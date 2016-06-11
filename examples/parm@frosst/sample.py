@@ -3,6 +3,18 @@ Command-line driver example for SMARTY.
 
 """
 
+import sys
+import string
+
+from optparse import OptionParser # For parsing of command line arguments
+
+import os
+import math
+import copy
+import re
+import numpy
+import random
+
 import smarty
 
 if __name__=="__main__":
@@ -42,6 +54,7 @@ if __name__=="__main__":
         parser.error("All input files must be specified.")
 
     # Load and type all molecules in the specified dataset.
+    import smarty.utils
     molecules = smarty.utils.read_molecules(options.molecules_filename, verbose=True)
 
     # Construct atom type sampler.

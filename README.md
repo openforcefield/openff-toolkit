@@ -14,6 +14,10 @@ Install `smarty` with
 ```bash
 pip install .
 ```
+If you modify the `smarty` codebase (rather than the examples), reinstall with
+```bash
+pip install . --upgrade
+```
 
 ## Documentation
 

@@ -4,6 +4,7 @@
 * `smarty.py` - example command-line driver
 * `atomtypes/` - input atom type sample specification files
 * `molecules/` - typed molecule datasets
+* `convert-atom-names-t-tripos.py` - utility to convert atom names to Tripos in mol2 files
 
 ## Usage
 

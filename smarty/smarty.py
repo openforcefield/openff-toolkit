@@ -64,7 +64,15 @@ class AtomTyper(object):
             self.atom = atom
 
         def __str__(self):
-            return "Atom not assigned: %6d %8s" % (self.atom.GetIdx(), OEGetAtomicSymbol(self.atom.GetAtomicNum()))
+            msg = "Atom not assigned: molecule %s : atom index %6d name %8s element %8s" % (self.molecule.GetTitle(), self.atom.GetIdx(), self.atom.GetName(), OEGetAtomicSymbol(self.atom.GetAtomicNum()))
+            msg += '\n'
+            for atom in self.molecule.GetAtoms():
+                msg += 'atom %8d : name %8s element %8s' % (atom.GetIdx(), atom.GetName(), OEGetAtomicSymbol(self.atom.GetAtomicNum()))
+                if atom == self.atom:
+                    msg += '  ***'
+                msg += '\n'
+
+            return msg
 
     def __init__(self, typelist, tagname):
         """"
@@ -223,8 +231,8 @@ class AtomTypeSampler(object):
                 self.atomtypes = proposed_atomtypes
                 self.molecules = proposed_molecules
                 return True
-            except Exception as e:
-                print e
+            except AtomTyper.TypingException as e:
+                #print e
                 # Reject since typing failed.
                 if verbose: print("Typing failed; rejecting.")
                 return False
@@ -249,7 +257,6 @@ class AtomTypeSampler(object):
                 return False
             # Insert atomtype immediately after.
             proposed_atomtypes.insert(atomtype_index+1, [proposed_atomtype, proposed_typename])
-            print(proposed_atomtypes)
             # Try to type all molecules.
             try:
                 # Type molecules.
@@ -357,10 +364,19 @@ class AtomTypeSampler(object):
         """
 
         for iteration in range(niterations):
-            accepted = self.sample_atomtypes(verbose=verbose)
             if verbose:
-                print("Iteration %d / %d: %s" % (iteration, niterations, str(accepted)))
+                print("Iteration %d / %d" % (iteration, niterations))
+
+            accepted = self.sample_atomtypes(verbose=verbose)
+
+            if verbose:
+                if accepted:
+                    print('Accepted.')
+                else:
+                    print('Rejected.')
 
                 # Compute atomtype statistics on molecules.
-                [atom_typecounts, molecule_typecounts] = atomtype_sampler.compute_type_statistics(atomtype_sampler.atomtypes, atomtype_sampler.molecules)
-                atomtype_sampler.show_type_statistics(atomtype_sampler.atomtypes, atom_typecounts, molecule_typecounts)
+                [atom_typecounts, molecule_typecounts] = self.compute_type_statistics(self.atomtypes, self.molecules)
+                self.show_type_statistics(self.atomtypes, atom_typecounts, molecule_typecounts)
+
+                print('')
