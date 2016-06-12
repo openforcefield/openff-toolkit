@@ -314,6 +314,7 @@ class AtomTypeSampler(object):
         total_atom_matches = 0
         for current_atomtype in current_atomtypes:
             if current_atomtype in mate:
+                reference_atomtype = mate[current_atomtype]
                 counts = graph[current_atomtype][reference_atomtype]['weight']
                 total_atom_matches += counts
 
