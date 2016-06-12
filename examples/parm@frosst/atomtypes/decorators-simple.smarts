@@ -1,3 +1,5 @@
 % aromatic/aliphatic
-a              atomatic
+a              aromatic
 A              aliphatic
+% halogens
+$(*~[$halogen]) halogen-adjacent

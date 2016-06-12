@@ -30,26 +30,36 @@ if __name__=="__main__":
     parser = OptionParser(usage=usage_string, version=version_string)
 
     parser.add_option("-b", "--basetypes", metavar='BASETYPES',
-                      action="store", type="string", dest='basetypes_filename', default='',
+                      action="store", type="string", dest='basetypes_filename', default=None,
                       help="Filename defining base atom types as SMARTS atom matches.")
 
     parser.add_option("-d", "--decorators", metavar='DECORATORS',
-                      action="store", type="string", dest='decorators_filename', default='',
+                      action="store", type="string", dest='decorators_filename', default=None,
                       help="Filename defining decorator atom types as SMARTS atom matches.")
 
+    parser.add_option("-s", "--substitutions", metavar="SUBSTITUTIONS",
+                      action="store", type="string", dest='substitutions_filename', default=None,
+                      help="Filename defining substitution definitions for SMARTS atom matches (OPTIONAL).")
+
+    parser.add_option("-r", "--reference", metavar="REFMOL",
+                      action="store", type="string", dest='reference_molecules_filename', default=None,
+                      help="Reference typed molecules for computing likelihood (must match same molecule and atom ordering in molecules file) (OPTIONAL).")
+
     parser.add_option("-m", "--molecules", metavar='MOLECULES',
-                      action="store", type="string", dest='molecules_filename', default='',
+                      action="store", type="string", dest='molecules_filename', default=None,
                       help="Small molecule set (in any OpenEye compatible file format) containing 'dG(exp)' fields with experimental hydration free energies.")
 
     parser.add_option("-i", "--iterations", metavar='ITERATIONS',
                       action="store", type="int", dest='iterations', default=150,
                       help="MCMC iterations.")
 
+    verbose = True
+
     # Parse command-line arguments.
     (options,args) = parser.parse_args()
 
     # Ensure all required options have been specified.
-    if options.basetypes_filename=='' or options.decorators_filename=='' or options.molecules_filename=='':
+    if (options.basetypes_filename is None) or (options.decorators_filename is None) or (options.molecules_filename is None):
         parser.print_help()
         parser.error("All input files must be specified.")
 
@@ -57,8 +67,13 @@ if __name__=="__main__":
     import smarty.utils
     molecules = smarty.utils.read_molecules(options.molecules_filename, verbose=True)
 
+    # Read reference typed molecules, if specified.
+    reference_typed_molecules = None
+    if options.reference_molecules_filename is not None:
+        reference_typed_molecules = smarty.utils.read_molecules(options.reference_molecules_filename, verbose=True)
+
     # Construct atom type sampler.
-    atomtype_sampler = smarty.AtomTypeSampler(options.basetypes_filename, options.decorators_filename, molecules)
+    atomtype_sampler = smarty.AtomTypeSampler(molecules, options.basetypes_filename, options.decorators_filename, replacements_filename=options.substitutions_filename, reference_typed_molecules=reference_typed_molecules, verbose=verbose)
 
     # Start sampling atom types.
-    atomtype_sampler.run(options.iterations, verbose=True)
+    atomtype_sampler.run(options.iterations)

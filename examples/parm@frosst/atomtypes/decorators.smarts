@@ -32,5 +32,9 @@ H1             total-h-count-1
 H2             total-h-count-2
 H3             total-h-count-3
 % aromatic/aliphatic
-a              atomatic
+a              aromatic
 A              aliphatic
+% halogens
+$(*~[$halogen]) halogen-adjacent
+$(*~[$smallhals]) small-halogen-adjacent
+$(*~[$largehals]) large-halogen-adjacent

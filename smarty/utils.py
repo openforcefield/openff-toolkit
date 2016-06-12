@@ -122,10 +122,18 @@ def read_molecules(filename, verbose=True):
 
     """
 
+    if not os.path.exists(filename):
+        raise Exception("File '%s' not found." % filename)
+
     if verbose: print("Loading molecules from '%s'..." % filename)
     start_time = time.time()
     molecules = list()
     input_molstream = oemolistream(filename)
+
+    from openeye import oechem
+    flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
+    input_molstream.SetFlavor(oechem.OEFormat_MOL2, flavor)
+
     molecule = OECreateOEGraphMol()
     while OEReadMolecule(input_molstream, molecule):
         # Get molecule name.

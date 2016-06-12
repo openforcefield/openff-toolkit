@@ -40,6 +40,8 @@ from openeye.oechem import *
 from openeye.oeomega import *
 from openeye.oequacpac import *
 
+import networkx
+
 import time
 
 #=============================================================================================
@@ -74,22 +76,35 @@ class AtomTyper(object):
 
             return msg
 
-    def __init__(self, typelist, tagname):
+    def __init__(self, typelist, tagname, replacements=None):
         """"
         Create an atom typer instance.
 
         ARGUMENTS
 
-        typelist (string) - if specified, will read types from list with each element [smarts, typename]
-        tagname (string) - tag name
+        typelist : str
+            If specified, will read types from list with each element [smarts, typename]
+        tagname : str
+            Tag name
+        replacements : list of [smarts, shortname]
+            Substitution/replacement bindings.
 
         """
 
         self.pattyTag = OEGetTag(tagname)
 
+        # Create bindings list.
+        bindings = list()
+        if replacements is not None:
+            for [smarts,shortname] in replacements:
+                bindings.append( (shortname, smarts) )
+
         # Create table of search objects.
         self.smartsList = []
         for [smarts, typename] in typelist:
+            # Perform binding replacements
+            smarts = OESmartsLexReplace(smarts, bindings)
+            # Create SMARTS search
             pat = OESubSearch()
             pat.Init(smarts)
             pat.SetMaxMatches(0)
@@ -136,15 +151,23 @@ class AtomTyper(object):
         """
         Read an atomtype or decorator list from a file.
 
-        ARGUMENTS
+        Parameters
+        ----------
+        filename : str
+            The name of the file to be read
 
-        filename (string) - the name of the file to be read
-
-        RETURNS
-
-        typelist (list) - typelist[i] is element i of the typelist in format [smarts, typename]
+        Returns
+        -------
+        typelist : list of tuples
+            Typelist[i] is element i of the typelist in format [smarts, typename]
 
         """
+        if filename is None:
+            return None
+
+        if not os.path.exists(filename):
+            raise Exception("File '%s' not found." % filename)
+
         typelist = list()
         ifs = open(filename)
         lines = ifs.readlines()
@@ -171,21 +194,36 @@ class AtomTypeSampler(object):
     Atom type sampler.
 
     """
-    def __init__(self, basetypes_filename, decorators_filename, molecules):
+    def __init__(self, molecules, basetypes_filename, decorators_filename, replacements_filename=None, reference_typed_molecules=None, temperature=1.0, verbose=False):
         """
         Initialize an atom type sampler.
 
         ARGUMENTS
 
-        basetypes_filename - file defining base atom types (which cannot be destroyed)
-        decorators_filename - file containing decorators that can be added to existing types to generate subtypes
-        molecules - list of molecules for typing
+        molecules : list of molecules for typing
+            List of molecules for typing
+        basetypes_filename : str
+            File defining base atom types (which cannot be destroyed)
+        decorators_filename : str
+            File containing decorators that can be added to existing types to generate subtypes
+        replacements_filename : str, optional, default=None
+            If specified, SMARTS replacement definitions will be read from this file
+        reference_typed_molecules : list of OEMol, optional, default=None
+            List of molecules with reference types for use in Monte Carlo acceptance.
+            If specified, the likelihood function will utilize the maximal number of matched atom types with these molecules.
+            If not specified, no likelihood function will be employed.
+        temperature : float, optional, default=1.0
+            Temperature for Monte Carlo acceptance/rejection
+        verbose : bool, optional, default=False
+            If True, verbose output will be printed.
 
-        NOTES
-
+        Notes
+        -----
         This is just a proof of concept.  No scoring of molecular properties is performed.
 
         """
+
+        self.verbose = verbose
 
         # Define internal typing tag.
         self.typetag = 'atomtype'
@@ -193,9 +231,23 @@ class AtomTypeSampler(object):
         # Read atomtypes and decorators.
         self.atomtypes = AtomTyper.read_typelist(basetypes_filename)
         self.decorators = AtomTyper.read_typelist(decorators_filename)
+        self.replacements = AtomTyper.read_typelist(replacements_filename)
 
         # Store a deep copy of the molecules since they will be annotated
         self.molecules = copy.deepcopy(molecules)
+
+        # Store reference molecules
+        self.reference_typed_molecules = None
+        self.reference_atomtypes = set()
+        if reference_typed_molecules is not None:
+            self.reference_typed_molecules = copy.deepcopy(reference_typed_molecules)
+            # Extract list of reference atom types
+            for molecule in reference_typed_molecules:
+                for atom in molecule.GetAtoms():
+                    self.reference_atomtypes.add(atom.GetType())
+            self.reference_atomtypes = list(self.reference_atomtypes)
+
+        self.temperature = temperature
 
         # Type all molecules with current typelist to ensure that basetypes are sufficient.
         self.type_molecules(self.atomtypes, self.molecules)
@@ -206,7 +258,90 @@ class AtomTypeSampler(object):
 
         return
 
-    def sample_atomtypes(self, verbose=True):
+    def best_match_reference_types(self):
+        """
+        Determine best match for each parameter with reference atom types
+
+        * Currently, types for reference typed molecules are accessed via atom.GetType(), while types for current typed molecules are accessed via atom.GetStringData(self.typetag).
+          This should be homogenized.
+
+        Contributor:
+        * Josh Fass <josh.fass@choderalab.org> contributed this algorithm.
+
+        """
+        if self.reference_typed_molecules is None:
+            if self.verbose: print('No reference molecules specified, so skipping likelihood calculation.')
+            return None
+
+        # Create bipartite graph (U,V,E) matching current atom types U with reference atom types V via edges E with weights equal to number of atoms typed in common.
+        if self.verbose: print('Creating graph matching current atom types with reference atom types...')
+        initial_time = time.time()
+        import networkx as nx
+        graph = nx.Graph()
+        # Add current atom types
+        current_atomtypes = [ typename for (smarts, typename) in self.atomtypes ]
+        for atomtype in current_atomtypes:
+            graph.add_node(atomtype, bipartite=0)
+        # Add reference atom types
+        reference_atomtypes = [ typename for typename in self.reference_atomtypes ]
+        for atomtype in reference_atomtypes:
+            graph.add_node(atomtype, bipartite=1)
+        # Add edges.
+        atoms_in_common = dict()
+        for current_atomtype in current_atomtypes:
+            for reference_atomtype in reference_atomtypes:
+                atoms_in_common[(current_atomtype,reference_atomtype)] = 0
+        for (current_typed_molecule, reference_typed_molecule) in zip(self.molecules, self.reference_typed_molecules):
+            for (current_typed_atom, reference_typed_atom) in zip(current_typed_molecule.GetAtoms(), reference_typed_molecule.GetAtoms()):
+                current_atomtype = current_typed_atom.GetStringData(self.typetag)
+                reference_atomtype = reference_typed_atom.GetType()
+                atoms_in_common[(current_atomtype,reference_atomtype)] += 1
+        for current_atomtype in current_atomtypes:
+            for reference_atomtype in reference_atomtypes:
+                weight = atoms_in_common[(current_atomtype,reference_atomtype)]
+                graph.add_edge(current_atomtype, reference_atomtype, weight=weight)
+        elapsed_time = time.time() - initial_time
+        if self.verbose: print('Graph creation took %.3f s' % elapsed_time)
+
+        # Compute maximum match
+        if self.verbose: print('Computing maximum weight match...')
+        initial_time = time.time()
+        mate = nx.algorithms.max_weight_matching(graph, maxcardinality=True)
+        elapsed_time = time.time() - initial_time
+        if self.verbose: print('Maximum weight match took %.3f s' % elapsed_time)
+
+        # Compute total weight.
+        total_atom_matches = 0
+        for current_atomtype in current_atomtypes:
+            if current_atomtype in mate:
+                counts = graph[current_atomtype][reference_atomtype]['weight']
+                total_atom_matches += counts
+
+        # Compute total atoms
+        total_atoms = 0
+        for molecule in self.molecules:
+            for atom in molecule.GetAtoms():
+                total_atoms += 1
+
+        # Report on matches
+        if self.verbose:
+            for current_atomtype in current_atomtypes:
+                if current_atomtype in mate:
+                    reference_atomtype = mate[current_atomtype]
+                    counts = graph[current_atomtype][reference_atomtype]['weight']
+                    print('%32s matches %32s : %8d atoms matched' % (current_atomtype, reference_atomtype, counts))
+                else:
+                    print('%32s does not match a reference atomtype' % (current_atomtype))
+
+        if self.verbose:
+            print('%d / %d total atoms match' % (total_atom_matches, total_atoms))
+
+
+
+
+        return
+
+    def sample_atomtypes(self):
         """
         Perform one step of atom type sampling.
 
@@ -217,25 +352,23 @@ class AtomTypeSampler(object):
         natomtypes = len(proposed_atomtypes)
         ndecorators = len(self.decorators)
 
+        valid_proposal = True
+
         if random.random() < 0.5:
             # Pick an atom type to destroy.
             atomtype_index = random.randint(0, natomtypes-1)
             (atomtype, typename) = proposed_atomtypes[atomtype_index]
-            if verbose: print("Attempting to destroy atom type %s : %s..." % (atomtype, typename))
+            if self.verbose: print("Attempting to destroy atom type %s : %s..." % (atomtype, typename))
             # Delete the atomtype.
             proposed_atomtypes.remove([atomtype, typename])
             # Try to type all molecules.
             try:
                 self.type_molecules(proposed_atomtypes, proposed_molecules)
-                # Accept if typing completed.
-                self.atomtypes = proposed_atomtypes
-                self.molecules = proposed_molecules
-                return True
             except AtomTyper.TypingException as e:
                 #print e
                 # Reject since typing failed.
-                if verbose: print("Typing failed; rejecting.")
-                return False
+                if self.verbose: print("Typing failed; rejecting.")
+                valid_proposal = False
         else:
             # Pick an atomtype to subtype.
             atomtype_index = random.randint(0, natomtypes-1)
@@ -253,8 +386,11 @@ class AtomTypeSampler(object):
             for (a, b) in self.atomtypes:
                 existing_atomtypes.add(a)
             if proposed_atomtype in existing_atomtypes:
-                if verbose: print("Atom type already exists; rejecting to avoid duplication.")
-                return False
+                if self.verbose: print("Atom type already exists; rejecting to avoid duplication.")
+                valid_proposal = False
+
+            # TODO: Check for valid proposal
+
             # Insert atomtype immediately after.
             proposed_atomtypes.insert(atomtype_index+1, [proposed_atomtype, proposed_typename])
             # Try to type all molecules.
@@ -266,22 +402,29 @@ class AtomTypeSampler(object):
                 # Reject if new type is unused.
                 if (proposed_atom_typecounts[proposed_typename] == 0):
                     # Reject because new type is unused in dataset.
-                    if verbose: print("Atom type '%s' (%s) unused in dataset; rejecting." % (proposed_atomtype, proposed_typename))
-                    return False
+                    if self.verbose: print("Atom type '%s' (%s) unused in dataset; rejecting." % (proposed_atomtype, proposed_typename))
+                    valid_proposal = False
                 # Reject if parent type is now unused.
                 if (proposed_atom_typecounts[atomtype_typename] == 0):
                     # Reject because new type is unused in dataset.
-                    if verbose: print("Parent type '%s' (%s) now unused in dataset; rejecting." % (atomtype, atomtype_typename))
-                    return False
-                # Accept.
-                self.atomtypes = proposed_atomtypes
-                self.molecules = proposed_molecules
-                return True
-            except Exception as e:
+                    if self.verbose: print("Parent type '%s' (%s) now unused in dataset; rejecting." % (atomtype, atomtype_typename))
+                    valid_proposal = False
+            except AtomTyper.TypingException as e:
                 print("Exception: %s" % str(e))
                 # Reject since typing failed.
-                if verbose: print("Typing failed for one or more molecules using proposed atomtypes; rejecting.")
-                return False
+                if self.verbose: print("Typing failed for one or more molecules using proposed atomtypes; rejecting.")
+                valid_proposal = False
+
+        if valid_proposal is False:
+            return False
+        if self.verbose: print('Proposal is valid...')
+
+        # TODO: Compute likelihood
+        self.best_match_reference_types()
+
+        # Accept.
+        self.atomtypes = proposed_atomtypes
+        self.molecules = proposed_molecules
 
         return
 
@@ -291,7 +434,7 @@ class AtomTypeSampler(object):
 
         """
         # Create an atom typer.
-        atomtyper = AtomTyper(typelist, self.typetag)
+        atomtyper = AtomTyper(typelist, self.typetag, replacements=self.replacements)
 
         # Type molecules.
         for molecule in molecules:
@@ -351,7 +494,7 @@ class AtomTypeSampler(object):
         print "%5s   %10d %10d" % ('TOTAL', natoms, nmolecules)
         return
 
-    def run(self, niterations, verbose=False):
+    def run(self, niterations):
         """
         Run atomtype sampler for the specified number of iterations.
 
@@ -359,17 +502,16 @@ class AtomTypeSampler(object):
         ----------
         niterations : int
             The specified number of iterations
-        verbose : bool
-            If True, print debug info
+
         """
 
         for iteration in range(niterations):
-            if verbose:
+            if self.verbose:
                 print("Iteration %d / %d" % (iteration, niterations))
 
-            accepted = self.sample_atomtypes(verbose=verbose)
+            accepted = self.sample_atomtypes()
 
-            if verbose:
+            if self.verbose:
                 if accepted:
                     print('Accepted.')
                 else:
