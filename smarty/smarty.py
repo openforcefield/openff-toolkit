@@ -263,10 +263,17 @@ class AtomTypeSampler(object):
             # Extract list of reference atom types
             for molecule in reference_typed_molecules:
                 for atom in molecule.GetAtoms():
-                    self.reference_atomtypes.add(atom.GetType())
+                    atomtype = atom.GetType()
+                    self.reference_atomtypes.add(atomtype)
             self.reference_atomtypes = list(self.reference_atomtypes)
             # Compute current atom matches
             [self.atom_type_matches, self.total_atom_type_matches] = self.best_match_reference_types(self.atomtypes, self.molecules)
+            # Count atom types.
+            self.reference_atomtypes_atomcount = { atomtype : 0 for atomtype in self.reference_atomtypes }
+            for molecule in reference_typed_molecules:
+                for atom in molecule.GetAtoms():
+                    atomtype = atom.GetType()
+                    self.reference_atomtypes_atomcount[atomtype] += 1
 
         # Maintain a list of SMARTS matches without any atom type matches in the dataset
         # This is used for efficiency.
@@ -561,20 +568,22 @@ class AtomTypeSampler(object):
 
         # Print header
         if atomtype_matches is not None:
-            print "%5s   %10s %10s   %48s %48s %16s %16s" % ('INDEX', 'ATOMS', 'MOLECULES', 'TYPE NAME', 'SMARTS', 'REFERENCE TYPE', 'REFERENCE COUNT')
+            print "%5s   %10s %10s   %64s %32s %8s %46s" % ('INDEX', 'ATOMS', 'MOLECULES', 'TYPE NAME', 'SMARTS', 'REF TYPE', 'FRACTION OF REF TYPED MOLECULES MATCHED')
         else:
-            print "%5s   %10s %10s   %48s %48s" % ('INDEX', 'ATOMS', 'MOLECULES', 'TYPE NAME', 'SMARTS')
+            print "%5s   %10s %10s   %64s %32s" % ('INDEX', 'ATOMS', 'MOLECULES', 'TYPE NAME', 'SMARTS')
 
         # Print counts
         for [smarts, typename] in typelist:
             if atomtype_matches is not None:
                 (reference_atomtype, reference_count) = reference_type_info[typename]
+                reference_total = self.reference_atomtypes_atomcount[reference_atomtype]
+                reference_fraction = float(reference_count) / float(reference_total)
                 if reference_atomtype is not None:
-                    print "%5d : %10d %10d | %48s %48s %16s %16d" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts, reference_atomtype, reference_count)
+                    print "%5d : %10d %10d | %64s %32s %8s %16d / %16d (%7.3f%%)" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts, reference_atomtype, reference_count, reference_total, reference_fraction*100)
                 else:
-                    print "%5d : %10d %10d | %48s %48s %16s %16s" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts, '', '')
+                    print "%5d : %10d %10d | %64s %32s" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts)
             else:
-                print "%5d : %10d %10d | %48s %48s" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts)
+                print "%5d : %10d %10d | %64s %32s" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts)
 
             natoms += atom_typecounts[typename]
             index += 1
@@ -582,7 +591,7 @@ class AtomTypeSampler(object):
         nmolecules = len(self.molecules)
 
         if atomtype_matches is not None:
-            print "%5s : %10d %10d |  %48s %48s %10d / %10d match (%.3f %%)" % ('TOTAL', natoms, nmolecules, '', '', self.total_atom_type_matches, self.total_atoms, (float(self.total_atom_type_matches) / float(self.total_atoms)) * 100)
+            print "%5s : %10d %10d |  %64s %32s %8d / %8d match (%.3f %%)" % ('TOTAL', natoms, nmolecules, '', '', self.total_atom_type_matches, self.total_atoms, (float(self.total_atom_type_matches) / float(self.total_atoms)) * 100)
         else:
             print "%5s : %10d %10d" % ('TOTAL', natoms, nmolecules)
 
