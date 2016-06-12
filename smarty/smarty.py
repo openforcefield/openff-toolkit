@@ -178,8 +178,10 @@ class AtomTyper(object):
                 line = line[0:index]
             # Split into tokens.
             tokens = string.split(line)
-            if len(tokens) == 2:
-                [smarts,typename] = tokens
+            # Process if we have enough tokens
+            if len(tokens) >= 2:
+                smarts = tokens[0]
+                typename = ' '.join(tokens[1:])
                 typelist.append([smarts,typename])
         ifs.close()
 

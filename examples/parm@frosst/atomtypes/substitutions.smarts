@@ -1,10 +1,13 @@
-% replacements
-% SMARTS replacement-string
+% Substitution definitions
+% Format:
+% <SMARTS> <replacement-string>
+
 % elements
 [#9]    fluorine
 [#17]   chlorine
 [#35]   bromine
 [#53]   iodine
+
 % halogens
 [$smallhals,$largehals]     halogen
 [$fluorine,$chlorine]       smallhals
