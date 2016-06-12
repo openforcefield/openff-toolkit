@@ -268,6 +268,10 @@ class AtomTypeSampler(object):
             # Compute current atom matches
             [self.atom_type_matches, self.total_atom_type_matches] = self.best_match_reference_types(self.atomtypes, self.molecules)
 
+        # Maintain a list of SMARTS matches without any atom type matches in the dataset
+        # This is used for efficiency.
+        self.atomtypes_with_no_matches = set()
+
         return
 
     def best_match_reference_types(self, atomtypes, molecules):
@@ -416,6 +420,12 @@ class AtomTypeSampler(object):
             proposed_atomtype = '[' + result.groups(1)[0] + '&' + decorator + ']'
             proposed_typename = atomtype_typename + ' ' + decorator_typename
             print("Attempting to create new subtype: '%s' (%s) + '%s' (%s) -> '%s' (%s)" % (atomtype, atomtype_typename, decorator, decorator_typename, proposed_atomtype, proposed_typename))
+
+            # Check that we haven't already determined this atom type isn't matched in the dataset.
+            if proposed_atomtype in self.atomtypes_with_no_matches:
+                if self.verbose: print("Atom type '%s' (%s) unused in dataset; rejecting." % (proposed_atomtype, proposed_typename))
+                return False
+
             # Check if proposed atomtype is already in set.
             existing_atomtypes = set()
             for (a, b) in self.atomtypes:
@@ -441,6 +451,8 @@ class AtomTypeSampler(object):
                     # Reject because new type is unused in dataset.
                     if self.verbose: print("Atom type '%s' (%s) unused in dataset; rejecting." % (proposed_atomtype, proposed_typename))
                     valid_proposal = False
+                    # Store this atomtype to speed up future rejections
+                    self.atomtypes_with_no_matches.add(proposed_atomtype)
                 # Reject if parent type is now unused.
                 if (proposed_atom_typecounts[atomtype_typename] == 0):
                     # Reject because new type is unused in dataset.
