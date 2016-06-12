@@ -1,16 +1,21 @@
 # Example application of SMARTY atom type sampler to recover parm@frosst typing
 
+In this example, the SMARTY `AtomTypeSampler` is used to attempt to recover SMARTS atom types that recapitulate the typing rules from a referenced set of typed molecules.
+
 ## Manifest
 * `smarty.py` - example command-line driver
 * `atomtypes/` - input atom type sample specification files
 * `molecules/` - typed molecule datasets
-* `convert-atom-names-t-tripos.py` - utility to convert atom names to Tripos in mol2 files
+* `convert-atom-names-to-tripos.py` - utility to convert atom names to Tripos in mol2 files
 
 ## Usage
 
+Usage
+
 Example:
 ```
-python sample.py --basetypes=atomtypes/basetypes.smarts --decorators=atomtypes/decorators.smarts --molecules=molecules/zinc-subset.mol2.gz --iterations 1000
+python sample.py --basetypes=atomtypes/basetypes.smarts --decorators=atomtypes/decorators.smarts --substitutions=atomtypes/substitutions.smarts \
+    --molecules=molecules/zinc-subset-tripos.mol2.gz --reference=molecules/zinc-subset-parm@frosst.mol2.gz --iterations 1000 --temperature=0.1
 ```
 
 Initially, the base atom types are added to the pool of current atom types, and the number of atoms and molecules matched by each atom type are shown:

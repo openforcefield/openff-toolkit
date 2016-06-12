@@ -21,9 +21,14 @@ if __name__=="__main__":
 
     # Create command-line argument options.
     usage_string = """\
-    usage: %prog --basetypes smartsfile --decorators smartsfile --molecules molfile --iterations niterations
+    Sample over atom types, optionally attempting to match atom types in a reference typed set of molecules.
 
-    example: %prog --basetypes atomtypes/basetypes.smarts --decorators atomtypes/decorators.smarts --molecules datasets/solvation.sdf --iterations 150
+    usage: %prog --basetypes smartsfile --decorators smartsfile [--substitutions smartsfile] --molecules molfile [--reference molfile] --iterations niterations [--temperature temperature]
+
+    example:
+
+    python %prog --basetypes=atomtypes/basetypes.smarts --decorators=atomtypes/decorators.smarts --substitutions=atomtypes/substitutions.smarts \
+        --molecules=molecules/zinc-subset-tripos.mol2.gz --reference=molecules/zinc-subset-parm@frosst.mol2.gz --iterations 1000 --temperature=0.1
 
     """
     version_string = "%prog %__version__"
@@ -52,6 +57,10 @@ if __name__=="__main__":
     parser.add_option("-i", "--iterations", metavar='ITERATIONS',
                       action="store", type="int", dest='iterations', default=150,
                       help="MCMC iterations.")
+
+    parser.add_option("-t", "--temperature", metavar='TEMPERATURE',
+                      action="store", type="float", dest='TEMPERATURE', default=0.1,
+                      help="Effective temperature for Monte Carlo acceptance, indicating fractional tolerance of mismatched atoms (default: 0.1). If 0 is specified, will behave in a greedy manner.")
 
     verbose = True
 

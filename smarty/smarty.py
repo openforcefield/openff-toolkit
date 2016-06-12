@@ -194,7 +194,7 @@ class AtomTypeSampler(object):
     Atom type sampler.
 
     """
-    def __init__(self, molecules, basetypes_filename, decorators_filename, replacements_filename=None, reference_typed_molecules=None, temperature=1.0, verbose=False):
+    def __init__(self, molecules, basetypes_filename, decorators_filename, replacements_filename=None, reference_typed_molecules=None, temperature=0.1, verbose=False):
         """
         Initialize an atom type sampler.
 
@@ -212,7 +212,7 @@ class AtomTypeSampler(object):
             List of molecules with reference types for use in Monte Carlo acceptance.
             If specified, the likelihood function will utilize the maximal number of matched atom types with these molecules.
             If not specified, no likelihood function will be employed.
-        temperature : float, optional, default=1.0
+        temperature : float, optional, default=0.1
             Temperature for Monte Carlo acceptance/rejection
         verbose : bool, optional, default=False
             If True, verbose output will be printed.
@@ -236,19 +236,6 @@ class AtomTypeSampler(object):
         # Store a deep copy of the molecules since they will be annotated
         self.molecules = copy.deepcopy(molecules)
 
-        # Store reference molecules
-        self.reference_typed_molecules = None
-        self.reference_atomtypes = set()
-        if reference_typed_molecules is not None:
-            self.reference_typed_molecules = copy.deepcopy(reference_typed_molecules)
-            # Extract list of reference atom types
-            for molecule in reference_typed_molecules:
-                for atom in molecule.GetAtoms():
-                    self.reference_atomtypes.add(atom.GetType())
-            self.reference_atomtypes = list(self.reference_atomtypes)
-
-        self.temperature = temperature
-
         # Type all molecules with current typelist to ensure that basetypes are sufficient.
         self.type_molecules(self.atomtypes, self.molecules)
 
@@ -256,11 +243,46 @@ class AtomTypeSampler(object):
         [atom_typecounts, molecule_typecounts] = self.compute_type_statistics(self.atomtypes, self.molecules)
         self.show_type_statistics(self.atomtypes, atom_typecounts, molecule_typecounts)
 
+        # Compute total atoms
+        self.total_atoms = 0.0
+        for molecule in self.molecules:
+            for atom in molecule.GetAtoms():
+                self.total_atoms += 1.0
+
+        # Store reference molecules
+        self.reference_typed_molecules = None
+        self.reference_atomtypes = set()
+        self.current_atom_matches = None
+        self.temperature = temperature
+        if reference_typed_molecules is not None:
+            self.reference_typed_molecules = copy.deepcopy(reference_typed_molecules)
+            # Extract list of reference atom types
+            for molecule in reference_typed_molecules:
+                for atom in molecule.GetAtoms():
+                    self.reference_atomtypes.add(atom.GetType())
+            self.reference_atomtypes = list(self.reference_atomtypes)
+            # Compute current atom matches
+            [self.atom_type_matches, self.total_atom_type_matches] = self.best_match_reference_types(self.atomtypes, self.molecules)
+
         return
 
-    def best_match_reference_types(self):
+    def best_match_reference_types(self, atomtypes, molecules):
         """
         Determine best match for each parameter with reference atom types
+
+        Parameters
+        ----------
+        atomtypes :
+            Current atom types
+        molecules : list of OEMol
+            Typed molecules, where types are stored in self.atomtypetag string data.
+
+        Returns
+        -------
+        atom_type_matches : list of tuples (current_atomtype, reference_atomtype, counts)
+            Best correspondence between current and reference atomtypes, along with number of atoms equivalently typed in reference molecule set.
+        total_atom_type_matches : int
+            The total number of correspondingly typed atoms in the reference molecule set.
 
         * Currently, types for reference typed molecules are accessed via atom.GetType(), while types for current typed molecules are accessed via atom.GetStringData(self.typetag).
           This should be homogenized.
@@ -279,7 +301,7 @@ class AtomTypeSampler(object):
         import networkx as nx
         graph = nx.Graph()
         # Add current atom types
-        current_atomtypes = [ typename for (smarts, typename) in self.atomtypes ]
+        current_atomtypes = [ typename for (smarts, typename) in atomtypes ]
         for atomtype in current_atomtypes:
             graph.add_node(atomtype, bipartite=0)
         # Add reference atom types
@@ -291,7 +313,7 @@ class AtomTypeSampler(object):
         for current_atomtype in current_atomtypes:
             for reference_atomtype in reference_atomtypes:
                 atoms_in_common[(current_atomtype,reference_atomtype)] = 0
-        for (current_typed_molecule, reference_typed_molecule) in zip(self.molecules, self.reference_typed_molecules):
+        for (current_typed_molecule, reference_typed_molecule) in zip(molecules, self.reference_typed_molecules):
             for (current_typed_atom, reference_typed_atom) in zip(current_typed_molecule.GetAtoms(), reference_typed_molecule.GetAtoms()):
                 current_atomtype = current_typed_atom.GetStringData(self.typetag)
                 reference_atomtype = reference_typed_atom.GetType()
@@ -306,38 +328,49 @@ class AtomTypeSampler(object):
         # Compute maximum match
         if self.verbose: print('Computing maximum weight match...')
         initial_time = time.time()
-        mate = nx.algorithms.max_weight_matching(graph, maxcardinality=True)
+        mate = nx.algorithms.max_weight_matching(graph, maxcardinality=False)
         elapsed_time = time.time() - initial_time
         if self.verbose: print('Maximum weight match took %.3f s' % elapsed_time)
 
-        # Compute total weight.
-        total_atom_matches = 0
+        # Compute match dictionary and total number of matches.
+        atom_type_matches = list()
+        total_atom_type_matches = 0
         for current_atomtype in current_atomtypes:
             if current_atomtype in mate:
                 reference_atomtype = mate[current_atomtype]
                 counts = graph[current_atomtype][reference_atomtype]['weight']
-                total_atom_matches += counts
-
-        # Compute total atoms
-        total_atoms = 0
-        for molecule in self.molecules:
-            for atom in molecule.GetAtoms():
-                total_atoms += 1
+                total_atom_type_matches += counts
+                atom_type_matches.append( (current_atomtype, reference_atomtype, counts) )
+            else:
+                atom_type_matches.append( (current_atomtype, None, None) )
 
         # Report on matches
         if self.verbose:
-            for current_atomtype in current_atomtypes:
-                if current_atomtype in mate:
-                    reference_atomtype = mate[current_atomtype]
-                    counts = graph[current_atomtype][reference_atomtype]['weight']
-                    print('%32s matches %32s : %8d atoms matched' % (current_atomtype, reference_atomtype, counts))
-                else:
-                    print('%32s does not match a reference atomtype' % (current_atomtype))
+            print("PROPOSED:")
+            self.show_type_matches(atom_type_matches)
 
-        if self.verbose:
-            print('%d / %d total atoms match' % (total_atom_matches, total_atoms))
+        return (atom_type_matches, total_atom_type_matches)
 
-        return total_atom_matches
+    def show_type_matches(self, atom_type_matches):
+        """
+        Show pairing of current to reference atom types.
+
+        atom_type_matches : list of (current_atomtype, reference_atomtype, counts)
+            List of atom type matches.
+
+        """
+        print('Atom type matches:')
+        total_atom_type_matches = 0
+        for (current_atomtype, reference_atomtype, counts) in atom_type_matches:
+            if reference_atomtype is not None:
+                print('%-64s matches %8s : %8d atoms matched' % (current_atomtype, reference_atomtype, counts))
+                total_atom_type_matches += counts
+            else:
+                print('%-64s         no match' % (current_atomtype))
+
+        fraction_matched_atoms = float(total_atom_type_matches) / float(self.total_atoms)
+        print('%d / %d total atoms match (%.3f %%)' % (total_atom_type_matches, self.total_atoms, fraction_matched_atoms * 100))
+
 
     def sample_atomtypes(self):
         """
@@ -349,9 +382,6 @@ class AtomTypeSampler(object):
         proposed_molecules = copy.deepcopy(self.molecules)
         natomtypes = len(proposed_atomtypes)
         ndecorators = len(self.decorators)
-
-        # TODO: Compute likelihood
-        current_atom_matches = self.best_match_reference_types()
 
         valid_proposal = True
 
@@ -390,7 +420,9 @@ class AtomTypeSampler(object):
                 if self.verbose: print("Atom type already exists; rejecting to avoid duplication.")
                 valid_proposal = False
 
-            # TODO: Check for valid proposal
+            # Check for valid proposal before proceeding.
+            if not valid_proposal:
+                return False
 
             # Insert atomtype immediately after.
             proposed_atomtypes.insert(atomtype_index+1, [proposed_atomtype, proposed_typename])
@@ -416,18 +448,26 @@ class AtomTypeSampler(object):
                 if self.verbose: print("Typing failed for one or more molecules using proposed atomtypes; rejecting.")
                 valid_proposal = False
 
-        if valid_proposal is False:
+        # Check for valid proposal
+        if not valid_proposal:
             return False
+
         if self.verbose: print('Proposal is valid...')
 
-        # TODO: Compute likelihood
-        proposed_atom_matches = self.best_match_reference_types()
+        if self.temperature == 0.0:
+            effective_temperature = 1
+        else:
+            effective_temperature = (self.total_atoms * self.temperature)
 
-        log_P_accept = (proposed_atom_matches - current_atom_matches) / self.temperature
+        # Compute likelihood for accept/reject
+        (proposed_atom_type_matches, proposed_total_atom_type_matches) = self.best_match_reference_types(proposed_atomtypes, proposed_molecules)
+        log_P_accept = (proposed_total_atom_type_matches - self.total_atom_type_matches) / effective_temperature
         if (log_P_accept > 0.0) or (numpy.random.uniform() < numpy.exp(log_P_accept)):
             # Accept.
             self.atomtypes = proposed_atomtypes
             self.molecules = proposed_molecules
+            self.atom_type_matches = proposed_atom_type_matches
+            self.total_atom_type_matches = proposed_total_atom_type_matches
             return True
         else:
             return False
@@ -480,22 +520,46 @@ class AtomTypeSampler(object):
 
         return (atom_typecounts, molecule_typecounts)
 
-    def show_type_statistics(self, typelist, atom_typecounts, molecule_typecounts):
+    def show_type_statistics(self, typelist, atom_typecounts, molecule_typecounts, atomtype_matches=None):
         """
         Print atom type statistics.
 
         """
         index = 1
         natoms = 0
-        #print "%5s   %10s %10s   %48s %48s" % ('index', 'atoms', 'molecules', 'type name', 'smarts')
-        print "%5s   %10s %10s   %48s %48s" % ('INDEX', 'ATOMS', 'MOLECULES', 'TYPE NAME', 'SMARTS')
+
+        if atomtype_matches is not None:
+            reference_type_info = dict()
+            for (typename, reference_atomtype, count) in atomtype_matches:
+                reference_type_info[typename] = (reference_atomtype, count)
+
+        # Print header
+        if atomtype_matches is not None:
+            print "%5s   %10s %10s   %48s %48s %16s %16s" % ('INDEX', 'ATOMS', 'MOLECULES', 'TYPE NAME', 'SMARTS', 'REFERENCE TYPE', 'REFERENCE COUNT')
+        else:
+            print "%5s   %10s %10s   %48s %48s" % ('INDEX', 'ATOMS', 'MOLECULES', 'TYPE NAME', 'SMARTS')
+
+        # Print counts
         for [smarts, typename] in typelist:
-            print "%5d : %10d %10d | %48s %48s" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts)
+            if atomtype_matches is not None:
+                (reference_atomtype, reference_count) = reference_type_info[typename]
+                if reference_atomtype is not None:
+                    print "%5d : %10d %10d | %48s %48s %16s %16d" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts, reference_atomtype, reference_count)
+                else:
+                    print "%5d : %10d %10d | %48s %48s %16s %16s" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts, '', '')
+            else:
+                print "%5d : %10d %10d | %48s %48s" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts)
+
             natoms += atom_typecounts[typename]
             index += 1
 
         nmolecules = len(self.molecules)
-        print "%5s   %10d %10d" % ('TOTAL', natoms, nmolecules)
+
+        if atomtype_matches is not None:
+            print "%5s : %10d %10d |  %48s %48s %10d / %10d match (%.3f %%)" % ('TOTAL', natoms, nmolecules, '', '', self.total_atom_type_matches, self.total_atoms, (float(self.total_atom_type_matches) / float(self.total_atoms)) * 100)
+        else:
+            print "%5s : %10d %10d" % ('TOTAL', natoms, nmolecules)
+
         return
 
     def run(self, niterations):
@@ -523,6 +587,6 @@ class AtomTypeSampler(object):
 
                 # Compute atomtype statistics on molecules.
                 [atom_typecounts, molecule_typecounts] = self.compute_type_statistics(self.atomtypes, self.molecules)
-                self.show_type_statistics(self.atomtypes, atom_typecounts, molecule_typecounts)
+                self.show_type_statistics(self.atomtypes, atom_typecounts, molecule_typecounts, atomtype_matches=self.atom_type_matches)
 
                 print('')
