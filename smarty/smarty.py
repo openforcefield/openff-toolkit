@@ -221,6 +221,10 @@ class AtomTypeSampler(object):
         -----
         This is just a proof of concept.  No scoring of molecular properties is performed.
 
+        TODO
+        ----
+        * Maintain a list of types that do not type any molecules so that we can avoid proposing these again.
+
         """
 
         self.verbose = verbose
@@ -454,16 +458,26 @@ class AtomTypeSampler(object):
 
         if self.verbose: print('Proposal is valid...')
 
-        if self.temperature == 0.0:
-            effective_temperature = 1
+        # Accept automatically if no reference molecules
+        accept = False
+        if self.reference_typed_molecules is None:
+            accept = True
         else:
-            effective_temperature = (self.total_atoms * self.temperature)
+            # Compute effective temperature
+            if self.temperature == 0.0:
+                effective_temperature = 1
+            else:
+                effective_temperature = (self.total_atoms * self.temperature)
 
-        # Compute likelihood for accept/reject
-        (proposed_atom_type_matches, proposed_total_atom_type_matches) = self.best_match_reference_types(proposed_atomtypes, proposed_molecules)
-        log_P_accept = (proposed_total_atom_type_matches - self.total_atom_type_matches) / effective_temperature
-        if (log_P_accept > 0.0) or (numpy.random.uniform() < numpy.exp(log_P_accept)):
-            # Accept.
+            # Compute likelihood for accept/reject
+            (proposed_atom_type_matches, proposed_total_atom_type_matches) = self.best_match_reference_types(proposed_atomtypes, proposed_molecules)
+            log_P_accept = (proposed_total_atom_type_matches - self.total_atom_type_matches) / effective_temperature
+            print('Proposal score: %d >> %d : log_P_accept = %.5e' % (self.total_atom_type_matches, proposed_total_atom_type_matches, log_P_accept))
+            if (log_P_accept > 0.0) or (numpy.random.uniform() < numpy.exp(log_P_accept)):
+                accept = True
+
+        # Accept or reject
+        if accept:
             self.atomtypes = proposed_atomtypes
             self.molecules = proposed_molecules
             self.atom_type_matches = proposed_atom_type_matches
