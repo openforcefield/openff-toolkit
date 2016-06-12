@@ -336,10 +336,7 @@ class AtomTypeSampler(object):
         if self.verbose:
             print('%d / %d total atoms match' % (total_atom_matches, total_atoms))
 
-
-
-
-        return
+        return total_atom_matches
 
     def sample_atomtypes(self):
         """
@@ -351,6 +348,9 @@ class AtomTypeSampler(object):
         proposed_molecules = copy.deepcopy(self.molecules)
         natomtypes = len(proposed_atomtypes)
         ndecorators = len(self.decorators)
+
+        # TODO: Compute likelihood
+        current_atom_matches = self.best_match_reference_types()
 
         valid_proposal = True
 
@@ -420,13 +420,16 @@ class AtomTypeSampler(object):
         if self.verbose: print('Proposal is valid...')
 
         # TODO: Compute likelihood
-        self.best_match_reference_types()
+        proposed_atom_matches = self.best_match_reference_types()
 
-        # Accept.
-        self.atomtypes = proposed_atomtypes
-        self.molecules = proposed_molecules
-
-        return
+        log_P_accept = (proposed_atom_matches - current_atom_matches) / self.temperature
+        if (log_P_accept > 0.0) or (numpy.random.uniform() < numpy.exp(log_P_accept)):
+            # Accept.
+            self.atomtypes = proposed_atomtypes
+            self.molecules = proposed_molecules
+            return True
+        else:
+            return False
 
     def type_molecules(self, typelist, molecules):
         """
