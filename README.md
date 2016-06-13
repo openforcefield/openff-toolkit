@@ -12,9 +12,30 @@ This is a simple example of how Bayesian atom type sampling using reversible-jum
 * `oe_license.txt.enc` - encrypted OpenEye license for continuous integration testing
 * `.travis.yml` - travis-ci continuous integration file
 
-## installation
+## Prerequisites
 
-Install `smarty` with
+Install [miniconda](http://conda.pydata.org/miniconda.html) first. On `osx` with `bash`, this is:
+```
+wget https://repo.continuum.io/miniconda/Miniconda2-latest-MacOSX-x86_64.sh
+bash Miniconda2-latest-MacOSX-x86_64.sh -b -p $HOME/miniconda
+export PATH="$HOME/miniconda/bin:${PATH}""
+```
+
+You must first install the OpenEye toolkit:
+```
+pip install -i https://pypi.anaconda.org/OpenEye/simple OpenEye-toolkits
+```
+
+Install other conda dependencies:
+```
+conda install --yes numpy networkx
+```
+
+NOTE: We'll find a better way to install these dependencies via `conda` soon.
+
+## Installation
+
+Install `smarty` from the `smarty/` directory with:
 ```bash
 pip install .
 ```

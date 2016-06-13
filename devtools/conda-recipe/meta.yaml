@@ -1,0 +1,33 @@
+package:
+  name: smarty
+  version: 0.0.0
+
+source:
+  path: ../..
+
+build:
+  preserve_egg_dir: True
+  number: 0
+
+requirements:
+  build:
+    - python
+    - setuptools
+
+  run:
+    - python
+    - numpy
+    - networkx
+
+test:
+  requires:
+    - nose
+    - nose-timer
+  imports:
+    - smarty
+  commands:
+    - smarty
+
+about:
+  home: https://github.com/open-forcefield-group/smarty
+  license: GNU Lesser General Public License v2 or later (LGPLv2+)
