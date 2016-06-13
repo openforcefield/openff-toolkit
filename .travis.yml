@@ -16,9 +16,11 @@ script:
   # Add omnia channel
   - conda config --add channels ${ORGNAME}
   # build the recipe
-  - conda build devtools/conda-recipe
+  #- conda build devtools/conda-recipe
   # Test the local installation
-  - source activate _test
+  #- source activate _test
+  # Install (DEBUG)
+  - pip install .
   # Install OpenEye toolkit
   - pip install $OPENEYE_CHANNEL openeye-toolkits
   # Run tests
