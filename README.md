@@ -1,20 +1,24 @@
-# smarty: Exploring Bayesian atom type sampling
+[![Build Status](https://travis-ci.org/open-forcefield-group/smarty.svg?branch=master)](https://travis-ci.org/open-forcefield-group/smarty)
+
+# `smarty`: Exploring Bayesian atom type sampling
 
 This is a simple example of how Bayesian atom type sampling using reversible-jump Markov chain Monte Carlo (RJMCMC) [1] over SMARTS types might work.
 
 ## Manifest
 
-```
-smarty/ - simple toolkit illustrating the use of RJMCMC to sample over SMARTS-specified atom types
-examples/ - some toy examples
-```
+* `examples/` - some toy examples - look here to get started
+* `smarty/` - simple toolkit illustrating the use of RJMCMC to sample over SMARTS-specified atom types
+* `devtools/` - continuous integration and packaging scripts and utilities
+* `oe_license.txt.enc` - encrypted OpenEye license for continuous integration testing
+* `.travis.yml` - travis-ci continuous integration file
+
 ## installation
 
 Install `smarty` with
 ```bash
 pip install .
 ```
-If you modify the `smarty` codebase (rather than the examples), reinstall with
+If you modify the `smarty` source code (rather than the examples), reinstall with
 ```bash
 pip install . --upgrade
 ```
