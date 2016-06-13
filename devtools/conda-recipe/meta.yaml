@@ -23,10 +23,10 @@ test:
   requires:
     - nose
     - nose-timer
-  imports:
-    - smarty
-  commands:
-    - smarty
+#  imports:
+#    - smarty
+#  commands:
+#    - smarty
 
 about:
   home: https://github.com/open-forcefield-group/smarty
