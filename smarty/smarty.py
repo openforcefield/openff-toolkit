@@ -578,9 +578,9 @@ class AtomTypeSampler(object):
         for [smarts, typename] in typelist:
             if atomtype_matches is not None:
                 (reference_atomtype, reference_count) = reference_type_info[typename]
-                reference_total = self.reference_atomtypes_atomcount[reference_atomtype]
-                reference_fraction = float(reference_count) / float(reference_total)
                 if reference_atomtype is not None:
+                    reference_total = self.reference_atomtypes_atomcount[reference_atomtype]
+                    reference_fraction = float(reference_count) / float(reference_total)
                     print "%5d : %10d %10d | %64s %32s %8s %16d / %16d (%7.3f%%)" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts, reference_atomtype, reference_count, reference_total, reference_fraction*100)
                 else:
                     print "%5d : %10d %10d | %64s %32s" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts)
