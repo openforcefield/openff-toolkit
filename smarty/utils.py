@@ -20,9 +20,6 @@ import re
 import numpy
 import random
 
-import simtk.openmm as openmm
-import simtk.unit as units
-
 import openeye.oechem
 import openeye.oeomega
 import openeye.oequacpac

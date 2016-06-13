@@ -26,10 +26,12 @@ You must first install the OpenEye toolkit:
 pip install -i https://pypi.anaconda.org/OpenEye/simple OpenEye-toolkits
 ```
 
-Install `networkx`:
+Install other conda dependencies:
 ```
-conda install --yes networkx
+conda install --yes numpy networkx
 ```
+
+NOTE: We'll find a better way to install these dependencies via `conda` soon.
 
 ## Installation
 
