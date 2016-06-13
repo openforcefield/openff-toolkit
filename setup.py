@@ -20,5 +20,5 @@ setup(
         "Topic :: Utilities",
         "License :: OSI Approved :: GNU Lesser General Public License (LGPL), Version 3",
     ],
-    entry_points={'console_scripts': ['smarty = smarty.cli:main']}),
+    entry_points={'console_scripts': ['smarty = smarty.cli:main']},
 )
