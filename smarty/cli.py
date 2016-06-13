@@ -17,8 +17,7 @@ import random
 
 import smarty
 
-if __name__=="__main__":
-
+def main():
     # Create command-line argument options.
     usage_string = """\
     Sample over atom types, optionally attempting to match atom types in a reference typed set of molecules.
