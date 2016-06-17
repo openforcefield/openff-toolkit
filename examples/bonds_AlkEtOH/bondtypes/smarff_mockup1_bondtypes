@@ -1,0 +1,9 @@
+# bonds
+# This is just the bonds section from the smarts version of the Parm99 FF bonding paramters. 
+[#6X4]-[#6X4]    parBond  (1.526, 310.0) parNum b001 {CT-CT from frcmod.Frosst_AlkEthOH}
+[#6X4]-[#1]      parBond  (1.090, 340.0) parNum b002 {CT-H_ from frcmod.Frosst_AlkEthOH}
+[#6X4]-[O&X2&H1] parBond  (1.410, 320.0) parNum b003 {CT-OH from frcmod.Frosst_AlkEthOH}
+[#6X4]-[O&X2&H0] parBond  (1.370, 320.0) parNum b004 {CT-OS from frcmod.Frosst_AlkEthOH}
+[#8X2]-[#1]      parBond  (0.960, 553.0) parNum b005 {OH-HO from frcmod.Frosst_AlkEthOH}
+
+
