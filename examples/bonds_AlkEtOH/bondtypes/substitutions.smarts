@@ -1,0 +1,61 @@
+% Substitution definitions
+% Format:
+% <SMARTS> <replacement-string>
+
+% elements
+[#1]    hydrogen
+[#6]    carbon
+[#7]    nitrogen
+[#8]    oxygen
+[#9]    fluorine
+[#15]   phosphorous
+[#16]   sulfur
+[#17]   chlorine
+[#35]   bromine
+[#53]   iodine
+
+% halogens
+[$smallhals,$largehals]     halogen
+[$fluorine,$chlorine]       smallhals
+[$bromine,$iodine]          largehals
+
+% any bonds
+[#6]~[#6]   cc
+[#6]~[#1]   ch
+[#6]~[#8]   co
+[#8]~[#1]   oh
+[#1]~[#1]   hh
+[#8]~[#8]   oo
+
+% single bonds
+[#6]-[#6]   c-c
+[#6]-[#1]   c-h
+[#6]-[#8]   c-o
+[#8]-[#1]   o-h
+[#1]-[#1]   h-h
+[#8]-[#8]   o-o
+
+% double bonds
+[#6]=[#6]   c=c
+[#6]=[#1]   c=h
+[#6]=[#8]   c=o
+[#8]=[#1]   o=h
+[#1]=[#1]   h=h
+[#8]=[#8]   o=o
+
+% triple bonds
+[#6]#[#6]   c#c
+[#6]#[#1]   c#h
+[#6]#[#8]   c#o
+[#8]#[#1]   o#h
+[#1]#[#1]   h#h
+[#8]#[#8]   o#o
+
+% Ring bonds
+[#6]@[#6]   c@c
+[#6]@[#1]   c@h
+[#6]@[#8]   c@o
+[#8]@[#1]   o@h
+[#1]@[#1]   h@h
+[#8]@[#8]   o@o
+
