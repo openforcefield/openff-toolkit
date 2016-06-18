@@ -81,7 +81,7 @@ def main():
         reference_typed_molecules = smarty.utils.read_molecules(options.reference_molecules_filename, verbose=True)
 
     # Construct atom type sampler.
-    atomtype_sampler = smarty.AtomTypeSampler(molecules, options.basetypes_filename, options.decorators_filename, replacements_filename=options.substitutions_filename, reference_typed_molecules=reference_typed_molecules, verbose=verbose)
+    atomtype_sampler = smarty.AtomTypeSampler(molecules, options.basetypes_filename, options.decorators_filename, replacements_filename=options.substitutions_filename, reference_typed_molecules=reference_typed_molecules, verbose=verbose, temperature=options.temperature)
 
     # Start sampling atom types.
     atomtype_sampler.run(options.iterations)
