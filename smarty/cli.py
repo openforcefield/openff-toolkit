@@ -58,7 +58,7 @@ def main():
                       help="MCMC iterations.")
 
     parser.add_option("-t", "--temperature", metavar='TEMPERATURE',
-                      action="store", type="float", dest='TEMPERATURE', default=0.1,
+                      action="store", type="float", dest='temperature', default=0.1,
                       help="Effective temperature for Monte Carlo acceptance, indicating fractional tolerance of mismatched atoms (default: 0.1). If 0 is specified, will behave in a greedy manner.")
 
     verbose = True
@@ -81,7 +81,7 @@ def main():
         reference_typed_molecules = smarty.utils.read_molecules(options.reference_molecules_filename, verbose=True)
 
     # Construct atom type sampler.
-    atomtype_sampler = smarty.AtomTypeSampler(molecules, options.basetypes_filename, options.decorators_filename, replacements_filename=options.substitutions_filename, reference_typed_molecules=reference_typed_molecules, verbose=verbose)
+    atomtype_sampler = smarty.AtomTypeSampler(molecules, options.basetypes_filename, options.decorators_filename, replacements_filename=options.substitutions_filename, reference_typed_molecules=reference_typed_molecules, verbose=verbose, temperature=options.temperature)
 
     # Start sampling atom types.
     atomtype_sampler.run(options.iterations)
