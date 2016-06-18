@@ -30,7 +30,7 @@ def main(argv=sys.argv):
 
     for mol in ifs.GetOEMols():
         oechem.OETriposAtomNames(mol)
-        oechem.OEWriteMolecule(ofs, mol)
+        oechem.OEWriteConstMolecule(ofs, mol)
 
     ifs.close()
     ofs.close()
