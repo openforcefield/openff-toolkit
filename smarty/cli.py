@@ -58,7 +58,7 @@ def main():
                       help="MCMC iterations.")
 
     parser.add_option("-t", "--temperature", metavar='TEMPERATURE',
-                      action="store", type="float", dest='TEMPERATURE', default=0.1,
+                      action="store", type="float", dest='temperature', default=0.1,
                       help="Effective temperature for Monte Carlo acceptance, indicating fractional tolerance of mismatched atoms (default: 0.1). If 0 is specified, will behave in a greedy manner.")
 
     verbose = True
