@@ -61,6 +61,10 @@ def main():
                       action="store", type="float", dest='temperature', default=0.1,
                       help="Effective temperature for Monte Carlo acceptance, indicating fractional tolerance of mismatched atoms (default: 0.1). If 0 is specified, will behave in a greedy manner.")
 
+    parser.add_option("-l", '--trajectory', metavar="TRAJECTORY_FILE",
+            action = "store", dest = "traj_file", default = "trajectory.csv",
+            help = "Name for trajectory file output, trajectory saves only changes to the list of 'atomtypes' for each iteration. For now, if the file name already exists, it just won't create a trajectory file")
+
     verbose = True
 
     # Parse command-line arguments.
@@ -84,4 +88,4 @@ def main():
     atomtype_sampler = smarty.AtomTypeSampler(molecules, options.basetypes_filename, options.decorators_filename, replacements_filename=options.substitutions_filename, reference_typed_molecules=reference_typed_molecules, verbose=verbose, temperature=options.temperature)
 
     # Start sampling atom types.
-    atomtype_sampler.run(options.iterations)
+    atomtype_sampler.run(options.iterations, options.traj_file)
