@@ -1,7 +1,3 @@
-% bond order
-$([*]=[*])     double-bonded
-$([*]#[*])     triple-bonded
-$([*]:[*])     aromatic-bonded
 % bonded to atoms
 $(*~[#1])      hydrogen-adjacent
 $(*~[#6])      carbon-adjacent
@@ -13,24 +9,24 @@ $(*~[#16])     sulfur-adjacent
 $(*~[#17])     chlorine-adjacent
 $(*~[#35])     bromine-adjacent
 $(*~[#53])     iodine-adjacent
-% degree
-D1             degree-1
-D2             degree-2
-D3             degree-3
-D4             degree-4
-D5             degree-5
-D6             degree-6
-% valence
-v1             valence-1
-v2             valence-2
-v3             valence-3
-v4             valence-4
-v5             valence-5
-v6             valence-6
+% total connectivity
+X1             connections-1
+X2             connections-1
+X3             connections-1
+X4             connections-1
 % total-h-count
+H0             total-h-count-0
 H1             total-h-count-1
 H2             total-h-count-2
 H3             total-h-count-3
+% formal charge
++0             neutral
++1             cationic+1
+-1             anionic-1
+% bond order
+$([*]=[*])     double-bonded
+$([*]#[*])     triple-bonded
+$([*]:[*])     aromatic-bonded
 % aromatic/aliphatic
 a              aromatic
 A              aliphatic
