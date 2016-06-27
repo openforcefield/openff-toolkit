@@ -17,7 +17,7 @@ def test_create_system():
     forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
 
     from openeye import oechem
-    ifs = oechem.oemolistream(get_data_filename('molecules/AlkEtOH-tripos.mol2'))
+    ifs = oechem.oemolistream(get_data_filename('molecules/AlkEtOH-tripos.mol2.gz'))
     mol = oechem.OEGraphMol()
     while oechem.OEReadMolecule(ifs, mol):
         from smarty.forcefield import generateTopologyFromOEMol
