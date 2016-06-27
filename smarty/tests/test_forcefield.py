@@ -11,7 +11,7 @@ def test_read_ffxml():
     """
     forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
 
-def test_create_system():
+def test_create_system(verbose=False):
     """Test creation of a System object from small molecules.
     """
     forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
@@ -22,4 +22,7 @@ def test_create_system():
     while oechem.OEReadMolecule(ifs, mol):
         from smarty.forcefield import generateTopologyFromOEMol
         topology = generateTopologyFromOEMol(mol)
-        system = forcefield.createSystem(topology, [mol])
+        system = forcefield.createSystem(topology, [mol], verbose=verbose)
+
+if __name__ == '__main__':
+    test_create_system(verbose=True)

@@ -382,7 +382,7 @@ class ForceField(object):
         self._forces.append(generator)
 
     def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(), **kwargs):
+                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(), verbose=False, **kwargs):
         """Construct an OpenMM System representing a Topology with this force field.
 
         Parameters
@@ -415,6 +415,8 @@ class ForceField(object):
            This allows user to specify which template to apply to particular Residues
            in the event that multiple matching templates are available (e.g Fe2+ and Fe3+
            templates in the ForceField for a monoatomic iron ion in the topology).
+        verbose : bool
+           If True, verbose output will be printed.
         kwargs
              Arbitrary additional keyword arguments may also be specified.
              This allows extra parameters to be specified that are specific to
@@ -461,7 +463,7 @@ class ForceField(object):
 
         # Add forces to the System
         for force in self._forces:
-            force.createForce(system, topology, **kwargs)
+            force.createForce(system, topology, verbose=verbose, **kwargs)
         if removeCMMotion:
             system.addForce(openmm.CMMotionRemover())
 
@@ -575,7 +577,7 @@ class HarmonicBondGenerator(object):
         for bond in element.findall('Bond'):
             generator.registerBond(bond)
 
-    def createForce(self, system, topology, **kwargs):
+    def createForce(self, system, topology, verbose=False, **kwargs):
         # Find existing force or create new one.
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [f for f in existing if type(f) == openmm.HarmonicBondForce]
@@ -594,6 +596,20 @@ class HarmonicBondGenerator(object):
         # Add all bonds to the system.
         for (atom_indices, bond) in bonds.items():
             force.addBond(atom_indices[0], atom_indices[1], bond.length, bond.k)
+
+        if verbose: print('%d bonds added' % (len(bonds)))
+
+        # Check that no topology bonds aren't missing force bonds.
+        topology_bonds = ValenceDict()
+        for (atom1, atom2) in topology.bonds():
+            topology_bonds[(atom1.index,atom2.index)] = True
+        if set(bonds.keys()) != set(topology_bonds.keys()):
+            msg = 'Mismatch between bonds added and topological bonds.\n'
+            msg += 'Bonds added:\n'
+            msg += bonds.keys() + '\n'
+            msg += 'Topological bonds:\n'
+            msg += topology_bonds.keys() + '\n'
+            raise Exception(msg)
 
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
 
