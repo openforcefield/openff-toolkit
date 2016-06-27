@@ -13,6 +13,19 @@ AUTHORS
 
 John D. Chodera <john.chodera@choderalab.org>
 
+Baseed on simtk.openmm.app.forcefield written by Peter Eastman.
+
+TODO
+* Add general constraint syntax using SMIRKS-based matching:
+```XML
+<Constraints>
+  <!-- bonds involving hydrogen -->
+  <Constraint smirks="[#1:1]-[*:2]"/> <!-- add constraint between atoms 1 and 2 using equilibrium bond distance -->
+  <!-- angles involving hydrogen -->
+  <Constraint smirks="[#1:1]-[*:2]-[#1:3]"/> <!-- add constraint between atoms 1 and 3 using auto-calculated distance from equilibrium bond and angles -->
+</Constraints>
+```
+* Move utility functions like '_generateOEMolFromTopologyResidue' elsewhere?
 """
 #=============================================================================================
 # GLOBAL IMPORTS
@@ -21,7 +34,8 @@ John D. Chodera <john.chodera@choderalab.org>
 import sys
 import string
 
-import xml.etree.ElementTree as etree
+#import xml.etree.ElementTree as etree
+import lxml.etree as etree
 
 from simtk.openmm.app import element as elem
 from simtk.openmm.app import Topology
@@ -39,7 +53,11 @@ import openeye.oequacpac
 
 from openeye import oechem
 
+from simtk import openmm, unit
+
 import time
+
+import networkx
 
 #=============================================================================================
 # PRIVATE SUBROUTINES
@@ -53,8 +71,242 @@ def _convertParameterToNumber(param):
     return float(param)
 
 #=============================================================================================
+# Augmented Topology
+#=============================================================================================
+
+def generateTopologyFromOEMol(molecule):
+    """
+    Generate an OpenMM Topology object from an OEMol molecule.
+
+    Parameters
+    ----------
+    molecule : openeye.oechem.OEMol
+        The molecule from which a Topology object is to be generated.
+
+    Returns
+    -------
+    topology : simtk.openmm.app.Topology
+        The Topology object generated from `molecule`.
+
+    """
+    # Create a Topology object with one Chain and one Residue.
+    from simtk.openmm.app import Topology
+    topology = Topology()
+    chain = topology.addChain()
+    resname = molecule.GetTitle()
+    residue = topology.addResidue(resname, chain)
+
+    # Create atoms in the residue.
+    for atom in molecule.GetAtoms():
+        name = atom.GetName()
+        element = elem.Element.getByAtomicNumber(atom.GetAtomicNum())
+        atom = topology.addAtom(name, element, residue)
+
+    # Create bonds.
+    atoms = { atom.name : atom for atom in topology.atoms() }
+    for bond in molecule.GetBonds():
+        topology.addBond(atoms[bond.GetBgn().GetName()], atoms[bond.GetEnd().GetName()])
+
+    return topology
+
+def generateGraphFromTopology(topology):
+    """Geneate a NetworkX graph from a Topology object.
+
+    Parameters
+    ----------
+    topology : simtk.openmm.app.Topology
+        The source topology.
+
+    Returns
+    -------
+    graph : networkx.Graph
+        The resulting graph, with nodes labeled with atom indices and elements
+
+    """
+    import networkx as nx
+    # Create graph of atoms connected by bonds.
+    G = nx.Graph()
+    for atom in topology.atoms():
+        G.add_node(atom.index, element=atom.element)
+    for (atom1, atom2) in topology.bonds():
+        G.add_edge(atom1.index, atom2.index)
+
+    return G
+
+class _Topology(Topology):
+    """Augmented Topology object which adds:
+
+    self._reference_molecules is a list of OEMol for the reference molecules
+    self._reference_to_topology_atom_mappings[reference_molecule] is a list of atom indices mapping a reference molecule atom index to the topology atom index
+    """
+    def __init__(self, topology, reference_molecules):
+        """
+        Parameters
+        ----------
+        topology : simtk.openmm.app.Topology
+            The Topology object to initialize this one from.
+        reference_molecules : list of openeye.oechem.OEMol
+            The list of reference molecules in the Topology.
+
+        """
+        # Initialize.
+        super(_Topology, self).__init__()
+
+        # TODO: Find a way to avoid having this be fragile based on internal representation of Topology.
+        # TODO: Should this also use a deepcopy of 'topology' first?
+        self._chains = topology._chains
+        self._numResidues = topology._numResidues
+        self._numAtoms = topology._numAtoms
+        self._bonds = topology._bonds
+        self._periodicBoxVectors = topology._periodicBoxVectors
+
+        # Store reference molecules.
+        # TODO: Deep copy?
+        self._reference_molecules = reference_molecules
+
+        # Identify all molecules and atom mappings.
+        self._identifyMolecules()
+
+    def _identifyMolecules(self):
+        """Identify all unique reference molecules and atom mappings to all instances in the Topology.
+        """
+        import networkx as nx
+        from networkx.algorithms import isomorphism
+
+        # Generate list of topology atoms.
+        atoms = [ atom for atom in self.atoms() ]
+
+        # Generate graphs for reference molecules.
+        self._reference_molecule_graphs = list()
+        for reference_molecule in self._reference_molecules:
+            # Generate Topology
+            reference_molecule_topology = generateTopologyFromOEMol(reference_molecule)
+            # Generate Graph
+            reference_molecule_graph = generateGraphFromTopology(reference_molecule_topology)
+            self._reference_molecule_graphs.append(reference_molecule_graph)
+
+        # Generate a graph for the current topology.
+        G = generateGraphFromTopology(self)
+
+        # Extract molecules (as connected component subgraphs).
+        self._reference_to_topology_atom_mappings = { reference_molecule : list() for reference_molecule in self._reference_molecules }
+        for molecule_graph in nx.connected_component_subgraphs(G):
+            # Check if we have already stored a reference molecule for this molecule.
+            reference_molecule_exists = False
+            for (reference_molecule_graph, reference_molecule) in zip(self._reference_molecule_graphs, self._reference_molecules):
+                GM = isomorphism.GraphMatcher(molecule_graph, reference_molecule_graph)
+                if GM.is_isomorphic():
+                    # This molecule is present in the list of unique reference molecules.
+                    reference_molecule_exists = True
+                    # Add the reference atom mappings.
+                    reference_to_topology_atom_mapping = dict()
+                    for (topology_atom, reference_atom) in GM.mapping.iteritems():
+                        reference_to_topology_atom_mapping[reference_atom] = topology_atom
+                    self._reference_to_topology_atom_mappings[reference_molecule].append(reference_to_topology_atom_mapping)
+                    # Break out of the search loop.
+                    break
+
+            # If the reference molecule could not be found, throw an exception.
+            if not reference_molecule_exists:
+                msg = 'No provided molecule matches topology molecule:\n'
+                for index in sorted(list(molecule_graph)):
+                    msg += 'Atom %8d %5s %5d %3s\n' % (atoms[index].index, atoms[index].name, atoms[index].residue.index, atoms[index].residue.name)
+                raise Exception(msg)
+
+    def getSMIRKSMatches(self, smirks):
+        """Find all sets of atoms in the topology that match the provided SMIRKS strings.
+
+        Parameters
+        ----------
+        smirks : str
+            SMIRKS string with tagged atoms.
+            If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+
+        Returns
+        -------
+        matches : list of tuples of Atom
+            matches[index] is an N-tuple of Atom entries from the topology
+            Matches are returned in no guaranteed order.
+
+        """
+        # Set up query.
+        qmol = oechem.OEQMol()
+        if not oechem.OEParseSmarts(qmol, smirks):
+            raise Exception("Error parsing SMIRKS '%s'" % smirks)
+
+        # Perform matching on each unique molecule, unrolling the matches to all matching copies of tha tmolecule in the Topology object.
+        matches = list()
+        unique = True # give unique matches
+        for reference_molecule in self._reference_molecules:
+            # Find all atomsets that match this definition in the reference molecule
+            ss = oechem.OESubSearch(qmol)
+            for match in ss.Match(reference_molecule, unique):
+                # Compile list of reference atom indices that match the pattern tags.
+                reference_atom_indices = dict()
+                for ma in match.GetAtoms():
+                    if ma.pattern.GetMapIdx() != 0:
+                        reference_atom_indices[ma.pattern.GetMapIdx()-1] = ma.target.GetIdx()
+                # Compress into list.
+                reference_atom_indices = [ reference_atom_indices[index] for index in range(len(reference_atom_indices)) ]
+                # Unroll all instances of this molecule.
+                for reference_to_topology_atom_mapping in self._reference_to_topology_atom_mappings[reference_molecule]:
+                    # Create match.
+                    atom_indices = tuple([ reference_to_topology_atom_mapping[atom_index] for atom_index in reference_atom_indices ])
+                    matches.append(atom_indices)
+
+        return matches
+
+#=============================================================================================
 # FORCEFIELD
 #=============================================================================================
+
+# Enumerated values for nonbonded method
+
+class NoCutoff(object):
+    def __repr__(self):
+        return 'NoCutoff'
+NoCutoff = NoCutoff()
+
+class CutoffNonPeriodic(object):
+    def __repr__(self):
+        return 'CutoffNonPeriodic'
+CutoffNonPeriodic = CutoffNonPeriodic()
+
+class CutoffPeriodic(object):
+    def __repr__(self):
+        return 'CutoffPeriodic'
+CutoffPeriodic = CutoffPeriodic()
+
+class Ewald(object):
+    def __repr__(self):
+        return 'Ewald'
+Ewald = Ewald()
+
+class PME(object):
+    def __repr__(self):
+        return 'PME'
+PME = PME()
+
+# Enumerated values for constraint type
+
+class HBonds(object):
+    def __repr__(self):
+        return 'HBonds'
+HBonds = HBonds()
+
+class AllBonds(object):
+    def __repr__(self):
+        return 'AllBonds'
+AllBonds = AllBonds()
+
+class HAngles(object):
+    def __repr__(self):
+        return 'HAngles'
+HAngles = HAngles()
+
+# A map of functions to parse elements of the XML file.
+
+parsers = {}
 
 class ForceField(object):
     """A ForceField constructs OpenMM System objects based on a Topology.
@@ -121,115 +373,24 @@ class ForceField(object):
                 if child.tag in parsers:
                     parsers[child.tag](child, self)
 
-    @classmethod
-    def generateOEMolFromTopologyResidue(cls, residue, geometry=False, tripos_atom_names=False):
-        """
-        Generate an OpenEye OEMol molecule from an OpenMM Topology Residue.
+    def getGenerators(self):
+        """Get the list of all registered generators."""
+        return self._forces
 
-        Parameters
-        ----------
-        residue : simtk.openmm.app.topology.Residue
-            The topology Residue from which an OEMol is to be created.
-            An Exception will be thrown if this residue has external bonds.
-        geometry : bool, optional, default=False
-            If True, will generate a single configuration with OEOmega.
-            Note that stereochemistry will be *random*.
-        tripos_atom_names : bool, optional, default=False
-            If True, will generate and assign Tripos atom names.
+    def registerGenerator(self, generator):
+        """Register a new generator."""
+        self._forces.append(generator)
 
-        Returns
-        -------
-        molecule : openeye.oechem.OEMol
-            The OEMol molecule corresponding to the topology.
-            Atom order will be preserved and bond orders assigned.
-
-        The Antechamber `bondtype` program will be used to assign bond orders, and these
-        will be converted back into OEMol bond type assignments.
-
-        Note that there is no way to preserve stereochemistry since `Residue` does
-        not note stereochemistry in any way.
-
-        """
-        # Raise an Exception if this residue has external bonds.
-        if len(list(residue.external_bonds())) > 0:
-            raise Exception("Cannot generate an OEMol from residue '%s' because it has external bonds." % residue.name)
-
-        # Create OEMol where all atoms have bond order 1.
-        molecule = oechem.OEMol()
-        molecule.SetTitle(residue.name) # name molecule after first residue
-        for atom in residue.atoms():
-            oeatom = molecule.NewAtom(atom.element.atomic_number)
-            oeatom.SetName(atom.name)
-            oeatom.AddData("topology_index", atom.index)
-        oeatoms = { oeatom.GetName() : oeatom for oeatom in molecule.GetAtoms() }
-        for (atom1, atom2) in residue.bonds():
-            order = 1
-            molecule.NewBond(oeatoms[atom1.name], oeatoms[atom2.name], order)
-
-        # Write out a mol2 file without altering molecule.
-        import tempfile
-        tmpdir = tempfile.mkdtemp()
-        mol2_input_filename = os.path.join(tmpdir,'molecule-before-bond-perception.mol2')
-        ac_output_filename = os.path.join(tmpdir,'molecule-after-bond-perception.ac')
-        ofs = oechem.oemolostream(mol2_input_filename)
-        m2h = True
-        substruct = False
-        oechem.OEWriteMol2File(ofs, molecule, m2h, substruct)
-        ofs.close()
-        # Run Antechamber bondtype
-        import subprocess
-        #command = 'bondtype -i %s -o %s -f mol2 -j full' % (mol2_input_filename, ac_output_filename)
-        command = 'antechamber -i %s -fi mol2 -o %s -fo ac -j 2' % (mol2_input_filename, ac_output_filename)
-        [status, output] = getstatusoutput(command)
-
-        # Define mapping from GAFF bond orders to OpenEye bond orders.
-        order_map = { 1 : 1, 2 : 2, 3: 3, 7 : 1, 8 : 2, 9 : 5, 10 : 5 }
-        # Read bonds.
-        infile = open(ac_output_filename)
-        lines = infile.readlines()
-        infile.close()
-        antechamber_bond_types = list()
-        for line in lines:
-            elements = line.split()
-            if elements[0] == 'BOND':
-                antechamber_bond_types.append(int(elements[4]))
-        oechem.OEClearAromaticFlags(molecule)
-        for (bond, antechamber_bond_type) in zip(molecule.GetBonds(), antechamber_bond_types):
-            #bond.SetOrder(order_map[antechamber_bond_type])
-            bond.SetIntType(order_map[antechamber_bond_type])
-        oechem.OEFindRingAtomsAndBonds(molecule)
-        oechem.OEKekulize(molecule)
-        oechem.OEAssignFormalCharges(molecule)
-        oechem.OEAssignAromaticFlags(molecule, oechem.OEAroModelOpenEye)
-
-        # Clean up.
-        os.unlink(mol2_input_filename)
-        os.unlink(ac_output_filename)
-        os.rmdir(tmpdir)
-
-        # Generate Tripos atom names if requested.
-        if tripos_atom_names:
-            oechem.OETriposAtomNames(molecule)
-
-        # Assign geometry
-        if geometry:
-            from openeye import oeomega
-            omega = oeomega.OEOmega()
-            omega.SetMaxConfs(1)
-            omega.SetIncludeInput(False)
-            omega.SetStrictStereo(False)
-            omega(molecule)
-
-        return molecule
-
-    def createSystem(self, topology, molecules=nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(), **args):
+    def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
+                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(), **kwargs):
         """Construct an OpenMM System representing a Topology with this force field.
 
         Parameters
         ----------
         topology : Topology
             The Topology for which to create a System
+        molecules : list of openeye.oechem.OEMol
+            List of molecules appearing in the topology
         nonbondedMethod : object=NoCutoff
             The method to use for nonbonded interactions.  Allowed values are
             NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
@@ -254,7 +415,7 @@ class ForceField(object):
            This allows user to specify which template to apply to particular Residues
            in the event that multiple matching templates are available (e.g Fe2+ and Fe3+
            templates in the ForceField for a monoatomic iron ion in the topology).
-        args
+        kwargs
              Arbitrary additional keyword arguments may also be specified.
              This allows extra parameters to be specified that are specific to
              particular force fields.
@@ -264,14 +425,14 @@ class ForceField(object):
         system
             the newly created System
         """
-        # TODO: Create an OEMol object from each molecule in the Topology.
-        molecules = ForceField._extractMolecules(topology)
+        # Work with a modified form of the topology that provides additional accessors.
+        topology = _Topology(topology, molecules)
 
         # Create the System and add atoms
-        sys = mm.System()
+        system = openmm.System()
         for atom in topology.atoms():
             # Add the particle to the OpenMM system.
-            sys.addParticle(atom.element.mass) # TODO: Allow option to use a different mass than the integral elemental mass?
+            system.addParticle(atom.element.mass) # TODO: Add option to use a different mass than the integral elemental mass?
 
         # Adjust hydrogen masses if requested.
         if hydrogenMass is not None:
@@ -281,29 +442,33 @@ class ForceField(object):
                 if atom1.element == elem.hydrogen:
                     (atom1, atom2) = (atom2, atom1)
                 if atom2.element == elem.hydrogen and atom1.element not in (elem.hydrogen, None):
-                    transferMass = hydrogenMass-sys.getParticleMass(atom2.index)
-                    sys.setParticleMass(atom2.index, hydrogenMass)
-                    sys.setParticleMass(atom1.index, sys.getParticleMass(atom1.index)-transferMass)
+                    transferMass = hydrogenMass-system.getParticleMass(atom2.index)
+                    system.setParticleMass(atom2.index, hydrogenMass)
+                    system.setParticleMass(atom1.index, system.getParticleMass(atom1.index)-transferMass)
 
         # Set periodic boundary conditions.
         boxVectors = topology.getPeriodicBoxVectors()
         if boxVectors is not None:
-            sys.setDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2])
+            system.setDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2])
         elif nonbondedMethod not in [NoCutoff, CutoffNonPeriodic]:
             raise ValueError('Requested periodic boundary conditions for a Topology that does not specify periodic box dimensions')
 
         # TODO: Convert requested bonds and angles to use constraints
 
+        # Set nonbonded method.
+        kwargs['nonbondedMethod'] = nonbondedMethod
+        kwargs['nonbondedCutoff'] = nonbondedCutoff
+
         # Add forces to the System
         for force in self._forces:
-            force.createForce(sys, data, nonbondedMethod, nonbondedCutoff, args)
+            force.createForce(system, topology, **kwargs)
         if removeCMMotion:
-            sys.addForce(mm.CMMotionRemover())
+            system.addForce(openmm.CMMotionRemover())
 
         # Let force generators do postprocessing
         for force in self._forces:
             if 'postprocessSystem' in dir(force):
-                force.postprocessSystem(sys, data, args)
+                force.postprocessSystem(system, data, **kwargs)
 
         return sys
 
@@ -314,69 +479,122 @@ class ForceField(object):
 # to the System.  The static method should be added to the parsers map.
 #=============================================================================================
 
+def _validateSMIRKS(smirks, node=None):
+    """Validate the specified SMIRKS string.
+
+    Parameters
+    ----------
+    smirks : str
+       The SMIRKS string to be validated
+    node : xml.etree.ElementTree.Element
+       Node of etree with 'sourceline' attribute.
+
+    """
+    qmol = oechem.OEQMol()
+    if not oechem.OEParseSmarts(qmol, smirks):
+        if (node is not None) and ('sourceline' in note.attrib):
+            raise Exception("Line %s: Error parsing SMIRKS '%s'" % (node.attrib['sourceline'], node.attrib['smirks']))
+        else:
+            raise Exception("Error parsing SMIRKS '%s'" % (node.attrib['smirks']))
+
+    return smirks
+
+import collections
+class TransformedDict(collections.MutableMapping):
+    """A dictionary that applies an arbitrary key-altering
+       function before accessing the keys"""
+
+    def __init__(self, *args, **kwargs):
+        self.store = dict()
+        self.update(dict(*args, **kwargs))  # use the free update to set keys
+
+    def __getitem__(self, key):
+        return self.store[self.__keytransform__(key)]
+
+    def __setitem__(self, key, value):
+        self.store[self.__keytransform__(key)] = value
+
+    def __delitem__(self, key):
+        del self.store[self.__keytransform__(key)]
+
+    def __iter__(self):
+        return iter(self.store)
+
+    def __len__(self):
+        return len(self.store)
+
+    def __keytransform__(self, key):
+        return key
+
+class ValenceDict(TransformedDict):
+    """Enforce uniqueness in atom indices"""
+    def __keytransform__(self, key):
+        """Reverse tuple if first element is larger than last element."""
+        # Ensure key is a tuple.
+        key = tuple(key)
+        # Reverse the key if the first element is bigger than the last.
+        if key[0] > key[-1]:
+            key = tuple(reversed(key))
+        return key
+
+#=============================================================================================
+# Force generators
+#=============================================================================================
+
 ## @private
 class HarmonicBondGenerator(object):
     """A HarmonicBondGenerator constructs a HarmonicBondForce."""
 
-    class Bond(object):
+    class SMARTYBondType(object):
+        """A SMARTY bond type."""
         def __init__(self, node):
-            self.smirks = node.attrib['smirks']
+            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.length = _convertParameterToNumber(node.attrib['length'])
             self.k = _convertParameterToNumber(node.attrib['k'])
 
-            # Check SMIRKS for validity
-            qmol = oechem.OEQMol()
-            if not oechem.OEParseSmarts( qmol, bond.smirks ):
-                raise Exception('HarmonicBondForce error in ')
-
-
-
     def __init__(self, forcefield):
         self.ff = forcefield
-        self._bonds = list()
+        self._bondtypes = list()
 
-    def registerBond(self, parameters):
-        self._bonds.append(HarmonicBondGenerator.Bond(bond))
+    def registerBond(self, node):
+        """Register a SMARTY bondtype definition."""
+        bond = HarmonicBondGenerator.SMARTYBondType(node)
+        self._bondtypes.append(bond)
 
     @staticmethod
     def parseElement(element, ff):
+        # Find existing force generator or create new one.
         existing = [f for f in ff._forces if isinstance(f, HarmonicBondGenerator)]
         if len(existing) == 0:
             generator = HarmonicBondGenerator(ff)
             ff.registerGenerator(generator)
         else:
             generator = existing[0]
+
+        # Register all SMARTY bond definitions.
         for bond in element.findall('Bond'):
             generator.registerBond(bond)
 
-    def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        existing = [sys.getForce(i) for i in range(sys.getNumForces())]
-        existing = [f for f in existing if type(f) == mm.HarmonicBondForce]
+    def createForce(self, system, topology, **kwargs):
+        # Find existing force or create new one.
+        existing = [system.getForce(i) for i in range(system.getNumForces())]
+        existing = [f for f in existing if type(f) == openmm.HarmonicBondForce]
         if len(existing) == 0:
-            force = mm.HarmonicBondForce()
-            sys.addForce(force)
+            force = openmm.HarmonicBondForce()
+            system.addForce(force)
         else:
             force = existing[0]
 
-        # Match all bonds of each type.
-        for bond in self._bonds:
-            qmol = oechem.OEQMol()
-            if not oechem.OEParseSmarts( qmol, bond.smirks ):
-                raise Exception('HarmonicBondForce error in ')
-            ss = oechem.OESubSearch( qmol)
-                for match in ss.Match(mol, unique):
-        for bond in data.bonds:
-            type1 = data.atomType[data.atoms[bond.atom1]]
-            type2 = data.atomType[data.atoms[bond.atom2]]
-            for i in range(len(self.types1)):
-                types1 = self.types1[i]
-                types2 = self.types2[i]
-                if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
-                    bond.length = self.length[i]
-                    if bond.isConstrained:
-                        data.addConstraint(sys, bond.atom1, bond.atom2, self.length[i])
-                    elif self.k[i] != 0:
-                        force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
-                    break
+        # Iterate over all defined bond types, allowing later matches to override earlier ones.
+        bonds = ValenceDict()
+        for bond in self._bondtypes:
+            for atom_indices in topology.getSMIRKSMatches(bond.smirks):
+                bonds[atom_indices] = bond
+
+        # Add all bonds to the system.
+        for (atom_indices, bond) in bonds.items():
+            force.addBond(atom_indices[0], atom_indices[1], bond.length, bond.k)
 
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
+
+#=============================================================================================
