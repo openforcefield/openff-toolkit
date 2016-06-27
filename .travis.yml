@@ -20,7 +20,7 @@ script:
   # Test the local installation
   #- source activate _test
   # This is a temporary workaround for the conda issues.
-  - conda install --yes nose nose-timer numpy networkx lxml
+  - conda install --yes nose nose-timer numpy networkx lxml openmm
   - pip install .
   # Install OpenEye toolkit
   - pip install $OPENEYE_CHANNEL openeye-toolkits
