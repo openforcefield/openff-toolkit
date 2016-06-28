@@ -36,9 +36,10 @@ def test_create_system_boxes(verbose=False):
     from openeye import oechem
     mol = oechem.OEGraphMol()
     for monomer in monomers:
-        filename = get_data_filename(os.path.join('systems', 'monomers', monomer + '.mol2'))
+        filename = get_data_filename(os.path.join('systems', 'monomers', monomer + '.sdf'))
         ifs = oechem.oemolistream(filename)
         while oechem.OEReadMolecule(ifs, mol):
+            oechem.OETriposAtomNames(mol)
             mols.append( oechem.OEGraphMol(mol) )
     print('%d reference molecules loaded' % len(mols))
 
@@ -60,9 +61,10 @@ def test_smirks():
     from openeye import oechem
     mol = oechem.OEGraphMol()
     for monomer in monomers:
-        filename = get_data_filename(os.path.join('systems', 'monomers', monomer + '.mol2'))
+        filename = get_data_filename(os.path.join('systems', 'monomers', monomer + '.sdf'))
         ifs = oechem.oemolistream(filename)
         while oechem.OEReadMolecule(ifs, mol):
+            oechem.OETriposAtomNames(mol)
             mols.append( oechem.OEGraphMol(mol) )
     print('%d reference molecules loaded' % len(mols))
 
@@ -86,12 +88,12 @@ def test_smirks():
             # Compile list of reference atom indices that match the pattern tags.
             reference_atom_indices = dict()
             matches = [ ma for ma in match.GetAtoms() ]
-            print(matches[0].target.GetName(), matches[1].target.GetName())
+            print(matches[0].target.GetName(), matches[0].target.GetAtomicNum(), matches[1].target.GetName(), matches[1].target.GetAtomicNum())
 
     if not matched:
         raise Exception("Pattern '%s' did not match any molecules in set" % (smirks))
 
 
 if __name__ == '__main__':
-    test_smirks()
-    #test_create_system_boxes(verbose=True)
+    #test_smirks()
+    test_create_system_boxes(verbose=True)

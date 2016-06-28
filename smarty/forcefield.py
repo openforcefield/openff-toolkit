@@ -25,7 +25,7 @@ TODO
   <Constraint smirks="[#1:1]-[*:2]-[#1:3]"/> <!-- add constraint between atoms 1 and 3 using auto-calculated distance from equilibrium bond and angles -->
 </Constraints>
 ```
-* Move utility functions like '_generateOEMolFromTopologyResidue' elsewhere?
+* Move utility functions like 'generateTopologyFromOEMol()' elsewhere?
 """
 #=============================================================================================
 # GLOBAL IMPORTS
@@ -240,10 +240,7 @@ class _Topology(Topology):
         for reference_molecule in self._reference_molecules:
             # Find all atomsets that match this definition in the reference molecule
             ss = oechem.OESubSearch(qmol)
-
-            matched = False
             for match in ss.Match(reference_molecule, unique):
-                matched = True
                 # Compile list of reference atom indices that match the pattern tags.
                 reference_atom_indices = dict()
                 for ma in match.GetAtoms():
@@ -256,9 +253,6 @@ class _Topology(Topology):
                     # Create match.
                     atom_indices = tuple([ reference_to_topology_atom_mapping[atom_index] for atom_index in reference_atom_indices ])
                     matches.append(atom_indices)
-
-            if not matched:
-                print("Pattern '%s' did not match molecule '%s'" % (smirks, reference_molecule.GetTitle()))
 
         return matches
 
@@ -319,12 +313,12 @@ class ForceField(object):
     """
 
     def __init__(self, *files):
-        """Load one or more XML parameter definition files and create a SMARTY ForceField object based on them.
+        """Load one or more XML parameter definition files and create a SMIRFF ForceField object based on them.
 
         Parameters
         ----------
         files : list
-            A list of XML files defining the SMARTY force field.
+            A list of XML files defining the SMIRFF force field.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory (for built in force fields), or an open file-like object with a read() method from which the forcefield XML data can be loaded.
 
         """
@@ -332,12 +326,12 @@ class ForceField(object):
         self.loadFile(files)
 
     def loadFile(self, files):
-        """Load a SMARTY XML file and add the definitions from it to this ForceField.
+        """Load a SMIRFF XML file and add the definitions from it to this ForceField.
 
         Parameters
         ----------
         files : string or file or tuple
-            An XML file or tuple of XML files containing SMARTY force field definitions.
+            An XML file or tuple of XML files containing SMIRFF force field definitions.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory (for built in force fields), or an open file-like object with a read() method from which the forcefield XML data can be loaded.
         """
 
@@ -553,8 +547,8 @@ class ValenceDict(TransformedDict):
 class HarmonicBondGenerator(object):
     """A HarmonicBondGenerator constructs a HarmonicBondForce."""
 
-    class SMARTYBondType(object):
-        """A SMARTY bond type."""
+    class BondType(object):
+        """A SMIRFF bond type."""
         def __init__(self, node):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.length = _convertParameterToNumber(node.attrib['length'])
@@ -565,8 +559,8 @@ class HarmonicBondGenerator(object):
         self._bondtypes = list()
 
     def registerBond(self, node):
-        """Register a SMARTY bondtype definition."""
-        bond = HarmonicBondGenerator.SMARTYBondType(node)
+        """Register a SMIRFF bondtype definition."""
+        bond = HarmonicBondGenerator.BondType(node)
         self._bondtypes.append(bond)
 
     @staticmethod
@@ -579,7 +573,7 @@ class HarmonicBondGenerator(object):
         else:
             generator = existing[0]
 
-        # Register all SMARTY bond definitions.
+        # Register all SMIRFF bond definitions.
         for bond in element.findall('Bond'):
             generator.registerBond(bond)
 
