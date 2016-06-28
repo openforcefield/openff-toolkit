@@ -599,16 +599,23 @@ class HarmonicBondGenerator(object):
 
         if verbose: print('%d bonds added' % (len(bonds)))
 
-        # Check that no topology bonds aren't missing force bonds.
+        # DEBUG: Check that no topology bonds aren't missing force bonds.
+        atoms = [ atom for atom in topology.atoms() ]
         topology_bonds = ValenceDict()
         for (atom1, atom2) in topology.bonds():
             topology_bonds[(atom1.index,atom2.index)] = True
         if set(bonds.keys()) != set(topology_bonds.keys()):
             msg = 'Mismatch between bonds added and topological bonds.\n'
-            msg += 'Bonds added:\n'
-            msg += str(bonds.keys()) + '\n'
-            msg += 'Topological bonds:\n'
-            msg += topology_bonds.keys() + '\n'
+            created_bondset = set(bonds.keys())
+            topology_bondset = set(topology_bonds.keys())
+            msg += 'Bonds created that are not present in Topology:\n'
+            msg += str(created_bondset.difference(topology_bondset)) + '\n'
+            msg += 'Topology bonds not assigned parameters:\n'
+            for (a1, a2) in topology_bondset.difference(created_bondset):
+                atom1 = atoms[a1]
+                atom2 = atoms[a2]
+                msg += '(%8d,%8d) : %5s %3s %3s - %5s %3s %3s' % (a1, a2, atom1.residue.index, atom1.residue.name, atom1.name, atom2.residue.index, atom2.residue.name, atom2.name)
+                msg += '\n'
             raise Exception(msg)
 
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
