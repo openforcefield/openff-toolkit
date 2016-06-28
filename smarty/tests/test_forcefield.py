@@ -51,5 +51,47 @@ def test_create_system_boxes(verbose=False):
         pdbfile = PDBFile(filename)
         system = forcefield.createSystem(pdbfile.topology, mols, verbose=verbose, nonbondedMethod=CutoffPeriodic)
 
+def test_smirks():
+    """Test matching the O-H bond in ethanol.
+    """
+    # Read monomers
+    mols = list()
+    monomers = ['ethanol']
+    from openeye import oechem
+    mol = oechem.OEGraphMol()
+    for monomer in monomers:
+        filename = get_data_filename(os.path.join('systems', 'monomers', monomer + '.mol2'))
+        ifs = oechem.oemolistream(filename)
+        while oechem.OEReadMolecule(ifs, mol):
+            mols.append( oechem.OEGraphMol(mol) )
+    print('%d reference molecules loaded' % len(mols))
+
+    smirks = '[#6:1]~[#1:2]' # C-H bond
+    smirks = '[#8:1]~[#1:2]' # C-H bond
+
+    # Set up query.
+    qmol = oechem.OEQMol()
+    if not oechem.OEParseSmarts(qmol, smirks):
+        raise Exception("Error parsing SMIRKS '%s'" % smirks)
+
+    # Perform matching on each reference molecule.
+    unique = True # give unique matches
+    matched = False # True if pattern matches on any molecule in set
+    for reference_molecule in mols:
+        # Find all atomsets that match this definition in the reference molecule
+        ss = oechem.OESubSearch(qmol)
+
+        for match in ss.Match(reference_molecule, unique):
+            matched = True
+            # Compile list of reference atom indices that match the pattern tags.
+            reference_atom_indices = dict()
+            matches = [ ma for ma in match.GetAtoms() ]
+            print(matches[0].target.GetName(), matches[1].target.GetName())
+
+    if not matched:
+        raise Exception("Pattern '%s' did not match any molecules in set" % (smirks))
+
+
 if __name__ == '__main__':
-    test_create_system_boxes(verbose=True)
+    test_smirks()
+    #test_create_system_boxes(verbose=True)
