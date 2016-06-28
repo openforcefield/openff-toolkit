@@ -67,7 +67,7 @@ def test_smirks():
     print('%d reference molecules loaded' % len(mols))
 
     smirks = '[#6:1]~[#1:2]' # C-H bond
-    smirks = '[#8:1]~[#1:2]' # C-H bond
+    smirks = '[#8:1]~[#1:2]' # O-H bond
 
     # Set up query.
     qmol = oechem.OEQMol()
