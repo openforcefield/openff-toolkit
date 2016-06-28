@@ -606,7 +606,7 @@ class HarmonicBondGenerator(object):
         if set(bonds.keys()) != set(topology_bonds.keys()):
             msg = 'Mismatch between bonds added and topological bonds.\n'
             msg += 'Bonds added:\n'
-            msg += bonds.keys() + '\n'
+            msg += str(bonds.keys()) + '\n'
             msg += 'Topological bonds:\n'
             msg += topology_bonds.keys() + '\n'
             raise Exception(msg)
