@@ -14,6 +14,7 @@
 <HarmonicBondForce>
    <Bond smirks="[#6X4:1]-[#6X4:2]" length="1.626" k="310.0"/> <!-- CT-CT from frcmod.Frosst_AlkEthOH -->
    <Bond smirks="[#6X4:1]-[#1:2]" length="1.090" k="340.0"/> <!-- CT-H_ from frcmod.Frosst_AlkEthOH -->
+   <Bond smirks="[#8:1]~[#1:2]" length="1.410" k="320.0"/> <!-- DEBUG O-H -->
    <Bond smirks="[#6X4:1]-[O&amp;X2&amp;H1:2]" length="1.410" k="320.0"/> <!-- CT-OH from frcmod.Frosst_AlkEthOH -->
    <Bond smirks="[#6X4:1]-[O&amp;X2&amp;H0:2]" length="1.370" k="320.0"/> <!--CT-OS from frcmod.Frosst_AlkEthOH -->
    <Bond smirks="[#8X2:1]-[#1:2]" length="0.960" k="553.0"/> <!-- OH-HO from frcmod.Frosst_AlkEthOH -->

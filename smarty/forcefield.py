@@ -240,7 +240,10 @@ class _Topology(Topology):
         for reference_molecule in self._reference_molecules:
             # Find all atomsets that match this definition in the reference molecule
             ss = oechem.OESubSearch(qmol)
+
+            matched = False
             for match in ss.Match(reference_molecule, unique):
+                matched = True
                 # Compile list of reference atom indices that match the pattern tags.
                 reference_atom_indices = dict()
                 for ma in match.GetAtoms():
@@ -253,6 +256,9 @@ class _Topology(Topology):
                     # Create match.
                     atom_indices = tuple([ reference_to_topology_atom_mapping[atom_index] for atom_index in reference_atom_indices ])
                     matches.append(atom_indices)
+
+            if not matched:
+                print("Pattern '%s' did not match molecule '%s'" % (smirks, reference_molecule.GetTitle()))
 
         return matches
 
@@ -592,6 +598,14 @@ class HarmonicBondGenerator(object):
         for bond in self._bondtypes:
             for atom_indices in topology.getSMIRKSMatches(bond.smirks):
                 bonds[atom_indices] = bond
+
+        if verbose:
+            print('')
+            print('HarmonicBondForceGenerator:')
+            print('')
+            for bond in self._bondtypes:
+                print('%32s : %8d matches' % (bond.smirks, len(topology.getSMIRKSMatches(bond.smirks))))
+            print('')
 
         # Add all bonds to the system.
         for (atom_indices, bond) in bonds.items():
