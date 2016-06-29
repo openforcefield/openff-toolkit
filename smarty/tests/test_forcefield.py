@@ -59,9 +59,14 @@ def check_energy_is_finite(system, positions):
     context = openmm.Context(system, integrator)
     context.setPositions(positions)
     state = context.getState(getEnergy=True)
-    energy = state.getPotentialEnergy() / unit.kilojoules_per_mole
+    energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
     if np.isnan(energy):
         raise Exception('Potential energy is NaN')
+
+    # Test minimization
+    from simtk.openmm import LocalEnergyMinimizer
+    LocalEnergyMinimizer.minimize(context)
+    print context.getState(getEnergy=True).getPotentialEnergy()
 
 def test_read_ffxml():
     """Test reading of ffxml files.

@@ -9,6 +9,7 @@
 <!-- required for alkanes, ethers, and alcohols (excluding ketals and 3-memb-rings) -->
 
 <HarmonicBondForce>
+   <!-- length is in angstroms; k is in kcal/mol/angstrom -->
    <Bond smirks="[#6X4:1]-[#6X4:2]" length="1.626" k="310.0"/> <!-- CT-CT from frcmod.Frosst_AlkEthOH -->
    <Bond smirks="[#6X4:1]-[#1:2]" length="1.090" k="340.0"/> <!-- CT-H_ from frcmod.Frosst_AlkEthOH -->
    <Bond smirks="[#8:1]~[#1:2]" length="1.410" k="320.0"/> <!-- DEBUG O-H -->
@@ -17,6 +18,7 @@
    <Bond smirks="[#8X2:1]-[#1:2]" length="0.960" k="553.0"/> <!-- OH-HO from frcmod.Frosst_AlkEthOH -->
 </HarmonicBondForce>
 <HarmonicAngleForce>
+   <!-- angle is in degrees; k is in kcal/mol/??? -->
    <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50" k="50.0"/> <!-- consensus matches all X-Csp3-X -->
    <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50" k="35.0"/> <!-- H1-CT-H1 from frcmod.Frosst_AlkEthOH -->
    <Angle smirks="[#6X4:1]-[#6X4:2]-[#6X4:3]" angle="109.50" k="40.0"/> <!-- CT-CT-CT from frcmod.Frosst_AlkEthOH -->
@@ -25,6 +27,7 @@
    <Angle smirks="[#6X4:1]-[#8X2:2]-[#6X4:3]" angle="109.50" k="60.0"/> <!-- CT-OS-CT from frcmod.Frosst_AlkEthOH -->
 </HarmonicAngleForce>
 <PeriodicTorsionForce>
+   <!-- phase is in degrees, k is in kcal/mol -->
    <Proper smirks="[a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]" periodicity1="3" phase1="0.0" k1="1.40"/> <!-- X -CT-CT-X from frcmod.Frosst_AlkEthOH -->
    <Proper smirks="[a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]" periodicity1="3" phase1="0.0" k1="0.50"/> <!--X -CT-OH-X from frcmod.Frosst_AlkEthOH -->
    <Proper smirks="[a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]" periodicity1="3" phase1="00" k1="1.15"/> <!-- X -CT-OS-X from frcmod.Frosst_AlkEthOH -->
@@ -36,6 +39,7 @@
    <Improper smirks="[a,A:1]~[#6X3:2]([a,A:3])~[OX1:4]" periodicity1="2" phase1="180.0" k1="10.5"/> <!-- X -X -C -O  from frcmod.Frosst_AlkEthOH -->
 </PeriodicTorsionForce>
 <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+   <!-- sigma is in angstroms, epsilon is in kcal/mol -->
    <Atom smirks="[#1:1]" sigma="1.4870" epsilon="0.0157"/> <!-- making HC the generic hydrogen -->
    <Atom smirks="[$([#1]-C):1]" sigma="1.4870" epsilon="0.0157"/> <!-- HC from frcmod.Frosst_AlkEthOH -->
    <Atom smirks="[$([#1]-C-[#7,#8,F,#16,Cl,Br]):1]" sigma="1.3870" epsilon="0.0157"/> <!-- H1 from frcmod.Frosst_AlkEthOH -->

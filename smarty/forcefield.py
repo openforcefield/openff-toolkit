@@ -551,8 +551,8 @@ class HarmonicBondGenerator(object):
         """A SMIRFF bond type."""
         def __init__(self, node):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.length = _convertParameterToNumber(node.attrib['length'])
-            self.k = _convertParameterToNumber(node.attrib['k'])
+            self.length = _convertParameterToNumber(node.attrib['length']) * unit.angstroms
+            self.k = _convertParameterToNumber(node.attrib['k']) * unit.kilocalories_per_mole / unit.angstroms
 
     def __init__(self, forcefield):
         self.ff = forcefield
@@ -638,8 +638,8 @@ class HarmonicAngleGenerator(object):
         """A SMIRFF angle type."""
         def __init__(self, node):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.angle = _convertParameterToNumber(node.attrib['angle'])
-            self.k = _convertParameterToNumber(node.attrib['k'])
+            self.angle = _convertParameterToNumber(node.attrib['angle']) * unit.degrees
+            self.k = _convertParameterToNumber(node.attrib['k']) * unit.kilocalories_per_mole / unit.radians
 
     def __init__(self, forcefield):
         self.ff = forcefield
@@ -714,8 +714,8 @@ class PeriodicTorsionGenerator(object):
             index = 1
             while 'phase%d'%index in node.attrib:
                 self.periodicity.append(int(node.attrib['periodicity%d'%index]))
-                self.phase.append(_convertParameterToNumber(node.attrib['phase%d'%index]))
-                self.k.append(_convertParameterToNumber(node.attrib['k%d'%index]))
+                self.phase.append(_convertParameterToNumber(node.attrib['phase%d'%index])) * unit.degrees
+                self.k.append(_convertParameterToNumber(node.attrib['k%d'%index])) * unit.kilocalories_per_mole
                 index += 1
 
     def __init__(self, forcefield):
@@ -787,8 +787,8 @@ class NonbondedGenerator(object):
         """A SMIRFF Lennard-Jones type."""
         def __init__(self, node):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.sigma = _convertParameterToNumber(node.attrib['sigma'])
-            self.epsilon = _convertParameterToNumber(node.attrib['epsilon'])
+            self.sigma = _convertParameterToNumber(node.attrib['sigma']) * unit.angstroms
+            self.epsilon = _convertParameterToNumber(node.attrib['epsilon']) * unit.kilocalories_per_mole
 
     def __init__(self, forcefield, coulomb14scale, lj14scale):
         self.ff = forcefield
