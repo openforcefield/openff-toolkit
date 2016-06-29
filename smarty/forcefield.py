@@ -25,7 +25,7 @@ TODO
   <Constraint smirks="[#1:1]-[*:2]-[#1:3]"/> <!-- add constraint between atoms 1 and 3 using auto-calculated distance from equilibrium bond and angles -->
 </Constraints>
 ```
-* Move utility functions like 'generate_topology_from_oemol()' elsewhere?
+* Move utility functions like 'generateTopologyFromOEMol()' elsewhere?
 """
 #=============================================================================================
 # GLOBAL IMPORTS
@@ -74,7 +74,7 @@ def _convertParameterToNumber(param):
 # Augmented Topology
 #=============================================================================================
 
-def generate_topology_from_oemol(molecule):
+def generateTopologyFromOEMol(molecule):
     """
     Generate an OpenMM Topology object from an OEMol molecule.
 
@@ -180,7 +180,7 @@ class _Topology(Topology):
         self._reference_molecule_graphs = list()
         for reference_molecule in self._reference_molecules:
             # Generate Topology
-            reference_molecule_topology = generate_topology_from_oemol(reference_molecule)
+            reference_molecule_topology = generateTopologyFromOEMol(reference_molecule)
             # Generate Graph
             reference_molecule_graph = generateGraphFromTopology(reference_molecule_topology)
             self._reference_molecule_graphs.append(reference_molecule_graph)
@@ -472,7 +472,7 @@ class ForceField(object):
             if 'postprocessSystem' in dir(force):
                 force.postprocessSystem(system, topology, **kwargs)
 
-        return sys
+        return system
 
 #=============================================================================================
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being
@@ -846,11 +846,21 @@ class NonbondedGenerator(object):
                 print('%64s : %8d matches' % (ljtype.smirks, len(topology.getSMIRKSMatches(ljtype.smirks))))
             print('')
 
-        # Add all bonds to the system.
+        # Add all Lennard-Jones terms to the system.
+        # Create all particles.
         for atom in topology.atoms():
             force.addParticle(0.0, 1.0, 0.0)
+        # Set the particle Lennard-Jones terms.
         for (atom_indices, ljtype) in atoms.items():
             force.setParticleParameters(atom_indices[0], 0.0, ljtype.sigma, ljtype.epsilon)
+
+        # Set the partial charges based on reference molecules.
+        for reference_molecule in topology._reference_molecules:
+            atom_mappings = topology._reference_to_topology_atom_mappings[reference_molecule]
+            for atom_mapping in atom_mappings:
+                for (atom, atom_index) in zip(reference_molecule.GetAtoms(), atom_mapping):
+                    [charge, sigma, epsilon] = force.getParticleParameters(atom_index)
+                    force.setParticleParameters(atom_index, atom.GetPartialCharge(), sigma, epsilon)
 
     def postprocessSystem(self, system, topology, verbose=False, **args):
         atoms = [ atom for atom in topology.atoms() ]
