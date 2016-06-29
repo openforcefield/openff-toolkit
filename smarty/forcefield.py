@@ -470,7 +470,7 @@ class ForceField(object):
         # Let force generators do postprocessing
         for force in self._forces:
             if 'postprocessSystem' in dir(force):
-                force.postprocessSystem(system, data, **kwargs)
+                force.postprocessSystem(system, topology, **kwargs)
 
         return sys
 
@@ -494,7 +494,7 @@ def _validateSMIRKS(smirks, node=None):
     """
     qmol = oechem.OEQMol()
     if not oechem.OEParseSmarts(qmol, smirks):
-        if (node is not None) and ('sourceline' in note.attrib):
+        if (node is not None) and ('sourceline' in node.attrib):
             raise Exception("Line %s: Error parsing SMIRKS '%s'" % (node.attrib['sourceline'], node.attrib['smirks']))
         else:
             raise Exception("Error parsing SMIRKS '%s'" % (node.attrib['smirks']))
@@ -598,7 +598,7 @@ class HarmonicBondGenerator(object):
             print('HarmonicBondGenerator:')
             print('')
             for bond in self._bondtypes:
-                print('%32s : %8d matches' % (bond.smirks, len(topology.getSMIRKSMatches(bond.smirks))))
+                print('%64s : %8d matches' % (bond.smirks, len(topology.getSMIRKSMatches(bond.smirks))))
             print('')
 
         # Add all bonds to the system.
@@ -685,7 +685,7 @@ class HarmonicAngleGenerator(object):
             print('HarmonicAngleGenerator:')
             print('')
             for angle in self._angletypes:
-                print('%32s : %8d matches' % (angle.smirks, len(topology.getSMIRKSMatches(angle.smirks))))
+                print('%64s : %8d matches' % (angle.smirks, len(topology.getSMIRKSMatches(angle.smirks))))
             print('')
 
         # Add all angles to the system.
@@ -765,7 +765,7 @@ class PeriodicTorsionGenerator(object):
             print('PeriodicTorsionGenerator:')
             print('')
             for torsion in self._torsiontypes:
-                print('%32s : %8d matches' % (torsion.smirks, len(topology.getSMIRKSMatches(torsion.smirks))))
+                print('%64s : %8d matches' % (torsion.smirks, len(topology.getSMIRKSMatches(torsion.smirks))))
             print('')
 
         # Add all torsions to the system.
@@ -776,3 +776,95 @@ class PeriodicTorsionGenerator(object):
         if verbose: print('%d torsions added' % (len(torsions)))
 
 parsers["PeriodicTorsionForce"] = PeriodicTorsionGenerator.parseElement
+
+## @private
+class NonbondedGenerator(object):
+    """A NonbondedGenerator constructs a NonbondedForce."""
+
+    SCALETOL = 1e-5
+
+    class LennardJonesType(object):
+        """A SMIRFF Lennard-Jones type."""
+        def __init__(self, node):
+            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.sigma = _convertParameterToNumber(node.attrib['sigma'])
+            self.epsilon = _convertParameterToNumber(node.attrib['epsilon'])
+
+    def __init__(self, forcefield, coulomb14scale, lj14scale):
+        self.ff = forcefield
+        self.coulomb14scale = coulomb14scale
+        self.lj14scale = lj14scale
+        self._ljtypes = list()
+
+    def registerAtom(self, node):
+        ljtype = NonbondedGenerator.LennardJonesType(node)
+        self._ljtypes.append(ljtype)
+
+    @staticmethod
+    def parseElement(element, ff):
+        existing = [f for f in ff._forces if isinstance(f, NonbondedGenerator)]
+        if len(existing) == 0:
+            generator = NonbondedGenerator(ff, float(element.attrib['coulomb14scale']), float(element.attrib['lj14scale']))
+            ff.registerGenerator(generator)
+        else:
+            # Multiple <NonbondedForce> tags were found, probably in different files.  Simply add more types to the existing one.
+            generator = existing[0]
+            if abs(generator.coulomb14scale - float(element.attrib['coulomb14scale'])) > NonbondedGenerator.SCALETOL or \
+                    abs(generator.lj14scale - float(element.attrib['lj14scale'])) > NonbondedGenerator.SCALETOL:
+                raise ValueError('Found multiple NonbondedForce tags with different 1-4 scales')
+        for atom in element.findall('Atom'):
+            generator.registerAtom(atom)
+
+    def createForce(self, system, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=0.9, verbose=False, **args):
+        methodMap = {NoCutoff:openmm.NonbondedForce.NoCutoff,
+                     CutoffNonPeriodic:openmm.NonbondedForce.CutoffNonPeriodic,
+                     CutoffPeriodic:openmm.NonbondedForce.CutoffPeriodic,
+                     Ewald:openmm.NonbondedForce.Ewald,
+                     PME:openmm.NonbondedForce.PME}
+        if nonbondedMethod not in methodMap:
+            raise ValueError('Illegal nonbonded method for NonbondedForce')
+        force = openmm.NonbondedForce()
+        force.setNonbondedMethod(methodMap[nonbondedMethod])
+        force.setCutoffDistance(nonbondedCutoff)
+        if 'ewaldErrorTolerance' in args:
+            force.setEwaldErrorTolerance(args['ewaldErrorTolerance'])
+        if 'useDispersionCorrection' in args:
+            force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
+        system.addForce(force)
+
+        # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
+        atoms = ValenceDict()
+        for ljtype in self._ljtypes:
+            for atom_indices in topology.getSMIRKSMatches(ljtype.smirks):
+                atoms[atom_indices] = ljtype
+
+        if verbose:
+            print('')
+            print('NonbondedForceGenerator:')
+            print('')
+            for ljtype in self._ljtypes:
+                print('%64s : %8d matches' % (ljtype.smirks, len(topology.getSMIRKSMatches(ljtype.smirks))))
+            print('')
+
+        # Add all bonds to the system.
+        for atom in topology.atoms():
+            force.addParticle(0.0, 1.0, 0.0)
+        for (atom_indices, ljtype) in atoms.items():
+            force.setParticleParameters(atom_indices[0], 0.0, ljtype.sigma, ljtype.epsilon)
+
+    def postprocessSystem(self, system, topology, verbose=False, **args):
+        atoms = [ atom for atom in topology.atoms() ]
+        natoms = len(atoms)
+
+        # Create exceptions based on bonds.
+        bondIndices = []
+        for (atom1, atom2) in topology.bonds():
+            if (atom1.index < 0) or (atom2.index < 0) or (atom1.index >= natoms) or (atom2.index >= natoms):
+                raise Exception('atom indices out of bounds')
+            bondIndices.append((atom1.index, atom2.index))
+
+        # Create the exceptions.
+        nonbonded = [f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)][0]
+        nonbonded.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)
+
+parsers["NonbondedForce"] = NonbondedGenerator.parseElement

@@ -8,9 +8,6 @@
 <!-- This mockup is based on frcmod.Frosst_AlkEthOH, the minimal subset of parm99/parm@Frosst -->
 <!-- required for alkanes, ethers, and alcohols (excluding ketals and 3-memb-rings) -->
 
-<AtomMasses>
-  <AtomMass smirks="[#1:1]" mass="1.008"/> <!-- from parm99 -->
-</AtomMasses>
 <HarmonicBondForce>
    <Bond smirks="[#6X4:1]-[#6X4:2]" length="1.626" k="310.0"/> <!-- CT-CT from frcmod.Frosst_AlkEthOH -->
    <Bond smirks="[#6X4:1]-[#1:2]" length="1.090" k="340.0"/> <!-- CT-H_ from frcmod.Frosst_AlkEthOH -->
@@ -41,7 +38,7 @@
 <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
    <Atom smirks="[#1:1]" sigma="1.4870" epsilon="0.0157"/> <!-- making HC the generic hydrogen -->
    <Atom smirks="[$([#1]-C):1]" sigma="1.4870" epsilon="0.0157"/> <!-- HC from frcmod.Frosst_AlkEthOH -->
-   <Atom smirks="[$([#1]-C-[#7,#8,F,#16,Cl,Br])]:1]" sigma="1.3870" epsilon="0.0157"/> <!-- H1 from frcmod.Frosst_AlkEthOH -->
+   <Atom smirks="[$([#1]-C-[#7,#8,F,#16,Cl,Br]):1]" sigma="1.3870" epsilon="0.0157"/> <!-- H1 from frcmod.Frosst_AlkEthOH -->
    <Atom smirks="[$([#1]-C(-[#7,#8,F,#16,Cl,Br])-[#7,#8,F,#16,Cl,Br]):1]" sigma="1.2870" epsilon="0.0157"/> <!--H2 from frcmod.Frosst_AlkEthOH -->
 </NonbondedForce>
 
