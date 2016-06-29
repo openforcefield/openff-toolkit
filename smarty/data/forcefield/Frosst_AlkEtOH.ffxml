@@ -29,11 +29,11 @@
 </HarmonicAngleForce>
 <PeriodicTorsionForce>
    <Proper smirks="[a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]" periodicity1="3" phase1="0.0" k1="1.40"/> <!-- X -CT-CT-X from frcmod.Frosst_AlkEthOH -->
-   <Proper smirks="[a,A:1]-[#6X4]-[#8X2]-[#1:4]" periodicity1="3" phase1="0.0" k1="0.50"/> <!--X -CT-OH-X from frcmod.Frosst_AlkEthOH -->
-   <Proper smirks="[a,A:1]-[#6X4]-[#8X2]-[!#1:4]" periodicity1="3" phase1="00" k1="1.15"/> <!-- X -CT-OS-X from frcmod.Frosst_AlkEthOH -->
+   <Proper smirks="[a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]" periodicity1="3" phase1="0.0" k1="0.50"/> <!--X -CT-OH-X from frcmod.Frosst_AlkEthOH -->
+   <Proper smirks="[a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]" periodicity1="3" phase1="00" k1="1.15"/> <!-- X -CT-OS-X from frcmod.Frosst_AlkEthOH -->
    <Proper smirks="[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]" periodicity1="3" phase1="0.0" k1="0.15"/> <!-- HC-CT-CT-HC from frcmod.Frosst_AlkEthOH -->
    <Proper smirks="[#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]" periodicity1="3" phase1="0.0" k1="0.16"/> <!-- HC-CT-CT-CT from frcmod.Frosst_AlkEthOH -->
-   <Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]" periodicity1="3" phase1="0.0" k1="0.16" periodiity2="1" phase2="0.0" k2="0.25"/> <!-- HO-OH-CT-CT from frcmod.Frosst_AlkEthOH -->
+   <Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]" periodicity1="3" phase1="0.0" k1="0.16" periodicity2="1" phase2="0.0" k2="0.25"/> <!-- HO-OH-CT-CT from frcmod.Frosst_AlkEthOH -->
    <Proper smirks="[#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]" periodicity1="3" phase1="0.0" k1="0.18" periodicity2="2" phase2="180.0" k2="0.25" periodicity3="1" phase3="180.0" k3="0.20"/> <!-- CT-CT-CT-CT from frcmod.Frosst_AlkEthOH -->
    <Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]" periodicity1="3" phase1="0.0" k1="0.383" periodicity2="2" phase2="180.0" k2="0.1"/> <!-- CT-CT-OS-CT from frcmod.Frosst_AlkEthOH -->
    <Improper smirks="[a,A:1]~[#6X3:2]([a,A:3])~[OX1:4]" periodicity1="2" phase1="180.0" k1="10.5"/> <!-- X -X -C -O  from frcmod.Frosst_AlkEthOH -->

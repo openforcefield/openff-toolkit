@@ -25,7 +25,7 @@ TODO
   <Constraint smirks="[#1:1]-[*:2]-[#1:3]"/> <!-- add constraint between atoms 1 and 3 using auto-calculated distance from equilibrium bond and angles -->
 </Constraints>
 ```
-* Move utility functions like 'generateTopologyFromOEMol()' elsewhere?
+* Move utility functions like 'generate_topology_from_oemol()' elsewhere?
 """
 #=============================================================================================
 # GLOBAL IMPORTS
@@ -74,7 +74,7 @@ def _convertParameterToNumber(param):
 # Augmented Topology
 #=============================================================================================
 
-def generateTopologyFromOEMol(molecule):
+def generate_topology_from_oemol(molecule):
     """
     Generate an OpenMM Topology object from an OEMol molecule.
 
@@ -180,7 +180,7 @@ class _Topology(Topology):
         self._reference_molecule_graphs = list()
         for reference_molecule in self._reference_molecules:
             # Generate Topology
-            reference_molecule_topology = generateTopologyFromOEMol(reference_molecule)
+            reference_molecule_topology = generate_topology_from_oemol(reference_molecule)
             # Generate Graph
             reference_molecule_graph = generateGraphFromTopology(reference_molecule_topology)
             self._reference_molecule_graphs.append(reference_molecule_graph)
@@ -595,7 +595,7 @@ class HarmonicBondGenerator(object):
 
         if verbose:
             print('')
-            print('HarmonicBondForceGenerator:')
+            print('HarmonicBondGenerator:')
             print('')
             for bond in self._bondtypes:
                 print('%32s : %8d matches' % (bond.smirks, len(topology.getSMIRKSMatches(bond.smirks))))
@@ -629,3 +629,150 @@ class HarmonicBondGenerator(object):
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
 
 #=============================================================================================
+
+## @private
+class HarmonicAngleGenerator(object):
+    """A HarmonicAngleGenerator constructs a HarmonicAngleForce."""
+
+    class AngleType(object):
+        """A SMIRFF angle type."""
+        def __init__(self, node):
+            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.angle = _convertParameterToNumber(node.attrib['angle'])
+            self.k = _convertParameterToNumber(node.attrib['k'])
+
+    def __init__(self, forcefield):
+        self.ff = forcefield
+        self._angletypes = list()
+
+    def registerAngle(self, node):
+        """Register a SMIRFF angletype definition."""
+        angle = HarmonicAngleGenerator.AngleType(node)
+        self._angletypes.append(angle)
+
+    @staticmethod
+    def parseElement(element, ff):
+        # Find existing force generator or create new one.
+        existing = [f for f in ff._forces if isinstance(f, HarmonicAngleGenerator)]
+        if len(existing) == 0:
+            generator = HarmonicAngleGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
+
+        # Register all SMIRFF angle definitions.
+        for angle in element.findall('Angle'):
+            generator.registerAngle(angle)
+
+    def createForce(self, system, topology, verbose=False, **kwargs):
+        # Find existing force or create new one.
+        existing = [system.getForce(i) for i in range(system.getNumForces())]
+        existing = [f for f in existing if type(f) == openmm.HarmonicAngleForce]
+        if len(existing) == 0:
+            force = openmm.HarmonicAngleForce()
+            system.addForce(force)
+        else:
+            force = existing[0]
+
+        # Iterate over all defined angle types, allowing later matches to override earlier ones.
+        angles = ValenceDict()
+        for angle in self._angletypes:
+            for atom_indices in topology.getSMIRKSMatches(angle.smirks):
+                angles[atom_indices] = angle
+
+        if verbose:
+            print('')
+            print('HarmonicAngleGenerator:')
+            print('')
+            for angle in self._angletypes:
+                print('%32s : %8d matches' % (angle.smirks, len(topology.getSMIRKSMatches(angle.smirks))))
+            print('')
+
+        # Add all angles to the system.
+        for (atom_indices, angle) in angles.items():
+            force.addAngle(atom_indices[0], atom_indices[1], atom_indices[2], angle.angle, angle.k)
+
+        if verbose: print('%d angles added' % (len(angles)))
+
+parsers["HarmonicAngleForce"] = HarmonicAngleGenerator.parseElement
+
+
+#=============================================================================================
+
+## @private
+class PeriodicTorsionGenerator(object):
+    """A PeriodicTorsionForceGenerator constructs a PeriodicTorsionForce."""
+
+    class TorsionType(object):
+        """A SMIRFF torsion type."""
+        def __init__(self, node):
+            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.periodicity = list()
+            self.phase = list()
+            self.k = list()
+            # Store parameters.
+            index = 1
+            while 'phase%d'%index in node.attrib:
+                self.periodicity.append(int(node.attrib['periodicity%d'%index]))
+                self.phase.append(_convertParameterToNumber(node.attrib['phase%d'%index]))
+                self.k.append(_convertParameterToNumber(node.attrib['k%d'%index]))
+                index += 1
+
+    def __init__(self, forcefield):
+        self.ff = forcefield
+        self._torsiontypes = list()
+
+    def registerTorsion(self, node):
+        """Register a SMIRFF torsiontype definition."""
+        torsion = PeriodicTorsionGenerator.TorsionType(node)
+        self._torsiontypes.append(torsion)
+
+    @staticmethod
+    def parseElement(element, ff):
+        # Find existing force generator or create new one.
+        existing = [f for f in ff._forces if isinstance(f, PeriodicTorsionGenerator)]
+        if len(existing) == 0:
+            generator = PeriodicTorsionGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
+
+        # Register all SMIRFF torsion definitions.
+        # TODO: Do we need to treat propers and impropers differently?
+        for torsion in element.findall('Proper'):
+            generator.registerTorsion(torsion)
+        for torsion in element.findall('Improper'):
+            generator.registerTorsion(torsion)
+
+    def createForce(self, system, topology, verbose=False, **kwargs):
+        # Find existing force or create new one.
+        existing = [system.getForce(i) for i in range(system.getNumForces())]
+        existing = [f for f in existing if type(f) == openmm.PeriodicTorsionForce]
+        if len(existing) == 0:
+            force = openmm.PeriodicTorsionForce()
+            system.addForce(force)
+        else:
+            force = existing[0]
+
+        # Iterate over all defined torsion types, allowing later matches to override earlier ones.
+        torsions = ValenceDict()
+        for torsion in self._torsiontypes:
+            for atom_indices in topology.getSMIRKSMatches(torsion.smirks):
+                torsions[atom_indices] = torsion
+
+        if verbose:
+            print('')
+            print('PeriodicTorsionGenerator:')
+            print('')
+            for torsion in self._torsiontypes:
+                print('%32s : %8d matches' % (torsion.smirks, len(topology.getSMIRKSMatches(torsion.smirks))))
+            print('')
+
+        # Add all torsions to the system.
+        for (atom_indices, torsion) in torsions.items():
+            for (periodicity, phase, k) in zip(torsion.periodicity, torsion.phase, torsion.k):
+                force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
+
+        if verbose: print('%d torsions added' % (len(torsions)))
+
+parsers["PeriodicTorsionForce"] = PeriodicTorsionGenerator.parseElement
