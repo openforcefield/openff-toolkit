@@ -37,9 +37,9 @@ def main():
                       action="store", type="string", dest='basetypes_filename', default=None,
                       help="Filename defining base or generic atom types as SMARTS atom matches; these are indestructible and normally are elemental atom types.")
 
-    parser.add_option("-s", "--initialtypes", metavar='BASETYPES',
+    parser.add_option("-f", "--initialtypes", metavar='BASETYPES',
                       action="store", type="string", dest='initialtypes_filename', default=None,
-                      help="Filename defining starting/initial atom types as SMARTS atom matches.")
+                      help="Filename defining initial (first) atom types as SMARTS atom matches.")
 
     parser.add_option("-d", "--decorators", metavar='DECORATORS',
                       action="store", type="string", dest='decorators_filename', default=None,
