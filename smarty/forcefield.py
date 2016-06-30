@@ -64,6 +64,9 @@ import networkx
 #=============================================================================================
 
 def _convertParameterToNumber(param):
+    """
+    Convert parameter to OpenMM units.
+    """
     if unit.is_quantity(param):
         if param.unit.is_compatible(unit.bar):
             return param / unit.bar
@@ -501,6 +504,34 @@ def _validateSMIRKS(smirks, node=None):
 
     return smirks
 
+def _extractQuantity(node, parent, name, unit_name=None):
+    """
+    Form a (potentially unit-bearing) quantity from the specified attribute name.
+
+    node : xml.etree.ElementTree.Element
+       Node of etree corresponding to force type entry.
+    parent : xml.etree.ElementTree.Element
+       Node of etree corresponding to parent Force.
+    name : str
+       Name of parameter to extract from attributes.
+    unit_name : str, optional, default=None
+       If specified, use this attribute name of 'parent' to look up units
+
+    """
+    if name not in node.attrib:
+        raise Exception("Line %d : Expected XML attribute '%s' not found" % name)
+    quantity = float(node.attrib[name])
+
+    if unit_name is None:
+        unit_name = name + '_unit'
+
+    if unit_name in parent.attrib:
+        # TODO: This is very dangerous.
+        string = '(%s * %s).value_in_unit_system(md_unit_system)' % (node.attrib[name], parent.attrib[unit_name])
+        quantity = eval(string, unit.__dict__)
+
+    return quantity
+
 import collections
 class TransformedDict(collections.MutableMapping):
     """A dictionary that applies an arbitrary key-altering
@@ -549,18 +580,18 @@ class HarmonicBondGenerator(object):
 
     class BondType(object):
         """A SMIRFF bond type."""
-        def __init__(self, node):
+        def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.length = _convertParameterToNumber(node.attrib['length']) * unit.angstroms
-            self.k = _convertParameterToNumber(node.attrib['k']) * unit.kilocalories_per_mole / unit.angstroms
+            self.length = _extractQuantity(node, parent, 'length')
+            self.k = _extractQuantity(node, parent, 'k')
 
     def __init__(self, forcefield):
         self.ff = forcefield
         self._bondtypes = list()
 
-    def registerBond(self, node):
+    def registerBond(self, node, parent):
         """Register a SMIRFF bondtype definition."""
-        bond = HarmonicBondGenerator.BondType(node)
+        bond = HarmonicBondGenerator.BondType(node, parent)
         self._bondtypes.append(bond)
 
     @staticmethod
@@ -575,7 +606,7 @@ class HarmonicBondGenerator(object):
 
         # Register all SMIRFF bond definitions.
         for bond in element.findall('Bond'):
-            generator.registerBond(bond)
+            generator.registerBond(bond, element)
 
     def createForce(self, system, topology, verbose=False, **kwargs):
         # Find existing force or create new one.
@@ -607,25 +638,6 @@ class HarmonicBondGenerator(object):
 
         if verbose: print('%d bonds added' % (len(bonds)))
 
-        # DEBUG: Check that no topology bonds aren't missing force bonds.
-        atoms = [ atom for atom in topology.atoms() ]
-        topology_bonds = ValenceDict()
-        for (atom1, atom2) in topology.bonds():
-            topology_bonds[(atom1.index,atom2.index)] = True
-        if set(bonds.keys()) != set(topology_bonds.keys()):
-            msg = 'Mismatch between bonds added and topological bonds.\n'
-            created_bondset = set(bonds.keys())
-            topology_bondset = set(topology_bonds.keys())
-            msg += 'Bonds created that are not present in Topology:\n'
-            msg += str(created_bondset.difference(topology_bondset)) + '\n'
-            msg += 'Topology bonds not assigned parameters:\n'
-            for (a1, a2) in topology_bondset.difference(created_bondset):
-                atom1 = atoms[a1]
-                atom2 = atoms[a2]
-                msg += '(%8d,%8d) : %5s %3s %3s - %5s %3s %3s' % (a1, a2, atom1.residue.index, atom1.residue.name, atom1.name, atom2.residue.index, atom2.residue.name, atom2.name)
-                msg += '\n'
-            raise Exception(msg)
-
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
 
 #=============================================================================================
@@ -636,18 +648,18 @@ class HarmonicAngleGenerator(object):
 
     class AngleType(object):
         """A SMIRFF angle type."""
-        def __init__(self, node):
+        def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.angle = _convertParameterToNumber(node.attrib['angle']) * unit.degrees
-            self.k = _convertParameterToNumber(node.attrib['k']) * unit.kilocalories_per_mole / unit.radians
+            self.angle = _extractQuantity(node, parent, 'angle')
+            self.k = _extractQuantity(node, parent, 'k')
 
     def __init__(self, forcefield):
         self.ff = forcefield
         self._angletypes = list()
 
-    def registerAngle(self, node):
+    def registerAngle(self, node, parent):
         """Register a SMIRFF angletype definition."""
-        angle = HarmonicAngleGenerator.AngleType(node)
+        angle = HarmonicAngleGenerator.AngleType(node, parent)
         self._angletypes.append(angle)
 
     @staticmethod
@@ -662,7 +674,7 @@ class HarmonicAngleGenerator(object):
 
         # Register all SMIRFF angle definitions.
         for angle in element.findall('Angle'):
-            generator.registerAngle(angle)
+            generator.registerAngle(angle, element)
 
     def createForce(self, system, topology, verbose=False, **kwargs):
         # Find existing force or create new one.
@@ -704,8 +716,9 @@ class PeriodicTorsionGenerator(object):
     """A PeriodicTorsionForceGenerator constructs a PeriodicTorsionForce."""
 
     class TorsionType(object):
+
         """A SMIRFF torsion type."""
-        def __init__(self, node):
+        def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.periodicity = list()
             self.phase = list()
@@ -713,18 +726,18 @@ class PeriodicTorsionGenerator(object):
             # Store parameters.
             index = 1
             while 'phase%d'%index in node.attrib:
-                self.periodicity.append(int(node.attrib['periodicity%d'%index]))
-                self.phase.append(_convertParameterToNumber(node.attrib['phase%d'%index])) * unit.degrees
-                self.k.append(_convertParameterToNumber(node.attrib['k%d'%index])) * unit.kilocalories_per_mole
+                self.periodicity.append( int(_extractQuantity(node, parent, 'periodicity%d' % index)) )
+                self.phase.append( _extractQuantity(node, parent, 'phase%d' % index, unit_name='phase_unit') )
+                self.k.append( _extractQuantity(node, parent, 'k%d' % index, unit_name='k_unit') )
                 index += 1
 
     def __init__(self, forcefield):
         self.ff = forcefield
         self._torsiontypes = list()
 
-    def registerTorsion(self, node):
+    def registerTorsion(self, node, parent):
         """Register a SMIRFF torsiontype definition."""
-        torsion = PeriodicTorsionGenerator.TorsionType(node)
+        torsion = PeriodicTorsionGenerator.TorsionType(node, parent)
         self._torsiontypes.append(torsion)
 
     @staticmethod
@@ -740,9 +753,9 @@ class PeriodicTorsionGenerator(object):
         # Register all SMIRFF torsion definitions.
         # TODO: Do we need to treat propers and impropers differently?
         for torsion in element.findall('Proper'):
-            generator.registerTorsion(torsion)
+            generator.registerTorsion(torsion, element)
         for torsion in element.findall('Improper'):
-            generator.registerTorsion(torsion)
+            generator.registerTorsion(torsion, element)
 
     def createForce(self, system, topology, verbose=False, **kwargs):
         # Find existing force or create new one.
@@ -785,10 +798,10 @@ class NonbondedGenerator(object):
 
     class LennardJonesType(object):
         """A SMIRFF Lennard-Jones type."""
-        def __init__(self, node):
+        def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.sigma = _convertParameterToNumber(node.attrib['sigma']) * unit.angstroms
-            self.epsilon = _convertParameterToNumber(node.attrib['epsilon']) * unit.kilocalories_per_mole
+            self.sigma = _extractQuantity(node, parent, 'sigma')
+            self.epsilon = _extractQuantity(node, parent, 'epsilon')
 
     def __init__(self, forcefield, coulomb14scale, lj14scale):
         self.ff = forcefield
@@ -796,8 +809,8 @@ class NonbondedGenerator(object):
         self.lj14scale = lj14scale
         self._ljtypes = list()
 
-    def registerAtom(self, node):
-        ljtype = NonbondedGenerator.LennardJonesType(node)
+    def registerAtom(self, node, parent):
+        ljtype = NonbondedGenerator.LennardJonesType(node, parent)
         self._ljtypes.append(ljtype)
 
     @staticmethod
@@ -813,7 +826,7 @@ class NonbondedGenerator(object):
                     abs(generator.lj14scale - float(element.attrib['lj14scale'])) > NonbondedGenerator.SCALETOL:
                 raise ValueError('Found multiple NonbondedForce tags with different 1-4 scales')
         for atom in element.findall('Atom'):
-            generator.registerAtom(atom)
+            generator.registerAtom(atom, element)
 
     def createForce(self, system, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=0.9, verbose=False, **args):
         methodMap = {NoCutoff:openmm.NonbondedForce.NoCutoff,
