@@ -26,7 +26,7 @@ script:
   - pip install $OPENEYE_CHANNEL openeye-toolkits
   # Run tests
   #- cd devtools && nosetests $PACKAGENAME --nocapture --verbosity=2 --with-doctest --with-timer -a "\!slow" && cd ..
-  - cd devtools && nosetests -vv --nocapture $PACKAGENAME && cd ..
+  - cd devtools && nosetests -vv --nocapture --with-timer $PACKAGENAME && cd ..
 
 env:
   matrix:
