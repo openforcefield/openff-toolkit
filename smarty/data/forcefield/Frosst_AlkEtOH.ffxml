@@ -9,7 +9,7 @@
 <!-- required for alkanes, ethers, and alcohols (excluding ketals and 3-memb-rings) -->
 
 <HarmonicBondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom">
-   <Bond smirks="[#6X4:1]-[#6X4:2]" length="1.626" k="310.0"/> <!-- CT-CT from frcmod.Frosst_AlkEthOH -->
+   <Bond smirks="[#6X4:1]-[#6X4:2]" length="1.526" k="310.0"/> <!-- CT-CT from frcmod.Frosst_AlkEthOH -->
    <Bond smirks="[#6X4:1]-[#1:2]" length="1.090" k="340.0"/> <!-- CT-H_ from frcmod.Frosst_AlkEthOH -->
    <Bond smirks="[#8:1]~[#1:2]" length="1.410" k="320.0"/> <!-- DEBUG O-H -->
    <Bond smirks="[#6X4:1]-[O&amp;X2&amp;H1:2]" length="1.410" k="320.0"/> <!-- CT-OH from frcmod.Frosst_AlkEthOH -->
@@ -41,6 +41,13 @@
    <Atom smirks="[$([#1]-C):1]" sigma="1.4870" epsilon="0.0157"/> <!-- HC from frcmod.Frosst_AlkEthOH -->
    <Atom smirks="[$([#1]-C-[#7,#8,F,#16,Cl,Br]):1]" sigma="1.3870" epsilon="0.0157"/> <!-- H1 from frcmod.Frosst_AlkEthOH -->
    <Atom smirks="[$([#1]-C(-[#7,#8,F,#16,Cl,Br])-[#7,#8,F,#16,Cl,Br]):1]" sigma="1.2870" epsilon="0.0157"/> <!--H2 from frcmod.Frosst_AlkEthOH -->
+   <Atom smirks="[$([#1]-C(-[#7,#8,F,#16,Cl,Br])(-[#7,#8,F,#16,Cl,Br])-[#7,#8,F,#16,Cl,Br]):1]" sigma="1.1870" epsilon="0.0157"/> <!--H3 from frcmod.Frosst_AlkEthOH -->
+   <Atom smirks="[#1$(*-[#8]):1]" sigma="0.0000" epsilon="0.0000"/> <!-- HO from frcmod.Frosst_AlkEthOH -->
+   <Atom smirks="[#6:1]" sigma="1.9080" epsilon="0.1094"/> <!-- making CT the generic carbon -->
+   <Atom smirks="[#6X4:1]" sigma="1.9080" epsilon="0.1094"/> <!-- CT from frcmod.Frosst_AlkEthOH-->
+   <Atom smirks="[#8:1]" sigma="1.6837" epsilon="0.1700"/> <!-- making OS the generic oxygen -->
+   <Atom smirks="[#8X2:1]" sigma="1.6837" epsilon="0.1700"/> <!-- OS from frcmod.Frosst_AlkEthOH -->
+   <Atom smirks="[#8X2+0$(*-[#1]):1]" sigma="1.7210" epsilon="0.2104"/> <!-- OH from frcmod.Frosst_AlkEthOH -->
 </NonbondedForce>
 
 </SMARFF>
