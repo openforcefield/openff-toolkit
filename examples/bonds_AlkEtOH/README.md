@@ -15,7 +15,7 @@ Usage
 
 Example:
 ```
-smarty --basetypes=bondtypes/basetype-bonds.smarts --decorators=atomtypes/decorators.smarts --substitutions=bondtypes/substitutions.smarts --molecules=molecules/test_filt1_tripos.mol2 --reference=molecules/test_filt1_ff.mol2 --iterations 500 --temperature=0.1 >|smartyBonds.iter500.log
+smarty --basetypes=bondtypes/basetype-bonds.smarts --initialtypes=bondtypes/basetype-bonds.smarts --decorators=atomtypes/decorators.smarts --substitutions=bondtypes/substitutions.smarts --molecules=molecules/test_filt1_tripos.mol2 --reference=molecules/test_filt1_ff.mol2 --iterations 500 --temperature=0.1 >|smartyBonds.iter500.log
 ```
 
 The results below are extracted from the log file smartyBonds.iter500.log.
