@@ -90,7 +90,7 @@ def check_system_creation_from_molecule(forcefield, mol, verbose=False):
 
 def check_system_creation_from_topology(forcefield, topology, mols, positions, verbose=False):
     """
-    Generate a System from the given OEMol and SMIRFF forcefield and check that its energy is finite.
+    Generate a System from the given topology, OEMols matching the contents of the topology, and SMIRFF forcefield and check that its energy is finite.
 
     Parameters
     ----------
