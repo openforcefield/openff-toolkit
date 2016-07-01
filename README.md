@@ -52,7 +52,7 @@ Check out the example in `examples/parm@frosst/`:
 
 Atom types are specified by SMARTS matches with corresponding parameter names.
 
-First, we start with a number of initial "base types", specified in `atomtypes/basetypes.smarts`:
+First, we start with a number of initial "base types" which are essentially indestructible (often generic) atom types, specified in `atomtypes/basetypes.smarts`:
 ```
 % atom types
 [#1]    hydrogen
@@ -67,6 +67,8 @@ First, we start with a number of initial "base types", specified in `atomtypes/b
 [#53]   iodine
 ```
 Note that lines beginning with `%` are comment lines.
+
+We also specify a number of starting types, "initial types" which can be the same or different from the base types. These follow the same format, and `atomtypes/basetypes.smarts` can be reused unless alternate behavior is desired (such as starting from more sophisticated initial types).
 
 Atom type creation moves attempt to split off a new atom type from a parent atom type by combining (via an "and" operator, `&`) the parent atom type with a "decorator".
 The decorators are listed in `atomtypes/decorators.smarts`:
@@ -113,7 +115,7 @@ Each decorator has a corresponding string token (no spaces allowed!) that is use
 For example, we may find the atom type ```[#6]&H3``` which is `carbon total-h-count-3` for a C atom bonded to three hydrogens.
 
 Newly proposed atom types are added to the end of the list.
-MAfter a new atom type is proposed, all molecules are reparameterized using the new set of atom types.
+After a new atom type is proposed, all molecules are reparameterized using the new set of atom types.
 Atom type matching proceeds by trying to see if each SMARTS match can be applied working from top to bottom of the list.
 This means the atom type list is hierarchical, with more general types appearing at the top of the list and more specific subtypes appearing at the bottom.
 
