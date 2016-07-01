@@ -22,11 +22,11 @@ def main():
     usage_string = """\
     Sample over atom types, optionally attempting to match atom types in a reference typed set of molecules.
 
-    usage: %prog --basetypes smartsfile --decorators smartsfile [--substitutions smartsfile] --molecules molfile [--reference molfile] --iterations niterations [--temperature temperature]
+    usage: %prog --basetypes smartsfile --initialtypes smartsfile --decorators smartsfile [--substitutions smartsfile] --molecules molfile [--reference molfile] --iterations niterations [--temperature temperature]
 
     example:
 
-    python %prog --basetypes=atomtypes/basetypes.smarts --decorators=atomtypes/decorators.smarts --substitutions=atomtypes/substitutions.smarts \
+    python %prog --basetypes=atomtypes/basetypes.smarts --initialtypes=atomtypes/initialtypes.smarts --decorators=atomtypes/decorators.smarts --substitutions=atomtypes/substitutions.smarts \
         --molecules=molecules/zinc-subset-tripos.mol2.gz --reference=molecules/zinc-subset-parm@frosst.mol2.gz --iterations 1000 --temperature=0.1
 
     """
@@ -35,7 +35,11 @@ def main():
 
     parser.add_option("-b", "--basetypes", metavar='BASETYPES',
                       action="store", type="string", dest='basetypes_filename', default=None,
-                      help="Filename defining base atom types as SMARTS atom matches.")
+                      help="Filename defining base or generic atom types as SMARTS atom matches; these are indestructible and normally are elemental atom types.")
+
+    parser.add_option("-f", "--initialtypes", metavar='BASETYPES',
+                      action="store", type="string", dest='initialtypes_filename', default=None,
+                      help="Filename defining initial (first) atom types as SMARTS atom matches.")
 
     parser.add_option("-d", "--decorators", metavar='DECORATORS',
                       action="store", type="string", dest='decorators_filename', default=None,
@@ -85,7 +89,7 @@ def main():
         reference_typed_molecules = smarty.utils.read_molecules(options.reference_molecules_filename, verbose=True)
 
     # Construct atom type sampler.
-    atomtype_sampler = smarty.AtomTypeSampler(molecules, options.basetypes_filename, options.decorators_filename, replacements_filename=options.substitutions_filename, reference_typed_molecules=reference_typed_molecules, verbose=verbose, temperature=options.temperature)
+    atomtype_sampler = smarty.AtomTypeSampler(molecules, options.basetypes_filename, options.initialtypes_filename, options.decorators_filename, replacements_filename=options.substitutions_filename, reference_typed_molecules=reference_typed_molecules, verbose=verbose, temperature=options.temperature)
 
     # Start sampling atom types.
     atomtype_sampler.run(options.iterations, options.traj_file)
