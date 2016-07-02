@@ -22,8 +22,9 @@ parts from John Chodera and Kyle Beauchamp.
 
 import os
 import smarty
-from smarty import Forcefield
+from smarty import ForceField
 from smarty.utils import get_data_filename
+import simtk.openmm
 from simtk.openmm import app
 from simtk.openmm.app import element as elem
 from simtk.openmm.app import Topology
@@ -69,7 +70,7 @@ def create_system_from_amber( prmtop_filename, crd_filename ):
     
     # Read coordinates
     crd = app.AmberInpcrdFile( crd_filename )
-    positions = pcrd.getPositions()
+    positions = crd.getPositions()
      
     return (topology, system, positions)
 
@@ -109,8 +110,7 @@ def create_system_from_molecule(forcefield, mol, verbose=False):
     
     return topology, system, positions
 
-def compare_system_energies( system0, system1, positions0, positions1=None, 
-                                label0="AMBER system", label1 = "SMIRFF system", verbose = True )
+def compare_system_energies( topology0, topology1, system0, system1, positions0, positions1=None, label0="AMBER system", label1 = "SMIRFF system", verbose = True ):
     """
     Given two OpenMM systems, check that their energies and component-wise 
     energies are consistent, and return these. The same positions will be used
@@ -159,8 +159,9 @@ def compare_system_energies( system0, system1, positions0, positions1=None,
     """
 
     # Create integrator
-    timestep = 1.0 * units.femtoseconds
-    integrator = simtk.openmm.VerletIntegrator( timestep )     
+    timestep = 1.0 * unit.femtoseconds
+    integrator0 = simtk.openmm.VerletIntegrator( timestep )     
+    integrator1 = simtk.openmm.VerletIntegrator( timestep )     
 
     # Grab second positions
     if positions1 == None:
@@ -168,10 +169,10 @@ def compare_system_energies( system0, system1, positions0, positions1=None,
 
     # Create simulations
     platform = simtk.openmm.Platform.getPlatformByName("Reference")
-    simulation0 = app.Simulation( topology0, system0, integrator, platform = platform ) 
-    simulation.context.setPositions(positions0)
-    simulation1 = app.Simulation( topology1, system1, integrator, platform = platform ) 
-    simulation.context.setPositions(positions1)
+    simulation0 = app.Simulation( topology0, system0, integrator0, platform = platform ) 
+    simulation0.context.setPositions(positions0)
+    simulation1 = app.Simulation( topology1, system1, integrator1, platform = platform ) 
+    simulation1.context.setPositions(positions1)
 
    
     # Do energy comparison, print info if desired
@@ -193,7 +194,7 @@ def compare_system_energies( system0, system1, positions0, positions1=None,
     return groups0, groups1, energy0, energy1 
 
 
-def compare_molecule_energies( prmtop, crd, forcefield, mol ):
+def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True ):
     """
     Compare energies for OpenMM Systems/topologies created from an AMBER prmtop
     and crd versus from a SMIRFF forcefield file and OEMol which should
@@ -232,8 +233,8 @@ def compare_molecule_energies( prmtop, crd, forcefield, mol ):
     ambertop, ambersys, amberpos = create_system_from_amber( prmtop, crd )
     smirfftop, smirffsys, smirffpos = create_system_from_molecule(forcefield, mol)
 
-    groups0, groups1, energy0, energy1 = compare_system_energies( system0, 
-                    system1, amberpos, verbose = verbose )
+    groups0, groups1, energy0, energy1 = compare_system_energies( ambertop, 
+               smirfftop, ambersys, smirffsys, amberpos, verbose = verbose )
 
     return groups0, groups1, energy0, energy1
 
