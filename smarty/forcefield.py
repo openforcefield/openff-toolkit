@@ -815,10 +815,8 @@ class NonbondedGenerator(object):
                 self.sigma = _extractQuantity(node, parent, 'sigma')
             #Handle rmin_half, AMBER-style
             except:
-                rmin_half = _extractQuantity(node, parent, 'rmin_half')
-                print('rmin_half:', rmin_half)
+                rmin_half = _extractQuantity(node, parent, 'rmin_half', unit_name='sigma_unit')
                 self.sigma = 2.*rmin_half/(2.**(1./6.))
-                print('sigma:', self.sigma)
             self.epsilon = _extractQuantity(node, parent, 'epsilon')
 
     def __init__(self, forcefield, coulomb14scale, lj14scale):
