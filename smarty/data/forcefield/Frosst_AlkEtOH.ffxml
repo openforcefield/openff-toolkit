@@ -8,13 +8,14 @@
 <!-- This mockup is based on frcmod.Frosst_AlkEthOH, the minimal subset of parm99/parm@Frosst -->
 <!-- required for alkanes, ethers, and alcohols (excluding ketals and 3-memb-rings) -->
 
+<!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
 <HarmonicBondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
-   <Bond smirks="[#6X4:1]-[#6X4:2]" length="1.526" k="310.0"/> <!-- CT-CT from frcmod.Frosst_AlkEthOH -->
-   <Bond smirks="[#6X4:1]-[#1:2]" length="1.090" k="340.0"/> <!-- CT-H_ from frcmod.Frosst_AlkEthOH -->
-   <Bond smirks="[#8:1]~[#1:2]" length="1.410" k="320.0"/> <!-- DEBUG O-H -->
-   <Bond smirks="[#6X4:1]-[O&amp;X2&amp;H1:2]" length="1.410" k="320.0"/> <!-- CT-OH from frcmod.Frosst_AlkEthOH -->
-   <Bond smirks="[#6X4:1]-[O&amp;X2&amp;H0:2]" length="1.370" k="320.0"/> <!--CT-OS from frcmod.Frosst_AlkEthOH -->
-   <Bond smirks="[#8X2:1]-[#1:2]" length="0.960" k="553.0"/> <!-- OH-HO from frcmod.Frosst_AlkEthOH -->
+   <Bond smirks="[#6X4:1]-[#6X4:2]" length="1.526" k="620.0"/> <!-- CT-CT from frcmod.Frosst_AlkEthOH -->
+   <Bond smirks="[#6X4:1]-[#1:2]" length="1.090" k="680.0"/> <!-- CT-H_ from frcmod.Frosst_AlkEthOH -->
+   <Bond smirks="[#8:1]~[#1:2]" length="1.410" k="640.0"/> <!-- DEBUG O-H -->
+   <Bond smirks="[#6X4:1]-[O&amp;X2&amp;H1:2]" length="1.410" k="640.0"/> <!-- CT-OH from frcmod.Frosst_AlkEthOH -->
+   <Bond smirks="[#6X4:1]-[O&amp;X2&amp;H0:2]" length="1.370" k="640.0"/> <!--CT-OS from frcmod.Frosst_AlkEthOH -->
+   <Bond smirks="[#8X2:1]-[#1:2]" length="0.960" k="1106.0"/> <!-- OH-HO from frcmod.Frosst_AlkEthOH -->
 </HarmonicBondForce>
 <HarmonicAngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
    <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50" k="50.0"/> <!-- consensus matches all X-Csp3-X -->
