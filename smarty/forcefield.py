@@ -799,8 +799,26 @@ class NonbondedGenerator(object):
     class LennardJonesType(object):
         """A SMIRFF Lennard-Jones type."""
         def __init__(self, node, parent):
+            """Currently we support radius definition via 'sigma' or 'rmin_half'."""
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.sigma = _extractQuantity(node, parent, 'sigma')
+
+            # Make sure we don't have BOTH rmin_half AND sigma
+            try:
+                a = _extractQuantity(node, parent, 'sigma')
+                a = _extractQuantity(node, parent, 'rmin_half')
+                raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the .ffxml file.")
+            except:
+                pass            
+
+            #Handle sigma
+            try: 
+                self.sigma = _extractQuantity(node, parent, 'sigma')
+            #Handle rmin_half, AMBER-style
+            except:
+                rmin_half = _extractQuantity(node, parent, 'rmin_half')
+                print('rmin_half:', rmin_half)
+                self.sigma = 2.*rmin_half/(2.**(1./6.))
+                print('sigma:', self.sigma)
             self.epsilon = _extractQuantity(node, parent, 'epsilon')
 
     def __init__(self, forcefield, coulomb14scale, lj14scale):
