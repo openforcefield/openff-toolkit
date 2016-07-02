@@ -1,0 +1,23 @@
+% bonded to atoms
+$(*-z) simply bonded
+$(*=z) doubly bonded
+$(*#z) triply bonded
+$(*:z) aromatic bond
+$(*~z) any bond
+% total connectivity
+X1             connections-1
+X2             connections-2
+X3             connections-3
+X4             connections-4
+% total-h-count
+H0             total-h-count-0
+H1             total-h-count-1
+H2             total-h-count-2
+H3             total-h-count-3
+% formal charge
++0             neutral
++1             cationic+1
+-1             anionic-1
+% aromatic/aliphatic
+a              aromatic
+A              aliphatic
