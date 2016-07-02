@@ -17,13 +17,14 @@
    <Bond smirks="[#6X4:1]-[O&amp;X2&amp;H0:2]" length="1.370" k="640.0"/> <!--CT-OS from frcmod.Frosst_AlkEthOH -->
    <Bond smirks="[#8X2:1]-[#1:2]" length="0.960" k="1106.0"/> <!-- OH-HO from frcmod.Frosst_AlkEthOH -->
 </HarmonicBondForce>
+<!-- WARNING: AMBER functional forms drop the factor of 2 in the angle energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
 <HarmonicAngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
-   <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50" k="50.0"/> <!-- consensus matches all X-Csp3-X -->
-   <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50" k="35.0"/> <!-- H1-CT-H1 from frcmod.Frosst_AlkEthOH -->
-   <Angle smirks="[#6X4:1]-[#6X4:2]-[#6X4:3]" angle="109.50" k="40.0"/> <!-- CT-CT-CT from frcmod.Frosst_AlkEthOH -->
-   <Angle smirks="[#8X2:1]-[#6X4:2]-[#8X2:3]" angle="109.50" k="70.0"/> <!-- O_-CT-O_ from frcmod.Frosst_AlkEthOH -->
-   <Angle smirks="[#6X4:1]-[#8X2:2]-[#1:3]" angle="108.50" k="55.0"/> <!-- CT-OH-HO from frcmod.Frosst_AlkEthOH -->
-   <Angle smirks="[#6X4:1]-[#8X2:2]-[#6X4:3]" angle="109.50" k="60.0"/> <!-- CT-OS-CT from frcmod.Frosst_AlkEthOH -->
+   <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50" k="100.0"/> <!-- consensus matches all X-Csp3-X -->
+   <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50" k="70.0"/> <!-- H1-CT-H1 from frcmod.Frosst_AlkEthOH -->
+   <Angle smirks="[#6X4:1]-[#6X4:2]-[#6X4:3]" angle="109.50" k="80.0"/> <!-- CT-CT-CT from frcmod.Frosst_AlkEthOH -->
+   <Angle smirks="[#8X2:1]-[#6X4:2]-[#8X2:3]" angle="109.50" k="140.0"/> <!-- O_-CT-O_ from frcmod.Frosst_AlkEthOH -->
+   <Angle smirks="[#6X4:1]-[#8X2:2]-[#1:3]" angle="108.50" k="110.0"/> <!-- CT-OH-HO from frcmod.Frosst_AlkEthOH -->
+   <Angle smirks="[#6X4:1]-[#8X2:2]-[#6X4:3]" angle="109.50" k="120.0"/> <!-- CT-OS-CT from frcmod.Frosst_AlkEthOH -->
 </HarmonicAngleForce>
 <PeriodicTorsionForce phase_unit="degrees" k_unit="kilocalories_per_mole">
    <Proper smirks="[a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]" periodicity1="3" phase1="0.0" k1="1.40"/> <!-- X -CT-CT-X from frcmod.Frosst_AlkEthOH -->
