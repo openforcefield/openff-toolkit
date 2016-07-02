@@ -4,6 +4,7 @@ import smarty
 import openeye
 import os
 from smarty.utils import get_data_filename
+from simtk.openmm import app
 from simtk.openmm.app import element as elem
 from simtk.openmm.app import Topology
 from simtk import unit, openmm
@@ -149,6 +150,35 @@ def test_create_system_boxes(verbose=False):
         f = partial(check_system_creation_from_topology, forcefield, pdbfile.topology, mols, pdbfile.positions, verbose=verbose)
         f.description = 'Test creation of System object from %s' % box
         yield f
+
+def create_openmm_amber_system( prmtop_filename, crd_filename ):
+    """Utility function. Create and return an OpenMM System given a prmtop and
+       crd, AMBER format files.
+    
+    Parameters
+    ----------
+    prmtop_filename : str (filename)
+        Filename of input AMBER format prmtop file
+    crd_filename : str (filename)
+        Filename of input AMBER format crd file
+
+    Returns
+    _______
+    system : OpenMM System
+    positions : initial atomic positions (OpenMM)
+"""
+    
+    # Create System object
+    prmtop = app.AmberPrmtopFile(prmtop_filename)
+    topology = prmtop.topology
+    system = prmtop.createSystem(nonbondedMethod = app.NoCutoff, constraints = None, implicitSolvent = None )
+    
+    # Read coordinates
+    crd = app.AmberInpcrdFile( crd_filename )
+    positions = pcrd.getPositions()
+     
+    return (system, positions)
+
 
 if __name__ == '__main__':
     #test_smirks()
