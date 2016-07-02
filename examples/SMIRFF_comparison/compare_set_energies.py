@@ -7,7 +7,7 @@ import os
 # versus energies from AMBER .prmtop and .crd files (parm@frosst params)
 
 datapath = './AlkEthOH_inputfiles/AlkEthOH_chain_filt1' 
-molname = 'AlkEthOH_c0'
+molname = 'AlkEthOH_c100'
 mol_filename = os.path.join( datapath, molname+'.mol2')
 
 # Check if we have this data file; if not we have to extract the archive

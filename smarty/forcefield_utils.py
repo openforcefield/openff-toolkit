@@ -183,10 +183,10 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
     if verbose:
         print("Energy of %s: " % label0, energy0 )
         print("Energy of %s: " % label1, energy1 )
-        print("Components of %s: \n" % label0 )
+        print("\nComponents of %s:" % label0 )
         for key in groups0.keys():
             print("%s: " % key, groups0[key] ) 
-        print("Components of %s: \n" % label1 )
+        print("\nComponents of %s:" % label1 )
         for key in groups1.keys():
             print("%s: " % key, groups1[key] ) 
 
