@@ -151,7 +151,7 @@ def test_create_system_boxes(verbose=False):
         f.description = 'Test creation of System object from %s' % box
         yield f
 
-def create_openmm_amber_system( prmtop_filename, crd_filename ):
+def create_system_from_amber( prmtop_filename, crd_filename ):
     """Utility function. Create and return an OpenMM System given a prmtop and
        crd, AMBER format files.
     
@@ -178,6 +178,28 @@ def create_openmm_amber_system( prmtop_filename, crd_filename ):
     positions = pcrd.getPositions()
      
     return (system, positions)
+
+def create_system_from_molecule(forcefield, mol, verbose=False):
+    """
+    Generate a System from the given OEMol and SMIRFF forcefield, return the resulting System.
+
+    Parameters
+    ----------
+    forcefield : smarty.ForceField
+        SMIRFF forcefield
+    mol : oechem.OEMol
+        Molecule to test (need not have coordinates)
+
+
+    Returns
+    ----------
+    system : OpenMM System
+    """
+
+    from smarty.forcefield import generateTopologyFromOEMol
+    topology = generateTopologyFromOEMol(mol)
+    system = forcefield.createSystem(topology, [mol], verbose=verbose)
+    return system
 
 
 if __name__ == '__main__':
