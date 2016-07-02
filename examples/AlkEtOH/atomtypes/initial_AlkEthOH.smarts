@@ -1,0 +1,9 @@
+% atom types
+[$([#1]-C)] hydrogen-carbon
+[$([#1]-C-[#7,#8,F,#16,Cl,Br])] hydrogen-carbon-ewd
+[$([#1]-C(-[#7,#8,F,#16,Cl,Br])-[#7,#8,F,#16,Cl,Br])]   hydrogen-carbon-ewd2
+[$([#1]-C(-[#7,#8,F,#16,Cl,Br])(-[#7,#8,F,#16,Cl,Br])-[#7,#8,F,#16,Cl,Br])] hydrogen-carbon-ewd3
+[#1$(*-[#8])]   hydrogen-oxygen
+[#6X4]  carbon-tet
+[#8X2]  oxygen-dival
+[OX2+0$(*-[#1])]    oxygen-hydrogen
