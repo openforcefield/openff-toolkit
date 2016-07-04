@@ -26,6 +26,8 @@ TODO
 </Constraints>
 ```
 * Move utility functions like 'generateTopologyFromOEMol()' elsewhere?
+* Use xml parser with 'sourceline' node attributes to aid debugging
+http://stackoverflow.com/questions/6949395/is-there-a-way-to-get-a-line-number-from-an-elementtree-element
 """
 #=============================================================================================
 # GLOBAL IMPORTS
@@ -519,7 +521,10 @@ def _extractQuantity(node, parent, name, unit_name=None):
 
     """
     if name not in node.attrib:
-        raise Exception("Line %d : Expected XML attribute '%s' not found" % name)
+        if 'sourceline' in node.attrib:
+            raise Exception("Line %d : Expected XML attribute '%s' not found" % (node.attrib['sourceline'], name))
+        else:
+            raise Exception("Expected XML attribute '%s' not found" % (name))
     quantity = float(node.attrib[name])
 
     if unit_name is None:
@@ -729,6 +734,10 @@ class PeriodicTorsionGenerator(object):
                 self.periodicity.append( int(_extractQuantity(node, parent, 'periodicity%d' % index)) )
                 self.phase.append( _extractQuantity(node, parent, 'phase%d' % index, unit_name='phase_unit') )
                 self.k.append( _extractQuantity(node, parent, 'k%d' % index, unit_name='k_unit') )
+                # Optionally handle 'idivf', which divides the periodicity by the specified value
+                if ('idivf%d' % index) in node.attrib:
+                    idivf = _extractQuantity(node, parent, 'idivf%d' % index)
+                    self.k[-1] /= float(idivf)
                 index += 1
 
     def __init__(self, forcefield):
