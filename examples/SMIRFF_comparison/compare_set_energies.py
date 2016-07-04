@@ -19,6 +19,8 @@ if not os.path.isfile( mol_filename):
 # Load OEMol
 mol = oechem.OEGraphMol()
 ifs = oechem.oemolistream(mol_filename)
+flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
+ifs.SetFlavor( oechem.OEFormat_MOL2, flavor)
 oechem.OEReadMolecule(ifs, mol )
 oechem.OETriposAtomNames(mol)
 
