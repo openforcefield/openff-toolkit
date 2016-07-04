@@ -35,7 +35,7 @@
    <Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]" periodicity1="3" phase1="0.0" k1="0.16" periodicity2="1" phase2="0.0" k2="0.25"/> <!-- HO-OH-CT-CT from frcmod.Frosst_AlkEthOH -->
    <Proper smirks="[#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]" periodicity1="3" phase1="0.0" k1="0.18" periodicity2="2" phase2="180.0" k2="0.25" periodicity3="1" phase3="180.0" k3="0.20"/> <!-- CT-CT-CT-CT from frcmod.Frosst_AlkEthOH -->
    <Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]" periodicity1="3" phase1="0.0" k1="0.383" periodicity2="2" phase2="180.0" k2="0.1"/> <!-- CT-CT-OS-CT from frcmod.Frosst_AlkEthOH -->
-   <Proper smirks="[#6X4:1]-[#8X4:2]-[#6X4:3]-[O&X2&H0:4]" periodicity1="3" phase1="0.0" k1="0.10" periodicity2="2" phase2="180.0" k2="0.85" periodicity3="1" phase3="180.0" k3="1.35"/> <!-- CT-OS-CT-OS from frcmod.Frosst_AlkEthOH -->
+   <Proper smirks="[#6X4:1]-[#8X4:2]-[#6X4:3]-[O&amp;X2&amp;H0:4]" periodicity1="3" phase1="0.0" k1="0.10" periodicity2="2" phase2="180.0" k2="0.85" periodicity3="1" phase3="180.0" k3="1.35"/> <!-- CT-OS-CT-OS from frcmod.Frosst_AlkEthOH -->
    <Proper smirks="[#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]" periodicity1="3" phase1="0.0" k1="0.144" periodicity2="2" phase2="0.0" k2="0.175"/> <!-- O_-CT-CT-O_ from frcmod.Frosst_AlkEthOH -->
    <Proper smirks="[#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4]" periodicity1="3" phase1="0.0" k1="0.0" periodicity2="1" phase2="0.0" k2="0.25"/> <!-- O_-CT-CT-O_ from frcmod.Frosst_AlkEthOH; discrepancy with parm@frosst with H2,H3-CT-CT-O_ per C Bayly -->
    <Improper smirks="[a,A:1]~[#6X3:2]([a,A:3])~[OX1:4]" periodicity1="2" phase1="180.0" k1="10.5"/> <!-- X -X -C -O  from frcmod.Frosst_AlkEthOH; none in set but here as format placeholder -->
