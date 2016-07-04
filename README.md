@@ -29,9 +29,10 @@ pip install -i https://pypi.anaconda.org/OpenEye/simple OpenEye-toolkits
 Install other conda dependencies:
 ```
 conda install --yes numpy networkx
+conda install --yes -c omnia openmoltools
 ```
 
-NOTE: We'll find a better way to install these dependencies via `conda` soon.
+NOTE: We'll add a better way to install these dependencies via `conda` soon.
 
 ## Installation
 
