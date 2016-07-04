@@ -45,7 +45,7 @@ from simtk import openmm, unit
 #=============================================================================
 
 
-def create_system_from_amber( prmtop_filename, crd_filename ):
+def create_system_from_amber( prmtop_filename, crd_filename, verbose = False ):
     """Utility function. Create and return an OpenMM System given a prmtop and
        crd, AMBER format files.
     
@@ -231,7 +231,7 @@ def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True ):
     """ 
 
     ambertop, ambersys, amberpos = create_system_from_amber( prmtop, crd )
-    smirfftop, smirffsys, smirffpos = create_system_from_molecule(forcefield, mol)
+    smirfftop, smirffsys, smirffpos = create_system_from_molecule(forcefield, mol, verbose = verbose)
 
     groups0, groups1, energy0, energy1 = compare_system_energies( ambertop, 
                smirfftop, ambersys, smirffsys, amberpos, verbose = verbose )
