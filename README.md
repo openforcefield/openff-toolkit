@@ -71,8 +71,10 @@ Note that lines beginning with `%` are comment lines.
 
 We also specify a number of starting types, "initial types" which can be the same or different from the base types. These follow the same format, and `atomtypes/basetypes.smarts` can be reused unless alternate behavior is desired (such as starting from more sophisticated initial types).
 
-Atom type creation moves attempt to split off a new atom type from a parent atom type by combining (via an "and" operator, `&`) the parent atom type with a "decorator".
-The decorators are listed in `atomtypes/decorators.smarts`:
+Atom type creation moves has two options, one is using simple decorators (`--decoratorbehavior=simple-decorators`) and the other is combinatorial decorators (default).
+ 
+ The first option (simple-decorators) attempt to split off a new atom type from a parent atom type by combining (via an "and" operator, `&`) the parent atom type with a "decorator".
+The decorators are listed in `AlkEtOH/atomtypes/decorators.smarts` or `parm@frosst/atomtypes/decorators.smarts`:
 ```
 % bond order
 $([*]=[*])     double-bonded
@@ -115,6 +117,37 @@ Each decorator has a corresponding string token (no spaces allowed!) that is use
 
 For example, we may find the atom type ```[#6]&H3``` which is `carbon total-h-count-3` for a C atom bonded to three hydrogens.
 
+The second option (combinatorial-decorator) attempt to create a new atom type by adding randomly one, two or three decorators to a base atom type.
+This decorators are different from the simple-decorator option and do not have atom types on it, only bond information.
+The new decorators are listed in `AlkEtOH2/atomtypes/decorators.smarts`:
+ 
+ ```
+ % bonded to atoms
+ $(*-z) simply-bonded
+ $(*=z) doubly-bonded
+ $(*#z) triply-bonded
+ $(*:z) aromatic-bond
+ $(*~z) any-bond
+ % total connectivity
+ X1             connections-1
+ X2             connections-2
+ X3             connections-3
+ X4             connections-4
+ % total-h-count
+ H0             total-h-count-0
+ H1             total-h-count-1
+ H2             total-h-count-2
+ H3             total-h-count-3
+ % formal charge
+ +0             neutral
+ +1             cationic+1
+ -1             anionic-1
+ % aromatic/aliphatic
+ a              aromatic
+ A              aliphatic
+ ```
+This option also has the corresponding string token. 
+ 
 Newly proposed atom types are added to the end of the list.
 After a new atom type is proposed, all molecules are reparameterized using the new set of atom types.
 Atom type matching proceeds by trying to see if each SMARTS match can be applied working from top to bottom of the list.
