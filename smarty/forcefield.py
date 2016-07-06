@@ -26,6 +26,8 @@ TODO
 </Constraints>
 ```
 * Move utility functions like 'generateTopologyFromOEMol()' elsewhere?
+* Use xml parser with 'sourceline' node attributes to aid debugging
+http://stackoverflow.com/questions/6949395/is-there-a-way-to-get-a-line-number-from-an-elementtree-element
 """
 #=============================================================================================
 # GLOBAL IMPORTS
@@ -519,7 +521,10 @@ def _extractQuantity(node, parent, name, unit_name=None):
 
     """
     if name not in node.attrib:
-        raise Exception("Line %d : Expected XML attribute '%s' not found" % name)
+        if 'sourceline' in node.attrib:
+            raise Exception("Line %d : Expected XML attribute '%s' not found" % (node.attrib['sourceline'], name))
+        else:
+            raise Exception("Expected XML attribute '%s' not found" % (name))
     quantity = float(node.attrib[name])
 
     if unit_name is None:
@@ -638,6 +643,27 @@ class HarmonicBondGenerator(object):
 
         if verbose: print('%d bonds added' % (len(bonds)))
 
+
+        # Check that no topology bonds are missing force parameters
+        atoms = [ atom for atom in topology.atoms() ]
+        topology_bonds = ValenceDict()
+        for (atom1, atom2) in topology.bonds():
+            topology_bonds[(atom1.index,atom2.index)] = True
+        if set(bonds.keys()) != set(topology_bonds.keys()):
+            msg = 'Mismatch between bonds added and topological bonds.\n'
+            created_bondset = set(bonds.keys())
+            topology_bondset = set(topology_bonds.keys())
+            msg += 'Bonds created that are not present in Topology:\n'
+            msg += str(created_bondset.difference(topology_bondset)) + '\n'
+            msg += 'Topology bonds not assigned parameters:\n'
+            for (a1, a2) in topology_bondset.difference(created_bondset):
+                atom1 = atoms[a1]
+                atom2 = atoms[a2]
+                msg += '(%8d,%8d) : %5s %3s %3s - %5s %3s %3s' % (a1, a2, atom1.residue.index, atom1.residue.name, atom1.name, atom2.residue.index, atom2.residue.name, atom2.name)
+                msg += '\n'
+            raise Exception(msg)        
+
+
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
 
 #=============================================================================================
@@ -729,6 +755,10 @@ class PeriodicTorsionGenerator(object):
                 self.periodicity.append( int(_extractQuantity(node, parent, 'periodicity%d' % index)) )
                 self.phase.append( _extractQuantity(node, parent, 'phase%d' % index, unit_name='phase_unit') )
                 self.k.append( _extractQuantity(node, parent, 'k%d' % index, unit_name='k_unit') )
+                # Optionally handle 'idivf', which divides the periodicity by the specified value
+                if ('idivf%d' % index) in node.attrib:
+                    idivf = _extractQuantity(node, parent, 'idivf%d' % index)
+                    self.k[-1] /= float(idivf)
                 index += 1
 
     def __init__(self, forcefield):
@@ -799,8 +829,24 @@ class NonbondedGenerator(object):
     class LennardJonesType(object):
         """A SMIRFF Lennard-Jones type."""
         def __init__(self, node, parent):
+            """Currently we support radius definition via 'sigma' or 'rmin_half'."""
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.sigma = _extractQuantity(node, parent, 'sigma')
+
+            # Make sure we don't have BOTH rmin_half AND sigma
+            try:
+                a = _extractQuantity(node, parent, 'sigma')
+                a = _extractQuantity(node, parent, 'rmin_half')
+                raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the .ffxml file.")
+            except:
+                pass            
+
+            #Handle sigma
+            try: 
+                self.sigma = _extractQuantity(node, parent, 'sigma')
+            #Handle rmin_half, AMBER-style
+            except:
+                rmin_half = _extractQuantity(node, parent, 'rmin_half', unit_name='sigma_unit')
+                self.sigma = 2.*rmin_half/(2.**(1./6.))
             self.epsilon = _extractQuantity(node, parent, 'epsilon')
 
     def __init__(self, forcefield, coulomb14scale, lj14scale):
