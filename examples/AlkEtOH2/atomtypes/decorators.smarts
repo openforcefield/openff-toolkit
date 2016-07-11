@@ -1,5 +1,5 @@
 % bonded to atoms
-$(*-z) simply-bonded
+$(*-z) singly-bonded
 $(*=z) doubly-bonded
 $(*#z) triply-bonded
 $(*:z) aromatic-bond
