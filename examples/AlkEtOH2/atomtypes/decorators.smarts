@@ -1,9 +1,3 @@
-% bonded to atoms
-$(*-z) simply-bonded
-$(*=z) doubly-bonded
-$(*#z) triply-bonded
-$(*:z) aromatic-bond
-$(*~z) any-bond
 % total connectivity
 X1             connections-1
 X2             connections-2
