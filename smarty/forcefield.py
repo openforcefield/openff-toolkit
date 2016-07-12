@@ -241,7 +241,10 @@ class _Topology(Topology):
 
         # Perform matching on each unique molecule, unrolling the matches to all matching copies of tha tmolecule in the Topology object.
         matches = list()
-        unique = True # give unique matches
+        # We require non-unique matches, i.e. we want every torsion matching
+        # a SMARTS query. With unique = True, "Two subgraph matches which cover the same atoms, albeit in different orders, will be called duplicates and the subgraph found later in the search will be discarded."
+        # if unique = True, we will fail to match non-equivalent torsions [0, 1, 2, 3 ] and [ 2, 1, 0, 3 ] going around the four ring atoms in cyclopropane, for example.
+        unique = False 
         for reference_molecule in self._reference_molecules:
             # Find all atomsets that match this definition in the reference molecule
             ss = oechem.OESubSearch(qmol)
