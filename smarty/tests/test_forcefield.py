@@ -10,6 +10,7 @@ from simtk.openmm.app import Topology
 from simtk import unit, openmm
 import numpy as np
 from StringIO import StringIO
+from smarty.forcefield_utils import *
 
 # This is a test forcefield that is not meant for actual use.
 # It just tests various capabilities.
@@ -236,6 +237,33 @@ def test_create_system_boxes_parmatfrosst(verbose=False):
     """
     forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
     check_boxes(forcefield, description="to test Parm@frosst parameters", verbose=verbose)
+
+def test_smirff_energies_vs_parmatfrosst(verbose=False):
+    """Test evaluation of energies from parm@frosst ffxml files versus energies of equivalent systems."""
+
+    from openeye import oechem
+    prefix = 'AlkEthOH_'
+    molecules = [ 'r118', 'r12', 'c1161', 'r0', 'c100', 'c38', 'c1266' ]
+   
+    # Loop over molecules, load OEMols and prep for comparison/do comparison
+    for molnm in molecules:
+        f_prefix = os.path.join('molecules', prefix+molnm )
+        mol2file = get_data_filename( f_prefix+'.mol2')
+        prmtop = get_data_filename( f_prefix+'.top')
+        crd = get_data_filename( f_prefix+'.crd')
+        # Load special parm@frosst with parm99/parm@frosst bugs re-added for testing
+        forcefield = ForceField( get_data_filename('forcefield/Frosst_AlkEtOH_parmAtFrosst.ffxml') ) 
+
+        # Load OEMol
+        mol = oechem.OEGraphMol()
+        ifs = oechem.oemolistream(mol2file)
+        flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
+        ifs.SetFlavor( oechem.OEFormat_MOL2, flavor)
+        oechem.OEReadMolecule(ifs, mol )
+        oechem.OETriposAtomNames(mol)    
+
+        # Do comparison
+        results = compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = verbose )
 
 if __name__ == '__main__':
     #test_smirks()
