@@ -7,7 +7,8 @@ import glob
 # Cross-check energies of molecules from AlkEthOH set using SMIRFF xml file 
 # versus energies from AMBER .prmtop and .crd files (parm@frosst params)
 
-datapath = './AlkEthOH_inputfiles/AlkEthOH_chain_filt1' 
+#datapath = './AlkEthOH_inputfiles/AlkEthOH_chain_filt1' 
+datapath = './AlkEthOH_inputfiles/AlkEthOH_rings_filt1' 
 
 #Check if this is a directory, if not, extract it
 # Check if we have this data file; if not we have to extract the archive
