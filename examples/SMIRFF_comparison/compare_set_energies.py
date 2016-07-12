@@ -18,6 +18,7 @@ if not os.path.isdir( datapath ):
 
 #Obtain list of molecules
 mol_filenames = glob.glob( datapath+'/*.mol2')
+mol_filenames = [ fnm for fnm in mol_filenames if not 'c1302' in fnm ] #Skip water
 
 for mol_filename in mol_filenames:
     molname = os.path.basename( mol_filename).replace('.mol2','')
