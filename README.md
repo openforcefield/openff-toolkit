@@ -4,10 +4,12 @@
 
 This is a simple example of how Bayesian atom type sampling using reversible-jump Markov chain Monte Carlo (RJMCMC) [1] over SMARTS types might work.
 
+This also provides a prototype and validation of the SMIRFF SMIRKS-based force field format, along with classes to parameterize OpenMM systems given SMIRFF `.ffxml` format files as provided here.
+
 ## Manifest
 
 * `examples/` - some toy examples - look here to get started
-* `smarty/` - simple toolkit illustrating the use of RJMCMC to sample over SMARTS-specified atom types
+* `smarty/` - simple toolkit illustrating the use of RJMCMC to sample over SMARTS-specified atom types; also contains forcefield.py for handling SMIRFF forcefield format.
 * `devtools/` - continuous integration and packaging scripts and utilities
 * `oe_license.txt.enc` - encrypted OpenEye license for continuous integration testing
 * `.travis.yml` - travis-ci continuous integration file
@@ -156,6 +158,15 @@ This means the atom type list is hierarchical, with more general types appearing
 If a proposed type matches zero atoms, the RJMCMC move is rejected.
 
 Currently, the acceptance criteria does not include the full Metropolis-Hastings acceptance criteria that would include the reverse probability.  This needs to be added in.
+
+## SMIRFF
+
+The SMIRFF forcefield format is available in sample form under data/forcefield, and is handled by forcefield.py.
+ An example comparing SMIRFF versus AMBER energies for the parm@frosst forcefield is provided under
+examples/SMIRFF_comparison, where two scripts can compare energies for a single molecule or for the entire AlkEthOH set. 
+Note that two forcefields are currently available in this format, `Fross_AlkEtOH.ffxml`,
+the parm@frosst forcefield as it should have been for this set, and `Frosst_AlkEtOH_parmAtFrosst.ffxml`,
+the forcefield as it was actually implemented (containing several bugs as noted in the file itself).
 
 ## References
 
