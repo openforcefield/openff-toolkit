@@ -20,69 +20,88 @@ Caitlin Bannan <bannanc@uci.edu>, Mobley Lab, University of California Irvine.
 
 import networkx
 
-#=============================================================================================
-# AtomEnvironment Object (node of chemical environment)
-#=============================================================================================
-
-class AtomEnvironment(object):
-    """
-    This is an Atom that is a part of a larger chemical environment
-    This may be just a dictionary, but I think it is worth having an option to add other methods
-
-    For example, we could eventually have a get valence property that would use the atom, charg
-
-    """
-    def __init__(self, base_types = None, properties = None, label = ""):  
-        """
-        """
-
-        self.base_types = base_types
-        self.properties = properties
-        self.label = label
-        
-
-#=============================================================================================
-# Chemical Environment 
-#=============================================================================================
-
 class ChemicalEnvironment(object):
-    """
-    Chemical Environments describe a molecular fragment with
-    atoms, their properties, and how they are bonded together
+   """Chemical environment abstract base class that matches an atom, bond, angle, etc.
+   """
+   class Atom(object):
+      """Atom representation, which may have some base (logical OR) and decorator (logical AND) properties.
 
-    This includes the properties of those atoms and bonds and the methods 
-    associated with changing or adding atoms or bonds to the fragment.
-    """
+      Type will be OR(basetypes) AND AND(decorators).
 
-    def __init__(self, connection_type, basetypes, decorators):
-        """
-        initialize a chemical environment graph with 'empty' atoms for the number of nodes needed
-        for the connection type.
+      Properties
+      -----------
+      basetypes : set of string
+         The base types that will be combined with logical OR
+      decorators : set of string
+         The decorators that will be combined with logical AND
+      """
+      def __init__(self):
+         """Initialize an Atom object with empty basetypes and decorators.
+         """
+         self.basetypes = set()
+         self.decorators = set()
 
-        Should we have an option for initial atom/bond identifiers?
+      def asSMARTS(self, index=None):
+         """Return the atom representation as SMARTS/SMIRKS.
 
-        ARGUMENTS
+         Parameters
+         ----------
+         index : int, optional, default=None
+            If not None, the specified index will be attached as a SMIRKS index (e.g. '[#6:1]')
 
-        connection_type: string? number? 
-            Determines the type of property being assigned, Lennard-Jones (or atomtype), Bond, Angle, Torsion, or Improper
-        basetypes: list of strings             
-            List of atom identifiers, this can include element numbers ("#1"), or a list of atoms ("#6,#7,#8")
-        decorators: list of strings
-            List of properties that can describe an atom, such as "X3" for connectivity 3
-        """
-        self.connection_type = connection_type
-        self.base_types = base_types
-        self.decorators = decorators
+         Returns
+         --------
+         smarts : str
+             The SMARTS/SMIRKS string
+         """
+         pass
 
-        self.Graph = self.buildGraph(self.connection_type)
+   class Bond(object):
+      """Bond representation, which may have base (OR) and decorator (AND) types.
+      """
+      # implementation similar to Atom
+      pass
 
-    def buildGraph(self, connection_type):
-        """
-        Makes a networkx graph that is the minimal size required for the connection_type specified.
+   def __init__(self):
+      """Initialize a chemical environment abstract base class.
+      """
+      # Create an empty graph which will store Atom objects.
+      self._graph = nx.Graph()
 
-        ARGUMENTS
-        connection_type: string? number?
-            property being determined, atom, bond, angle, torsion, or improper
+   def asSMARTS(self):
+      """Return a SMARTS/SMIRKS representation of the chemical environment.
+      """
+      pass
 
-        Returns a networkx graph object with the assigned shape and atom label numbers assigned. 
-        """
+   def selectAtom(self):
+      """Select an atom with uniform probability.
+      """
+      pass
+
+   def selectBond(self):
+      """Select a bond with uniform probability.
+      """
+      pass
+
+   def addAtom(self, atom, bond, bondedAtom):
+      """Add an atom to the specified target atom.
+      """
+      pass
+
+   def removeAtom(self, atom):
+      """Remove the specified atom from the chemical environment, along with its associated bond.
+      """
+      pass
+
+class AtomChemicalEnvironment(ChemicalEnvironment):
+      """Chemical environment matching a single atom.
+      """
+      def __init__(self):
+         """Initialize a chemical environment corresponding to matching a single atom.
+         """
+         # Initialize base class
+         super(AtomChemicalEnvironment,self).__init__()
+         # Add a labeled atom corresponding to :1
+         # TODO
+
+# and so on for BondChemicalEnvironment, AngleChemicalEnvironment, TorsionChemicalEnvironment
