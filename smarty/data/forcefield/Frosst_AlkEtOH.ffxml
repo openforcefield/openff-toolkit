@@ -2,7 +2,7 @@
 
 <SMARFF>
 
-<!-- SMARFF (SMARTS Force Field) mockup1.0 for alkanes, ethers, and alcohols -->
+<!-- SMIRKS (SMIRKS Force Field) mockup1.0 for alkanes, ethers, and alcohols -->
 <Date>Date: Tue May  3 2016</Date>
 <Author>C. I. Bayly, OpenEye Scientific Software</Author>
 <!-- This mockup is based on frcmod.Frosst_AlkEthOH, the minimal subset of parm99/parm@Frosst -->
