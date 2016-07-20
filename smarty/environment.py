@@ -111,6 +111,11 @@ class ChemicalEnvironment(object):
             else: 
                 return smirks[:-1] + ':' + str(self.index) + smirks[-1]
 
+        def addBase(self, base):
+            self.bases.add(base)
+
+        def addDecorator(self, decorator):
+            self.decorators.add(decorator)
 
     class Bond(object):
         """Bond representation, which may have base (OR) and decorator (AND) types.
@@ -162,6 +167,12 @@ class ChemicalEnvironment(object):
             for consistency asSMARTS() or asSMIRKS() can be called
             """
             return self.asSMARTS()
+
+        def addBase(self, base):
+            self.bases.add(base)
+
+        def addDecorator(self, decorator):
+            self.decorators.add(decorator)
 
     def __init__(self):
         """Initialize a chemical environment abstract base class.
@@ -216,9 +227,14 @@ class ChemicalEnvironment(object):
         Bonds are found by the two atoms that define them
 
         RETURNS
-        (atom1, atom2) 
+        atom1 and atom2
+            Atom objects that are on either end of the bond
+        bond
+            Bond object connencting atoms 
         """
-        return random.choice(self._graph.edges())
+        (atom1, atom2) = random.choice(self._graph.edges())  
+        bond = self._graph.edge[atom1][atom2]['bond']
+        return atom1, atom2, bond 
 
     def addAtom(self, bondToAtom = None, bondBases = None, bondDecorators = None, 
             newAtomIndex = None, newBases = None, newDecorators = None):
