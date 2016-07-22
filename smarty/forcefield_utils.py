@@ -26,6 +26,7 @@ from smarty import ForceField
 from smarty.utils import get_data_filename
 import simtk.openmm
 from simtk.openmm import app
+import simtk.openmm as mm
 from simtk.openmm.app import element as elem
 from simtk.openmm.app import Topology
 import numpy as np
@@ -173,6 +174,27 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
     simulation0.context.setPositions(positions0)
     simulation1 = app.Simulation( topology1, system1, integrator1, platform = platform ) 
     simulation1.context.setPositions(positions1)
+
+    # Print what torsions were found if verbose
+    if verbose:
+        # Build list of atoms for debugging info
+        atoms0 = [ atom for atom in simulation0.topology.atoms() ]
+        atoms1 = [ atom for atom in simulation1.topology.atoms() ]
+        # Loop over first system and print torsion info
+        for force in simulation0.system.getForces():
+            if type(force) == mm.PeriodicTorsionForce:
+                print("Num (type) \t Num (type) \t Num (type) \t Num (type) \t per \t phase \t k0")
+                for k in range(force.getNumTorsions()):
+                    i0, i1, i2, i3, per, phase, k0 = force.getTorsionParameters(k)
+                    print("%3s (%3s)- %3s (%3s)- \t %s (%3s)- \t %3s (%3s)- \t %f \t %f \t %f " % (i0, atoms0[i0].name, i1, atoms0[i1].name, i2, atoms0[i2].name, i3, atoms0[i3].name, per, phase/unit.degree, k0/unit.kilojoule_per_mole) )
+        for force in simulation1.system.getForces():
+            if type(force) == mm.PeriodicTorsionForce:
+                print("Num (type) \t Num (type) \t Num (type) \t Num (type) \t per \t phase \t k0")
+                for k in range(force.getNumTorsions()):
+                    i0, i1, i2, i3, per, phase, k0 = force.getTorsionParameters(k)
+                    print("%3s (%3s)- %3s (%3s)- %3s (%3s)- %3s (%3s) - %f \t %f \t %f " % (i0, atoms1[i0].name, i1, atoms1[i1].name, i2, atoms1[i2].name, i3, atoms1[i3].name, per, phase/unit.degree, k0/unit.kilojoule_per_mole) )
+                    
+
 
    
     # Do energy comparison, print info if desired
