@@ -52,14 +52,14 @@ class ChemicalEnvironment(object):
             strings that will be AND'd together in a SMARTS
             """
             # Set of strings that will be OR'd together
-            if bases is  None:
+            if bases ==  None:
                 self.bases = set()
             else:
                 self.bases = set(bases)
 
             # Set of strings that will be AND'd to the the end 
             # Probably decorators
-            if decorators is None:
+            if decorators == None:
                 self.decorators = set()
             else:
                 self.decorators = set(decorators)
@@ -78,12 +78,12 @@ class ChemicalEnvironment(object):
             smarts = '['
 
             # Add the OR'd features
-            if self.bases:
+            if len(self.bases) > 0:
                 smarts += ','.join(self.bases)
             else:
                 smarts += '*'
 
-            if self.decorators:
+            if len(self.decorators) > 0:
                 smarts += ';' + ';'.join(self.decorators)
 
             return smarts + ']'
@@ -99,7 +99,7 @@ class ChemicalEnvironment(object):
             smirks = self.asSMARTS()
 
             # No index specified so SMIRKS = SMARTS 
-            if self.index is None:
+            if self.index == None:
                 return smirks 
 
             # Add label to the end of SMARTS
@@ -143,13 +143,13 @@ class ChemicalEnvironment(object):
             """
 
             # Make set of bases
-            if bases is None:
+            if bases == None:
                 self.bases = set()
             else:
                 self.bases = set(bases)
 
             # Make set of decorators
-            if decorators is None:
+            if decorators == None:
                 self.decorators = set()
             else:
                 self.decorators = set(decorators)
@@ -162,12 +162,12 @@ class ChemicalEnvironment(object):
             smarts : str
             The SMARTS string for just this atom
             """
-            if self.bases:
+            if len(self.bases) > 0:
                 smarts = ','.join(self.bases)
             else:
                 smarts = '~'
 
-            if self.decorators:
+            if len(self.decorators) > 0:
                 smarts += ';' + ';'.join(self.decorators)
 
             return smarts
@@ -212,7 +212,7 @@ class ChemicalEnvironment(object):
         # Create an empty graph which will store Atom objects.
         self._graph = nx.Graph()
 
-    def asSMIRKS(self, initialAtom = None, neighbors = None):
+    def asSMIRKS(self, initialAtom = None, neighbors = None, smarts = False):
         """Return a SMIRKS representation of the chemical environment.
 
         Parameters
@@ -223,19 +223,25 @@ class ChemicalEnvironment(object):
             This is all of the initalAtom neighbors if not specified 
             generally this is used only for the recursive calls 
             so initial atoms are not reprinted
+        smarts = optional, boolean
+            if True, returns a SMARTS string instead of SMIRKS
         """
-        if initialAtom is None:
+        if initialAtom == None:
             initialAtom = self.getAtoms()[0]
 
-        if neighbors is None:
+        if neighbors == None:
             neighbors = self._graph.neighbors(initialAtom)
 
         # initialize smirks for starting atom
-        smirks = initialAtom.asSMIRKS()
+        if smarts:
+            smirks = initialAtom.asSMARTS()
+        else:
+            smirks = initialAtom.asSMIRKS()
 
         # loop through neighbors
         for idx, neighbor in enumerate(neighbors):
             # get the SMIRKS for the bond between these atoms
+            # bonds are the same if smarts or smirks
             bondSMIRKS = self._graph.edge[initialAtom][neighbor]['bond'].asSMIRKS()
     
             # Get the neighbors for this neighbor
@@ -244,7 +250,7 @@ class ChemicalEnvironment(object):
             new_neighbors.remove(initialAtom)
 
             # Call asSMIRKS again to get the details for that atom
-            atomSMIRKS = self.asSMIRKS(neighbor, new_neighbors)
+            atomSMIRKS = self.asSMIRKS(neighbor, new_neighbors, smarts)
 
             # Use ( ) for branch atoms (all but last)
             if idx < len(neighbors) - 1:
@@ -304,7 +310,7 @@ class ChemicalEnvironment(object):
         --------
         newAtom: atom object for the newly created atom        
         """
-        if bondToAtom is None:
+        if bondToAtom == None:
             bondToAtom = self.selectAtom()
 
         # create new bond
@@ -383,27 +389,52 @@ class ChemicalEnvironment(object):
 class AtomChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching one labeled atom.
     """
-    def __init__(self, initAtomBases = [None], initAtomDecors = [None]):
+    def __init__(self, initAtomBases = None, initAtomDecors = None):
         """Initialize a chemical environment corresponding to matching a single atom.
         """
         # Initialize base class
         super(AtomChemicalEnvironment,self).__init__()
-        self.atom1 = self.Atom(1, initAtomBases[0], initAtomDecors[0])
+        self.atom1 = self.Atom(1, initAtomBases, initAtomDecors)
         self._graph.add_node(self.atom1)
+
+    def asSMARTS(self):
+        """
+        Makes SMARTS string for one atom
+
+        Returns
+        --------
+        the SMARTS string for the atom for atom ':1'
+        """
+        # smarts for atom1 without last ']'
+        smarts = self.atom1.asSMARTS()[:-1]
+        
+        for idx, neighbor in enumerate(self._graph.neighbors(self.atom1)):
+            new_neighbors = self._graph.neighbors(neighbor)
+            new_neighbors.remove(self.atom1)
+
+            bondSMARTS = self._graph.edge[self.atom1][neighbor]['bond'].asSMARTS()
+            neighborSMARTS = self.asSMIRKS(neighbor, new_neighbors, True)
+
+            if idx == 0:
+                smarts += '$(*' + bondSMARTS + neighborSMARTS + ')'
+            else:
+                smarts += '(*' + bondSMARTS + neighborSMARTS + ')'
+
+        return smarts + ']'
 
 class BondChemicalEnvironment(AtomChemicalEnvironment):
     """Chemical environment matching two labeled atoms (or a bond).
     """
     def __init__(self, 
             initAtomBases = [None, None], initAtomDecors = [None, None], 
-            initBondBases = [None], initBondDecors = [None]):
+            initBondBases = None, initBondDecors = None):
         """Initialize a chemical environment corresponding to matching two atoms (bond).
         """
         # Initialize base class
-        super(BondChemicalEnvironment,self).__init__(initAtomBases[:1], initAtomDecors[:1])
+        super(BondChemicalEnvironment,self).__init__(initAtomBases[0], initAtomDecors[0])
 
         # Add initial atom
-        self.atom2 = self.addAtom(self.atom1, initBondBases[0], initBondDecors[0], initAtomBases[1], initAtomDecors[1], 2)
+        self.atom2 = self.addAtom(self.atom1, initBondBases, initBondDecors, initAtomBases[1], initAtomDecors[1], 2)
 
 class AngleChemicalEnvironment(BondChemicalEnvironment):
     """Chemical environment matching three marked atoms (angle).
@@ -414,7 +445,7 @@ class AngleChemicalEnvironment(BondChemicalEnvironment):
         """
         # Initialize base class
         super(AngleChemicalEnvironment,self).__init__(initAtomBases[:2], initAtomDecors[:2],
-                initBondBases[:1], initBondDecors[:1])
+                initBondBases[0], initBondDecors[0])
 
         # Add initial atom
         self.atom3 = self.addAtom(self.atom2, initBondBases[1], initBondDecors[1], initAtomBases[2], initAtomDecors[2], 3)
