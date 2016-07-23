@@ -14,7 +14,7 @@ def find_package_data(data_root, package_root):
 
 setup(
     name = "smarty",
-    version = "0.1.1",
+    version = "0.1.2",
     author = "John Chodera",
     author_email = "john.chodera@choderalab.org",
     description = ("Automated Bayesian atomtype sampling"),
