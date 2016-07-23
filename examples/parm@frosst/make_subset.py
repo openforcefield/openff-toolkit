@@ -25,6 +25,7 @@ ifs = oemolistream( 'molecules/zinc-subset-parm@frosst.mol2.gz')
 flavor = OEIFlavor_Generic_Default | OEIFlavor_MOL2_Default | OEIFlavor_MOL2_Forcefield
 ifs.SetFlavor(OEFormat_MOL2, flavor)
 ofs = oemolostream( 'molecules/zinc-subset-%s-parm@frosst.mol2.gz' % nmols )
+ofs.SetFlavor(OEFormat_MOL2, flavor)
 mol = OEMol()
 ct=0
 while OEReadMolecule(ifs, mol) and ct < nmols:
