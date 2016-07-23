@@ -14,7 +14,7 @@ Usage
 
 Example:
 ```
-smarty --basetypes=atomtypes/basetypes-elemental.smarts --initialtypes=--basetypes=atomtypes/basetypes-elemental.smarts --decorators=atomtypes/decorators.smarts --substitutions=atomtypes/substitutions.smarts \
+smarty --basetypes=atomtypes/basetypes-elemental.smarts --initialtypes=atomtypes/basetypes-elemental.smarts --decorators=atomtypes/decorators.smarts --substitutions=atomtypes/substitutions.smarts \
     --molecules=molecules/zinc-subset-tripos.mol2.gz --reference=molecules/zinc-subset-parm@frosst.mol2.gz --iterations 1000 --temperature=0.1
 ```
 
