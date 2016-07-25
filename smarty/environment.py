@@ -338,7 +338,7 @@ class ChemicalEnvironment(object):
             atom to be removed if it meets the conditions. 
         """
         if atom.index is not None:
-            print("Cannont remove labeled atom %s" % atom.asSMIRKS())
+            print("Cannot remove labeled atom %s" % atom.asSMIRKS())
 
         elif len(self._graph.neighbors(atom)) > 1:
             print("Cannot remove atom %s because it connects two atoms" % atom.asSMIRKS())
