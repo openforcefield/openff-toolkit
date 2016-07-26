@@ -1,7 +1,0 @@
-% Each general bond type in the set
-[#6]~[#6]   cc
-[#6]~[#1]   ch
-[#6]~[#8]   co
-[#8]~[#1]   oh
-[#1]~[#1]   hh
-[#8]~[#8]   oo
