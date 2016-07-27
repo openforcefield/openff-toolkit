@@ -200,7 +200,12 @@ class ForceField_labeler(object):
                 # Initialize dictionary storage for this force type
                 if isinstance(force, HarmonicBondGenerator):
                     forcelabel = 'HarmonicBondForce'
-                # TO DO: Add other force types here
+                elif isinstance(force, HarmonicAngleGenerator):
+                    forcelabel = 'HarmonicAngleForce'
+                elif isinstance(force, PeriodicTorsionGenerator):
+                    forcelabel = 'PeriodicTorsionForce'
+                elif isinstance(force, NonbondedGenerator):
+                    forcelabel = 'NonbondedForce'
                 else:
                     continue
                     if verbose: print("Encountered unimplemented force; skipping.")
@@ -360,7 +365,7 @@ class HarmonicBondGenerator(object):
         Returns
         ---------
             force_terms: list
-                Returns a list of tuples, [ ((atom id 1, ... atom id N), parameter id) , (....), ... ] for all forces of this type which would be applied.
+                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
         """
 
         # Iterate over all defined bond SMIRKS, allowing later matches to override earlier ones.
@@ -380,9 +385,235 @@ class HarmonicBondGenerator(object):
         # Add all bonds to the output list
         force_terms = []
         for (atom_indices, bond) in bonds.items():
-            force_terms.append( ((atom_indices[0], atom_indices[1]), bond.pid) )
+            force_terms.append( ([atom_indices[0], atom_indices[1]], bond.pid, bond.smirks) )
 
         return force_terms
 
 
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
+
+
+#=============================================================================================
+
+class HarmonicAngleGenerator(object):
+    """A HarmonicAngleGenerator constructs a HarmonicAngleForce."""
+
+    class AngleType(object):
+        """A SMIRFF angle type."""
+        def __init__(self, node, parent):
+            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.pid = _extractQuantity(node, parent, 'id')
+
+    def __init__(self, forcefield):
+        self.ff = forcefield
+        self._angletypes = list()
+
+    def registerAngle(self, node, parent):
+        """Register a SMIRFF angletype definition."""
+        angle = HarmonicAngleGenerator.AngleType(node, parent)
+        self._angletypes.append(angle)
+
+    @staticmethod
+    def parseElement(element, ff):
+        # Find existing force generator or create new one.
+        existing = [f for f in ff._forces if isinstance(f, HarmonicAngleGenerator)]
+        if len(existing) == 0:
+            generator = HarmonicAngleGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
+
+        # Register all SMIRFF angle definitions.
+        for angle in element.findall('Angle'):
+            generator.registerAngle(angle, element)
+
+    def parseForce(self, oemol, verbose=False, **kwargs):
+        """Take a provided OEMol and parse HarmonicAngleForce terms for this molecule.
+
+        Parameters
+        ----------
+            oemol : OEChem OEMol object for molecule to be examined
+
+        Returns
+        ---------
+            force_terms: list
+                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
+        """
+
+        # Iterate over all defined angle types, allowing later matches to override earlier ones.
+        angles = ValenceDict()
+        for angle in self._angletypes:
+            for atom_indices in _getSMIRKSMatches(oemol, angle.smirks):
+                angles[atom_indices] = angle
+
+        if verbose:
+            print('')
+            print('HarmonicAngleGenerator:')
+            print('')
+            for angle in self._angletypes:
+                print('%64s : %8d matches' % (angle.smirks, len(_getSMIRKSMatches(oemol, angle.smirks))))
+            print('')
+
+        # Add all angles to the output list
+        force_terms = []
+        for (atom_indices, angle) in angles.items():
+            force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[2]], angle.pid, angle.smirks) )
+
+        return force_terms
+
+parsers["HarmonicAngleForce"] = HarmonicAngleGenerator.parseElement
+
+#=============================================================================================
+
+class PeriodicTorsionGenerator(object):
+    """A PeriodicTorsionForceGenerator constructs a PeriodicTorsionForce."""
+
+    class TorsionType(object):
+
+        """A SMIRFF torsion type."""
+        def __init__(self, node, parent):
+            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.pid = _extractQuantity(node, parent, 'id')
+
+    def __init__(self, forcefield):
+        self.ff = forcefield
+        self._torsiontypes = list()
+
+    def registerTorsion(self, node, parent):
+        """Register a SMIRFF torsiontype definition."""
+        torsion = PeriodicTorsionGenerator.TorsionType(node, parent)
+        self._torsiontypes.append(torsion)
+
+    @staticmethod
+    def parseElement(element, ff):
+        # Find existing force generator or create new one.
+        existing = [f for f in ff._forces if isinstance(f, PeriodicTorsionGenerator)]
+        if len(existing) == 0:
+            generator = PeriodicTorsionGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
+
+        # Register all SMIRFF torsion definitions.
+        # TODO: Do we need to treat propers and impropers differently?
+        for torsion in element.findall('Proper'):
+            generator.registerTorsion(torsion, element)
+        for torsion in element.findall('Improper'):
+            generator.registerTorsion(torsion, element)
+
+    def parseForce(self, oemol, verbose=False, **kwargs):
+        """Take a provided OEMol and parse PeriodicTorsionForce terms for this molecule.
+
+        Parameters
+        ----------
+            oemol : OEChem OEMol object for molecule to be examined
+
+        Returns
+        ---------
+            force_terms: list
+                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
+        """
+
+
+        # Iterate over all defined torsion types, allowing later matches to override earlier ones.
+        torsions = ValenceDict()
+        for torsion in self._torsiontypes:
+            for atom_indices in _getSMIRKSMatches(oemol, torsion.smirks):
+                torsions[atom_indices] = torsion
+
+        if verbose:
+            print('')
+            print('PeriodicTorsionGenerator:')
+            print('')
+            for torsion in self._torsiontypes:
+                print('%64s : %8d matches' % (torsion.smirks, len(_getSMIRKSMatches(oemol, torsion.smirks))))
+            print('')
+
+
+        # Add all torsions to the output list
+        force_terms = []
+        for (atom_indices, torsion) in torsions.items():
+            force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3]], torsion.pid, torsion.smirks) )
+
+        return force_terms
+
+parsers["PeriodicTorsionForce"] = PeriodicTorsionGenerator.parseElement
+
+
+
+#=============================================================================================
+
+class NonbondedGenerator(object):
+    """A NonbondedGenerator constructs a NonbondedForce."""
+
+    SCALETOL = 1e-5
+
+    class LennardJonesType(object):
+        """A SMIRFF Lennard-Jones type."""
+        def __init__(self, node, parent):
+            """Currently we support radius definition via 'sigma' or 'rmin_half'."""
+            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.pid = _extractQuantity(node, parent, 'id')
+
+    def __init__(self, forcefield, coulomb14scale, lj14scale):
+        self.ff = forcefield
+        self.coulomb14scale = coulomb14scale
+        self.lj14scale = lj14scale
+        self._ljtypes = list()
+
+    def registerAtom(self, node, parent):
+        ljtype = NonbondedGenerator.LennardJonesType(node, parent)
+        self._ljtypes.append(ljtype)
+
+    @staticmethod
+    def parseElement(element, ff):
+        existing = [f for f in ff._forces if isinstance(f, NonbondedGenerator)]
+        if len(existing) == 0:
+            generator = NonbondedGenerator(ff, float(element.attrib['coulomb14scale']), float(element.attrib['lj14scale']))
+            ff.registerGenerator(generator)
+        else:
+            # Multiple <NonbondedForce> tags were found, probably in different files.  Simply add more types to the existing one.
+            generator = existing[0]
+            if abs(generator.coulomb14scale - float(element.attrib['coulomb14scale'])) > NonbondedGenerator.SCALETOL or \
+                    abs(generator.lj14scale - float(element.attrib['lj14scale'])) > NonbondedGenerator.SCALETOL:
+                raise ValueError('Found multiple NonbondedForce tags with different 1-4 scales')
+        for atom in element.findall('Atom'):
+            generator.registerAtom(atom, element)
+
+
+    def parseForce(self, oemol, verbose=False, **kwargs):
+        """Take a provided OEMol and parse HarmonicBondForce terms for this molecule.
+
+        Parameters
+        ----------
+            oemol : OEChem OEMol object for molecule to be examined
+
+        Returns
+        ---------
+            force_terms: list
+                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
+        """
+
+        # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
+        atoms = ValenceDict()
+        for ljtype in self._ljtypes:
+            for atom_indices in _getSMIRKSMatches(oemol, ljtype.smirks):
+                atoms[atom_indices] = ljtype
+
+        if verbose:
+            print('')
+            print('NonbondedForceGenerator:')
+            print('')
+            for ljtype in self._ljtypes:
+                print('%64s : %8d matches' % (ljtype.smirks, len(_getSMIRKSMatches(oemol, ljtype.smirks))))
+            print('') 
+
+        # Add all Lennard-Jones terms to the output list
+        force_terms = []
+        for (atom_indices, ljtype) in atoms.items():
+            force_terms.append( ([atom_indices[0]], ljtype.pid, ljtype.smirks) )
+
+        return force_terms
+
+
+parsers["NonbondedForce"] = NonbondedGenerator.parseElement
