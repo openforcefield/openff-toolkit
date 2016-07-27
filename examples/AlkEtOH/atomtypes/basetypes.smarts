@@ -1,7 +1,6 @@
 % atom types
 [#1]    hydrogen
 [#6]    carbon
-[#6&a]  carbon aromatic
 [#7]    nitrogen
 [#8]    oxygen
 [#9]    fluorine
