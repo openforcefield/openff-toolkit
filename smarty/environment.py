@@ -261,18 +261,36 @@ class ChemicalEnvironment(object):
 
         return smirks
 
-    def selectAtom(self):
+    def selectAtom(self, atomIndex = None):
         """Select an atom with uniform probability.
+
+        Paramters
+        ---------
+        atomIndex: int, optional
+            if None returns a random atom, otherwise returns atom at that index
 
         Returns 
         --------
         a random atom(node)
         """
-        return random.choice(self._graph.nodes())
+        if atomIndex == None:
+            return random.choice(self._graph.nodes())
+        atoms = self.getAtoms()
+        indices = [a.index for a in atoms]
+        if atomIndex in indices:
+            return atoms.index(atomIndex)
+        # TODO: index is not specified raise error instead?
+        else:
+            return None
 
-    def selectBond(self):
+    def selectBond(self, atomIndex1 = None, atomIndex2 = None):
         """Select a bond with uniform probability.
         Bonds are found by the two atoms that define them
+
+        Parameters
+        ----------
+        atomIndex1 and atomIndex2: int, optional
+            indices for atoms framing the bond
 
         Returns
         --------
@@ -281,8 +299,17 @@ class ChemicalEnvironment(object):
         bond
             Bond object connencting atoms 
         """
-        # Get a random edge
-        (atom1, atom2) = random.choice(self._graph.edges())  
+        # TODO: Handle exceptions associated with the input atom indices
+
+        # get atom1, if atomIndex1 is None then this is random
+        atom1 = self.selectAtom(atomIndex1)
+
+        # if antomIndex2 is None
+        if atomIndex2 == None:
+            atom2 = random.choice(self._graph.neighbors(atom1))
+        else:
+            atom2 = self.selectAtom(atomIndex2)
+
         # Get the bond object for that edge
         bond = self._graph.edge[atom1][atom2]['bond']
         return atom1, atom2, bond 
