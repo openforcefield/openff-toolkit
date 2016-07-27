@@ -265,6 +265,13 @@ def test_smirff_energies_vs_parmatfrosst(verbose=False):
         # Do comparison
         results = compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = verbose )
 
+def test_label_molecules(verbose=False):
+    """Test labeling/getting stats on labeling molecules"""
+    molecules = smarty.utils.read_molecules(get_data_filename('molecules/AlkEtOH-tripos.mol2.gz'), verbose=verbose)
+    ffxml = get_data_filename('forcefield/Frosst_AlkEtOH.ffxml')
+    get_molecule_parameterIDs( molecules, ffxml)
+
+
 if __name__ == '__main__':
     #test_smirks()
     test_create_system_boxes(verbose=True)
