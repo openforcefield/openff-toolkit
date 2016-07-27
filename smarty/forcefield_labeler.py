@@ -98,7 +98,7 @@ def _getSMIRKSMatches( oemol, smirks):
 parsers = {}
 
 class ForceField_labeler(object):
-    """A ForceField_labeler holds parameters and SMIRKS from a SMIRFF XML file and can be used to label OEMols with what force terms would be applied."""
+    """A ForceField_labeler holds parameters and SMIRKS from a SMIRFF XML file and can be used to label OEMols with what force terms would be applied, or more specifically, to return a list of what force terms would be applied to a list of oemols."""
 
 
     # Adapted from forcefield.py
@@ -170,7 +170,7 @@ class ForceField_labeler(object):
         self._forces.append(generator)
 
     def labelMolecules( self, oemols, verbose = False):
-        """Return labels for a set of OEMols corresponding to parameters from this force field.
+        """Return labels for a list of OEMols corresponding to parameters from this force field. For each oemol, a dictionary of force types is returned, and for each force type, each force term is provided with the atoms involved, the parameter id assigned, and the corresponding SMIRKS.
 
         Parameters
         ----------
@@ -186,8 +186,8 @@ class ForceField_labeler(object):
             one molecule from the provided list of oemols and is a dictionary
             keyed by force type, i.e. molecule_labels[0]['HarmonicBondForce'] 
             gives details for the harmonic bond parameters for the first 
-            molecule. Each element is a list of the form [ ( ( atom1, ..., 
-            atomN), parameter_id), ... ]
+            molecule. Each element is a list of the form [ ( [ atom1, ..., 
+            atomN], parameter_id, SMIRKS), ... ]
         
         """
 

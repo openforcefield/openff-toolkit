@@ -157,12 +157,14 @@ Currently, the acceptance criteria does not include the full Metropolis-Hastings
 
 ## SMIRFF
 
-The SMIRFF forcefield format is available in sample form under data/forcefield, and is handled by forcefield.py.
+The SMIRFF forcefield format is available in sample form under data/forcefield, and is handled by `forcefield.py`.
  An example comparing SMIRFF versus AMBER energies for the parm@frosst forcefield is provided under
 examples/SMIRFF_comparison, where two scripts can compare energies for a single molecule or for the entire AlkEthOH set. 
 Note that two forcefields are currently available in this format, `Fross_AlkEtOH.ffxml`,
 the parm@frosst forcefield as it should have been for this set, and `Frosst_AlkEtOH_parmAtFrosst.ffxml`,
 the forcefield as it was actually implemented (containing several bugs as noted in the file itself).
+
+It can also be of interest to know what SMIRFF parameters would be applied to particular molecules. Utility functionality for this is provided under `forcefield_labeler.py`, which has generally similar structure to `forcefield.py` but instead of providing OpenMM systems with parameters, it can be applied to specific molecules and returns information about what parameters would be applied. 
 
 ## References
 
