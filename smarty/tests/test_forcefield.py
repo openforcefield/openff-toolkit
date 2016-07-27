@@ -17,7 +17,7 @@ from smarty.forcefield_utils import *
 ffxml_contents = """\
 <?xml version="1.0"?>
 
-<SMARFF>
+<SMIRFF>
 
 <!-- Header block (optional) -->
 <Date>Date: Tue May  3 2016</Date>
@@ -72,7 +72,7 @@ ffxml_contents = """\
    <Atom smirks="[#8X2+0$(*-[#1]):1]" rmin_half="1.7210" epsilon="0.2104"/> <!-- OH from frcmod.Frosst_AlkEthOH -->
 </NonbondedForce>
 
-</SMARFF>
+</SMIRFF>
 """
 
 def positions_from_oemol(mol):
