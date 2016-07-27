@@ -7,7 +7,7 @@
 """
 forcefield_utils.py
 
-OpenMM ForceField replacement using SMIRKS-based matching.
+Utilities relating to OpenMM ForceField replacement using SMIRKS-based matching.
 
 AUTHORS
 
@@ -23,6 +23,7 @@ parts from John Chodera and Kyle Beauchamp.
 import os
 import smarty
 from smarty import ForceField
+from smarty.forcefield_labeler import ForceField_labeler
 from smarty.utils import get_data_filename
 import simtk.openmm
 from simtk.openmm import app
@@ -260,3 +261,66 @@ def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True ):
 
     return groups0, groups1, energy0, energy1
 
+
+def get_molecule_parameterIDs( oemols, ffxml):
+    """Process a list of oemols with a specified SMIRFF ffxml file and determine which parameters are used by which molecules, returning collated results.
+
+
+    Parameters
+    ----------
+    oemols : list
+        List of OpenEye OEChem molecules to parse; must have explicit hydrogens. 
+
+    Returns
+    -------
+    parameters_by_molecule : dict
+        Parameter IDs used in each molecule, keyed by isomeric SMILES 
+        generated from provided OEMols. Each entry in the dict is a list 
+        which does not necessarily have unique entries; i.e. parameter IDs
+        which are used more than once will occur multiple times.
+
+    parameters_by_ID : dict
+        Molecules in which each parameter ID occur, keyed by parameter ID.
+        Each entry in the dict is a set of isomeric SMILES for molecules
+        in which that parameter occurs. No frequency information is stored.
+
+    """
+
+    # Create storage
+    parameters_by_molecule = {}
+    parameters_by_ID = {}
+
+    # Generate isomeric SMILES
+    isosmiles = list()
+    for mol in oemols:
+        smi = oechem.OECreateIsoSmiString(mol)
+        if not smi in isosmiles:
+            isosmiles.append(smi)
+        # If the molecule is already here, raise exception
+        else:
+            raise ValueError("Error: get_molecule_parameterIDs has been provided a list of oemols which contains the same molecule, having isomeric smiles %s, more than once." % smi )
+    # Label molecules
+    labeler = ForceField_labeler( ffxml )  
+    labels = labeler.labelMolecules( oemols )
+    
+    # Organize labels into output dictionary by looping over all molecules/smiles
+    for idx in range(len(isosmiles)):
+        # Pull smiles, initialize storage
+        smi = isosmiles[idx]
+        parameters_by_molecule[smi] = []
+
+        # Organize data for this molecule
+        data = labels[idx]
+        for force_type in data.keys():
+            for (atom_indices, pid, smirks) in data[force_type]:
+                # Store pid to molecule
+                parameters_by_molecule[smi].append(pid)
+
+                # Store which molecule this pid occurred in
+                if not parameters_by_ID.has_key( pid ):
+                    parameters_by_ID[pid] = set()
+                    parameters_by_ID[pid].add(smi)
+                else:
+                    parameters_by_ID[pid].add(smi)
+
+    return parameters_by_molecule, parameters_by_ID
