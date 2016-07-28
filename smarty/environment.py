@@ -36,20 +36,21 @@ class ChemicalEnvironment(object):
         Properties
         -----------
         bases : set of string
-        The base types that will be combined with logical OR
+            The base types that will be combined with logical OR
         decorators : set of string
-        The decorators that will be combined with logical AND
+            The decorators that will be combined with logical AND
         """
         def __init__(self, index = None, bases = None, decorators = None):
             """Initialize an Atom object with empty bases decorators.
 
-            ARGUMENTS:
+            Parameters
+            -----------
             index : int, optional, default=None
-            If not None, the specified index will be attached as a SMIRKS index (e.g. '[#6:1]')
+                If not None, the specified index will be attached as a SMIRKS index (e.g. '[#6:1]')
             bases: set of strings, optional, default = None
-            strings that will be OR'd together in a SMARTS
+                strings that will be OR'd together in a SMARTS
             decorators: set of str, optional, default = None
-            strings that will be AND'd together in a SMARTS
+                strings that will be AND'd together in a SMARTS
             """
             # Set of strings that will be OR'd together
             if bases ==  None:
@@ -130,12 +131,20 @@ class ChemicalEnvironment(object):
 
     class Bond(object):
         """Bond representation, which may have base (OR) and decorator (AND) types.
+        Properties
+        -----------
+        bases : set of string
+            The base types that will be combined with logical OR
+        decorators : set of string
+            The decorators that will be combined with logical AND
+
         """
         # implementation similar to Atom but for bonds connecting atoms
 
         def __init__(self, bases = None, decorators = None):
             """
-            ARGUMENTS:
+            Parameters
+            -----------
             bases: set of strings, optional, default = None
                 strings that will be OR'd together in a SMARTS
             decorators: set of str, optional, default = None
@@ -160,7 +169,7 @@ class ChemicalEnvironment(object):
             Returns
             --------
             smarts : str
-            The SMARTS string for just this atom
+                The SMARTS string for just this atom
             """
             if len(self.bases) > 0:
                 smarts = ','.join(self.bases)
@@ -174,7 +183,9 @@ class ChemicalEnvironment(object):
 
         def asSMIRKS(self):
             """
-            returns the same as asSMARTS()
+            Returns 
+            --------
+            the same as asSMARTS()
                 for consistency asSMARTS() or asSMIRKS() can be called
                 for all environment objects 
             """
@@ -309,6 +320,9 @@ class ChemicalEnvironment(object):
             atom2 = random.choice(self._graph.neighbors(atom1))
         else:
             atom2 = self.selectAtom(atomIndex2)
+            if not atom2 in self._graph.neighbors(atom1):
+                raise Exception("Error Atom Mismatch:
+                        Atoms1 (%s) is not bonded to Atom2 (%s)" % (atom1.asSMIRKS(), atom2.asSMIRKS()))
 
         # Get the bond object for that edge
         bond = self._graph.edge[atom1][atom2]['bond']
@@ -363,17 +377,23 @@ class ChemicalEnvironment(object):
         ----------
         atom: atom object, required
             atom to be removed if it meets the conditions. 
+
+        Returns
+        --------
+        Boolean True: atom was removed, False: atom was not removed
         """
         if atom.index is not None:
             print("Cannot remove labeled atom %s" % atom.asSMIRKS())
+            return False
 
         elif len(self._graph.neighbors(atom)) > 1:
             print("Cannot remove atom %s because it connects two atoms" % atom.asSMIRKS())
+            return False
 
         else:
-            bondedTo = self._graph.neighbors(atom)[0]
             # Remove atom (removes associated bonds)
             self._graph.remove_node(atom)
+            return True
 
     def getAtoms(self):
         """
@@ -413,15 +433,30 @@ class ChemicalEnvironment(object):
             return self._graph.edge[atom1][atom2]['bond']
         else:
             return None
+
 class AtomChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching one labeled atom.
+    
     """
-    def __init__(self, initAtomBases = None, initAtomDecors = None):
+    def __init__(self, AtomInfo = [None, None]):
         """Initialize a chemical environment corresponding to matching a single atom.
+
+        Parameters
+        -----------
+        AtomInfo: list of sets, optional
+            Comes in the form [AtomBases, AtomDecors]
+            AtomBases: descriptors for the first atom that are connected with logical operation OR
+            AtomDecors: descriptors for the first atom that are connected with the logical operation AND
+
+        For example:
+            # create an atom that is carbon, nitrogen, or oxygen with no formal charge
+            atom = AtomChemicalEnvironment([['#6', '#7', '#8'], ['+0']])
+            print atom.asSMIRKS()
+            # prints: "[#6,#7,#8;+0:1]"
         """
         # Initialize base class
         super(AtomChemicalEnvironment,self).__init__()
-        self.atom1 = self.Atom(1, initAtomBases, initAtomDecors)
+        self.atom1 = self.Atom(1, AtomInfo[0], AtomInfo[1])
         self._graph.add_node(self.atom1)
 
     def asSMARTS(self):
@@ -430,7 +465,10 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
 
         Returns
         --------
-        the SMARTS string for the atom for atom ':1'
+        string for the SMARTS string for the first atom (labeled with index :1)
+        
+        This is a single atom with neighbors as decorators in the form:
+        [atom1$(*~neighbor1)$(*~neighbor2)...]
         """
         # smarts for atom1 without last ']'
         smarts = self.atom1.asSMARTS()[:-1]
@@ -442,71 +480,130 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
             bondSMARTS = self._graph.edge[self.atom1][neighbor]['bond'].asSMARTS()
             neighborSMARTS = self.asSMIRKS(neighbor, new_neighbors, True)
 
-            if idx == 0:
-                smarts += '$(*' + bondSMARTS + neighborSMARTS + ')'
-            else:
-                smarts += '(*' + bondSMARTS + neighborSMARTS + ')'
+            smarts += '$(*' + bondSMARTS + neighborSMARTS + ')'
 
         return smarts + ']'
 
 class BondChemicalEnvironment(AtomChemicalEnvironment):
     """Chemical environment matching two labeled atoms (or a bond).
     """
-    def __init__(self, 
-            initAtomBases = [None, None], initAtomDecors = [None, None], 
-            initBondBases = None, initBondDecors = None):
+    def __init__(self, Atom1Info = [None, None],
+            BondInfo = [None, None],
+            Atom2Info = [None, None])
         """Initialize a chemical environment corresponding to matching two atoms (bond).
+
+        Parameters
+        -----------
+        Atom1Info, Atom2Info: list of sets, optional
+            Comes in the form [AtomBases, AtomDecors]
+            AtomBases: descriptors for the first atom that are connected with logical operation OR
+            AtomDecors: descriptors for the first atom that are connected with the logical operation AND
+        BondInfo: list of sets, optional
+            In the form [BondBases, BondDecors] similar to atom information
+
+        For example:
+            # create a tetravalent carbon connected with a single bond to oxygen
+            Atom1Info = [['#6'], ['X4']]  
+            BondInfo = [['-'], None]  
+            Atom2Info = [['#8'], None]  
+
+            bond = BondChemicalEnvironment(Atom1Info, BondInfo, Atom2Info)
+            print bond.asSMIRKS()
+            # prints: "[#6;X4:1]-[#8:2]" 
         """
         # Initialize base class
-        super(BondChemicalEnvironment,self).__init__(initAtomBases[0], initAtomDecors[0])
+        super(BondChemicalEnvironment,self).__init__(Atom1Info)
 
         # Add initial atom
-        self.atom2 = self.addAtom(self.atom1, initBondBases, initBondDecors, initAtomBases[1], initAtomDecors[1], 2)
+        self.atom2 = self.addAtom(self.atom1, BondInfo[0], BondInfo[1], AtomInfo[0], AtomInfo[1], 2)
 
 class AngleChemicalEnvironment(BondChemicalEnvironment):
     """Chemical environment matching three marked atoms (angle).
     """
-    def __init__(self, initAtomBases = [None, None, None], initAtomDecors = [None, None, None], 
-            initBondBases = [None, None], initBondDecors = [None, None]):
+    def __init__(self, Atom1Info = [None, None], Bond1Info = [None, None], 
+            Atom2Info = [None, None], Bond2Info = [None, None], Atom3Info = [None, None]):
+
         """Initialize a chemical environment corresponding to matching three atoms.
+
+        Parameters
+        -----------
+        Atom1Info, Atom2Info, Atom3Info: list of sets, optional
+            Comes in the form [AtomBases, AtomDecors]
+            AtomBases: descriptors for the first atom that are connected with logical operation OR
+            AtomDecors: descriptors for the first atom that are connected with the logical operation AND
+        Bond1Info and Bond2Info: list of sets, optional
+            In the form [BondBases, BondDecors] similar to atom information
+
+        For example:
+            # create an angle where the center atom is a neutral trivalent carbon 
+            Atom2Info = [['#6X3'], ['+0']]
+            angle = AngleChemicalEnvironment(Atom2Info = Atom2Info)
+            print angle.asSMIRKS()
+            # "[*:1]~[#6X3;+0:2]~[*:3]"
         """
         # Initialize base class
-        super(AngleChemicalEnvironment,self).__init__(initAtomBases[:2], initAtomDecors[:2],
-                initBondBases[0], initBondDecors[0])
+        super(AngleChemicalEnvironment,self).__init__(Atom1Info, Bond1Info, Atom2Info)
 
         # Add initial atom
-        self.atom3 = self.addAtom(self.atom2, initBondBases[1], initBondDecors[1], initAtomBases[2], initAtomDecors[2], 3)
+        self.atom3 = self.addAtom(self.atom2, Bond2Info[0], Bond2Info[1], Atom3Info[0], Atom3Info[1], 3)
 
 class TorsionChemicalEnvironment(AngleChemicalEnvironment):
     """Chemical environment matching four marked atoms (torsion).
     """
-    def __init__(self, 
-            initAtomBases = [None, None, None, None], initAtomDecors = [None, None, None, None], 
-            initBondBases = [None, None, None], initBondDecors = [None, None, None]):
-        """Initialize a chemical environment corresponding to matching four atoms.
+    def __init__(self, Atom1Info = [None, None], Bond1Info = [None, None], 
+            Atom2Info = [None, None], Bond2Info = [None, None], 
+            Atom3Info = [None, None], Bond3Info = [None, None], Atom4Info = [None, None]):
+        """Initialize a chemical environment corresponding to matching four atoms (torsion).
+        
+        Parameters
+        -----------
+        Atom1Info, Atom2Info, Atom3Info, Atom4Info: list of sets, optional
+            Comes in the form [AtomBases, AtomDecors]
+            AtomBases: descriptors for the first atom that are connected with logical operation OR
+            AtomDecors: descriptors for the first atom that are connected with the logical operation AND
+        Bond1Info and Bond2Info, Bond3Info: list of sets, optional
+            In the form [BondBases, BondDecors] similar to atom information
+
+        For example:
+            # Create a torsion centered around two tetravalent carbons with single ring bonds
+            CarbonInfo = [['#6'], ['X4']
+            BondInfo = [['-'], ['@']]
+            torsion = TorsionChemicalEnvironment(Atom2Info = CarbonInfo, Bond2Info = BondInfo, Atom3Info = CarbonInfo)
+            print torsion.asSMIRKS()
+            # "[*:1]~[#6X4:2]-;@[#6X4:3]~[*:4]"
         """
         # Initialize base class
-        super(TorsionChemicalEnvironment,self).__init__(
-                initAtomBases[:3], initAtomDecors[:3], 
-                initBondBases[:2], initBondDecors[:2])
+        super(TorsionChemicalEnvironment,self).__init__(Atom1Info, Bond1Info, 
+                Atom2Info, Bond2Info, Atom3Info)
 
         # Add initial atom
-        self.atom4 = self.addAtom(self.atom3, initBondBases[2], initBondDecors[2], initAtomBases[3], initAtomDecors[3], 4)
+        self.atom4 = self.addAtom(self.atom3, Bond3Info[0], Bond3Info[1], Atom4Info[0], Atom4Info[1], 4)
 
 class ImproperChemicalEnvironment(AngleChemicalEnvironment):
     """Chemical environment matching four marked atoms (improper).
     """
-    def __init__(self, 
-        initAtomBases = [None, None, None, None], initAtomDecors = [None, None, None, None], 
-        initBondBases = [None, None, None], initBondDecors = [None, None, None]):
-        """Initialize a chemical environment corresponding to matching four atoms
-        connected as an improper torsion.
+    def __init__(self, Atom1Info = [None, None], Bond1Info = [None, None], 
+            Atom2Info = [None, None], Bond2Info = [None, None], 
+            Atom3Info = [None, None], Bond3Info = [None, None], Atom4Info = [None, None]):
+        """Initialize a chemical environment corresponding to matching four atoms (improper).
+        
+        Parameters
+        -----------
+        Atom1Info, Atom2Info, Atom3Info, Atom4Info: list of sets, optional
+            Comes in the form [AtomBases, AtomDecors]
+            AtomBases: descriptors for the first atom that are connected with logical operation OR
+            AtomDecors: descriptors for the first atom that are connected with the logical operation AND
+        Bond1Info and Bond2Info, Bond3Info: list of sets, optional
+            In the form [BondBases, BondDecors] similar to atom information
+
+        For example:
+
         """
+        # TODO: add improper example after talking to Christopher about numbering
         # Initialize base class
-        super(ImproperChemicalEnvironment,self).__init__(
-                initAtomBases[:3], initAtomDecors[:3],
-                initBondBases[:2], initBondDecors[:2])
+        super(TorsionChemicalEnvironment,self).__init__(Atom1Info, Bond1Info, 
+                Atom2Info, Bond2Info, Atom3Info)
 
         # Add initial atom
-        self.atom4 = self.addAtom(self.atom2, initBondBases[2], initBondDecors[2], initAtomBases[3], initAtomDecors[3], 4)
+        self.atom4 = self.addAtom(self.atom2, Bond3Info[0], Bond3Info[1], Atom4Info[0], Atom4Info[1], 4)
 
