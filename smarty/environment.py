@@ -321,8 +321,7 @@ class ChemicalEnvironment(object):
         else:
             atom2 = self.selectAtom(atomIndex2)
             if not atom2 in self._graph.neighbors(atom1):
-                raise Exception("Error Atom Mismatch:
-                        Atoms1 (%s) is not bonded to Atom2 (%s)" % (atom1.asSMIRKS(), atom2.asSMIRKS()))
+                raise Exception("Error Atom Mismatch: Atoms1 (%s) is not bonded to Atom2 (%s)" % (atom1.asSMIRKS(), atom2.asSMIRKS()))
 
         # Get the bond object for that edge
         bond = self._graph.edge[atom1][atom2]['bond']
@@ -489,7 +488,7 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
     """
     def __init__(self, Atom1Info = [None, None],
             BondInfo = [None, None],
-            Atom2Info = [None, None])
+            Atom2Info = [None, None]):
         """Initialize a chemical environment corresponding to matching two atoms (bond).
 
         Parameters
