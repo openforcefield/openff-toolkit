@@ -514,7 +514,7 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
         super(BondChemicalEnvironment,self).__init__(Atom1Info)
 
         # Add initial atom
-        self.atom2 = self.addAtom(self.atom1, BondInfo[0], BondInfo[1], AtomInfo[0], AtomInfo[1], 2)
+        self.atom2 = self.addAtom(self.atom1, BondInfo[0], BondInfo[1], Atom2Info[0], Atom2Info[1], 2)
 
 class AngleChemicalEnvironment(BondChemicalEnvironment):
     """Chemical environment matching three marked atoms (angle).
@@ -600,7 +600,7 @@ class ImproperChemicalEnvironment(AngleChemicalEnvironment):
         """
         # TODO: add improper example after talking to Christopher about numbering
         # Initialize base class
-        super(TorsionChemicalEnvironment,self).__init__(Atom1Info, Bond1Info, 
+        super(ImproperChemicalEnvironment,self).__init__(Atom1Info, Bond1Info, 
                 Atom2Info, Bond2Info, Atom3Info)
 
         # Add initial atom
