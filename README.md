@@ -119,17 +119,11 @@ Each decorator has a corresponding string token (no spaces allowed!) that is use
 
 For example, we may find the atom type ```[#6]&H3``` which is `carbon total-h-count-3` for a C atom bonded to three hydrogens.
 
-The second option (combinatorial-decorator) attempt to create a new atom type by adding randomly one, two or three decorators to a base atom type.
-This decorators are different from the simple-decorator option and do not have atom types on it, only bond information.
-The new decorators are listed in `AlkEtOH2/atomtypes/decorators.smarts`:
- 
+The second option (combinatorial-decorator) attempt to create the new atomtype adding an Alpha or Beta substituent to a basetype or an atomtype.
+This decorators are different from the simple-decorator option and do not have atom types or bond information on it.
+The new decorators are listed in `AlkEtOH/atomtypes/new-decorators.smarts` and `parm@frosst/atomtypes/new-decorators.smarts`:
+
  ```
- % bonded to atoms
- $(*-z) simply-bonded
- $(*=z) doubly-bonded
- $(*#z) triply-bonded
- $(*:z) aromatic-bond
- $(*~z) any-bond
  % total connectivity
  X1             connections-1
  X2             connections-2
@@ -148,8 +142,10 @@ The new decorators are listed in `AlkEtOH2/atomtypes/decorators.smarts`:
  a              aromatic
  A              aliphatic
  ```
-This option also has the corresponding string token. 
- 
+This option also has the corresponding string token.
+
+Example: `smarty --basetypes=examples/AlkEtOH/atomtypes/basetypes.smarts --initialtypes=examples/AlkEtOH/atomtypes/basetypes.smarts --decorators=examples/AlkEtOH/atomtypes/new-decorators.smarts  --molecules=examples/AlkEtOH/molecules/test_filt1_tripos.mol2 --reference=examples/AlkEtOH/molecules/test_filt1_ff.mol2 --iterations 1000 --temperature=0.00001`
+
 Newly proposed atom types are added to the end of the list.
 After a new atom type is proposed, all molecules are reparameterized using the new set of atom types.
 Atom type matching proceeds by trying to see if each SMARTS match can be applied working from top to bottom of the list.
@@ -161,12 +157,14 @@ Currently, the acceptance criteria does not include the full Metropolis-Hastings
 
 ## SMIRFF
 
-The SMIRFF forcefield format is available in sample form under data/forcefield, and is handled by forcefield.py.
+The SMIRFF forcefield format is available in sample form under data/forcefield, and is handled by `forcefield.py`.
  An example comparing SMIRFF versus AMBER energies for the parm@frosst forcefield is provided under
 examples/SMIRFF_comparison, where two scripts can compare energies for a single molecule or for the entire AlkEthOH set. 
 Note that two forcefields are currently available in this format, `Fross_AlkEtOH.ffxml`,
 the parm@frosst forcefield as it should have been for this set, and `Frosst_AlkEtOH_parmAtFrosst.ffxml`,
 the forcefield as it was actually implemented (containing several bugs as noted in the file itself).
+
+It can also be of interest to know what SMIRFF parameters would be applied to particular molecules. Utility functionality for this is provided under `forcefield_labeler.py`, which has generally similar structure to `forcefield.py` but instead of providing OpenMM systems with parameters, it can be applied to specific molecules and returns information about what parameters would be applied. 
 
 ## References
 

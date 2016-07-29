@@ -17,7 +17,7 @@ from smarty.forcefield_utils import *
 ffxml_contents = """\
 <?xml version="1.0"?>
 
-<SMARFF>
+<SMIRFF>
 
 <!-- Header block (optional) -->
 <Date>Date: Tue May  3 2016</Date>
@@ -72,7 +72,7 @@ ffxml_contents = """\
    <Atom smirks="[#8X2+0$(*-[#1]):1]" rmin_half="1.7210" epsilon="0.2104"/> <!-- OH from frcmod.Frosst_AlkEthOH -->
 </NonbondedForce>
 
-</SMARFF>
+</SMIRFF>
 """
 
 def positions_from_oemol(mol):
@@ -264,6 +264,13 @@ def test_smirff_energies_vs_parmatfrosst(verbose=False):
 
         # Do comparison
         results = compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = verbose )
+
+def test_label_molecules(verbose=False):
+    """Test labeling/getting stats on labeling molecules"""
+    molecules = smarty.utils.read_molecules(get_data_filename('molecules/AlkEtOH-tripos.mol2.gz'), verbose=verbose)
+    ffxml = get_data_filename('forcefield/Frosst_AlkEtOH.ffxml')
+    get_molecule_parameterIDs( molecules, ffxml)
+
 
 if __name__ == '__main__':
     #test_smirks()
