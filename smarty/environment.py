@@ -289,7 +289,7 @@ class ChemicalEnvironment(object):
         atoms = self.getAtoms()
         indices = [a.index for a in atoms]
         if atomIndex in indices:
-            return atoms.index(atomIndex)
+            return atoms[indices.index(atomIndex)]
         # TODO: index is not specified raise error instead?
         else:
             return None
@@ -428,7 +428,7 @@ class ChemicalEnvironment(object):
         --------
         bond object between the atoms or None if no bond there
         """
-        if self._graph.edge[atom1].hasKey(atom2):
+        if self._graph.edge[atom1].has_key(atom2):
             return self._graph.edge[atom1][atom2]['bond']
         else:
             return None

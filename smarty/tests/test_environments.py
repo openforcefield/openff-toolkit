@@ -5,9 +5,9 @@ from smarty.utils import get_data_filename
 from unittest import TestCase
 
 class TestChemicalEnvironments(TestCase):
-    def createEnvironments(self):
+    def test_createEnvironments(self):
         """
-        Checks that each type of chemical environment can be created
+        Test all types of ChemicalEnvironment objects with defined atoms and bonds
         Each will be tetrahedral carbons connected by ring single bonds
         """
         carbon = [['#6'], ['X4']]
@@ -21,9 +21,9 @@ class TestChemicalEnvironments(TestCase):
         improper = environment.ImproperChemicalEnvironment(
                 carbon, singleBond, carbon, singleBond, carbon, singleBond, carbon) 
 
-    def complicatedTorsion(self): 
+    def test_complicatedTorsion(self): 
         """
-        Create a torsion
+        Test ChemicalEnvironment objects with complicated torsion
         test methods that add atoms, remove atoms 
         add bases and decorates to existing atoms
 
@@ -59,8 +59,8 @@ class TestChemicalEnvironments(TestCase):
         atom3alpha1.addDecorator('+0')
 
         # Call getAtoms and getBonds just to make sure they work
-        torsions.getAtoms()
-        torsions.getBonds()
+        torsion.getAtoms()
+        torsion.getBonds()
 
         # get smarts and smirks for the large torsion
         smarts = torsion.asSMARTS()
