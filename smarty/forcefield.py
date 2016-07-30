@@ -306,7 +306,7 @@ class ForceField(object):
     """
 
     def __init__(self, *files):
-        """Load one or more XML parameter definition files and create a SMIRFF ForceField object based on them.
+        """Load one or more XML parameter definition files and create a SMIRFF ForceField object based on them. 
 
         Parameters
         ----------
@@ -354,7 +354,25 @@ class ForceField(object):
 
             trees.append(tree)
 
+        # Retain XML trees internally
+        self._XMLTrees = trees
+        # Store whether this has been modified or not; if modified, it will 
+        # trigger re-parsing/loading of XML on system creation
+        self._XMLModified = False
+
+        # Parse XML, get force definitions
+        self.parseXMLTrees()
+
+    def parseXMLTrees(self):
+        """Parse XML trees, load force definitions."""
+
+        trees = self._XMLTrees
+
+        # We'll be creating all forces again from scratch by re-parsing
+        self._forces = []
+
         # Load the atom masses.
+        # This code will not work, see smarty issue #85. Checking on removal.
         for tree in trees:
             if tree.getroot().find('AtomTypes') is not None:
                 for type in tree.getroot().find('AtomTypes').findall('Type'):
@@ -366,6 +384,7 @@ class ForceField(object):
                 if child.tag in parsers:
                     parsers[child.tag](child, self)
 
+
     def getGenerators(self):
         """Get the list of all registered generators."""
         return self._forces
@@ -376,7 +395,7 @@ class ForceField(object):
 
     def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(), verbose=False, **kwargs):
-        """Construct an OpenMM System representing a Topology with this force field.
+        """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
 
         Parameters
         ----------
@@ -420,6 +439,11 @@ class ForceField(object):
         system
             the newly created System
         """
+        # XML modified? If so, re-parse forces
+        if self._XMLModified:
+            if verbose: print("Re-parsing XML because it was modified.")
+            self.parseXMLTrees()
+
         # Work with a modified form of the topology that provides additional accessors.
         topology = _Topology(topology, molecules)
 
