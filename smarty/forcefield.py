@@ -36,7 +36,6 @@ http://stackoverflow.com/questions/6949395/is-there-a-way-to-get-a-line-number-f
 import sys
 import string
 
-#import xml.etree.ElementTree as etree
 import lxml.etree as etree
 
 from simtk.openmm.app import element as elem
@@ -60,20 +59,6 @@ from simtk import openmm, unit
 import time
 
 import networkx
-
-#=============================================================================================
-# PRIVATE SUBROUTINES
-#=============================================================================================
-
-def _convertParameterToNumber(param):
-    """
-    Convert parameter to OpenMM units.
-    """
-    if unit.is_quantity(param):
-        if param.unit.is_compatible(unit.bar):
-            return param / unit.bar
-        return param.value_in_unit_system(unit.md_unit_system)
-    return float(param)
 
 #=============================================================================================
 # Augmented Topology
