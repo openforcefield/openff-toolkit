@@ -220,7 +220,18 @@ class ChemicalEnvironment(object):
         # Create an empty graph which will store Atom objects.
         self._graph = nx.Graph()
 
-    def asSMIRKS(self, initialAtom = None, neighbors = None, smarts = False):
+    def asSMIRKS(self, smarts = False):
+        """
+        Returns a SMIRKS representation of the chemical environment
+
+        Parameters
+        -----------
+        smarts: optional, boolean
+            if True, returns a SMARTS instead of SMIRKS without index labels
+        """
+        return self._asSMIRKS(None, None, smarts)
+
+    def _asSMIRKS(self, initialAtom = None, neighbors = None, smarts = False):
         """Return a SMIRKS representation of the chemical environment.
 
         Parameters
@@ -239,6 +250,9 @@ class ChemicalEnvironment(object):
 
         if neighbors == None:
             neighbors = self._graph.neighbors(initialAtom)
+        
+        # sort neighbors to gaurentee order is constant
+        neighbors = sorted(neighbors)
 
         # initialize smirks for starting atom
         if smarts:
@@ -258,7 +272,7 @@ class ChemicalEnvironment(object):
             new_neighbors.remove(initialAtom)
 
             # Call asSMIRKS again to get the details for that atom
-            atomSMIRKS = self.asSMIRKS(neighbor, new_neighbors, smarts)
+            atomSMIRKS = self._asSMIRKS(neighbor, new_neighbors, smarts)
 
             # Use ( ) for branch atoms (all but last)
             if idx < len(neighbors) - 1:
@@ -455,7 +469,18 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
         self.atom1 = self.Atom(1, AtomInfo[0], AtomInfo[1])
         self._graph.add_node(self.atom1)
 
-    def asSMARTS(self):
+    def asSMIRKS(self, smarts = False):
+        """
+        Returns a SMIRKS representation of the chemical environment
+
+        Parameters
+        -----------
+        smarts: optional, boolean
+            if True, returns a SMARTS instead of SMIRKS without index labels
+        """
+        return self._asSMIRKS(self.atom1, None, smarts)
+
+    def asAtomtypeSMARTS(self):
         """
         Makes SMARTS string for one atom
 
@@ -474,7 +499,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
             new_neighbors.remove(self.atom1)
 
             bondSMARTS = self._graph.edge[self.atom1][neighbor]['bond'].asSMARTS()
-            neighborSMARTS = self.asSMIRKS(neighbor, new_neighbors, True)
+            neighborSMARTS = self._asSMIRKS(neighbor, new_neighbors, True)
 
             smarts += '$(*' + bondSMARTS + neighborSMARTS + ')'
 

@@ -63,7 +63,7 @@ class TestChemicalEnvironments(TestCase):
         torsion.getBonds()
 
         # get smarts and smirks for the large torsion
-        smarts = torsion.asSMARTS()
+        smarts = torsion.asAtomtypeSMARTS()
         smirks = torsion.asSMIRKS()
         # TODO: add test that these are relevant
       
