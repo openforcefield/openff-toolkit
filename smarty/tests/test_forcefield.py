@@ -11,6 +11,7 @@ from simtk import unit, openmm
 import numpy as np
 from StringIO import StringIO
 from smarty.forcefield_utils import *
+import tempfile
 
 # This is a test forcefield that is not meant for actual use.
 # It just tests various capabilities.
@@ -128,6 +129,28 @@ def check_energy_is_finite(system, positions):
     energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
     if np.isnan(energy):
         raise Exception('Potential energy is NaN')
+
+def get_energy(system, positions):
+    """
+    Return the potential energy.
+    
+    Parameters
+    ----------
+    system : simtk.openmm.System
+        The system to check
+    positions : simtk.unit.Quantity of dimension (natoms,3) with units of length
+        The positions to use
+    Returns
+    ---------
+    energy
+    """
+
+    integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+    context = openmm.Context(system, integrator)
+    context.setPositions(positions)
+    state = context.getState(getEnergy=True)
+    energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
+    return energy
 
 def test_read_ffxml():
     """Test reading of ffxml files.
@@ -271,6 +294,45 @@ def test_label_molecules(verbose=False):
     ffxml = get_data_filename('forcefield/Frosst_AlkEtOH.ffxml')
     get_molecule_parameterIDs( molecules, ffxml)
 
+
+def test_change_parameters(verbose=True):
+    """Test modification of forcefield parameters."""
+    from openeye import oechem
+    # Load simple OEMol
+    ifs = oechem.oemolistream(get_data_filename('molecules/AlkEthOH_c100.mol2'))
+    mol = oechem.OEMol()
+    flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
+    ifs.SetFlavor( oechem.OEFormat_MOL2, flavor)
+    oechem.OEReadMolecule(ifs, mol )
+    oechem.OETriposAtomNames(mol)
+    
+    # Load forcefield file
+    ffxml = get_data_filename('forcefield/Frosst_AlkEtOH.ffxml')
+    ff = ForceField(ffxml)
+     
+    from smarty.forcefield import generateTopologyFromOEMol
+    topology = generateTopologyFromOEMol(mol)
+    # Create initial system
+    system = ff.createSystem(topology, [mol], verbose=verbose)
+    # Get initial energy before parameter modification
+    positions = positions_from_oemol(mol)
+    old_energy=get_energy(system, positions)
+
+    # Get params for an angle
+    params = ff.getParameter(smirks='[a,A:1]-[#6X4:2]-[a,A:3]')
+    # Modify params
+    params['k']='0.0'
+    ff.setParameter(params, smirks='[a,A:1]-[#6X4:2]-[a,A:3]')
+    # Write params
+    ff.writeFile( tempfile.TemporaryFile(suffix='.ffxml') )    
+    # Make sure params changed energy! (Test whether they get rebuilt on system creation)
+    system=ff.createSystem(topology, [mol], verbose=verbose)
+    energy=get_energy(system, positions)
+    if verbose:
+        print("New energy/old energy:", energy, old_energy)
+    if np.abs(energy-old_energy)<0.1:
+        raise Exception("Error: Parameter modification did not change energy.")   
+ 
 
 if __name__ == '__main__':
     #test_smirks()
