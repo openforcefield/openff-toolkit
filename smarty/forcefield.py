@@ -386,6 +386,60 @@ class ForceField(object):
         """Register a new generator."""
         self._forces.append(generator)
 
+    def getParameter(self, smirks = None, paramID=None, force_type='Implied'):
+        """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
+
+    Parameters
+    ----------
+    smirks (optional) : str
+        Default None. If specified, will pull parameters on line containing this `smirks`.
+    paramID : str
+        Default None. If specified, will pull parameters on line with this `id` 
+    force_type : str
+        Default "Implied". Optionally, specify a particular force type such as 
+        "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a 
+        matching ID or SMIRKS. 
+    
+
+    Returns
+    -------
+    params : dict
+        Dictionary of attributes (parameters and their descriptions) from XML    
+
+
+Usage notes: SMIRKS or parameter ID must be specified.
+
+To do: Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
+"""
+        # Check for valid input
+        if smirks and paramID:
+            raise ValueError("Error: Specify SMIRKS OR parameter ID but not both.")
+        if smirks==None and paramID==None:
+            raise ValueError("Error: Must specify SMIRKS and/or parameter ID.")
+
+        
+        trees=self._XMLTrees
+        # Loop over XML files we read
+        for tree in trees:
+            # Loop over tree
+            for child in tree.getroot():    
+                # Check a particular section?
+                checksection = True
+                if force_type is not 'Implied':
+                    # See whether this has the tag we want to check
+                    checksection= (child.tag==force_type)
+                
+                if checksection:
+                    #Loop over descendants
+                    for elem in child.iterdescendants(tag=etree.Element):
+                        if smirks:
+                            if elem.attrib['smirks'] == smirks:
+                                return elem.attrib
+                        elif paramID:
+                            if elem.attrib['id'] == paramID:
+                                return elem.attrib
+
+
     def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(), verbose=False, **kwargs):
         """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
