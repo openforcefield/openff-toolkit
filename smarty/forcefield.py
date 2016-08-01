@@ -509,6 +509,18 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         return status
 
 
+    def writeFile(self, files):
+        """Write forcefield trees out to specified files."""
+ 
+        # Ensure that we are working with a tuple of files.
+        if not isinstance(files, tuple):
+            files = (files,)
+
+        for idx, filenm in enumerate(files):
+            tree=self._XMLTrees[idx]
+            tree.write( filenm, xml_declaration=True)
+
+
     def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(), verbose=False, **kwargs):
         """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
