@@ -29,41 +29,38 @@ class ChemicalEnvironment(object):
     """Chemical environment abstract base class that matches an atom, bond, angle, etc.
     """
     class Atom(object):
-        """Atom representation, which may have some base (logical OR) and decorator (logical AND) properties.
-
-        Type will be OR(bases) and AND(decorators).
+        """Atom representation, which may have some ORtypes and ANDtypes properties.
 
         Properties
         -----------
-        bases : set of string
-            The base types that will be combined with logical OR
-        decorators : set of string
-            The decorators that will be combined with logical AND
+        ORtypes : set of string
+            The descriptor types that will be combined with logical OR
+        ANDtypes : set of string
+            The descriptor types  that will be combined with logical AND
         """
-        def __init__(self, index = None, bases = None, decorators = None):
-            """Initialize an Atom object with empty bases decorators.
+        def __init__(self, index = None, ORtypes = None, ANDtypes = None):
+            """Initialize an Atom object with optional descriptors.
 
             Parameters
             -----------
             index : int, optional, default=None
                 If not None, the specified index will be attached as a SMIRKS index (e.g. '[#6:1]')
-            bases: set of strings, optional, default = None
+            ORtypes: set of strings, optional, default = None
                 strings that will be OR'd together in a SMARTS
-            decorators: set of str, optional, default = None
+            ANDtypes: set of str, optional, default = None
                 strings that will be AND'd together in a SMARTS
             """
             # Set of strings that will be OR'd together
-            if bases ==  None:
-                self.bases = set()
+            if ORtypes ==  None:
+                self.ORtypes = set()
             else:
-                self.bases = set(bases)
+                self.ORtypes = set(ORtypes)
 
             # Set of strings that will be AND'd to the the end 
-            # Probably decorators
-            if decorators == None:
-                self.decorators = set()
+            if ANDtypes == None:
+                self.ANDtypes = set()
             else:
-                self.decorators = set(decorators)
+                self.ANDtypes = set(ANDtypes)
 
             self.index = index
 
@@ -79,13 +76,13 @@ class ChemicalEnvironment(object):
             smarts = '['
 
             # Add the OR'd features
-            if len(self.bases) > 0:
-                smarts += ','.join(self.bases)
+            if len(self.ORtypes) > 0:
+                smarts += ','.join(self.ORtypes)
             else:
                 smarts += '*'
 
-            if len(self.decorators) > 0:
-                smarts += ';' + ';'.join(self.decorators)
+            if len(self.ANDtypes) > 0:
+                smarts += ';' + ';'.join(self.ANDtypes)
 
             return smarts + ']'
 
@@ -107,61 +104,61 @@ class ChemicalEnvironment(object):
             else: 
                 return smirks[:-1] + ':' + str(self.index) + smirks[-1]
 
-        def addBase(self, base):
+        def addORtype(self, ORtype):
             """
-            Adds base to the set for this atom.
+            Adds ORtype to the set for this atom.
 
             Parameters
             --------
-            base: string
-                added to the set of bases that are OR'd together for this atom
+            ORtype: string
+                added to the set of ORtypes for this atom
             """
-            self.bases.add(base)
+            self.ORtypes.add(ORtype)
 
-        def addDecorator(self, decorator):
+        def addANDtype(self, ANDtype):
             """
-            Adds decorator to the set for this atom.
+            Adds ANDtype to the set for this atom.
 
             Parameters
             --------
-            decorator: string
-                added to the set of decorators that are ANd'd together for this atom
+            ANDtype: string
+                added to the set of ANDtypes for this atom
             """
-            self.decorators.add(decorator)
+            self.ANDtypes.add(ANDtype)
 
     class Bond(object):
-        """Bond representation, which may have base (OR) and decorator (AND) types.
+        """Bond representation, which may have ORtype and ANDtype descriptors.
         Properties
         -----------
-        bases : set of string
-            The base types that will be combined with logical OR
-        decorators : set of string
-            The decorators that will be combined with logical AND
+        ORtypes : set of string
+            The ORtype types that will be combined with logical OR
+        ANDtypes : set of string
+            The ANDtypes that will be combined with logical AND
 
         """
         # implementation similar to Atom but for bonds connecting atoms
 
-        def __init__(self, bases = None, decorators = None):
+        def __init__(self, ORtypes = None, ANDtypes = None):
             """
             Parameters
             -----------
-            bases: set of strings, optional, default = None
+            ORtypes: set of strings, optional, default = None
                 strings that will be OR'd together in a SMARTS
-            decorators: set of str, optional, default = None
+            ANDtypes: set of str, optional, default = None
                 strings that will be AND'd together in a SMARTS 
             """
 
-            # Make set of bases
-            if bases == None:
-                self.bases = set()
+            # Make set of ORtypes 
+            if ORtypes == None:
+                self.ORtypes = set()
             else:
-                self.bases = set(bases)
+                self.ORtypes = set(ORtypes)
 
-            # Make set of decorators
-            if decorators == None:
-                self.decorators = set()
+            # Make set of ANDtypes 
+            if ANDtypes == None:
+                self.ANDtypes = set()
             else:
-                self.decorators = set(decorators)
+                self.ANDtypes = set(ANDtypes)
 
         def asSMARTS(self):
             """Return the atom representation as SMARTS.
@@ -171,13 +168,13 @@ class ChemicalEnvironment(object):
             smarts : str
                 The SMARTS string for just this atom
             """
-            if len(self.bases) > 0:
-                smarts = ','.join(self.bases)
+            if len(self.ORtypes) > 0:
+                smarts = ','.join(self.ORtypes)
             else:
                 smarts = '~'
 
-            if len(self.decorators) > 0:
-                smarts += ';' + ';'.join(self.decorators)
+            if len(self.ANDtypes) > 0:
+                smarts += ';' + ';'.join(self.ANDtypes)
 
             return smarts
 
@@ -191,27 +188,27 @@ class ChemicalEnvironment(object):
             """
             return self.asSMARTS()
 
-        def addBase(self, base):
+        def addORtype(self, ORtype):
             """
-            Adds base to the set for this bond.
+            Adds ORtype to the set for this bond.
 
             Parameters
             --------
-            base: string
-                added to the set of bases that are OR'd together for this bond
+            ORtype: string
+                added to the set of ORtypes for this bond
             """
-            self.bases.add(base)
+            self.ORtypes.add(ORtype)
 
-        def addDecorator(self, decorator):
+        def addANDtype(self, ANDtype):
             """
-            Adds decorator to the set for this bond.
+            Adds ANDtype to the set for this bond.
 
             Parameters
             --------
-            decorator: string
-                added to the set of decorator that are OR'd together for this bond
+            ANDtype: string
+                added to the set of ANDtype for this bond
             """
-            self.decorators.add(decorator)
+            self.ANDtypes.add(ANDtype)
 
     def __init__(self):
         """Initialize a chemical environment abstract base class.
@@ -223,7 +220,18 @@ class ChemicalEnvironment(object):
         # Create an empty graph which will store Atom objects.
         self._graph = nx.Graph()
 
-    def asSMIRKS(self, initialAtom = None, neighbors = None, smarts = False):
+    def asSMIRKS(self, smarts = False):
+        """
+        Returns a SMIRKS representation of the chemical environment
+
+        Parameters
+        -----------
+        smarts: optional, boolean
+            if True, returns a SMARTS instead of SMIRKS without index labels
+        """
+        return self._asSMIRKS(None, None, smarts)
+
+    def _asSMIRKS(self, initialAtom = None, neighbors = None, smarts = False):
         """Return a SMIRKS representation of the chemical environment.
 
         Parameters
@@ -242,6 +250,9 @@ class ChemicalEnvironment(object):
 
         if neighbors == None:
             neighbors = self._graph.neighbors(initialAtom)
+        
+        # sort neighbors to gaurentee order is constant
+        neighbors = sorted(neighbors)
 
         # initialize smirks for starting atom
         if smarts:
@@ -261,7 +272,7 @@ class ChemicalEnvironment(object):
             new_neighbors.remove(initialAtom)
 
             # Call asSMIRKS again to get the details for that atom
-            atomSMIRKS = self.asSMIRKS(neighbor, new_neighbors, smarts)
+            atomSMIRKS = self._asSMIRKS(neighbor, new_neighbors, smarts)
 
             # Use ( ) for branch atoms (all but last)
             if idx < len(neighbors) - 1:
@@ -327,22 +338,22 @@ class ChemicalEnvironment(object):
         bond = self._graph.edge[atom1][atom2]['bond']
         return atom1, atom2, bond 
 
-    def addAtom(self, bondToAtom, bondBases = None, bondDecorators = None, 
-            newBases = None, newDecorators = None, newAtomIndex = None):
+    def addAtom(self, bondToAtom, bondORtypes= None, bondANDtypes = None, 
+            newORtypes = None, newANDtypes = None, newAtomIndex = None):
         """Add an atom to the specified target atom.
 
         Parameters
         -----------
         bondToAtom: atom object, required
             atom the new atom will be bound to
-        bondBases: set of strings, optional
-            strings that will be used for the bases (OR set) for the new bond
-        bondDecorators: set of strings, optional
-            strings that will be used for the decorators (AND set) for the new bond
-        newBases: set of strings, optional
-            strings that will be used for the bases (OR set) for the new atom
-        newDecorators: set of strings, optional
-            strings that will be used for the decorates (AND set) fro the new atom
+        bondORtypes: set of strings, optional
+            strings that will be used for the ORtypes for the new bond
+        bondANDtypes: set of strings, optional
+            strings that will be used for the ANDtypes for the new bond
+        newORtypes: set of strings, optional
+            strings that will be used for the ORtypes for the new atom
+        newANDtypes: set of strings, optional
+            strings that will be used for the ANDtypes for the new atom
         newAtomIndex: int, optional
             integer label that could be used to index the atom in a SMIRKS string
 
@@ -354,10 +365,10 @@ class ChemicalEnvironment(object):
             bondToAtom = self.selectAtom()
 
         # create new bond
-        newBond = self.Bond(bondBases, bondDecorators)
+        newBond = self.Bond(bondORtypes, bondANDtypes)
 
         # create new atom
-        newAtom = self.Atom(newAtomIndex, newBases, newDecorators)
+        newAtom = self.Atom(newAtomIndex, newORtypes, newANDtypes)
 
         # Add node for newAtom
         self._graph.add_node(newAtom)
@@ -443,9 +454,9 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
         Parameters
         -----------
         AtomInfo: list of sets, optional
-            Comes in the form [AtomBases, AtomDecors]
-            AtomBases: descriptors for the first atom that are connected with logical operation OR
-            AtomDecors: descriptors for the first atom that are connected with the logical operation AND
+            Comes in the form [AtomORtypes, AtomANDtypes]
+            AtomORtypes: descriptors for the first atom that are connected with logical operation OR
+            AtomANDtypes: descriptors for the first atom that are connected with the logical operation AND
 
         For example:
             # create an atom that is carbon, nitrogen, or oxygen with no formal charge
@@ -458,7 +469,18 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
         self.atom1 = self.Atom(1, AtomInfo[0], AtomInfo[1])
         self._graph.add_node(self.atom1)
 
-    def asSMARTS(self):
+    def asSMIRKS(self, smarts = False):
+        """
+        Returns a SMIRKS representation of the chemical environment
+
+        Parameters
+        -----------
+        smarts: optional, boolean
+            if True, returns a SMARTS instead of SMIRKS without index labels
+        """
+        return self._asSMIRKS(self.atom1, None, smarts)
+
+    def asAtomtypeSMARTS(self):
         """
         Makes SMARTS string for one atom
 
@@ -477,7 +499,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
             new_neighbors.remove(self.atom1)
 
             bondSMARTS = self._graph.edge[self.atom1][neighbor]['bond'].asSMARTS()
-            neighborSMARTS = self.asSMIRKS(neighbor, new_neighbors, True)
+            neighborSMARTS = self._asSMIRKS(neighbor, new_neighbors, True)
 
             smarts += '$(*' + bondSMARTS + neighborSMARTS + ')'
 
@@ -494,11 +516,11 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
         Parameters
         -----------
         Atom1Info, Atom2Info: list of sets, optional
-            Comes in the form [AtomBases, AtomDecors]
-            AtomBases: descriptors for the first atom that are connected with logical operation OR
-            AtomDecors: descriptors for the first atom that are connected with the logical operation AND
+            Comes in the form [AtomORtypes, AtomANDtypes]
+            AtomORtypes: descriptors for the first atom that are connected with logical operation OR
+            AtomANDtypes: descriptors for the first atom that are connected with the logical operation AND
         BondInfo: list of sets, optional
-            In the form [BondBases, BondDecors] similar to atom information
+            In the form [BondORtypes, BondANDtypes] similar to atom information
 
         For example:
             # create a tetravalent carbon connected with a single bond to oxygen
@@ -527,11 +549,11 @@ class AngleChemicalEnvironment(BondChemicalEnvironment):
         Parameters
         -----------
         Atom1Info, Atom2Info, Atom3Info: list of sets, optional
-            Comes in the form [AtomBases, AtomDecors]
-            AtomBases: descriptors for the first atom that are connected with logical operation OR
-            AtomDecors: descriptors for the first atom that are connected with the logical operation AND
+            Comes in the form [AtomORtypes, AtomANDtypes]
+            AtomORtypes: descriptors for the first atom that are connected with logical operation OR
+            AtomANDtypes: descriptors for the first atom that are connected with the logical operation AND
         Bond1Info and Bond2Info: list of sets, optional
-            In the form [BondBases, BondDecors] similar to atom information
+            In the form [BondORtypes, BondANDtypes] similar to atom information
 
         For example:
             # create an angle where the center atom is a neutral trivalent carbon 
@@ -557,11 +579,11 @@ class TorsionChemicalEnvironment(AngleChemicalEnvironment):
         Parameters
         -----------
         Atom1Info, Atom2Info, Atom3Info, Atom4Info: list of sets, optional
-            Comes in the form [AtomBases, AtomDecors]
-            AtomBases: descriptors for the first atom that are connected with logical operation OR
-            AtomDecors: descriptors for the first atom that are connected with the logical operation AND
+            Comes in the form [AtomORtypes, AtomANDtypes]
+            AtomORtypes: descriptors for the first atom that are connected with logical operation OR
+            AtomANDtypes: descriptors for the first atom that are connected with the logical operation AND
         Bond1Info and Bond2Info, Bond3Info: list of sets, optional
-            In the form [BondBases, BondDecors] similar to atom information
+            In the form [BondORtypes, BondANDtypes] similar to atom information
 
         For example:
             # Create a torsion centered around two tetravalent carbons with single ring bonds
@@ -589,11 +611,11 @@ class ImproperChemicalEnvironment(AngleChemicalEnvironment):
         Parameters
         -----------
         Atom1Info, Atom2Info, Atom3Info, Atom4Info: list of sets, optional
-            Comes in the form [AtomBases, AtomDecors]
-            AtomBases: descriptors for the first atom that are connected with logical operation OR
-            AtomDecors: descriptors for the first atom that are connected with the logical operation AND
+            Comes in the form [AtomORtypes, AtomANDtypes]
+            AtomORtypes: descriptors for the first atom that are connected with logical operation OR
+            AtomANDtypes: descriptors for the first atom that are connected with the logical operation AND
         Bond1Info and Bond2Info, Bond3Info: list of sets, optional
-            In the form [BondBases, BondDecors] similar to atom information
+            In the form [BondORtypes, BondANDtypes] similar to atom information
 
         For example:
 

@@ -25,7 +25,7 @@ class TestChemicalEnvironments(TestCase):
         """
         Test ChemicalEnvironment objects with complicated torsion
         test methods that add atoms, remove atoms 
-        add bases and decorates to existing atoms
+        add ORtypes and ANDtypes to existing atoms
 
         This is the SMIRK for the final torsion
         "[*:1] - [#6:2](=[#8,#7;H0]) - [#6:3](-[#7X3,#8X2;+0]-[#1])(-[#1]) - [*:4]"
@@ -46,24 +46,24 @@ class TestChemicalEnvironments(TestCase):
         atom3beta1 = torsion.addAtom(atom3alpha1, ['-'], None, ['#1'])
         atom3alpha2 = torsion.addAtom(atom3, ['-'], None, ['#1'])
 
-        # Get bond for atom3 and alpha and add decorator
+        # Get bond for atom3 and alpha and add ANDtype
         bond = torsion.getBond(atom3, atom3alpha1)
         if bond == None:
             # If None, bond wasn't found correctly
             raise Exception("could not find bond between atom3 and it's alpha atom")
-        bond.addBase('-')
+        bond.addORtype('-')
 
-        # Add bases and decorators to atom3 alpha atom
-        atom3alpha1.addBase('#7X3')
-        atom3alpha1.addBase('#8X2')
-        atom3alpha1.addDecorator('+0')
+        # Add ORtypes and ANDtypes to atom3 alpha atom
+        atom3alpha1.addORtype('#7X3')
+        atom3alpha1.addORtype('#8X2')
+        atom3alpha1.addANDtype('+0')
 
         # Call getAtoms and getBonds just to make sure they work
         torsion.getAtoms()
         torsion.getBonds()
 
         # get smarts and smirks for the large torsion
-        smarts = torsion.asSMARTS()
+        smarts = torsion.asAtomtypeSMARTS()
         smirks = torsion.asSMIRKS()
         # TODO: add test that these are relevant
       
