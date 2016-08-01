@@ -371,13 +371,6 @@ class ForceField(object):
         # We'll be creating all forces again from scratch by re-parsing
         self._forces = []
 
-        # Load the atom masses.
-        # This code will not work, see smarty issue #85. Checking on removal.
-        for tree in trees:
-            if tree.getroot().find('AtomTypes') is not None:
-                for type in tree.getroot().find('AtomTypes').findall('Type'):
-                    self.registerAtomType(type.attrib)
-
         # Load force definitions
         for tree in trees:
             for child in tree.getroot():
