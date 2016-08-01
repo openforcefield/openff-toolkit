@@ -432,12 +432,81 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
                 if checksection:
                     #Loop over descendants
                     for elem in child.iterdescendants(tag=etree.Element):
-                        if smirks:
-                            if elem.attrib['smirks'] == smirks:
-                                return elem.attrib
-                        elif paramID:
-                            if elem.attrib['id'] == paramID:
-                                return elem.attrib
+                        if (smirks and elem.attrib['smirks']==smirks) or (paramID and elem.attrib['id']==paramID):
+                            return elem.attrib
+
+
+    def setParameter(self, params, smirks=None, paramID=None, force_type="Implied"):
+        """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
+
+    Parameters
+    ----------
+    params : dict
+        Dictionary of attributes (parameters and their descriptions) for XML,
+        i.e. as output by getParameter.    
+    smirks (optional) : str
+        Default None. If specified, will set parameters on line containing this `smirks`.
+    paramID (optional) : str
+        Default None. If specified, will set parameters on line with this `id` 
+    force_type (optional) : str
+        Default "Implied". Optionally, specify a particular force type such as 
+        "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a 
+        matching ID or SMIRKS. 
+    
+
+    Returns
+    -------
+    status : bool
+        True/False as to whether that parameter was found and successfully set
+
+Usage notes: SMIRKS or parameter ID must be specified.
+
+To do: Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
+"""
+        # Check for valid input
+        if smirks and paramID:
+            raise ValueError("Error: Specify SMIRKS OR parameter ID but not both.")
+        if smirks==None and paramID==None:
+            raise ValueError("Error: Must specify SMIRKS and/or parameter ID.")
+        if not params:
+            raise ValueError("Error, parameters must be specified.")
+
+
+        trees=self._XMLTrees
+        status = False
+        # Loop over XML files we read
+        for tree in trees:
+            # Loop over tree
+            for child in tree.getroot():    
+                # Check a particular section?
+                checksection = True
+                if force_type is not 'Implied':
+                    # See whether this has the tag we want to check
+                    checksection= (child.tag==force_type)
+                
+                if checksection:
+                    #Loop over descendants
+                    for elem in child.iterdescendants(tag=etree.Element):
+                        if (smirks and elem.attrib['smirks']==smirks) or (paramID and elem.attrib['id']==paramID):
+                            # Try to set parameters
+                            old_params=elem.attrib
+                            if set(old_params.keys()) != set(params.keys()):
+                                raise ValueError('Error: Provided parameters have different keys (%s) than existing parameters (%s).' % (', '.join(old_params.keys()), ', '.join(params.keys())))
+
+                            # Loop over attributes, change values
+                            for tag in params.keys():
+                                elem.set( tag, params[tag])
+
+                            # Found parameters and set, so update status
+                            status = True   
+ 
+
+        # If we made any changes to XML, set flag so it will be reprocessed prior 
+        # to system creation
+        if status:
+            self._XMLModified = True
+
+        return status
 
 
     def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
