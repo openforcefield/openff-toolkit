@@ -36,7 +36,6 @@ http://stackoverflow.com/questions/6949395/is-there-a-way-to-get-a-line-number-f
 import sys
 import string
 
-#import xml.etree.ElementTree as etree
 import lxml.etree as etree
 
 from simtk.openmm.app import element as elem
@@ -60,20 +59,6 @@ from simtk import openmm, unit
 import time
 
 import networkx
-
-#=============================================================================================
-# PRIVATE SUBROUTINES
-#=============================================================================================
-
-def _convertParameterToNumber(param):
-    """
-    Convert parameter to OpenMM units.
-    """
-    if unit.is_quantity(param):
-        if param.unit.is_compatible(unit.bar):
-            return param / unit.bar
-        return param.value_in_unit_system(unit.md_unit_system)
-    return float(param)
 
 #=============================================================================================
 # Augmented Topology
@@ -321,7 +306,7 @@ class ForceField(object):
     """
 
     def __init__(self, *files):
-        """Load one or more XML parameter definition files and create a SMIRFF ForceField object based on them.
+        """Load one or more XML parameter definition files and create a SMIRFF ForceField object based on them. 
 
         Parameters
         ----------
@@ -369,17 +354,29 @@ class ForceField(object):
 
             trees.append(tree)
 
-        # Load the atom masses.
-        for tree in trees:
-            if tree.getroot().find('AtomTypes') is not None:
-                for type in tree.getroot().find('AtomTypes').findall('Type'):
-                    self.registerAtomType(type.attrib)
+        # Retain XML trees internally
+        self._XMLTrees = trees
+        # Store whether this has been modified or not; if modified, it will 
+        # trigger re-parsing/loading of XML on system creation
+        self._XMLModified = False
+
+        # Parse XML, get force definitions
+        self.parseXMLTrees()
+
+    def parseXMLTrees(self):
+        """Parse XML trees, load force definitions."""
+
+        trees = self._XMLTrees
+
+        # We'll be creating all forces again from scratch by re-parsing
+        self._forces = []
 
         # Load force definitions
         for tree in trees:
             for child in tree.getroot():
                 if child.tag in parsers:
                     parsers[child.tag](child, self)
+
 
     def getGenerators(self):
         """Get the list of all registered generators."""
@@ -389,9 +386,144 @@ class ForceField(object):
         """Register a new generator."""
         self._forces.append(generator)
 
+    def getParameter(self, smirks = None, paramID=None, force_type='Implied'):
+        """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
+
+    Parameters
+    ----------
+    smirks (optional) : str
+        Default None. If specified, will pull parameters on line containing this `smirks`.
+    paramID : str
+        Default None. If specified, will pull parameters on line with this `id` 
+    force_type : str
+        Default "Implied". Optionally, specify a particular force type such as 
+        "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a 
+        matching ID or SMIRKS. 
+    
+
+    Returns
+    -------
+    params : dict
+        Dictionary of attributes (parameters and their descriptions) from XML    
+
+
+Usage notes: SMIRKS or parameter ID must be specified.
+
+To do: Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
+"""
+        # Check for valid input
+        if smirks and paramID:
+            raise ValueError("Error: Specify SMIRKS OR parameter ID but not both.")
+        if smirks==None and paramID==None:
+            raise ValueError("Error: Must specify SMIRKS or parameter ID.")
+
+        
+        trees=self._XMLTrees
+        # Loop over XML files we read
+        for tree in trees:
+            # Loop over tree
+            for child in tree.getroot():    
+                # Check a particular section?
+                checksection = True
+                if force_type is not 'Implied':
+                    # See whether this has the tag we want to check
+                    checksection= (child.tag==force_type)
+                
+                if checksection:
+                    #Loop over descendants
+                    for elem in child.iterdescendants(tag=etree.Element):
+                        if (smirks and elem.attrib['smirks']==smirks) or (paramID and elem.attrib['id']==paramID):
+                            return elem.attrib
+
+
+    def setParameter(self, params, smirks=None, paramID=None, force_type="Implied"):
+        """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
+
+    Parameters
+    ----------
+    params : dict
+        Dictionary of attributes (parameters and their descriptions) for XML,
+        i.e. as output by getParameter.    
+    smirks (optional) : str
+        Default None. If specified, will set parameters on line containing this `smirks`.
+    paramID (optional) : str
+        Default None. If specified, will set parameters on line with this `id` 
+    force_type (optional) : str
+        Default "Implied". Optionally, specify a particular force type such as 
+        "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a 
+        matching ID or SMIRKS. 
+    
+
+    Returns
+    -------
+    status : bool
+        True/False as to whether that parameter was found and successfully set
+
+Usage notes: SMIRKS or parameter ID must be specified.
+
+To do: Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
+"""
+        # Check for valid input
+        if smirks and paramID:
+            raise ValueError("Error: Specify SMIRKS OR parameter ID but not both.")
+        if smirks==None and paramID==None:
+            raise ValueError("Error: Must specify SMIRKS or parameter ID.")
+        if not params:
+            raise ValueError("Error, parameters must be specified.")
+
+
+        trees=self._XMLTrees
+        status = False
+        # Loop over XML files we read
+        for tree in trees:
+            # Loop over tree
+            for child in tree.getroot():    
+                # Check a particular section?
+                checksection = True
+                if force_type is not 'Implied':
+                    # See whether this has the tag we want to check
+                    checksection= (child.tag==force_type)
+                
+                if checksection:
+                    #Loop over descendants
+                    for elem in child.iterdescendants(tag=etree.Element):
+                        if (smirks and elem.attrib['smirks']==smirks) or (paramID and elem.attrib['id']==paramID):
+                            # Try to set parameters
+                            old_params=elem.attrib
+                            if set(old_params.keys()) != set(params.keys()):
+                                raise ValueError('Error: Provided parameters have different keys (%s) than existing parameters (%s).' % (', '.join(old_params.keys()), ', '.join(params.keys())))
+
+                            # Loop over attributes, change values
+                            for tag in params.keys():
+                                elem.set( tag, params[tag])
+
+                            # Found parameters and set, so update status
+                            status = True   
+ 
+
+        # If we made any changes to XML, set flag so it will be reprocessed prior 
+        # to system creation
+        if status:
+            self._XMLModified = True
+
+        return status
+
+
+    def writeFile(self, files):
+        """Write forcefield trees out to specified files."""
+ 
+        # Ensure that we are working with a tuple of files.
+        if not isinstance(files, tuple):
+            files = (files,)
+
+        for idx, filenm in enumerate(files):
+            tree=self._XMLTrees[idx]
+            tree.write( filenm, xml_declaration=True)
+
+
     def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(), verbose=False, **kwargs):
-        """Construct an OpenMM System representing a Topology with this force field.
+        """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
 
         Parameters
         ----------
@@ -435,6 +567,11 @@ class ForceField(object):
         system
             the newly created System
         """
+        # XML modified? If so, re-parse forces
+        if self._XMLModified:
+            if verbose: print("Re-parsing XML because it was modified.")
+            self.parseXMLTrees()
+
         # Work with a modified form of the topology that provides additional accessors.
         topology = _Topology(topology, molecules)
 
