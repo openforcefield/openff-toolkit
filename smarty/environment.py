@@ -126,6 +126,46 @@ class ChemicalEnvironment(object):
             """
             self.ANDtypes.add(ANDtype)
 
+        def getORtypes(self):
+            """
+            returns a copy of the list of ORtypes for this atom
+            """
+            return list(self.ORtypes.copy())
+
+        def setORtypes(self, newORtypes):
+            """
+            sets new ORtypes for this atom
+
+            Parameters
+            ----------
+            newORtypes: set of strings
+                strings that will be OR'd together in a SMARTS
+            """
+            if newORtypes == None:
+                self.ORtypes = set()
+            else:
+                self.ORtypes = set(newORtypes)
+
+        def getANDtypes(self):
+            """
+            returns a copy of the list of ANDtypes for this atom
+            """
+            return list(self.ANDtypes.copy())
+
+        def setANDtypes(self, newANDtypes):
+            """
+            sets new ANDtypes for this atom
+
+            Parameters
+            ----------
+            newANDtypes: set of strings
+                strings that will be AND'd together in a SMARTS
+            """
+            if newANDtypes == None:
+                self.ANDtypes = set()
+            else:
+                self.ANDtypes = set(newANDtypes)
+
     class Bond(object):
         """Bond representation, which may have ORtype and ANDtype descriptors.
         Properties
@@ -209,6 +249,46 @@ class ChemicalEnvironment(object):
                 added to the set of ANDtype for this bond
             """
             self.ANDtypes.add(ANDtype)
+
+        def getORtypes(self):
+            """
+            returns a copy of the list of ORtypes for this bond
+            """
+            return list(self.ORtypes.copy())
+
+        def setORtypes(self, newORtypes):
+            """
+            sets new ORtypes for this bond 
+
+            Parameters
+            ----------
+            newORtypes: set of strings
+                strings that will be OR'd together in a SMARTS
+            """
+            if newORtypes == None:
+                self.ORtypes = set()
+            else:
+                self.ORtypes = set(newORtypes)
+
+        def getANDtypes(self):
+            """
+            returns a copy of the list of ANDtypes for this bond 
+            """
+            return list(self.ANDtypes.copy())
+
+        def setANDtypes(self, newANDtypes):
+            """
+            sets new ANDtypes for this bond 
+
+            Parameters
+            ----------
+            newANDtypes: set of strings
+                strings that will be AND'd together in a SMARTS
+            """
+            if newANDtypes == None:
+                self.ANDtypes = set()
+            else:
+                self.ANDtypes = set(newANDtypes)
 
     def __init__(self):
         """Initialize a chemical environment abstract base class.
