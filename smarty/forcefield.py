@@ -415,7 +415,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         if smirks and paramID:
             raise ValueError("Error: Specify SMIRKS OR parameter ID but not both.")
         if smirks==None and paramID==None:
-            raise ValueError("Error: Must specify SMIRKS and/or parameter ID.")
+            raise ValueError("Error: Must specify SMIRKS or parameter ID.")
 
         
         trees=self._XMLTrees
