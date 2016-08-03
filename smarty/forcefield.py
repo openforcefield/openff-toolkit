@@ -433,7 +433,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
                     #Loop over descendants
                     for elem in child.iterdescendants(tag=etree.Element):
                         if (smirks and elem.attrib['smirks']==smirks) or (paramID and elem.attrib['id']==paramID):
-                            return elem.attrib
+                            return copy.deepcopy(elem.attrib)
 
 
     def setParameter(self, params, smirks=None, paramID=None, force_type="Implied"):
