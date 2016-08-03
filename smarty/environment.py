@@ -113,7 +113,7 @@ class ChemicalEnvironment(object):
             ORtype: string
                 added to the list of ORtypes for this atom
             """
-            self.ORtypes.add(ORtype)
+            self.ORtypes.append(ORtype)
 
         def addANDtype(self, ANDtype):
             """
@@ -124,7 +124,7 @@ class ChemicalEnvironment(object):
             ANDtype: string
                 added to the list of ANDtypes for this atom
             """
-            self.ANDtypes.add(ANDtype)
+            self.ANDtypes.append(ANDtype)
 
         def getORtypes(self):
             """
@@ -237,7 +237,7 @@ class ChemicalEnvironment(object):
             ORtype: string
                 added to the list of ORtypes for this bond
             """
-            self.ORtypes.add(ORtype)
+            self.ORtypes.append(ORtype)
 
         def addANDtype(self, ANDtype):
             """
@@ -248,7 +248,7 @@ class ChemicalEnvironment(object):
             ANDtype: string
                 added to the list of ANDtype for this bond
             """
-            self.ANDtypes.add(ANDtype)
+            self.ANDtypes.append(ANDtype)
 
         def getORtypes(self):
             """
@@ -299,6 +299,7 @@ class ChemicalEnvironment(object):
         """
         # Create an empty graph which will store Atom objects.
         self._graph = nx.Graph()
+        self.label = None
 
     def asSMIRKS(self, smarts = False):
         """
