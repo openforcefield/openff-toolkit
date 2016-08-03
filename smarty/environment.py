@@ -33,9 +33,9 @@ class ChemicalEnvironment(object):
 
         Properties
         -----------
-        ORtypes : set of string
+        ORtypes : list of string
             The descriptor types that will be combined with logical OR
-        ANDtypes : set of string
+        ANDtypes : list of string
             The descriptor types  that will be combined with logical AND
         """
         def __init__(self, index = None, ORtypes = None, ANDtypes = None):
@@ -45,22 +45,22 @@ class ChemicalEnvironment(object):
             -----------
             index : int, optional, default=None
                 If not None, the specified index will be attached as a SMIRKS index (e.g. '[#6:1]')
-            ORtypes: set of strings, optional, default = None
+            ORtypes: list of strings, optional, default = None
                 strings that will be OR'd together in a SMARTS
-            ANDtypes: set of str, optional, default = None
+            ANDtypes: list of str, optional, default = None
                 strings that will be AND'd together in a SMARTS
             """
             # Set of strings that will be OR'd together
             if ORtypes ==  None:
-                self.ORtypes = set()
+                self.ORtypes = list()
             else:
-                self.ORtypes = set(ORtypes)
+                self.ORtypes = list(ORtypes)
 
             # Set of strings that will be AND'd to the the end 
             if ANDtypes == None:
-                self.ANDtypes = set()
+                self.ANDtypes = list()
             else:
-                self.ANDtypes = set(ANDtypes)
+                self.ANDtypes = list(ANDtypes)
 
             self.index = index
 
@@ -111,7 +111,7 @@ class ChemicalEnvironment(object):
             Parameters
             --------
             ORtype: string
-                added to the set of ORtypes for this atom
+                added to the list of ORtypes for this atom
             """
             self.ORtypes.add(ORtype)
 
@@ -122,7 +122,7 @@ class ChemicalEnvironment(object):
             Parameters
             --------
             ANDtype: string
-                added to the set of ANDtypes for this atom
+                added to the list of ANDtypes for this atom
             """
             self.ANDtypes.add(ANDtype)
 
@@ -138,13 +138,13 @@ class ChemicalEnvironment(object):
 
             Parameters
             ----------
-            newORtypes: set of strings
+            newORtypes: list of strings
                 strings that will be OR'd together in a SMARTS
             """
             if newORtypes == None:
-                self.ORtypes = set()
+                self.ORtypes = list()
             else:
-                self.ORtypes = set(newORtypes)
+                self.ORtypes = list(newORtypes)
 
         def getANDtypes(self):
             """
@@ -158,21 +158,21 @@ class ChemicalEnvironment(object):
 
             Parameters
             ----------
-            newANDtypes: set of strings
+            newANDtypes: list of strings
                 strings that will be AND'd together in a SMARTS
             """
             if newANDtypes == None:
-                self.ANDtypes = set()
+                self.ANDtypes = list()
             else:
-                self.ANDtypes = set(newANDtypes)
+                self.ANDtypes = list(newANDtypes)
 
     class Bond(object):
         """Bond representation, which may have ORtype and ANDtype descriptors.
         Properties
         -----------
-        ORtypes : set of string
+        ORtypes : list of string
             The ORtype types that will be combined with logical OR
-        ANDtypes : set of string
+        ANDtypes : list of string
             The ANDtypes that will be combined with logical AND
 
         """
@@ -182,23 +182,23 @@ class ChemicalEnvironment(object):
             """
             Parameters
             -----------
-            ORtypes: set of strings, optional, default = None
+            ORtypes: list of strings, optional, default = None
                 strings that will be OR'd together in a SMARTS
-            ANDtypes: set of str, optional, default = None
+            ANDtypes: list of str, optional, default = None
                 strings that will be AND'd together in a SMARTS 
             """
 
             # Make set of ORtypes 
             if ORtypes == None:
-                self.ORtypes = set()
+                self.ORtypes = list()
             else:
-                self.ORtypes = set(ORtypes)
+                self.ORtypes = list(ORtypes)
 
             # Make set of ANDtypes 
             if ANDtypes == None:
-                self.ANDtypes = set()
+                self.ANDtypes = list()
             else:
-                self.ANDtypes = set(ANDtypes)
+                self.ANDtypes = list(ANDtypes)
 
         def asSMARTS(self):
             """Return the atom representation as SMARTS.
@@ -235,7 +235,7 @@ class ChemicalEnvironment(object):
             Parameters
             --------
             ORtype: string
-                added to the set of ORtypes for this bond
+                added to the list of ORtypes for this bond
             """
             self.ORtypes.add(ORtype)
 
@@ -246,7 +246,7 @@ class ChemicalEnvironment(object):
             Parameters
             --------
             ANDtype: string
-                added to the set of ANDtype for this bond
+                added to the list of ANDtype for this bond
             """
             self.ANDtypes.add(ANDtype)
 
@@ -262,13 +262,13 @@ class ChemicalEnvironment(object):
 
             Parameters
             ----------
-            newORtypes: set of strings
+            newORtypes: list of strings
                 strings that will be OR'd together in a SMARTS
             """
             if newORtypes == None:
-                self.ORtypes = set()
+                self.ORtypes = list()
             else:
-                self.ORtypes = set(newORtypes)
+                self.ORtypes = list(newORtypes)
 
         def getANDtypes(self):
             """
@@ -282,13 +282,13 @@ class ChemicalEnvironment(object):
 
             Parameters
             ----------
-            newANDtypes: set of strings
+            newANDtypes: list of strings
                 strings that will be AND'd together in a SMARTS
             """
             if newANDtypes == None:
-                self.ANDtypes = set()
+                self.ANDtypes = list()
             else:
-                self.ANDtypes = set(newANDtypes)
+                self.ANDtypes = list(newANDtypes)
 
     def __init__(self):
         """Initialize a chemical environment abstract base class.
@@ -426,13 +426,13 @@ class ChemicalEnvironment(object):
         -----------
         bondToAtom: atom object, required
             atom the new atom will be bound to
-        bondORtypes: set of strings, optional
+        bondORtypes: list of strings, optional
             strings that will be used for the ORtypes for the new bond
-        bondANDtypes: set of strings, optional
+        bondANDtypes: list of strings, optional
             strings that will be used for the ANDtypes for the new bond
-        newORtypes: set of strings, optional
+        newORtypes: list of strings, optional
             strings that will be used for the ORtypes for the new atom
-        newANDtypes: set of strings, optional
+        newANDtypes: list of strings, optional
             strings that will be used for the ANDtypes for the new atom
         newAtomIndex: int, optional
             integer label that could be used to index the atom in a SMIRKS string
@@ -442,7 +442,11 @@ class ChemicalEnvironment(object):
         newAtom: atom object for the newly created atom        
         """
         if bondToAtom == None:
-            bondToAtom = self.selectAtom()
+            if len(self._graph.nodes()) > 0:
+                return None
+            newAtom = self.Atom(newAtomIndex, newORtypes, newANDtypes)
+            self._graph.add_node(newAtom)
+            return newAtom
 
         # create new bond
         newBond = self.Bond(bondORtypes, bondANDtypes)
@@ -533,7 +537,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
 
         Parameters
         -----------
-        AtomInfo: list of sets, optional
+        AtomInfo: list of lists, optional
             Comes in the form [AtomORtypes, AtomANDtypes]
             AtomORtypes: descriptors for the first atom that are connected with logical operation OR
             AtomANDtypes: descriptors for the first atom that are connected with the logical operation AND
@@ -595,11 +599,11 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
 
         Parameters
         -----------
-        Atom1Info, Atom2Info: list of sets, optional
+        Atom1Info, Atom2Info: list of lists, optional
             Comes in the form [AtomORtypes, AtomANDtypes]
             AtomORtypes: descriptors for the first atom that are connected with logical operation OR
             AtomANDtypes: descriptors for the first atom that are connected with the logical operation AND
-        BondInfo: list of sets, optional
+        BondInfo: list of lists, optional
             In the form [BondORtypes, BondANDtypes] similar to atom information
 
         For example:
@@ -628,11 +632,11 @@ class AngleChemicalEnvironment(BondChemicalEnvironment):
 
         Parameters
         -----------
-        Atom1Info, Atom2Info, Atom3Info: list of sets, optional
+        Atom1Info, Atom2Info, Atom3Info: list of lists, optional
             Comes in the form [AtomORtypes, AtomANDtypes]
             AtomORtypes: descriptors for the first atom that are connected with logical operation OR
             AtomANDtypes: descriptors for the first atom that are connected with the logical operation AND
-        Bond1Info and Bond2Info: list of sets, optional
+        Bond1Info and Bond2Info: list of lists, optional
             In the form [BondORtypes, BondANDtypes] similar to atom information
 
         For example:
@@ -658,11 +662,11 @@ class TorsionChemicalEnvironment(AngleChemicalEnvironment):
         
         Parameters
         -----------
-        Atom1Info, Atom2Info, Atom3Info, Atom4Info: list of sets, optional
+        Atom1Info, Atom2Info, Atom3Info, Atom4Info: list of lists, optional
             Comes in the form [AtomORtypes, AtomANDtypes]
             AtomORtypes: descriptors for the first atom that are connected with logical operation OR
             AtomANDtypes: descriptors for the first atom that are connected with the logical operation AND
-        Bond1Info and Bond2Info, Bond3Info: list of sets, optional
+        Bond1Info and Bond2Info, Bond3Info: list of lists, optional
             In the form [BondORtypes, BondANDtypes] similar to atom information
 
         For example:
@@ -690,11 +694,11 @@ class ImproperChemicalEnvironment(AngleChemicalEnvironment):
         
         Parameters
         -----------
-        Atom1Info, Atom2Info, Atom3Info, Atom4Info: list of sets, optional
+        Atom1Info, Atom2Info, Atom3Info, Atom4Info: list of lists, optional
             Comes in the form [AtomORtypes, AtomANDtypes]
             AtomORtypes: descriptors for the first atom that are connected with logical operation OR
             AtomANDtypes: descriptors for the first atom that are connected with the logical operation AND
-        Bond1Info and Bond2Info, Bond3Info: list of sets, optional
+        Bond1Info and Bond2Info, Bond3Info: list of lists, optional
             In the form [BondORtypes, BondANDtypes] similar to atom information
 
         For example:
