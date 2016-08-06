@@ -229,7 +229,7 @@ class _Topology(Topology):
         # We require non-unique matches, i.e. we want every torsion matching
         # a SMARTS query. With unique = True, "Two subgraph matches which cover the same atoms, albeit in different orders, will be called duplicates and the subgraph found later in the search will be discarded."
         # if unique = True, we will fail to match non-equivalent torsions [0, 1, 2, 3 ] and [ 2, 1, 0, 3 ] going around the four ring atoms in cyclopropane, for example.
-        unique = False 
+        unique = False
         for reference_molecule in self._reference_molecules:
             # Find all atomsets that match this definition in the reference molecule
             ss = oechem.OESubSearch(qmol)
@@ -306,7 +306,7 @@ class ForceField(object):
     """
 
     def __init__(self, *files):
-        """Load one or more XML parameter definition files and create a SMIRFF ForceField object based on them. 
+        """Load one or more XML parameter definition files and create a SMIRFF ForceField object based on them.
 
         Parameters
         ----------
@@ -356,7 +356,7 @@ class ForceField(object):
 
         # Retain XML trees internally
         self._XMLTrees = trees
-        # Store whether this has been modified or not; if modified, it will 
+        # Store whether this has been modified or not; if modified, it will
         # trigger re-parsing/loading of XML on system creation
         self._XMLModified = False
 
@@ -394,17 +394,17 @@ class ForceField(object):
     smirks (optional) : str
         Default None. If specified, will pull parameters on line containing this `smirks`.
     paramID : str
-        Default None. If specified, will pull parameters on line with this `id` 
+        Default None. If specified, will pull parameters on line with this `id`
     force_type : str
-        Default "Implied". Optionally, specify a particular force type such as 
-        "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a 
-        matching ID or SMIRKS. 
-    
+        Default "Implied". Optionally, specify a particular force type such as
+        "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a
+        matching ID or SMIRKS.
+
 
     Returns
     -------
     params : dict
-        Dictionary of attributes (parameters and their descriptions) from XML    
+        Dictionary of attributes (parameters and their descriptions) from XML
 
 
 Usage notes: SMIRKS or parameter ID must be specified.
@@ -417,18 +417,18 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         if smirks==None and paramID==None:
             raise ValueError("Error: Must specify SMIRKS or parameter ID.")
 
-        
+
         trees=self._XMLTrees
         # Loop over XML files we read
         for tree in trees:
             # Loop over tree
-            for child in tree.getroot():    
+            for child in tree.getroot():
                 # Check a particular section?
                 checksection = True
                 if force_type is not 'Implied':
                     # See whether this has the tag we want to check
                     checksection= (child.tag==force_type)
-                
+
                 if checksection:
                     #Loop over descendants
                     for elem in child.iterdescendants(tag=etree.Element):
@@ -443,16 +443,16 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
     ----------
     params : dict
         Dictionary of attributes (parameters and their descriptions) for XML,
-        i.e. as output by getParameter.    
+        i.e. as output by getParameter.
     smirks (optional) : str
         Default None. If specified, will set parameters on line containing this `smirks`.
     paramID (optional) : str
-        Default None. If specified, will set parameters on line with this `id` 
+        Default None. If specified, will set parameters on line with this `id`
     force_type (optional) : str
-        Default "Implied". Optionally, specify a particular force type such as 
-        "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a 
-        matching ID or SMIRKS. 
-    
+        Default "Implied". Optionally, specify a particular force type such as
+        "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a
+        matching ID or SMIRKS.
+
 
     Returns
     -------
@@ -477,13 +477,13 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         # Loop over XML files we read
         for tree in trees:
             # Loop over tree
-            for child in tree.getroot():    
+            for child in tree.getroot():
                 # Check a particular section?
                 checksection = True
                 if force_type is not 'Implied':
                     # See whether this has the tag we want to check
                     checksection= (child.tag==force_type)
-                
+
                 if checksection:
                     #Loop over descendants
                     for elem in child.iterdescendants(tag=etree.Element):
@@ -498,10 +498,10 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
                                 elem.set( tag, params[tag])
 
                             # Found parameters and set, so update status
-                            status = True   
- 
+                            status = True
 
-        # If we made any changes to XML, set flag so it will be reprocessed prior 
+
+        # If we made any changes to XML, set flag so it will be reprocessed prior
         # to system creation
         if status:
             self._XMLModified = True
@@ -511,7 +511,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
     def writeFile(self, files):
         """Write forcefield trees out to specified files."""
- 
+
         # Ensure that we are working with a tuple of files.
         if not isinstance(files, tuple):
             files = (files,)
@@ -601,6 +601,8 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
             raise ValueError('Requested periodic boundary conditions for a Topology that does not specify periodic box dimensions')
 
         # TODO: Convert requested bonds and angles to use constraints
+        if constraints != None:
+            raise Exception("Constraints are not implemented yet.")
 
         # Set nonbonded method.
         kwargs['nonbondedMethod'] = nonbondedMethod
@@ -801,7 +803,7 @@ class HarmonicBondGenerator(object):
                 atom2 = atoms[a2]
                 msg += '(%8d,%8d) : %5s %3s %3s - %5s %3s %3s' % (a1, a2, atom1.residue.index, atom1.residue.name, atom1.name, atom2.residue.index, atom2.residue.name, atom2.name)
                 msg += '\n'
-            raise Exception(msg)        
+            raise Exception(msg)
 
 
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
@@ -978,10 +980,10 @@ class NonbondedGenerator(object):
                 a = _extractQuantity(node, parent, 'rmin_half')
                 raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the .ffxml file.")
             except:
-                pass            
+                pass
 
             #Handle sigma
-            try: 
+            try:
                 self.sigma = _extractQuantity(node, parent, 'sigma')
             #Handle rmin_half, AMBER-style
             except:
