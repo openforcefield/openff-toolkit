@@ -73,6 +73,11 @@ ffxml_contents = """\
    <Atom smirks="[#8X2+0$(*-[#1]):1]" rmin_half="1.7210" epsilon="0.2104"/> <!-- OH from frcmod.Frosst_AlkEthOH -->
 </NonbondedForce>
 
+<BondChargeCorrections method="AM1">
+  <BondChargeCorrection smirks="[#6X4:1]-[#6X3a:2]" increment="+0.0073"/> <!-- tetrahedral carbon bonded to aromatic carbon correction -->
+  <BondChargeCorrection smirks="[#6X4:1]-[#6X3a:2]-[#7]" increment="-0.0943"/> <!-- tetrahedral carbon bonded to aromatic carbon (bonded to a nitrogen) -->
+</BondChargeCorrections>
+
 </SMIRFF>
 """
 
@@ -133,7 +138,7 @@ def check_energy_is_finite(system, positions):
 def get_energy(system, positions):
     """
     Return the potential energy.
-    
+
     Parameters
     ----------
     system : simtk.openmm.System
@@ -157,7 +162,7 @@ def test_read_ffxml():
     """
     forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
 
-def check_system_creation_from_molecule(forcefield, mol, verbose=False):
+def check_system_creation_from_molecule(forcefield, mol, chargeMethod=None, verbose=False):
     """
     Generate a System from the given OEMol and SMIRFF forcefield and check that its energy is finite.
 
@@ -167,17 +172,19 @@ def check_system_creation_from_molecule(forcefield, mol, verbose=False):
         SMIRFF forcefield
     mol : oechem.OEMol
         Molecule to test (need not have coordinates)
+    chargeMethod : str, optional, default=None
+        Charge method to use in creating system
 
     """
 
     from smarty.forcefield import generateTopologyFromOEMol
     topology = generateTopologyFromOEMol(mol)
-    system = forcefield.createSystem(topology, [mol], verbose=verbose)
+    system = forcefield.createSystem(topology, [mol], chargeMethod=chargeMethod, verbose=verbose)
     # Test energy computation.
     positions = positions_from_oemol(mol)
     check_energy_is_finite(system, positions)
 
-def check_system_creation_from_topology(forcefield, topology, mols, positions, verbose=False):
+def check_system_creation_from_topology(forcefield, topology, mols, positions, chargeMethod=None, verbose=False):
     """
     Generate a System from the given topology, OEMols matching the contents of the topology, and SMIRFF forcefield and check that its energy is finite.
 
@@ -190,21 +197,23 @@ def check_system_creation_from_topology(forcefield, topology, mols, positions, v
     mols : list of oechem.OEMol
         Reference molecules
     positions : simtk.unit.Quantity with dimension (natoms,3) with units of length
+    chargeMethod : str, optional, default=None
+        Charge method to use in creating system
 
     """
     from smarty.forcefield import CutoffPeriodic
-    system = forcefield.createSystem(topology, mols, verbose=verbose, nonbondedMethod=CutoffPeriodic)
+    system = forcefield.createSystem(topology, mols, verbose=verbose, chargeMethod=chargeMethod, nonbondedMethod=CutoffPeriodic)
     # Test energy computation.
     check_energy_is_finite(system, positions)
 
-def check_AlkEtOH(forcefield, description="", verbose=False):
+def check_AlkEtOH(forcefield, description="", chargeMethod=None, verbose=False):
     """Test creation of System from AlkEtOH small molecules.
     """
     from openeye import oechem
     ifs = oechem.oemolistream(get_data_filename('molecules/AlkEtOH-tripos.mol2.gz'))
     mol = oechem.OEGraphMol()
     while oechem.OEReadMolecule(ifs, mol):
-        args = { 'verbose' : verbose }
+        args = { 'verbose' : verbose, 'chargeMethod' : chargeMethod }
         f = partial(check_system_creation_from_molecule, forcefield, mol, **args)
         f.description ='Testing creation of system object from small molecules (%s) %s' % (mol.GetTitle(), description)
         yield f
@@ -214,15 +223,19 @@ def test_create_system_molecules_features(verbose=False):
     """
     ffxml = StringIO(ffxml_contents)
     forcefield = ForceField(ffxml)
-    check_AlkEtOH(forcefield, description="to test ffxml features", verbose=verbose)
+
+    for chargeMethod in [None, 'BCC', 'OECharges_AM1BCCSym']:
+        for f in check_AlkEtOH(forcefield, description="to test ffxml features with charge method %s" % str(chargeMethod), chargeMethod=chargeMethod, verbose=verbose):
+            yield f
 
 def test_create_system_molecules_parmatfrosst(verbose=False):
     """Test creation of a System object from small molecules to test parm@frosst forcefield.
     """
     forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
-    check_AlkEtOH(forcefield, "to test Parm@Frosst parameters", verbose=verbose)
+    for f in check_AlkEtOH(forcefield, "to test Parm@Frosst parameters", verbose=verbose):
+        yield f
 
-def check_boxes(forcefield, description="", verbose=False):
+def check_boxes(forcefield, description="", chargeMethod=None, verbose=False):
     """Test creation of System from boxes of mixed solvents.
     """
     # Read monomers
@@ -244,7 +257,7 @@ def check_boxes(forcefield, description="", verbose=False):
     for box in boxes:
         filename = get_data_filename(os.path.join('systems', 'packmol_boxes', box))
         pdbfile = PDBFile(filename)
-        f = partial(check_system_creation_from_topology, forcefield, pdbfile.topology, mols, pdbfile.positions, verbose=verbose)
+        f = partial(check_system_creation_from_topology, forcefield, pdbfile.topology, mols, pdbfile.positions, chargeMethod=chargeMethod, verbose=verbose)
         f.description = 'Test creation of System object from %s' % box
         yield f
 
@@ -253,13 +266,16 @@ def test_create_system_boxes_features(verbose=False):
     """
     ffxml = StringIO(ffxml_contents)
     forcefield = ForceField(ffxml)
-    check_boxes(forcefield, description="to test Parm@frosst parameters", verbose=verbose)
+    for chargeMethod in [None, 'BCC', 'OECharges_AM1BCCSym']:
+        for f in check_boxes(forcefield, description="to test Parm@frosst parameters with charge method %s" % str(chargeMethod), chargeMethod=chargeMethod, verbose=verbose):
+            yield f
 
 def test_create_system_boxes_parmatfrosst(verbose=False):
     """Test creation of a System object from some boxes of mixed solvents to test parm@frosst forcefield.
     """
     forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
-    check_boxes(forcefield, description="to test Parm@frosst parameters", verbose=verbose)
+    for f in check_boxes(forcefield, description="to test Parm@frosst parameters", verbose=verbose):
+        yield f
 
 def test_smirff_energies_vs_parmatfrosst(verbose=False):
     """Test evaluation of energies from parm@frosst ffxml files versus energies of equivalent systems."""
@@ -267,7 +283,7 @@ def test_smirff_energies_vs_parmatfrosst(verbose=False):
     from openeye import oechem
     prefix = 'AlkEthOH_'
     molecules = [ 'r118', 'r12', 'c1161', 'r0', 'c100', 'c38', 'c1266' ]
-   
+
     # Loop over molecules, load OEMols and prep for comparison/do comparison
     for molnm in molecules:
         f_prefix = os.path.join('molecules', prefix+molnm )
@@ -275,7 +291,7 @@ def test_smirff_energies_vs_parmatfrosst(verbose=False):
         prmtop = get_data_filename( f_prefix+'.top')
         crd = get_data_filename( f_prefix+'.crd')
         # Load special parm@frosst with parm99/parm@frosst bugs re-added for testing
-        forcefield = ForceField( get_data_filename('forcefield/Frosst_AlkEtOH_parmAtFrosst.ffxml') ) 
+        forcefield = ForceField( get_data_filename('forcefield/Frosst_AlkEtOH_parmAtFrosst.ffxml') )
 
         # Load OEMol
         mol = oechem.OEGraphMol()
@@ -283,7 +299,7 @@ def test_smirff_energies_vs_parmatfrosst(verbose=False):
         flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
         ifs.SetFlavor( oechem.OEFormat_MOL2, flavor)
         oechem.OEReadMolecule(ifs, mol )
-        oechem.OETriposAtomNames(mol)    
+        oechem.OETriposAtomNames(mol)
 
         # Do comparison
         results = compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = verbose )
@@ -305,11 +321,11 @@ def test_change_parameters(verbose=True):
     ifs.SetFlavor( oechem.OEFormat_MOL2, flavor)
     oechem.OEReadMolecule(ifs, mol )
     oechem.OETriposAtomNames(mol)
-    
+
     # Load forcefield file
     ffxml = get_data_filename('forcefield/Frosst_AlkEtOH.ffxml')
     ff = ForceField(ffxml)
-     
+
     from smarty.forcefield import generateTopologyFromOEMol
     topology = generateTopologyFromOEMol(mol)
     # Create initial system
@@ -324,15 +340,15 @@ def test_change_parameters(verbose=True):
     params['k']='0.0'
     ff.setParameter(params, smirks='[a,A:1]-[#6X4:2]-[a,A:3]')
     # Write params
-    ff.writeFile( tempfile.TemporaryFile(suffix='.ffxml') )    
+    ff.writeFile( tempfile.TemporaryFile(suffix='.ffxml') )
     # Make sure params changed energy! (Test whether they get rebuilt on system creation)
     system=ff.createSystem(topology, [mol], verbose=verbose)
     energy=get_energy(system, positions)
     if verbose:
         print("New energy/old energy:", energy, old_energy)
     if np.abs(energy-old_energy)<0.1:
-        raise Exception("Error: Parameter modification did not change energy.")   
- 
+        raise Exception("Error: Parameter modification did not change energy.")
+
 
 if __name__ == '__main__':
     #test_smirks()
