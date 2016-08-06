@@ -15,16 +15,8 @@ John D. Chodera <john.chodera@choderalab.org>
 
 Baseed on simtk.openmm.app.forcefield written by Peter Eastman.
 
-TODO
-* Add general constraint syntax using SMIRKS-based matching:
-```XML
-<Constraints>
-  <!-- bonds involving hydrogen -->
-  <Constraint smirks="[#1:1]-[*:2]"/> <!-- add constraint between atoms 1 and 2 using equilibrium bond distance -->
-  <!-- angles involving hydrogen -->
-  <Constraint smirks="[#1:1]-[*:2]-[#1:3]"/> <!-- add constraint between atoms 1 and 3 using auto-calculated distance from equilibrium bond and angles -->
-</Constraints>
-```
+TODO:
+* Constraint handling
 * Move utility functions like 'generateTopologyFromOEMol()' elsewhere?
 * Use xml parser with 'sourceline' node attributes to aid debugging
 http://stackoverflow.com/questions/6949395/is-there-a-way-to-get-a-line-number-from-an-elementtree-element
@@ -52,7 +44,7 @@ import openeye.oechem
 import openeye.oeomega
 import openeye.oequacpac
 
-from openeye import oechem
+from openeye import oechem, oequacpac
 
 from simtk import openmm, unit
 
@@ -520,9 +512,25 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
             tree=self._XMLTrees[idx]
             tree.write( filenm, xml_declaration=True)
 
+    def _assignPartialCharges(self, molecule, oechargemethod):
+        """Assign partial charges to the specified molecule using best practices.
+
+        Parameters
+        ----------
+        molecule : OEMol
+            The molecule to be charged.
+            NOTE: The molecule will be modified when charges are added.
+        oechargemethod : str
+            The name of the charge method from oequacpac to use (e.g. 'OECharges_AM1BCCSym')
+
+        """
+        # TODO: Do we need to use omega to do a conformational expansion first?
+        # TODO: Cache charged molecules here to save time in future calls to createSystem
+        oequacpac.OEAssignPartialCharges(molecule, getattr(oequacpac, oechargemethod), False, False)
 
     def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(), verbose=False, **kwargs):
+                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
+                     chargeMethod='BCC', verbose=False, **kwargs):
         """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
 
         Parameters
@@ -555,6 +563,10 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
            This allows user to specify which template to apply to particular Residues
            in the event that multiple matching templates are available (e.g Fe2+ and Fe3+
            templates in the ForceField for a monoatomic iron ion in the topology).
+        chargeModel : str, optional, default=None
+           If 'BCC' is specified, bond charge corrections defined the `ForceField` will be applied to AM1-derived charges, otherwise charges from provided `molecules` will be used. (DEFAULT)
+           If one of the `openeye.oequacpac.OECharges_` options is specified as a string (e.g. 'OECharges_AM1BCCSym'), this will be used and no bond charge corrections will be applied.
+           If `None`, charges from the provided `molecules` will be used and no bond charge corrections will be applied.
         verbose : bool
            If True, verbose output will be printed.
         kwargs
@@ -567,10 +579,42 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         system
             the newly created System
         """
-        # XML modified? If so, re-parse forces
+        # XML modified? If so, re-parse by generators
         if self._XMLModified:
             if verbose: print("Re-parsing XML because it was modified.")
             self.parseXMLTrees()
+
+        # Make a deep copy of the input molecules so they are not modified by charging
+        molecules = copy.deepcopy(molecules)
+
+        # Charge molecules, if needed
+        if chargeMethod == None:
+            # Don't charge molecules
+            if verbose: print('Charges specified in provided molecules will be used.')
+            oechargemethod = None
+        elif chargeMethod == 'BCC':
+            # Check if we have a BondChargeCorrectionGenerator populated
+            force_generators = { force.__class__.__name__ : force for force in self._forces }
+            if ('BondChargeCorrectionGenerator' in force_generators):
+                oechargemethod = force_generators['BondChargeCorrectionGenerator']._oechargemethod
+                if verbose: print('Applying oechem.oequacpac.OEAssignPartialCharges with initial charge method "%s" followed by bond charge corrections.' % oechargemethod)
+            else:
+                # Don't charge molecules if no bond charge corrections were found
+                oechargemethod = None
+        elif type(chargeMethod) == str:
+            # Check if the user has provided a manually-specified charge method
+            if hasattr(oequacpac, chargeMethod):
+                oechargemethod = chargeMethod
+                if verbose: print('Applying oechem.oequacpac.OEAssignPartialCharges with specified charge method "%s".' % oechargemethod)
+            else:
+                raise Exception("Unknown chargeMethod '%s'"% chargeMethod)
+        else:
+            raise Exception("Unknown chargeMethod ''%s'"% str(chargeMethod))
+
+        # Charge molecules if a valid charging method was identified
+        if oechargemethod is not None:
+            for molecule in molecules:
+                self._assignPartialCharges(molecule, oechargemethod)
 
         # Work with a modified form of the topology that provides additional accessors.
         topology = _Topology(topology, molecules)
@@ -608,9 +652,15 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         kwargs['nonbondedMethod'] = nonbondedMethod
         kwargs['nonbondedCutoff'] = nonbondedCutoff
 
+        # Set user-specified charge method.
+        kwargs['chargeMethod'] = chargeMethod
+
         # Add forces to the System
         for force in self._forces:
-            force.createForce(system, topology, verbose=verbose, **kwargs)
+            if 'createForce' in dir(force):
+                force.createForce(system, topology, verbose=verbose, **kwargs)
+
+        # Add center-of-mass motion removal, if requested
         if removeCMMotion:
             system.addForce(openmm.CMMotionRemover())
 
@@ -1079,3 +1129,86 @@ class NonbondedGenerator(object):
         nonbonded.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)
 
 parsers["NonbondedForce"] = NonbondedGenerator.parseElement
+
+## @private
+class BondChargeCorrectionGenerator(object):
+    """A BondChargeCorrectionGenerator handles <BondChargeCorrections>."""
+
+    class BondChargeCorrectionType(object):
+        """A SMIRFF bond type."""
+        def __init__(self, node, parent):
+            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.increment = _extractQuantity(node, parent, 'increment')
+            # If no units are specified, assume elementary charge
+            if type(self.increment) == float:
+                self.increment *= unit.elementary_charge
+
+    def __init__(self, forcefield, initialChargeMethod):
+        self.ff = forcefield
+        self._bondChargeCorrections = list()
+        self._initialChargeMethod = initialChargeMethod
+        self._oechargemethod = 'OECharges_' + initialChargeMethod
+        if not hasattr(oequacpac, self._oechargemethod):
+            raise Exception("BondChargeCorrectionGenerator: initialChargeMethod attribute was '%s', but '%s' was not found in oequacpac available methods." % (initialChargeMethod, self._oechargemethod))
+
+    def registerBondChargeCorrection(self, node, parent):
+        """Register a SMIRFF bondtype definition."""
+        bond = BondChargeCorrectionGenerator.BondChargeCorrectionType(node, parent)
+        self._bondChargeCorrections.append(bond)
+
+    @staticmethod
+    def parseElement(element, ff):
+        # Find existing force generator or create new one.
+        existing = [f for f in ff._forces if isinstance(f, BondChargeCorrectionGenerator)]
+        if len(existing) == 0:
+            generator = BondChargeCorrectionGenerator(ff, element.attrib['method'])
+            ff.registerGenerator(generator)
+        else:
+            # Check that new bond charge generator doesn't request a different method from existing one.
+            if element.attrib['method'] != existing[0]._initialChargeMethod:
+                raise Exception("Existing BondChargeCorrectionGenerator uses initial charging method '%s' while new BondChargeCorrectionGenerator requests '%s'" % (existing[0]._initialChargeMethod, element.attrib['method']))
+
+            generator = existing[0]
+
+        # Register all SMIRFF bond definitions.
+        for bond in element.findall('BondChargeCorrection'):
+            generator.registerBondChargeCorrection(bond, element)
+
+    def createForce(self, system, topology, verbose=False, **args):
+        # No forces are created by this generator.
+        pass
+
+    def postprocessSystem(self, system, topology, verbose=False, chargeMethod=None, **args):
+        if chargeMethod != 'BCC':
+            # Only apply charge corrections if chargeMethod is 'BCC'
+            return
+
+        # Iterate over all defined bond charge corrections, allowing later matches to override earlier ones.
+        bonds = ValenceDict()
+        for bond in self._bondChargeCorrections:
+            for atom_indices in topology.getSMIRKSMatches(bond.smirks):
+                bonds[atom_indices] = bond
+
+        if verbose:
+            print('')
+            print('Bond charge corrections:')
+            print('')
+            for bond in self._bondChargeCorrections:
+                print('%64s %12.6f : %8d matches' % (bond.smirks, bond.increment / unit.elementary_charge, len(topology.getSMIRKSMatches(bond.smirks))))
+            print('')
+
+        # Apply bond charge increments
+        for force in system.getForces():
+            if force.__class__.__name__ in ['NonbondedForce']:
+                for (atom_indices, bond) in bonds.items():
+                    # Retrieve parameters
+                    [charge0, sigma0, epsilon0] = force.getParticleParameters(atom_indices[0])
+                    [charge1, sigma1, epsilon1] = force.getParticleParameters(atom_indices[1])
+                    # Apply bond charge increment
+                    charge0 -= bond.increment
+                    charge1 += bond.increment
+                    # Update charges
+                    force.setParticleParameters(atom_indices[0], charge0, sigma0, epsilon0)
+                    force.setParticleParameters(atom_indices[1], charge1, sigma1, epsilon1)
+
+parsers["BondChargeCorrections"] = BondChargeCorrectionGenerator.parseElement

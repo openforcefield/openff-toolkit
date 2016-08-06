@@ -73,9 +73,10 @@ ffxml_contents = """\
    <Atom smirks="[#8X2+0$(*-[#1]):1]" rmin_half="1.7210" epsilon="0.2104"/> <!-- OH from frcmod.Frosst_AlkEthOH -->
 </NonbondedForce>
 
-<BondChargeCorrections method="AM1">
+<BondChargeCorrections method="AM1" increment_unit="elementary_charge">
   <BondChargeCorrection smirks="[#6X4:1]-[#6X3a:2]" increment="+0.0073"/> <!-- tetrahedral carbon bonded to aromatic carbon correction -->
   <BondChargeCorrection smirks="[#6X4:1]-[#6X3a:2]-[#7]" increment="-0.0943"/> <!-- tetrahedral carbon bonded to aromatic carbon (bonded to a nitrogen) -->
+  <BondChargeCorrection smirks="[#6X4:1]-[#8:2]" increment="+0.0718"/> <!-- tetrahedral carbon bonded to an oxygen :    13   11   31    1   0.0718 -->
 </BondChargeCorrections>
 
 </SMIRFF>
@@ -249,7 +250,7 @@ def check_boxes(forcefield, description="", chargeMethod=None, verbose=False):
         while oechem.OEReadMolecule(ifs, mol):
             oechem.OETriposAtomNames(mol)
             mols.append( oechem.OEGraphMol(mol) )
-    print('%d reference molecules loaded' % len(mols))
+    if verbose: print('%d reference molecules loaded' % len(mols))
 
     # Read systems.
     boxes = ['cyclohexane_ethanol_0.4_0.6.pdb', 'propane_methane_butanol_0.2_0.3_0.5.pdb']
@@ -258,7 +259,7 @@ def check_boxes(forcefield, description="", chargeMethod=None, verbose=False):
         filename = get_data_filename(os.path.join('systems', 'packmol_boxes', box))
         pdbfile = PDBFile(filename)
         f = partial(check_system_creation_from_topology, forcefield, pdbfile.topology, mols, pdbfile.positions, chargeMethod=chargeMethod, verbose=verbose)
-        f.description = 'Test creation of System object from %s' % box
+        f.description = 'Test creation of System object from %s %s' % (box, description)
         yield f
 
 def test_create_system_boxes_features(verbose=False):
@@ -311,7 +312,7 @@ def test_label_molecules(verbose=False):
     get_molecule_parameterIDs( molecules, ffxml)
 
 
-def test_change_parameters(verbose=True):
+def test_change_parameters(verbose=False):
     """Test modification of forcefield parameters."""
     from openeye import oechem
     # Load simple OEMol
