@@ -24,6 +24,8 @@ test:
   requires:
     - nose
     - nose-timer
+  imports:
+    - smarty
 
 about:
   home: https://github.com/open-forcefield-group/smarty
