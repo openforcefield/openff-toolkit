@@ -1,16 +1,16 @@
 try:
     import openeye
     # These can only be imported if openeye tools are available
-    from .atomtyper import *
-    from .forcefield import *
-    from .forcefield_utils import *
-    from .forcefield_labeler import *
-    from .sampler import *
-    from .utils import *
+    from smarty.atomtyper import *
+    from smarty.forcefield import *
+    from smarty.forcefield_utils import *
+    from smarty.forcefield_labeler import *
+    from smarty.sampler import *
+    from smarty.utils import *
 
 except Exception as e:
     print(e)
     print('Warning: Cannot import openeye toolkit; not all functionality will be available.')
 
-from .environment import *
-from .score_utils import *
+from smarty.environment import *
+from smarty.score_utils import *
