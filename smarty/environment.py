@@ -331,8 +331,8 @@ class ChemicalEnvironment(object):
         if neighbors == None:
             neighbors = self._graph.neighbors(initialAtom)
 
-        # sort neighbors to gaurentee order is constant
-        neighbors = sorted(neighbors)
+        # sort neighbors to guarantee order is constant
+        neighbors = sorted(neighbors, key=lambda atom: atom.asSMIRKS())
 
         # initialize smirks for starting atom
         if smarts:
