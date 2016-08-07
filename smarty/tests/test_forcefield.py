@@ -9,13 +9,13 @@ from simtk.openmm.app import element as elem
 from simtk.openmm.app import Topology
 from simtk import unit, openmm
 import numpy as np
-from StringIO import StringIO
+from io import StringIO
 from smarty.forcefield_utils import *
 import tempfile
 
 # This is a test forcefield that is not meant for actual use.
 # It just tests various capabilities.
-ffxml_contents = """\
+ffxml_contents = u"""\
 <?xml version="1.0"?>
 
 <SMIRFF>
