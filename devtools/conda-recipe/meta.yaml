@@ -19,6 +19,7 @@ requirements:
     - numpy
     - networkx
     - lxml
+    - openmoltools
 
 test:
   requires:
