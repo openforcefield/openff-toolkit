@@ -182,7 +182,7 @@ class _Topology(Topology):
                     reference_molecule_exists = True
                     # Add the reference atom mappings.
                     reference_to_topology_atom_mapping = dict()
-                    for (topology_atom, reference_atom) in GM.mapping.iteritems():
+                    for (topology_atom, reference_atom) in GM.mapping.items():
                         reference_to_topology_atom_mapping[reference_atom] = topology_atom
                     self._reference_to_topology_atom_mappings[reference_molecule].append(reference_to_topology_atom_mapping)
                     # Break out of the search loop.
