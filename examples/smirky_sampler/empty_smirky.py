@@ -8,7 +8,9 @@ ANDs = ['+0']
 mol2file = 'test_filt1_tripos.mol2'
 SMIRFF = "forcefield/Frosst_AlkEtOH.ffxml"
 verbose = True
-#typetag = 'Bond'  
+replacements = None
+elementList = ['#%i' % i for i in range(1,119)]
+#typetag = 'Bond'
 typetag = 'Angle'
 #typetag = 'VdW'
 #typetag = 'Torsion'
@@ -18,6 +20,6 @@ molecules = read_molecules(mol2file, verbose = verbose)
 
 # Try to initialize a Bond sampler:
 print "Attempting to sample %sS" % typetag.upper()
-sampler = TypeSampler(molecules, ORs, ANDs, typetag, None, SMIRFF, 0.0, True)
+sampler = TypeSampler(molecules, typetag, elementList, ORs, ANDs, replacements, None, SMIRFF, 0.0, True)
 
 
