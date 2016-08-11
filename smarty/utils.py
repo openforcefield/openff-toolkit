@@ -71,7 +71,7 @@ def normalize_molecules(molecules):
         openeye.oechem.OEAddExplicitHydrogens(molecule)
 
     # Build a conformation for all molecules with Omega.
-    print "Building conformations for all molecules..."
+    print("Building conformations for all molecules...")
     import openeye.oeomega
     omega = openeye.oeomega.OEOmega()
     omega.SetMaxConfs(1)
@@ -81,10 +81,10 @@ def normalize_molecules(molecules):
         omega(molecule)
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print "%.3f s elapsed" % elapsed_time
+    print("%.3f s elapsed" % elapsed_time)
 
     # Regularize all molecules through writing as mol2.
-    print "Regularizing all molecules..."
+    print("Regularizing all molecules...")
     ligand_mol2_dirname  = os.path.dirname(mcmcDbName) + '/mol2'
     if( not os.path.exists( ligand_mol2_dirname ) ):
         os.makedirs(ligand_mol2_dirname)
@@ -97,10 +97,10 @@ def normalize_molecules(molecules):
     omolstream.close()
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print "%.3f s elapsed" % elapsed_time
+    print("%.3f s elapsed" % elapsed_time)
 
     # Assign AM1-BCC charges.
-    print "Assigning AM1-BCC charges..."
+    print("Assigning AM1-BCC charges...")
     start_time = time.time()
     for molecule in molecules:
         # Assign AM1-BCC charges.
@@ -112,16 +112,16 @@ def normalize_molecules(molecules):
             OEAssignPartialCharges(molecule, OECharges_AM1BCC, False) # use explicit hydrogens
         # Check to make sure we ended up with partial charges.
         if OEHasPartialCharges(molecule) == False:
-            print "No charges on molecule: '%s'" % molecule.GetTitle()
-            print "IUPAC name: %s" % OECreateIUPACName(molecule)
+            print("No charges on molecule: '%s'" % molecule.GetTitle())
+            print("IUPAC name: %s" % OECreateIUPACName(molecule))
             # TODO: Write molecule out
             # Delete themolecule.
             molecules.remove(molecule)
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print "%.3f s elapsed" % elapsed_time
-    print "%d molecules remaining" % len(molecules)
+    print("%.3f s elapsed" % elapsed_time)
+    print("%d molecules remaining" % len(molecules))
 
     return
 

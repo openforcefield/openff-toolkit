@@ -333,8 +333,8 @@ class ChemicalEnvironment(object):
         if neighbors == None:
             neighbors = self._graph.neighbors(initialAtom)
 
-        # sort neighbors to gaurentee order is constant
-        neighbors = sorted(neighbors)
+        # sort neighbors to guarantee order is constant
+        neighbors = sorted(neighbors, key=lambda atom: atom.asSMIRKS())
 
         # initialize smirks for starting atom
         if smarts:
@@ -538,7 +538,7 @@ class ChemicalEnvironment(object):
         --------
         bond object between the atoms or None if no bond there
         """
-        if self._graph.edge[atom1].has_key(atom2):
+        if atom2 in self._graph.edge[atom1]:
             return self._graph.edge[atom1][atom2]['bond']
         else:
             return None
@@ -766,4 +766,3 @@ class ImproperChemicalEnvironment(AngleChemicalEnvironment):
 
         # Add initial atom
         self.atom4 = self.addAtom(self.atom2, Bond3Info[0], Bond3Info[1], Atom4Info[0], Atom4Info[1], 4)
-

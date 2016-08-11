@@ -15,16 +15,8 @@ John D. Chodera <john.chodera@choderalab.org>
 
 Baseed on simtk.openmm.app.forcefield written by Peter Eastman.
 
-TODO
-* Add general constraint syntax using SMIRKS-based matching:
-```XML
-<Constraints>
-  <!-- bonds involving hydrogen -->
-  <Constraint smirks="[#1:1]-[*:2]"/> <!-- add constraint between atoms 1 and 2 using equilibrium bond distance -->
-  <!-- angles involving hydrogen -->
-  <Constraint smirks="[#1:1]-[*:2]-[#1:3]"/> <!-- add constraint between atoms 1 and 3 using auto-calculated distance from equilibrium bond and angles -->
-</Constraints>
-```
+TODO:
+* Constraint handling
 * Move utility functions like 'generateTopologyFromOEMol()' elsewhere?
 * Use xml parser with 'sourceline' node attributes to aid debugging
 http://stackoverflow.com/questions/6949395/is-there-a-way-to-get-a-line-number-from-an-elementtree-element
@@ -36,7 +28,6 @@ http://stackoverflow.com/questions/6949395/is-there-a-way-to-get-a-line-number-f
 import sys
 import string
 
-#import xml.etree.ElementTree as etree
 import lxml.etree as etree
 
 from simtk.openmm.app import element as elem
@@ -53,27 +44,13 @@ import openeye.oechem
 import openeye.oeomega
 import openeye.oequacpac
 
-from openeye import oechem
+from openeye import oechem, oequacpac
 
 from simtk import openmm, unit
 
 import time
 
 import networkx
-
-#=============================================================================================
-# PRIVATE SUBROUTINES
-#=============================================================================================
-
-def _convertParameterToNumber(param):
-    """
-    Convert parameter to OpenMM units.
-    """
-    if unit.is_quantity(param):
-        if param.unit.is_compatible(unit.bar):
-            return param / unit.bar
-        return param.value_in_unit_system(unit.md_unit_system)
-    return float(param)
 
 #=============================================================================================
 # Augmented Topology
@@ -205,7 +182,7 @@ class _Topology(Topology):
                     reference_molecule_exists = True
                     # Add the reference atom mappings.
                     reference_to_topology_atom_mapping = dict()
-                    for (topology_atom, reference_atom) in GM.mapping.iteritems():
+                    for (topology_atom, reference_atom) in GM.mapping.items():
                         reference_to_topology_atom_mapping[reference_atom] = topology_atom
                     self._reference_to_topology_atom_mappings[reference_molecule].append(reference_to_topology_atom_mapping)
                     # Break out of the search loop.
@@ -244,7 +221,7 @@ class _Topology(Topology):
         # We require non-unique matches, i.e. we want every torsion matching
         # a SMARTS query. With unique = True, "Two subgraph matches which cover the same atoms, albeit in different orders, will be called duplicates and the subgraph found later in the search will be discarded."
         # if unique = True, we will fail to match non-equivalent torsions [0, 1, 2, 3 ] and [ 2, 1, 0, 3 ] going around the four ring atoms in cyclopropane, for example.
-        unique = False 
+        unique = False
         for reference_molecule in self._reference_molecules:
             # Find all atomsets that match this definition in the reference molecule
             ss = oechem.OESubSearch(qmol)
@@ -369,17 +346,29 @@ class ForceField(object):
 
             trees.append(tree)
 
-        # Load the atom masses.
-        for tree in trees:
-            if tree.getroot().find('AtomTypes') is not None:
-                for type in tree.getroot().find('AtomTypes').findall('Type'):
-                    self.registerAtomType(type.attrib)
+        # Retain XML trees internally
+        self._XMLTrees = trees
+        # Store whether this has been modified or not; if modified, it will
+        # trigger re-parsing/loading of XML on system creation
+        self._XMLModified = False
+
+        # Parse XML, get force definitions
+        self.parseXMLTrees()
+
+    def parseXMLTrees(self):
+        """Parse XML trees, load force definitions."""
+
+        trees = self._XMLTrees
+
+        # We'll be creating all forces again from scratch by re-parsing
+        self._forces = []
 
         # Load force definitions
         for tree in trees:
             for child in tree.getroot():
                 if child.tag in parsers:
                     parsers[child.tag](child, self)
+
 
     def getGenerators(self):
         """Get the list of all registered generators."""
@@ -389,9 +378,160 @@ class ForceField(object):
         """Register a new generator."""
         self._forces.append(generator)
 
+    def getParameter(self, smirks = None, paramID=None, force_type='Implied'):
+        """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
+
+    Parameters
+    ----------
+    smirks (optional) : str
+        Default None. If specified, will pull parameters on line containing this `smirks`.
+    paramID : str
+        Default None. If specified, will pull parameters on line with this `id`
+    force_type : str
+        Default "Implied". Optionally, specify a particular force type such as
+        "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a
+        matching ID or SMIRKS.
+
+
+    Returns
+    -------
+    params : dict
+        Dictionary of attributes (parameters and their descriptions) from XML
+
+
+Usage notes: SMIRKS or parameter ID must be specified.
+
+To do: Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
+"""
+        # Check for valid input
+        if smirks and paramID:
+            raise ValueError("Error: Specify SMIRKS OR parameter ID but not both.")
+        if smirks==None and paramID==None:
+            raise ValueError("Error: Must specify SMIRKS or parameter ID.")
+
+
+        trees=self._XMLTrees
+        # Loop over XML files we read
+        for tree in trees:
+            # Loop over tree
+            for child in tree.getroot():
+                # Check a particular section?
+                checksection = True
+                if force_type is not 'Implied':
+                    # See whether this has the tag we want to check
+                    checksection= (child.tag==force_type)
+
+                if checksection:
+                    #Loop over descendants
+                    for elem in child.iterdescendants(tag=etree.Element):
+                        if (smirks and elem.attrib['smirks']==smirks) or (paramID and elem.attrib['id']==paramID):
+                            return copy.deepcopy(elem.attrib)
+
+
+    def setParameter(self, params, smirks=None, paramID=None, force_type="Implied"):
+        """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
+
+    Parameters
+    ----------
+    params : dict
+        Dictionary of attributes (parameters and their descriptions) for XML,
+        i.e. as output by getParameter.
+    smirks (optional) : str
+        Default None. If specified, will set parameters on line containing this `smirks`.
+    paramID (optional) : str
+        Default None. If specified, will set parameters on line with this `id`
+    force_type (optional) : str
+        Default "Implied". Optionally, specify a particular force type such as
+        "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a
+        matching ID or SMIRKS.
+
+
+    Returns
+    -------
+    status : bool
+        True/False as to whether that parameter was found and successfully set
+
+Usage notes: SMIRKS or parameter ID must be specified.
+
+To do: Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
+"""
+        # Check for valid input
+        if smirks and paramID:
+            raise ValueError("Error: Specify SMIRKS OR parameter ID but not both.")
+        if smirks==None and paramID==None:
+            raise ValueError("Error: Must specify SMIRKS or parameter ID.")
+        if not params:
+            raise ValueError("Error, parameters must be specified.")
+
+
+        trees=self._XMLTrees
+        status = False
+        # Loop over XML files we read
+        for tree in trees:
+            # Loop over tree
+            for child in tree.getroot():
+                # Check a particular section?
+                checksection = True
+                if force_type is not 'Implied':
+                    # See whether this has the tag we want to check
+                    checksection= (child.tag==force_type)
+
+                if checksection:
+                    #Loop over descendants
+                    for elem in child.iterdescendants(tag=etree.Element):
+                        if (smirks and elem.attrib['smirks']==smirks) or (paramID and elem.attrib['id']==paramID):
+                            # Try to set parameters
+                            old_params=elem.attrib
+                            if set(old_params.keys()) != set(params.keys()):
+                                raise ValueError('Error: Provided parameters have different keys (%s) than existing parameters (%s).' % (', '.join(old_params.keys()), ', '.join(params.keys())))
+
+                            # Loop over attributes, change values
+                            for tag in params.keys():
+                                elem.set( tag, params[tag])
+
+                            # Found parameters and set, so update status
+                            status = True
+
+
+        # If we made any changes to XML, set flag so it will be reprocessed prior
+        # to system creation
+        if status:
+            self._XMLModified = True
+
+        return status
+
+
+    def writeFile(self, files):
+        """Write forcefield trees out to specified files."""
+
+        # Ensure that we are working with a tuple of files.
+        if not isinstance(files, tuple):
+            files = (files,)
+
+        for idx, filenm in enumerate(files):
+            tree=self._XMLTrees[idx]
+            tree.write( filenm, xml_declaration=True)
+
+    def _assignPartialCharges(self, molecule, oechargemethod):
+        """Assign partial charges to the specified molecule using best practices.
+
+        Parameters
+        ----------
+        molecule : OEMol
+            The molecule to be charged.
+            NOTE: The molecule will be modified when charges are added.
+        oechargemethod : str
+            The name of the charge method from oequacpac to use (e.g. 'OECharges_AM1BCCSym')
+
+        """
+        # TODO: Do we need to use omega to do a conformational expansion first?
+        # TODO: Cache charged molecules here to save time in future calls to createSystem
+        oequacpac.OEAssignPartialCharges(molecule, getattr(oequacpac, oechargemethod), False, False)
+
     def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(), verbose=False, **kwargs):
-        """Construct an OpenMM System representing a Topology with this force field.
+                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
+                     chargeMethod='BCC', verbose=False, **kwargs):
+        """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
 
         Parameters
         ----------
@@ -423,6 +563,10 @@ class ForceField(object):
            This allows user to specify which template to apply to particular Residues
            in the event that multiple matching templates are available (e.g Fe2+ and Fe3+
            templates in the ForceField for a monoatomic iron ion in the topology).
+        chargeModel : str, optional, default=None
+           If 'BCC' is specified, bond charge corrections defined the `ForceField` will be applied to AM1-derived charges, otherwise charges from provided `molecules` will be used. (DEFAULT)
+           If one of the `openeye.oequacpac.OECharges_` options is specified as a string (e.g. 'OECharges_AM1BCCSym'), this will be used and no bond charge corrections will be applied.
+           If `None`, charges from the provided `molecules` will be used and no bond charge corrections will be applied.
         verbose : bool
            If True, verbose output will be printed.
         kwargs
@@ -435,6 +579,43 @@ class ForceField(object):
         system
             the newly created System
         """
+        # XML modified? If so, re-parse by generators
+        if self._XMLModified:
+            if verbose: print("Re-parsing XML because it was modified.")
+            self.parseXMLTrees()
+
+        # Make a deep copy of the input molecules so they are not modified by charging
+        molecules = copy.deepcopy(molecules)
+
+        # Charge molecules, if needed
+        if chargeMethod == None:
+            # Don't charge molecules
+            if verbose: print('Charges specified in provided molecules will be used.')
+            oechargemethod = None
+        elif chargeMethod == 'BCC':
+            # Check if we have a BondChargeCorrectionGenerator populated
+            force_generators = { force.__class__.__name__ : force for force in self._forces }
+            if ('BondChargeCorrectionGenerator' in force_generators):
+                oechargemethod = force_generators['BondChargeCorrectionGenerator']._oechargemethod
+                if verbose: print('Applying oechem.oequacpac.OEAssignPartialCharges with initial charge method "%s" followed by bond charge corrections.' % oechargemethod)
+            else:
+                # Don't charge molecules if no bond charge corrections were found
+                oechargemethod = None
+        elif type(chargeMethod) == str:
+            # Check if the user has provided a manually-specified charge method
+            if hasattr(oequacpac, chargeMethod):
+                oechargemethod = chargeMethod
+                if verbose: print('Applying oechem.oequacpac.OEAssignPartialCharges with specified charge method "%s".' % oechargemethod)
+            else:
+                raise Exception("Unknown chargeMethod '%s'"% chargeMethod)
+        else:
+            raise Exception("Unknown chargeMethod ''%s'"% str(chargeMethod))
+
+        # Charge molecules if a valid charging method was identified
+        if oechargemethod is not None:
+            for molecule in molecules:
+                self._assignPartialCharges(molecule, oechargemethod)
+
         # Work with a modified form of the topology that provides additional accessors.
         topology = _Topology(topology, molecules)
 
@@ -464,14 +645,22 @@ class ForceField(object):
             raise ValueError('Requested periodic boundary conditions for a Topology that does not specify periodic box dimensions')
 
         # TODO: Convert requested bonds and angles to use constraints
+        if constraints != None:
+            raise Exception("Constraints are not implemented yet.")
 
         # Set nonbonded method.
         kwargs['nonbondedMethod'] = nonbondedMethod
         kwargs['nonbondedCutoff'] = nonbondedCutoff
 
+        # Set user-specified charge method.
+        kwargs['chargeMethod'] = chargeMethod
+
         # Add forces to the System
         for force in self._forces:
-            force.createForce(system, topology, verbose=verbose, **kwargs)
+            if 'createForce' in dir(force):
+                force.createForce(system, topology, verbose=verbose, **kwargs)
+
+        # Add center-of-mass motion removal, if requested
         if removeCMMotion:
             system.addForce(openmm.CMMotionRemover())
 
@@ -664,7 +853,7 @@ class HarmonicBondGenerator(object):
                 atom2 = atoms[a2]
                 msg += '(%8d,%8d) : %5s %3s %3s - %5s %3s %3s' % (a1, a2, atom1.residue.index, atom1.residue.name, atom1.name, atom2.residue.index, atom2.residue.name, atom2.name)
                 msg += '\n'
-            raise Exception(msg)        
+            raise Exception(msg)
 
 
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
@@ -841,10 +1030,10 @@ class NonbondedGenerator(object):
                 a = _extractQuantity(node, parent, 'rmin_half')
                 raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the .ffxml file.")
             except:
-                pass            
+                pass
 
             #Handle sigma
-            try: 
+            try:
                 self.sigma = _extractQuantity(node, parent, 'sigma')
             #Handle rmin_half, AMBER-style
             except:
@@ -940,3 +1129,86 @@ class NonbondedGenerator(object):
         nonbonded.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)
 
 parsers["NonbondedForce"] = NonbondedGenerator.parseElement
+
+## @private
+class BondChargeCorrectionGenerator(object):
+    """A BondChargeCorrectionGenerator handles <BondChargeCorrections>."""
+
+    class BondChargeCorrectionType(object):
+        """A SMIRFF bond type."""
+        def __init__(self, node, parent):
+            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.increment = _extractQuantity(node, parent, 'increment')
+            # If no units are specified, assume elementary charge
+            if type(self.increment) == float:
+                self.increment *= unit.elementary_charge
+
+    def __init__(self, forcefield, initialChargeMethod):
+        self.ff = forcefield
+        self._bondChargeCorrections = list()
+        self._initialChargeMethod = initialChargeMethod
+        self._oechargemethod = 'OECharges_' + initialChargeMethod
+        if not hasattr(oequacpac, self._oechargemethod):
+            raise Exception("BondChargeCorrectionGenerator: initialChargeMethod attribute was '%s', but '%s' was not found in oequacpac available methods." % (initialChargeMethod, self._oechargemethod))
+
+    def registerBondChargeCorrection(self, node, parent):
+        """Register a SMIRFF bondtype definition."""
+        bond = BondChargeCorrectionGenerator.BondChargeCorrectionType(node, parent)
+        self._bondChargeCorrections.append(bond)
+
+    @staticmethod
+    def parseElement(element, ff):
+        # Find existing force generator or create new one.
+        existing = [f for f in ff._forces if isinstance(f, BondChargeCorrectionGenerator)]
+        if len(existing) == 0:
+            generator = BondChargeCorrectionGenerator(ff, element.attrib['method'])
+            ff.registerGenerator(generator)
+        else:
+            # Check that new bond charge generator doesn't request a different method from existing one.
+            if element.attrib['method'] != existing[0]._initialChargeMethod:
+                raise Exception("Existing BondChargeCorrectionGenerator uses initial charging method '%s' while new BondChargeCorrectionGenerator requests '%s'" % (existing[0]._initialChargeMethod, element.attrib['method']))
+
+            generator = existing[0]
+
+        # Register all SMIRFF bond definitions.
+        for bond in element.findall('BondChargeCorrection'):
+            generator.registerBondChargeCorrection(bond, element)
+
+    def createForce(self, system, topology, verbose=False, **args):
+        # No forces are created by this generator.
+        pass
+
+    def postprocessSystem(self, system, topology, verbose=False, chargeMethod=None, **args):
+        if chargeMethod != 'BCC':
+            # Only apply charge corrections if chargeMethod is 'BCC'
+            return
+
+        # Iterate over all defined bond charge corrections, allowing later matches to override earlier ones.
+        bonds = ValenceDict()
+        for bond in self._bondChargeCorrections:
+            for atom_indices in topology.getSMIRKSMatches(bond.smirks):
+                bonds[atom_indices] = bond
+
+        if verbose:
+            print('')
+            print('Bond charge corrections:')
+            print('')
+            for bond in self._bondChargeCorrections:
+                print('%64s %12.6f : %8d matches' % (bond.smirks, bond.increment / unit.elementary_charge, len(topology.getSMIRKSMatches(bond.smirks))))
+            print('')
+
+        # Apply bond charge increments
+        for force in system.getForces():
+            if force.__class__.__name__ in ['NonbondedForce']:
+                for (atom_indices, bond) in bonds.items():
+                    # Retrieve parameters
+                    [charge0, sigma0, epsilon0] = force.getParticleParameters(atom_indices[0])
+                    [charge1, sigma1, epsilon1] = force.getParticleParameters(atom_indices[1])
+                    # Apply bond charge increment
+                    charge0 -= bond.increment
+                    charge1 += bond.increment
+                    # Update charges
+                    force.setParticleParameters(atom_indices[0], charge0, sigma0, epsilon0)
+                    force.setParticleParameters(atom_indices[1], charge1, sigma1, epsilon1)
+
+parsers["BondChargeCorrections"] = BondChargeCorrectionGenerator.parseElement
