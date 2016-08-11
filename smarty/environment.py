@@ -24,6 +24,7 @@ and David Mobley, UC Irvine.
 
 import networkx as nx
 import random
+import copy
 
 class ChemicalEnvironment(object):
     """Chemical environment abstract base class that matches an atom, bond, angle, etc.
@@ -130,7 +131,7 @@ class ChemicalEnvironment(object):
             """
             returns a copy of the list of ORtypes for this atom
             """
-            return list(self.ORtypes.copy())
+            return list(copy.deepcopy(self.ORtypes))
 
         def setORtypes(self, newORtypes):
             """
@@ -150,7 +151,7 @@ class ChemicalEnvironment(object):
             """
             returns a copy of the list of ANDtypes for this atom
             """
-            return list(self.ANDtypes.copy())
+            return list(copy.deepcopy(self.ANDtypes))
 
         def setANDtypes(self, newANDtypes):
             """
@@ -254,7 +255,7 @@ class ChemicalEnvironment(object):
             """
             returns a copy of the list of ORtypes for this bond
             """
-            return list(self.ORtypes.copy())
+            return list(copy.deepcopy(self.ORtypes))
 
         def setORtypes(self, newORtypes):
             """
@@ -274,7 +275,7 @@ class ChemicalEnvironment(object):
             """
             returns a copy of the list of ANDtypes for this bond
             """
-            return list(self.ANDtypes.copy())
+            return list(copy.deepcopy(self.ANDtypes))
 
         def setANDtypes(self, newANDtypes):
             """
@@ -442,6 +443,7 @@ class ChemicalEnvironment(object):
         --------
         newAtom: atom object for the newly created atom
         """
+        # TODO: determine other requirements to check before adding atom
         if bondToAtom == None:
             if len(self._graph.nodes()) > 0:
                 return None
@@ -463,7 +465,7 @@ class ChemicalEnvironment(object):
 
         return newAtom
 
-    def removeAtom(self, atom):
+    def removeAtom(self, atom, onlyEmpty = True):
         """Remove the specified atom from the chemical environment.
         if the atom is not indexed for the SMIRKS string or
         used to connect two other atoms.
@@ -472,23 +474,35 @@ class ChemicalEnvironment(object):
         ----------
         atom: atom object, required
             atom to be removed if it meets the conditions.
+        onlyEmpty: boolean, optional
+            True only an atom with no ANDtypes and 1 ORtype can be removed
 
         Returns
         --------
         Boolean True: atom was removed, False: atom was not removed
         """
+        # labeled atoms can't be removed
         if atom.index is not None:
             print("Cannot remove labeled atom %s" % atom.asSMIRKS())
             return False
 
-        elif len(self._graph.neighbors(atom)) > 1:
+        # Atom connected to more than one other atom cannot be removed
+        if len(self._graph.neighbors(atom)) > 1:
             print("Cannot remove atom %s because it connects two atoms" % atom.asSMIRKS())
             return False
 
-        else:
-            # Remove atom (removes associated bonds)
+        # if you can remove "decorated atoms" remove it
+        if not onlyEmpty:
             self._graph.remove_node(atom)
             return True
+
+        if len(atom.ANDtypes) > 0:
+            return False
+        elif len(atom.ORtypes) > 1:
+            return False
+
+        self._graph.remove_node(atom)
+        return True
 
     def getAtoms(self):
         """
