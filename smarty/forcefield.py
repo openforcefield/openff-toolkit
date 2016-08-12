@@ -53,6 +53,51 @@ import time
 import networkx
 
 #=============================================================================================
+# PRIVATE SUBROUTINES
+#=============================================================================================
+
+def _getSMIRKSMatches_OEMol(oemol, smirks):
+    """Find all sets of atoms in the provided oemol that match the provided SMIRKS strings.
+
+        Parameters
+    ----------
+    smirks : str
+        SMIRKS string with tagged atoms.
+        If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+
+    Returns
+    -------
+    matches : list of tuples of atoms numbers
+        matches[index] is an N-tuple of atom numbers from the oemol
+        Matches are returned in no guaranteed order.
+    """
+
+    # Set up query.
+    qmol = oechem.OEQMol()
+    if not oechem.OEParseSmarts(qmol, smirks):
+        raise Exception("Error parsing SMIRKS '%s'" % smirks)
+
+    # Perform matching on each oemol
+    matches = list()
+
+    # We require non-unique matches, i.e. all matches
+    unique = False
+    ss = oechem.OESubSearch(qmol)
+    matches = []
+    for match in ss.Match( oemol, unique):
+        # Compile list of atom indices that match the pattern tags
+        atom_indices = dict()
+        for ma in match.GetAtoms():
+            if ma.pattern.GetMapIdx() != 0:
+                atom_indices[ma.pattern.GetMapIdx()-1] = ma.target.GetIdx()
+        # Compress into list
+        atom_indices = [ atom_indices[index] for index in range(len(atom_indices)) ]
+        # Store
+        matches.append( tuple(atom_indices) )
+
+    return matches
+
+#=============================================================================================
 # Augmented Topology
 #=============================================================================================
 
@@ -241,46 +286,6 @@ class _Topology(Topology):
 
         return matches
 
-    def getSMIRKSMatches_OEMol(oemol, smirks):
-        """Find all sets of atoms in the provided oemol that match the provided SMIRKS strings.
-
-            Parameters
-        ----------
-        smirks : str
-            SMIRKS string with tagged atoms.
-            If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
-
-        Returns
-        -------
-        matches : list of tuples of atoms numbers
-            matches[index] is an N-tuple of atom numbers from the oemol
-            Matches are returned in no guaranteed order.
-        """
-
-        # Set up query.
-        qmol = oechem.OEQMol()
-        if not oechem.OEParseSmarts(qmol, smirks):
-            raise Exception("Error parsing SMIRKS '%s'" % smirks)
-
-        # Perform matching on each unique molecule, unrolling the matches to all matching copies of tha tmolecule in the Topology object.
-        matches = list()
-
-        # We require non-unique matches, i.e. all matches
-        unique = False
-        ss = oechem.OESubSearch(qmol)
-        matches = []
-        for match in ss.Match( oemol, unique):
-            # Compile list of atom indices that match the pattern tags
-            atom_indices = dict()
-            for ma in match.GetAtoms():
-                if ma.pattern.GetMapIdx() != 0:
-                    atom_indices[ma.pattern.GetMapIdx()-1] = ma.target.GetIdx()
-            # Compress into list
-            atom_indices = [ atom_indices[index] for index in range(len(atom_indices)) ]
-            # Store
-            matches.append( tuple(atom_indices) )
-
-        return matches
 
 #=============================================================================================
 # FORCEFIELD
@@ -885,6 +890,7 @@ class HarmonicBondGenerator(object):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.length = _extractQuantity(node, parent, 'length')
             self.k = _extractQuantity(node, parent, 'k')
+            self.pid = _extractQuantity(node, parent, 'id')
 
     def __init__(self, forcefield):
         self.ff = forcefield
@@ -976,7 +982,7 @@ class HarmonicBondGenerator(object):
         # Iterate over all defined bond SMIRKS, allowing later matches to override earlier ones.
         bonds = ValenceDict()
         for bond in self._bondtypes:
-            for atom_indices in getSMIRKSMatches_OEMol( oemol, bond.smirks ):
+            for atom_indices in _getSMIRKSMatches_OEMol( oemol, bond.smirks ):
                 bonds[atom_indices] = bond
 
         if verbose:
@@ -984,7 +990,7 @@ class HarmonicBondGenerator(object):
             print('HarmonicBondGenerator:')
             print('')
             for bond in self._bondtypes:
-                print('%64s : %8d matches' % (bond.smirks, len(getSMIRKSMatches_OEMol(oemol, bond.smirks))))
+                print('%64s : %8d matches' % (bond.smirks, len(_getSMIRKSMatches_OEMol(oemol, bond.smirks))))
             print('')
 
         # Add all bonds to the output list
@@ -1008,6 +1014,7 @@ class HarmonicAngleGenerator(object):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.angle = _extractQuantity(node, parent, 'angle')
             self.k = _extractQuantity(node, parent, 'k')
+            self.pid = _extractQuantity(node, parent, 'id')
 
     def __init__(self, forcefield):
         self.ff = forcefield
@@ -1079,7 +1086,7 @@ class HarmonicAngleGenerator(object):
         # Iterate over all defined angle types, allowing later matches to override earlier ones.
         angles = ValenceDict()
         for angle in self._angletypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, angle.smirks):
+            for atom_indices in _getSMIRKSMatches_OEMol(oemol, angle.smirks):
                 angles[atom_indices] = angle
 
         if verbose:
@@ -1087,7 +1094,7 @@ class HarmonicAngleGenerator(object):
             print('HarmonicAngleGenerator:')
             print('')
             for angle in self._angletypes:
-                print('%64s : %8d matches' % (angle.smirks, len(getSMIRKSMatches_OEMol(oemol, angle.smirks))))
+                print('%64s : %8d matches' % (angle.smirks, len(_getSMIRKSMatches_OEMol(oemol, angle.smirks))))
             print('')
 
         # Add all angles to the output list
@@ -1114,6 +1121,7 @@ class PeriodicTorsionGenerator(object):
             self.periodicity = list()
             self.phase = list()
             self.k = list()
+            self.pid = _extractQuantity(node, parent, 'id')
             # Store parameters.
             index = 1
             while 'phase%d'%index in node.attrib:
@@ -1200,7 +1208,7 @@ class PeriodicTorsionGenerator(object):
         # Iterate over all defined torsion types, allowing later matches to override earlier ones.
         torsions = ValenceDict()
         for torsion in self._torsiontypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, torsion.smirks):
+            for atom_indices in _getSMIRKSMatches_OEMol(oemol, torsion.smirks):
                 torsions[atom_indices] = torsion
 
         if verbose:
@@ -1208,7 +1216,7 @@ class PeriodicTorsionGenerator(object):
             print('PeriodicTorsionGenerator:')
             print('')
             for torsion in self._torsiontypes:
-                print('%64s : %8d matches' % (torsion.smirks, len(getSMIRKSMatches_OEMol(oemol, torsion.smirks))))
+                print('%64s : %8d matches' % (torsion.smirks, len(_getSMIRKSMatches_OEMol(oemol, torsion.smirks))))
             print('')
 
         # Add all torsions to the output list
@@ -1231,6 +1239,7 @@ class NonbondedGenerator(object):
         def __init__(self, node, parent):
             """Currently we support radius definition via 'sigma' or 'rmin_half'."""
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.pid = _extractQuantity(node, parent, 'id')
 
             # Make sure we don't have BOTH rmin_half AND sigma
             try:
@@ -1352,7 +1361,7 @@ class NonbondedGenerator(object):
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atoms = ValenceDict()
         for ljtype in self._ljtypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, ljtype.smirks):
+            for atom_indices in _getSMIRKSMatches_OEMol(oemol, ljtype.smirks):
                 atoms[atom_indices] = ljtype
 
         if verbose:
@@ -1360,7 +1369,7 @@ class NonbondedGenerator(object):
             print('NonbondedForceGenerator:')
             print('')
             for ljtype in self._ljtypes:
-                print('%64s : %8d matches' % (ljtype.smirks, len(getSMIRKSMatches_OEMol(oemol, ljtype.smirks))))
+                print('%64s : %8d matches' % (ljtype.smirks, len(_getSMIRKSMatches_OEMol(oemol, ljtype.smirks))))
             print('')
 
         # Add all Lennard-Jones terms to the output list
@@ -1382,6 +1391,7 @@ class BondChargeCorrectionGenerator(object):
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.increment = _extractQuantity(node, parent, 'increment')
+            self.pid = _extractQuantity(node, parent, 'id')
             # If no units are specified, assume elementary charge
             if type(self.increment) == float:
                 self.increment *= unit.elementary_charge
@@ -1435,7 +1445,7 @@ class BondChargeCorrectionGenerator(object):
         """
         bccs = {}
         for bcc in self._bondChargeCorrections:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, bcc.smirks):
+            for atom_indices in _getSMIRKSMatches_OEMol(oemol, bcc.smirks):
                 bccs[atom_indices] = bcc
 
         if verbose:
@@ -1443,7 +1453,7 @@ class BondChargeCorrectionGenerator(object):
             print('BondChargeCorrectionGenerator:')
             print('')
             for bcc in self._bondChargeCorrections:
-                print('%64s : %8d matches' % (bcc.smirks, len(getSMIRKSMatches_OEMol(oemol, bcc.smirks))))
+                print('%64s : %8d matches' % (bcc.smirks, len(_getSMIRKSMatches_OEMol(oemol, bcc.smirks))))
             print('')
 
         # Add all BCCs to the output list
