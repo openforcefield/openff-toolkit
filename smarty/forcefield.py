@@ -772,9 +772,11 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
 #=============================================================================================
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being
-# created.  Each generator class must define two methods: 1) a static method that takes an etree Element and a ForceField,
+# created.  Each generator class must define three methods: 1) a static method that takes an etree Element and a ForceField,
 # and returns the corresponding generator object; 2) a createForce() method that constructs the Force object and adds it
-# to the System.  The static method should be added to the parsers map.
+# to the System; and 3) a parseForce() method that provides access to which
+# terms are applied to which atoms in specified oemols.
+# The static method should be added to the parsers map.
 #=============================================================================================
 
 def _validateSMIRKS(smirks, node=None):
