@@ -319,13 +319,14 @@ def test_molecule_labeling(verbose = False):
     labels = ff.labelMolecules( [mol], verbose = verbose)
 
     # Check that force terms aren't empty
-    if not 'HarmonicBondForce' in labels[0].keys():
+    print(labels[0].keys())
+    if not 'HarmonicBondGenerator' in labels[0].keys():
         raise Exception("No force term assigned for harmonic bonds.")
-    if not 'HarmonicAngleForce' in labels[0].keys():
+    if not 'HarmonicAngleGenerator' in labels[0].keys():
         raise Exception("No force term assigned for harmonic angles.")
-    if not 'PeriodicTorsionForce' in labels[0].keys():
+    if not 'PeriodicTorsionGenerator' in labels[0].keys():
         raise Exception("No force term assigned for periodic torsions.")
-    if not 'NonbondedForce' in labels[0].keys():
+    if not 'NonbondedGenerator' in labels[0].keys():
         raise Exception("No nonbonded force term assigned.")
 
 

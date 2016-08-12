@@ -752,19 +752,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
             molecule_labels.append({})
             for force in self._forces:
                 # Initialize dictionary storage for this force type
-                if isinstance(force, HarmonicBondGenerator):
-                    forcelabel = 'HarmonicBondForce'
-                elif isinstance(force, HarmonicAngleGenerator):
-                    forcelabel = 'HarmonicAngleForce'
-                elif isinstance(force, PeriodicTorsionGenerator):
-                    forcelabel = 'PeriodicTorsionForce'
-                elif isinstance(force, NonbondedGenerator):
-                    forcelabel = 'NonbondedForce'
-                elif isinstance(force, BondChargeCorrectionGenerator):
-                    forcelabel = 'BondChargeCorrections'
-                else:
-                    continue
-                    if verbose: print("Encountered unimplemented force; skipping.")
+                forcelabel = force.__class__.__name__
 
                 # Grab force terms of this type for this molecule and store
                 molecule_labels[idx][forcelabel] = force.parseForce( mol, verbose=verbose )
