@@ -19,14 +19,13 @@ requirements:
     - numpy
     - networkx
     - lxml
+    - openmoltools
 
 test:
   requires:
     - nose
     - nose-timer
   imports:
-    - smarty
-  commands:
     - smarty
 
 about:
