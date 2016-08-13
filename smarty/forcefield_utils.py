@@ -23,7 +23,6 @@ parts from John Chodera and Kyle Beauchamp.
 import os
 import smarty
 from smarty import ForceField
-from smarty.forcefield_labeler import ForceField_labeler
 from smarty.utils import get_data_filename
 import simtk.openmm
 from simtk.openmm import app
@@ -300,8 +299,8 @@ def get_molecule_parameterIDs( oemols, ffxml):
         else:
             raise ValueError("Error: get_molecule_parameterIDs has been provided a list of oemols which contains the same molecule, having isomeric smiles %s, more than once." % smi )
     # Label molecules
-    labeler = ForceField_labeler( ffxml )
-    labels = labeler.labelMolecules( oemols )
+    ff = ForceField( ffxml )
+    labels = ff.labelMolecules( oemols )
 
     # Organize labels into output dictionary by looping over all molecules/smiles
     for idx in range(len(isosmiles)):

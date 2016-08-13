@@ -53,6 +53,51 @@ import time
 import networkx
 
 #=============================================================================================
+# PRIVATE SUBROUTINES
+#=============================================================================================
+
+def getSMIRKSMatches_OEMol(oemol, smirks):
+    """Find all sets of atoms in the provided oemol that match the provided SMIRKS strings.
+
+        Parameters
+    ----------
+    smirks : str
+        SMIRKS string with tagged atoms.
+        If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+
+    Returns
+    -------
+    matches : list of tuples of atoms numbers
+        matches[index] is an N-tuple of atom numbers from the oemol
+        Matches are returned in no guaranteed order.
+    """
+
+    # Set up query.
+    qmol = oechem.OEQMol()
+    if not oechem.OEParseSmarts(qmol, smirks):
+        raise Exception("Error parsing SMIRKS '%s'" % smirks)
+
+    # Perform matching on each oemol
+    matches = list()
+
+    # We require non-unique matches, i.e. all matches
+    unique = False
+    ss = oechem.OESubSearch(qmol)
+    matches = []
+    for match in ss.Match( oemol, unique):
+        # Compile list of atom indices that match the pattern tags
+        atom_indices = dict()
+        for ma in match.GetAtoms():
+            if ma.pattern.GetMapIdx() != 0:
+                atom_indices[ma.pattern.GetMapIdx()-1] = ma.target.GetIdx()
+        # Compress into list
+        atom_indices = [ atom_indices[index] for index in range(len(atom_indices)) ]
+        # Store
+        matches.append( tuple(atom_indices) )
+
+    return matches
+
+#=============================================================================================
 # Augmented Topology
 #=============================================================================================
 
@@ -195,7 +240,7 @@ class _Topology(Topology):
                     msg += 'Atom %8d %5s %5d %3s\n' % (atoms[index].index, atoms[index].name, atoms[index].residue.index, atoms[index].residue.name)
                 raise Exception(msg)
 
-    def getSMIRKSMatches(self, smirks):
+    def unrollSMIRKSMatches(self, smirks):
         """Find all sets of atoms in the topology that match the provided SMIRKS strings.
 
         Parameters
@@ -211,35 +256,23 @@ class _Topology(Topology):
             Matches are returned in no guaranteed order.
 
         """
-        # Set up query.
-        qmol = oechem.OEQMol()
-        if not oechem.OEParseSmarts(qmol, smirks):
-            raise Exception("Error parsing SMIRKS '%s'" % smirks)
 
         # Perform matching on each unique molecule, unrolling the matches to all matching copies of tha tmolecule in the Topology object.
         matches = list()
-        # We require non-unique matches, i.e. we want every torsion matching
-        # a SMARTS query. With unique = True, "Two subgraph matches which cover the same atoms, albeit in different orders, will be called duplicates and the subgraph found later in the search will be discarded."
-        # if unique = True, we will fail to match non-equivalent torsions [0, 1, 2, 3 ] and [ 2, 1, 0, 3 ] going around the four ring atoms in cyclopropane, for example.
-        unique = False
         for reference_molecule in self._reference_molecules:
             # Find all atomsets that match this definition in the reference molecule
-            ss = oechem.OESubSearch(qmol)
-            for match in ss.Match(reference_molecule, unique):
-                # Compile list of reference atom indices that match the pattern tags.
-                reference_atom_indices = dict()
-                for ma in match.GetAtoms():
-                    if ma.pattern.GetMapIdx() != 0:
-                        reference_atom_indices[ma.pattern.GetMapIdx()-1] = ma.target.GetIdx()
-                # Compress into list.
-                reference_atom_indices = [ reference_atom_indices[index] for index in range(len(reference_atom_indices)) ]
-                # Unroll all instances of this molecule.
+            refmol_matches = getSMIRKSMatches_OEMol( reference_molecule, smirks)
+
+            # Loop over matches
+            for reference_atom_indices in refmol_matches:
+                # Unroll corresponding atom indices over all instances of this molecule
                 for reference_to_topology_atom_mapping in self._reference_to_topology_atom_mappings[reference_molecule]:
                     # Create match.
                     atom_indices = tuple([ reference_to_topology_atom_mapping[atom_index] for atom_index in reference_atom_indices ])
                     matches.append(atom_indices)
 
         return matches
+
 
 #=============================================================================================
 # FORCEFIELD
@@ -700,11 +733,54 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
         return system
 
+    def labelMolecules(self, oemols, verbose = False):
+        """Return labels for a list of OEMols corresponding to parameters from this force field. For each oemol, a dictionary of force types is returned, and for each force type, each force term is provided with the atoms involved, the parameter id assigned, and the corresponding SMIRKS.
+
+        Parameters
+        ----------
+        oemols : list of OEMols
+            The OpenEye OEChem OEMol objects as a list; these will be labeled. Should include all atoms with the correct ordering atom atom numbers will be returned along with corresponding labeling.
+        verbose : bool
+            If True, verbose output will be printed
+
+        Returns
+        -------
+        molecule_labels : list
+            list of labels for molecules. Each entry in the list corresponds to
+            one molecule from the provided list of oemols and is a dictionary
+            keyed by force type, i.e. molecule_labels[0]['HarmonicBondForce']
+            gives details for the harmonic bond parameters for the first
+            molecule. Each element is a list of the form [ ( [ atom1, ...,
+            atomN], parameter_id, SMIRKS), ... ]
+
+        """
+
+        # XML modified? If so, re-parse by generators
+        if self._XMLModified:
+            if verbose: print("Re-parsing XML because it was modified.")
+            self.parseXMLTrees()
+
+        # Storage for labels
+        molecule_labels = []
+
+        # Loop over molecules and label
+        for idx,mol in enumerate(oemols):
+            molecule_labels.append({})
+            for force in self._forces:
+                # Initialize dictionary storage for this force type
+                forcelabel = force.__class__.__name__
+
+                # Grab force terms of this type for this molecule and store
+                molecule_labels[idx][forcelabel] = force.labelForce( mol, verbose=verbose )
+        return molecule_labels
+
 #=============================================================================================
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being
-# created.  Each generator class must define two methods: 1) a static method that takes an etree Element and a ForceField,
+# created.  Each generator class must define three methods: 1) a static method that takes an etree Element and a ForceField,
 # and returns the corresponding generator object; 2) a createForce() method that constructs the Force object and adds it
-# to the System.  The static method should be added to the parsers map.
+# to the System; and 3) a labelForce() method that provides access to which
+# terms are applied to which atoms in specified oemols.
+# The static method should be added to the parsers map.
 #=============================================================================================
 
 def _validateSMIRKS(smirks, node=None):
@@ -741,12 +817,22 @@ def _extractQuantity(node, parent, name, unit_name=None):
        If specified, use this attribute name of 'parent' to look up units
 
     """
+    # Check for expected attributes
     if name not in node.attrib:
         if 'sourceline' in node.attrib:
             raise Exception("Line %d : Expected XML attribute '%s' not found" % (node.attrib['sourceline'], name))
         else:
             raise Exception("Expected XML attribute '%s' not found" % (name))
-    quantity = float(node.attrib[name])
+
+    # Most attributes will be converted to floats, but some are strings
+    string_names = ['parent_id', 'id']
+    # Handle case where this is a normal quantity
+    if name not in string_names:
+        quantity = float(node.attrib[name])
+    # Handle label or string
+    else:
+        quantity = node.attrib[name]
+        return quantity
 
     if unit_name is None:
         unit_name = name + '_unit'
@@ -810,6 +896,7 @@ class HarmonicBondGenerator(object):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.length = _extractQuantity(node, parent, 'length')
             self.k = _extractQuantity(node, parent, 'k')
+            self.pid = _extractQuantity(node, parent, 'id')
 
     def __init__(self, forcefield):
         self.ff = forcefield
@@ -847,7 +934,7 @@ class HarmonicBondGenerator(object):
         # Iterate over all defined bond types, allowing later matches to override earlier ones.
         bonds = ValenceDict()
         for bond in self._bondtypes:
-            for atom_indices in topology.getSMIRKSMatches(bond.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks):
                 bonds[atom_indices] = bond
 
         if verbose:
@@ -855,7 +942,7 @@ class HarmonicBondGenerator(object):
             print('HarmonicBondGenerator:')
             print('')
             for bond in self._bondtypes:
-                print('%64s : %8d matches' % (bond.smirks, len(topology.getSMIRKSMatches(bond.smirks))))
+                print('%64s : %8d matches' % (bond.smirks, len(topology.unrollSMIRKSMatches(bond.smirks))))
             print('')
 
         # Add all bonds to the system.
@@ -885,6 +972,40 @@ class HarmonicBondGenerator(object):
             raise Exception(msg)
 
 
+    def labelForce(self, oemol, verbose=False, **kwargs):
+        """Take a provided OEMol and parse HarmonicBondForce terms for this molecule.
+
+        Parameters
+        ----------
+            oemol : OEChem OEMol object for molecule to be examined
+
+        Returns
+        ---------
+            force_terms: list
+                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
+        """
+
+        # Iterate over all defined bond SMIRKS, allowing later matches to override earlier ones.
+        bonds = ValenceDict()
+        for bond in self._bondtypes:
+            for atom_indices in getSMIRKSMatches_OEMol( oemol, bond.smirks ):
+                bonds[atom_indices] = bond
+
+        if verbose:
+            print('')
+            print('HarmonicBondGenerator:')
+            print('')
+            for bond in self._bondtypes:
+                print('%64s : %8d matches' % (bond.smirks, len(getSMIRKSMatches_OEMol(oemol, bond.smirks))))
+            print('')
+
+        # Add all bonds to the output list
+        force_terms = []
+        for (atom_indices, bond) in bonds.items():
+            force_terms.append( ([atom_indices[0], atom_indices[1]], bond.pid, bond.smirks) )
+
+        return force_terms
+
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
 
 #=============================================================================================
@@ -899,6 +1020,7 @@ class HarmonicAngleGenerator(object):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.angle = _extractQuantity(node, parent, 'angle')
             self.k = _extractQuantity(node, parent, 'k')
+            self.pid = _extractQuantity(node, parent, 'id')
 
     def __init__(self, forcefield):
         self.ff = forcefield
@@ -936,7 +1058,7 @@ class HarmonicAngleGenerator(object):
         # Iterate over all defined angle types, allowing later matches to override earlier ones.
         angles = ValenceDict()
         for angle in self._angletypes:
-            for atom_indices in topology.getSMIRKSMatches(angle.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(angle.smirks):
                 angles[atom_indices] = angle
 
         if verbose:
@@ -944,7 +1066,7 @@ class HarmonicAngleGenerator(object):
             print('HarmonicAngleGenerator:')
             print('')
             for angle in self._angletypes:
-                print('%64s : %8d matches' % (angle.smirks, len(topology.getSMIRKSMatches(angle.smirks))))
+                print('%64s : %8d matches' % (angle.smirks, len(topology.unrollSMIRKSMatches(angle.smirks))))
             print('')
 
         # Add all angles to the system.
@@ -952,6 +1074,41 @@ class HarmonicAngleGenerator(object):
             force.addAngle(atom_indices[0], atom_indices[1], atom_indices[2], angle.angle, angle.k)
 
         if verbose: print('%d angles added' % (len(angles)))
+
+
+    def labelForce(self, oemol, verbose=False, **kwargs):
+        """Take a provided OEMol and parse HarmonicAngleForce terms for this molecule.
+
+        Parameters
+        ----------
+            oemol : OEChem OEMol object for molecule to be examined
+
+        Returns
+        ---------
+            force_terms: list
+                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
+        """
+
+        # Iterate over all defined angle types, allowing later matches to override earlier ones.
+        angles = ValenceDict()
+        for angle in self._angletypes:
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, angle.smirks):
+                angles[atom_indices] = angle
+
+        if verbose:
+            print('')
+            print('HarmonicAngleGenerator:')
+            print('')
+            for angle in self._angletypes:
+                print('%64s : %8d matches' % (angle.smirks, len(getSMIRKSMatches_OEMol(oemol, angle.smirks))))
+            print('')
+
+        # Add all angles to the output list
+        force_terms = []
+        for (atom_indices, angle) in angles.items():
+            force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[2]], angle.pid, angle.smirks) )
+
+        return force_terms
 
 parsers["HarmonicAngleForce"] = HarmonicAngleGenerator.parseElement
 
@@ -970,6 +1127,7 @@ class PeriodicTorsionGenerator(object):
             self.periodicity = list()
             self.phase = list()
             self.k = list()
+            self.pid = _extractQuantity(node, parent, 'id')
             # Store parameters.
             index = 1
             while 'phase%d'%index in node.attrib:
@@ -1021,7 +1179,7 @@ class PeriodicTorsionGenerator(object):
         # Iterate over all defined torsion types, allowing later matches to override earlier ones.
         torsions = ValenceDict()
         for torsion in self._torsiontypes:
-            for atom_indices in topology.getSMIRKSMatches(torsion.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks):
                 torsions[atom_indices] = torsion
 
         if verbose:
@@ -1029,7 +1187,7 @@ class PeriodicTorsionGenerator(object):
             print('PeriodicTorsionGenerator:')
             print('')
             for torsion in self._torsiontypes:
-                print('%64s : %8d matches' % (torsion.smirks, len(topology.getSMIRKSMatches(torsion.smirks))))
+                print('%64s : %8d matches' % (torsion.smirks, len(topology.unrollSMIRKSMatches(torsion.smirks))))
             print('')
 
         # Add all torsions to the system.
@@ -1038,6 +1196,41 @@ class PeriodicTorsionGenerator(object):
                 force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
 
         if verbose: print('%d torsions added' % (len(torsions)))
+
+    def labelForce(self, oemol, verbose=False, **kwargs):
+        """Take a provided OEMol and parse PeriodicTorsionForce terms for this molecule.
+
+        Parameters
+        ----------
+            oemol : OEChem OEMol object for molecule to be examined
+
+        Returns
+        ---------
+            force_terms: list
+                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
+        """
+
+
+        # Iterate over all defined torsion types, allowing later matches to override earlier ones.
+        torsions = ValenceDict()
+        for torsion in self._torsiontypes:
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, torsion.smirks):
+                torsions[atom_indices] = torsion
+
+        if verbose:
+            print('')
+            print('PeriodicTorsionGenerator:')
+            print('')
+            for torsion in self._torsiontypes:
+                print('%64s : %8d matches' % (torsion.smirks, len(getSMIRKSMatches_OEMol(oemol, torsion.smirks))))
+            print('')
+
+        # Add all torsions to the output list
+        force_terms = []
+        for (atom_indices, torsion) in torsions.items():
+            force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3]], torsion.pid, torsion.smirks) )
+
+        return force_terms
 
 parsers["PeriodicTorsionForce"] = PeriodicTorsionGenerator.parseElement
 
@@ -1052,6 +1245,7 @@ class NonbondedGenerator(object):
         def __init__(self, node, parent):
             """Currently we support radius definition via 'sigma' or 'rmin_half'."""
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.pid = _extractQuantity(node, parent, 'id')
 
             # Make sure we don't have BOTH rmin_half AND sigma
             try:
@@ -1115,7 +1309,7 @@ class NonbondedGenerator(object):
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atoms = ValenceDict()
         for ljtype in self._ljtypes:
-            for atom_indices in topology.getSMIRKSMatches(ljtype.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(ljtype.smirks):
                 atoms[atom_indices] = ljtype
 
         if verbose:
@@ -1123,7 +1317,7 @@ class NonbondedGenerator(object):
             print('NonbondedForceGenerator:')
             print('')
             for ljtype in self._ljtypes:
-                print('%64s : %8d matches' % (ljtype.smirks, len(topology.getSMIRKSMatches(ljtype.smirks))))
+                print('%64s : %8d matches' % (ljtype.smirks, len(topology.unrollSMIRKSMatches(ljtype.smirks))))
             print('')
 
         # Add all Lennard-Jones terms to the system.
@@ -1157,6 +1351,41 @@ class NonbondedGenerator(object):
         nonbonded = [f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)][0]
         nonbonded.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)
 
+    def labelForce(self, oemol, verbose=False, **kwargs):
+        """Take a provided OEMol and parse HarmonicBondForce terms for this molecule.
+
+        Parameters
+        ----------
+            oemol : OEChem OEMol object for molecule to be examined
+
+        Returns
+        ---------
+            force_terms: list
+                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
+        """
+
+        # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
+        atoms = ValenceDict()
+        for ljtype in self._ljtypes:
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, ljtype.smirks):
+                atoms[atom_indices] = ljtype
+
+        if verbose:
+            print('')
+            print('NonbondedForceGenerator:')
+            print('')
+            for ljtype in self._ljtypes:
+                print('%64s : %8d matches' % (ljtype.smirks, len(getSMIRKSMatches_OEMol(oemol, ljtype.smirks))))
+            print('')
+
+        # Add all Lennard-Jones terms to the output list
+        force_terms = []
+        for (atom_indices, ljtype) in atoms.items():
+            force_terms.append( ([atom_indices[0]], ljtype.pid, ljtype.smirks) )
+
+        return force_terms
+
+
 parsers["NonbondedForce"] = NonbondedGenerator.parseElement
 
 ## @private
@@ -1168,6 +1397,7 @@ class BondChargeCorrectionGenerator(object):
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.increment = _extractQuantity(node, parent, 'increment')
+            self.pid = _extractQuantity(node, parent, 'id')
             # If no units are specified, assume elementary charge
             if type(self.increment) == float:
                 self.increment *= unit.elementary_charge
@@ -1207,6 +1437,38 @@ class BondChargeCorrectionGenerator(object):
         # No forces are created by this generator.
         pass
 
+    def labelForce(self, oemol, verbose=False, **kwargs):
+        """Take a provided OEMol and parse BondChargeCorrection terms for this molecule.
+
+        Parameters:
+        -----------
+        oemol : OEChem OEMol object for molecule to be examined
+
+        Returns
+        -------
+        parameter_terms : list
+            Returns a list of tuples, [ ([atom id 1, atom id 2], parameter id, smirks), (...), ...] for all sets of atoms to which this parameter would be applied.
+        """
+        bccs = {}
+        for bcc in self._bondChargeCorrections:
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, bcc.smirks):
+                bccs[atom_indices] = bcc
+
+        if verbose:
+            print('')
+            print('BondChargeCorrectionGenerator:')
+            print('')
+            for bcc in self._bondChargeCorrections:
+                print('%64s : %8d matches' % (bcc.smirks, len(getSMIRKSMatches_OEMol(oemol, bcc.smirks))))
+            print('')
+
+        # Add all BCCs to the output list
+        force_terms = []
+        for (atom_indices, bcc) in bccs.items():
+            force_terms.append( ([atom_indices[0], atom_indices[1]], bcc.pid, bcc.smirks) )
+
+        return force_terms
+
     def postprocessSystem(self, system, topology, verbose=False, chargeMethod=None, **args):
         if chargeMethod != 'BCC':
             # Only apply charge corrections if chargeMethod is 'BCC'
@@ -1215,7 +1477,7 @@ class BondChargeCorrectionGenerator(object):
         # Iterate over all defined bond charge corrections, allowing later matches to override earlier ones.
         bonds = ValenceDict()
         for bond in self._bondChargeCorrections:
-            for atom_indices in topology.getSMIRKSMatches(bond.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks):
                 bonds[atom_indices] = bond
 
         if verbose:
@@ -1223,7 +1485,7 @@ class BondChargeCorrectionGenerator(object):
             print('Bond charge corrections:')
             print('')
             for bond in self._bondChargeCorrections:
-                print('%64s %12.6f : %8d matches' % (bond.smirks, bond.increment / unit.elementary_charge, len(topology.getSMIRKSMatches(bond.smirks))))
+                print('%64s %12.6f : %8d matches' % (bond.smirks, bond.increment / unit.elementary_charge, len(topology.unrollSMIRKSMatches(bond.smirks))))
             print('')
 
         # Apply bond charge increments
