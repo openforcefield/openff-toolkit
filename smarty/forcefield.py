@@ -755,14 +755,14 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
                 forcelabel = force.__class__.__name__
 
                 # Grab force terms of this type for this molecule and store
-                molecule_labels[idx][forcelabel] = force.parseForce( mol, verbose=verbose )
+                molecule_labels[idx][forcelabel] = force.labelForce( mol, verbose=verbose )
         return molecule_labels
 
 #=============================================================================================
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being
 # created.  Each generator class must define three methods: 1) a static method that takes an etree Element and a ForceField,
 # and returns the corresponding generator object; 2) a createForce() method that constructs the Force object and adds it
-# to the System; and 3) a parseForce() method that provides access to which
+# to the System; and 3) a labelForce() method that provides access to which
 # terms are applied to which atoms in specified oemols.
 # The static method should be added to the parsers map.
 #=============================================================================================
@@ -956,7 +956,7 @@ class HarmonicBondGenerator(object):
             raise Exception(msg)
 
 
-    def parseForce(self, oemol, verbose=False, **kwargs):
+    def labelForce(self, oemol, verbose=False, **kwargs):
         """Take a provided OEMol and parse HarmonicBondForce terms for this molecule.
 
         Parameters
@@ -1060,7 +1060,7 @@ class HarmonicAngleGenerator(object):
         if verbose: print('%d angles added' % (len(angles)))
 
 
-    def parseForce(self, oemol, verbose=False, **kwargs):
+    def labelForce(self, oemol, verbose=False, **kwargs):
         """Take a provided OEMol and parse HarmonicAngleForce terms for this molecule.
 
         Parameters
@@ -1181,7 +1181,7 @@ class PeriodicTorsionGenerator(object):
 
         if verbose: print('%d torsions added' % (len(torsions)))
 
-    def parseForce(self, oemol, verbose=False, **kwargs):
+    def labelForce(self, oemol, verbose=False, **kwargs):
         """Take a provided OEMol and parse PeriodicTorsionForce terms for this molecule.
 
         Parameters
@@ -1335,7 +1335,7 @@ class NonbondedGenerator(object):
         nonbonded = [f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)][0]
         nonbonded.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)
 
-    def parseForce(self, oemol, verbose=False, **kwargs):
+    def labelForce(self, oemol, verbose=False, **kwargs):
         """Take a provided OEMol and parse HarmonicBondForce terms for this molecule.
 
         Parameters
@@ -1421,7 +1421,7 @@ class BondChargeCorrectionGenerator(object):
         # No forces are created by this generator.
         pass
 
-    def parseForce(self, oemol, verbose=False, **kwargs):
+    def labelForce(self, oemol, verbose=False, **kwargs):
         """Take a provided OEMol and parse BondChargeCorrection terms for this molecule.
 
         Parameters:
