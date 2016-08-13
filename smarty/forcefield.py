@@ -240,7 +240,7 @@ class _Topology(Topology):
                     msg += 'Atom %8d %5s %5d %3s\n' % (atoms[index].index, atoms[index].name, atoms[index].residue.index, atoms[index].residue.name)
                 raise Exception(msg)
 
-    def getSMIRKSMatches(self, smirks):
+    def unrollSMIRKSMatches(self, smirks):
         """Find all sets of atoms in the topology that match the provided SMIRKS strings.
 
         Parameters
@@ -256,29 +256,16 @@ class _Topology(Topology):
             Matches are returned in no guaranteed order.
 
         """
-        # Set up query.
-        qmol = oechem.OEQMol()
-        if not oechem.OEParseSmarts(qmol, smirks):
-            raise Exception("Error parsing SMIRKS '%s'" % smirks)
 
         # Perform matching on each unique molecule, unrolling the matches to all matching copies of tha tmolecule in the Topology object.
         matches = list()
-        # We require non-unique matches, i.e. we want every torsion matching
-        # a SMARTS query. With unique = True, "Two subgraph matches which cover the same atoms, albeit in different orders, will be called duplicates and the subgraph found later in the search will be discarded."
-        # if unique = True, we will fail to match non-equivalent torsions [0, 1, 2, 3 ] and [ 2, 1, 0, 3 ] going around the four ring atoms in cyclopropane, for example.
-        unique = False
         for reference_molecule in self._reference_molecules:
             # Find all atomsets that match this definition in the reference molecule
-            ss = oechem.OESubSearch(qmol)
-            for match in ss.Match(reference_molecule, unique):
-                # Compile list of reference atom indices that match the pattern tags.
-                reference_atom_indices = dict()
-                for ma in match.GetAtoms():
-                    if ma.pattern.GetMapIdx() != 0:
-                        reference_atom_indices[ma.pattern.GetMapIdx()-1] = ma.target.GetIdx()
-                # Compress into list.
-                reference_atom_indices = [ reference_atom_indices[index] for index in range(len(reference_atom_indices)) ]
-                # Unroll all instances of this molecule.
+            refmol_matches = getSMIRKSMatches_OEMol( reference_molecule, smirks)
+
+            # Loop over matches
+            for reference_atom_indices in refmol_matches:
+                # Unroll corresponding atom indices over all instances of this molecule
                 for reference_to_topology_atom_mapping in self._reference_to_topology_atom_mappings[reference_molecule]:
                     # Create match.
                     atom_indices = tuple([ reference_to_topology_atom_mapping[atom_index] for atom_index in reference_atom_indices ])
@@ -918,7 +905,7 @@ class HarmonicBondGenerator(object):
         # Iterate over all defined bond types, allowing later matches to override earlier ones.
         bonds = ValenceDict()
         for bond in self._bondtypes:
-            for atom_indices in topology.getSMIRKSMatches(bond.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks):
                 bonds[atom_indices] = bond
 
         if verbose:
@@ -926,7 +913,7 @@ class HarmonicBondGenerator(object):
             print('HarmonicBondGenerator:')
             print('')
             for bond in self._bondtypes:
-                print('%64s : %8d matches' % (bond.smirks, len(topology.getSMIRKSMatches(bond.smirks))))
+                print('%64s : %8d matches' % (bond.smirks, len(topology.unrollSMIRKSMatches(bond.smirks))))
             print('')
 
         # Add all bonds to the system.
@@ -1042,7 +1029,7 @@ class HarmonicAngleGenerator(object):
         # Iterate over all defined angle types, allowing later matches to override earlier ones.
         angles = ValenceDict()
         for angle in self._angletypes:
-            for atom_indices in topology.getSMIRKSMatches(angle.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(angle.smirks):
                 angles[atom_indices] = angle
 
         if verbose:
@@ -1050,7 +1037,7 @@ class HarmonicAngleGenerator(object):
             print('HarmonicAngleGenerator:')
             print('')
             for angle in self._angletypes:
-                print('%64s : %8d matches' % (angle.smirks, len(topology.getSMIRKSMatches(angle.smirks))))
+                print('%64s : %8d matches' % (angle.smirks, len(topology.unrollSMIRKSMatches(angle.smirks))))
             print('')
 
         # Add all angles to the system.
@@ -1163,7 +1150,7 @@ class PeriodicTorsionGenerator(object):
         # Iterate over all defined torsion types, allowing later matches to override earlier ones.
         torsions = ValenceDict()
         for torsion in self._torsiontypes:
-            for atom_indices in topology.getSMIRKSMatches(torsion.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks):
                 torsions[atom_indices] = torsion
 
         if verbose:
@@ -1171,7 +1158,7 @@ class PeriodicTorsionGenerator(object):
             print('PeriodicTorsionGenerator:')
             print('')
             for torsion in self._torsiontypes:
-                print('%64s : %8d matches' % (torsion.smirks, len(topology.getSMIRKSMatches(torsion.smirks))))
+                print('%64s : %8d matches' % (torsion.smirks, len(topology.unrollSMIRKSMatches(torsion.smirks))))
             print('')
 
         # Add all torsions to the system.
@@ -1293,7 +1280,7 @@ class NonbondedGenerator(object):
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atoms = ValenceDict()
         for ljtype in self._ljtypes:
-            for atom_indices in topology.getSMIRKSMatches(ljtype.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(ljtype.smirks):
                 atoms[atom_indices] = ljtype
 
         if verbose:
@@ -1301,7 +1288,7 @@ class NonbondedGenerator(object):
             print('NonbondedForceGenerator:')
             print('')
             for ljtype in self._ljtypes:
-                print('%64s : %8d matches' % (ljtype.smirks, len(topology.getSMIRKSMatches(ljtype.smirks))))
+                print('%64s : %8d matches' % (ljtype.smirks, len(topology.unrollSMIRKSMatches(ljtype.smirks))))
             print('')
 
         # Add all Lennard-Jones terms to the system.
@@ -1461,7 +1448,7 @@ class BondChargeCorrectionGenerator(object):
         # Iterate over all defined bond charge corrections, allowing later matches to override earlier ones.
         bonds = ValenceDict()
         for bond in self._bondChargeCorrections:
-            for atom_indices in topology.getSMIRKSMatches(bond.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks):
                 bonds[atom_indices] = bond
 
         if verbose:
@@ -1469,7 +1456,7 @@ class BondChargeCorrectionGenerator(object):
             print('Bond charge corrections:')
             print('')
             for bond in self._bondChargeCorrections:
-                print('%64s %12.6f : %8d matches' % (bond.smirks, bond.increment / unit.elementary_charge, len(topology.getSMIRKSMatches(bond.smirks))))
+                print('%64s %12.6f : %8d matches' % (bond.smirks, bond.increment / unit.elementary_charge, len(topology.unrollSMIRKSMatches(bond.smirks))))
             print('')
 
         # Apply bond charge increments
