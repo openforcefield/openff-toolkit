@@ -523,10 +523,39 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         oechargemethod : str
             The name of the charge method from oequacpac to use (e.g. 'OECharges_AM1BCCSym')
 
+
+        Notes:
+        As per Christopher Bayly and http://docs.eyesopen.com/toolkits/cookbook/python/modeling/am1-bcc.html, OEAssignPartialCharges needs multiple conformations to ensure well-behaved charges. This implements that recipe for conformer generation.
         """
-        # TODO: Do we need to use omega to do a conformational expansion first?
         # TODO: Cache charged molecules here to save time in future calls to createSystem
-        oequacpac.OEAssignPartialCharges(molecule, getattr(oequacpac, oechargemethod), False, False)
+
+        # Expand conformers
+        if not openeye.oechem.OEChemIsLicensed(): raise(ImportError("Need License for OEChem!"))
+        if not openeye.oeomega.OEOmegaIsLicensed(): raise(ImportError("Need License for OEOmega!"))
+        omega = openeye.oeomega.OEOmega()
+        omega.SetMaxConfs(800)
+        omega.SetCanonOrder(False)
+        omega.SetSampleHydrogens(True)
+        omega.SetEnergyWindow(15.0)
+        omega.SetRMSThreshold(1.0)
+        omega.SetStrictStereo(True) #Don't generate random stereoisomer if not specified
+        charged_copy = openeye.oechem.OEMol(molecule)
+        status = omega(charged_copy)
+        if not status:
+            raise(RuntimeError("Omega returned error code %s" % status))
+
+        # Assign charges
+        status = openeye.oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, oechargemethod), False, False)
+        if not status:
+            raise(RuntimeError("OEAssignPartialCharges returned error code %s" % status))
+
+        # Our copy has the charges we want but not the right conformation. Copy charges over
+        partial_charges = []
+        for atom in charged_copy.GetAtoms():
+            partial_charges.append( atom.GetPartialCharge() )
+        for (idx,atom) in enumerate(molecule.GetAtoms()):
+            atom.SetPartialCharge( partial_charges[idx] )
+
 
     def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
