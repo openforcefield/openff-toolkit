@@ -4,7 +4,6 @@ try:
     from smarty.atomtyper import *
     from smarty.forcefield import *
     from smarty.forcefield_utils import *
-    from smarty.forcefield_labeler import *
     from smarty.sampler import *
     from smarty.utils import *
 
