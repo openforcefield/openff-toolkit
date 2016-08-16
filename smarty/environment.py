@@ -332,13 +332,13 @@ class ChemicalEnvironment(object):
                 idx += 1
                 
                 # Check for branching
+                if leftover[0] == ')':
+                    bondingTo = store.pop()
+                    leftover = leftover[1:]
                 if leftover[0] == '(':
                     store.append(bondingTo)
                     leftover = leftover[1:]
-                elif leftover[0] == ')':
-                    bondingTo = store.pop()
-                    leftover = leftover[1:]
-
+                
                 # find beginning and end of atom
                 start = leftover.find('[')
                 end = leftover.find(']')
