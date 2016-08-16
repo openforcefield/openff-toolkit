@@ -543,14 +543,14 @@ class ChemicalEnvironment(object):
         else:
             return None
 
-    def getLabeledAtoms(self):
+    def getIndexedAtoms(self):
         """
         returns the list of Atom objects with an index
         """
         index_atoms = []
-        for atom in self._graph.nodes:
+        for atom in self._graph.nodes():
             if atom.index is not None:
-                index_atoms.append([atom.idex, atom])
+                index_atoms.append([atom.index, atom])
         return [atom for [idx, atom] in sorted(index_atoms)]
 
     def getType(self):
