@@ -26,6 +26,9 @@ import networkx as nx
 import random
 import copy
 
+import openeye.oechem
+from openeye.oechem import *
+
 class ChemicalEnvironment(object):
     """Chemical environment abstract base class that matches an atom, bond, angle, etc.
     """
@@ -291,16 +294,109 @@ class ChemicalEnvironment(object):
             else:
                 self.ANDtypes = list(newANDtypes)
 
-    def __init__(self):
+    def __init__(self, smirks = None):
         """Initialize a chemical environment abstract base class.
-
-        This is an empty chemical environment.
-        Atom, Bond, Angle, Torsion, or Improper Chemical Environment
-        should be used for a filled chemical environment
+        
+        smirks = string, optional
+            if smirks is not None, a chemical environment is built 
+            from the provided SMIRKS string
         """
         # Create an empty graph which will store Atom objects.
         self._graph = nx.Graph()
         self.label = None
+
+        if smirks is not None:
+            # check SMIRKS is parseable
+            mol = OEQMol()
+            if not OEParseSmarts(mol, smirks):
+                raise Exception("Provides SMIRKS: %s was not parseable" % smirks)
+
+            atoms = dict() # store created atom
+            idx = 1 # current atom being created
+            store = list() # to store indices while branching
+            bondingTo = idx # which atom are we going to bond to
+
+            start = smirks.find('[')
+            if start != 0:
+                raise Exception("Provided SMIRKS: %s should begin with '[' instead of %s" % (smirks, smirks[0]))
+            end = smirks.find(']')
+            
+            atom = smirks[start+1:end]
+            OR, AND, index = self._getAtomInfo(atom)
+            leftover = smirks[end+1:]
+
+            new_atom = self.addAtom(None, newORtypes = OR, newANDtypes = AND, newAtomIndex = index)
+            atoms[idx] = new_atom
+
+            while len(leftover) > 0:
+                idx += 1
+                
+                # Check for branching
+                if leftover[0] == ')':
+                    bondingTo = store.pop()
+                    leftover = leftover[1:]
+                if leftover[0] == '(':
+                    store.append(bondingTo)
+                    leftover = leftover[1:]
+                
+                # find beginning and end of atom
+                start = leftover.find('[')
+                end = leftover.find(']')
+
+                # Get bond and atom info
+                bOR, bAND = self._getBondInfo(leftover[:start])
+                aOR, aAND, index = self._getAtomInfo(leftover[start+1:end])
+
+                # create new atom
+                new_atom = self.addAtom(atoms[bondingTo], bOR, bAND, aOR, aAND, index)
+
+                # update state
+                atoms[idx] = new_atom
+                bondingTo = idx
+                leftover = leftover[end+1:]
+            
+
+    def _getAtomInfo(self, atom):
+        """
+        given atom string, returns ORtypes, ANDtypes, and index
+        """
+        # Find atom index
+        colon = atom.find(':')
+        if colon == -1:
+            index = None
+        else:
+            index = int(atom[colon+1:])
+            atom = atom[:colon]
+
+        split = atom.split(';')
+
+        ANDtypes = split[1:]
+        ORtypes = split[0].split(',')
+
+        if len(ANDtypes) == 0:
+            ANDtypes = None
+
+        if len(ORtypes) == 1 and ORtypes[0] == '*':
+            ORtypes = None
+        
+        return ORtypes, ANDtypes, index
+
+    def _getBondInfo(self, bond):
+        """
+        given bond strings returns ORtypes and ANDtypes
+        """
+        split = bond.split(';')
+
+        ANDtypes = split[1:]
+        ORtypes = split[0].split(',')
+
+        if len(ANDtypes) == 0:
+            ANDtypes = None
+
+        if len(ORtypes) == 1 and ORtypes[0] == '~':
+            ORtypes = None
+        
+        return ORtypes, ANDtypes
 
     def asSMIRKS(self, smarts = False):
         """
@@ -327,6 +423,10 @@ class ChemicalEnvironment(object):
         smarts = optional, boolean
             if True, returns a SMARTS string instead of SMIRKS
         """
+        # If empty chemical environment
+        if len(self._graph.nodes()) == 0:
+            return ""
+
         if initialAtom == None:
             initialAtom = self.getAtoms()[0]
 
@@ -543,14 +643,14 @@ class ChemicalEnvironment(object):
         else:
             return None
 
-    def getLabeledAtoms(self):
+    def getIndexedAtoms(self):
         """
         returns the list of Atom objects with an index
         """
         index_atoms = []
-        for atom in self._graph.nodes:
+        for atom in self._graph.nodes():
             if atom.index is not None:
-                index_atoms.append([atom.idex, atom])
+                index_atoms.append([atom.index, atom])
         return [atom for [idx, atom] in sorted(index_atoms)]
 
     def getType(self):
