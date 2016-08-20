@@ -3,6 +3,7 @@ from smarty import environment
 import smarty
 from smarty.utils import get_data_filename
 from unittest import TestCase
+from openeye.oechem import *
 
 class TestChemicalEnvironments(TestCase):
     def test_createEnvironments(self):
@@ -79,4 +80,20 @@ class TestChemicalEnvironments(TestCase):
         if not removed:
             raise Exception("did not remove an atom that should be allowed")
 
-        
+    def test_parseSMIRKS(self):
+        """
+        Test creating environments with SMIRKS
+        """
+        smirksList = [ ["[#6](-[#1])-[#8]", None], 
+                ["[#6&X4&H0:1](-[#1])-[#6&X4]", 'VdW'],
+                [ "[#6&X4&H0:1](-[#1])-[#6&X4:2]", 'Bond'],
+                [ "[*:1]-[*:2](-[#6&X4])-[*:3]", 'Angle'],
+                [ "[#6&X4&H0:1](-[#1])-[#6&X4:2]-[#6&X4&H0:3](-[#1])-[#6&X4:4]", 'Torsion'],
+                [ "[#1:1]-[#6&X4:2](-[#8:3])-[#1:4]", 'Improper'],
+                [ "[#1:1]-[#6&X4:2](-[#8:3])-[*:4](-[#6&H1])-[#8:5]", None] ]
+
+        for [smirks, checkType] in smirksList:
+            env = environment.ChemicalEnvironment(smirks)
+            Type = env.getType()
+            if Type != checkType:
+                raise Exception("SMIRKS (%s) clasified as %s instead of %s" % (smirks, Type, checkType))

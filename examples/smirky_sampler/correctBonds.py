@@ -1,5 +1,4 @@
 from smarty.environment import *
-from smarty.forcefield_labeler import *
 from smarty.sampler_smirky import *
 from smarty.utils import *
 from operator import itemgetter, attrgetter
@@ -48,8 +47,13 @@ CTOS.atom2.setANDtypes(['X2', 'H0'])
 CTOS.label = 'CTOS'
 
 initialList = [CTCT, CTH, OH, CTOH, CTOS]
+for env in initialList:
+    print env.asSMIRKS()
+
+initialList = [[e.asSMIRKS(), e.label] for e in initialList]
 # Begin sampling
 print "Attempting to sample %sS" % typetag.upper()
 sampler = TypeSampler(molecules, typetag, elements, ORs, ANDs, replacements, initialList, SMIRFF, 0.0, True)
-
+frac = sampler.run(2)
+print frac
 
