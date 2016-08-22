@@ -165,6 +165,7 @@ class _Topology(Topology):
 
     self._reference_molecules is a list of OEMol for the reference molecules
     self._reference_to_topology_atom_mappings[reference_molecule] is a list of atom indices mapping a reference molecule atom index to the topology atom index
+    self._bondorders is a list of floating point bond orders for the bonds in the Topology.
     """
     def __init__(self, topology, reference_molecules):
         """
@@ -193,6 +194,9 @@ class _Topology(Topology):
 
         # Identify all molecules and atom mappings.
         self._identifyMolecules()
+
+        # Get/initialize bond orders
+        self._initializeBondOrders()
 
     def _identifyMolecules(self):
         """Identify all unique reference molecules and atom mappings to all instances in the Topology.
@@ -239,6 +243,41 @@ class _Topology(Topology):
                 for index in sorted(list(molecule_graph)):
                     msg += 'Atom %8d %5s %5d %3s\n' % (atoms[index].index, atoms[index].name, atoms[index].residue.index, atoms[index].residue.name)
                 raise Exception(msg)
+
+    def _initializeBondOrders(self):
+        """Initialize and store list of bond orders for the molecules in this Topology."""
+        # Initialize
+        self._bondorders=list()
+
+        # Loop over reference molecules and pull bond orders
+        for mol in self._reference_molecules:
+            # Pull mappings for this molecule
+            mappings = self._reference_to_topology_atom_mappings[mol]
+            # Loop over bonds
+            for bond in mol.GetBonds():
+                # Get atom indices involved in bond
+                at1 = bond.GetBgn()
+                at2 = bond.GetEnd()
+
+                # Convert atom numbers to topology atom numbers
+                for mapatom in mappings:
+                    if mapatom==at1:
+                        topat1 = mappings[mapatom]
+                    elif mapatom==at2:
+                        topat2 = mappings[mapatom]
+                # Get bond order
+                order = bond.GetOrder()
+
+                #WRITE CODE HERE TO SAVE INFO
+
+                # DEBUG: PRINT BOND COUNT AND COMPARE TO TOPOLOGY
+
+
+        # Loop over bonds in topology and store orders in the same order
+        # Not sure if I have to do this, they might already be in same order
+
+
+#WORKING RIGHT ABOVE
 
     def unrollSMIRKSMatches(self, smirks):
         """Find all sets of atoms in the topology that match the provided SMIRKS strings.
