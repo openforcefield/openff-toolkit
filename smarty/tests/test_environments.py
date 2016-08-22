@@ -3,6 +3,7 @@ from smarty import environment
 import smarty
 from smarty.utils import get_data_filename
 from unittest import TestCase
+import openeye.oechem
 from openeye.oechem import *
 
 class TestChemicalEnvironments(TestCase):
@@ -18,14 +19,14 @@ class TestChemicalEnvironments(TestCase):
         angle = environment.AngleChemicalEnvironment(
                 carbon, singleBond, carbon, singleBond, carbon)
         torsion = environment.TorsionChemicalEnvironment(
-                carbon, singleBond, carbon, singleBond, carbon, singleBond, carbon) 
+                carbon, singleBond, carbon, singleBond, carbon, singleBond, carbon)
         improper = environment.ImproperChemicalEnvironment(
-                carbon, singleBond, carbon, singleBond, carbon, singleBond, carbon) 
+                carbon, singleBond, carbon, singleBond, carbon, singleBond, carbon)
 
-    def test_complicatedTorsion(self): 
+    def test_complicatedTorsion(self):
         """
         Test ChemicalEnvironment objects with complicated torsion
-        test methods that add atoms, remove atoms 
+        test methods that add atoms, remove atoms
         add ORtypes and ANDtypes to existing atoms
 
         This is the SMIRK for the final torsion
@@ -33,7 +34,7 @@ class TestChemicalEnvironments(TestCase):
         """
         carbon = [['#6'], None]
         single = [['-'], None]
-        torsion = environment.TorsionChemicalEnvironment(Atom2Info = carbon, 
+        torsion = environment.TorsionChemicalEnvironment(Atom2Info = carbon,
                 Bond2Info = single, Atom3Info = carbon, Bond3Info = single)
 
         # save atoms (use selectAtom)
@@ -67,7 +68,7 @@ class TestChemicalEnvironments(TestCase):
         smarts = torsion.asAtomtypeSMARTS()
         smirks = torsion.asSMIRKS()
         # TODO: add test that these are relevant
-      
+
         # Try removing atoms
         # if it was labeled:
         removed = torsion.removeAtom(atom1)
@@ -84,7 +85,7 @@ class TestChemicalEnvironments(TestCase):
         """
         Test creating environments with SMIRKS
         """
-        smirksList = [ ["[#6](-[#1])-[#8]", None], 
+        smirksList = [ ["[#6](-[#1])-[#8]", None],
                 ["[#6&X4&H0:1](-[#1])-[#6&X4]", 'VdW'],
                 [ "[#6&X4&H0:1](-[#1])-[#6&X4:2]", 'Bond'],
                 [ "[*:1]-[*:2](-[#6&X4])-[*:3]", 'Angle'],
