@@ -579,7 +579,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
         for idx, filenm in enumerate(files):
             tree=self._XMLTrees[idx]
-            tree.write( filenm, xml_declaration=True)
+            tree.write( filenm, xml_declaration=True, pretty_print=True)
 
     def _assignPartialCharges(self, molecule, oechargemethod):
         """Assign partial charges to the specified molecule using best practices.
