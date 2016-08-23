@@ -88,7 +88,6 @@ while ct < len(text):
 
     # Check first entry to see if it's a section name, if so initialize storage
     if tmp[0] in secnames:
-        print(tmp[0])
         thissec = tmp[0]
         sections[thissec] = []
     # Otherwise store
@@ -136,8 +135,6 @@ for (idx, name) in enumerate(secnames):
                 for paramtag in ('periodicity1', 'phase1', 'idivf1', 'k1'):
                     if paramtag in params:
                         val = params.pop(paramtag)
-                        # Update old parameters with this addition
-                        # CURRENTLY THIS DOESN'T WORK SINCE SETPARAMETER REQUIRES SAME KEYS AS OLD PARAMETER
                         oldparams[paramtag[:-1]+str(idnr) ] = val
                 # Store
                 ff.setParameter( oldparams, smirks=smirks, force_type=force_section[idx])
