@@ -496,7 +496,23 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         if not params:
             raise ValueError("Error, parameters must be specified.")
 
+        # Below, we should do due dilegence that we're working on a parameter line which has
+        # roughly the same types of parameters (though for torsions (or bonds, if we have partial bond orders),
+        # the number of terms might differ), so define a utility function to give
+        # back the basic names of parameters (i.e. k) without suffixes
+        def get_param_names( param_keys ):
+            names = set()
+            for param in param_keys:
+                ct = 1
+                while param[-ct].isdigit():
+                    ct+=1
+                if ct > 1:
+                    names.add( param[:-(ct-1)])
+                else:
+                    names.add( param )
+            return names
 
+        # Set parameters
         trees=self._XMLTrees
         status = False
         # Loop over XML files we read
@@ -515,7 +531,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
                         if (smirks and elem.attrib['smirks']==smirks) or (paramID and elem.attrib['id']==paramID):
                             # Try to set parameters
                             old_params=elem.attrib
-                            if set(old_params.keys()) != set(params.keys()):
+                            if get_param_names(old_params.keys()) != get_param_names(params.keys()):
                                 raise ValueError('Error: Provided parameters have different keys (%s) than existing parameters (%s).' % (', '.join(old_params.keys()), ', '.join(params.keys())))
 
                             # Loop over attributes, change values
