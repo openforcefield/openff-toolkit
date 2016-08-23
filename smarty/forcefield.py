@@ -533,6 +533,42 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
         return status
 
+    def addParameter(self, params, smirks, force_type, tag):
+        """Add specified SMIRKS/parameter in the section under the specified force type.
+
+    Parameters
+    ----------
+    params : dict
+        Dictionary of attributes (parameters and their descriptions) for XML,
+        i.e. as output by getParameter.
+    smirks : str
+        SMIRKS pattern to associate with this parameter
+    force_type : str
+        Specify a particular force type such as "HarmonicBondForce" or "HarmonicAngleForce" in which to add this parameter
+    tag : str
+        Tag to use identifying this parameter, i.e. 'Bond' for a HarmonicBondForce, etc.
+
+
+    Returns
+    -------
+    status : Bool
+        Successful? True or False.
+
+
+"""
+
+        trees=self._XMLTrees
+        # Loop over XML files we read
+        found = False
+        for tree in trees:
+            # Loop over tree
+            for child in tree.getroot():
+                if child.tag==force_type:
+                    found = True
+                    addl = etree.Element( tag, smirks=smirks, attrib = params)
+                    child.append(addl)
+        return found
+
 
     def writeFile(self, files):
         """Write forcefield trees out to specified files."""
