@@ -360,11 +360,12 @@ class ForceField(object):
         # Load in all XML trees.
         trees = list()
         for file in files:
+            parser = etree.XMLParser(remove_blank_text=True) # For pretty print on write
             try:
                 # this handles either filenames or open file-like objects
-                tree = etree.parse(file)
+                tree = etree.parse(file, parser)
             except IOError:
-                tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
+                tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file), parser)
             except Exception as e:
                 # Fail with an error message about which file could not be read.
                 # TODO: Also handle case where fallback to 'data' directory encounters problems,
