@@ -118,7 +118,11 @@ for (idx, name) in enumerate(secnames):
 
         # If it's not a torsion, just store in straightforward way
         if not (name=='IMPR' or name=='DIHE'):
-            ff.addParameter( params, smirks, force_section[idx], tag[idx] )
+            # Check for duplicates first
+            if ff.getParameter( smirks, force_type = force_section[idx] ):
+                raise ValueError("Error: parameter for %s is already present in forcefield." % smirks )
+            else:
+                ff.addParameter( params, smirks, force_section[idx], tag[idx] )
         # If it's a torsion, check to see if there are already parameters and
         # if so, add a new term to this torsion
         else:
@@ -140,8 +144,6 @@ for (idx, name) in enumerate(secnames):
                 ff.setParameter( oldparams, smirks=smirks, force_type=force_section[idx])
             # Otherwise, just store new parameters
             ff.addParameter( params, smirks, force_section[idx], tag[idx])
-
-  # TO DO: ADD CHECKS TO MAKE SURE NO DUPLICATE PARAMS
 
 # Write SMIRFF XML file
 ff.writeFile(outxml)
