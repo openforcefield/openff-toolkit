@@ -16,7 +16,6 @@
     <Angle smirks="[#6:1]~[#6:2]~[#8H1:3]" angle="120.00" id="a2" k="160.0"/>
   </HarmonicAngleForce>
   <PeriodicTorsionForce phase_unit="degrees" k_unit="kilocalories_per_mole">
-    <Improper smirks="[*:1]~[*:2]~[*:3]~[*:4]" id="i0" k1="1000" periodicity1="2" phase1="180."/>
     <Improper smirks="[*:1]~[*:2]~[#6:3]~[#8:4]" id="i1" k1="10.5" periodicity1="2" phase1="180."/>
     <Proper smirks="[*:1]~[*:2]~[*:3]~[*:4]" id="t0" idivf1="1" k1="100.0" periodicity1="2" phase1="0.0"/>
     <Proper smirks="[*:1]~[#6:2]~[#6:3]~[*:4]" id="t1" idivf1="4" k1="14.50" periodicity1="2" phase1="180.0"/>
