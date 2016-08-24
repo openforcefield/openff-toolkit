@@ -160,3 +160,7 @@ for (idx, name) in enumerate(secnames):
 
 # Write SMIRFF XML file
 ff.writeFile(outxml)
+
+# Roundtrip to fix formatting (for some reason etree won't format it properly on first write after modification)
+tmp = ForceField(outxml)
+tmp.writeFile(outxml)
