@@ -100,7 +100,10 @@ while ct < len(text):
 # Read template forcefield file
 ff = ForceField(inxml)
 # Use functions to parse sections from target file and add parameters to force field
+param_id_by_section={}
+param_prefix_by_sec = {'NONBON':'n' , 'BOND':'b', 'ANGL':'a', 'DIHE':'t', 'IMPR':'i'}
 for (idx, name) in enumerate(secnames):
+    param_id_by_section[name] = 1
     for line in sections[name]:
         # Parse line for parameters
         if name=='NONBON':
@@ -114,6 +117,9 @@ for (idx, name) in enumerate(secnames):
         elif name=='ANGL':
             params = parse_angl_line(line)
 
+        # Add parameter ID
+        params['id'] = param_prefix_by_sec[name]+str( param_id_by_section[name] )
+
         smirks = params['smirks']
 
         # If it's not a torsion, just store in straightforward way
@@ -123,6 +129,9 @@ for (idx, name) in enumerate(secnames):
                 raise ValueError("Error: parameter for %s is already present in forcefield." % smirks )
             else:
                 ff.addParameter( params, smirks, force_section[idx], tag[idx] )
+
+            # Increment parameter id
+            param_id_by_section[name] +=1
         # If it's a torsion, check to see if there are already parameters and
         # if so, add a new term to this torsion
         else:
@@ -142,8 +151,12 @@ for (idx, name) in enumerate(secnames):
                         oldparams[paramtag[:-1]+str(idnr) ] = val
                 # Store
                 ff.setParameter( oldparams, smirks=smirks, force_type=force_section[idx])
-            # Otherwise, just store new parameters
-            ff.addParameter( params, smirks, force_section[idx], tag[idx])
+            else:
+                # Otherwise, just store new parameters
+                ff.addParameter( params, smirks, force_section[idx], tag[idx])
+                # Increment parameter ID
+                param_id_by_section[name] += 1
+
 
 # Write SMIRFF XML file
 ff.writeFile(outxml)
