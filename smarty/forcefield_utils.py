@@ -111,7 +111,7 @@ def create_system_from_molecule(forcefield, mol, verbose=False):
 
     return topology, system, positions
 
-def compare_system_energies( topology0, topology1, system0, system1, positions0, positions1=None, label0="AMBER system", label1 = "SMIRFF system", verbose = True ):
+def compare_system_energies( topology0, topology1, system0, system1, positions0, positions1=None, label0="AMBER system", label1 = "SMIRFF system", verbose = True, skip_assert = False ):
     """
     Given two OpenMM systems, check that their energies and component-wise
     energies are consistent, and return these. The same positions will be used
@@ -138,6 +138,8 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
         String labeling system1 for output. Default, "SMIRFF system"
     verbose (optional) : bool
         Print out info on energies, True/False (default True)
+    skip_assert (optional) : bool
+        Skip assertion that energies must be equal within specified tolerance. Default False.
 
     Returns
     ----------
@@ -199,9 +201,11 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
 
     # Do energy comparison, print info if desired
     syscheck = system_checker.SystemChecker( simulation0, simulation1 )
-    syscheck.check_force_parameters()
-    groups0, groups1 = syscheck.check_energy_groups()
-    energy0, energy1 = syscheck.check_energies()
+    if not skip_assert:
+        # Only check force terms if we want to make sure energies are identical
+        syscheck.check_force_parameters()
+    groups0, groups1 = syscheck.check_energy_groups(skip_assert = skip_assert)
+    energy0, energy1 = syscheck.check_energies(skip_assert = skip_assert)
     if verbose:
         print("Energy of %s: " % label0, energy0 )
         print("Energy of %s: " % label1, energy1 )
@@ -216,7 +220,7 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
     return groups0, groups1, energy0, energy1
 
 
-def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True ):
+def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True, skip_assert=False ):
     """
     Compare energies for OpenMM Systems/topologies created from an AMBER prmtop
     and crd versus from a SMIRFF forcefield file and OEMol which should
@@ -235,6 +239,8 @@ def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True ):
         Molecule to test
     verbose (optional): Bool
         Print out info. Default: True
+    skip_assert : bool
+        Skip assertion that energies must be equal within tolerance. Default, False.
 
     Returns
     --------
@@ -256,7 +262,7 @@ def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True ):
     smirfftop, smirffsys, smirffpos = create_system_from_molecule(forcefield, mol, verbose = verbose)
 
     groups0, groups1, energy0, energy1 = compare_system_energies( ambertop,
-               smirfftop, ambersys, smirffsys, amberpos, verbose = verbose )
+               smirfftop, ambersys, smirffsys, amberpos, verbose = verbose, skip_assert = skip_assert )
 
     return groups0, groups1, energy0, energy1
 
