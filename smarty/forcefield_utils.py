@@ -201,7 +201,9 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
 
     # Do energy comparison, print info if desired
     syscheck = system_checker.SystemChecker( simulation0, simulation1 )
-    syscheck.check_force_parameters()
+    if not skip_assert:
+        # Only check force terms if we want to make sure energies are identical
+        syscheck.check_force_parameters()
     groups0, groups1 = syscheck.check_energy_groups(skip_assert = skip_assert)
     energy0, energy1 = syscheck.check_energies(skip_assert = skip_assert)
     if verbose:
