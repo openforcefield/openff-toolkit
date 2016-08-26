@@ -329,3 +329,32 @@ def get_molecule_parameterIDs( oemols, ffxml):
                     parameters_by_ID[pid].add(smi)
 
     return parameters_by_molecule, parameters_by_ID
+
+def getMolParamIDToAtomIndex( oemol, ff):
+    """Take an OEMol and a SMIRFF forcefield object and return a dictionary, keyed by parameter ID, where each entry is a tuple of ( smirks, [[atom1, ... atomN], [atom1, ... atomN]) giving the SMIRKS corresponding to that parameter ID and a list of the atom groups in that molecule that parameter is applied to.
+
+    Parameters
+    ----------
+    oemol : OEMol
+        OpenEye OEMol with the molecule to investigate.
+    ff : ForceField
+        SMIRFF ForceField object (obtained from an ffxml via ForceField(ffxml)) containing FF of interest.
+
+    Returns
+    -------
+    param_usage : dictionary
+        Dictionary, keyed by parameter ID, where each entry is a tuple of ( smirks, [[atom1, ... atomN], [atom1, ... atomN]) giving the SMIRKS corresponding to that parameter ID and a list of the atom groups in that molecule that parameter is applied to.
+
+    """
+
+    labels = ff.labelMolecules([mol])
+    param_usage = {}
+    for mol_entry in range(len(labels)):
+        for force in labels[mol_entry].keys():
+            for (atom_indices, pid, smirks) in labels[mol_entry][force]:
+                if not pid in param_usage:
+                    param_usage[pid] = (smirks, [atom_indices])
+                else:
+                    param_usage[pid][1].append( atom_indices )
+
+    return param_usage
