@@ -56,14 +56,18 @@ import networkx
 # PRIVATE SUBROUTINES
 #=============================================================================================
 
-def getSMIRKSMatches_OEMol(oemol, smirks):
+def getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model = None):
     """Find all sets of atoms in the provided oemol that match the provided SMIRKS strings.
 
-        Parameters
+    Parameters
     ----------
+    oemol : OpenEye oemol
+        oemol to process with the SMIRKS in order to find matches
     smirks : str
         SMIRKS string with tagged atoms.
         If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+    aromaticity_model : str (optional)
+        OpenEye aromaticity model designation as a string, such as "OEAroModel_MDL". Default: None. If none is provided, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
 
     Returns
     -------
@@ -72,19 +76,41 @@ def getSMIRKSMatches_OEMol(oemol, smirks):
         Matches are returned in no guaranteed order.
     """
 
+    # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
+    mol = oechem.OEMol(oemol)
+
     # Set up query.
     qmol = oechem.OEQMol()
     if not oechem.OEParseSmarts(qmol, smirks):
         raise Exception("Error parsing SMIRKS '%s'" % smirks)
 
-    # Perform matching on each oemol
+    # Determine aromaticity model
+    if aromaticity_model:
+        if type(aromaticity_model) == str:
+            # Check if the user has provided a manually-specified aromaticity_model
+            if hasattr(oechem, aromaticity_model):
+                oearomodel = getattr(oechem, aromaticity_model)
+            else:
+                raise ValueError("Error: provided aromaticity model not recognized by oechem.")
+        else:
+            raise ValueError("Error: provided aromaticity model must be a string.")
+
+        # If aromaticity model was provided, prepare molecule
+        oechem.OEClearAromaticFlags( mol)
+        oechem.OEAssignAromaticFlags( mol, oearomodel)
+        # avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
+        oechem.OEAssignHybridization( mol)
+        oechem.OEAssignFormalCharges( mol)
+        oechem.OEAssignImplicitHydrogens( mol)
+
+    # Perform matching on each mol
     matches = list()
 
     # We require non-unique matches, i.e. all matches
     unique = False
     ss = oechem.OESubSearch(qmol)
     matches = []
-    for match in ss.Match( oemol, unique):
+    for match in ss.Match( mol, unique):
         # Compile list of atom indices that match the pattern tags
         atom_indices = dict()
         for ma in match.GetAtoms():
