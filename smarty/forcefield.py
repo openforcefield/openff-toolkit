@@ -414,7 +414,20 @@ class ForceField(object):
 
         # Load force definitions
         for tree in trees:
-            for child in tree.getroot():
+            root = tree.getroot()
+
+            # Before loading, do some error checking/consistency checking.
+            # Warn if version number is not consistent
+            if 'version' in root.attrib:
+                if float(root.attrib['version']) != self.version:
+                    print("Warning: Inconsistent version number in parsed FFXML files.")
+            # Throw an exception if aromaticity model is not consistent
+            if 'aromaticity_model' in root.attrib:
+                if root.attrib['aromaticity_model'] != self._aromaticity_model:
+                    raise ValueError("Error: Aromaticity model specified in FFXML files is inconsistent.")
+
+            # Now actually load
+            for child in root:
                 if child.tag in parsers:
                     parsers[child.tag](child, self)
 
