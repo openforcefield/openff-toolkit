@@ -1,6 +1,7 @@
 from functools import partial
-from smarty import environment
 import smarty
+import smarty.environment
+from smarty.environment import *
 from smarty.utils import get_data_filename
 from unittest import TestCase
 import openeye.oechem
@@ -14,14 +15,11 @@ class TestChemicalEnvironments(TestCase):
         """
         carbon = [['#6'], ['X4']]
         singleBond = [['-'], ['@']]
-        atom = environment.AtomChemicalEnvironment(carbon)
-        bond = environment.BondChemicalEnvironment(carbon, singleBond, carbon)
-        angle = environment.AngleChemicalEnvironment(
-                carbon, singleBond, carbon, singleBond, carbon)
-        torsion = environment.TorsionChemicalEnvironment(
-                carbon, singleBond, carbon, singleBond, carbon, singleBond, carbon)
-        improper = environment.ImproperChemicalEnvironment(
-                carbon, singleBond, carbon, singleBond, carbon, singleBond, carbon)
+        atom = AtomChemicalEnvironment('[#6X4:1]','CT')
+        bond = BondChemicalEnvironment('[#6X4:1]-[#6X4:2]', 'CT-CT')
+        angle = AngleChemicalEnvironment('[#6X4:1]-[#6X4:2]-[#6X4:3]', 'CT-CT-CT')
+        torsion = TorsionChemicalEnvironment('[#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]', 'CT-CT-CT-CT')
+        improper = ImproperChemicalEnvironment('[#6X4:1]-[#6X4:2](-[#6X4:3])-[#6X4:4]', 'CT-CT(-CT)-CT')
 
     def test_complicatedTorsion(self):
         """
@@ -32,32 +30,29 @@ class TestChemicalEnvironments(TestCase):
         This is the SMIRK for the final torsion
         "[*:1] - [#6:2](=[#8,#7;H0]) - [#6:3](-[#7X3,#8X2;+0]-[#1])(-[#1]) - [*:4]"
         """
-        carbon = [['#6'], None]
-        single = [['-'], None]
-        torsion = environment.TorsionChemicalEnvironment(Atom2Info = carbon,
-                Bond2Info = single, Atom3Info = carbon, Bond3Info = single)
-
+        torsion_smirks = "[*:1]-[#6:2]-[#6:3]-[*:4]"
+        torsion = TorsionChemicalEnvironment(torsion_smirks)
         # save atoms (use selectAtom)
         atom1 = torsion.selectAtom(1)
         atom2 = torsion.selectAtom(2)
         atom3 = torsion.selectAtom(3)
 
         # Add atoms with names so I can try to remove them
-        atom2alpha = torsion.addAtom(atom2, ['='], None, ['#8','#7'], ['H0'])
+        atom2alpha = torsion.addAtom(atom2, {'=':[]}, None, {'#8':[],'#7':[]}, ['H0'])
         atom3alpha1 = torsion.addAtom(atom3)
-        atom3beta1 = torsion.addAtom(atom3alpha1, ['-'], None, ['#1'])
-        atom3alpha2 = torsion.addAtom(atom3, ['-'], None, ['#1'])
+        atom3beta1 = torsion.addAtom(atom3alpha1, {'-':[]}, None, {'#1':[]})
+        atom3alpha2 = torsion.addAtom(atom3, {'-':[]}, None, {'#1':[]})
 
         # Get bond for atom3 and alpha and add ANDtype
         bond = torsion.getBond(atom3, atom3alpha1)
         if bond == None:
             # If None, bond wasn't found correctly
             raise Exception("could not find bond between atom3 and it's alpha atom")
-        bond.addORtype('-')
+        bond.addORtype('-', [])
 
         # Add ORtypes and ANDtypes to atom3 alpha atom
-        atom3alpha1.addORtype('#7X3')
-        atom3alpha1.addORtype('#8X2')
+        atom3alpha1.addORtype('#7', ['X3'])
+        atom3alpha1.addORtype('#8', ['X2'])
         atom3alpha1.addANDtype('+0')
 
         # Call getAtoms and getBonds just to make sure they work
@@ -67,7 +62,9 @@ class TestChemicalEnvironments(TestCase):
         # get smarts and smirks for the large torsion
         smarts = torsion.asAtomtypeSMARTS()
         smirks = torsion.asSMIRKS()
-        # TODO: add test that these are relevant
+        qmol = OEQMol()
+        if not OEParseSmarts(qmol, smirks):
+            raise Exception("could not parse created SMIRKS %s" % smirks)
 
         # Try removing atoms
         # if it was labeled:
@@ -94,7 +91,7 @@ class TestChemicalEnvironments(TestCase):
                 [ "[#1:1]-[#6&X4:2](-[#8:3])-[*:4](-[#6&H1])-[#8:5]", None] ]
 
         for [smirks, checkType] in smirksList:
-            env = environment.ChemicalEnvironment(smirks)
+            env = ChemicalEnvironment(smirks)
             Type = env.getType()
             if Type != checkType:
                 raise Exception("SMIRKS (%s) clasified as %s instead of %s" % (smirks, Type, checkType))
