@@ -397,6 +397,21 @@ class ForceField(object):
         # We'll be creating all forces again from scratch by re-parsing
         self._forces = []
 
+        # Store forcefield version info and, if present, aromaticity model
+        root = trees[0].getroot()
+        if root.tag=='SMIRFF':
+            if 'version' in root.attrib:
+                #TO DO: Should this be a float, a string, or something else?
+                self.version = float(root.attrib['version'])
+            else:
+                self.version = 0.0
+            if 'aromaticity_model' in root.attrib:
+                self._aromaticity_model = root.attrib['aromaticity_model']
+            else:
+                self._aromaticity_model = None
+        else:
+            raise ValueError("Error: ForceField parses a SMIRFF forcefield, but this does not appear to be one as the root tag is %s." % root.tag)
+
         # Load force definitions
         for tree in trees:
             for child in tree.getroot():
