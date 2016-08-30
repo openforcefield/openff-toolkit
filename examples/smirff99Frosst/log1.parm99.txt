@@ -1,0 +1,22 @@
+Mon Aug 29 11:45:56 PDT 2016
+
+Converting parm99 to a smirff
+-----------------------------
+This is part of getting a smirff for parm@Frosst: since parm@Frosst is
+read in as a frcmod on top of parm99, this means parm99 must be the
+initial smirff. The overall principle is not to make an exact replica
+of parm99 as a smirff but rather to get most of the main attributes
+in there. The main issue will be the torsions since I do not know how
+much progress I can make on that front.
+
+The principle is to work from robustness: to get the spirit of the parm99
+parameterization into the smirff, erring on the side of generality not
+possible with the atom-type datastructure of parm99.
+
+The approach is to make an intermediate smirffish frcmod file by simply
+changing the atom-type path at the start of each parameter in parm99 with
+smirks strings, keeping the rest of the format, and then processing this
+into a proper smirff ffxml after combining with the smirff-ified
+parm@Frosst frcmod into smirff99Frosst.
+
+
