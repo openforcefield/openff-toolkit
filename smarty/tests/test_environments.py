@@ -38,10 +38,10 @@ class TestChemicalEnvironments(TestCase):
         atom3 = torsion.selectAtom(3)
 
         # Add atoms with names so I can try to remove them
-        atom2alpha = torsion.addAtom(atom2, {'=':[]}, None, {'#8':[],'#7':[]}, ['H0'])
+        atom2alpha = torsion.addAtom(atom2, [('=',[])], None, [('#8',[]),('#7',[])], ['H0'])
         atom3alpha1 = torsion.addAtom(atom3)
-        atom3beta1 = torsion.addAtom(atom3alpha1, {'-':[]}, None, {'#1':[]})
-        atom3alpha2 = torsion.addAtom(atom3, {'-':[]}, None, {'#1':[]})
+        atom3beta1 = torsion.addAtom(atom3alpha1, [('-',[])], None, [('#1',[])])
+        atom3alpha2 = torsion.addAtom(atom3, [('-',[])], None, [('#1',[])])
 
         # Get bond for atom3 and alpha and add ANDtype
         bond = torsion.getBond(atom3, atom3alpha1)

@@ -28,6 +28,6 @@ setup(
         "Topic :: Utilities",
         "License :: OSI Approved :: GNU Lesser General Public License (LGPL), Version 3",
     ],
-    entry_points={'console_scripts': ['smarty = smarty.cli:main']},
+    entry_points={'console_scripts': ['smarty = smarty.cli_smarty:main', 'smirky = smarty.cli_smirky:main']},
     package_data={'smarty': find_package_data('smarty/data', 'smarty')},
 )

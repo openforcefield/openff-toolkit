@@ -26,11 +26,11 @@ import networkx as nx
 import re
 import copy
 
-import numpy as np
-from numpy import random
-
 import openeye.oechem
 from openeye.oechem import *
+
+import numpy as np
+from numpy import random
 
 # -------------
 # to do list:
@@ -70,7 +70,7 @@ class ChemicalEnvironment(object):
                 self.ORtypes = copy.deepcopy(ORtypes)
 
             # Set of strings that will be AND'd to the the end
-            if ANDtypes == None:
+            if ANDtypes is None:
                 self.ANDtypes = list()
             else:
                 self.ANDtypes = list(ANDtypes)
@@ -137,6 +137,8 @@ class ChemicalEnvironment(object):
             ORbase: string, such as '#6'
             ORdecorators: list of strings, such as ['X4','+0']
             """
+            while "" in ORdecorators:
+                ORdecorators.remove("")
             self.ORtypes.append((ORbase, ORdecorators))
 
         def addANDtype(self, ANDtype):
@@ -148,7 +150,8 @@ class ChemicalEnvironment(object):
             ANDtype: string
                 added to the list of ANDtypes for this atom
             """
-            self.ANDtypes.append(ANDtype)
+            if ANDtype != "":
+                self.ANDtypes.append(ANDtype)
 
         def getORtypes(self):
             """
@@ -165,9 +168,14 @@ class ChemicalEnvironment(object):
             newORtypes: list of tuples in the form (base, [ORdecorators])
                 for example: ('#6', ['X4','H0','+0']) --> '#6X4H0+0'
             """
-            if newORtypes == None:
+            if newORtypes is None:
                 self.ORtypes = list()
             else:
+                # Remove blank decorator
+                for base, decors in newORtypes:
+                    while "" in decors:
+                        decors.remove("")
+                # set new list
                 self.ORtypes = newORtypes
 
         def getANDtypes(self):
@@ -185,16 +193,19 @@ class ChemicalEnvironment(object):
             newANDtypes: list of strings
                 strings that will be AND'd together in a SMARTS
             """
-            if newANDtypes == None:
+            if newANDtypes is None:
                 self.ANDtypes = list()
             else:
+                while "" in newANDtypes:
+                    newANDtypes.remove("")
                 self.ANDtypes = list(newANDtypes)
 
     class Bond(Atom):
         """Bond representation, which may have ORtype and ANDtype descriptors.
         Properties
         -----------
-        ORtypes : dictionary of bases and ORdecorators in form {base: [list of decorators]}
+        ORtypes : list of tuples of ORbases and ORdecorators
+            in form (base: [list of decorators])
             The ORtype types that will be combined with logical OR
         ANDtypes : list of string
             The ANDtypes that will be combined with logical AND
@@ -277,6 +288,7 @@ class ChemicalEnvironment(object):
         self.label = label
 
         if smirks is not None:
+            # TODO: determine how to handle this with replacement possibilities
             # check SMIRKS is parseable
             #mol = OEQMol()
             #if not OEParseSmarts(mol, smirks):
@@ -397,7 +409,7 @@ class ChemicalEnvironment(object):
         ORtypes = list()
         for OR in ORList:
             if OR[0] != '~':
-                ORtypes.append( (OR[0], list(OR[1:]) ) )
+                ORtypes.append( (OR[0], list(OR[1:])))
 
         return ORtypes, ANDtypes
 
@@ -433,7 +445,7 @@ class ChemicalEnvironment(object):
         if initialAtom == None:
             initialAtom = self.getAtoms()[0]
 
-        if neighbors == None:
+        if neighbors is None:
             neighbors = self._graph.neighbors(initialAtom)
 
         # sort neighbors to guarantee order is constant
@@ -489,19 +501,22 @@ class ChemicalEnvironment(object):
         if descriptor == None:
             return random.choice(self._graph.nodes())
 
+        try: descriptor = int(descriptor)
+        except: descriptor = descriptor
+
         if type(descriptor) is int:
-            for atom in self.getIndexedAtoms():
+            for atom in self.getAtoms():
                 if atom.index == descriptor:
                     return atom
             return None
 
-        atoms = self.getComponentList(descriptor,'atom')
+        atoms = self.getComponentList('atom',descriptor)
         if len(atoms) == 0:
             return None
 
         return random.choice(atoms)
 
-    def getComponentList(component_type, descriptor = None):
+    def getComponentList(self, component_type, descriptor = None):
         """
         Returns a list of atoms or bonds matching the descriptor
 
@@ -517,6 +532,9 @@ class ChemicalEnvironment(object):
         if descriptor != None:
             d = descriptor.lower()
 
+        if not component_type.lower() in ['atom', 'bond']:
+            raise Exception("Error: 'getComponentList()' component_type must be 'atom' or 'bond'")
+
         if component_type.lower() == 'atom':
             if d == 'indexed':
                 return self.getIndexedAtoms()
@@ -528,16 +546,20 @@ class ChemicalEnvironment(object):
                 return self.getBetaAtoms()
             else:
                 return self.getAtoms()
-        if d == 'indexed':
-            return self.getIndexedBonds()
-        elif d == 'unindexed':
-            return self.getUnindexedBonds()
-        elif d == 'alpha':
-            return self.getAlphaBonds()
-        elif d == 'beta':
-            return self.getBetaBonds()
 
-        return self.getBonds()
+        elif component_type.lower() == 'bond':
+            if d == 'indexed':
+                return self.getIndexedBonds()
+            elif d == 'unindexed':
+                return self.getUnindexedBonds()
+            elif d == 'alpha':
+                return self.getAlphaBonds()
+            elif d == 'beta':
+                return self.getBetaBonds()
+
+            return self.getBonds()
+
+        return None
 
     def selectBond(self, descriptor = None):
         """Select a random bond fitting the descriptor.
@@ -557,13 +579,16 @@ class ChemicalEnvironment(object):
         a single Bond object fitting the description
         or None if no such atom exists
         """
+        try: descriptor = int(descriptor)
+        except: descriptor = descriptor
+
         if type(descriptor) is int:
-            for bond in self.getIndexedBonds():
-                if bond.index == descriptor:
+            for bond in self.getBonds():
+                if bond._bond_type == descriptor:
                     return bond
             return None
 
-        bonds = self.getComponentList(descriptor,'bond')
+        bonds = self.getComponentList('bond', descriptor)
         if len(bonds) == 0:
             return None
 
@@ -684,13 +709,25 @@ class ChemicalEnvironment(object):
         """
         return self._graph.nodes()
 
-    def getBonds(self):
+    def getBonds(self, atom = None):
         """
+        Parameter
+        ----------
+        atom: Atom object, optional, returns bonds connected to atom
+        returns all bonds in fragment if atom is None
+
         Returns
         --------
         a complete list of bonds in the fragment
         """
-        return [self._graph.edge[a1][a2]['bond'] for (a1,a2) in self._graph.edges()]
+        if atom == None:
+            bonds = [self._graph.edge[a1][a2]['bond'] for (a1,a2) in self._graph.edges()]
+        else:
+            bonds = []
+            for (a1, a2, info) in self._graph.edges_iter(atom, True):
+                bonds.append(info['bond'])
+
+        return bonds
 
     def getBond(self, atom1, atom2):
         """
@@ -805,6 +842,24 @@ class ChemicalEnvironment(object):
         else:
             return component._bond_type == 0
 
+    def isUnindexed(self, component):
+        """
+        returns True if the atom or bond is not indexed
+        """
+        if component._atom:
+            return component.index == None
+        else:
+            return component._bond_type < 1
+
+    def isIndexed(self, component):
+        """
+        returns True if the atom or bond is indexed
+        """
+        if component._atom:
+            return component.index != None
+        else:
+            return component._bond_type > 0
+
     def isBeta(self, component):
         """
         Takes an atom or bond are returns True if it is beta to an indexed atom
@@ -835,10 +890,10 @@ class ChemicalEnvironment(object):
         if natoms == 3:
             return "Angle"
         if natoms == 4:
-            atom2 = index_atoms[1]
-            atom4 = index_atoms[3]
+            atom2 = self.selectAtom(2)
+            atom4 = self.selectAtom(4)
             bond24 = self.getBond(atom2, atom4)
-            if bond24 is not None:
+            if bond24 != None:
                 return "Improper"
             return "Torsion"
         else:
