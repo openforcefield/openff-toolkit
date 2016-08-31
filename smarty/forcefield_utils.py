@@ -23,7 +23,6 @@ parts from John Chodera and Kyle Beauchamp.
 import os
 import smarty
 from smarty import ForceField
-from smarty.forcefield_labeler import ForceField_labeler
 from smarty.utils import get_data_filename
 import simtk.openmm
 from simtk.openmm import app
@@ -50,7 +49,7 @@ from simtk import openmm, unit
 def create_system_from_amber( prmtop_filename, crd_filename, verbose = False ):
     """Utility function. Create and return an OpenMM System given a prmtop and
        crd, AMBER format files.
-    
+
     Parameters
     ----------
     prmtop_filename : str (filename)
@@ -64,16 +63,16 @@ def create_system_from_amber( prmtop_filename, crd_filename, verbose = False ):
     system : OpenMM System
     positions : initial atomic positions (OpenMM)
 """
-    
+
     # Create System object
     prmtop = app.AmberPrmtopFile(prmtop_filename)
     topology = prmtop.topology
     system = prmtop.createSystem(nonbondedMethod = app.NoCutoff, constraints = None, implicitSolvent = None )
-    
+
     # Read coordinates
     crd = app.AmberInpcrdFile( crd_filename )
     positions = crd.getPositions()
-     
+
     return (topology, system, positions)
 
 def create_system_from_molecule(forcefield, mol, verbose=False):
@@ -98,7 +97,7 @@ def create_system_from_molecule(forcefield, mol, verbose=False):
     from smarty.forcefield import generateTopologyFromOEMol
     topology = generateTopologyFromOEMol(mol)
     system = forcefield.createSystem(topology, [mol], verbose=verbose)
-    
+
     # Get positions
     coordinates = mol.GetCoords()
     natoms = len(coordinates)
@@ -109,12 +108,12 @@ def create_system_from_molecule(forcefield, mol, verbose=False):
         positions[index,1] = y
         positions[index,2] = z
     positions = unit.Quantity(positions, unit.angstroms)
-    
+
     return topology, system, positions
 
 def compare_system_energies( topology0, topology1, system0, system1, positions0, positions1=None, label0="AMBER system", label1 = "SMIRFF system", verbose = True ):
     """
-    Given two OpenMM systems, check that their energies and component-wise 
+    Given two OpenMM systems, check that their energies and component-wise
     energies are consistent, and return these. The same positions will be used
     for both systems unless a second set of positions is provided.
 
@@ -124,14 +123,14 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
         Topology of first system
     topology1 : OpenMM Topology
         Topology of second system
-    system0 : OpenMM System 
+    system0 : OpenMM System
         First system for comparison (usually from AMBER)
     system1 : OpenMM System
         Second system for comparison (usually from SMIRFF)
     positions0 : simtk.unit.Quantity wrapped
         Positions to use for energy evaluation comparison
     positions1 (optional) : simtk.unit.Quantity wrapped (optional)
-        Positions to use for second OpenMM system; original positions are used 
+        Positions to use for second OpenMM system; original positions are used
         if this is not provided
     label0 (optional) : str
         String labeling system0 for output. Default, "AMBER system"
@@ -143,14 +142,14 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
     Returns
     ----------
         groups0 : dict
-            As returned by openmoltools.system_checker.check_energy_groups, 
+            As returned by openmoltools.system_checker.check_energy_groups,
             a dictionary with keys "bond", "angle", "nb", "torsion" and values
             corresponding to the energies of these components for the first simulation object
         groups1 : dict
-            As returned by openmoltools.system_checker.check_energy_groups, 
+            As returned by openmoltools.system_checker.check_energy_groups,
             a dictionary with keys "bond", "angle", "nb", "torsion" and values
             corresponding to the energies of these components for the second simulation object
-        energy0 : simtk.unit.Quantity 
+        energy0 : simtk.unit.Quantity
             Energy of first system
         energy1 : simtk.unit.Quantity
             Energy of second system
@@ -162,18 +161,18 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
 
     # Create integrator
     timestep = 1.0 * unit.femtoseconds
-    integrator0 = simtk.openmm.VerletIntegrator( timestep )     
-    integrator1 = simtk.openmm.VerletIntegrator( timestep )     
+    integrator0 = simtk.openmm.VerletIntegrator( timestep )
+    integrator1 = simtk.openmm.VerletIntegrator( timestep )
 
     # Grab second positions
     if positions1 == None:
-        positions1 = copy.deepcopy( positions0 ) 
+        positions1 = copy.deepcopy( positions0 )
 
     # Create simulations
     platform = simtk.openmm.Platform.getPlatformByName("Reference")
-    simulation0 = app.Simulation( topology0, system0, integrator0, platform = platform ) 
+    simulation0 = app.Simulation( topology0, system0, integrator0, platform = platform )
     simulation0.context.setPositions(positions0)
-    simulation1 = app.Simulation( topology1, system1, integrator1, platform = platform ) 
+    simulation1 = app.Simulation( topology1, system1, integrator1, platform = platform )
     simulation1.context.setPositions(positions1)
 
     # Print what torsions were found if verbose
@@ -194,27 +193,27 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
                 for k in range(force.getNumTorsions()):
                     i0, i1, i2, i3, per, phase, k0 = force.getTorsionParameters(k)
                     print("%3s (%3s)- %3s (%3s)- %3s (%3s)- %3s (%3s) - %f \t %f \t %f " % (i0, atoms1[i0].name, i1, atoms1[i1].name, i2, atoms1[i2].name, i3, atoms1[i3].name, per, phase/unit.degree, k0/unit.kilojoule_per_mole) )
-                    
 
 
-   
+
+
     # Do energy comparison, print info if desired
     syscheck = system_checker.SystemChecker( simulation0, simulation1 )
     syscheck.check_force_parameters()
     groups0, groups1 = syscheck.check_energy_groups()
-    energy0, energy1 = syscheck.check_energies()   
+    energy0, energy1 = syscheck.check_energies()
     if verbose:
         print("Energy of %s: " % label0, energy0 )
         print("Energy of %s: " % label1, energy1 )
         print("\nComponents of %s:" % label0 )
         for key in groups0.keys():
-            print("%s: " % key, groups0[key] ) 
+            print("%s: " % key, groups0[key] )
         print("\nComponents of %s:" % label1 )
         for key in groups1.keys():
-            print("%s: " % key, groups1[key] ) 
+            print("%s: " % key, groups1[key] )
 
     # Return
-    return groups0, groups1, energy0, energy1 
+    return groups0, groups1, energy0, energy1
 
 
 def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True ):
@@ -223,7 +222,7 @@ def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True ):
     and crd versus from a SMIRFF forcefield file and OEMol which should
     parameterize the same system with same parameters.
 
-    
+
     Parameters
     ----------
     prmtop_filename : str (filename)
@@ -240,23 +239,23 @@ def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True ):
     Returns
     --------
         groups0 : dict
-            As returned by openmoltools.system_checker.check_energy_groups, 
+            As returned by openmoltools.system_checker.check_energy_groups,
             a dictionary with keys "bond", "angle", "nb", "torsion" and values
             corresponding to the energies of these components for the first simulation object
         groups1 : dict
-            As returned by openmoltools.system_checker.check_energy_groups, 
+            As returned by openmoltools.system_checker.check_energy_groups,
             a dictionary with keys "bond", "angle", "nb", "torsion" and values
             corresponding to the energies of these components for the second simulation object
-        energy0 : simtk.unit.Quantity 
+        energy0 : simtk.unit.Quantity
             Energy of first system
         energy1 : simtk.unit.Quantity
             Energy of second system
-    """ 
+    """
 
     ambertop, ambersys, amberpos = create_system_from_amber( prmtop, crd )
     smirfftop, smirffsys, smirffpos = create_system_from_molecule(forcefield, mol, verbose = verbose)
 
-    groups0, groups1, energy0, energy1 = compare_system_energies( ambertop, 
+    groups0, groups1, energy0, energy1 = compare_system_energies( ambertop,
                smirfftop, ambersys, smirffsys, amberpos, verbose = verbose )
 
     return groups0, groups1, energy0, energy1
@@ -269,13 +268,13 @@ def get_molecule_parameterIDs( oemols, ffxml):
     Parameters
     ----------
     oemols : list
-        List of OpenEye OEChem molecules to parse; must have explicit hydrogens. 
+        List of OpenEye OEChem molecules to parse; must have explicit hydrogens.
 
     Returns
     -------
     parameters_by_molecule : dict
-        Parameter IDs used in each molecule, keyed by isomeric SMILES 
-        generated from provided OEMols. Each entry in the dict is a list 
+        Parameter IDs used in each molecule, keyed by isomeric SMILES
+        generated from provided OEMols. Each entry in the dict is a list
         which does not necessarily have unique entries; i.e. parameter IDs
         which are used more than once will occur multiple times.
 
@@ -300,9 +299,9 @@ def get_molecule_parameterIDs( oemols, ffxml):
         else:
             raise ValueError("Error: get_molecule_parameterIDs has been provided a list of oemols which contains the same molecule, having isomeric smiles %s, more than once." % smi )
     # Label molecules
-    labeler = ForceField_labeler( ffxml )  
-    labels = labeler.labelMolecules( oemols )
-    
+    ff = ForceField( ffxml )
+    labels = ff.labelMolecules( oemols )
+
     # Organize labels into output dictionary by looping over all molecules/smiles
     for idx in range(len(isosmiles)):
         # Pull smiles, initialize storage
@@ -317,7 +316,7 @@ def get_molecule_parameterIDs( oemols, ffxml):
                 parameters_by_molecule[smi].append(pid)
 
                 # Store which molecule this pid occurred in
-                if not parameters_by_ID.has_key( pid ):
+                if pid not in parameters_by_ID:
                     parameters_by_ID[pid] = set()
                     parameters_by_ID[pid].add(smi)
                 else:
