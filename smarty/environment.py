@@ -32,10 +32,22 @@ from openeye.oechem import *
 import numpy as np
 from numpy import random
 
-# -------------
-# to do list:
-# TODO: should there be print statments in here, should they have a verbose option?
-# -------------
+class SMIRKSMismatchError(Exception):
+    """
+    Exception for cases where smirks are inappropriate
+    for the environment type they are being parsed into
+    """
+    def __init__(self, msg):
+        super(SMIRKSMismatchError, self).__init__(self,msg)
+        self.msg = msg
+
+class SMIRKSParsingError(Exception):
+    """
+    Exception for when SMIRKS are not parseable for any environment
+    """
+    def __init__(self, msg):
+        super(SMIRKSParsingError, self).__init__(self, msg)
+        self.msg = msg
 
 class ChemicalEnvironment(object):
     """Chemical environment abstract base class that matches an atom, bond, angle, etc.
@@ -171,10 +183,6 @@ class ChemicalEnvironment(object):
             if newORtypes is None:
                 self.ORtypes = list()
             else:
-                # Remove blank decorator
-                for base, decors in newORtypes:
-                    while "" in decors:
-                        decors.remove("")
                 # set new list
                 self.ORtypes = newORtypes
 
@@ -273,7 +281,7 @@ class ChemicalEnvironment(object):
             orderList = [orderDict[base] for (base, decor) in self.ORtypes]
             return min(orderList)
 
-    def __init__(self, smirks = None, label = None):
+    def __init__(self, smirks = None, label = None, replacements = None):
         """Initialize a chemical environment abstract base class.
 
         smirks = string, optional
@@ -282,17 +290,22 @@ class ChemicalEnvironment(object):
         label = anything, optional
             intended to be used to label this chemical environment
             could be a string, int, or float, or anything
+        replacements = list of lists, optional,
+            [substitution, smarts] form for parsing SMIRKS
         """
         # Create an empty graph which will store Atom objects.
         self._graph = nx.Graph()
         self.label = label
 
         if smirks is not None:
-            # TODO: determine how to handle this with replacement possibilities
             # check SMIRKS is parseable
-            #mol = OEQMol()
-            #if not OEParseSmarts(mol, smirks):
-            #    raise Exception("Provides SMIRKS: %s was not parseable" % smirks)
+            if replacements is not None:
+                test_smirks = OESmartsLexReplace(smirks, replacements)
+            else:
+                test_smirks = smirks
+            mol = OEQMol()
+            if not OEParseSmarts(mol, smirks):
+                raise SMIRKSParsingError("Error Provided SMIRKS: %s was not parseable" % smirks)
 
             atoms = dict() # store created atom
             idx = 1 # current atom being created
@@ -529,8 +542,10 @@ class ChemicalEnvironment(object):
         Returns
         -------
         """
-        if descriptor != None:
+        if descriptor is not None:
             d = descriptor.lower()
+        else:
+            d = None
 
         if not component_type.lower() in ['atom', 'bond']:
             raise Exception("Error: 'getComponentList()' component_type must be 'atom' or 'bond'")
@@ -865,9 +880,9 @@ class ChemicalEnvironment(object):
         Takes an atom or bond are returns True if it is beta to an indexed atom
         """
         if component._atom:
-            return self._graph.node[component]['atom_type'] == 1
+            return self._graph.node[component]['atom_type'] == -1
         else:
-            return component._bond_type == 1
+            return component._bond_type == -1
 
     def getType(self):
         """
@@ -899,14 +914,21 @@ class ChemicalEnvironment(object):
         else:
             return None
 
-    def getValence(atom):
+    def getNeighbors(self, atom):
+        """
+        Returns atoms that are bound to the given atom
+        in the form of a list of Atom objects
+        """
+        return self._graph.neighbors(atom)
+
+    def getValence(self, atom):
         """
         Returns the valence (number of neighboring atoms)
         around the given atom
         """
         return len(self._graph.neighbors(atom))
 
-    def getBondOrder(atom):
+    def getBondOrder(self, atom):
         """
         Returns minimum bond order around a given atom
         0 if atom has no neighbors
@@ -922,7 +944,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching one labeled atom.
 
     """
-    def __init__(self, smirks = None, label = None):
+    def __init__(self, smirks = None, label = None, replacements = None):
         """Initialize a chemical environment corresponding to matching a single atom.
 
         Parameters
@@ -933,6 +955,8 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
         label = anything, optional
             intended to be used to label this chemical environment
             could be a string, int, or float, or anything
+        replacements = list of lists, optional,
+            [substitution, smarts] form for parsing SMIRKS
 
         For example:
             # create an atom that is carbon, nitrogen, or oxygen with no formal charge
@@ -944,11 +968,15 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
         if smirks == None:
             smirks = "[*:1]"
 
-        super(AtomChemicalEnvironment,self).__init__(smirks, label)
-
+        super(AtomChemicalEnvironment,self).__init__(smirks, label, replacements)
+        correct, expected = self._checkType()
+        if not correct:
+            assigned = self.getType()
+            raise SMIRKSMismatchError("The SMIRKS (%s) was assigned the type %s when %s was expected" % (smirks, assigned, expected))
         self.atom1 = self.selectAtom(1)
-        if self.atom1 == None:
-            raise Exception("AtomChemicalEnvironments need an indexed atom None found in %s" % smirks)
+
+    def _checkType(self):
+        return (self.getType() == 'VdW'), 'VdW'
 
     def asSMIRKS(self, smarts = False):
         """
@@ -989,7 +1017,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
 class BondChemicalEnvironment(AtomChemicalEnvironment):
     """Chemical environment matching two labeled atoms (or a bond).
     """
-    def __init__(self, smirks = None, label = None):
+    def __init__(self, smirks = None, label = None, replacements = None):
         """Initialize a chemical environment corresponding to matching two atoms (bond).
 
         Parameters
@@ -1000,13 +1028,15 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
         label = anything, optional
             intended to be used to label this chemical environment
             could be a string, int, or float, or anything
+        replacements = list of lists, optional,
+            [substitution, smarts] form for parsing SMIRKS
 
         """
         # Initialize base class
         if smirks == None:
             smirks = "[*:1]~[*:2]"
 
-        super(BondChemicalEnvironment,self).__init__(smirks, label)
+        super(BondChemicalEnvironment,self).__init__(smirks, label, replacements)
 
         # Add initial atom
         self.atom2 = self.selectAtom(2)
@@ -1014,12 +1044,14 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
             raise Exception("Error: Bonds need 2 indexed atoms, there were not enough in %s" % smirks)
 
         self.bond1 = self._graph.edge[self.atom1][self.atom2]['bond']
-        self.bond1.index = 1
+
+    def _checkType(self):
+        return (self.getType() == 'Bond'), 'Bond'
 
 class AngleChemicalEnvironment(BondChemicalEnvironment):
     """Chemical environment matching three marked atoms (angle).
     """
-    def __init__(self, smirks = None, label = None):
+    def __init__(self, smirks = None, label = None, replacements = None):
 
         """Initialize a chemical environment corresponding to matching three atoms.
 
@@ -1031,24 +1063,26 @@ class AngleChemicalEnvironment(BondChemicalEnvironment):
         label = anything, optional
             intended to be used to label this chemical environment
             could be a string, int, or float, or anything
+        replacements = list of lists, optional,
+            [substitution, smarts] form for parsing SMIRKS
         """
         if smirks == None:
             smirks = "[*:1]~[*:2]~[*:3]"
 
         # Initialize base class
-        super(AngleChemicalEnvironment,self).__init__(smirks, label)
+        super(AngleChemicalEnvironment,self).__init__(smirks, label, replacements)
 
         # Add initial atom
         self.atom3 = self.selectAtom(3)
-        if self.atom3 == None:
-            raise Exception("Error: Angles need 3 indexed atoms, there were not enough in %s" % smirks)
         self.bond2 = self._graph.edge[self.atom2][self.atom3]['bond']
-        self.bond2.index = 2
+
+    def _checkType(self):
+        return (self.getType() == 'Angle'), 'Angle'
 
 class TorsionChemicalEnvironment(AngleChemicalEnvironment):
     """Chemical environment matching four marked atoms (torsion).
     """
-    def __init__(self, smirks = None, label = None):
+    def __init__(self, smirks = None, label = None, replacements = None):
         """Initialize a chemical environment corresponding to matching four atoms (torsion).
 
         Parameters
@@ -1060,23 +1094,25 @@ class TorsionChemicalEnvironment(AngleChemicalEnvironment):
         label = anything, optional
             intended to be used to label this chemical environment
             could be a string, int, or float, or anything
+        replacements = list of lists, optional,
+            [substitution, smarts] form for parsing SMIRKS
         """
         if smirks == None:
             smirks = "[*:1]~[*:2]~[*:3]~[*:4]"
         # Initialize base class
-        super(TorsionChemicalEnvironment,self).__init__(smirks, label)
+        super(TorsionChemicalEnvironment,self).__init__(smirks, label, replacements)
 
         # Add initial atom
         self.atom4 = self.selectAtom(4)
-        if self.atom4 == None:
-            raise Exception("Error: Torsion need 4 indexed atoms, there were not enough in %s" % smirks)
         self.bond3 = self._graph.edge[self.atom3][self.atom4]['bond']
-        self.bond3.index = 3
+
+    def _checkType(self):
+        return (self.getType() == 'Torsion'), 'Torsion'
 
 class ImproperChemicalEnvironment(AngleChemicalEnvironment):
     """Chemical environment matching four marked atoms (improper).
     """
-    def __init__(self, smirks = None, label = None):
+    def __init__(self, smirks = None, label = None, replacements = None):
         """Initialize a chemical environment corresponding four atoms (improper).
 
         Parameters
@@ -1092,11 +1128,12 @@ class ImproperChemicalEnvironment(AngleChemicalEnvironment):
         if smirks == None:
             smirks = "[*:1]~[*:2](~[*:3])~[*:4]"
         # Initialize base class
-        super(ImproperChemicalEnvironment,self).__init__(smirks, label)
+        super(ImproperChemicalEnvironment,self).__init__(smirks, label, replacements)
 
         # Add initial atom
         self.atom4 = self.selectAtom(4)
-        if self.atom4 == None:
-            raise Exception("Error: Improper need 4 indexed atoms, there were not enough in %s" % smirks)
         self.bond3 = self._graph.edge[self.atom2][self.atom4]['bond']
-        self.bond3.index = 3
+
+    def _checkType(self):
+        return (self.getType() == 'Improper'), 'Improper'
+
