@@ -15,18 +15,19 @@ install:
 script:
   # Add omnia channel
   - conda config --add channels ${ORGNAME}
-  # build the recipe
-  - conda build devtools/conda-recipe
-  # Test the local installation
-  - source activate _test
-  # This is a temporary workaround for the conda issues.
-  - conda install --yes nose nose-timer numpy networkx lxml openmm
-  #- pip install .
+  # Create and activate test environment
+  - conda create -n test python=$python
+  - source activate test
   # Install OpenEye toolkit
   - pip install $OPENEYE_CHANNEL openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
+  # Build the recipe
+  - conda build devtools/conda-recipe
+  # Install
+  - conda install --yes --use-local smarty
+  # This is a temporary workaround for the conda issues.
+  #- conda install --yes nose nose-timer numpy networkx lxml openmm
   # Run tests
   #- cd devtools && nosetests $PACKAGENAME --nocapture --verbosity=2 --with-doctest --with-timer -a "\!slow" && cd ..
-  - python --version
   - cd devtools && nosetests -vv --nocapture --with-timer $PACKAGENAME && cd ..
 
 env:
