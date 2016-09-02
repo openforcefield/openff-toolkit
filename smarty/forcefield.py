@@ -248,12 +248,14 @@ class _Topology(Topology):
         """Initialize and store list of bond orders for the molecules in this Topology."""
         # Initialize
         self._bondorders=list()
-
+        bondorders_by_atomindices = {} #Temporary storage
         # Loop over reference molecules and pull bond orders
+
         for mol in self._reference_molecules:
+            #DEBUG
+            #print("Molecule %s..." % oechem.OECreateIsoSmiString(mol))
             # Pull mappings for this molecule
             mappings = self._reference_to_topology_atom_mappings[mol]
-            print mappings
             # Loop over bonds
             for idx,bond in enumerate(mol.GetBonds()):
                 # Get atom indices involved in bond
@@ -261,34 +263,37 @@ class _Topology(Topology):
                 at2 = bond.GetEnd().GetIdx()
                 # Get bond order
                 order = bond.GetOrder()
-                print("Bond between %s and %s is order %.2f..." % (at1, at2, order))
-
+                #DEBUG
+                #print("   Bond between %s and %s is order %.2f..." % (at1, at2, order))
                 # Convert atom numbers to topology atom numbers; there may be multiple matches
                 for mapping in mappings:
+                    topat1 = None
+                    topat2 = None
                     for mapatom in mapping:
                         if mapatom==at1:
                             topat1 = mapping[mapatom]
                         elif mapatom==at2:
                             topat2 = mapping[mapatom]
-
-                    #WRITE CODE HERE TO SAVE INFO
-                    self._bondorders.append(order)
-                    print("Saving bond order between atoms %s and %s..." % (topat1, topat2))
-
-                # DEBUG: PRINT BOND COUNT AND COMPARE TO TOPOLOGY
-                print("Topology bonds between %s and %s..." % (self._bonds[idx][0], self._bonds[idx][1]))
+                    if topat1==None or topat2==None:
+                        raise ValueError("No mapping found for these topology atoms (indices %s-%s)." % (at1, at2))
+                    # Store bond order temporarily to re-use below
+                    if not topat1 in bondorders_by_atomindices:
+                        bondorders_by_atomindices[topat1] = {}
+                    bondorders_by_atomindices[topat1][topat2] = order
+                    #DEBUG
+                    #print("       Saving bond order between atoms %s and %s..." % (topat1, topat2))
 
         # Loop over bonds in topology and store orders in the same order
-        # Not sure if I have to do this, they might already be in same order
-        # IN GENERAL THERE IS NO REASON FOR THEM TO BE IN THE SAME ORDER
-        # The matching is done via graph matching, so each topology atom
-        # gets mapped to a specific reference atom. Here I'll need to loop over bonds
-        # in the topology and find the bond order for each, which I can do if
-        # I store the bond order by topology atom in the loop above.
-        #
-
-
-#WORKING RIGHT ABOVE
+        for bond in self._bonds:
+            # See if we have in the 0-1 order and store
+            topat1 = bond[0].index
+            topat2 = bond[1].index
+            #print("Finding bond order for bond between topology atoms %s and %s..." % (topat1, topat2))
+            if topat2 in bondorders_by_atomindices[topat1]:
+                order = bondorders_by_atomindices[topat1][topat2]
+            else:
+                order = bondorders_by_atomindices[topat2][topat1]
+            self._bondorders.append(order)
 
     def unrollSMIRKSMatches(self, smirks):
         """Find all sets of atoms in the topology that match the provided SMIRKS strings.
