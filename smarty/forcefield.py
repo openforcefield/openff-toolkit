@@ -653,7 +653,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
             tree=self._XMLTrees[idx]
             tree.write( filenm, xml_declaration=True, pretty_print=True)
 
-    def _assignPartialCharges(self, molecule, oechargemethod):
+    def _assignPartialCharges(self, molecule, oechargemethod, modifycharges = True):
         """Assign partial charges to the specified molecule using best practices.
 
         Parameters
@@ -663,10 +663,12 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
             NOTE: The molecule will be modified when charges are added.
         oechargemethod : str
             The name of the charge method from oequacpac to use (e.g. 'OECharges_AM1BCCSym')
-
+        modifycharges : bool (optional)
+            If False, don't actually assign partial charges; use the charge calculation solely to update the Wiberg bond orders.
 
         Notes:
         As per Christopher Bayly and http://docs.eyesopen.com/toolkits/cookbook/python/modeling/am1-bcc.html, OEAssignPartialCharges needs multiple conformations to ensure well-behaved charges. This implements that recipe for conformer generation.
+        This conformer generation may or may not be necessary if the calculation is only to obtain bond orders; this will have to be investigated separately so it is retained for now.
         """
         # TODO: Cache charged molecules here to save time in future calls to createSystem
 
@@ -692,10 +694,11 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         # Our copy has the charges we want but not the right conformation. Copy charges over. Also copy over Wiberg bond orders if present
         partial_charges = []
         partial_bondorders = []
-        for atom in charged_copy.GetAtoms():
-            partial_charges.append( atom.GetPartialCharge() )
-        for (idx,atom) in enumerate(molecule.GetAtoms()):
-            atom.SetPartialCharge( partial_charges[idx] )
+        if modifycharges:
+            for atom in charged_copy.GetAtoms():
+                partial_charges.append( atom.GetPartialCharge() )
+            for (idx,atom) in enumerate(molecule.GetAtoms()):
+                atom.SetPartialCharge( partial_charges[idx] )
         for bond in charged_copy.GetBonds():
             partial_bondorders.append( bond.GetData("WibergBondOrder"))
         for (idx, bond) in enumerate(molecule.GetBonds()):
