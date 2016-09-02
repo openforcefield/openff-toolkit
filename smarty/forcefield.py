@@ -689,13 +689,17 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         status = openeye.oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, oechargemethod), False, False)
         if not status:
             raise(RuntimeError("OEAssignPartialCharges returned error code %s" % status))
-
-        # Our copy has the charges we want but not the right conformation. Copy charges over
+        # Our copy has the charges we want but not the right conformation. Copy charges over. Also copy over Wiberg bond orders if present
         partial_charges = []
+        partial_bondorders = []
         for atom in charged_copy.GetAtoms():
             partial_charges.append( atom.GetPartialCharge() )
         for (idx,atom) in enumerate(molecule.GetAtoms()):
             atom.SetPartialCharge( partial_charges[idx] )
+        for bond in charged_copy.GetBonds():
+            partial_bondorders.append( bond.GetData("WibergBondOrder"))
+        for (idx, bond) in enumerate(molecule.GetBonds()):
+            bond.SetData("WibergBondOrder", partial_bondorders[idx])
 
 
     def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
