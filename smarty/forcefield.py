@@ -415,11 +415,12 @@ class ForceField(object):
         # Load in all XML trees.
         trees = list()
         for file in files:
+            parser = etree.XMLParser(remove_blank_text=True) # For pretty print on write
             try:
                 # this handles either filenames or open file-like objects
-                tree = etree.parse(file)
+                tree = etree.parse(file, parser)
             except IOError:
-                tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
+                tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file), parser)
             except Exception as e:
                 # Fail with an error message about which file could not be read.
                 # TODO: Also handle case where fallback to 'data' directory encounters problems,
@@ -551,7 +552,23 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         if not params:
             raise ValueError("Error, parameters must be specified.")
 
+        # Below, we should do due dilegence that we're working on a parameter line which has
+        # roughly the same types of parameters (though for torsions (or bonds, if we have partial bond orders),
+        # the number of terms might differ), so define a utility function to give
+        # back the basic names of parameters (i.e. k) without suffixes
+        def get_param_names( param_keys ):
+            names = set()
+            for param in param_keys:
+                ct = 1
+                while param[-ct].isdigit():
+                    ct+=1
+                if ct > 1:
+                    names.add( param[:-(ct-1)])
+                else:
+                    names.add( param )
+            return names
 
+        # Set parameters
         trees=self._XMLTrees
         status = False
         # Loop over XML files we read
@@ -570,7 +587,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
                         if (smirks and elem.attrib['smirks']==smirks) or (paramID and elem.attrib['id']==paramID):
                             # Try to set parameters
                             old_params=elem.attrib
-                            if set(old_params.keys()) != set(params.keys()):
+                            if get_param_names(old_params.keys()) != get_param_names(params.keys()):
                                 raise ValueError('Error: Provided parameters have different keys (%s) than existing parameters (%s).' % (', '.join(old_params.keys()), ', '.join(params.keys())))
 
                             # Loop over attributes, change values
@@ -588,6 +605,42 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
         return status
 
+    def addParameter(self, params, smirks, force_type, tag):
+        """Add specified SMIRKS/parameter in the section under the specified force type.
+
+    Parameters
+    ----------
+    params : dict
+        Dictionary of attributes (parameters and their descriptions) for XML,
+        i.e. as output by getParameter.
+    smirks : str
+        SMIRKS pattern to associate with this parameter
+    force_type : str
+        Specify a particular force type such as "HarmonicBondForce" or "HarmonicAngleForce" in which to add this parameter
+    tag : str
+        Tag to use identifying this parameter, i.e. 'Bond' for a HarmonicBondForce, etc.
+
+
+    Returns
+    -------
+    status : Bool
+        Successful? True or False.
+
+
+"""
+
+        trees=self._XMLTrees
+        # Loop over XML files we read
+        found = False
+        for tree in trees:
+            # Loop over tree
+            for child in tree.getroot():
+                if child.tag==force_type:
+                    found = True
+                    addl = etree.Element( tag, smirks=smirks, attrib = params)
+                    child.append(addl)
+        return found
+
 
     def writeFile(self, files):
         """Write forcefield trees out to specified files."""
@@ -598,7 +651,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
         for idx, filenm in enumerate(files):
             tree=self._XMLTrees[idx]
-            tree.write( filenm, xml_declaration=True)
+            tree.write( filenm, xml_declaration=True, pretty_print=True)
 
     def _assignPartialCharges(self, molecule, oechargemethod):
         """Assign partial charges to the specified molecule using best practices.
