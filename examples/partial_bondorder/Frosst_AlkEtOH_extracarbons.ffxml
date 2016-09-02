@@ -7,7 +7,7 @@
 <Author>C. I. Bayly, OpenEye Scientific Software and David Mobley, UCI</Author>
 <!-- This mockup is based on frcmod.Frosst_AlkEthOH, the minimal subset of parm99/parm@Frosst -->
 <!-- required for alkanes, ethers, and alcohols (excluding ketals and 3-memb-rings) -->
-<!-- It has been extended to cover trivalent carbon in the same set, such as pentadiene and benzene, by adding additional bond, angle, and torsion parameters. Additionally, bond parameters for 6X3 were collapsed using partial bond orders. -->
+<!-- It has been extended to cover trivalent carbon in the same set, such as pentadiene and benzene, by adding additional bond, angle, and torsion parameters. Additionally, bond parameters for 6X3 were collapsed using partial bond orders. THIS IS NOT A COMPLETE FORCEFIELD AND IS PRESENT FOR TESTING PURPOSES.-->
 
 <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
 <HarmonicBondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2" fractional_bondorder="interpolate-linear">
