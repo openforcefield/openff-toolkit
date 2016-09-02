@@ -4,13 +4,13 @@ try:
     from smarty.atomtyper import *
     from smarty.forcefield import *
     from smarty.forcefield_utils import *
-    from smarty.forcefield_labeler import *
     from smarty.sampler import *
     from smarty.utils import *
+    from smarty.environment import *
+    from smarty.sampler_smirky import *
 
 except Exception as e:
     print(e)
     print('Warning: Cannot import openeye toolkit; not all functionality will be available.')
 
-from smarty.environment import *
 from smarty.score_utils import *

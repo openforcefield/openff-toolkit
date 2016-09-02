@@ -13,6 +13,7 @@ This also provides a prototype and validation of the SMIRFF SMIRKS-based force f
 * `devtools/` - continuous integration and packaging scripts and utilities
 * `oe_license.txt.enc` - encrypted OpenEye license for continuous integration testing
 * `.travis.yml` - travis-ci continuous integration file
+* `utilities/` - some utility functionality relating to the project; initially, for conversion of parm@frosst modified frcmod files to SMIRFF XML.
 
 ## Prerequisites
 
