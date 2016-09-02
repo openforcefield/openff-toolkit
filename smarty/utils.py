@@ -237,7 +237,10 @@ def parse_odds_file(filename, verbose = False):
             continue
 
         # add decorator
-        decorators.append(entry[0])
+        if entry[0] == "''" or entry[0] == '""':
+            decorators.append('')
+        else:
+            decorators.append(entry[0])
 
         if len(entry) == 2:
             odds.append(float(entry[1]))
@@ -246,7 +249,7 @@ def parse_odds_file(filename, verbose = False):
         else:
             raise Exception("Error entry (%s) in decorator file '%s' is invalid" % (l, filename))
 
-    if noOdds:
+    if (odds.count(0) == len(odds)) or noOdds:
         odds = None
         #TODO: handle case where 1 line is missing odds entry
 

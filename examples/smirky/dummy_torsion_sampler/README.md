@@ -5,8 +5,8 @@ to the reference SMIRFF for AlkEthOH.
 
 Called from the command line:
 ```
-smirky --molecules AlkEthOH_test_filt1_ff.mol2 --typetag Torsion --verbose \
-True --smirff forcefield/Frosst_AlkEtOH.ffxml --iterations 1000
+smirky --molecules AlkEthOH_test_filt1_ff.mol2 --typetag Torsion \
+--verbose True --smirff forcefield/Frosst_AlkEtOH.ffxml --iterations 1000
 ```
 
 Printed to command line:
