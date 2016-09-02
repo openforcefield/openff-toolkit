@@ -196,7 +196,7 @@ class _Topology(Topology):
         self._identifyMolecules()
 
         # Get/initialize bond orders
-        self._initializeBondOrders()
+        self._updateBondOrders()
 
     def _identifyMolecules(self):
         """Identify all unique reference molecules and atom mappings to all instances in the Topology.
@@ -244,8 +244,14 @@ class _Topology(Topology):
                     msg += 'Atom %8d %5s %5d %3s\n' % (atoms[index].index, atoms[index].name, atoms[index].residue.index, atoms[index].residue.name)
                 raise Exception(msg)
 
-    def _initializeBondOrders(self):
-        """Initialize and store list of bond orders for the molecules in this Topology."""
+    def _updateBondOrders(self, Wiberg = False):
+        """Update and store list of bond orders for the molecules in this Topology. Can be used for initialization of bondorders list, or for updating bond orders in the list.
+
+    Parameters:
+    ----------
+    Wiberg : bool (optional)
+        Default False. If False, uses bond orders OEChem assigns to bonds on the molecule. If True, instead uses Wiberg bond orders stored on bonds in the molecule. These must already be present, i.e. from assignPartialCharges with an AM1 method.
+"""
         # Initialize
         self._bondorders=list()
         bondorders_by_atomindices = {} #Temporary storage
@@ -262,7 +268,10 @@ class _Topology(Topology):
                 at1 = bond.GetBgn().GetIdx()
                 at2 = bond.GetEnd().GetIdx()
                 # Get bond order
-                order = bond.GetOrder()
+                if not Wiberg:
+                    order = bond.GetOrder()
+                else:
+                    order = bond.GetData('WibergBondOrder')
                 #DEBUG
                 #print("   Bond between %s and %s is order %.2f..." % (at1, at2, order))
                 # Convert atom numbers to topology atom numbers; there may be multiple matches
