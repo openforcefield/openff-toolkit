@@ -53,7 +53,7 @@ from score_utils import scores_vs_time
 # ATOMTYPE SAMPLER
 #=============================================================================================
 
-class AtomTypeSampler(object):
+class AtomTypeSamplerElemental(object):
     """
     Atom type sampler.
 
