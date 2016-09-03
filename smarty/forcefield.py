@@ -805,6 +805,17 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         # Work with a modified form of the topology that provides additional accessors.
         topology = _Topology(topology, molecules)
 
+        # If the charge method was not an OpenEye AM1 method, obtain Wiberg bond orders
+        if not (type(chargeMethod) == str and 'AM1' in chargeMethod):
+            print("Doing an AM1 calculation to get Wiberg bond orders.")
+            for molecule in molecules:
+                # Do AM1 calculation just to get bond orders on moleules (discarding charges)
+                self._assignPartialCharges(molecule, "OECharges_AM1", modifycharges = False)
+
+
+        # Update bond orders stored in the topology
+        topology._updateBondOrders(Wiberg = True )
+
         # Create the System and add atoms
         system = openmm.System()
         for atom in topology.atoms():
