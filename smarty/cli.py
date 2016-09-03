@@ -36,6 +36,10 @@ def main():
     parser.add_option("-y", "--samplertype", metavar='SAMPLER_TYPE',
                       action="store", type="string", dest='sampler_type', default='original',
                       help="Choose between original or elemental sampler search (default = original).")
+                      
+    parser.add_option("-e", "--element", metavar='ELEMENT',
+                      action="store", type="string", dest='element', default=None,
+                      help="If you choose sampler elemental, you have to choose one element to search (in number format, such as Oxigen = 8, Carbon = 6 and so on.")
 
     parser.add_option("-b", "--basetypes", metavar='BASETYPES',
                       action="store", type="string", dest='basetypes_filename', default=None,
@@ -108,7 +112,7 @@ def main():
 
     # Construct atom type sampler.
     if options.sampler_type == "elemental":
-        atomtype_sampler = smarty.AtomTypeSamplerElemental(molecules, options.basetypes_filename, options.initialtypes_filename, options.decorators_filename, replacements_filename=options.substitutions_filename, reference_typed_molecules=reference_typed_molecules, verbose=verbose, temperature=options.temperature, decorator_behavior=options.decorator_behavior)
+        atomtype_sampler = smarty.AtomTypeSamplerElemental(molecules, options.basetypes_filename, options.initialtypes_filename, options.decorators_filename, replacements_filename=options.substitutions_filename, reference_typed_molecules=reference_typed_molecules, verbose=verbose, temperature=options.temperature, decorator_behavior=options.decorator_behavior, element=options.element)
     else:
         atomtype_sampler = smarty.AtomTypeSampler(molecules, options.basetypes_filename, options.initialtypes_filename, options.decorators_filename, replacements_filename=options.substitutions_filename, reference_typed_molecules=reference_typed_molecules, verbose=verbose, temperature=options.temperature, decorator_behavior=options.decorator_behavior)
 

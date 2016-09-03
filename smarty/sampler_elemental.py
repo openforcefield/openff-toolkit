@@ -58,7 +58,7 @@ class AtomTypeSamplerElemental(object):
     Atom type sampler.
 
     """
-    def __init__(self, molecules, basetypes_filename, initialtypes_filename, decorators_filename, replacements_filename=None, reference_typed_molecules=None, temperature=0.1, verbose=False, decorator_behavior='combinatorial-decorators'):
+    def __init__(self, molecules, basetypes_filename, initialtypes_filename, decorators_filename, replacements_filename=None, reference_typed_molecules=None, temperature=0.1, verbose=False, decorator_behavior='combinatorial-decorators', element=None):
         """
         Initialize an atom type sampler.
 
@@ -91,7 +91,7 @@ class AtomTypeSamplerElemental(object):
         
         
         # Choose one element per run to find its atomtypes (string format)
-        self.initial_element = "7"
+        self.initial_element = element
 
         self.verbose = verbose
         
