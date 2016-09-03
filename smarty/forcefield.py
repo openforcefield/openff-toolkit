@@ -12,6 +12,7 @@ OpenMM ForceField replacement using SMIRKS-based matching.
 AUTHORS
 
 John D. Chodera <john.chodera@choderalab.org>
+David L. Mobley <dmobley@mobleylab.org>
 
 Baseed on simtk.openmm.app.forcefield written by Peter Eastman.
 
@@ -166,6 +167,7 @@ class _Topology(Topology):
     self._reference_molecules is a list of OEMol for the reference molecules
     self._reference_to_topology_atom_mappings[reference_molecule] is a list of atom indices mapping a reference molecule atom index to the topology atom index
     self._bondorders is a list of floating point bond orders for the bonds in the Topology.
+    self._bondorders_by_atomindices is a dict of floating point bond orders for the bonds in the Topology, keyed by indices of the atoms involved.
     """
     def __init__(self, topology, reference_molecules):
         """
@@ -254,7 +256,7 @@ class _Topology(Topology):
 """
         # Initialize
         self._bondorders=list()
-        bondorders_by_atomindices = {} #Temporary storage
+        self._bondorders_by_atomindices = {}
         # Loop over reference molecules and pull bond orders
 
         for mol in self._reference_molecules:
@@ -285,10 +287,13 @@ class _Topology(Topology):
                             topat2 = mapping[mapatom]
                     if topat1==None or topat2==None:
                         raise ValueError("No mapping found for these topology atoms (indices %s-%s)." % (at1, at2))
-                    # Store bond order temporarily to re-use below
-                    if not topat1 in bondorders_by_atomindices:
-                        bondorders_by_atomindices[topat1] = {}
-                    bondorders_by_atomindices[topat1][topat2] = order
+                    # Store bond order to re-use below and elsewhere; store in both directions
+                    if not topat1 in self._bondorders_by_atomindices:
+                        self._bondorders_by_atomindices[topat1] = {}
+                    if not topat2 in self._bondorders_by_atomindices:
+                        self._bondorders_by_atomindices[topat2] = {}
+                    self._bondorders_by_atomindices[topat2][topat1] = order
+                    self._bondorders_by_atomindices[topat1][topat2] = order
                     #DEBUG
                     #print("       Saving bond order between atoms %s and %s..." % (topat1, topat2))
 
@@ -298,10 +303,7 @@ class _Topology(Topology):
             topat1 = bond[0].index
             topat2 = bond[1].index
             #print("Finding bond order for bond between topology atoms %s and %s..." % (topat1, topat2))
-            if topat2 in bondorders_by_atomindices[topat1]:
-                order = bondorders_by_atomindices[topat1][topat2]
-            else:
-                order = bondorders_by_atomindices[topat2][topat1]
+            order = self._bondorders_by_atomindices[topat1][topat2]
             self._bondorders.append(order)
 
     def unrollSMIRKSMatches(self, smirks):
@@ -1030,8 +1032,29 @@ class HarmonicBondGenerator(object):
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.length = _extractQuantity(node, parent, 'length')
-            self.k = _extractQuantity(node, parent, 'k')
-            self.pid = _extractQuantity(node, parent, 'id')
+
+            # Determine if we are using fractional bond orders for this bond
+            # First, check if this force uses fractional bond orders
+            if 'fractional_bondorder' in parent.attrib:
+                # If it does, see if this parameter line provides fractional bond order parameters
+                if 'length_bondorder1' in node.attrib and 'k_bondorder1' in node.attrib:
+                    # Store what interpolation scheme we're using
+                    self.fractional_bondorder = parent.attrib['fractional_bondorder']
+                    # Store bondorder1 and bondorder2 parameters
+                    self.k = list()
+                    self.length = list()
+                    for ct in range(1,3):
+                        self.length.append( _extractQuantity(node, parent, 'length_bondorder%s' % ct, unit_name = 'length_unit']
+                        self.k.append( _extractQuantity(node, parent, 'k_bondorder%s' % ct, unit_name = 'k_unit']
+                else:
+                    self.fractional_bondorder = None
+            else:
+                self.fractional_bondorder = None
+
+            # If no fractional bond orders, just get normal length and k
+            if self.fractional_bondorder == None:
+                self.length = _extractQuantity(node, parent, 'length')
+                self.k = _extractQuantity(node, parent, 'k')
 
     def __init__(self, forcefield):
         self.ff = forcefield
@@ -1068,9 +1091,12 @@ class HarmonicBondGenerator(object):
 
         # Iterate over all defined bond types, allowing later matches to override earlier ones.
         bonds = ValenceDict()
+        bondorders = ValenceDict()
         for bond in self._bondtypes:
             for atom_indices in topology.unrollSMIRKSMatches(bond.smirks):
                 bonds[atom_indices] = bond
+                # Retrieve bond orders
+                bondorders[atom_indices] = topology._bondorders_by_atomindices[atom_indices[0]][atom_indices[1]
 
         if verbose:
             print('')
@@ -1082,7 +1108,17 @@ class HarmonicBondGenerator(object):
 
         # Add all bonds to the system.
         for (atom_indices, bond) in bonds.items():
-            force.addBond(atom_indices[0], atom_indices[1], bond.length, bond.k)
+            if bond.partialbondorder==None:
+                force.addBond(atom_indices[0], atom_indices[1], bond.length, bond.k)
+            # If this bond uses partial bond orders
+            else:
+                order = bondorders[atom_indices]
+                if bond.partialbondorder=='interpolate-linear':
+                    k = bond.k[0] + (bond.k[1]-bond.k[0])*(order-1.)
+                    length = bond.length[0] + (bond.length[1]-bond.length[0])*(order-1.)
+                force.addBond(atom_indices[0], atom_indices[1], length, k)
+                else:
+                    raise Exception("Partial bondorder treatment %s is not implemented." % bond.partialbondorder)
 
         if verbose: print('%d bonds added' % (len(bonds)))
 
@@ -1156,6 +1192,10 @@ class HarmonicAngleGenerator(object):
             self.angle = _extractQuantity(node, parent, 'angle')
             self.k = _extractQuantity(node, parent, 'k')
             self.pid = _extractQuantity(node, parent, 'id')
+            if 'fractional_bondorder' in parent.attrib:
+                self.fractional_bondorder = parent.attrib['fractional_bondorder']
+            else:
+                self.fractional_bondorder = None
 
     def __init__(self, forcefield):
         self.ff = forcefield
@@ -1263,6 +1303,10 @@ class PeriodicTorsionGenerator(object):
             self.phase = list()
             self.k = list()
             self.pid = _extractQuantity(node, parent, 'id')
+            if 'fractional_bondorder' in parent.attrib:
+                self.fractional_bondorder = parent.attrib['fractional_bondorder']
+            else:
+                self.fractional_bondorder = None
             # Store parameters.
             index = 1
             while 'phase%d'%index in node.attrib:
@@ -1381,6 +1425,10 @@ class NonbondedGenerator(object):
             """Currently we support radius definition via 'sigma' or 'rmin_half'."""
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.pid = _extractQuantity(node, parent, 'id')
+            if 'fractional_bondorder' in parent.attrib:
+                self.fractional_bondorder = parent.attrib['fractional_bondorder']
+            else:
+                self.fractional_bondorder = None
 
             # Make sure we don't have BOTH rmin_half AND sigma
             try:
