@@ -16,7 +16,7 @@ script:
   # Add omnia channel
   - conda config --add channels ${ORGNAME}
   # Create and activate test environment
-  - conda create -n test python=$python
+  - conda create --yes -n test python=$python
   - source activate test
   # Install OpenEye toolkit
   - pip install $OPENEYE_CHANNEL openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
