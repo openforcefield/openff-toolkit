@@ -1044,8 +1044,8 @@ class HarmonicBondGenerator(object):
                     self.k = list()
                     self.length = list()
                     for ct in range(1,3):
-                        self.length.append( _extractQuantity(node, parent, 'length_bondorder%s' % ct, unit_name = 'length_unit']
-                        self.k.append( _extractQuantity(node, parent, 'k_bondorder%s' % ct, unit_name = 'k_unit']
+                        self.length.append( _extractQuantity(node, parent, 'length_bondorder%s' % ct, unit_name = 'length_unit') )
+                        self.k.append( _extractQuantity(node, parent, 'k_bondorder%s' % ct, unit_name = 'k_unit') )
                 else:
                     self.fractional_bondorder = None
             else:
@@ -1096,7 +1096,7 @@ class HarmonicBondGenerator(object):
             for atom_indices in topology.unrollSMIRKSMatches(bond.smirks):
                 bonds[atom_indices] = bond
                 # Retrieve bond orders
-                bondorders[atom_indices] = topology._bondorders_by_atomindices[atom_indices[0]][atom_indices[1]
+                bondorders[atom_indices] = topology._bondorders_by_atomindices[atom_indices[0]][atom_indices[1]]
 
         if verbose:
             print('')
@@ -1116,7 +1116,8 @@ class HarmonicBondGenerator(object):
                 if bond.partialbondorder=='interpolate-linear':
                     k = bond.k[0] + (bond.k[1]-bond.k[0])*(order-1.)
                     length = bond.length[0] + (bond.length[1]-bond.length[0])*(order-1.)
-                force.addBond(atom_indices[0], atom_indices[1], length, k)
+                    force.addBond(atom_indices[0], atom_indices[1], length, k)
+                    print("Added bond with partial bond order %.2f; length %.2g; k %.2g" % (order, length, k))
                 else:
                     raise Exception("Partial bondorder treatment %s is not implemented." % bond.partialbondorder)
 
