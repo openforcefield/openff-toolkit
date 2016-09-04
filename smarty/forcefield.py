@@ -260,8 +260,6 @@ class _Topology(Topology):
         # Loop over reference molecules and pull bond orders
 
         for mol in self._reference_molecules:
-            #DEBUG
-            #print("Molecule %s..." % oechem.OECreateIsoSmiString(mol))
             # Pull mappings for this molecule
             mappings = self._reference_to_topology_atom_mappings[mol]
             # Loop over bonds
@@ -274,8 +272,6 @@ class _Topology(Topology):
                     order = bond.GetOrder()
                 else:
                     order = bond.GetData('WibergBondOrder')
-                #DEBUG
-                #print("   Bond between %s and %s is order %.2f..." % (at1, at2, order))
                 # Convert atom numbers to topology atom numbers; there may be multiple matches
                 for mapping in mappings:
                     topat1 = None
@@ -294,15 +290,12 @@ class _Topology(Topology):
                         self._bondorders_by_atomindices[topat2] = {}
                     self._bondorders_by_atomindices[topat2][topat1] = order
                     self._bondorders_by_atomindices[topat1][topat2] = order
-                    #DEBUG
-                    #print("       Saving bond order between atoms %s and %s..." % (topat1, topat2))
 
         # Loop over bonds in topology and store orders in the same order
         for bond in self._bonds:
             # See if we have in the 0-1 order and store
             topat1 = bond[0].index
             topat2 = bond[1].index
-            #print("Finding bond order for bond between topology atoms %s and %s..." % (topat1, topat2))
             order = self._bondorders_by_atomindices[topat1][topat2]
             self._bondorders.append(order)
 
@@ -809,7 +802,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
         # If the charge method was not an OpenEye AM1 method, obtain Wiberg bond orders
         if not (type(chargeMethod) == str and 'AM1' in chargeMethod):
-            print("Doing an AM1 calculation to get Wiberg bond orders.")
+            if verbose: print("Doing an AM1 calculation to get Wiberg bond orders.")
             for molecule in molecules:
                 # Do AM1 calculation just to get bond orders on moleules (discarding charges)
                 self._assignPartialCharges(molecule, "OECharges_AM1", modifycharges = False)
@@ -1031,7 +1024,6 @@ class HarmonicBondGenerator(object):
         """A SMIRFF bond type."""
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.length = _extractQuantity(node, parent, 'length')
 
             # Determine if we are using fractional bond orders for this bond
             # First, check if this force uses fractional bond orders
@@ -1108,18 +1100,18 @@ class HarmonicBondGenerator(object):
 
         # Add all bonds to the system.
         for (atom_indices, bond) in bonds.items():
-            if bond.partialbondorder==None:
+            if bond.fractional_bondorder==None:
                 force.addBond(atom_indices[0], atom_indices[1], bond.length, bond.k)
             # If this bond uses partial bond orders
             else:
                 order = bondorders[atom_indices]
-                if bond.partialbondorder=='interpolate-linear':
+                if bond.fractional_bondorder=='interpolate-linear':
                     k = bond.k[0] + (bond.k[1]-bond.k[0])*(order-1.)
                     length = bond.length[0] + (bond.length[1]-bond.length[0])*(order-1.)
                     force.addBond(atom_indices[0], atom_indices[1], length, k)
-                    print("Added bond with partial bond order %.2f; length %.2g; k %.2g" % (order, length, k))
+                    print("Added bond with partial bond order %.2f; length=%.2g; k=%.2g" % (order, length, k))
                 else:
-                    raise Exception("Partial bondorder treatment %s is not implemented." % bond.partialbondorder)
+                    raise Exception("Partial bondorder treatment %s is not implemented." % bond.fractional_bondorder)
 
         if verbose: print('%d bonds added' % (len(bonds)))
 
