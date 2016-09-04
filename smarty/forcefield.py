@@ -1109,7 +1109,7 @@ class HarmonicBondGenerator(object):
                     k = bond.k[0] + (bond.k[1]-bond.k[0])*(order-1.)
                     length = bond.length[0] + (bond.length[1]-bond.length[0])*(order-1.)
                     force.addBond(atom_indices[0], atom_indices[1], length, k)
-                    print("Added bond with partial bond order %.2f; length=%.2g; k=%.2g" % (order, length, k))
+                    print("%64s" % "Added %s bond, order %.2f; length=%.2g; k=%.2g" % (bond.smirks, order, length, k))
                 else:
                     raise Exception("Partial bondorder treatment %s is not implemented." % bond.fractional_bondorder)
 
