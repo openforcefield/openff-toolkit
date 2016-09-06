@@ -197,24 +197,24 @@ def parse_odds_file(filename, verbose = False):
     if filename is None:
         return None
 
-    # if not a file object open file
-    if not isinstance(filename, file):
+    # if input is a file object
+    try:
+        input_lines = filename.readlines()
+        if verbose: print("Attempting to parse file '%s'" % filename.name)
+    except AttributeError:
+        if verbose: print("Attempting to parse file '%s'" % filename)
         try:
-            ifs = open(filename,'r')
+            ifs = open(filename, 'r')
+            input_ddlines = ifs.readlines()
         except IOError:
             ifs = get_data_filename(filename)
-            ifs = open(ifs,'r')
+            ifs = open(ifs, 'r')
+            input_lines = ifs.readlines()
         except Exception as e:
             raise Exception("%s\nProvided file (%s) could not be parsed" % (str(e), filename))
-    else:
-        ifs = filename
-
-    # Read data from input
-    try:
-        input_lines = ifs.readlines()
     except Exception as e:
         msg = str(e) + '\n'
-        msg += "Could not read data from file %s" % filename.name
+        msg += "Could not read data from file %s" % filename
         raise Exception(msg)
 
     # close file
