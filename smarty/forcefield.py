@@ -1024,6 +1024,7 @@ class HarmonicBondGenerator(object):
         """A SMIRFF bond type."""
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.pid = _extractQuantity(node, parent, 'id')
 
             # Determine if we are using fractional bond orders for this bond
             # First, check if this force uses fractional bond orders
@@ -1102,6 +1103,7 @@ class HarmonicBondGenerator(object):
         for (atom_indices, bond) in bonds.items():
             if bond.fractional_bondorder==None:
                 force.addBond(atom_indices[0], atom_indices[1], bond.length, bond.k)
+                print("%64s" % "Added %s bond, length=%.2g; k=%.2g" % (bond.smirks, bond.length, bond.k))
             # If this bond uses partial bond orders
             else:
                 order = bondorders[atom_indices]
