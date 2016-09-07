@@ -21,7 +21,7 @@ script:
   # Install OpenEye toolkit
   #- pip install $OPENEYE_CHANNEL openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
   # Use beta version for partial bond orders
-  - pip install --pre $OPENEYE_CHANNEL openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
+  - pip install --pre https://pypi.anaconda.org/openeye/label/beta/simple openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
   # Build the recipe
   - conda build devtools/conda-recipe
   # Install
