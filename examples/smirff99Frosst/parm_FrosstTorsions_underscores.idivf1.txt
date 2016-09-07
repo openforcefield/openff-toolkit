@@ -1,0 +1,957 @@
+X_-C_-C_-X      1  0.625   180.0    2 gentle planar from X-CP-CP-X
+X_-CA-C_-X      1  0.250     0.0    2 consensus from B3LYP/6-311G(d,p) benzoyl compounds feb 2003
+X_-CC-C_-X      1  0.250     0.0    2 analogy X_-C -CA-X Oct 2004 replacing 20 kcal/mol barrier
+X_-CP-C_-X      1  0.625   180.0    2 his-CO- guess bphnyl
+X_-CR-C_-X      1  0.625   180.0    2 his-CO- guess bphnyl
+X_-CW-C_-X      1  0.625   180.0    2 his-CO- guess bphnyl
+X_-N2-C_-X      1  2.400   180.0    2 Amidine,guanidine like torsion, see parm94 X_-CA-N2-X, 30 Sept 2004
+X_-NB-C_-X      1 10.000   180.0    2 ff94 imidazole X-CK-NB-X
+X_-OS-C_-X      1  2.500   180.0    2 half ff94 X-C-N-X
+X_-S_-C_-X      1  1.750   180.0    2 guess 0.75 times X-C-OS-X
+X_-C2-C2-X      1  0.000     0.0    1 By definition
+X_-CA-C2-X      1  0.000     0.0    1 By definition
+X_-CC-C2-X      1  0.000     0.0    1 By definition
+X_-CJ-C2-X      1  0.000     0.0    1 By definition 31 March 2004
+X_-CM-C2-X      1  0.000     0.0    1 By definition
+X_-CR-C2-X      1  0.000     0.0    1 By definition
+X_-CT-C2-X      1  0.000     0.0    1 By definition
+X_-CT-C2-X      1  0.000     0.0    1 By definition
+X_-CW-C2-X      1  0.000     0.0    1 By definition
+X_-CC-CA-X      1  0.625   180.0    2 his, X-CP-CP-X
+X_-CM-CA-X      1  0.625   180.0    2 CHANGED FROM ff94
+X_-CP-CA-X      1  3.625   180.0    2 ff94 X-CA-CA-X
+X_-CR-CA-X      1  0.625   180.0    2 his, X-CP-CP-X
+X_-CW-CA-X      1  0.625   180.0    2 his, X-CP-CP-X
+X_-N_-CA-X      1  0.625   180.0    2 anal X-CP-CP-X
+X_-N*-CA-X      1  1.500   180.0    2 indole,ff94 X-CW-NA-
+X_-N3-CA-X      1  0.000     0.0    1 guess from X-CA-CT-X Oct 2004
+X_-OH-CA-X      1  0.900   180.0    2 ff94 X-C-OH-X
+X_-OS-CA-X      1  1.350   180.0    2 RHF/6-31G(d,p) Dec 12 1997
+X_-P_-CA-X      1  1.000     0.0    1 dummy
+X_-SO-CA-X      1  0.000     0.0    3 guess
+X_-CC-CB-X      1  1.675   180.0    2 ff94 X-C*-CB-X
+X_-CP-CB-X      1  3.625   180.0    2 ff94 X-CA-CA-X
+X_-CR-CB-X      1  1.250   180.0    2 guess for fused ring systems. Apr 26 2006
+X_-CW-CB-X      1  0.625   180.0    2 anal X-CP-CP-X
+X_-NA-CB-X      1  1.525   180.0    2 indole,ff94 X-CN-NA-
+X_-NB-CB-X      1  3.000   180.0    2 ff94 X-CW-NA-X
+X_-OS-CB-X      1  3.000   180.0    2 ff94 X-CW-NA-X
+X_-S_-CB-X      1  3.000   180.0    2 ff94 X-CW-NA-X
+X_-CC-CC-X      1  1.675   180.0    2 ff94 X-C*-CB-X
+X_-CR-CC-X      1  1.675   180.0    2 ff94 X-C*-CB-X
+X_-N_-CC-X      1  1.400   180.0    2 ff94 X-CC-NA-X
+X_-N*-CC-X      1  1.500   180.0    2 ff94 X-CW-NA-X
+X_-N2-CC-X      1  1.400   180.0    2 ff94 X-CC-NA-X
+X_-NC-CC-X      1  4.800   180.0    2 ff94 X-CA-NC-X
+X_-OS-CC-X      1  2.400   180.0    2 ff94 X-CV-NB-X
+X_-CJ-CJ-X      1  0.000     0.0    2 accounted for in other terms
+X_-CM-CJ-X      1  0.000     0.0    3 ff94 X_-CM-CT-X
+X_-CT-CJ-X      1  0.000     0.0    1 best fit Dec 1 2004
+X_-N_-CJ-X      1  0.700   180.0   -2 fit to CA-N-CJ-CJ, CA-N-CJ-H1, CJ-CJ-N-CT Oct 20
+X_-N_-CJ-X      1  0.300     0.0    1 and CT-N-CJ-H1, H-N-CJ-H1 rhf/6-31g(dp) 2004
+X_-N_-CM-X      1  0.625   180.0    2 from X-CA-CM-X
+X_-N2-CM-X      1  0.625   180.0    2 like X-N2-CR-X; 5 Oct 2005
+X_-CP-CP-X      1  0.625   180.0    2 tuned to flurbi Xray
+X_-NC-CP-X      1  4.800   180.0    2 ff94 X-CA-NC-X
+X_-CR-CR-X      1  2.500   180.0    2 Approx. Nov 24 2006
+X_-CT-CR-X      1  0.000     0.0    2 his, ff94 X-CC-CT-X
+X_-CW-CR-X      1  0.625   180.0    2 like X-CP-CP-X
+X_-N_-CR-X      1  0.625   180.0    2 like X-CP-CP-X
+X_-N*-CR-X      1  2.325   180.0    2 ff94 X-CR-NA-X
+X_-N2-CR-X      1  0.625   180.0    2 like X-CP-CP-X
+X_-N3-CR-X      1  0.000     0.0    1 guess from X-CA-CT-X banyu Oct 2004
+X_-NC-CR-X      1  5.000   180.0    2 ff94 X-CR-NB-X
+X_-OS-CR-X      1  2.400   180.0    2 ff94 X-CV-NB-X
+X_-S_-CR-X      1  0.000   180.0    2 guess
+X_-CW-CT-X      1  0.000     0.0    2 his, ff94 X-CC-CT-X
+X_-P_-CT-X      1  0.000     0.0    1 dummy
+X_-SO-CT-X      1  0.000     0.0    3 guess
+X_-CW-CW-X      1  0.625   180.0    2 thioph guess bphnyl
+X_-N_-CW-X      1  1.500   180.0    2 ff94 X-CW-NA-X
+X_-N*-CW-X      1  1.500   180.0    2 ff94 X-CW-NA-X
+X_-N2-CW-X      1  1.400   180.0    2 ff94 X-CC-NA-X
+X_-NB-CW-X      1  3.000   180.0    2 ff94 X-CW-NA-X
+X_-NC-CW-X      1  1.500   180.0    2 ff94 X-CW-NA-X
+X_-OS-CW-X      1  3.000   180.0    2 ff94 X-CW-NA-X
+X_-S_-CW-X      1  3.000   180.0    2 ff94 X-CW-NA-X
+X_-N2-N_-X      1  0.000     0.0    1 June 29 2007
+X_-NB-N_-X      1  0.000     0.0    1 June 29 2007
+X_-NB-N*-X      1  6.000   180.0    1
+X_-NB-N2-X      1  0.000     0.0    1 June 29 2007
+X_-NB-NA-X      1  0.000     0.0    1
+X_-NC-NA-X      1  0.625   180.0    2 anal X-CP-CP-X Dec 15 2006
+X_-NB-NB-X      1  6.000   180.0    1
+X_-OS-NB-X      1  0.000     0.0    1
+C2-C2-C_-O2     1  0.000     0.0    1 by symetry; 12 June 2005
+CA-CA-C_-CT     1  0.200     0.0    2 fit to B3LYP/6-311G(d,p) acetophenone scan feb 2003
+CB-CA-C_-CT     1  0.200     0.0    2 analogy CT-C_-CA-CA
+CP-CA-C_-CT     1  0.200     0.0    2 analogy CT-C_-CA-CA
+NC-CA-C_-CT     1  0.200     0.0    2 analogy CT-C_-CA-CA
+CA-CA-C_-H4     1  0.000   180.0    2 from B3LYP/6-311G(d,p) benzaldehyde scan: set to 0 feb 2003
+CB-CA-C_-H4     1  0.000   180.0    2 analogy H4-C_-CA-CA
+CP-CA-C_-H4     1  0.000   180.0    2 analogy H4-C_-CA-CA
+NC-CA-C_-H4     1  0.000   180.0    2 analogy H4-C_-CA-CA
+CA-CA-C_-N      1  0.725     0.0    2 fit to B3LYP/6-311G(d,p) benzamide scan feb 2003
+CB-CA-C_-N      1  0.725     0.0    2 analogy N_-C_-CA-CA
+CP-CA-C_-N      1  0.725     0.0    2 analogy N_-C_-CA-CA
+NC-CA-C_-N      1  0.725     0.0    2 analogy N_-C_-CA-CA
+CA-CA-C_-N2     1  0.146     0.0   -4 B3LYP/6-311G** fit, 19 Oct 2004 (charged N2 using amidine)
+CA-CA-C_-N2     1  0.998   180.0    2
+NC-CA-C_-N2     1  0.077   180.0   -4 B3LYP/6-311G** fit, 19 Oct 2004 (charged N2 using amidine)
+NC-CA-C_-N2     1  1.482   180.0    2
+CA-CA-C_-O      1  2.450   180.0    2 fit to B3LYP/6-311G(d,p) benzaldehyde scan feb 2003
+CB-CA-C_-O      1  2.450   180.0    2 analogy O_-C_-CA-CA
+CP-CA-C_-O      1  2.450   180.0    2 analogy O_-C_-CA-CA
+NC-CA-C_-O      1  2.450   180.0    2 analogy O_-C_-CA-CA
+CA-CA-C_-OH     1  3.625   180.0    2 from parm94 X-C-CA-X; only use is parm94 TYR feb 2003
+CA-CA-C_-OS     1  0.550     0.0    2 fit to B3LYP/6-311G(d,p) methyl benzoate scan feb 2003
+CB-CA-C_-OS     1  0.550     0.0    2 analogy OS-C_-CA-CA
+CP-CA-C_-OS     1  0.550     0.0    2 analogy OS-C_-CA-CA
+NC-CA-C_-OS     1  0.550     0.0    2 analogy OS-C_-CA-CA
+CC-CC-C_-N2     1  0.184     0.0   -4 B3LYP/6-311G** fit, 19 Oct 2004 (charged N2 using amidine)
+CC-CC-C_-N2     1  0.938   180.0    2
+CW-CC-C_-N2     1  0.184     0.0   -4 B3LYP/6-311G** fit, 19 Oct 2004 (charged N2 using amidine)
+CW-CC-C_-N2     1  0.938   180.0    2
+NB-CC-C_-N2     1  1.846   180.0    2 B3LYP/6-311G** fit, 27 Oct 2004 (charged N2 using amidine branched on CC of an imidazole)
+CJ-CJ-C_-CT     1  0.000     0.0    1 set to zero for CJ-CJ-C-O
+HC-CJ-C_-CT     1  0.000     0.0    1 set to zero for CJ-CJ-C-O
+CA-CJ-C_-H4     1  0.000     0.0    1 set to 0 Sept 14 2005
+CJ-CJ-C_-H4     1  0.000     0.0    1 guess
+HC-CJ-C_-H4     1  0.000     0.0    1 guess
+CA-CJ-C_-N      1  1.392     0.0   -2 FIT B3LYP6-31G(d) Sept 14 2005
+CA-CJ-C_-N      1  0.645   180.0   -1 FIT B3LYP6-31G(d) Sept 14 2005
+CA-CJ-C_-N      1  0.961   180.0    3 FIT B3LYP6-31G(d) Sept 14 2005
+CJ-CJ-C_-N      1  0.000     0.0    1 set to zero for CJ-CJ-C-O
+CT-CJ-C_-N      1  0.000     0.0    1 set to zero for CJ-CJ-C-O
+HC-CJ-C_-N      1  0.000     0.0    1 set to zero for CJ-CJ-C-O
+CJ-CJ-C_-NB     1  0.000     0.0    1 dummy guess (had to get going) March 30 2004
+N_-CJ-C_-NB     1  0.000     0.0    1 dummy guess (had to get going) March 30 2004
+CA-CJ-C_-O      1  3.174   180.0   -2 FIT B3LYP6-31G(d) Sept 14 2005
+CA-CJ-C_-O      1  0.277   180.0   -1 FIT B3LYP6-31G(d) Sept 14 2005
+CA-CJ-C_-O      1  0.514   180.0    3 FIT B3LYP6-31G(d) Sept 14 2005
+CJ-CJ-C_-O      1  0.000     0.0    1 set to zero for CJ-CJ-C-O
+CT-CJ-C_-O      1  0.000     0.0    1 set to zero for CJ-CJ-C-O
+HC-CJ-C_-O      1  5.000     0.0    1 set to zero for CJ-CJ-C-O
+CJ-CJ-C_-O2     1  2.400   320.0    2 working
+HC-CJ-C_-O2     1  0.000     0.0    1 dummy
+CJ-CJ-C_-OS     1  0.065   180.0   -4 Taken from CA-CA-CJ-CJ June 29 2007
+CJ-CJ-C_-OS     1  0.550   180.0    2
+HC-CJ-C_-OS     1  0.000     0.0    1 set to zero for CJ-CJ-C-OS
+CJ-CJ-C_-S      1  0.000     0.0    1 dummy guess (had to get going) March 30 2004
+N_-CJ-C_-S      1  0.000     0.0    1 dummy guess (had to get going) March 30 2004
+CM-CM-C_-CT     1  0.200     0.0    2 analogy CT-C_-CA-CA
+CM-CM-C_-H4     1  0.000   180.0    2 analogy H4-C_-CA-CA
+CM-CM-C_-N      1  0.725     0.0    2 analogy N_-C_-CA-CA
+CM-CM-C_-O      1  2.450   180.0    2 analogy O_-C_-CA-CA
+CM-CM-C_-OS     1  0.550     0.0    2 analogy OS-C_-CA-CA
+NC-CP-C_-O      1  3.625   180.0    2 from X-C-CA-X Mar 6 2007
+CA-CP-C_-CA     1  3.625   180.0    2 from X-C-CA-X
+CP-CP-C_-CA     1  3.625   180.0    2 from X-C-CA-X
+CA-CP-C_-N      1  3.625   180.0    2 from X-C-CA-X Sept 24 2003
+CP-CP-C_-N      1  3.625   180.0    2 from X-C-CA-X Sept 24 2003
+NC-CP-C_-N      1  3.625   180.0    2 from X-C-CA-X Mar 6 2007
+CA-CP-C_-O      1  3.625   180.0    2 from X-C-CA-X
+CP-CP-C_-O      1  3.625   180.0    2 from X-C-CA-X
+C_-CR-C_-CA     1  1.000   180.0    1 guess nov 22 2006
+NA-CR-C_-CA     1  1.000   180.0    1 guess Nov 22 2006
+NB-CR-C_-CA     1  1.000   180.0    1 guess Nov 22 2006
+S_-CR-C_-CA     1  1.000   180.0    1 guess Nov 22 2006
+CC-CR-C_-CT     1  1.000   180.0    1 guess
+NB-CR-C_-CT     1  1.000   180.0    1 guess
+OS-CR-C_-CT     1  1.000   180.0    1 guess
+C_-CR-C_-CW     1  1.000   180.0    1 guess nov 22 2006
+CT-CR-C_-CW     1  1.000   180.0    1 guess
+H4-CR-C_-CW     1  1.000   180.0    1 guess
+N2-CR-C_-CW     1  1.000   180.0    1 guess Nov 22 2006
+NB-CR-C_-CW     1  1.000     0.0    2 guess
+NC-CR-C_-H4     1  0.000     0.0    2 guess July 29 2003
+C_-CR-C_-N      1  1.000   180.0    1 guess nov 22 2006
+CA-CR-C_-N      1  1.000   180.0    1 guess
+CT-CR-C_-N      1  1.000   180.0    1 guess
+NB-CR-C_-N      1  1.000   180.0    2 guess
+S_-CR-C_-N      1  1.000   180.0    1 guess Nov 22 2006
+CC-CR-C_-N2     1  1.000   180.0    1 guess, 30 Sept 2004
+NA-CR-C_-N2     1  0.582     0.0   -4 From NA-CW-C_-N2: reproduce very well the B3LYP/6-311G** surface for this torsion (using amidine branched on CR of an imidazole) 27 Oct 2004
+NA-CR-C_-N2     1  2.101   180.0    2
+NB-CR-C_-N2     1  1.846   180.0    2 From NB-CC-C_-N2: reproduce very well the B3LYP/6-311G** surface for this torsion (using amidine branched on CR of an imidazole) 27 Oct 2004
+NC-CR-C_-N2     1  1.315   180.0    2 B3LYP/6-311G** fit, 27 Oct 2004 (charged N2 using amidine branched on CR of a pyrimidine)
+OS-CR-C_-N2     1  1.990   180.0    2 From OS-CW-C_-N2 : reproduce well the B3LYP/6-311G** surface for this torsion (although the barrier height is 4kcal/mol higher than the B3LYP DFT surface) (charged N2 using amidine branched on CR of oxazole) 28 Oct 2004
+S_-CR-C_-N2     1  0.521     0.0   -4 From S-CW-C -N2 : reproduce well the B3LYP/6-311G** surface for this torsion (charged N2 using amidine branched on CR of thiazole) 28 Oct 2004
+S_-CR-C_-N2     1  1.262   180.0    2
+CA-CR-C_-NB     1  1.000   180.0    1 guess
+CT-CR-C_-NB     1  1.000   180.0    1 guess
+N_-CR-C_-NB     1  1.000   180.0    1 guess
+NB-CR-C_-NB     1  1.000     0.0    1 guess
+NC-CR-C_-NB     1  0.875   180.0    2 RHF/6-31G(d,p) July 6 2003
+OS-CR-C_-NB     1  1.000   180.0    1 guess 31 Aug 2004
+C_-CR-C_-O      1  1.000   180.0    1 guess nov 22 2006
+CA-CR-C_-O      1  1.000   180.0    1 guess
+CC-CR-C_-O      1  1.000   180.0    1 guess
+CT-CR-C_-O      1  1.000     0.0    1 guess
+H4-CR-C_-O      1  1.000     0.0    1 guess
+N_-CR-C_-O      1  1.000   180.0    1 guess
+N2-CR-C_-O      1  1.000   180.0    1 guess Nov 22 2006
+NA-CR-C_-O      1  1.000   180.0    1 guess Nov 22 2006
+NB-CR-C_-O      1  1.000   180.0    1 guess
+OS-CR-C_-O      1  1.000   180.0    1 guess
+S_-CR-C_-O      1  1.000   180.0    1 guess Nov 22 2006
+NB-CR-C_-O2     1  1.000     0.0    1 guess; 15 Nov 2005
+CT-CR-C_-OS     1  1.000     0.0    2 guess
+NB-CR-C_-OS     1  1.000     0.0    2 guess
+CA-CR-C_-S      1  0.400   180.0    2 Like NC-CR-C_-S Interpolated from OS-C_-CA-CA and CT-C -CA-CA
+NB-CR-C_-S      1  1.000   180.0    2 guess
+NC-CR-C_-S      1  0.400   180.0    2 Like CA-CR-C_-S interpolated from OS-C_-CA-CA and CT-C -CA-CA
+OS-CR-C_-S      1  1.000   180.0    1 guess 31 Aug 2004
+NA-CW-C_-N2     1  0.582     0.0   -4 B3LYP/6-311G** fit, 27 Oct 2004 (charged N2 using amidine branched on CW of an imidazole)
+NA-CW-C_-N2     1  2.101   180.0    2
+OS-CW-C_-N2     1  1.990   180.0    2 B3LYP/6-311G** fit, 28 Oct 2004 (charged N2 using amidine branched on CW of furane)
+S_-CW-C_-N2     1  0.521     0.0   -4 B3LYP/6-311G** fit, 28 Oct 2004 (charged N2 using amidine branched on CW of thiophene)
+S_-CW-C_-N2     1  1.262   180.0    2
+CT-N3-C_-N      1  0.000     0.0    1 dummy
+CT-N3-C_-O      1  0.000     0.0    1 dummy
+CR-NB-C_-CR     1  1.000     0.0    1 guess
+CM-NB-C_-CT     1  0.000     0.0    1 guess
+CR-NB-C_-CT     1  0.000     0.0    1
+NB-NB-C_-CT     1  0.000     0.0    1
+CR-NB-C_-CW     1  1.000     0.0    1 guess
+NB-NB-C_-CW     1  1.000     0.0    1 guess
+CM-NB-C_-O      1  1.000   180.0    1 guess
+CR-NB-C_-O      1  0.000     0.0    1
+NB-NB-C_-O      1  0.000     0.0    1
+CT-C*-C*-H4     1  0.000     0.0    1
+NB-C*-C*-H4     1  0.000     0.0    1
+CT-C*-C*-NB     1  0.000     0.0    1
+NB-C*-C*-NB     1  0.000     0.0    1
+CT-N*-C*-NB     1  3.750   180.0    2 five member aromatic ring
+CW-N*-C*-NB     1  3.750   180.0    2 five member aromatic ring
+CT-N*-C*-S      1  3.750   180.0    2 five member aromatic ring
+CW-N*-C*-S      1  3.750   180.0    2 five member aromatic ring
+O2-NB-C*-C*     1  0.000     0.0    1
+OS-NB-C*-C*     1  0.000     0.0    1
+OS-NB-C*-C*     1  0.000     0.0    1
+O2-NB-C*-CT     1  0.000     0.0    1
+OS-NB-C*-CT     1  0.000     0.0    1
+O2-NB-C*-H4     1  0.000     0.0    1
+OS-NB-C*-H4     1  0.000     0.0    1
+SO-NB-C*-N*     1  7.500   180.0    2 RHF/6-31G(d) Mar 7 2007
+SO-NB-C*-S      1  7.500   180.0    2 RHF/6-31G(d) Mar 7 2007
+CC-S_-C*-N*     1  3.750   180.0    2 five member aromatic ring
+CC-S_-C*-NB     1  3.750   180.0    2 five member aromatic ring
+CA-CA-CA-NL     1  1.100   180.0    2 guess
+C_-CJ-CA-CA     1  0.128   180.0    2 FIT B3LYP6-31G(d) Sept 14 2005
+CJ-CJ-CA-CA     1  0.065   180.0   -4 RHF/6-31G(d,p) opt fit
+CJ-CJ-CA-CA     1  0.550   180.0    2 RHF/6-31G(d,p) opt fit
+CM-CJ-CA-CA     1  0.065   180.0   -4 guess from CA-CA-CJ-CJ
+CM-CJ-CA-CA     1  0.550   180.0    2 Jan 26 2005
+CT-CJ-CA-CA     1  0.065   180.0   -4 guess from CA-CA-CJ-CJ
+CT-CJ-CA-CA     1  0.550   180.0    2 Feb 1 2005
+HC-CJ-CA-CA     1  0.000     0.0    1 guess Jan 28 2004
+N_-CJ-CA-CA     1  0.065   180.0   -4 from CA-CA-CJ-CJ Dec 16 2004
+N_-CJ-CA-CA     1  0.550   180.0    2 from CA-CA-CJ-CJ Dec 16 2004
+CJ-CJ-CA-CP     1  0.065   180.0   -4 guess from CA-CA-CJ-CJ 16 Feb 2005
+CJ-CJ-CA-CP     1  0.550   180.0    2
+HC-CJ-CA-CP     1  0.000     0.0    1 guess 16 Feb 2005
+CJ-CJ-CA-NC     1  2.100   180.0   -2 FIT B3LYP6-31G(d) Sept 14 2005
+CJ-CJ-CA-NC     1  0.432   180.0   -1 FIT B3LYP6-31G(d) Sept 14 2005
+CJ-CJ-CA-NC     1  0.620     0.0    3 FIT B3LYP6-31G(d) Sept 14 2005
+HC-CJ-CA-NC     1  0.000     0.0    1 set to 0 Sept 14 2005
+CP-CP-CA-CP     1  3.625   180.0    2 2 2 adjacent biphenyls
+SO-N3-CA-CA     1  1.000   180.0    2 Fit to CA-CA-N3-SO/CA-N3-SO-CT surface
+CR-NB-CA-CA     1  0.000     0.0    1 guess
+H_-NB-CA-CA     1  2.400   180.0    2 like X-C-NB-X; 15 April 2005
+NB-NB-CA-CA     1  0.000     0.0    1 guess
+CC-NB-CA-CT     1  1.500   180.0    2
+H_-NB-CA-N2     1  2.400   180.0    2 like X-C-NB-X; 15 April 2005
+CC-NB-CA-NA     1  1.500   180.0    2
+CC-NB-CA-OS     1  1.500   180.0    2
+CT-ND-CA-CA     1  2.500   180.0    2 *********
+NL-NL-CA-CA     1  0.500   180.0    2 guess
+CT-OS-CA-CA     1  1.350   180.0    2 RHF/6-31G(d,p) Dec 12 1997
+C_-S_-CA-C      1  0.300     0.0    1 from CA-S-CA-CA; august 25 2009
+CA-S_-CA-C      1  0.000     0.0    2 from CA-S-CA-CA
+CR-S_-CA-C      1  0.300   180.0    2 from CR-S-CA-CA
+CT-S_-CA-C      1  0.000     0.0    1 guess; August 25 2009
+CW-S_-CA-C      1  0.000     0.0    1 from CA-S-CA-CA; august 25 2009
+C_-S_-CA-CA     1  0.000     0.0    1 guess
+CA-S_-CA-CA     1  0.000     0.0    1 dummy
+CB-S_-CA-CA     1  0.000     0.0    1
+CC-S_-CA-CA     1  0.000     0.0    1 guess
+CJ-S_-CA-CA     1  0.000     0.0    1 guess; 25 august 2009
+CM-S_-CA-CA     1  0.000     0.0    1
+CP-S_-CA-CA     1  0.000     0.0    1 guess for rigid system; 13 April 2005
+CR-S_-CA-CA     1  0.300   180.0    2
+CT-S_-CA-CA     1  0.000   180.0    2 guess cb 4nov98
+CW-S_-CA-CA     1  0.300   180.0    2 from CA-CA-S-CA; I could not find a solid basis for those parameter: probably guess somewhere; 12 dec 2006
+NB-S_-CA-CA     1  0.000     0.0    1 dummy
+CA-S_-CA-CB     1  0.000     0.0    1 guess
+CR-S_-CA-CB     1  0.300   180.0    2 guess from CA-CA-S-CA oct8 2003
+CT-S_-CA-CB     1  0.000     0.0    2 taken from X-CA-CT-X
+CT-S_-CA-CP     1  0.000   180.0    2 from CA-CA-S-CT guess cb 4nov98
+CB-S_-CA-CT     1  0.000     0.0    1
+CA-S_-CA-CW     1  0.300   180.0    2 from CA-S-CA-CA 20 May 2005
+CT-S_-CA-CW     1  0.000   180.0    2 from CA-CA-S-CT guess, 20 May 2005
+CB-S_-CA-H4     1  0.000     0.0    1 guess
+NB-S_-CA-H4     1  0.000     0.0    1 dummy
+CA-S_-CA-N      1  0.000     0.0    1 guess
+CP-S_-CA-N      1  0.000     0.0    1 guess for rigid structure; 15 April 2005
+CT-S_-CA-N      1  0.000     0.0    1 guess from CA-CA-S-CT, 3 sept 2009
+CP-S_-CA-N3     1  0.000     0.0    1 guess for rigid systems; 13 April 2005
+CM-S_-CA-NC     1  0.000   180.0    2 from CA-CA-S-CT
+CR-S_-CA-NC     1  0.300   180.0    2 from CR-S-CA-CA Sept2 2003
+CT-S_-CA-NC     1  0.000     0.0    1 dummy
+HS-SH-CA-CA     1  0.000     0.0    2 guess
+CT-SO-CA-CA     1  0.575     0.0    2 RHF/6-41G(d,p) Dec 12 1997
+N2-CR-CB-C      1  0.000     0.0    1 guess (intra cyclic aromatic); 5 April 2006
+NC-CR-CB-C      1  0.000     0.0    1 guess ( intra cyclic aromatic); 5 April 2006
+N_-CR-CB-CA     1  0.000     0.0    1 guess for intra cyclic; 4 April 2006
+N2-CR-CB-CA     1  0.000     0.0    1 guess (intra cyclic aromatic); 5 April 2006
+N3-CR-CB-CA     1  0.000     0.0    1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NA-CR-CB-CA     1  0.000     0.0    1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NA-CR-CB-CA     1  0.000     0.0    1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NB-CR-CB-CA     1  0.000     0.0    1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NC-CR-CB-CA     1  0.000     0.0    1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+N3-CR-CB-CR     1  0.000     0.0    1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NA-CR-CB-CR     1  0.000     0.0    1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NB-CR-CB-CR     1  0.000     0.0    1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NC-CR-CB-CR     1  0.000     0.0    1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+N_-CR-CB-N      1  0.000     0.0    1 guess for intra cyclic; 4 April 2006
+NC-CR-CB-N      1  0.000     0.0    1 guess for intra cyclic; 4 April 2006
+C_-N_-CB-C      1  0.000     0.0    1 guess (intracyclic in aromatic rings, pyridone) 3 Aug 2006
+CA-N_-CB-C      1  0.000     0.0    1 guess (intracyclic in aromatic rings) 3 Aug 2006
+H_-N_-CB-C      1  1.100   180.0    2 guess Aug 31 2010
+C_-N_-CB-CA     1  3.600   180.0    2 From CA-CA-CA-CA Mar 8 2004
+CR-N_-CB-CA     1  3.600   180.0    2 From CA-CA-CA-CA Jan 9 2008
+CT-N_-CB-CA     1  3.600   180.0    2 From CA-CA-CA-CA Mar 8 2004
+CW-N_-CB-CA     1  3.600   180.0    2 From CA-CA-CA-CA May 19 2006
+H_-N_-CB-CA     1  1.100   180.0    2 guess Nov 8 2004
+C_-N_-CB-CB     1  0.000     0.0    1 aug29 2003 guess
+CA-N_-CB-CB     1  0.000     0.0    1 fused intra cyclic; 27 April 2006
+CR-N_-CB-CB     1  3.600   180.0    2 From CA-CA-CA-CA Jan 9 2008
+CT-N_-CB-CB     1  3.600   180.0    2 From CA-CA-CA-CA Mar 8 2004
+CW-N_-CB-CB     1  3.600   180.0    2 From CA-CA-CA-CA May 19 2006
+H_-N_-CB-CB     1  0.000     0.0    1 aug29 2003 guess
+O2-N_-CB-CB     1  3.600   180.0    2 From CA-CA-CA-CA Oct 14 2008
+C_-N_-CB-CC     1  3.600   180.0    2 from CA-CA-CA-CA April 2 2009
+H_-N_-CB-CC     1  1.800   180.0    2 from CA-CA-CA-CA April 2 2009
+C_-N_-CB-CP     1  0.000     0.0    1 aug29 2003 guess
+H_-N_-CB-CP     1  0.000     0.0    1 aug29 2003 guess
+C_-N_-CB-CR     1  0.000     0.0    1 guess for intra cyclic; 4 April 2006
+CT-N_-CB-CR     1  0.000     0.0    1 guess for intra cyclic; 4 April 2006
+C_-N_-CB-N      1  0.000     0.0    1 guess (intracyclic; 3 Aug 2006
+CA-N_-CB-N      1  0.000     0.0    1 guess (intracyclic in aromatic rings); 3 Aug 2006
+CA-N_-CB-N      1  0.000     0.0    1 guess (intracyclic in aromatic rings, e.g. pyridone); 3 Aug 2006
+H_-N_-CB-N      1  0.000     0.0    1 guess for intra cyclic; 3 Aug 2006
+C_-N_-CB-NB     1  0.000     0.0    1 fused intra cyclic; 19 July 2006
+CA-N_-CB-NB     1  0.000     0.0    1 fused intra cyclic; 19 July 2006
+C_-N_-CB-NC     1  0.000     0.0    1 fused intra cyclic; 27 April 2006
+CA-N_-CB-NC     1  0.000     0.0    1 fused intra cyclic; 27 April 2006
+CT-N_-CB-NC     1  0.000     0.0    1 guess intra cyclic; 4 May 2006
+O2-N_-CB-NC     1  3.600   180.0    2 From CA-CA-CA-CA Oct 14 2008
+CA-N2-CB-CA     1  3.600   180.0    2 From CA-CA-CA-CA Jan 9 2008
+CR-N2-CB-CA     1  3.600   180.0    2 From CA-CA-CA-CA Jan 9 2008
+CA-N2-CB-CB     1  0.000     0.0    1 guess fused ring system; 27 April 2006
+CR-N2-CB-CB     1  3.600   180.0    2 From CA-CA-CA-CA Mar 6 2007
+CA-N2-CB-NC     1  0.000     0.0    1 guess fused ring system; 27 April 2006
+CR-N2-CB-NC     1  3.600   180.0    2 From CA-CA-CA-CA Mar 6 2007
+CJ-CJ-CC-CC     1  0.050   180.0   -4 RHF/6-31G(d) opt fit Oct21 2010
+CJ-CJ-CC-CC     1  0.250     0.0   -3 RHF/6-31G(d) opt fit Oct21 2010
+CJ-CJ-CC-CC     1  0.010   180.0    2 RHF/6-31G(d) opt fit Oct21 2010
+HC-CJ-CC-CC     1  0.050   180.0   -4 RHF/6-31G(d) opt fit Oct21 2010
+HC-CJ-CC-CC     1  0.150     0.0   -3 RHF/6-31G(d) opt fit Oct21 2010
+HC-CJ-CC-CC     1  0.150   180.0    2 RHF/6-31G(d) opt fit Oct21 2010
+CJ-CJ-CC-CR     1  0.300     0.0    1 RHF/6-31G(d,p) opt Sept 2 2008
+HC-CJ-CC-CR     1  0.220     0.0   -3 RHF/6-31G(d,p) opt Sept 2 2008
+HC-CJ-CC-CR     1  0.000     0.0   -2
+HC-CJ-CC-CR     1  0.400     0.0    1
+CJ-CJ-CC-CW     1  0.300   180.0    1 RHF/6-31G(d,p) opt Sept 2 2008
+HC-CJ-CC-CW     1  0.220   180.0   -3 RHF/6-31G(d,p) opt Sept 2 2008
+HC-CJ-CC-CW     1  0.000   180.0   -2
+HC-CJ-CC-CW     1  0.400   180.0    1
+CM-CM-CC-CC     1  0.625   180.0    2 From X-CA-CR-X
+HA-CM-CC-CC     1  0.375   180.0    2 From X-CA-CR-X
+CM-CM-CC-CW     1  0.625   180.0    2 From X-CA-CR-X
+HA-CM-CC-CW     1  0.375   180.0    2 From X-CA-CR-X
+CA-CP-CC-CB     1  0.000     0.0    1 guess; July 4 2005
+CP-CP-CC-CB     1  0.000     0.0    1 guess; July 4 2005
+CA-CP-CC-CW     1  0.000     0.0    1 guess; July 4 2005
+CP-CP-CC-CW     1  0.000     0.0    1 guess; July 4 2005
+NB-CR-CC-CW     1  0.000     0.0    1
+OH-CR-CC-CW     1  0.000     0.0    1
+OS-CR-CC-CW     1  0.000     0.0    1
+NB-CR-CC-HA     1  0.000     0.0    1
+OH-CR-CC-HA     1  0.500     0.0    1 estimated
+OS-CR-CC-HA     1  0.000     0.0    1
+CA-N3-CC-CC     1  0.000     0.0    1 guess
+H_-N3-CC-CC     1  0.000     0.0    1 guess
+CA-N3-CC-CW     1  0.000     0.0    1 guess
+CT-N3-CC-CW     1  0.000     0.0    1 guess
+H_-N3-CC-CW     1  0.000     0.0    1 guess
+CA-N3-CC-NB     1  0.000     0.0    1 guess
+CT-N3-CC-NB     1  0.000     0.0    1 guess
+H_-N3-CC-NB     1  0.000     0.0    1 guess
+O2-P_-CC-CC     1  1.000     0.0    1 dummy
+O2-P_-CC-CW     1  1.000     0.0    1 dummy
+CT-S_-CC-CB     1  0.000     0.0    1
+CW-S_-CC-CB     1  0.300   180.0    2 from CA-S-CA-CA; 3 June 2005
+CA-S_-CC-CC     1  0.300   180.0    2
+CT-S_-CC-CC     1  0.300   180.0    2 from CA-S-CA-CA
+C*-S_-CC-CT     1  3.750   180.0    2 five member aromatic ring
+C*-S_-CC-CW     1  3.750   180.0    2 five member aromatic ring
+CA-S_-CC-CW     1  0.000     0.0    1 guess
+CT-S_-CC-CW     1  0.000     0.0    1
+CW-S_-CC-CW     1  0.300   180.0    2 from CA-S-CA-CA; 3 June 2005
+CA-S_-CC-NB     1  0.000     0.0    1 guesse
+CT-S_-CC-NB     1  0.000     0.0    1 guess
+CA-SO-CC-CB     1  1.750   180.0    2 taken from O-SO-CW-CC June 29 2007
+N3-SO-CC-CB     1  0.750     0.0    1 taken from CT-N3-SO-O Dec 4 2000
+O_-SO-CC-CB     1  0.750     0.0    1 taken from CT-N3-SO-O June 29 2007
+CA-SO-CC-CC     1  1.750   180.0    2 taken from O-SO-CW-CC June 29 2007
+N_-SO-CC-CC     1  0.000     0.0    2 guess
+N3-SO-CC-CC     1  0.750     0.0    1 taken from CT-N3-SO-O Dec 4 2000
+O_-SO-CC-CC     1  0.750     0.0    1 taken from CT-N3-SO-O Dec 4 2000
+O2-SO-CC-CC     1  1.750   180.0    2 taken from O-SO-CW-CC Nov 11 2009
+CA-SO-CC-CW     1  1.750   180.0    2 taken from O-SO-CW-CC June 29 2007
+CT-SO-CC-CW     1  0.750     0.0    1 taken from CT-N3-SO-O Dec 4 2000
+N_-SO-CC-CW     1  0.000     0.0    2 guess
+N3-SO-CC-CW     1  0.750     0.0    1 taken from CT-N3-SO-O Dec 4 2000
+O_-SO-CC-CW     1  0.750     0.0    1 taken from CT-N3-SO-O Dec 4 2000
+O2-SO-CC-CW     1  1.750   180.0    2 taken from O-SO-CW-CC Nov 11 2009
+N3-SO-CC-NB     1  0.750     0.0    1 taken from CT-N3-SO-O Mar 28 2001
+O_-SO-CC-NB     1  0.750     0.0    1 taken from CT-N3-SO-O Dec 4 2000
+CJ-CJ-CJ-CT     1  3.000     0.0   -2 fit to RHF/6-31G(d)
+CJ-CJ-CJ-CT     1  2.700     0.0    1 fit to RHF/6-31G(d)
+CT-CJ-CJ-CT     1  0.000     0.0    2 accounted for in other terms
+HC-CJ-CJ-CT     1  0.000     0.0    2 accounted for in other terms
+CJ-CJ-CJ-HC     1  3.000     0.0   -2 fit to RHF/6-31G(d)
+CJ-CJ-CJ-HC     1  2.700     0.0    1 fit to RHF/6-31G(d)
+CJ-CJ-CJ-X      1  3.000     0.0   -2 fit to RHF/6-31G(d)
+CJ-CJ-CJ-X      1  2.700     0.0    1 fit to RHF/6-31G(d)
+CC-CR-CJ-CJ     1  0.050   180.0   -4 RHF/6-31G(d) opt fit Oct21 2010
+CC-CR-CJ-CJ     1  0.250     0.0   -3 RHF/6-31G(d) opt fit Oct21 2010
+CC-CR-CJ-CJ     1  0.010   180.0    2 RHF/6-31G(d) opt fit Oct21 2010
+NB-CR-CJ-CJ     1  0.300     0.0   -3 RHF/6-31G(d) opt fit Oct21 2010
+NB-CR-CJ-CJ     1  0.950   180.0   -2 RHF/6-31G(d) opt fit Oct21 2010
+NB-CR-CJ-CJ     1  0.275   180.0    1 RHF/6-31G(d) opt fit Oct21 2010
+CC-CR-CJ-HC     1  0.050   180.0   -4 RHF/6-31G(d) opt fit Oct21 2010
+CC-CR-CJ-HC     1  0.150     0.0   -3 RHF/6-31G(d) opt fit Oct21 2010
+CC-CR-CJ-HC     1  0.150   180.0    2 RHF/6-31G(d) opt fit Oct21 2010
+NB-CR-CJ-HC     1  0.000     0.0    1 RHF/6-31G(d) opt fit Oct21 2010
+C_-CT-CJ-CJ     1  0.000     0.0    1 from CJ-CJ-CT-CR
+CA-CT-CJ-CJ     1  0.000     0.0    1 guess oct 26 2004
+CJ-CT-CJ-CJ     1  0.000     0.0    1 guess mar 30 2001
+CR-CT-CJ-CJ     1  0.000     0.0    1 aproximated 5/19/1999
+CT-CT-CJ-CJ     1  1.000     0.0    3 fit to RHF/6-31G(d)
+CW-CT-CJ-CJ     1  1.000     0.0    3 from CT-CT-CJ-CJ Nov_13_2003
+H1-CT-CJ-CJ     1  1.000     0.0    1 by comparision
+HC-CT-CJ-CJ     1  0.867     0.0    3 fit to RHF/6-31G(d)
+N_-CT-CJ-CJ     1  1.000     0.0    1 by comparision
+N3-CT-CJ-CJ     1  0.156     0.0    3 compare to X-CT-CT-X
+OH-CT-CJ-CJ     1  1.000     0.0    3 by comparison above
+S_-CT-CJ-CJ     1  1.000     0.0    3 by comparison above
+CT-CT-CJ-CT     1  0.156     0.0    3 compare to X-CT-CT-X
+HC-CT-CJ-CT     1  0.000     0.0    1 kept zero in fit
+C_-CT-CJ-HC     1  0.000     0.0    1 from CR-CT-CJ-HC
+CA-CT-CJ-HC     1  0.000     0.0    1 guess oct 26 2004
+CJ-CT-CJ-HC     1  0.000     0.0    1 guess mar 30 2001
+CR-CT-CJ-HC     1  0.000     0.0    1 kept zero in fit
+CT-CT-CJ-HC     1  0.000     0.0    1 kept zero in fit
+CW-CT-CJ-HC     1  0.000     0.0    1 from CT-CT-CJ-HC Nov_13_2003
+H1-CT-CJ-HC     1  1.000     0.0    1 by comparision
+HC-CT-CJ-HC     1  0.000     0.0    1 kept zero in fit
+N_-CT-CJ-HC     1  1.000     0.0    1 by comparision
+N3-CT-CJ-HC     1  0.156     0.0    3 compare to X-CT-CT-X
+OH-CT-CJ-HC     1  0.000     0.0    1 guess mar 30 2001
+S_-CT-CJ-HC     1  0.000     0.0    1 from CT-CT-CJ-HC Dec 1 2004
+HC-CT-CJ-HP     1  0.000     0.0    1 HC-CJ-CT-HC
+CT-CT-CJ-N      1  0.156     0.0    3 compare to X-CT-CT-X
+OH-CT-CJ-N      1  0.156     0.0    3 compare to X-CT-CT-X
+S_-CT-CJ-N      1  1.000     0.0    3 by comparison above
+HC-CT-CJ-N3     1  0.156     0.0    3 from N3-CT-CJ-HC
+CT-CT-CJ-OH     1  1.000     0.0    3 compared to CT-CT-CJ-CJ Dec 1 2004
+H1-CT-CJ-OH     1  1.000     0.0    1 by comparision
+HC-CT-CJ-OH     1  0.000     0.0    1 unknow Dec 1 2004
+C_-N_-CJ-C      1  0.000     0.0    1 dummy guess (had to get going) March 30 2004
+H_-N_-CJ-C      1  0.000     0.0    1 dummy guess (had to get going) March 30 2004
+C_-N_-CJ-CJ     1  2.000     0.0    2 fit to RHF/6-31G(d)
+H_-N_-CJ-CJ     1  0.000     0.0    1
+C_-N_-CJ-CT     1  0.500   180.0   -4 from C-N-CT-CT
+C_-N_-CJ-CT     1  0.150   180.0   -3 from C-N-CT-CT
+C_-N_-CJ-CT     1  0.530     0.0    1 from C-N-CT-CT
+H_-N_-CJ-CT     1  0.000     0.0    1 kept zero in fit
+C_-N_-CJ-H1     1  0.000     0.0    1 set to zero for CJ-CJ-C-O
+C_-N_-CJ-HC     1  0.000     0.0    1
+H_-N_-CJ-HC     1  0.000     0.0    1
+CB-N*-CJ-CJ     1  0.065   180.0   -4 From CA-CA-CJ-CJ June 29 2007
+CB-N*-CJ-CJ     1  0.550   180.0    2
+CR-N*-CJ-CJ     1  0.065   180.0   -4 From CA-CA-CJ-CJ June 29 2007
+CR-N*-CJ-CJ     1  0.550   180.0    2
+CW-N*-CJ-CJ     1  0.500     0.0   -3 B3LYP/6-31G(d,p) Apr 24 2008
+CW-N*-CJ-CJ     1  1.750     0.0   -2 B3LYP/6-31G(d,p) Apr 24 2008
+CW-N*-CJ-CJ     1  0.250     0.0    1 B3LYP/6-31G(d,p) Apr 24 2008
+CB-N*-CJ-H1     1  0.000     0.0    1 guess June 29 2007
+CR-N*-CJ-H1     1  0.000     0.0    1 guess June 29 2007
+CW-N*-CJ-H1     1  0.000     0.0    1 Set to Zero Apr 24 2008
+CA-N2-CJ-CJ     1  0.065   180.0   -4 guess from CA-CA-CJ-CJ June 29 2007
+CA-N2-CJ-CJ     1  0.550   180.0    2
+CA-N2-CJ-H1     1  0.000     0.0    1 guess June 29 2007
+CT-N3-CJ-CJ     1  1.000     0.0    3 from CT-CT-CJ-CJ
+H_-N3-CJ-CJ     1  2.700     0.0    1 from CJ-CJ-CJ-HC
+SO-N3-CJ-CJ     1  1.000     0.0    3 from S-CT-CJ-CJ
+CJ-N3-CJ-CT     1  0.156     0.0    3 from CT-CJ-CT-CT
+CT-N3-CJ-CT     1  0.156     0.0    3 N3-CT-CJ-CJ
+H_-N3-CJ-CT     1  0.000     0.0    1 from H-N-CJ-CT
+CJ-N3-CJ-H1     1  2.700     0.0    1 from CJ-CJ-CJ-HC
+CT-N3-CJ-H1     1  0.156     0.0    3 from N-CT-CJ-HC
+H_-N3-CJ-H1     1  0.000     0.0    1 from HC-CJ-CT-HC
+SO-N3-CJ-H1     1  0.000     0.0    1
+CJ-N3-CJ-HP     1  2.700     0.0    1 from CJ-CJ-CJ-HC
+CT-N3-CJ-HP     1  0.000     0.0    1 from H-N-CJ-CT
+H_-N3-CJ-HP     1  0.000     0.0    1 from HC-CJ-CT-HC
+HO-OH-CJ-CJ     1  0.400     0.0   -3 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-CJ     1  0.500     0.0   -2 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-CJ     1  0.700     0.0    1 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-CT     1  0.400     0.0   -3 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-CT     1  0.500     0.0   -2 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-CT     1  0.700     0.0    1 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-H1     1  0.400     0.0   -3 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-H1     1  0.500     0.0   -2 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-H1     1  0.700     0.0    1 calc RHF/6-311G(d) Dec 1 2004
+CA-OS-CJ-CJ     1  0.000     0.0    1 guess; 26 April 2006
+CA-OS-CJ-H1     1  0.000     0.0    1 guess; 26 April 2006
+CA-S_-CJ-CJ     1  0.000     0.0    1 guess; 25 august 2009
+CA-S_-CJ-H1     1  0.000     0.0    1 guess; 26 august 2009
+CT-CR-CM-CA     1  0.000     0.0    1 guess
+NB-CR-CM-CA     1  0.000     0.0    1 guess
+CC-CR-CM-CM     1  0.250   180.0   -3 RHF/6-31G(d) torsion fit Aug 25 2008
+CC-CR-CM-CM     1  1.000   180.0   -2 RHF/6-31G(d) torsion fit Aug 25 2008
+CC-CR-CM-CM     1  0.400   180.0    1 RHF/6-31G(d) torsion fit Aug 25 2008
+CT-CR-CM-CM     1  0.000     0.0    1 guess
+N*-CR-CM-CM     1  0.250   180.0   -3 From CM-CM-CR-CC Feb 10 2010
+N*-CR-CM-CM     1  1.000   180.0   -2 From CM-CM-CR-CC Feb 10 2010
+N*-CR-CM-CM     1  0.400   180.0    1 From CM-CM-CR-CC Feb 10 2010
+NB-CR-CM-CM     1  0.000     0.0    1 guess
+OS-CR-CM-CM     1  1.000   180.0    2 guess
+S_-CR-CM-CM     1  0.625   180.0    2 From X-CA-CR-X
+CC-CR-CM-CT     1  0.250     0.0   -3 RHF/6-31G(d) torsion fit Aug 25 2008
+CC-CR-CM-CT     1  1.400   180.0   -2 RHF/6-31G(d) torsion fit Aug 25 2008
+CC-CR-CM-CT     1  0.400     0.0    1 RHF/6-31G(d) torsion fit Aug 25 2008
+CT-CR-CM-CT     1  0.000     0.0    1 guess
+N*-CR-CM-CT     1  0.250   180.0   -3 From CM-CM-CR-CC Feb 10 2010
+N*-CR-CM-CT     1  1.000   180.0   -2 From CM-CM-CR-CC Feb 10 2010
+N*-CR-CM-CT     1  0.400   180.0    1 From CM-CM-CR-CC Feb 10 2010
+NB-CR-CM-CT     1  0.000     0.0    1 guess
+OS-CR-CM-CT     1  1.000   180.0    2 guess
+NB-CR-CM-HA     1  0.625   180.0    2 From X-CA-CR-X
+S_-CR-CM-HA     1  0.625   180.0    2 From X-CA-CR-X
+CT-CR-CM-NB     1  0.000     0.0    1 guess
+NB-CR-CM-NB     1  0.000     0.0    1 guess
+CM-CT-CM-CM     1  0.450     0.0   -3 from ab initio mt
+CM-CT-CM-CM     1  0.250   180.0    2 from ab initio mt
+HC-CT-CM-CM     1  1.000   180.0    3 from ab initio mt
+C_-CW-CM-CM     1  3.625   180.0    2 from X-CA-Ca-X apr 20 2001
+CC-CW-CM-CM     1  1.000   180.0    1 guess planar pi mar 13 2001
+NA-CW-CM-CM     1  1.000   180.0    1 guess planar pi mar 13 2001
+OS-CW-CM-CM     1  0.625   180.0    2 From X-CA-CR-X
+S_-CW-CM-CM     1  0.625   180.0    2 From X-CA-CR-X
+CC-CW-CM-CT     1  1.000   180.0    2 guess
+OS-CW-CM-CT     1  1.000   180.0    2 guess
+C_-CW-CM-HA     1  3.625   180.0    2 from X-CA-Ca-X apr 20 2001
+CC-CW-CM-HA     1  1.000   180.0    1 guess planar pi mar 13 2001
+NA-CW-CM-HA     1  1.000   180.0    1 guess planar pi mar 13 2001
+OS-CW-CM-HA     1  0.375   180.0    2 From X-CA-CR-X
+S_-CW-CM-HA     1  0.375   180.0    2 From X-CA-CR-X
+C_-N_-CM-CM     1  0.000     0.0    1
+CT-N_-CM-CM     1  0.000     0.0    1 guess
+H_-N_-CM-CM     1  0.000     0.0    1 guess
+C_-N_-CM-H4     1  0.000     0.0    1
+CT-N_-CM-H4     1  0.000     0.0    1 guess
+H_-N_-CM-H4     1  0.000     0.0    1 guess
+CA-N2-CM-CM     1  0.625   180.0    2 From X-CA-N-X
+H_-N2-CM-CM     1  0.625   180.0    2 From X-CA-N-X
+CA-N2-CM-H4     1  0.625   180.0    2 From X-CA-N-X
+H_-N2-CM-H4     1  0.625   180.0    2 From X-CA-N-X
+CM-NB-CM-C      1  0.000     0.0    1 guess
+C_-NB-CM-CA     1  0.000     0.0    1 guess
+C_-NB-CM-CM     1  2.500   180.0    1 guess planar; 3 June 2005
+CM-NB-CM-CM     1  0.000     0.0    1
+CR-NB-CM-CM     1  0.000     0.0    1 guess
+NB-NB-CM-CM     1  0.000     0.0    1 guess
+CM-NB-CM-CR     1  0.000     0.0    1 guess
+CM-NB-CM-CT     1  0.000     0.0    1
+CT-NB-CM-CT     1  1.000     0.0    1 guess
+NB-NB-CM-CT     1  0.000     0.0    1
+C_-NB-CM-H4     1  0.500   180.0    1 guess
+CM-NB-CM-H4     1  0.000     0.0    1
+CR-NB-CM-H4     1  0.000     0.0    1 guess
+CT-NB-CM-H4     1  0.000     0.0    1 guess
+NB-NB-CM-H4     1  0.000     0.0    1
+CM-NB-CM-N      1  0.000     0.0    1
+CT-NB-CM-N      1  1.000     0.0    1 guess
+HO-OH-CM-C      1  0.250     0.0    1
+HX-OH-CM-C      1  0.250     0.0    1 Analog to HO-OH-CM-C, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+HO-OH-CM-CM     1  0.250     0.0    1
+HX-OH-CM-CM     1  0.250     0.0    1 Analog to HX-OH-CM-CM, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+CA-OS-CM-C      1  0.000     0.0    1 guess
+CT-OS-CM-C      1  0.000     0.0    1 guess
+CA-OS-CM-CM     1  0.000     0.0    1 guess
+CT-OS-CM-CM     1  0.000     0.0    1 guess
+CW-OS-CM-CM     1  1.350   180.0    2 From X-CA-OS-X
+SO-OS-CM-CM     1  0.000     0.0    1 guess
+CA-OS-CM-CT     1  0.000     0.0    1 guess
+CT-OS-CM-CT     1  0.000     0.0    1 guess
+CA-OS-CM-H4     1  1.350   180.0    2 From X-CA-OS-X
+CT-OS-CM-H4     1  0.000     0.0    1 guess
+SO-OS-CM-H4     1  0.000     0.0    1 guess
+O2-P_-CM-CM     1  1.000     0.0    1 dummy
+O2-P_-CM-CT     1  1.000     0.0    1 dummy
+CA-S_-CM-C      1  0.300   180.0    2 from CA-S-CA-CA
+CA-S_-CM-CM     1  0.000     0.0    1
+CT-S_-CM-CM     1  0.000     0.0    1 guess
+CA-S_-CM-CT     1  0.000     0.0    1
+CT-S_-CM-CT     1  0.000     0.0    1 guess
+CA-S_-CM-H4     1  0.000   180.0    2 from CA-CA-S-CT
+CT-S_-CM-H4     1  0.100   180.0    2 guess
+CC-CW-CP-CA     1  0.000     0.0    1 guess, rigid fused aryls; 19 May 2005
+S_-CW-CP-CA     1  0.000     0.0    1 guess, rigid fused aryls; 19 May 2005
+CC-CW-CP-CP     1  0.000     0.0    1 guess, rigid fused aryls; 19 May 2005
+S_-CW-CP-CP     1  0.000     0.0    1 guess, rigid fused aryls; 19 May 2005
+C_-N_-CP-CA     1  3.625   180.0    2 from X-C-CA-X Nov 2 2005
+H_-N_-CP-CA     1  3.625   180.0    2 from X-C-CA-X Nov 2 2005
+C_-N_-CP-CP     1  3.625   180.0    2 from X-C-CA-X Nov 2 2005
+H_-N_-CP-CP     1  3.625   180.0    2 from X-C-CA-X Nov 2 2005
+CA-NA-CP-CA     1  0.000     0.0    1 guess for rigid systems; 13 April 2005
+H_-NA-CP-CA     1  0.000     0.0    1 guess for rigid systems; 13 April 2005
+CA-NA-CP-CP     1  0.000     0.0    1 guess for rigid systems; 13 April 2005
+H_-NA-CP-CP     1  0.000     0.0    1 guess for rigid systems; 13 April 2005
+CA-OS-CP-CA     1  0.000     0.0    1 guess for rigid systems; 13 April 2005
+CA-OS-CP-CP     1  0.000     0.0    1 guess for rigid systems; 13 April 2005
+CA-S_-CP-CA     1  0.000     0.0    1 guess for rigid systems; 13 April 2005
+CA-S_-CP-CP     1  0.000     0.0    1 guess for rigid systems; 13 April 2005
+O2-CR-CR-CA     1  0.000     0.0    1 guess
+CA-CR-CR-CT     1  0.000     0.0    1 guess
+CT-CR-CR-CT     1  0.000     0.0    1
+N_-CR-CR-CT     1  0.000     0.0    1 guess
+NB-CR-CR-CT     1  0.000     0.0    1
+CT-CR-CR-H4     1  0.000     0.0    1
+N_-CR-CR-H4     1  0.000     0.0    1 guess
+N3-CR-CR-H4     1  0.000     0.0    1 guess
+NB-CR-CR-H4     1  0.000     0.0    1
+CA-CR-CR-NB     1  0.000     0.0    1 guess
+N_-CR-CR-NB     1  0.000     0.0    1 guess
+N3-CR-CR-NB     1  0.000     0.0    1 guess
+NB-CR-CR-NB     1  0.000     0.0    1
+O2-CR-CR-NB     1  0.000     0.0    1 guess
+CT-CR-CR-S      1  0.000     0.0    1
+NB-CR-CR-S      1  0.000     0.0    1
+CA-N2-CR-N*     1  0.000     0.0    1 guess
+H_-N2-CR-N*     1  0.000     0.0    1 guess
+CA-N2-CR-NB     1  0.000     0.0    1 guess
+H_-N2-CR-NB     1  1.000   180.0    2 guess
+H_-N2-CR-OS     1  1.000   180.0    2 guess
+CA-N3-CR-CR     1  0.000     0.0    1 guess
+H_-N3-CR-CR     1  0.000     0.0    1 guess
+CA-N3-CR-N*     1  0.000     0.0    1 guess
+CT-N3-CR-N*     1  0.000     0.0    1 guess
+H_-N3-CR-N*     1  0.000     0.0    1 guess
+CA-N3-CR-NB     1  0.000     0.0    1 guess
+CT-N3-CR-NB     1  0.000     0.0    1 guess
+H_-N3-CR-NB     1  0.000     0.0    1 guess
+CA-N3-CR-OS     1  0.000     0.0    1 guess
+CT-N3-CR-OS     1  0.000     0.0    1 guess
+H_-N3-CR-OS     1  0.000     0.0    1 guess
+CT-N3-CR-S      1  0.000     0.0    1 guess Jan 15 2002
+HO-OH-CR-CC     1  0.250     0.0    1 estimated
+HX-OH-CR-CC     1  0.250     0.0    1 Analog to HO-OH-CR-CC, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+HO-OH-CR-NB     1  0.000     0.0    1
+HX-OH-CR-NB     1  0.000     0.0    1 Analog to HX-OH-CR-NB, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+HO-OH-CR-OS     1  1.000   180.0    2 guess
+HX-OH-CR-OS     1  1.000   180.0    2 Analog to HO-OH-CR-OS, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+N_-SO-CR-CA     1  0.000     0.0    2 guess
+NB-SO-CR-CA     1  0.000     0.0    1 guess
+O_-SO-CR-CA     1  0.000     0.0    2 guess
+CT-SO-CR-CC     1  0.300     0.0    2 guess by analogy with CT-SO-CA-CA with a lower barrier; 21 Feb 2006
+O_-SO-CR-CC     1  0.000     0.0    1 guess; 21 Feb 2006
+CT-SO-CR-NB     1  0.300     0.0    2 guess, by analogy with CT-SO-CA-CA with a lower barrier; 21 Feb 2006
+N_-SO-CR-NB     1  0.000     0.0    2 guess
+NB-SO-CR-NB     1  0.000     0.0    1 guess
+O_-SO-CR-NB     1  0.000     0.0    2 guess
+CT-SO-CR-S      1  0.300     0.0    2 guess; by analogy with CT-SO-CA-CA with a lower barrier; 21 Feb 2006
+N_-SO-CR-S      1  0.000     0.0    2 guess
+O_-SO-CR-S      1  0.000     0.0    2 guess
+S_-CW-CT-H1     1  0.260     0.0   -2 RHF/6-31G(d) opt Sept 20 2009
+S_-CW-CT-H1     1  0.350   180.0    1 RHF/6-31G(d) opt Sept 20 2009
+S_-CW-CT-N      1  0.285   270.0   -4 RHF/6-31G(d) opt Sept 20 2009
+S_-CW-CT-N      1  0.669     0.0   -3 RHF/6-31G(d) opt Sept 20 2009
+S_-CW-CT-N      1  0.310   180.0   -2 RHF/6-31G(d) opt Sept 20 2009
+S_-CW-CT-N      1  0.548   270.0   -2 RHF/6-31G(d) opt Sept 20 2009
+S_-CW-CT-N      1  0.263   270.0   -1 RHF/6-31G(d) opt Sept 20 2009
+S_-CW-CT-N      1  0.222     0.0    1 RHF/6-31G(d) opt Sept 20 2009
+S_-CW-CT-N3     1  0.988     0.0   -4 RHF/6-31G(d) opt Sept 20 2009
+S_-CW-CT-N3     1  0.258     0.0   -3 RHF/6-31G(d) opt Sept 20 2009
+S_-CW-CT-N3     1  0.805     0.0   -2 RHF/6-31G(d) opt Sept 20 2009
+S_-CW-CT-N3     1  2.059   270.0   -2 RHF/6-31G(d) opt Sept 20 2009
+S_-CW-CT-N3     1  1.710    90.0    1 RHF/6-31G(d) opt Sept 20 2009
+C_-NB-CT-C      1  1.000     0.0    1 guess
+CR-NB-CT-C      1  0.000     0.0    1 guess
+CR-NB-CT-CA     1  0.000     0.0    2 guess
+NB-NB-CT-CA     1  0.000     0.0    1 guess
+CM-NB-CT-CM     1  0.000     0.0    1 guess
+NB-NB-CT-CM     1  0.000     0.0    1 guess
+C_-NB-CT-CT     1  1.000     0.0    1 guess
+CM-NB-CT-CT     1  0.000     0.0    1 guess
+CR-NB-CT-CT     1  0.000     0.0    1 guess
+NB-NB-CT-CT     1  0.000     0.0    1
+NB-NB-CT-CW     1  0.000     0.0    1
+C_-NB-CT-H1     1  0.500     0.0    1 guess
+CM-NB-CT-H1     1  0.000     0.0    1 guess
+CR-NB-CT-H1     1  0.000     0.0    1 guess
+NB-NB-CT-H1     1  0.000     0.0    1
+CR-NB-CT-H2     1  0.000     0.0    1 guess
+NB-NB-CT-H2     1  0.000     0.0    1
+CC-NB-CT-HP     1  0.000     0.0    1 guess
+CR-NB-CT-HP     1  0.000     0.0    1 guess
+NB-NB-CT-N      1  0.000     0.0    1
+CR-NB-CT-N3     1  0.000     0.0    1 guess
+CR-NB-CT-NB     1  0.000     0.0    1 guess
+NB-NB-CT-NB     1  0.000     0.0    1
+CR-NB-CT-OS     1  0.000     0.0    1 guess
+NB-NB-CT-OS     1  0.000     0.0    1 guess
+NB-NB-CT-SO     1  0.000     0.0    1 guess
+CA-NC-CT-CA     1  0.000     0.0    2 taken from X_-CA-CT-X June 14 2007
+CA-NC-CT-HP     1  0.000     0.0    2 taken from X_-CA-CT-X June 14 2007
+CA-ND-CT-C      1  0.156     0.0    3 from X-CT-CT-X Jan 30 2002
+CT-ND-CT-C      1  0.000     0.0    1 dummy
+CA-ND-CT-CT     1  2.000   180.0    1 *********
+CT-ND-CT-CT     1  0.156     0.0    3 from X-CT-CT-X Jan 30 2002
+CA-ND-CT-H1     1  0.000     0.0    1 dummy
+CT-ND-CT-H1     1  0.000     0.0    1 dummy
+NJ-NJ-CT-CA     1  0.000     0.0    2
+NJ-NJ-CT-CT     1  0.000     0.0    2
+NL-NL-CT-CA     1  0.000     0.0    2 guess
+NL-NL-CT-H1     1  0.000     0.0    2 guess
+O2-P_-CT-CT     1  1.000     0.0    1 dummy
+O2-P_-CT-F      1  1.000     0.0    1 dummy
+O2-P_-CT-H1     1  0.000     0.0    1 dummy
+O2-P_-CT-HC     1  0.000     0.0    1 dummy
+O2-P_-CT-N      1  0.000     0.0    1 dummy
+CT-S_-CT-CA     1  0.300     0.0   -1 fit to RHF/6-31G(d)
+CT-S_-CT-CA     1  0.350     0.0    3 march 17 1998
+H_-S_-CT-H      1  0.333     0.0    3 from parmC96
+CT-SO-CT-CT     1  0.800     0.0    3 RHF/6-41G(d,p) Dec 12 1997
+CT-SO-CT-H1     1  0.250     0.0    1 RHF/6-41G(d,p) Dec 12 1997
+O_-SO-CT-H1     1  0.000     0.0    1 RHF/6-41G(d,p) Dec 12 1997
+C_-N_-CW-C      1  1.000   180.0    2 guess May 19 2006
+CB-N_-CW-C      1  1.000   180.0    2 guess May 19 2006
+CT-N_-CW-C      1  1.000   180.0    1 in a rigid ring; 12 dec 2006
+CW-N_-CW-C      1  1.000   180.0    2 guess May 19 2006
+C_-N_-CW-CA     1  1.000   180.0    2 guess
+CA-N_-CW-CA     1  1.000   180.0    2 guess
+CT-N_-CW-CA     1  2.450   180.0    2 guess Dec 6 2005
+H_-N_-CW-CA     1  1.100   180.0    1 guess Aug 31 2006
+C_-N_-CW-CC     1  1.000   180.0    2 guess
+CA-N_-CW-CC     1  1.000   180.0    2 guess
+CB-N_-CW-CC     1  1.000   180.0    2 guess May 19 2006
+CT-N_-CW-CC     1  1.000   180.0    2 guess
+CW-N_-CW-CC     1  1.000   180.0    2 guess May 19 2006
+H_-N_-CW-CC     1  1.000     0.0    1 guess
+C_-N_-CW-CT     1  1.000   180.0    2 guess
+CW-N_-CW-CT     1  1.000   180.0    2 guess May 19 2006
+H_-N_-CW-CT     1  1.000   180.0    2 guess
+C_-N_-CW-H4     1  1.000     0.0    2 guess
+CT-N_-CW-H4     1  0.000     0.0    1 guess
+H_-N_-CW-H4     1  1.000     0.0    1 guess
+C_-N_-CW-NA     1  1.000   180.0    2 guess 16 May 2005
+CT-N_-CW-NA     1  1.000   180.0    2 guess 3 June 2005
+H_-N_-CW-NA     1  0.000     0.0    1 guess 16 May 2005
+C_-N_-CW-OS     1  1.000   180.0    2 guess
+CA-N_-CW-OS     1  0.000     0.0    1 guess
+CT-N_-CW-OS     1  1.000   180.0    2 guess
+H_-N_-CW-OS     1  1.000   180.0    2 guess
+C_-N_-CW-S      1  1.000   180.0    2 guess
+H_-N_-CW-S      1  1.000   180.0    2 guess
+CA-N3-CW-CC     1  0.000     0.0    1 guess
+CT-N3-CW-CC     1  0.000     0.0    1 guess
+H_-N3-CW-CC     1  0.000     0.0    1 guess
+CA-N3-CW-NA     1  0.000     0.0    1 guess
+CT-N3-CW-NA     1  0.000     0.0    1 guess
+H_-N3-CW-NA     1  0.000     0.0    1 guess
+CA-N3-CW-OS     1  0.000     0.0    1 guess
+CT-N3-CW-OS     1  0.000     0.0    1 guess
+H_-N3-CW-OS     1  0.000     0.0    1 guess
+H_-N3-CW-S      1  0.000     0.0    1 guess
+CA-NC-CW-C      1  4.800   180.0    2 ff94 X-CA-NC-X
+CA-NC-CW-CC     1  4.800   180.0    2 ff94 X-CA-NC-X
+CA-NC-CW-OS     1  4.800   180.0    2 ff94 X-CA-NC-X
+N_-SO-CW-CA     1  0.000     0.0    2 guess
+NB-SO-CW-CA     1  0.000     0.0    1 guess
+O_-SO-CW-CA     1  0.000     0.0    2 guess
+N_-SO-CW-CC     1  0.000     0.0    2 guess
+N3-SO-CW-CC     1  1.750   180.0    2 guess 0.75 times X-C-OS-X
+NB-SO-CW-CC     1  0.000     0.0    1 guess
+O_-SO-CW-CC     1  1.750   180.0    2 guess 0.75 times X-C-OS-X
+N3-SO-CW-NA     1  1.750   180.0    2 guess 0.75 times X-C-OS-X, 2 Sept 2004
+O_-SO-CW-NA     1  1.750   180.0    2 similar to O_-SO-CW-CC, 2 Sept 2004
+N3-SO-CW-OS     1  1.750   180.0    2 guess 0.75 times X-C-OS-X
+O_-SO-CW-OS     1  1.750   180.0    2 guess 0.75 times X-C-OS-X
+N3-SO-CW-S      1  1.750   180.0    2 guess 0.75 times X-C-OS-X
+O_-SO-CW-S      1  1.750   180.0    2 guess 0.75 times X-C-OS-X
+C_-N_-N_-C      1  0.000     0.0    1
+CM-N_-N_-C      1  0.000     0.0    1 from other-N-N- dummies apr 20 2001
+CT-N_-N_-C      1  0.000     0.0    1
+CT-N_-N_-CT     1  0.000     0.0    1
+C_-N_-N_-H      1  0.000     0.0    1
+CM-N_-N_-H      1  0.000     0.0    1 from other-N-N- dummies apr 20 2001
+CT-N_-N_-H      1  0.000     0.0    1
+CT-N3-N_-C      1  0.000     0.0    1 dummy
+CT-N3-N_-CA     1  0.000     0.0    1 guess
+CT-N3-N_-CT     1  0.000     0.0    1 dummy
+CT-N3-N_-H      1  0.000     0.0    1 guess june 25 2009
+CC-NA-N_-C      1  3.600   180.0    2 from CA-CA-CA-CA April 9 2009
+CW-NA-N_-C      1  3.600   180.0    2 from CA-CA-CA-CA April 9 2009
+H_-NA-N_-C      1  3.600   180.0    2 from CA-CA-CA-CA April 9 2009
+CC-NA-N_-CT     1  3.600   180.0    2 from CA-CA-CA-CA April 9 2009
+CW-NA-N_-CT     1  3.600   180.0    2 from CA-CA-CA-CA April 9 2009
+H_-NA-N_-CT     1  3.600   180.0    2 from CA-CA-CA-CA April 9 2009
+CR-NB-N_-C      1  0.000     0.0    1 guess
+CR-NB-N_-CT     1  0.000     0.0    1 guess
+CR-NB-N_-H      1  2.000   180.0    2 guess Mar 6 2007
+CA-NC-N_-C      1  0.000     0.0    1 guess
+CP-NC-N_-C      1  3.600   180.0    2 from CA-CA-CA-CA Aug 30 2010
+CR-NC-N_-C      1  0.000     0.0    1 guess
+CA-NC-N_-CA     1  0.000     0.0    1 guess
+CA-NC-N_-CM     1  0.000     0.0    1 guess
+CA-NC-N_-CT     1  0.000     0.0    1 guess
+CP-NC-N_-CT     1  3.600   180.0    2 from CA-CA-CA-CA Aug 30 2010
+CR-NC-N_-CT     1  0.000     0.0    1 guess
+CA-NC-N_-H      1  0.625   180.0    2 From X-CA-CR-X Oct 23 2006
+CC-OS-N_-C      1  0.000     0.0    1 to be calculated
+CT-OS-N_-C      1  0.000     0.0    1 guess
+NB-OS-N_-C      1  1.000     0.0    1 guess
+CC-OS-N_-CT     1  0.000     0.0    1 to be calculated
+CC-OS-N_-H      1  0.625   180.0    2 From X-CA-CR-X Oct 23 2006
+CT-OS-N_-H      1  0.000     0.0    1 guess
+NB-OS-N_-H      1  1.000   180.0    1 guess
+CW-S_-N_-C      1  2.000   180.0    2 guess Mar 6 2007
+CW-S_-N_-CT     1  2.000   180.0    2 guess Mar 6 2007
+CA-SO-N_-C      1  0.000     0.0    2 guess
+CC-SO-N_-C      1  0.000     0.0    2 guess
+CR-SO-N_-C      1  0.000     0.0    2 guess
+CT-SO-N_-C      1  0.500     0.0   -3 taken from CT-N3-SO-CA
+CT-SO-N_-C      1  1.750     0.0   -2 taken from CT-N3-SO-CA
+CT-SO-N_-C      1  1.500     0.0    1 taken from CT-N3-SO-CA
+CW-SO-N_-C      1  0.000     0.0    2 guess
+N2-SO-N_-C      1  0.000     0.0    1 guess
+O_-SO-N_-C      1  0.750     0.0    1 taken from CT-N3-SO-O
+CR-NB-N*-NB     1  0.000     0.0    1
+CA-NC-N*-CR     1  0.000     0.0    1 guess
+CA-NC-N*-CW     1  0.500   180.0    2 guess Jan 9 2008
+CA-NC-N*-NB     1  0.000     0.0    1 guess
+NB-OS-N*-CR     1  0.000     0.0    1 guess
+NB-OS-N*-CW     1  0.000     0.0    1 guess
+CR-NB-N2-CA     1  7.500   180.0    1 std sp2-sp2 aromatic June 14 2007
+NB-NB-N2-CA     1  0.000     0.0    1 assumed intracyclic (aryl); 11 Aug 2005
+CR-NB-N2-CR     1  7.500   180.0    1 std sp2-sp2 aromatic June 14 2007
+NB-NB-N2-CR     1  0.000     0.0    1 assumed intracyclic (aryl); 11 Aug 2005
+CT-SO-N2-CA     1  0.000     0.0    1 guess
+N_-SO-N2-CA     1  0.000     0.0    1 guess
+O_-SO-N2-CA     1  0.000     0.0    1 guess
+O2-SO-N2-CA     1  0.000     0.0    1 guess
+OS-SO-N2-CA     1  0.000     0.0    1 guess
+N_-SO-N2-CT     1  0.000     0.0    1 guess
+O_-SO-N2-CT     1  0.000     0.0    1 guess
+O2-SO-N2-CT     1  0.000     0.0    1 guess
+OS-SO-N2-CT     1  0.000     0.0    1 guess
+CT-SO-N2-H      1  0.000     0.0    1 guess
+O_-SO-N2-H      1  0.000     0.0    1 guess
+O2-SO-N2-H      1  1.000   180.0   -1 taken from H-N3-SO-O
+O2-SO-N2-H      1  0.250     0.0    3 Taken from H-N3-SO-O
+CT-N3-N3-CT     1  0.375     0.0   -3 MP2/6-31G(d,p) 7/23/98
+CT-N3-N3-CT     1  2.125     0.0   -2 MP2/6-31G(d,p) 7/23/98
+CT-N3-N3-CT     1  1.500     0.0    1 MP2/6-31G(d,p) 7/23/98
+CT-N3-N3-H      1  0.400     0.0   -3 MP2/6-31G(d,p) 7/24/98
+CT-N3-N3-H      1  2.150     0.0   -2 MP2/6-31G(d,p) 7/24/98
+CT-N3-N3-H      1  1.200     0.0    1 MP2/6-31G(d,p) 7/24/98
+H_-N3-N3-H      1  0.125     0.0   -3 MP2/6-31G(d,p) 7/23/98
+H_-N3-N3-H      1  1.875     0.0   -2 MP2/6-31G(d,p) 7/23/98
+H_-N3-N3-H      1  0.750     0.0    1 MP2/6-31G(d,p) 7/23/98
+NB-NB-N3-SO     1  0.000     0.0    1 guess
+CA-SO-N3-CA     1  0.500     0.0   -3 similar to case with CT instead of CA
+CA-SO-N3-CA     1  1.750     0.0   -2 similar to case with CT instead of CA
+CA-SO-N3-CA     1  1.500     0.0    1 similar to case with CT instead of CA
+CT-SO-N3-CA     1  0.500    90.0   -3 Fit to CA-CA-N3-SO/CA-N3-SO-CT surface
+CT-SO-N3-CA     1  1.375     0.0    2 Fit to CA-CA-N3-SO/CA-N3-SO-CT surface
+O_-SO-N3-CA     1  0.750     0.0    1 similar to case with CT instead of CA
+CA-SO-N3-CJ     1  0.500     0.0   -3 from CT-N3-SO-CA
+CA-SO-N3-CJ     1  1.750     0.0   -2 from CT-N3-SO-CA
+CA-SO-N3-CJ     1  1.500     0.0    1 from CT-N3-SO-CA
+CC-SO-N3-CJ     1  0.500     0.0   -3 from CT-N3-SO-CA
+CC-SO-N3-CJ     1  1.750     0.0   -2 from CT-N3-SO-CA
+CC-SO-N3-CJ     1  1.500     0.0    1 from CT-N3-SO-CA
+O_-SO-N3-CJ     1  0.750     0.0    1 from CT-N3-SO-O
+O2-SO-N3-CJ     1  0.200     0.0   -3 Taken from CT-N3-SO-O2 fit Nov 5 2009
+O2-SO-N3-CJ     1  0.300   180.0   -2 Taken from CT-N3-SO-O2 fit Nov 5 2009
+O2-SO-N3-CJ     1  0.700     0.0    1 Taken from CT-N3-SO-O2 fit Nov 5 2009
+CA-SO-N3-CT     1  0.500     0.0   -3 RHF/6-41G(d,p) Dec 12 1997
+CA-SO-N3-CT     1  1.750     0.0   -2 RHF/6-41G(d,p) Dec 12 1997
+CA-SO-N3-CT     1  1.500     0.0    1 RHF/6-41G(d,p) Dec 12 1997
+CC-SO-N3-CT     1  0.500     0.0   -3 Similar to CA-SO-N3-CT, , 2 Sept 2004
+CC-SO-N3-CT     1  1.750     0.0   -2 "
+CC-SO-N3-CT     1  1.500     0.0    1 "
+CT-SO-N3-CT     1  2.500     0.0   -1 RHF/6-41G(d,p) Dec 12 1997
+CT-SO-N3-CT     1  0.750     0.0    3 RHF/6-41G(d,p) Dec 12 1997
+CW-SO-N3-CT     1  0.500     0.0   -3 Similar to CA-SO-N3-CT, , 2 Sept 2004
+CW-SO-N3-CT     1  1.750     0.0   -2 "
+CW-SO-N3-CT     1  1.500     0.0    1 "
+O_-SO-N3-CT     1  0.750     0.0    1 RHF/6-41G(d,p) Dec 12 1997
+O2-SO-N3-CT     1  0.200     0.0   -3 RHF/6-31G(d) opt scan fit Jan 16 2009
+O2-SO-N3-CT     1  0.300   180.0   -2 RHF/6-31G(d) opt scan fit Jan 16 2009
+O2-SO-N3-CT     1  0.700     0.0    1 RHF/6-31G(d) opt scan fit Jan 16 2009
+CA-SO-N3-H      1  0.500     0.0   -3 RHF/6-41G(d,p) Dec 12 1997
+CA-SO-N3-H      1  0.000     0.0    1 RHF/6-41G(d,p) Dec 12 1997
+CC-SO-N3-H      1  0.500     0.0   -3 Taken from H-N3-SO-CA
+CC-SO-N3-H      1  0.000     0.0    1 Taken from H-N3-SO-CA
+CT-SO-N3-H      1  0.000     0.0    1 RHF/6-41G(d,p) Dec 12 1997
+CW-SO-N3-H      1  0.500     0.0   -3 from H-N3-SO-CA
+CW-SO-N3-H      1  0.000     0.0    1 from H-N3-SO-CA
+O_-SO-N3-H      1  1.000   180.0   -1 RHF/6-41G(d,p) Dec 12 1997
+O_-SO-N3-H      1  0.250     0.0    3 RHF/6-41G(d,p) Dec 12 1997
+O2-SO-N3-H      1  1.000   180.0   -1 RHF/6-41G(d,p) Dec 12 1997
+O2-SO-N3-H      1  0.250     0.0    3 RHF/6-41G(d,p) Dec 12 1997
+CT-SO-N3-NB     1  0.000     0.0    1 guess
+O_-SO-N3-NB     1  0.000     0.0    1 guess
+CA-S_-NB-CC     1  0.000     0.0    1 dummy
+CR-S_-NB-CR     1  0.000     0.0    1 guess July 30 2003
+CW-S_-NB-CR     1  0.000     0.0    1 guess
+CT-SO-NB-C*     1  0.040     0.0   -6 RHF/6-31G(d) Mar 7 2007
+CT-SO-NB-C*     1  0.407     0.0   -5 RHF/6-31G(d) Mar 7 2007
+CT-SO-NB-C*     1  0.013     0.0   -4 RHF/6-31G(d) Mar 7 2007
+CT-SO-NB-C*     1  0.018     0.0   -3 RHF/6-31G(d) Mar 7 2007
+CT-SO-NB-C*     1  1.329   180.0   -2 RHF/6-31G(d) Mar 7 2007
+CT-SO-NB-C*     1  0.927     0.0    1 RHF/6-31G(d) Mar 7 2007
+O_-SO-NB-C*     1  0.071     0.0   -6 RHF/6-31G(d) Mar 7 2007
+O_-SO-NB-C*     1  0.697     0.0   -5 RHF/6-31G(d) Mar 7 2007
+O_-SO-NB-C*     1  0.208   180.0   -4 RHF/6-31G(d) Mar 7 2007
+O_-SO-NB-C*     1  3.931   180.0   -2 RHF/6-31G(d) Mar 7 2007
+O_-SO-NB-C*     1  1.940   180.0   -3 RHF/6-31G(d) Mar 7 2007
+O_-SO-NB-C*     1  2.448     0.0    1 RHF/6-31G(d) Mar 7 2007
+CR-SO-NB-CR     1  0.000     0.0    1 guess
+CW-SO-NB-CR     1  0.000     0.0    1 guess
+O_-SO-NB-CR     1  0.000     0.0    1 guess
+CR-SO-NB-NB     1  0.000     0.0    1 guess
+CW-SO-NB-NB     1  0.000     0.0    1 guess
+O_-SO-NB-NB     1  0.000     0.0    1 guess
+CA-NC-NC-CA     1  0.000     0.0    1 intracyclic, guess, 15 Nov 2005
+CB-NC-NC-CB     1  0.000     0.0    1 intracyclic, guess, 6 April 2005
+CA-NL-NL-NL     1  0.000     0.0    2 guess
+CT-NL-NL-NL     1  0.000     0.0    2 guess
+N2-SO-OS-C      1  0.000     0.0    1 guess
+O2-SO-OS-C      1  0.000     0.0    1 guess
+CA-SO-OS-CA     1  0.250     0.0    3 taken from X_-OS-P_-X June 14 2007
+O2-SO-OS-CA     1  0.250     0.0    3 taken from X_-OS-P_-X June 14 2007
+CT-SO-OS-CM     1  0.000     0.0    1 guess
+O2-SO-OS-CM     1  0.000     0.0    1 guess
+CT-SO-OS-CT     1  0.000     0.0    1 guess
+N2-SO-OS-CT     1  0.000     0.0    1 guess
+O2-SO-OS-CT     1  0.000     0.0    1 guess
+C_-S_-S_-CT     1  3.500     0.0   -2 Taken from CT-S-S-CT June 25 2010
+C_-S_-S_-CT     1  0.600     0.0    3 Taken from CT-S-S-CT June 25 2010
