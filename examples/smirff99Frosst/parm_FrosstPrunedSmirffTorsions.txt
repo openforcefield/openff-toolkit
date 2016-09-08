@@ -1,0 +1,226 @@
+# pruned-down set of torsions from smirff-ified parm@Frosst
+# Csp3-Csp3cyclopropyl
+[*:1]-[#6X4:2]-[#6X4r3:3]-[*:4]          1  0.000    0.0     1  Frosst X_-CT-CJ-X  best fit Dec 1 2004
+[*:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]     1  1.0      0.0     3   Frosst generic
+[*:1]-[#6X4r3:2]-@[#6X4r3:3]-[*:4]         1  0.000    0.0     2  Frosst generic
+[#6X4r3:1]-[#6X4r3:2]-[#6X4r3:3]-[*:4]  1  3.000  0.0  -2  Frosst  generic  fit  to  RHF/6-31G(d)  
+[#6X4r3:1]-[#6X4r3:2]-[#6X4r3:3]-[*:4]  1  2.700  0.0  1  Frosst  CJ-CJ-CJ-X  fit  to  RHF/6-31G(d)  
+#
+# Csp3-Csp2-X
+[*:1]~[#6X3:2]-[#6X4:3]-[*:4]  1  0.000    0.0     2  Frosst generic
+[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]-[#6X4:3]-[#1:4]  1  0.260  0.0  -2  Frosst  S_-CW-CT-H1  RHF/6-31G(d)  opt  Sept  20  2009  
+[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]-[#6X4:3]-[#1:4]  1  0.350  180.0  1  Frosst  S_-CW-CT-H1  RHF/6-31G(d)  opt  Sept  20  2009  
+[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]-[#6X4:3]-[NX4,NX3:4]  1  0.988  0.0  -4  Frosst  S_-CW-CT-N3  RHF/6-31G(d)  opt  Sept  20  2009  
+[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]-[#6X4:3]-[NX4,NX3:4]  1  0.258  0.0  -3  Frosst  S_-CW-CT-N3  RHF/6-31G(d)  opt  Sept  20  2009  
+[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]-[#6X4:3]-[NX4,NX3:4]  1  0.805  0.0  -2  Frosst  S_-CW-CT-N3  RHF/6-31G(d)  opt  Sept  20  2009  
+[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]-[#6X4:3]-[NX4,NX3:4]  1  2.059  270.0  -2  Frosst  S_-CW-CT-N3  RHF/6-31G(d)  opt  Sept  20  2009  
+[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]-[#6X4:3]-[NX4,NX3:4]  1  1.710  90.0  1  Frosst  S_-CW-CT-N3  RHF/6-31G(d)  opt  Sept  20  2009  
+[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]-[#6X4:3]-[#7X3$(*-[#6X3,#6X2]):4]  1  0.285  270.0  -4  Frosst  S_-CW-CT-N  RHF/6-31G(d)  opt  Sept  20  2009  
+[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]-[#6X4:3]-[#7X3$(*-[#6X3,#6X2]):4]  1  0.669  0.0  -3  Frosst  S_-CW-CT-N  RHF/6-31G(d)  opt  Sept  20  2009  
+[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]-[#6X4:3]-[#7X3$(*-[#6X3,#6X2]):4]  1  0.310  180.0  -2  Frosst  S_-CW-CT-N  RHF/6-31G(d)  opt  Sept  20  2009  
+[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]-[#6X4:3]-[#7X3$(*-[#6X3,#6X2]):4]  1  0.548  270.0  -2  Frosst  S_-CW-CT-N  RHF/6-31G(d)  opt  Sept  20  2009  
+[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]-[#6X4:3]-[#7X3$(*-[#6X3,#6X2]):4]  1  0.263  270.0  -1  Frosst  S_-CW-CT-N  RHF/6-31G(d)  opt  Sept  20  2009  
+[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]-[#6X4:3]-[#7X3$(*-[#6X3,#6X2]):4]  1  0.222  0.0  1  Frosst  S_-CW-CT-N  RHF/6-31G(d)  opt  Sept  20  2009  
+# Csp3-Csp2=X
+[*:1]-[#6X4:2]-[#6X3:3]=[*:4]  1  0.000    0.0     2  Frosst X_-CT-CR-X  his, ff94 X-CC-CT-X
+[#6X3:1]-[#6X4:2]-[#6X3:3]=[#6X3:4]  1  0.450  0.0  -3  Frosst  CM-CT-CM-CM  from  ab  initio  mt  
+[#6X3:1]-[#6X4:2]-[#6X3:3]=[#6X3:4]  1  0.250  180.0  2  Frosst  CM-CT-CM-CM  from  ab  initio  mt  
+[#1:1]-[#6X4:2]-[#6X3:3]=[#6X3:4]  1  1.000  180.0     3  Frosst HC-CT-CM-CM  from ab initio mt
+# Csp3cyclopropyl-Csp2
+[*:1]-[#6X4r3:2]-[#6X3:3]~[*:4]            1  0.000    0.0     1   Frosst generic
+[#6X4:1]-[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.065  180.0  -4  Frosst  CT-CJ-CA-CA  guess  from  CA-CA-CJ-CJ  
+[#6X4:1]-[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.550  180.0  2  Frosst  CT-CJ-CA-CA  Feb  1  2005  
+[#1:1]-[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.050  180.0  -4  Frosst  CC-CR-CJ-HC  RHF/6-31G(d)  opt  fit  Oct21  2010  
+[#1:1]-[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.150  0.0  -3  Frosst  CC-CR-CJ-HC  RHF/6-31G(d)  opt  fit  Oct21  2010  
+[#1:1]-[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.150  180.0  2  Frosst  CC-CR-CJ-HC  RHF/6-31G(d)  opt  fit  Oct21  2010  
+[#6X3:1]-[#6X4r3:2]-[#6X3:3]-[#7X3:4]  1  1.392  0.0  -2  Frosst  CA-CJ-C_-N  FIT  B3LYP6-31G(d)  Sept  14  2005  
+[#6X3:1]-[#6X4r3:2]-[#6X3:3]-[#7X3:4]  1  0.645  180.0  -1  Frosst  CA-CJ-C_-N  FIT  B3LYP6-31G(d)  Sept  14  2005  
+[#6X3:1]-[#6X4r3:2]-[#6X3:3]-[#7X3:4]  1  0.961  180.0  3  Frosst  CA-CJ-C_-N  FIT  B3LYP6-31G(d)  Sept  14  2005  
+[#6X3:1]-[#6X4r3:2]-[#6X3:3]=[#8X1:4]  1  3.174  180.0  -2  Frosst  CA-CJ-C_-O  FIT  B3LYP6-31G(d)  Sept  14  2005  
+[#6X3:1]-[#6X4r3:2]-[#6X3:3]=[#8X1:4]  1  0.277  180.0  -1  Frosst  CA-CJ-C_-O  FIT  B3LYP6-31G(d)  Sept  14  2005  
+[#6X3:1]-[#6X4r3:2]-[#6X3:3]=[#8X1:4]  1  0.514  180.0  3  Frosst  CA-CJ-C_-O  FIT  B3LYP6-31G(d)  Sept  14  2005  
+[#6X3:1]-[#6X4r3:2]-[#6X3:3]~[#6X3:4]      1  0.128  180.0     2   Frosst generic
+[#7X3:1]-[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.065  180.0  -4  Frosst  N_-CJ-CA-CA  from  CA-CA-CJ-CJ  Dec  16  2004  
+[#7X3:1]-[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.550  180.0  2  Frosst  N_-CJ-CA-CA  from  CA-CA-CJ-CJ  Dec  16  2004  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.050  180.0  -4  Frosst  CC-CR-CJ-CJ  RHF/6-31G(d)  opt  fit  Oct21  2010  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.250  0.0  -3  Frosst  CC-CR-CJ-CJ  RHF/6-31G(d)  opt  fit  Oct21  2010  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.010  180.0  2  Frosst  CC-CR-CJ-CJ  RHF/6-31G(d)  opt  fit  Oct21  2010  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3r6:3]:[#6X3r6:4]  1  0.065  180.0  -4  Frosst  CJ-CJ-CA-CA  RHF/6-31G(d,p)  opt  fit  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3r6:3]:[#6X3r6:4]  1  0.550  180.0  2  Frosst  CJ-CJ-CA-CA  RHF/6-31G(d,p)  opt  fit  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3r5:3]-@[#6X3r5:4]  1  0.050  180.0  -4  Frosst  CJ-CJ-CC-CC  RHF/6-31G(d)  opt  fit  Oct21  2010  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3r5:3]-@[#6X3r5:4]  1  0.250  0.0  -3  Frosst  CJ-CJ-CC-CC  RHF/6-31G(d)  opt  fit  Oct21  2010  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3r5:3]-@[#6X3r5:4]  1  0.010  180.0  2  Frosst  CJ-CJ-CC-CC  RHF/6-31G(d)  opt  fit  Oct21  2010  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3r5:3]=@[#6X3r5:4]  1  0.300  180.0     1  Frosst CJ-CJ-CC-CW  RHF/6-31G(d,p) opt Sept 2 2008
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3:3]-[#6X4:4]    1  0.000    0.0     1  Frosst CJ-CJ-C_-CT  set to zero for CJ-CJ-C-O
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3r6:3]:[#7X2r6:4]  1  2.100  180.0  -2  Frosst  CJ-CJ-CA-NC  FIT  B3LYP6-31G(d)  Sept  14  2005  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3r6:3]:[#7X2r6:4]  1  0.432  180.0  -1  Frosst  CJ-CJ-CA-NC  FIT  B3LYP6-31G(d)  Sept  14  2005  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3r6:3]:[#7X2r6:4]  1  0.620  0.0  3  Frosst  CJ-CJ-CA-NC  FIT  B3LYP6-31G(d)  Sept  14  2005  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3:3]=[#7X2:4]  1  0.300  0.0  -3  Frosst  NB-CR-CJ-CJ  RHF/6-31G(d)  opt  fit  Oct21  2010  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3:3]=[#7X2:4]  1  0.950  180.0  -2  Frosst  NB-CR-CJ-CJ  RHF/6-31G(d)  opt  fit  Oct21  2010  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3:3]=[#7X2:4]  1  0.275  180.0  1  Frosst  NB-CR-CJ-CJ  RHF/6-31G(d)  opt  fit  Oct21  2010  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3:3]-[#8X2:4]  1  0.065  180.0  -4  Frosst  CJ-CJ-C_-OS  Taken  from  CA-CA-CJ-CJ  June  29  2007  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3:3]-[#8X2:4]  1  0.550  180.0  2  Frosst  CJ-CJ-C_-OS  
+[#6X4r3:1]-@[#6X4r3:2]-[#6X3:3]=[#8X1:4]    1  2.400  320.0     2   Frosst generic
+#
+#
+# Csp2-Csp2 : conjugation is everything
+[*:1]~[#6X3:2]-[#6X3:3]~[*:4]  1  0.625  180.0     2   Frosst generic
+[*:1]~[#6X3:2]:[#6X3:3]~[*:4]  1  3.625  180.0     2   Frosst generic
+[*:1]-[#6X3:2]=[#6X3:3]-[*:4]  1  5.4    180.0     2   Frosst generic
+# Csp2-Csp2 specific torsions
+[*:1]~[#6X3:2]-[#6X3$(*=[O,S,N]):3]-[*:4]  1  0.250  180.0     2   Frosst generic alpha,beta unsat carbonyl
+#
+# N-C bonds
+# trivalent Nsp3-Csp3cyclopropyl
+[*:1]-[NX4,NX3:2]-[#6X4r3:3]-[*:4]         1  1.000    0.0     3  Frosst CT-N3-CJ-CJ  from CT-CT-CJ-CJ
+[#1:1]-[NX4,NX3:2]-[#6X4r3:3]-[*:4]        1  0.000    0.0     1   Frosst generic
+[#1:1]-[NX4,NX3:2]-[#6X4r3:3]-[#6X4r3:4]   1  2.700    0.0     1  Frosst H_-N3-CJ-CJ  from CJ-CJ-CJ-HC
+[!1:1]-[NX4,NX3:2]-[#6X4r3:3]-[*:4]        1  0.156    0.0     3  Frosst CT-N3-CJ-CT  N3-CT-CJ-CJ
+[!#1:1]-[NX4,NX3:2]-[#6X4r3:3]-[#6X4r3:4]  1  1.000    0.0     3  Frosst SO-N3-CJ-CJ  from S-CT-CJ-CJ
+#
+# trivalent Nsp2-Csp3
+[*:1]-[#7X3$(*-[#6X3,#6X2]):2]-[#6X4:3]-[*:4]      1  0.000    0.0     1  Frosst generic
+[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.500  0.0  -3  Frosst  CW-N*-CJ-CJ  B3LYP/6-31G(d,p)  Apr  24  2008  
+[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  1.750  0.0  -2  Frosst  CW-N*-CJ-CJ  B3LYP/6-31G(d,p)  Apr  24  2008  
+[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.250  0.0  1  Frosst  CW-N*-CJ-CJ  B3LYP/6-31G(d,p)  Apr  24  2008  
+#
+# trivalent Nsp2-Csp2 : conjugation is important (Nsp2 pyramidalization and torsion barrier)
+[*:1]-[#7X3,#7X2-1:2]-[#6X3:3]~[*:4]    1  1.     180.0     2   Frosst generic
+[*:1]-[#7X3,#7X2-1:2]-!@[#6X3:3]-[*:4]  1  0.625  180.0     2   Frosst generic conjugated exocyclic
+[*:1]-[#7X3r5:2]-@[#6X3r5:3]~[*:4]      1  1.40   180.0     2   Frosst generic het5
+[#8X1:1]~[#7X3:2]~[#6X3:3]~[*:4]        1  3.600  180.0     2  Frosst O2-N_-CB-CB N-oxide From CA-CA-CA-CA Oct 14 2008
+#
+# divalent N~Csp2 : conjugation important here but usually endocyclic
+# divalent N-Csp2
+[*:1]~[#7X2:2]-[#6X4:3]-[*:4]        1  0.000    0.0     1   Frosst generic
+[*:1]=[#7X2:2]-[#6X3:3]-[*:4]  1  0.0    180.0     2   Frosst generic
+[#6X3:1]=[#7X2:2]-[#6X4:3]-[#1:4]    1  0.500    0.0     1   Frosst generic
+[#6X3:1]=[#7X2:2]-[#6X4:3]-[#6X3,#6X4:4]  1  1.000    0.0     1   Frosst generic
+[*:1]=[#7X2:2]-[#6X3:3]=[*:4]  1  1.5    180.0     2   Frosst generic
+# divalent Naro-Caro
+[*:1]~[#7X2:2]:[#6X3:3]~[*:4]  1  3.     180.0     2   Frosst generic
+[#6X3:1]:[#7X2:2]:[#6X3:3]:[#6X3:4]  1  4.800  180.0     2   Frosst generic
+# divalent N=Csp2
+[*:1]-[#7X2:2]=[#6X3:3]-[*:4]  1  5.     180.0     2   Frosst generic
+[#6X3:1]-[#7X2:2]=[#6X3:3]-[#6X3:4]  1  5.     180.0     2   Frosst generic
+[#6X3:1]-[#7X2:2]=[#6X3:3]-[#8X2:4]  1  4.800  180.0     2   Frosst generic
+[#16X4,#16X3+0:1]-[#7X2:2]=[#6X3:3]-[#7X3:4]  1  7.500  180.0     2  Frosst SO-NB-C*-N*  RHF/6-31G(d) Mar 7 2007
+[#16X4,#16X3+0:1]-[#7X2:2]=[#6X3:3]-[#16X2,#16X1-1,#16X3+1:4]  1  7.500  180.0     2  Frosst SO-NB-C*-S  RHF/6-31G(d) Mar 7 2007
+[*:1]-[#7X3+1:2]=[#6X3:3]-[*:4]  1  2.400  180.0     2   Frosst generic Amidine,guanidine
+[#1:1]-[#7X3+1:2]=,:[#6X3:3]-,:[#6X3:4]  1  2.400  180.0     2  Frosst H_-NB-CA-CA  like X-C-NB-X; 15 April 2005
+[#1:1]-[#7X3+1:2]=,:[#6X3:3]-[#7X3:4]  1  2.400  180.0     2  Frosst H_-NB-CA-N2  like X-C-NB-X; 15 April 2005
+#
+# univalent N: corner cases such as azides
+[#7X1:1]~[#7X2:2]-[#6X3:3]~[#6X3:4]  1  0.500  180.0     2  Frosst NL-NL-CA-CA  guess
+[#7X1:1]~[#7X2:2]-[#6X4:3]-[#6X3:4]  1  0.000    0.0     2  Frosst NL-NL-CT-CA  guess
+[#7X1:1]~[#7X2:2]-[#6X4:3]~[#1:4]    1  0.000    0.0     2  Frosst NL-NL-CT-H1  guess
+#
+# C-O bonds
+# O-Csp3cyclopropyl
+[#6X3:1]-[#8X2:2]-[#6X4r3:3]-@[#6X4r3:4]  1  0.000    0.0     1  Frosst CA-OS-CJ-CJ  guess; 26 April 2006
+[#6X3:1]-[#8X2:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst CA-OS-CJ-H1  guess; 26 April 2006
+[#1:1]-[#8X2:2]-[#6X4r3:3]-[#1:4]  1  0.400  0.0  -3  Frosst  HO-OH-CJ-H1  calc  RHF/6-311G(d)  Dec  1  2004  
+[#1:1]-[#8X2:2]-[#6X4r3:3]-[#1:4]  1  0.500  0.0  -2  Frosst  HO-OH-CJ-H1  calc  RHF/6-311G(d)  Dec  1  2004  
+[#1:1]-[#8X2:2]-[#6X4r3:3]-[#1:4]  1  0.700  0.0  1  Frosst  HO-OH-CJ-H1  calc  RHF/6-311G(d)  Dec  1  2004  
+[#1:1]-[#8X2:2]-[#6X4r3:3]-[#6X4:4]  1  0.400  0.0  -3  Frosst  HO-OH-CJ-CT  calc  RHF/6-311G(d)  Dec  1  2004  
+[#1:1]-[#8X2:2]-[#6X4r3:3]-[#6X4:4]  1  0.500  0.0  -2  Frosst  HO-OH-CJ-CT  calc  RHF/6-311G(d)  Dec  1  2004  
+[#1:1]-[#8X2:2]-[#6X4r3:3]-[#6X4:4]  1  0.700  0.0  1  Frosst  HO-OH-CJ-CT  calc  RHF/6-311G(d)  Dec  1  2004  
+[#1:1]-[#8X2:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.400  0.0  -3  Frosst  HO-OH-CJ-CJ  calc  RHF/6-311G(d)  Dec  1  2004  
+[#1:1]-[#8X2:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.500  0.0  -2  Frosst  HO-OH-CJ-CJ  calc  RHF/6-311G(d)  Dec  1  2004  
+[#1:1]-[#8X2:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.700  0.0  1  Frosst  HO-OH-CJ-CJ  calc  RHF/6-311G(d)  Dec  1  2004  
+# O-Csp2
+[*:1]-[#8X2H0:2]-[#6X3:3]~[*:4]    1  1.350  180.0     2  Frosst X_-OS-CA-X  RHF/6-31G(d,p) Dec 12 1997
+[#1:1]-[#8X2H1:2]-@[#6X3:3]~[*:4]  1  2.500  180.0     2   Frosst generic endocyclic
+[*:1]-[#8X2:2]-[#6X3$(*=[O,S,N]):3]-[*:4]  1  2.500  180.0     2   Frosst generic ester
+# O-Nsp2 het5 endocyclic
+[*:1]-[#8X2r5:2]-@[#7X3r5:3]~[*:4]  1  0.000    0.0     1  Frosst generic het5 endocyclic
+[*:1]-[#8X2r5:2]-@[#7X2r5:3]~[*:4]  1  0.000    0.0     1  Frosst generic het5 endocyclic
+#
+# N-N bonds
+# trivalent Nsp3 - trivalent Nsp3
+[#1:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#1:4]  1  0.125  0.0  -3  Frosst  H_-N3-N3-H  MP2/6-31G(d,p)  7/23/98  
+[#1:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#1:4]  1  1.875  0.0  -2  Frosst  H_-N3-N3-H  MP2/6-31G(d,p)  7/23/98  
+[#1:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#1:4]  1  0.750  0.0  1  Frosst  H_-N3-N3-H  MP2/6-31G(d,p)  7/23/98  
+[#6X4:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#1:4]  1  0.400  0.0  -3  Frosst  CT-N3-N3-H  MP2/6-31G(d,p)  7/24/98  
+[#6X4:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#1:4]  1  2.150  0.0  -2  Frosst  CT-N3-N3-H  MP2/6-31G(d,p)  7/24/98  
+[#6X4:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#1:4]  1  1.200  0.0  1  Frosst  CT-N3-N3-H  MP2/6-31G(d,p)  7/24/98  
+[#6X4:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#6X4:4]  1  0.375  0.0  -3  Frosst  CT-N3-N3-CT  MP2/6-31G(d,p)  7/23/98  
+[#6X4:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#6X4:4]  1  2.125  0.0  -2  Frosst  CT-N3-N3-CT  MP2/6-31G(d,p)  7/23/98  
+[#6X4:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#6X4:4]  1  1.500  0.0  1  Frosst  CT-N3-N3-CT  MP2/6-31G(d,p)  7/23/98  
+# trivalent Nsp3 - trivalent Nsp2
+[#6X4:1]-[NX4,NX3:2]-[#7X3$(*-[#6X3,#6X2]):3]-[#1:4]  1  0.000    0.0     1  Frosst CT-N3-N_-H  guess june 25 2009
+[#6X4:1]-[NX4,NX3:2]-[#7X3$(*-[#6X3,#6X2]):3]-[#6X3:4]  1  0.000    0.0     1   Frosst generic
+[#6X4:1]-[NX4,NX3:2]-[#7X3$(*-[#6X3,#6X2]):3]-[#6X4:4]  1  0.000    0.0     1  Frosst CT-N3-N_-CT  dummy
+# trivalent Nsp2 - trivalent Nsp2
+[*:1]-[#7X3$(*-[#6X3,#6X2]):2]-[#7X3$(*-[#6X3,#6X2]):3]-[*:4]      1  0.000    0.0     1  Frosst X_-N2-N_-X  June 29 2007
+[*:1]-[#7X3$(*-[#6X3,#6X2])r5:2]-@[#7X3$(*-[#6X3,#6X2])r5:3]~[*:4]   1  3.600  180.0     2   Frosst generic het5 endocyclic
+# divalent N-N
+[*:1]~[#7X2:2]~[#7X2:3]~[*:4]        1  6.000  180.0     1  Frosst X_-NB-NB-X 
+[#6X3:1]~[#7X2:2]~[#7X2:3]~[#6X3:4]  1  0.000    0.0     1   Frosst generic
+[*:1]~[#7X2:2]-[#7X3:3]-[*:4]        1  0.625  180.0     1   Frosst generic
+# univalent N
+[#6:1]-[#7X2:2]~[#7X2:3]~[#7X1:4]    1  0.000    0.0     2  Frosst generic
+#
+#
+# divalent S-C
+[*:1]-[#16X2,#16X1-1,#16X3+1:2]-[#6:3]~[*:4]  1  0.000  180.0     2   Frosst generic
+[#1:1]-[#16X2,#16X1-1,#16X3+1:2]-[#6X4:3]-[#1:4]  1  0.333    0.0     3  Frosst H_-S_-CT-H  from parmC96
+[#6X4:1]-[#16X2,#16X1-1,#16X3+1:2]-[#6X4:3]-[#6X3:4]  1  0.300  0.0  -1  Frosst  CT-S_-CT-CA  fit  to  RHF/6-31G(d)  
+[#6X4:1]-[#16X2,#16X1-1,#16X3+1:2]-[#6X4:3]-[#6X3:4]  1  0.350  0.0  3  Frosst  CT-S_-CT-CA  march  17  1998  
+[#6X3:1]-@[#16X2,#16X1-1,#16X3+1:2]-@[#6X3,#7X2;r5:3]=@[#6,#7;r5:4]  1  2.     180.0     2   Frosst generic divalent S in het5
+[#6X3:1]-[#16X2,#16X1-1,#16X3+1:2]-[#16X2,#16X1-1,#16X3+1:3]-[#6X4:4]  1  3.500  0.0  -2  Frosst  C_-S_-S_-CT  Taken  from  CT-S-S-CT  June  25  2010  
+[#6X3:1]-[#16X2,#16X1-1,#16X3+1:2]-[#16X2,#16X1-1,#16X3+1:3]-[#6X4:4]  1  0.600  0.0  3  Frosst  C_-S_-S_-CT  Taken  from  CT-S-S-CT  June  25  2010  
+# hypervalent S
+# hypS-C
+[*:1]~[#16X4,#16X3+0:2]-[#6X4:3]-[*:4]  1  0.000    0.0     3  Frosst X_-SO-CT-X  guess
+[#6X4:1]-[#16X4,#16X3+0:2]-[#6X4:3]-[#1:4]  1  0.250    0.0     1  Frosst CT-SO-CT-H1  RHF/6-41G(d,p) Dec 12 1997
+[#6X4:1]-[#16X4,#16X3+0:2]-[#6X4:3]~[#6X4:4]  1  0.800    0.0     3  Frosst CT-SO-CT-CT  RHF/6-41G(d,p) Dec 12 1997
+[*:1]~[#16X4,#16X3+0:2]-[#6X3:3]~[*:4]  1  1.750  180.0     2  Frosst X_-SO-CA-X  generic guess
+[#6:1]-[#16X4,#16X3+0:2]-[#6X3:3]~[*:4]  1  0.750    0.0     1   Frosst generic
+# hypS-N
+[*:1]-[#16X4,#16X3+0:2]-[#7:3]~[*:4]  1  0.000    0.0     1   Frosst generic
+# hypS-Nsp3 trivalent : assumes N is not conjugated (although it could be the other substituent on the N)
+[#6X4:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-SO-N3-H  RHF/6-41G(d,p) Dec 12 1997
+[#6X3:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#1:4]  1  0.500    0.0     3  Frosst CA-SO-N3-H  RHF/6-41G(d,p) Dec 12 1997
+[#6X4:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  2.500  0.0  -1  Frosst  CT-SO-N3-CT  RHF/6-41G(d,p)  Dec  12  1997  
+[#6X4:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  0.750  0.0  3  Frosst  CT-SO-N3-CT  RHF/6-41G(d,p)  Dec  12  1997  
+[#6X3:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  0.500  0.0  -3  Frosst  CA-SO-N3-CT  RHF/6-41G(d,p)  Dec  12  1997  
+[#6X3:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  1.750  0.0  -2  Frosst  CA-SO-N3-CT  RHF/6-41G(d,p)  Dec  12  1997  
+[#6X3:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  1.500  0.0  1  Frosst  CA-SO-N3-CT  RHF/6-41G(d,p)  Dec  12  1997  
+[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#1:4]  1  1.000  180.0  -1  Frosst  O_-SO-N3-H  RHF/6-41G(d,p)  Dec  12  1997  
+[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#1:4]  1  0.250  0.0  3  Frosst  O_-SO-N3-H  RHF/6-41G(d,p)  Dec  12  1997  
+[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  0.200  0.0  -3  Frosst  O2-SO-N3-CT  RHF/6-31G(d)  opt  scan  fit  Jan  16  2009  
+[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  0.300  180.0  -2  Frosst  O2-SO-N3-CT  RHF/6-31G(d)  opt  scan  fit  Jan  16  2009  
+[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  0.700  0.0  1  Frosst  O2-SO-N3-CT  RHF/6-31G(d)  opt  scan  fit  Jan  16  2009  
+# hypS-Nsp2 trivalent
+[#6X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.500  0.0  -3  Frosst  CA-SO-N3-CA  similar  to  case  with  CT  instead  of  CA  
+[#6X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  1.750  0.0  -2  Frosst  CA-SO-N3-CA  similar  to  case  with  CT  instead  of  CA  
+[#6X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  1.500  0.0  1  Frosst  CA-SO-N3-CA  similar  to  case  with  CT  instead  of  CA  
+[#6X4:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.500  90.0  -3  Frosst  CT-SO-N3-CA  Fit  to  CA-CA-N3-SO/CA-N3-SO-CT  surface  
+[#6X4:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  1.375  0.0  2  Frosst  CT-SO-N3-CA  Fit  to  CA-CA-N3-SO/CA-N3-SO-CT  surface  
+[#8X1:1]~[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.750    0.0     1  Frosst O_-SO-N3-CA  similar to case with CT instead of CA
+[#8X1:1]~[#16X4,#16X3+0:2]-[#7X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst O_-SO-N3-NB  guess
+# hypS-Nsp2 divalent
+[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.040  0.0  -6  Frosst  CT-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
+[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.407  0.0  -5  Frosst  CT-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
+[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.013  0.0  -4  Frosst  CT-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
+[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.018  0.0  -3  Frosst  CT-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
+[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  1.329  180.0  -2  Frosst  CT-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
+[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.927  0.0  1  Frosst  CT-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
+[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.071  0.0  -6  Frosst  O_-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
+[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.697  0.0  -5  Frosst  O_-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
+[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.208  180.0  -4  Frosst  O_-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
+[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  3.931  180.0  -2  Frosst  O_-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
+[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  1.940  180.0  -3  Frosst  O_-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
+[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  2.448  0.0  1  Frosst  O_-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
+# hypS-Odivalent
+[*:1]-[#16X4,#16X3+0:2]-[#8X2:3]-[*:4]  1  0.000    0.0     1  Frosst generic
+#
+# P-C
+[*:1]~[#15:2]-[#6:3]-[*:4]    1  0.000    0.0     1  Frosst X_-P_-CT-X  dummy
+[*:1]~[#15:2]-[#6X3:3]~[*:4]  1  1.000    0.0     1  Frosst X_-P_-CA-X  dummy
+#
+# bonds with any triple-bonded atom (acetylene, nitrile, azide): linear bond cannot have torsion
+[*:1]-[*:2]#[*:3]-[*:4]     1  0.000    0.0     1  Frosst generic
+[*:1]-[*:2]-[*:3]#[*:4]     1  0.000    0.0     1  Frosst generic
+#

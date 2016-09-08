@@ -1,0 +1,45 @@
+BOND
+# hydrogen
+[#1:1]           0.6000  0.0157  Frosst generic by analogy with H,HS assuming electroneg bond partner
+[#1:1]-[#6X4]    1.4870  0.0157  Frosst HC OPLS
+[#1:1]-[#6X4]-[#7,#8,F,#16,Cl,Br]  1.3870  0.0157  Frosst H1 Veenstra et al JCC,8,(1992),963
+[#1:1]-[#6X4](-[#7,#8,F,#16,Cl,Br])-[#7,#8,F,#16,Cl,Br]  1.2870  0.0157  Frosst H2 Veenstra et al JCC,8,(1992),963
+[#1:1]-[#6X4](-[#7,#8,F,#16,Cl,Br])(-[#7,#8,F,#16,Cl,Br])-[#7,#8,F,#16,Cl,Br]  1.1870  0.0157  Frosst H3 Veenstra et al JCC,8,(1992),963
+[#1:1]-[#6X4]~[*+1,*+2]  1.1000  0.0157  Frosst HP Veenstra et al JCC,8,(1992),963
+[#1:1]-[#6X3]    1.4590  0.0150  Frosst HA Spellmeyer
+[#1:1]-[#6X3]~[#7,#8,F,#16,Cl,Br]  1.4090  0.0150  Frosst H4 Spellmeyer, one electrowithdr. neighbor
+[#1:1]-[#6X3](~[#7,#8,F,#16,Cl,Br])~[#7,#8,F,#16,Cl,Br]  1.3590  0.0150  Frosst H5 Spellmeyer, two electrowithdr. neighbor
+[#1:1]-[#6X2]    1.4590  0.0150  Frosst HZ H bonded to sp C (Howard et al JCC 16)
+[#1:1]-[#7]      0.6000  0.0157  Frosst H
+[#1:1]-[#8]      0.0000  0.0000  Frosst HO OPLS Jorgensen, JACS,110,(1988),1657
+[#1:1]-[#16]     0.6000  0.0157  Frosst HS
+#
+# carbon
+#  C*          1.9080  0.0860             OPLS
+#  C           1.9080  0.0860             OPLS
+[#6:1]           1.9080  0.0860  Frosst generic Spellmeyer
+[#6X4:1]         1.9080  0.1094  Frosst CT Spellmeyer
+#
+# oxygen
+[#8:1]           1.6612  0.2100  Frosst generic O,O2 OPLS
+[#8X2H0+0:1]     1.6837  0.1700  Frosst OS OPLS ether
+[#8X2H1+0:1]     1.7210  0.2104  Frosst OH OPLS
+#
+# nitrogen
+#  N           1.8240  0.1700             OPLS
+#  N3          1.8240  0.1700             OPLS
+[#7:1]           1.8240  0.1700  Frosst generic OPLS
+#
+# sulfur
+#  S           2.0000  0.2500             W. Cornell CH3SH and CH3SCH3 FEP's
+#  SH          2.0000  0.2500             W. Cornell CH3SH and CH3SCH3 FEP's
+[#16:1]          2.0000  0.2500  Frosst generic
+#
+# phosphorus
+[#15:1]          2.1000  0.2000  Frosst P JCC,7,(1986),230;
+#
+# halogens
+[#9:1]            1.75  0.061   Frosst F Gough et al. JCC 13,(1992),963.
+[#17:1]          1.948  0.265   Frosst Cl Fox, JPCB,102,8070,(98),flex.mdl CHCl3
+[#35:1]           2.22  0.320   Frosst Br Junmei(?)
+[#53:1]           2.35  0.40    Frosst I JCC,7,(1986),230;
