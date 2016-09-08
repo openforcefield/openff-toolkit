@@ -91,6 +91,34 @@ ffxml_contents = u"""\
 </SMIRFF>
 """
 
+# Set up another, super minimal FF to test that alternate aromaticity
+# models implemented properly
+ffxml_MDL_contents = u"""\
+<?xml version="1.0"?>
+
+<SMIRFF version="0.1" aromaticity_model="OEAroModel_MDL">
+
+!-- SMIRKS (SMIRKS Force Field) minimal file, not intended for use -->
+  <Date>Date: Sept. 7, 2016</Date>
+  <Author>D. L. Mobley, UC Irvine</Author>
+  <HarmonicBondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
+    <Bond smirks="[*:1]~[*:2]" id="b1" k="2000.0" length="4.0"/>
+    <Bond smirks="[#6X3:1]-[#8X2:2]" id="b16" k="960.0" length="1.240"/>
+  </HarmonicBondForce>
+  <HarmonicAngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
+    <Angle smirks="[*:1]~[*:2]~[*:3]" angle="109.5" id="a1" k="160.0"/>
+</HarmonicAngleForce>
+<PeriodicTorsionForce phase_unit="degrees" k_unit="kilocalories_per_mole">
+<Improper smirks="[*:1]~[#6X3:2]~[*:3]~[*:4]" id="i1" k1="3.5" periodicity1="2" phase1="180."/>
+    <Proper smirks="[*:1]~[*:2]~[*:3]~[*:4]" id="t1" idivf1="4" k1="3.50" periodicity1="2" phase1="180.0"/>
+  </PeriodicTorsionForce>
+  <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+    <Atom smirks="[*:1]" epsilon="0.2100" id="n1" rmin_half="1.6612"/>
+    <Atom smirks="[#1:1]" epsilon="0.0157" id="n2" rmin_half="0.6000"/>
+  </NonbondedForce>
+</SMIRFF>
+"""
+
 def positions_from_oemol(mol):
     """
     Extract OpenMM positions from OEMol.
@@ -364,6 +392,25 @@ def test_partial_bondorder(verbose = False):
     energy = get_energy(system, positions)
     if energy < 7.50 or energy > 7.60:
         raise Exception("Partial bond order code seems to have issues, as energy for benzene is outside of tolerance in tests.")
+
+def test_MDL_aromaticity(verbose=False):
+    """Test support for alternate aromaticity models."""
+    ffxml = StringIO(ffxml_MDL_contents)
+    ff = ForceField(ffxml)
+    from openeye import oechem
+    mol = oechem.OEMol()
+    oechem.OEParseSmiles(mol, 'c12c(cccc1)occ2')
+    oechem.OEAddExplicitHydrogens(mol)
+
+    labels=ff.labelMolecules( [mol], verbose = True)
+    # The bond 6-7 should get the b16 parameter iff the MDL model is working, otherwise it will pick up just the generic
+    details = labels[0]['HarmonicBondGenerator']
+    found = False
+    for (atom_indices, pid, smirks) in details:
+        if pid == 'b16' and atom_indices==[6,7]:
+            found = True
+    if not found: raise Exception("Didn't find right param.")
+
 
 def test_change_parameters(verbose=False):
     """Test modification of forcefield parameters."""
