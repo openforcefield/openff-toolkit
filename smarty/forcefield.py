@@ -57,14 +57,18 @@ import networkx
 # PRIVATE SUBROUTINES
 #=============================================================================================
 
-def getSMIRKSMatches_OEMol(oemol, smirks):
+def getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model = None):
     """Find all sets of atoms in the provided oemol that match the provided SMIRKS strings.
 
-        Parameters
+    Parameters
     ----------
+    oemol : OpenEye oemol
+        oemol to process with the SMIRKS in order to find matches
     smirks : str
         SMIRKS string with tagged atoms.
         If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+    aromaticity_model : str (optional)
+        OpenEye aromaticity model designation as a string, such as "OEAroModel_MDL". Default: None. If none is provided, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
 
     Returns
     -------
@@ -73,19 +77,41 @@ def getSMIRKSMatches_OEMol(oemol, smirks):
         Matches are returned in no guaranteed order.
     """
 
+    # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
+    mol = oechem.OEMol(oemol)
+
     # Set up query.
     qmol = oechem.OEQMol()
     if not oechem.OEParseSmarts(qmol, smirks):
         raise Exception("Error parsing SMIRKS '%s'" % smirks)
 
-    # Perform matching on each oemol
+    # Determine aromaticity model
+    if aromaticity_model:
+        if type(aromaticity_model) == str:
+            # Check if the user has provided a manually-specified aromaticity_model
+            if hasattr(oechem, aromaticity_model):
+                oearomodel = getattr(oechem, aromaticity_model)
+            else:
+                raise ValueError("Error: provided aromaticity model not recognized by oechem.")
+        else:
+            raise ValueError("Error: provided aromaticity model must be a string.")
+
+        # If aromaticity model was provided, prepare molecule
+        oechem.OEClearAromaticFlags( mol)
+        oechem.OEAssignAromaticFlags( mol, oearomodel)
+        # avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
+        oechem.OEAssignHybridization( mol)
+        oechem.OEAssignFormalCharges( mol)
+        oechem.OEAssignImplicitHydrogens( mol)
+
+    # Perform matching on each mol
     matches = list()
 
     # We require non-unique matches, i.e. all matches
     unique = False
     ss = oechem.OESubSearch(qmol)
     matches = []
-    for match in ss.Match( oemol, unique):
+    for match in ss.Match( mol, unique):
         # Compile list of atom indices that match the pattern tags
         atom_indices = dict()
         for ma in match.GetAtoms():
@@ -299,7 +325,7 @@ class _Topology(Topology):
             order = self._bondorders_by_atomindices[topat1][topat2]
             self._bondorders.append(order)
 
-    def unrollSMIRKSMatches(self, smirks):
+    def unrollSMIRKSMatches(self, smirks, aromaticity_model = None):
         """Find all sets of atoms in the topology that match the provided SMIRKS strings.
 
         Parameters
@@ -307,6 +333,8 @@ class _Topology(Topology):
         smirks : str
             SMIRKS string with tagged atoms.
             If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+        aromaticity_model : str (optional)
+            Default None. Aromaticity model used in SMIRKS matching, as per getSMIRKSMatches_OEMol docs. If provided, pre-processes molecule with this model prior to matching. Otherwise, uses provided oemol.
 
         Returns
         -------
@@ -316,11 +344,11 @@ class _Topology(Topology):
 
         """
 
-        # Perform matching on each unique molecule, unrolling the matches to all matching copies of tha tmolecule in the Topology object.
+        # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
         matches = list()
         for reference_molecule in self._reference_molecules:
             # Find all atomsets that match this definition in the reference molecule
-            refmol_matches = getSMIRKSMatches_OEMol( reference_molecule, smirks)
+            refmol_matches = getSMIRKSMatches_OEMol( reference_molecule, smirks, aromaticity_model = aromaticity_model)
 
             # Loop over matches
             for reference_atom_indices in refmol_matches:
@@ -456,9 +484,37 @@ class ForceField(object):
         # We'll be creating all forces again from scratch by re-parsing
         self._forces = []
 
+        # Store forcefield version info and, if present, aromaticity model
+        root = trees[0].getroot()
+        if root.tag=='SMIRFF':
+            if 'version' in root.attrib:
+                #TO DO: Should this be a float, a string, or something else?
+                self.version = float(root.attrib['version'])
+            else:
+                self.version = 0.0
+            if 'aromaticity_model' in root.attrib:
+                self._aromaticity_model = root.attrib['aromaticity_model']
+            else:
+                self._aromaticity_model = None
+        else:
+            raise ValueError("Error: ForceField parses a SMIRFF forcefield, but this does not appear to be one as the root tag is %s." % root.tag)
+
         # Load force definitions
         for tree in trees:
-            for child in tree.getroot():
+            root = tree.getroot()
+
+            # Before loading, do some error checking/consistency checking.
+            # Warn if version number is not consistent
+            if 'version' in root.attrib:
+                if float(root.attrib['version']) != self.version:
+                    print("Warning: Inconsistent version number in parsed FFXML files.")
+            # Throw an exception if aromaticity model is not consistent
+            if 'aromaticity_model' in root.attrib:
+                if root.attrib['aromaticity_model'] != self._aromaticity_model:
+                    raise ValueError("Error: Aromaticity model specified in FFXML files is inconsistent.")
+
+            # Now actually load
+            for child in root:
                 if child.tag in parsers:
                     parsers[child.tag](child, self)
 
@@ -1086,7 +1142,7 @@ class HarmonicBondGenerator(object):
         bonds = ValenceDict()
         bondorders = ValenceDict()
         for bond in self._bondtypes:
-            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks, aromaticity_model = self.ff._aromaticity_model):
                 bonds[atom_indices] = bond
                 # Retrieve bond orders
                 bondorders[atom_indices] = topology._bondorders_by_atomindices[atom_indices[0]][atom_indices[1]]
@@ -1096,7 +1152,7 @@ class HarmonicBondGenerator(object):
             print('HarmonicBondGenerator:')
             print('')
             for bond in self._bondtypes:
-                print('%64s : %8d matches' % (bond.smirks, len(topology.unrollSMIRKSMatches(bond.smirks))))
+                print('%64s : %8d matches' % (bond.smirks, len(topology.unrollSMIRKSMatches(bond.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all bonds to the system.
@@ -1153,7 +1209,7 @@ class HarmonicBondGenerator(object):
         # Iterate over all defined bond SMIRKS, allowing later matches to override earlier ones.
         bonds = ValenceDict()
         for bond in self._bondtypes:
-            for atom_indices in getSMIRKSMatches_OEMol( oemol, bond.smirks ):
+            for atom_indices in getSMIRKSMatches_OEMol( oemol, bond.smirks, aromaticity_model = self.ff._aromaticity_model ):
                 bonds[atom_indices] = bond
 
         if verbose:
@@ -1161,7 +1217,7 @@ class HarmonicBondGenerator(object):
             print('HarmonicBondGenerator:')
             print('')
             for bond in self._bondtypes:
-                print('%64s : %8d matches' % (bond.smirks, len(getSMIRKSMatches_OEMol(oemol, bond.smirks))))
+                print('%64s : %8d matches' % (bond.smirks, len(getSMIRKSMatches_OEMol(oemol, bond.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all bonds to the output list
@@ -1227,7 +1283,7 @@ class HarmonicAngleGenerator(object):
         # Iterate over all defined angle types, allowing later matches to override earlier ones.
         angles = ValenceDict()
         for angle in self._angletypes:
-            for atom_indices in topology.unrollSMIRKSMatches(angle.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(angle.smirks, aromaticity_model = self.ff._aromaticity_model):
                 angles[atom_indices] = angle
 
         if verbose:
@@ -1235,7 +1291,7 @@ class HarmonicAngleGenerator(object):
             print('HarmonicAngleGenerator:')
             print('')
             for angle in self._angletypes:
-                print('%64s : %8d matches' % (angle.smirks, len(topology.unrollSMIRKSMatches(angle.smirks))))
+                print('%64s : %8d matches' % (angle.smirks, len(topology.unrollSMIRKSMatches(angle.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all angles to the system.
@@ -1261,7 +1317,7 @@ class HarmonicAngleGenerator(object):
         # Iterate over all defined angle types, allowing later matches to override earlier ones.
         angles = ValenceDict()
         for angle in self._angletypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, angle.smirks):
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, angle.smirks, aromaticity_model = self.ff._aromaticity_model):
                 angles[atom_indices] = angle
 
         if verbose:
@@ -1269,7 +1325,7 @@ class HarmonicAngleGenerator(object):
             print('HarmonicAngleGenerator:')
             print('')
             for angle in self._angletypes:
-                print('%64s : %8d matches' % (angle.smirks, len(getSMIRKSMatches_OEMol(oemol, angle.smirks))))
+                print('%64s : %8d matches' % (angle.smirks, len(getSMIRKSMatches_OEMol(oemol, angle.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all angles to the output list
@@ -1352,7 +1408,7 @@ class PeriodicTorsionGenerator(object):
         # Iterate over all defined torsion types, allowing later matches to override earlier ones.
         torsions = ValenceDict()
         for torsion in self._torsiontypes:
-            for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
                 torsions[atom_indices] = torsion
 
         if verbose:
@@ -1360,7 +1416,7 @@ class PeriodicTorsionGenerator(object):
             print('PeriodicTorsionGenerator:')
             print('')
             for torsion in self._torsiontypes:
-                print('%64s : %8d matches' % (torsion.smirks, len(topology.unrollSMIRKSMatches(torsion.smirks))))
+                print('%64s : %8d matches' % (torsion.smirks, len(topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all torsions to the system.
@@ -1387,7 +1443,7 @@ class PeriodicTorsionGenerator(object):
         # Iterate over all defined torsion types, allowing later matches to override earlier ones.
         torsions = ValenceDict()
         for torsion in self._torsiontypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, torsion.smirks):
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
                 torsions[atom_indices] = torsion
 
         if verbose:
@@ -1395,7 +1451,7 @@ class PeriodicTorsionGenerator(object):
             print('PeriodicTorsionGenerator:')
             print('')
             for torsion in self._torsiontypes:
-                print('%64s : %8d matches' % (torsion.smirks, len(getSMIRKSMatches_OEMol(oemol, torsion.smirks))))
+                print('%64s : %8d matches' % (torsion.smirks, len(getSMIRKSMatches_OEMol(oemol, torsion.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all torsions to the output list
@@ -1486,7 +1542,7 @@ class NonbondedGenerator(object):
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atoms = ValenceDict()
         for ljtype in self._ljtypes:
-            for atom_indices in topology.unrollSMIRKSMatches(ljtype.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(ljtype.smirks, aromaticity_model = self.ff._aromaticity_model):
                 atoms[atom_indices] = ljtype
 
         if verbose:
@@ -1494,7 +1550,7 @@ class NonbondedGenerator(object):
             print('NonbondedForceGenerator:')
             print('')
             for ljtype in self._ljtypes:
-                print('%64s : %8d matches' % (ljtype.smirks, len(topology.unrollSMIRKSMatches(ljtype.smirks))))
+                print('%64s : %8d matches' % (ljtype.smirks, len(topology.unrollSMIRKSMatches(ljtype.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all Lennard-Jones terms to the system.
@@ -1544,7 +1600,7 @@ class NonbondedGenerator(object):
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atoms = ValenceDict()
         for ljtype in self._ljtypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, ljtype.smirks):
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, ljtype.smirks, aromaticity_model = self.ff._aromaticity_model):
                 atoms[atom_indices] = ljtype
 
         if verbose:
@@ -1552,7 +1608,7 @@ class NonbondedGenerator(object):
             print('NonbondedForceGenerator:')
             print('')
             for ljtype in self._ljtypes:
-                print('%64s : %8d matches' % (ljtype.smirks, len(getSMIRKSMatches_OEMol(oemol, ljtype.smirks))))
+                print('%64s : %8d matches' % (ljtype.smirks, len(getSMIRKSMatches_OEMol(oemol, ljtype.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all Lennard-Jones terms to the output list
@@ -1628,7 +1684,7 @@ class BondChargeCorrectionGenerator(object):
         """
         bccs = {}
         for bcc in self._bondChargeCorrections:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, bcc.smirks):
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, bcc.smirks, aromaticity_model = self.ff._aromaticity_model):
                 bccs[atom_indices] = bcc
 
         if verbose:
@@ -1636,7 +1692,7 @@ class BondChargeCorrectionGenerator(object):
             print('BondChargeCorrectionGenerator:')
             print('')
             for bcc in self._bondChargeCorrections:
-                print('%64s : %8d matches' % (bcc.smirks, len(getSMIRKSMatches_OEMol(oemol, bcc.smirks))))
+                print('%64s : %8d matches' % (bcc.smirks, len(getSMIRKSMatches_OEMol(oemol, bcc.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all BCCs to the output list
@@ -1654,7 +1710,7 @@ class BondChargeCorrectionGenerator(object):
         # Iterate over all defined bond charge corrections, allowing later matches to override earlier ones.
         bonds = ValenceDict()
         for bond in self._bondChargeCorrections:
-            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks, aromaticity_model = self.ff._aromaticity_model):
                 bonds[atom_indices] = bond
 
         if verbose:
@@ -1662,7 +1718,7 @@ class BondChargeCorrectionGenerator(object):
             print('Bond charge corrections:')
             print('')
             for bond in self._bondChargeCorrections:
-                print('%64s %12.6f : %8d matches' % (bond.smirks, bond.increment / unit.elementary_charge, len(topology.unrollSMIRKSMatches(bond.smirks))))
+                print('%64s %12.6f : %8d matches' % (bond.smirks, bond.increment / unit.elementary_charge, len(topology.unrollSMIRKSMatches(bond.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Apply bond charge increments
