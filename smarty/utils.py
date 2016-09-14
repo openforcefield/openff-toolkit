@@ -205,7 +205,7 @@ def parse_odds_file(filename, verbose = False):
         if verbose: print("Attempting to parse file '%s'" % filename)
         try:
             ifs = open(filename, 'r')
-            input_ddlines = ifs.readlines()
+            input_lines = ifs.readlines()
         except IOError:
             ifs = get_data_filename(filename)
             ifs = open(ifs, 'r')
