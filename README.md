@@ -162,7 +162,8 @@ Currently, the acceptance criteria does not include the full Metropolis-Hastings
 
 Check out examples in `examples/smirky/`:
 
-This tool can sample any chemical environment type relevant to SMIRFFs, that is atoms, bonds, angles, and propoer and improper torsions
+This tool can sample any chemical environment type relevant to SMIRFFs, that is atoms, bonds, angles, and proper and improper torsions, one at a time
+Scoring is analous to smarty (explained above), but uses a SMIRFF with existing parameters as a reference insteady of atomtyped molecules.
 
 Input for this tool can require up to four different file types
 * MOLECULES - any file that are readable in openeye, mol2, sdf, oeb, etc.
