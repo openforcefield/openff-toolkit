@@ -149,8 +149,7 @@ class ChemicalEnvironment(object):
             ORbase: string, such as '#6'
             ORdecorators: list of strings, such as ['X4','+0']
             """
-            while "" in ORdecorators:
-                ORdecorators.remove("")
+            ORdecorators = list(set(ORdecorators))
             self.ORtypes.append((ORbase, ORdecorators))
 
         def addANDtype(self, ANDtype):
@@ -162,7 +161,7 @@ class ChemicalEnvironment(object):
             ANDtype: string
                 added to the list of ANDtypes for this atom
             """
-            if ANDtype != "":
+            if ANDtype != "" and ANDtype not in self.ANDtypes:
                 self.ANDtypes.append(ANDtype)
 
         def getORtypes(self):
@@ -206,7 +205,7 @@ class ChemicalEnvironment(object):
             else:
                 while "" in newANDtypes:
                     newANDtypes.remove("")
-                self.ANDtypes = list(newANDtypes)
+                self.ANDtypes = list(set(newANDtypes))
 
     class Bond(Atom):
         """Bond representation, which may have ORtype and ANDtype descriptors.
@@ -391,8 +390,16 @@ class ChemicalEnvironment(object):
         if ORtype == '*':
             return None, []
 
-        # Save regular expression for SMIRKS decorators
-        reg = r'(!?[#]\d+|!?[aA]|!?[DHjrVX^]\d+|!?[R+-]\d*|!?[@]\d+|!?[@]@?)'
+        # There are a limited number of descriptors for smirks string they are:
+        element_num = "!?[#]\d+" # That is a # followed by one or more ints w/or w/o at ! in front '!#16'
+        aro_ali = "!?[aA]" # a or A w/ or w/o a ! in front 'A'
+        needs_int = "!?[DHjrVX^]\d+" # the decorators (D, H, j, r, V, X, ^) followed by one or more integers w/ or w/o a ! 'D2'
+        optional_int = "!?[R+-]\d*" # R, +, - do not need to be followed by a integer w/ or w/o a ! 'R2'
+        chirality = "!?[@]\d+|!?[@]@?" # chirality options, "@", "@@", "@int" w/ or w/o a ! in front
+
+        # Combine regular expressions to get any of the options above
+        reg = '|'.join([element_num, aro_ali, needs_int, optional_int, chirality])
+        reg = r'('+reg+')'
 
         # special case 2: replacement string has $ initially
         if ORtype[0] == '$':

@@ -8,7 +8,7 @@ smart/data/odds_files.
 
 From command line called:
 ```
-smirky -molecules AlkEthOH_test_filt1_ff.mol2 --typetag Angle --verbose True
+smirky --molecules AlkEthOH_test_filt1_ff.mol2 --typetag Angle --verbose True
 ```
 
 Output to command line:
