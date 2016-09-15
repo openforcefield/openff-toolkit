@@ -14,8 +14,8 @@ def find_package_data(data_root, package_root):
 
 setup(
     name = "smarty",
-    version = "0.1.2",
-    author = "John Chodera",
+    version = "0.1.3",
+    author = "John Chodera, David Mobley, and others",
     author_email = "john.chodera@choderalab.org",
     description = ("Automated Bayesian atomtype sampling"),
     license = "GNU Lesser General Public License (LGPL), Version 3",
@@ -28,6 +28,6 @@ setup(
         "Topic :: Utilities",
         "License :: OSI Approved :: GNU Lesser General Public License (LGPL), Version 3",
     ],
-    entry_points={'console_scripts': ['smarty = smarty.cli:main']},
+    entry_points={'console_scripts': ['smarty = smarty.cli_smarty:main', 'smirky = smarty.cli_smirky:main']},
     package_data={'smarty': find_package_data('smarty/data', 'smarty')},
 )

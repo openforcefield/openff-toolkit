@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='ASCII'?>
-<SMIRFF aromaticity_model="OEAroModel_MDL">
+<SMIRFF version="0.1" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRKS (SMIRKS Force Field) template file -->
   <Date>Date: Aug. 23, 2016</Date>
   <Author>D. L. Mobley, UC Irvine</Author>

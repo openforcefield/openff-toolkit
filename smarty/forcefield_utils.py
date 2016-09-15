@@ -347,7 +347,7 @@ def getMolParamIDToAtomIndex( oemol, ff):
 
     """
 
-    labels = ff.labelMolecules([mol])
+    labels = ff.labelMolecules([oemol])
     param_usage = {}
     for mol_entry in range(len(labels)):
         for force in labels[mol_entry].keys():

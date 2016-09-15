@@ -142,7 +142,10 @@ def read_molecules(filename, verbose=True):
     """
 
     if not os.path.exists(filename):
-        raise Exception("File '%s' not found." % filename)
+        built_in = get_data_filename('molecules/%s' % filename)
+        if not os.path.exists(built_in):
+            raise Exception("File '%s' not found." % filename)
+        filename = built_in
 
     if verbose: print("Loading molecules from '%s'..." % filename)
     start_time = time.time()
@@ -168,3 +171,87 @@ def read_molecules(filename, verbose=True):
     if verbose: print("%.3f s elapsed" % elapsed_time)
 
     return molecules
+
+def parse_odds_file(filename, verbose = False):
+    """
+    parses files that have the form
+    decorator       odds
+    if only one column odds will be assumed equally probable
+
+    Parameters
+    -----------
+    filename: string or file object
+    may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory (for built in decorator files), or an opten file-like object with a readlines() method.
+
+    Returns
+    --------
+    choices: 2-tuple of the form ( [decorators], [odds] )
+    """
+    if verbose:
+        if isinstance(filename, file):
+            print("Attempting to parse file '%s'" % filename.name)
+        else:
+            print("Attempting to parse file '%s'" % filename)
+
+    # if no file return None
+    if filename is None:
+        return None
+
+    # if input is a file object
+    try:
+        input_lines = filename.readlines()
+        if verbose: print("Attempting to parse file '%s'" % filename.name)
+    except AttributeError:
+        if verbose: print("Attempting to parse file '%s'" % filename)
+        try:
+            ifs = open(filename, 'r')
+            input_ddlines = ifs.readlines()
+        except IOError:
+            ifs = get_data_filename(filename)
+            ifs = open(ifs, 'r')
+            input_lines = ifs.readlines()
+        except Exception as e:
+            raise Exception("%s\nProvided file (%s) could not be parsed" % (str(e), filename))
+    except Exception as e:
+        msg = str(e) + '\n'
+        msg += "Could not read data from file %s" % filename
+        raise Exception(msg)
+
+    # close file
+    ifs.close()
+
+    decorators = []
+    odds = []
+    noOdds = False
+    for l in input_lines:
+        # skip empty lines
+        if len(l) == 0:
+            continue
+        # check for and remove comments
+        comment = l.find('%')
+        if comment == -1: # no comment
+            entry = l.split()
+        elif comment > 0: # remove trailing comment
+            entry = l[:comment].split()
+        else: # whole line is a comment skip
+            continue
+
+        # add decorator
+        if entry[0] == "''" or entry[0] == '""':
+            decorators.append('')
+        else:
+            decorators.append(entry[0])
+
+        if len(entry) == 2:
+            odds.append(float(entry[1]))
+        elif len(entry) == 1:
+            noOdds = True
+        else:
+            raise Exception("Error entry (%s) in decorator file '%s' is invalid" % (l, filename))
+
+    if (odds.count(0) == len(odds)) or noOdds:
+        odds = None
+        #TODO: handle case where 1 line is missing odds entry
+
+    return (decorators, odds)
+
