@@ -12,6 +12,7 @@ OpenMM ForceField replacement using SMIRKS-based matching.
 AUTHORS
 
 John D. Chodera <john.chodera@choderalab.org>
+David L. Mobley <dmobley@mobleylab.org>
 
 Baseed on simtk.openmm.app.forcefield written by Peter Eastman.
 
@@ -191,6 +192,8 @@ class _Topology(Topology):
 
     self._reference_molecules is a list of OEMol for the reference molecules
     self._reference_to_topology_atom_mappings[reference_molecule] is a list of atom indices mapping a reference molecule atom index to the topology atom index
+    self._bondorders is a list of floating point bond orders for the bonds in the Topology.
+    self._bondorders_by_atomindices is a dict of floating point bond orders for the bonds in the Topology, keyed by indices of the atoms involved.
     """
     def __init__(self, topology, reference_molecules):
         """
@@ -219,6 +222,9 @@ class _Topology(Topology):
 
         # Identify all molecules and atom mappings.
         self._identifyMolecules()
+
+        # Get/initialize bond orders
+        self._updateBondOrders()
 
     def _identifyMolecules(self):
         """Identify all unique reference molecules and atom mappings to all instances in the Topology.
@@ -265,6 +271,59 @@ class _Topology(Topology):
                 for index in sorted(list(molecule_graph)):
                     msg += 'Atom %8d %5s %5d %3s\n' % (atoms[index].index, atoms[index].name, atoms[index].residue.index, atoms[index].residue.name)
                 raise Exception(msg)
+
+    def _updateBondOrders(self, Wiberg = False):
+        """Update and store list of bond orders for the molecules in this Topology. Can be used for initialization of bondorders list, or for updating bond orders in the list.
+
+    Parameters:
+    ----------
+    Wiberg : bool (optional)
+        Default False. If False, uses bond orders OEChem assigns to bonds on the molecule. If True, instead uses Wiberg bond orders stored on bonds in the molecule. These must already be present, i.e. from assignPartialCharges with an AM1 method.
+"""
+        # Initialize
+        self._bondorders=list()
+        self._bondorders_by_atomindices = {}
+        # Loop over reference molecules and pull bond orders
+
+        for mol in self._reference_molecules:
+            # Pull mappings for this molecule
+            mappings = self._reference_to_topology_atom_mappings[mol]
+            # Loop over bonds
+            for idx,bond in enumerate(mol.GetBonds()):
+                # Get atom indices involved in bond
+                at1 = bond.GetBgn().GetIdx()
+                at2 = bond.GetEnd().GetIdx()
+                # Get bond order
+                if not Wiberg:
+                    order = bond.GetOrder()
+                else:
+                    order = bond.GetData('WibergBondOrder')
+                # Convert atom numbers to topology atom numbers; there may be multiple matches
+                for mapping in mappings:
+                    topat1 = None
+                    topat2 = None
+                    for mapatom in mapping:
+                        if mapatom==at1:
+                            topat1 = mapping[mapatom]
+                        elif mapatom==at2:
+                            topat2 = mapping[mapatom]
+                    if topat1==None or topat2==None:
+                        raise ValueError("No mapping found for these topology atoms (indices %s-%s)." % (at1, at2))
+                    # Store bond order to re-use below and elsewhere; store in both directions
+                    if not topat1 in self._bondorders_by_atomindices:
+                        self._bondorders_by_atomindices[topat1] = {}
+                    if not topat2 in self._bondorders_by_atomindices:
+                        self._bondorders_by_atomindices[topat2] = {}
+                    self._bondorders_by_atomindices[topat2][topat1] = order
+                    self._bondorders_by_atomindices[topat1][topat2] = order
+
+        # Loop over bonds in topology and store orders in the same order
+        for bond in self._bonds:
+            # See if we have in the 0-1 order and store
+            topat1 = bond[0].index
+            topat2 = bond[1].index
+            order = self._bondorders_by_atomindices[topat1][topat2]
+            self._bondorders.append(order)
 
     def unrollSMIRKSMatches(self, smirks, aromaticity_model = None):
         """Find all sets of atoms in the topology that match the provided SMIRKS strings.
@@ -654,7 +713,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
             tree=self._XMLTrees[idx]
             tree.write( filenm, xml_declaration=True, pretty_print=True)
 
-    def _assignPartialCharges(self, molecule, oechargemethod):
+    def _assignPartialCharges(self, molecule, oechargemethod, modifycharges = True):
         """Assign partial charges to the specified molecule using best practices.
 
         Parameters
@@ -664,10 +723,12 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
             NOTE: The molecule will be modified when charges are added.
         oechargemethod : str
             The name of the charge method from oequacpac to use (e.g. 'OECharges_AM1BCCSym')
-
+        modifycharges : bool (optional)
+            If False, don't actually assign partial charges; use the charge calculation solely to update the Wiberg bond orders.
 
         Notes:
         As per Christopher Bayly and http://docs.eyesopen.com/toolkits/cookbook/python/modeling/am1-bcc.html, OEAssignPartialCharges needs multiple conformations to ensure well-behaved charges. This implements that recipe for conformer generation.
+        This conformer generation may or may not be necessary if the calculation is only to obtain bond orders; this will have to be investigated separately so it is retained for now.
         """
         # TODO: Cache charged molecules here to save time in future calls to createSystem
 
@@ -690,13 +751,18 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         status = openeye.oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, oechargemethod), False, False)
         if not status:
             raise(RuntimeError("OEAssignPartialCharges returned error code %s" % status))
-
-        # Our copy has the charges we want but not the right conformation. Copy charges over
+        # Our copy has the charges we want but not the right conformation. Copy charges over. Also copy over Wiberg bond orders if present
         partial_charges = []
-        for atom in charged_copy.GetAtoms():
-            partial_charges.append( atom.GetPartialCharge() )
-        for (idx,atom) in enumerate(molecule.GetAtoms()):
-            atom.SetPartialCharge( partial_charges[idx] )
+        partial_bondorders = []
+        if modifycharges:
+            for atom in charged_copy.GetAtoms():
+                partial_charges.append( atom.GetPartialCharge() )
+            for (idx,atom) in enumerate(molecule.GetAtoms()):
+                atom.SetPartialCharge( partial_charges[idx] )
+        for bond in charged_copy.GetBonds():
+            partial_bondorders.append( bond.GetData("WibergBondOrder"))
+        for (idx, bond) in enumerate(molecule.GetBonds()):
+            bond.SetData("WibergBondOrder", partial_bondorders[idx])
 
 
     def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
@@ -789,6 +855,17 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
         # Work with a modified form of the topology that provides additional accessors.
         topology = _Topology(topology, molecules)
+
+        # If the charge method was not an OpenEye AM1 method, obtain Wiberg bond orders
+        if not (type(chargeMethod) == str and 'AM1' in chargeMethod):
+            if verbose: print("Doing an AM1 calculation to get Wiberg bond orders.")
+            for molecule in molecules:
+                # Do AM1 calculation just to get bond orders on moleules (discarding charges)
+                self._assignPartialCharges(molecule, "OECharges_AM1", modifycharges = False)
+
+
+        # Update bond orders stored in the topology
+        topology._updateBondOrders(Wiberg = True )
 
         # Create the System and add atoms
         system = openmm.System()
@@ -1003,9 +1080,30 @@ class HarmonicBondGenerator(object):
         """A SMIRFF bond type."""
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.length = _extractQuantity(node, parent, 'length')
-            self.k = _extractQuantity(node, parent, 'k')
             self.pid = _extractQuantity(node, parent, 'id')
+
+            # Determine if we are using fractional bond orders for this bond
+            # First, check if this force uses fractional bond orders
+            if 'fractional_bondorder' in parent.attrib:
+                # If it does, see if this parameter line provides fractional bond order parameters
+                if 'length_bondorder1' in node.attrib and 'k_bondorder1' in node.attrib:
+                    # Store what interpolation scheme we're using
+                    self.fractional_bondorder = parent.attrib['fractional_bondorder']
+                    # Store bondorder1 and bondorder2 parameters
+                    self.k = list()
+                    self.length = list()
+                    for ct in range(1,3):
+                        self.length.append( _extractQuantity(node, parent, 'length_bondorder%s' % ct, unit_name = 'length_unit') )
+                        self.k.append( _extractQuantity(node, parent, 'k_bondorder%s' % ct, unit_name = 'k_unit') )
+                else:
+                    self.fractional_bondorder = None
+            else:
+                self.fractional_bondorder = None
+
+            # If no fractional bond orders, just get normal length and k
+            if self.fractional_bondorder == None:
+                self.length = _extractQuantity(node, parent, 'length')
+                self.k = _extractQuantity(node, parent, 'k')
 
     def __init__(self, forcefield):
         self.ff = forcefield
@@ -1042,9 +1140,12 @@ class HarmonicBondGenerator(object):
 
         # Iterate over all defined bond types, allowing later matches to override earlier ones.
         bonds = ValenceDict()
+        bondorders = ValenceDict()
         for bond in self._bondtypes:
             for atom_indices in topology.unrollSMIRKSMatches(bond.smirks, aromaticity_model = self.ff._aromaticity_model):
                 bonds[atom_indices] = bond
+                # Retrieve bond orders
+                bondorders[atom_indices] = topology._bondorders_by_atomindices[atom_indices[0]][atom_indices[1]]
 
         if verbose:
             print('')
@@ -1056,7 +1157,18 @@ class HarmonicBondGenerator(object):
 
         # Add all bonds to the system.
         for (atom_indices, bond) in bonds.items():
-            force.addBond(atom_indices[0], atom_indices[1], bond.length, bond.k)
+            if bond.fractional_bondorder==None:
+                force.addBond(atom_indices[0], atom_indices[1], bond.length, bond.k)
+            # If this bond uses partial bond orders
+            else:
+                order = bondorders[atom_indices]
+                if bond.fractional_bondorder=='interpolate-linear':
+                    k = bond.k[0] + (bond.k[1]-bond.k[0])*(order-1.)
+                    length = bond.length[0] + (bond.length[1]-bond.length[0])*(order-1.)
+                    force.addBond(atom_indices[0], atom_indices[1], length, k)
+                    if verbose: print("%64s" % "Added %s bond, order %.2f; length=%.2g; k=%.2g" % (bond.smirks, order, length, k))
+                else:
+                    raise Exception("Partial bondorder treatment %s is not implemented." % bond.fractional_bondorder)
 
         if verbose: print('%d bonds added' % (len(bonds)))
 
@@ -1130,6 +1242,10 @@ class HarmonicAngleGenerator(object):
             self.angle = _extractQuantity(node, parent, 'angle')
             self.k = _extractQuantity(node, parent, 'k')
             self.pid = _extractQuantity(node, parent, 'id')
+            if 'fractional_bondorder' in parent.attrib:
+                self.fractional_bondorder = parent.attrib['fractional_bondorder']
+            else:
+                self.fractional_bondorder = None
 
     def __init__(self, forcefield):
         self.ff = forcefield
@@ -1237,6 +1353,10 @@ class PeriodicTorsionGenerator(object):
             self.phase = list()
             self.k = list()
             self.pid = _extractQuantity(node, parent, 'id')
+            if 'fractional_bondorder' in parent.attrib:
+                self.fractional_bondorder = parent.attrib['fractional_bondorder']
+            else:
+                self.fractional_bondorder = None
             # Store parameters.
             index = 1
             while 'phase%d'%index in node.attrib:
@@ -1355,6 +1475,10 @@ class NonbondedGenerator(object):
             """Currently we support radius definition via 'sigma' or 'rmin_half'."""
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.pid = _extractQuantity(node, parent, 'id')
+            if 'fractional_bondorder' in parent.attrib:
+                self.fractional_bondorder = parent.attrib['fractional_bondorder']
+            else:
+                self.fractional_bondorder = None
 
             # Make sure we don't have BOTH rmin_half AND sigma
             try:
