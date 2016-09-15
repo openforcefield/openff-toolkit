@@ -61,3 +61,7 @@ target/
 
 # Ipython notebook checkpoints
 *.ipynb_checkpoints/
+
+# the log and csv files created when testing smirky
+smarty/tests/test_smirky.csv
+smarty/tests/test_smirky.log
