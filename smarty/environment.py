@@ -273,6 +273,7 @@ class ChemicalEnvironment(object):
             """
             Returns a float for the order of this bond
             for multiple ORtypes or ~ it returns the minimum possible order
+            the intended application is for checking valence around a given atom
             """
             orderDict = {'~':1.,
                     '-':1., ':': 1.5, '=':2., '#':3.,
