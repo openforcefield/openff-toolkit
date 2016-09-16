@@ -1,0 +1,1367 @@
+
+#[#16X2:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.375  180.0     2  Frosst S_-CW-CM-HA  From X-CA-CR-X
+#[#16X2:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.625  180.0     2  Frosst S_-CR-CM-HA  From X-CA-CR-X
+[#16X2:1]-[#6X3:2]~[#6X3:3]-[#1:4]  1  0.625  180.0     2   Frosst generic
+
+#[#16X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst S_-CW-CP-CA  guess, rigid fused aryls; 19 May 2005
+#[#16X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst S_-CW-CP-CP  guess, rigid fused aryls; 19 May 2005
+#[#16X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.625  180.0     2  Frosst S_-CR-CM-CM  From X-CA-CR-X
+#[#16X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.625  180.0     2  Frosst S_-CW-CM-CM  From X-CA-CR-X
+#[#16X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     1  Frosst S_-CR-C_-CA  guess Nov 22 2006
+[#16X2:1]-[#6X3:2]~[#6X3:3]~[#6X3:4]  1  0.625  180.0     1   Frosst generic
+
+#[#16X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.521    0.0    -4  Frosst S_-CR-C_-N2  From S-CW-C -N2 : reproduce well the B3LYP/6-311G** surface for this torsion (charged N2 using amidine branched on CR of thiazole) 28 Oct 2004@[#16X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  1.262  180.0     2  Frosst S_-CR-C_-N2 
+#[#16X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.521    0.0    -4  Frosst S_-CW-C_-N2  B3LYP/6-311G** fit, 28 Oct 2004 (charged N2 using amidine branched on CW of thiophene)@[#16X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  1.262  180.0     2  Frosst S_-CW-C_-N2 
+#[#16X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  1.000  180.0     1  Frosst S_-CR-C_-N  guess Nov 22 2006
+[#16X2:1]-[#6X3:2]-[#6X3:3]~[#7X3:4]  1  0.5    180.0     1   Frosst generic
+
+[#16X2:1]-[#6X3:2]-[#6X3:3]~[#8X1:4]  1  0.5    180.0     1  Frosst S_-CR-C_-O  guess Nov 22 2006
+
+[#16X2:1]-[#6X3:2]-[#6X4:3]-[#1:4]  1  0.260    0.0    -2  Frosst S_-CW-CT-H1  RHF/6-31G(d) opt Sept 20 2009@[#16X2:1]-[#6X3:2]-[#6X4:3]-[#1:4]  1  0.350  180.0     1  Frosst S_-CW-CT-H1  RHF/6-31G(d) opt Sept 20 2009
+
+[#16X2:1]-[#6X3:2]-[#6X4:3]-[#7X3:4]  1  0.285  270.0    -4  Frosst S_-CW-CT-N  RHF/6-31G(d) opt Sept 20 2009@[#16X2:1]-[#6X3:2]-[#6X4:3]-[#7X3:4]  1  0.669    0.0    -3  Frosst S_-CW-CT-N  RHF/6-31G(d) opt Sept 20 2009@[#16X2:1]-[#6X3:2]-[#6X4:3]-[#7X3:4]  1  0.310  180.0    -2  Frosst S_-CW-CT-N  RHF/6-31G(d) opt Sept 20 2009@[#16X2:1]-[#6X3:2]-[#6X4:3]-[#7X3:4]  1  0.548  270.0    -2  Frosst S_-CW-CT-N  RHF/6-31G(d) opt Sept 20 2009@[#16X2:1]-[#6X3:2]-[#6X4:3]-[#7X3:4]  1  0.263  270.0    -1  Frosst S_-CW-CT-N  RHF/6-31G(d) opt Sept 20 2009@[#16X2:1]-[#6X3:2]-[#6X4:3]-[#7X3:4]  1  0.222    0.0     1  Frosst S_-CW-CT-N  RHF/6-31G(d) opt Sept 20 2009
+
+[#16X2:1]-[#6X3:2]-[#6X4:3]-[NX4,NX3:4]  1  0.988    0.0    -4  Frosst S_-CW-CT-N3  RHF/6-31G(d) opt Sept 20 2009@[#16X2:1]-[#6X3:2]-[#6X4:3]-[NX4,NX3:4]  1  0.258    0.0    -3  Frosst S_-CW-CT-N3  RHF/6-31G(d) opt Sept 20 2009@[#16X2:1]-[#6X3:2]-[#6X4:3]-[NX4,NX3:4]  1  0.805    0.0    -2  Frosst S_-CW-CT-N3  RHF/6-31G(d) opt Sept 20 2009@[#16X2:1]-[#6X3:2]-[#6X4:3]-[NX4,NX3:4]  1  2.059  270.0    -2  Frosst S_-CW-CT-N3  RHF/6-31G(d) opt Sept 20 2009@[#16X2:1]-[#6X3:2]-[#6X4:3]-[NX4,NX3:4]  1  1.710   90.0     1  Frosst S_-CW-CT-N3  RHF/6-31G(d) opt Sept 20 2009
+
+[#16X2:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst S_-CT-CJ-HC  from CT-CT-CJ-HC Dec 1 2004
+
+[#16X2:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]  1  1.000    0.0     3  Frosst S_-CT-CJ-CJ  by comparison above
+
+[#16X2:1]-[#6X4:2]-[#6X4r3:3]-[#7X3:4]  1  1.000    0.0     3  Frosst S_-CT-CJ-N  by comparison above
+
+[#16X4,#16X3+0:1]-[#7X2:2]=[#6X3:3]-[#16X2H0:4]  1  7.500  180.0     2  Frosst SO-NB-C*-S  RHF/6-31G(d) Mar 7 2007
+
+[#16X4,#16X3+0:1]-[#7X2:2]=[#6X3:3]-[#7X3:4]  1  7.500  180.0     2  Frosst SO-NB-C*-N*  RHF/6-31G(d) Mar 7 2007
+
+[#16X4,#16X3+0:1]-[NX4,NX3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     2  Frosst SO-N3-CA-CA  Fit to CA-CA-N3-SO/CA-N3-SO-CT surface
+
+[#16X4,#16X3+0:1]-[NX4,NX3:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst SO-N3-CJ-H1 
+
+[#16X4,#16X3+0:1]-[NX4,NX3:2]-[#6X4r3:3]-[#6X4r3:4]  1  1.000    0.0     3  Frosst SO-N3-CJ-CJ  from S-CT-CJ-CJ
+
+[#16X4,#16X3+0:1]-[#8X2:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst SO-OS-CM-H4  guess
+
+[#16X4,#16X3+0:1]-[#8X2:2]-[#6X3:3]=[#6X3:4]  1  0.000    0.0     1  Frosst SO-OS-CM-CM  guess
+
+[#1:1]-[#16X2:2]-[#6X4:3]-[#1:4]  1  0.333    0.0     3  Frosst H_-S_-CT-H  from parmC96
+
+[#1:1]-[#16X3H1:2]-[#6X3:3]~[#6X3:4]  1  0.000    0.0     2  Frosst HS-SH-CA-CA  guess
+#[#1:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.375  180.0     2  Frosst HA-CM-CC-CC  From X-CA-CR-X
+#[#1:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.375  180.0     2  Frosst HA-CM-CC-CW  From X-CA-CR-X
+#[#1:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     1  Frosst H4-CR-C_-CW  guess
+[#1:1]-[#6X3:2]~[#6X3:3]~[#6X3:4]  1  0.4    180.0     1   Frosst generic
+
+
+[#1:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  1.000    0.0     1  Frosst H4-CR-C_-O  guess
+
+[#1:1]-[#6X4:2]-[#6X3:3]=[#6X3:4]  1  1.000  180.0     3  Frosst HC-CT-CM-CM  from ab initio mt
+#[#1:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst HC-CT-CJ-HC  kept zero in fit
+#[#1:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst HC-CT-CJ-HP  HC-CJ-CT-HC
+#[#1:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  1.000    0.0     1  Frosst H1-CT-CJ-HC  by comparision
+[#1:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#1:1]-[#6X4:2]-[#6X4r3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst HC-CT-CJ-CT  kept zero in fit
+#[#1:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.867    0.0     3  Frosst HC-CT-CJ-CJ  fit to RHF/6-31G(d)
+#[#1:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]  1  1.000    0.0     1  Frosst H1-CT-CJ-CJ  by comparision
+[#1:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.9      0.0     1   Frosst generic
+
+
+[#1:1]-[#6X4:2]-[#6X4r3:3]-[NX4,NX3:4]  1  0.156    0.0     3  Frosst HC-CT-CJ-N3  from N3-CT-CJ-HC
+#[#1:1]-[#6X4:2]-[#6X4r3:3]-[#8X2:4]  1  0.000    0.0     1  Frosst HC-CT-CJ-OH  unknow Dec 1 2004
+#[#1:1]-[#6X4:2]-[#6X4r3:3]-[#8X2:4]  1  1.000    0.0     1  Frosst H1-CT-CJ-OH  by comparision
+[#1:1]-[#6X4:2]-[#6X4r3:3]-[#8X2:4]  1  1.000    0.0     1   Frosst generic
+
+
+[#1:1]-[#6X4r3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst HC-CJ-C_-H4  guess
+#[#1:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst HC-CJ-CA-CA  guess Jan 28 2004
+#[#1:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst HC-CJ-CA-CP  guess 16 Feb 2005
+#[#1:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.050  180.0    -4  Frosst HC-CJ-CC-CC  RHF/6-31G(d) opt fit Oct21 2010@[#1:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.150    0.0    -3  Frosst HC-CJ-CC-CC  RHF/6-31G(d) opt fit Oct21 2010@[#1:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.150  180.0     2  Frosst HC-CJ-CC-CC  RHF/6-31G(d) opt fit Oct21 2010
+#[#1:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.220    0.0    -3  Frosst HC-CJ-CC-CR  RHF/6-31G(d,p) opt Sept 2 2008@[#1:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0    -2  Frosst HC-CJ-CC-CR @[#1:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.400    0.0     1  Frosst HC-CJ-CC-CR 
+#[#1:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.220  180.0    -3  Frosst HC-CJ-CC-CW  RHF/6-31G(d,p) opt Sept 2 2008@[#1:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.000  180.0    -2  Frosst HC-CJ-CC-CW @[#1:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.400  180.0     1  Frosst HC-CJ-CC-CW 
+[#1:1]-[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.220  180.0    -3   Frosst generic
+
+
+[#1:1]-[#6X4r3:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst HC-CJ-C_-CT  set to zero for CJ-CJ-C-O
+
+[#1:1]-[#6X4r3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst HC-CJ-CA-NC  set to 0 Sept 14 2005
+
+[#1:1]-[#6X4r3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst HC-CJ-C_-N  set to zero for CJ-CJ-C-O
+#[#1:1]-[#6X4r3:2]-[#6X3:3]-[#8X1:4]  1  0.000    0.0     1  Frosst HC-CJ-C_-O2  dummy
+#[#1:1]-[#6X4r3:2]-[#6X3:3]-[#8X1:4]  1  5.000    0.0     1  Frosst HC-CJ-C_-O  set to zero for CJ-CJ-C-O
+[#1:1]-[#6X4r3:2]-[#6X3:3]-[#8X1:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#1:1]-[#6X4r3:2]-[#6X3:3]-[#8X2:4]  1  0.000    0.0     1  Frosst HC-CJ-C_-OS  set to zero for CJ-CJ-C-OS
+
+[#1:1]-[#6X4r3:2]-[#6X4r3:3]-[#6X4:4]  1  0.000    0.0     2  Frosst HC-CJ-CJ-CT  accounted for in other terms
+
+[#1:1]-[#7X2:2]-[#6X3:3]~[#6X3:4]  1  2.400  180.0     2  Frosst H_-NB-CA-CA  like X-C-NB-X; 15 April 2005
+
+[#1:1]-[#7X2:2]-[#6X3:3]~[#7X3:4]  1  2.400  180.0     2  Frosst H_-NB-CA-N2  like X-C-NB-X; 15 April 2005
+
+[#1:1]-[#7X3:2]-[#6X3:3]-[#16X2H0:4]  1  1.000  180.0     2  Frosst H_-N_-CW-S  guess
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst H_-N_-CM-H4  guess
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#1:4]  1  0.625  180.0     2  Frosst H_-N2-CM-H4  From X-CA-N-X
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#1:4]  1  1.000    0.0     1  Frosst H_-N_-CW-H4  guess
+[#1:1]-[#7X3:2]-[#6X3:3]-[#1:4]  1  0.625    0.0     1   Frosst generic
+
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst H_-NA-CP-CA  guess for rigid systems; 13 April 2005
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst H_-NA-CP-CP  guess for rigid systems; 13 April 2005
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst H_-N_-CB-CB  aug29 2003 guess
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst H_-N_-CB-CP  aug29 2003 guess
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst H_-N_-CM-CM  guess
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.625  180.0     2  Frosst H_-N2-CM-CM  From X-CA-N-X
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.000    0.0     1  Frosst H_-N_-CW-CC  guess
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.100  180.0     1  Frosst H_-N_-CW-CA  guess Aug 31 2006
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.100  180.0     2  Frosst H_-N_-CB-C  guess Aug 31 2010
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.100  180.0     2  Frosst H_-N_-CB-CA  guess Nov 8 2004
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.800  180.0     2  Frosst H_-N_-CB-CC  from CA-CA-CA-CA April 2 2009
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.625  180.0     2  Frosst H_-N_-CP-CA  from X-C-CA-X Nov 2 2005
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.625  180.0     2  Frosst H_-N_-CP-CP  from X-C-CA-X Nov 2 2005
+[#1:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.0    180.0     2   Frosst generic
+
+
+[#1:1]-[#7X3:2]-[#6X3:3]-[#6X4:4]  1  1.000  180.0     2  Frosst H_-N_-CW-CT  guess
+
+[#1:1]-[#7X3:2]-[#6X3:3]-[#7X2:4]  1  1.000  180.0     2  Frosst H_-N2-CR-NB  guess
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst H_-N2-CR-N*  guess
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst H_-N_-CB-N  guess for intra cyclic; 3 Aug 2006
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst H_-N_-CW-NA  guess 16 May 2005
+[#1:1]-[#7X3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1   Frosst generic
+
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#8X2:4]  1  1.000  180.0     2  Frosst H_-N2-CR-OS  guess
+#[#1:1]-[#7X3:2]-[#6X3:3]-[#8X2:4]  1  1.000  180.0     2  Frosst H_-N_-CW-OS  guess
+[#1:1]-[#7X3:2]-[#6X3:3]-[#8X2:4]  1  1.000  180.0     2   Frosst generic
+
+
+[#1:1]-[#7X3:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst H_-N_-CJ-HC 
+
+[#1:1]-[#7X3:2]-[#6X4r3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst H_-N_-CJ-C  dummy guess (had to get going) March 30 2004
+
+[#1:1]-[#7X3:2]-[#6X4r3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst H_-N_-CJ-CT  kept zero in fit
+
+[#1:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.000    0.0     1  Frosst H_-N_-CJ-CJ 
+
+[#1:1]-[#7X3:2]-[#7X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst H_-NA-N_-C  from CA-CA-CA-CA April 9 2009
+
+[#1:1]-[#7X3:2]-[#7X3:3]-[#6X4:4]  1  3.600  180.0     2  Frosst H_-NA-N_-CT  from CA-CA-CA-CA April 9 2009
+
+[#1:1]-[NX4,NX3:2]-[#6X3:3]-[#16X2H0:4]  1  0.000    0.0     1  Frosst H_-N3-CW-S  guess
+#[#1:1]-[#7X4:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst H_-N3-CC-CC  guess
+#[#1:1]-[#7X4:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst H_-N3-CC-CW  guess
+#[#1:1]-[#7X4:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst H_-N3-CR-CR  guess
+#[#1:1]-[#7X4:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst H_-N3-CW-CC  guess
+[#1:1]-[NX4,NX3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1   Frosst generic
+
+#[#1:1]-[#7X4:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst H_-N3-CC-NB  guess
+#[#1:1]-[#7X4:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst H_-N3-CR-NB  guess
+[#1:1]-[NX4,NX3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1   Frosst generic
+
+#[#1:1]-[#7X4:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst H_-N3-CR-N*  guess
+#[#1:1]-[#7X4:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst H_-N3-CW-NA  guess
+[#1:1]-[NX4,NX3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1   Frosst generic
+
+#[#1:1]-[#7X4:2]-[#6X3:3]-[#8X2:4]  1  0.000    0.0     1  Frosst H_-N3-CR-OS  guess
+#[#1:1]-[#7X4:2]-[#6X3:3]-[#8X2:4]  1  0.000    0.0     1  Frosst H_-N3-CW-OS  guess
+[#1:1]-[NX4,NX3:2]-[#6X3:3]-[#8X2:4]  1  0.000    0.0     1   Frosst generic
+
+#[#1:1]-[#7X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst H_-N3-CJ-H1  from HC-CJ-CT-HC
+#[#1:1]-[#7X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst H_-N3-CJ-HP  from HC-CJ-CT-HC
+[#1:1]-[NX4,NX3:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#1:1]-[NX4,NX3:2]-[#6X4r3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst H_-N3-CJ-CT  from H-N-CJ-CT
+
+[#1:1]-[NX4,NX3:2]-[#6X4r3:3]-[#6X4r3:4]  1  2.700    0.0     1  Frosst H_-N3-CJ-CJ  from CJ-CJ-CJ-HC
+
+[#1:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#1:4]  1  0.125    0.0    -3  Frosst H_-N3-N3-H  MP2/6-31G(d,p) 7/23/98@[#1:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#1:4]  1  1.875    0.0    -2  Frosst H_-N3-N3-H  MP2/6-31G(d,p) 7/23/98@[#1:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#1:4]  1  0.750    0.0     1  Frosst H_-N3-N3-H  MP2/6-31G(d,p) 7/23/98
+#[#1:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  0.250    0.0     1  Frosst HO-OH-CM-C 
+#[#1:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  0.250    0.0     1  Frosst HO-OH-CM-CM 
+#[#1:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  0.250    0.0     1  Frosst HO-OH-CR-CC  estimated
+#[#1:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  0.250    0.0     1  Frosst HX-OH-CM-C  Analog to HO-OH-CM-C, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+#[#1:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  0.250    0.0     1  Frosst HX-OH-CM-CM  Analog to HX-OH-CM-CM, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+#[#1:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  0.250    0.0     1  Frosst HX-OH-CR-CC  Analog to HO-OH-CR-CC, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+[#1:1]-[#8X2:2]-[#6X3:3]~[#6X3:4]  1  0.250    0.0     1   Frosst generic
+
+#[#1:1]-[#8X2:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst HO-OH-CR-NB 
+#[#1:1]-[#8X2:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst HX-OH-CR-NB  Analog to HX-OH-CR-NB, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+[#1:1]-[#8X2:2]-[#6X3:3]=[#7X2:4]  1  0.000    0.0     1   Frosst generic
+
+#[#1:1]-[#8X2:2]-[#6X3:3]-[#8X2:4]  1  1.000  180.0     2  Frosst HO-OH-CR-OS  guess
+#[#1:1]-[#8X2:2]-[#6X3:3]-[#8X2:4]  1  1.000  180.0     2  Frosst HX-OH-CR-OS  Analog to HO-OH-CR-OS, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+[#1:1]-[#8X2:2]-[#6X3:3]-[#8X2:4]  1  1.000  180.0     2   Frosst generic
+
+
+[#1:1]-[#8X2:2]-[#6X4r3:3]-[#1:4]  1  0.400    0.0    -3  Frosst HO-OH-CJ-H1  calc RHF/6-311G(d) Dec 1 2004@[#1:1]-[#8X2:2]-[#6X4r3:3]-[#1:4]  1  0.500    0.0    -2  Frosst HO-OH-CJ-H1  calc RHF/6-311G(d) Dec 1 2004@[#1:1]-[#8X2:2]-[#6X4r3:3]-[#1:4]  1  0.700    0.0     1  Frosst HO-OH-CJ-H1  calc RHF/6-311G(d) Dec 1 2004
+
+[#1:1]-[#8X2:2]-[#6X4r3:3]-[#6X4:4]  1  0.400    0.0    -3  Frosst HO-OH-CJ-CT  calc RHF/6-311G(d) Dec 1 2004@[#1:1]-[#8X2:2]-[#6X4r3:3]-[#6X4:4]  1  0.500    0.0    -2  Frosst HO-OH-CJ-CT  calc RHF/6-311G(d) Dec 1 2004@[#1:1]-[#8X2:2]-[#6X4r3:3]-[#6X4:4]  1  0.700    0.0     1  Frosst HO-OH-CJ-CT  calc RHF/6-311G(d) Dec 1 2004
+
+[#1:1]-[#8X2:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.400    0.0    -3  Frosst HO-OH-CJ-CJ  calc RHF/6-311G(d) Dec 1 2004@[#1:1]-[#8X2:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.500    0.0    -2  Frosst HO-OH-CJ-CJ  calc RHF/6-311G(d) Dec 1 2004@[#1:1]-[#8X2:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.700    0.0     1  Frosst HO-OH-CJ-CJ  calc RHF/6-311G(d) Dec 1 2004
+
+[#6X2:1]#[#6X2:2]-[#6X3:3]~[#8X1:4]  1  0.000    0.0     1  Frosst C2-C2-C_-O2  by symetry; 12 June 2005
+
+[#6X3:1]-[#16X2:2]-[#16X2:3]-[#6X4:4]  1  3.500    0.0    -2  Frosst C_-S_-S_-CT  Taken from CT-S-S-CT June 25 2010@[#6X3:1]-[#16X2:2]-[#16X2:3]-[#6X4:4]  1  0.600    0.0     3  Frosst C_-S_-S_-CT  Taken from CT-S-S-CT June 25 2010
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CB-S_-CA-H4  guess
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#1:4]  1  0.000  180.0     2  Frosst CA-S_-CM-H4  from CA-CA-S-CT
+[#6X3:1]-[#16X2:2]-[#6X3:3]-[#1:4]  1  0.000  180.0     2   Frosst generic
+
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-S_-CA-CA  dummy
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-S_-CA-CB  guess
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-S_-CC-CW  guess
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-S_-CM-CM 
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-S_-CP-CA  guess for rigid systems; 13 April 2005
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-S_-CP-CP  guess for rigid systems; 13 April 2005
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CB-S_-CA-CA 
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CC-S_-CA-CA  guess
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CM-S_-CA-CA 
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CP-S_-CA-CA  guess for rigid system; 13 April 2005
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CW-S_-CA-C  from CA-S-CA-CA; august 25 2009
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst C_-S_-CA-CA  guess
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     2  Frosst CA-S_-CA-C  from CA-S-CA-CA
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.300    0.0     1  Frosst C_-S_-CA-C  from CA-S-CA-CA; august 25 2009
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.300  180.0     2  Frosst CA-S_-CA-CW  from CA-S-CA-CA 20 May 2005
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.300  180.0     2  Frosst CA-S_-CC-CC 
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.300  180.0     2  Frosst CA-S_-CM-C  from CA-S-CA-CA
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.300  180.0     2  Frosst CR-S_-CA-C  from CR-S-CA-CA
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.300  180.0     2  Frosst CR-S_-CA-CA 
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.300  180.0     2  Frosst CR-S_-CA-CB  guess from CA-CA-S-CA oct8 2003
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.300  180.0     2  Frosst CW-S_-CA-CA  from CA-CA-S-CA; I could not find a solid basis for those parameter: probably guess somewhere; 12 dec 2006
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.300  180.0     2  Frosst CW-S_-CC-CB  from CA-S-CA-CA; 3 June 2005
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.300  180.0     2  Frosst CW-S_-CC-CW  from CA-S-CA-CA; 3 June 2005
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  3.750  180.0     2  Frosst C*-S_-CC-CW  five member aromatic ring
+[#6X3:1]-[#16X2:2]-[#6X3:3]~[#6X3:4]  1  3.750  180.0     2   Frosst generic
+
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CA-S_-CM-CT 
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CB-S_-CA-CT 
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X4:4]  1  3.750  180.0     2  Frosst C*-S_-CC-CT  five member aromatic ring
+[#6X3:1]-[#16X2:2]-[#6X3:3]-[#6X4:4]  1  3.750  180.0     2   Frosst generic
+
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CA-S_-CC-NB  guesse
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#7X2:4]  1  0.000  180.0     2  Frosst CM-S_-CA-NC  from CA-CA-S-CT
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#7X2:4]  1  0.300  180.0     2  Frosst CR-S_-CA-NC  from CR-S-CA-CA Sept2 2003
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#7X2:4]  1  3.750  180.0     2  Frosst CC-S_-C*-NB  five member aromatic ring
+[#6X3:1]-[#16X2:2]-[#6X3:3]-[#7X2:4]  1  3.750  180.0     2   Frosst generic
+
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CA-S_-CA-N  guess
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CP-S_-CA-N  guess for rigid structure; 15 April 2005
+#[#6X3:1]-[#16X2:2]-[#6X3:3]-[#7X3:4]  1  3.750  180.0     2  Frosst CC-S_-C*-N*  five member aromatic ring
+[#6X3:1]-[#16X2:2]-[#6X3:3]-[#7X3:4]  1  3.750  180.0     2   Frosst generic
+
+
+[#6X3:1]-[#16X2:2]-[#6X3:3]-[NX4,NX3:4]  1  0.000    0.0     1  Frosst CP-S_-CA-N3  guess for rigid systems; 13 April 2005
+
+[#6X3:1]-[#16X2:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst CA-S_-CJ-H1  guess; 26 august 2009
+
+[#6X3:1]-[#16X2:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.000    0.0     1  Frosst CA-S_-CJ-CJ  guess; 25 august 2009
+#[#6X3:1]-[#16X2:2]-[#7X2:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-S_-NB-CC  dummy
+#[#6X3:1]-[#16X2:2]-[#7X2:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CR-S_-NB-CR  guess July 30 2003
+#[#6X3:1]-[#16X2:2]-[#7X2:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CW-S_-NB-CR  guess
+[#6X3:1]-[#16X2:2]-[#7X2:3]~[#6X3:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#6X3:1]-[#16X2:2]-[#7X3:3]-[#6X3:4]  1  2.000  180.0     2  Frosst CW-S_-N_-C  guess Mar 6 2007
+
+[#6X3:1]-[#16X2:2]-[#7X3:3]-[#6X4:4]  1  2.000  180.0     2  Frosst CW-S_-N_-CT  guess Mar 6 2007
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  1.750  180.0     2  Frosst CA-SO-CC-CB  taken from O-SO-CW-CC June 29 2007
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  1.750  180.0     2  Frosst CA-SO-CC-CC  taken from O-SO-CW-CC June 29 2007
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  1.750  180.0     2  Frosst CA-SO-CC-CW  taken from O-SO-CW-CC June 29 2007
+[#6X3:1]-[#16X4,#16X3+0:2]-[#6X3:3]~[#6X3:4]  1  1.750  180.0     2   Frosst generic
+
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X2:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CR-SO-NB-CR  guess
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X2:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CW-SO-NB-CR  guess
+[#6X3:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X2:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CR-SO-NB-NB  guess
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X2:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CW-SO-NB-NB  guess
+[#6X3:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#7X2:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     2  Frosst CA-SO-N_-C  guess
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     2  Frosst CC-SO-N_-C  guess
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     2  Frosst CR-SO-N_-C  guess
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     2  Frosst CW-SO-N_-C  guess
+[#6X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]~[#6X3:4]  1  0.000    0.0     2   Frosst generic
+
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#1:4]  1  0.500    0.0    -3  Frosst CA-SO-N3-H  RHF/6-41G(d,p) Dec 12 1997@[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#1:4]  1  0.000    0.0     1  Frosst CA-SO-N3-H  RHF/6-41G(d,p) Dec 12 1997
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#1:4]  1  0.500    0.0    -3  Frosst CC-SO-N3-H  Taken from H-N3-SO-CA@[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#1:4]  1  0.000    0.0     1  Frosst CC-SO-N3-H  Taken from H-N3-SO-CA
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#1:4]  1  0.500    0.0    -3  Frosst CW-SO-N3-H  from H-N3-SO-CA@[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#1:4]  1  0.000    0.0     1  Frosst CW-SO-N3-H  from H-N3-SO-CA
+[#6X3:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#1:4]  1  0.500    0.0    -3   Frosst generic
+
+
+[#6X3:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X3:4]  1  0.500    0.0    -3  Frosst CA-SO-N3-CA  similar to case with CT instead of CA@[#6X3:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X3:4]  1  1.750    0.0    -2  Frosst CA-SO-N3-CA  similar to case with CT instead of CA@[#6X3:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X3:4]  1  1.500    0.0     1  Frosst CA-SO-N3-CA  similar to case with CT instead of CA
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4:4]  1  0.500    0.0    -3  Frosst CA-SO-N3-CT  RHF/6-41G(d,p) Dec 12 1997@[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4:4]  1  1.750    0.0    -2  Frosst CA-SO-N3-CT  RHF/6-41G(d,p) Dec 12 1997@[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4:4]  1  1.500    0.0     1  Frosst CA-SO-N3-CT  RHF/6-41G(d,p) Dec 12 1997
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4:4]  1  0.500    0.0    -3  Frosst CC-SO-N3-CT  Similar to CA-SO-N3-CT, , 2 Sept 2004@[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4:4]  1  1.750    0.0    -2  Frosst CC-SO-N3-CT  "@[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4:4]  1  1.500    0.0     1  Frosst CC-SO-N3-CT  "
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4:4]  1  0.500    0.0    -3  Frosst CW-SO-N3-CT  Similar to CA-SO-N3-CT, , 2 Sept 2004@[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4:4]  1  1.750    0.0    -2  Frosst CW-SO-N3-CT  "@[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4:4]  1  1.500    0.0     1  Frosst CW-SO-N3-CT  "
+[#6X3:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  0.500    0.0    -3   Frosst generic
+
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4r3:4]  1  0.500    0.0    -3  Frosst CA-SO-N3-CJ  from CT-N3-SO-CA@[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4r3:4]  1  1.750    0.0    -2  Frosst CA-SO-N3-CJ  from CT-N3-SO-CA@[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4r3:4]  1  1.500    0.0     1  Frosst CA-SO-N3-CJ  from CT-N3-SO-CA
+#[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4r3:4]  1  0.500    0.0    -3  Frosst CC-SO-N3-CJ  from CT-N3-SO-CA@[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4r3:4]  1  1.750    0.0    -2  Frosst CC-SO-N3-CJ  from CT-N3-SO-CA@[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4r3:4]  1  1.500    0.0     1  Frosst CC-SO-N3-CJ  from CT-N3-SO-CA
+[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#6X4r3:4]  1  0.500    0.0    -3   Frosst generic
+
+
+[#6X3:1]-[#16X4,#16X3+0:2]-[#8X2:3]-[#6X3:4]  1  0.250    0.0     3  Frosst CA-SO-OS-CA  taken from X_-OS-P_-X June 14 2007
+
+[#6X3:1]~[#6X3:2]-[#6X3:3]-[#16X2H0:4]  1  0.400  180.0     2  Frosst CA-CR-C_-S  Like NC-CR-C_-S Interpolated from OS-C_-CA-CA and CT-C -CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.000  180.0     2  Frosst CA-CA-C_-H4  from B3LYP/6-311G(d,p) benzaldehyde scan: set to 0 feb 2003
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.000  180.0     2  Frosst CB-CA-C_-H4  analogy H4-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.000  180.0     2  Frosst CM-CM-C_-H4  analogy H4-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.000  180.0     2  Frosst CP-CA-C_-H4  analogy H4-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  1.000  180.0     1  Frosst CC-CW-CM-HA  guess planar pi mar 13 2001
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  3.625  180.0     2  Frosst C_-CW-CM-HA  from X-CA-Ca-X apr 20 2001
+[#6X3:1]~[#6X3:2]~[#6X3:3]-[#1:4]  1  3.625  180.0     2   Frosst generic
+
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-CP-CC-CB  guess; July 4 2005
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-CP-CC-CW  guess; July 4 2005
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CC-CW-CP-CA  guess, rigid fused aryls; 19 May 2005
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CC-CW-CP-CP  guess, rigid fused aryls; 19 May 2005
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CP-CP-CC-CB  guess; July 4 2005
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CP-CP-CC-CW  guess; July 4 2005
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.250  180.0    -3  Frosst CC-CR-CM-CM  RHF/6-31G(d) torsion fit Aug 25 2008@[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0    -2  Frosst CC-CR-CM-CM  RHF/6-31G(d) torsion fit Aug 25 2008@[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.400  180.0     1  Frosst CC-CR-CM-CM  RHF/6-31G(d) torsion fit Aug 25 2008
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.625  180.0     2  Frosst CM-CM-CC-CC  From X-CA-CR-X
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.625  180.0     2  Frosst CM-CM-CC-CW  From X-CA-CR-X
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     1  Frosst CC-CW-CM-CM  guess planar pi mar 13 2001
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     1  Frosst C_-CR-C_-CA  guess nov 22 2006
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     1  Frosst C_-CR-C_-CW  guess nov 22 2006
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  3.625  180.0     2  Frosst CA-CP-C_-CA  from X-C-CA-X
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  3.625  180.0     2  Frosst CP-CP-CA-CP  2 2 adjacent biphenyls
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  3.625  180.0     2  Frosst CP-CP-C_-CA  from X-C-CA-X
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  3.625  180.0     2  Frosst C_-CW-CM-CM  from X-CA-Ca-X apr 20 2001
+[#6X3:1]~[#6X3:2]-[#6X3:3]~[#6X3:4]  1  1.0    180.0     2   Frosst generic
+[#6X3:1]:[#6X3:2]:[#6X3:3]:[#6X3:4]  1  3.625  180.0     2   Frosst generic
+[#6X3:1]-[#6X3:2]=[#6X3:3]-[#6X3:4]  1  5.400  180.0     2   Frosst generic
+
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CA-CR-CR-CT  guess
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.200    0.0     2  Frosst CA-CA-C_-CT  fit to B3LYP/6-311G(d,p) acetophenone scan feb 2003
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.200    0.0     2  Frosst CB-CA-C_-CT  analogy CT-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.200    0.0     2  Frosst CM-CM-C_-CT  analogy CT-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.200    0.0     2  Frosst CP-CA-C_-CT  analogy CT-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.250    0.0    -3  Frosst CC-CR-CM-CT  RHF/6-31G(d) torsion fit Aug 25 2008@[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  1.400  180.0    -2  Frosst CC-CR-CM-CT  RHF/6-31G(d) torsion fit Aug 25 2008@[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.400    0.0     1  Frosst CC-CR-CM-CT  RHF/6-31G(d) torsion fit Aug 25 2008
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  1.000  180.0     1  Frosst CC-CR-C_-CT  guess
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  1.000  180.0     2  Frosst CC-CW-CM-CT  guess
+[#6X3:1]~[#6X3:2]-[#6X3:3]-[#6X4:4]  1  1.000  180.0     2   Frosst generic
+
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CA-CR-CR-NB  guess
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X2:4]  1  1.000  180.0     1  Frosst CA-CR-C_-NB  guess
+[#6X3:1]~[#6X3:2]-[#6X3:3]=[#7X2:4]  1  1.000  180.0     1   Frosst generic
+
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.146    0.0    -4  Frosst CA-CA-C_-N2  B3LYP/6-311G** fit, 19 Oct 2004 (charged N2 using amidine)@[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.998  180.0     2  Frosst CA-CA-C_-N2 
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.184    0.0    -4  Frosst CC-CC-C_-N2  B3LYP/6-311G** fit, 19 Oct 2004 (charged N2 using amidine)@[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.938  180.0     2  Frosst CC-CC-C_-N2 
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.184    0.0    -4  Frosst CW-CC-C_-N2  B3LYP/6-311G** fit, 19 Oct 2004 (charged N2 using amidine)@[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.938  180.0     2  Frosst CW-CC-C_-N2 
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.725    0.0     2  Frosst CA-CA-C_-N  fit to B3LYP/6-311G(d,p) benzamide scan feb 2003
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.725    0.0     2  Frosst CB-CA-C_-N  analogy N_-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.725    0.0     2  Frosst CM-CM-C_-N  analogy N_-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.725    0.0     2  Frosst CP-CA-C_-N  analogy N_-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  1.000  180.0     1  Frosst CA-CR-C_-N  guess
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  1.000  180.0     1  Frosst CC-CR-C_-N2  guess, 30 Sept 2004
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  1.000  180.0     1  Frosst C_-CR-C_-N  guess nov 22 2006
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  3.625  180.0     2  Frosst CA-CP-C_-N  from X-C-CA-X Sept 24 2003
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  3.625  180.0     2  Frosst CP-CP-C_-N  from X-C-CA-X Sept 24 2003
+[#6X3:1]~[#6X3:2]~[#6X3:3]-[#7X3:4]  1  1.000  180.0     2   Frosst generic
+
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  1.000  180.0     1  Frosst CA-CR-C_-O  guess
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  1.000  180.0     1  Frosst CC-CR-C_-O  guess
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  1.000  180.0     1  Frosst C_-CR-C_-O  guess nov 22 2006
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  2.450  180.0     2  Frosst CA-CA-C_-O  fit to B3LYP/6-311G(d,p) benzaldehyde scan feb 2003
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  2.450  180.0     2  Frosst CB-CA-C_-O  analogy O_-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  2.450  180.0     2  Frosst CM-CM-C_-O  analogy O_-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  2.450  180.0     2  Frosst CP-CA-C_-O  analogy O_-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  3.625  180.0     2  Frosst CA-CP-C_-O  from X-C-CA-X
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  3.625  180.0     2  Frosst CP-CP-C_-O  from X-C-CA-X
+[#6X3:1]~[#6X3:2]-[#6X3:3]=[#8X1:4]  1  1.0    180.0     2   Frosst generic
+
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X2:4]  1  0.550    0.0     2  Frosst CA-CA-C_-OS  fit to B3LYP/6-311G(d,p) methyl benzoate scan feb 2003
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X2:4]  1  0.550    0.0     2  Frosst CB-CA-C_-OS  analogy OS-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X2:4]  1  0.550    0.0     2  Frosst CM-CM-C_-OS  analogy OS-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X2:4]  1  0.550    0.0     2  Frosst CP-CA-C_-OS  analogy OS-C_-CA-CA
+#[#6X3:1]-[#6X3:2]-[#6X3:3]-[#8X2:4]  1  3.625  180.0     2  Frosst CA-CA-C_-OH  from parm94 X-C-CA-X; only use is parm94 TYR feb 2003
+[#6X3:1]~[#6X3:2]~[#6X3:3]-[#8X2:4]  1  3.625  180.0     2   Frosst generic
+
+
+[#6X3:1]~[#6X3:2]-[#6X4r3:3]-[#1:4]  1  0.050  180.0    -4  Frosst CC-CR-CJ-HC  RHF/6-31G(d) opt fit Oct21 2010@[#6X3:1]~[#6X3:2]-[#6X4r3:3]-[#1:4]  1  0.150    0.0    -3  Frosst CC-CR-CJ-HC  RHF/6-31G(d) opt fit Oct21 2010@[#6X3:1]~[#6X3:2]-[#6X4r3:3]-[#1:4]  1  0.150  180.0     2  Frosst CC-CR-CJ-HC  RHF/6-31G(d) opt fit Oct21 2010
+
+[#6X3:1]~[#6X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.050  180.0    -4  Frosst CC-CR-CJ-CJ  RHF/6-31G(d) opt fit Oct21 2010@[#6X3:1]~[#6X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.250    0.0    -3  Frosst CC-CR-CJ-CJ  RHF/6-31G(d) opt fit Oct21 2010@[#6X3:1]~[#6X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.010  180.0     2  Frosst CC-CR-CJ-CJ  RHF/6-31G(d) opt fit Oct21 2010
+
+[#6X3:1]-[#6X4:2]-[#6X3:3]=[#6X3:4]  1  0.450    0.0    -3  Frosst CM-CT-CM-CM  from ab initio mt@[#6X3:1]-[#6X4:2]-[#6X3:3]=[#6X3:4]  1  0.250  180.0     2  Frosst CM-CT-CM-CM  from ab initio mt
+#[#6X3:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst CA-CT-CJ-HC  guess oct 26 2004
+#[#6X3:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst CR-CT-CJ-HC  kept zero in fit
+#[#6X3:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst CW-CT-CJ-HC  from CT-CT-CJ-HC Nov_13_2003
+#[#6X3:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst C_-CT-CJ-HC  from CR-CT-CJ-HC
+[#6X3:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X3:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.000    0.0     1  Frosst CA-CT-CJ-CJ  guess oct 26 2004
+#[#6X3:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.000    0.0     1  Frosst CR-CT-CJ-CJ  aproximated 5/19/1999
+#[#6X3:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.000    0.0     1  Frosst C_-CT-CJ-CJ  from CJ-CJ-CT-CR
+#[#6X3:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]  1  1.000    0.0     3  Frosst CW-CT-CJ-CJ  from CT-CT-CJ-CJ Nov_13_2003
+[#6X3:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]  1  1.000    0.0     3   Frosst generic
+
+
+[#6X3:1]-[#6X4r3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CA-CJ-C_-H4  set to 0 Sept 14 2005
+#[#6X3:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.065  180.0    -4  Frosst CM-CJ-CA-CA  guess from CA-CA-CJ-CJ@[#6X3:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.550  180.0     2  Frosst CM-CJ-CA-CA  Jan 26 2005
+#[#6X3:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.128  180.0     2  Frosst C_-CJ-CA-CA  FIT B3LYP6-31G(d) Sept 14 2005
+[#6X3:1]-[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.128  180.0     2   Frosst generic
+
+
+[#6X3:1]-[#6X4r3:2]-[#6X3:3]-[#7X3:4]  1  1.392    0.0    -2  Frosst CA-CJ-C_-N  FIT B3LYP6-31G(d) Sept 14 2005@[#6X3:1]-[#6X4r3:2]-[#6X3:3]-[#7X3:4]  1  0.645  180.0    -1  Frosst CA-CJ-C_-N  FIT B3LYP6-31G(d) Sept 14 2005@[#6X3:1]-[#6X4r3:2]-[#6X3:3]-[#7X3:4]  1  0.961  180.0     3  Frosst CA-CJ-C_-N  FIT B3LYP6-31G(d) Sept 14 2005
+
+[#6X3:1]-[#6X4r3:2]-[#6X3:3]=[#8X1:4]  1  3.174  180.0    -2  Frosst CA-CJ-C_-O  FIT B3LYP6-31G(d) Sept 14 2005@[#6X3:1]-[#6X4r3:2]-[#6X3:3]=[#8X1:4]  1  0.277  180.0    -1  Frosst CA-CJ-C_-O  FIT B3LYP6-31G(d) Sept 14 2005@[#6X3:1]-[#6X4r3:2]-[#6X3:3]=[#8X1:4]  1  0.514  180.0     3  Frosst CA-CJ-C_-O  FIT B3LYP6-31G(d) Sept 14 2005
+
+[#6X3:1]-[#7X2:2]~[#7X2:3]~[#7X1:4]  1  0.000    0.0     2  Frosst CA-NL-NL-NL  guess
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CM-NB-CM-H4 
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CR-NB-CM-H4  guess
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#1:4]  1  0.500  180.0     1  Frosst C_-NB-CM-H4  guess
+[#6X3:1]-[#7X2:2]-[#6X3:3]-[#1:4]  1  0.500  180.0     1   Frosst generic
+
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CM-NB-CM-C  guess
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CM-NB-CM-CM 
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CM-NB-CM-CR  guess
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CR-NB-CA-CA  guess
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CR-NB-CM-CM  guess
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst C_-NB-CM-CA  guess
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  1.000    0.0     1  Frosst CR-NB-C_-CR  guess
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  1.000    0.0     1  Frosst CR-NB-C_-CW  guess
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  2.500  180.0     1  Frosst C_-NB-CM-CM  guess planar; 3 June 2005
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  4.800  180.0     2  Frosst CA-NC-CW-C  ff94 X-CA-NC-X
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  4.800  180.0     2  Frosst CA-NC-CW-CC  ff94 X-CA-NC-X
+[#6X3:1]=[#7X2:2]-[#6X3:3]=[#6X3:4]  1  1.000  180.0     2   Frosst generic
+[#6X3:1]:[#7X2:2]:[#6X3:3]:[#6X3:4]  1  4.800  180.0     2   Frosst generic
+[#6X3:1]-[#7X2:2]=[#6X3:3]-[#6X3:4]  1  5.     180.0     2   Frosst generic
+
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CM-NB-CM-CT 
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CM-NB-C_-CT  guess
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CR-NB-C_-CT 
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#6X4:4]  1  1.500  180.0     2  Frosst CC-NB-CA-CT 
+[#6X3:1]~[#7X2:2]~[#6X3:3]-[#6X4:4]  1  1.500  180.0     2   Frosst generic
+
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CM-NB-CM-N 
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#7X3:4]  1  1.500  180.0     2  Frosst CC-NB-CA-NA 
+[#6X3:1]~[#7X2:2]~[#6X3:3]-[#7X3:4]  1  1.500  180.0     2   Frosst generic
+
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#8X1:4]  1  0.000    0.0     1  Frosst CR-NB-C_-O 
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#8X1:4]  1  1.000  180.0     1  Frosst CM-NB-C_-O  guess
+[#6X3:1]~[#7X2:2]-[#6X3:3]=[#8X1:4]  1  1.000  180.0     1   Frosst generic
+
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#8X2:4]  1  1.500  180.0     2  Frosst CC-NB-CA-OS 
+#[#6X3:1]-[#7X2:2]-[#6X3:3]-[#8X2:4]  1  4.800  180.0     2  Frosst CA-NC-CW-OS  ff94 X-CA-NC-X
+[#6X3:1]~[#7X2:2]~[#6X3:3]-[#8X2:4]  1  4.800  180.0     2   Frosst generic
+
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1  Frosst CC-NB-CT-HP  guess
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1  Frosst CM-NB-CT-H1  guess
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1  Frosst CR-NB-CT-H1  guess
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1  Frosst CR-NB-CT-H2  guess
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1  Frosst CR-NB-CT-HP  guess
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     2  Frosst CA-NC-CT-HP  taken from X_-CA-CT-X June 14 2007
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#1:4]  1  0.500    0.0     1  Frosst C_-NB-CT-H1  guess
+[#6X3:1]=[#7X2:2]-[#6X4:3]-[#1:4]  1  0.500    0.0     1   Frosst generic
+
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CM-NB-CT-CM  guess
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CR-NB-CT-C  guess
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#6X3:4]  1  0.000    0.0     2  Frosst CA-NC-CT-CA  taken from X_-CA-CT-X June 14 2007
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#6X3:4]  1  0.000    0.0     2  Frosst CR-NB-CT-CA  guess
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#6X3:4]  1  1.000    0.0     1  Frosst C_-NB-CT-C  guess
+[#6X3:1]=[#7X2:2]-[#6X4:3]-[#6X3:4]  1  1.000    0.0     1   Frosst generic
+
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CM-NB-CT-CT  guess
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CR-NB-CT-CT  guess
+#[#6X3:1]-[#7X2:2]-[#6X4:3]-[#6X4:4]  1  1.000    0.0     1  Frosst C_-NB-CT-CT  guess
+[#6X3:1]=[#7X2:2]-[#6X4:3]-[#6X4:4]  1  1.000    0.0     1   Frosst generic
+
+
+[#6X3:1]=[#7X2:2]-[#6X4:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CR-NB-CT-NB  guess
+
+[#6X3:1]=[#7X2:2]-[#6X4:3]-[#7X4:4]  1  0.000    0.0     1  Frosst CR-NB-CT-N3  guess
+
+[#6X3:1]=[#7X2:2]-[#6X4:3]-[#8X2:4]  1  0.000    0.0     1  Frosst CR-NB-CT-OS  guess
+#[#6X3:1]-[#7X2:2]-[#7X2:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-NC-NC-CA  intracyclic, guess, 15 Nov 2005
+#[#6X3:1]-[#7X2:2]-[#7X2:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CB-NC-NC-CB  intracyclic, guess, 6 April 2005
+[#6X3:1]~[#7X2:2]~[#7X2:3]~[#6X3:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#1:4]  1  0.625  180.0     2  Frosst CA-NC-N_-H  From X-CA-CR-X Oct 23 2006
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#1:4]  1  2.000  180.0     2  Frosst CR-NB-N_-H  guess Mar 6 2007
+[#6X3:1]~[#7X2:2]-[#7X3:3]-[#1:4]  1  2.000  180.0     2   Frosst generic
+
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-NC-N*-CR  guess
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-NC-N_-C  guess
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-NC-N_-CA  guess
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-NC-N_-CM  guess
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CR-NB-N_-C  guess
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CR-NC-N_-C  guess
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X3:4]  1  0.500  180.0     2  Frosst CA-NC-N*-CW  guess Jan 9 2008
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst CP-NC-N_-C  from CA-CA-CA-CA Aug 30 2010
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X3:4]  1  7.500  180.0     1  Frosst CR-NB-N2-CA  std sp2-sp2 aromatic June 14 2007
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X3:4]  1  7.500  180.0     1  Frosst CR-NB-N2-CR  std sp2-sp2 aromatic June 14 2007
+[#6X3:1]~[#7X2:2]-[#7X3:3]-[#6X3:4]  1  3.500  180.0     1   Frosst generic
+
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CA-NC-N_-CT  guess
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CR-NB-N_-CT  guess
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CR-NC-N_-CT  guess
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X4:4]  1  3.600  180.0     2  Frosst CP-NC-N_-CT  from CA-CA-CA-CA Aug 30 2010
+[#6X3:1]-[#7X2:2]-[#7X3:3]-[#6X4:4]  1  0.000  180.0     2   Frosst generic
+
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CA-NC-N*-NB  guess
+#[#6X3:1]-[#7X2:2]-[#7X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CR-NB-N*-NB 
+[#6X3:1]-[#7X2:2]-[#7X3:3]-[#7X2:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#16X2H0:4]  1  1.000  180.0     2  Frosst C_-N_-CW-S  guess
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#16X2H0:4]  1  3.750  180.0     2  Frosst CW-N*-C*-S  five member aromatic ring
+[#6X3:1]-[#7X3:2]-[#6X3:3]-[#16X2H0:4]  1  1.     180.0     2   Frosst generic
+
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst C_-N_-CM-H4 
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#1:4]  1  0.625  180.0     2  Frosst CA-N2-CM-H4  From X-CA-N-X
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#1:4]  1  1.000    0.0     2  Frosst C_-N_-CW-H4  guess
+[#6X3:1]-[#7X3:2]-[#6X3:3]-[#1:4]  1  1.000    0.0     2   Frosst generic
+
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-N2-CB-CB  guess fused ring system; 27 April 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-NA-CP-CA  guess for rigid systems; 13 April 2005
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-NA-CP-CP  guess for rigid systems; 13 April 2005
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-N_-CB-C  guess (intracyclic in aromatic rings) 3 Aug 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-N_-CB-CB  fused intra cyclic; 27 April 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst C_-N_-CB-C  guess (intracyclic in aromatic rings, pyridone) 3 Aug 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst C_-N_-CB-CB  aug29 2003 guess
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst C_-N_-CB-CP  aug29 2003 guess
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst C_-N_-CB-CR  guess for intra cyclic; 4 April 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst C_-N_-CM-CM 
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.625  180.0     2  Frosst CA-N2-CM-CM  From X-CA-N-X
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     2  Frosst CA-N_-CW-CA  guess
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     2  Frosst CA-N_-CW-CC  guess
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     2  Frosst CB-N_-CW-C  guess May 19 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     2  Frosst CB-N_-CW-CC  guess May 19 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     2  Frosst CW-N_-CW-C  guess May 19 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     2  Frosst CW-N_-CW-CC  guess May 19 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     2  Frosst C_-N_-CW-C  guess May 19 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     2  Frosst C_-N_-CW-CA  guess
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     2  Frosst C_-N_-CW-CC  guess
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst CA-N2-CB-CA  From CA-CA-CA-CA Jan 9 2008
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst CR-N2-CB-CA  From CA-CA-CA-CA Jan 9 2008
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst CR-N2-CB-CB  From CA-CA-CA-CA Mar 6 2007
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst CR-N_-CB-CA  From CA-CA-CA-CA Jan 9 2008
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst CR-N_-CB-CB  From CA-CA-CA-CA Jan 9 2008
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst CW-N_-CB-CA  From CA-CA-CA-CA May 19 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst CW-N_-CB-CB  From CA-CA-CA-CA May 19 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst C_-N_-CB-CA  From CA-CA-CA-CA Mar 8 2004
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst C_-N_-CB-CC  from CA-CA-CA-CA April 2 2009
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.625  180.0     2  Frosst C_-N_-CP-CA  from X-C-CA-X Nov 2 2005
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.625  180.0     2  Frosst C_-N_-CP-CP  from X-C-CA-X Nov 2 2005
+[#6X3:1]-[#7X3:2]-[#6X3:3]~[#6X3:4]  1  1.     180.0     2   Frosst generic
+
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X4:4]  1  1.000  180.0     2  Frosst CW-N_-CW-CT  guess May 19 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X4:4]  1  1.000  180.0     2  Frosst C_-N_-CW-CT  guess
+[#6X3:1]-[#7X3:2]-[#6X3:3]-[#6X4:4]  1  1.000  180.0     2   Frosst generic
+
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CA-N2-CB-NC  guess fused ring system; 27 April 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CA-N2-CR-NB  guess
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CA-N_-CB-NB  fused intra cyclic; 19 July 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CA-N_-CB-NC  fused intra cyclic; 27 April 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst C_-N_-CB-NB  fused intra cyclic; 19 July 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst C_-N_-CB-NC  fused intra cyclic; 27 April 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X2:4]  1  3.600  180.0     2  Frosst CR-N2-CB-NC  From CA-CA-CA-CA Mar 6 2007
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X2:4]  1  3.750  180.0     2  Frosst CW-N*-C*-NB  five member aromatic ring
+[#6X3:1]-[#7X3:2]-[#6X3:3]~[#7X2:4]  1  1.     180.0     2   Frosst generic
+
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CA-N2-CR-N*  guess
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CA-N_-CB-N  guess (intracyclic in aromatic rings); 3 Aug 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CA-N_-CB-N  guess (intracyclic in aromatic rings, e.g. pyridone); 3 Aug 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst C_-N_-CB-N  guess (intracyclic; 3 Aug 2006
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X3:4]  1  1.000  180.0     2  Frosst C_-N_-CW-NA  guess 16 May 2005
+[#6X3:1]-[#7X3:2]-[#6X3:3]-[#7X3:4]  1  1.000  180.0     2   Frosst generic
+
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#8X2:4]  1  0.000    0.0     1  Frosst CA-N_-CW-OS  guess
+#[#6X3:1]-[#7X3:2]-[#6X3:3]-[#8X2:4]  1  1.000  180.0     2  Frosst C_-N_-CW-OS  guess
+[#6X3:1]-[#7X3:2]-[#6X3:3]-[#8X2:4]  1  1.000  180.0     2   Frosst generic
+
+
+[#6X3:1]-[#7X3:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1  Frosst CA-ND-CT-H1  dummy
+
+[#6X3:1]-[#7X3:2]-[#6X4:3]-[#6X3:4]  1  0.156    0.0     3  Frosst CA-ND-CT-C  from X-CT-CT-X Jan 30 2002
+
+[#6X3:1]-[#7X3:2]-[#6X4:3]-[#6X4:4]  1  2.000  180.0     1  Frosst CA-ND-CT-CT  *********
+#[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst CA-N2-CJ-H1  guess June 29 2007
+#[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst CB-N*-CJ-H1  guess June 29 2007
+#[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst CR-N*-CJ-H1  guess June 29 2007
+#[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst CW-N*-CJ-H1  Set to Zero Apr 24 2008
+#[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst C_-N_-CJ-H1  set to zero for CJ-CJ-C-O
+#[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst C_-N_-CJ-HC 
+[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst C_-N_-CJ-C  dummy guess (had to get going) March 30 2004
+
+[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4:4]  1  0.500  180.0    -4  Frosst C_-N_-CJ-CT  from C-N-CT-CT@[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4:4]  1  0.150  180.0    -3  Frosst C_-N_-CJ-CT  from C-N-CT-CT@[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4:4]  1  0.530    0.0     1  Frosst C_-N_-CJ-CT  from C-N-CT-CT
+#[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.065  180.0    -4  Frosst CA-N2-CJ-CJ  guess from CA-CA-CJ-CJ June 29 2007@[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.550  180.0     2  Frosst CA-N2-CJ-CJ 
+#[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.065  180.0    -4  Frosst CB-N*-CJ-CJ  From CA-CA-CJ-CJ June 29 2007@[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.550  180.0     2  Frosst CB-N*-CJ-CJ 
+#[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.065  180.0    -4  Frosst CR-N*-CJ-CJ  From CA-CA-CJ-CJ June 29 2007@[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.550  180.0     2  Frosst CR-N*-CJ-CJ 
+#[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.500    0.0    -3  Frosst CW-N*-CJ-CJ  B3LYP/6-31G(d,p) Apr 24 2008@[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  1.750    0.0    -2  Frosst CW-N*-CJ-CJ  B3LYP/6-31G(d,p) Apr 24 2008@[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.250    0.0     1  Frosst CW-N*-CJ-CJ  B3LYP/6-31G(d,p) Apr 24 2008
+#[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  2.000    0.0     2  Frosst C_-N_-CJ-CJ  fit to RHF/6-31G(d)
+[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.500    0.0    -3  Frosst CW-N*-CJ-CJ  B3LYP/6-31G(d,p) Apr 24 2008@[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  1.750    0.0    -2  Frosst CW-N*-CJ-CJ  B3LYP/6-31G(d,p) Apr 24 2008@[#6X3:1]-[#7X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.250    0.0     1  Frosst CW-N*-CJ-CJ  B3LYP/6-31G(d,p) Apr 24 2008
+
+#[#6X3:1]-[#7X3:2]-[#7X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CM-N_-N_-H  from other-N-N- dummies apr 20 2001
+#[#6X3:1]-[#7X3:2]-[#7X3:3]-[#1:4]  1  0.000    0.0     1  Frosst C_-N_-N_-H 
+[#6X3:1]-[#7X3:2]-[#7X3:3]-[#1:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X3:1]-[#7X3:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CM-N_-N_-C  from other-N-N- dummies apr 20 2001
+#[#6X3:1]-[#7X3:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst C_-N_-N_-C 
+#[#6X3:1]-[#7X3:2]-[#7X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst CC-NA-N_-C  from CA-CA-CA-CA April 9 2009
+#[#6X3:1]-[#7X3:2]-[#7X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst CW-NA-N_-C  from CA-CA-CA-CA April 9 2009
+[#6X3:1]~[#7X3:2]-[#7X3:3]-[#6X3:4]  1  3.600  180.0     2   Frosst generic
+
+#[#6X3:1]-[#7X3:2]-[#7X3:3]-[#6X4:4]  1  3.600  180.0     2  Frosst CC-NA-N_-CT  from CA-CA-CA-CA April 9 2009
+#[#6X3:1]-[#7X3:2]-[#7X3:3]-[#6X4:4]  1  3.600  180.0     2  Frosst CW-NA-N_-CT  from CA-CA-CA-CA April 9 2009
+[#6X3:1]-[#7X3:2]-[#7X3:3]-[#6X4:4]  1  3.600  180.0     2   Frosst generic
+
+#[#6X3:1]-[#7X4:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-N3-CC-CC  guess
+#[#6X3:1]-[#7X4:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-N3-CC-CW  guess
+#[#6X3:1]-[#7X4:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-N3-CR-CR  guess
+#[#6X3:1]-[#7X4:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-N3-CW-CC  guess
+[#6X3:1]-[NX4,NX3:2]-[#6X3:3]~[#6X3:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X3:1]-[#7X4:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CA-N3-CC-NB  guess
+#[#6X3:1]-[#7X4:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CA-N3-CR-NB  guess
+[#6X3:1]-[NX4,NX3:2]-[#6X3:3]~[#7X2:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X3:1]-[#7X4:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CA-N3-CR-N*  guess
+#[#6X3:1]-[#7X4:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CA-N3-CW-NA  guess
+[#6X3:1]-[NX4,NX3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X3:1]-[#7X4:2]-[#6X3:3]-[#8X2:4]  1  0.000    0.0     1  Frosst CA-N3-CR-OS  guess
+#[#6X3:1]-[#7X4:2]-[#6X3:3]-[#8X2:4]  1  0.000    0.0     1  Frosst CA-N3-CW-OS  guess
+[#6X3:1]-[NX4,NX3:2]-[#6X3:3]-[#8X2:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#6X3:1]-[#8X2:2]-[#6X3:3]-[#1:4]  1  1.350  180.0     2  Frosst CA-OS-CM-H4  From X-CA-OS-X
+#[#6X3:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-OS-CM-C  guess
+#[#6X3:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-OS-CM-CM  guess
+#[#6X3:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-OS-CP-CA  guess for rigid systems; 13 April 2005
+#[#6X3:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CA-OS-CP-CP  guess for rigid systems; 13 April 2005
+#[#6X3:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  1.350  180.0     2  Frosst CW-OS-CM-CM  From X-CA-OS-X
+[#6X3:1]-[#8X2:2]-[#6X3:3]~[#6X3:4]  1  1.350  180.0     2   Frosst generic
+
+
+[#6X3:1]-[#8X2:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CA-OS-CM-CT  guess
+
+[#6X3:1]-[#8X2:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst CA-OS-CJ-H1  guess; 26 April 2006
+
+[#6X3:1]-[#8X2:2]-[#6X4r3:3]-@[#6X4r3:4]  1  0.000    0.0     1  Frosst CA-OS-CJ-CJ  guess; 26 April 2006
+
+[#6X3:1]-[#8X2:2]-[#7X3:3]-[#1:4]  1  0.625  180.0     2  Frosst CC-OS-N_-H  From X-CA-CR-X Oct 23 2006
+
+[#6X3:1]-[#8X2:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CC-OS-N_-C  to be calculated
+
+[#6X3:1]-[#8X2:2]-[#7X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CC-OS-N_-CT  to be calculated
+
+[#6X4:1]-[#16X2:2]-[#6X3:3]-[#1:4]  1  0.100  180.0     2  Frosst CT-S_-CM-H4  guess
+#[#6X4:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-S_-CA-C  guess; August 25 2009
+#[#6X4:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-S_-CC-CB 
+#[#6X4:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-S_-CC-CW 
+#[#6X4:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-S_-CM-CM  guess
+#[#6X4:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     2  Frosst CT-S_-CA-CB  taken from X-CA-CT-X
+#[#6X4:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000  180.0     2  Frosst CT-S_-CA-CA  guess cb 4nov98
+#[#6X4:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000  180.0     2  Frosst CT-S_-CA-CP  from CA-CA-S-CT guess cb 4nov98
+#[#6X4:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000  180.0     2  Frosst CT-S_-CA-CW  from CA-CA-S-CT guess, 20 May 2005
+#[#6X4:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.300  180.0     2  Frosst CT-S_-CC-CC  from CA-S-CA-CA
+[#6X4:1]-[#16X2:2]-[#6X3:3]~[#6X3:4]  1  0.300  180.0     2   Frosst generic
+
+
+[#6X4:1]-[#16X2:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CT-S_-CM-CT  guess
+#[#6X4:1]-[#16X2:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CT-S_-CA-NC  dummy
+#[#6X4:1]-[#16X2:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CT-S_-CC-NB  guess
+[#6X4:1]-[#16X2:2]-[#6X3:3]~[#7X2:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#6X4:1]-[#16X2:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CT-S_-CA-N  guess from CA-CA-S-CT, 3 sept 2009
+
+[#6X4:1]-[#16X2:2]-[#6X4:3]-[#6X3:4]  1  0.300    0.0    -1  Frosst CT-S_-CT-CA  fit to RHF/6-31G(d)@[#6X4:1]-[#16X2:2]-[#6X4:3]-[#6X3:4]  1  0.350    0.0     3  Frosst CT-S_-CT-CA  march 17 1998
+
+[#6X4:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#16X2H0:4]  1  0.300    0.0     2  Frosst CT-SO-CR-S  guess; by analogy with CT-SO-CA-CA with a lower barrier; 21 Feb 2006
+#[#6X4:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.300    0.0     2  Frosst CT-SO-CR-CC  guess by analogy with CT-SO-CA-CA with a lower barrier; 21 Feb 2006
+#[#6X4:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.575    0.0     2  Frosst CT-SO-CA-CA  RHF/6-41G(d,p) Dec 12 1997
+#[#6X4:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.750    0.0     1  Frosst CT-SO-CC-CW  taken from CT-N3-SO-O Dec 4 2000
+[#6X4:1]-[#16X4,#16X3+0:2]-[#6X3:3]~[#6X3:4]  1  0.750    0.0     1   Frosst generic
+
+
+[#6X4:1]-[#16X4,#16X3+0:2]-[#6X3:3]~[#7X2:4]  1  0.300    0.0     2  Frosst CT-SO-CR-NB  guess, by analogy with CT-SO-CA-CA with a lower barrier; 21 Feb 2006
+
+[#6X4:1]-[#16X4,#16X3+0:2]-[#6X4:3]-[#1:4]  1  0.250    0.0     1  Frosst CT-SO-CT-H1  RHF/6-41G(d,p) Dec 12 1997
+
+[#6X4:1]-[#16X4,#16X3+0:2]-[#6X4:3]~[#6X4:4]  1  0.800    0.0     3  Frosst CT-SO-CT-CT  RHF/6-41G(d,p) Dec 12 1997
+
+[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.040    0.0    -6  Frosst CT-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.407    0.0    -5  Frosst CT-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.013    0.0    -4  Frosst CT-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.018    0.0    -3  Frosst CT-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  1.329  180.0    -2  Frosst CT-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.927    0.0     1  Frosst CT-SO-NB-C*  RHF/6-31G(d) Mar 7 2007
+
+[#6X4:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-SO-N2-H  guess
+#[#6X4:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-SO-N2-CA  guess
+#[#6X4:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.500    0.0    -3  Frosst CT-SO-N_-C  taken from CT-N3-SO-CA@[#6X4:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  1.750    0.0    -2  Frosst CT-SO-N_-C  taken from CT-N3-SO-CA@[#6X4:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  1.500    0.0     1  Frosst CT-SO-N_-C  taken from CT-N3-SO-CA
+[#6X4:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.500    0.0    -3   Frosst generic
+
+
+[#6X4:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-SO-N3-H  RHF/6-41G(d,p) Dec 12 1997
+
+[#6X4:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X3:4]  1  0.500   90.0    -3  Frosst CT-SO-N3-CA  Fit to CA-CA-N3-SO/CA-N3-SO-CT surface@[#6X4:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X3:4]  1  1.375    0.0     2  Frosst CT-SO-N3-CA  Fit to CA-CA-N3-SO/CA-N3-SO-CT surface
+
+[#6X4:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  2.500    0.0    -1  Frosst CT-SO-N3-CT  RHF/6-41G(d,p) Dec 12 1997@[#6X4:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  0.750    0.0     3  Frosst CT-SO-N3-CT  RHF/6-41G(d,p) Dec 12 1997
+
+[#6X4:1]-[#16X4,#16X3+0:2]-[#7X4:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CT-SO-N3-NB  guess
+
+[#6X4:1]-[#16X4,#16X3+0:2]-[#8X2:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-SO-OS-CM  guess
+
+[#6X4:1]-[#16X4,#16X3+0:2]-[#8X2:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CT-SO-OS-CT  guess
+
+[#6X4:1]-[#6X3:2]~[#6X3:3]-[#16X2H0:4]  1  0.000    0.0     1  Frosst CT-CR-CR-S 
+#[#6X4:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-C*-C*-H4 
+#[#6X4:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-CR-CR-H4 
+[#6X4:1]-[#6X3:2]~[#6X3:3]-[#1:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X4:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-CR-CM-CA  guess
+#[#6X4:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-CR-CM-CM  guess
+#[#6X4:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     1  Frosst CT-CR-C_-CW  guess
+[#6X4:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     1   Frosst generic
+
+#[#6X4:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CT-CR-CM-CT  guess
+#[#6X4:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CT-CR-CR-CT 
+[#6X4:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X4:1]-[#6X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CT-C*-C*-NB 
+#[#6X4:1]-[#6X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CT-CR-CM-NB  guess
+#[#6X4:1]-[#6X3:2]-[#6X3:3]-[#7X2:4]  1  1.000  180.0     1  Frosst CT-CR-C_-NB  guess
+[#6X4:1]-[#6X3:2]~[#6X3:3]~[#7X2:4]  1  1.000  180.0     1   Frosst generic
+
+
+[#6X4:1]-[#6X3:2]~[#6X3:3]-[#7X3:4]  1  1.000  180.0     1  Frosst CT-CR-C_-N  guess
+
+[#6X4:1]-[#6X3:2]-[#6X3:3]=[#8X1:4]  1  1.000    0.0     1  Frosst CT-CR-C_-O  guess
+
+[#6X4:1]-[#6X3:2]-[#6X3:3]-[#8X2:4]  1  1.000    0.0     2  Frosst CT-CR-C_-OS  guess
+
+[#6X4:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-CT-CJ-HC  kept zero in fit
+
+[#6X4:1]-[#6X4:2]-[#6X4r3:3]-[#6X4:4]  1  0.156    0.0     3  Frosst CT-CT-CJ-CT  compare to X-CT-CT-X
+
+[#6X4:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]  1  1.000    0.0     3  Frosst CT-CT-CJ-CJ  fit to RHF/6-31G(d)
+
+[#6X4:1]-[#6X4:2]-[#6X4r3:3]-[#7X3:4]  1  0.156    0.0     3  Frosst CT-CT-CJ-N  compare to X-CT-CT-X
+
+[#6X4:1]-[#6X4:2]-[#6X4r3:3]-[#8X2:4]  1  1.000    0.0     3  Frosst CT-CT-CJ-OH  compared to CT-CT-CJ-CJ Dec 1 2004
+
+[#6X4:1]-[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.065  180.0    -4  Frosst CT-CJ-CA-CA  guess from CA-CA-CJ-CJ@[#6X4:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.550  180.0     2  Frosst CT-CJ-CA-CA  Feb 1 2005
+
+[#6X4:1]-[#6X4r3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CT-CJ-C_-N  set to zero for CJ-CJ-C-O
+
+[#6X4:1]-[#6X4r3:2]-[#6X3:3]=[#8X1:4]  1  0.000    0.0     1  Frosst CT-CJ-C_-O  set to zero for CJ-CJ-C-O
+
+[#6X4:1]-[#6X4r3:2]-[#6X4r3:3]-[#6X4:4]  1  0.000    0.0     2  Frosst CT-CJ-CJ-CT  accounted for in other terms
+
+[#6X4:1]-[#7X1:2]~[#7X1:3]~[#7X1:4]  1  0.000    0.0     2  Frosst CT-NL-NL-NL  guess
+
+[#6X4:1]-[#7X2:2]~[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-NB-CM-H4  guess
+
+[#6X4:1]-[#7X2:2]~[#6X3:3]-[#6X4:4]  1  1.000    0.0     1  Frosst CT-NB-CM-CT  guess
+
+[#6X4:1]-[#7X2:2]~[#6X3:3]-[#7X3:4]  1  1.000    0.0     1  Frosst CT-NB-CM-N  guess
+
+[#6X4:1]-[#7X3:2]-[#6X3:3]-[#16X2H0:4]  1  3.750  180.0     2  Frosst CT-N*-C*-S  five member aromatic ring
+#[#6X4:1]-[#7X3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-N_-CM-H4  guess
+#[#6X4:1]-[#7X3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-N_-CW-H4  guess
+[#6X4:1]-[#7X3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X4:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-N_-CB-CR  guess for intra cyclic; 4 April 2006
+#[#6X4:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-N_-CM-CM  guess
+#[#6X4:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     1  Frosst CT-N_-CW-C  in a rigid ring; 12 dec 2006
+#[#6X4:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     2  Frosst CT-N_-CW-CC  guess
+#[#6X4:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  2.450  180.0     2  Frosst CT-N_-CW-CA  guess Dec 6 2005
+#[#6X4:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  2.500  180.0     2  Frosst CT-ND-CA-CA  *********
+#[#6X4:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst CT-N_-CB-CA  From CA-CA-CA-CA Mar 8 2004
+#[#6X4:1]-[#7X3:2]-[#6X3:3]-[#6X3:4]  1  3.600  180.0     2  Frosst CT-N_-CB-CB  From CA-CA-CA-CA Mar 8 2004
+[#6X4:1]-[#7X3:2]-[#6X3:3]~[#6X3:4]  1  3.600  180.0     2   Frosst generic
+
+#[#6X4:1]-[#7X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CT-N_-CB-NC  guess intra cyclic; 4 May 2006
+#[#6X4:1]-[#7X3:2]-[#6X3:3]-[#7X2:4]  1  3.750  180.0     2  Frosst CT-N*-C*-NB  five member aromatic ring
+[#6X4:1]-[#7X3:2]-[#6X3:3]~[#7X2:4]  1  3.750  180.0     2   Frosst generic
+
+
+[#6X4:1]-[#7X3:2]-[#6X3:3]-[#7X3:4]  1  1.000  180.0     2  Frosst CT-N_-CW-NA  guess 3 June 2005
+
+[#6X4:1]-[#7X3:2]-[#6X3:3]-[#8X2:4]  1  1.000  180.0     2  Frosst CT-N_-CW-OS  guess
+
+[#6X4:1]-[#7X3:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-ND-CT-H1  dummy
+
+[#6X4:1]-[#7X3:2]-[#6X4:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-ND-CT-C  dummy
+
+[#6X4:1]-[#7X3:2]-[#6X4:3]-[#6X4:4]  1  0.156    0.0     3  Frosst CT-ND-CT-CT  from X-CT-CT-X Jan 30 2002
+
+[#6X4:1]-[#7X3:2]-[#7X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-N_-N_-H 
+
+[#6X4:1]-[#7X3:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-N_-N_-C 
+
+[#6X4:1]-[#7X3:2]-[#7X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CT-N_-N_-CT 
+
+[#6X4:1]-[NX4,NX3:2]-[#6X3:3]-[#16X2H0:4]  1  0.000    0.0     1  Frosst CT-N3-CR-S  guess Jan 15 2002
+#[#6X4:1]-[#7X4:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-N3-CC-CW  guess
+#[#6X4:1]-[#7X4:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-N3-CW-CC  guess
+[#6X4:1]-[NX4,NX3:2]-[#6X3:3]=[#6X3:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X4:1]-[#7X4:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CT-N3-CC-NB  guess
+#[#6X4:1]-[#7X4:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CT-N3-CR-NB  guess
+[#6X4:1]-[NX4,NX3:2]-[#6X3:3]=[#7X2:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X4:1]-[#7X4:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CT-N3-CR-N*  guess
+#[#6X4:1]-[#7X4:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CT-N3-CW-NA  guess
+#[#6X4:1]-[#7X4:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CT-N3-C_-N  dummy
+[#6X4:1]-[NX4,NX3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#6X4:1]-[NX4,NX3:2]-[#6X3:3]=[#8X1:4]  1  0.000    0.0     1  Frosst CT-N3-C_-O  dummy
+#[#6X4:1]-[#7X4:2]-[#6X3:3]-[#8X2:4]  1  0.000    0.0     1  Frosst CT-N3-CR-OS  guess
+#[#6X4:1]-[#7X4:2]-[#6X3:3]-[#8X2:4]  1  0.000    0.0     1  Frosst CT-N3-CW-OS  guess
+[#6X4:1]-[NX4,NX3:2]-[#6X3:3]-[#8X2:4]  1  0.000    0.0     1   Frosst generic
+
+#[#6X4:1]-[#7X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-N3-CJ-HP  from H-N-CJ-CT
+#[#6X4:1]-[#7X4:2]-[#6X4r3:3]-[#1:4]  1  0.156    0.0     3  Frosst CT-N3-CJ-H1  from N-CT-CJ-HC
+[#6X4:1]-[NX4,NX3:2]-[#6X4r3:3]-[#1:4]  1  0.156    0.0     3   Frosst generic
+
+
+[#6X4:1]-[NX4,NX3:2]-[#6X4r3:3]-[#6X4:4]  1  0.156    0.0     3  Frosst CT-N3-CJ-CT  N3-CT-CJ-CJ
+
+[#6X4:1]-[NX4,NX3:2]-[#6X4r3:3]-[#6X4r3:4]  1  1.000    0.0     3  Frosst CT-N3-CJ-CJ  from CT-CT-CJ-CJ
+
+[#6X4:1]-[NX4,NX3:2]-[#7X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-N3-N_-H  guess june 25 2009
+#[#6X4:1]-[#7X4:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-N3-N_-C  dummy
+#[#6X4:1]-[#7X4:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-N3-N_-CA  guess
+[#6X4:1]-[NX4,NX3:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#6X4:1]-[NX4,NX3:2]-[#7X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CT-N3-N_-CT  dummy
+
+[#6X4:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#1:4]  1  0.400    0.0    -3  Frosst CT-N3-N3-H  MP2/6-31G(d,p) 7/24/98@[#6X4:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#1:4]  1  2.150    0.0    -2  Frosst CT-N3-N3-H  MP2/6-31G(d,p) 7/24/98@[#6X4:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#1:4]  1  1.200    0.0     1  Frosst CT-N3-N3-H  MP2/6-31G(d,p) 7/24/98
+
+[#6X4:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#6X4:4]  1  0.375    0.0    -3  Frosst CT-N3-N3-CT  MP2/6-31G(d,p) 7/23/98@[#6X4:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#6X4:4]  1  2.125    0.0    -2  Frosst CT-N3-N3-CT  MP2/6-31G(d,p) 7/23/98@[#6X4:1]-[NX4,NX3:2]-[NX4,NX3:3]-[#6X4:4]  1  1.500    0.0     1  Frosst CT-N3-N3-CT  MP2/6-31G(d,p) 7/23/98
+
+[#6X4:1]-[#8X2:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-OS-CM-H4  guess
+#[#6X4:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-OS-CM-C  guess
+#[#6X4:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-OS-CM-CM  guess
+#[#6X4:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  1.350  180.0     2  Frosst CT-OS-CA-CA  RHF/6-31G(d,p) Dec 12 1997
+[#6X4:1]-[#8X2:2]-[#6X3:3]-[#6X3:4]  1  1.350  180.0     2   Frosst generic
+
+
+[#6X4:1]-[#8X2:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CT-OS-CM-CT  guess
+
+[#6X4:1]-[#8X2:2]-[#7X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CT-OS-N_-H  guess
+
+[#6X4:1]-[#8X2:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CT-OS-N_-C  guess
+
+[#6X4r3:1]-[#16X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst CJ-S_-CA-CA  guess; 25 august 2009
+
+[#6X4r3:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst CJ-CT-CJ-HC  guess mar 30 2001
+
+[#6X4r3:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.000    0.0     1  Frosst CJ-CT-CJ-CJ  guess mar 30 2001
+
+[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#16X2H0:4]  1  0.000    0.0     1  Frosst CJ-CJ-C_-S  dummy guess (had to get going) March 30 2004
+
+[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst CJ-CJ-C_-H4  guess
+#[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.050  180.0    -4  Frosst CJ-CJ-CC-CC  RHF/6-31G(d) opt fit Oct21 2010@[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.250    0.0    -3  Frosst CJ-CJ-CC-CC  RHF/6-31G(d) opt fit Oct21 2010@[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.010  180.0     2  Frosst CJ-CJ-CC-CC  RHF/6-31G(d) opt fit Oct21 2010
+#[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.065  180.0    -4  Frosst CJ-CJ-CA-CA  RHF/6-31G(d,p) opt fit@[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.550  180.0     2  Frosst CJ-CJ-CA-CA  RHF/6-31G(d,p) opt fit
+#[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.065  180.0    -4  Frosst CJ-CJ-CA-CP  guess from CA-CA-CJ-CJ 16 Feb 2005@[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.550  180.0     2  Frosst CJ-CJ-CA-CP 
+#[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.300    0.0     1  Frosst CJ-CJ-CC-CR  RHF/6-31G(d,p) opt Sept 2 2008
+#[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.300  180.0     1  Frosst CJ-CJ-CC-CW  RHF/6-31G(d,p) opt Sept 2 2008
+[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#6X3:4]  1  0.300  180.0     1   Frosst generic
+
+
+[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst CJ-CJ-C_-CT  set to zero for CJ-CJ-C-O
+#[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst CJ-CJ-C_-NB  dummy guess (had to get going) March 30 2004
+[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]~[#7X2:4]  1  2.100  180.0    -2  Frosst CJ-CJ-CA-NC  FIT B3LYP6-31G(d) Sept 14 2005@[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]~[#7X2:4]  1  0.432  180.0    -1  Frosst CJ-CJ-CA-NC  FIT B3LYP6-31G(d) Sept 14 2005@[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]~[#7X2:4]  1  0.620    0.0     3  Frosst CJ-CJ-CA-NC  FIT B3LYP6-31G(d) Sept 14 2005
+
+
+[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst CJ-CJ-C_-N  set to zero for CJ-CJ-C-O
+#[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#8X1:4]  1  0.000    0.0     1  Frosst CJ-CJ-C_-O  set to zero for CJ-CJ-C-O
+#[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#8X1:4]  1  2.400  320.0     2  Frosst CJ-CJ-C_-O2  working
+[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]~[#8X1:4]  1  2.400  320.0     2   Frosst generic
+
+
+[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#8X2:4]  1  0.065  180.0    -4  Frosst CJ-CJ-C_-OS  Taken from CA-CA-CJ-CJ June 29 2007@[#6X4r3:1]-[#6X4r3:2]-[#6X3:3]-[#8X2:4]  1  0.550  180.0     2  Frosst CJ-CJ-C_-OS 
+
+[#6X4r3:1]-[#6X4r3:2]-[#6X4r3:3]-[#1:4]  1  3.000    0.0    -2  Frosst CJ-CJ-CJ-HC  fit to RHF/6-31G(d)@[#6X4r3:1]-[#6X4r3:2]-[#6X4r3:3]-[#1:4]  1  2.700    0.0     1  Frosst CJ-CJ-CJ-HC  fit to RHF/6-31G(d)
+
+[#6X4r3:1]-[#6X4r3:2]-[#6X4r3:3]-[#6X4:4]  1  3.000    0.0    -2  Frosst CJ-CJ-CJ-CT  fit to RHF/6-31G(d)@[#6X4r3:1]-[#6X4r3:2]-[#6X4r3:3]-[#6X4:4]  1  2.700    0.0     1  Frosst CJ-CJ-CJ-CT  fit to RHF/6-31G(d)
+
+[#6X4r3:1]-[#6X4r3:2]-[#6X4r3:3]-[*:4]  1  3.000    0.0    -2  Frosst CJ-CJ-CJ-X  fit to RHF/6-31G(d)@[#6X4r3:1]-[#6X4r3:2]-[#6X4r3:3]-[*:4]  1  2.700    0.0     1  Frosst CJ-CJ-CJ-X  fit to RHF/6-31G(d)
+#[#6X4r3:1]-[#7X4:2]-[#6X4r3:3]-[#1:4]  1  2.700    0.0     1  Frosst CJ-N3-CJ-H1  from CJ-CJ-CJ-HC
+#[#6X4r3:1]-[#7X4:2]-[#6X4r3:3]-[#1:4]  1  2.700    0.0     1  Frosst CJ-N3-CJ-HP  from CJ-CJ-CJ-HC
+[#6X4r3:1]-[NX4,NX3:2]-[#6X4r3:3]-[#1:4]  1  2.700    0.0     1   Frosst generic
+
+
+[#6X4r3:1]-[NX4,NX3:2]-[#6X4r3:3]-[#6X4:4]  1  0.156    0.0     3  Frosst CJ-N3-CJ-CT  from CT-CJ-CT-CT
+
+[#7X1:1]~[#7X1:2]-[#6X3:3]~[#6X3:4]  1  0.500  180.0     2  Frosst NL-NL-CA-CA  guess
+
+[#7X1:1]~[#7X1:2]-[#6X4:3]~[#1:4]  1  0.000    0.0     2  Frosst NL-NL-CT-H1  guess
+
+[#7X1:1]~[#7X1:2]-[#6X4:3]-[#6X3:4]  1  0.000    0.0     2  Frosst NL-NL-CT-CA  guess
+
+[#7X2:1]-[#16X2:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst NB-S_-CA-H4  dummy
+
+[#7X2:1]-[#16X2:2]-[#6X3:3]~[#6X3:4]  1  0.000    0.0     1  Frosst NB-S_-CA-CA  dummy
+#[#7X2:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-SO-CR-CA  guess
+#[#7X2:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-SO-CW-CA  guess
+#[#7X2:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-SO-CW-CC  guess
+[#7X2:1]-[#16X4,#16X3+0:2]-[#6X3:3]~[#6X3:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#7X2:1]-[#16X4,#16X3+0:2]-[#6X3:3]=,:[#7X2:4]  1  0.000    0.0     1  Frosst NB-SO-CR-NB  guess
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#16X2H0:4]  1  0.000    0.0     1  Frosst NB-CR-CR-S 
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#16X2H0:4]  1  0.400  180.0     2  Frosst NC-CR-C_-S  Like CA-CR-C_-S interpolated from OS-C_-CA-CA and CT-C -CA-CA
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#16X2H0:4]  1  1.000  180.0     2  Frosst NB-CR-C_-S  guess
+[#7X2:1]~[#6X3:2]~[#6X3:3]-[#16X2H0:4]  1  1.000  180.0     2   Frosst generic
+
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst NB-C*-C*-H4 
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst NB-CR-CC-HA 
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst NB-CR-CR-H4 
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     2  Frosst NC-CR-C_-H4  guess July 29 2003
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.000  180.0     2  Frosst NC-CA-C_-H4  analogy H4-C_-CA-CA
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.625  180.0     2  Frosst NB-CR-CM-HA  From X-CA-CR-X
+[#7X2:1]~[#6X3:2]~[#6X3:3]-[#1:4]  1  0.625  180.0     2   Frosst generic
+
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-CR-CB-CA  guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-CR-CB-CR  guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-CR-CC-CW 
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-CR-CM-CA  guess
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-CR-CM-CM  guess
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NC-CR-CB-C  guess ( intra cyclic aromatic); 5 April 2006
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NC-CR-CB-CA  guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NC-CR-CB-CR  guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000    0.0     2  Frosst NB-CR-C_-CW  guess
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     1  Frosst NB-CR-C_-CA  guess Nov 22 2006
+[#7X2:1]~[#6X3:2]~[#6X3:3]~[#6X3:4]  1  1.000  180.0     1   Frosst generic
+
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst NB-CR-CM-CT  guess
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst NB-CR-CR-CT 
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.200    0.0     2  Frosst NC-CA-C_-CT  analogy CT-C_-CA-CA
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  1.000  180.0     1  Frosst NB-CR-C_-CT  guess
+[#7X2:1]~[#6X3:2]~[#6X3:3]-[#6X4:4]  1  1.000  180.0     1   Frosst generic
+
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst NB-C*-C*-NB 
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst NB-CR-CM-NB  guess
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst NB-CR-CR-NB 
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X2:4]  1  0.875  180.0     2  Frosst NC-CR-C_-NB  RHF/6-31G(d,p) July 6 2003
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X2:4]  1  1.000    0.0     1  Frosst NB-CR-C_-NB  guess
+[#7X2:1]~[#6X3:2]~[#6X3:3]~[#7X2:4]  1  1.000    0.0     1   Frosst generic
+
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst NC-CR-CB-N  guess for intra cyclic; 4 April 2006
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.077  180.0    -4  Frosst NC-CA-C_-N2  B3LYP/6-311G** fit, 19 Oct 2004 (charged N2 using amidine)@[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  1.482  180.0     2  Frosst NC-CA-C_-N2 
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.725    0.0     2  Frosst NC-CA-C_-N  analogy N_-C_-CA-CA
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  1.000  180.0     2  Frosst NB-CR-C_-N  guess
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  1.315  180.0     2  Frosst NC-CR-C_-N2  B3LYP/6-311G** fit, 27 Oct 2004 (charged N2 using amidine branched on CR of a pyrimidine)
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  1.846  180.0     2  Frosst NB-CC-C_-N2  B3LYP/6-311G** fit, 27 Oct 2004 (charged N2 using amidine branched on CC of an imidazole)
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  1.846  180.0     2  Frosst NB-CR-C_-N2  From NB-CC-C_-N2: reproduce very well the B3LYP/6-311G** surface for this torsion (using amidine branched on CR of an imidazole) 27 Oct 2004
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  3.625  180.0     2  Frosst NC-CP-C_-N  from X-C-CA-X Mar 6 2007
+[#7X2:1]~[#6X3:2]~[#6X3:3]-[#7X3:4]  1  1.846  180.0     2  Frosst NB-CR-C_-N2  From NB-CC-C_-N2: reproduce very well the B3LYP/6-311G** surface for this torsion (using amidine branched on CR of an imidazole) 27 Oct 2004
+
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  1.000    0.0     1  Frosst NB-CR-C_-O2  guess; 15 Nov 2005
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  1.000  180.0     1  Frosst NB-CR-C_-O  guess
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  2.450  180.0     2  Frosst NC-CA-C_-O  analogy O_-C_-CA-CA
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  3.625  180.0     2  Frosst NC-CP-C_-O  from X-C-CA-X Mar 6 2007
+[#7X2:1]~[#6X3:2]-[#6X3:3]=[#8X1:4]  1  3.625  180.0     2   Frosst generic
+
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#8X2:4]  1  0.550    0.0     2  Frosst NC-CA-C_-OS  analogy OS-C_-CA-CA
+#[#7X2:1]-[#6X3:2]-[#6X3:3]-[#8X2:4]  1  1.000    0.0     2  Frosst NB-CR-C_-OS  guess
+[#7X2:1]~[#6X3:2]-[#6X3:3]-[#8X2:4]  1  1.000    0.0     2   Frosst generic
+
+
+[#7X2:1]~[#6X3:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst NB-CR-CJ-HC  RHF/6-31G(d) opt fit Oct21 2010
+
+[#7X2:1]~[#6X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.300    0.0    -3  Frosst NB-CR-CJ-CJ  RHF/6-31G(d) opt fit Oct21 2010@[#7X2:1]~[#6X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.950  180.0    -2  Frosst NB-CR-CJ-CJ  RHF/6-31G(d) opt fit Oct21 2010@[#7X2:1]~[#6X3:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.275  180.0     1  Frosst NB-CR-CJ-CJ  RHF/6-31G(d) opt fit Oct21 2010
+
+[#7X2:1]~[#7X2:2]~[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst NB-NB-CM-H4 
+#[#7X2:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-NB-CA-CA  guess
+#[#7X2:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-NB-CM-CM  guess
+#[#7X2:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  1.000    0.0     1  Frosst NB-NB-C_-CW  guess
+[#7X2:1]~[#7X2:2]~[#6X3:3]~[#6X3:4]  1  1.000    0.0     1   Frosst generic
+
+#[#7X2:1]-[#7X2:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst NB-NB-CM-CT 
+#[#7X2:1]-[#7X2:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst NB-NB-C_-CT 
+[#7X2:1]~[#7X2:2]~[#6X3:3]-[#6X4:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#7X2:1]~[#7X2:2]-[#6X3:3]=[#8X1:4]  1  0.000    0.0     1  Frosst NB-NB-C_-O 
+
+[#7X2:1]~[#7X2:2]-[#6X4:3]-[#16X4,#16X3+0:4]  1  0.000    0.0     1  Frosst NB-NB-CT-SO  guess
+#[#7X2:1]-[#7X2:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1  Frosst NB-NB-CT-H1 
+#[#7X2:1]-[#7X2:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1  Frosst NB-NB-CT-H2 
+[#7X2:1]~[#7X2:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1   Frosst generic
+
+#[#7X2:1]-[#7X2:2]-[#6X4:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-NB-CT-CA  guess
+#[#7X2:1]-[#7X2:2]-[#6X4:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-NB-CT-CM  guess
+#[#7X2:1]-[#7X2:2]-[#6X4:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-NB-CT-CW 
+[#7X2:1]~[#7X2:2]-[#6X4:3]-[#6X3:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#7X2:1]~[#7X2:2]-[#6X4:3]-[#6X4:4]  1  0.000    0.0     1  Frosst NB-NB-CT-CT 
+
+[#7X2:1]~[#7X2:2]-[#6X4:3]-[#7X2:4]  1  0.000    0.0     1  Frosst NB-NB-CT-NB 
+
+[#7X2:1]~[#7X2:2]-[#6X4:3]-[#7X3:4]  1  0.000    0.0     1  Frosst NB-NB-CT-N 
+
+[#7X2:1]~[#7X2:2]-[#6X4:3]-[#8X2:4]  1  0.000    0.0     1  Frosst NB-NB-CT-OS  guess
+#[#7X2:1]-[#7X2:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-NB-N2-CA  assumed intracyclic (aryl); 11 Aug 2005
+#[#7X2:1]-[#7X2:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-NB-N2-CR  assumed intracyclic (aryl); 11 Aug 2005
+[#7X2:1]~[#7X2:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#7X2:1]~[#7X2:2]-[#7X4:3]-[#16X4,#16X3+0:4]  1  0.000    0.0     1  Frosst NB-NB-N3-SO  guess
+
+[#7X2:1]-[#8X2:2]-[#7X3:3]-[#1:4]  1  1.000  180.0     1  Frosst NB-OS-N_-H  guess
+#[#7X2:1]-[#8X2:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-OS-N*-CR  guess
+#[#7X2:1]-[#8X2:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NB-OS-N*-CW  guess
+#[#7X2:1]-[#8X2:2]-[#7X3:3]-[#6X3:4]  1  1.000    0.0     1  Frosst NB-OS-N_-C  guess
+[#7X2:1]-[#8X2:2]-[#7X3:3]-[#6X3:4]  1  1.000    0.0     1   Frosst generic
+
+
+[#7X3:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#16X2H0:4]  1  0.000    0.0     2  Frosst N_-SO-CR-S  guess
+#[#7X3:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     2  Frosst N_-SO-CC-CC  guess
+#[#7X3:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     2  Frosst N_-SO-CC-CW  guess
+#[#7X3:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     2  Frosst N_-SO-CR-CA  guess
+#[#7X3:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     2  Frosst N_-SO-CW-CA  guess
+#[#7X3:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     2  Frosst N_-SO-CW-CC  guess
+[#7X3:1]-[#16X4,#16X3+0:2]-[#6X3:3]~[#6X3:4]  1  0.000    0.0     2   Frosst generic
+
+
+[#7X3:1]-[#16X4,#16X3+0:2]-[#6X3:3]~[#7X2:4]  1  0.000    0.0     2  Frosst N_-SO-CR-NB  guess
+#[#7X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst N2-SO-N_-C  guess
+#[#7X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst N_-SO-N2-CA  guess
+[#7X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#7X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst N_-SO-N2-CT  guess
+
+[#7X3:1]-[#16X4,#16X3+0:2]-[#8X2:3]-[#6X3:4]  1  0.000    0.0     1  Frosst N2-SO-OS-C  guess
+
+[#7X3:1]-[#16X4,#16X3+0:2]-[#8X2:3]-[#6X4:4]  1  0.000    0.0     1  Frosst N2-SO-OS-CT  guess
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst N_-CR-CR-H4  guess
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  1.000  180.0     1  Frosst NA-CW-CM-HA  guess planar pi mar 13 2001
+[#7X3:1]-[#6X3:2]~[#6X3:3]-[#1:4]  1  1.000  180.0     1   Frosst generic
+
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst N2-CR-CB-C  guess (intra cyclic aromatic); 5 April 2006
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst N2-CR-CB-CA  guess (intra cyclic aromatic); 5 April 2006
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NA-CR-CB-CA  guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NA-CR-CB-CA  guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst NA-CR-CB-CR  guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst N_-CR-CB-CA  guess for intra cyclic; 4 April 2006
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.250  180.0    -3  Frosst N*-CR-CM-CM  From CM-CM-CR-CC Feb 10 2010@[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0    -2  Frosst N*-CR-CM-CM  From CM-CM-CR-CC Feb 10 2010@[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.400  180.0     1  Frosst N*-CR-CM-CM  From CM-CM-CR-CC Feb 10 2010
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     1  Frosst N2-CR-C_-CW  guess Nov 22 2006
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     1  Frosst NA-CR-C_-CA  guess Nov 22 2006
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     1  Frosst NA-CW-CM-CM  guess planar pi mar 13 2001
+[#7X3:1]-[#6X3:2]~[#6X3:3]~[#6X3:4]  1  1.000  180.0     1   Frosst generic
+
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst N_-CR-CR-CT  guess
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.250  180.0    -3  Frosst N*-CR-CM-CT  From CM-CM-CR-CC Feb 10 2010@[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  1.000  180.0    -2  Frosst N*-CR-CM-CT  From CM-CM-CR-CC Feb 10 2010@[#7X3:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  0.400  180.0     1  Frosst N*-CR-CM-CT  From CM-CM-CR-CC Feb 10 2010
+[#7X3:1]-[#6X3:2]~[#6X3:3]-[#6X4:4]  1  0.250  180.0    -3  Frosst N*-CR-CM-CT  From CM-CM-CR-CC Feb 10 2010@[#7X3:1]-[#6X3:2]~[#6X3:3]-[#6X4:4]  1  1.000  180.0    -2  Frosst N*-CR-CM-CT  From CM-CM-CR-CC Feb 10 2010@[#7X3:1]-[#6X3:2]~[#6X3:3]-[#6X4:4]  1  0.400  180.0     1  Frosst N*-CR-CM-CT  From CM-CM-CR-CC Feb 10 2010
+
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst N_-CR-CR-NB  guess
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#7X2:4]  1  1.000  180.0     1  Frosst N_-CR-C_-NB  guess
+[#7X3:1]-[#6X3:2]~[#6X3:3]~[#7X2:4]  1  1.000  180.0     1   Frosst generic
+
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.000    0.0     1  Frosst N_-CR-CB-N  guess for intra cyclic; 4 April 2006
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.582    0.0    -4  Frosst NA-CR-C_-N2  From NA-CW-C_-N2: reproduce very well the B3LYP/6-311G** surface for this torsion (using amidine branched on CR of an imidazole) 27 Oct 2004@[#7X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  2.101  180.0     2  Frosst NA-CR-C_-N2 
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  0.582    0.0    -4  Frosst NA-CW-C_-N2  B3LYP/6-311G** fit, 27 Oct 2004 (charged N2 using amidine branched on CW of an imidazole)@[#7X3:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  2.101  180.0     2  Frosst NA-CW-C_-N2 
+[#7X3:1]-[#6X3:2]~[#6X3:3]-[#7X3:4]  1  0.582    0.0    -4   Frosst generic
+
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  1.000  180.0     1  Frosst N2-CR-C_-O  guess Nov 22 2006
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  1.000  180.0     1  Frosst NA-CR-C_-O  guess Nov 22 2006
+#[#7X3:1]-[#6X3:2]-[#6X3:3]-[#8X1:4]  1  1.000  180.0     1  Frosst N_-CR-C_-O  guess
+[#7X3:1]-[#6X3:2]-[#6X3:3]=[#8X1:4]  1  1.000  180.0     1   Frosst generic
+
+
+[#7X3:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  1.000    0.0     1  Frosst N_-CT-CJ-HC  by comparision
+
+[#7X3:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]  1  1.000    0.0     1  Frosst N_-CT-CJ-CJ  by comparision
+
+[#7X3:1]-[#6X4r3:2]-[#6X3:3]-[#16X2H0:4]  1  0.000    0.0     1  Frosst N_-CJ-C_-S  dummy guess (had to get going) March 30 2004
+
+[#7X3:1]-[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.065  180.0    -4  Frosst N_-CJ-CA-CA  from CA-CA-CJ-CJ Dec 16 2004@[#7X3:1]-[#6X4r3:2]-[#6X3:3]~[#6X3:4]  1  0.550  180.0     2  Frosst N_-CJ-CA-CA  from CA-CA-CJ-CJ Dec 16 2004
+
+[#7X3:1]-[#6X4r3:2]-[#6X3:3]~[#7X2:4]  1  0.000    0.0     1  Frosst N_-CJ-C_-NB  dummy guess (had to get going) March 30 2004
+
+[#7X3r3:1]-[#7X3r3:2]-[#6X4:3]-[#6X3:4]  1  0.000    0.0     2  Frosst NJ-NJ-CT-CA 
+
+[#7X3r3:1]-[#7X3r3:2]-[#6X4:3]-[#6X4:4]  1  0.000    0.0     2  Frosst NJ-NJ-CT-CT 
+
+[NX4,NX3:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#16X2H0:4]  1  1.750  180.0     2  Frosst N3-SO-CW-S  guess 0.75 times X-C-OS-X
+#[#7X4:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.750    0.0     1  Frosst N3-SO-CC-CB  taken from CT-N3-SO-O Dec 4 2000
+#[#7X4:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.750    0.0     1  Frosst N3-SO-CC-CC  taken from CT-N3-SO-O Dec 4 2000
+#[#7X4:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.750    0.0     1  Frosst N3-SO-CC-CW  taken from CT-N3-SO-O Dec 4 2000
+#[#7X4:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  1.750  180.0     2  Frosst N3-SO-CW-CC  guess 0.75 times X-C-OS-X
+[NX4,NX3:1]-[#16X4,#16X3+0:2]-[#6X3:3]~[#6X3:4]  1  1.750  180.0     2   Frosst generic
+
+
+[NX4,NX3:1]-[#16X4,#16X3+0:2]-[#6X3:3]~[#7X2:4]  1  0.750    0.0     1  Frosst N3-SO-CC-NB  taken from CT-N3-SO-O Mar 28 2001
+
+[NX4,NX3:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#7X3:4]  1  1.750  180.0     2  Frosst N3-SO-CW-NA  guess 0.75 times X-C-OS-X, 2 Sept 2004
+
+[NX4,NX3:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#8X2:4]  1  1.750  180.0     2  Frosst N3-SO-CW-OS  guess 0.75 times X-C-OS-X
+
+[NX4,NX3:1]-[#6X3:2]~[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst N3-CR-CR-H4  guess
+#[#7X4:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst N3-CR-CB-CA  guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+#[#7X4:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst N3-CR-CB-CR  guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+[NX4,NX3:1]-[#6X3:2]~[#6X3:3]~[#6X3:4]  1  0.000    0.0     1   Frosst generic
+
+
+[NX4,NX3:1]-[#6X3:2]~[#6X3:3]~[#7X2:4]  1  0.000    0.0     1  Frosst N3-CR-CR-NB  guess
+
+[NX4,NX3:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  0.156    0.0     3  Frosst N3-CT-CJ-HC  compare to X-CT-CT-X
+
+[NX4,NX3:1]-[#6X4:2]-[#6X4r3:3]-[#6X4r3:4]  1  0.156    0.0     3  Frosst N3-CT-CJ-CJ  compare to X-CT-CT-X
+#[#8X1:1]-[#15:2]-[#6X3:3]-[#6X3:4]  1  1.000    0.0     1  Frosst O2-P_-CC-CC  dummy
+#[#8X1:1]-[#15:2]-[#6X3:3]-[#6X3:4]  1  1.000    0.0     1  Frosst O2-P_-CC-CW  dummy
+#[#8X1:1]-[#15:2]-[#6X3:3]-[#6X3:4]  1  1.000    0.0     1  Frosst O2-P_-CM-CM  dummy
+[#8X1:1]~[#15:2]-[#6X3:3]~[#6X3:4]  1  1.000    0.0     1   Frosst generic
+
+
+[#8X1:1]~[#15:2]-[#6X3:3]-[#6X4:4]  1  1.000    0.0     1  Frosst O2-P_-CM-CT  dummy
+#[#8X1:1]-[#15:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1  Frosst O2-P_-CT-H1  dummy
+#[#8X1:1]-[#15:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1  Frosst O2-P_-CT-HC  dummy
+[#8X1:1]~[#15:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#8X1:1]~[#15:2]-[#6X4:3]-[#6X4:4]  1  1.000    0.0     1  Frosst O2-P_-CT-CT  dummy
+
+[#8X1:1]~[#15:2]-[#6X4:3]-[#7X3:4]  1  0.000    0.0     1  Frosst O2-P_-CT-N  dummy
+
+[#8X1:1]~[#15:2]-[#6X4:3]-[#9:4]  1  1.000    0.0     1  Frosst O2-P_-CT-F  dummy
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#16X2H0:4]  1  0.000    0.0     2  Frosst O_-SO-CR-S  guess
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#16X2H0:4]  1  1.750  180.0     2  Frosst O_-SO-CW-S  guess 0.75 times X-C-OS-X
+[#8X1:1]~[#16X4,#16X3+0:2]-[#6X3:3]-[#16X2H0:4]  1  1.750  180.0     2   Frosst generic
+
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst O_-SO-CR-CC  guess; 21 Feb 2006
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     2  Frosst O_-SO-CR-CA  guess
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     2  Frosst O_-SO-CW-CA  guess
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.750    0.0     1  Frosst O_-SO-CC-CB  taken from CT-N3-SO-O June 29 2007
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.750    0.0     1  Frosst O_-SO-CC-CC  taken from CT-N3-SO-O Dec 4 2000
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  0.750    0.0     1  Frosst O_-SO-CC-CW  taken from CT-N3-SO-O Dec 4 2000
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  1.750  180.0     2  Frosst O2-SO-CC-CC  taken from O-SO-CW-CC Nov 11 2009
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  1.750  180.0     2  Frosst O2-SO-CC-CW  taken from O-SO-CW-CC Nov 11 2009
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#6X3:4]  1  1.750  180.0     2  Frosst O_-SO-CW-CC  guess 0.75 times X-C-OS-X
+[#8X1:1]~[#16X4,#16X3+0:2]-[#6X3:3]~[#6X3:4]  1  1.750  180.0     2   Frosst generic
+
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#7X2:4]  1  0.000    0.0     2  Frosst O_-SO-CR-NB  guess
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#6X3:3]-[#7X2:4]  1  0.750    0.0     1  Frosst O_-SO-CC-NB  taken from CT-N3-SO-O Dec 4 2000
+[#8X1:1]~[#16X4,#16X3+0:2]-[#6X3:3]~[#7X2:4]  1  0.750    0.0     1   Frosst generic
+
+
+[#8X1:1]~[#16X4,#16X3+0:2]-[#6X3:3]-[#7X3:4]  1  1.750  180.0     2  Frosst O_-SO-CW-NA  similar to O_-SO-CW-CC, 2 Sept 2004
+
+[#8X1:1]~[#16X4,#16X3+0:2]-[#6X3:3]-[#8X2:4]  1  1.750  180.0     2  Frosst O_-SO-CW-OS  guess 0.75 times X-C-OS-X
+
+[#8X1:1]~[#16X4,#16X3+0:2]-[#6X4:3]-[#1:4]  1  0.000    0.0     1  Frosst O_-SO-CT-H1  RHF/6-41G(d,p) Dec 12 1997
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#7X2:3]-[#6X3:4]  1  0.000    0.0     1  Frosst O_-SO-NB-CR  guess
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#7X2:3]-[#6X3:4]  1  0.071    0.0    -6  Frosst O_-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#8X1:1]-[#16X4,#16X3+0:2]-[#7X2:3]-[#6X3:4]  1  0.697    0.0    -5  Frosst O_-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#8X1:1]-[#16X4,#16X3+0:2]-[#7X2:3]-[#6X3:4]  1  0.208  180.0    -4  Frosst O_-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#8X1:1]-[#16X4,#16X3+0:2]-[#7X2:3]-[#6X3:4]  1  3.931  180.0    -2  Frosst O_-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#8X1:1]-[#16X4,#16X3+0:2]-[#7X2:3]-[#6X3:4]  1  1.940  180.0    -3  Frosst O_-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#8X1:1]-[#16X4,#16X3+0:2]-[#7X2:3]-[#6X3:4]  1  2.448    0.0     1  Frosst O_-SO-NB-C*  RHF/6-31G(d) Mar 7 2007
+[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.071    0.0    -6  Frosst O_-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.697    0.0    -5  Frosst O_-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.208  180.0    -4  Frosst O_-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  3.931  180.0    -2  Frosst O_-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  1.940  180.0    -3  Frosst O_-SO-NB-C*  RHF/6-31G(d) Mar 7 2007@[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  2.448    0.0     1  Frosst O_-SO-NB-C*  RHF/6-31G(d) Mar 7 2007
+
+
+[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#7X2:4]  1  0.000    0.0     1  Frosst O_-SO-NB-NB  guess
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#1:4]  1  0.000    0.0     1  Frosst O_-SO-N2-H  guess
+[#8X1:1]~[#16X4,#16X3+0:2]-[#7X3:3]-[#1:4]  1  1.000  180.0    -1  Frosst O2-SO-N2-H  taken from H-N3-SO-O@[#8X1:1]~[#16X4,#16X3+0:2]-[#7X3:3]-[#1:4]  1  0.250    0.0     3  Frosst O2-SO-N2-H  Taken from H-N3-SO-O
+
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst O2-SO-N2-CA  guess
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst O_-SO-N2-CA  guess
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.750    0.0     1  Frosst O_-SO-N_-C  taken from CT-N3-SO-O
+[#8X1:1]~[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.750    0.0     1   Frosst generic
+
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst O2-SO-N2-CT  guess
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst O_-SO-N2-CT  guess
+[#8X1:1]~[#16X4,#16X3+0:2]-[#7X3:3]-[#6X4:4]  1  0.000    0.0     1   Frosst generic
+
+#[#8X1:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#1:4]  1  1.000  180.0    -1  Frosst O2-SO-N3-H  RHF/6-41G(d,p) Dec 12 1997@[#8X1:1]-[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#1:4]  1  0.250    0.0     3  Frosst O2-SO-N3-H  RHF/6-41G(d,p) Dec 12 1997
+[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#1:4]  1  1.000  180.0    -1  Frosst O_-SO-N3-H  RHF/6-41G(d,p) Dec 12 1997@[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#1:4]  1  0.250    0.0     3  Frosst O_-SO-N3-H  RHF/6-41G(d,p) Dec 12 1997
+
+
+[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X3:4]  1  0.750    0.0     1  Frosst O_-SO-N3-CA  similar to case with CT instead of CA
+
+[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  0.200    0.0    -3  Frosst O2-SO-N3-CT  RHF/6-31G(d) opt scan fit Jan 16 2009@[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  0.300  180.0    -2  Frosst O2-SO-N3-CT  RHF/6-31G(d) opt scan fit Jan 16 2009@[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4:4]  1  0.700    0.0     1  Frosst O2-SO-N3-CT  RHF/6-31G(d) opt scan fit Jan 16 2009
+
+[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4r3:4]  1  0.200    0.0    -3  Frosst O2-SO-N3-CJ  Taken from CT-N3-SO-O2 fit Nov 5 2009@[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4r3:4]  1  0.300  180.0    -2  Frosst O2-SO-N3-CJ  Taken from CT-N3-SO-O2 fit Nov 5 2009@[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#6X4r3:4]  1  0.700    0.0     1  Frosst O2-SO-N3-CJ  Taken from CT-N3-SO-O2 fit Nov 5 2009
+
+
+[#8X1:1]~[#16X4,#16X3+0:2]-[NX4,NX3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst O_-SO-N3-NB  guess
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#8X2:3]-[#6X3:4]  1  0.000    0.0     1  Frosst O2-SO-OS-C  guess
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#8X2:3]-[#6X3:4]  1  0.000    0.0     1  Frosst O2-SO-OS-CM  guess
+#[#8X1:1]-[#16X4,#16X3+0:2]-[#8X2:3]-[#6X3:4]  1  0.250    0.0     3  Frosst O2-SO-OS-CA  taken from X_-OS-P_-X June 14 2007
+[#8X1:1]~[#16X4,#16X3+0:2]-[#8X2:3]-[#6X3:4]  1  0.250    0.0     3   Frosst generic
+
+
+[#8X1:1]~[#16X4,#16X3+0:2]-[#8X2:3]-[#6X4:4]  1  0.000    0.0     1  Frosst O2-SO-OS-CT  guess
+
+[#8X1:1]~[#6X3:2]~[#6X3:3]~[#6X3:4]  1  0.000    0.0     1  Frosst O2-CR-CR-CA  guess
+
+[#8X1:1]~[#6X3:2]~[#6X3:3]~[#7X2:4]  1  0.000    0.0     1  Frosst O2-CR-CR-NB  guess
+
+[#8X1:1]~[#7X2:2]~[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst O2-NB-C*-H4 
+
+[#8X1:1]~[#7X2:2]~[#6X3:3]~[#6X3:4]  1  0.000    0.0     1  Frosst O2-NB-C*-C* 
+
+[#8X1:1]~[#7X2:2]~[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst O2-NB-C*-CT 
+
+[#8X1:1]~[#7X3:2]~[#6X3:3]~[#6X3:4]  1  3.600  180.0     2  Frosst O2-N_-CB-CB  From CA-CA-CA-CA Oct 14 2008
+
+[#8X1:1]~[#7X3:2]~[#6X3:3]~[#7X2:4]  1  3.600  180.0     2  Frosst O2-N_-CB-NC  From CA-CA-CA-CA Oct 14 2008
+
+[#8X2:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst OS-SO-N2-CA  guess
+
+[#8X2:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst OS-SO-N2-CT  guess
+
+[#8X2:1]-[#6X3:2]~[#6X3:3]-[#16X2H0:4]  1  1.000  180.0     1  Frosst OS-CR-C_-S  guess 31 Aug 2004
+#[#8X2:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst OS-CR-CC-HA 
+#[#8X2:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.375  180.0     2  Frosst OS-CW-CM-HA  From X-CA-CR-X
+#[#8X2:1]-[#6X3:2]-[#6X3:3]-[#1:4]  1  0.500    0.0     1  Frosst OH-CR-CC-HA  estimated
+[#8X2:1]-[#6X3:2]~[#6X3:3]-[#1:4]  1  0.500    0.0     1   Frosst generic
+
+#[#8X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst OH-CR-CC-CW 
+#[#8X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst OS-CR-CC-CW 
+#[#8X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  0.625  180.0     2  Frosst OS-CW-CM-CM  From X-CA-CR-X
+#[#8X2:1]-[#6X3:2]-[#6X3:3]-[#6X3:4]  1  1.000  180.0     2  Frosst OS-CR-CM-CM  guess
+[#8X2:1]-[#6X3:2]~[#6X3:3]~[#6X3:4]  1  1.000  180.0     2   Frosst generic
+
+#[#8X2:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  1.000  180.0     1  Frosst OS-CR-C_-CT  guess
+#[#8X2:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  1.000  180.0     2  Frosst OS-CR-CM-CT  guess
+#[#8X2:1]-[#6X3:2]-[#6X3:3]-[#6X4:4]  1  1.000  180.0     2  Frosst OS-CW-CM-CT  guess
+[#8X2:1]-[#6X3:2]~[#6X3:3]-[#6X4:4]  1  1.000  180.0     2   Frosst generic
+
+
+[#8X2:1]-[#6X3:2]~[#6X3:3]~[#7X2:4]  1  1.000  180.0     1  Frosst OS-CR-C_-NB  guess 31 Aug 2004
+#[#8X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  1.990  180.0     2  Frosst OS-CR-C_-N2  From OS-CW-C_-N2 : reproduce well the B3LYP/6-311G** surface for this torsion (although the barrier height is 4kcal/mol higher than the B3LYP DFT surface) (charged N2 using amidine branched on CR of oxazole) 28 Oct 2004
+#[#8X2:1]-[#6X3:2]-[#6X3:3]-[#7X3:4]  1  1.990  180.0     2  Frosst OS-CW-C_-N2  B3LYP/6-311G** fit, 28 Oct 2004 (charged N2 using amidine branched on CW of furane)
+[#8X2:1]-[#6X3:2]~[#6X3:3]~[#7X3:4]  1  1.990  180.0     2   Frosst generic
+
+
+[#8X2:1]-[#6X3:2]-[#6X3:3]=[#8X1:4]  1  1.000  180.0     1  Frosst OS-CR-C_-O  guess
+
+[#8X2:1]-[#6X4:2]-[#6X4r3:3]-[#1:4]  1  0.000    0.0     1  Frosst OH-CT-CJ-HC  guess mar 30 2001
+
+[#8X2:1]-[#6X4:2]-[#6X4r3:3]-@[#6X4r3:4]  1  1.000    0.0     3  Frosst OH-CT-CJ-CJ  by comparison above
+
+[#8X2:1]-[#6X4:2]-[#6X4r3:3]-[#7X3:4]  1  0.156    0.0     3  Frosst OH-CT-CJ-N  compare to X-CT-CT-X
+
+[#8X2:1]-[#7X2:2]-[#6X3:3]-[#1:4]  1  0.000    0.0     1  Frosst OS-NB-C*-H4 
+#[#8X2:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst OS-NB-C*-C* 
+#[#8X2:1]-[#7X2:2]-[#6X3:3]-[#6X3:4]  1  0.000    0.0     1  Frosst OS-NB-C*-C* 
+[#8X2:1]-[#7X2:2]~[#6X3:3]~[#6X3:4]  1  0.000    0.0     1   Frosst generic
+
+
+[#8X2:1]-[#7X2:2]~[#6X3:3]-[#6X4:4]  1  0.000    0.0     1  Frosst OS-NB-C*-CT 
+
+[*:1]~[#15:2]-[#6X3:3]~[*:4]  1  1.000    0.0     1  Frosst X_-P_-CA-X  dummy
+
+[*:1]~[#15:2]-[#6X4:3]-[*:4]  1  0.000    0.0     1  Frosst X_-P_-CT-X  dummy
+#[*:1]-[#16X2:2]-[#6X3:3]-[*:4]  1  0.000  180.0     2  Frosst X_-S_-CR-X  guess
+#[*:1]-[#16X2:2]-[#6X3:3]-[*:4]  1  1.750  180.0     2  Frosst X_-S_-C_-X  guess 0.75 times X-C-OS-X
+#[*:1]-[#16X2:2]-[#6X3:3]-[*:4]  1  3.000  180.0     2  Frosst X_-S_-CB-X  ff94 X-CW-NA-X
+#[*:1]-[#16X2:2]-[#6X3:3]-[*:4]  1  3.000  180.0     2  Frosst X_-S_-CW-X  ff94 X-CW-NA-X
+[*:1]-[#16X2:2]-[#6X3:3]~[*:4]  1  3.000  180.0     2   Frosst generic
+
+
+[*:1]~[#16X4,#16X3+0:2]-[#6X3:3]~[*:4]  1  0.000    0.0     3  Frosst X_-SO-CA-X  guess
+
+[*:1]~[#16X4,#16X3+0:2]-[#6X4:3]-[*:4]  1  0.000    0.0     3  Frosst X_-SO-CT-X  guess
+
+[*:1]-[#6X2:2]#[#6X2:3]-[*:4]  1  0.000    0.0     1  Frosst X_-C2-C2-X  By definition
+#[*:1]-[#6X3:2]-[#6X2:3]-[*:4]  1  0.000    0.0     1  Frosst X_-CA-C2-X  By definition
+#[*:1]-[#6X3:2]-[#6X2:3]-[*:4]  1  0.000    0.0     1  Frosst X_-CC-C2-X  By definition
+#[*:1]-[#6X3:2]-[#6X2:3]-[*:4]  1  0.000    0.0     1  Frosst X_-CM-C2-X  By definition
+#[*:1]-[#6X3:2]-[#6X2:3]-[*:4]  1  0.000    0.0     1  Frosst X_-CR-C2-X  By definition
+#[*:1]-[#6X3:2]-[#6X2:3]-[*:4]  1  0.000    0.0     1  Frosst X_-CW-C2-X  By definition
+[*:1]-[#6X3:2]-[#6X2:3]#[*:4]  1  0.000    0.0     1   Frosst generic
+
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.250    0.0     2  Frosst X_-CA-C_-X  consensus from B3LYP/6-311G(d,p) benzoyl compounds feb 2003
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.250    0.0     2  Frosst X_-CC-C_-X  analogy X_-C -CA-X Oct 2004 replacing 20 kcal/mol barrier
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-CC-CA-X  his, X-CP-CP-X
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-CM-CA-X  CHANGED FROM ff94
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-CP-CP-X  tuned to flurbi Xray
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-CP-C_-X  his-CO- guess bphnyl
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-CR-CA-X  his, X-CP-CP-X
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-CR-C_-X  his-CO- guess bphnyl
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-CW-CA-X  his, X-CP-CP-X
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-CW-CB-X  anal X-CP-CP-X
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-CW-CR-X  like X-CP-CP-X
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-CW-CW-X  thioph guess bphnyl
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-CW-C_-X  his-CO- guess bphnyl
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-C_-C_-X  gentle planar from X-CP-CP-X
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  1.250  180.0     2  Frosst X_-CR-CB-X  guess for fused ring systems. Apr 26 2006
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  1.675  180.0     2  Frosst X_-CC-CB-X  ff94 X-C*-CB-X
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  1.675  180.0     2  Frosst X_-CC-CC-X  ff94 X-C*-CB-X
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  1.675  180.0     2  Frosst X_-CR-CC-X  ff94 X-C*-CB-X
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  2.500  180.0     2  Frosst X_-CR-CR-X  Approx. Nov 24 2006
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  3.625  180.0     2  Frosst X_-CP-CA-X  ff94 X-CA-CA-X
+#[*:1]-[#6X3:2]-[#6X3:3]-[*:4]  1  3.625  180.0     2  Frosst X_-CP-CB-X  ff94 X-CA-CA-X
+[*:1]~[#6X3:2]-[#6X3$(*=[O,S,N]):3]~[*:4]  1  0.250  180.0     2   Frosst generic
+[*:1]~[#6X3:2]-[#6X3:3]~[*:4]  1  0.625  180.0     2   Frosst generic
+[*:1]~[#6X3:2]:[#6X3:3]~[*:4]  1  3.625  180.0     2   Frosst generic
+[*:1]-[#6X3:2]=[#6X3:3]-[*:4]  1  3.625  180.0     2   Frosst generic
+
+
+[*:1]~[#6X3:2]-[#6X4:3]-[*:4]  1  0.000    0.0     2  Frosst X_-CW-CT-X  his, ff94 X-CC-CT-X
+
+[*:1]~[#6X3:2]-[#6X4r3:3]-[*:4]  1  0.000    0.0     3  Frosst X_-CM-CJ-X  ff94 X_-CM-CT-X
+#[*:1]-[#6X4:2]-[#6X2:3]-[*:4]  1  0.000    0.0     1  Frosst X_-CT-C2-X  By definition
+#[*:1]-[#6X4:2]-[#6X2:3]-[*:4]  1  0.000    0.0     1  Frosst X_-CT-C2-X  By definition
+[*:1]-[#6X4:2]-[#6X2:3]#[*:4]  1  0.000    0.0     1   Frosst generic
+
+
+[*:1]-[#6X4:2]-[#6X3:3]#[*:4]  1  0.000    0.0     2  Frosst X_-CT-CR-X  his, ff94 X-CC-CT-X
+
+[*:1]-[#6X4:2]-[#6X4r3:3]-[*:4]  1  0.000    0.0     1  Frosst X_-CT-CJ-X  best fit Dec 1 2004
+
+[*:1]-[#6X4r3:2]-[#6X2:3]-[*:4]  1  0.000    0.0     1  Frosst X_-CJ-C2-X  By definition 31 March 2004
+
+[*:1]-[#6X4r3:2]-@[#6X4r3:3]-[*:4]  1  0.000    0.0     2  Frosst X_-CJ-CJ-X  accounted for in other terms
+#[*:1]-[#7X2:2]-[#6X3:3]-[*:4]  1  1.500  180.0     2  Frosst X_-NC-CW-X  ff94 X-CW-NA-X
+#[*:1]-[#7X2:2]-[#6X3:3]-[*:4]  1  10.000  180.0     2  Frosst X_-NB-C_-X  ff94 imidazole X-CK-NB-X
+#[*:1]-[#7X2:2]-[#6X3:3]-[*:4]  1  3.000  180.0     2  Frosst X_-NB-CB-X  ff94 X-CW-NA-X
+#[*:1]-[#7X2:2]-[#6X3:3]-[*:4]  1  3.000  180.0     2  Frosst X_-NB-CW-X  ff94 X-CW-NA-X
+#[*:1]-[#7X2:2]-[#6X3:3]-[*:4]  1  4.800  180.0     2  Frosst X_-NC-CC-X  ff94 X-CA-NC-X
+#[*:1]-[#7X2:2]-[#6X3:3]-[*:4]  1  4.800  180.0     2  Frosst X_-NC-CP-X  ff94 X-CA-NC-X
+#[*:1]-[#7X2:2]-[#6X3:3]-[*:4]  1  5.000  180.0     2  Frosst X_-NC-CR-X  ff94 X-CR-NB-X
+[*:1]~[#7X2:2]-[#6X3:3]~[*:4]  1  1.5    180.0     2   Frosst generic
+[*:1]~[#7X2:2]:[#6X3:3]~[*:4]  1  3.     180.0     2   Frosst generic
+[*:1]-[#7X2:2]=[#6X3:3]-[*:4]  1  5.     180.0     2   Frosst generic
+
+
+[*:1]~[#7X2:2]~[#7X2:3]~[*:4]  1  6.000  180.0     1  Frosst X_-NB-NB-X 
+#[*:1]-[#7X2:2]-[#7X3:3]-[*:4]  1  0.000    0.0     1  Frosst X_-NB-N2-X  June 29 2007
+#[*:1]-[#7X2:2]-[#7X3:3]-[*:4]  1  0.000    0.0     1  Frosst X_-NB-NA-X 
+#[*:1]-[#7X2:2]-[#7X3:3]-[*:4]  1  0.000    0.0     1  Frosst X_-NB-N_-X  June 29 2007
+#[*:1]-[#7X2:2]-[#7X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-NC-NA-X  anal X-CP-CP-X Dec 15 2006
+#[*:1]-[#7X2:2]-[#7X3:3]-[*:4]  1  6.000  180.0     1  Frosst X_-NB-N*-X 
+[*:1]~[#7X2:2]-[#7X3:3]-[*:4]  1  0.625  180.0     1   Frosst generic
+
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-N2-CM-X  like X-N2-CR-X; 5 Oct 2005
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-N2-CR-X  like X-CP-CP-X
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-N_-CA-X  anal X-CP-CP-X
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-N_-CM-X  from X-CA-CM-X
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  0.625  180.0     2  Frosst X_-N_-CR-X  like X-CP-CP-X
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  1.400  180.0     2  Frosst X_-N2-CC-X  ff94 X-CC-NA-X
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  1.400  180.0     2  Frosst X_-N2-CW-X  ff94 X-CC-NA-X
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  1.400  180.0     2  Frosst X_-N_-CC-X  ff94 X-CC-NA-X
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  1.500  180.0     2  Frosst X_-N*-CA-X  indole,ff94 X-CW-NA-
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  1.500  180.0     2  Frosst X_-N*-CC-X  ff94 X-CW-NA-X
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  1.500  180.0     2  Frosst X_-N*-CW-X  ff94 X-CW-NA-X
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  1.500  180.0     2  Frosst X_-N_-CW-X  ff94 X-CW-NA-X
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  1.525  180.0     2  Frosst X_-NA-CB-X  indole,ff94 X-CN-NA-
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  2.325  180.0     2  Frosst X_-N*-CR-X  ff94 X-CR-NA-X
+#[*:1]-[#7X3:2]-[#6X3:3]-[*:4]  1  2.400  180.0     2  Frosst X_-N2-C_-X  Amidine,guanidine like torsion, see parm94 X_-CA-N2-X, 30 Sept 2004
+[*:1]-[#7X3:2]-!@[#6X3:3]-[*:4]  1  0.625  180.0     2   Frosst generic conjugated exocyclic
+[*:1]-[#7X3:2]-@[#6X3:3]-[*:4]  1  1.400  180.0     2   Frosst generic trivalent N eg in het5
+[*:1]-[#7X3+1:2]=[#6X3:3]-[*:4]  1  2.400  180.0     2   Frosst generic Amidine,guanidine
+
+
+[*:1]-[#7X3:2]-[#6X4r3:3]-[*:4]  1  0.700  180.0    -2  Frosst X_-N_-CJ-X  fit to CA-N-CJ-CJ, CA-N-CJ-H1, CJ-CJ-N-CT Oct 20@[*:1]-[#7X3:2]-[#6X4r3:3]-[*:4]  1  0.300    0.0     1  Frosst X_-N_-CJ-X  and CT-N-CJ-H1, H-N-CJ-H1 rhf/6-31g(dp) 2004
+
+[*:1]-[#7X3:2]-[#7X3:3]-[*:4]  1  0.000    0.0     1  Frosst X_-N2-N_-X  June 29 2007
+#[*:1]-[#7X4:2]-[#6X3:3]-[*:4]  1  0.000    0.0     1  Frosst X_-N3-CA-X  guess from X-CA-CT-X Oct 2004
+#[*:1]-[#7X4:2]-[#6X3:3]-[*:4]  1  0.000    0.0     1  Frosst X_-N3-CR-X  guess from X-CA-CT-X banyu Oct 2004
+[*:1]-[NX4,NX3:2]-[#6X3:3]~[*:4]  1  0.000    0.0     1   Frosst generic
+
+[#1:1]-[#8X2:2]-[#6X3:3]-[*:4]  1  0.900  180.0     2  Frosst X_-OH-CA-X  ff94 X-C-OH-X
+[*:1]-[#8X2H0:2]-[#6X3:3]-[*:4]  1  1.350  180.0     2  Frosst X_-OS-CA-X  RHF/6-31G(d,p) Dec 12 1997
+#[*:1]-[#8X2:2]-[#6X3:3]-[*:4]  1  2.400  180.0     2  Frosst X_-OS-CC-X  ff94 X-CV-NB-X
+#[*:1]-[#8X2:2]-[#6X3:3]-[*:4]  1  2.400  180.0     2  Frosst X_-OS-CR-X  ff94 X-CV-NB-X
+#[*:1]-[#8X2:2]-[#6X3:3]-[*:4]  1  2.500  180.0     2  Frosst X_-OS-C_-X  half ff94 X-C-N-X
+#[*:1]-[#8X2:2]-[#6X3:3]-[*:4]  1  3.000  180.0     2  Frosst X_-OS-CB-X  ff94 X-CW-NA-X
+#[*:1]-[#8X2:2]-[#6X3:3]-[*:4]  1  3.000  180.0     2  Frosst X_-OS-CW-X  ff94 X-CW-NA-X
+[*:1]-[#8X2:2]-[#6X3$(*=[O,S,N]):3]-[*:4]  1  2.500  180.0     2   Frosst generic
+[*:1]-[#8X2:2]-@[#6X3:3]~[*:4]  1  2.500  180.0     2   Frosst generic
+
+[*:1]-[#8X2:2]-@[#7X2:3]~[*:4]  1  0.000    0.0     1  Frosst X_-OS-NB-X 

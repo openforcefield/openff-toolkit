@@ -1,0 +1,2896 @@
+Force field modifications for small molecules (hopefully general)
+
+MASS
+BR      79.90          bromine
+C2      12.01          acetylene C
+CJ      12.01          Cyclopropyl carbon sp3
+CL      35.45          Chlorine covalently bonded
+CP      12.01          sp2 aromatic C for biphenyl-type (ie non-aromatic) linkage
+FE      55.00          iron
+HX       1.008         28 sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)          
+I      126.9           iodine
+MG      24.30          magnesium
+ND      14.01          nitrogen connected to at least one aromatic system
+NJ      14.01          nitrogen in a three-membered ring
+NL      14.01          nitrile nitrogen
+OP      16.00          Oxygen in hydronium ion H3O+; bond to HX
+SD      32.06          Double bonded non-hypervalent sulfur 
+SO      32.06          hypervalent sulfur
+ZN      65.39          zinc 
+
+BOND
+BR-CA        220.000     1.900   calc RHF/6-311G(d) 
+BR-CC        220.000     1.900   analogy CA-BR
+BR-CT        225.000     1.900   from CA-BR
+BR-CW        220.000     1.900   analogy CA-BR
+C*-C*        350.000     1.415   B3PW91/6-31G(d) bond length estimated force constant 
+C*-CP        546.000     1.400   ff94 CW-C*; estimated intermediate dist for dbl/sngl
+C*-CR        350.000     1.400   guess Aug 18 2000
+C*-H4        300.000     1.078   B3PW91/6-31G(d) bond length estimated force constant 
+C*-N*        477.000     1.343   RHF/6-31G(d)  Mar 7 2007 
+C*-NB        350.000     1.311   B3PW91/6-31G(d) bond length estimated force constant 
+C*-S         300.000     1.745   RHF/6-31G(d)  Mar 7 2007 
+C*-SO        227.000     1.750   smol SO-CA
+C -C         469.000     1.400    RHF/6-41G(d,p) Dec 12 1997
+C -CC        469.000     1.400   from C-C Aug 15 2001 
+C -CJ        317.000     1.522   from CT-C params
+C -CP        469.000     1.409   from CA-C
+C -CR        350.000     1.400
+C -CW        317.000     1.485   his-CO- ff94 CA-CT
+C -H4        367.000     1.080   from C*-HC
+C -H5        367.000     1.080   ff94 CM-H5
+C -N2        481.0       1.340   like CA-N2 of parm94 ARG,  30 Sept 2004, JCC,7,(1986),230; ARG,CYT,GUA
+C -N3        450.000     1.400   guess
+C -NB        410.000     1.350   guess
+C -OS        320.000     1.340   force ff94 CT-OS ; R0 xray
+C -S         300.000     1.790   R0 from calc BP86/tzp(DeFT) 
+C2-C         350.000     1.440   From C2-CA;  12 June 2005
+C2-C2        350.000     1.188   RHF/6-31G(d,p) opt estimated force constant 
+C2-CA        350.000     1.440   RHF/6-31G(d,p) opt estimated force constant 
+C2-CC        350.000     1.440   from C2-CC
+C2-CJ        350.000     1.500   guess from the other C2-CX  31 March 2004
+C2-CR        350.000     1.440   from C2-CA 
+C2-CM        317.000     1.485   from C-CW his-CO- ff94 CA-CT
+C2-CT        350.000     1.468   RHF/6-31G(d,p) opt estimated force constant 
+C2-CW        350.000     1.440   From C2-CA
+C2-HC        300.000     1.060   from H3C-C-C-H calc B3PW91/6-311G(d,p)  june2002
+C2-NL        350.000     1.188   from C2-C2
+CA-CC        317.000     1.485   his-pyridine ff94 CA-CT
+CA-CJ        300.000     1.5095  RHF/6-31G* Jan 28 2004 
+CA-CL        367.000     1.746   ff94 CT-F ; R0 from a Merck X-ray
+CA-CM        317.000     1.485   CHANGED FROM ff94 ; for the phe-db single bond
+CA-CP        469.000     1.400   ff94 CA-CA ; for within the ring
+CA-CR        317.000     1.485   his-pyridine ff94 CA-CT
+CA-CW        317.000     1.485   his-pyridine ff94 CA-CT
+CA-F         367.000     1.356   ff94 CT-F ; R0 from ab initio
+CA-H5        367.000     1.080   ff94 CA-HA ;  2 May 2006
+CA-I         225.000     2.060   from lit values 2.132 CH3-I and 1.989 HCC-I
+CA-N*        477.000     1.343   ff94 CR-NA
+CA-N         337.000     1.426   ff94 CT-N ; R0 from MMFF min
+CA-N3        387.000     1.445   from CT-N3
+CA-NB        477.000     1.343   calc at RHF/6-31* level 
+CA-ND        450.000     1.380   calc at B3PW91/6-31+G** level  Jan 30 2002
+CA-NL        250.000     1.400   guess
+CA-OH        450.000     1.364   ff94 C-OH
+CA-O2        450.000     1.364   From CA-OH - guess anionic O  Mar 5 2009
+CA-OS        300.000     1.400   ** Gro, JACS,V112,4165('90); R0 from a Merck X-ray
+CA-P         160.000     1.900   guess based on apocryphal CM-P bond
+CA-S         300.000     1.737   calc RHF/6-31G(d)  (estimated force constant)
+CA-SD        300.000     1.7     calc B3LYP/cc-pVTZ  (estimated force constant)
+CA-SH        300.000     1.737   estimated similar to CA-S
+CA-SO        227.000     1.750   force by analogy with CT-S, R0 from xray
+CB-CC        388.000     1.459   ff94 C*-CB pyrrolering c-c single bond (like in TRP)
+CB-CR        388.000     1.459   ff94 C*-CB pyrrolering c-c single bond (taken from CB-CC)  14 March 2005
+CB-CW        388.000     1.459   ff94 C*-CB pyrrolering c-c single bond (taken from CB-CC)  Jan 9 2008
+CB-CP        469.000     1.400   ff94 CA-CA ; for within the ring
+CB-N         337.000     1.426   guess  aug 29 2003 
+CB-NA        428.000     1.380   indole, ff94 CN-NA TRP
+CB-N2        428.000     1.380   indole, ff94 CN-NA TRP;  27 April 2006
+CB-OS        300.000     1.400   analogy CA-OS; Gro, JACS,V112,4165('90)
+CB-S         300.000     1.750   thiophene: force guess, R0 from Halgren RHF/6-31G*
+CC-CC        388.000     1.459   ff94 C*-CB pyrrolering c-c single bond (like in TRP)
+CC-CJ        300.0       1.483     RHF/6-31G(d,p) opt  Sept 2 2008
+CC-CL        250.000     1.746
+CC-CP        388.000     1.459   ff94 C*-CB pyrrole ring c-c single bond (like in TRP) see CC-CC;  4 July 2005
+CW-CL        250.000     1.746   Based on CC-CL, CL-CT and CA-CL values.  April 1 2003
+CC-CM        350.000     1.400
+CC-CR        388.000     1.459   ff94 C*-CB pyrrolering c-c single bond (like in TRP)
+CC-F         250.000     1.356
+CC-H4        367.000     1.080   his ff94 CW-H4
+CC-HA        367.000     1.080   ff94 CA-HA
+CC-N         427.000     1.381   ff94 CA-NA
+CC-N*        427.000     1.381   ff94 CA-NA
+CC-N2        350.000     1.340   guess
+CC-N3        387.000     1.445   from CT-N3
+CC-NC        461.000     1.354   ff94 CB-NC
+CC-O2        400.000     1.236   calc RHF/6-31G(d) 
+CC-OS        300.000     1.400   analogy CA-OS; Gro, JACS,V112,4165('90)
+CC-P         160.000     1.900   guess based on apocryphal CM-P bond
+CC-S         300.000     1.737   from CA-S
+CC-SO        227.000     1.750   From Ca-SO
+CJ-CJ        257.240     1.515   calc RHF/6-31G(d) 
+CJ-CM        317.0       1.510   ff94 for THY
+CJ-CR        350.000     1.485   RHF/6-31G(d,p) bond length estimated force constant 
+CJ-CT        283.720     1.514   calc RHF/6-31G(d) 
+CJ-F         367.000     1.332   from CT-F  oct 14 2005
+CJ-H1        330.680     1.089   from CJ-HC
+CJ-HC        330.680     1.089   calc RHF/6-31G(d) 
+CJ-HP        330.680     1.089   from CJ-HC
+CJ-N         337.000     1.449   from CT-N params
+CJ-N*        220.000     1.438   calc B3LYP/6-31G(d,p) Apr 24 2008 
+CJ-N2        337.000     1.449   from CT-N params
+CJ-N3        367.000     1.471   from CT-N3
+CJ-OH        220.000     1.406   calc RHF/6-311G(d)  Dec 1 2004
+CJ-OS        220.000     1.406   analogy to CJ-OH;  26 April 2006
+CJ-S         227.000     1.810   analogy to CT-S;  25 august 2009
+CL-CM        367.000     1.746   Initial guess july 9 2003 
+CR-CL        250.000     1.746   Based on CC-CL, CL-CT and CA-CL values.  Jan 9 2008
+CL-CT        367.000     1.746
+CM-CR        350.000     1.400   guess Aug 18 2000
+CM-CW        317.000     1.485   from C-CW his-CO- ff94 CA-CT
+CM-F         367.000     1.356   Initial guess July 9 2003 
+CM-N         337.000     1.426   from CA-N ** ff94 CT-N ; R0 from MMFF min
+CM-N2        427.000     1.381   ff94 his's etc.
+CM-NB        340.000     1.414   bond calc at RHF/6-31Gd level estimated force constant 
+CM-O2        350.000     1.400   guess
+CM-OH        350.000     1.326   from CR-OH
+CM-OS        300.000     1.400   from CA-OS ** Gro, JACS,V112,4165('90); R0 from a Merck X-ray
+CM-P         160.000     1.900
+CM-S         300.000     1.737   from CA-S
+CM-SD        300.000     1.688   b3lyp/6-31G(d) opt  July_17_2007
+CP-CP        317.000     1.485   ff94 CA-CT ; for the phe-phe single bond
+CP-CW        469.000     1.400   ff94 CA-CA ; for within the ring;  19 May 2005
+CP-N         427.000     1.381   ff94 CA-NA;  nov 2 2005
+CP-NA        427.000     1.381   ff94 CA-NA;  13 april 2005
+CP-NC        483.000     1.339   ff94 CA-NC
+CP-OS        300.000     1.400   from CA-OS;  13 April 2005
+CP-S         300.000     1.737   from CA-S;  13 April 2005
+CR-CR        350.000     1.400
+CR-CT        317.000     1.504   his ff94 CC-CT
+CR-CW        388.000     1.459   ff94 C*-CB 5cyc-5cyc biphenyl-like link
+CR-F         367.000     1.356   from CA-F (distance) and CT-F (force constant)  28 April 2005
+CR-H4        370.000     1.075   bond calc at RHF/6-31Gd level estimated force constant 
+CR-N*        477.000     1.343   ff94 CR-NA
+CR-N         477.000     1.343   ff94 CR-NA
+CR-N2        350.000     1.340
+CR-N3        450.000     1.400   from guess of C-N3
+CR-NC        488.000     1.335   ff94 CR-NB
+CR-O2        400.000     1.236   from CC-O2 Sept 14 2001
+CR-OH        350.000     1.326   from RHF/6-31G(d) opt estimated force constant
+CR-OS        300.000     1.400   analogy CA-OS; Gro, JACS,V112,4165('90)
+CR-S         300.000     1.744   calc RHF/6-31G(d)  (estimated force constant)
+CR-SO        250.000     1.840   B3LYP/6-31G(d) opt structure May 17 2001
+CR-SR        227.000     1.810   ff94 CT-S
+CT-CW        317.000     1.504   his ff94 CC-CT
+CT-F         367.000     1.332   JCC,13,(1992),963;CHF3
+CT-I         225.000     2.132   from lit values 2.132 CH3-I
+CT-N3        387.650     1.445   calc @B3PW91/6-31G(d) multi system average 
+CT-NB        340.000     1.460   guess
+CT-NC        300.000     1.450   From CT-ND
+CT-ND        300.000     1.450   calc at B3WP91/6-31+G**  Jan 30 2002
+CT-NJ        250.000     1.400   guess
+CT-NL        250.000     1.450   guess
+CT-OS        320.000     1.370   ** Gro, JACS,V112,4165('90); R0 from a Merck X-ray
+CT-P         164.000     1.908   calc at RHF/6-31* level 
+CT-SO        227.000     1.750   force by analogy with CT-S, R0 from xray
+CW-CW        546.000     1.400   ff94 CW-C*; estimated intermediate dist for dbl/sngl
+CW-F         250.000     1.356   by analogy to CC-F;  25 Nov 2004
+CW-H4        367.000     1.080   thiophene: analogy to CW-H4
+CW-HA        200.000     1.080
+CW-N*        427.000     1.381   ff94 CW-NA; JCC,7,(1986),230; HIS,TRP
+CW-N         350.000     1.350
+CW-N2        350.000     1.340   guess
+CW-N3        387.000     1.445   from CT-N3
+CW-NB        427.000     1.381   ff94 CW-NA
+CW-NC        337.000     1.426   from CA-N ** ff94 CT-N
+CW-O2        300.000     1.236   from CR-O2 Sept 14 2001 
+CW-OS        300.000     1.400   analogy CA-OS; Gro, JACS,V112,4165('90)
+CW-S         300.000     1.750   thiophene: force guess, R0 from Halgren RHF/6-31G*
+CW-SO        227.000     1.750   From Ca-SO
+F -P         300.000     1.639   calc: B3LYP/6-311G(d,p)  Jan 13 2006
+H -NB        434.000     1.010   from all N-H bonds
+H -NC        434.000     1.010   analogy H-N for AA (for protonated pyridine)
+HX-OH        553.000     0.960   Same as HO-OH (parm94_simmerling).  28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+HX-OS        553.000     0.960   Same as HX-OS (parm94_simmerling).  28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+HX-OP        553.000     0.970   lightly longer than HX-OS (parm94_simmerling) due to + charge.  Mar2008
+N*-NB        300.000     1.330   calc RHF/6-31G(d)  18may99 (estimated force constant)
+N*-NC        340.000     1.329   estimated bond length estimated force const 
+N -N         350.000     1.380   from RHF/6-31G(d) opt estimated force constant
+N -N3        380.000     1.408   from N3-N3
+N -NA        300.000     1.330   From NA-NB Apr 9 2009 
+N -NB        340.000     1.329   estimated bond length estimated force const 
+N -NC        340.000     1.329   from N*-NB value
+N -O2        600.000     1.300   from C-O2
+N -OS        350.000     1.400
+N -SO        300.000     1.590   bond calc at RHF/6-31Gd level estimated force constant 
+N2-NB        300.000     1.270   from NB-NB;  11 Aug 2005        
+N2-O2        350.000     1.194   from fit to rhf/6-31G* from T.Halgren  1/26/99
+N2-SO        250.000     1.840   from SO-CR
+N3-N3        384.410     1.408   calc RHF/6-31G(d) 
+N3-NB        300.000     1.340   estimated from NB-NB and N3-N3 Sept 14 2001 
+N3-SO        265.000     1.710    RHF/6-41G(d,p) Dec 12 1997
+NA-NB        300.000     1.330   calc RHF/6-31G(d)  (estimated force constant)
+NB-NB        300.000     1.270   calc RHF/6-31G(d) ,mod  18may99 (estimated force constant)
+NB-O2        350.000     1.214   B3PW91/6-31G(d) bond length estimated force constant 
+NB-OS        305.000     1.380   calc RHF/6-31G(d) 
+NB-S         300.000     1.686   calc RHF/6-31G(d)  (estimated force constant)
+NB-SO        265.000     1.710   from N3-SO Sept 14 2001 
+NC-OS        300.000     1.274   B3LYP/6-31G(d) opt April 2 2001 
+NC-O2        600.000     1.300   guess from N -O2 by  August29 2003
+NC-NC        340.000     1.329   estimated from N-NC by  6 April 2005
+NC-NA        340.000     1.329   estimated from N-NC by  June 18 2007
+NJ-NJ        250.000     1.300   guess
+NL-NL        250.000     1.300   guess
+O-P          230.0       1.610   Taken from OS-P -> JCC,7,(1986),230; NA PHOSPHATES  july26_2005
+O -SO        525.000     1.440   force by analogy with O2-P, R0 from xrayO2-SO 300.0 1.49 calc RHF/6-31G(d)  (estimated force constant)
+OS-SO        300.000     1.596   Bond length average over set of conf RHF/6-31G(d) opts  July 11 2007 (estimated force const)
+O2-SO        300.000     1.423   Bond length average over set of conf RHF/6-31G(d) opts  July 11 2007 (estimated force const)
+P-SD         230.0       1.98   RHF/6-31G(d,p)  Sept 9 2009 Force constant Taken from OS-P -> JCC,7,(1986),230
+
+ANGLE
+C -C -C      70.000 120.000 std sp2 carbon Sept 13 2001
+C -C -CA     70.000 120.000 RHF/6-41G(d,p) Dec 12 1997
+C -C -CC     70.000 120.000 std sp2 carbon May 8 2001
+C -C -CM     70.000 120.000 std sp2 carbon Dec 21 2000
+C -C -CR     70.000 120.000 guess april 11 2000
+C -C -CT     70.000 120.000 std sp2 carbon Sept 13 2001
+C -C -CW     70.000 120.000 std sp2 carbon Feb 20 2001
+C -C -N      70.000 120.000 std aromatic
+C -C -N2     70.000 120.000 std sp2 carbon; 25 April 2005
+C -C -NB     70.000 120.000 std aromatic
+C -C -O      70.000 120.000 RHF/6-41G(d,p) Dec 12 1997
+C -C -O2     70.000 120.000 std aromatic
+C -C -OS     70.000 120.000 guess april 11 2000
+C2-C -O2     70.000 120.000 std sp2 carbon; 12 June 2005
+CA-C -CB     70.000 120.000 ff94 std aromatic
+CA-C -CM     70.000 120.000 std sp2 carbon May 11 2001
+CA-C -CP     63.000 120.000 from CA-C-CA april 11 2000
+CA-C -CR     70.000 120.000 from CA-C-CA Nov 22 2006
+CA-C -CT     70.000 120.000
+CA-C -CW     70.000 120.000 std aromatic
+CA-C -H4     50.000 120.000 std aromatic
+CA-C -N      70.000 116.600 ff94 CT-C-N cb 6jan97
+CA-C -N*     70.000 120.000 sp2 carbon
+CA-C -N2     70.000 120.000 sp2 carbon, 30 Sept 2004
+CA-C -NA     70.000 120.000 RHF/6-41G(d,p) Dec 12 1997
+CA-C -NB     70.000 120.000 std aromatic
+CA-C -NC     70.000 120.000 std aromatic Feb 25 2009
+CA-C -O      80.000 120.400 ff94 CT-C-O cb 6jan97
+CA-C -O2     80.000 120.000 from ff94 CT-C-O cb 4nov98
+CA-C -OS     70.000 120.000
+CA-C -S      70.000 120.000 std carbonyl
+CB-C -CB     70.000 120.000 guess July 14 2008
+CB-C -CW     70.000 120.000 guess april 11 2000
+CB-C -N      70.000 120.000 guess april 11 2000
+CB-C -N*     70.000 120.000 ff94 std aromatic
+CC-C -CT     70.000 120.000 std sp2 carbon 21 Oct 2004
+CC-C -CW     70.000 120.000 std sp2 carbon june 8 2001
+CC-C -N      70.000 120.000 std sp2 carbon Mar 7 2001
+CC-C -N2     70.000 120.000 std sp2 carbon 30 Sept 2004
+CC-C -NB     70.000 120.000 std sp2 carbon Jul 30 2003
+CC-C -O      70.000 120.000 std sp2 carbon Mar 7 2001
+CC-C -O2     70.000 120.000 std sp2 carbon; 3 Aug 2005
+CC-C -OS     70.000 120.000 std sp2 carbon Aug 15 2001
+CC-C -S      70.000 120.000 std sp2 carbon Jul 20 2003
+CJ-C -CT     70.000 120.000 guess april 11 2000
+CJ-C -H4     50.000 120.000 guess april 11 2000
+CJ-C -N      70.000 120.000 guess april 11 2000
+CJ-C -NB     70.000 120.000 std sp2 carbon March 30 2004
+CJ-C -O      70.000 120.000 guess april 11 2000
+CJ-C -O2     70.000 117.000 from CT-C-O2
+CJ-C -OS     70.000 120.000 std sp2 carbon Feb 6 2004
+CJ-C -S      70.000 120.000 std sp2 carbon March 30 2004
+CM-C -CT     70.000 120.000 std aromatic
+CM-C -H4     50.000 120.000 std sp2 carbon june 8 2001
+CM-C -N      70.000 120.000 guess april 11 2000
+CM-C -NB     70.000 120.000 std sp2 carbon june 8 2001 (checked at B3LYP/6-31G(d))
+CM-C -O2     70.000 120.000
+CM-C -OS     70.000 117.000 ff94 CT-C-O2
+CP-C -N      70.000 120.000 guess Sept 24 2003
+CP-C -O      70.000 120.000 guess april 11 2000
+CR-C -CT     70.000 120.000 guess april 11 2000
+CR-C -CW     70.000 120.000 guess april 11 2000
+CR-C -H4     50.000 120.000 guess: std sp2 with H Jul 29 2003
+CR-C -N      70.000 120.000 guess april 11 2000
+CR-C -N2     70.000 120.000 std sp2, 30 Sept 2004
+CR-C -NB     70.000 120.000 guess april 11 2000
+CR-C -O      70.000 120.000 guess april 11 2000
+CR-C -O2     70.000 120.000 std sp2 carbon; 15 Nov 2005
+CR-C -OS     70.000 120.000 guess Aug 15 2001
+CR-C -S      70.000 120.000 std sp2 carbon June 23 2003
+CT-C -CT     70.000 120.000 RHF/6-41G(d,p) Dec 12 1997
+CT-C -CW     70.000 120.000
+CT-C -H4     50.000 120.000 guess april 11 2000
+CT-C -N*     70.000 120.000 guess april 11 2000
+CT-C -N2     70.000 120.000 std sp2 21 Oct 2004
+CT-C -NA     70.000 116.600 ff94 CT-C-N oct97
+CT-C -NB     70.000 120.000 guess april 11 2000
+CT-C -OS     70.000 120.000
+CT-C -S      70.000 110.000 R0 from BP86/tzp(DeFT) thioimidate
+CW-C -CW     70.000 120.000 guess april 11 2000
+CW-C -N      70.000 116.600 ff94 CT-C-N cb 20Oct97
+CW-C -N*     80.000 120.400 ff94 CT-C-O cb 20Oct97
+CW-C -N2     70.000 120.000 std sp2 22 Oct 2004
+CW-C -NB     70.000 120.000 guess april 11 2000
+CW-C -O      80.000 120.400 ff94 CT-C-O cb 20Oct97
+CW-C -O2     70.000 120.000 std aromatic
+CW-C -OS     70.000 120.000 std sp2 carbon Aug 15 2001
+CW-C -S      70.000 120.000 std guess
+H4-C -H4     50.000 109.5 std guess july 8 2003
+H4-C -NB     50.000 120.000 std aromatic
+H4-C -O      50.000 120.000 guess april 11 2000
+H5-C -N      40.000 120.000 std aromatic
+H5-C -O      40.000 120.000 std aromatic
+H5-C -OS     50.000 120.000 std sp2 carbon Dec 18 2000
+N -C -N      70.000 120.000
+N -C -N3     70.000 120.000
+N -C -NB     70.000 120.000 guess april 27 2000
+N -C -NC     70.000 120.000 guess april 11 2000
+N -C -O2     70.000 120.000 guess april 11 2000
+N -C -OS     70.000 120.000 guess april 11 2000
+N -C -S      70.000 120.000 std aromatic Dec 4 2000
+N2-C -N2     70.000 120.000 Sp2 carbon, 30 Sept 2004
+N2-C -S      70.000 120.000 sp2 carbon, 5 April 2005
+N3-C -O      70.000 120.000
+NA-C -OS     70.000 120.000 ff94 CA-C _OH oct97
+NB-C -NB     70.000 120.000 std aromatic Dec 14 2000
+NB-C -O      70.000 120.000 guess april 11 2000
+NB-C -OS     70.000 121.000 imidate thet0 from b3pw91/6-311Gdp 11/2000
+NB-C -S      70.000 118.000 R0 from BP86/tzp(DeFT) thioimidate
+O -C -OS     70.000 120.000 std aromatic Dec 15 2000
+O -C -S      70.000 124.000 thioester thet0 from b3pw91/6-311Gdp 11/00
+OS-C -OS     70.000 120.000 std sp2 carbon, Sept 3 2004
+CB-C*-SO     70.000 125.000 guess from C*-C*-CT
+N*-C*-NB     70.000 120.000 RHF/6-31G(d) Mar 7 2007
+N*-C*-S      70.000 120.000 RHF put it at 109 but it is in a ring use std sp2 carbon
+NB-C*-S      70.000 125.000 RHF/6-31G(d) Mar 7 2007
+C -C2-C2     70.000 180.000 std sp carbon; 12 June 2005
+C2-C2-C2     70.000 180.000 std sp carbon; Jan 9 2007
+C2-C2-CA     70.000 180.000 std sp carbon Dec 15 2000
+C2-C2-CC     70.000 180.000 std sp carbon July 18 2002
+C2-C2-CJ     70.000 180.000 std sp carbon March 31 2004
+C2-C2-CM     70.000 180.000 std sp carbon March 31 2003
+C2-C2-CR     70.000 180.000 std sp carbon April 3 2003
+C2-C2-CT     70.000 180.000 std sp carbon Dec 15 2000
+C2-C2-CW     70.000 180.000 std sp carbon Dec 21 2000
+C2-C2-HC     50.000 180.000 std sp carbon June 28 2002
+CA-C2-NL     70.000 180.000 std sp carbon May 9 2001
+CC-C2-NL     70.000 180.000 std sp carbon Oct 23 2009
+CM-C2-CM     70.000 180.000 std sp carbon Jan 9 2007
+CM-C2-CT     70.000 180.000 std sp carbon Jan 9 2007
+CM-C2-NL     70.000 180.000 std sp carbon Mar 7 2001
+CR-C2-NL     70.000 180.000 std sp carbon July 20 2006
+CT-C2-NL     70.000 180.000 std sp carbon May 9 2001
+CW-C2-NL     70.000 180.000 std sp carbon Jan 9 2007
+BR-CA-C      70.000 120.000 From BR-CA-CA Jan 9 2007
+BR-CA-CA     70.000 120.000 BA calc RHF/6-31G(d) (ECP for BR)
+BR-CA-CB     70.000 120.000 std sp2 carbon mar 22 2001
+BR-CA-CC     70.000 120.000 std sp2 carbon; 4 July 2005
+BR-CA-CP     70.000 120.000 guess Mar 13 2003
+BR-CA-CW     70.000 120.000 guess std sp2 carbon; 4 July 2005
+BR-CA-N      70.000 120.000 guess Mar 13 2003
+BR-CA-NC     70.000 120.000 guess april 11 2000
+C -CA-C      70.000 120.000 std sp2 carbon Aug 16 2001
+C -CA-C2     70.000 120.000 std sp2 carbon Jan 5 2007
+C -CA-CB     70.000 120.000 guess april 11 2000
+C -CA-CC     70.000 120.000 guess Feb 11 2004
+C -CA-CL     70.000 120.000 std sp2 carbon Sept 18 2009
+C -CA-CM     70.000 120.000 std sp2 carbon apr 20 2001
+C -CA-CP     63.000 120.000 from CA-CA-C april 11 2000
+C -CA-CT     70.000 120.000 ff94 CA-CA-CT
+C -CA-CW     70.000 120.000 std sp2 carbon; 2 May 2005
+C -CA-F      70.000 120.000 guess Mar 13 2003
+C -CA-H4     50.000 120.000 guess april 11 2000
+C -CA-N      70.000 120.000 ff94 CA-CA-CT
+C -CA-N*     70.000 120.000 three sp2 centers
+C -CA-N2     70.000 120.000 ff94 CA-CA-CT
+C -CA-N3     70.000 120.000 guess april 11 2000
+C -CA-NA     70.000 120.000 ff94 CA-CA-CT
+C -CA-NC     70.000 120.000
+C -CA-O2     70.000 120.000 guess March 5 2009 anionic O
+C -CA-OH     70.000 120.000 guess april 11 2000
+C -CA-OS     70.000 120.000
+C -CA-S      70.000 120.000 std sp2 carbon june 6 2001
+C -CA-SO     70.000 120.000 std sp2 carbon Sept 3 2004,
+C2-CA-CA     70.000 120.000 std sp2 carbon Dec 15 2000
+C2-CA-CB     70.000 120.000 std sp2 carbon Dec 14 2004
+C2-CA-CP     70.000 120.000 std aromatic
+C2-CA-N*     70.000 120.000 std sp2 carbon Apr 18 2005,
+C2-CA-NA     70.000 120.000 std sp2 carbon Jan 5 2007
+C2-CA-NC     70.000 120.000 std sp2 carbon Nov 13 2003
+CA-CA-CC     70.000 120.000 amidopyridine, ff94 CA-CA-CT
+CA-CA-CJ     70.000 121.000 Jan 28 2004
+CA-CA-CL     70.000 120.000 ff94 CA-C-OH
+CA-CA-CM     70.000 120.000 ff94 CA-CA-CT
+CA-CA-CP     63.000 120.000 ff94 CA-CA-CA ; for within the ring
+CA-CA-CR     70.000 120.000 amidopyridine, ff94 CA-CA-CT
+CA-CA-CW     70.000 120.000 amidopyridine, ff94 CA-CA-CT
+CA-CA-F      70.000 120.000 ff94 CA-C-OH
+CA-CA-I      70.000 120.000 std sp2 carbon aug 15 2001
+CA-CA-N      70.000 120.000 ff94 CA-CA-CT cb 6jan97
+CA-CA-N*     70.000 120.000 ff94 std aromatic
+CA-CA-N2     70.000 120.000 ff94 CA-CA-CT
+CA-CA-N3     70.000 120.000 guess april 11 2000
+CA-CA-NA     70.000 120.000 ff94 CA-CA-CT
+CA-CA-NB     70.000 120.000 guess april 11 2000
+CA-CA-NC     70.000 120.000 quinoline, ff94 CA-CA-CT
+CA-CA-ND     70.000 120.000 calc B3PW91/6-31+G** Jan 30 2002
+CA-CA-NL     70.000 120.000 guess
+CA-CA-O2     70.000 120.000 guess March 5 2009 anionic O
+CA-CA-OH     70.000 120.000 ff94 CA-C-OH
+CA-CA-OS     70.000 120.000 ** Gro, JACS,V111,2152('89)
+CA-CA-P      70.000 120.000 std aromatic
+CA-CA-S      70.000 120.000 std aromatic
+CA-CA-SD     70.000 120.000 std aromatic
+CA-CA-SH     70.000 120.000 std aromatic
+CA-CA-SO     70.000 120.000 force ff94 CA-CA-CT
+CB-CA-CB     70.000 120.000
+CB-CA-CC     70.000 120.000 guess april 11 2000
+CB-CA-CL     70.000 120.000 guess Mar 29 2005
+CB-CA-CM     70.000 120.000 guess april 11 2000
+CB-CA-CP     63.000 120.000 ff94 CA-CA-CA ; for within the ring
+CB-CA-CR     70.000 120.000 guess sept 26 2003
+CB-CA-CT     70.000 120.000 quinoline, ff94 CA-CA-CT
+CB-CA-CW     70.000 120.000 std sp2 carbon May 17 2001
+CB-CA-F      70.000 120.000 std sp2 carbon Feb 17 2005
+CB-CA-N      70.000 120.000 guess april 11 2000
+CB-CA-N3     70.000 120.000 guess Aug 7 2000
+CB-CA-NA     70.000 120.000 guess Nov 3 2008
+CB-CA-OH     70.000 120.000 std aromatic
+CB-CA-OS     70.000 120.000
+CB-CA-P      70.000 120.000
+CB-CA-S      70.000 120.000 guess april 11 2000
+CB-CA-SO     70.000 120.000 guess april 11 2000
+CC-CA-CL     70.000 120.000 guess april 04 2006
+CC-CA-CM     70.000 120.000 guess april 11 2000
+CC-CA-CP     70.000 120.000 std sp2 carbon apr 26 2001
+CC-CA-CT     70.000 124.700 calc RHF/6-31G(d) (estimated force constant)
+CC-CA-H4     40.000 120.000 ff94 CA-CA-HA
+CC-CA-HA     40.000 120.000 ff94 CA-CA-HA
+CC-CA-I      70.000 120.000 std sp2 carbon aug 15 2001
+CC-CA-N      70.000 120.000 std sp2 carbon July 18 2002
+CC-CA-N2     70.000 120.000 std sp2 carbon; 2 May 2005
+CC-CA-NC     70.000 120.000 std aromatic
+CC-CA-OS     70.000 120.000 guess Jan 9 2007
+CC-CA-S      70.000 120.000 guess Jan 23 2004
+CJ-CA-CP     70.000 120.000 std sp2, guess, 16 Feb 2005
+CJ-CA-NC     70.000 120.000 std sp2, guess, 14 sept 2005
+CL-CA-CP     70.000 120.000 guess Mar 13 2003
+CL-CA-CW     70.000 120.000 std sp2 guess; June 21 2005
+CL-CA-N      70.000 120.000 guess Mar 13 2003
+CM-CA-CP     70.000 120.000 guess Oct 20 2007
+CM-CA-CW     70.000 120.000 guess april 11 2000
+CM-CA-N      70.000 120.000 guess april 11 2000
+CM-CA-N*     70.000 120.000 guess april 11 2000
+CM-CA-NA     70.000 120.000 guess nov29 2000
+CM-CA-OS     70.000 120.000 std sp2 carbon may 29 2001
+CP-CA-CP     70.000 120.000 std sp2 carbon apr 2 2001
+CP-CA-CR     70.000 120.000 std sp2 carbon Jan 9 2007
+CP-CA-CT     70.000 120.000 guess april 11 2000
+CP-CA-CW     70.000 120.000 guess Sept 11 2003
+CP-CA-F      70.000 120.000 std aromatic
+CP-CA-H4     50.000 120.000 guess april 11 2000
+CP-CA-HA     40.000 120.000 ff94 CA-CA-HA
+CP-CA-I      70.000 120.000 std sp2 carbon aug 15 2001
+CP-CA-N      70.000 120.000 guess Mar 13 2003
+CP-CA-N*     70.000 120.000 std sp2 center 13 April 2005
+CP-CA-N2     70.000 120.000 guess april 11 2000
+CP-CA-N3     70.000 120.000 guess Dec 5 2002
+CP-CA-NA     70.000 120.000 guess Nov 21 2003
+CP-CA-NC     70.000 120.000 std aromatic
+CP-CA-OH     70.000 120.000 std aromatic
+CP-CA-OS     70.000 120.000 std aromatic
+CP-CA-S      70.000 109.800 from CA-CA-S april 11 2000
+CP-CA-SO     70.000 109.800 from CA-CA-S Oct 20 2007
+CR-CA-CT     70.000 120.000 guess 13 October 2010
+CR-CA-CW     70.000 120.000 guess april 11 2000
+CR-CA-HA     50.000 120.000 guess april 11 2000
+CR-CA-NC     70.000 120.000 std aromatic
+CT-CA-CT     70.000 120.000
+CT-CA-CW     70.000 120.000 guess april 11 2000
+CT-CA-HA     50.000 120.000
+CT-CA-N      70.000 120.000
+CT-CA-N*     70.000 120.000
+CT-CA-N2     70.000 120.000 ff94 CA-CA-CT
+CT-CA-NA     70.000 120.000 ff94 CA-CA-CT
+CT-CA-NB     70.000 120.000 std ar
+CT-CA-NC     70.000 120.000 std aromatic
+CT-CA-OS     70.000 120.000 std ar
+CT-CA-S      70.000 120.000 guess april 11 2000
+CT-CA-SO     70.000 120.000 std ar
+CW-CA-CW     70.000 120.000 std sp2; 19 May 2005
+CW-CA-H4     50.000 120.000 std sp2; 19 May 2005
+CW-CA-HA     50.000 120.000 std ar
+CW-CA-I      70.000 120.000 std sp2 carbon aug 15 2001
+CW-CA-N      70.000 120.000 std sp carbon; nov 2 2005
+CW-CA-N2     70.000 120.000 std sp carbon; 3 June 2005
+CW-CA-NC     70.000 120.000 std aromatic
+CW-CA-OS     70.000 120.000 std sp2 carbon; 21 June 2005
+CW-CA-S      70.000 120.000 guess Jan 23 2004
+F -CA-N      70.000 120.000 guess Mar 13 2003
+F -CA-NC     70.000 120.000 std aromatic
+H4-CA-N      40.000 120.000 ff94 CA-CA-HA
+H4-CA-N*     40.000 120.000 ff94 CA-CA-HA
+H4-CA-N2     50.000 120.000 standard sp2 center; 17 May 2005
+H4-CA-NA     40.000 120.000 ff94 CA-CA-HA
+H4-CA-NC     50.000 120.000 pyridine, ff94 C*-CW-H4
+H4-CA-OS     50.000 120.000 std ar
+H4-CA-S      70.000 122.300 calc RHF/6-31G(d) (estimated force constant)
+H4-CA-SO     50.000 120.000 std ar
+H5-CA-N      40.000 120.000 ff94 CA-CA-HA May 12 2006
+H5-CA-N*     50.000 120.000 std ar
+HA-CA-N2     50.000 120.000 std ar
+HA-CA-NC     40.000 120.000 quinoline, ff94 CA-CA-HA
+N -CA-NA     70.000 120.000 std sp center 14 April 2005
+N -CA-NC     70.000 120.000 std aromatic
+N -CA-OS     70.000 120.000 std sp2 center 14 April 2005
+N -CA-S      70.000 120.000 std sp2 center 23 October 2003
+N -CA-SD     70.000 120.000 std sp2 center 16 December 2009
+N -CA-SO     70.000 120.000 std sp2 center 2 Sept 2004
+N*-CA-N2     70.000 120.000 std sp2 carbon Jan 9 2007
+N*-CA-NC     70.000 120.000 std sp2 carbon Feb 25 2009
+N*-CA-OS     70.000 120.000 std sp2 carbon 23 Oct 2009
+N -CA-N2     70.000 120.000 std sp2 carbon 5 Oct 2005
+N2-CA-NB     70.000 120.000 std sp2 center 15 April 2005
+N2-CA-OH     70.000 120.000 std ar
+N2-CA-OS     70.000 120.000 std ar
+N3-CA-NA     70.000 120.000 std sp2 center 13 April 2005
+N3-CA-NC     70.000 120.000 guess april 11 2000
+N3-CA-OS     70.000 120.000 std sp2; 13 April 2005
+N3-CA-S      70.000 120.000 std sp2; 13 April 2005
+NA-CA-NB     70.000 120.000 std ar
+NA-CA-OH     70.000 120.000 std ar
+NA-CA-OS     70.000 120.000 RHF/6-41G(d,p) Dec 12 1997
+NA-CA-SO     70.000 120.000 guess april 11 2000
+NB-CA-OS     70.000 120.000 std ar
+CL-CA-NC     70.000 120.000 std ar
+H5-CA-NC     50.000 120.000 sp2 C; 2 May 2006
+NC-CA-NC     70.000 120.000 RHF/6-41G(d,p) Dec 12 1997
+NC-CA-OH     70.000 120.000 std sp2 C, 7 april 2005
+NC-CA-OS     70.000 120.000 std aromatic
+NC-CA-S      70.000 120.000 guess april 11 2000
+NC-CA-SO     70.000 120.000 std sp2 carbon Feb 21 2001
+C -CB-CA     70.000 120.000 std aromatic
+C -CB-CC     70.000 120.000 std aromatic Dec 8 2000
+C -CB-CP     70.000 120.000 std aromatic Jan 9 2007
+C -CB-CR     70.000 120.000 std sp2 carbon; 5 April 2006
+C -CB-N*     70.000 120.000 std sp2 carbon; Jan 9 2007
+C -CB-NA     70.000 120.000 std aromatic
+C -CB-NC     70.000 120.000 std sp2 carbon May 8 2001
+CA-CB-CA     63.000 120.000 ff94 CA-CA-CA
+CA-CB-CB     63.000 122.700 ff94 CA-CN-CB; AA trp
+CA-CB-CC     63.000 134.900 indole, ff94 C*-CB-CA
+CA-CB-CP     63.000 122.700 ff94 CA-CN-CB; AA trp
+CA-CB-CR     63.000 134.900 indole, ff94 C*-CB-CA (from CA-CB-CC above) 14 March 2005
+CA-CB-CW     70.000 120.000 std sp2 carbon Jan 9 2007
+CA-CB-N      70.000 120.000 std sp2 carbon Mar 8 2004
+CA-CB-N*     70.000 132.800 ff94 CA-CN-NA; AA trp
+CA-CB-N2     70.000 132.800 ff94 CA-CN-NA; AA trp
+CA-CB-NA     70.000 132.800 ff94 CA-CN-NA; AA trp
+CA-CB-NB     70.000 132.800 ff94 CA-CN-NA; AA trp
+CA-CB-NC     70.000 120.000 quinoline, ff94 CA-CA-CT
+CA-CB-OS     70.000 132.800 ff94 CA-CN-NA; AA trp
+CA-CB-S      70.000 132.800 ff94 CA-CN-NA; AA trp
+CB-CB-CB     70.000 120.000 guess april 11 2000
+CB-CB-CC     63.000 106.400 B0 tuned to a Merck X-ray
+CB-CB-CP     63.000 120.000 ff94 CA-CA-CA ; for within the ring
+CB-CB-CR     70.000 120.000 std sp2 carbon Apr 26 2006
+CB-CB-CW     70.000 120.000 std sp2 carbon Jan 9 2007
+CB-CB-N      70.000 120.000 std sp2 carbon aug 29 2003
+CB-CB-N*     70.000 104.400 ff94 CB-CN-NA; AA trp
+CB-CB-N2     70.000 120.000 sp2 C; 27 April 2006
+CB-CB-NA     70.000 104.400 indole, ff94 CB-CN-NA trp
+CB-CB-NB     70.000 104.400 ff94 CB-CN-NA; AA trp
+CB-CB-OS     70.000 104.400 ff94 CB-CN-NA; AA trp
+CB-CB-S      70.000 104.400 ff94 CB-CN-NA; AA trp
+CC-CB-CP     63.000 134.900 indole, ff94 C*-CB-CA
+CC-CB-N      70.000 120.000 guess std sp2 carbon 16 Sep 2003
+CC-CB-NC     70.000 120.000 Stdn sp2 carbon October 10 2003
+CC-CB-OS     70.000 120.000 guess std sp2 carbon sep 24 2003
+CC-CB-S      70.000 120.000 guess april 11 2000
+CP-CB-CP     70.000 120.000 guess Jan 9 2007
+CP-CB-N      70.000 120.0 std sp2 carbon aug 29 2003
+CP-CB-N*     70.000 120.000 guess Jan 23 2004
+CP-CB-NA     70.000 120.000 std sp2 carbon mar 13 2001
+CP-CB-NB     70.000 120.000 std sp2 carbon; 30 Nov 2005
+CP-CB-NC     70.000 120.000 std sp2 carbon apr 2 2001
+CP-CB-OS     70.000 104.400 aug 28 2003 guess
+CP-CB-S      70.000 120.000 std sp2 carbon July 18 2002
+CR-CB-CR     70.000 120.000 std sp2 carbon, 14 March 2005
+CR-CB-N      70.000 120.000 std sp2 carbon, 4 April 2006
+CR-CB-CW     70.000 120.000 std sp2 carbon, Mar 27 2009
+CW-CB-CW     70.000 120.000 std sp2 carbon, Nov 3 2008
+C -CB-N      70.000 120.000 std sp2 carbon. 3 Aug 2006
+N -CB-N      70.000 120.000 std sp2 carbon; 3 Aug 2006
+N -CB-NB     70.000 120.000 std sp2 carbon, 19 July 2006
+N*-CB-OS     70.000 120.000 aug 28 2003 guess
+NA-CB-NA     70.000 120.000 std sp2 carbon jan 16 2002
+NA-CB-NC     70.000 120.000 Stdn. sp2 carbon July 19 2002
+N -CB-NC     70.000 120.000 sp2 C; 27 April 2006
+N2-CB-NC     70.000 120.000 sp2 C; 27 April 2006
+NC-CB-NC     70.000 120.000 guess Aug 7 2000
+NC-CB-OS     70.000 120.000 guess Jan 23 2004
+BR-CC-CB     70.000 120.000 std aromatic Feb 17 2005
+BR-CC-CC     70.000 120.000 std aromatic
+BR-CC-CR     70.000 120.000 std aromatic Nov 3 2008
+BR-CC-CW     70.000 120.000 std aromatic
+C -CC-CA     70.000 120.000 std aromatic Sept 12 2001
+C -CC-CC     70.000 120.000 std aromatic
+C -CC-CL     70.000 120.000 std sp2 carbon May 17 2001
+C -CC-CR     70.000 120.000 std sp2 carbon Sep 2 2004
+C -CC-CT     70.000 120.000 std sp2 carbon May 17 2001
+C -CC-CW     70.000 120.000 std sp2 carbon Mar 7 2001
+C -CC-F      70.000 120.000 std sp2 carbon May 17 2001
+C -CC-HA     50.000 120.000 std sp2 carbon Mar 7 2001
+C -CC-NB     70.000 120.000 std sp2 carbon june 8 2001
+C2-CC-CB     70.000 120.000 std aromatic
+C2-CC-CC     70.000 120.000 std aromatic
+C2-CC-CR     70.000 120.000 std sp2 carbon April 2 2003
+C2-CC-CW     70.000 120.000 std sp2 carbon July 18 2002
+C2-CC-NB     70.000 120.000 std sp2 carbon April 3 2003
+CA-CC-CB     70.000 120.000 guess april 11 2000
+CA-CC-CC     70.000 120.000
+CA-CC-CR     70.000 120.000 guess april 11 2000
+CA-CC-CW     70.000 120.000 std aromatic
+CA-CC-N      70.000 120.000 guess april 11 2000
+CA-CC-NA     70.000 120.000 std sp2 carbon Feb 20 2001
+CA-CC-NB     70.000 120.000 std aromatic
+CA-CC-O2     70.000 124.300 calc RHF/6-31G(d) (estimated force constant)
+CA-CC-OS     70.000 120.000 guess april 11 2000
+C -CC-CB     70.000 120.000 std sp2; 17 Aug 2005
+CB-CC-CC     70.000 120.000 std aromatic Dec 8 2000
+CB-CC-CL     70.000 120.000 std aromatic Nov 4 2008
+CB-CC-CP     70.000 120.000 std sp2 carbon; 4 July 2005
+CB-CC-CR     70.000 120.000 sp2 carbon; 1 Aug 2005
+CB-CC-CT     70.000 120.000 std aromatic
+CB-CC-CW     63.000 106.400 ff94 CB-C*-CW; AA trp
+CB-CC-F      70.000 120.000 std aromatic Feb 17 2005
+CB-CC-HA     40.000 120.000 indole, ff94 C*-CW-H4
+CB-CC-N      70.000 120.000 std sp2 C; 2 May 2005
+CB-CC-N*     70.000 120.000 std sp2 C; July_14_2008
+CB-CC-N2     70.000 120.000 std sp2 C; Feb_11_2008
+CB-CC-N3     70.000 120.000 std sp2 C; July_14_2008
+CB-CC-NA     70.000 120.000 std aromatic Dec 6 2000
+CB-CC-NC     70.000 120.000 std sp2 carbon JAN 5 2001
+CB-CC-OS     70.000 120.000 guess april 11 2000
+CB-CC-S      70.000 120.000 guess april 11 2000
+CB-CC-SO     70.000 129.000 RHF/6-31G(d) opt June 29 2007
+CC-CC-CC     70.000 120.000 std sp2 carbon Feb 11 2004
+CC-CC-CL     70.000 120.000 std sp2 carbon Jan 21 2003
+CC-CC-CM     70.000 120.000 std sp2 carbon May 11 2001
+CC-CC-CR     70.000 120.000 guess april 11 2000
+CC-CC-CT     70.000 120.000 std aromatic
+CC-CC-CW     70.000 120.000 std aromatic
+CC-CC-F      70.000 120.000 std sp2 carbon, Nov 25 2004
+CC-CC-HA     40.000 120.000 std aromatic
+CC-CC-N      70.000 120.000 guess april 11 2000
+CC-CC-N*     70.000 120.000 guess June 9 2010
+CC-CC-N2     70.000 120.000 std aromatic
+CC-CC-N3     70.000 120.000 guess april 11 2000
+CC-CC-NA     70.000 120.000 std sp2 carbon; 3 June 2005
+CC-CC-NB     70.000 120.000 guess april 11 2000
+CC-CC-NC     70.000 120.000 guess Jan 4 2008
+CC-CC-OS     70.000 120.000 std aromatic
+CC-CC-P      70.000 120.000 std aromatic
+CC-CC-S      70.000 120.000 std sp2 carbon may 15 2001
+CC-CC-SO     70.000 120.000 from CA-CA-SO mar 28 2001
+CJ-CC-CR     70.000 120.000 RHF/6-31G(d,p) opt Sept 2 2008
+CJ-CC-CW     70.000 120.000 RHF/6-31G(d,p) opt Sept 2 2008
+CL-CC-CW     70.000 120.000 std sp2 carbon May 17 2001
+CL-CC-N      70.000 120.000 std sp2 carbon Dec 6 2005
+CL-CC-NB     70.000 120.000 std sp2 carbon Dec 6 2005
+CM-CC-CR     70.000 120.000 guess april 11 2000
+CM-CC-CW     70.000 120.000 guess april 11 2000
+CM-CC-NB     70.000 120.000 guess Oct 20 2007
+CP-CC-CW     63.000 106.400 thiophene: guess based on ff94 CB-C*-CW
+CP-CC-HA     40.000 120.000 ff94 C*-CW-H4
+CR-CC-CR     70.000 120.000 guess april 11 2000
+CR-CC-CT     70.000 120.000 guess april 11 2000
+CR-CC-CW     70.000 120.000 std aromatic
+CR-CC-F      70.000 120.000 std aromatic Dec 22 2004
+CR-CC-HA     50.000 120.000 guess april 11 2000
+CR-CC-N2     70.000 120.000 std aromatic
+CR-CC-NA     70.000 120.000 std sp2 carbon; 3 June 2005
+CR-CC-NB     70.000 120.000 guess april 11 2000
+CR-CC-OS     70.000 120.000 guess april 11 2000
+CT-CC-CW     70.000 125.000 ff94 CT-C*-CW; AA trp
+CT-CC-N      70.000 120.000 guess april 11 2000
+CT-CC-N*     70.000 120.000 guess Jan 9 2007
+CT-CC-O2     70.000 121.100 calc RHF/6-31G(d) (estimated force constant)
+CT-CC-OS     70.000 120.000 guess april 11 2000
+CT-CC-S      70.000 120.000 RHF/6-31G(d) Mar 7 2007
+CW-CC-CW     70.000 120.000 guess april 11 2000
+CW-CC-F      70.000 120.000 std sp2 carbon May 17 2001
+CW-CC-H4     40.000 120.000 AA his
+CW-CC-HA     40.000 120.000 std aromatic
+CW-CC-N      70.000 120.000 std aromatic
+CW-CC-N*     70.000 120.000 std aromatic Jan 9 2007
+CW-CC-N2     70.000 120.000 std aromatic
+CW-CC-N3     70.000 120.000 guess april 11 2000
+CW-CC-NC     70.000 120.000 std aromatic
+CW-CC-OS     70.000 120.000 std aromatic
+CW-CC-P      70.000 120.000 From CA-CA-P Dec 4 2000
+CW-CC-S      70.000 120.000 guess april 11 2000
+CW-CC-SO     70.000 120.000 From CA-CA-SO Dec 4 2000
+F -CC-N      70.000 120.000 guess Feb 1 2010
+H4-CC-N      70.000 120.000 guess april 11 2000
+H4-CC-NA     40.000 120.000 standard sp2, august 25 2009
+H4-CC-NB     40.000 120.000 AA his
+H4-CC-OS     70.000 120.000 guess april 11 2000
+N -CC-N2     70.000 120.000 std aromatic
+N -CC-NB     70.000 120.000 std aromatic
+N2-CC-NC     70.000 120.000 guess June 29 2007
+N3-CC-NB     70.000 120.000 guess april 11 2000
+NA-CC-NB     70.000 120.000 std aromatic
+N2-CC-NB     70.000 120.000 std aromatic
+NB-CC-NC     70.000 120.000 std aromatic
+NB-CC-O2     70.000 127.800 calc RHF/6-31G(d) (estimated force constant)
+NB-CC-OS     70.000 120.000 std aromatic Dec 8 2000
+NB-CC-S      70.000 120.000 std aromatic Dec 8 2000
+NB-CC-SO     70.000 120.000 From CA-CA-SO Dec 4 2000
+C -CJ-CJ     106.940 118.749 by comparison above
+C -CJ-CM     124.630 113.408 similar to CT-CJ-CT; 9 May 2005
+C -CJ-CT     101.110 112.788 guess Mar 9 2005
+C -CJ-HC     101.110 112.788 by comparison above
+C -CJ-N      70.000 109.500 std sp3 carbon March 30 2004
+C2-CJ-CM     101.110 112.788 guess Jan 26 2005
+C2-CJ-HC     63.445 117.277 like CJ-CJ-HC March 31 2004
+C -CJ-CA     101.110 112.788 guess Sept 14 2005
+CA-CJ-CJ     106.940 118.749 Jan 28 2004
+CA-CJ-CM     101.110 112.788 guess Jan 26 2005
+CA-CJ-CT     101.110 112.788 guess Feb 1 2005
+CA-CJ-HC     101.110 112.788 Jan 28 2004
+CA-CJ-N      106.940 118.749 from CA-CJ-CJ Dec 16 2004
+CC-CJ-CJ     70.000 120.000 RHF/6-31G(d,p) opt Sept 2 2008
+CC-CJ-HC     70.000 120.000 RHF/6-31G(d,p) opt Sept 2 2008
+C2-CJ-CJ     106.940 118.749 guess like CJ-CJ-CT March 31 2004
+CJ-CJ-CJ     358.920 59.899 calc RHF/6-31G(d)
+CJ-CJ-CM     106.940 118.749 like CJ-CJ-CT
+CJ-CJ-CR     70.000 120.500 RHF/6-31G(d,p) angle estimated force constant
+CJ-CJ-CT     106.940 118.749 calc RHF/6-31G(d)
+CJ-CJ-F      63.445 117.277 from Cj-CJ-HC Oct 14 2005
+CJ-CJ-H1     63.445 117.277 from Cj-CJ-HC april 11 2000
+CJ-CJ-HC     63.445 117.277 calc RHF/6-31G(d)
+CJ-CJ-HP     63.445 117.277 from CJ-CJ-HC april 11 2000
+CJ-CJ-N      106.940 118.749 by comparison above
+CJ-CJ-N*     106.940 118.749 by comparison above June 29 2007
+CJ-CJ-N2     70.000 118.749 RHF/6-31G(d,p) June 29 2007
+CJ-CJ-N3     107.000 118.800 from CJ-CJ-N april 11 2000
+CJ-CJ-OH     70.000 119.000 calc RHF/6-311G(d) Dec 1 2004
+CJ-CJ-OS     70.000 119.000 from CJ-CJ-OH Dec 16 2004
+CJ-CJ-S      70.000 119.000 guess; 25 august 2009
+CM-CJ-HC     63.445 117.277 like CJ-CJ-HC
+CR-CJ-HC     70.000 114.000 RHF/6-31G(d,p) angle estimated force constant
+CT-CJ-CT     124.630 113.408 calc RHF/6-31G(d)
+CT-CJ-HC     101.110 112.788 calc RHF/6-31G(d)
+CT-CJ-HP     63.445 117.277 from CJ-CJ-HC april 11 2000
+CT-CJ-N      106.940 118.749 by comparison above
+CT-CJ-N3     106.940 118.749 from CJ-CJ-CT april 11 2000
+CT-CJ-OH     70.000 112.000 calc RHF/6-311G(d) Dec 1 2004
+F -CJ-F      63.445 117.277 from Cj-CJ-HC Oct 14 2005
+F -CJ-H1     63.445 117.277 from Cj-CJ-HC Oct 14 2005
+H1-CJ-H1     50.000 109.5 Std. guess july 8 2003
+H1-CJ-N      50.000 111.100 RHF/6-31G(d) opt geom april 11 2000
+H1-CJ-N*     50.000 113.100 RHF/6-31G(d) opt geom June 29 2007
+H1-CJ-N2     50.000 116.000 RHF/6-31G(d) opt geom June 29 2007
+H1-CJ-N3     101.000 112.800 from HC-CJ-CT april 11 2000
+H1-CJ-OH     50.000 112.000 calc RHF/6-311G(d) Dec 1 2004
+H1-CJ-OS     50.000 112.000 from H1-CJ-OH Dec 16 2004
+H1-CJ-S      50.000 112.000 from H1-CJ-OH guess; 25 august 2009
+HC-CJ-HC     68.681 113.894 calc RHF/6-31G(d)
+HC-CJ-N      63.445 117.277
+HP-CJ-HP     68.681 113.894 from HC-CJ-HC april 11 2000
+HP-CJ-N3     63.445 117.277 from CJ-CJ-HC april 11 2000
+C -CM-C      70.000 120.000 guess april 11 2000
+C -CM-CA     70.000 119.700 ff94 C-CM-CT
+C -CM-N      70.000 120.000 guess april 11 2000
+C -CM-NB     70.000 120.000 guess jun 28 2000
+C -CM-OH     70.000 120.000 std sp2 carbon Dec 21 2000
+C -CM-OS     70.000 120.000 guess Sept13 2000
+C -CM-S      70.000 120.000 std sp2 carbon june 6 2001
+C*-CM-CM     70.000 120.000 std sp2 carbon Mar 7 2007
+C*-CM-HA     50.000 120.000 std sp2 carbon Mar 7 2007
+C2-CM-CM     70.000 120.000 std sp2 carbon Mar 7 2001
+C2-CM-CT     70.000 120.000 std sp2 carbon Mar 31 2003
+C2-CM-HA     50.000 120.000 std sp2 carbon Mar 7 2001
+CA-CM-CA     70.000 120.000 guess Oct 20 2007
+CA-CM-CC     70.000 120.000 guess Oct 20 2007
+CA-CM-CJ     70.000 120.000 guess Jan 24 2005
+CA-CM-CR     70.000 120.000 guess Aug 7 2000
+CA-CM-CT     70.000 119.700 ff94 C-CM-CT
+CA-CM-F      70.000 120.000 std sp2 carbon Feb 17 2005
+CA-CM-N      70.000 120.000 std sp2 carbon July 19 2002
+CA-CM-NB     70.000 120.000 guess april 11 2000
+CA-CM-OS     70.000 120.000 guess april 11 2000
+CA-CM-S      70.000 120.000 guess april 11 2000
+CC-CM-CM     70.000 120.000 guess april 11 2000
+CC-CM-H4     50.000 120.000 guess april 11 2000
+CC-CM-HA     50.000 120.000 std sp2 carbon May 11 2001
+CJ-CM-CT     70.000 120.000 std sp2 Jan 24 2005
+CJ-CM-HA     50.000 120.000 std sp2
+CL-CM-CL     70.000 120.000 Initial guess july 9 2003
+CL-CM-CM     70.000 123.000 fit to AM1 opt july 10 2003
+CL-CM-H4     50.000 120.000 Initial guess july 9 2003
+CJ-CM-CM     70.000 120.000 std sp2
+CM-CM-CM     70.000 119.700 RHF/6-41G(d,p) Dec 12 1997
+CM-CM-CR     70.000 120.000 guess Aug 7 2000
+CM-CM-CW     70.000 120.000 std sp2 carbon mar 13 2001
+CM-CM-F      70.000 123.000 fit to AM1 opt July 10 2003
+CM-CM-N      70.000 120.000 guess april 11 2000
+CM-CM-N2     70.000 120.000 std aromatic
+CM-CM-NB     70.000 120.000 guess april 11 2000
+CM-CM-O2     70.000 120.000 guess april 11 2000
+CM-CM-OH     70.000 120.000 std sp2 carbon Dec 21 2000
+CM-CM-OS     70.000 120.000 guess april 11 2000
+CM-CM-P      70.000 120.000
+CM-CM-S      70.000 120.000 guess april 11 2000
+CR-CM-CT     70.000 120.000 guess Aug 7 2000
+CR-CM-HA     50.000 120.000 std sp2 carbon apr 26 2001
+CR-CM-NB     70.000 120.000 guess Aug 7 2000
+CT-CM-CT     70.000 120.000
+CT-CM-CW     70.000 120.000 std sp2 carbon june 22 2001
+CT-CM-F      70.000 120.000 initial guess July 9 2003
+CT-CM-H4     50.000 120.000 guess april 11 2000
+CT-CM-HA     40.000 120.000 ff94 C-CA-HA; arach acid mariat
+CT-CM-N      70.000 119.700 from CA-CM-CT april 11 2000
+CT-CM-N*     70.000 120.000 guess april 11 2000
+CT-CM-N2     70.000 120.000 std aromatic
+CT-CM-NB     70.000 120.000 guess april 11 2000
+CT-CM-O2     70.000 120.000 guess april 11 2000
+CT-CM-OS     70.000 120.000 guess jun 21 2000
+CT-CM-OS     70.000 120.000 guess jun 21 2000
+CT-CM-P      70.000 120.000
+CT-CM-S      70.000 120.000 guess jun 21 2000
+CR-CM-CW     70.000 120.000 guess std sp2 carbon; ; 20 July 2009
+CW-CM-HA     50.000 120.000 std sp2 carbon mar 13 2001
+F -CM-F      70.000 120.000 Std. guess july 8 2003
+F -CM-OS     70.000 120.000 Std. guess Oct 15 2007
+H4-CM-N      50.000 120.000 guess april 11 2000
+H4-CM-N2     70.000 120.000
+H4-CM-NB     50.000 120.000 guess april 11 2000
+H4-CM-OH     50.000 120.000 guess July 11 2008
+H4-CM-OS     50.000 120.000 guess april 11 2000
+H4-CM-S      50.000 120.000 guess april 11 2000
+HA-CM-HA     40.000 120.000 std aromatic
+HA-CM-N2     50.000 120.000
+N -CM-N      70.000 115.200 from B3LYP/6-31G(d) opt estimated force constant July_17_2007
+N -CM-NB     70.000 124.200 from RHF/6-31G(d) opt estimated force constant april 11 2000
+N -CM-SD     70.000 122.300 from B3LYP/6-31G(d) opt estimated force constant July_17_2007
+N -CM-N2     70.000 120.000 std sp2 carbon; 5 Oct 2005
+C -CP-CA     63.000 120.000 from CA-CA-C april 11 2000
+C -CP-CB     63.000 120.000 from CA-CA-C Jan 9 2007
+C -CP-CP     70.000 120.000 guess april 11 2000
+C -CP-NC     70.000 120.000 guess Jan 9 2007
+CA-CP-CA     63.000 123.000 ff94 CA-CA-CA ; for within the ring
+CA-CP-CB     70.000 120.000 std aromatic
+CA-CP-CC     70.000 120.000 std sp2; 4 July 2005
+CA-CP-CP     70.000 120.000 std aromatic
+CA-CP-CW     70.000 120.000 std sp2; 19 May 2005
+CA-CP-N      70.000 120.000 std sp2 center nov 2 2005
+CA-CP-NA     70.000 120.000 std sp2 center 13 April 2005
+CA-CP-NC     70.000 120.000 std aromatic
+CA-CP-OS     70.000 120.000 std sp2 center 13 April 2005
+CA-CP-S      70.000 120.000 std sp2 center; 13 April 2005
+CB-CP-CP     70.000 120.000 std aromatic
+CB-CP-NC     70.000 120.000 std sp2 carbon apr 21 2001
+CC-CP-CP     70.000 125.000 ff94 CT-C*-CW; AA trp
+CC-CP-CW     63.000 106.400 based on ff94 CB-C*-CW
+CP-CP-CP     70.000 120.000 std aromatic
+CP-CP-CW     70.000 120.000 std sp2; 19 May 2005
+CP-CP-N      70.000 120.000 std sp2; nov 2 2005
+CP-CP-NA     70.000 120.000 std sp2; 13 april 2005
+CP-CP-NC     70.000 120.000 std aromatic
+CP-CP-OS     70.000 120.000 std sp2; 13 April 2005
+CP-CP-S      70.000 120.000 std sp2 center; 13 April 2005
+NC-CP-NC     70.000 120.000 std sp2 center; 2 May 2005
+BR-CR-NB     70.000 120.000 guess Oct 15 2007
+BR-CR-S      70.000 120.000 guess Oct 15 2007
+C -CR-C      70.000 120.000 guess Nov 22 2006
+C -CR-CA     70.000 120.000 guess Sept 13 2001
+C -CR-CC     70.000 120.000 guess april 11 2000
+C -CR-CT     70.000 120.000 guess april 11 2000
+C -CR-H4     50.000 120.000 guess april 11 2000
+C -CR-N      70.000 120.000 guess april 11 2000
+C -CR-N*     70.000 120.000 guess June 29 2007
+C -CR-N2     70.000 120.000 guess Nov 22 2006
+C -CR-NA     70.000 120.000 guess Nov 22 2006
+C -CR-NB     70.000 120.000 guess april 11 2000
+C -CR-NC     70.000 120.000 std sp2 carbon June 23 2003
+C -CR-OS     70.000 120.000 guess april 11 2000
+C -CR-S      70.000 120.000 std sp2 carbon 28 October 2004
+C2-CR-NA     70.000 120.000 std sp2 carbon Jan 5 2007
+C2-CR-NB     70.000 120.000 std sp2 carbon April 3 2003
+C2-CR-OS     70.000 120.000 std sp2 carbon April 18 2003
+C2-CR-S      70.000 120.000 std sp2 carbon May 7 2003
+CA-CR-CC     70.000 120.000 guess Sept 5 2000
+CA-CR-CR     70.000 120.000 guess april 11 2000
+CA-CR-H4     50.000 120.000 std sp2 carbon june 1 2001
+CA-CR-N      70.000 120.000 guess Aug 7 2000
+CA-CR-N*     70.000 120.000 guess april 11 2000
+CA-CR-NA     70.000 120.000 std aromatic
+CA-CR-NB     70.000 120.000 std aromatic
+CA-CR-NC     70.000 120.000 std aromatic
+CA-CR-OS     70.000 120.000
+CA-CR-S      70.000 120.000 std sp2 carbon may 15 2001
+CA-CR-SO     70.000 120.000 std sp2 carbon May 17 2001
+CB-CR-CC     70.000 120.000 std sp2 carbon Jan 9 2007
+CB-CR-CT     70.000 120.000 std sp2 carbon aug 29 2003
+CB-CR-CW     70.000 120.000 std sp2 carbon Jan 9 2007
+CB-CR-H4     70.000 120.000 std sp2 carbon; Jan 7 2008
+CB-CR-N      70.000 120.000 std sp2 carbon; April 3 2003
+CB-CR-N2     70.000 120.000 std sp2 carbon; 5 April 2006
+CB-CR-N3     70.000 120.000 std sp2 carbon March 14 2005
+CB-CR-NA     70.000 120.000 std sp2 carbon March 14 2005
+CB-CR-NB     70.000 120.000 std sp2 carbon March 14 2005
+CB-CR-NC     70.000 120.000 std sp2 carbon March 14 2005
+BR-CR-CC     70.000 120.000 guess Oct 15 2007
+C2-CR-CC     70.000 120.000 std sp2 carbon April 3 2003
+CC-CR-CJ     70.000 120.000 STD sp2 carbon angle {differs from RHF/6-31G(d,p) but the bond terms correct this} Oct212010
+CC-CR-CL     70.000 120.000 guess Oct 15 2007
+CC-CR-CM     70.000 120.000 std sp2 carbon aug 25 2008
+CC-CR-CR     70.000 120.000 guess april 11 2000
+CC-CR-CT     70.000 120.000 std aromatic
+CC-CR-CW     70.000 120.000 std aromatic
+CC-CR-F      70.000 120.000 guess Oct 15 2007
+CC-CR-H4     50.000 120.000 guess april 11 2000
+CC-CR-N      70.000 120.000 guess sp2 carbon; 14 July 2005
+CC-CR-N*     70.000 120.000 std sp2 carbon May 8 2001
+CC-CR-N2     70.000 120.000 std aromatic
+CC-CR-NA     70.000 120.000 guess July_14_2008
+CC-CR-NB     70.000 120.000 guess april 11 2000
+CC-CR-O2     70.000 120.000 guess Sept 14 2001
+CC-CR-OH     70.000 120.000 guess april 11 2000
+CC-CR-OS     70.000 120.000 guess april 11 2000
+CC-CR-S      70.000 120.000 std sp2 carbon Feb 13 2001
+CC-CR-SO     70.000 120.000 std sp2 carbon; Feb 21 2006
+CJ-CR-NB     70.000 120.000 RHF/6-31G(d,p) angle estimated force constant
+CL-CR-NB     70.000 120.000 guess Jan 9 2007
+CL-CR-S      70.000 120.000 guess Jan 9 2007
+CM-CR-CT     70.000 120.000 guess Aug 7 2000
+CM-CR-H4     50.000 120.000 guess J-F T; July 20 2009
+CM-CR-N*     70.000 120.000 std sp2 carbon Feb 10 2010
+CM-CR-NB     70.000 120.000 guess Aug 7 2000
+CM-CR-OS     70.000 120.000 std sp2 carbon june 22 2001
+CM-CR-S      70.000 120.000 std sp2 carbon apr 26 2001
+CR-CR-CT     70.000 120.000 guess april 11 2000
+CR-CR-H4     50.000 120.000 guess april 11 2000
+CR-CR-N      70.000 120.000 guess nov29 2000
+CR-CR-N3     70.000 120.000 guess april 11 2000
+CR-CR-NA     70.000 120.000 std sp2 carbon Mar 5 2010
+CR-CR-NB     70.000 120.000 guess april 11 2000
+CR-CR-O2     70.000 120.000 guess Sept 21 2001
+CR-CR-OS     70.000 120.000 guess Nov 24 2006
+CR-CR-S      70.000 120.000 guess april 11 2000
+CT-CR-CT     70.000 120.000 guess april 11 2000
+CT-CR-CW     70.000 120.000 guess april 11 2000
+CT-CR-H4     50.000 120.000 guess april 11 2000
+CT-CR-N      70.000 120.000 guess april 11 2000
+CT-CR-N*     70.000 120.000 std aromatic
+CT-CR-N2     70.000 120.000 guess June 29 2007
+CT-CR-N3     70.000 120.000 std sp2 carbon Jan 5 2007
+CT-CR-NA     70.000 120.000 std aromatic
+CT-CR-NB     70.000 120.000 std aromatic
+CT-CR-NC     70.000 120.000 std aromatic
+CT-CR-O2     70.000 120.000 guess Sept 14 2001
+CT-CR-OS     70.000 120.000 std aromatic
+CT-CR-S      70.000 122.000 calc RHF/6-31G(d) (estimated force constant)
+CW-CR-H4     50.000 120.000 std sp2 carbon, Mar 27 2009
+CW-CR-N      70.000 120.000 std sp2 carbon Sept 17 2010
+CW-CR-N*     70.000 120.000 std sp2 carbon june 8 2001
+CW-CR-N2     70.000 120.000 std sp2 carbon; 14 July 2005
+CW-CR-NA     70.000 120.000 std aromatic Nov 22 2006
+CW-CR-NB     70.000 120.000 std aromatic
+CW-CR-NC     70.000 120.000 std sp2 carbon; 25 April 2005
+CW-CR-OS     70.000 120.000 std aromatic
+CW-CR-S      70.000 120.000 std sp2 carbon Feb 13 2001
+F -CR-NB     70.000 120.000 guess Oct 15 2007
+F -CR-S      70.000 120.000 guess Oct 15 2007
+H4-CR-NA     40.000 120.000 AA his
+H4-CR-NB     40.000 120.000 AA his
+H5-CR-N      50.000 120.000 guess april 11 2000
+H5-CR-N*     40.000 120.000 ff94 CA-CA-HA
+H5-CR-NC     40.000 120.000 ff94 CA-CA-HA
+H5-CR-OS     40.000 120.000 std aromatic
+H5-CR-S      70.000 120.000 guess april 11 2000
+N*-CR-N      70.000 120.000 guess Oct 3 2001
+N -CR-NA     70.000 120.000 std sp2 carbon mar 9 2001
+N -CR-NB     70.000 120.000 std aromatic
+N -CR-NC     70.000 120.000 guess april 11 2000
+N -CR-OS     70.000 120.000 std aromatic
+N -CR-S      70.000 120.000 std sp2 carbon Sep 4 2003
+N*-CR-N*     70.000 120.000 std sp2 carbon Jan 9 2007
+N*-CR-N2     70.000 120.000 guess april 11 2000
+N*-CR-N3     70.000 120.000 guess april 11 2000
+N*-CR-NA     70.000 120.000 guess; 27 august 2009
+N*-CR-NB     70.000 120.000 std aromatic
+N*-CR-NC     70.000 120.000 std aromatic
+N*-CR-OS     70.000 120.000 std aromatic Dec 4 2000
+N*-CR-S      70.000 120.000 std aromatic banyu Oct 2004
+H5-CR-N2     50.000 120.000 std sp2; 11 Aug 2005
+N2-CR-N2     70.000 120.000 std sp2 C; May 30 2008
+N2-CR-NA     70.000 120.000 std sp2; July 19 2005
+N2-CR-NB     70.000 120.000 guess april 11 2000
+N2-CR-OS     70.000 120.000 guess april 11 2000
+N2-CR-S      70.000 120.000 std sp2 C; 18 July 2006
+N3-CR-NB     70.000 120.000 guess april 11 2000
+N3-CR-OS     70.000 120.000 guess april 11 2000
+N3-CR-S      70.000 120.000 guess Jan 15 2002
+NA-CR-OS     70.000 120.000 std aromatic
+NA-CR-S      70.000 120.000 std aromatic
+NB-CR-NB     189.000 114.200 calc RHF/6-31G(d)
+NB-CR-NC     70.000 120.000 guess april 11 2000
+NB-CR-O2     70.000 120.000 guess Sept 14 2001
+NB-CR-OH     70.000 120.000 guess april 11 2000
+NB-CR-OS     70.000 120.000 std aromatic
+NB-CR-S      70.000 120.000 std aromatic
+NB-CR-SO     70.000 120.000 std sp2 carbon May 17 2001
+F -CR-NC     70.000 120.000 std sp2 carbon 28 April 2005
+N2-CR-NC     70.000 120.000 std sp2 carbon April 27 2005
+N3-CR-NC     70.000 120.000 guess Spet 2 2005
+NA-CR-NC     70.000 120.000 std sp2 carbon March 14 2005
+NC-CR-NC     70.000 120.000 guess april 11 2000
+NC-CR-OS     70.000 120.000 std sp2; 16 May 2005
+NC-CR-S      70.000 120.000 std sp2 carbon mar 14 2001
+OH-CR-OS     70.000 120.000 std sp2 carbon june 22 2001
+OS-CR-OS     70.000 120.000 guess april 11 2000
+OS-CR-S      70.000 120.000 guess april 11 2000
+S -CR-S      70.000 120.000 std aromatic
+S -CR-SO     70.000 120.000 std sp2 carbon May 18 2001
+BR-CT-BR     70.000 109.500 std CT
+BR-CT-CA     70.000 109.500 std sp3 carbon mar 13 2001
+BR-CT-CM     70.000 109.500 std sp3 carbon Jan 9 2007
+BR-CT-CT     70.000 109.500 std sp3 carbon mar 13 2001
+BR-CT-CW     70.000 109.500 std CT Aug 31 2009
+BR-CT-F      70.000 109.500 std sp3 carbon July 9 2003
+BR-CT-H1     50.000 109.500 std sp3 carbon mar 13 2001
+BR-CT-H2     50.000 109.500 std CT
+BR-CT-H3     50.000 109.500 std CT
+BR-CT-N      70.000 109.500 std CT Aug 31 2009
+C -CT-C      70.000 109.500 sp3 carbon
+C -CT-CA     63.000 108.000 ff94 tuned to flurbi Xray
+C -CT-CC     70.000 114.000 B0 tuned to a Merck X-ray
+C -CT-CJ     70.000 109.500 standard CT april 11 2000
+C -CT-CL     70.000 109.500 std CT
+C -CT-CM     70.000 109.500 RHF/6-41G(d,p) Dec 12 1997
+C -CT-CR     63.000 110.500 guess
+C -CT-CW     63.000 112.000 guess
+C -CT-F      70.000 109.500 guess april 11 2000
+C -CT-H2     50.000 109.500 ff94 C-CT-HC
+C -CT-N*     63.000 110.100 ff94 C-CT-N
+C -CT-N2     63.000 112.000 ff94 CA-CT-CT cb 8sep97
+C -CT-NB     70.000 109.500 guess april 11 2000
+C -CT-ND     70.000 109.500 Standard sp3 CT
+C -CT-OH     50.000 109.500 ff94 CT-CT-OH
+C -CT-OS     50.000 109.500 ff94 general CT-X
+C -CT-P      70.000 109.500 std sp3 carbon Dec 4 2000
+C -CT-S      50.000 112.000 guess; basis: ff94 CT-CT-S ff94 CT-CT-SH average
+C -CT-SO     50.000 109.500 sp3 carbon
+C*-CT-H1     50.000 109.500 guess april 11 2000
+C*-CT-N      70.000 109.500 guess april 11 2000
+C -CT-C2     70.000 109.500 sp3 carbon
+C2-CT-C2     70.000 109.500 sp3 carbon April 2005
+C2-CT-CA     70.000 109.500 std sp3 carbon May 9 2001
+C2-CT-CR     70.000 109.500 std sp3 carbon Sept 3 2004
+C2-CT-CT     70.000 109.500 std sp3 carbon mar 13 2001
+C2-CT-CW     70.000 109.500 std sp3 carbon Dec 15 2000
+C2-CT-F      70.000 109.500 std sp3 carbon Jan 14 2003
+C2-CT-H1     50.000 109.500 std sp3 carbon Feb 27 2001
+C2-CT-H2     50.000 109.500 sp3 carbon
+C2-CT-HC     50.000 109.500 std sp3 carbon Dec 15 2000
+C2-CT-HP     50.000 109.500 std sp3 carbon Aug 9 2004
+C2-CT-N      70.000 109.500 std sp3 carbon Jan 07 2003
+C2-CT-N3     70.000 109.500 std sp3 carbon Jan 14 2003
+C2-CT-OH     70.000 109.500 sp3 carbon
+C2-CT-OS     70.000 109.500 sp3 carbon 2 Sept 2004
+C2-CT-S      70.000 109.500 std sp3 carbon Feb 27 2001
+CA-CT-CA     70.000 113.100 RHF/6-41G(d,p) Dec 12 1997
+CA-CT-CC     70.000 109.500 guess april 11 2000
+CA-CT-CC     70.000 109.500 std sp3 carbon Oct 26 2004
+CA-CT-CJ     70.000 109.500 std sp3 carbon Oct 26 2004
+CA-CT-CL     70.000 109.500 guess 25 august 2009
+CA-CT-CM     70.000 109.500
+CA-CT-CR     70.000 109.500 RHF/6-41G(d,p) Dec 12 1997
+CA-CT-CW     70.000 109.500 std Csp3
+CA-CT-F      50.000 109.500 guess 1jan1999
+CA-CT-H1     50.000 109.500 ff94 CA-CT-HC
+CA-CT-H2     50.000 109.500 ff94 CA-CT-HC
+CA-CT-HP     50.000 109.500 guess april 11 2000
+CA-CT-N      63.000 112.000 ff94 CA-CT-CT
+CA-CT-N*     63.000 112.000 ff94 CA-CT-CT
+CA-CT-N2     70.000 109.500
+CA-CT-N3     70.000 109.500 guess april 11 2000
+CA-CT-NB     70.000 109.500 guess april 11 2000
+CA-CT-NC     70.0   109.5 std sp3 carbon June 14 2007
+CA-CT-NJ     70.000 109.500 guess
+CA-CT-NL     70.000 109.500 guess
+CA-CT-OH     50.000 109.500 ff94 general CT-X
+CA-CT-OS     50.000 109.500 ff94 general CT-X
+CA-CT-P      50.000 109.500 guess 1jan1999
+CA-CT-S      50.000 112.000 guess; basis: ff94 CT-CT-S ff94 CT-CT-SH average
+CA-CT-SH     50.000 109.500 guess jun 13 2000
+CA-CT-SO     50.000 109.500
+C2-CT-CC     70.000 109.500 std sp3 carbon Oct 26 2004
+CC-CT-CC     70.000 109.500 std sp3 carbon Aprl 4 2005
+CC-CT-CJ     70.000 109.500 std sp3 carbon Aprl 6 2006
+CC-CT-CM     70.000 109.500 guess april 11 2000
+CC-CT-CR     70.000 109.500 std sp3 carbon Aprl 4 2005
+CC-CT-CW     70.000 109.500 guess jun 28 2000
+CC-CT-F      70.000 109.500 guess April 11 2005
+CC-CT-H1     50.000 109.500 ff94 CA-CT-HC
+CC-CT-H2     50.000 109.500 ff94 CA-CT-HC
+CC-CT-HP     50.000 109.500 std sp3 carbon Dec 6 2000
+CC-CT-N      70.000 109.500 guess april 11 2000
+CC-CT-N*     70.000 109.500 guess Oct 15 2007
+CC-CT-N2     70.000 109.500 guess Nov 18 2008
+CC-CT-N3     70.000 109.500 guess april 11 2000
+CC-CT-OH     70.000 109.500 guess jun 28 2000
+CC-CT-OS     70.000 109.500 guess april 11 2000
+CC-CT-S      50.000 114.700 ff94 CT-CT-S
+CC-CT-SO     70.000 109.500 guess april 11 2000
+CJ-CT-CJ     70.000 109.500 std sp3 carbon apr 2 2001
+CJ-CT-CR     70.000 109.500 standard sp3 carbon may_19_1999
+CJ-CT-CT     70.000 109.500 standard sp3 carbon may_19_1999
+CJ-CT-CW     70.000 109.500 standard sp3 carbon Nov_13_2003
+CJ-CT-F      70.000 109.500 guess 25 august 2009
+CJ-CT-H1     69.011 110.332 by comparison to CJ-CT-HC
+CJ-CT-H2     69.011 110.332 by comparison to CJ-CT-HC
+CJ-CT-HC     69.011 110.332 calc RHF/6-31G(d)
+CJ-CT-HP     69.011 110.332 by comparison to CJ-CT-HC Mar 9 2005
+CJ-CT-N      89.151 112.260 by comparison to CJ-CT-CT
+CJ-CT-N*     89.151 112.260 by comparison to CJ-CT-CT
+CJ-CT-N2     70.000 109.500 standard sp3 carbon Dec_4_2007
+CJ-CT-N3     89.151 112.260 by comparison to CJ-CT-CT
+CJ-CT-OH     50.000 109.500 from CT-CT-OH
+CJ-CT-OS     50.000 109.500 from CT-CT-OH
+CJ-CT-S      50.000 114.700 from CT-C params
+CJ-CT-SO     70.0   109.5 STDn sp3 carbon Mar 22 2005
+CL-CT-CL     70.000 109.500 std CT
+CL-CT-CM     70.000 109.5 Initial guess july 9 2003 1
+CL-CT-CW     70.000 109.5 Initial guess Aug 31 2009
+CL-CT-F      70.000 109.500 std CT
+CL-CT-H1     50.000 109.500 guess
+CL-CT-H2     50.000 109.500 guess
+CL-CT-H3     50.000 109.500 guess
+CL-CT-HP     50.000 109.500 guess Mar 6 2007
+CL-CT-N      70.000 109.500 guess Aug 31 2009
+CL-CT-N3     70.000 109.500 guess Mar 6 2007
+CM-CT-CM     63.000 111.300 ff94 CA-CT-CT; T0 ab initio; arach acid mariat
+CM-CT-CR     70.000 109.500 guess april 11 2000
+CM-CT-CT     63.000 114.000 ff94 CA-CT-CT
+CM-CT-CT     63.000 114.000 ff94 CA-CT-CT; arach acid mariat
+CM-CT-CW     70.000 109.500 guess april 11 2000
+CM-CT-F      70.000 111.300 guess, R0 from MMFF94 min
+CM-CT-H1     50.000 109.500 ff94 CA-CT-HC; arach acid mariat
+CM-CT-H2     50.000 109.500
+CM-CT-HP     50.000 109.500 guess april 11 2000
+CM-CT-N      63.000 112.000 ff94 CA-CT-CT
+CM-CT-N*     70.000 109.500
+CM-CT-N2     70.000 109.500
+CM-CT-N3     70.000 109.500 RHF/6-41G(d,p) Dec 12 1997
+CM-CT-NB     70.000 109.500 guess jun 21 2000
+CM-CT-OH     70.000 109.500
+CM-CT-OS     50.000 109.500 ff94 CT-CT-OS; arach acid mariat
+CM-CT-S      70.000 109.500 guess april 11 2000
+CM-CT-SO     70.000 109.500 guess april 11 2000
+CR-CT-CR     70.000 109.500 guess april 11 2000
+CR-CT-CT     63.000 113.100 ff94 AA his
+CR-CT-CW     70.000 109.500 guess april 11 2000
+CR-CT-F      70.000 109.500 std sp3 carbon Feb 8 2002
+CR-CT-H1     50.000 109.500 by comparision to parm96 data set
+CR-CT-H2     50.000 109.500 by comparision to parm96 data set
+CR-CT-HC     50.000 109.500 ff94 AA his
+CR-CT-HP     50.000 109.500 guess april 11 2000
+CR-CT-N      70.000 110.000 by comparision to parm96 data set
+CR-CT-N*     70.000 109.500 guess July 26 2005
+CR-CT-N2     70.000 109.500 guess april 11 2000
+CR-CT-N3     70.000 109.500 guess april 11 2000
+CR-CT-OH     70.000 109.500 ff94 AA his
+CR-CT-OS     70.000 109.500 guess april 11 2000
+CR-CT-S      70.000 109.500 guess april 11 2000
+CR-CT-SO     70.000 109.500 guess april 11 2000
+CL-CT-CT     70.000 109.500 std CT
+CT-CT-CW     63.000 113.100 ff94 AA his
+CT-CT-F      70.000 111.300 guess
+CT-CT-I      70.000 109.500 std CT
+CT-CT-NA     63.000 113.100 ff94 AA his
+CT-CT-NB     70.000 109.500 guess april 11 2000
+CT-CT-ND     70.000 109.500 std sp3 carbon
+CT-CT-NJ     70.000 109.500 guess
+CT-CT-P      134.000 113.800 calc at RHF/6-31G* level
+CT-CT-SO     50.000 109.500 ff94 general CT-X
+CW-CT-CW     70.000 120.000 guess april 11 2000
+CW-CT-F      70.000 111.300 guess
+CW-CT-H1     50.000 109.500
+CW-CT-H2     50.000 109.500 guess april 11 2000
+CW-CT-HC     50.000 109.500 ff94 AA his
+CW-CT-HP     50.000 109.500 guess april 11 2000
+CW-CT-N      70.000 109.500
+CW-CT-N*     70.000 109.500 guess Oct 15 2007
+CW-CT-N3     70.000 109.500
+CW-CT-NB     70.000 109.500 guess april 11 2000
+CW-CT-OH     70.000 109.500 guess
+CW-CT-OS     70.000 109.500
+CW-CT-P      134.000 113.800 analogy CT-CT-P
+CW-CT-S      60.000 109.500
+CW-CT-SO     60.000 109.500
+F -CT-F      70.000 109.500 std CT
+F -CT-H2     50.000 109.500 std sp3 carbon Feb 7 2002
+F -CT-H3     40.000 109.500 by comp. with F-CT-H1
+F -CT-HP     40.000 109.500 by comp. with F-CT-H1 May 20 2008
+F -CT-N      70.000 109.500 guess Jan 11 2008
+F -CT-N*     70.000 109.500 guess July 31 2007
+F -CT-N3     70.000 109.500 guess april 11 2000
+F -CT-OH     50.000 109.500
+F -CT-OS     50.000 109.500
+F -CT-P      148.000 113.600 calc at RHF/6-31G* level
+F -CT-S      70.000 109.500 guess Feb 15 2005
+F -CT-SO     70.000 109.500 guess april 11 2000
+H1-CT-N3     65.000 115.000 RHF/6-41G(d,p) Dec 12 1997
+H1-CT-NB     50.000 109.500 guess april 11 2000
+H1-CT-ND     70.000 111.400 calc B3PW91/6-31+G** Jan 30 2002
+H1-CT-NL     50.000 109.500 guess
+H1-CT-P      70.000 111.600
+H1-CT-SO     50.000 109.500 ff94 general CT-X
+H2-CT-N      40.000 109.500 sp3 carbon
+H2-CT-N2     50.000 109.500 guess april 11 2000
+H2-CT-N3     50.000 109.500 guess april 11 2000
+H2-CT-NB     50.000 109.500 guess april 11 2000
+H2-CT-OH     50.000 109.500 ff94 CA-CT-HC; thioacetal tet int.
+H2-CT-S      50.000 109.500 ff94 CA-CT-HC; thioacetal tet int.
+H2-CT-SO     40.000 109.500 sp3 carbon
+H3-CT-N      40.000 109.500 sp3 carbon
+H3-CT-N3     50.000 109.500 guess april 11 2000
+H3-CT-OS     50.000 109.500
+H3-CT-S      50.000 109.500 guess april 11 2000
+H3-CT-SO     40.000 109.500 sp3 carbon
+HC-CT-N*     40.000 109.500 sp3 carbon
+HC-CT-OS     40.000 109.500 sp3 carbon June 25 2010
+HC-CT-P      70.000 111.600 calc at B3PW91/6-31G(d)
+HC-CT-S      50.000 109.500 std sp3 carbon Mar 6 2001
+HP-CT-N      50.000 109.500 guess jun 21 2000
+HP-CT-N*     50.000 109.500 guess Jan 13 2009
+HP-CT-N2     50.000 109.500 guess april 11 2000
+HP-CT-NB     50.000 109.500 guess april 11 2000
+HP-CT-NC     50.0   109.5 std sp3 carbon June 14 2007
+HP-CT-OH     50.000 109.500 guess april 11 2000
+HP-CT-OS     50.000 109.500 guess jun 28 2000
+HP-CT-S      70.000 109.500 std sp3 carbon apr 2 2001
+HP-CT-SO     50.000 109.500 guess april 11 2000
+H1-CT-I      50.000 109.500 std CT
+HC-CT-I      50.000 109.500 std CT
+I -CT-I      70.000 109.500 std CT
+N -CT-N      63.000 112.000 by comparision to N-CT-CA
+N -CT-N3     70.000 109.500 guess april 11 2000
+N -CT-NB     70.000 109.500 guess april 11 2000
+N -CT-OH     70.000 109.500
+N -CT-OS     70.000 109.500
+N -CT-P      70.000 111.600
+N -CT-S      50.000 114.700 RHF/6-41G(d,p) Dec 12 1997
+N -CT-SO     50.000 109.500 sp3 carbon
+N*-CT-N      70.000 109.500 std sp3 carbon Apr 04 2008
+N*-CT-N*     70.000 109.500 std sp3 carbon Jul 26 2005
+N*-CT-N2     70.000 109.500 std sp3 carbon Mar 10 2008
+N*-CT-N3     70.000 109.500 std sp3 carbon Feb 2 2006
+N*-CT-OH     70.000 109.500 std sp3 carbon Sep 14 2009
+N*-CT-P      70.000 109.500 std sp3 carbon Feb 14 2001
+N*-CT-S      70.000 109.500 std sp3 carbon mar 28 2001
+N*-CT-SO     70.000 109.500 guess jun 28 2000
+N2-CT-N2     70.000 109.500 sp3 carbon 8 July 2003
+N2-CT-N3     70.000 109.500 sp3 carbon 2 June 2005
+N2-CT-OS     70.000 109.500 guess april 11 2000
+N2-CT-S      70.000 109.500 guess april 11 2000
+N3-CT-N3     70.000 109.500 std sp3 carbon Jan 15 2001
+N3-CT-NB     70.000 109.500 guess april 11 2000
+N3-CT-OH     70.000 109.500 guess Aug 7 2000
+N3-CT-OS     70.000 109.500 guess april 11 2000
+N3-CT-S      70.000 109.500 guess april 11 2000
+N3-CT-SO     70.000 109.500 guess april 11 2000
+NB-CT-NB     70.000 109.500 guess april 11 2000
+NB-CT-OS     70.000 109.500 guess jun 21 2000
+NB-CT-SO     70.000 109.500 std sp3 carbon Sept 14 2001
+NJ-CT-NJ     70.000 120.000 guess
+OH-CT-OH     70.000 109.500
+OH-CT-OS     70.000 109.500
+OH-CT-P      70.000 109.500 jan 2006 guess
+OH-CT-S      50.000 114.700 ff94 CT-CT-S ; thioacetal tet int.
+OH-CT-SH     70.000 109.500 guess april 11 2000
+OS-CT-OS     70.000 109.500 guess april 11 2000
+OS-CT-P      70.000 109.500 std sp3 carbon Dec 5 2000
+OS-CT-S      70.000 109.500 guess april 11 2000
+OS-CT-SO     70.000 109.500 std sp3 carbon Jan 29 2001
+S -CT-S      70.000 109.500 guess jun 21 2000
+S -CT-SO     70.000 109.500 std sp3 carbon Feb 21 2001
+BR-CW-CC     70.000 125.000
+BR-CW-N*     70.000 120.000 std sp2 carbon Feb 17 2005
+BR-CW-S      70.000 120.000 std sp2 carbon Dec 10 2003
+C -CW-CA     70.000 120.000 guess april 11 2000
+C -CW-CC     70.000 120.000 std aromatic
+C -CW-CM     70.000 120.000 std sp2 carbon apr 20 2001
+C -CW-CR     70.000 120.000 guess april 11 2000
+C -CW-CT     70.000 120.000 guess april 11 2000
+C -CW-CW     70.000 120.000 guess april 11 2000
+C -CW-HA     50.000 120.000 guess april 11 2000
+C -CW-N      70.000 120.000 std aromatic May 19 2006
+C -CW-N*     70.000 120.000 std aromatic
+C -CW-N2     70.000 120.000 std aromatic
+C -CW-NA     70.000 120.000 std aromatic
+C -CW-NC     70.000 120.000 std sp2 carbon apr 24 2001
+C -CW-OS     70.000 120.000 guess april 11 2000
+C -CW-S      70.000 120.000 guess april 11 2000
+C2-CW-CC     70.000 120.000 std sp2 carbon Dec 21 2000
+C2-CW-N*     70.000 120.000 std sp2 carbon Dec 21 2000
+C2-CW-NA     70.000 120.000 std sp2 carbon mar 13 2001
+C2-CW-OS     70.000 120.000 std sp2 carbon April 1 2003.
+C2-CW-S      70.000 120.000 std sp2 carbon July 18 2002
+CA-CW-CB     70.000 120.000 std aromatic Nov 3 2008
+CA-CW-CC     70.000 120.000 std aromatic
+CA-CW-CR     70.000 120.000 std sp2 carbon; 3 June 2005
+CA-CW-CW     70.000 120.000 std sp2 carbon; Nov 24 2006
+CA-CW-N      70.000 120.000 guess april 11 2000
+CA-CW-N*     70.000 120.000 guess april 11 2000
+CA-CW-N2     70.000 120.000 guess Jan 9 2008
+CA-CW-NA     70.000 120.000 std aromatic
+CA-CW-NB     70.000 120.000 std aromatic: Nov 24 2006
+CA-CW-OS     70.000 120.000 guess april 11 2000
+CA-CW-S      70.000 120.000 std sp2 carbon Feb 13 2001
+CA-CW-SO     70.000 120.000 std sp2 carbon May 17 2001
+CB-CW-CC     70.000 120.000 std sp2 carbon Jan 9 2007
+CB-CW-CW     70.000 120.000 std sp2 carbon Nov 3 2008
+CB-CW-HA     50.000 120.000 guess Mar 27 2009
+CB-CW-NA     70.000 120.000 std sp2 carbon Jan 9 2007
+CC-CW-CC     70.000 120.000 guess april 11 2000
+CC-CW-CL     70.000 120.000 std sp2 carbon 1 April 2003.
+CC-CW-CM     70.000 120.000 std sp2 carbon mar 13 2001
+CC-CW-CP     70.000 120.000 std sp2; 19 May 2005
+CC-CW-CR     70.000 125.000
+CC-CW-CT     70.000 120.000 std aromatic
+CC-CW-CW     70.000 125.000
+CC-CW-F      70.000 120.000 std sp2 carbon Nov 25 2004
+CC-CW-HA     50.000 120.000 guess april 11 2000
+CC-CW-N      70.000 120.000 guess april 11 2000
+CC-CW-N*     70.000 125.000
+CC-CW-N2     70.000 120.000 std aromatic
+CC-CW-N3     70.000 120.000 guess april 11 2000
+CC-CW-NB     70.000 125.000
+CC-CW-NC     70.000 120.000 std sp2 carbon apr 24 2001
+CC-CW-O2     70.000 120.000 std sp2 carbon Sept 14 2001
+CC-CW-OS     70.000 125.000
+CC-CW-S      70.000 125.000
+CC-CW-SO     70.000 125.000
+CL-CW-NA     70.000 120.000 std sp2 carbon Dec 6 2005
+CL-CW-OS     70.000 120.000 std sp2 carbon 1 April 2003.
+CM-CW-NA     70.000 120.000 std sp2 carbon mar 13 2001
+CM-CW-OS     70.000 120.000 std sp2 carbon May 11 2001
+CM-CW-S      70.000 120.000 std sp2 carbon May 11 2001
+CP-CW-H4     40.000 120.000 ff94 C*-CW-H4
+CP-CW-S      70.000 120.000 std aromatic
+CR-CW-CR     70.000 120.000 guess april 11 2000
+CR-CW-CW     70.000 120.000 std aromatic
+CR-CW-H4     50.000 120.000 std aromatic
+CR-CW-N      70.000 120.000 std aromatic Sept 17 2010
+CR-CW-N*     70.000 120.000 guess april 11 2000
+CR-CW-NA     70.000 120.000 std aromatic
+CR-CW-NB     70.000 120.000 std aromatic
+CR-CW-OS     70.000 120.000 guess april 11 2000
+CR-CW-S      70.000 120.000 guess april 11 2000
+CT-CW-N      70.000 120.000 guess april 11 2000
+CT-CW-N*     70.000 125.000 ff94 CT-C*-CW
+CT-CW-N2     70.000 120.000 guess June 29 2007
+CT-CW-NA     70.000 120.000 std aromatic
+CT-CW-OS     70.000 120.000 std aromatic
+CT-CW-S      70.000 120.000
+CW-CW-CW     70.000 120.000 std sp2 carbon Feb 20 2001
+CW-CW-H4     50.000 120.000 std sp2 carbon Nov 24 2006 D
+CW-CW-HA     50.000 120.000 std sp2 carbon Feb 20 2001
+CW-CW-N      70.000 120.000 std sp2 carbon Sept 18 2009
+CW-CW-N*     70.000 120.000 std sp2 carbon Oct 3 2001
+CW-CW-NA     70.000 120.000 guess april 11 2000
+CW-CW-NB     70.000 120.000 std sp2 carbon Feb 20 2001
+CW-CW-OS     70.000 120.000 guess april 11 2000
+CW-CW-S      70.000 120.000 std aromatic
+F -CW-N*     70.000 120.000 std sp2 carbon, Feb 17 2005
+F -CW-S      70.000 120.000 std sp2 carbon, Nov 25 2004
+H4-CW-N      70.000 120.000 guess april 11 2000
+H4-CW-N*     40.000 120.000 std aromatic
+H4-CW-NB     70.000 120.000 std aromatic Nov 24 2006
+H4-CW-OS     40.000 120.000 std aromatic
+H4-CW-S      40.000 120.000 std aromatic
+N*-CW-N      70.000 120.000 std sp2 aromatic Sept 18 2009
+N -CW-N2     70.000 120.000 std sp2 aromatic Oct 31 2007
+N -CW-NC     70.000 120.000 std sp2 aromatic Jan 9 2007
+N -CW-OS     70.000 120.000 guess april 11 2000
+N -CW-S      70.000 120.000 std sp2 aromatic Feb 2 2004
+N*-CW-N2     70.000 120.000 std aromatic
+N*-CW-NA     70.000 120.000 std sp2 carbon Feb 20 2001
+N*-CW-NC     70.000 120.000 std sp2 carbon Jan 9 2007
+N*-CW-OS     70.000 120.000 std sp2 carbon feb 20 2001
+N*-CW-S      70.000 120.000 std sp2 carbon Feb 13 2001
+H4-CW-N2     50.000 120.000 guess; 3 June 2005
+N2-CW-N2     70.000 120.000 std sp2 carbon; May 14 2008
+N2-CW-NA     70.000 120.000 std sp2 carbon; July 4 2005
+N2-CW-OS     70.000 120.000 guess; July 29 2005
+N2-CW-S      70.000 120.000 std sp2 carbon 4 sep 2001
+N3-CW-NA     70.000 120.000 guess april 11 2000
+N3-CW-OS     70.000 120.000 guess april 11 2000
+N3-CW-S      70.000 120.000 guess sept 26 2003
+N -CW-NA     70.000 120.000 std sp2; 16 May 2005
+NA-CW-NA     70.000 120.000 std sp2; 11 May 2010
+NA-CW-NB     70.000 120.000 std aromatic
+NA-CW-NC     70.000 120.000 std aromatic Jan 9 2007
+NA-CW-OS     70.000 108.000
+NA-CW-S      70.000 120.000 guess nov29 2000
+NA-CW-SO     70.000 120.000 guess std sp2 Sep 16 2003
+NB-CW-OS     70.000 120.000 std aromatic
+NC-CW-OS     70.000 120.000 std sp2 carbon apr 24 2001
+O2-CW-OS     70.000 120.000 guess Sept 14 2001
+OS-CW-OS     70.000 120.000 guess april 11 2000
+OS-CW-S      70.000 120.000 std aromatic
+S -CW-S      70.000 120.000 guess april 11 2000
+S -CW-SO     70.000 120.000 std sp2 carbon apr 24 2001
+C -N -C      70.000 120.000 sp2 nitrogen
+C -N -CA     70.000 121.900 ff94 C-N-CT cb 6jan97
+C -N -CB     70.000 120.000 sp2 nitrogen aug 29 2003
+C -N -CC     70.000 121.900 ff94 C-N-CT cb 6jan97
+C -N -CJ     50.000 121.900 from C-N-CT
+C -N -CM     70.000 120.000 guess april 11 2000
+C -N -CP     70.000 120.000 guess nov 2 2005
+C -N -CR     70.000 120.000 std aromatic
+C -N -CW     70.000 120.000 guess april 11 2000
+C -N -N      70.000 121.500 from RHF/6-31G(d) opt estimated force constant april 11 2000
+C -N -N2     70.000 120.000 guess June 29 2007
+C -N -N3     70.000 120.000 guess april 11 2000
+C -N -NA     70.000 120.000 guess Apr 9 2009
+C -N -NB     70.000 120.000 guess jun 21 2000
+C -N -NC     70.000 120.000 guess april 11 2000
+C -N -O2     70.000 120.000 guess april 11 2000
+C -N -OS     70.000 120.000 guess april 11 2000
+C -N -S      70.000 116.000 RHF/6-31G(d) Mar 6 2007
+C -N -SO     70.000 113.000 guess april 11 2000
+CA-N -CA     70.000 120.000 guess jun 28 2000
+CA-N -CB     70.000 120.000 sp2 n; 27 april 2006
+CA-N -CC     70.000 120.000 std sp2 nitrogen May 8 2001
+CA-N -CJ     70.000 120.000 std sp2 nitrogen Oct 20 2004
+CA-N -CM     70.000 120.000 guess april 11 2000
+CA-N -CR     70.000 120.000 guess april 11 2000
+CA-N -CT     70.000 121.900 ff94 C-N-CT cb 6jan97
+CA-N -CW     70.000 120.000 guess april 11 2000
+CA-N -H      50.000 120.000 amidopyridine, ff94 C-N-H
+CA-N -N2     70.000 120.000 guess June 29 2007
+CA-N -N3     70.000 120.000 guess jun 28 2000
+CA-N -NB     70.000 120.000 guess june 29 2007
+CA-N -NC     70.000 120.000 guess jun 28 2000
+CB-N -CR     70.000 120.000 std sp2 Nitrogen Jan 9 2008
+CB-N -CT     70.000 120.000 std sp2 Nitrogen Mar 8 2004
+CB-N -CW     70.000 120.000 std sp2 Nitrogen May 19 2006
+CB-N -H      50.000 120.000 guess aug 29 2003
+CB-N -O2     70.000 120.000 std sp2 Nitrogen Oct 14 2008
+CC-N -CC     70.000 120.000 guess July 23 2010
+CC-N -CT     70.000 120.000 guess april 11 2000
+CC-N -CT     70.000 120.000 guess april 11 2000
+CC-N -CW     70.000 120.000 std sp2 nitrogen May 8 2001
+CC-N -H      50.000 120.000 ff94 C-N-H
+CJ-N -CJ     70.000 120.000 std sp2 nitrogen Sept 27 2005;
+CJ-N -CT     70.000 120.000 std sp2 nitrogen Oct 20 2004
+CJ-N -H      50.000 118.040 from CT-N-H
+CM-N -CM     70.000 120.000 std sp2 nitrogen apr 24 2001
+CM-N -CT     70.000 120.000 guess april 11 2000
+CM-N -H      50.000 120.000 guess april 11 2000
+CM-N -N      70.000 120.000 std sp2 nitrogen apr 20 2001
+CM-N -NC     70.000 120.000 guess jun 28 2000
+CP-N -H      70.000 120.000 guess Nov 2 2005
+CR-N -CT     70.000 120.000 guess april 11 2000
+CR-N -CW     70.000 120.000 guess Feb 1 2010
+CR-N -H      50.000 120.000 ff94 C-N-H
+CR-N -S      70.000 120.000 guess Sept 4 2003
+CT-N -CW     70.000 120.000 guess april 11 2000
+CT-N -N      70.000 115.600 from RHF/6-31G(d) opt estimated force constant april 11 2000
+CT-N -N2     70.000 120.000 guess June 29 2007
+CT-N -N3     70.000 120.000 guess april 11 2000
+CT-N -NA     70.000 120.000 guess Apr 9 2009
+CT-N -NB     70.000 120.000 guess jun 21 2000
+CT-N -NC     70.000 120.000 guess april 11 2000
+CT-N -O2     70.000 120.000 guess april 11 2000
+CT-N -OS     70.000 120.000 guess april 11 2000
+CT-N -S      70.000 120.000 RHF/6-31G(d) Mar 6 2007
+CW-N -CW     70.000 120.000 guess May 19 2006
+CW-N -H      50.000 120.000 guess april 11 2000
+H -N -N      50.000 120.000 guess april 11 2000
+H -N -NB     50.000 120.000 guess Jan 9 2007
+H -N -NC     50.000 120.000 guess Oct 23 2006
+H -N -OS     70.000 120.000 guess april 11 2000
+H -N -N3     70.000 120.000 guess June 25 2009
+C -N*-CA     70.000 120.000 ff94 std aromatic
+C -N*-CR     70.000 120.000 ff94 CN-NA-CW
+C*-N*-CT     70.000 120.000 RHF/6-31G(d) Mar 7 2007
+C*-N*-CW     70.000 120.000 RHF put it at 115 but it is in a ring use std sp2 nitrogen
+CA-N*-CA     70.000 120.000
+CA-N*-CB     70.000 120.000 guess april 11 2000
+CA-N*-CR     70.000 120.000 guess april 11 2000
+CA-N*-CT     70.000 120.000 ff94 std aromatic
+CA-N*-CW     70.000 120.000 guess april 11 2000
+CA-N*-H      50.000 120.000 sp2 nitrogen
+CA-N*-NB     70.000 120.000 guess april 11 2000
+CB-N*-CB     70.000 120.000 ff94 std aromatic CIB 2013mar
+CB-N*-CJ     70.000 120.000 guess June 29 2007
+CB-N*-CM     70.000 120.000 ff94 std aromatic
+CB-N*-CR     70.000 120.000 std sp2 nitrogen Mar 7 2001
+CB-N*-CT     70.000 125.800 ff94 CB-N*-CT
+CB-N*-CW     70.000 120.000 ff94 std aromatic
+CB-N*-NB     70.000 120.000 std aromatic
+CC-N*-CR     70.000 120.000 std aromatic Jan 9 2007
+CC-N*-CT     70.000 120.000 std aromatic July 14 2008
+CC-N*-CW     70.000 120.000 std aromatic Jan 9 2007
+CC-N*-NB     70.000 120.000 std aromatic July 14 2008
+CJ-N*-CR     70.000 120.000 guess June 29 2007
+CJ-N*-CW     70.000 126.000 calc B3LYP/6-31G(d,p) Apr 24 2008
+CM-N*-CR     70.000 120.000 guess april 11 2000
+CM-N*-CW     70.000 120.000 ff94 std aromatic
+CM-N*-NB     70.000 120.000 guess april 11 2000
+CR-N*-CR     70.000 120.000 guess april 11 2000
+CR-N*-CT     70.000 125.800 ff94 CB-N*-CT
+CR-N*-CW     70.000 120.000 std aromatic
+CR-N*-NB     70.000 120.000 guess april 11 2000
+CR-N*-NC     70.000 120.000 guess april 11 2000
+CR-N*-OS     70.000 120.000 guess april 11 2000
+CT-N*-CW     70.000 125.000 ff94 CT-C*-CW
+CT-N*-CW     70.000 125.000 ff94 CT-C*-CW
+CT-N*-H      50.000 120.000 sp2 nitrogen
+CT-N*-NB     70.000 120.000 ff94 std aromatic
+CW-N*-CW     70.000 120.000 std aromatic
+CW-N*-NB     70.000 120.000 std aromatic
+CW-N*-NC     70.000 120.000 std aromatic
+CW-N*-OS     70.000 120.000 guess april 11 2000
+NB-N*-NB     70.000 120.000 std sp2 nitrogen; 25 April 2005
+NB-N*-NC     70.000 120.000 guess may 4 2000
+C -N2-C      70.000 120.000 std sp2; 22 April 2005
+C -N2-CW     70.000 120.000 sp2 N; 3 June 2005
+C -N2-H      35.000 120.000 sp2 N (like parm94 ARG), 30 Sept 2004
+C -N2-CA     70.000 120.000 sp2 N; 15 April 2005
+CA-N2-CA     70.000 120.000
+CA-N2-CB     70.000 120.000 sp2 N; 27 April 2006
+CA-N2-CC     70.000 120.000 std sp2 atom March 25 2004
+CA-N2-CJ     70.000 116.000 from fit to rhf/6-31G* June 29 2007
+CA-N2-CM     70.000 120.000
+CA-N2-CR     70.000 120.000 guess april 11 2000
+CA-N2-CW     70.000 120.000 guess april 4 2005
+CA-N2-N      70.000 120.000 std sp2; June 29 2007
+CA-N2-NB     70.000 120.000 std sp2; 11 Aug 2005
+CA-N2-O2     70.000 117.700 from fit to rhf/6-31G* from T.Halgren 1/26/99
+CA-N2-SO     70.000 120.000
+CB-N2-CR     70.000 120.000 guess Mar 6 2007
+CC-N2-CC     70.000 120.000 std sp2 June 29 2007
+CC-N2-CR     70.000 120.000 std sp2 nitrogen; May 15 2008
+CC-N2-CT     70.000 120.000 std sp2
+CC-N2-CW     70.000 120.000 std sp2 nitrogen; May 15 2008
+CC-N2-H      50.000 120.000 std sp2
+CC-N2-N      70.000 120.000 std sp2 June 29 2007
+CM-N2-CT     70.000 120.000 ff94 CB-N*-CT cb 8sep97
+CM-N2-H      50.000 120.000 ff94 CW-NA-H cb 8sep97
+C -N2-CR     70.000 120.000 std sp2 nitrogen; Oct 5 2005
+CM-N2-CR     70.000 120.000 std sp2 nitrogen; Oct 5 2005
+CR-N2-CR     70.000 120.000 std sp2 nitrogen; July 4 2005
+CR-N2-CT     70.000 120.000
+CR-N2-CW     70.000 120.000 std sp2 nitrogen; July 4 2005
+CR-N2-H      50.000 120.000 guess april 11 2000
+CR-N2-NB     70.000 120.000 std sp2; 11 Aug 2005
+C -N2-CT     70.000 120.000 std sp2, Sept 30 2004
+CT-N2-CT     70.000 120.000
+CT-N2-CW     70.000 120.000 std sp2
+CT-N2-O2     70.000 120.000 guess april 11 2000
+CT-N2-SO     70.000 120.000
+CW-N2-CW     70.000 120.000 std sp2 nitrogen; 3 June 2005
+CW-N2-H      50.000 120.000 ff94 CW-NA-H cb 8sep97
+CW-N2-NB     70.000 120.000 June 29 2007
+H -N2-SO     70.000 120.000
+O2-N2-O2     70.000 124.500 from fit to rhf/6-31G* from T.Halgren 1/26/99
+C -N3-CT     70.000 109.500
+CA-N3-CA     70.000 109.500 guess april 11 2000
+CA-N3-CC     70.000 109.500 guess april 11 2000
+CA-N3-CR     70.000 109.500 guess april 11 2000
+CA-N3-CT     70.000 109.500 guess april 11 2000
+CA-N3-CW     70.000 109.500 guess april 11 2000
+CA-N3-H      50.000 109.500 guess april 11 2000
+CA-N3-SO     78.000 117.000 similar to CT-N3-SO RHF/6-41G(d,p) Dec 12 1997
+CC-N3-CT     70.000 109.500 guess april 11 2000
+CC-N3-H      50.000 109.500 guess april 11 2000
+CJ-N3-CJ     106.940 118.749 from CJ-CJ-CJ april 11 2000
+CJ-N3-CT     70.000 109.500 guess april 11 2000
+CJ-N3-H      63.445 117.277 from CJ-CJ-HC april 11 2000
+CJ-N3-SO     70.000 109.500 guess april 11 2000
+CR-N3-CT     70.000 109.500 guess april 11 2000
+CR-N3-H      50.000 109.500 guess april 11 2000
+CT-N3-CT     115.000 110.000
+CT-N3-CW     70.000 109.500 guess april 11 2000
+CT-N3-N      70.000 110.000 guess april 11 2000
+CT-N3-N3     1106.89 114.75 Calc MP2/6-31G(d,p) Jan 9 2008
+CT-N3-O2     70.000 109.500 guess Mar 6 2007
+CT-N3-SO     78.000 117.000 RHF/6-41G(d,p) Dec 12 1997
+CW-N3-H      50.000 109.500 guess april 11 2000
+H -N3-N3     200.000 109.500
+H -N3-SO     85.000 111.000 RHF/6-41G(d,p) Dec 12 1997
+N3-N3-SO     70.000 109.500 std sp3 nitrogen Sept 14 2001
+NB-N3-SO     70.000 109.500 Stn. sp3 nitrogen Sept 14 2001
+CA-NA-CA     70.000 120.000 std aromatic
+CA-NA-CB     70.000 120.000 std aromatic
+CA-NA-CC     70.000 120.000 std aromatic
+CA-NA-CP     70.000 120.000 std aromatic
+CA-NA-CR     70.000 120.000 std aromatic
+CA-NA-CW     70.000 120.000
+CB-NA-CB     70.000 120.000 std sp2 nitrogen; 4 May 2005
+CB-NA-CR     70.000 120.000 std aromatic
+CB-NA-CW     70.000 120.000 std aromatic
+CB-NA-H      50.000 123.100 indole, ff94 CN-NA-H
+CB-NA-NB     70.000 120.000 std sp2 carbon aug 29 2003
+CC-NA-CC     70.000 120.000 std sp2 nitrogen; 3 June 2005
+CC-NA-CW     70.000 120.000 std sp2 carbon Feb 20 2001
+CC-NA-N      70.000 120.000 std sp2 nitrogen Apr 9 2009
+CC-NA-NB     70.000 120.000 sp2 nitrogen guess; 14 July 2005
+CR-NA-CR     70.000 120.000 guess april 11 2000
+CR-NA-NB     70.000 120.000 std aromatic
+CR-NA-NC     70.000 120.000 std aromatic
+CW-NA-CW     70.000 120.000 std aromatic
+CW-NA-H      50.000 123.100 indole, ff94 CW-NA-H
+CW-NA-N      70.000 120.000 std sp2 aromatic 9 April 2009
+CW-NA-NB     70.000 120.000 std sp2 aromatic 2 April 2003
+CP-NA-H      50.000 120.000 std sp2 center 13 April 2005
+H -NA-N      50.000 120.000 std aromatic
+H -NA-NB     50.000 120.000 std aromatic
+NB-NA-NB     70.000 120.000 guess april 11 2000
+H -NA-NC     50.000 120.000 std sp2 center
+C -NB-C      70.000 120.000 guess May 20 2008
+C -NB-CC     70.000 120.000 guess June 29 2007
+C -NB-CM     70.000 120.000 guess april 11 2000
+C -NB-CR     70.000 120.000 guess april 11 2000
+C -NB-CT     70.000 120.000 std sp2 nitrogen june 8 2001 (checked at B3LYP/6-31G(d))
+C -NB-CW     70.000 120.000 std sp2 nitrogen Mar 6 2007
+C -NB-H      50.000 110.000 R0 from BP86/tzp(DeFT) thioimidate
+C -NB-N      70.000 120.000 std sp2 nitrogen guess; June 29 2007
+C -NB-NB     70.000 120.000 guess april 11 2000
+C -NB-OS     70.000 120.000 std sp2 nitrogen guess; 2 June 2005
+C*-NB-SO     40.000 120.000 RHF/6-31G(d) Mar 7 2007
+CA-NB-CC     70.000 120.000
+CA-NB-CR     70.000 120.000 guess april 11 2000
+CA-NB-H      50.000 120.000 std sp2 center; 15 April 2005
+CA-NB-NB     70.000 120.000 guess april 11 2000
+CB-NB-CR     70.000 120.000 std aromatic
+CB-NB-H      50.000 120.000 std sp2 N; 19 July 2005
+CB-NB-NB     70.000 120.000 std aromatic
+CC-NB-CT     70.000 120.000 guess april 11 2000
+CC-NB-H      50.000 120.000 guess april 11 2000
+CC-NB-N      70.000 120.000 std aromatic June 29 2007
+CC-NB-NB     70.000 120.000 std aromatic
+CC-NB-OS     70.000 120.000 std aromatic
+CC-NB-S      70.000 120.000 std aromatic
+CM-NB-CM     70.000 115.000 from RHF/6-31G(d) opt estimated force constant april 11 2000
+CM-NB-CR     70.000 120.000 guess april 11 2000
+CM-NB-CT     70.000 120.000 guess april 11 2000
+CM-NB-NB     70.000 120.000 guess april 11 2000
+CR-NB-CR     70.000 120.000 std aromatic
+CR-NB-CT     70.000 120.000 guess april 11 2000
+CR-NB-CW     70.000 120.000 std aromatic
+CR-NB-H      50.000 120.000 guess april 11 2000
+CR-NB-N      70.000 120.000 guess jun 21 2000
+CR-NB-N*     70.000 120.000 std sp2 center; 25 April 2005
+CR-NB-N2     70.0   120.000 std sp2 nitrogen June 14 2007
+CR-NB-NA     70.000 120.000 guess april 11 2000
+CR-NB-NB     70.000 120.000 std aromatic
+CR-NB-OS     70.000 120.000 std aromatic
+CR-NB-S      70.000 120.000 RHF/6-31G(d) opt geom april 11 2000
+CR-NB-SO     70.000 120.000 std aromatic
+CT-NB-NB     70.000 120.000 guess april 11 2000
+CW-NB-NB     70.000 120.000 guess Mar 6 2007
+CW-NB-OS     70.000 120.000 guess Nov 24 2006
+N*-NB-NB     70.000 120.000 std aromati
+N2-NB-NB     70.000 120.000 std sp2; 11 Aug 2005
+N3-NB-NB     70.000 120.000 guess Sept 14 2001
+NA-NB-NB     70.000 120.000 std aromatic
+NB-NB-NB     70.000 120.000 std aromatic
+NB-NB-OS     70.000 120.000 guess april 11 2000
+NB-NB-SO     70.000 120.000 std sp2 nitrogen Sept 14 2001
+C -NC-CB     70.000 120.000 guess april 11 2000
+C -NC-CR     70.000 120.000 guess Aug 27 2001
+CA-NC-CA     70.000 120.000 std aromatic
+CA-NC-CC     70.000 120.000 std aromatic
+CA-NC-CP     70.000 120.000 std aromatic
+CA-NC-CR     70.000 120.000 guess april 11 2000
+CA-NC-CT     70.0   120.000 std sp2 nitrogen June 14 2007
+CA-NC-CW     70.000 120.000 std sp2 nitrogen apr 24 2001
+CA-NC-H      50.000 120.000 std aromatic (for protonated pyridine)
+CA-NC-N      70.000 120.000 guess april 11 2000
+CA-NC-N*     70.000 120.000 guess may 4 2000
+CA-NC-NA     70.000 120.000 std sp2 nitrogen;
+CA-NC-NC     70.000 120.000 std sp2 nitrogen; 15 Nov 2005
+CA-NC-O2     70.000 120.000 std sp2 nitrogen aug 29 2003
+CA-NC-OS     70.000 120.000 std sp2 nitrogen apr 2 2001
+CB-NC-CP     70.000 120.000 guess Aug 7 2000
+CB-NC-CR     70.000 120.000 std aromatic
+CB-NC-CW     70.000 120.000 std aromatic July 14 2008
+CB-NC-NC     70.000 120.000 std sp2 nitrogen 6 April 2005
+CC-NC-CR     70.000 120.000 std aromatic
+CP-NC-CP     70.000 120.000 guess Jan 9 2007
+CP-NC-CR     70.000 120.000 guess may 4 2000
+CP-NC-N      70.000 120.000 guess Aug 30 2010
+CP-NC-OS     70.000 120.000 guess nov 14 2003
+CR-NC-CR     70.000 120.000 guess april 11 2000
+CR-NC-H      50.000 120.000 guess april 03 2006
+CR-NC-N      70.000 120.000 guess april 11 2000
+CR-NC-N*     70.000 120.000 guess april 11 2000
+CR-NC-NA     70.000 120.000 std aromatic
+CR-NC-NC     70.000 120.000 guess april 11 2000
+C -ND-CT     25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CA-ND-CA     25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CA-ND-CC     25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CA-ND-CR     25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CA-ND-CT     25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CA-ND-CW     25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CA-ND-H      25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CC-ND-CT     25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CC-ND-H      25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CR-ND-CT     25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CR-ND-H      25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CT-ND-CT     25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CT-ND-CW     25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CT-ND-N      25.000 110.000 Temp fit to MP2 like behavour Jan 16 2002
+CW-ND-H      25.000 115.000 Temp fit to MP2 like behavour Jan 16 2002
+CT-NJ-NJ     70.000 120.000 guess
+CA-NL-NL     70.000 180.000 guess
+CT-NL-NL     70.000 180.000 guess
+NL-NL-NL     70.000 180.000 guess
+C -OH-HX     35.0   113.000 Same as parm94_simmerling C -OH-HO. 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+CA-OH-HO     40.000 113.000 ff94 C-OH-HO
+CA-OH-HX     40.000 113.000 Analog to CA-OH-HO, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+CJ-OH-HO     70.000 107.500 calc RHF/6-311G(d) Dec 1 2004
+CM-OH-HO     50.000 109.500 std sp3 oxygen Dec 15 2000
+CM-OH-HX     50.000 109.500 Analog to CM-OH-HO, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+CR-OH-HO     50.000 120.000 guess april 11 2000
+CR-OH-HX     50.000 120.000 Analog to CR-OH-HO, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+CT-OH-HX     55.0   108.50 Same as CT-OH-HO parm94_simmerling, 28 Sept 2004.
+HO-OH-HO     55.0   108.50 Same as CT-OH-HO parm94_simmerling, for Cationic OH group Oct 3 2009
+HX-OH-P      45.0   108.50 Same as HO-OH-P parm94_simmerling, 28 Sept 2004
+HX-OP-HX     35.0   109.50 From B3LYP(eps=80) calc on H3O+. Mar2008
+C -OS-C      70.000 120.000 guess april 11 2000
+C -OS-CA     70.000 120.000 guess april 11 2000
+C -OS-CB     70.000 120.000 guess june 3 2003
+C -OS-CT     46.500 113.000 ff94 CA-OS-CT
+C -OS-CW     70.000 120.000 guess april 11 2000
+C -OS-NB     70.000 120.000 guess april 11 2000
+C -OS-P      70.000 127.000 RHF/6-31G(d,p) opt Sept 11 2009
+C -OS-SO     70.000 120.000 guess april 11 2000
+C*-OS-CT     46.500 113.000 analogy CA-OS-CT ** Gro, JACS,V112,4165('90)
+CA-OS-CA     70.000 120.000
+CA-OS-CB     70.000 120.000 guess nov29 2000
+CA-OS-CC     70.000 120.000 guess Sept 21 2001
+CA-OS-CM     70.000 109.500 guess Sept13 2000
+CA-OS-CP     70.000 120.000 sp2 center; 13 April 2005
+CA-OS-CR     70.000 108.500 From CA-OS-NB Jan 16 2004
+CA-OS-CT     46.500 113.000 ** Gro, JACS,V112,4165('90)
+CA-OS-CW     70.000 120.000
+CA-OS-NB     70.000 108.500 calc RHF/6-31G(d) (estimated force constant)
+CA-OS-P      100.00 120.500 ff94 CT-OS-P
+CA-OS-SO     100.0  122.500 RHF/6-31G(d) opt scan June 14 2007
+CB-OS-CB     70.000 120.000 std sp2 center; 13 April 2005
+CB-OS-CC     70.000 120.000 std aromatic July 14 2008
+CB-OS-CR     70.000 120.000 std aromatic
+CB-OS-CW     70.000 120.000 std aromatic
+CB-OS-NB     70.000 120.000 std aromatic Jan 7 2008
+CC-OS-CC     70.000 120.000 std aromatic June 9 2010
+CC-OS-CR     70.000 120.000 std aromatic
+CC-OS-CT     46.500 113.000 from CA-OS-CT April 28 2005
+CC-OS-CW     70.000 120.000 std sp2 oxygen JAN 5 2001
+CC-OS-N      70.000 120.000 guess april 11 2000
+CC-OS-NB     70.000 120.000 guess april 11 2000
+CA-OS-CJ     70.000 120.000 guess; 26 April 2006
+CJ-OS-CT     70.000 120.000 guess Dec 16 2004
+CM-OS-CT     46.500 113.000 from CA-OS-CT ** Gro, JACS,V112,4165('90)
+CM-OS-CW     70.000 120.000 std sp2 oxygen Apr 24 2001
+CM-OS-SO     70.000 120.000 std aromatic
+CR-OS-CR     70.000 120.000 guess april 11 2000
+CR-OS-CT     46.500 113.000 ff94 CA-OS-CT
+CR-OS-CW     70.000 120.000 std aromatic
+CR-OS-NB     70.000 120.000 std aromatic
+CT-OS-CW     70.000 120.000 std aromatic
+CT-OS-N      70.000 109.500 guess jun 21 2000
+CT-OS-NB     70.000 120.000 std aromatic
+CT-OS-P      70.000 120.000 RHF/6-31G(d,p) Sept 9 2009
+CT-OS-SO     70.000 120.000 std aromatic
+CW-OS-CW     70.000 120.000 std aromatic
+CW-OS-NB     70.000 120.000 guess april 11 2000
+CW-OS-NB     70.000 120.000 std aromatic
+N -OS-NB     70.000 120.000 guess april 11 2000
+N*-OS-NB     70.000 120.000 guess april 11 2000
+NB-OS-NB     70.000 120.000 guess Sept 21 2001
+CA-P -O2     148.00 100.200 analogy with CT-P-O2
+CC-P -O2     148.00 100.200 From CA-P-O2 Dec 4 2000
+CM-P -O2     148.00 100.200 From CA-P-O2 apr 27 2001
+CT-P -CT     148.00 100.200 From CT-P-O2 May 14 2001
+CT-P -F       70.000 96.3   calc B3LYP/6-311G(d,p) Jan 13 2006
+CT-P -O      148.000 100.200 From CT-P -O2 july 26 2005
+CT-P -O2     148.000 100.200 calc at RHF/6-31G* level
+CT-P -OH     148.000 100.200 From CA-P-O2 Dec 4 2000
+CT-P -OS     148.000 100.200 From CA-P-O2 July 3 2001
+F -P -O2      70.000 108.0 calc B3LYP/6-311G(d,p) Jan 13 2006
+O2-P -OS     148.000 108.000 RHF/6-31G(d,p) Sept 9 2009
+O2-P -SD     148.000 122.000 RHF/6-31G(d,p) Sept 9 2009
+O -P -OS      45.0   102.60 Taken from OS-P-OS simmerling data set July26_2005
+OS-P -SD     148.000 108.000 RHF/6-31G(d,p) Sept 9 2009
+C -S -CA     62.000   94.500 From CA-S-NB Dec 8 2000
+C -S -CT     70.000  100.000 R0 from BP86/tzp(DeFT) thioimidate
+C -S -CW     62.000  94.500 From CA-S-NB April 22 2005
+C -S -S      68.0   103.70 From CT-S-S June 25 2010
+C*-S -CC     70.000 90.000 RHF/6-31G(d) Mar 7 2007
+CA-S -CA     62.000 94.500 From CA-S-NB Dec 4 2000
+CA-S -CB     70.000 109.500 guess april 11 2000
+CA-S -CC     62.000 94.500 From CA-S-NB Dec 8 2000
+CA-S -CJ     62.000 94.500 guess; 25 august 2009
+CA-S -CM     62.000 94.500 From CA-S-NB Mar 8 2001
+CA-S -CP     62.000 94.500 From CA-S-NB; 13 April 2005
+CA-S -CR     62.000 94.500 From CA-S-NB Dec 4 2000
+CA-S -CT     62.000 103.100 T0 from ab init (ff94 force constant) cb 4nov98
+CA-S -CW     62.000 94.500 by analogy to CA-S -CA; 12 dec 2006
+CA-S -NB     62.000 94.500 calc RHF/6-31G(d) (ff94 force constant)
+CB-S -CB     62.000 94.500 From CA-S-NB; 4 May 2005
+CB-S -CR     62.000 98.900 ff94 CT-S-CT
+CB-S -CW     62.000 98.900 ff94 CT-S-CT
+CC-S -CT     70.000 100.000 From C-S-CT April 28 2005
+CC-S -CW     62.000 94.500 from CA-S-NB; 3 June 2005
+CM-S -CT     70.000 109.500 guess april 11 2000
+CR-S -CR     70.000 109.500 guess april 11 2000
+CR-S -CT     62.000 98.900 ff94 CT-S-CT
+CR-S -CW     62.000 98.900 ff94 CT-S-CT
+CR-S -NB     62.000 98.900 Analogy with CR-S -CW. July 30 2003
+CT-S -CW     70.000 109.500 guess april 11 2000
+CW-S -CW     62.000 98.900 ff94 CT-S-CT
+CW-S -N      70.000 90.500 RHF/6-31G(d) opt geom Mar 6 2007
+CW-S -NB     70.000 91.500 RHF/6-31G(d) opt geom april 11 2000
+CA-SH-HS     43.0   96.00 by analogy with parm94 CT-SH-HS
+C*-SO-CT     45.000 105.000 smol CA-SO-CT
+C*-SO-O      100.00 108.000 smol CA-SO-O
+CA-SO-CA     60.000 120.000
+CA-SO-CC     45.000 106.000 RHF/6-31G(d) opt June 29 2007
+CA-SO-CT     45.000 105.000 force ff94 OS-P-OS, ANG0 from xray
+CA-SO-N      70.000 97.000 From CC-SO-N
+CA-SO-N3     110.000 102.000 RHF/6-41G(d,p) Dec 12 1997
+CA-SO-O      100.000 108.000 force ff94 O2-P-OS, ANG0 from xray
+CA-SO-O2     70.000 97.000 From CC-SO-N
+CA-SO-OS     45.0   103.50 RHF/6-31G(d) opt geom June 14 2007
+CC-SO-CT     45.000 105.000 From C*-SO-CT Dec 4 2000
+CC-SO-N      70.000 97.000 B3LYP/6-31G(d) opt structure May 17 2001
+CC-SO-N3     110.000 102.000 CA-SO-N3 Mar 28 2001
+CC-SO-O      100.000 108.000 From C*-SO-O Dec 4 2000
+CC-SO-O2     70.000 97.000 from CA-SO-O2; Juil 13 2009
+CR-SO-N      70.000 97.000 B3LYP/6-31G(d) opt structure May 17 2001
+CR-SO-NB     70.000 97.000 from CR-SO-N Sept 14 2001
+CR-SO-O      70.000 108.500 B3LYP/6-31G(d) opt structure May 17 2001
+CR-SO-CT     45.000 105.000 same as CA-SO-CT by analogy; Feb 21 2006
+CT-SO-CT     45.000 105.000 guess to be not too different from CA-SO-CT
+CT-SO-N      70.000 120.000 guess
+CT-SO-N2     104.000 106.000 July_17_2007 RHF/6-31G(d) opt
+CT-SO-N3     104.000 102.000 RHF/6-41G(d,p) Dec 12 1997
+CT-SO-NB     100.000 101.000 RHF/6-31G(d) Mar 7 2007
+CT-SO-O      100.000 110.000 force ff94 O2-P-OS, ANG0 from xray
+CT-SO-O2     70.000 101.000 calc RHF/6-31G(d) (estimated force constant)
+CT-SO-OS     70.000 101.000 From CT-SO-O2 Sept 20 2001
+CW-SO-N      70.000 97.000 B3LYP/6-31G(d) opt structure May 17 2001
+CW-SO-N3     110.000 102.000 CA-SO-N3 apr 24 2001
+CW-SO-NB     70.000 97.000 from CW-SO-N Sept 14 2001
+CW-SO-O      100.000 108.000 From C*-SO-O apr 24 2001
+N -SO-N2     70.000 97.000
+N -SO-O      70.000 97.000 From CC-SO-N
+N -SO-O2     70.000 97.000 From CC-SO-O2 ; Aug 18 2010
+N2-SO-O      70.000 97.000
+N2-SO-O2     70.000 97.000
+N2-SO-OS     70.000 97.000
+N3-SO-O      138.000 107.000 RHF/6-41G(d,p) Dec 12 1997
+N3-SO-O2     138.000 107.000 Jan 16 2009 RHF/6-31G(d) ave fit
+NB-SO-O      70.000 97.000 From CC-SO-N
+O -SO-O      140.000 118.000 force ff94 O2-P-O2, ANG0 from xray
+O2-SO-O2     70.000 113.800 calc RHF/6-31G(d) (estimated force constant)
+O2-SO-OS     45.0   104.50 RHf/6-31G(d) opt June 14 2007
+
+DIHEDRAL
+X -C -C -X      4 2.500  180.000 2 gentle planar from X-CP-CP-X
+X -CA-C -X      4 1.000    0.000 2 consensus from B3LYP/6-311G(d,p) benzoyl compounds feb 2003
+X -CC-C -X      4 1.000    0.000 2 analogy X -C -CA-X Oct 2004 replacing 20 kcal/mol barrier
+X -CP-C -X      4 2.500  180.000 2 his-CO- guess bphnyl
+X -CR-C -X      4 2.500  180.000 2 his-CO- guess bphnyl
+X -CW-C -X      4 2.500  180.000 2 his-CO- guess bphnyl
+X -N2-C -X      4 9.60   180.000 2 Amidine,guanidine like torsion, see parm94 X -CA-N2-X, 30 Sept 2004
+X -NB-C -X      2 20.000 180.000 2 ff94 imidazole X-CK-NB-X
+X -OS-C -X      2 5.000  180.000 2 half ff94 X-C-N-X
+X -S -C -X      2 3.500  180.000 2 guess 0.75 times X-C-OS-X
+X -C2-C2-X      1 0.000    0.000 1 By definition
+X -CA-C2-X      1 0.000    0.000 1 By definition
+X -CC-C2-X      1 0.000    0.000 1 By definition
+X -CJ-C2-X      1 0.000    0.000 1 By definition 31 March 2004
+X -CM-C2-X      1 0.000    0.000 1 By definition
+X -CR-C2-X      1 0.000    0.000 1 By definition
+X -CT-C2-X      1 0.000    0.000 1 By definition
+X -CT-C2-X      1 0.000    0.000 1 By definition
+X -CW-C2-X      1 0.000    0.000 1 By definition
+X -CC-CA-X      4 2.500  180.000 2 his, X-CP-CP-X
+X -CM-CA-X      4 2.500  180.000 2 CHANGED FROM ff94
+X -CP-CA-X      4 14.500 180.000 2 ff94 X-CA-CA-X
+X -CR-CA-X      4 2.500  180.000 2 his, X-CP-CP-X
+X -CW-CA-X      4 2.500  180.000 2 his, X-CP-CP-X
+X -N -CA-X      4 2.500  180.000 2 anal X-CP-CP-X
+X -N*-CA-X      4 6.000  180.000 2 indole,ff94 X-CW-NA-
+X -N3-CA-X      1 0.000    0.000 1 guess from X-CA-CT-X Oct 2004
+X -OH-CA-X      2 1.800  180.000 2 ff94 X-C-OH-X
+X -OS-CA-X      1 1.350  180.000 2 RHF/6-31G(d,p) Dec 12 1997
+X -P -CA-X      1 1.000    0.000 1 dummy
+X -SO-CA-X      6 0.000    0.000 3 guess
+X -CC-CB-X      4 6.700  180.000 2 ff94 X-C*-CB-X
+X -CP-CB-X      4 14.500 180.000 2 ff94 X-CA-CA-X
+X -CR-CB-X      2 2.500  180.000 2 guess for fused ring systems. Apr 26 2006
+X -CW-CB-X      4 2.500  180.000 2 anal X-CP-CP-X
+X -NA-CB-X      4 6.100  180.000 2 indole,ff94 X-CN-NA-
+X -NB-CB-X      2 6.000  180.000 2 ff94 X-CW-NA-X
+X -OS-CB-X      2 6.000  180.000 2 ff94 X-CW-NA-X
+X -S -CB-X      2 6.000  180.000 2 ff94 X-CW-NA-X
+X -CC-CC-X      4 6.700  180.000 2 ff94 X-C*-CB-X
+X -CR-CC-X      4 6.700  180.000 2 ff94 X-C*-CB-X
+X -N -CC-X      4 5.600  180.000 2 ff94 X-CC-NA-X
+X -N*-CC-X      4 6.000  180.000 2 ff94 X-CW-NA-X
+X -N2-CC-X      4 5.600  180.000 2 ff94 X-CC-NA-X
+X -NC-CC-X      2 9.600  180.000 2 ff94 X-CA-NC-X
+X -OS-CC-X      2 4.800  180.000 2 ff94 X-CV-NB-X
+X -CJ-CJ-X      1 0.000    0.000 2 accounted for in other terms
+X -CM-CJ-X      6 0.00     0.000 3 ff94 X -CM-CT-X
+X -CT-CJ-X      1 0.000    0.000 1 best fit Dec 1 2004
+X -N -CJ-X      1 0.7    180.000 -2 fit to CA-N-CJ-CJ, CA-N-CJ-H1, CJ-CJ-N-CT Oct 20
+X -N -CJ-X      1 0.3      0.000 1 and CT-N-CJ-H1, H-N-CJ-H1 rhf/6-31g(dp) 2004
+X -N -CM-X      4 2.500  180.000 2 from X-CA-CM-X
+X -N2-CM-X      4 2.500  180.000 2 like X-N2-CR-X; 5 Oct 2005
+X -CP-CP-X      4 2.500  180.000 2 tuned to flurbi Xray
+X -NC-CP-X      2 9.600  180.000 2 ff94 X-CA-NC-X
+X -CR-CR-X      2 5.0    180.000 2 Approx. Nov 24 2006
+X -CT-CR-X      6 0.000    0.000 2 his, ff94 X-CC-CT-X
+X -CW-CR-X      4 2.500  180.000 2 like X-CP-CP-X
+X -N -CR-X      4 2.500  180.000 2 like X-CP-CP-X
+X -N*-CR-X      4 9.300  180.000 2 ff94 X-CR-NA-X
+X -N2-CR-X      4 2.500  180.000 2 like X-CP-CP-X
+X -N3-CR-X      1 0.000    0.000 1 guess from X-CA-CT-X banyu Oct 2004
+X -NC-CR-X      2 10.000 180.000 2 ff94 X-CR-NB-X
+X -OS-CR-X      2 4.800  180.000 2 ff94 X-CV-NB-X
+X -S -CR-X      3 0.000  180.000 2 guess
+X -CW-CT-X      6 0.000    0.000 2 his, ff94 X-CC-CT-X
+X -P -CT-X      1 0.000    0.000 1 dummy
+X -SO-CT-X      9 0.000    0.000 3 guess
+X -CW-CW-X      4 2.500  180.000 2 thioph guess bphnyl
+X -N -CW-X      4 6.000  180.000 2 ff94 X-CW-NA-X
+X -N*-CW-X      4 6.000  180.000 2 ff94 X-CW-NA-X
+X -N2-CW-X      4 5.600  180.000 2 ff94 X-CC-NA-X
+X -NB-CW-X      2 6.000  180.000 2 ff94 X-CW-NA-X
+X -NC-CW-X      4 6.000  180.000 2 ff94 X-CW-NA-X
+X -OS-CW-X      2 6.000  180.000 2 ff94 X-CW-NA-X
+X -S -CW-X      2 6.000  180.000 2 ff94 X-CW-NA-X
+X -N2-N -X      1 0.000    0.000 1 June 29 2007
+X -NB-N -X      1 0.000    0.000 1 June 29 2007
+X -NB-N*-X      1 6.000  180.000 1
+X -NB-N2-X      1 0.000    0.000 1 June 29 2007
+X -NB-NA-X      1 0.000    0.000 1
+X -NC-NA-X      4 2.500  180.000 2 anal X-CP-CP-X Dec 15 2006
+X -NB-NB-X      1 6.000  180.000 1
+X -OS-NB-X      1 0.000    0.000 1
+C2-C2-C -O2     1 0.000    0.000 1 by symetry; 12 June 2005
+CA-CA-C -CT     2 0.400    0.000 2 fit to B3LYP/6-311G(d,p) acetophenone scan feb 2003
+CB-CA-C -CT     2 0.400    0.000 2 analogy CT-C -CA-CA
+CP-CA-C -CT     2 0.400    0.000 2 analogy CT-C -CA-CA
+NC-CA-C -CT     2 0.400    0.000 2 analogy CT-C -CA-CA
+CA-CA-C -H4     2 0.000  180.000 2 from B3LYP/6-311G(d,p) benzaldehyde scan: set to 0 feb 2003
+CB-CA-C -H4     2 0.000  180.000 2 analogy H4-C -CA-CA
+CP-CA-C -H4     2 0.000  180.000 2 analogy H4-C -CA-CA
+NC-CA-C -H4     2 0.000  180.000 2 analogy H4-C -CA-CA
+CA-CA-C -N      2 1.450    0.000 2 fit to B3LYP/6-311G(d,p) benzamide scan feb 2003
+CB-CA-C -N      2 1.450    0.000 2 analogy N -C -CA-CA
+CP-CA-C -N      2 1.450    0.000 2 analogy N -C -CA-CA
+NC-CA-C -N      2 1.450    0.000 2 analogy N -C -CA-CA
+CA-CA-C -N2     4 0.586    0.000 -4 B3LYP/6-311G** fit, 19 Oct 2004 (charged N2 using amidine)
+CA-CA-C -N2     4 3.993  180.000 2
+NC-CA-C -N2     2 0.154  180.000 -4 B3LYP/6-311G** fit, 19 Oct 2004 (charged N2 using amidine)
+NC-CA-C -N2     2 2.965  180.000 2
+CA-CA-C -O      2 4.900  180.000 2 fit to B3LYP/6-311G(d,p) benzaldehyde scan feb 2003
+CB-CA-C -O      2 4.900  180.000 2 analogy O -C -CA-CA
+CP-CA-C -O      2 4.900  180.000 2 analogy O -C -CA-CA
+NC-CA-C -O      2 4.900  180.000 2 analogy O -C -CA-CA
+CA-CA-C -OH     4 14.500 180.000 2 from parm94 X-C-CA-X; only use is parm94 TYR feb 2003
+CA-CA-C -OS     2 1.100   0.000 2 fit to B3LYP/6-311G(d,p) methyl benzoate scan feb 2003
+CB-CA-C -OS     2 1.100   0.000 2 analogy OS-C -CA-CA
+CP-CA-C -OS     2 1.100   0.000 2 analogy OS-C -CA-CA
+NC-CA-C -OS     2 1.100   0.000 2 analogy OS-C -CA-CA
+CC-CC-C -N2     4 0.737   0.000 -4 B3LYP/6-311G** fit, 19 Oct 2004 (charged N2 using amidine)
+CC-CC-C -N2     4 3.750 180.000 2
+CW-CC-C -N2     4 0.737   0.000 -4 B3LYP/6-311G** fit, 19 Oct 2004 (charged N2 using amidine)
+CW-CC-C -N2     4 3.750 180.000 2
+NB-CC-C -N2     2 3.692 180.000 2 B3LYP/6-311G** fit, 27 Oct 2004 (charged N2 using amidine branched on CC of an imidazole)
+CJ-CJ-C -CT     1 0.000   0.000 1 set to zero for CJ-CJ-C-O
+HC-CJ-C -CT     1 0.000   0.000 1 set to zero for CJ-CJ-C-O
+CA-CJ-C -H4     1 0.000   0.000 1 set to 0 Sept 14 2005
+CJ-CJ-C -H4     1 0.000   0.000 1 guess
+HC-CJ-C -H4     1 0.000   0.000 1 guess
+CA-CJ-C -N      1 1.392   0.000 -2 FIT B3LYP6-31G(d) Sept 14 2005
+CA-CJ-C -N      1 0.645 180.000 -1 FIT B3LYP6-31G(d) Sept 14 2005
+CA-CJ-C -N      1 0.961 180.000 3 FIT B3LYP6-31G(d) Sept 14 2005
+CJ-CJ-C -N      1 0.000   0.000 1 set to zero for CJ-CJ-C-O
+CT-CJ-C -N      1 0.000   0.000 1 set to zero for CJ-CJ-C-O
+HC-CJ-C -N      1 0.000   0.000 1 set to zero for CJ-CJ-C-O
+CJ-CJ-C -NB     1 0.000   0.000 1 dummy guess (had to get going) March 30 2004
+N -CJ-C -NB     1 0.000   0.000 1 dummy guess (had to get going) March 30 2004
+CA-CJ-C -O      1 3.174 180.000 -2 FIT B3LYP6-31G(d) Sept 14 2005
+CA-CJ-C -O      1 0.277 180.000 -1 FIT B3LYP6-31G(d) Sept 14 2005
+CA-CJ-C -O      1 0.514 180.000 3 FIT B3LYP6-31G(d) Sept 14 2005
+CJ-CJ-C -O      2 0.000   0.000 1 set to zero for CJ-CJ-C-O
+CT-CJ-C -O      1 0.000   0.000 1 set to zero for CJ-CJ-C-O
+HC-CJ-C -O      1 5.000   0.000 1 set to zero for CJ-CJ-C-O
+CJ-CJ-C -O2     1 2.400 320.000 2 working
+HC-CJ-C -O2     1 0.000   0.000 1 dummy
+CJ-CJ-C -OS     1 0.065 180.000 -4 Taken from CA-CA-CJ-CJ June 29 2007
+CJ-CJ-C -OS     1 0.550 180.000 2
+HC-CJ-C -OS     1 0.000   0.000 1 set to zero for CJ-CJ-C-OS
+CJ-CJ-C -S      1 0.000   0.000 1 dummy guess (had to get going) March 30 2004
+N -CJ-C -S      1 0.000   0.000 1 dummy guess (had to get going) March 30 2004
+CM-CM-C -CT     2 0.400   0.000 2 analogy CT-C -CA-CA
+CM-CM-C -H4     2 0.000 180.000 2 analogy H4-C -CA-CA
+CM-CM-C -N      2 1.450   0.000 2 analogy N -C -CA-CA
+CM-CM-C -O      2 4.900 180.000 2 analogy O -C -CA-CA
+CM-CM-C -OS     2 1.100   0.000 2 analogy OS-C -CA-CA
+NC-CP-C -O      4 14.50 180.000 2 from X-C-CA-X Mar 6 2007
+CA-CP-C -CA     4 14.50 180.000 2 from X-C-CA-X
+CP-CP-C -CA     4 14.50 180.000 2 from X-C-CA-X
+CA-CP-C -N      4 14.50 180.000 2 from X-C-CA-X Sept 24 2003
+CP-CP-C -N      4 14.50 180.000 2 from X-C-CA-X Sept 24 2003
+NC-CP-C -N      4 14.50 180.000 2 from X-C-CA-X Mar 6 2007
+CA-CP-C -O      4 14.50 180.000 2 from X-C-CA-X
+CP-CP-C -O      4 14.50 180.000 2 from X-C-CA-X
+C -CR-C -CA     1 1.000 180.000 1 guess nov 22 2006
+NA-CR-C -CA     1 1.000 180.000 1 guess Nov 22 2006
+NB-CR-C -CA     1 1.000 180.000 1 guess Nov 22 2006
+S -CR-C -CA     1 1.000 180.000 1 guess Nov 22 2006
+CC-CR-C -CT     1 1.000 180.000 1 guess
+NB-CR-C -CT     1 1.000 180.000 1 guess
+OS-CR-C -CT     1 1.000 180.000 1 guess
+C -CR-C -CW     1 1.000 180.000 1 guess nov 22 2006
+CT-CR-C -CW     1 1.000 180.000 1 guess
+H4-CR-C -CW     1 1.000 180.000 1 guess
+N2-CR-C -CW     1 1.000 180.000 1 guess Nov 22 2006
+NB-CR-C -CW     1 1.000   0.000 2 guess
+NC-CR-C -H4     1 0.000   0.000 2 guess July 29 2003
+C -CR-C -N      1 1.000 180.000 1 guess nov 22 2006
+CA-CR-C -N      1 1.000 180.000 1 guess
+CT-CR-C -N      1 1.000 180.000 1 guess
+NB-CR-C -N      1 1.000 180.000 2 guess
+S -CR-C -N      1 1.000 180.000 1 guess Nov 22 2006
+CC-CR-C -N2     1 1.000 180.000 1 guess, 30 Sept 2004
+NA-CR-C -N2     2 1.164   0.000 -4 From NA-CW-C -N2: reproduce very well the B3LYP/6-311G** surface for this torsion (using amidine branched on CR of an imidazole) 27 Oct 2004
+NA-CR-C -N2     2 4.202 180.000 2
+NB-CR-C -N2     2 3.692 180.000 2 From NB-CC-C -N2: reproduce very well the B3LYP/6-311G** surface for this torsion (using amidine branched on CR of an imidazole) 27 Oct 2004
+NC-CR-C -N2     4 5.261 180.000 2 B3LYP/6-311G** fit, 27 Oct 2004 (charged N2 using amidine branched on CR of a pyrimidine)
+OS-CR-C -N2     2 3.979 180.000 2 From OS-CW-C -N2 : reproduce well the B3LYP/6-311G** surface for this torsion (although the barrier height is 4kcal/mol higher than the B3LYP DFT surface) (charged N2 using amidine branched on CR of oxazole) 28 Oct 2004
+S -CR-C -N2     2 1.043   0.000 -4 From S-CW-C -N2 : reproduce well the B3LYP/6-311G** surface for this torsion (charged N2 using amidine branched on CR of thiazole) 28 Oct 2004
+S -CR-C -N2     2 2.525 180.000 2
+CA-CR-C -NB     1 1.000 180.000 1 guess
+CT-CR-C -NB     1 1.000 180.000 1 guess
+N -CR-C -NB     1 1.000 180.000 1 guess
+NB-CR-C -NB     1 1.000   0.000 1 guess
+NC-CR-C -NB     2 1.750 180.000 2 RHF/6-31G(d,p) July 6 2003
+OS-CR-C -NB     1 1.000 180.000 1 guess 31 Aug 2004
+C -CR-C -O      1 1.000 180.000 1 guess nov 22 2006
+CA-CR-C -O      1 1.000 180.000 1 guess
+CC-CR-C -O      1 1.000 180.000 1 guess
+CT-CR-C -O      1 1.000   0.000 1 guess
+H4-CR-C -O      1 1.000   0.000 1 guess
+N -CR-C -O      1 1.000 180.000 1 guess
+N2-CR-C -O      1 1.000 180.000 1 guess Nov 22 2006
+NA-CR-C -O      1 1.000 180.000 1 guess Nov 22 2006
+NB-CR-C -O      1 1.000 180.000 1 guess
+OS-CR-C -O      1 1.000 180.000 1 guess
+S -CR-C -O      1 1.000 180.000 1 guess Nov 22 2006
+NB-CR-C -O2     1 1.000   0.000 1 guess; 15 Nov 2005
+CT-CR-C -OS     1 1.000   0.000 2 guess
+NB-CR-C -OS     1 1.000   0.000 2 guess
+CA-CR-C -S      2 0.800 180.000 2 Like NC-CR-C -S Interpolated from OS-C -CA-CA and CT-C -CA-CA
+NB-CR-C -S      1 1.000 180.000 2 guess
+NC-CR-C -S      2 0.800 180.000 2 Like CA-CR-C -S interpolated from OS-C -CA-CA and CT-C -CA-CA
+OS-CR-C -S      1 1.000 180.000 1 guess 31 Aug 2004
+NA-CW-C -N2     2 1.164   0.000 -4 B3LYP/6-311G** fit, 27 Oct 2004 (charged N2 using amidine branched on CW of an imidazole)
+NA-CW-C -N2     2 4.202 180.000 2
+OS-CW-C -N2     2 3.979 180.000 2 B3LYP/6-311G** fit, 28 Oct 2004 (charged N2 using amidine branched on CW of furane)
+S -CW-C -N2     2 1.043   0.000 -4 B3LYP/6-311G** fit, 28 Oct 2004 (charged N2 using amidine branched on CW of thiophene)
+S -CW-C -N2     2 2.525 180.000 2
+CT-N3-C -N      1 0.000   0.000 1 dummy
+CT-N3-C -O      1 0.000   0.000 1 dummy
+CR-NB-C -CR     1 1.000   0.000 1 guess
+CM-NB-C -CT     1 0.000   0.000 1 guess
+CR-NB-C -CT     0 0.000   0.000 1
+NB-NB-C -CT     0 0.000   0.000 1
+CR-NB-C -CW     1 1.000   0.000 1 guess
+NB-NB-C -CW     1 1.000   0.000 1 guess
+CM-NB-C -O      1 1.000 180.000 1 guess
+CR-NB-C -O      0 0.000   0.000 1
+NB-NB-C -O      0 0.000   0.000 1
+CT-C*-C*-H4     0 0.000   0.000 1
+NB-C*-C*-H4     0 0.000   0.000 1
+CT-C*-C*-NB     0 0.000   0.000 1
+NB-C*-C*-NB     0 0.000   0.000 1
+CT-N*-C*-NB     4 15.00 180.000 2 five member aromatic ring
+CW-N*-C*-NB     4 15.00 180.000 2 five member aromatic ring
+CT-N*-C*-S      4 15.00 180.000 2 five member aromatic ring
+CW-N*-C*-S      4 15.00 180.000 2 five member aromatic ring
+O2-NB-C*-C*     0 0.000   0.000 1
+OS-NB-C*-C*     0 0.000   0.000 1
+OS-NB-C*-C*     0 0.000   0.000 1
+O2-NB-C*-CT     0 0.000   0.000 1
+OS-NB-C*-CT     0 0.000   0.000 1
+O2-NB-C*-H4     0 0.000   0.000 1
+OS-NB-C*-H4     0 0.000   0.000 1
+SO-NB-C*-N*     2 15.00 180.000 2 RHF/6-31G(d) Mar 7 2007
+SO-NB-C*-S      2 15.00 180.000 2 RHF/6-31G(d) Mar 7 2007
+CC-S -C*-N*     4 15.00 180.000 2 five member aromatic ring
+CC-S -C*-NB     4 15.00 180.000 2 five member aromatic ring
+CA-CA-CA-NL     1 1.100 180.000 2 guess
+C -CJ-CA-CA     2 0.256 180.000 2 FIT B3LYP6-31G(d) Sept 14 2005
+CJ-CJ-CA-CA     1 0.065 180.000 -4 RHF/6-31G(d,p) opt fit
+CJ-CJ-CA-CA     1 0.550 180.000 2 RHF/6-31G(d,p) opt fit
+CM-CJ-CA-CA     1 0.065 180.000 -4 guess from CA-CA-CJ-CJ
+CM-CJ-CA-CA     1 0.550 180.000 2 Jan 26 2005
+CT-CJ-CA-CA     1 0.065 180.000 -4 guess from CA-CA-CJ-CJ
+CT-CJ-CA-CA     1 0.550 180.000 2 Feb 1 2005
+HC-CJ-CA-CA     1 0.000   0.000 1 guess Jan 28 2004
+N -CJ-CA-CA     1 0.065 180.000 -4 from CA-CA-CJ-CJ Dec 16 2004
+N -CJ-CA-CA     1 0.550 180.000 2 from CA-CA-CJ-CJ Dec 16 2004
+CJ-CJ-CA-CP     1 0.065 180.000 -4 guess from CA-CA-CJ-CJ 16 Feb 2005
+CJ-CJ-CA-CP     1 0.550 180.000 2
+HC-CJ-CA-CP     1 0.000   0.000 1 guess 16 Feb 2005
+CJ-CJ-CA-NC     1 2.100 180.000 -2 FIT B3LYP6-31G(d) Sept 14 2005
+CJ-CJ-CA-NC     1 0.432 180.000 -1 FIT B3LYP6-31G(d) Sept 14 2005
+CJ-CJ-CA-NC     1 0.620   0.000 3 FIT B3LYP6-31G(d) Sept 14 2005
+HC-CJ-CA-NC     1 0.000   0.000 1 set to 0 Sept 14 2005
+CP-CP-CA-CP     4 14.50 180.000 2 2 adjacent biphenyls
+SO-N3-CA-CA     2 2.0   180.000 2 Fit to CA-CA-N3-SO/CA-N3-SO-CT surface
+CR-NB-CA-CA     1 0.000   0.000 1 guess
+H -NB-CA-CA     4 9.60  180.000 2 like X-C-NB-X; 15 April 2005
+NB-NB-CA-CA     1 0.000   0.000 1 guess
+CC-NB-CA-CT     4 6.000 180.000 2
+H -NB-CA-N2     4 9.60  180.000 2 like X-C-NB-X; 15 April 2005
+CC-NB-CA-NA     4 6.000 180.000 2
+CC-NB-CA-OS     4 6.000 180.000 2
+CT-ND-CA-CA     2 5.000 180.000 2 *********
+NL-NL-CA-CA     1 0.500 180.000 2 guess
+CT-OS-CA-CA     1 1.350 180.000 2 RHF/6-31G(d,p) Dec 12 1997
+C -S -CA-C      1 0.300   0.000 1 from CA-S-CA-CA; august 25 2009
+CA-S -CA-C      1 0.000   0.000 2 from CA-S-CA-CA
+CR-S -CA-C      1 0.300 180.000 2 from CR-S-CA-CA
+CT-S -CA-C      1 0.000   0.000 1 guess; August 25 2009
+CW-S -CA-C      1 0.000   0.000 1 from CA-S-CA-CA; august 25 2009
+C -S -CA-CA     1 0.000   0.000 1 guess
+CA-S -CA-CA     1 0.000   0.000 1 dummy
+CB-S -CA-CA     1 0.000   0.000 1
+CC-S -CA-CA     1 0.000   0.000 1 guess
+CJ-S -CA-CA     1 0.000   0.000 1 guess; 25 august 2009
+CM-S -CA-CA     1 0.000   0.000 1
+CP-S -CA-CA     1 0.000   0.000 1 guess for rigid system; 13 April 2005
+CR-S -CA-CA     1 0.300 180.000 2
+CT-S -CA-CA     1 0.000 180.000 2 guess cb 4nov98
+CW-S -CA-CA     1 0.300 180.000 2 from CA-CA-S-CA; I could not find a solid basis for those parameter: probably guess somewhere; 12 dec 2006
+NB-S -CA-CA     1 0.000   0.000 1 dummy
+CA-S -CA-CB     1 0.000   0.000 1 guess
+CR-S -CA-CB     1 0.300 180.000 2 guess from CA-CA-S-CA oct8 2003
+CT-S -CA-CB     6 0.000   0.000 2 taken from X-CA-CT-X
+CT-S -CA-CP     1 0.000 180.000 2 from CA-CA-S-CT guess cb 4nov98
+CB-S -CA-CT     1 0.000   0.000 1
+CA-S -CA-CW     1 0.300 180.000 2 from CA-S-CA-CA 20 May 2005
+CT-S -CA-CW     1 0.000 180.000 2 from CA-CA-S-CT guess, 20 May 2005
+CB-S -CA-H4     1 0.000   0.000 1 guess
+NB-S -CA-H4     1 0.000   0.000 1 dummy
+CA-S -CA-N      1 0.000   0.000 1 guess
+CP-S -CA-N      1 0.000   0.000 1 guess for rigid structure; 15 April 2005
+CT-S -CA-N      1 0.000   0.000 1 guess from CA-CA-S-CT, 3 sept 2009
+CP-S -CA-N3     1 0.000   0.000 1 guess for rigid systems; 13 April 2005
+CM-S -CA-NC     1 0.000 180.000 2 from CA-CA-S-CT
+CR-S -CA-NC     1 0.300 180.000 2 from CR-S-CA-CA Sept2 2003
+CT-S -CA-NC     1 0.000   0.000 1 dummy
+HS-SH-CA-CA     2 0.000   0.000 2 guess
+CT-SO-CA-CA     2 1.150   0.000 2 RHF/6-41G(d,p) Dec 12 1997
+N2-CR-CB-C      1 0.000   0.000 1 guess (intra cyclic aromatic); 5 April 2006
+NC-CR-CB-C      1 0.000   0.000 1 guess ( intra cyclic aromatic); 5 April 2006
+N -CR-CB-CA     1 0.000   0.000 1 guess for intra cyclic; 4 April 2006
+N2-CR-CB-CA     1 0.000   0.000 1 guess (intra cyclic aromatic); 5 April 2006
+N3-CR-CB-CA     1 0.000   0.000 1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NA-CR-CB-CA     1 0.000   0.000 1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NA-CR-CB-CA     1 0.000   0.000 1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NB-CR-CB-CA     1 0.000   0.000 1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NC-CR-CB-CA     1 0.000   0.000 1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+N3-CR-CB-CR     1 0.000   0.000 1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NA-CR-CB-CR     1 0.000   0.000 1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NB-CR-CB-CR     1 0.000   0.000 1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+NC-CR-CB-CR     1 0.000   0.000 1 guess (intra cyclic in 5-6 fusde aryl rings) 14 March 2005
+N -CR-CB-N      1 0.000   0.000 1 guess for intra cyclic; 4 April 2006
+NC-CR-CB-N      1 0.000   0.000 1 guess for intra cyclic; 4 April 2006
+C -N -CB-C      1 0.000   0.000 1 guess (intracyclic in aromatic rings, pyridone) 3 Aug 2006
+CA-N -CB-C      1 0.000   0.000 1 guess (intracyclic in aromatic rings) 3 Aug 2006
+H -N -CB-C      1 1.100 180.000 2 guess Aug 31 2010
+C -N -CB-CA     4 14.4  180.000 2 From CA-CA-CA-CA Mar 8 2004
+CR-N -CB-CA     4 14.4  180.000 2 From CA-CA-CA-CA Jan 9 2008
+CT-N -CB-CA     4 14.4  180.000 2 From CA-CA-CA-CA Mar 8 2004
+CW-N -CB-CA     4 14.4  180.000 2 From CA-CA-CA-CA May 19 2006
+H -N -CB-CA     1 1.100 180.000 2 guess Nov 8 2004
+C -N -CB-CB     1 0.000   0.000 1 aug29 2003 guess
+CA-N -CB-CB     1 0.000   0.000 1 fused intra cyclic; 27 April 2006
+CR-N -CB-CB     4 14.4  180.000 2 From CA-CA-CA-CA Jan 9 2008
+CT-N -CB-CB     4 14.4  180.000 2 From CA-CA-CA-CA Mar 8 2004
+CW-N -CB-CB     4 14.4  180.000 2 From CA-CA-CA-CA May 19 2006
+H -N -CB-CB     1 0.000   0.000 1 aug29 2003 guess
+O2-N -CB-CB     4 14.4  180.000 2 From CA-CA-CA-CA Oct 14 2008
+C -N -CB-CC     4 14.4  180.000 2 from CA-CA-CA-CA April 2 2009
+H -N -CB-CC     4 7.2   180.000 2 from CA-CA-CA-CA April 2 2009
+C -N -CB-CP     1 0.000   0.000 1 aug29 2003 guess
+H -N -CB-CP     1 0.000   0.000 1 aug29 2003 guess
+C -N -CB-CR     1 0.000   0.000 1 guess for intra cyclic; 4 April 2006
+CT-N -CB-CR     1 0.000   0.000 1 guess for intra cyclic; 4 April 2006
+C -N -CB-N      1 0.000   0.000 1 guess (intracyclic; 3 Aug 2006
+CA-N -CB-N      1 0.000   0.000 1 guess (intracyclic in aromatic rings); 3 Aug 2006
+CA-N -CB-N      1 0.000   0.000 1 guess (intracyclic in aromatic rings, e.g. pyridone); 3 Aug 2006
+H -N -CB-N      1 0.000   0.000 1 guess for intra cyclic; 3 Aug 2006
+C -N -CB-NB     1 0.000   0.000 1 fused intra cyclic; 19 July 2006
+CA-N -CB-NB     1 0.000   0.000 1 fused intra cyclic; 19 July 2006
+C -N -CB-NC     1 0.000   0.000 1 fused intra cyclic; 27 April 2006
+CA-N -CB-NC     1 0.000   0.000 1 fused intra cyclic; 27 April 2006
+CT-N -CB-NC     1 0.000   0.000 1 guess intra cyclic; 4 May 2006
+O2-N -CB-NC     4 14.4  180.000 2 From CA-CA-CA-CA Oct 14 2008
+CA-N2-CB-CA     4 14.4  180.000 2 From CA-CA-CA-CA Jan 9 2008
+CR-N2-CB-CA     4 14.4  180.000 2 From CA-CA-CA-CA Jan 9 2008
+CA-N2-CB-CB     1 0.000   0.000 1 guess fused ring system; 27 April 2006
+CR-N2-CB-CB     4 14.4  180.000 2 From CA-CA-CA-CA Mar 6 2007
+CA-N2-CB-NC     1 0.000   0.000 1 guess fused ring system; 27 April 2006
+CR-N2-CB-NC     4 14.4  180.000 2 From CA-CA-CA-CA Mar 6 2007
+CJ-CJ-CC-CC     1 0.050 180.000 -4 RHF/6-31G(d) opt fit Oct21 2010
+CJ-CJ-CC-CC     1 0.250   0.000 -3 RHF/6-31G(d) opt fit Oct21 2010
+CJ-CJ-CC-CC     1 0.010 180.000 2 RHF/6-31G(d) opt fit Oct21 2010
+HC-CJ-CC-CC     1 0.050 180.000 -4 RHF/6-31G(d) opt fit Oct21 2010
+HC-CJ-CC-CC     1 0.150   0.000 -3 RHF/6-31G(d) opt fit Oct21 2010
+HC-CJ-CC-CC     1 0.150 180.000 2 RHF/6-31G(d) opt fit Oct21 2010
+CJ-CJ-CC-CR     1 0.300   0.000 1 RHF/6-31G(d,p) opt Sept 2 2008
+HC-CJ-CC-CR     1 0.220   0.000 -3 RHF/6-31G(d,p) opt Sept 2 2008
+HC-CJ-CC-CR     1 0.000   0.000 -2
+HC-CJ-CC-CR     1 0.400   0.000 1
+CJ-CJ-CC-CW     1 0.300 180.000 1 RHF/6-31G(d,p) opt Sept 2 2008
+HC-CJ-CC-CW     1 0.220 180.000 -3 RHF/6-31G(d,p) opt Sept 2 2008
+HC-CJ-CC-CW     1 0.000 180.000 -2
+HC-CJ-CC-CW     1 0.400 180.000 1
+CM-CM-CC-CC     4 2.500 180.000 2 From X-CA-CR-X
+HA-CM-CC-CC     4 1.500 180.000 2 From X-CA-CR-X
+CM-CM-CC-CW     4 2.500 180.000 2 From X-CA-CR-X
+HA-CM-CC-CW     4 1.500 180.000 2 From X-CA-CR-X
+CA-CP-CC-CB     1 0.000   0.000 1 guess; July 4 2005
+CP-CP-CC-CB     1 0.000   0.000 1 guess; July 4 2005
+CA-CP-CC-CW     1 0.000   0.000 1 guess; July 4 2005
+CP-CP-CC-CW     1 0.000   0.000 1 guess; July 4 2005
+NB-CR-CC-CW     0 0.000   0.000 1
+OH-CR-CC-CW     0 0.000   0.000 1
+OS-CR-CC-CW     0 0.000   0.000 1
+NB-CR-CC-HA     0 0.000   0.000 1
+OH-CR-CC-HA     0 0.500   0.000 1 estimated
+OS-CR-CC-HA     0 0.000   0.000 1
+CA-N3-CC-CC     1 0.000   0.000 1 guess
+H -N3-CC-CC     1 0.000   0.000 1 guess
+CA-N3-CC-CW     1 0.000   0.000 1 guess
+CT-N3-CC-CW     1 0.000   0.000 1 guess
+H -N3-CC-CW     1 0.000   0.000 1 guess
+CA-N3-CC-NB     1 0.000   0.000 1 guess
+CT-N3-CC-NB     1 0.000   0.000 1 guess
+H -N3-CC-NB     1 0.000   0.000 1 guess
+O2-P -CC-CC     1 1.000   0.000 1 dummy
+O2-P -CC-CW     1 1.000   0.000 1 dummy
+CT-S -CC-CB     1 0.000   0.000 1
+CW-S -CC-CB     1 0.300 180.000 2 from CA-S-CA-CA; 3 June 2005
+CA-S -CC-CC     1 0.300 180.000 2
+CT-S -CC-CC     1 0.300 180.000 2 from CA-S-CA-CA
+C*-S -CC-CT     4 15.00 180.000 2 five member aromatic ring
+C*-S -CC-CW     4 15.00 180.000 2 five member aromatic ring
+CA-S -CC-CW     1 0.000   0.000 1 guess
+CT-S -CC-CW     1 0.000   0.000 1
+CW-S -CC-CW     1 0.300 180.000 2 from CA-S-CA-CA; 3 June 2005
+CA-S -CC-NB     1 0.000   0.000 1 guesse
+CT-S -CC-NB     1 0.000   0.000 1 guess
+CA-SO-CC-CB     2 3.5   180.000 2 taken from O-SO-CW-CC June 29 2007
+N3-SO-CC-CB     1 0.750   0.000 1 taken from CT-N3-SO-O Dec 4 2000
+O -SO-CC-CB     1 0.750   0.000 1 taken from CT-N3-SO-O June 29 2007
+CA-SO-CC-CC     2 3.5   180.000 2 taken from O-SO-CW-CC June 29 2007
+N -SO-CC-CC     1 0.000   0.000 2 guess
+N3-SO-CC-CC     1 0.750   0.000 1 taken from CT-N3-SO-O Dec 4 2000
+O -SO-CC-CC     1 0.750   0.000 1 taken from CT-N3-SO-O Dec 4 2000
+O2-SO-CC-CC     2 3.5   180.000 2 taken from O-SO-CW-CC Nov 11 2009
+CA-SO-CC-CW     2 3.5   180.000 2 taken from O-SO-CW-CC June 29 2007
+CT-SO-CC-CW     1 0.750   0.000 1 taken from CT-N3-SO-O Dec 4 2000
+N -SO-CC-CW     1 0.000   0.000 2 guess
+N3-SO-CC-CW     1 0.750   0.000 1 taken from CT-N3-SO-O Dec 4 2000
+O -SO-CC-CW     1 0.750   0.000 1 taken from CT-N3-SO-O Dec 4 2000
+O2-SO-CC-CW     2 3.5   180.000 2 taken from O-SO-CW-CC Nov 11 2009
+N3-SO-CC-NB     1 0.750   0.000 1 taken from CT-N3-SO-O Mar 28 2001
+O -SO-CC-NB     1 0.750   0.000 1 taken from CT-N3-SO-O Dec 4 2000
+CJ-CJ-CJ-CT     1 3.000   0.000 -2 fit to RHF/6-31G(d)
+CJ-CJ-CJ-CT     1 2.700   0.000 1 fit to RHF/6-31G(d)
+CT-CJ-CJ-CT     1 0.000   0.000 2 accounted for in other terms
+HC-CJ-CJ-CT     1 0.000   0.000 2 accounted for in other terms
+CJ-CJ-CJ-HC     1 3.000   0.000 -2 fit to RHF/6-31G(d)
+CJ-CJ-CJ-HC     1 2.700   0.000 1 fit to RHF/6-31G(d)
+CJ-CJ-CJ-X      1 3.000   0.000 -2 fit to RHF/6-31G(d)
+CJ-CJ-CJ-X      1 2.700   0.000 1 fit to RHF/6-31G(d)
+CC-CR-CJ-CJ     1 0.050 180.000 -4 RHF/6-31G(d) opt fit Oct21 2010
+CC-CR-CJ-CJ     1 0.250   0.000 -3 RHF/6-31G(d) opt fit Oct21 2010
+CC-CR-CJ-CJ     1 0.010 180.000 2 RHF/6-31G(d) opt fit Oct21 2010
+NB-CR-CJ-CJ     1 0.300   0.000 -3 RHF/6-31G(d) opt fit Oct21 2010
+NB-CR-CJ-CJ     1 0.950 180.000 -2 RHF/6-31G(d) opt fit Oct21 2010
+NB-CR-CJ-CJ     1 0.275 180.000 1 RHF/6-31G(d) opt fit Oct21 2010
+CC-CR-CJ-HC     1 0.050 180.000 -4 RHF/6-31G(d) opt fit Oct21 2010
+CC-CR-CJ-HC     1 0.150   0.000 -3 RHF/6-31G(d) opt fit Oct21 2010
+CC-CR-CJ-HC     1 0.150 180.000 2 RHF/6-31G(d) opt fit Oct21 2010
+NB-CR-CJ-HC     1 0.000   0.000 1 RHF/6-31G(d) opt fit Oct21 2010
+C -CT-CJ-CJ     1 0.000   0.000 1 from CJ-CJ-CT-CR
+CA-CT-CJ-CJ     1 0.000   0.000 1 guess oct 26 2004
+CJ-CT-CJ-CJ     1 0.000   0.000 1 guess mar 30 2001
+CR-CT-CJ-CJ     1 0.000   0.000 1 aproximated 5/19/1999
+CT-CT-CJ-CJ     1 1.000   0.000 3 fit to RHF/6-31G(d)
+CW-CT-CJ-CJ     1 1.000   0.000 3 from CT-CT-CJ-CJ Nov_13_2003
+H1-CT-CJ-CJ     1 1.000   0.000 1 by comparision
+HC-CT-CJ-CJ     3 2.600   0.000 3 fit to RHF/6-31G(d)
+N -CT-CJ-CJ     1 1.000   0.000 1 by comparision
+N3-CT-CJ-CJ     9 1.400   0.000 3 compare to X-CT-CT-X
+OH-CT-CJ-CJ     1 1.000   0.000 3 by comparison above
+S -CT-CJ-CJ     1 1.000   0.000 3 by comparison above
+CT-CT-CJ-CT     9 1.400   0.000 3 compare to X-CT-CT-X
+HC-CT-CJ-CT     1 0.000   0.000 1 kept zero in fit
+C -CT-CJ-HC     1 0.000   0.000 1 from CR-CT-CJ-HC
+CA-CT-CJ-HC     1 0.000   0.000 1 guess oct 26 2004
+CJ-CT-CJ-HC     1 0.000   0.000 1 guess mar 30 2001
+CR-CT-CJ-HC     1 0.000   0.000 1 kept zero in fit
+CT-CT-CJ-HC     1 0.000   0.000 1 kept zero in fit
+CW-CT-CJ-HC     1 0.000   0.000 1 from CT-CT-CJ-HC Nov_13_2003
+H1-CT-CJ-HC     1 1.000   0.000 1 by comparision
+HC-CT-CJ-HC     1 0.000   0.000 1 kept zero in fit
+N -CT-CJ-HC     1 1.000   0.000 1 by comparision
+N3-CT-CJ-HC     9 1.400   0.000 3 compare to X-CT-CT-X
+OH-CT-CJ-HC     1 0.000   0.000 1 guess mar 30 2001
+S -CT-CJ-HC     1 0.000   0.000 1 from CT-CT-CJ-HC Dec 1 2004
+HC-CT-CJ-HP     1 0.000   0.000 1 HC-CJ-CT-HC
+CT-CT-CJ-N      9 1.400   0.000 3 compare to X-CT-CT-X
+OH-CT-CJ-N      9 1.400   0.000 3 compare to X-CT-CT-X
+S -CT-CJ-N      1 1.000   0.000 3 by comparison above
+HC-CT-CJ-N3     9 1.400   0.000 3 from N3-CT-CJ-HC
+CT-CT-CJ-OH     1 1.000   0.000 3 compared to CT-CT-CJ-CJ Dec 1 2004
+H1-CT-CJ-OH     1 1.000   0.000 1 by comparision
+HC-CT-CJ-OH     1 0.000   0.000 1 unknow Dec 1 2004
+C -N -CJ-C      1 0.0     0.000 1 dummy guess (had to get going) March 30 2004
+H -N -CJ-C      1 0.0     0.000 1 dummy guess (had to get going) March 30 2004
+C -N -CJ-CJ     1 2.000   0.000 2 fit to RHF/6-31G(d)
+H -N -CJ-CJ     1 0.000   0.000 1
+C -N -CJ-CT     1 0.500 180.000 -4 from C-N-CT-CT
+C -N -CJ-CT     1 0.150 180.000 -3 from C-N-CT-CT
+C -N -CJ-CT     1 0.530   0.000 1 from C-N-CT-CT
+H -N -CJ-CT     1 0.000   0.000 1 kept zero in fit
+C -N -CJ-H1     1 0.000   0.000 1 set to zero for CJ-CJ-C-O
+C -N -CJ-HC     1 0.000   0.000 1
+H -N -CJ-HC     1 0.000   0.000 1
+CB-N*-CJ-CJ     1 0.065 180.000 -4 From CA-CA-CJ-CJ June 29 2007
+CB-N*-CJ-CJ     1 0.550 180.000 2
+CR-N*-CJ-CJ     1 0.065 180.000 -4 From CA-CA-CJ-CJ June 29 2007
+CR-N*-CJ-CJ     1 0.550 180.000 2
+CW-N*-CJ-CJ     2 1.000   0.000 -3 B3LYP/6-31G(d,p) Apr 24 2008
+CW-N*-CJ-CJ     2 3.500   0.000 -2 B3LYP/6-31G(d,p) Apr 24 2008
+CW-N*-CJ-CJ     2 0.500   0.000 1 B3LYP/6-31G(d,p) Apr 24 2008
+CB-N*-CJ-H1     1 0.000   0.000 1 guess June 29 2007
+CR-N*-CJ-H1     1 0.000   0.000 1 guess June 29 2007
+CW-N*-CJ-H1     1 0.000   0.000 1 Set to Zero Apr 24 2008
+CA-N2-CJ-CJ     1 0.065 180.000 -4 guess from CA-CA-CJ-CJ June 29 2007
+CA-N2-CJ-CJ     1 0.550 180.000 2
+CA-N2-CJ-H1     1 0.000   0.000 1 guess June 29 2007
+CT-N3-CJ-CJ     1 1.000   0.000 3 from CT-CT-CJ-CJ
+H -N3-CJ-CJ     1 2.700   0.000 1 from CJ-CJ-CJ-HC
+SO-N3-CJ-CJ     1 1.000   0.000 3 from S-CT-CJ-CJ
+CJ-N3-CJ-CT     9 1.400   0.000 3 from CT-CJ-CT-CT
+CT-N3-CJ-CT     9 1.400   0.000 3 N3-CT-CJ-CJ
+H -N3-CJ-CT     1 0.000   0.000 1 from H-N-CJ-CT
+CJ-N3-CJ-H1     1 2.700   0.000 1 from CJ-CJ-CJ-HC
+CT-N3-CJ-H1     9 1.400   0.000 3 from N-CT-CJ-HC
+H -N3-CJ-H1     1 0.000   0.000 1 from HC-CJ-CT-HC
+SO-N3-CJ-H1     1 0.000   0.000 1
+CJ-N3-CJ-HP     1 2.700   0.000 1 from CJ-CJ-CJ-HC
+CT-N3-CJ-HP     1 0.000   0.000 1 from H-N-CJ-CT
+H -N3-CJ-HP     1 0.000   0.000 1 from HC-CJ-CT-HC
+HO-OH-CJ-CJ     1 0.400   0.000 -3 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-CJ     1 0.500   0.000 -2 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-CJ     1 0.700   0.000 1 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-CT     1 0.400   0.000 -3 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-CT     1 0.500   0.000 -2 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-CT     1 0.700   0.000 1 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-H1     1 0.400   0.000 -3 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-H1     1 0.500   0.000 -2 calc RHF/6-311G(d) Dec 1 2004
+HO-OH-CJ-H1     1 0.700   0.000 1 calc RHF/6-311G(d) Dec 1 2004
+CA-OS-CJ-CJ     1 0.000   0.000 1 guess; 26 April 2006
+CA-OS-CJ-H1     1 0.000   0.000 1 guess; 26 April 2006
+CA-S -CJ-CJ     1 0.000   0.000 1 guess; 25 august 2009
+CA-S -CJ-H1     1 0.000   0.000 1 guess; 26 august 2009
+CT-CR-CM-CA     1 0.000   0.000 1 guess
+NB-CR-CM-CA     1 0.000   0.000 1 guess
+CC-CR-CM-CM     1 0.2500 180.000 -3 RHF/6-31G(d) torsion fit Aug 25 2008
+CC-CR-CM-CM     1 1.0000 180.000 -2 RHF/6-31G(d) torsion fit Aug 25 2008
+CC-CR-CM-CM     1 0.4000 180.000 1 RHF/6-31G(d) torsion fit Aug 25 2008
+CT-CR-CM-CM     1 0.000    0.000 1 guess
+N*-CR-CM-CM     1 0.2500 180.000 -3 From CM-CM-CR-CC Feb 10 2010
+N*-CR-CM-CM     1 1.0000 180.000 -2 From CM-CM-CR-CC Feb 10 2010
+N*-CR-CM-CM     1 0.4000 180.000 1 From CM-CM-CR-CC Feb 10 2010
+NB-CR-CM-CM     1 0.000    0.000 1 guess
+OS-CR-CM-CM     1 1.000  180.000 2 guess
+S -CR-CM-CM     4 2.500  180.000 2 From X-CA-CR-X
+CC-CR-CM-CT     1 0.2500   0.000 -3 RHF/6-31G(d) torsion fit Aug 25 2008
+CC-CR-CM-CT     1 1.4000 180.000 -2 RHF/6-31G(d) torsion fit Aug 25 2008
+CC-CR-CM-CT     1 0.4000   0.000 1 RHF/6-31G(d) torsion fit Aug 25 2008
+CT-CR-CM-CT     1 0.000    0.000 1 guess
+N*-CR-CM-CT     1 0.2500 180.000 -3 From CM-CM-CR-CC Feb 10 2010
+N*-CR-CM-CT     1 1.0000 180.000 -2 From CM-CM-CR-CC Feb 10 2010
+N*-CR-CM-CT     1 0.4000 180.000 1 From CM-CM-CR-CC Feb 10 2010
+NB-CR-CM-CT     1 0.000    0.000 1 guess
+OS-CR-CM-CT     1 1.000  180.000 2 guess
+NB-CR-CM-HA     4 2.500  180.000 2 From X-CA-CR-X
+S -CR-CM-HA     4 2.500  180.000 2 From X-CA-CR-X
+CT-CR-CM-NB     1 0.000    0.000 1 guess
+NB-CR-CM-NB     1 0.000    0.000 1 guess
+CM-CT-CM-CM     1 0.450    0.000 -3 from ab initio mt
+CM-CT-CM-CM     1 0.250  180.000 2 from ab initio mt
+HC-CT-CM-CM     1 1.000  180.000 3 from ab initio mt
+C -CW-CM-CM     4 14.500 180.000 2 from X-CA-Ca-X apr 20 2001
+CC-CW-CM-CM     1 1.000  180.000 1 guess planar pi mar 13 2001
+NA-CW-CM-CM     1 1.000  180.000 1 guess planar pi mar 13 2001
+OS-CW-CM-CM     4 2.500  180.000 2 From X-CA-CR-X
+S -CW-CM-CM     4 2.500  180.000 2 From X-CA-CR-X
+CC-CW-CM-CT     1 1.000  180.000 2 guess
+OS-CW-CM-CT     1 1.000  180.000 2 guess
+C -CW-CM-HA     4 14.500 180.000 2 from X-CA-Ca-X apr 20 2001
+CC-CW-CM-HA     1 1.000  180.000 1 guess planar pi mar 13 2001
+NA-CW-CM-HA     1 1.000  180.000 1 guess planar pi mar 13 2001
+OS-CW-CM-HA     4 1.500  180.000 2 From X-CA-CR-X
+S -CW-CM-HA     4 1.500  180.000 2 From X-CA-CR-X
+C -N -CM-CM     1 0.000    0.000 1
+CT-N -CM-CM     1 0.000    0.000 1 guess
+H -N -CM-CM     1 0.000    0.000 1 guess
+C -N -CM-H4     1 0.000    0.000 1
+CT-N -CM-H4     1 0.000    0.000 1 guess
+H -N -CM-H4     1 0.000    0.000 1 guess
+CA-N2-CM-CM     4 2.500  180.000 2 From X-CA-N-X
+H -N2-CM-CM     4 2.500  180.000 2 From X-CA-N-X
+CA-N2-CM-H4     4 2.500  180.000 2 From X-CA-N-X
+H -N2-CM-H4     4 2.500  180.000 2 From X-CA-N-X
+CM-NB-CM-C      1 0.000    0.000 1 guess
+C -NB-CM-CA     1 0.000    0.000 1 guess
+C -NB-CM-CM     1 2.500  180.000 1 guess planar; 3 June 2005
+CM-NB-CM-CM     0 0.000    0.000 1
+CR-NB-CM-CM     1 0.000    0.000 1 guess
+NB-NB-CM-CM     1 0.000    0.000 1 guess
+CM-NB-CM-CR     1 0.000    0.000 1 guess
+CM-NB-CM-CT     0 0.000    0.000 1
+CT-NB-CM-CT     1 1.000    0.000 1 guess
+NB-NB-CM-CT     0 0.000    0.000 1
+C -NB-CM-H4     1 0.500  180.000 1 guess
+CM-NB-CM-H4     0 0.000    0.000 1
+CR-NB-CM-H4     1 0.000    0.000 1 guess
+CT-NB-CM-H4     1 0.000    0.000 1 guess
+NB-NB-CM-H4     0 0.000    0.000 1
+CM-NB-CM-N      0 0.000    0.000 1
+CT-NB-CM-N      1 1.000    0.000 1 guess
+HO-OH-CM-C      2 0.500    0.000 1
+HX-OH-CM-C      2 0.500    0.000 1 Analog to HO-OH-CM-C, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+HO-OH-CM-CM     2 0.500    0.000 1
+HX-OH-CM-CM     2 0.500    0.000 1 Analog to HX-OH-CM-CM, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+CA-OS-CM-C      1 0.000    0.000 1 guess
+CT-OS-CM-C      1 0.000    0.000 1 guess
+CA-OS-CM-CM     1 0.000    0.000 1 guess
+CT-OS-CM-CM     1 0.000    0.000 1 guess
+CW-OS-CM-CM     1 1.350  180.000 2 From X-CA-OS-X
+SO-OS-CM-CM     1 0.000    0.000 1 guess
+CA-OS-CM-CT     1 0.000    0.000 1 guess
+CT-OS-CM-CT     1 0.000    0.000 1 guess
+CA-OS-CM-H4     1 1.350  180.000 2 From X-CA-OS-X
+CT-OS-CM-H4     1 0.000    0.000 1 guess
+SO-OS-CM-H4     1 0.000    0.000 1 guess
+O2-P -CM-CM     1 1.000    0.000 1 dummy
+O2-P -CM-CT     1 1.000    0.000 1 dummy
+CA-S -CM-C      1 0.300  180.000 2 from CA-S-CA-CA
+CA-S -CM-CM     1 0.000    0.000 1
+CT-S -CM-CM     1 0.000    0.000 1 guess
+CA-S -CM-CT     1 0.000    0.000 1
+CT-S -CM-CT     1 0.000    0.000 1 guess
+CA-S -CM-H4     1 0.000  180.000 2 from CA-CA-S-CT
+CT-S -CM-H4     1 0.100  180.000 2 guess
+CC-CW-CP-CA     1 0.000    0.000 1 guess, rigid fused aryls; 19 May 2005
+S -CW-CP-CA     1 0.000    0.000 1 guess, rigid fused aryls; 19 May 2005
+CC-CW-CP-CP     1 0.000    0.000 1 guess, rigid fused aryls; 19 May 2005
+S -CW-CP-CP     1 0.000    0.000 1 guess, rigid fused aryls; 19 May 2005
+C -N -CP-CA     4 14.500 180.000 2 from X-C-CA-X Nov 2 2005
+H -N -CP-CA     4 14.500 180.000 2 from X-C-CA-X Nov 2 2005
+C -N -CP-CP     4 14.500 180.000 2 from X-C-CA-X Nov 2 2005
+H -N -CP-CP     4 14.500 180.000 2 from X-C-CA-X Nov 2 2005
+CA-NA-CP-CA     1 0.000    0.000 1 guess for rigid systems; 13 April 2005
+H -NA-CP-CA     1 0.000    0.000 1 guess for rigid systems; 13 April 2005
+CA-NA-CP-CP     1 0.000    0.000 1 guess for rigid systems; 13 April 2005
+H -NA-CP-CP     1 0.000    0.000 1 guess for rigid systems; 13 April 2005
+CA-OS-CP-CA     1 0.000    0.000 1 guess for rigid systems; 13 April 2005
+CA-OS-CP-CP     1 0.000    0.000 1 guess for rigid systems; 13 April 2005
+CA-S -CP-CA     1 0.000    0.000 1 guess for rigid systems; 13 April 2005
+CA-S -CP-CP     1 0.000    0.000 1 guess for rigid systems; 13 April 2005
+O2-CR-CR-CA     1 0.000    0.000 1 guess
+CA-CR-CR-CT     1 0.000    0.000 1 guess
+CT-CR-CR-CT     0 0.000    0.000 1
+N -CR-CR-CT     1 0.000    0.000 1 guess
+NB-CR-CR-CT     0 0.000    0.000 1
+CT-CR-CR-H4     0 0.000    0.000 1
+N -CR-CR-H4     1 0.000    0.000 1 guess
+N3-CR-CR-H4     1 0.000    0.000 1 guess
+NB-CR-CR-H4     0 0.000    0.000 1
+CA-CR-CR-NB     1 0.000    0.000 1 guess
+N -CR-CR-NB     1 0.000    0.000 1 guess
+N3-CR-CR-NB     1 0.000    0.000 1 guess
+NB-CR-CR-NB     0 0.000    0.000 1
+O2-CR-CR-NB     1 0.000    0.000 1 guess
+CT-CR-CR-S      0 0.000    0.000 1
+NB-CR-CR-S      0 0.000    0.000 1
+CA-N2-CR-N*     1 0.000    0.000 1 guess
+H -N2-CR-N*     1 0.000    0.000 1 guess
+CA-N2-CR-NB     1 0.000    0.000 1 guess
+H -N2-CR-NB     1 1.000  180.000 2 guess
+H -N2-CR-OS     1 1.000  180.000 2 guess
+CA-N3-CR-CR     1 0.000    0.000 1 guess
+H -N3-CR-CR     1 0.000    0.000 1 guess
+CA-N3-CR-N*     1 0.000    0.000 1 guess
+CT-N3-CR-N*     1 0.000    0.000 1 guess
+H -N3-CR-N*     1 0.000    0.000 1 guess
+CA-N3-CR-NB     1 0.000    0.000 1 guess
+CT-N3-CR-NB     1 0.000    0.000 1 guess
+H -N3-CR-NB     1 0.000    0.000 1 guess
+CA-N3-CR-OS     1 0.000    0.000 1 guess
+CT-N3-CR-OS     1 0.000    0.000 1 guess
+H -N3-CR-OS     1 0.000    0.000 1 guess
+CT-N3-CR-S      1 0.000    0.000 1 guess Jan 15 2002
+HO-OH-CR-CC     2 0.500    0.000 1 estimated
+HX-OH-CR-CC     2 0.500    0.000 1 Analog to HO-OH-CR-CC, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+HO-OH-CR-NB     0 0.000    0.000 1
+HX-OH-CR-NB     0 0.000    0.000 1 Analog to HX-OH-CR-NB, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+HO-OH-CR-OS     1 1.000  180.000 2 guess
+HX-OH-CR-OS     1 1.000  180.000 2 Analog to HO-OH-CR-OS, 28 Sept 2004 (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)
+N -SO-CR-CA     1 0.000    0.000 2 guess
+NB-SO-CR-CA     1 0.000    0.000 1 guess
+O -SO-CR-CA     1 0.000    0.000 2 guess
+CT-SO-CR-CC     2 0.600    0.000 2 guess by analogy with CT-SO-CA-CA with a lower barrier; 21 Feb 2006
+O -SO-CR-CC     1 0.000    0.000 1 guess; 21 Feb 2006
+CT-SO-CR-NB     2 0.600    0.000 2 guess, by analogy with CT-SO-CA-CA with a lower barrier; 21 Feb 2006
+N -SO-CR-NB     1 0.000    0.000 2 guess
+NB-SO-CR-NB     1 0.000    0.000 1 guess
+O -SO-CR-NB     1 0.000    0.000 2 guess
+CT-SO-CR-S      2 0.600    0.000 2 guess; by analogy with CT-SO-CA-CA with a lower barrier; 21 Feb 2006
+N -SO-CR-S      1 0.000    0.000 2 guess
+O -SO-CR-S      1 0.000    0.000 2 guess
+S -CW-CT-H1     1 0.260    0.000 -2 RHF/6-31G(d) opt Sept 20 2009
+S -CW-CT-H1     1 0.350  180.000 1 RHF/6-31G(d) opt Sept 20 2009
+S -CW-CT-N      1 0.285  270.000 -4 RHF/6-31G(d) opt Sept 20 2009
+S -CW-CT-N      1 0.669    0.000 -3 RHF/6-31G(d) opt Sept 20 2009
+S -CW-CT-N      1 0.310  180.000 -2 RHF/6-31G(d) opt Sept 20 2009
+S -CW-CT-N      1 0.548  270.000 -2 RHF/6-31G(d) opt Sept 20 2009
+S -CW-CT-N      1 0.263  270.000 -1 RHF/6-31G(d) opt Sept 20 2009
+S -CW-CT-N      1 0.222    0.000 1 RHF/6-31G(d) opt Sept 20 2009
+S -CW-CT-N3     1 0.988    0.000 -4 RHF/6-31G(d) opt Sept 20 2009
+S -CW-CT-N3     1 0.258    0.000 -3 RHF/6-31G(d) opt Sept 20 2009
+S -CW-CT-N3     1 0.805    0.000 -2 RHF/6-31G(d) opt Sept 20 2009
+S -CW-CT-N3     1 2.059  270.000 -2 RHF/6-31G(d) opt Sept 20 2009
+S -CW-CT-N3     1 1.710   90.000 1 RHF/6-31G(d) opt Sept 20 2009
+C -NB-CT-C      1 1.000    0.000 1 guess
+CR-NB-CT-C      1 0.000    0.000 1 guess
+CR-NB-CT-CA     1 0.000    0.000 2 guess
+NB-NB-CT-CA     1 0.000    0.000 1 guess
+CM-NB-CT-CM     1 0.000    0.000 1 guess
+NB-NB-CT-CM     1 0.000    0.000 1 guess
+C -NB-CT-CT     1 1.000    0.000 1 guess
+CM-NB-CT-CT     1 0.000    0.000 1 guess
+CR-NB-CT-CT     1 0.000    0.000 1 guess
+NB-NB-CT-CT     0 0.000    0.000 1
+NB-NB-CT-CW     0 0.000    0.000 1
+C -NB-CT-H1     1 0.500    0.000 1 guess
+CM-NB-CT-H1     1 0.000    0.000 1 guess
+CR-NB-CT-H1     1 0.000    0.000 1 guess
+NB-NB-CT-H1     0 0.000    0.000 1
+CR-NB-CT-H2     1 0.000    0.000 1 guess
+NB-NB-CT-H2     0 0.000    0.000 1
+CC-NB-CT-HP     1 0.000    0.000 1 guess
+CR-NB-CT-HP     1 0.000    0.000 1 guess
+NB-NB-CT-N      0 0.000    0.000 1
+CR-NB-CT-N3     1 0.000    0.000 1 guess
+CR-NB-CT-NB     1 0.000    0.000 1 guess
+NB-NB-CT-NB     0 0.000    0.000 1
+CR-NB-CT-OS     1 0.000    0.000 1 guess
+NB-NB-CT-OS     1 0.000    0.000 1 guess
+NB-NB-CT-SO     1 0.000    0.000 1 guess
+CA-NC-CT-CA     6 0.00     0.000 2. taken from X -CA-CT-X June 14 2007
+CA-NC-CT-HP     6 0.00     0.000 2. taken from X -CA-CT-X June 14 2007
+CA-ND-CT-C      9 1.400    0.000 3 from X-CT-CT-X Jan 30 2002
+CT-ND-CT-C      1 0.000    0.000 1 dummy
+CA-ND-CT-CT     2 4.000  180.000 1 *********
+CT-ND-CT-CT     9 1.400    0.000 3 from X-CT-CT-X Jan 30 2002
+CA-ND-CT-H1     1 0.000    0.000 1 dummy
+CT-ND-CT-H1     1 0.000    0.000 1 dummy
+NJ-NJ-CT-CA     1 0.000    0.000 2
+NJ-NJ-CT-CT     1 0.000    0.000 2
+NL-NL-CT-CA     1 0.000    0.000 2 guess
+NL-NL-CT-H1     1 0.000    0.000 2 guess
+O2-P -CT-CT     1 1.000    0.000 1 dummy
+O2-P -CT-F      1 1.000    0.000 1 dummy
+O2-P -CT-H1     1 0.000    0.000 1 dummy
+O2-P -CT-HC     1 0.000    0.000 1 dummy
+O2-P -CT-N      1 0.000    0.000 1 dummy
+CT-S -CT-CA     1 0.300    0.000 -1 fit to RHF/6-31G(d)
+CT-S -CT-CA     1 0.350    0.000 3 march 17 1998
+H -S -CT-H      3 1.000    0.000 3 from parmC96
+CT-SO-CT-CT     1 0.800    0.000 3 RHF/6-41G(d,p) Dec 12 1997
+CT-SO-CT-H1     1 0.250    0.000 1 RHF/6-41G(d,p) Dec 12 1997
+O -SO-CT-H1     1 0.000    0.000 1 RHF/6-41G(d,p) Dec 12 1997
+C -N -CW-C      1 1.000  180.000 2 guess May 19 2006
+CB-N -CW-C      1 1.000  180.000 2 guess May 19 2006
+CT-N -CW-C      1 1.000  180.000 1 in a rigid ring; 12 dec 2006
+CW-N -CW-C      1 1.000  180.000 2 guess May 19 2006
+C -N -CW-CA     1 1.000  180.000 2 guess
+CA-N -CW-CA     1 1.000  180.000 2 guess
+CT-N -CW-CA     2 4.900  180.000 2 guess Dec 6 2005
+H -N -CW-CA     1 1.100  180.000 1 guess Aug 31 2006
+C -N -CW-CC     1 1.000  180.000 2 guess
+CA-N -CW-CC     1 1.000  180.000 2 guess
+CB-N -CW-CC     1 1.000  180.000 2 guess May 19 2006
+CT-N -CW-CC     1 1.000  180.000 2 guess
+CW-N -CW-CC     1 1.000  180.000 2 guess May 19 2006
+H -N -CW-CC     1 1.000    0.000 1 guess
+C -N -CW-CT     1 1.000  180.000 2 guess
+CW-N -CW-CT     1 1.000  180.000 2 guess May 19 2006
+H -N -CW-CT     1 1.000  180.000 2 guess
+C -N -CW-H4     1 1.000    0.000 2 guess
+CT-N -CW-H4     1 0.000    0.000 1 guess
+H -N -CW-H4     1 1.000    0.000 1 guess
+C -N -CW-NA     1 1.000  180.000 2 guess 16 May 2005
+CT-N -CW-NA     1 1.000  180.000 2 guess 3 June 2005
+H -N -CW-NA     1 0.000    0.000 1 guess 16 May 2005
+C -N -CW-OS     1 1.000  180.000 2 guess
+CA-N -CW-OS     1 0.000    0.000 1 guess
+CT-N -CW-OS     1 1.000  180.000 2 guess
+H -N -CW-OS     1 1.000  180.000 2 guess
+C -N -CW-S      1 1.000  180.000 2 guess
+H -N -CW-S      1 1.000  180.000 2 guess
+CA-N3-CW-CC     1 0.000    0.000 1 guess
+CT-N3-CW-CC     1 0.000    0.000 1 guess
+H -N3-CW-CC     1 0.000    0.000 1 guess
+CA-N3-CW-NA     1 0.000    0.000 1 guess
+CT-N3-CW-NA     1 0.000    0.000 1 guess
+H -N3-CW-NA     1 0.000    0.000 1 guess
+CA-N3-CW-OS     1 0.000    0.000 1 guess
+CT-N3-CW-OS     1 0.000    0.000 1 guess
+H -N3-CW-OS     1 0.000    0.000 1 guess
+H -N3-CW-S      1 0.000    0.000 1 guess
+CA-NC-CW-C      2 9.600  180.000 2 ff94 X-CA-NC-X
+CA-NC-CW-CC     2 9.600  180.000 2 ff94 X-CA-NC-X
+CA-NC-CW-OS     2 9.600  180.000 2 ff94 X-CA-NC-X
+N -SO-CW-CA     1 0.000    0.000 2 guess
+NB-SO-CW-CA     1 0.000    0.000 1 guess
+O -SO-CW-CA     1 0.000    0.000 2 guess
+N -SO-CW-CC     1 0.000    0.000 2 guess
+N3-SO-CW-CC     2 3.500  180.000 2 guess 0.75 times X-C-OS-X
+NB-SO-CW-CC     1 0.000    0.000 1 guess
+O -SO-CW-CC     2 3.500  180.000 2 guess 0.75 times X-C-OS-X
+N3-SO-CW-NA     2 3.500  180.000 2 guess 0.75 times X-C-OS-X, 2 Sept 2004
+O -SO-CW-NA     2 3.500  180.000 2 similar to O -SO-CW-CC, 2 Sept 2004
+N3-SO-CW-OS     2 3.500  180.000 2 guess 0.75 times X-C-OS-X
+O -SO-CW-OS     2 3.500  180.000 2 guess 0.75 times X-C-OS-X
+N3-SO-CW-S      2 3.500  180.000 2 guess 0.75 times X-C-OS-X
+O -SO-CW-S      2 3.500  180.000 2 guess 0.75 times X-C-OS-X
+C -N -N -C      0 0.000    0.000 1
+CM-N -N -C      1 0.000    0.000 1 from other-N-N- dummies apr 20 2001
+CT-N -N -C      0 0.000    0.000 1
+CT-N -N -CT     0 0.000    0.000 1
+C -N -N -H      0 0.000    0.000 1
+CM-N -N -H      1 0.000    0.000 1 from other-N-N- dummies apr 20 2001
+CT-N -N -H      0 0.000    0.000 1
+CT-N3-N -C      1 0.000    0.000 1 dummy
+CT-N3-N -CA     1 0.000    0.000 1 guess
+CT-N3-N -CT     1 0.000    0.000 1 dummy
+CT-N3-N -H      1 0.000    0.000 1 guess june 25 2009
+CC-NA-N -C      4 14.4   180.000 2 from CA-CA-CA-CA April 9 2009
+CW-NA-N -C      4 14.4   180.000 2 from CA-CA-CA-CA April 9 2009
+H -NA-N -C      4 14.4   180.000 2 from CA-CA-CA-CA April 9 2009
+CC-NA-N -CT     4 14.4   180.000 2 from CA-CA-CA-CA April 9 2009
+CW-NA-N -CT     4 14.4   180.000 2 from CA-CA-CA-CA April 9 2009
+H -NA-N -CT     4 14.4   180.000 2 from CA-CA-CA-CA April 9 2009
+CR-NB-N -C      1 0.000    0.000 1 guess
+CR-NB-N -CT     1 0.000    0.000 1 guess
+CR-NB-N -H      1 2.000  180.000 2 guess Mar 6 2007
+CA-NC-N -C      1 0.000    0.000 1 guess
+CP-NC-N -C      4 14.4   180.000 2 from CA-CA-CA-CA Aug 30 2010
+CR-NC-N -C      1 0.000    0.000 1 guess
+CA-NC-N -CA     1 0.000    0.000 1 guess
+CA-NC-N -CM     1 0.000    0.000 1 guess
+CA-NC-N -CT     1 0.000    0.000 1 guess
+CP-NC-N -CT     4 14.4   180.000 2 from CA-CA-CA-CA Aug 30 2010
+CR-NC-N -CT     1 0.000    0.000 1 guess
+CA-NC-N -H      4 2.500  180.000 2 From X-CA-CR-X Oct 23 2006
+CC-OS-N -C      1 0.000    0.000 1 to be calculated
+CT-OS-N -C      1 0.000    0.000 1 guess
+NB-OS-N -C      1 1.000    0.000 1 guess
+CC-OS-N -CT     1 0.000    0.000 1 to be calculated
+CC-OS-N -H      4 2.500  180.000 2 From X-CA-CR-X Oct 23 2006
+CT-OS-N -H      1 0.000    0.000 1 guess
+NB-OS-N -H      1 1.000  180.000 1 guess
+CW-S -N -C      1 2.000  180.000 2 guess Mar 6 2007
+CW-S -N -CT     1 2.000  180.000 2 guess Mar 6 2007
+CA-SO-N -C      1 0.000    0.000 2 guess
+CC-SO-N -C      1 0.000    0.000 2 guess
+CR-SO-N -C      1 0.000    0.000 2 guess
+CT-SO-N -C      1 0.500    0.000 -3 taken from CT-N3-SO-CA
+CT-SO-N -C      1 1.750    0.000 -2 taken from CT-N3-SO-CA
+CT-SO-N -C      1 1.500    0.000 1 taken from CT-N3-SO-CA
+CW-SO-N -C      1 0.000    0.000 2 guess
+N2-SO-N -C      1 0.000    0.000 1 guess
+O -SO-N -C      1 0.750    0.000 1 taken from CT-N3-SO-O
+CR-NB-N*-NB     0 0.000    0.000 1
+CA-NC-N*-CR     1 0.000    0.000 1 guess
+CA-NC-N*-CW     1 0.500  180.000 2 guess Jan 9 2008
+CA-NC-N*-NB     1 0.000    0.000 1 guess
+NB-OS-N*-CR     1 0.000    0.000 1 guess
+NB-OS-N*-CW     1 0.000    0.000 1 guess
+CR-NB-N2-CA     2 15.000 180.00 1. std sp2-sp2 aromatic June 14 2007
+NB-NB-N2-CA     1 0.000    0.000 1 assumed intracyclic (aryl); 11 Aug 2005
+CR-NB-N2-CR     2 15.000 180.000 1. std sp2-sp2 aromatic June 14 2007
+NB-NB-N2-CR     1 0.000    0.000 1 assumed intracyclic (aryl); 11 Aug 2005
+CT-SO-N2-CA     1 0.000    0.000 1 guess
+N -SO-N2-CA     1 0.000    0.000 1 guess
+O -SO-N2-CA     1 0.000    0.000 1 guess
+O2-SO-N2-CA     1 0.000    0.000 1 guess
+OS-SO-N2-CA     1 0.000    0.000 1 guess
+N -SO-N2-CT     1 0.000    0.000 1 guess
+O -SO-N2-CT     1 0.000    0.000 1 guess
+O2-SO-N2-CT     1 0.000    0.000 1 guess
+OS-SO-N2-CT     1 0.000    0.000 1 guess
+CT-SO-N2-H      1 0.000    0.000 1 guess
+O -SO-N2-H      1 0.000    0.000 1 guess
+O2-SO-N2-H      1 1.000  180.000 -1 taken from H-N3-SO-O
+O2-SO-N2-H      1 0.250    0.000 3 Taken from H-N3-SO-O
+CT-N3-N3-CT     2 0.750    0.000 -3 MP2/6-31G(d,p) 7/23/98
+CT-N3-N3-CT     2 4.250    0.000 -2 MP2/6-31G(d,p) 7/23/98
+CT-N3-N3-CT     2 3.000    0.000 1 MP2/6-31G(d,p) 7/23/98
+CT-N3-N3-H      2 0.800    0.000 -3 MP2/6-31G(d,p) 7/24/98
+CT-N3-N3-H      2 4.300    0.000 -2 MP2/6-31G(d,p) 7/24/98
+CT-N3-N3-H      2 2.400    0.000 1 MP2/6-31G(d,p) 7/24/98
+H -N3-N3-H      2 0.250    0.000 -3 MP2/6-31G(d,p) 7/23/98
+H -N3-N3-H      2 3.750    0.000 -2 MP2/6-31G(d,p) 7/23/98
+H -N3-N3-H      2 1.500    0.000 1 MP2/6-31G(d,p) 7/23/98
+NB-NB-N3-SO     1 0.000    0.000 1 guess
+CA-SO-N3-CA     1 0.500    0.000 -3 similar to case with CT instead of CA
+CA-SO-N3-CA     1 1.750    0.000 -2 similar to case with CT instead of CA
+CA-SO-N3-CA     1 1.500    0.000 1 similar to case with CT instead of CA
+CT-SO-N3-CA     2 1.0     90.000 -3 Fit to CA-CA-N3-SO/CA-N3-SO-CT surface
+CT-SO-N3-CA     2 2.75     0.000 2 Fit to CA-CA-N3-SO/CA-N3-SO-CT surface
+O -SO-N3-CA     1 0.750    0.000 1 similar to case with CT instead of CA
+CA-SO-N3-CJ     1 0.500    0.000 -3 from CT-N3-SO-CA
+CA-SO-N3-CJ     1 1.750    0.000 -2 from CT-N3-SO-CA
+CA-SO-N3-CJ     1 1.500    0.000 1 from CT-N3-SO-CA
+CC-SO-N3-CJ     1 0.500    0.000 -3 from CT-N3-SO-CA
+CC-SO-N3-CJ     1 1.750    0.000 -2 from CT-N3-SO-CA
+CC-SO-N3-CJ     1 1.500    0.000 1 from CT-N3-SO-CA
+O -SO-N3-CJ     1 0.750    0.000 1 from CT-N3-SO-O
+O2-SO-N3-CJ     1 0.200    0.000 -3 Taken from CT-N3-SO-O2 fit Nov 5 2009
+O2-SO-N3-CJ     1 0.300  180.000 -2 Taken from CT-N3-SO-O2 fit Nov 5 2009
+O2-SO-N3-CJ     1 0.700    0.000 1 Taken from CT-N3-SO-O2 fit Nov 5 2009
+CA-SO-N3-CT     1 0.500    0.000 -3 RHF/6-41G(d,p) Dec 12 1997
+CA-SO-N3-CT     1 1.750    0.000 -2 RHF/6-41G(d,p) Dec 12 1997
+CA-SO-N3-CT     1 1.500    0.000 1 RHF/6-41G(d,p) Dec 12 1997
+CC-SO-N3-CT     1 0.500    0.000 -3 Similar to CA-SO-N3-CT, , 2 Sept 2004
+CC-SO-N3-CT     1 1.750    0.000 -2 "
+CC-SO-N3-CT     1 1.500    0.000 1 "
+CT-SO-N3-CT     1 2.500    0.000 -1 RHF/6-41G(d,p) Dec 12 1997
+CT-SO-N3-CT     1 0.750    0.000 3 RHF/6-41G(d,p) Dec 12 1997
+CW-SO-N3-CT     1 0.500    0.000 -3 Similar to CA-SO-N3-CT, , 2 Sept 2004
+CW-SO-N3-CT     1 1.750    0.000 -2 "
+CW-SO-N3-CT     1 1.500    0.000 1 "
+O -SO-N3-CT     1 0.750    0.000 1 RHF/6-41G(d,p) Dec 12 1997
+O2-SO-N3-CT     1 0.200    0.000 -3 RHF/6-31G(d) opt scan fit Jan 16 2009
+O2-SO-N3-CT     1 0.300  180.000 -2 RHF/6-31G(d) opt scan fit Jan 16 2009
+O2-SO-N3-CT     1 0.700    0.000 1 RHF/6-31G(d) opt scan fit Jan 16 2009
+CA-SO-N3-H      1 0.500    0.000 -3 RHF/6-41G(d,p) Dec 12 1997
+CA-SO-N3-H      1 0.000    0.000 1 RHF/6-41G(d,p) Dec 12 1997
+CC-SO-N3-H      1 0.500    0.000 -3 Taken from H-N3-SO-CA
+CC-SO-N3-H      1 0.000    0.000 1 Taken from H-N3-SO-CA
+CT-SO-N3-H      1 0.000    0.000 1 RHF/6-41G(d,p) Dec 12 1997
+CW-SO-N3-H      1 0.500    0.000 -3 from H-N3-SO-CA
+CW-SO-N3-H      1 0.000    0.000 1 from H-N3-SO-CA
+O -SO-N3-H      1 1.000  180.000 -1 RHF/6-41G(d,p) Dec 12 1997
+O -SO-N3-H      1 0.250    0.000 3 RHF/6-41G(d,p) Dec 12 1997
+O2-SO-N3-H      1 1.000  180.000 -1 RHF/6-41G(d,p) Dec 12 1997
+O2-SO-N3-H      1 0.250    0.000 3 RHF/6-41G(d,p) Dec 12 1997
+CT-SO-N3-NB     1 0.000    0.000 1 guess
+O -SO-N3-NB     1 0.000    0.000 1 guess
+CA-S -NB-CC     1 0.000    0.000 1 dummy
+CR-S -NB-CR     1 0.000    0.000 1 guess July 30 2003
+CW-S -NB-CR     1 0.000    0.000 1 guess
+CT-SO-NB-C*     2 0.080    0.000 -6 RHF/6-31G(d) Mar 7 2007
+CT-SO-NB-C*     2 0.815    0.000 -5 RHF/6-31G(d) Mar 7 2007
+CT-SO-NB-C*     2 0.027    0.000 -4 RHF/6-31G(d) Mar 7 2007
+CT-SO-NB-C*     2 0.037    0.000 -3 RHF/6-31G(d) Mar 7 2007
+CT-SO-NB-C*     2 2.658  180.000 -2 RHF/6-31G(d) Mar 7 2007
+CT-SO-NB-C*     2 1.854    0.000 1 RHF/6-31G(d) Mar 7 2007
+O -SO-NB-C*     1 0.071    0.000 -6 RHF/6-31G(d) Mar 7 2007
+O -SO-NB-C*     1 0.697    0.000 -5 RHF/6-31G(d) Mar 7 2007
+O -SO-NB-C*     1 0.208  180.000 -4 RHF/6-31G(d) Mar 7 2007
+O -SO-NB-C*     1 3.931  180.000 -2 RHF/6-31G(d) Mar 7 2007
+O -SO-NB-C*     1 1.940  180.000 -3 RHF/6-31G(d) Mar 7 2007
+O -SO-NB-C*     1 2.448    0.000 1 RHF/6-31G(d) Mar 7 2007
+CR-SO-NB-CR     1 0.000    0.000 1 guess
+CW-SO-NB-CR     1 0.000    0.000 1 guess
+O -SO-NB-CR     1 0.000    0.000 1 guess
+CR-SO-NB-NB     1 0.000    0.000 1 guess
+CW-SO-NB-NB     1 0.000    0.000 1 guess
+O -SO-NB-NB     1 0.000    0.000 1 guess
+CA-NC-NC-CA     1 0.000    0.000 1 intracyclic, guess, 15 Nov 2005
+CB-NC-NC-CB     1 0.000    0.000 1 intracyclic, guess, 6 April 2005
+CA-NL-NL-NL     1 0.000    0.000 2 guess
+CT-NL-NL-NL     1 0.000    0.000 2 guess
+N2-SO-OS-C      1 0.000    0.000 1 guess
+O2-SO-OS-C      1 0.000    0.000 1 guess
+CA-SO-OS-CA     3 0.75     0.000 3. taken from X -OS-P -X June 14 2007
+O2-SO-OS-CA     3 0.75     0.000 3. taken from X -OS-P -X June 14 2007
+CT-SO-OS-CM     1 0.000    0.000 1 guess
+O2-SO-OS-CM     1 0.000    0.000 1 guess
+CT-SO-OS-CT     1 0.000    0.000 1 guess
+N2-SO-OS-CT     1 0.000    0.000 1 guess
+O2-SO-OS-CT     1 0.000    0.000 1 guess
+C -S -S -CT     1 3.50     0.000 -2. Taken from CT-S-S-CT June 25 2010
+C -S -S -CT     1 0.60     0.000 3. Taken from CT-S-S-CT June 25 2010
+
+IMPROPER
+X -C*-C*-X     1.100   180.000    2   5-memb Ar db
+X -CP-C*-X     1.100   180.000    2   5-memb Ar db
+X -CP-C*-X     1.100   180.000    2   5-memb Ar db
+X -S -C*-X     1.100   180.000    2   thiophene
+X -X -C -NB   10.500   180.000    2   imide from ff94 X-X-C-O
+X -X -CA-CL    1.100   180.000    2   ff94 X-X-CA-HA
+X -X -CA-F     1.100   180.000    2   Ar-F;ff94 X-X-CA-HA
+X -X -CA-OS    1.100   180.000    2   ff94 X-X-CA-HA
+X -CB-CB-X     1.100   180.000    2   indole bridgehead
+X -X -CC-X     1.100   180.000    2   guess generic 5cyc
+X -X -CM-CA    1.100   180.000    2   planar db
+X -X -CM-CM    1.100   180.000    2   planar db
+X -X -CM-CT    1.100   180.000    2   planar db
+X -X -CP-X     1.100   180.000    2   planar ar
+X -X -CR-X     1.100   180.000    2   guess generic 5cyc
+X -X -CW-X     1.100   180.000    2   guess generic 5cyc
+X -X -N*-X     1.100   180.000    2   guess generic 5cyc
+X -X -NA-X     1.100   180.000    2   guess generic 5cyc
+CA-CA-CA-CA    1.100   180.000    2   naph;ff94 X-X-CA-HA
+CA-CA-CA-CP    1.100   180.000    2   naph;ff94 X-X-CA-HA
+CA-CA-CA-NC    1.100   180.000    2   quin;ff94 X-X-CA-HA
+CP-CP-CA-CA    1.100   180.000    2   Ph-Ph;ff94 CA-CA-C-OH
+CA-CR-CC-CW   10.500   180.000    2   guess Feb3/2000
+NB-CR-CC-CT   10.500   180.000    2   guess Feb3/2000
+CT-N*-CR-NB   10.500   180.000    2   guess Feb10/2000
+S -NB-CR-S    10.500   180.000    2   guess  Nov 4 2003 to keep a benzothiophene planar with the sulfur substituant.
+CA-NB-N*-CR   10.500   180.000    2   guess Feb11/2000
+CT-NB-N*-CR   10.500   180.000    2   guess Feb18/2000
+NB-NB-N*-NB    1.000   180.000    2
+
+NONBON
+  BR          2.05    0.35            Bondi extrap from CL (Sep2000)
+  C2          1.9080  0.0860          From aromatic carbons CA,C,CM
+  CJ          1.9080  0.1094          set to CT values
+  CL          1.948   0.265           Covalent Cl (J.P.C B,v102,p8070(1998)
+  CP          1.9080  0.0860          ff94 CA
+  I           2.18    0.4             Bondi extrap from CL (Sep2000)
+  ND          1.824    0.17           Taken from parm94.dat
+  NJ          1.824    0.17           Taken from parm94.dat
+  NL          1.824    0.17           Taken from parm94.dat
+  OP          1.7682  0.1521          H3O+ taken from TIP3P water model
+  SD          2.0000  0.2500          by analogy with S and SH
+  SO          2.0000  0.2500          by analogy with S and SH
+  FE          0.8     0.0003          Rough fit  April2003
+  ZN          1.10    0.0125          From Parm99 : Zn2+, Merz,PAK, JACS,113,8262,(1991); added by  26 Feb 2006
+  MG          0.7926  0.8947          From Parm99 : Mg2+ Aqvist JPC 1990,94,8021: added by  26 Feb 2006
+  HX          0.6000  0.0157          Same param than H.  Sep 28 2004.  (HX is like HO but avoid electrostatic singularities in ketal and aminal because it has a small Lennard Jones volume)

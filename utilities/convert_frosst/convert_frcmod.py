@@ -90,6 +90,7 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
     force_section = ['NonbondedForce', 'HarmonicBondForce', 'HarmonicAngleForce', 'PeriodicTorsionForce', 'PeriodicTorsionForce']
     ct = 0
     thissec = None
+    # Why is this a while loop and not a for line in text loop?
     while ct < len(text):
         line = text[ct]
         tmp = line.split()
@@ -154,7 +155,8 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
                     # Find what number to use
                     idnr = 1
                     paramtag = 'k%s' % idnr
-                    while paramtag in params:
+                    # This was "while paramtag in params" so it was overwriting k2 etc.
+                    while paramtag in oldparams:
                         idnr+=1
                         paramtag = 'k%s' % idnr
                     # Construct new param object with updated numbers
