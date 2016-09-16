@@ -1,4 +1,5 @@
 Mon Aug 29 11:45:56 PDT 2016
+Written by Christopher Bayly at the beginning of this process
 
 Converting parm99 to a smirff
 -----------------------------
