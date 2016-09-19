@@ -74,14 +74,14 @@ Note that lines beginning with `%` are comment lines.
 
 We also specify a number of starting types, "initial types" which can be the same or different from the base types. These follow the same format, and `atomtypes/basetypes.smarts` can be reused unless alternate behavior is desired (such as starting from more sophisticated initial types).
 
-We have two sampler options for SMARTY, one if the original and the other is elemental. The principle of sampling is the same, the only change is in which elements we are interesting to look at. Saying that, if we want to sampler all elements at the same time, we use the original sampler, if we are interested in one specific element, we can sampler an isolated element, such as Oxigen, and sampler only for that atom type.
+We have two sampler options for SMARTY, one if the original and the other is elemental. The principle of sampling is the same, the only change is in which elements we are interesting to look at. Saying that, if we want to sampler all elements at the same time, we use the original sampler, if we are interested in one specific element, we can sampler an isolated element, such as Oxygen, and sampler only for that atom type.
 
 
 ## ORIGINAL SAMPLER
 
 Command line example: `smarty --samplertype original --basetypes=examples/AlkEtOH/atomtypes/basetypes.smarts --initialtypes=examples/AlkEtOH/atomtypes/basetypes.smarts --decorators=examples/AlkEtOH/atomtypes/new-decorators.smarts  --molecules=examples/AlkEtOH/molecules/test_filt1_tripos.mol2 --reference=examples/AlkEtOH/molecules/test_filt1_ff.mol2 --iterations 100 --temperature=0`
 
-Original sampler is the default option.
+Original sampler is the default option. Here, smarty samples around all elements.
 
 Atom type creation moves has two options, one is using simple decorators (`--decoratorbehavior=simple-decorators`) and the other is combinatorial decorators (default).
  
@@ -169,9 +169,9 @@ Currently, the acceptance criteria does not include the full Metropolis-Hastings
 
 Command line example: `smarty --samplertype elemental --element=8 --basetypes=examples/AlkEtOH/atomtypes/basetypes.smarts --initialtypes=examples/AlkEtOH/atomtypes/basetypes.smarts --decorators=examples/AlkEtOH/atomtypes/new-decorators.smarts  --molecules=examples/AlkEtOH/molecules/test_filt1_tripos.mol2 --reference=examples/AlkEtOH/molecules/test_filt1_ff.mol2 --iterations 100 --temperature=0`
 
-The elemental sampler has the same principle of the original sampler. However, the sampler will occurs for only one element (such as Oxigen, Carbon, Hydrogen, etc), which needs to be specified on the command line.
+The elemental sampler has the same principle of the original sampler. However, the sampler will occurs for only one element (such as Oxygen, Carbon, Hydrogen, etc), which needs to be specified on the command line.
 
-The element number needs to be specified (--element=8 for Oxigen).
+The element number needs to be specified (--element=8 for Oxygen).
 
 ## SMIRFF
 
