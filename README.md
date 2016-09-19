@@ -79,7 +79,7 @@ We also specify a number of starting types, "initial types" which can be the sam
 We have two sampler options for SMARTY, one if the original and the other is elemental. The principle of sampling is the same, the only change is in which elements we are interesting to look at. Saying that, if we want to sampler all elements at the same time, we use the original sampler, if we are interested in one specific element, we can sampler an isolated element, such as Oxygen, and sampler only for that atom type.
 
 
-### ORIGINAL SAMPLER
+### Original sampler
 
 Command line example: `smarty --samplertype original --basetypes=examples/AlkEtOH/atomtypes/basetypes.smarts --initialtypes=examples/AlkEtOH/atomtypes/basetypes.smarts --decorators=examples/AlkEtOH/atomtypes/new-decorators.smarts  --molecules=examples/AlkEtOH/molecules/test_filt1_tripos.mol2 --reference=examples/AlkEtOH/molecules/test_filt1_ff.mol2 --iterations 100 --temperature=0`
 
@@ -167,7 +167,7 @@ If a proposed type matches zero atoms, the RJMCMC move is rejected.
 
 Currently, the acceptance criteria does not include the full Metropolis-Hastings acceptance criteria that would include the reverse probability.  This needs to be added in.
 
-### ELEMENTAL SAMPLER
+### Elemental sampler
 
 Command line example: `smarty --samplertype elemental --element=8 --basetypes=examples/AlkEtOH/atomtypes/basetypes.smarts --initialtypes=examples/AlkEtOH/atomtypes/basetypes.smarts --decorators=examples/AlkEtOH/atomtypes/new-decorators.smarts  --molecules=examples/AlkEtOH/molecules/test_filt1_tripos.mol2 --reference=examples/AlkEtOH/molecules/test_filt1_ff.mol2 --iterations 100 --temperature=0`
 
