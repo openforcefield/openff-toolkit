@@ -1,5 +1,6 @@
 from functools import partial
 from smarty import ForceField
+from smarty import generateTopologyFromOEMol
 import smarty
 import openeye
 import os
@@ -21,16 +22,18 @@ ffxml_contents = u"""\
 <SMIRFF>
 
 <!-- Header block (optional) -->
-<Date>Date: Tue May  3 2016</Date>
-<Author>C. I. Bayly, OpenEye Scientific Software</Author>
+<Date>Date: May-September 2016</Date>
+<Author>C. I. Bayly, OpenEye Scientific Software and David Mobley, UCI</Author>
 
-<HarmonicBondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
+<HarmonicBondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2" fractional_bondorder="interpolate-linear">
    <Bond smirks="[#6X4:1]-[#6X4:2]" length="1.526" k="620.0" id="b0001" parent_id="b0001"/> <!-- CT-CT from frcmod.Frosst_AlkEthOH -->
    <Bond smirks="[#6X4:1]-[#1:2]" length="1.090" k="680.0" id="b0002" parent_id="b0002"/> <!-- CT-H_ from frcmod.Frosst_AlkEthOH -->
    <Bond smirks="[#8:1]~[#1:2]" length="1.410" k="640.0" id="b0003" parent_id="b0003"/> <!-- DEBUG O-H -->
    <Bond smirks="[#6X4:1]-[O&amp;X2&amp;H1:2]" length="1.410" k="640.0" id="b0004" parent_id="b0004"/> <!-- CT-OH from frcmod.Frosst_AlkEthOH -->
    <Bond smirks="[#6X4:1]-[O&amp;X2&amp;H0:2]" length="1.370" k="640.0" id="b0005" parent_id="b0005"/> <!--CT-OS from frcmod.Frosst_AlkEthOH -->
    <Bond smirks="[#8X2:1]-[#1:2]" length="0.960" k="1106.0" id="b0006" parent_id="b0003"/> <!-- OH-HO from frcmod.Frosst_AlkEthOH -->
+    <Bond smirks="[#6X3:1]!#[#6X3:2]" id="b5" parent_id="b5" k_bondorder1="820.0" k_bondorder2="1098" length_bondorder1="1.45" length_bondorder2="1.35"/> <!-- Christopher Bayly from parm99, Aug 2016 -->
+   <Bond smirks="[#6X3:1]-[#1:2]" id="b27" parent_id="b27" k="734.0" length="1.080"/> <!-- Christopher Bayly from par99, Aug 2016 -->
 </HarmonicBondForce>
 
 <HarmonicAngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
@@ -40,6 +43,9 @@ ffxml_contents = u"""\
    <Angle smirks="[#8X2:1]-[#6X4:2]-[#8X2:3]" angle="109.50" k="140.0" id="a0004" parent_id="a0001"/> <!-- O_-CT-O_ from frcmod.Frosst_AlkEthOH -->
    <Angle smirks="[#6X4:1]-[#8X2:2]-[#1:3]" angle="108.50" k="110.0" id="a0005" parent_id="a0005"/> <!-- CT-OH-HO from frcmod.Frosst_AlkEthOH -->
    <Angle smirks="[#6X4:1]-[#8X2:2]-[#6X4:3]" angle="109.50" k="120.0" id="a0006" parent_id="a0006"/> <!-- CT-OS-CT from frcmod.Frosst_AlkEthOH -->
+   <Angle smirks="[*:1]~[#6X3:2]~[*:3]" angle="120." id="a10" parent_id="a10" k="140.0"/> <!-- Christopher Bayly from parm99, Aug 2016 -->
+   <Angle smirks="[#1:1]-[#6X3:2]~[*:3]" angle="120." id="a11" parent_id="a11" k="100.0"/> <!-- Christopher Bayly from parm99, Aug 2016 -->
+   <Angle smirks="[#1:1]-[#6X3:2]-[#1:3]" angle="120." id="a12" parent_id="a12" k="70.0"/> <!-- Christopher Bayly from parm99, Aug 2016 -->
 </HarmonicAngleForce>
 <PeriodicTorsionForce phase_unit="degrees" k_unit="kilocalories_per_mole">
    <Proper smirks="[a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]" idivf1="9" periodicity1="3" phase1="0.0" k1="1.40" id="t0001" parent_id="t0001"/> <!-- X -CT-CT-X from frcmod.Frosst_AlkEthOH -->
@@ -54,6 +60,11 @@ ffxml_contents = u"""\
    <Proper smirks="[#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]" idivf1="1" periodicity1="3" phase1="0.0" k1="0.144" idivf2="1" periodicity2="2" phase2="0.0" k2="1.175" id="t0010" parent_id="t0001"/> <!-- O_-CT-CT-O_ from frcmod.Frosst_AlkEthOH -->
    <Proper smirks="[#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4]" idivf1="1" periodicity1="3" phase1="0.0" k1="0.0" idivf2="1" periodicity2="1" phase2="0.0" k2="0.25" id="t0011" parent_id="t0001"/> <!-- H_-CT-CT-O_ from frcmod.Frosst_AlkEthOH; discrepancy with parm@frosst with H2,H3-CT-CT-O_ per C Bayly -->
    <Proper smirks="[#1:1]-[#6X4:2]-[#6X4:3]-[OX2:4]" idivf1="1" periodicity1="3" phase1="0.0" k1="0.0" idivf2="1" periodicity2="1" phase2="0.0" k2="0.25" id="t0012" parent_id="t0001"/> <!-- HC,H1-CT-CT-OH,OS from frcmod.Frosst_AlkEthOH ; note corresponding H2 and H3 params missing so they presumably get generic parameters (another parm@frosst bug) -->
+  <Proper smirks="[*:1]~[#6X3:2]-[#6X4:3]~[*:4]" id="t13" idivf1="1" k1="0.000" periodicity1="3" phase1="0.0"/> <!-- parm99 generic, Bayly, Aug 2016 -->
+    <Proper smirks="[#1:1]-[#6X4:2]-[#6X3:3]=[#6X3:4]" id="t15" parent_id="t15" idivf1="1" k1="0.380" periodicity1="3" phase1="180.0" phase2="0.0" k2="1.150" periodicity2="1" idivf2="1"/> <!-- parm99, Bayly, Aug 2016 -->
+    <Proper smirks="[*:1]~[#6X3:2]-[#6X3:3]~[*:4]" id="t18" parent_id="t18" idivf1="1" k1="1." periodicity1="2" phase1="180.0"/> <!-- parm99 generic, Bayly, Aug 2016 -->
+   <Proper smirks="[*:1]~[#6X3:2]:[#6X3:3]~[*:4]" id="t20" parent_id="t20" idivf1="1" k1="3.625" periodicity1="2" phase1="180.0"/> <!-- parm99 generic, Bayly, Aug 2016 -->
+    <Proper smirks="[*:1]-[#6X3:2]=[#6X3:3]-[*:4]" id="t21" parent_id="t21" idivf1="1" k1="6." periodicity1="2" phase1="180.0"/> <!-- parm99 generic, Bayly, Aug 2016 -->
    <Improper smirks="[a,A:1]~[#6X3:2]([a,A:3])~[OX1:4]" periodicity1="2" phase1="180.0" k1="10.5" id="i0001" parent_id="i0001"/> <!-- X -X -C -O  from frcmod.Frosst_AlkEthOH; none in set but here as format placeholder -->
 </PeriodicTorsionForce>
 <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
@@ -80,6 +91,34 @@ ffxml_contents = u"""\
 </SMIRFF>
 """
 
+# Set up another, super minimal FF to test that alternate aromaticity
+# models implemented properly
+ffxml_MDL_contents = u"""\
+<?xml version="1.0"?>
+
+<SMIRFF version="0.1" aromaticity_model="OEAroModel_MDL">
+
+!-- SMIRKS (SMIRKS Force Field) minimal file, not intended for use -->
+  <Date>Date: Sept. 7, 2016</Date>
+  <Author>D. L. Mobley, UC Irvine</Author>
+  <HarmonicBondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
+    <Bond smirks="[*:1]~[*:2]" id="b1" k="2000.0" length="4.0"/>
+    <Bond smirks="[#6X3:1]-[#8X2:2]" id="b16" k="960.0" length="1.240"/>
+  </HarmonicBondForce>
+  <HarmonicAngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
+    <Angle smirks="[*:1]~[*:2]~[*:3]" angle="109.5" id="a1" k="160.0"/>
+</HarmonicAngleForce>
+<PeriodicTorsionForce phase_unit="degrees" k_unit="kilocalories_per_mole">
+<Improper smirks="[*:1]~[#6X3:2]~[*:3]~[*:4]" id="i1" k1="3.5" periodicity1="2" phase1="180."/>
+    <Proper smirks="[*:1]~[*:2]~[*:3]~[*:4]" id="t1" idivf1="4" k1="3.50" periodicity1="2" phase1="180.0"/>
+  </PeriodicTorsionForce>
+  <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+    <Atom smirks="[*:1]" epsilon="0.2100" id="n1" rmin_half="1.6612"/>
+    <Atom smirks="[#1:1]" epsilon="0.0157" id="n2" rmin_half="0.6000"/>
+  </NonbondedForce>
+</SMIRFF>
+"""
+
 def positions_from_oemol(mol):
     """
     Extract OpenMM positions from OEMol.
@@ -94,6 +133,7 @@ def positions_from_oemol(mol):
     positions : simtk.unit.Quantity of dimension (nparticles,3)
 
     """
+    from openeye import oeomega
     if mol.GetDimension() != 3:
         # Assign coordinates
         omega = oeomega.OEOmega()
@@ -328,6 +368,48 @@ def test_molecule_labeling(verbose = False):
         raise Exception("No force term assigned for periodic torsions.")
     if not 'NonbondedGenerator' in labels[0].keys():
         raise Exception("No nonbonded force term assigned.")
+
+def test_partial_bondorder(verbose = False):
+    """Test setup of a molecule which activates partial bond order code."""
+    from openeye import oechem
+    mol = oechem.OEMol()
+    from openeye import oeiupac
+    oeiupac.OEParseIUPACName(mol, 'benzene')
+    positions = positions_from_oemol(mol)
+    oechem.OETriposAtomNames(mol)
+    topology = generateTopologyFromOEMol(mol)
+    # Load forcefield from above
+    ffxml = StringIO(ffxml_contents)
+    ff = ForceField(ffxml)
+
+    # Set up once using AM1BCC charges
+    system = ff.createSystem(topology, [mol], chargeMethod = 'OECharges_AM1BCCSym', verbose = verbose)
+    # Set up once also without asking for charges
+    system = ff.createSystem(topology, [mol], verbose = verbose)
+
+    # Check that energy is what it ought to be -- the partial bond order
+    # for benzene makes the energy a bit higher than it would be without it
+    energy = get_energy(system, positions)
+    if energy < 7.50 or energy > 7.60:
+        raise Exception("Partial bond order code seems to have issues, as energy for benzene is outside of tolerance in tests.")
+
+def test_MDL_aromaticity(verbose=False):
+    """Test support for alternate aromaticity models."""
+    ffxml = StringIO(ffxml_MDL_contents)
+    ff = ForceField(ffxml)
+    from openeye import oechem
+    mol = oechem.OEMol()
+    oechem.OEParseSmiles(mol, 'c12c(cccc1)occ2')
+    oechem.OEAddExplicitHydrogens(mol)
+
+    labels=ff.labelMolecules( [mol], verbose = True)
+    # The bond 6-7 should get the b16 parameter iff the MDL model is working, otherwise it will pick up just the generic
+    details = labels[0]['HarmonicBondGenerator']
+    found = False
+    for (atom_indices, pid, smirks) in details:
+        if pid == 'b16' and atom_indices==[6,7]:
+            found = True
+    if not found: raise Exception("Didn't find right param.")
 
 
 def test_change_parameters(verbose=False):

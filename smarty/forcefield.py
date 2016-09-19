@@ -12,6 +12,7 @@ OpenMM ForceField replacement using SMIRKS-based matching.
 AUTHORS
 
 John D. Chodera <john.chodera@choderalab.org>
+David L. Mobley <dmobley@mobleylab.org>
 
 Baseed on simtk.openmm.app.forcefield written by Peter Eastman.
 
@@ -56,14 +57,18 @@ import networkx
 # PRIVATE SUBROUTINES
 #=============================================================================================
 
-def getSMIRKSMatches_OEMol(oemol, smirks):
+def getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model = None):
     """Find all sets of atoms in the provided oemol that match the provided SMIRKS strings.
 
-        Parameters
+    Parameters
     ----------
+    oemol : OpenEye oemol
+        oemol to process with the SMIRKS in order to find matches
     smirks : str
         SMIRKS string with tagged atoms.
         If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+    aromaticity_model : str (optional)
+        OpenEye aromaticity model designation as a string, such as "OEAroModel_MDL". Default: None. If none is provided, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
 
     Returns
     -------
@@ -72,19 +77,41 @@ def getSMIRKSMatches_OEMol(oemol, smirks):
         Matches are returned in no guaranteed order.
     """
 
+    # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
+    mol = oechem.OEMol(oemol)
+
     # Set up query.
     qmol = oechem.OEQMol()
     if not oechem.OEParseSmarts(qmol, smirks):
         raise Exception("Error parsing SMIRKS '%s'" % smirks)
 
-    # Perform matching on each oemol
+    # Determine aromaticity model
+    if aromaticity_model:
+        if type(aromaticity_model) == str:
+            # Check if the user has provided a manually-specified aromaticity_model
+            if hasattr(oechem, aromaticity_model):
+                oearomodel = getattr(oechem, aromaticity_model)
+            else:
+                raise ValueError("Error: provided aromaticity model not recognized by oechem.")
+        else:
+            raise ValueError("Error: provided aromaticity model must be a string.")
+
+        # If aromaticity model was provided, prepare molecule
+        oechem.OEClearAromaticFlags( mol)
+        oechem.OEAssignAromaticFlags( mol, oearomodel)
+        # avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
+        oechem.OEAssignHybridization( mol)
+        oechem.OEAssignFormalCharges( mol)
+        oechem.OEAssignImplicitHydrogens( mol)
+
+    # Perform matching on each mol
     matches = list()
 
     # We require non-unique matches, i.e. all matches
     unique = False
     ss = oechem.OESubSearch(qmol)
     matches = []
-    for match in ss.Match( oemol, unique):
+    for match in ss.Match( mol, unique):
         # Compile list of atom indices that match the pattern tags
         atom_indices = dict()
         for ma in match.GetAtoms():
@@ -165,6 +192,8 @@ class _Topology(Topology):
 
     self._reference_molecules is a list of OEMol for the reference molecules
     self._reference_to_topology_atom_mappings[reference_molecule] is a list of atom indices mapping a reference molecule atom index to the topology atom index
+    self._bondorders is a list of floating point bond orders for the bonds in the Topology.
+    self._bondorders_by_atomindices is a dict of floating point bond orders for the bonds in the Topology, keyed by indices of the atoms involved.
     """
     def __init__(self, topology, reference_molecules):
         """
@@ -193,6 +222,9 @@ class _Topology(Topology):
 
         # Identify all molecules and atom mappings.
         self._identifyMolecules()
+
+        # Get/initialize bond orders
+        self._updateBondOrders()
 
     def _identifyMolecules(self):
         """Identify all unique reference molecules and atom mappings to all instances in the Topology.
@@ -240,7 +272,60 @@ class _Topology(Topology):
                     msg += 'Atom %8d %5s %5d %3s\n' % (atoms[index].index, atoms[index].name, atoms[index].residue.index, atoms[index].residue.name)
                 raise Exception(msg)
 
-    def unrollSMIRKSMatches(self, smirks):
+    def _updateBondOrders(self, Wiberg = False):
+        """Update and store list of bond orders for the molecules in this Topology. Can be used for initialization of bondorders list, or for updating bond orders in the list.
+
+    Parameters:
+    ----------
+    Wiberg : bool (optional)
+        Default False. If False, uses bond orders OEChem assigns to bonds on the molecule. If True, instead uses Wiberg bond orders stored on bonds in the molecule. These must already be present, i.e. from assignPartialCharges with an AM1 method.
+"""
+        # Initialize
+        self._bondorders=list()
+        self._bondorders_by_atomindices = {}
+        # Loop over reference molecules and pull bond orders
+
+        for mol in self._reference_molecules:
+            # Pull mappings for this molecule
+            mappings = self._reference_to_topology_atom_mappings[mol]
+            # Loop over bonds
+            for idx,bond in enumerate(mol.GetBonds()):
+                # Get atom indices involved in bond
+                at1 = bond.GetBgn().GetIdx()
+                at2 = bond.GetEnd().GetIdx()
+                # Get bond order
+                if not Wiberg:
+                    order = bond.GetOrder()
+                else:
+                    order = bond.GetData('WibergBondOrder')
+                # Convert atom numbers to topology atom numbers; there may be multiple matches
+                for mapping in mappings:
+                    topat1 = None
+                    topat2 = None
+                    for mapatom in mapping:
+                        if mapatom==at1:
+                            topat1 = mapping[mapatom]
+                        elif mapatom==at2:
+                            topat2 = mapping[mapatom]
+                    if topat1==None or topat2==None:
+                        raise ValueError("No mapping found for these topology atoms (indices %s-%s)." % (at1, at2))
+                    # Store bond order to re-use below and elsewhere; store in both directions
+                    if not topat1 in self._bondorders_by_atomindices:
+                        self._bondorders_by_atomindices[topat1] = {}
+                    if not topat2 in self._bondorders_by_atomindices:
+                        self._bondorders_by_atomindices[topat2] = {}
+                    self._bondorders_by_atomindices[topat2][topat1] = order
+                    self._bondorders_by_atomindices[topat1][topat2] = order
+
+        # Loop over bonds in topology and store orders in the same order
+        for bond in self._bonds:
+            # See if we have in the 0-1 order and store
+            topat1 = bond[0].index
+            topat2 = bond[1].index
+            order = self._bondorders_by_atomindices[topat1][topat2]
+            self._bondorders.append(order)
+
+    def unrollSMIRKSMatches(self, smirks, aromaticity_model = None):
         """Find all sets of atoms in the topology that match the provided SMIRKS strings.
 
         Parameters
@@ -248,6 +333,8 @@ class _Topology(Topology):
         smirks : str
             SMIRKS string with tagged atoms.
             If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+        aromaticity_model : str (optional)
+            Default None. Aromaticity model used in SMIRKS matching, as per getSMIRKSMatches_OEMol docs. If provided, pre-processes molecule with this model prior to matching. Otherwise, uses provided oemol.
 
         Returns
         -------
@@ -257,11 +344,11 @@ class _Topology(Topology):
 
         """
 
-        # Perform matching on each unique molecule, unrolling the matches to all matching copies of tha tmolecule in the Topology object.
+        # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
         matches = list()
         for reference_molecule in self._reference_molecules:
             # Find all atomsets that match this definition in the reference molecule
-            refmol_matches = getSMIRKSMatches_OEMol( reference_molecule, smirks)
+            refmol_matches = getSMIRKSMatches_OEMol( reference_molecule, smirks, aromaticity_model = aromaticity_model)
 
             # Loop over matches
             for reference_atom_indices in refmol_matches:
@@ -397,9 +484,37 @@ class ForceField(object):
         # We'll be creating all forces again from scratch by re-parsing
         self._forces = []
 
+        # Store forcefield version info and, if present, aromaticity model
+        root = trees[0].getroot()
+        if root.tag=='SMIRFF':
+            if 'version' in root.attrib:
+                #TO DO: Should this be a float, a string, or something else?
+                self.version = float(root.attrib['version'])
+            else:
+                self.version = 0.0
+            if 'aromaticity_model' in root.attrib:
+                self._aromaticity_model = root.attrib['aromaticity_model']
+            else:
+                self._aromaticity_model = None
+        else:
+            raise ValueError("Error: ForceField parses a SMIRFF forcefield, but this does not appear to be one as the root tag is %s." % root.tag)
+
         # Load force definitions
         for tree in trees:
-            for child in tree.getroot():
+            root = tree.getroot()
+
+            # Before loading, do some error checking/consistency checking.
+            # Warn if version number is not consistent
+            if 'version' in root.attrib:
+                if float(root.attrib['version']) != self.version:
+                    print("Warning: Inconsistent version number in parsed FFXML files.")
+            # Throw an exception if aromaticity model is not consistent
+            if 'aromaticity_model' in root.attrib:
+                if root.attrib['aromaticity_model'] != self._aromaticity_model:
+                    raise ValueError("Error: Aromaticity model specified in FFXML files is inconsistent.")
+
+            # Now actually load
+            for child in root:
                 if child.tag in parsers:
                     parsers[child.tag](child, self)
 
@@ -598,7 +713,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
             tree=self._XMLTrees[idx]
             tree.write( filenm, xml_declaration=True, pretty_print=True)
 
-    def _assignPartialCharges(self, molecule, oechargemethod):
+    def _assignPartialCharges(self, molecule, oechargemethod, modifycharges = True):
         """Assign partial charges to the specified molecule using best practices.
 
         Parameters
@@ -608,10 +723,12 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
             NOTE: The molecule will be modified when charges are added.
         oechargemethod : str
             The name of the charge method from oequacpac to use (e.g. 'OECharges_AM1BCCSym')
-
+        modifycharges : bool (optional)
+            If False, don't actually assign partial charges; use the charge calculation solely to update the Wiberg bond orders.
 
         Notes:
         As per Christopher Bayly and http://docs.eyesopen.com/toolkits/cookbook/python/modeling/am1-bcc.html, OEAssignPartialCharges needs multiple conformations to ensure well-behaved charges. This implements that recipe for conformer generation.
+        This conformer generation may or may not be necessary if the calculation is only to obtain bond orders; this will have to be investigated separately so it is retained for now.
         """
         # TODO: Cache charged molecules here to save time in future calls to createSystem
 
@@ -634,13 +751,18 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         status = openeye.oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, oechargemethod), False, False)
         if not status:
             raise(RuntimeError("OEAssignPartialCharges returned error code %s" % status))
-
-        # Our copy has the charges we want but not the right conformation. Copy charges over
+        # Our copy has the charges we want but not the right conformation. Copy charges over. Also copy over Wiberg bond orders if present
         partial_charges = []
-        for atom in charged_copy.GetAtoms():
-            partial_charges.append( atom.GetPartialCharge() )
-        for (idx,atom) in enumerate(molecule.GetAtoms()):
-            atom.SetPartialCharge( partial_charges[idx] )
+        partial_bondorders = []
+        if modifycharges:
+            for atom in charged_copy.GetAtoms():
+                partial_charges.append( atom.GetPartialCharge() )
+            for (idx,atom) in enumerate(molecule.GetAtoms()):
+                atom.SetPartialCharge( partial_charges[idx] )
+        for bond in charged_copy.GetBonds():
+            partial_bondorders.append( bond.GetData("WibergBondOrder"))
+        for (idx, bond) in enumerate(molecule.GetBonds()):
+            bond.SetData("WibergBondOrder", partial_bondorders[idx])
 
 
     def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
@@ -733,6 +855,17 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
         # Work with a modified form of the topology that provides additional accessors.
         topology = _Topology(topology, molecules)
+
+        # If the charge method was not an OpenEye AM1 method, obtain Wiberg bond orders
+        if not (type(chargeMethod) == str and 'AM1' in chargeMethod):
+            if verbose: print("Doing an AM1 calculation to get Wiberg bond orders.")
+            for molecule in molecules:
+                # Do AM1 calculation just to get bond orders on moleules (discarding charges)
+                self._assignPartialCharges(molecule, "OECharges_AM1", modifycharges = False)
+
+
+        # Update bond orders stored in the topology
+        topology._updateBondOrders(Wiberg = True )
 
         # Create the System and add atoms
         system = openmm.System()
@@ -947,9 +1080,30 @@ class HarmonicBondGenerator(object):
         """A SMIRFF bond type."""
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.length = _extractQuantity(node, parent, 'length')
-            self.k = _extractQuantity(node, parent, 'k')
             self.pid = _extractQuantity(node, parent, 'id')
+
+            # Determine if we are using fractional bond orders for this bond
+            # First, check if this force uses fractional bond orders
+            if 'fractional_bondorder' in parent.attrib:
+                # If it does, see if this parameter line provides fractional bond order parameters
+                if 'length_bondorder1' in node.attrib and 'k_bondorder1' in node.attrib:
+                    # Store what interpolation scheme we're using
+                    self.fractional_bondorder = parent.attrib['fractional_bondorder']
+                    # Store bondorder1 and bondorder2 parameters
+                    self.k = list()
+                    self.length = list()
+                    for ct in range(1,3):
+                        self.length.append( _extractQuantity(node, parent, 'length_bondorder%s' % ct, unit_name = 'length_unit') )
+                        self.k.append( _extractQuantity(node, parent, 'k_bondorder%s' % ct, unit_name = 'k_unit') )
+                else:
+                    self.fractional_bondorder = None
+            else:
+                self.fractional_bondorder = None
+
+            # If no fractional bond orders, just get normal length and k
+            if self.fractional_bondorder == None:
+                self.length = _extractQuantity(node, parent, 'length')
+                self.k = _extractQuantity(node, parent, 'k')
 
     def __init__(self, forcefield):
         self.ff = forcefield
@@ -986,21 +1140,35 @@ class HarmonicBondGenerator(object):
 
         # Iterate over all defined bond types, allowing later matches to override earlier ones.
         bonds = ValenceDict()
+        bondorders = ValenceDict()
         for bond in self._bondtypes:
-            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks, aromaticity_model = self.ff._aromaticity_model):
                 bonds[atom_indices] = bond
+                # Retrieve bond orders
+                bondorders[atom_indices] = topology._bondorders_by_atomindices[atom_indices[0]][atom_indices[1]]
 
         if verbose:
             print('')
             print('HarmonicBondGenerator:')
             print('')
             for bond in self._bondtypes:
-                print('%64s : %8d matches' % (bond.smirks, len(topology.unrollSMIRKSMatches(bond.smirks))))
+                print('%64s : %8d matches' % (bond.smirks, len(topology.unrollSMIRKSMatches(bond.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all bonds to the system.
         for (atom_indices, bond) in bonds.items():
-            force.addBond(atom_indices[0], atom_indices[1], bond.length, bond.k)
+            if bond.fractional_bondorder==None:
+                force.addBond(atom_indices[0], atom_indices[1], bond.length, bond.k)
+            # If this bond uses partial bond orders
+            else:
+                order = bondorders[atom_indices]
+                if bond.fractional_bondorder=='interpolate-linear':
+                    k = bond.k[0] + (bond.k[1]-bond.k[0])*(order-1.)
+                    length = bond.length[0] + (bond.length[1]-bond.length[0])*(order-1.)
+                    force.addBond(atom_indices[0], atom_indices[1], length, k)
+                    if verbose: print("%64s" % "Added %s bond, order %.2f; length=%.2g; k=%.2g" % (bond.smirks, order, length, k))
+                else:
+                    raise Exception("Partial bondorder treatment %s is not implemented." % bond.fractional_bondorder)
 
         if verbose: print('%d bonds added' % (len(bonds)))
 
@@ -1041,7 +1209,7 @@ class HarmonicBondGenerator(object):
         # Iterate over all defined bond SMIRKS, allowing later matches to override earlier ones.
         bonds = ValenceDict()
         for bond in self._bondtypes:
-            for atom_indices in getSMIRKSMatches_OEMol( oemol, bond.smirks ):
+            for atom_indices in getSMIRKSMatches_OEMol( oemol, bond.smirks, aromaticity_model = self.ff._aromaticity_model ):
                 bonds[atom_indices] = bond
 
         if verbose:
@@ -1049,7 +1217,7 @@ class HarmonicBondGenerator(object):
             print('HarmonicBondGenerator:')
             print('')
             for bond in self._bondtypes:
-                print('%64s : %8d matches' % (bond.smirks, len(getSMIRKSMatches_OEMol(oemol, bond.smirks))))
+                print('%64s : %8d matches' % (bond.smirks, len(getSMIRKSMatches_OEMol(oemol, bond.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all bonds to the output list
@@ -1074,6 +1242,10 @@ class HarmonicAngleGenerator(object):
             self.angle = _extractQuantity(node, parent, 'angle')
             self.k = _extractQuantity(node, parent, 'k')
             self.pid = _extractQuantity(node, parent, 'id')
+            if 'fractional_bondorder' in parent.attrib:
+                self.fractional_bondorder = parent.attrib['fractional_bondorder']
+            else:
+                self.fractional_bondorder = None
 
     def __init__(self, forcefield):
         self.ff = forcefield
@@ -1111,7 +1283,7 @@ class HarmonicAngleGenerator(object):
         # Iterate over all defined angle types, allowing later matches to override earlier ones.
         angles = ValenceDict()
         for angle in self._angletypes:
-            for atom_indices in topology.unrollSMIRKSMatches(angle.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(angle.smirks, aromaticity_model = self.ff._aromaticity_model):
                 angles[atom_indices] = angle
 
         if verbose:
@@ -1119,7 +1291,7 @@ class HarmonicAngleGenerator(object):
             print('HarmonicAngleGenerator:')
             print('')
             for angle in self._angletypes:
-                print('%64s : %8d matches' % (angle.smirks, len(topology.unrollSMIRKSMatches(angle.smirks))))
+                print('%64s : %8d matches' % (angle.smirks, len(topology.unrollSMIRKSMatches(angle.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all angles to the system.
@@ -1145,7 +1317,7 @@ class HarmonicAngleGenerator(object):
         # Iterate over all defined angle types, allowing later matches to override earlier ones.
         angles = ValenceDict()
         for angle in self._angletypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, angle.smirks):
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, angle.smirks, aromaticity_model = self.ff._aromaticity_model):
                 angles[atom_indices] = angle
 
         if verbose:
@@ -1153,7 +1325,7 @@ class HarmonicAngleGenerator(object):
             print('HarmonicAngleGenerator:')
             print('')
             for angle in self._angletypes:
-                print('%64s : %8d matches' % (angle.smirks, len(getSMIRKSMatches_OEMol(oemol, angle.smirks))))
+                print('%64s : %8d matches' % (angle.smirks, len(getSMIRKSMatches_OEMol(oemol, angle.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all angles to the output list
@@ -1181,6 +1353,10 @@ class PeriodicTorsionGenerator(object):
             self.phase = list()
             self.k = list()
             self.pid = _extractQuantity(node, parent, 'id')
+            if 'fractional_bondorder' in parent.attrib:
+                self.fractional_bondorder = parent.attrib['fractional_bondorder']
+            else:
+                self.fractional_bondorder = None
             # Store parameters.
             index = 1
             while 'phase%d'%index in node.attrib:
@@ -1232,7 +1408,7 @@ class PeriodicTorsionGenerator(object):
         # Iterate over all defined torsion types, allowing later matches to override earlier ones.
         torsions = ValenceDict()
         for torsion in self._torsiontypes:
-            for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
                 torsions[atom_indices] = torsion
 
         if verbose:
@@ -1240,7 +1416,7 @@ class PeriodicTorsionGenerator(object):
             print('PeriodicTorsionGenerator:')
             print('')
             for torsion in self._torsiontypes:
-                print('%64s : %8d matches' % (torsion.smirks, len(topology.unrollSMIRKSMatches(torsion.smirks))))
+                print('%64s : %8d matches' % (torsion.smirks, len(topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all torsions to the system.
@@ -1267,7 +1443,7 @@ class PeriodicTorsionGenerator(object):
         # Iterate over all defined torsion types, allowing later matches to override earlier ones.
         torsions = ValenceDict()
         for torsion in self._torsiontypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, torsion.smirks):
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
                 torsions[atom_indices] = torsion
 
         if verbose:
@@ -1275,7 +1451,7 @@ class PeriodicTorsionGenerator(object):
             print('PeriodicTorsionGenerator:')
             print('')
             for torsion in self._torsiontypes:
-                print('%64s : %8d matches' % (torsion.smirks, len(getSMIRKSMatches_OEMol(oemol, torsion.smirks))))
+                print('%64s : %8d matches' % (torsion.smirks, len(getSMIRKSMatches_OEMol(oemol, torsion.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all torsions to the output list
@@ -1299,6 +1475,10 @@ class NonbondedGenerator(object):
             """Currently we support radius definition via 'sigma' or 'rmin_half'."""
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.pid = _extractQuantity(node, parent, 'id')
+            if 'fractional_bondorder' in parent.attrib:
+                self.fractional_bondorder = parent.attrib['fractional_bondorder']
+            else:
+                self.fractional_bondorder = None
 
             # Make sure we don't have BOTH rmin_half AND sigma
             try:
@@ -1362,7 +1542,7 @@ class NonbondedGenerator(object):
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atoms = ValenceDict()
         for ljtype in self._ljtypes:
-            for atom_indices in topology.unrollSMIRKSMatches(ljtype.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(ljtype.smirks, aromaticity_model = self.ff._aromaticity_model):
                 atoms[atom_indices] = ljtype
 
         if verbose:
@@ -1370,7 +1550,7 @@ class NonbondedGenerator(object):
             print('NonbondedForceGenerator:')
             print('')
             for ljtype in self._ljtypes:
-                print('%64s : %8d matches' % (ljtype.smirks, len(topology.unrollSMIRKSMatches(ljtype.smirks))))
+                print('%64s : %8d matches' % (ljtype.smirks, len(topology.unrollSMIRKSMatches(ljtype.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all Lennard-Jones terms to the system.
@@ -1420,7 +1600,7 @@ class NonbondedGenerator(object):
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atoms = ValenceDict()
         for ljtype in self._ljtypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, ljtype.smirks):
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, ljtype.smirks, aromaticity_model = self.ff._aromaticity_model):
                 atoms[atom_indices] = ljtype
 
         if verbose:
@@ -1428,7 +1608,7 @@ class NonbondedGenerator(object):
             print('NonbondedForceGenerator:')
             print('')
             for ljtype in self._ljtypes:
-                print('%64s : %8d matches' % (ljtype.smirks, len(getSMIRKSMatches_OEMol(oemol, ljtype.smirks))))
+                print('%64s : %8d matches' % (ljtype.smirks, len(getSMIRKSMatches_OEMol(oemol, ljtype.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all Lennard-Jones terms to the output list
@@ -1504,7 +1684,7 @@ class BondChargeCorrectionGenerator(object):
         """
         bccs = {}
         for bcc in self._bondChargeCorrections:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, bcc.smirks):
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, bcc.smirks, aromaticity_model = self.ff._aromaticity_model):
                 bccs[atom_indices] = bcc
 
         if verbose:
@@ -1512,7 +1692,7 @@ class BondChargeCorrectionGenerator(object):
             print('BondChargeCorrectionGenerator:')
             print('')
             for bcc in self._bondChargeCorrections:
-                print('%64s : %8d matches' % (bcc.smirks, len(getSMIRKSMatches_OEMol(oemol, bcc.smirks))))
+                print('%64s : %8d matches' % (bcc.smirks, len(getSMIRKSMatches_OEMol(oemol, bcc.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all BCCs to the output list
@@ -1530,7 +1710,7 @@ class BondChargeCorrectionGenerator(object):
         # Iterate over all defined bond charge corrections, allowing later matches to override earlier ones.
         bonds = ValenceDict()
         for bond in self._bondChargeCorrections:
-            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks):
+            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks, aromaticity_model = self.ff._aromaticity_model):
                 bonds[atom_indices] = bond
 
         if verbose:
@@ -1538,7 +1718,7 @@ class BondChargeCorrectionGenerator(object):
             print('Bond charge corrections:')
             print('')
             for bond in self._bondChargeCorrections:
-                print('%64s %12.6f : %8d matches' % (bond.smirks, bond.increment / unit.elementary_charge, len(topology.unrollSMIRKSMatches(bond.smirks))))
+                print('%64s %12.6f : %8d matches' % (bond.smirks, bond.increment / unit.elementary_charge, len(topology.unrollSMIRKSMatches(bond.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Apply bond charge increments

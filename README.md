@@ -52,6 +52,8 @@ pip install . --upgrade
 
 ### How it works
 
+##smarty
+
 Check out the example in `examples/parm@frosst/`:
 
 Atom types are specified by SMARTS matches with corresponding parameter names.
@@ -172,6 +174,122 @@ Command line example: `smarty --samplertype elemental --element=8 --basetypes=ex
 The elemental sampler has the same principle of the original sampler. However, the sampler will occurs for only one element (such as Oxygen, Carbon, Hydrogen, etc), which needs to be specified on the command line.
 
 The element number needs to be specified (--element=8 for Oxygen).
+ 
+=======
+##smirky
+
+Check out examples in `examples/smirky/`:
+
+This tool can sample any chemical environment type relevant to SMIRFFs, that is atoms, bonds, angles, and proper and improper torsions, one at a time
+Scoring is analous to smarty (explained above), but uses a SMIRFF with existing parameters as a reference insteady of atomtyped molecules.
+
+Input for this tool can require up to four different file types
+* MOLECULES - any file that are readable in openeye, mol2, sdf, oeb, etc.
+* ODDSFILES - File with the form "smarts     odds" for the different decorator or bond options
+* SMARTS - .smarts file type with the form "smarts/smirks      label/typename" 
+* REFERENCE - a SMIRFF file with reference atoms, bonts, angles, torsions, and impropers
+
+```
+Usage:     Sample over fragment types (atoms, bonds, angles, torsions, or impropers)
+    optionally attempting to match created types to an established SMIRFF.
+    For all files left blank, they will be taken from this module's
+    data/odds_files/ subdirectory.
+
+    usage smirky --molecules molfile --typetag fragmentType
+            [--atomORbases AtomORbaseFile --atomORdecors AtomORdecorFile
+            --atomANDdecors AtomANDdecorFile --bondORbase BondORbaseFile
+            --bondANDdecors BondANDdecorFile --atomIndexOdds AtomIndexFile
+            --bondIndexOdds BondIndexFile --replacements substitutions
+            --initialFragments initialFragments --SMIRFF referenceSMIRFF
+            --temperature float --verbose verbose
+            --iterations iterations --output outputFile]
+
+    example:
+    smirky -molecules AlkEthOH_test_filt1_ff.mol2 --typetag Angle
+
+    
+
+Options:
+  --version             show program's version number and exit
+  -h, --help            show this help message and exit
+  -m MOLECULES, --molecules=MOLECULES
+                        Small molecule set (in any OpenEye compatible file
+                        format) containing 'dG(exp)' fields with experimental
+                        hydration free energies. This filename can also be an
+                        option in this module's data/molecules sub-directory
+  -T TYPETAG, --typetag=TYPETAG
+                        type of fragment being sampled, options are 'VdW',
+                        'Bond', 'Angle', 'Torsion', 'Improper'
+  -e ODDFILES, --atomORbases=ODDFILES
+                        Filename defining atom OR bases and associated
+                        probabilities. These are combined with atom OR
+                        decorators in SMIRKS, for example in
+                        '[#6X4,#7X3;R2:2]' '#6' and '#7' are atom OR bases.
+                        (OPTIONAL)
+  -O ODDFILES, --atomORdecors=ODDFILES
+                        Filename defining atom OR decorators and associated
+                        probabilities. These are combined with atom bases in
+                        SMIRKS, for example in '[#6X4,#7X3;R2:2]' 'X4' and
+                        'X3' are ORdecorators. (OPTIONAL)
+  -A ODDFILES, --atomANDdecors=ODDFILES
+                        Filename defining atom AND decorators and associated
+                        probabilities. These are added to the end of an atom's
+                        SMIRKS, for example in '[#6X4,#7X3;R2:2]' 'R2' is an
+                        AND decorator. (OPTIONAL)
+  -o ODDFILES, --bondORbase=ODDFILES
+                        Filename defining bond OR bases and their associated
+                        probabilities. These are OR'd together to describe a
+                        bond, for example in '[#6]-,=;@[#6]' '-' and '=' are
+                        OR bases. (OPTIONAL)
+  -a ODDFILES, --bondANDdecors=ODDFILES
+                        Filename defining bond AND decorators and their
+                        associated probabilities. These are AND'd to the end
+                        of a bond, for example in '[#6]-,=;@[#7]' '@' is an
+                        AND decorator.(OPTIONAL)
+  -D ODDSFILE, --atomOddsFile=ODDSFILE
+                        Filename defining atom descriptors and probabilities
+                        with making changes to that kind of atom. Options for
+                        descriptors are integers corresponding to that indexed
+                        atom, 'Indexed', 'Unindexed', 'Alpha', 'Beta', 'All'.
+                        (OPTIONAL)
+  -d ODDSFILE, --bondOddsFile=ODDSFILE
+                        Filename defining bond descriptors and probabilities
+                        with making changes to that kind of bond. Options for
+                        descriptors are integers corresponding to that indexed
+                        bond, 'Indexed', 'Unindexed', 'Alpha', 'Beta', 'All'.
+                        (OPTIONAL)
+  -s SMARTS, --substitutions=SMARTS
+                        Filename defining substitution definitions for SMARTS
+                        atom matches. (OPTIONAL).
+  -f SMARTS, --initialtypes=SMARTS
+                        Filename defining initial (first) fragment types as
+                        'SMIRKS    typename'. If this is left blank the
+                        initial type will be a generic form of the given
+                        fragment, for example '[*:1]~[*:2]' for a bond
+                        (OPTIONAL)
+  -r REFERENCE, --smirff=REFERENCE
+                        Filename defining a SMIRFF force fielce used to
+                        determine reference fragment types in provided set of
+                        molecules. It may be an absolute file path, a path
+                        relative to the current working directory, or a path
+                        relative to this module's data subdirectory (for built
+                        in force fields). (OPTIONAL)
+  -i ITERATIONS, --iterations=ITERATIONS
+                        MCMC iterations.
+  -t TEMPERATURE, --temperature=TEMPERATURE
+                        Effective temperature for Monte Carlo acceptance,
+                        indicating fractional tolerance of mismatched atoms
+                        (default: 0.1). If 0 is specified, will behave in a
+                        greedy manner.
+  -p OUTPUT, --output=OUTPUT
+                        Filename base for output information. This same base
+                        will be used for all output files created. If None
+                        provided then it is set to 'typetag_temperature'
+                        (OPTIONAL).
+  -v VERBOSE, --verbose=VERBOSE
+                        If True prints minimal information to the commandline
+                        during iterations. (OPTIONAL)
+```
 
 ## SMIRFF
 
