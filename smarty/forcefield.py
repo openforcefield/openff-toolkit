@@ -1353,7 +1353,7 @@ class PeriodicTorsionGenerator(object):
             self.phase = list()
             self.k = list()
             self.pid = _extractQuantity(node, parent, 'id')
-            self.torsiontype = parent.tag #Improper or Proper?
+            self.torsiontype = node.tag #Improper or Proper?
             if 'fractional_bondorder' in parent.attrib:
                 self.fractional_bondorder = parent.attrib['fractional_bondorder']
             else:
