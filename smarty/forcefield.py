@@ -53,6 +53,8 @@ import time
 
 import networkx
 
+import smarty.environment as env
+
 #=============================================================================================
 # PRIVATE SUBROUTINES
 #=============================================================================================
@@ -1354,6 +1356,16 @@ class PeriodicTorsionGenerator(object):
             self.k = list()
             self.pid = _extractQuantity(node, parent, 'id')
             self.torsiontype = node.tag #Improper or Proper?
+
+            # Check that the SMIRKS pattern matches the type it's supposed
+            # to be (avoiding bugs wherein an improperly formed generic improper
+            # overrides propers, for example)
+            chemenv = env.ChemicalEnvironment(self.smirks)
+            thistype = chemenv.getType()
+            if self.torsiontype != thistype:
+                raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, self.torsiontype))
+
+
             if 'fractional_bondorder' in parent.attrib:
                 self.fractional_bondorder = parent.attrib['fractional_bondorder']
             else:
