@@ -1353,6 +1353,7 @@ class PeriodicTorsionGenerator(object):
             self.phase = list()
             self.k = list()
             self.pid = _extractQuantity(node, parent, 'id')
+            self.torsiontype = parent.tag #Improper or Proper?
             if 'fractional_bondorder' in parent.attrib:
                 self.fractional_bondorder = parent.attrib['fractional_bondorder']
             else:
@@ -1368,6 +1369,10 @@ class PeriodicTorsionGenerator(object):
                     idivf = _extractQuantity(node, parent, 'idivf%d' % index)
                     self.k[-1] /= float(idivf)
                 index += 1
+                # SMIRFF applies trefoil (six-fold) impropers unlike AMBER
+                # If it's an improper, divide by the factor of six internally
+                if self.torsiontype=='Improper':
+                    self.k[-1] /= 6.
 
     def __init__(self, forcefield):
         self.ff = forcefield
@@ -1389,7 +1394,6 @@ class PeriodicTorsionGenerator(object):
             generator = existing[0]
 
         # Register all SMIRFF torsion definitions.
-        # TODO: Do we need to treat propers and impropers differently?
         for torsion in element.findall('Proper'):
             generator.registerTorsion(torsion, element)
         for torsion in element.findall('Improper'):
