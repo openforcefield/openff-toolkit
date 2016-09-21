@@ -69,8 +69,8 @@ BOND
 [#6X3:1]=[#8X1+0,#8X2+1:2]      570.0  1.229   parm99 carbonyl oxygen
 [#6X3:1]:[#8X2+1:2]             570.0  1.28    parm99 aromatice oxonium guess
 # bonds to Csp (alkynes, nitriles, allenes)
-[#6X2:1]-[#6X4:2]     350.0    1.468   Frosst C2-CT RHF/6-31G(d,p) opt estimated force constant
 [#6X2:1]-[#6:2]       350.0    1.440   Frosst generic
+[#6X2:1]-[#6X4:2]     350.0    1.468   Frosst C2-CT RHF/6-31G(d,p) opt estimated force constant
 [#6X2:1]=[#6X3:2]     549.0    1.35    smirff generic allene is a regular double bond
 [#6X2:1]#[#7X1:2]     350.0    1.188   Frosst C2-NL from C2-C2
 [#6X2:1]#[#6X2:2]     350.0    1.188   Frosst C2-C2 RHF/6-31G(d,p) opt estimated force constant
