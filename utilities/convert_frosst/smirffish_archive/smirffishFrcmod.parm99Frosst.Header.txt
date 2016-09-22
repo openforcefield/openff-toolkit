@@ -1,0 +1,26 @@
+# SMIRFF (SMIRKS Force Field) hybrid with parm99.dat to capture its chemistry
+# Date: Tue Aug 23 2016
+# Author: C. I. Bayly, OpenEye Scientific Software
+#
+MASSES
+[#6:1]   12.01     C  Carbon
+[#20:1]  40.08     Ca Calcium
+[#1:1]    1.008    H  Hydrogen
+[#9:1]   19.00     F  Fluorine
+[#17:1]  35.45     Cl Chlorine
+[#35:1]  79.90     Br Bromine
+[#53:1] 126.9      I  Iodine
+[#12:1]  24.305    Mg magnesium
+[#7:1]   14.01     N  Nitrogen
+[#8:1]   16.00     O  Oxygen
+[#15:1]  30.97     P  Phosphorus
+[#16:1]  32.06     S  Sulfur
+[#29:1]  63.55     Cu copper
+[#26:1]  55.00     Fe iron
+[#3:1]    6.94     Li Lithium
+[#11:1]  22.99     Na Sodium
+[#19:1]  39.10     K  Potassium
+[#37:1]  85.47     Rb Rubidium
+[#55:1] 132.91     Cs Cesium
+[#30:1]  65.4      Zn Zinc
+

@@ -1,0 +1,290 @@
+ANGLE
+# Csp
+#CZ-CZ-HZ    50.0      180.00    Junmei et al, 1999
+#CT-CZ-CZ    80.0      180.00    Junmei et al, 1999
+#CT-CY-NY    80.0      180.00    Junmei et al, 1999
+[*:1]~[#6X2:2]~[*:3]   80.0  180.0   parm99 generic smirff only sp carbons are linear
+#
+# fused het6-het5 bridgehead
+#C*-CB-CA    63.0      134.90    changed from 85.0  bsd on C6H6 nmodes; AA trp
+#CA-CN-NA    70.0      132.80    AA trp
+#CA-CB-NB    70.0      132.40    
+#C_-CB-NB    70.0      130.00
+#N*-CB-NC    70.0      126.20
+[*r6:1]~@[*r5:2]~@[*r5:3]   70.0  130.    parm99 generic fused het6-het5 bridgehead outer angle
+#
+# Not using het5 outer angle from DNA/RNA fused het6-het5, instead using histidine all 120.0
+#CK-N*-H     50.0      128.80    for unmethylated n.a. bases,chngd bsd NMA nmodes
+#CK-N*-CT    70.0      128.80
+#CB-C_-O     80.0      128.80
+#CB-C*-CT    70.0      128.60    AA trp
+#CB-CB-NC    70.0      127.70
+#C_-NA-C     70.0      126.40
+#CB-N*-H     50.0      125.80    for unmethylated n.a. bases,chngd bsd NMA nmodes
+#CB-N*-CT    70.0      125.80
+#CT-C*-CW    70.0      125.00    AA trp
+#H5-CK-NB    50.0      123.05
+#H5-CK-N*    50.0      123.05
+#CN-NA-H     50.0      123.10    AA trp,    changed based on NMA nmodes
+#
+#O_-C_-O     80.0      126.00    AA COO- terminal residues
+#O2-C_-O2    80.0      126.00    AA GLU            (SCH JPC 79,2379)
+[#8X1:1]~[#6X3:2]~[#8:3]   80.0  126.00  parm99 generic
+#
+# guessed to be overfit compared to generic Csp2 120.
+#NC-CQ-NC    70.0      129.10
+#CM-C_-O     80.0      125.30
+#C_-NA-CA    70.0      125.20
+#CM-CM-OS    80.0      125.00    Junmei et al, 1999
+#CB-CA-N2    70.0      123.50
+#NA-CA-NC    70.0      123.30
+#CA-CM-HA    50.0      123.30
+#CA-CM-H4    50.0      123.30
+#CA-N2-CT    50.0      123.20    AA arg
+#CA-CN-CB    63.0      122.70    changed from 85.0  bsd on C6H6 nmodes; AA trp
+#NC-C_-O     80.0      122.50
+#
+# guessed to group together under generic Csp2 120.
+#C_-N*-CM    70.0      121.60
+#CM-CA-NC    70.0      121.50
+#CM-N*-H     50.0      121.20    for unmethylated n.a. bases,chngd bsd NMA nmodes
+#CM-N*-CT    70.0      121.20
+#CM-CM-N*    70.0      121.20
+#F_-CA-CA    70.0      121.00    Junmei et al,99 
+#N*-C_-O     80.0      120.90
+#C_-CM-CM    63.0      120.70    changed from 85.0  bsd on C6H6 nmodes; NA thy
+#NA-C_-O     80.0      120.60
+#C_-NC-CA    70.0      120.50
+#CT-C_-O     80.0      120.40
+#CM-CA-N2    70.0      120.10
+#NA-CR-NB    70.0      120.00    AA his
+#NA-CR-NA    70.0      120.00    AA his
+#N2-CA-N2    70.0      120.00    AA arg
+#H_-N_-H     35.0      120.00    ade,cyt,gua,gln,asn     **
+#H_-N2-H     35.0      120.00    
+#HA-CM-HA    35.0      120.00    Junmei et al, 1999
+#HA-CM-CT    50.0      120.00    Junmei et al, 1999
+#HA-CM-CD    50.0      120.00    Junmei et al, 1999
+#HA-CD-CM    50.0      120.00    Junmei et al, 1999
+#HA-CD-CD    50.0      120.00    Junmei et al, 1999
+#H5-C_-N     50.0      120.00    Junmei et al, 1999
+#H5-CR-NB    50.0      120.00    AA his
+#H5-CR-NA    50.0      120.00    AA his
+#H4-C_-OH    50.0      120.00    Junmei et al, 1999
+#H4-C_-O     50.0      120.00    Junmei et al, 1999
+#H4-C_-C     50.0      120.00    Junmei et al, 1999 
+#H4-CW-NA    50.0      120.00    AA his
+#H4-CV-NB    50.0      120.00    AA his
+#C_-C_-OH    80.0      120.00    Junmei et al, 1999
+#C_-C_-O     80.0      120.00    Junmei et al, 1999 acrolein
+#C_-CA-HA    50.0      120.00    AA (not used in tyr)
+#C_-CA-CA    63.0      120.00    changed from 85.0  bsd on C6H6 nmodes
+#CW-NA-H     50.0      120.00    AA his,    changed based on NMA nmodes
+#CW-CC-NB    70.0      120.00    AA his
+#CW-CC-NA    70.0      120.00    AA his
+#CV-CC-NA    70.0      120.00    AA his
+#CT-CC-NB    70.0      120.00    AA his
+#CT-CC-NA    70.0      120.00    AA his
+#CT-CC-CW    70.0      120.00    AA his
+#CT-CC-CV    70.0      120.00    AA his
+#CR-NA-H     50.0      120.00    AA his,    changed based on NMA nmodes
+#CR-NA-CW    70.0      120.00    AA his
+#CN-CA-HA    50.0      120.00    AA trp
+#CM-CD-CT    70.0      120.00    Junmei et al, 1999
+#CD-CD-CT    70.0      120.00    Junmei et al, 1999
+#CD-CD-CM    63.0      120.00    Junmei et al, 1999
+#CC-NA-H     50.0      120.00    AA his,    changed based on NMA nmodes
+#CC-NA-CR    70.0      120.00    AA his
+#CC-CW-NA    70.0      120.00    AA his
+#CC-CW-H4    50.0      120.00    AA his
+#CC-CV-NB    70.0      120.00    AA his
+#CC-CV-H4    50.0      120.00    AA his
+#CB-CA-HA    50.0      120.00
+#CB-CA-H4    50.0      120.00
+#CA-N2-H     50.0      120.00    
+#CA-C_-OH    70.0      120.00    AA (not used in tyr)
+#CA-C_-CA    63.0      120.00    changed from 85.0  bsd on C6H6 nmodes; AA
+#CA-CA-OH    70.0      120.00    replacement in tyr
+#CA-CA-HA    50.0      120.00
+#CA-CA-H4    50.0      120.00
+#CA-CA-CT    70.0      120.00
+#CA-CA-CN    63.0      120.00    changed from 85.0  bsd on C6H6 nmodes; AA trp
+#CA-CA-CB    63.0      120.00    changed from 85.0  bsd on C6H6 nmodes
+#CA-CA-CA    63.0      120.00    changed from 85.0  bsd on C6H6 nmodes
+#C*-CW-H4    50.0      120.00    AA trp
+#N_-C_-O     80.0      122.90    AA general
+#C_-N_-CT    50.0      121.90    AA general
+#C_-N_-H     50.0      120.00    AA general, gln, asn,changed based on NMA nmodes
+#CT-N_-H     50.0      118.04    AA general,     changed based on NMA nmodes
+#CT-C_-N     70.0      116.60    AA general
+#C_-CM-HA    50.0      119.70
+#C_-CM-H4    50.0      119.70
+#C_-CM-CT    70.0      119.70
+#CM-CM-HA    50.0      119.70
+#CM-CM-H4    50.0      119.70
+#CM-CM-CT    70.0      119.70
+#N2-CA-NC    70.0      119.30
+#C_-N*-H     50.0      119.20    changed based on NMA nmodes
+#C_-CB-CB    63.0      119.20    changed from 85.0  bsd on C6H6 nmodes; NA gua
+#H4-CM-N*    50.0      119.10
+#HA-CD-HA    35.0      119.00    Junmei et al, 1999
+#H5-C_-O     50.0      119.00    Junmei et al, 1999
+[*:1]~[#6X3:2]~[*:3]    70.  120.    parm99 generic Csp2
+[#1:1]-[#6X3:2]~[*:3]    50.  120.    parm99 generic Csp2
+[#1:1]-[#6X3:2]-[#1:3]    35.  120.    parm99 generic Csp2
+[*:1]~[#7:2]~[*:3]    70.  120.    parm99 generic Nsp2 trivalent; Nsp3 trivalent defined below
+#
+# guess these are overfit especially for het5 inner angles.
+#I_-CA-CA    70.0      118.80    Junmei et al,99 
+#Cl-CA-CA    70.0      118.80    Junmei et al,99 
+#Br-CA-CA    70.0      118.80    Junmei et al,99
+#N*-C_-NC    70.0      118.60
+#CA-NC-CQ    70.0      118.60
+#CT-N2-H     50.0      118.40    AA arg
+#CT-N_-CT    50.0      118.00    AA pro             (DETAR JACS 99,1232)
+#CA-NA-H     50.0      118.00    changed based on NMA nmodes
+#C_-N*-CT    70.0      117.60
+#CB-CA-NC    70.0      117.30
+#CA-CB-CB    63.0      117.30    changed from 85.0  bsd on C6H6 nmodes; NA ade
+#CT-C_-O2    70.0      117.00
+#CT-C_-CT    63.0      117.00    Junmei et al, 1999
+#CR-NB-CV    70.0      117.00    AA his
+#CC-NB-CR    70.0      117.00    AA his
+#CA-CM-CM    63.0      117.00    changed from 85.0  bsd on C6H6 nmodes; NA cyt
+#C_-NA-H     50.0      116.80    changed based on NMA nmodes
+#CA-CB-CN    63.0      116.20    changed from 85.0  bsd on C6H6 nmodes; AA trp
+#N2-CA-NA    70.0      116.00
+#C*-CT-CT    63.0      115.60    AA trp
+#H5-CQ-NC    50.0      115.45
+#N*-C_-NA    70.0      115.40
+#H4-C_-CT    50.0      115.00    Junmei et al, 1999
+#H4-C_-CM    50.0      115.00    Junmei et al, 1999 
+#CT-C_-OS    80.0      115.00    Junmei et al, 1999
+#CM-C_-NA    70.0      114.10
+#N*-CK-NB    70.0      113.90
+#H4-CM-OS    50.0      113.00    Junmei et al, 1999
+#CA-NC-CB    70.0      112.20
+#CN-NA-CW    70.0      111.60    AA trp
+#CB-C_-NA    70.0      111.30    NA
+#CB-NC-CQ    70.0      111.00
+#CB-CB-NB    70.0      110.40
+#CT-C_-OH    80.0      110.00    Junmei et al, 1999
+#C*-CB-CN    63.0      108.80    changed from 85.0  bsd on C6H6 nmodes; AA trp
+#C*-CW-NA    70.0      108.70    AA trp
+#H5-C_-OS    50.0      107.00    Junmei et al, 1999
+#H5-C_-OH    50.0      107.00    Junmei et al, 1999
+#CB-C*-CW    63.0      106.40    changed from 85.0  bsd on C6H6 nmodes; AA trp
+#CB-CB-N*    70.0      106.20
+#CB-N*-CK    70.0      105.40
+#CB-CN-NA    70.0      104.40    AA trp
+#CB-NB-CK    70.0      103.80
+#
+# Csp3
+#CT-CT-S     50.0      114.70    AA cyx            (SCHERAGA  JPC 79,1428)
+#CT-CT-CA    63.0      114.00    AA phe tyr          (SCH JPC  79,2379)
+#CC-CT-CT    63.0      113.10    AA his
+#C_-CT-N3    80.0      111.20    AA amino terminal residues
+#CT-CT-NT    80.0      111.20    neutral amines 
+#CT-CT-N3    80.0      111.20    AA lys             (JCP 76, 1439)
+#CT-CT-N2    80.0      111.20    AA arg             (JCP 76, 1439)
+#CM-CT-CT    63.0      111.00    Junmei et al, 1999 (last change: Mar24,99)
+#HC-CT-CZ    50.0      110.00    Junmei et al, 1999
+#H1-CT-CZ    50.0      110.00    Junmei et al, 1999
+#H1-CT-CY    50.0      110.00    Junmei et al, 1999
+#CT-CT-CZ    63.0      110.00    Junmei et al, 1999
+#CT-CT-CY    63.0      110.00    Junmei et al, 1999    
+#OS-CT-CZ    50.0      110.00    Junmei et al, 1999
+#OS-CT-CY    50.0      110.00    Junmei et al, 1999
+#C_-CT-CT    63.0      111.10    AA general
+#C_-CT-N     63.0      110.10    AA general
+#CT-CT-N     80.0      109.70    AA ala, general    (JACS 94, 2657)
+#H1-CT-N     50.0      109.50    AA general  changed based on NMA nmodes
+#C_-CT-H1    50.0      109.50    AA general  changed based on NMA nmodes
+#HP-CT-N3    50.0      109.50    AA lys, ch3nh3+, changed based on NMA nmodes
+#HP-CT-HP    35.0      109.50    AA lys, ch3nh4+
+#HC-CT-HC    35.0      109.50
+#HC-CT-CM    50.0      109.50    changed based on NMA nmodes
+#HC-CT-CD    50.0      109.50    Junmei et al, 1999
+#H2-CT-OS    50.0      109.50    changed based on NMA nmodes
+#H2-CT-N*    50.0      109.50    changed based on NMA nmodes
+#H2-CT-H2    35.0      109.50    AA lys
+#H1-CT-SH    50.0      109.50    AA cyx     changed based on NMA nmodes
+#H1-CT-S     50.0      109.50    AA cys     changed based on NMA nmodes
+#H1-CT-OS    50.0      109.50    changed based on NMA nmodes 
+#H1-CT-OH    50.0      109.50    changed based on NMA nmodes 
+#H1-CT-NT    50.0      109.50    neutral amines 
+#H1-CT-N2    50.0      109.50    AA arg     changed based on NMA nmodes
+#H1-CT-N*    50.0      109.50    changed based on NMA nmodes
+#H1-CT-H1    35.0      109.50
+#H1-CT-CM    50.0      109.50    Junmei et al, 1999 
+#F_-CT-H2    50.0      109.50  
+#F_-CT-H1    50.0      109.50    JCC,13,(1992),963;
+#C_-CT-OS    60.0      109.50    Junmei et al, 1999
+#C_-CT-HP    50.0      109.50    AA zwitterion  changed based on NMA nmodes
+#C_-CT-HC    50.0      109.50    AA gln      changed based on NMA nmodes
+#CT-CT-OS    50.0      109.50
+#CT-CT-OH    50.0      109.50
+#CT-CT-N*    50.0      109.50
+#CT-CT-HP    50.0      109.50    changed based on NMA nmodes
+#CT-CT-HC    50.0      109.50    changed based on NMA nmodes
+#CT-CT-H2    50.0      109.50    changed based on NMA nmodes
+#CT-CT-H1    50.0      109.50    changed based on NMA nmodes
+#CT-CT-CT    40.0      109.50
+#CM-CT-OS    50.0      109.50    Junmei et al, 1999
+#CC-CT-HC    50.0      109.50    AA his     changed based on NMA nmodes
+#CA-CT-HC    50.0      109.50    AA tyr     changed based on NMA nmodes
+#C*-CT-HC    50.0      109.50    AA trp    changed based on NMA nmodes
+#OS-CT-N*    50.0      109.50
+#F_-CT-F     77.0      109.10    JCC,13,(1992),963;
+#F_-CT-CT    50.0      109.00    
+#CT-CT-SH    50.0      108.60    AA cys
+#Cl-CT-H1    50.0      108.50    (6-31g* opt value)  
+#Cl-CT-CT    50.0      108.50    (6-31g* opt value)
+#Br-CT-CT    50.0      108.00    Junmei et al 99 
+#Br-CT-H1    50.0      106.50    Junmei et al 99 
+#I_-CT-CT    50.0      106.00    Junmei et al,99 
+#OS-CT-OS   160.0      101.00    Junmei et al, 1999
+[*:1]~[#6X4:2]-[*:3]    50.  109.5   parm99 generic Csp3
+[#1:1]-[#6X4:2]-[#1:3]    35.  109.5   parm99 generic Csp3
+#
+# Nsp3 trivalent and divalent: aliphatic N, ie not attached to Csp2 or Csp
+#H_-NT-H     35.0      109.50    neutral amines 
+#H_-N3-H     35.0      109.50    AA lys, AA(end)
+#CT-NT-H     50.0      109.50    neutral amines 
+#CT-NT-CT    50.0      109.50    neutral amines 
+#CT-N3-H     50.0      109.50    AA lys,     changed based on NMA nmodes
+#CT-N3-CT    50.0      109.50    AA pro/nt
+[*:1]-[#7X4:2]-[*:3]    50.  109.5   parm99 generic Nsp3 tetravalent
+[#1:1]-[#7X4:2]-[*:3]    35.  109.5   parm99 generic Nsp3 tetravalent
+[!6X3,!#6X2:1]-[#7X3:2](-[!6X3,!#6X2])-[!#6X3,!#6X2:3]    50.  109.5   parm99 generic Nsp3 trivalent
+[#1:1]-[#7X3:2](-[!6X3,!#6X2])-[!#6X3,!#6X2:3]    35.  109.5   parm99 generic Nsp3 trivalent
+[*:1]-[#7X2-1:2]-[*:3]    50.  109.5   parm99 generic Nsp3 divalent anionic
+#
+# oxygen
+#P_-OS-P    100.0      120.50
+#CT-OS-P    100.0      120.50
+#C_-OS-CT    60.0      117.00    Junmei et al, 1999
+#CM-OS-CT    60.0      117.00    Junmei et al, 1999
+#HO-OH-P     45.0      108.50
+#CT-OH-HO    55.0      108.50
+#CT-OS-CT    60.0      109.50
+#C_-OH-HO    50.0      113.00    (not used in tyr anymore)
+#CA-OH-HO    50.0      113.00    replacement in tyr
+#HW-OW-HW    100.      104.52    TIP3P water
+[*:1]-[#8:2]-[*:3]    60.  109.5   parm99 generic diverse range of angles (low confidence)
+#
+# phosphorus
+#O2-P_-OS   100.0      108.23
+#O2-P_-OH    45.0      108.23
+#O2-P_-O2   140.0      119.90
+#OS-P_-OS    45.0      102.60
+#OH-P_-OS    45.0      102.60
+[*:1]-[#15:2]-[*:3]    60.  109.5   parm99 generic diverse range of angles (low confidence)
+#
+# sulfur
+#CT-S_-S     68.0      103.70    AA cyx             (SCHERAGA  JPC 79,1428)
+#CT-S_-CT    62.0       98.90    AA met
+#CT-SH-HS    43.0       96.00    changed from 44.0 based on methanethiol nmodes
+#HS-SH-HS    35.0       92.07    AA cys
+[*:1]-[#16X2,#16X3+1:2]-[*:3]    60.  98.     parm99 generic divalent sulfur
+[*:1]-[#16X4,#16X3+0:2]-[*:3]    60.  109.5   parm99 generic hypervalent sulfur
