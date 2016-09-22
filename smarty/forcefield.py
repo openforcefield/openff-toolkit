@@ -1360,10 +1360,10 @@ class PeriodicTorsionGenerator(object):
             # Check that the SMIRKS pattern matches the type it's supposed
             # to be (avoiding bugs wherein an improperly formed generic improper
             # overrides propers, for example)
-            chemenv = env.ChemicalEnvironment(self.smirks)
-            thistype = chemenv.getType()
-            if thistype=='Torsion': thistype = 'Proper'
             try:
+                chemenv = env.ChemicalEnvironment(self.smirks)
+                thistype = chemenv.getType()
+                if thistype=='Torsion': thistype = 'Proper'
                 if self.torsiontype != thistype:
                     raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, self.torsiontype))
             except IndexError:
