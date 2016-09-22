@@ -41,16 +41,24 @@ def _find_embedded_brackets(string, in_char, out_char):
     Finds the substring surrounded by the in_char and out_char
     intended use is to identify embedded bracketed sequences
 
+    string - a string you want separated
+    in_char - regular expression for the character you're looking for '\(' for '('
+    out_char - regular expression for the closing character such as '\)' for ')'
+
     string = "[#1$(*-C(-[#7,#8,F,#16,Cl,Br])-[#7,#8,F,#16,Cl,Br]):1]"
     sub_string, in_idx, out_idx = _find_embedded_brackets(string, '\(','\)')
-    # in_idx = 4, out_idx = 50
+    # sub_string = (*-C(-[#7,#8,F,#16,Cl,Br])-[#7,#8,F,#16,Cl,Br])  in_idx = 4, out_idx = 50
     """
     in_list = [m.start() for m in re.finditer(in_char, string)]
     out_list = [m.start() for m in re.finditer(out_char, string)]
+    # If no occurance of the in_char return an empty string
     if len(in_list) == 0:
         return "", -1, -1
+    # If no out_char returns the first in_char to the end
     if len(out_list) == 0:
         return string[in_list[0]:], in_list[0], -1
+
+    # Otherwise find closure from the first in_char
     list_idx = 0
     while list_idx < len(in_list) - 1:
         if in_list[list_idx+1] > out_list[list_idx]:
@@ -61,20 +69,35 @@ def _find_embedded_brackets(string, in_char, out_char):
     return string[in_idx:out_idx+1], in_idx, out_idx
 
 def _convert_embedded_SMIRKS(smirks):
+    """
+    Converts a SMIRKS string with the $(...) in an atom to the
+    form expected by the environment parser
+
+    smirks = any smirks string, if no $(...) then the original smirks is returned
+
+    initial_smirks = "[#1$(*~[#6]):1]"
+    new_smirks = _convert_embedded_SMIRKS(initial_smirks)
+    # new_smirks = [#1:1]~[#6]
+    """
     a_out = 0
     while smirks.find('$') != -1:
+        # Find first atom
         atom, a_in, a_out = _find_embedded_brackets(smirks, '\[', '\]')
         d = atom.find('$')
+        # Find atom with the $ string embedded
         while d == -1:
             atom, temp_in, temp_out = _find_embedded_brackets(smirks[a_out:], '\[', '\]')
             a_in = a_out + temp_in
             a_out += temp_out + 1
             d = atom.find('$')
 
+        # Store the smirks pattern before and after the relevant atom
         pre_smirks = smirks[:a_in]
         post_smirks = smirks[a_out+1:]
 
         embedded, p_in, p_out = _find_embedded_brackets(atom, '\(', '\)')
+        # two forms of embedded strings $(*~stuff) or $([..]~stuff)
+        # in the latter case the first atom refers the currect atom
         if embedded[1] == '[':
             first, f_in, f_out = _find_embedded_brackets(embedded, '\[','\]')
             first = _convert_embedded_SMIRKS(first)
@@ -357,57 +380,64 @@ class ChemicalEnvironment(object):
         if smirks is not None:
             # check SMIRKS is parseable
             if replacements is not None:
-                smirks = OESmartsLexReplace(smirks, replacements)
+                new_smirks = OESmartsLexReplace(smirks, replacements)
             else:
-                smirks = smirks
-            smirks = _convert_embedded_SMIRKS(smirks)
+                new_smirks = smirks
+            new_smirks = _convert_embedded_SMIRKS(new_smirks)
             mol = OEQMol()
-            if not OEParseSmarts(mol, smirks):
+            if not OEParseSmarts(mol, new_smirks):
                 raise SMIRKSParsingError("Error Provided SMIRKS: %s was not parseable" % smirks)
+            try:
+                self._parse_smirks(new_smirks)
+            except:
+                raise SMIRKSParsingError("Error SMIRKS (%s) was not parseable into a ChemicalEnvironment" % new_smirks)
 
-            atoms = dict() # store created atom
-            idx = 1 # current atom being created
-            store = list() # to store indices while branching
-            bondingTo = idx # which atom are we going to bond to
+    def _parse_smirks(self,smirks):
+        """
+        This function converts a smirks string to a Chemical Environment
+        """
+        atoms = dict() # store created atom
+        idx = 1 # current atom being created
+        store = list() # to store indices while branching
+        bondingTo = idx # which atom are we going to bond to
 
-            start = smirks.find('[')
-            if start != 0:
-                raise Exception("Provided SMIRKS: %s should begin with '[' instead of %s" % (smirks, smirks[0]))
-            end = smirks.find(']')
+        atom, start, end = _find_embedded_brackets(smirks, '\[', '\]')
+        if start != 0:
+            raise SMIRKSParsingError("Provided SMIRKS: %s should begin with '[' instead of %s" % (smirks, smirks[0]))
 
-            atom = smirks[start+1:end]
-            OR, AND, index = self._getAtomInfo(atom)
-            leftover = smirks[end+1:]
+        atom = atom[1:]
+        OR, AND, index = self._getAtomInfo(atom)
+        leftover = smirks[end+1:]
 
-            new_atom = self.addAtom(None, newORtypes = OR, newANDtypes = AND, newAtomIndex = index)
+        new_atom = self.addAtom(None, newORtypes = OR, newANDtypes = AND, newAtomIndex = index)
+        atoms[idx] = new_atom
+
+        while len(leftover) > 0 and leftover.find('[') != -1:
+            idx += 1
+
+            # Check for branching
+            if leftover[0] == ')':
+                bondingTo = store.pop()
+                leftover = leftover[1:]
+            if leftover[0] == '(':
+                store.append(bondingTo)
+                leftover = leftover[1:]
+
+            # find beginning and end of atom
+            atom_string, start, end = _find_embedded_brackets(leftover, '\[', '\]')
+
+            # Get bond and atom info
+            bOR, bAND = self._getBondInfo(leftover[:start])
+            aOR, aAND, index = self._getAtomInfo(leftover[start+1:end])
+
+            # create new atom
+            new_atom = self.addAtom(atoms[bondingTo], bOR, bAND, aOR, aAND, index)
+
+            # update state
             atoms[idx] = new_atom
-
-            while len(leftover) > 0 and leftover.find('[') != -1:
-                idx += 1
-
-                # Check for branching
-                if leftover[0] == ')':
-                    bondingTo = store.pop()
-                    leftover = leftover[1:]
-                if leftover[0] == '(':
-                    store.append(bondingTo)
-                    leftover = leftover[1:]
-
-                # find beginning and end of atom
-                atom_string, start, end = _find_embedded_brackets(leftover, '\[', '\]')
-
-                # Get bond and atom info
-                bOR, bAND = self._getBondInfo(leftover[:start])
-                aOR, aAND, index = self._getAtomInfo(leftover[start+1:end])
-
-                # create new atom
-                new_atom = self.addAtom(atoms[bondingTo], bOR, bAND, aOR, aAND, index)
-
-                # update state
-                atoms[idx] = new_atom
-                bondingTo = idx
-                leftover = leftover[end+1:]
-
+            bondingTo = idx
+            leftover = leftover[end+1:]
+        return
 
     def _getAtomInfo(self, atom):
         """
