@@ -387,10 +387,10 @@ class ChemicalEnvironment(object):
             mol = OEQMol()
             if not OEParseSmarts(mol, new_smirks):
                 raise SMIRKSParsingError("Error Provided SMIRKS: %s was not parseable" % smirks)
-            try:
-                self._parse_smirks(new_smirks)
-            except:
-                raise SMIRKSParsingError("Error SMIRKS (%s) was not parseable into a ChemicalEnvironment" % new_smirks)
+            #try:
+            self._parse_smirks(new_smirks)
+            #except:
+            #    raise SMIRKSParsingError("Error SMIRKS (%s) was not parseable into a ChemicalEnvironment" % new_smirks)
 
     def _parse_smirks(self,smirks):
         """
@@ -405,7 +405,7 @@ class ChemicalEnvironment(object):
         if start != 0:
             raise SMIRKSParsingError("Provided SMIRKS: %s should begin with '[' instead of %s" % (smirks, smirks[0]))
 
-        atom = atom[1:]
+        atom = atom[1:-1]
         OR, AND, index = self._getAtomInfo(atom)
         leftover = smirks[end+1:]
 
@@ -428,7 +428,7 @@ class ChemicalEnvironment(object):
 
             # Get bond and atom info
             bOR, bAND = self._getBondInfo(leftover[:start])
-            aOR, aAND, index = self._getAtomInfo(leftover[start+1:end])
+            aOR, aAND, index = self._getAtomInfo(atom_string[1:-1])
 
             # create new atom
             new_atom = self.addAtom(atoms[bondingTo], bOR, bAND, aOR, aAND, index)
