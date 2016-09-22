@@ -393,6 +393,31 @@ def test_partial_bondorder(verbose = False):
     if energy < 7.50 or energy > 7.60:
         raise Exception("Partial bond order code seems to have issues, as energy for benzene is outside of tolerance in tests.")
 
+def test_improper(verbose = False):
+    """Test implement of impropers on benzene."""
+    from openeye import oechem
+    # Load benzene
+    ifs = oechem.oemolistream(get_data_filename('molecules/benzene.mol2'))
+    mol = oechem.OEMol()
+    flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
+    ifs.SetFlavor( oechem.OEFormat_MOL2, flavor)
+    oechem.OEReadMolecule(ifs, mol )
+    ifs.close()
+    # Load forcefield
+    ffxml = get_data_filename('forcefield/benzene_minimal.ffxml')
+    ff = ForceField(ffxml)
+
+    # Load AMBER files and compare
+    crd = get_data_filename('molecules/benzene.crd')
+    top = get_data_filename('molecules/benzene.top')
+    g0, g1, e0, e1 = compare_molecule_energies( top, crd, ff, mol, skip_assert = True)
+
+    # Check that torsional energies the same to 1 in 10^6
+    rel_error = np.abs(( g0['torsion']-g1['torsion'])/ g0['torsion'])
+    if rel_error > 2e-5: #Note that this will not be tiny because we use six-fold impropers and they use a single improper
+        raise Exception("Improper torsion energy for benzene differs too much (relative error %.4g) between AMBER and SMIRFF." % rel_error )
+
+
 def test_MDL_aromaticity(verbose=False):
     """Test support for alternate aromaticity models."""
     ffxml = StringIO(ffxml_MDL_contents)
