@@ -385,14 +385,11 @@ class ChemicalEnvironment(object):
             while len(leftover) > 0 and leftover.find('[') != -1:
                 idx += 1
 
-                print(store)
                 # Check for branching
                 if leftover[0] == ')':
-                    print(leftover)
                     bondingTo = store.pop()
                     leftover = leftover[1:]
                 if leftover[0] == '(':
-                    print(leftover)
                     store.append(bondingTo)
                     leftover = leftover[1:]
 

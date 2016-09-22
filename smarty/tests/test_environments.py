@@ -202,5 +202,5 @@ class TestChemicalEnvironments(TestCase):
         """
         Check embedded atom parsing works
         """
-        smirks = "[#1$(*-C(-[#7,#8,F,#16,Cl,Br])-[#7,#8,F,#16,Cl,Br]):1]~[$([#1]~[#6])]"
+        smirks = "[#1$(*-[#6](-[#7,#8,#9,#16,#17,#35])-[#7,#8,#9,#16,#17,#35]):1]~[$([#1]~[#6])]"
         env = ChemicalEnvironment(smirks)
