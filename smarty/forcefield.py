@@ -1363,8 +1363,11 @@ class PeriodicTorsionGenerator(object):
             chemenv = env.ChemicalEnvironment(self.smirks)
             thistype = chemenv.getType()
             if thistype=='Torsion': thistype = 'Proper'
-            if self.torsiontype != thistype:
-                raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, self.torsiontype))
+            try:
+                if self.torsiontype != thistype:
+                    raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, self.torsiontype))
+            except IndexError:
+                print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
 
 
             if 'fractional_bondorder' in parent.attrib:
