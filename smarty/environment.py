@@ -387,10 +387,10 @@ class ChemicalEnvironment(object):
             mol = OEQMol()
             if not OEParseSmarts(mol, new_smirks):
                 raise SMIRKSParsingError("Error Provided SMIRKS: %s was not parseable" % smirks)
-            #try:
-            self._parse_smirks(new_smirks)
-            #except:
-            #    raise SMIRKSParsingError("Error SMIRKS (%s) was not parseable into a ChemicalEnvironment" % new_smirks)
+            try:
+                self._parse_smirks(new_smirks)
+            except:
+                raise SMIRKSParsingError("Error SMIRKS (%s) was not parseable into a ChemicalEnvironment" % new_smirks)
 
     def _parse_smirks(self,smirks):
         """
