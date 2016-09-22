@@ -197,3 +197,10 @@ class TestChemicalEnvironments(TestCase):
         msg = "SMIRKS (%s) should not be parseable, but an environment was successfully created"
         with self.assertRaises(SMIRKSParsingError, msg = msg):
             env = ChemicalEnvironment(smirks)
+
+    def test_embedded_atoms_smirks(self):
+        """
+        Check embedded atom parsing works
+        """
+        smirks = "[#1$(*-C(-[#7,#8,F,#16,Cl,Br])-[#7,#8,F,#16,Cl,Br]):1]~[$([#1]~[#6])]"
+        env = ChemicalEnvironment(smirks)

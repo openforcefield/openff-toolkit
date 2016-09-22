@@ -32,6 +32,63 @@ from openeye.oechem import *
 import numpy as np
 from numpy import random
 
+#==============================================================================
+# Functions
+#==============================================================================
+
+def _find_embedded_brackets(string, in_char, out_char):
+    """
+    Finds the substring surrounded by the in_char and out_char
+    intended use is to identify embedded bracketed sequences
+
+    string = "[#1$(*-C(-[#7,#8,F,#16,Cl,Br])-[#7,#8,F,#16,Cl,Br]):1]"
+    sub_string, in_idx, out_idx = _find_embedded_brackets(string, '\(','\)')
+    # in_idx = 4, out_idx = 50
+    """
+    in_list = [m.start() for m in re.finditer(in_char, string)]
+    out_list = [m.start() for m in re.finditer(out_char, string)]
+    if len(in_list) == 0:
+        return "", -1, -1
+    if len(out_list) == 0:
+        return string[in_list[0]:], in_list[0], -1
+    list_idx = 0
+    while list_idx < len(in_list) - 1:
+        if in_list[list_idx+1] > out_list[list_idx]:
+            break
+        list_idx+=1
+    in_idx = in_list[0]
+    out_idx = out_list[list_idx]
+    return string[in_idx:out_idx+1], in_idx, out_idx
+
+def _convert_embedded_SMIRKS(smirks):
+    a_out = 0
+    while smirks.find('$') != -1:
+        atom, a_in, a_out = _find_embedded_brackets(smirks, '\[', '\]')
+        d = atom.find('$')
+        while d == -1:
+            atom, temp_in, temp_out = _find_embedded_brackets(smirks[a_out:], '\[', '\]')
+            a_in = a_out + temp_in
+            a_out += temp_out + 1
+            d = atom.find('$')
+
+        pre_smirks = smirks[:a_in]
+        post_smirks = smirks[a_out+1:]
+
+        embedded, p_in, p_out = _find_embedded_brackets(atom, '\(', '\)')
+        if embedded[1] == '[':
+            first, f_in, f_out = _find_embedded_brackets(embedded, '\[','\]')
+            first = _convert_embedded_SMIRKS(first)
+            new_atom = atom[:d]+first[1:-1]+atom[p_out+1:]
+            embedded = '('+embedded[f_out+1:]
+        else: # embedded[1] = *
+            new_atom = atom[:d]+atom[p_out+1:]
+            embedded = '('+embedded[2:]
+
+        # Make new smirks
+        smirks = pre_smirks+new_atom+embedded+post_smirks
+
+    return smirks
+
 class SMIRKSMismatchError(Exception):
     """
     Exception for cases where smirks are inappropriate
@@ -300,9 +357,10 @@ class ChemicalEnvironment(object):
         if smirks is not None:
             # check SMIRKS is parseable
             if replacements is not None:
-                test_smirks = OESmartsLexReplace(smirks, replacements)
+                smirks = OESmartsLexReplace(smirks, replacements)
             else:
-                test_smirks = smirks
+                smirks = smirks
+            smirks = _convert_embedded_SMIRKS(smirks)
             mol = OEQMol()
             if not OEParseSmarts(mol, smirks):
                 raise SMIRKSParsingError("Error Provided SMIRKS: %s was not parseable" % smirks)
@@ -324,20 +382,22 @@ class ChemicalEnvironment(object):
             new_atom = self.addAtom(None, newORtypes = OR, newANDtypes = AND, newAtomIndex = index)
             atoms[idx] = new_atom
 
-            while len(leftover) > 0:
+            while len(leftover) > 0 and leftover.find('[') != -1:
                 idx += 1
 
+                print(store)
                 # Check for branching
                 if leftover[0] == ')':
+                    print(leftover)
                     bondingTo = store.pop()
                     leftover = leftover[1:]
                 if leftover[0] == '(':
+                    print(leftover)
                     store.append(bondingTo)
                     leftover = leftover[1:]
 
                 # find beginning and end of atom
-                start = leftover.find('[')
-                end = leftover.find(']')
+                atom_string, start, end = _find_embedded_brackets(leftover, '\[', '\]')
 
                 # Get bond and atom info
                 bOR, bAND = self._getBondInfo(leftover[:start])
