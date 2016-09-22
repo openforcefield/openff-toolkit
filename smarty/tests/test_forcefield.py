@@ -109,7 +109,7 @@ ffxml_MDL_contents = u"""\
     <Angle smirks="[*:1]~[*:2]~[*:3]" angle="109.5" id="a1" k="160.0"/>
 </HarmonicAngleForce>
 <PeriodicTorsionForce phase_unit="degrees" k_unit="kilocalories_per_mole">
-<Improper smirks="[*:1]~[#6X3:2]~[*:3]~[*:4]" id="i1" k1="3.5" periodicity1="2" phase1="180."/>
+<Improper smirks="[a,A:1]~[#6X3:2]([a,A:3])~[OX1:4]" periodicity1="2" phase1="180.0" k1="10.5" id="i0001" parent_id="i0001"/> <!-- X -X -C -O  from frcmod.Frosst_AlkEthOH; none in set but here as format placeholder -->
     <Proper smirks="[*:1]~[*:2]~[*:3]~[*:4]" id="t1" idivf1="4" k1="3.50" periodicity1="2" phase1="180.0"/>
   </PeriodicTorsionForce>
   <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
