@@ -86,8 +86,8 @@ def _convert_embedded_SMIRKS(smirks):
         d = atom.find('$')
         # Find atom with the $ string embedded
         while d == -1:
-            atom, temp_in, temp_out = _find_embedded_brackets(smirks[a_out:], '\[', '\]')
-            a_in = a_out + temp_in
+            atom, temp_in, temp_out = _find_embedded_brackets(smirks[a_out+1:], '\[', '\]')
+            a_in = a_out + temp_in + 1
             a_out += temp_out + 1
             d = atom.find('$')
 
@@ -390,7 +390,7 @@ class ChemicalEnvironment(object):
             try:
                 self._parse_smirks(new_smirks)
             except:
-                raise SMIRKSParsingError("Error SMIRKS (%s) was not parseable into a ChemicalEnvironment" % new_smirks)
+                raise SMIRKSParsingError("Error SMIRKS (%s) converted to %s  was not parseable into a ChemicalEnvironment" % (smirks, new_smirks))
 
     def _parse_smirks(self,smirks):
         """
