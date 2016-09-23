@@ -326,9 +326,10 @@ class ChemicalEnvironment(object):
                 The SMARTS string for just this atom
             """
             if self.ORtypes:
-                smarts = ''
+                ORcombos = list()
                 for (ORbase, ORdecorators) in self.ORtypes:
-                    smarts += ORbase+''.join(ORdecorators)
+                    ORcombos.append(ORbase+''.join(ORdecorators))
+                smarts = ','.join(ORcombos)
             else:
                 smarts = '~'
 
@@ -378,15 +379,17 @@ class ChemicalEnvironment(object):
         self.label = label
 
         if smirks is not None:
-            # check SMIRKS is parseable
+            # fill in replacements and update format
             if replacements is not None:
                 new_smirks = OESmartsLexReplace(smirks, replacements)
             else:
                 new_smirks = smirks
             new_smirks = _convert_embedded_SMIRKS(new_smirks)
+            # Check that it is a valid SMIRKS
             mol = OEQMol()
             if not OEParseSmarts(mol, new_smirks):
                 raise SMIRKSParsingError("Error Provided SMIRKS: %s was not parseable" % smirks)
+            # try parsing into environment object
             try:
                 self._parse_smirks(new_smirks)
             except:
@@ -510,14 +513,25 @@ class ChemicalEnvironment(object):
         """
         given bond strings returns ORtypes and ANDtypes
         """
-        split = bond.split(';')
+        # Define bond regular expression options below in order:
+        # single, double, triple, aromatic, directional up bond, directional down bond
+        # Each can have ! in from and directional can have ? after
+        # up and down bonds have lots of \ to fit the python requirements
+        bond_regs = ['!?[-]', '!?[=]', '!?[#]', '!?[:]', '!?[@]', '!?[\\\\]\\??', '!?[\\/]\\??']
+        bond_regs = r'('+'|'.join(bond_regs)+')'
+        # Note, not looking for ~ because that is used for empty bonds
 
+        # AND types indicated by ; at the end
+        split = bond.split(';')
         ANDtypes = split[1:]
+
+        # ORtypes are divided by ,
         ORList = split[0].split(',')
         ORtypes = list()
         for OR in ORList:
-            if OR[0] != '~':
-                ORtypes.append( (OR[0], list(OR[1:])))
+            or_divide = re.findall(bond_regs, OR)
+            if len(or_divide) > 0:
+                ORtypes.append( (or_divide[0], or_divide[1:]))
 
         return ORtypes, ANDtypes
 
