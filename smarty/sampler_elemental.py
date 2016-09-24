@@ -122,6 +122,7 @@ class AtomTypeSamplerElemental(object):
         # Ensure all base types are in initial types (and add if not) as 
         # base types are generics (such as elemental) and need to be present 
         # at the start
+
         initial_smarts = [ smarts for (smarts, name) in self.atomtypes ]
         for [smarts, typename] in self.basetypes:
             if smarts not in initial_smarts:
@@ -132,7 +133,8 @@ class AtomTypeSamplerElemental(object):
         # need never be used ever and can be deleted- i.e. if we have no 
         # phosphorous in the set we don't need a phosphorous base type)
         self.used_basetypes = []
-
+        self.used_atomtypes = []
+        
         # Creat dictionary to store children of initial atom types
         #self.parents = dict()
         #for [smarts, typename] in self.atomtypes:
@@ -158,7 +160,9 @@ class AtomTypeSamplerElemental(object):
         for molecule in self.molecules:
             for atom in molecule.GetAtoms():
                 self.total_atoms += 1.0
-        
+
+        print "ATOMTYPES BEFORE TOTAL: " + str(self.atomtypes)
+
         # Compute total atoms of the specif element
         self.total_element = self.calculate_number_element(self.atomtypes, self.molecules)
         print "Total Element type: " + str(self.total_element)
@@ -202,24 +206,42 @@ class AtomTypeSamplerElemental(object):
         # Atom basetypes to create new smart strings
         self.atom_basetype = copy.deepcopy(self.used_basetypes)
         
-        self.atomtypes = copy.deepcopy(self.used_basetypes)
+        # Track used vs unused atomtypes - unused atomtypes are not retained
+        for (smarts, atom_type) in self.atomtypes:
+            # If this type is used, then track it
+            if atom_typecounts[atom_type] > 0:
+                self.used_atomtypes.append( [ smarts, atom_type] )
+                if self.verbose: print("Storing used atomtype `%s`, name `%s` with count %s..." % (smarts, atom_type, atom_typecounts[atom_type] )) 
+            # If unused, it matches nothing in the set
+            elif atom_typecounts[atom_type] == 0 and (smarts not in self.basetypes_smarts): 
+                self.atomtypes_with_no_matches.add( smarts )
+                if self.verbose: print("Storing base atom type `%s`, which is unused, so that it will not be proposed further." % smarts )
+        
+        # Atom basetypes to create new smart strings
+        self.atom_basetype = copy.deepcopy(self.used_basetypes)
+        self.atomtypes = copy.deepcopy(self.used_atomtypes)
 
         # Track unused initial types that are not base types as we also don't 
         # need to retain those
-        for (smarts, atom_type) in self.atomtypes:
-            if atom_typecounts[atom_type] == 0 and (smarts not in self.basetypes_smarts):
-                self.atomtypes_with_no_matches.add( smarts )
-                if self.verbose: print("Storing initial atom type `%s`, which is unused, so that it will not be proposed further." % smarts )   
+        #for (smarts, atom_type) in self.atomtypes:
+        #    if atom_typecounts[atom_type] == 0 and (smarts not in self.basetypes_smarts):
+        #        self.atomtypes_with_no_matches.add( smarts )
+        #        if self.verbose: print("Storing initial atom type `%s`, which is unused, so that it will not be proposed further." % smarts )   
+
+        print "ATOMTYPES BEFORE MERGE: " + str(self.atomtypes)
+
+        if self.atomtypes != self.atom_basetype:
+            self.atomtypes = self.atomtypes + self.atom_basetype
 
         self.newatomtypes = []
-        print "initial: " + str(self.atomtypes)
         for [smarts, typename] in self.atomtypes:
             element = re.findall('\d+', smarts)[0]
             if element == self.initial_element:
                 self.newatomtypes += [[smarts, typename]]
-        print self.newatomtypes
         self.atomtypes = copy.deepcopy(self.newatomtypes)
         
+        print "ATOMTYPES FINAL: " + str(self.atomtypes)
+
         # Creat dictionary to store children of initial atom types
         self.parents = dict()
         for [smarts, typename] in self.newatomtypes:
@@ -550,6 +572,10 @@ class AtomTypeSamplerElemental(object):
                         if self.verbose: print("Attempting to create new subtype: '%s' (%s) -> '%s' (%s)" % (atom1type[0], atom1type[1], proposed_atomtype, proposed_typename))
 
                 # Update proposed parent dictionary
+                print atom1type[0]
+                print proposed_atomtype
+                print proposed_typename
+                print self.parents
                 proposed_parents[atom1type[0]].append([proposed_atomtype, proposed_typename])
 
             proposed_parents[proposed_atomtype] = []
@@ -674,7 +700,7 @@ class AtomTypeSamplerElemental(object):
 
         # Type molecules.
         for molecule in molecules:
-            atomtyper.assignTypes(molecule)
+            atomtyper.assignTypes(molecule, "elemental")
 
         return
 
@@ -873,11 +899,11 @@ class AtomTypeSamplerElemental(object):
                             includeBase = True
                             break
             # Remove atomtypes from completed element branches
-            if not includeBase:
-                print "INclude Base False"
-                self.unmatched_atomtypes.remove([base_smarts, base_typename])
-                for child in self.parents[base_smarts]:
-                    self.unmatched_atomtypes.remove(child)
+            #if not includeBase:
+            #    print "INclude Base False"
+            #    self.unmatched_atomtypes.remove([base_smarts, base_typename])
+            #    for child in self.parents[base_smarts]:
+            #        self.unmatched_atomtypes.remove(child)
 
         return
 
