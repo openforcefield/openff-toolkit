@@ -1366,7 +1366,7 @@ class PeriodicTorsionGenerator(object):
                 if thistype=='Torsion': thistype = 'Proper'
                 if self.torsiontype != thistype:
                     raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, self.torsiontype))
-            except IndexError:
+            except env.SMIRKSParsingError:
                 print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
 
 
