@@ -228,9 +228,20 @@ class _Topology(Topology):
         # Get/initialize bond orders
         self._updateBondOrders()
 
-    def _isBonded(self, atom1, atom2):
+    def _isBonded(self, atom_index_1, atom_index_2):
         """Return True if atoms are bonded, False if not.
 
+        Parameters
+        ----------
+        atom_index_1 : int
+        atom_index_2 : int
+            Atom indices
+
+        Returns
+        -------
+        is_bonded : bool
+            True if atoms are bonded, False otherwise
+        
         TODO
         ----
         This assumes _Topology is immutable.
@@ -238,13 +249,13 @@ class _Topology(Topology):
         if not hasattr(self, '_bondedAtoms'):
             # Construct list of all atoms each atom is bonded to.
             self._bondedAtoms = dict()
-            for atom in self.atoms():
+            for atom in range(self._numAtoms):
                 self._bondedAtoms[atom] = set()
             for bond in self._bonds:
-                self._bondedAtoms[bond[0]].add(bond[1])
-                self._bondedAtoms[bond[1]].add(bond[0])
+                self._bondedAtoms[bond[0].index].add(bond[1].index)
+                self._bondedAtoms[bond[1].index].add(bond[0].index)
 
-        return atom2 in self._bondedAtoms[atom1]
+        return atom_index_2 in self._bondedAtoms[atom_index_1]
 
     def _identifyMolecules(self):
         """Identify all unique reference molecules and atom mappings to all instances in the Topology.
