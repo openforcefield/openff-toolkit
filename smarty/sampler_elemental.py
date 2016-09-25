@@ -161,11 +161,8 @@ class AtomTypeSamplerElemental(object):
             for atom in molecule.GetAtoms():
                 self.total_atoms += 1.0
 
-        print "ATOMTYPES BEFORE TOTAL: " + str(self.atomtypes)
-
         # Compute total atoms of the specif element
         self.total_element = self.calculate_number_element(self.atomtypes, self.molecules)
-        print "Total Element type: " + str(self.total_element)
 
         # Store reference molecules
         self.reference_typed_molecules = None
@@ -228,8 +225,6 @@ class AtomTypeSamplerElemental(object):
         #        self.atomtypes_with_no_matches.add( smarts )
         #        if self.verbose: print("Storing initial atom type `%s`, which is unused, so that it will not be proposed further." % smarts )   
 
-        print "ATOMTYPES BEFORE MERGE: " + str(self.atomtypes)
-
         if self.atomtypes != self.atom_basetype:
             self.atomtypes = self.atomtypes + self.atom_basetype
 
@@ -239,8 +234,6 @@ class AtomTypeSamplerElemental(object):
             if element == self.initial_element:
                 self.newatomtypes += [[smarts, typename]]
         self.atomtypes = copy.deepcopy(self.newatomtypes)
-        
-        print "ATOMTYPES FINAL: " + str(self.atomtypes)
 
         # Creat dictionary to store children of initial atom types
         self.parents = dict()
@@ -725,7 +718,6 @@ class AtomTypeSamplerElemental(object):
         number_element = 0
         for [smarts, typename] in typelist:
             # Get statistics for only the element we are looking for
-            element = re.findall('\d+', smarts)[0]
             if element == self.initial_element:
                 atom_typecounts[typename] = 0
         # Count number of atoms with each type.
