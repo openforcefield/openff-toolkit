@@ -718,6 +718,7 @@ class AtomTypeSamplerElemental(object):
         number_element = 0
         for [smarts, typename] in typelist:
             # Get statistics for only the element we are looking for
+            element = re.findall('\d+', smarts)[0]
             if element == self.initial_element:
                 atom_typecounts[typename] = 0
         # Count number of atoms with each type.
@@ -733,7 +734,6 @@ class AtomTypeSamplerElemental(object):
         return number_element
 
     
-
     def compute_type_statistics(self, typelist, molecules, only_element=False):
         """
         Compute statistics for numnber of molecules assigned each type.
