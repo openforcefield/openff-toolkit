@@ -228,6 +228,24 @@ class _Topology(Topology):
         # Get/initialize bond orders
         self._updateBondOrders()
 
+    def _isBonded(self, atom1, atom2):
+        """Return True if atoms are bonded, False if not.
+
+        TODO
+        ----
+        This assumes _Topology is immutable.
+        """
+        if not hasattr(self, '_bondedAtoms'):
+            # Construct list of all atoms each atom is bonded to.
+            self._bondedAtoms = dict()
+            for atom in range(self._numAtoms):
+                self._bondedAtoms[atom] = set()
+            for bond in self._bonds:
+                self._bondedAtoms[bond[0]].add(bond[1])
+                self._bondedAtoms[bond[1]].add(bond[0])
+
+        return atom2 in self._bondedAtoms[atom1]
+
     def _identifyMolecules(self):
         """Identify all unique reference molecules and atom mappings to all instances in the Topology.
         """
@@ -1159,6 +1177,9 @@ class HarmonicBondGenerator(object):
 
         # Add all bonds to the system.
         for (atom_indices, bond) in bonds.items():
+            # Ensure atoms are actually bonded correct pattern in Topology
+            assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
+
             if bond.fractional_bondorder==None:
                 force.addBond(atom_indices[0], atom_indices[1], bond.length, bond.k)
             # If this bond uses partial bond orders
@@ -1298,6 +1319,10 @@ class HarmonicAngleGenerator(object):
 
         # Add all angles to the system.
         for (atom_indices, angle) in angles.items():
+            # Ensure atoms are actually bonded correct pattern in Topology
+            assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
+            assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
+
             force.addAngle(atom_indices[0], atom_indices[1], atom_indices[2], angle.angle, angle.k)
 
         if verbose: print('%d angles added' % (len(angles)))
@@ -1441,6 +1466,17 @@ class PeriodicTorsionGenerator(object):
 
         # Add all torsions to the system.
         for (atom_indices, torsion) in torsions.items():
+            if torsion.torsiontype == 'Proper':
+                # Ensure atoms are actually bonded correct pattern in Topology
+                assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
+                assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
+                assert topology._isBonded(atom_indices[2], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[2], atom_indices[3])
+            elif torsion.torsiontype == 'Improper':
+                # Ensure atoms are actually bonded correct pattern in Topology
+                assert topology._isBonded(atom_indices[0], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[2])
+                assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
+                assert topology._isBonded(atom_indices[3], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[3], atom_indices[2])
+
             for (periodicity, phase, k) in zip(torsion.periodicity, torsion.phase, torsion.k):
                 force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
 
