@@ -280,9 +280,7 @@ class AtomTypeSamplerElemental(object):
 
         # Get current atomtypes and reference atom types
         current_atomtypes = [ typename for (smarts, typename) in atomtypes ]
-        print current_atomtypes
         reference_atomtypes = [ typename for typename in self.reference_atomtypes ]
-        print reference_atomtypes
         # check that current atom types are not in reference atom types
         if set(current_atomtypes) & set(reference_atomtypes):
             raise Exception("Current and reference atom types must be unique")
@@ -529,9 +527,7 @@ class AtomTypeSamplerElemental(object):
                 # combinatorial-decorators
                 nbondset = len(self.bondset)
                 # Pick an atomtype
-                print "TESTE UNMATCHED: " + str(self.unmatched_atomtypes)
                 atom1type = self.PickAnAtom(self.unmatched_atomtypes)
-                print atom1type[0]
                 # Check if it is the element you want, if not, try to get only that atomtype element
                 element = re.findall('\d+', atom1type[0])[0]
                 if self.verbose: print("****** Got this element '%s'." % element)
@@ -565,10 +561,6 @@ class AtomTypeSamplerElemental(object):
                         if self.verbose: print("Attempting to create new subtype: '%s' (%s) -> '%s' (%s)" % (atom1type[0], atom1type[1], proposed_atomtype, proposed_typename))
 
                 # Update proposed parent dictionary
-                print atom1type[0]
-                print proposed_atomtype
-                print proposed_typename
-                print self.parents
                 proposed_parents[atom1type[0]].append([proposed_atomtype, proposed_typename])
 
             proposed_parents[proposed_atomtype] = []
@@ -754,7 +746,6 @@ class AtomTypeSamplerElemental(object):
         molecule_typecounts = dict()
         for [smarts, typename] in typelist:
             # Get statistics for only the element we are looking for
-            print smarts
             element = re.findall('\d+', smarts)[0]
             if only_element:
                 if element == self.initial_element:
@@ -882,8 +873,6 @@ class AtomTypeSamplerElemental(object):
                 # If the number of atoms matches the references are the same for basetypes and their children
                 # then we have found all reference types for that element and should stop searching that branch
                 if atom_typecounts[base_typename] == reference_counts[base_typename]:
-                    print atom_typecounts[base_typename]
-                    print reference_counts[base_typename]
                     includeBase = False
                     for [child_smarts, child_name] in self.parents[base_smarts]:
                         # If any of the children's atom count and reference count don't agree then these should stay in the unmatched_atomtypes
