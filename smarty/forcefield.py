@@ -241,7 +241,7 @@ class _Topology(Topology):
         -------
         is_bonded : bool
             True if atoms are bonded, False otherwise
-        
+
         TODO
         ----
         This assumes _Topology is immutable.
@@ -1484,9 +1484,9 @@ class PeriodicTorsionGenerator(object):
                 assert topology._isBonded(atom_indices[2], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[2], atom_indices[3])
             elif torsion.torsiontype == 'Improper':
                 # Ensure atoms are actually bonded correct pattern in Topology
-                assert topology._isBonded(atom_indices[0], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[2])
+                assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
                 assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
-                assert topology._isBonded(atom_indices[3], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[3], atom_indices[2])
+                assert topology._isBonded(atom_indices[1], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[3])
 
             for (periodicity, phase, k) in zip(torsion.periodicity, torsion.phase, torsion.k):
                 force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
