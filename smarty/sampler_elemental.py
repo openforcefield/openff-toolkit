@@ -45,9 +45,9 @@ import networkx
 
 import time
 
-from . import AtomTyper
-from score_utils import load_trajectory
-from score_utils import scores_vs_time
+from smarty.atomtyper import AtomTyper
+from smarty.score_utils import load_trajectory
+from smarty.score_utils import scores_vs_time
 
 #=============================================================================================
 # ATOMTYPE SAMPLER
