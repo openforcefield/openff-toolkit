@@ -238,7 +238,7 @@ class _Topology(Topology):
         if not hasattr(self, '_bondedAtoms'):
             # Construct list of all atoms each atom is bonded to.
             self._bondedAtoms = dict()
-            for atom in range(self._numAtoms):
+            for atom in self.atoms():
                 self._bondedAtoms[atom] = set()
             for bond in self._bonds:
                 self._bondedAtoms[bond[0]].add(bond[1])
