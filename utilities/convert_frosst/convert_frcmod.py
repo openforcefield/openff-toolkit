@@ -3,6 +3,7 @@
 import lxml.etree as etree
 import numpy as np
 from smarty import ForceField
+from smarty import environment
 
 # Function definitions for parsing sections within parameter file
 def _parse_nonbon_line( line ):
@@ -135,6 +136,8 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
             params['id'] = param_prefix_by_sec[name]+str( param_id_by_section[name] )
 
             smirks = params['smirks']
+            #Check smirks is valid for chemical enviroment parsing:
+            env = environment.ChemicalEnvironment(smirks)
 
             # If it's not a torsion, just store in straightforward way
             if not (name=='IMPR' or name=='DIHE'):
