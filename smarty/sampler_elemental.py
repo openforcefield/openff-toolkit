@@ -784,9 +784,9 @@ class AtomTypeSamplerElemental(object):
 
         # Print header
         if atomtype_matches is not None:
-            print "%5s   %10s %10s   %64s %32s %8s %46s" % ('INDEX', 'ATOMS', 'MOLECULES', 'TYPE NAME', 'SMARTS', 'REF TYPE', 'FRACTION OF REF TYPED MOLECULES MATCHED')
+            print ("%5s   %10s %10s   %64s %32s %8s %46s" % ('INDEX', 'ATOMS', 'MOLECULES', 'TYPE NAME', 'SMARTS', 'REF TYPE', 'FRACTION OF REF TYPED MOLECULES MATCHED'))
         else:
-            print "%5s   %10s %10s   %64s %32s" % ('INDEX', 'ATOMS', 'MOLECULES', 'TYPE NAME', 'SMARTS')
+            print ("%5s   %10s %10s   %64s %32s" % ('INDEX', 'ATOMS', 'MOLECULES', 'TYPE NAME', 'SMARTS'))
 
         # Print counts
         for [smarts, typename] in typelist:
@@ -797,11 +797,11 @@ class AtomTypeSamplerElemental(object):
                     if reference_atomtype is not None:
                         reference_total = self.reference_atomtypes_atomcount[reference_atomtype]
                         reference_fraction = float(reference_count) / float(reference_total)
-                        print "%5d : %10d %10d | %64s %32s %8s %16d / %16d (%7.3f%%)" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts, reference_atomtype, reference_count, reference_total, reference_fraction*100)
+                        print ("%5d : %10d %10d | %64s %32s %8s %16d / %16d (%7.3f%%)" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts, reference_atomtype, reference_count, reference_total, reference_fraction*100))
                     else:
-                        print "%5d : %10d %10d | %64s %32s" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts)
+                        print ("%5d : %10d %10d | %64s %32s" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts))
                 else:
-                    print "%5d : %10d %10d | %64s %32s" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts)
+                    print ("%5d : %10d %10d | %64s %32s" % (index, atom_typecounts[typename], molecule_typecounts[typename], typename, smarts))
 
                 natoms += atom_typecounts[typename]
                 index += 1
@@ -809,9 +809,9 @@ class AtomTypeSamplerElemental(object):
         nmolecules = len(self.molecules)
 
         if atomtype_matches is not None:
-            print "%5s : %10d %10d |  %64s %32s %8d / %8d match (%.3f %%)" % ('TOTAL', natoms, nmolecules, '', '', self.total_atom_type_matches, self.total_element, (float(self.total_atom_type_matches) / float(self.total_element)) * 100)
+            print ("%5s : %10d %10d |  %64s %32s %8d / %8d match (%.3f %%)" % ('TOTAL', natoms, nmolecules, '', '', self.total_atom_type_matches, self.total_element, (float(self.total_atom_type_matches) / float(self.total_element)) * 100))
         else:
-            print "%5s : %10d %10d" % ('TOTAL', natoms, nmolecules)
+            print ("%5s : %10d %10d" % ('TOTAL', natoms, nmolecules))
 
         return
 
