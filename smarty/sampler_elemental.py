@@ -134,12 +134,6 @@ class AtomTypeSamplerElemental(object):
         # phosphorous in the set we don't need a phosphorous base type)
         self.used_basetypes = []
         self.used_atomtypes = []
-        
-        # Creat dictionary to store children of initial atom types
-        #self.parents = dict()
-        #for [smarts, typename] in self.atomtypes:
-        #    #store empty list of chlidren for each atomtype
-        #    self.parents[smarts] = []
 
         # Store a deep copy of the molecules since they will be annotated
         self.molecules = copy.deepcopy(molecules)
@@ -217,13 +211,6 @@ class AtomTypeSamplerElemental(object):
         # Atom basetypes to create new smart strings
         self.atom_basetype = copy.deepcopy(self.used_basetypes)
         self.atomtypes = copy.deepcopy(self.used_atomtypes)
-
-        # Track unused initial types that are not base types as we also don't 
-        # need to retain those
-        #for (smarts, atom_type) in self.atomtypes:
-        #    if atom_typecounts[atom_type] == 0 and (smarts not in self.basetypes_smarts):
-        #        self.atomtypes_with_no_matches.add( smarts )
-        #        if self.verbose: print("Storing initial atom type `%s`, which is unused, so that it will not be proposed further." % smarts )   
 
         if self.atomtypes != self.atom_basetype:
             self.atomtypes = self.atomtypes + self.atom_basetype
@@ -353,9 +340,7 @@ class AtomTypeSamplerElemental(object):
             else:
                 print('%-64s         no match' % (current_atomtype))
 
-        #fraction_matched_atoms = float(total_atom_type_matches) / float(self.total_atoms)
         fraction_matched_atoms = float(total_atom_type_matches) / float(self.total_element)
-        #print('%d / %d total atoms match (%.3f %%)' % (total_atom_type_matches, self.total_atoms, fraction_matched_atoms * 100))
         print('%d / %d total atoms match (%.3f %%)' % (total_atom_type_matches, self.total_element, fraction_matched_atoms * 100))
 
         return fraction_matched_atoms
@@ -614,36 +599,6 @@ class AtomTypeSamplerElemental(object):
 
         if self.verbose: print('Proposal is valid...')
 
-
-        # IF is creating a new atom type
-        #if creating:
-        #
-        #    # Get the Element we are creating
-        #    element = re.findall('\d+', proposed_atomtype)[0]
-        #    if self.verbose: print("****** Calculating only for element '%s'." % element)
-        #    # Create proposed atomtypes by element
-        #    proposed_atomtype_by_element = []
-        #    for atomt in proposed_atomtypes:
-        #        if re.findall('\d+', atomt[0])[0] == element:
-        #            proposed_atomtype_by_element += [atomt]
-        #    print proposed_atomtype_by_element
-        #    print proposed_atomtypes
-        #
-        #    # Get only the element atomtypes form the Total Atoms
-        #    total_atom_type_element = []
-        #    for total_atomt in self.atomtypes:
-        #        if re.findall('\d+', total_atomt[0])[0] == element:
-        #            total_atom_type_element += [total_atomt]
-        #    print total_atom_type_element
-        #                #self.type_molecules(proposed_atomtype_by_element, self.molecules)
-        #    if self.verbose: print("****** GRAPH for atual atomtypes that are related with element %s." % (element))
-        #    [self.atom_type_matches, self.total_atom_type_matches] = self.best_match_reference_types(total_atom_type_element, self.molecules)
-        #    if self.verbose: print("****** GRAPH for proposed atomtypes that are related with element %s" % (element))
-        #    (proposed_atom_type_matches, proposed_total_atom_type_matches) = self.best_match_reference_types(proposed_atomtype_by_element, proposed_molecules)
-        #else:
-        #    (proposed_atom_type_matches, proposed_total_atom_type_matches) = self.best_match_reference_types(proposed_atomtypes, proposed_molecules)
-
-
         # Accept automatically if no reference molecules
         accept = False
         if self.reference_typed_molecules is None:
@@ -828,8 +783,6 @@ class AtomTypeSamplerElemental(object):
 
         index = 1
         output = []
-        # Print counts
-        # INDEX, SMARTS, PARENT INDEX, REF TYPE, MATCHES, MOLECULES, FRACTION, OUT of, PERCENTAGE
         for [smarts, typename] in typelist:
             if atomtype_matches is not None:
                 (reference_atomtype, reference_count) = reference_type_info[typename]
@@ -879,12 +832,6 @@ class AtomTypeSamplerElemental(object):
                         if not atom_typecounts[child_name] == reference_counts[child_name]:
                             includeBase = True
                             break
-            # Remove atomtypes from completed element branches
-            #if not includeBase:
-            #    print "INclude Base False"
-            #    self.unmatched_atomtypes.remove([base_smarts, base_typename])
-            #    for child in self.parents[base_smarts]:
-            #        self.unmatched_atomtypes.remove(child)
 
         return
 
