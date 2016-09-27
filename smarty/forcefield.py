@@ -862,16 +862,17 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         # Work with a modified form of the topology that provides additional accessors.
         topology = _Topology(topology, molecules)
 
-        # If the charge method was not an OpenEye AM1 method, obtain Wiberg bond orders
-        if not (type(chargeMethod) == str and 'AM1' in chargeMethod):
+        # If the charge method was not an OpenEye AM1 method and we need Wiberg bond orders, obtain Wiberg bond orders
+        if not (type(chargeMethod) == str and 'AM1' in chargeMethod) and self._use_fractional_bondorder:
             if verbose: print("Doing an AM1 calculation to get Wiberg bond orders.")
             for molecule in molecules:
                 # Do AM1 calculation just to get bond orders on moleules (discarding charges)
                 self._assignPartialCharges(molecule, "OECharges_AM1", modifycharges = False)
 
 
-        # Update bond orders stored in the topology
-        topology._updateBondOrders(Wiberg = True )
+        # Update bond orders stored in the topology if needed
+        if self._use_fractional_bondorder:
+            topology._updateBondOrders(Wiberg = True )
 
         # Create the System and add atoms
         system = openmm.System()
@@ -1167,6 +1168,10 @@ class HarmonicBondGenerator(object):
                 force.addBond(atom_indices[0], atom_indices[1], bond.length, bond.k)
             # If this bond uses partial bond orders
             else:
+                # Make sure forcefield asks for fractional bond orders
+                if not self.ff._use_fractional_bondorder:
+                    raise ValueError("Error: your forcefield file does not request to use fractional bond orders in its header, but a harmonic bond attempts to use them.")
+                # Proceed to do interpolation
                 order = bondorders[atom_indices]
                 if bond.fractional_bondorder=='interpolate-linear':
                     k = bond.k[0] + (bond.k[1]-bond.k[0])*(order-1.)
