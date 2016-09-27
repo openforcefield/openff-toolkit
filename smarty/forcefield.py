@@ -499,7 +499,7 @@ class ForceField(object):
             else:
                 self._aromaticity_model = None
             if 'fractional_bondorder' in root.attrib:
-                self._use_fractional_bondorder = bool(root.attrib['fractional_bondorder'])
+                self._use_fractional_bondorder = bool(root.attrib['use_fractional_bondorder'])
             else:
                 self._use_fractional_bondorder = False
         else:
