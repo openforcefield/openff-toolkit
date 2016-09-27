@@ -19,7 +19,7 @@ import tempfile
 ffxml_contents = u"""\
 <?xml version="1.0"?>
 
-<SMIRFF>
+<SMIRFF use_fractional_bondorder="True">
 
 <!-- Header block (optional) -->
 <Date>Date: May-September 2016</Date>
