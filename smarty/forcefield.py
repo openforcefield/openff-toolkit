@@ -498,6 +498,10 @@ class ForceField(object):
                 self._aromaticity_model = root.attrib['aromaticity_model']
             else:
                 self._aromaticity_model = None
+            if 'fractional_bondorder' in root.attrib:
+                self._use_fractional_bondorder = bool(root.attrib['fractional_bondorder'])
+            else:
+                self._use_fractional_bondorder = False
         else:
             raise ValueError("Error: ForceField parses a SMIRFF forcefield, but this does not appear to be one as the root tag is %s." % root.tag)
 
