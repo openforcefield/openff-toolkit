@@ -8,6 +8,7 @@ smirky --molecules AlkEthOH_test_filt1_ff.mol2 \
     --bondANDdecors bond_AND_decorators.smarts \
     --atomOddsFile atom_odds_forAngles.smarts \
     --bondOddsFile bond_odds_forAngles.smarts \
+    --initialtypes initial_Angles.smarts \
     --substitutions substitutions.smarts \
     --smirff forcefield/Frosst_AlkEtOH.ffxml \
     --iterations $1 \

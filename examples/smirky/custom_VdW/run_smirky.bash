@@ -10,6 +10,7 @@ smirky --molecules AlkEthOH_test_filt1_ff.mol2 \
     --bondOddsFile bond_odds_forVdWs.smarts \
     --substitutions substitutions.smarts \
     --smirff forcefield/Frosst_AlkEtOH.ffxml \
+    --initialtypes initial_VdW.smarts \
     --iterations $1 \
     --temperature $2 \
     --verbose True \

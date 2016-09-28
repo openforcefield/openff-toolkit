@@ -7,6 +7,7 @@ smirky --molecules AlkEthOH_test_filt1_ff.mol2 \
     --bondORbase bond_OR_bases.smarts \
     --bondANDdecors bond_AND_decorators.smarts \
     --atomOddsFile atom_odds_forTorsions.smarts \
+    --initialtypes initial_Torsions.smarts \
     --bondOddsFile bond_odds_forTorsions.smarts \
     --substitutions substitutions.smarts \
     --smirff forcefield/Frosst_AlkEtOH.ffxml \
