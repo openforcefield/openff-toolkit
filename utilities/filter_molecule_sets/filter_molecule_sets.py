@@ -73,10 +73,10 @@ def filter_molecules(input_molstream, output_molstream, allow_repeats = False,
 
         errs.clear()
 
-    print("%i molecules in %s" % (count, input_file))
+    print("%i molecules in input file" % (count))
     print("%i molecules resulted in warnings when parsing" % warnings)
     print("%i molecules were had repeated isomeric SMILES" % smile_count)
-    print("%i molecules saved to %s" % (saved, output_file))
+    print("%i molecules saved to output" % (saved))
 
 if __name__=="__main__":
     from optparse import OptionParser
@@ -123,12 +123,17 @@ if __name__=="__main__":
 
     # Load and check input file
     ifs = oechem.oemolistream(opt.input_file)
+    # TODO: get input file format/flavor based on input file name?
+    flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
     if not ifs.IsValid():
         parser.print_help()
         parser.error("Error: input_file (%s) was not valid" % opt.input_file)
 
     # Load and check output file
     ofs = oechem.oemolostream(opt.output_file)
+    # TODO: get output file flavor/format based on output_file name?
+    flavor = oechem.OEOFlavor_Generic_Default | oechem.OEOFlavor_MOL2_Default | oechem.OEOFlavor_MOL2_Forcefield
+    ofs.SetFlavor(oechem.OEFormat_MOL2, flavor)
     if not ofs.IsValid():
         parser.print_help()
         parser.error("Error: output_file (%s) was not valid" % opt.output_file)
@@ -138,7 +143,7 @@ if __name__=="__main__":
 
     repeats = opt.repeats == 'True'
     warnings = opt.warnings == 'True'
-    hydrogens = opt.hydogens == 'True'
+    hydrogens = opt.hydrogens == 'True'
 
     filter_molecules(ifs, ofs, repeats, warnings, opt.heavy, smirks, opt.metals, hydrogens)
 
