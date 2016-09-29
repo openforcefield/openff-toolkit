@@ -7,7 +7,7 @@ Molecule sets currently included in this directory are listed below, although wh
 
 * `DrugBank.sdf` - [DrugBank Release Version 5.0.1](http://www.drugbank.ca/releases/latest)
 * `DrugBank_atyped.oeb` - complete DrugBank molecule set with parm@Frosst atomtypes provided by Christopher Bayly
-* `updated_DrugBank.mol2.gz' - created by calling `python filter_molecule_sets.py -f DrugBank.sdf -o updated_DrugBank.mol2.gz`
+* `updated_DrugBank.mol2.gz` - created by calling `python filter_molecule_sets.py -f DrugBank.sdf -o updated_DrugBank.mol2.gz`
 
 The main script for this directory is `filter_molecule_sets.py` 
 
