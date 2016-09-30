@@ -101,10 +101,10 @@ def filter_molecules(input_molstream, output_molstream, allow_repeats = False,
                 saved += 1
         errs.clear()
 
-    print("%i molecules in %s" % (count, input_molstream))
+    print("%i molecules in input stream" % (count))
     print("%i molecules resulted in warnings when parsing" % warnings)
     print("%i molecules were had repeated isomeric SMILES" % smile_count)
-    print("%i molecules saved to %s" % (saved, output_molstream))
+    print("%i molecules saved" % (saved))
 
 
 if __name__=="__main__":
