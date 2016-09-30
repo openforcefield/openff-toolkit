@@ -19,7 +19,7 @@ Usage:             Given a set of molecules filter for
             SMIRKS patterns you do not wish to have included
 
     usage:
-        filter_molecule_sets.py --input DrugBank.sdf --output updated_DrugBank.mol2.gz \
+        filter_molecule_sets.py --input DrugBank_atyped.oeb --output updated_DrugBank.mol2.gz \
         --repeats False --warnings False --heavy 100 --SMIRKS remove_smikrs_example.smarts \
         --metals 0 --hydrogens True
     
@@ -50,5 +50,17 @@ Options:
                         OPTIONAL
   -H HYDROGENS, --hydrogens=HYDROGENS
                         If True, hydrogens are added to the output molecules
-
+  -a ATOMS, --atoms=ATOMS
+			File name with atomic number of the elements that you
+			do not want in your set of molecules, OPTIONAL
+  -t ATOMTYPE, --atomtype=ATOMTYPE
+			Atom type that you do not want in your set of molecules,
+			OPTIONAL
+  -y FLAVOR, --flavor=FLAVOR
+			Choose between two different flavors for atom types, 
+			default= tripos (options: tripos or ff). Use .oeb file
+			for ff option.
 ```
+
+elements_exclude.txt - File with element numbers that you do not want in your
+set of molecules.
