@@ -1,0 +1,197 @@
+INDEX      TORSIONS  MOLECULES   TYPE NAME: SMIRKS                                 
+    1 :        146         40 | *-C-C-*: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]        
+    2 :        101         42 | *-C-O-H: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]         
+    3 :        156         30 | *-C-O-!H: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]       
+    4 :        574         42 | H-C-C-H: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]          
+    5 :        552         40 | H-C-C-C: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]        
+    6 :        103         42 | C-C-O-H: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]        
+    7 :        131         37 | C-C-C-C: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]      
+    8 :         66         30 | C-C-O-C: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]      
+    9 :         12          6 | C-O-C-O: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8X2H0:4]    
+   10 :         27         18 | O-C-C-O: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]      
+   11 :          0          0 | O-C-C-H: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4]        
+   12 :        307         42 | H-C-C-O: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]        
+TOTAL :       2175         42
+removing unused element ([#5]) from list
+removing unused element ([#7]) from list
+removing unused element ([#9]) from list
+removing unused element ([#14]) from list
+removing unused element ([#15]) from list
+removing unused element ([#16]) from list
+removing unused element ([#17]) from list
+removing unused element ([#35]) from list
+removing unused element ([#53]) from list
+Creating labeler from forcefield/Frosst_AlkEtOH.ffxml...
+Creating graph matching current types with reference types...
+Graph creation took 0.270 s
+Computing maximum weight match...
+Maximum weight match took 0.007 s
+PROPOSED:
+Torsion type matches:
+*-C-C-*: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]                       matches                         t0001: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]:      146 Torsion    types matched
+*-C-O-H: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]                        matches                          t0002: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]:      101 Torsion    types matched
+*-C-O-!H: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]                      matches                         t0003: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]:      156 Torsion    types matched
+H-C-C-H: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]                         matches                           t0004: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]:      574 Torsion    types matched
+H-C-C-C: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]                       matches                         t0005: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]:      552 Torsion    types matched
+C-C-O-H: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]                       matches                         t0006: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]:      103 Torsion    types matched
+C-C-C-C: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]                     matches                       t0007: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]:      131 Torsion    types matched
+C-C-O-C: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]                     matches                       t0008: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]:       66 Torsion    types matched
+C-O-C-O: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8X2H0:4]                   matches                   t0009: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8&X2&H0:4]:       12 Torsion    types matched
+O-C-C-O: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]                     matches                       t0010: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]:       27 Torsion    types matched
+O-C-C-H: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4]                       no match
+H-C-C-O: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]                       matches                         t0012: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]:      307 Torsion    types matched
+2175 / 2175 total Torsions match (100.000 %)
+INDEX      TORSIONS  MOLECULES   TYPE NAME: SMIRKS                                  REF TYPE: SMIRKS                                   FRACTION OF REF TYPED MOLECULES MATCHED
+    1 :        146         40 | *-C-C-*: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]         t0001: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]               146 /     146 (100.000%)
+    2 :        101         42 | *-C-O-H: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]          t0002: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]                101 /     101 (100.000%)
+    3 :        156         30 | *-C-O-!H: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]        t0003: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]               156 /     156 (100.000%)
+    4 :        574         42 | H-C-C-H: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]           t0004: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]                 574 /     574 (100.000%)
+    5 :        552         40 | H-C-C-C: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]         t0005: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]               552 /     552 (100.000%)
+    6 :        103         42 | C-C-O-H: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]         t0006: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]               103 /     103 (100.000%)
+    7 :        131         37 | C-C-C-C: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]       t0007: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]             131 /     131 (100.000%)
+    8 :         66         30 | C-C-O-C: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]       t0008: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]              66 /      66 (100.000%)
+    9 :         12          6 | C-O-C-O: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8X2H0:4]     t0009: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8&X2&H0:4]          12 /      12 (100.000%)
+   10 :         27         18 | O-C-C-O: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]       t0010: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]              27 /      27 (100.000%)
+   11 :          0          0 | O-C-C-H: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4]        
+   12 :        307         42 | H-C-C-O: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]         t0012: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]               307 /     307 (100.000%)
+TOTAL :       2175         42 |                                                       2175 /     2175 match (100.000 %)
+Iteration 0 / 2
+Attempting to create new subtype: '9290' ([#1:1]-[#6X4;!R:2]-[#6X4:3]-[#8X2:4]) from parent type 'H-C-C-O' ([#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4])
+	Probability of making this environment is 0.002 %Type '9290' ([#1:1]-[#6X4;!R:2]-[#6X4:3]-[#8X2:4]) unused in dataset; rejecting.
+Rejected.
+INDEX      TORSIONS  MOLECULES   TYPE NAME: SMIRKS                                  REF TYPE: SMIRKS                                   FRACTION OF REF TYPED MOLECULES MATCHED
+    1 :        146         40 | *-C-C-*: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]         t0001: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]               146 /     146 (100.000%)
+    2 :        101         42 | *-C-O-H: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]          t0002: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]                101 /     101 (100.000%)
+    3 :        156         30 | *-C-O-!H: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]        t0003: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]               156 /     156 (100.000%)
+    4 :        574         42 | H-C-C-H: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]           t0004: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]                 574 /     574 (100.000%)
+    5 :        552         40 | H-C-C-C: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]         t0005: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]               552 /     552 (100.000%)
+    6 :        103         42 | C-C-O-H: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]         t0006: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]               103 /     103 (100.000%)
+    7 :        131         37 | C-C-C-C: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]       t0007: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]             131 /     131 (100.000%)
+    8 :         66         30 | C-C-O-C: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]       t0008: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]              66 /      66 (100.000%)
+    9 :         12          6 | C-O-C-O: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8X2H0:4]     t0009: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8&X2&H0:4]          12 /      12 (100.000%)
+   10 :         27         18 | O-C-C-O: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]       t0010: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]              27 /      27 (100.000%)
+   11 :          0          0 | O-C-C-H: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4]        
+   12 :        307         42 | H-C-C-O: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]         t0012: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]               307 /     307 (100.000%)
+TOTAL :       2175         42 |                                                       2175 /     2175 match (100.000 %)
+
+Torsion type hierarchy: 
+	*-C-C-* ([a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4])
+	*-C-O-H ([a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4])
+	*-C-O-!H ([a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4])
+	H-C-C-H ([#1:1]-[#6X4:2]-[#6X4:3]-[#1:4])
+	H-C-C-C ([#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4])
+	C-C-O-H ([#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4])
+	C-C-C-C ([#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4])
+	C-C-O-C ([#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4])
+	C-O-C-O ([#6X4:1]-[#8X2:2]-[#6X4:3]-[#8X2H0:4])
+	O-C-C-O ([#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4])
+	O-C-C-H ([#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4])
+	H-C-C-O ([#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4])
+
+
+Iteration 1 / 2
+Attempting to create new subtype: '6134' ([#1:1]-[#6:2]-[#6X4:3]-[#8X2:4]) from parent type 'H-C-C-O' ([#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4])
+	Probability of making this environment is 0.107 %Proposal is valid...
+Creating graph matching current types with reference types...
+Graph creation took 0.284 s
+Computing maximum weight match...
+Maximum weight match took 0.007 s
+PROPOSED:
+Torsion type matches:
+*-C-C-*: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]                       matches                         t0001: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]:      146 Torsion    types matched
+*-C-O-H: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]                        matches                          t0002: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]:      101 Torsion    types matched
+*-C-O-!H: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]                      matches                         t0003: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]:      156 Torsion    types matched
+H-C-C-H: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]                         matches                           t0004: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]:      574 Torsion    types matched
+H-C-C-C: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]                       matches                         t0005: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]:      552 Torsion    types matched
+C-C-O-H: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]                       matches                         t0006: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]:      103 Torsion    types matched
+C-C-C-C: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]                     matches                       t0007: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]:      131 Torsion    types matched
+C-C-O-C: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]                     matches                       t0008: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]:       66 Torsion    types matched
+C-O-C-O: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8X2H0:4]                   matches                   t0009: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8&X2&H0:4]:       12 Torsion    types matched
+O-C-C-O: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]                     matches                       t0010: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]:       27 Torsion    types matched
+O-C-C-H: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4]                       no match
+H-C-C-O: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]                       no match
+6134: [#1:1]-[#6:2]-[#6X4:3]-[#8X2:4]                            matches                         t0012: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]:      307 Torsion    types matched
+2175 / 2175 total Torsions match (100.000 %)
+Proposal score: 2175 >> 2175 : log_P_accept = 0.00000e+00
+Accepted.
+INDEX      TORSIONS  MOLECULES   TYPE NAME: SMIRKS                                  REF TYPE: SMIRKS                                   FRACTION OF REF TYPED MOLECULES MATCHED
+    1 :        146         40 | *-C-C-*: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]         t0001: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]               146 /     146 (100.000%)
+    2 :        101         42 | *-C-O-H: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]          t0002: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]                101 /     101 (100.000%)
+    3 :        156         30 | *-C-O-!H: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]        t0003: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]               156 /     156 (100.000%)
+    4 :        574         42 | H-C-C-H: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]           t0004: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]                 574 /     574 (100.000%)
+    5 :        552         40 | H-C-C-C: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]         t0005: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]               552 /     552 (100.000%)
+    6 :        103         42 | C-C-O-H: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]         t0006: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]               103 /     103 (100.000%)
+    7 :        131         37 | C-C-C-C: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]       t0007: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]             131 /     131 (100.000%)
+    8 :         66         30 | C-C-O-C: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]       t0008: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]              66 /      66 (100.000%)
+    9 :         12          6 | C-O-C-O: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8X2H0:4]     t0009: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8&X2&H0:4]          12 /      12 (100.000%)
+   10 :         27         18 | O-C-C-O: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]       t0010: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]              27 /      27 (100.000%)
+   11 :          0          0 | O-C-C-H: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4]        
+   12 :          0          0 | H-C-C-O: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]        
+   13 :        307         42 | 6134: [#1:1]-[#6:2]-[#6X4:3]-[#8X2:4]              t0012: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]               307 /     307 (100.000%)
+TOTAL :       2175         42 |                                                       2175 /     2175 match (100.000 %)
+
+Torsion type hierarchy: 
+	*-C-C-* ([a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4])
+	*-C-O-H ([a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4])
+	*-C-O-!H ([a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4])
+	H-C-C-H ([#1:1]-[#6X4:2]-[#6X4:3]-[#1:4])
+	H-C-C-C ([#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4])
+	C-C-O-H ([#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4])
+	C-C-C-C ([#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4])
+	C-C-O-C ([#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4])
+	C-O-C-O ([#6X4:1]-[#8X2:2]-[#6X4:3]-[#8X2H0:4])
+	O-C-C-O ([#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4])
+	O-C-C-H ([#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4])
+	H-C-C-O ([#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4])
+		6134 ([#1:1]-[#6:2]-[#6X4:3]-[#8X2:4])
+
+
+Creating graph matching current types with reference types...
+Graph creation took 0.284 s
+Computing maximum weight match...
+Maximum weight match took 0.007 s
+PROPOSED:
+Torsion type matches:
+*-C-C-*: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]                       matches                         t0001: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]:      146 Torsion    types matched
+*-C-O-H: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]                        matches                          t0002: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]:      101 Torsion    types matched
+*-C-O-!H: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]                      matches                         t0003: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]:      156 Torsion    types matched
+H-C-C-H: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]                         matches                           t0004: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]:      574 Torsion    types matched
+H-C-C-C: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]                       matches                         t0005: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]:      552 Torsion    types matched
+C-C-O-H: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]                       matches                         t0006: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]:      103 Torsion    types matched
+C-C-C-C: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]                     matches                       t0007: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]:      131 Torsion    types matched
+C-C-O-C: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]                     matches                       t0008: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]:       66 Torsion    types matched
+C-O-C-O: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8X2H0:4]                   matches                   t0009: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8&X2&H0:4]:       12 Torsion    types matched
+O-C-C-O: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]                     matches                       t0010: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]:       27 Torsion    types matched
+O-C-C-H: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4]                       no match
+H-C-C-O: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]                       no match
+6134: [#1:1]-[#6:2]-[#6X4:3]-[#8X2:4]                            matches                         t0012: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]:      307 Torsion    types matched
+2175 / 2175 total Torsions match (100.000 %)
+Torsion type matches:
+*-C-C-*: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]                       matches                         t0001: [a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]:      146 Torsion    types matched
+*-C-O-H: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]                        matches                          t0002: [a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]:      101 Torsion    types matched
+*-C-O-!H: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]                      matches                         t0003: [a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4]:      156 Torsion    types matched
+H-C-C-H: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]                         matches                           t0004: [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]:      574 Torsion    types matched
+H-C-C-C: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]                       matches                         t0005: [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]:      552 Torsion    types matched
+C-C-O-H: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]                       matches                         t0006: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4]:      103 Torsion    types matched
+C-C-C-C: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]                     matches                       t0007: [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]:      131 Torsion    types matched
+C-C-O-C: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]                     matches                       t0008: [#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]:       66 Torsion    types matched
+C-O-C-O: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8X2H0:4]                   matches                   t0009: [#6X4:1]-[#8X2:2]-[#6X4:3]-[#8&X2&H0:4]:       12 Torsion    types matched
+O-C-C-O: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]                     matches                       t0010: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]:       27 Torsion    types matched
+O-C-C-H: [#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4]                       no match
+H-C-C-O: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]                       no match
+6134: [#1:1]-[#6:2]-[#6X4:3]-[#8X2:4]                            matches                         t0012: [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]:      307 Torsion    types matched
+2175 / 2175 total Torsions match (100.000 %)
+Torsion type hierarchy: 
+	*-C-C-* ([a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4])
+	*-C-O-H ([a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4])
+	*-C-O-!H ([a,A:1]-[#6X4:2]-[#8X2:3]-[!#1:4])
+	H-C-C-H ([#1:1]-[#6X4:2]-[#6X4:3]-[#1:4])
+	H-C-C-C ([#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4])
+	C-C-O-H ([#6X4:1]-[#6X4:2]-[#8X2:3]-[#1:4])
+	C-C-C-C ([#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4])
+	C-C-O-C ([#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4])
+	C-O-C-O ([#6X4:1]-[#8X2:2]-[#6X4:3]-[#8X2H0:4])
+	O-C-C-O ([#8X2:1]-[#6X4:2]-[#6X4:3]-[#8X2:4])
+	O-C-C-H ([#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4])
+	H-C-C-O ([#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4])
+		6134 ([#1:1]-[#6:2]-[#6X4:3]-[#8X2:4])
