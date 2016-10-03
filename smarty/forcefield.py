@@ -1408,7 +1408,7 @@ class PeriodicTorsionGenerator(object):
 
             # Doublecheck type of torsion
             if node.tag != 'Proper':
-                raise ValueError: "Error: Attempting to process an invalid torsion type as a Proper."
+                raise ValueError("Error: Attempting to process an invalid torsion type as a Proper.")
 
             # Check that the SMIRKS pattern matches the type it's supposed to
             try:
@@ -1447,7 +1447,7 @@ class PeriodicTorsionGenerator(object):
             self.pid = _extractQuantity(node, parent, 'id')
 
             if node.tag != 'Improper':
-                raise ValueError: "Error: Attempting to process an invalid torsion type as a Proper."
+                raise ValueError("Error: Attempting to process an invalid torsion type as an improper.")
 
             # Check that the SMIRKS pattern matches the type it's supposed to
             try:
@@ -1529,7 +1529,7 @@ class PeriodicTorsionGenerator(object):
         # Handle impropers in similar manner
         impropers = ImproperDict()
         for improper in self._impropertorsiontypes:
-            for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
+            for atom_indices in topology.unrollSMIRKSMatches(improper.smirks, aromaticity_model = self.ff._aromaticity_model):
                 impropers[atom_indices] = improper
 
 
@@ -1562,6 +1562,7 @@ class PeriodicTorsionGenerator(object):
         for (atom_indices, improper) in impropers.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             # For impropers, central atom is atom 1
+            print(atom_indices)
             assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
             assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
             assert topology._isBonded(atom_indices[1], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[3])
@@ -1602,7 +1603,7 @@ class PeriodicTorsionGenerator(object):
         # Handle impropers in similar manner
         impropers = ImproperDict()
         for improper in self._impropertorsiontypes:
-            for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, improper.smirks, aromaticity_model = self.ff._aromaticity_model):
                 impropers[atom_indices] = improper
 
         if verbose:
@@ -1615,7 +1616,7 @@ class PeriodicTorsionGenerator(object):
             print('PeriodicTorsionGenerator Impropers:')
             print('')
             for improper in self._impropertorsiontypes:
-                print('%64s : %8d matches' % (improper.smirks, len(topology.unrollSMIRKSMatches(improper.smirks, aromaticity_model = self.ff._aromaticity_model))))
+                print('%64s : %8d matches' % (improper.smirks, len(getSMIRKSMatches_OEMol(oemol, improper.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all torsions to the output list
