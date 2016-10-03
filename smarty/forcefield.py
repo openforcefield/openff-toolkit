@@ -1382,26 +1382,65 @@ parsers["HarmonicAngleForce"] = HarmonicAngleGenerator.parseElement
 class PeriodicTorsionGenerator(object):
     """A PeriodicTorsionForceGenerator constructs a PeriodicTorsionForce."""
 
-    class TorsionType(object):
+    class ProperTorsionType(object):
 
-        """A SMIRFF torsion type."""
+        """A SMIRFF torsion type for proper torsions."""
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.periodicity = list()
             self.phase = list()
             self.k = list()
             self.pid = _extractQuantity(node, parent, 'id')
-            self.torsiontype = node.tag #Improper or Proper?
 
-            # Check that the SMIRKS pattern matches the type it's supposed
-            # to be (avoiding bugs wherein an improperly formed generic improper
-            # overrides propers, for example)
+            # Doublecheck type of torsion
+            if node.tag != 'Proper':
+                raise ValueError: "Error: Attempting to process an invalid torsion type as a Proper."
+
+            # Check that the SMIRKS pattern matches the type it's supposed to
             try:
                 chemenv = env.ChemicalEnvironment(self.smirks)
                 thistype = chemenv.getType()
-                if thistype=='Torsion': thistype = 'Proper'
-                if self.torsiontype != thistype:
-                    raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, self.torsiontype))
+                if thistype != 'Torsion':
+                    raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Proper'))
+            except env.SMIRKSParsingError:
+                print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
+
+
+            if 'fractional_bondorder' in parent.attrib:
+                self.fractional_bondorder = parent.attrib['fractional_bondorder']
+            else:
+                self.fractional_bondorder = None
+            # Store parameters.
+            index = 1
+            while 'phase%d'%index in node.attrib:
+                self.periodicity.append( int(_extractQuantity(node, parent, 'periodicity%d' % index)) )
+                self.phase.append( _extractQuantity(node, parent, 'phase%d' % index, unit_name='phase_unit') )
+                self.k.append( _extractQuantity(node, parent, 'k%d' % index, unit_name='k_unit') )
+                # Optionally handle 'idivf', which divides the periodicity by the specified value
+                if ('idivf%d' % index) in node.attrib:
+                    idivf = _extractQuantity(node, parent, 'idivf%d' % index)
+                    self.k[-1] /= float(idivf)
+                index += 1
+
+    class ImproperTorsionType(object):
+
+        """A SMIRFF torsion type for improper torsions."""
+        def __init__(self, node, parent):
+            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.periodicity = list()
+            self.phase = list()
+            self.k = list()
+            self.pid = _extractQuantity(node, parent, 'id')
+
+            if node.tag != 'Improper':
+                raise ValueError: "Error: Attempting to process an invalid torsion type as a Proper."
+
+            # Check that the SMIRKS pattern matches the type it's supposed to
+            try:
+                chemenv = env.ChemicalEnvironment(self.smirks)
+                thistype = chemenv.getType()
+                if thistype != 'Improper':
+                    raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Improper'))
             except env.SMIRKSParsingError:
                 print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
 
@@ -1426,13 +1465,19 @@ class PeriodicTorsionGenerator(object):
                 if self.torsiontype=='Improper':
                     self.k[-1] /= 6.
 
+
     def __init__(self, forcefield):
         self.ff = forcefield
         self._torsiontypes = list()
 
-    def registerTorsion(self, node, parent):
-        """Register a SMIRFF torsiontype definition."""
-        torsion = PeriodicTorsionGenerator.TorsionType(node, parent)
+    def registerProperTorsion(self, node, parent):
+        """Register a SMIRFF torsiontype definition for a proper."""
+        torsion = PeriodicTorsionGenerator.ProperTorsionType(node, parent)
+        self._torsiontypes.append(torsion)
+
+    def registerImproperTorsion(self, node, parent):
+        """Register a SMIRFF torsiontype definition for an improper."""
+        torsion = PeriodicTorsionGenerator.ImproperTorsionType(node, parent)
         self._torsiontypes.append(torsion)
 
     @staticmethod
@@ -1447,9 +1492,9 @@ class PeriodicTorsionGenerator(object):
 
         # Register all SMIRFF torsion definitions.
         for torsion in element.findall('Proper'):
-            generator.registerTorsion(torsion, element)
+            generator.registerProperTorsion(torsion, element)
         for torsion in element.findall('Improper'):
-            generator.registerTorsion(torsion, element)
+            generator.registerImproperTorsion(torsion, element)
 
     def createForce(self, system, topology, verbose=False, **kwargs):
         # Find existing force or create new one.
