@@ -76,6 +76,15 @@ Note that lines beginning with `%` are comment lines.
 
 We also specify a number of starting types, "initial types" which can be the same or different from the base types. These follow the same format, and `atomtypes/basetypes.smarts` can be reused unless alternate behavior is desired (such as starting from more sophisticated initial types).
 
+We have two sampler options for SMARTY which differ in how focused the sampling is. The original sampler samples over all elements/patterns at once, whereas the elemental sampler focuses on sampling only one specific element. The principle of sampling is the same; the only change is in which elements we sample over. To sample only over a single element, such as oxygen, for example, we use the elemental sampler to focus on that element.
+
+
+### Original sampler
+
+Command line example: `smarty --samplertype original --basetypes=examples/AlkEtOH/atomtypes/basetypes.smarts --initialtypes=examples/AlkEtOH/atomtypes/basetypes.smarts --decorators=examples/AlkEtOH/atomtypes/new-decorators.smarts  --molecules=examples/AlkEtOH/molecules/test_filt1_tripos.mol2 --reference=examples/AlkEtOH/molecules/test_filt1_ff.mol2 --iterations 100 --temperature=0`
+
+The original sampler is the default option. Here, smarty samples SMARTS patterns covering all elements contained in the set.
+
 Atom type creation moves has two options, one is using simple decorators (`--decoratorbehavior=simple-decorators`) and the other is combinatorial decorators (default).
  
  The first option (simple-decorators) attempt to split off a new atom type from a parent atom type by combining (via an "and" operator, `&`) the parent atom type with a "decorator".
@@ -158,6 +167,15 @@ If a proposed type matches zero atoms, the RJMCMC move is rejected.
 
 Currently, the acceptance criteria does not include the full Metropolis-Hastings acceptance criteria that would include the reverse probability.  This needs to be added in.
 
+### Elemental sampler
+
+Command line example: `smarty --samplertype elemental --element=8 --basetypes=examples/AlkEtOH/atomtypes/basetypes.smarts --initialtypes=examples/AlkEtOH/atomtypes/basetypes.smarts --decorators=examples/AlkEtOH/atomtypes/new-decorators.smarts  --molecules=examples/AlkEtOH/molecules/test_filt1_tripos.mol2 --reference=examples/AlkEtOH/molecules/test_filt1_ff.mol2 --iterations 100 --temperature=0`
+
+The elemental sampler has the same principles as the original sampler. However, the sampler will sample only a single element (such as Oxygen, Carbon, Hydrogen, etc), which needs to be specified on the command line.
+
+The element number needs to be specified by atomic number (--element=8 for oxygen).
+ 
+=======
 ##smirky
 
 Check out examples in `examples/smirky/`:

@@ -15,8 +15,28 @@ def check_valence(mol):
                 return False
     return True
 
+def check_element(mol, elements):
+    for atom in mol.GetAtoms():
+        if str(atom.GetAtomicNum()) in elements:
+            print("Found a #%i atom in molecule %s" % (atom.GetAtomicNum(), oechem.OECreateIsoSmiString(mol)))
+            return False
+    return True
+
+def check_atomtype(mol, check_type):
+    for atom in mol.GetAtoms():
+        if atom.GetType() == check_type:
+            print("Found type %s atom in molecule %s" % (atom.GetType(), oechem.OECreateIsoSmiString(mol)))
+            return False
+    return True
+
+def read_Elements(elements):
+    f = open(elements, 'r')
+    elements_list = f.read().splitlines()
+    f.close()
+    return elements_list
+
 def keep_molecule(mol, max_heavy_atoms = 100,
-        remove_smirks = list(), max_metals = 0):
+        remove_smirks = list(), max_metals = 0, elements = [], check_type = None):
     if oechem.OECount(mol, oechem.OEIsMetal()) > max_metals:
         return False
     if oechem.OECount(mol, oechem.OEIsHeavy()) > max_heavy_atoms:
@@ -29,11 +49,20 @@ def keep_molecule(mol, max_heavy_atoms = 100,
         matches = [match for match in ss.Match(mol, False)]
         if len(matches) > 0:
             return False
-    return check_valence(mol)
+    extra = True
+    if elements != None:
+        elements_list = read_Elements(elements)
+        extra = check_element(mol, elements_list)
+    if check_type != None:
+        extra = check_atomtype(mol, check_type)
+    if extra:
+        return check_valence(mol)
+    else:
+        return False
 
 def filter_molecules(input_molstream, output_molstream, allow_repeats = False,
         allow_warnings = False, max_heavy_atoms = 100, remove_smirks = list(),
-        max_metals = 0, explicitHs = True):
+        max_metals = 0, explicitHs = True, elements = None, check_type = None):
     """
     Takes input file and removes molecules using given criteria then
     writes a new output file
@@ -65,18 +94,18 @@ def filter_molecules(input_molstream, output_molstream, allow_repeats = False,
             smile_count += 1
 
         if new_smile or allow_repeats:
-            keep = keep_molecule(mol_copy, max_heavy_atoms, remove_smirks, max_metals)
+            keep = keep_molecule(mol_copy, max_heavy_atoms, remove_smirks, max_metals, elements, check_type)
             if keep:
                 smiles.append(smi)
                 oechem.OEWriteMolecule(output_molstream, mol_copy)
                 saved += 1
-
         errs.clear()
 
-    print("%i molecules in %s" % (count, input_file))
+    print("%i molecules in input stream" % (count))
     print("%i molecules resulted in warnings when parsing" % warnings)
     print("%i molecules were had repeated isomeric SMILES" % smile_count)
-    print("%i molecules saved to %s" % (saved, output_file))
+    print("%i molecules saved" % (saved))
+
 
 if __name__=="__main__":
     from optparse import OptionParser
@@ -113,6 +142,13 @@ if __name__=="__main__":
     parser.add_option('-H', '--hydrogens', type = 'choice', dest = 'hydrogens', default = 'True',
             choices = ['True', 'False'],
             help = "If True, hydrogens are added to the output molecules")
+    parser.add_option('-a', '--atoms', type = 'string', dest = 'atoms', default = None, action = 'store',
+            help = "File name which contains the atomic number of the elements that you do not want to be in your set of molecules.")
+    parser.add_option('-t', '--type', type = 'string', dest = 'atomtype', default = None,
+            help = "Atom type that you do not want in your set of molecules")
+    parser.add_option('-y', '--flavor', type = 'choice', dest = 'flavor', default = 'tripos',
+            choices = ['tripos', 'ff'],
+            help = "If you want to include different flavor - options: tripos or ff")
 
     (opt, args) = parser.parse_args()
 
@@ -129,6 +165,9 @@ if __name__=="__main__":
 
     # Load and check output file
     ofs = oechem.oemolostream(opt.output_file)
+    if opt.flavor == 'ff':
+        flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
+        ofs.SetFlavor(oechem.OEFormat_MOL2, flavor)
     if not ofs.IsValid():
         parser.print_help()
         parser.error("Error: output_file (%s) was not valid" % opt.output_file)
@@ -136,11 +175,12 @@ if __name__=="__main__":
     smirks = smarty.utils.parse_odds_file(opt.smirks_file, False)
     smirks = smirks[0]
 
+    print opt.atoms
     repeats = opt.repeats == 'True'
     warnings = opt.warnings == 'True'
-    hydrogens = opt.hydogens == 'True'
+    hydrogens = opt.hydrogens == 'True'
 
-    filter_molecules(ifs, ofs, repeats, warnings, opt.heavy, smirks, opt.metals, hydrogens)
+    filter_molecules(ifs, ofs, repeats, warnings, opt.heavy, smirks, opt.metals, hydrogens, opt.atoms, opt.atomtype)
 
     ifs.close()
     ofs.close()
