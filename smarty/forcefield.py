@@ -54,6 +54,7 @@ import time
 import networkx
 
 import smarty.environment as env
+import itertools
 
 #=============================================================================================
 # PRIVATE SUBROUTINES
@@ -1568,12 +1569,10 @@ class PeriodicTorsionGenerator(object):
 
             # Impropers are applied to all six paths around the trefoil
             for (periodicity, phase, k) in zip(improper.periodicity, improper.phase, improper.k):
-                force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
-                force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[3], atom_indices[2], periodicity, phase, k)
-                force.addTorsion(atom_indices[2], atom_indices[1], atom_indices[0], atom_indices[3], periodicity, phase, k)
-                force.addTorsion(atom_indices[3], atom_indices[1], atom_indices[0], atom_indices[2], periodicity, phase, k)
-                force.addTorsion(atom_indices[3], atom_indices[1], atom_indices[2], atom_indices[0], periodicity, phase, k)
-                force.addTorsion(atom_indices[2], atom_indices[1], atom_indices[3], atom_indices[0], periodicity, phase, k)
+                # Permute non-central atoms
+                others = [ atom_indices[0], atom_indices[2], atom_indices[3] ]
+                for p in itertools.permutations( others ):
+                    force.addTorsion(p[0], atom_indices[1], p[1], p[2], periodicity, phase, k)
 
         if verbose: print('%d impropers added, each applied in a six-fold manner' % (len(impropers)))
 
@@ -1624,12 +1623,10 @@ class PeriodicTorsionGenerator(object):
             force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3]], torsion.pid, torsion.smirks) )
         # Add all impropers to the output list
         for (atom_indices, improper) in impropers.items():
-            force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3]], improper.pid, improper.smirks) )
-            force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[3], atom_indices[2]], improper.pid, improper.smirks) )
-            force_terms.append( ([atom_indices[2], atom_indices[1], atom_indices[0], atom_indices[3]], improper.pid, improper.smirks) )
-            force_terms.append( ([atom_indices[3], atom_indices[1], atom_indices[0], atom_indices[2]], improper.pid, improper.smirks) )
-            force_terms.append( ([atom_indices[3], atom_indices[1], atom_indices[2], atom_indices[0]], improper.pid, improper.smirks) )
-            force_terms.append( ([atom_indices[2], atom_indices[1], atom_indices[3], atom_indices[0]], improper.pid, improper.smirks) )
+            # Permute non-central atoms
+            others = [ atom_indices[0], atom_indices[2], atom_indices[3] ]
+            for p in itertools.permutations( others ):
+                force_terms.append( ([p[0], atom_indices[1], p[1], p[2]], improper.pid, improper.smirks) )
 
         return force_terms
 
