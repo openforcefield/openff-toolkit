@@ -1462,23 +1462,24 @@ class PeriodicTorsionGenerator(object):
                 index += 1
                 # SMIRFF applies trefoil (six-fold) impropers unlike AMBER
                 # If it's an improper, divide by the factor of six internally
-                if self.torsiontype=='Improper':
+                if node.tag=='Improper':
                     self.k[-1] /= 6.
 
 
     def __init__(self, forcefield):
         self.ff = forcefield
-        self._torsiontypes = list()
+        self._propertorsiontypes = list()
+        self._impropertorsiontypes = list()
 
     def registerProperTorsion(self, node, parent):
         """Register a SMIRFF torsiontype definition for a proper."""
         torsion = PeriodicTorsionGenerator.ProperTorsionType(node, parent)
-        self._torsiontypes.append(torsion)
+        self._propertorsiontypes.append(torsion)
 
     def registerImproperTorsion(self, node, parent):
         """Register a SMIRFF torsiontype definition for an improper."""
         torsion = PeriodicTorsionGenerator.ImproperTorsionType(node, parent)
-        self._torsiontypes.append(torsion)
+        self._impropertorsiontypes.append(torsion)
 
     @staticmethod
     def parseElement(element, ff):
@@ -1508,7 +1509,7 @@ class PeriodicTorsionGenerator(object):
 
         # Iterate over all defined torsion types, allowing later matches to override earlier ones.
         torsions = ValenceDict()
-        for torsion in self._torsiontypes:
+        for torsion in self._propertorsiontypes:
             for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
                 torsions[atom_indices] = torsion
 
@@ -1516,7 +1517,7 @@ class PeriodicTorsionGenerator(object):
             print('')
             print('PeriodicTorsionGenerator:')
             print('')
-            for torsion in self._torsiontypes:
+            for torsion in self._propertorsiontypes:
                 print('%64s : %8d matches' % (torsion.smirks, len(topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
@@ -1554,7 +1555,7 @@ class PeriodicTorsionGenerator(object):
 
         # Iterate over all defined torsion types, allowing later matches to override earlier ones.
         torsions = ValenceDict()
-        for torsion in self._torsiontypes:
+        for torsion in self._propertorsiontypes:
             for atom_indices in getSMIRKSMatches_OEMol(oemol, torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
                 torsions[atom_indices] = torsion
 
@@ -1562,7 +1563,7 @@ class PeriodicTorsionGenerator(object):
             print('')
             print('PeriodicTorsionGenerator:')
             print('')
-            for torsion in self._torsiontypes:
+            for torsion in self._propertorsiontypes:
                 print('%64s : %8d matches' % (torsion.smirks, len(getSMIRKSMatches_OEMol(oemol, torsion.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
