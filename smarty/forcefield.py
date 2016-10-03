@@ -1562,7 +1562,6 @@ class PeriodicTorsionGenerator(object):
         for (atom_indices, improper) in impropers.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             # For impropers, central atom is atom 1
-            print(atom_indices)
             assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
             assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
             assert topology._isBonded(atom_indices[1], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[3])
