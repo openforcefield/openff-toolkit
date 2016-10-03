@@ -1099,6 +1099,20 @@ class ValenceDict(TransformedDict):
             key = tuple(reversed(key))
         return key
 
+class ImproperDict(TransformedDict):
+    """Symmetrize improper torsions"""
+    def __keytransform__(self,key):
+        """Reorder tuple in numerical order except for element[1] which is the central atom; it retains its position."""
+        # Ensure key is a tuple
+        key = tuple(key)
+        # Retrieve connected atoms
+        connectedatoms = [key[0], key[2], key[3]]
+        # Sort connected atoms
+        connectedatoms.sort()
+        # Re-store connected atoms
+        key = tuple( [connectedatoms[0], key[1], connectedatoms[1], connectedatoms[2]])
+        return(key)
+
 #=============================================================================================
 # Force generators
 #=============================================================================================
@@ -1512,32 +1526,59 @@ class PeriodicTorsionGenerator(object):
         for torsion in self._propertorsiontypes:
             for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
                 torsions[atom_indices] = torsion
+        # Handle impropers in similar manner
+        impropers = ImproperDict()
+        for improper in self._impropertorsiontypes:
+            for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
+                impropers[atom_indices] = improper
+
 
         if verbose:
             print('')
-            print('PeriodicTorsionGenerator:')
+            print('PeriodicTorsionGenerator Propers:')
             print('')
             for torsion in self._propertorsiontypes:
                 print('%64s : %8d matches' % (torsion.smirks, len(topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
+            print('PeriodicTorsionGenerator Impropers:')
+            print('')
+            for improper in self._impropertorsiontypes:
+                print('%64s : %8d matches' % (improper.smirks, len(topology.unrollSMIRKSMatches(improper.smirks, aromaticity_model = self.ff._aromaticity_model))))
+            print('')
 
-        # Add all torsions to the system.
+        # Add all proper torsions to the system.
         for (atom_indices, torsion) in torsions.items():
-            if torsion.torsiontype == 'Proper':
-                # Ensure atoms are actually bonded correct pattern in Topology
-                assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
-                assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
-                assert topology._isBonded(atom_indices[2], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[2], atom_indices[3])
-            elif torsion.torsiontype == 'Improper':
-                # Ensure atoms are actually bonded correct pattern in Topology
-                assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
-                assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
-                assert topology._isBonded(atom_indices[1], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[3])
+            # Ensure atoms are actually bonded correct pattern in Topology
+            assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
+            assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
+            assert topology._isBonded(atom_indices[2], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[2], atom_indices[3])
 
             for (periodicity, phase, k) in zip(torsion.periodicity, torsion.phase, torsion.k):
                 force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
-
         if verbose: print('%d torsions added' % (len(torsions)))
+
+
+        # Add all improper torsions to the system
+        for (atom_indices, improper) in impropers.items():
+            # Ensure atoms are actually bonded correct pattern in Topology
+            # For impropers, central atom is atom 1
+            assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
+            assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
+            assert topology._isBonded(atom_indices[1], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[3])
+
+            # Impropers are applied to all six paths around the trefoil
+            for (periodicity, phase, k) in zip(improper.periodicity, improper.phase, improper.k):
+                force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
+                force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[3], atom_indices[2], periodicity, phase, k)
+                force.addTorsion(atom_indices[2], atom_indices[1], atom_indices[0], atom_indices[3], periodicity, phase, k)
+                force.addTorsion(atom_indices[3], atom_indices[1], atom_indices[0], atom_indices[2], periodicity, phase, k)
+                force.addTorsion(atom_indices[3], atom_indices[1], atom_indices[2], atom_indices[0], periodicity, phase, k)
+                force.addTorsion(atom_indices[2], atom_indices[1], atom_indices[3], atom_indices[0], periodicity, phase, k)
+
+        if verbose: print('%d impropers added, each applied in a six-fold manner' % (len(impropers)))
+
+
+
 
     def labelForce(self, oemol, verbose=False, **kwargs):
         """Take a provided OEMol and parse PeriodicTorsionForce terms for this molecule.
@@ -1558,6 +1599,11 @@ class PeriodicTorsionGenerator(object):
         for torsion in self._propertorsiontypes:
             for atom_indices in getSMIRKSMatches_OEMol(oemol, torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
                 torsions[atom_indices] = torsion
+        # Handle impropers in similar manner
+        impropers = ImproperDict()
+        for improper in self._impropertorsiontypes:
+            for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
+                impropers[atom_indices] = improper
 
         if verbose:
             print('')
@@ -1566,11 +1612,24 @@ class PeriodicTorsionGenerator(object):
             for torsion in self._propertorsiontypes:
                 print('%64s : %8d matches' % (torsion.smirks, len(getSMIRKSMatches_OEMol(oemol, torsion.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
+            print('PeriodicTorsionGenerator Impropers:')
+            print('')
+            for improper in self._impropertorsiontypes:
+                print('%64s : %8d matches' % (improper.smirks, len(topology.unrollSMIRKSMatches(improper.smirks, aromaticity_model = self.ff._aromaticity_model))))
+            print('')
 
         # Add all torsions to the output list
         force_terms = []
         for (atom_indices, torsion) in torsions.items():
             force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3]], torsion.pid, torsion.smirks) )
+        # Add all impropers to the output list
+        for (atom_indices, improper) in impropers.items():
+            force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3]], improper.pid, improper.smirks) )
+            force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[3], atom_indices[2]], improper.pid, improper.smirks) )
+            force_terms.append( ([atom_indices[2], atom_indices[1], atom_indices[0], atom_indices[3]], improper.pid, improper.smirks) )
+            force_terms.append( ([atom_indices[3], atom_indices[1], atom_indices[0], atom_indices[2]], improper.pid, improper.smirks) )
+            force_terms.append( ([atom_indices[3], atom_indices[1], atom_indices[2], atom_indices[0]], improper.pid, improper.smirks) )
+            force_terms.append( ([atom_indices[2], atom_indices[1], atom_indices[3], atom_indices[0]], improper.pid, improper.smirks) )
 
         return force_terms
 
