@@ -1,0 +1,11 @@
+% Decorator         Odds
+% bond types
+-                   1
+:                   0
+=                   0
+#                   0
+% not bond types
+!-                  0
+!:                  0
+!=                  0
+!#                  0
