@@ -41,6 +41,9 @@ def keep_molecule(mol, max_heavy_atoms = 100,
         return False
     if oechem.OECount(mol, oechem.OEIsHeavy()) > max_heavy_atoms:
         return False
+    # 
+    if oechem.OECount(mol, oechem.OEIsHeavy()) < 5:
+        return False
     for smirks in remove_smirks:
         qmol = oechem.OEQMol()
         if not oechem.OEParseSmarts(qmol, smirks):
@@ -49,16 +52,14 @@ def keep_molecule(mol, max_heavy_atoms = 100,
         matches = [match for match in ss.Match(mol, False)]
         if len(matches) > 0:
             return False
-    extra = True
     if elements != None:
         elements_list = read_Elements(elements)
-        extra = check_element(mol, elements_list)
+        if not check_element(mol, elements_list):
+            return False
     if check_type != None:
-        extra = check_atomtype(mol, check_type)
-    if extra:
-        return check_valence(mol)
-    else:
-        return False
+        if not check_atomtype(mol, check_type):
+            return False
+    return check_valence(mol)
 
 def filter_molecules(input_molstream, output_molstream, allow_repeats = False,
         allow_warnings = False, max_heavy_atoms = 100, remove_smirks = list(),
