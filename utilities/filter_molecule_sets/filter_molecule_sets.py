@@ -1,4 +1,5 @@
 from openeye import oechem
+from openeye import oeomega
 import smarty
 
 def check_valence(mol):
@@ -15,13 +16,21 @@ def check_valence(mol):
                 return False
     return True
 
-def check_element(mol, elements):
-    for atom in mol.GetAtoms():
-        if str(atom.GetAtomicNum()) in elements:
-            print("Found a #%i atom in molecule %s" % (atom.GetAtomicNum(), oechem.OECreateIsoSmiString(mol)))
-            return False
-    return True
-
+def generate_conformer(mol):
+    """
+    Generates a 3D conformer of the OEMol
+    """
+    omega = oeomega.OEOmega()
+    omega.SetMaxConfs(1)
+    omega.SetIncludeInput(True)
+    omega.SetCanonOrder(False)
+    omega.SetSampleHydrogens(True)
+    omega.SetStrictStereo(False)
+    omega.SetStrictAtomTypes(True)
+    status = omega(mol)
+    if not status:
+        raise(Exception("omega returned error code %d" % status))
+    return mol
 def check_atomtype(mol, check_type):
     for atom in mol.GetAtoms():
         if atom.GetType() == check_type:
@@ -36,7 +45,7 @@ def read_Elements(elements):
     return elements_list
 
 def keep_molecule(mol, max_heavy_atoms = 100,
-        remove_smirks = list(), max_metals = 0, elements = [], check_type = None):
+        remove_smirks = list(), max_metals = 0, check_type = None):
     if oechem.OECount(mol, oechem.OEIsMetal()) > max_metals:
         return False
     if oechem.OECount(mol, oechem.OEIsHeavy()) > max_heavy_atoms:
@@ -61,9 +70,11 @@ def keep_molecule(mol, max_heavy_atoms = 100,
             return False
     return check_valence(mol)
 
+
 def filter_molecules(input_molstream, output_molstream, allow_repeats = False,
         allow_warnings = False, max_heavy_atoms = 100, remove_smirks = list(),
-        max_metals = 0, explicitHs = True, elements = None, check_type = None):
+        max_metals = 0, explicitHs = True, check_type = None,
+        number = 10000, conformer = False):
     """
     Takes input file and removes molecules using given criteria then
     writes a new output file
@@ -95,18 +106,22 @@ def filter_molecules(input_molstream, output_molstream, allow_repeats = False,
             smile_count += 1
 
         if new_smile or allow_repeats:
-            keep = keep_molecule(mol_copy, max_heavy_atoms, remove_smirks, max_metals, elements, check_type)
+            keep = keep_molecule(mol_copy, max_heavy_atoms, remove_smirks, max_metals, check_type)
             if keep:
+                if conformer:
+                    print("generating conformer for molecule %i" % count)
+                    mol_copy = generate_conformer(mol_copy)
                 smiles.append(smi)
                 oechem.OEWriteMolecule(output_molstream, mol_copy)
                 saved += 1
+                if saved >= number:
+                    break
         errs.clear()
 
-    print("%i molecules in input stream" % (count))
+    print("%i molecules in input file" % (count))
     print("%i molecules resulted in warnings when parsing" % warnings)
     print("%i molecules were had repeated isomeric SMILES" % smile_count)
-    print("%i molecules saved" % (saved))
-
+    print("%i molecules saved to output" % (saved))
 
 if __name__=="__main__":
     from optparse import OptionParser
@@ -151,6 +166,12 @@ if __name__=="__main__":
             choices = ['tripos', 'ff'],
             help = "If you want to include different flavor - options: tripos or ff")
 
+    parser.add_option('-z', '--number', type = 'int', dest = 'number', default = 10000, help = "Limit for the number of molecules in the final set, returns the first z molecules that meet the filtering requirements")
+
+    parser.add_option('-C', '--conformers', type = 'choice', dest = 'conformers',
+            default = 'False', choices = ['True', 'False'],
+            help = "If True, generates a single conformer of each molecule before writing to the output file")
+
     (opt, args) = parser.parse_args()
 
     # Check input files
@@ -160,6 +181,8 @@ if __name__=="__main__":
 
     # Load and check input file
     ifs = oechem.oemolistream(opt.input_file)
+    # TODO: get input file format/flavor based on input file name?
+    flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
     if not ifs.IsValid():
         parser.print_help()
         parser.error("Error: input_file (%s) was not valid" % opt.input_file)
@@ -173,15 +196,28 @@ if __name__=="__main__":
         parser.print_help()
         parser.error("Error: output_file (%s) was not valid" % opt.output_file)
 
-    smirks = smarty.utils.parse_odds_file(opt.smirks_file, False)
-    smirks = smirks[0]
+    if opt.smirks_file is None:
+        smirks = []
+    else:
+        smirks = smarty.utils.parse_odds_file(opt.smirks_file, False)
+        smirks = smirks[0]
 
-    print opt.atoms
+    # if atoms is not None add to smirks papers
+    if opt.atoms is not None:
+        try:
+            elements = read_Elements(opt.atoms)
+            elements = [ '[#%i]' % e for e in elements ]
+        except:
+            elementReadError = Exception("problem reading element file %s" % opt.atoms)
+            raise elementReadError
+        smirks += elements
+
     repeats = opt.repeats == 'True'
     warnings = opt.warnings == 'True'
     hydrogens = opt.hydrogens == 'True'
+    conformer = opt.conformers == 'True'
 
-    filter_molecules(ifs, ofs, repeats, warnings, opt.heavy, smirks, opt.metals, hydrogens, opt.atoms, opt.atomtype)
+    filter_molecules(ifs, ofs, repeats, warnings, opt.heavy, smirks, opt.metals, hydrogens, opt.atomtype, opt.number, conformer)
 
     ifs.close()
     ofs.close()

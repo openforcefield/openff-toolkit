@@ -1,0 +1,13 @@
+% Descriptor        odds
+% used in the default, all equally likely
+all                 0
+%
+% Other options remember to use indices appropriately
+1                   1
+2                   0
+3                   0
+4                   0
+Indexed             0
+Unindexed           0
+Alpha               5
+Beta                10
