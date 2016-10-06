@@ -1,9 +1,0 @@
-% Substitution definitions
-% Format:
-% <SMARTS> <replacement-string>
-% halogens
-[#7!-1,#8,#16]              ewg2
-[#7!-1,#8!-1,#16!-1,$halogen]     ewg1
-[$smallhals,$largehals]     halogen
-[#9,#17]                    smallhals
-[#35,#53]                   largehals

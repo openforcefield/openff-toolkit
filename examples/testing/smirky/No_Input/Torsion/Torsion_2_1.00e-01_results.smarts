@@ -1,9 +1,0 @@
-% Results for sampling Torsions at 1.00e-01
-%% SMIRKS patterns for final results are below
-% followed by a their matched reference SMIRKS from forcefield/Frosst_AlkEtOH.ffxml
-%Final Score was 46.851 %
-%%
-[*:1]~[*:2]~[*:3]~[*:4]                            0                   
-% [#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]                  t0004               
-[#6:1](~[#6])~[*:2]~[*:3]~[#1:4]                   1976                
-% [#1:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]                t0005               
