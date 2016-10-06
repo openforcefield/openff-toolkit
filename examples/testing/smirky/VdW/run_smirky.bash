@@ -13,4 +13,5 @@ smirky --molecules AlkEthOH_test_filt1_ff.mol2 \
     --initialtypes initial_VdW.smarts \
     --iterations $1 \
     --temperature $2 \
+    --output $3 \
     --verbose True \

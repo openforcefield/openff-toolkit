@@ -1,0 +1,15 @@
+% Results for sampling Bonds at 1.00e-03
+%% SMIRKS patterns for final results are below
+% followed by a their matched reference SMIRKS from forcefield/Frosst_AlkEtOH.ffxml
+%Final Score was 100.000 %
+%%
+[*:1]~[*:2]                                        0                   
+% [#6X4:1]-[#8&X2&H1:2]                            b0004               
+[#6!H3:1]~[#1!H2:2]                                7118                
+% [#6X4:1]-[#1:2]                                  b0002               
+[*:1]~[#8H0:2]                                     7147                
+% [#6X4:1]-[#8&X2&H0:2]                            b0005               
+[#8X2:1]~[#1!H2:2]                                 9987                
+% [#8X2:1]-[#1:2]                                  b0006               
+[#6!H3:1]~[#6!H3:2]                                1059                
+% [#6X4:1]-[#6X4:2]                                b0001               

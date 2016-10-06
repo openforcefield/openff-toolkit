@@ -13,4 +13,5 @@ smirky --molecules AlkEthOH_test_filt1_ff.mol2 \
     --smirff forcefield/Frosst_AlkEtOH.ffxml \
     --iterations $1 \
     --temperature $2 \
+    --output $3 \
     --verbose True \

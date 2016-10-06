@@ -1,0 +1,19 @@
+% Results for sampling VdWs at 1.00e-04
+%% SMIRKS patterns for final results are below
+% followed by a their matched reference SMIRKS from forcefield/Frosst_AlkEtOH.ffxml
+%Final Score was 96.264 %
+%%
+[*:1]                                              0                   
+% [#1$(*-[#8]):1]                                  n0006               
+[#1:1]~[#6]                                        1068                
+% [$([#1]-[#6](-[#7,#8,#9,#16,#17,#35])-[#7,#8,#9,#16,#17,#35]):1] n0004               
+[#1:1]~[#6]~[#6]                                   7500                
+% [$([#1]-[#6]-[#7,#8,#9,#16,#17,#35]):1]          n0003               
+[#1:1]~[#6](~[#1])(~[#6])~[#6]                     1978                
+% [$([#1]-[#6]):1]                                 n0002               
+[#6:1]                                             2800                
+% [#6X4:1]                                         n0008               
+[#8!H1:1]                                          9619                
+% [#8X2:1]                                         n0010               
+[#8H1:1]                                           8625                
+% [#8X2+0$(*-[#1]):1]                              n0011               

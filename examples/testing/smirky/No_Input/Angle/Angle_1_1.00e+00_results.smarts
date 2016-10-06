@@ -1,0 +1,15 @@
+% Results for sampling Angles at 1.00e+00
+%% SMIRKS patterns for final results are below
+% followed by a their matched reference SMIRKS from forcefield/Frosst_AlkEtOH.ffxml
+%Final Score was 43.229 %
+%%
+[*:1]~[*:2]~[*:3]                                  0                   
+[*:1]~[*:2]-[*:3]                                  2215                
+% [#1:1]-[#6X4:2]-[#1:3]                           a0002               
+[*:1]~[*:2]~[#6!H1:3]                              8896                
+% [a,A:1]-[#6X4:2]-[a,A:3]                         a0001               
+[*:1]~[*:2]~[#6!H1:3]~[#8]                         2484                
+% [#6X4:1]-[#6X4:2]-[#6X4:3]                       a0003               
+[*:1]~[*:2]-[#8:3]                                 9206                
+% [#8X2:1]-[#6X4:2]-[#8X2:3]                       a0004               
+[#1!H3:1]~[*:2]~[#6!H1:3]~[#8]                     8789                
