@@ -137,7 +137,7 @@ class AtomTypeSamplerElemental(object):
 
         # Store a deep copy of the molecules since they will be annotated
         self.molecules = copy.deepcopy(molecules)
-
+        
         # Type all molecules with current typelist to ensure that starting types are sufficient.
         self.type_molecules(self.atomtypes, self.molecules)
 
@@ -179,6 +179,9 @@ class AtomTypeSamplerElemental(object):
                 for atom in molecule.GetAtoms():
                     atomtype = atom.GetType()
                     self.reference_atomtypes_atomcount[atomtype] += 1
+        
+        # Get only the Element initial atom type matches
+        self.total_atom_type_matches = self.total_element
         
         # Maintain a list of SMARTS matches without any atom type matches in the dataset
         # This is used for efficiency.
@@ -637,11 +640,9 @@ class AtomTypeSamplerElemental(object):
         """
         # Create an atom typer.
         atomtyper = AtomTyper(typelist, self.typetag, replacements=self.replacements)
-
         # Type molecules.
         for molecule in molecules:
             atomtyper.assignTypes(molecule, "elemental")
-
         return
 
 
