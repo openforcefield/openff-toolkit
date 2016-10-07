@@ -799,7 +799,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
     def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
-                     chargeMethod='BCC', verbose=False, **kwargs):
+                     chargeMethod=None, verbose=False, **kwargs):
         """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
 
         Parameters
@@ -832,7 +832,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
            This allows user to specify which template to apply to particular Residues
            in the event that multiple matching templates are available (e.g Fe2+ and Fe3+
            templates in the ForceField for a monoatomic iron ion in the topology).
-        chargeModel : str, optional, default=None
+        chargeMethod : str, optional, default=None
            If 'BCC' is specified, bond charge corrections defined the `ForceField` will be applied to AM1-derived charges, otherwise charges from provided `molecules` will be used. (DEFAULT)
            If one of the `openeye.oequacpac.OECharges_` options is specified as a string (e.g. 'OECharges_AM1BCCSym'), this will be used and no bond charge corrections will be applied.
            If `None`, charges from the provided `molecules` will be used and no bond charge corrections will be applied.
