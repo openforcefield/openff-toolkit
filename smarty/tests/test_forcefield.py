@@ -396,7 +396,7 @@ def test_partial_bondorder(verbose = False):
     energy = get_energy(system, positions)
     # Energy is lower with user supplied charges (which in this case are zero)
     if energy < 4.00 or energy > 6.0:
-    raise Exception("Partial bond order code seems to have issues when run with user-provided charges, as energy for benzene is out of tolerance in tests.")
+        raise Exception("Partial bond order code seems to have issues when run with user-provided charges, as energy for benzene is out of tolerance in tests.")
 
 def test_improper(verbose = False):
     """Test implement of impropers on benzene."""
