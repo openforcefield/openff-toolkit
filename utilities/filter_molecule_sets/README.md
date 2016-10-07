@@ -3,6 +3,12 @@
 There are a number of molecule sets that have been used in the open-forcefield effort. 
 In an effort to test the SMIRFFparm99Frosst it became increasingly evident that some of these molecules sets include molecules outside what we want to currently test our tools. 
 
+Molecule sets currently included in this directory are listed below, although when filtering is finalized, molecule sets should be moved to smart/data/molecules 
+
+* `DrugBank.sdf` - [DrugBank Release Version 5.0.1](http://www.drugbank.ca/releases/latest)
+* `DrugBank_atyped.oeb` - complete DrugBank molecule set with parm@Frosst atomtypes provided by Christopher Bayly
+* `updated_DrugBank.mol2.gz` - created by calling `python filter_molecule_sets.py -f DrugBank.sdf -o updated_DrugBank.mol2.gz`
+
 The main script for this directory is `filter_molecule_sets.py` 
 
 ```
@@ -13,7 +19,7 @@ Usage:             Given a set of molecules filter for
             SMIRKS patterns you do not wish to have included
 
     usage:
-        filter_molecule_sets.py --input DrugBank.sdf --output updated_DrugBank.mol2.gz \
+        filter_molecule_sets.py --input DrugBank_atyped.oeb --output updated_DrugBank.mol2.gz \
         --repeats False --warnings False --heavy 100 --SMIRKS remove_smikrs_example.smarts \
         --metals 0 --hydrogens True
     
@@ -44,5 +50,17 @@ Options:
                         OPTIONAL
   -H HYDROGENS, --hydrogens=HYDROGENS
                         If True, hydrogens are added to the output molecules
-
+  -a ATOMS, --atoms=ATOMS
+			File name with atomic number of the elements that you
+			do not want in your set of molecules, OPTIONAL
+  -t ATOMTYPE, --atomtype=ATOMTYPE
+			Atom type that you do not want in your set of molecules,
+			OPTIONAL
+  -y FLAVOR, --flavor=FLAVOR
+			Choose between two different flavors for atom types, 
+			default= tripos (options: tripos or ff). Use .oeb file
+			for ff option.
 ```
+
+elements_exclude.txt - File with element numbers that you do not want in your
+set of molecules.
