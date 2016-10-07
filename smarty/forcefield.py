@@ -54,6 +54,7 @@ import time
 import networkx
 
 import smarty.environment as env
+import itertools
 
 #=============================================================================================
 # PRIVATE SUBROUTINES
@@ -1099,6 +1100,20 @@ class ValenceDict(TransformedDict):
             key = tuple(reversed(key))
         return key
 
+class ImproperDict(TransformedDict):
+    """Symmetrize improper torsions"""
+    def __keytransform__(self,key):
+        """Reorder tuple in numerical order except for element[1] which is the central atom; it retains its position."""
+        # Ensure key is a tuple
+        key = tuple(key)
+        # Retrieve connected atoms
+        connectedatoms = [key[0], key[2], key[3]]
+        # Sort connected atoms
+        connectedatoms.sort()
+        # Re-store connected atoms
+        key = tuple( [connectedatoms[0], key[1], connectedatoms[1], connectedatoms[2]])
+        return(key)
+
 #=============================================================================================
 # Force generators
 #=============================================================================================
@@ -1382,26 +1397,65 @@ parsers["HarmonicAngleForce"] = HarmonicAngleGenerator.parseElement
 class PeriodicTorsionGenerator(object):
     """A PeriodicTorsionForceGenerator constructs a PeriodicTorsionForce."""
 
-    class TorsionType(object):
+    class ProperTorsionType(object):
 
-        """A SMIRFF torsion type."""
+        """A SMIRFF torsion type for proper torsions."""
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.periodicity = list()
             self.phase = list()
             self.k = list()
             self.pid = _extractQuantity(node, parent, 'id')
-            self.torsiontype = node.tag #Improper or Proper?
 
-            # Check that the SMIRKS pattern matches the type it's supposed
-            # to be (avoiding bugs wherein an improperly formed generic improper
-            # overrides propers, for example)
+            # Doublecheck type of torsion
+            if node.tag != 'Proper':
+                raise ValueError("Error: Attempting to process an invalid torsion type as a Proper.")
+
+            # Check that the SMIRKS pattern matches the type it's supposed to
             try:
                 chemenv = env.ChemicalEnvironment(self.smirks)
                 thistype = chemenv.getType()
-                if thistype=='Torsion': thistype = 'Proper'
-                if self.torsiontype != thistype:
-                    raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, self.torsiontype))
+                if thistype != 'Torsion':
+                    raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Proper'))
+            except env.SMIRKSParsingError:
+                print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
+
+
+            if 'fractional_bondorder' in parent.attrib:
+                self.fractional_bondorder = parent.attrib['fractional_bondorder']
+            else:
+                self.fractional_bondorder = None
+            # Store parameters.
+            index = 1
+            while 'phase%d'%index in node.attrib:
+                self.periodicity.append( int(_extractQuantity(node, parent, 'periodicity%d' % index)) )
+                self.phase.append( _extractQuantity(node, parent, 'phase%d' % index, unit_name='phase_unit') )
+                self.k.append( _extractQuantity(node, parent, 'k%d' % index, unit_name='k_unit') )
+                # Optionally handle 'idivf', which divides the periodicity by the specified value
+                if ('idivf%d' % index) in node.attrib:
+                    idivf = _extractQuantity(node, parent, 'idivf%d' % index)
+                    self.k[-1] /= float(idivf)
+                index += 1
+
+    class ImproperTorsionType(object):
+
+        """A SMIRFF torsion type for improper torsions."""
+        def __init__(self, node, parent):
+            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.periodicity = list()
+            self.phase = list()
+            self.k = list()
+            self.pid = _extractQuantity(node, parent, 'id')
+
+            if node.tag != 'Improper':
+                raise ValueError("Error: Attempting to process an invalid torsion type as an improper.")
+
+            # Check that the SMIRKS pattern matches the type it's supposed to
+            try:
+                chemenv = env.ChemicalEnvironment(self.smirks)
+                thistype = chemenv.getType()
+                if thistype != 'Improper':
+                    raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Improper'))
             except env.SMIRKSParsingError:
                 print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
 
@@ -1423,17 +1477,24 @@ class PeriodicTorsionGenerator(object):
                 index += 1
                 # SMIRFF applies trefoil (six-fold) impropers unlike AMBER
                 # If it's an improper, divide by the factor of six internally
-                if self.torsiontype=='Improper':
+                if node.tag=='Improper':
                     self.k[-1] /= 6.
+
 
     def __init__(self, forcefield):
         self.ff = forcefield
-        self._torsiontypes = list()
+        self._propertorsiontypes = list()
+        self._impropertorsiontypes = list()
 
-    def registerTorsion(self, node, parent):
-        """Register a SMIRFF torsiontype definition."""
-        torsion = PeriodicTorsionGenerator.TorsionType(node, parent)
-        self._torsiontypes.append(torsion)
+    def registerProperTorsion(self, node, parent):
+        """Register a SMIRFF torsiontype definition for a proper."""
+        torsion = PeriodicTorsionGenerator.ProperTorsionType(node, parent)
+        self._propertorsiontypes.append(torsion)
+
+    def registerImproperTorsion(self, node, parent):
+        """Register a SMIRFF torsiontype definition for an improper."""
+        torsion = PeriodicTorsionGenerator.ImproperTorsionType(node, parent)
+        self._impropertorsiontypes.append(torsion)
 
     @staticmethod
     def parseElement(element, ff):
@@ -1447,9 +1508,9 @@ class PeriodicTorsionGenerator(object):
 
         # Register all SMIRFF torsion definitions.
         for torsion in element.findall('Proper'):
-            generator.registerTorsion(torsion, element)
+            generator.registerProperTorsion(torsion, element)
         for torsion in element.findall('Improper'):
-            generator.registerTorsion(torsion, element)
+            generator.registerImproperTorsion(torsion, element)
 
     def createForce(self, system, topology, verbose=False, **kwargs):
         # Find existing force or create new one.
@@ -1463,35 +1524,60 @@ class PeriodicTorsionGenerator(object):
 
         # Iterate over all defined torsion types, allowing later matches to override earlier ones.
         torsions = ValenceDict()
-        for torsion in self._torsiontypes:
+        for torsion in self._propertorsiontypes:
             for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
                 torsions[atom_indices] = torsion
+        # Handle impropers in similar manner
+        impropers = ImproperDict()
+        for improper in self._impropertorsiontypes:
+            for atom_indices in topology.unrollSMIRKSMatches(improper.smirks, aromaticity_model = self.ff._aromaticity_model):
+                impropers[atom_indices] = improper
+
 
         if verbose:
             print('')
-            print('PeriodicTorsionGenerator:')
+            print('PeriodicTorsionGenerator Propers:')
             print('')
-            for torsion in self._torsiontypes:
+            for torsion in self._propertorsiontypes:
                 print('%64s : %8d matches' % (torsion.smirks, len(topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
+            print('PeriodicTorsionGenerator Impropers:')
+            print('')
+            for improper in self._impropertorsiontypes:
+                print('%64s : %8d matches' % (improper.smirks, len(topology.unrollSMIRKSMatches(improper.smirks, aromaticity_model = self.ff._aromaticity_model))))
+            print('')
 
-        # Add all torsions to the system.
+        # Add all proper torsions to the system.
         for (atom_indices, torsion) in torsions.items():
-            if torsion.torsiontype == 'Proper':
-                # Ensure atoms are actually bonded correct pattern in Topology
-                assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
-                assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
-                assert topology._isBonded(atom_indices[2], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[2], atom_indices[3])
-            elif torsion.torsiontype == 'Improper':
-                # Ensure atoms are actually bonded correct pattern in Topology
-                assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
-                assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
-                assert topology._isBonded(atom_indices[1], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[3])
+            # Ensure atoms are actually bonded correct pattern in Topology
+            assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
+            assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
+            assert topology._isBonded(atom_indices[2], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[2], atom_indices[3])
 
             for (periodicity, phase, k) in zip(torsion.periodicity, torsion.phase, torsion.k):
                 force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
-
         if verbose: print('%d torsions added' % (len(torsions)))
+
+
+        # Add all improper torsions to the system
+        for (atom_indices, improper) in impropers.items():
+            # Ensure atoms are actually bonded correct pattern in Topology
+            # For impropers, central atom is atom 1
+            assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
+            assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
+            assert topology._isBonded(atom_indices[1], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[3])
+
+            # Impropers are applied to all six paths around the trefoil
+            for (periodicity, phase, k) in zip(improper.periodicity, improper.phase, improper.k):
+                # Permute non-central atoms
+                others = [ atom_indices[0], atom_indices[2], atom_indices[3] ]
+                for p in itertools.permutations( others ):
+                    force.addTorsion(p[0], atom_indices[1], p[1], p[2], periodicity, phase, k)
+
+        if verbose: print('%d impropers added, each applied in a six-fold manner' % (len(impropers)))
+
+
+
 
     def labelForce(self, oemol, verbose=False, **kwargs):
         """Take a provided OEMol and parse PeriodicTorsionForce terms for this molecule.
@@ -1509,22 +1595,38 @@ class PeriodicTorsionGenerator(object):
 
         # Iterate over all defined torsion types, allowing later matches to override earlier ones.
         torsions = ValenceDict()
-        for torsion in self._torsiontypes:
+        for torsion in self._propertorsiontypes:
             for atom_indices in getSMIRKSMatches_OEMol(oemol, torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
                 torsions[atom_indices] = torsion
+        # Handle impropers in similar manner
+        impropers = ImproperDict()
+        for improper in self._impropertorsiontypes:
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, improper.smirks, aromaticity_model = self.ff._aromaticity_model):
+                impropers[atom_indices] = improper
 
         if verbose:
             print('')
             print('PeriodicTorsionGenerator:')
             print('')
-            for torsion in self._torsiontypes:
+            for torsion in self._propertorsiontypes:
                 print('%64s : %8d matches' % (torsion.smirks, len(getSMIRKSMatches_OEMol(oemol, torsion.smirks, aromaticity_model = self.ff._aromaticity_model))))
+            print('')
+            print('PeriodicTorsionGenerator Impropers:')
+            print('')
+            for improper in self._impropertorsiontypes:
+                print('%64s : %8d matches' % (improper.smirks, len(getSMIRKSMatches_OEMol(oemol, improper.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all torsions to the output list
         force_terms = []
         for (atom_indices, torsion) in torsions.items():
             force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3]], torsion.pid, torsion.smirks) )
+        # Add all impropers to the output list
+        for (atom_indices, improper) in impropers.items():
+            # Permute non-central atoms
+            others = [ atom_indices[0], atom_indices[2], atom_indices[3] ]
+            for p in itertools.permutations( others ):
+                force_terms.append( ([p[0], atom_indices[1], p[1], p[2]], improper.pid, improper.smirks) )
 
         return force_terms
 
