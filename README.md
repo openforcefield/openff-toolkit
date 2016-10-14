@@ -4,7 +4,7 @@
 
 This is a simple example of how Bayesian atom type sampling using reversible-jump Markov chain Monte Carlo (RJMCMC) [1] over SMARTS types might work.
 
-This also provides a prototype and validation of the SMIRFF SMIRKS-based force field format, along with classes to parameterize OpenMM systems given SMIRFF `.ffxml` format files as provided here.
+This also provides a prototype and validation of the SMIRFF SMIRKS-based force field format, along with classes to parameterize OpenMM systems given [SMIRFF `.ffxml` format files](https://github.com/open-forcefield-group/smarty/blob/master/The-SMIRFF-force-field-format.md) as provided here.
 
 ## Manifest
 
@@ -50,9 +50,11 @@ pip install . --upgrade
 
 ## Documentation
 
-### How it works
+## The SMIRFF force field format
 
-##smarty
+The SMIRFF force field format is documented [here](https://github.com/open-forcefield-group/smarty/blob/master/The-SMIRFF-force-field-format.md).
+
+## SMARTY atom type sampler
 
 Check out the example in `examples/parm@frosst/`:
 
@@ -86,7 +88,7 @@ Command line example: `smarty --samplertype original --basetypes=examples/AlkEtO
 The original sampler is the default option. Here, smarty samples SMARTS patterns covering all elements contained in the set.
 
 Atom type creation moves has two options, one is using simple decorators (`--decoratorbehavior=simple-decorators`) and the other is combinatorial decorators (default).
- 
+
  The first option (simple-decorators) attempt to split off a new atom type from a parent atom type by combining (via an "and" operator, `&`) the parent atom type with a "decorator".
 The decorators are listed in `AlkEtOH/atomtypes/decorators.smarts` or `parm@frosst/atomtypes/decorators.smarts`:
 ```
@@ -174,7 +176,7 @@ Command line example: `smarty --samplertype elemental --element=8 --basetypes=ex
 The elemental sampler has the same principles as the original sampler. However, the sampler will sample only a single element (such as Oxygen, Carbon, Hydrogen, etc), which needs to be specified on the command line.
 
 The element number needs to be specified by atomic number (--element=8 for oxygen).
- 
+
 =======
 ##smirky
 
@@ -186,7 +188,7 @@ Scoring is analous to smarty (explained above), but uses a SMIRFF with existing 
 Input for this tool can require up to four different file types
 * MOLECULES - any file that are readable in openeye, mol2, sdf, oeb, etc.
 * ODDSFILES - File with the form "smarts     odds" for the different decorator or bond options
-* SMARTS - .smarts file type with the form "smarts/smirks      label/typename" 
+* SMARTS - .smarts file type with the form "smarts/smirks      label/typename"
 * REFERENCE - a SMIRFF file with reference atoms, bonts, angles, torsions, and impropers
 
 ```
@@ -207,7 +209,7 @@ Usage:     Sample over fragment types (atoms, bonds, angles, torsions, or improp
     example:
     smirky -molecules AlkEthOH_test_filt1_ff.mol2 --typetag Angle
 
-    
+
 
 Options:
   --version             show program's version number and exit
@@ -295,12 +297,12 @@ Options:
 
 The SMIRFF forcefield format is available in sample form under data/forcefield, and is handled by `forcefield.py`.
  An example comparing SMIRFF versus AMBER energies for the parm@frosst forcefield is provided under
-examples/SMIRFF_comparison, where two scripts can compare energies for a single molecule or for the entire AlkEthOH set. 
+examples/SMIRFF_comparison, where two scripts can compare energies for a single molecule or for the entire AlkEthOH set.
 Note that two forcefields are currently available in this format, `Fross_AlkEtOH.ffxml`,
 the parm@frosst forcefield as it should have been for this set, and `Frosst_AlkEtOH_parmAtFrosst.ffxml`,
 the forcefield as it was actually implemented (containing several bugs as noted in the file itself).
 
-It can also be of interest to know what SMIRFF parameters would be applied to particular molecules. Utility functionality for this is provided under `forcefield_labeler.py`, which has generally similar structure to `forcefield.py` but instead of providing OpenMM systems with parameters, it can be applied to specific molecules and returns information about what parameters would be applied. 
+It can also be of interest to know what SMIRFF parameters would be applied to particular molecules. Utility functionality for this is provided under `forcefield_labeler.py`, which has generally similar structure to `forcefield.py` but instead of providing OpenMM systems with parameters, it can be applied to specific molecules and returns information about what parameters would be applied.
 
 ## References
 
