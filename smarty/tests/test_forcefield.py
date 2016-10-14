@@ -19,7 +19,7 @@ import tempfile
 ffxml_contents = u"""\
 <?xml version="1.0"?>
 
-<SMIRFF>
+<SMIRFF use_fractional_bondorder="True">
 
 <!-- Header block (optional) -->
 <Date>Date: May-September 2016</Date>
@@ -384,14 +384,19 @@ def test_partial_bondorder(verbose = False):
 
     # Set up once using AM1BCC charges
     system = ff.createSystem(topology, [mol], chargeMethod = 'OECharges_AM1BCCSym', verbose = verbose)
-    # Set up once also without asking for charges
-    system = ff.createSystem(topology, [mol], verbose = verbose)
 
     # Check that energy is what it ought to be -- the partial bond order
     # for benzene makes the energy a bit higher than it would be without it
     energy = get_energy(system, positions)
     if energy < 7.50 or energy > 7.60:
         raise Exception("Partial bond order code seems to have issues, as energy for benzene is outside of tolerance in tests.")
+
+    # Set up once also without asking for charges
+    system = ff.createSystem(topology, [mol], verbose = verbose)
+    energy = get_energy(system, positions)
+    # Energy is lower with user supplied charges (which in this case are zero)
+    if energy < 4.00 or energy > 6.0:
+        raise Exception("Partial bond order code seems to have issues when run with user-provided charges, as energy for benzene is out of tolerance in tests.")
 
 def test_improper(verbose = False):
     """Test implement of impropers on benzene."""
