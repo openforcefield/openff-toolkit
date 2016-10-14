@@ -8,6 +8,8 @@ Molecule sets currently included in this directory are listed below, although wh
 * `DrugBank.sdf` - [DrugBank Release Version 5.0.1](http://www.drugbank.ca/releases/latest)
 * `DrugBank_atyped.oeb` - complete DrugBank molecule set with parm@Frosst atomtypes provided by Christopher Bayly
 * `updated_DrugBank.mol2.gz` - created by calling `python filter_molecule_sets.py -f DrugBank.sdf -o updated_DrugBank.mol2.gz`
+* `DrugBank_updated_tripos.mol2.gz` - created by calling `python filter_molecule_sets.py --input DrugBank_atyped.oeb --output DrugBank_updated_tripos.mol2.gz --repeats False --warnings False --heavy 100 --SMIRKS remove_smirks_simple.smarts --metals 0 --atoms elements_exclude.txt --type gg,Se1 --flavor tripos`
+* `DrugBank_updated_ff.mol2.gz` - created by calling `python filter_molecule_sets.py --input DrugBank_atyped.oeb --output DrugBank_updated_ff.mol2.gz --repeats False --warnings False --heavy 100 --SMIRKS remove_smirks_simple.smarts --metals 0 --atoms elements_exclude.txt --type gg,Se1 --flavor ff`
 
 The main script for this directory is `filter_molecule_sets.py` 
 
@@ -54,8 +56,8 @@ Options:
 			File name with atomic number of the elements that you
 			do not want in your set of molecules, OPTIONAL
   -t ATOMTYPE, --atomtype=ATOMTYPE
-			Atom type that you do not want in your set of molecules,
-			OPTIONAL
+			Atom types that you do not want in your set of molecules,
+			OPTIONAL (usage: --atomtype gg,Se1)
   -y FLAVOR, --flavor=FLAVOR
 			Choose between two different flavors for atom types, 
 			default= tripos (options: tripos or ff). Use .oeb file
