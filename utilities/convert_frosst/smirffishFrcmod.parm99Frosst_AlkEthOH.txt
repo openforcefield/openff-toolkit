@@ -144,6 +144,7 @@ ANGL
 # Csp3 general
 [*:1]~[#6X4:2]-[*:3]      50.  109.5   parm99 generic Csp3
 [#1:1]-[#6X4:2]-[#1:3]    35.  109.5   parm99 generic Csp3
+[#6X4:1]-[#6X4:2]-[#6X4:3] 40. 109.5   AlkEthOH/parm99
 [#8X2:1]-[#6X4:2]-[#8X2:3] 70  109.5   Frosst AlkEthOH OH-CT-OS
 # generic Csp2 120.
 [*:1]~[#6X3:2]~[*:3]      70.  120.    parm99 generic Csp2
@@ -192,7 +193,7 @@ DIHE
 [*:1]~[*:2]~[*:3]~[*:4]    4    3.50        180.0             2.
 # C-C bonds
 # Csp3-Csp3
-[*:1]-[#6X4:2]-[#6X4:3]-[*:4]  1  0.156    0.0   3.0  parm99 X_-CT-CT-X  JCC,7,(1986),230
+[*:1]-[#6X4:2]-[#6X4:3]-[*:4]  9  1.40    0.0   3.0  parm99 X_-CT-CT-X  JCC,7,(1986),230
 [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]  1  0.180    0.0  -3.0  parm99 CT-CT-CT-CT  Junmei et al, 1999
 [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]  1  0.250  180.0  -2.0  parm99 CT-CT-CT-CT  Junmei et al, 1999
 [#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]  1  0.200  180.0   1.0  parm99 CT-CT-CT-CT  Junmei et al, 1999
@@ -214,6 +215,7 @@ DIHE
 [#1:1]-[#6X4:2]-[#6X4:3]-[#17:4]  1  0.250    0.0   1.0  parm99 HC-CT-CT-Cl  Junmei et al, 1999
 [#1:1]-[#6X4:2]-[#6X4:3]-[#35:4]  1  0.000    0.0  -3.0  parm99 HC-CT-CT-Br  JCC,7,(1986),230
 [#1:1]-[#6X4:2]-[#6X4:3]-[#35:4]  1  0.550    0.0   1.0  parm99 HC-CT-CT-Br  Junmei et al, 1999
+[#1:1]-[#6X4:2]-[#6X4:3](-[#8])-[#1:4] 9 1.40 0.0  -3.0  parm99 bug X-CT-CT-X for H*-CT-CT-H* except HC-CT-HC per AlkEthOH
 [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4] 1  0.0      0.0  -3.0  HC,H1-CT-CT-OH,OS AlkEthOH
 [#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4] 1  0.25     0.0   1.0  HC,H1-CT-CT-OH,OS AlkEthOH
 [#8X2:1]-[#6X4:2]-[#6X4:3]-[#1:4] 1  0.0      0.0  -3.0  H_-CT-CT-O_ AlkEthOH
