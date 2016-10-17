@@ -13,6 +13,7 @@ These are all files associated with converting and testing the combined SMIRFF  
 * `parameter_usage.ipynb` - example notebook (requested and updated by Bayly) which shows how to determine which molecules do/do not contain a specific parameter and then visualized those molecules and where that parameter is assigned. Used to check the use of generic bond, angle, or torsion SMIRKS in the ffxml to determine what chemistry is not covered by the relevant SMIRFF 
 * smirffishFrcmod.parm99Frosst.txt - the key source file for the smirff ffxml file, this file has the format of an amber .frcmod file except the initial field giving bonded amber atomtypes is replaced with a smirks string for use with the smirff format for that parameter. 
 * smirff99Frosst.ffxml - this is the smirff format file containing the best efforts of C.I.Bayly during his sabbatical in summer 2016 to convert amber parm99.dat plus the parm@Frosst frcmod file into a single small-molecule smirff ffxml.
+* smirffishFrcmod.parm99Frosst_AlkEthOH.txt - a version of smirffishFrcmod.parm99Frosst.txt which has been extended to include the same parameters as parm@frosst on the AlkEthOH set, including in cases where Bayly deliberately deviated from it (e.g. for the CT-OH-HO angle/force constant where he went to the generic). Created by David Mobley for energy checking purposes.
 
 ## Usage Examples
 
