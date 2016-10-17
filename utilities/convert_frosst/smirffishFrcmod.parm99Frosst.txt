@@ -61,6 +61,7 @@ BOND
 [#6X3:1]=[#7X2,#7X3+1:2]                530.  1.30    parm99 generic
 # C~O bonds
 [#6X4:1]-[#8X2:2]               320.0  1.410   parm99 aliphatic carbon-oxygen Csp3-O
+[#6X4:1]-[#8X2H0:2]             320.0  1.370   Frosst Csp3-ether oxygen in AlkEthOH; R0 xray
 [#6X3:1]-[#8X2:2]               350.   1.326   Frosst generic
 [#6X3:1]-[#8X2H1:2]             450.0  1.364   parm99 phenol C-OH
 [#6X3a:1]-[#8X2H0:2]            450.0  1.323   parm99 aromatic ether aroC-O-nonH

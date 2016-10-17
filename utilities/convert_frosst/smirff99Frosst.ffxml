@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='ASCII'?>
 <SMIRFF version="0.1" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRKS (SMIRKS Force Field) template file -->
-  <Date>Date: Sept. 20, 2016</Date>
+  <Date>Date: Oct. 17, 2016</Date>
   <Author>C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine</Author>
   <!-- This file is meant for processing via smarty.forcefield -->
   <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
@@ -21,63 +21,64 @@
     <Bond smirks="[#6X3:1]:[#7X2,#7X3+1:2]" id="b13" k="960.0" length="1.34"/>
     <Bond smirks="[#6X3:1]=[#7X2,#7X3+1:2]" id="b14" k="1060.0" length="1.30"/>
     <Bond smirks="[#6X4:1]-[#8X2:2]" id="b15" k="640.0" length="1.410"/>
-    <Bond smirks="[#6X3:1]-[#8X2:2]" id="b16" k="700.0" length="1.326"/>
-    <Bond smirks="[#6X3:1]-[#8X2H1:2]" id="b17" k="900.0" length="1.364"/>
-    <Bond smirks="[#6X3a:1]-[#8X2H0:2]" id="b18" k="900.0" length="1.323"/>
-    <Bond smirks="[#6X3:1](=[#8X1])-[#8X2:2]" id="b19" k="640.0" length="1.340"/>
-    <Bond smirks="[#6X3:1](~[#8X1])~[#8X1:2]" id="b20" k="1312.0" length="1.250"/>
-    <Bond smirks="[#6X3:1]=[#8X1+0,#8X2+1:2]" id="b21" k="1140.0" length="1.229"/>
-    <Bond smirks="[#6X3:1]:[#8X2+1:2]" id="b22" k="1140.0" length="1.28"/>
-    <Bond smirks="[#6X2:1]-[#6:2]" id="b23" k="700.0" length="1.440"/>
-    <Bond smirks="[#6X2:1]-[#6X4:2]" id="b24" k="700.0" length="1.468"/>
-    <Bond smirks="[#6X2:1]=[#6X3:2]" id="b25" k="1098.0" length="1.35"/>
-    <Bond smirks="[#6X2:1]#[#7X1:2]" id="b26" k="700.0" length="1.188"/>
-    <Bond smirks="[#6X2:1]#[#6X2:2]" id="b27" k="700.0" length="1.188"/>
-    <Bond smirks="[#6X2:1]-[#8X2:2]" id="b28" k="700.0" length="1.326"/>
-    <Bond smirks="[#6X2:1]-[#7:2]" id="b29" k="854.0" length="1.38"/>
-    <Bond smirks="[#6X2:1]=[#7:2]" id="b30" k="854.0" length="1.17"/>
-    <Bond smirks="[#6X2:1]=[#16:2]" id="b31" k="854.0" length="1.54"/>
-    <Bond smirks="[#7X3:1]-[#7X3:2]" id="b32" k="760.0" length="1.40"/>
-    <Bond smirks="[#7X3:1]-[#7X2:2]" id="b33" k="680.0" length="1.33"/>
-    <Bond smirks="[#7X2:1]-[#7X2:2]" id="b34" k="680.0" length="1.33"/>
-    <Bond smirks="[#7:1]:[#7:2]" id="b35" k="680.0" length="1.33"/>
-    <Bond smirks="[#7:1]=[#7:2]" id="b36" k="680.0" length="1.30"/>
-    <Bond smirks="[#7:1]#[#7:2]" id="b37" k="760.0" length="1.27"/>
-    <Bond smirks="[#7:1]-[#8X2:2]" id="b38" k="600.0" length="1.40"/>
-    <Bond smirks="[#7:1]~[#8X1:2]" id="b39" k="700.0" length="1.30"/>
-    <Bond smirks="[#8X2:1]-[#8X2:2]" id="b40" k="600.0" length="1.46"/>
-    <Bond smirks="[#16:1]-[#6X4:2]" id="b41" k="474.0" length="1.810"/>
-    <Bond smirks="[#16X2:1]-[#1:2]" id="b42" k="548.0" length="1.336"/>
-    <Bond smirks="[#16:1]-[#16:2]" id="b43" k="332.0" length="2.038"/>
-    <Bond smirks="[#16X2,#16X1-1,#16X3+1:1]-[#6X4:2]" id="b44" k="474.0" length="1.81"/>
-    <Bond smirks="[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]" id="b45" k="600.0" length="1.74"/>
-    <Bond smirks="[#16X2:1]-[#7:2]" id="b46" k="600.0" length="1.69"/>
-    <Bond smirks="[#16X2:1]-[#8X2:2]" id="b47" k="600.0" length="1.60"/>
-    <Bond smirks="[#16X2:1]=[#8X1,#7X2:2]" id="b48" k="600.0" length="1.44"/>
-    <Bond smirks="[#16X4,#16X3+0:1]-[#6:2]" id="b49" k="454.0" length="1.750"/>
-    <Bond smirks="[#16X4,#16X3+0:1]~[#7:2]" id="b50" k="530.0" length="1.71"/>
-    <Bond smirks="[#16X4,#16X3+0:1]-[#8X2:2]" id="b51" k="600.0" length="1.596"/>
-    <Bond smirks="[#16X4,#16X3+0:1]~[#8X1:2]" id="b52" k="600.0" length="1.44"/>
-    <Bond smirks="[#15:1]~[#6:2]" id="b53" k="320.0" length="1.90"/>
-    <Bond smirks="[#15:1]-[#7:2]" id="b54" k="600.0" length="1.65"/>
-    <Bond smirks="[#15:1]=[#7:2]" id="b55" k="800.0" length="1.5"/>
-    <Bond smirks="[#15:1]~[#8X2:2]" id="b56" k="460.0" length="1.610"/>
-    <Bond smirks="[#15:1]~[#8X1:2]" id="b57" k="1050.0" length="1.480"/>
-    <Bond smirks="[#15:1]~[#9:2]" id="b58" k="600.0" length="1.639"/>
-    <Bond smirks="[#15:1]=[#16X1:2]" id="b59" k="460.0" length="1.98"/>
-    <Bond smirks="[#6X4:1]-[#9:2]" id="b60" k="734.0" length="1.380"/>
-    <Bond smirks="[#6X3:1]-[#9:2]" id="b61" k="772.0" length="1.359"/>
-    <Bond smirks="[#6X4:1]-[#17:2]" id="b62" k="464.0" length="1.766"/>
-    <Bond smirks="[#6X3:1]-[#17:2]" id="b63" k="386.0" length="1.727"/>
-    <Bond smirks="[#6X4:1]-[#35:2]" id="b64" k="318.0" length="1.944"/>
-    <Bond smirks="[#6X3:1]-[#35:2]" id="b65" k="344.0" length="1.890"/>
-    <Bond smirks="[#6X4:1]-[#53:2]" id="b66" k="296.0" length="2.166"/>
-    <Bond smirks="[#6X3:1]-[#53:2]" id="b67" k="342.0" length="2.075"/>
-    <Bond smirks="[#6X4:1]-[#1:2]" id="b68" k="680.0" length="1.090"/>
-    <Bond smirks="[#6X3:1]-[#1:2]" id="b69" k="734.0" length="1.080"/>
-    <Bond smirks="[#6X2:1]-[#1:2]" id="b70" k="680.0" length="1.090"/>
-    <Bond smirks="[#7:1]-[#1:2]" id="b71" k="868.0" length="1.010"/>
-    <Bond smirks="[#8:1]-[#1:2]" id="b72" k="1106.0" length="0.960"/>
+    <Bond smirks="[#6X4:1]-[#8X2H0:2]" id="b16" k="640.0" length="1.370"/>
+    <Bond smirks="[#6X3:1]-[#8X2:2]" id="b17" k="700.0" length="1.326"/>
+    <Bond smirks="[#6X3:1]-[#8X2H1:2]" id="b18" k="900.0" length="1.364"/>
+    <Bond smirks="[#6X3a:1]-[#8X2H0:2]" id="b19" k="900.0" length="1.323"/>
+    <Bond smirks="[#6X3:1](=[#8X1])-[#8X2:2]" id="b20" k="640.0" length="1.340"/>
+    <Bond smirks="[#6X3:1](~[#8X1])~[#8X1:2]" id="b21" k="1312.0" length="1.250"/>
+    <Bond smirks="[#6X3:1]=[#8X1+0,#8X2+1:2]" id="b22" k="1140.0" length="1.229"/>
+    <Bond smirks="[#6X3:1]:[#8X2+1:2]" id="b23" k="1140.0" length="1.28"/>
+    <Bond smirks="[#6X2:1]-[#6:2]" id="b24" k="700.0" length="1.440"/>
+    <Bond smirks="[#6X2:1]-[#6X4:2]" id="b25" k="700.0" length="1.468"/>
+    <Bond smirks="[#6X2:1]=[#6X3:2]" id="b26" k="1098.0" length="1.35"/>
+    <Bond smirks="[#6X2:1]#[#7X1:2]" id="b27" k="700.0" length="1.188"/>
+    <Bond smirks="[#6X2:1]#[#6X2:2]" id="b28" k="700.0" length="1.188"/>
+    <Bond smirks="[#6X2:1]-[#8X2:2]" id="b29" k="700.0" length="1.326"/>
+    <Bond smirks="[#6X2:1]-[#7:2]" id="b30" k="854.0" length="1.38"/>
+    <Bond smirks="[#6X2:1]=[#7:2]" id="b31" k="854.0" length="1.17"/>
+    <Bond smirks="[#6X2:1]=[#16:2]" id="b32" k="854.0" length="1.54"/>
+    <Bond smirks="[#7X3:1]-[#7X3:2]" id="b33" k="760.0" length="1.40"/>
+    <Bond smirks="[#7X3:1]-[#7X2:2]" id="b34" k="680.0" length="1.33"/>
+    <Bond smirks="[#7X2:1]-[#7X2:2]" id="b35" k="680.0" length="1.33"/>
+    <Bond smirks="[#7:1]:[#7:2]" id="b36" k="680.0" length="1.33"/>
+    <Bond smirks="[#7:1]=[#7:2]" id="b37" k="680.0" length="1.30"/>
+    <Bond smirks="[#7:1]#[#7:2]" id="b38" k="760.0" length="1.27"/>
+    <Bond smirks="[#7:1]-[#8X2:2]" id="b39" k="600.0" length="1.40"/>
+    <Bond smirks="[#7:1]~[#8X1:2]" id="b40" k="700.0" length="1.30"/>
+    <Bond smirks="[#8X2:1]-[#8X2:2]" id="b41" k="600.0" length="1.46"/>
+    <Bond smirks="[#16:1]-[#6X4:2]" id="b42" k="474.0" length="1.810"/>
+    <Bond smirks="[#16X2:1]-[#1:2]" id="b43" k="548.0" length="1.336"/>
+    <Bond smirks="[#16:1]-[#16:2]" id="b44" k="332.0" length="2.038"/>
+    <Bond smirks="[#16X2,#16X1-1,#16X3+1:1]-[#6X4:2]" id="b45" k="474.0" length="1.81"/>
+    <Bond smirks="[#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]" id="b46" k="600.0" length="1.74"/>
+    <Bond smirks="[#16X2:1]-[#7:2]" id="b47" k="600.0" length="1.69"/>
+    <Bond smirks="[#16X2:1]-[#8X2:2]" id="b48" k="600.0" length="1.60"/>
+    <Bond smirks="[#16X2:1]=[#8X1,#7X2:2]" id="b49" k="600.0" length="1.44"/>
+    <Bond smirks="[#16X4,#16X3+0:1]-[#6:2]" id="b50" k="454.0" length="1.750"/>
+    <Bond smirks="[#16X4,#16X3+0:1]~[#7:2]" id="b51" k="530.0" length="1.71"/>
+    <Bond smirks="[#16X4,#16X3+0:1]-[#8X2:2]" id="b52" k="600.0" length="1.596"/>
+    <Bond smirks="[#16X4,#16X3+0:1]~[#8X1:2]" id="b53" k="600.0" length="1.44"/>
+    <Bond smirks="[#15:1]~[#6:2]" id="b54" k="320.0" length="1.90"/>
+    <Bond smirks="[#15:1]-[#7:2]" id="b55" k="600.0" length="1.65"/>
+    <Bond smirks="[#15:1]=[#7:2]" id="b56" k="800.0" length="1.5"/>
+    <Bond smirks="[#15:1]~[#8X2:2]" id="b57" k="460.0" length="1.610"/>
+    <Bond smirks="[#15:1]~[#8X1:2]" id="b58" k="1050.0" length="1.480"/>
+    <Bond smirks="[#15:1]~[#9:2]" id="b59" k="600.0" length="1.639"/>
+    <Bond smirks="[#15:1]=[#16X1:2]" id="b60" k="460.0" length="1.98"/>
+    <Bond smirks="[#6X4:1]-[#9:2]" id="b61" k="734.0" length="1.380"/>
+    <Bond smirks="[#6X3:1]-[#9:2]" id="b62" k="772.0" length="1.359"/>
+    <Bond smirks="[#6X4:1]-[#17:2]" id="b63" k="464.0" length="1.766"/>
+    <Bond smirks="[#6X3:1]-[#17:2]" id="b64" k="386.0" length="1.727"/>
+    <Bond smirks="[#6X4:1]-[#35:2]" id="b65" k="318.0" length="1.944"/>
+    <Bond smirks="[#6X3:1]-[#35:2]" id="b66" k="344.0" length="1.890"/>
+    <Bond smirks="[#6X4:1]-[#53:2]" id="b67" k="296.0" length="2.166"/>
+    <Bond smirks="[#6X3:1]-[#53:2]" id="b68" k="342.0" length="2.075"/>
+    <Bond smirks="[#6X4:1]-[#1:2]" id="b69" k="680.0" length="1.090"/>
+    <Bond smirks="[#6X3:1]-[#1:2]" id="b70" k="734.0" length="1.080"/>
+    <Bond smirks="[#6X2:1]-[#1:2]" id="b71" k="680.0" length="1.090"/>
+    <Bond smirks="[#7:1]-[#1:2]" id="b72" k="868.0" length="1.010"/>
+    <Bond smirks="[#8:1]-[#1:2]" id="b73" k="1106.0" length="0.960"/>
   </HarmonicBondForce>
   <!-- WARNING: AMBER functional forms drop the factor of 2 in the angle energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
   <HarmonicAngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
