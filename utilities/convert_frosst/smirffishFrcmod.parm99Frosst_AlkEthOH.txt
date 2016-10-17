@@ -144,6 +144,7 @@ ANGL
 # Csp3 general
 [*:1]~[#6X4:2]-[*:3]      50.  109.5   parm99 generic Csp3
 [#1:1]-[#6X4:2]-[#1:3]    35.  109.5   parm99 generic Csp3
+[#8X2:1]-[#6X4:2]-[#8X2:3] 70  109.5   Frosst AlkEthOH OH-CT-OS
 # generic Csp2 120.
 [*:1]~[#6X3:2]~[*:3]      70.  120.    parm99 generic Csp2
 [#1:1]-[#6X3:2]~[*:3]     50.  120.    parm99 generic Csp2
