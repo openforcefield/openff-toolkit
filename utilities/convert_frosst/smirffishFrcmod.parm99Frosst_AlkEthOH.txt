@@ -144,7 +144,6 @@ ANGL
 # Csp3 general
 [*:1]~[#6X4:2]-[*:3]      50.  109.5   parm99 generic Csp3
 [#1:1]-[#6X4:2]-[#1:3]    35.  109.5   parm99 generic Csp3
-[#6X4:1]-[#8X2:2]-[#1:3]  55.  108.5   parm99 CT-OH-HO AlkEthOH
 # generic Csp2 120.
 [*:1]~[#6X3:2]~[*:3]      70.  120.    parm99 generic Csp2
 [#1:1]-[#6X3:2]~[*:3]     50.  120.    parm99 generic Csp2
@@ -170,6 +169,8 @@ ANGL
 [*:1]~[#7X2:2]~[#7X1:3]   70.0  180.0   Frosst generic smirff only sp carbons are linear
 # oxygen including endocyclic het5 (a la furan)
 [*:1]-[#8:2]-[*:3]        50.  113.    Frosst generic divalent oxygen including endocyclic het5
+[#6X4:1]-[#8X2:2]-[#1:3]  55.  108.5   parm99 CT-OH-HO AlkEthOH
+[#6X4:1]-[#8X2:2]-[#6X4:3] 60. 109.5   parm99 CT-OS-CT AlkEthOH
 # Osp2 divalent conjugated in a ring
 [#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3] 70.  120.    Frosst generic Osp2 divalent conjugated in a ring
 [*:1]-[#8X2+1:2]=[*:3]    50.  120.    Frosst generic divalent oxonium guess
