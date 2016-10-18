@@ -132,24 +132,24 @@ BOND
 ANGL
 # begin section from parm99
 [*:1]~[*:2]~[*:3]         80.0      120.0   smirff generic is sp2 hybridized
-# Any atom in 3-membered ring
-[*;r3:1]1~;@[*;r3:2]~;@[*;r3:3]1 350.  60.     Frosst generic any atom within the 3-membered ring
-[*;r3:1]~;@[*;r3:2]~;!@[*:3] 100.  118.    Frosst generic 3ringAtom-3ringAtom-substit
-[*:1]~;!@[*;r3:2]~;!@[*:3]  100.  113.    Frosst generic substit-3ringAtom-nonHsubstit
-[#1:1]-[*;r3:2]~;!@[*:3]    50.  113.    Frosst generic substit-3ringAtom-Hsubstit
-# fused het6-het5 bridgehead outer angle
-[*;r6:1]~;@[*;r5:2]~;@[*;r5;R2:3] 70.0  130.    parm99 generic fused het6-het5 bridgehead outer angle
-# het5 outer angle
-[*:1]~;!@[*;r5:2]~;@[*;r5:3]  70.0  125.    Frosst generic het5 substituent outer angle
 # Csp3 general
 [*:1]~[#6X4:2]-[*:3]      50.  109.5   parm99 generic Csp3
 [#1:1]-[#6X4:2]-[#1:3]    35.  109.5   parm99 generic Csp3
 [#6X4:1]-[#6X4:2]-[#6X4:3] 40. 109.5   AlkEthOH/parm99
 [#8X2:1]-[#6X4:2]-[#8X2:3] 70  109.5   Frosst AlkEthOH OH-CT-OS
+# Any atom in 3-membered ring
+[*;r3:1]1~;@[*;r3:2]~;@[*;r3:3]1 350.  60.     Frosst generic any atom within the 3-membered ring
+[*;r3:1]~;@[*;r3:2]~;!@[*:3] 100.  118.    Frosst generic 3ringAtom-3ringAtom-substit
+[*:1]~;!@[*;r3:2]~;!@[*:3]  100.  113.    Frosst generic substit-3ringAtom-nonHsubstit
+[#1:1]-[*;r3:2]~;!@[*:3]    50.  113.    Frosst generic substit-3ringAtom-Hsubstit
 # generic Csp2 120.
 [*:1]~[#6X3:2]~[*:3]      70.  120.    parm99 generic Csp2
 [#1:1]-[#6X3:2]~[*:3]     50.  120.    parm99 generic Csp2
 [#1:1]-[#6X3:2]-[#1:3]    35.  120.    parm99 generic Csp2
+# fused het6-het5 bridgehead outer angle
+[*;r6:1]~;@[*;r5:2]~;@[*;r5;R2:3] 70.0  130.    parm99 generic fused het6-het5 bridgehead outer angle
+# het5 outer angle
+[*:1]~;!@[*;r5:2]~;@[*;r5:3]  70.0  125.    Frosst generic het5 substituent outer angle
 # carboxylic acid, ester, carboxylate
 [#8X1:1]~[#6X3:2]~[#8:3]  80.0  126.00  parm99 generic
 # Csp
