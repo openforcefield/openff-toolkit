@@ -29,6 +29,7 @@ from openeye.oeomega import *
 from openeye.oequacpac import *
 
 import time
+from simtk import unit
 
 #=============================================================================================
 # UTILITY ROUTINES
@@ -255,3 +256,43 @@ def parse_odds_file(filename, verbose = False):
 
     return (decorators, odds)
 
+
+def setPositionsInOEMol(molecule, positions):
+    """Set the positions in an OEMol using a position array with units from simtk.unit, i.e. from OpenMM. Atoms must have same order.
+
+    Arguments:
+    ---------
+    molecule : OEMol
+        OpenEye molecule
+    positions : Nx3 array
+        Unit-bearing via simtk.unit Nx3 array of coordinates
+    """
+    if molecule.NumAtoms() != len(positions): raise ValueError("Number of atoms in molecule does not match length of position array.")
+    pos_unitless = positions/unit.angstroms
+
+    coordlist = []
+    for idx in range(len(pos_unitless)):
+        for j in range(3):
+            coordlist.append( pos_unitless[idx][j])
+    molecule.SetCoords(OEFloatArray(coordlist))
+
+def extractPositionsFromOEMol(molecule):
+    """Get the positions from an OEMol and return in a position array with units via simtk.unit, i.e. foramtted for OpenMM.
+    Adapted from choderalab/openmoltools test function extractPositionsFromOEMOL
+
+    Arguments:
+    ----------
+    molecule : OEMol
+        OpenEye molecule
+
+    Returns:
+    --------
+    positions : Nx3 array
+        Unit-bearing via simtk.unit Nx3 array of coordinates
+    """
+
+    positions = unit.Quantity(numpy.zeros([molecule.NumAtoms(), 3], numpy.float32), unit.angstroms)
+    coords = molecule.GetCoords()
+    for index in range(molecule.NumAtoms()):
+        positions[index,:] = unit.Quantity(coords[index], unit.angstroms)
+    return positions
