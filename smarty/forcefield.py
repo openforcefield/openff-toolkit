@@ -197,6 +197,9 @@ class _Topology(Topology):
     self._reference_to_topology_atom_mappings[reference_molecule] is a list of atom indices mapping a reference molecule atom index to the topology atom index
     self._bondorders is a list of floating point bond orders for the bonds in the Topology.
     self._bondorders_by_atomindices is a dict of floating point bond orders for the bonds in the Topology, keyed by indices of the atoms involved.
+
+    Assumes class is immutable.
+
     """
     def __init__(self, topology, reference_molecules):
         """
@@ -229,6 +232,65 @@ class _Topology(Topology):
         # Get/initialize bond orders
         self._updateBondOrders()
 
+    def angles(self):
+        """
+        Get an iterator over all i-j-k angles.
+        """
+        if not hasattr(self, '_angles'):
+            self._construct_bonded_atoms_list()
+            self._angles = set()
+            for atom1 in self._atoms:
+                for atom2 in self._bondedAtoms[atom1]:
+                    for atom3 in self._bondedAtoms[atom2]:
+                        if atom1 == atom3:
+                            continue
+                        if atom1.index < atom3.index:
+                            self._angles.add( (atom1, atom2, atom3) )
+                        else:
+                            self._angles.add( (atom3, atom2, atom1) )
+
+        return iter(self._angles)
+
+    def torsions(self):
+        """
+        Get an iterator over all i-j-k-l torsions.
+        Note that i-j-k-i torsions are excluded.
+        """
+        if not hasattr(self, '_torsions'):
+            self._construct_bonded_atoms_list()
+
+            self._torsions = set()
+            for atom1 in self._atoms:
+                for atom2 in self._bondedAtoms[atom1]:
+                    for atom3 in self._bondedAtoms[atom2]:
+                        if atom1 == atom3:
+                            continue
+                        for atom4 in self._bondedAtoms[atom3]:
+                            if atom4 == atom2:
+                                continue
+                            # Exclude i-j-k-i
+                            if atom1 == atom4:
+                                continue
+                            if atom1.index < atom4.index:
+                                self._torsions.add( (atom1, atom2, atom3, atom4) )
+                            else:
+                                self._torsions.add( (atom4, atom3, atom2, atom1) )
+
+        return iter(self._torsions)
+
+    def _construct_bonded_atoms_list(self):
+        """
+        Construct list of all atoms each atom is bonded to.
+        """
+        if not hasattr(self, '_bondedAtoms'):
+            self._atoms = [ atom for atom in self.atoms() ]
+            self._bondedAtoms = dict()
+            for atom in self._atoms:
+                self._bondedAtoms[atom] = set()
+            for bond in self._bonds:
+                self._bondedAtoms[bond[0]].add(bond[1])
+                self._bondedAtoms[bond[1]].add(bond[0])
+
     def _isBonded(self, atom_index_1, atom_index_2):
         """Return True if atoms are bonded, False if not.
 
@@ -247,16 +309,10 @@ class _Topology(Topology):
         ----
         This assumes _Topology is immutable.
         """
-        if not hasattr(self, '_bondedAtoms'):
-            # Construct list of all atoms each atom is bonded to.
-            self._bondedAtoms = dict()
-            for atom in range(self._numAtoms):
-                self._bondedAtoms[atom] = set()
-            for bond in self._bonds:
-                self._bondedAtoms[bond[0].index].add(bond[1].index)
-                self._bondedAtoms[bond[1].index].add(bond[0].index)
-
-        return atom_index_2 in self._bondedAtoms[atom_index_1]
+        self._construct_bonded_atoms_list()
+        atom1 = self._atoms[atom_index_1]
+        atom2 = self._atoms[atom_index_2]
+        return atom2 in self._bondedAtoms[atom1]
 
     def _identifyMolecules(self):
         """Identify all unique reference molecules and atom mappings to all instances in the Topology.
@@ -307,11 +363,12 @@ class _Topology(Topology):
     def _updateBondOrders(self, Wiberg = False):
         """Update and store list of bond orders for the molecules in this Topology. Can be used for initialization of bondorders list, or for updating bond orders in the list.
 
-    Parameters:
-    ----------
-    Wiberg : bool (optional)
-        Default False. If False, uses bond orders OEChem assigns to bonds on the molecule. If True, instead uses Wiberg bond orders stored on bonds in the molecule. These must already be present, i.e. from assignPartialCharges with an AM1 method.
-"""
+        Parameters:
+        ----------
+        Wiberg : bool (optional)
+            Default False. If False, uses bond orders OEChem assigns to bonds on the molecule. If True, instead uses Wiberg bond orders stored on bonds in the molecule. These must already be present, i.e. from assignPartialCharges with an AM1 method.
+
+        """
         # Initialize
         self._bondorders=list()
         self._bondorders_by_atomindices = {}
@@ -1067,6 +1124,70 @@ def _extractQuantity(node, parent, name, unit_name=None):
 
     return quantity
 
+def _check_for_missing_valence_terms(name, topology, assigned_terms, topological_terms):
+    """
+    Check to ensure there are no missing valence terms.
+
+    Parameters
+    ----------
+    name : str
+        Name of the calling force generator
+    topology : simtk.openmm.app.Topology
+        The Topology object
+    assigned_terms : iterable of ints or int tuples
+        Atom index tuples defining added valence terms
+    topological_terms : iterable of atoms or atom tuples
+        Atom tuples defining topological valence atomsets to which forces should be assigned
+
+    """
+    # Convert to lists
+    assigned_terms = [ item for item in assigned_terms ]
+    topological_terms = [ item for item in topological_terms ]
+
+    def ordered_tuple(atoms):
+        atoms = list(atoms)
+        if atoms[0] < atoms[-1]:
+            return tuple(atoms)
+        else:
+            return tuple(reversed(atoms))
+    try:
+        topology_set = set([ ordered_tuple( atom.index for atom in atomset ) for atomset in topological_terms ])
+        assigned_set = set([ ordered_tuple( index for index in atomset ) for atomset in assigned_terms ])
+    except TypeError, te:
+        topology_set = set([ atom.index for atom in topological_terms ])
+        assigned_set = set([ atomset[0] for atomset in assigned_terms ])
+
+    def render_atoms(atomsets):
+        msg = ""
+        for atomset in atomsets:
+            print(atomset)
+            msg += '%30s :' % str(atomset)
+            try:
+                for atom_index in atomset:
+                    atom = atoms[atom_index]
+                    msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
+            except TypeError, te:
+                atom = atoms[atomset]
+                msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
+
+            msg += '\n'
+        return msg
+
+    if set(assigned_set) != set(topology_set):
+        msg = '%s: Mismatch between valence terms added and topological terms expected.\n' % name
+        atoms = [ atom for atom in topology.atoms() ]
+        if len(assigned_set.difference(topology_set)) > 0:
+            msg += 'Valence terms created that are not present in Topology:\n'
+            msg += render_atoms(assigned_set.difference(topology_set))
+        if len(topology_set.difference(assigned_set)) > 0:
+            msg += 'Topological atom sets not assigned parameters:\n'
+            msg += render_atoms(topology_set.difference(assigned_set))
+        msg += 'topology_set:\n'
+        msg += str(topology_set) + '\n'
+        msg += 'assigned_set:\n'
+        msg += str(assigned_set) + '\n'
+        raise Exception(msg)
+
 import collections
 class TransformedDict(collections.MutableMapping):
     """A dictionary that applies an arbitrary key-altering
@@ -1230,26 +1351,8 @@ class HarmonicBondGenerator(object):
 
         if verbose: print('%d bonds added' % (len(bonds)))
 
-
-        # Check that no topology bonds are missing force parameters
-        atoms = [ atom for atom in topology.atoms() ]
-        topology_bonds = ValenceDict()
-        for (atom1, atom2) in topology.bonds():
-            topology_bonds[(atom1.index,atom2.index)] = True
-        if set(bonds.keys()) != set(topology_bonds.keys()):
-            msg = 'Mismatch between bonds added and topological bonds.\n'
-            created_bondset = set(bonds.keys())
-            topology_bondset = set(topology_bonds.keys())
-            msg += 'Bonds created that are not present in Topology:\n'
-            msg += str(created_bondset.difference(topology_bondset)) + '\n'
-            msg += 'Topology bonds not assigned parameters:\n'
-            for (a1, a2) in topology_bondset.difference(created_bondset):
-                atom1 = atoms[a1]
-                atom2 = atoms[a2]
-                msg += '(%8d,%8d) : %5s %3s %3s - %5s %3s %3s' % (a1, a2, atom1.residue.index, atom1.residue.name, atom1.name, atom2.residue.index, atom2.residue.name, atom2.name)
-                msg += '\n'
-            raise Exception(msg)
-
+        # Check that no topological bonds are missing force parameters
+        _check_for_missing_valence_terms('HarmonicBondForce', topology, bonds.keys(), topology.bonds())
 
     def labelForce(self, oemol, verbose=False, **kwargs):
         """Take a provided OEMol and parse HarmonicBondForce terms for this molecule.
@@ -1362,6 +1465,8 @@ class HarmonicAngleGenerator(object):
 
         if verbose: print('%d angles added' % (len(angles)))
 
+        # Check that no topological angles are missing force parameters
+        _check_for_missing_valence_terms('HarmonicAngleForce', topology, angles.keys(), topology.angles())
 
     def labelForce(self, oemol, verbose=False, **kwargs):
         """Take a provided OEMol and parse HarmonicAngleForce terms for this molecule.
@@ -1567,6 +1672,8 @@ class PeriodicTorsionGenerator(object):
                 force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
         if verbose: print('%d torsions added' % (len(torsions)))
 
+        # Check that no topological torsions are missing force parameters
+        _check_for_missing_valence_terms('PeriodicTorsionForce', topology, torsions.keys(), topology.torsions())
 
         # Add all improper torsions to the system
         for (atom_indices, improper) in impropers.items():
@@ -1739,6 +1846,9 @@ class NonbondedGenerator(object):
         for (atom_indices, ljtype) in atoms.items():
             force.setParticleParameters(atom_indices[0], 0.0, ljtype.sigma, ljtype.epsilon)
 
+        # Check that no topological torsions are missing force parameters
+        _check_for_missing_valence_terms('NonbondedForce Lennard-Jones parameters', topology, atoms.keys(), topology.atoms())
+
         # Set the partial charges based on reference molecules.
         for reference_molecule in topology._reference_molecules:
             atom_mappings = topology._reference_to_topology_atom_mappings[reference_molecule]
@@ -1746,6 +1856,8 @@ class NonbondedGenerator(object):
                 for (atom, atom_index) in zip(reference_molecule.GetAtoms(), atom_mapping):
                     [charge, sigma, epsilon] = force.getParticleParameters(atom_index)
                     force.setParticleParameters(atom_index, atom.GetPartialCharge(), sigma, epsilon)
+
+        # TODO: Should we check that there are no missing charges?
 
     def postprocessSystem(self, system, topology, verbose=False, **args):
         atoms = [ atom for atom in topology.atoms() ]
