@@ -369,6 +369,54 @@ def test_molecule_labeling(verbose = False):
     if not 'NonbondedGenerator' in labels[0].keys():
         raise Exception("No nonbonded force term assigned.")
 
+import unittest
+class TestExceptionHandling(unittest.TestCase):
+    def test_parameter_completeness_check(self):
+        """Test that proper exceptions are raised if a force field fails to assign parameters to valence terms in a molecule."""
+        from openeye import oechem
+        mol = oechem.OEMol()
+        oechem.OEParseSmiles(mol, 'CCC')
+        oechem.OEAddExplicitHydrogens(mol)
+        oechem.OETriposAtomNames(mol)
+        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
+        topology = generateTopologyFromOEMol(mol)
+
+        # Test nonbonded error checking by wiping out required LJ parameter
+        params = ff.getParameter(paramID='n0001')
+        params['smirks']='[#136:1]'
+        ff.setParameter(paramID='n0001', params=params)
+        ff.setParameter(paramID='n0002', params=params)
+        with self.assertRaises(Exception):
+            system = ff.createSystem( topology, [mol])
+        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
+
+        # Test bond error checking by wiping out a required bond parameter
+        params = ff.getParameter(paramID='b0001')
+        params['smirks'] = '[#136:1]~[*:2]'
+        ff.setParameter( paramID='b0001', params=params)
+        with self.assertRaises(Exception):
+            system = ff.createSystem( topology, [mol])
+        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
+
+        # Test angle error checking by wiping out a required angle parameter
+        params = ff.getParameter(paramID='a0001')
+        params['smirks'] = '[#136:1]~[*:2]~[*:3]'
+        ff.setParameter( paramID='a0001', params=params)
+        with self.assertRaises(Exception):
+            system = ff.createSystem( topology, [mol])
+        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
+
+        # Test torsion error checking by wiping out a required torsion parameter
+        params = ff.getParameter(paramID='t0001')
+        params['smirks'] = '[#136:1]~[*:2]~[*:3]~[*:4]'
+        ff.setParameter( paramID='t0001', params=params)
+        ff.setParameter( paramID='t0004', params=params)
+        with self.assertRaises(Exception):
+            system = ff.createSystem( topology, [mol])
+        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
+
+
+
 def test_partial_bondorder(verbose = False):
     """Test setup of a molecule which activates partial bond order code."""
     from openeye import oechem
