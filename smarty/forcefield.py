@@ -1127,29 +1127,42 @@ def _check_for_missing_valence_terms(name, topology, assigned_terms, topological
         Name of the calling force generator
     topology : simtk.openmm.app.Topology
         The Topology object
-    assigned_terms : iterable of int tuples
+    assigned_terms : iterable of ints or int tuples
         Atom index tuples defining added valence terms
-    topological_terms : iterable of atom tuples
+    topological_terms : iterable of atoms or atom tuples
         Atom tuples defining topological valence atomsets to which forces should be assigned
 
     """
+    # Convert to lists
+    assigned_terms = [ item for item in assigned_terms ]
+    topological_terms = [ item for item in topological_terms ]
+
     def ordered_tuple(atoms):
         atoms = list(atoms)
         if atoms[0] < atoms[-1]:
             return tuple(atoms)
         else:
             return tuple(reversed(atoms))
-
-    assigned_set = set([ ordered_tuple( index for index in atomset ) for atomset in assigned_terms ])
-    topology_set = set([ ordered_tuple( atom.index for atom in atomset ) for atomset in topological_terms ])
+    try:
+        topology_set = set([ ordered_tuple( atom.index for atom in atomset ) for atomset in topological_terms ])
+        assigned_set = set([ ordered_tuple( index for index in atomset ) for atomset in assigned_terms ])
+    except TypeError, te:
+        topology_set = set([ atom.index for atom in topological_terms ])
+        assigned_set = set([ atomset[0] for atomset in assigned_terms ])
 
     def render_atoms(atomsets):
         msg = ""
         for atomset in atomsets:
+            print(atomset)
             msg += '%30s :' % str(atomset)
-            for atom_index in atomset:
-                atom = atoms[atom_index]
+            try:
+                for atom_index in atomset:
+                    atom = atoms[atom_index]
+                    msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
+            except TypeError, te:
+                atom = atoms[atomset]
                 msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
+
             msg += '\n'
         return msg
 
@@ -1162,6 +1175,10 @@ def _check_for_missing_valence_terms(name, topology, assigned_terms, topological
         if len(topology_set.difference(assigned_set)) > 0:
             msg += 'Topological atom sets not assigned parameters:\n'
             msg += render_atoms(topology_set.difference(assigned_set))
+        msg += 'topology_set:\n'
+        msg += str(topology_set) + '\n'
+        msg += 'assigned_set:\n'
+        msg += str(assigned_set) + '\n'
         raise Exception(msg)
 
 import collections
@@ -1822,6 +1839,9 @@ class NonbondedGenerator(object):
         for (atom_indices, ljtype) in atoms.items():
             force.setParticleParameters(atom_indices[0], 0.0, ljtype.sigma, ljtype.epsilon)
 
+        # Check that no topological torsions are missing force parameters
+        _check_for_missing_valence_terms('NonbondedForce Lennard-Jones parameters', topology, atoms.keys(), topology.atoms())
+
         # Set the partial charges based on reference molecules.
         for reference_molecule in topology._reference_molecules:
             atom_mappings = topology._reference_to_topology_atom_mappings[reference_molecule]
@@ -1829,6 +1849,8 @@ class NonbondedGenerator(object):
                 for (atom, atom_index) in zip(reference_molecule.GetAtoms(), atom_mapping):
                     [charge, sigma, epsilon] = force.getParticleParameters(atom_index)
                     force.setParticleParameters(atom_index, atom.GetPartialCharge(), sigma, epsilon)
+
+        # TODO: Should we check that there are no missing charges?
 
     def postprocessSystem(self, system, topology, verbose=False, **args):
         atoms = [ atom for atom in topology.atoms() ]
