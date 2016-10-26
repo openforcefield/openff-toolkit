@@ -1133,8 +1133,15 @@ def _check_for_missing_valence_terms(name, topology, assigned_terms, topological
         Atom tuples defining topological valence atomsets to which forces should be assigned
 
     """
-    assigned_set = set([ tuple( index for index in atomset ) for atomset in assigned_terms ])
-    topology_set = set([ tuple( atom.index for atom in atomset ) for atomset in topological_terms ])
+    def ordered_tuple(atoms):
+        atoms = list(atoms)
+        if atoms[0] < atoms[-1]:
+            return tuple(atoms)
+        else:
+            return tuple(reversed(atoms))
+
+    assigned_set = set([ ordered_tuple( index for index in atomset ) for atomset in assigned_terms ])
+    topology_set = set([ ordered_tuple( atom.index for atom in atomset ) for atomset in topological_terms ])
 
     def render_atoms(atomsets):
         msg = ""
