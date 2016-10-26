@@ -234,7 +234,7 @@ class _Topology(Topology):
 
     def angles(self):
         """
-        Get a list of all angles.
+        Get an iterator over all i-j-k angles.
         """
         if not hasattr(self, '_angles'):
             self._construct_bonded_atoms_list()
@@ -252,6 +252,10 @@ class _Topology(Topology):
         return iter(self._angles)
 
     def torsions(self):
+        """
+        Get an iterator over all i-j-k-l torsions.
+        Note that i-j-k-i torsions are excluded.
+        """
         if not hasattr(self, '_torsions'):
             self._construct_bonded_atoms_list()
 
@@ -263,6 +267,9 @@ class _Topology(Topology):
                             continue
                         for atom4 in self._bondedAtoms[atom3]:
                             if atom4 == atom2:
+                                continue
+                            # Exclude i-j-k-i
+                            if atom1 == atom4:
                                 continue
                             if atom1.index < atom4.index:
                                 self._torsions.add( (atom1, atom2, atom3, atom4) )
