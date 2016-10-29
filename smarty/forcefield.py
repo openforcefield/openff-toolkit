@@ -1153,7 +1153,7 @@ def _check_for_missing_valence_terms(name, topology, assigned_terms, topological
     try:
         topology_set = set([ ordered_tuple( atom.index for atom in atomset ) for atomset in topological_terms ])
         assigned_set = set([ ordered_tuple( index for index in atomset ) for atomset in assigned_terms ])
-    except TypeError, te:
+    except TypeError as te:
         topology_set = set([ atom.index for atom in topological_terms ])
         assigned_set = set([ atomset[0] for atomset in assigned_terms ])
 
@@ -1166,7 +1166,7 @@ def _check_for_missing_valence_terms(name, topology, assigned_terms, topological
                 for atom_index in atomset:
                     atom = atoms[atom_index]
                     msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
-            except TypeError, te:
+            except TypeError as te:
                 atom = atoms[atomset]
                 msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
 
