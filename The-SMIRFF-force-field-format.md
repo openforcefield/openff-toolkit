@@ -86,7 +86,7 @@ Thus, comparing a SMIRFF file to a corresponding AMBER parameter file or .frcmod
 ### PROPER TORSIONS
 
 Torsions are implemented as a [`PeriodicTorsionForce`](http://docs.openmm.org/7.0.0/userguide/theory.html#periodictorsionforce) tag with child tags for `Proper` (discussed here) and `Improper` (discussed below) parameters, for example:
-```
+```XML
 <PeriodicTorsionForce phase_unit="degrees" k_unit="kilocalories_per_mole">
    <Proper smirks="[a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]" idivf1="9" periodicity1="3" phase1="0.0" k1="1.40"/>
 ...
