@@ -15,12 +15,11 @@ which introduces following `Angle` terms which will use units of degrees for the
 
 Under each of these force terms, there are tags for individual parameter lines such as these:
 ```XML
-   <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50" k="100.0" id="a0001" parent_id="a0001"/>
-   <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50" k="70.0" id="a0002" parent_id="a0001"/>
+   <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50" k="100.0"/>
+   <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50" k="70.0"/>
 ```
 The first of these specifies the `[a,A:1]-[#6X4:2]-[a,A:3]` SMIRKS pattern for an angle, with a tetravalent carbon at the center with single bonds to two atoms of any type. 
 Atoms are labeled 1, 2, and 3, with 2 being the central atom. Equilibrium angle values are provided, along with force constants (with units as given above). 
-Additional tags `id` and `parent_id` are essentially "informational", with `id` essentially serving as a serial number for the parameter (it can be used to report on which parameters are assigned to a given molecule, for example) and `parent_id` ultimately being helpful in expressing relationships between parameters and tracking *parameter hierarchies*, though we do very little with this yet.
 
 **SMIRFF parameters are hierarchical** in that parameters which come later in a file override those which come earlier if they match the same pattern.
  This can be seen in the example above, where the first line provides a generic angle parameter for any tetravalent carbon (single bond) angle, and the second line overrides this for the specific case of a hydrogen-(tetravalent carbon)-hydrogen angle.
@@ -48,8 +47,8 @@ Before getting in to individual sections, it's worth noting that the XML parser 
 Nonbonded parameters (currently, Lennard-Jones parameters) are specified via the [`NonbondedForce`](http://docs.openmm.org/7.0.0/userguide/theory.html#nonbondedforce) tag with sub-tags for individual `Atom` entries, such as:
 ```XML
 <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
-   <Atom smirks="[#1:1]" rmin_half="1.4870" epsilon="0.0157" id="n0001" parent_id="n0001"/>
-   <Atom smirks="[$([#1]-[#6]):1]" rmin_half="1.4870" epsilon="0.0157" id="n0002" parent_id="n0001"/>
+   <Atom smirks="[#1:1]" rmin_half="1.4870" epsilon="0.0157"/>
+   <Atom smirks="[$([#1]-[#6]):1]" rmin_half="1.4870" epsilon="0.0157"/>
    ...
 </NonbondedForce>
 Scaling terms for 1-4 interactions should be specified in attributes for the `NonbondedForce` tag, along with units.
@@ -61,8 +60,8 @@ For compatibility, the size property of an atom can be specified either via prov
 Bond parameters are specified via the [`HarmonicBondForce`](http://docs.openmm.org/7.0.0/userguide/theory.html#harmonicbondforce) tag with individual `Bond` tags providing equilibrium bond length `length` and force constant `k` values for specific bonds, for example:
 ```XML
 <HarmonicBondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
-   <Bond smirks="[#6X4:1]-[#6X4:2]" length="1.526" k="620.0" id="b0001" parent_id="b0001"/>
-   <Bond smirks="[#6X4:1]-[#1:2]" length="1.090" k="680.0" id="b0002" parent_id="b0002"/>
+   <Bond smirks="[#6X4:1]-[#6X4:2]" length="1.526" k="620.0"/>
+   <Bond smirks="[#6X4:1]-[#1:2]" length="1.090" k="680.0"/>
 ...
 </HarmonicBondForce>
 ```
@@ -75,8 +74,8 @@ Thus, comparing a SMIRFF file to a corresponding AMBER parameter file or `.frcmo
 Angle parameters are specified via the [`HarmonicAngleForce`](http://docs.openmm.org/7.0.0/userguide/theory.html#harmonicangleforce) tag with individual `Angle` tags providing parameters (equilibrium angle `angle` and force constant `k`), as in this example:
 ```XML
 <HarmonicAngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
-   <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50" k="100.0" id="a0001" parent_id="a0001"/>
-   <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50" k="70.0" id="a0002" parent_id="a0001"/>
+   <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50" k="100.0"/>
+   <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50" k="70.0"/>
 ...
 </HarmonicAngleForce>
 ```
@@ -89,9 +88,9 @@ Thus, comparing a SMIRFF file to a corresponding AMBER parameter file or .frcmod
 Torsions are implemented as a [`PeriodicTorsionForce`](http://docs.openmm.org/7.0.0/userguide/theory.html#periodictorsionforce) tag with child tags for `Proper` (discussed here) and `Improper` (discussed below) parameters, for example:
 ```
 <PeriodicTorsionForce phase_unit="degrees" k_unit="kilocalories_per_mole">
-   <Proper smirks="[a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]" idivf1="9" periodicity1="3" phase1="0.0" k1="1.40" id="t0001" parent_id="t0001"/>
+   <Proper smirks="[a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]" idivf1="9" periodicity1="3" phase1="0.0" k1="1.40"/>
 ...
-   <Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]" idivf1="1" periodicity1="3" phase1="0.0" k1="0.383" idivf2="1" periodicity2="2" phase2="180.0" k2="0.1" id="t0008" parent_id="t0003"/>
+   <Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]" idivf1="1" periodicity1="3" phase1="0.0" k1="0.383" idivf2="1" periodicity2="2" phase2="180.0" k2="0.1"/>
 ...
 </PeriodicTorsionForce>
 ```
@@ -111,7 +110,7 @@ The averaging approach would make it easier to avoid this problem without requir
 
 Impropers are applied in the same manner as proper torsions, via `PeriodicTorsionForce`, but with the `Improper` tag, as in:
 ```XML:
-<Improper smirks="[*:1]~[#6X3:2](=[#7X2,#7X3+1:3])~[#7:4]" id="i4" k1="10.5" periodicity1="2" phase1="180."/>
+<Improper smirks="[*:1]~[#6X3:2](=[#7X2,#7X3+1:3])~[#7:4]" k1="10.5" periodicity1="2" phase1="180."/>
 ...
 ```
 
@@ -126,9 +125,9 @@ Bond charge corrections (along the lines of Christopher Bayly's bond charge corr
 Here is an example not intended for actual use:
 ```XML
 <BondChargeCorrections method="AM1" increment_unit="elementary_charge">
-  <BondChargeCorrection smirks="[#6X4:1]-[#6X3a:2]" increment="+0.0073" id="c0001" parent_id="c0001"/>
-  <BondChargeCorrection smirks="[#6X4:1]-[#6X3a:2]-[#7]" increment="-0.0943" id="c0002" parent_id="c0002"/>
-  <BondChargeCorrection smirks="[#6X4:1]-[#8:2]" increment="+0.0718" id="c0003" parent_id="c0003"/>
+  <BondChargeCorrection smirks="[#6X4:1]-[#6X3a:2]" increment="+0.0073"/>
+  <BondChargeCorrection smirks="[#6X4:1]-[#6X3a:2]-[#7]" increment="-0.0943"/>
+  <BondChargeCorrection smirks="[#6X4:1]-[#8:2]" increment="+0.0718"/>
 </BondChargeCorrections>
 ```
 The charge model specified must be a method understood by the OpenEye toolkits, and the charge correction `increment` (in units of proton charge) will be applied on top of this by subtracting `increment` from the atom tagged as 1 and adding it to the atom tagged as 2.
@@ -142,16 +141,16 @@ Partial bond orders can be used to allow interpolation of parameters. For exampl
 ```XML
 <HarmonicBondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
 ...
-    <Bond smirks="[#6X3:1]-[#6X3:2]" id="b5" k="820.0" length="1.45"/>
-    <Bond smirks="[#6X3:1]:[#6X3:2]" id="b6" k="938.0" length="1.40"/>
-    <Bond smirks="[#6X3:1]=[#6X3:2]" id="b7" k="1098.0" length="1.35"/>
+    <Bond smirks="[#6X3:1]-[#6X3:2]" k="820.0" length="1.45"/>
+    <Bond smirks="[#6X3:1]:[#6X3:2]" k="938.0" length="1.40"/>
+    <Bond smirks="[#6X3:1]=[#6X3:2]" k="1098.0" length="1.35"/>
 ...
 ```
 can be replaced by a single parameter line:
 ```XML
 <HarmonicBondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2" fractional_bondorder="interpolate-linear">
 ...
-    <Bond smirks="[#6X3:1]!#[#6X3:2]" id="b5" k_bondorder1="820.0" k_bondorder2="1098" length_bondorder1="1.45" length_bondorder2="1.35"/>
+    <Bond smirks="[#6X3:1]!#[#6X3:2]" k_bondorder1="820.0" k_bondorder2="1098" length_bondorder1="1.45" length_bondorder2="1.35"/>
 ...
 ```
 This allows specification of force constants and lengths for bond orders 1 and 2, and then interpolation between those based on the partial bond order. 
@@ -169,7 +168,23 @@ Alternate aromaticity models can be requested by the force field, such as
 `<SMIRFF version="0.1" aromaticity_model="OEAroModel_MDL">` used by SMIRFF99Frosst (a choice by Christopher Bayly to simplify handling of certain heteroaromatic compounds). 
 Any of the names of the [aromaticity models available in the OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/oechemtk/aromaticity.html) can be used.
 
-### Future plans
+### Future advanced features
+
+At present, the SMIRFF format basically defaults to AMBER- or OpenMM-style decisions on many issues.
+For example, AMBER-style (Lorentz-Berthelot) combining rules are used, and the AMBER force field functional form.
+Angles potentials are assumed to be harmonic.  
+However, we have plans to support other combination rules, functional forms, and angle potentials. 
+In keeping with the above, whole-force field decisions will be handled as attributes of the SMIRFF tag. 
+For example, alternate combination rules or functional forms might be handled as follows:
+* Geometric mean combining rule: `<SMIRFF combining_rule="geometric_mean">`
+* A Halgren buffered 14-7 potential for vdW could be handled as `<SMIRFF NonbondedForm="buffered_14_7">`
+* Selection of the type of angle force applied would be handled in a similar manner, via an `AngleForce="harmonic"` tag or similar. [This feature is being planned.](https://github.com/open-forcefield-group/smarty/issues/179)
+
+
+[Generalized Born parameters and models will also be supported](https://github.com/open-forcefield-group/smarty/issues/165) and implementation is being planned.
+
+
+### Additional plans for future development
 
 See the Issue tracker for a more thorough list, though some major areas are highlighted here:
 * Exploring how use of partial bond order can simplify the environments needed
@@ -214,6 +229,16 @@ So, for example, one can read a PDB file describing a mixture and provide OpenEy
 
 One important note is that the OpenEye molecules currently must have atom names, hence the [`OETriposAtomNames`](https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemFunctions/OETriposAtomNames.html) above.
 
+### `id` and other XML attributes
+
+In general, other XML attributes can be specified and will be ignored by `ForceField` unless they are specifically handled by the parser (and specified in this document). 
+
+One attribute we have found helpful in actual parsing is the `id` attribute for a specific parameter line, and we *recommend* that SMIRFF forcefields utilize this as effectively a parameter serial number, such as in:
+```XML
+ <Bond smirks="[#6X3:1]-[#6X3:2]" id="b5" k="820.0" length="1.45"/>
+```
+Some functionality in `ForceField`, such as `ForceField.labelMolecules`, looks for the `id` attribute. 
+Without this attribute, there is no way to uniquely identify a specific parameter line in the XML file without referring to it by its smirks string, and since some smirks strings can become long and relatively unwieldly (especially for torsions) this provides a more human- and search-friendly way of referring to specific sets of parameters.
 
 ### A remark about parameter availability
 
