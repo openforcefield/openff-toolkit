@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='ASCII'?>
 <SMIRFF version="0.1" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRKS (SMIRKS Force Field) template file -->
-  <Date>Date: Oct. 17, 2016</Date>
+  <Date>Date: Nov. 7, 2016</Date>
   <Author>C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine</Author>
   <!-- This file is meant for processing via smarty.forcefield -->
   <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
@@ -25,7 +25,7 @@
     <Bond smirks="[#6X3:1]-[#8X2:2]" id="b17" k="700.0" length="1.326"/>
     <Bond smirks="[#6X3:1]-[#8X2H1:2]" id="b18" k="900.0" length="1.364"/>
     <Bond smirks="[#6X3a:1]-[#8X2H0:2]" id="b19" k="900.0" length="1.323"/>
-    <Bond smirks="[#6X3:1](=[#8X1])-[#8X2:2]" id="b20" k="640.0" length="1.340"/>
+    <Bond smirks="[#6X3:1](=[#8X1])-[#8X2H0:2]" id="b20" k="640.0" length="1.340"/>
     <Bond smirks="[#6X3:1](~[#8X1])~[#8X1:2]" id="b21" k="1312.0" length="1.250"/>
     <Bond smirks="[#6X3:1]=[#8X1+0,#8X2+1:2]" id="b22" k="1140.0" length="1.229"/>
     <Bond smirks="[#6X3:1]:[#8X2+1:2]" id="b23" k="1140.0" length="1.28"/>
