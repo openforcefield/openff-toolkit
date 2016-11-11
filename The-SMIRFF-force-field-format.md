@@ -102,6 +102,27 @@ Impropers are applied in the same manner as proper torsions, via `PeriodicTorsio
 
 **Improper torsions deviate profoundly from AMBER handling of impropers** in two ways. First, to eliminate ambiguity, we treat impropers as a [trefoil](https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Trefoil_knot_left.svg/2000px-Trefoil_knot_left.svg.png) and apply the same set of parameters to all six paths around the trefoil. *Because of this, all barrier heights are divided by six before we apply them*, for consistency with AMBER force fields. Second, the *second* atom in an improper (in the example above, the trivalent carbon) is the central atom in the trefoil.
 
+### GBSA parameters
+
+Generalized-Born surface area (GBSA) implicit solvent parameters can also be specified in a manner similar to `NonbondedForce`:
+```XML
+ <GBSAForce model="OBC1" radius_units="nanometers" sasa_penalty="5" sasa_penalty_units="cal/mol/angstroms**2">
+   <Atom smirks="[#1:1]" radius="0.12" scale="0.85"/>
+   <Atom smirks="[#1:1]~[#6]" radius="0.13" scale="0.85"/>
+   <Atom smirks="[#1:1]~[#8]" radius="0.08" scale="0.85"/>
+   <Atom smirks="[#1:1]~[#16]" radius="0.08" scale="0.85"/>
+   <Atom smirks="[#6:1]" radius="0.22" scale="0.72"/>
+   <Atom smirks="[#7:1]" radius="0.155" scale="0.79"/>
+   <Atom smirks="[#8:1]" radius="0.15" scale="0.85"/>
+   <Atom smirks="[#9:1]" radius="0.15" scale="0.88"/>
+   <Atom smirks="[#14:1]" radius="0.21" scale="0.8"/>
+   <Atom smirks="[#15:1]" radius="0.185" scale="0.86"/>
+   <Atom smirks="[#16:1]" radius="0.18" scale="0.96"/>
+   <Atom smirks="[#17:1]" radius="0.17" scale="0.8"/>
+ </GBSAForce>
+```
+Here, `radius` and `scale` are parameters of the `OBC1` GB model supported by OpenMM.
+
 ### SPECIAL SECTIONS
 
 **Bond charge corrections**
