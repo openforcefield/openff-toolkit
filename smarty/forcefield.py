@@ -1160,7 +1160,6 @@ def _check_for_missing_valence_terms(name, topology, assigned_terms, topological
     def render_atoms(atomsets):
         msg = ""
         for atomset in atomsets:
-            print(atomset)
             msg += '%30s :' % str(atomset)
             try:
                 for atom_index in atomset:
