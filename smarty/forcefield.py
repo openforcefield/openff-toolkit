@@ -1550,6 +1550,9 @@ class PeriodicTorsionGenerator(object):
                     idivf = _extractQuantity(node, parent, 'idivf%d' % index)
                     self.k[-1] /= float(idivf)
                 index += 1
+            # Check for errors, i.e. 'phase' instead of 'phase1'
+            if len(self.phase)==0:
+               raise Exception("Error: Torsion with id %s has no parseable phase entries." % self.pid)
 
     class ImproperTorsionType(object):
 
@@ -1593,6 +1596,9 @@ class PeriodicTorsionGenerator(object):
                 # If it's an improper, divide by the factor of six internally
                 if node.tag=='Improper':
                     self.k[-1] /= 6.
+            # Check for errors, i.e. 'phase' instead of 'phase1'
+            if len(self.phase)==0:
+               raise Exception("Error: Torsion with id %s has no parseable phase entries." % self.pid)
 
 
     def __init__(self, forcefield):
