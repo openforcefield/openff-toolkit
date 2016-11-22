@@ -194,7 +194,7 @@ class _Topology(Topology):
     """Augmented Topology object which adds:
 
     self._reference_molecules is a list of OEMol for the reference molecules
-    self._reference_to_topology_atom_mappings[reference_molecule] is a list of atom indices mapping a reference molecule atom index to the topology atom index
+    self._reference_to_topology_atom_mappings[reference_molecule] is a list of dicts, where each dict maps the atom indices of atoms in the reference molecule onto an equivalent atom index for a topology atom.
     self._bondorders is a list of floating point bond orders for the bonds in the Topology.
     self._bondorders_by_atomindices is a dict of floating point bond orders for the bonds in the Topology, keyed by indices of the atoms involved.
 
