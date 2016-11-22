@@ -1819,7 +1819,7 @@ class NonbondedGenerator(object):
                      Ewald:openmm.NonbondedForce.Ewald,
                      PME:openmm.NonbondedForce.PME}
         if nonbondedMethod not in methodMap:
-            raise ValueError('Illegal nonbonded method for NonbondedForce')
+            raise ValueError('Illegal nonbonded method for NonbondedForce; method given was %s' % nonbondedMethod)
         force = openmm.NonbondedForce()
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)
