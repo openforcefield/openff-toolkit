@@ -39,7 +39,7 @@ import openeye.oequacpac
 from openeye import oechem
 
 from simtk import openmm, unit
-
+import parmed
 
 #=============================================================================
 # UTILITY FUNCTIONS
@@ -363,3 +363,49 @@ def getMolParamIDToAtomIndex( oemol, ff):
                     param_usage[pid][1].append( atom_indices )
 
     return param_usage
+
+
+def save_system_to_amber( topology, system, positions, prmtop, crd ):
+    """Save an OpenMM System, with provided topology and positions, to AMBER prmtop and coordinate files.
+
+    Parameters
+    ----------
+    topology : OpenMM Topology
+        Topology of the system to be saved, perhaps as loaded from a PDB file or similar.
+    system : OpenMM System
+        Parameterized System to be saved, containing components represented by Topology
+    positions : unit.Quantity position array
+        Position array containing positions of atoms in topology/system
+    prmtop : filename
+        AMBER parameter file name to write
+    crd : filename
+        AMBER coordinate file name (ASCII crd format) to write
+
+    """
+
+    structure = parmed.openmm.topsystem.load_topology( topology, system, positions )
+    structure.save( prmtop, overwrite = True, format="amber" )
+    structure.save( crd, format='rst7', overwrite = True)
+
+
+def save_system_to_gromacs( topology, system, positions, top, gro ):
+    """Save an OpenMM System, with provided topology and positions, to AMBER prmtop and coordinate files.
+
+    Parameters
+    ----------
+    topology : OpenMM Topology
+        Topology of the system to be saved, perhaps as loaded from a PDB file or similar.
+    system : OpenMM System
+        Parameterized System to be saved, containing components represented by Topology
+    positions : unit.Quantity position array
+        Position array containing positions of atoms in topology/system
+    top : filename
+        GROMACS topology file name to write
+    gro : filename
+        GROMACS coordinate file name (.gro format) to write
+
+    """
+
+    structure = parmed.openmm.topsystem.load_topology( topology, system, positions )
+    structure.save( prmtop, overwrite = True, format="gromacs")
+    structure.save( gro, overwrite = True, format="gro")
