@@ -407,5 +407,5 @@ def save_system_to_gromacs( topology, system, positions, top, gro ):
     """
 
     structure = parmed.openmm.topsystem.load_topology( topology, system, positions )
-    structure.save( prmtop, overwrite = True, format="gromacs")
+    structure.save( top, overwrite = True, format="gromacs")
     structure.save( gro, overwrite = True, format="gro")
