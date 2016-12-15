@@ -68,7 +68,7 @@ class AtomTypeSamplerElemental(object):
             List of molecules for typing
         basetypes_filename : str
             File defining base/generic atom types (which cannot be destroyed); often these are elemental types
-        initialtypes_filename : 
+        initialtypes_filename :
             File defining initial atom types (which CAN be destroyed, except for those which occur in basetypes_filename
         decorators_filename : str
             File containing decorators that can be added to existing types to generate subtypes
@@ -88,13 +88,13 @@ class AtomTypeSamplerElemental(object):
         This is just a proof of concept.  No scoring of molecular properties is performed.
 
         """
-        
-        
+
+
         # Choose one element per run to find its atomtypes (string format)
         self.initial_element = element
 
         self.verbose = verbose
-        
+
         self.decorator_behavior = decorator_behavior
 
         # Define internal typing tag.
@@ -108,7 +108,7 @@ class AtomTypeSamplerElemental(object):
         self.basetypes = AtomTyper.read_typelist(basetypes_filename)
         self.decorators = AtomTyper.read_typelist(decorators_filename)
         self.replacements = AtomTyper.read_typelist(replacements_filename)
-        # Try to ensure base/initial types have unique names as name 
+        # Try to ensure base/initial types have unique names as name
         # clashes between initial and target types will cause problems
         for idx, [smarts, typename] in enumerate(self.atomtypes):
             self.atomtypes[idx] = [smarts, 'c_'+typename]
@@ -119,8 +119,8 @@ class AtomTypeSamplerElemental(object):
         # Store smarts for basetypes
         self.basetypes_smarts = [ smarts for (smarts, name) in self.basetypes ]
 
-        # Ensure all base types are in initial types (and add if not) as 
-        # base types are generics (such as elemental) and need to be present 
+        # Ensure all base types are in initial types (and add if not) as
+        # base types are generics (such as elemental) and need to be present
         # at the start
 
         initial_smarts = [ smarts for (smarts, name) in self.atomtypes ]
@@ -128,16 +128,16 @@ class AtomTypeSamplerElemental(object):
             if smarts not in initial_smarts:
                 self.atomtypes = [[smarts, typename]] + self.atomtypes
                 if self.verbose: print("Added base (generic) type `%s`, name %s, to initial types." % (smarts, typename) )
-        # Store initially populated base types, as these will be retained even 
+        # Store initially populated base types, as these will be retained even
         # if they have zero occupancy (whereas unpopulated base types
-        # need never be used ever and can be deleted- i.e. if we have no 
+        # need never be used ever and can be deleted- i.e. if we have no
         # phosphorous in the set we don't need a phosphorous base type)
         self.used_basetypes = []
         self.used_atomtypes = []
 
         # Store a deep copy of the molecules since they will be annotated
         self.molecules = copy.deepcopy(molecules)
-        
+
         # Type all molecules with current typelist to ensure that starting types are sufficient.
         self.type_molecules(self.atomtypes, self.molecules)
 
@@ -179,10 +179,10 @@ class AtomTypeSamplerElemental(object):
                 for atom in molecule.GetAtoms():
                     atomtype = atom.GetType()
                     self.reference_atomtypes_atomcount[atomtype] += 1
-        
+
         # Get only the Element initial atom type matches
         self.total_atom_type_matches = self.total_element
-        
+
         # Maintain a list of SMARTS matches without any atom type matches in the dataset
         # This is used for efficiency.
         self.atomtypes_with_no_matches = set()
@@ -192,25 +192,25 @@ class AtomTypeSamplerElemental(object):
             # If this type is used, then track it
             if basetype_typecounts[atom_type] > 0:
                 self.used_basetypes.append( [ smarts, atom_type] )
-                if self.verbose: print("Storing used base type `%s`, name `%s` with count %s..." % (smarts, atom_type, atom_typecounts[atom_type] )) 
+                if self.verbose: print("Storing used base type `%s`, name `%s` with count %s..." % (smarts, atom_type, atom_typecounts[atom_type] ))
             # If unused, it matches nothing in the set
-            else:  
+            else:
                 self.atomtypes_with_no_matches.add( smarts )
                 if self.verbose: print("Storing base atom type `%s`, which is unused, so that it will not be proposed further." % smarts )
         # Atom basetypes to create new smart strings
         self.atom_basetype = copy.deepcopy(self.used_basetypes)
-        
+
         # Track used vs unused atomtypes - unused atomtypes are not retained
         for (smarts, atom_type) in self.atomtypes:
             # If this type is used, then track it
             if atom_typecounts[atom_type] > 0:
                 self.used_atomtypes.append( [ smarts, atom_type] )
-                if self.verbose: print("Storing used atomtype `%s`, name `%s` with count %s..." % (smarts, atom_type, atom_typecounts[atom_type] )) 
+                if self.verbose: print("Storing used atomtype `%s`, name `%s` with count %s..." % (smarts, atom_type, atom_typecounts[atom_type] ))
             # If unused, it matches nothing in the set
-            elif atom_typecounts[atom_type] == 0 and (smarts not in self.basetypes_smarts): 
+            elif atom_typecounts[atom_type] == 0 and (smarts not in self.basetypes_smarts):
                 self.atomtypes_with_no_matches.add( smarts )
                 if self.verbose: print("Storing base atom type `%s`, which is unused, so that it will not be proposed further." % smarts )
-        
+
         # Atom basetypes to create new smart strings
         self.atom_basetype = copy.deepcopy(self.used_basetypes)
         self.atomtypes = copy.deepcopy(self.used_atomtypes)
@@ -347,11 +347,11 @@ class AtomTypeSamplerElemental(object):
         print('%d / %d total atoms match (%.3f %%)' % (total_atom_type_matches, self.total_element, fraction_matched_atoms * 100))
 
         return fraction_matched_atoms
-    
-    
+
+
     def AtomDecorator(self, atom1type, decorator):
         """
-        Given an atom and a decorator ammend the SMARTS string with that decorator 
+        Given an atom and a decorator ammend the SMARTS string with that decorator
         Returns at "atom" which is a tuple of [SMARTS, typeName] for the decorated atom
         """
         if self.HasAlpha(atom1type):
@@ -367,10 +367,10 @@ class AtomTypeSamplerElemental(object):
 
     def PickAnAtom(self, atomList):
         """
-        takes a desired current set of atomtypes (current, base, populated base, or some combination of the 
-        above or something else) and pick one at random. (Here, we will typically but perhaps not always want 
-        to use currently populated atomtypes, i.e. the atomtypes list, not basetypes (generic types) or 
-        used_basetypes (base types which type anything)). A little silly, but still helpful. 
+        takes a desired current set of atomtypes (current, base, populated base, or some combination of the
+        above or something else) and pick one at random. (Here, we will typically but perhaps not always want
+        to use currently populated atomtypes, i.e. the atomtypes list, not basetypes (generic types) or
+        used_basetypes (base types which type anything)). A little silly, but still helpful.
         Returns a tuple corresponding to the selected (smarts, name).
         """
         atomtype_index = random.randint(0, len(atomList)-1)
@@ -378,7 +378,7 @@ class AtomTypeSamplerElemental(object):
 
     def HasAlpha(self, atom1type):
         """
-        Takes a specified atomtype tuple (smarts, name) and determines whether or not it already has an alpha 
+        Takes a specified atomtype tuple (smarts, name) and determines whether or not it already has an alpha
         substituent, returning True or False.
         """
         if atom1type[0].find("$") != -1:
@@ -388,12 +388,12 @@ class AtomTypeSamplerElemental(object):
 
     def AddAlphaSubstituentAtom(self, atom1type, bondset, atom2type, first_alpha):
         """
-        Takes specified atomtypes atom1type and atom2type (where atom1type is a type without an alpha substituent), 
-        and a specified bond set, and introduces an alpha substituent involving atom2type (which can be a decorated 
-        type such as output by AtomDecorator); returns a tuple of (smarts, name) from the result. Example output 
-        for input of atom1type=("[#1]", "hydrogen"), bondset = (['-'], "single"), and atom2type = ("[#6]" is 
-        ("[#1$(*-[#6])]", "hydrogen singly bonded to carbon") or something along those lines. This should basically 
-        just be adding $(*zw) where z is the selected bond type and w is atom2type. It should raise an exception 
+        Takes specified atomtypes atom1type and atom2type (where atom1type is a type without an alpha substituent),
+        and a specified bond set, and introduces an alpha substituent involving atom2type (which can be a decorated
+        type such as output by AtomDecorator); returns a tuple of (smarts, name) from the result. Example output
+        for input of atom1type=("[#1]", "hydrogen"), bondset = (['-'], "single"), and atom2type = ("[#6]" is
+        ("[#1$(*-[#6])]", "hydrogen singly bonded to carbon") or something along those lines. This should basically
+        just be adding $(*zw) where z is the selected bond type and w is atom2type. It should raise an exception
         if an alpha substituent is attempted to be added to an atom1type which already has an alpha substituent.
         """
         if first_alpha:
@@ -407,16 +407,16 @@ class AtomTypeSamplerElemental(object):
 
     def AddBetaSubstituentAtom(self, atom1type, bondset, atom2type):
         """
-        Takes specified atomtypes atom1type and atom2type (where atom1type is a type WITH an alpha substituent), 
-        and a specified bond set, and introduces an alpha substituent involving atom2type (which can be a 
-        decorated type such as output by AtomDecorator); returns a tuple of (smarts, name) from the result. 
-        Example output for input of atom1type=("[#1$(*-[#6])]", "hydrogen singly bonded to carbon"), 
-        bondset = (['-'], "single"), and atom2type = ("[#8]" is ("[#1$(*-[#6]-[#8])]", "hydrogen singly bonded 
-        to (carbon singly bonded to oxygen)") or something along those lines. This will have to handle two cases 
-        separately -- addition of the first beta substituent (where it is inserted between the characters (] and 
-        is inserted without parens), and addition of subsequent beta substituents (where it is inserted after 
-        the first set of [] in the substituent and is inserted enclosed in parens, i.e. (-[w]).) It should raise 
-        an exception if a beta substituent is attempted to be added to an atom1type which does not have an alpha 
+        Takes specified atomtypes atom1type and atom2type (where atom1type is a type WITH an alpha substituent),
+        and a specified bond set, and introduces an alpha substituent involving atom2type (which can be a
+        decorated type such as output by AtomDecorator); returns a tuple of (smarts, name) from the result.
+        Example output for input of atom1type=("[#1$(*-[#6])]", "hydrogen singly bonded to carbon"),
+        bondset = (['-'], "single"), and atom2type = ("[#8]" is ("[#1$(*-[#6]-[#8])]", "hydrogen singly bonded
+        to (carbon singly bonded to oxygen)") or something along those lines. This will have to handle two cases
+        separately -- addition of the first beta substituent (where it is inserted between the characters (] and
+        is inserted without parens), and addition of subsequent beta substituents (where it is inserted after
+        the first set of [] in the substituent and is inserted enclosed in parens, i.e. (-[w]).) It should raise
+        an exception if a beta substituent is attempted to be added to an atom1type which does not have an alpha
         substituent.
         """
 
@@ -427,7 +427,7 @@ class AtomTypeSamplerElemental(object):
         # find closed alpha atom
         closeAlpha = atom1type[0].find(']')
         # This has two atoms (already has an alpha atom)
-        if count == 2: 
+        if count == 2:
             proposed_atomtype = atom1type[0][:closeAlpha+1]
             proposed_atomtype += bondset[0] + atom2type[0] + ')]'
             proposed_typename = atom1type[1] + bondset[1] + ' ' + atom2type[1]
@@ -441,11 +441,11 @@ class AtomTypeSamplerElemental(object):
             if self.verbose: print("ADD MORE BETA SUB: proposed --- %s %s" % ( str(proposed_atomtype), str(proposed_typename)))
         else:
             # Has only 1 atom which means there isn't an alpha atom yet, add an alpha atom instead
-            proposed_atomtype, proposed_typename = self.AddAlphaSubstituentAtom(atom1type, bondset, atom2type) 
+            proposed_atomtype, proposed_typename = self.AddAlphaSubstituentAtom(atom1type, bondset, atom2type)
         return proposed_atomtype, proposed_typename
 
 
-    def sample_atomtypes(self): 
+    def sample_atomtypes(self):
         """
         Perform one step of atom type sampling.
 
@@ -459,17 +459,17 @@ class AtomTypeSamplerElemental(object):
         natombasetypes = len(self.atom_basetype)
 
         valid_proposal = True
-        
+
         #creating = False
-        
+
         if random.random() < 0.5:
             # Pick an atom type to destroy.
             atomtype_index = random.randint(0, natomtypes-1)
             (atomtype, typename) = proposed_atomtypes[atomtype_index]
             if self.verbose: print("Attempting to destroy atom type %s : %s..." % (atomtype, typename))
-            # Reject deletion of (populated) base types as we want to retain 
+            # Reject deletion of (populated) base types as we want to retain
             # generics even if empty
-            if [atomtype, typename] in self.used_basetypes: 
+            if [atomtype, typename] in self.used_basetypes:
                 if self.verbose: print("Destruction rejected for atom type %s because this is a generic type which was initially populated." % atomtype )
                 return False
 
@@ -505,7 +505,7 @@ class AtomTypeSamplerElemental(object):
                 proposed_atomtype = '[' + result.groups(1)[0] + '&' + decorator + ']'
                 proposed_typename = atomtype_typename + ' ' + decorator_typename
                 if self.verbose: print("Attempting to create new subtype: '%s' (%s) + '%s' (%s) -> '%s' (%s)" % (atomtype, atomtype_typename, decorator, decorator_typename, proposed_atomtype, proposed_typename))
-            
+
                 # Update proposed parent dictionary
                 proposed_parents[atomtype].append([proposed_atomtype, proposed_typename])
                 # Hack to make naming consistent with below
@@ -565,7 +565,7 @@ class AtomTypeSamplerElemental(object):
             if proposed_atomtype in existing_atomtypes:
                 if self.verbose: print("Atom type already exists; rejecting to avoid duplication.")
                 valid_proposal = False
-            
+
             # Check for valid proposal before proceeding.
             if not valid_proposal:
                 return False
@@ -649,17 +649,17 @@ class AtomTypeSamplerElemental(object):
     def calculate_number_element(self, typelist, molecules):
         """
         Compute statistics for numnber of molecules assigned each type.
-                    
+
         ARGUMENTS
-                    
+
         typelist
         molecules
-                    
+
         RETURNS
         #
         atom_typecounts (dict) - counts of number of atoms containing each atomtype
         molecule_typecounds (dict) - counts of number of molecules containing each atom type
-        
+
         """
         # Zero type counts by atom and molecule.
         atom_typecounts = dict()
@@ -681,7 +681,7 @@ class AtomTypeSamplerElemental(object):
 
         return number_element
 
-    
+
     def compute_type_statistics(self, typelist, molecules, only_element=False):
         """
         Compute statistics for numnber of molecules assigned each type.
@@ -802,13 +802,13 @@ class AtomTypeSamplerElemental(object):
 
     def get_unfinishedAtomList(self, atom_typecounts, molecule_typecounts, atomtype_matches = None):
         """
-        This method prunes the set of current atomtypes so that if all branches 
-        of a base type have been found it no longer tries extending any atom of that base type.  
+        This method prunes the set of current atomtypes so that if all branches
+        of a base type have been found it no longer tries extending any atom of that base type.
         """
         # Reset unmatched atom types incase something was destroyed
         self.unmatched_atomtypes = copy.deepcopy(self.atomtypes)
 
-        # If we don't have reference matches, unmatched_atomtypes should be all current atomtypes 
+        # If we don't have reference matches, unmatched_atomtypes should be all current atomtypes
         if atomtype_matches is None:
             return
         else: # store counts for each atom type
@@ -838,7 +838,7 @@ class AtomTypeSamplerElemental(object):
 
     def print_parent_tree(self, roots, start=''):
         """
-        Recursively prints the parent tree. 
+        Recursively prints the parent tree.
 
         Parameters
         ----------
@@ -897,7 +897,7 @@ class AtomTypeSamplerElemental(object):
                 print('')
 
                 # Print parent tree as it is now.
-                roots = self.parents.keys()
+                roots = list(self.parents.keys())
                 # Remove keys from roots if they are children
                 for parent, children in self.parents.items():
                     child_smarts = [smarts for [smarts, name] in children]
@@ -916,7 +916,7 @@ class AtomTypeSamplerElemental(object):
             start = ['Iteration,Index,Smarts,ParNum,ParentParNum,RefType,Matches,Molecules,FractionMatched,Denominator\n']
             f.writelines(start + self.traj)
             f.close()
- 
+
             # Get/print some stats on trajectory
             # Load timeseries
             timeseries = load_trajectory( trajFile )
@@ -944,7 +944,7 @@ class AtomTypeSamplerElemental(object):
                 # Plot scores for individual types
                 for reftype in reftypes:
                     pl.plot( time_fractions[reftype] )
-            
+
             # Axis labels and legend
             pl.xlabel('Iteration')
             pl.ylabel('Fraction of reference type found')
@@ -961,7 +961,7 @@ class AtomTypeSamplerElemental(object):
         fraction_matched_atoms = self.show_type_matches(self.atom_type_matches)
 
         # If verbose print parent tree:
-        if self.verbose: 
+        if self.verbose:
             roots = self.parents.keys()
             # Remove keys from roots if they are children
             for parent, children in self.parents.items():
