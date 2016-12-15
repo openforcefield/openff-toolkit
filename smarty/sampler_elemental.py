@@ -231,6 +231,7 @@ class AtomTypeSamplerElemental(object):
             #store empty list of chlidren for each atomtype
             self.parents[smarts] = []
 
+        self.child_to_parent = self._switch_parent_dict()
         return
 
     def best_match_reference_types(self, atomtypes, molecules):
@@ -625,6 +626,7 @@ class AtomTypeSamplerElemental(object):
             self.atomtypes = proposed_atomtypes
             self.molecules = proposed_molecules
             self.parents = proposed_parents
+            self.child_to_parent = self._switch_parent_dict()
             (proposed_atom_type_matches, proposed_total_atom_type_matches) = self.best_match_reference_types(proposed_atomtypes, proposed_molecules)
             self.atom_type_matches = proposed_atom_type_matches
             self.total_atom_type_matches = proposed_total_atom_type_matches
@@ -784,20 +786,30 @@ class AtomTypeSamplerElemental(object):
 
         index = 1
         output = []
+        ntypes = 0
         for [smarts, typename] in typelist:
+            parent = str(self.child_to_parent[smarts])
             if atomtype_matches is not None:
                 (reference_atomtype, reference_count) = reference_type_info[typename]
                 if reference_atomtype is not None:
                     reference_total = self.reference_atomtypes_atomcount[reference_atomtype]
                     reference_fraction = float(reference_count) / float(reference_total)
                     # Save output
-                    output.append("%i,'%s',%i,%i,'%s',%i,%i,%i,%i" % (index, smarts, 0, 0, reference_atomtype, atom_typecounts[typename], molecule_typecounts[typename], reference_count, reference_total))
+                    output.append("%i,'%s','%s','%s','%s',%i,%i,%i,%i" % (index, smarts, typename, parent, reference_atomtype, atom_typecounts[typename], molecule_typecounts[typename], reference_count, reference_total))
                 else:
-                    output.append("%i,'%s',%i,%i,'%s',%i,%i,%i,%i" % (index, smarts, 0, 0, 'NONE', atom_typecounts[typename], molecule_typecounts[typename], 0, 0))
+                    output.append("%i,'%s','%s','%s','%s',%i,%i,%i,%i" % (index, smarts, typename, parent, 'NONE', atom_typecounts[typename], molecule_typecounts[typename], 0, 0))
 
             else:
-                output.append("%i,'%s',%i,%i,'%s',%i,%i,%i,%i" % (index, smarts, 0, 0, 'NONE', atom_typecounts[typename], molecule_typecounts[typename], 0, 0))
+                output.append("%i,'%s','%s','%s','%s',%i,%i,%i,%i" % (index, smarts, typename, parent, 'NONE', atom_typecounts[typename], molecule_typecounts[typename], 0, 0))
             index += 1
+            ntypes += atom_typecounts[typename]
+
+        nmolecules = len(self.molecules)
+        if atomtype_matches is None:
+            output.append("-1,'total','all','None','all',%i,%i,0,0" % (ntypes, nmolecules))
+        else:
+            output.append("-1,'total','all','None','all',%i,%i,%i,%i" % (ntypes,nmolecules,self.total_atom_type_matches,self.total_atoms))
+
         return output
 
     def get_unfinishedAtomList(self, atom_typecounts, molecule_typecounts, atomtype_matches = None):
@@ -836,6 +848,21 @@ class AtomTypeSamplerElemental(object):
 
         return
 
+    def _switch_parent_dict(self):
+        """
+        Takes the parent dictionary and returns a dictionary in the form
+        {child:parent}
+        """
+        child_to_parent = dict()
+        for smarts in self.parents.keys():
+            child_to_parent[smarts] = None
+
+        for smarts, children in self.parents.items():
+            for [child_smarts, child_typename] in children:
+                child_to_parent[child_smarts] = smarts
+
+        return child_to_parent
+
     def print_parent_tree(self, roots, start=''):
         """
         Recursively prints the parent tree.
@@ -870,7 +897,13 @@ class AtomTypeSamplerElemental(object):
             fraction of total atoms matched successfully at end of run
 
         """
-        self.traj = []
+        if trajFile is not None:
+            # make "trajectory" file
+            if os.path.isfile(trajFile):
+                print("trajectory file already exists, it was overwritten")
+            self.traj = open(trajFile, 'w')
+            self.traj.write('Iteration,Index,Smarts,ParNum,ParentParNum,RefType,Matches,Molecules,FractionMatched,Denominator\n')
+
         for iteration in range(niterations):
             if self.verbose:
                 print("Iteration %d / %d" % (iteration, niterations))
@@ -884,7 +917,7 @@ class AtomTypeSamplerElemental(object):
                 lines = self.save_type_statistics(self.atomtypes, atom_typecounts, molecule_typecounts, atomtype_matches=self.atom_type_matches)
                 # Add lines to trajectory with iteration number:
                 for l in lines:
-                    self.traj.append('%i,%s \n' % (iteration, l))
+                    self.traj.write('%i,%s \n' % (iteration, l))
 
             if self.verbose:
                 if accepted:
@@ -896,25 +929,11 @@ class AtomTypeSamplerElemental(object):
                 self.show_type_statistics(self.atomtypes, atom_typecounts, molecule_typecounts, atomtype_matches=self.atom_type_matches)
                 print('')
 
-                # Print parent tree as it is now.
-                roots = list(self.parents.keys())
-                # Remove keys from roots if they are children
-                for parent, children in self.parents.items():
-                    child_smarts = [smarts for [smarts, name] in children]
-                    for child in child_smarts:
-                        if child in roots:
-                            roots.remove(child)
-
+                roots = [r for r in self.child_to_parent.keys() if self.child_to_parent[r] is None]
                 print("Atom type hierarchy:")
                 self.print_parent_tree(roots, '\t')
 
         if trajFile is not None:
-            # make "trajectory" file
-            if os.path.isfile(trajFile):
-                print("trajectory file already exists, it was overwritten")
-            f = open(trajFile, 'w')
-            start = ['Iteration,Index,Smarts,ParNum,ParentParNum,RefType,Matches,Molecules,FractionMatched,Denominator\n']
-            f.writelines(start + self.traj)
             f.close()
 
             # Get/print some stats on trajectory
