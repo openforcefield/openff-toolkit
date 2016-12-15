@@ -13,6 +13,8 @@ import numpy as np
 from io import StringIO
 from smarty.forcefield_utils import *
 import tempfile
+import parmed
+import os
 
 # This is a test forcefield that is not meant for actual use.
 # It just tests various capabilities.
@@ -527,6 +529,84 @@ def test_change_parameters(verbose=False):
         print("New energy/old energy:", energy, old_energy)
     if np.abs(energy-old_energy)<0.1:
         raise Exception("Error: Parameter modification did not change energy.")
+
+def test_amber_roundtrip():
+    """Save a System (a mixture) to AMBER, read back in, verify yields same energy and force terms."""
+
+    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
+    filename = get_data_filename(os.path.join('systems', 'packmol_boxes', 'cyclohexane_ethanol_0.4_0.6.pdb'))
+    from simtk.openmm.app import PDBFile
+    pdbfile = PDBFile(filename)
+    mol2files = [get_data_filename(os.path.join('systems', 'monomers', 'ethanol.mol2')), get_data_filename(os.path.join('systems', 'monomers', 'cyclohexane.mol2'))]
+
+    flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
+    mols = []
+    mol = oechem.OEMol()
+    for mol2file in mol2files:
+        ifs = oechem.oemolistream(mol2file)
+        ifs.SetFlavor( oechem.OEFormat_MOL2, flavor)
+        mol = oechem.OEGraphMol()
+        while oechem.OEReadMolecule(ifs, mol):
+            oechem.OETriposAtomNames(mol)
+            mols.append(oechem.OEGraphMol(mol))
+
+    # setup system
+    system = forcefield.createSystem( pdbfile.topology, mols)
+
+    # Create ParmEd structure, save to AMBER
+    a, prmtop = tempfile.mkstemp(suffix='.prmtop')
+    a, crd = tempfile.mkstemp(suffix='.crd')
+    save_system_to_amber( pdbfile.topology, system, pdbfile.positions, prmtop, crd)
+
+    # Read back in and cross-check energies
+    parm = parmed.load_file(prmtop, crd)
+    ambersys = parm.createSystem(nonbondedMethod= app.NoCutoff, constraints = None, implicitSolvent = None)
+    groups0, groups1, energy0, energy1 = compare_system_energies( pdbfile.topology, pdbfile.topology, ambersys, system, pdbfile.positions)
+
+    # Remove temp files
+    os.remove(prmtop)
+    os.remove(crd)
+
+
+def test_gromacs_roundtrip():
+    """Save a System (a mixture) to GROMACS, read back in, verify yields same energy and force terms."""
+
+    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
+    filename = get_data_filename(os.path.join('systems', 'packmol_boxes', 'cyclohexane_ethanol_0.4_0.6.pdb'))
+    from simtk.openmm.app import PDBFile
+    pdbfile = PDBFile(filename)
+    mol2files = [get_data_filename(os.path.join('systems', 'monomers', 'ethanol.mol2')), get_data_filename(os.path.join('systems', 'monomers', 'cyclohexane.mol2'))]
+
+    flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
+    mols = []
+    mol = oechem.OEMol()
+    for mol2file in mol2files:
+        ifs = oechem.oemolistream(mol2file)
+        ifs.SetFlavor( oechem.OEFormat_MOL2, flavor)
+        mol = oechem.OEGraphMol()
+        while oechem.OEReadMolecule(ifs, mol):
+            oechem.OETriposAtomNames(mol)
+            mols.append(oechem.OEGraphMol(mol))
+
+    # setup system
+    system = forcefield.createSystem( pdbfile.topology, mols)
+
+    # Create ParmEd structure, save to AMBER
+    a, topfile = tempfile.mkstemp(suffix='.top')
+    a, grofile = tempfile.mkstemp(suffix='.gro')
+    save_system_to_gromacs( pdbfile.topology, system, pdbfile.positions, topfile, grofile)
+
+    # Read back in and cross-check energies
+    top = parmed.load_file(topfile)
+    gro = parmed.load_file(grofile)
+    gromacssys = top.createSystem(nonbondedMethod= app.NoCutoff, constraints = None, implicitSolvent = None)
+
+    groups0, groups1, energy0, energy1 = compare_system_energies( pdbfile.topology, pdbfile.topology, gromacssys, system, pdbfile.positions)
+
+    # Remove temp files
+    os.remove(topfile)
+    os.remove(grofile)
+
 
 
 if __name__ == '__main__':
