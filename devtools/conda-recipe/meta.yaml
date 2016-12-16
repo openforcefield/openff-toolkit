@@ -21,7 +21,6 @@ requirements:
     - lxml
     - openmoltools >=0.7.3
     - parmed
-    - os
 
 test:
   requires:
