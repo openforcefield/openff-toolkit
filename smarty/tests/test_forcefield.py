@@ -561,7 +561,7 @@ def test_amber_roundtrip():
     # Read back in and cross-check energies
     parm = parmed.load_file(prmtop, crd)
     ambersys = parm.createSystem(nonbondedMethod= app.NoCutoff, constraints = None, implicitSolvent = None)
-    groups0, groups1, energy0, energy1 = compare_system_energies( pdbfile.topology, pdbfile.topology, ambersys, system, pdbfile.positions)
+    groups0, groups1, energy0, energy1 = compare_system_energies( pdbfile.topology, pdbfile.topology, ambersys, system, pdbfile.positions, verbose = False)
 
     # Remove temp files
     os.remove(prmtop)
@@ -601,7 +601,7 @@ def test_gromacs_roundtrip():
     gro = parmed.load_file(grofile)
     gromacssys = top.createSystem(nonbondedMethod= app.NoCutoff, constraints = None, implicitSolvent = None)
 
-    groups0, groups1, energy0, energy1 = compare_system_energies( pdbfile.topology, pdbfile.topology, gromacssys, system, pdbfile.positions)
+    groups0, groups1, energy0, energy1 = compare_system_energies( pdbfile.topology, pdbfile.topology, gromacssys, system, pdbfile.positions, verbose = False)
 
     # Remove temp files
     os.remove(topfile)
