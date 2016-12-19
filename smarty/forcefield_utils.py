@@ -364,6 +364,50 @@ def getMolParamIDToAtomIndex( oemol, ff):
 
     return param_usage
 
+def merge_system( topology0, topology1, system0, system1, label0="AMBER system", label1 = "SMIRFF system", verbose = True):
+    """Merge two given OpenMM systems. Returns the merged OpenMM System.
+
+    Parameters
+    ----------
+    topology0 : OpenMM Topology
+        Topology of first system (i.e. a protein)
+    topology1 : OpenMM Topology
+        Topology of second system (i.e. a ligand)
+    system0 : OpenMM System
+        First system for comparison (usually from AMBER)
+    system1 : OpenMM System
+        Second system for comparison (usually from SMIRFF)
+    label0 (optional) : str
+        String labeling system0 for output. Default, "AMBER system"
+    label1 (optional) : str
+        String labeling system1 for output. Default, "SMIRFF system"
+    verbose (optional) : bool
+        Print out info on energies, True/False (default True)
+
+    Returns
+    ----------
+    topology : OpenMM Topology
+    system : OpenMM System
+    positions: ???
+    """
+
+    #Load OpenMM Systems to ParmEd Structures
+    structure0 = parmed.openmm.load_topology( topology0, system0 )
+    structure1 = parmed.openmm.load_topology( topology1, system1 )
+    from simtk.openmm.app import Topology
+    #Merge parameterized Structure
+    structure = structure0 + structure1
+    topology = structure.topology
+
+    #Generate merged OpenMM system
+    system = structure.createSystem()
+
+    if verbose:
+        print("Generating ParmEd Structures...\n \t{}: {}\n \t{}: {}\n".format(label0, structure0, label1, structure1))
+        print("Merged ParmEd Structure: {}".format( structure ))
+
+    return topology, system
+
 
 def save_system_to_amber( topology, system, positions, prmtop, crd ):
     """Save an OpenMM System, with provided topology and positions, to AMBER prmtop and coordinate files.
