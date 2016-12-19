@@ -33,6 +33,7 @@ Install other conda dependencies:
 ```
 conda install --yes numpy networkx
 conda install --yes -c omnia openmoltools
+conda install --yes -c omnia parmed
 ```
 
 NOTE: We'll add a better way to install these dependencies via `conda` soon.
