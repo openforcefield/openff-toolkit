@@ -194,7 +194,7 @@ class _Topology(Topology):
     """Augmented Topology object which adds:
 
     self._reference_molecules is a list of OEMol for the reference molecules
-    self._reference_to_topology_atom_mappings[reference_molecule] is a list of atom indices mapping a reference molecule atom index to the topology atom index
+    self._reference_to_topology_atom_mappings[reference_molecule] is a list of dicts, where each dict maps the atom indices of atoms in the reference molecule onto an equivalent atom index for a topology atom.
     self._bondorders is a list of floating point bond orders for the bonds in the Topology.
     self._bondorders_by_atomindices is a dict of floating point bond orders for the bonds in the Topology, keyed by indices of the atoms involved.
 
@@ -1160,7 +1160,6 @@ def _check_for_missing_valence_terms(name, topology, assigned_terms, topological
     def render_atoms(atomsets):
         msg = ""
         for atomset in atomsets:
-            print(atomset)
             msg += '%30s :' % str(atomset)
             try:
                 for atom_index in atomset:
@@ -1820,7 +1819,7 @@ class NonbondedGenerator(object):
                      Ewald:openmm.NonbondedForce.Ewald,
                      PME:openmm.NonbondedForce.PME}
         if nonbondedMethod not in methodMap:
-            raise ValueError('Illegal nonbonded method for NonbondedForce')
+            raise ValueError('Illegal nonbonded method for NonbondedForce; method given was %s' % nonbondedMethod)
         force = openmm.NonbondedForce()
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)
@@ -1858,11 +1857,23 @@ class NonbondedGenerator(object):
         # Set the partial charges based on reference molecules.
         for reference_molecule in topology._reference_molecules:
             atom_mappings = topology._reference_to_topology_atom_mappings[reference_molecule]
-            for atom_mapping in atom_mappings:
-                for (atom, atom_index) in zip(reference_molecule.GetAtoms(), atom_mapping):
-                    [charge, sigma, epsilon] = force.getParticleParameters(atom_index)
-                    force.setParticleParameters(atom_index, atom.GetPartialCharge(), sigma, epsilon)
+            # Retrieve charges from reference molecule, stored by atom index
+            charge_by_atom = {}
+            for atom in reference_molecule.GetAtoms():
+                charge_by_atom[atom.GetIdx()] = atom.GetPartialCharge()
 
+            # Loop over mappings and copy NB parameters from reference molecule
+            # to other instances of the molecule
+            for atom_mapping in atom_mappings:
+                for (atom_index, map_atom_index) in atom_mapping.items():
+                    # Retrieve NB params for reference atom (charge not set yet)
+                    [charge, sigma, epsilon] = force.getParticleParameters(atom_index)
+                    # Look up the charge on the atom in the reference molecule
+                    charge = charge_by_atom[atom_index]*unit.elementary_charge
+
+                    # Set parameters for equivalent atom in other instance of
+                    # this molecule
+                    force.setParticleParameters(map_atom_index, charge, sigma, epsilon)
         # TODO: Should we check that there are no missing charges?
 
     def postprocessSystem(self, system, topology, verbose=False, **args):
