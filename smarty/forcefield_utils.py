@@ -374,9 +374,9 @@ def merge_system( topology0, topology1, system0, system1, positions0, positions1
     topology1 : OpenMM Topology
         Topology of second system (i.e. a ligand)
     system0 : OpenMM System
-        First system for comparison (usually from AMBER)
+        First system for merging (usually from AMBER)
     system1 : OpenMM System
-        Second system for comparison (usually from SMIRFF)
+        Second system for merging (usually from SMIRFF)
     positions0 : simtk.unit.Quantity wrapped
         Positions to use for energy evaluation comparison
     positions1 (optional) : simtk.unit.Quantity wrapped (optional)
@@ -386,7 +386,7 @@ def merge_system( topology0, topology1, system0, system1, positions0, positions1
     label1 (optional) : str
         String labeling system1 for output. Default, "SMIRFF system"
     verbose (optional) : bool
-        Print out info on energies, True/False (default True)
+        Print out info on topologies, True/False (default True)
 
     Returns
     ----------
@@ -404,9 +404,11 @@ def merge_system( topology0, topology1, system0, system1, positions0, positions1
     topology = structure.topology
 
     #Concatenate positions arrays
-    positions0 = np.array(positions0._value)
-    positions1 = np.array(positions1._value)
-    coordinates = np.vstack((positions0,positions1))
+    positions_unit = unit.angstroms
+    positions0_dimensionless = np.array( positions0 / positions_unit )
+    positions1_dimensionless = np.array( positions1 / positions_unit )
+
+    coordinates = np.vstack((positions0_dimensionless,positions1_dimensionless))
     natoms = len(coordinates)
     positions = np.zeros([natoms,3], np.float32)
     for index in range(natoms):
@@ -414,7 +416,7 @@ def merge_system( topology0, topology1, system0, system1, positions0, positions1
         positions[index,0] = x
         positions[index,1] = y
         positions[index,2] = z
-    positions = unit.Quantity(positions, unit.angstroms)
+    positions = unit.Quantity(positions, positions_unit)
 
     #Generate merged OpenMM system
     system = structure.createSystem()
