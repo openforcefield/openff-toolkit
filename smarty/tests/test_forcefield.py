@@ -678,7 +678,7 @@ def test_merge_system():
     prmtop = get_data_filename( prefix+'.prmtop')
     incrd = get_data_filename( prefix+'.inpcrd')
 
-    topology0, system0, postions0 = create_system_from_amber( prmtop, incrd )
+    topology0, system0, positions0 = create_system_from_amber( prmtop, incrd )
 
     from openeye import oechem
     # Load simple OEMol
@@ -693,7 +693,7 @@ def test_merge_system():
     forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
     topology1, system1, positions1 = create_system_from_molecule(forcefield, mol)
 
-    merge_system( topology0, topology1, system0, system1 )
+    merge_system( topology0, topology1, system0, system1, positions0, positions1, verbose=True )
 
 
 
