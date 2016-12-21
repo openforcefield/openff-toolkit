@@ -670,7 +670,33 @@ def test_component_combination():
         if sum(abscharges)==0:
             raise Exception('Error: Residue %s in cyclohexane-ethanol test system has a charge of zero, which is incorrect.' % resnr)
 
+def test_merge_system():
+    """Test merging of a system created from AMBER and another created from SMIRFF."""
+
+    #Create System from AMBER
+    prefix = os.path.join('systems', 'amber', 'cyclohexane_ethanol_0.4_0.6')
+    prmtop = get_data_filename( prefix+'.prmtop')
+    incrd = get_data_filename( prefix+'.inpcrd')
+
+    topology0, system0, positions0 = create_system_from_amber( prmtop, incrd )
+
+    from openeye import oechem
+    # Load simple OEMol
+    ifs = oechem.oemolistream(get_data_filename('molecules/AlkEthOH_c100.mol2'))
+    mol = oechem.OEMol()
+    flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
+    ifs.SetFlavor( oechem.OEFormat_MOL2, flavor)
+    oechem.OEReadMolecule(ifs, mol )
+    oechem.OETriposAtomNames(mol)
+
+    # Load forcefield file
+    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
+    topology1, system1, positions1 = create_system_from_molecule(forcefield, mol)
+
+    merge_system( topology0, topology1, system0, system1, positions0, positions1, verbose=True )
+
+
 
 if __name__ == '__main__':
     #test_smirks()
-    test_create_system_boxes(verbose=True)
+    test_merge_system()

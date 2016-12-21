@@ -364,6 +364,69 @@ def getMolParamIDToAtomIndex( oemol, ff):
 
     return param_usage
 
+def merge_system( topology0, topology1, system0, system1, positions0, positions1, label0="AMBER system", label1 = "SMIRFF system", verbose = True):
+    """Merge two given OpenMM systems. Returns the merged OpenMM System.
+
+    Parameters
+    ----------
+    topology0 : OpenMM Topology
+        Topology of first system (i.e. a protein)
+    topology1 : OpenMM Topology
+        Topology of second system (i.e. a ligand)
+    system0 : OpenMM System
+        First system for merging (usually from AMBER)
+    system1 : OpenMM System
+        Second system for merging (usually from SMIRFF)
+    positions0 : simtk.unit.Quantity wrapped
+        Positions to use for energy evaluation comparison
+    positions1 (optional) : simtk.unit.Quantity wrapped (optional)
+        Positions to use for second OpenMM system
+    label0 (optional) : str
+        String labeling system0 for output. Default, "AMBER system"
+    label1 (optional) : str
+        String labeling system1 for output. Default, "SMIRFF system"
+    verbose (optional) : bool
+        Print out info on topologies, True/False (default True)
+
+    Returns
+    ----------
+    topology : OpenMM Topology
+    system : OpenMM System
+    positions: unit.Quantity position array
+    """
+
+    #Load OpenMM Systems to ParmEd Structures
+    structure0 = parmed.openmm.load_topology( topology0, system0 )
+    structure1 = parmed.openmm.load_topology( topology1, system1 )
+
+    #Merge parameterized Structure
+    structure = structure0 + structure1
+    topology = structure.topology
+
+    #Concatenate positions arrays
+    positions_unit = unit.angstroms
+    positions0_dimensionless = np.array( positions0 / positions_unit )
+    positions1_dimensionless = np.array( positions1 / positions_unit )
+
+    coordinates = np.vstack((positions0_dimensionless,positions1_dimensionless))
+    natoms = len(coordinates)
+    positions = np.zeros([natoms,3], np.float32)
+    for index in range(natoms):
+        (x,y,z) = coordinates[index]
+        positions[index,0] = x
+        positions[index,1] = y
+        positions[index,2] = z
+    positions = unit.Quantity(positions, positions_unit)
+
+    #Generate merged OpenMM system
+    system = structure.createSystem()
+
+    if verbose:
+        print("Generating ParmEd Structures...\n \t{}: {}\n \t{}: {}\n".format(label0, structure0, label1, structure1))
+        print("Merged ParmEd Structure: {}".format( structure ))
+
+    return topology, system, positions
+
 
 def save_system_to_amber( topology, system, positions, prmtop, crd ):
     """Save an OpenMM System, with provided topology and positions, to AMBER prmtop and coordinate files.
