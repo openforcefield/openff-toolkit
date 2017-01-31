@@ -65,3 +65,4 @@ target/
 # ignore files from tests
 smarty/tests/test_smirky.pdf
 smarty/tests/test_smirky.log
+smarty/tests/test_smirky.csv
