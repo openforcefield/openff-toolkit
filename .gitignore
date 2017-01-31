@@ -61,3 +61,7 @@ target/
 
 # Ipython notebook checkpoints
 *.ipynb_checkpoints/
+
+# ignore files from tests
+smarty/tests/test_smirky.pdf
+smarty/tests/test_smirky.log
