@@ -22,6 +22,7 @@ requirements:
     - openmoltools >=0.7.3
     - parmed
     - pylab
+    - pandas
 
 test:
   requires:
