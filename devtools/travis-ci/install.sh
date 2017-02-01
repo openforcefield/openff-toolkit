@@ -21,7 +21,7 @@ conda install --yes conda-build jinja2 anaconda-client pip
 conda install --yes -c omnia openmoltools
 conda install --yes -c omnia parmed
 conda install --yes -c matplotlib
-conda install --yes -c pandas
+conda install --yes -c pandas pandas=0.19.0rc1
 
 # Restore original directory
 popd
