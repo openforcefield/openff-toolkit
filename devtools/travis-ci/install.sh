@@ -17,9 +17,11 @@ bash $MINICONDA -b -p $MINICONDA_HOME
 export PIP_ARGS="-U"
 export PATH=$MINICONDA_HOME/bin:$PATH
 conda update --yes conda
-conda install --yes conda-build jinja2 anaconda-client pip matplotlib pandas=0.17.0
+conda install --yes conda-build jinja2 anaconda-client pip 
 conda install --yes -c omnia openmoltools
 conda install --yes -c omnia parmed
+conda install --yes -c matplotlib 
+conda install --yes -c pandas=0.17.0
 
 # Restore original directory
 popd
