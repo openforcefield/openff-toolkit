@@ -13,6 +13,7 @@ requirements:
   build:
     - python
     - setuptools
+    - pandas
 
   run:
     - python
@@ -21,7 +22,8 @@ requirements:
     - lxml
     - openmoltools >=0.7.3
     - parmed
-    - pylab
+    - matplotlib
+    - pandas
 
 test:
   requires:
