@@ -62,7 +62,7 @@ target/
 # Ipython notebook checkpoints
 *.ipynb_checkpoints/
 
-# the log and csv files created when testing smirky
-smarty/tests/*.csv
-smarty/tests/*.log
+# ignore files created during tests
 smarty/tests/*.pdf
+smarty/tests/*.log
+smarty/tests/*.csv
