@@ -934,7 +934,7 @@ class AtomTypeSamplerElemental(object):
                 self.print_parent_tree(roots, '\t')
 
         if trajFile is not None:
-            f.close()
+            self.traj.close()
 
             # Get/print some stats on trajectory
             # Load timeseries
