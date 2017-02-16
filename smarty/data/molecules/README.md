@@ -18,6 +18,8 @@ including a brieg description when possible
         - tripose - tripos atomtyped
 * `zinc-subset-*.mol2.gz`: set of 7505 molecules
         - `*` = parm@frosst atomtypes or tripos atomtypes
+* `PhEthOH_pFrosstTyped.oeb`: 5082 molecules with phenyl groups in addition to alkanes, ethers, and alcohols
+* `PhEthOH_pFrosstTyped_first200.oeb`: first 200 in PhEthOH set used for testing smarty and smirky
 * `DrugBank_atyped.oeb`: parm@Frosst atomtypes molecules from the [DrugBank Release Version 5.0.1](http://www.drugbank.ca/releases/latest)
 * `MiniDrugBank_atyped.oeb`: A subset of `DrugBank_atyped.oeb`. All the atomtypes and smirff99Frosst parametertypes in the full set are here with a minimum number of molecules. 
 
