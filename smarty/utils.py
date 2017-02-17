@@ -159,9 +159,10 @@ def read_molecules(filename, verbose=True):
 
     molecule = OECreateOEGraphMol()
     while OEReadMolecule(input_molstream, molecule):
-        # Get molecule name.
-        name = OEGetSDData(molecule, 'name').strip()
-        molecule.SetTitle(name)
+        # If molecule has no title, try getting SD 'name' tag
+        if molecule.GetTitle() == '':
+            name = OEGetSDData(molecule, 'name').strip()
+            molecule.SetTitle(name)
         # Append to list.
         molecule_copy = OEMol(molecule)
         molecules.append(molecule_copy)
