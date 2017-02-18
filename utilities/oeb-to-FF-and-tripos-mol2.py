@@ -18,7 +18,7 @@ def main(argv=sys.argv):
     ifs = oechem.oemolistream()
     if not ifs.open(argv[1]+'.oeb'):
         oechem.OEThrow.Fatal("Unable to open %s for reading" % argv[1]+'.oeb' )
-    
+
     ofsff = oechem.oemolostream()
     ofsff.SetFlavor( oechem.OEFormat_MOL2, oechem.OEOFlavor_MOL2_Forcefield )
     if not ofsff.open(argv[1]+'_ff.mol2'):
