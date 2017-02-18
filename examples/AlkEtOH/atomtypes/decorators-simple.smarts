@@ -1,5 +1,0 @@
-% aromatic/aliphatic
-a              aromatic
-A              aliphatic
-% halogens
-$(*~[$halogen]) halogen-adjacent
