@@ -2,6 +2,7 @@
 # Date: Tue Aug 25 2016
 # Author: C. I. Bayly, OpenEye Scientific Software
 #
+# Updated: Many times during Fall 2016 - Winter 2017, most recently Fri. March 3, 2017
 
 NONBON
 [*:1]   4.  0.25  smirff dummy_generic  a really big soft atom
