@@ -5,7 +5,7 @@ cd $HOME
 # Install Miniconda
 MINICONDA=Miniconda2-latest-Linux-x86_64.sh
 MINICONDA_HOME=$HOME/miniconda
-MINICONDA_MD5=$(curl -s http://repo.continuum.io/miniconda/ | grep -A3 $MINICONDA | sed -n '4p' | sed -n 's/ *<td>\(.*\)<\/td> */\1/p')
+MINICONDA_MD5=$(curl -s https://repo.continuum.io/miniconda/ | grep -A3 $MINICONDA | sed -n '4p' | sed -n 's/ *<td>\(.*\)<\/td> */\1/p')
 wget -q http://repo.continuum.io/miniconda/$MINICONDA
 if [[ $MINICONDA_MD5 != $(md5sum $MINICONDA | cut -d ' ' -f 1) ]]; then
     echo "Miniconda MD5 mismatch"
@@ -17,8 +17,11 @@ bash $MINICONDA -b -p $MINICONDA_HOME
 export PIP_ARGS="-U"
 export PATH=$MINICONDA_HOME/bin:$PATH
 conda update --yes conda
-conda install --yes conda-build jinja2 anaconda-client pip
+conda install --yes conda-build jinja2 anaconda-client pip 
 conda install --yes -c omnia openmoltools
+conda install --yes -c omnia parmed
+conda install --yes -c matplotlib 
+conda install --yes pandas
 
 # Restore original directory
 popd

@@ -39,7 +39,7 @@ import openeye.oequacpac
 from openeye import oechem
 
 from simtk import openmm, unit
-
+import parmed
 
 #=============================================================================
 # UTILITY FUNCTIONS
@@ -111,7 +111,7 @@ def create_system_from_molecule(forcefield, mol, verbose=False):
 
     return topology, system, positions
 
-def compare_system_energies( topology0, topology1, system0, system1, positions0, positions1=None, label0="AMBER system", label1 = "SMIRFF system", verbose = True, skip_assert = False ):
+def compare_system_energies( topology0, topology1, system0, system1, positions0, positions1=None, label0="AMBER system", label1 = "SMIRFF system", verbose = True, skip_assert = False, skip_improper = False ):
     """
     Given two OpenMM systems, check that their energies and component-wise
     energies are consistent, and return these. The same positions will be used
@@ -140,6 +140,8 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
         Print out info on energies, True/False (default True)
     skip_assert (optional) : bool
         Skip assertion that energies must be equal within specified tolerance. Default False.
+    skip_improper (optional) : bool
+        Skip detailed checking of force terms on impropers (helpful here if comparing with AMBER force fields using different definitions of impropers.) Default False.
 
     Returns
     ----------
@@ -203,7 +205,7 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
     syscheck = system_checker.SystemChecker( simulation0, simulation1 )
     if not skip_assert:
         # Only check force terms if we want to make sure energies are identical
-        syscheck.check_force_parameters()
+        syscheck.check_force_parameters(skipImpropers = skip_improper)
     groups0, groups1 = syscheck.check_energy_groups(skip_assert = skip_assert)
     energy0, energy1 = syscheck.check_energies(skip_assert = skip_assert)
     if verbose:
@@ -220,7 +222,7 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
     return groups0, groups1, energy0, energy1
 
 
-def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True, skip_assert=False ):
+def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True, skip_assert=False, skip_improper = False):
     """
     Compare energies for OpenMM Systems/topologies created from an AMBER prmtop
     and crd versus from a SMIRFF forcefield file and OEMol which should
@@ -241,6 +243,9 @@ def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True, ski
         Print out info. Default: True
     skip_assert : bool
         Skip assertion that energies must be equal within tolerance. Default, False.
+    skip_improper (optional) : bool
+        Skip detailed checking of force terms on impropers (helpful here if comparing with AMBER force fields using different definitions of impropers.) Default False.
+
 
     Returns
     --------
@@ -262,7 +267,7 @@ def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True, ski
     smirfftop, smirffsys, smirffpos = create_system_from_molecule(forcefield, mol, verbose = verbose)
 
     groups0, groups1, energy0, energy1 = compare_system_energies( ambertop,
-               smirfftop, ambersys, smirffsys, amberpos, verbose = verbose, skip_assert = skip_assert )
+               smirfftop, ambersys, smirffsys, amberpos, verbose = verbose, skip_assert = skip_assert, skip_improper = skip_improper )
 
     return groups0, groups1, energy0, energy1
 
@@ -358,3 +363,112 @@ def getMolParamIDToAtomIndex( oemol, ff):
                     param_usage[pid][1].append( atom_indices )
 
     return param_usage
+
+def merge_system( topology0, topology1, system0, system1, positions0, positions1, label0="AMBER system", label1 = "SMIRFF system", verbose = True):
+    """Merge two given OpenMM systems. Returns the merged OpenMM System.
+
+    Parameters
+    ----------
+    topology0 : OpenMM Topology
+        Topology of first system (i.e. a protein)
+    topology1 : OpenMM Topology
+        Topology of second system (i.e. a ligand)
+    system0 : OpenMM System
+        First system for merging (usually from AMBER)
+    system1 : OpenMM System
+        Second system for merging (usually from SMIRFF)
+    positions0 : simtk.unit.Quantity wrapped
+        Positions to use for energy evaluation comparison
+    positions1 (optional) : simtk.unit.Quantity wrapped (optional)
+        Positions to use for second OpenMM system
+    label0 (optional) : str
+        String labeling system0 for output. Default, "AMBER system"
+    label1 (optional) : str
+        String labeling system1 for output. Default, "SMIRFF system"
+    verbose (optional) : bool
+        Print out info on topologies, True/False (default True)
+
+    Returns
+    ----------
+    topology : OpenMM Topology
+    system : OpenMM System
+    positions: unit.Quantity position array
+    """
+
+    #Load OpenMM Systems to ParmEd Structures
+    structure0 = parmed.openmm.load_topology( topology0, system0 )
+    structure1 = parmed.openmm.load_topology( topology1, system1 )
+
+    #Merge parameterized Structure
+    structure = structure0 + structure1
+    topology = structure.topology
+
+    #Concatenate positions arrays
+    positions_unit = unit.angstroms
+    positions0_dimensionless = np.array( positions0 / positions_unit )
+    positions1_dimensionless = np.array( positions1 / positions_unit )
+
+    coordinates = np.vstack((positions0_dimensionless,positions1_dimensionless))
+    natoms = len(coordinates)
+    positions = np.zeros([natoms,3], np.float32)
+    for index in range(natoms):
+        (x,y,z) = coordinates[index]
+        positions[index,0] = x
+        positions[index,1] = y
+        positions[index,2] = z
+    positions = unit.Quantity(positions, positions_unit)
+
+    #Generate merged OpenMM system
+    system = structure.createSystem()
+
+    if verbose:
+        print("Generating ParmEd Structures...\n \t{}: {}\n \t{}: {}\n".format(label0, structure0, label1, structure1))
+        print("Merged ParmEd Structure: {}".format( structure ))
+
+    return topology, system, positions
+
+
+def save_system_to_amber( topology, system, positions, prmtop, crd ):
+    """Save an OpenMM System, with provided topology and positions, to AMBER prmtop and coordinate files.
+
+    Parameters
+    ----------
+    topology : OpenMM Topology
+        Topology of the system to be saved, perhaps as loaded from a PDB file or similar.
+    system : OpenMM System
+        Parameterized System to be saved, containing components represented by Topology
+    positions : unit.Quantity position array
+        Position array containing positions of atoms in topology/system
+    prmtop : filename
+        AMBER parameter file name to write
+    crd : filename
+        AMBER coordinate file name (ASCII crd format) to write
+
+    """
+
+    structure = parmed.openmm.topsystem.load_topology( topology, system, positions )
+    structure.save( prmtop, overwrite = True, format="amber" )
+    structure.save( crd, format='rst7', overwrite = True)
+
+
+def save_system_to_gromacs( topology, system, positions, top, gro ):
+    """Save an OpenMM System, with provided topology and positions, to AMBER prmtop and coordinate files.
+
+    Parameters
+    ----------
+    topology : OpenMM Topology
+        Topology of the system to be saved, perhaps as loaded from a PDB file or similar.
+    system : OpenMM System
+        Parameterized System to be saved, containing components represented by Topology
+    positions : unit.Quantity position array
+        Position array containing positions of atoms in topology/system
+    top : filename
+        GROMACS topology file name to write
+    gro : filename
+        GROMACS coordinate file name (.gro format) to write
+
+    """
+
+    structure = parmed.openmm.topsystem.load_topology( topology, system, positions )
+    structure.save( top, overwrite = True, format="gromacs")
+    structure.save( gro, overwrite = True, format="gro")
