@@ -11,7 +11,16 @@ Molecule sets currently included in this directory are listed below, although wh
 * `DrugBank_updated_tripos.mol2.gz` - created by calling `python filter_molecule_sets.py --input DrugBank_atyped.oeb --output DrugBank_updated_tripos.mol2.gz --repeats False --warnings False --heavy 100 --SMIRKS remove_smirks_simple.smarts --metals 0 --atoms elements_exclude.txt --type gg,Se1 --flavor tripos`
 * `DrugBank_updated_ff.mol2.gz` - created by calling `python filter_molecule_sets.py --input DrugBank_atyped.oeb --output DrugBank_updated_ff.mol2.gz --repeats False --warnings False --heavy 100 --SMIRKS remove_smirks_simple.smarts --metals 0 --atoms elements_exclude.txt --type gg,Se1 --flavor ff`
 
-The main script for this directory is `filter_molecule_sets.py` 
+
+An ipython notebook was created to more carefully filter the molecule sets, 
+`pickMolecules`
+It illustrates how we maximized the number of atomtypes or force field parameters
+in a minimal number of molecules. 
+It results in the `MiniDrugBank_atyped` molecule set. 
+This is the final set added to /smarty/data/molecules/
+
+
+ The main python script for this directory is `filter_molecule_sets.py` 
 
 ```
 Usage:             Given a set of molecules filter for
@@ -66,3 +75,5 @@ Options:
 
 elements_exclude.txt - File with element numbers that you do not want in your
 set of molecules.
+
+
