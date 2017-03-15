@@ -122,7 +122,7 @@ First, to eliminate ambiguity, we treat impropers as a [trefoil](https://upload.
 
 Generalized-Born surface area (GBSA) implicit solvent parameters can also be specified in a manner similar to `NonbondedForce`:
 ```XML
- <GBSAForce model="OBC1" radius_units="nanometers" sasa_penalty="5" sasa_penalty_units="cal/mol/angstroms**2">
+ <GBSAForce model="OBC1" radius_units="nanometers" sasa_penalty="5" sasa_penalty_units="cal/mol/angstroms**2" solvent_dielectric="78.5" solute_dielectric="1">
    <Atom smirks="[#1:1]" radius="0.12" scale="0.85"/>
    <Atom smirks="[#1:1]~[#6]" radius="0.13" scale="0.85"/>
    <Atom smirks="[#1:1]~[#8]" radius="0.08" scale="0.85"/>
@@ -138,13 +138,14 @@ Generalized-Born surface area (GBSA) implicit solvent parameters can also be spe
  </GBSAForce>
 ```
 In the `<GBSAForce/>` tag, `model` selects from one of the [GBSA models available in OpenMM's `simtk.openmm.app`](http://docs.openmm.org/7.1.0/userguide/application.html#amber-implicit-solvent), currently one of
-* `HCT`: [Hawkins-Cramer-Truhlar](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#hawkins1995) (corresponding to `igb=1` in AMBER)
-* `OBC1`: [Onufriev-Bashford-Case](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#onufriev2004) using the GB(OBC)I parameters (corresponding to `igb=2` in AMBER)
-* `OBC2`: [Onufriev-Bashford-Case](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#onufriev2004) using the GB(OBC)II parameters (corresponding to `igb=5` in AMBER)
-* `GBn`: [GBn solvation model](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#mongan2007) (corresponding to `igb=7` in AMBER)
-* `GBn2`: [GBn2 solvation model](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#nguyen2013) (corresponding to `igb=8` in AMBER)
+* `HCT`: [Hawkins-Cramer-Truhlar](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#hawkins1995) (corresponding to `igb=1` in AMBER): requires `[radius, scale]`
+* `OBC1`: [Onufriev-Bashford-Case](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#onufriev2004) using the GB(OBC)I parameters (corresponding to `igb=2` in AMBER): requires `[radius, scale]`
+* `OBC2`: [Onufriev-Bashford-Case](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#onufriev2004) using the GB(OBC)II parameters (corresponding to `igb=5` in AMBER): requires `[radius, scale]`
+* `GBn`: [GBn solvation model](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#mongan2007) (corresponding to `igb=7` in AMBER): requires `[radius, scale, alpha, beta, gamma]`
+* `GBn2`: [GBn2 solvation model](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#nguyen2013) (corresponding to `igb=8` in AMBER): requires `[radius, scale, alpha, beta, gamma]`
 
 The `sasa_penalty` attribute specifies the solvent-accessible surface area penalty ("SA" part of GBSA), with units optionally specified by `sasa_penalty_units`.
+The attributes `solvent_dielectric` and `solute_dielectric` specify solvent and solute dielectric constants.
 In this example, `radius` and `scale` are parameters of the `OBC1` GB model supported by OpenMM, but other models also have additional parameters (such as `alpha`, `beta`, `gamma` for GBn/GBn2).
 Units are optionally specified in the `<GBSAForce/>` tag.
 

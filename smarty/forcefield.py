@@ -2048,122 +2048,122 @@ parsers["BondChargeCorrections"] = BondChargeCorrectionGenerator.parseElement
 class GBSAForceGenerator(object):
     """A GBSAForceGenerator constructs GBSA forces."""
 
+    # TODO: Uncomment other models once they are supported.
+    GBSA_expected_parameters = {
+        'HCT' : ['radius', 'scale'],
+        'OBC1' : ['radius', 'scale'],
+        'OBC2' : ['radius', 'scale'],
+        #'GBn' : ['radius', 'scale', 'alpha', 'beta', 'gamma'],
+        #'GBn2' : ['radius', 'scale', 'alpha', 'beta', 'gamma'],
+    }
+
     class GBSAType(object):
         """A SMIRFF GBSA type."""
         def __init__(self, node, parent):
             """Create a GBSAType"""
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.pid = _extractQuantity(node, parent, 'id')
-            if 'fractional_bondorder' in parent.attrib:
-                self.fractional_bondorder = parent.attrib['fractional_bondorder']
-            else:
-                self.fractional_bondorder = None
 
-            # Make sure we don't have BOTH rmin_half AND sigma
-            try:
-                a = _extractQuantity(node, parent, 'sigma')
-                a = _extractQuantity(node, parent, 'rmin_half')
-                raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the .ffxml file.")
-            except:
-                pass
+            # Store model parameters.
+            expected_parameters = self.GBSA_expected_parameters[self.model]
+            provided_parameters = list()
+            missing_parameters = list()
+            for name in expected_parameters:
+                if name in node.attrib:
+                    provided_parameters.append(name)
+                    value = _extractQuantity(node, parent, name)
+                    setattr(self, name, value)
+                else:
+                    missing_parameters.append(name)
+            if len(missing_parameters) > 0:
+                msg  = 'GBSAForce: missing per-atom parameters for tag %s' % str(node)
+                msg += 'model "%s" requires specification of per-atom parameters %s\n' % (model, str(expected_parameters))
+                msg += 'provided parameters : %s\n' % str(provided_parameters)
+                msg += 'missing parameters: %s' % str(missing_parameters)
+                raise Exception(msg)
 
-            #Handle sigma
-            try:
-                self.sigma = _extractQuantity(node, parent, 'sigma')
-            #Handle rmin_half, AMBER-style
-            except:
-                rmin_half = _extractQuantity(node, parent, 'rmin_half', unit_name='sigma_unit')
-                self.sigma = 2.*rmin_half/(2.**(1./6.))
-
-            self.epsilon = _extractQuantity(node, parent, 'radius')
-            self.epsilon = _extractQuantity(node, parent, 'scale')
-
-    def __init__(self, forcefield, coulomb14scale, lj14scale):
+    def __init__(self, forcefield, model, sasa_penalty, solvent_dielectric, solute_dielectric):
         self.ff = forcefield
-        self.coulomb14scale = coulomb14scale
-        self.lj14scale = lj14scale
-        self._ljtypes = list()
+        self._gbsa_types = list()
+
+        valid_methods = self.GBSA_expected_parameters.keys()
+        if not model in valid_models:
+            raise Exception('Specified GBSAForce model "%s" not one of valid methods: %s' % (model, valid_model))
+        self.model = model
+        self.sasa_penalty = sasa_penalty
+        self.solvent_dielectric = solvent_dielectric
+        self.solute_dielectric = solute_dielectric
 
     def registerAtom(self, node, parent):
-        ljtype = NonbondedGenerator.LennardJonesType(node, parent)
-        self._ljtypes.append(ljtype)
+        gbsa_type = NonbondedGenerator.GBSAType(node, parent)
+        self._gbsa_types.append(gbsa_type)
 
     @staticmethod
     def parseElement(element, ff):
-        existing = [f for f in ff._forces if isinstance(f, NonbondedGenerator)]
+        model = element.attrib['model']
+        solvent_dielectric = selement.attric['solventDielectric']
+        solute_dielectric = selement.attric['soluteDielectric']
+        sasa_penalty = _extractQuantity(element, element, 'sasa_penalty')
+
+        existing = [f for f in ff._forces if isinstance(f, GBSAForceGenerator)]
         if len(existing) == 0:
-            generator = NonbondedGenerator(ff, float(element.attrib['coulomb14scale']), float(element.attrib['lj14scale']))
+            generator = GBSAForceGenerator(ff, model=model, sasa_penalty=sasa_penalty, solvent_dielectric=solvent_dielectric, solute_dielectric=solute_dielectric)
             ff.registerGenerator(generator)
         else:
-            # Multiple <NonbondedForce> tags were found, probably in different files.  Simply add more types to the existing one.
+            # TODO: Handle case where two different GBSA models are specified by different `<GBSAForce> blocks`
+            # Multiple <GBSAForce> tags were found, probably in different files.  Simply add more types to the existing one.
             generator = existing[0]
-            if abs(generator.coulomb14scale - float(element.attrib['coulomb14scale'])) > NonbondedGenerator.SCALETOL or \
-                    abs(generator.lj14scale - float(element.attrib['lj14scale'])) > NonbondedGenerator.SCALETOL:
-                raise ValueError('Found multiple NonbondedForce tags with different 1-4 scales')
+            if (generator.model != model):
+                raise ValueError('Found multiple GBSAForce tags with different "model" specifications')
+            if (generator.sasa_penalty != sasa_penalty):
+                raise ValueError('Found multiple GBSAForce tags with different "sasa_penalty" specifications')
+            if (generator.solute_dielectric != solute_dielectric) or (generator.solvent_dielectric != solvent_dielectric):
+                raise ValueError('Found multiple GBSAForce tags with different solvent or solute dielectrics')
         for atom in element.findall('Atom'):
             generator.registerAtom(atom, element)
 
-    def createForce(self, system, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=0.9, verbose=False, **args):
-        methodMap = {NoCutoff:openmm.NonbondedForce.NoCutoff,
-                     CutoffNonPeriodic:openmm.NonbondedForce.CutoffNonPeriodic,
-                     CutoffPeriodic:openmm.NonbondedForce.CutoffPeriodic,
-                     Ewald:openmm.NonbondedForce.Ewald,
-                     PME:openmm.NonbondedForce.PME}
-        if nonbondedMethod not in methodMap:
-            raise ValueError('Illegal nonbonded method for NonbondedForce')
-        force = openmm.NonbondedForce()
-        force.setNonbondedMethod(methodMap[nonbondedMethod])
-        force.setCutoffDistance(nonbondedCutoff)
-        if 'ewaldErrorTolerance' in args:
-            force.setEwaldErrorTolerance(args['ewaldErrorTolerance'])
-        if 'useDispersionCorrection' in args:
-            force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
+    def createForce(self, system, topology, verbose=False, **args):
+        from smarty import gbsaforces
+        force_class = getattr(gbsaforces, self.model)
+        force = force_class(solventDielectric=self.solvent_dielectric, soluteDielectric=self.solute_dielectric, SA=self.sasa_penalty)
         system.addForce(force)
 
-        # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
+        # Iterate over all defined GBSA types, allowing later matches to override earlier ones.
         atoms = ValenceDict()
-        for ljtype in self._ljtypes:
-            for atom_indices in topology.unrollSMIRKSMatches(ljtype.smirks, aromaticity_model = self.ff._aromaticity_model):
+        for gbsa_type in self._gbsa_types:
+            for atom_indices in topology.unrollSMIRKSMatches(gbsa_type.smirks, aromaticity_model = self.ff._aromaticity_model):
                 atoms[atom_indices] = ljtype
 
         if verbose:
             print('')
-            print('NonbondedForceGenerator:')
+            print('GBSAForceGenerator:')
             print('')
-            for ljtype in self._ljtypes:
-                print('%64s : %8d matches' % (ljtype.smirks, len(topology.unrollSMIRKSMatches(ljtype.smirks, aromaticity_model = self.ff._aromaticity_model))))
+            for gbsa_type in self._gbsa_types:
+                print('%64s : %8d matches' % (gbsa_type.smirks, len(topology.unrollSMIRKSMatches(gbsa_type.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
-        # Add all Lennard-Jones terms to the system.
-        # Create all particles.
+        # Add all GBSA terms to the system.
+        expected_parameters = self.GBSA_expected_parameters[self.model]
+        # Create all particle parmeters.
+        nparams = 1 + len(expected_parameters) # charge + GBSA parameters
+        params = [ 0 for i in range(nparams) ]
         for atom in topology.atoms():
-            force.addParticle(0.0, 1.0, 0.0)
+            force.addParticle(params)
         # Set the particle Lennard-Jones terms.
-        for (atom_indices, ljtype) in atoms.items():
-            force.setParticleParameters(atom_indices[0], 0.0, ljtype.sigma, ljtype.epsilon)
+        for (atom_indices, gbsa_type) in atoms.items():
+            params = [0] + [ getattr(gbsa_type, name) for name in expected_parameters ]
+            force.setParticleParameters(atom_indices[0], params)
 
         # Set the partial charges based on reference molecules.
         for reference_molecule in topology._reference_molecules:
             atom_mappings = topology._reference_to_topology_atom_mappings[reference_molecule]
             for atom_mapping in atom_mappings:
                 for (atom, atom_index) in zip(reference_molecule.GetAtoms(), atom_mapping):
-                    [charge, sigma, epsilon] = force.getParticleParameters(atom_index)
-                    force.setParticleParameters(atom_index, atom.GetPartialCharge(), sigma, epsilon)
+                    params = force.getParticleParameters(atom_index)
+                    params[0] = atom.GetPartialCharge() * unit.elementary_charge
+                    force.setParticleParameters(atom_index, params)
 
     def postprocessSystem(self, system, topology, verbose=False, **args):
-        atoms = [ atom for atom in topology.atoms() ]
-        natoms = len(atoms)
-
-        # Create exceptions based on bonds.
-        bondIndices = []
-        for (atom1, atom2) in topology.bonds():
-            if (atom1.index < 0) or (atom2.index < 0) or (atom1.index >= natoms) or (atom2.index >= natoms):
-                raise Exception('atom indices out of bounds')
-            bondIndices.append((atom1.index, atom2.index))
-
-        # Create the exceptions.
-        nonbonded = [f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)][0]
-        nonbonded.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)
+        pass
 
     def labelForce(self, oemol, verbose=False, **kwargs):
         """Take a provided OEMol and parse HarmonicBondForce terms for this molecule.
@@ -2180,24 +2180,23 @@ class GBSAForceGenerator(object):
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atoms = ValenceDict()
-        for ljtype in self._ljtypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, ljtype.smirks, aromaticity_model = self.ff._aromaticity_model):
-                atoms[atom_indices] = ljtype
+        for gbsa_type in self._ljtypes:
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, gbsa_type.smirks, aromaticity_model = self.ff._aromaticity_model):
+                atoms[atom_indices] = gbsa_type
 
         if verbose:
             print('')
             print('GBSAForceGenerator:')
             print('')
             for ljtype in self._ljtypes:
-                print('%64s : %8d matches' % (ljtype.smirks, len(getSMIRKSMatches_OEMol(oemol, ljtype.smirks, aromaticity_model = self.ff._aromaticity_model))))
+                print('%64s : %8d matches' % (gbsa_type.smirks, len(getSMIRKSMatches_OEMol(oemol, gbsa_type.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
-        # Add all Lennard-Jones terms to the output list
+        # Add all GBSA terms to the output list
         force_terms = []
-        for (atom_indices, ljtype) in atoms.items():
-            force_terms.append( ([atom_indices[0]], ljtype.pid, ljtype.smirks) )
+        for (atom_indices, gbsa_type) in atoms.items():
+            force_terms.append( ([atom_indices[0]], gbsa_type.pid, gbsa_type.smirks) )
 
         return force_terms
-
 
 parsers["GBSAForce"] = GBSAForceGenerator.parseElement
