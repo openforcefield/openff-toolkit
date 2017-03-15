@@ -46,7 +46,7 @@ def strip_unit(value, unit):
         return value
     return value.value_in_unit(unit)
 
-def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, kappa, offset):
+def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA_model, cutoff, kappa, offset):
     """Add the energy terms to the CustomGBForce.
 
     These are identical for all the GB models.
@@ -64,10 +64,10 @@ def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, k
     else:
         force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*charge^2/B"+params,
                 CustomGBForce.SingleParticle)
-    if SA=='ACE':
+    if SA_model=='ACE':
         force.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6; radius=or+offset"+params, CustomGBForce.SingleParticle)
-    elif SA is not None:
-        raise ValueError('Unknown surface area method: '+SA)
+    elif SA_model is not None:
+        raise ValueError('Unknown surface area method: '+SA_model)
     if cutoff is None:
         if kappa > 0:
             force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*charge1*charge2/f;"
@@ -148,8 +148,8 @@ class HCT(CustomAmberGBForceBase):
         Dielectric constant for the solvent
     soluteDielectric: float
         Dielectric constant for the solute
-    SA: string or None
-        Surface area model to use
+    SA_model: string or None
+        Surface area model to use ['ACE', None]
     cutoff: float or Quantity or None
         Cutoff distance to use. If float, value is in nm. If ``None``,
         then no cutoffs are used.
@@ -159,7 +159,7 @@ class HCT(CustomAmberGBForceBase):
         is given. A value of zero corresponds to zero salt concentration.
 
     """
-    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
+    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA_model=None,
                  cutoff=None, kappa=0.0):
         CustomAmberGBForceBase.__init__(self)
 
@@ -173,7 +173,7 @@ class HCT(CustomAmberGBForceBase):
                               CustomGBForce.ParticlePairNoExclusions)
 
         self.addComputedValue("B", "1/(1/or-I)", CustomGBForce.SingleParticle)
-        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
+        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA_model, cutoff, kappa, 0.009)
 
 class OBC1(CustomAmberGBForceBase):
     """This class is equivalent to Amber ``igb=2``
@@ -186,8 +186,8 @@ class OBC1(CustomAmberGBForceBase):
         Dielectric constant for the solvent
     soluteDielectric: float
         Dielectric constant for the solute
-    SA: string or None
-        Surface area model to use
+    SA_model: string or None
+        Surface area model to use ['ACE', None]
     cutoff: float or Quantity or None
         Cutoff distance to use. If float, value is in nm. If ``None``,
         then no cutoffs are used.
@@ -197,7 +197,7 @@ class OBC1(CustomAmberGBForceBase):
         is given. A value of zero corresponds to zero salt concentration.
 
     """
-    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
+    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA_model=None,
                  cutoff=None, kappa=0.0):
 
         CustomAmberGBForceBase.__init__(self)
@@ -212,9 +212,9 @@ class OBC1(CustomAmberGBForceBase):
 
         self.addComputedValue("B", "1/(1/radius-tanh(0.8*psi+2.909125*psi^3)/radius);"
                                    "psi=I*radius; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
-        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
+        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA_model, cutoff, kappa, 0.009)
 
-class OBC2(GBSAOBC1Force):
+class OBC2(OBC1):
     """This class is equivalent to Amber ``igb=5``
 
     The list of parameters to ``addParticle`` is: ``[charge, radius, scale]``.
@@ -225,8 +225,8 @@ class OBC2(GBSAOBC1Force):
         Dielectric constant for the solvent
     soluteDielectric: float
         Dielectric constant for the solute
-    SA: string or None
-        Surface area model to use
+    SA_model: string or None
+        Surface area model to use ['ACE', None]
     cutoff: float or Quantity or None
         Cutoff distance to use. If float, value is in nm. If ``None``,
         then no cutoffs are used.
@@ -236,7 +236,7 @@ class OBC2(GBSAOBC1Force):
         is given. A value of zero corresponds to zero salt concentration.
 
     """
-    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
+    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA_model=None,
                  cutoff=None, kappa=0.0):
 
         CustomAmberGBForceBase.__init__(self)
@@ -251,4 +251,4 @@ class OBC2(GBSAOBC1Force):
 
         self.addComputedValue("B", "1/(1/or-tanh(psi-0.8*psi^2+4.85*psi^3)/radius);"
                                      "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
-        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
+        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA_model, cutoff, kappa, 0.009)

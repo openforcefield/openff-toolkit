@@ -59,7 +59,7 @@
    <Atom smirks="[#8X2+0$(*-[#1]):1]" rmin_half="1.7210" epsilon="0.2104" id="n0011" parent_id="n0009"/> <!-- OH from frcmod.Frosst_AlkEthOH -->
 </NonbondedForce>
 <!-- GBSA parameters for testing; added by JDC on 18 Oct 2016 -->
-<GBSAForce model="OBC1" radius_units="nanometers" sasa_penalty="5" sasa_penalty_units="cal/mol/angstroms**2" solvent_dielectric="78.5" solute_dielectric="1">
+<GBSAForce model="OBC1" radius_units="nanometers" sa_model="ACE" sasa_penalty="5" sasa_penalty_units="cal/mol/angstroms**2" solvent_dielectric="78.5" solute_dielectric="1">
    <Atom smirks="[#1:1]" radius="0.12" scale="0.85"/>
    <Atom smirks="[#1:1]~[#6]" radius="0.13" scale="0.85"/>
    <Atom smirks="[#1:1]~[#8]" radius="0.08" scale="0.85"/>

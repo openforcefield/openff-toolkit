@@ -2049,12 +2049,17 @@ class GBSAForceGenerator(object):
     """A GBSAForceGenerator constructs GBSA forces."""
 
     # TODO: Uncomment other models once they are supported.
-    GBSA_expected_parameters = {
+    GB_expected_parameters = {
         'HCT' : ['radius', 'scale'],
         'OBC1' : ['radius', 'scale'],
         'OBC2' : ['radius', 'scale'],
         #'GBn' : ['radius', 'scale', 'alpha', 'beta', 'gamma'],
         #'GBn2' : ['radius', 'scale', 'alpha', 'beta', 'gamma'],
+    }
+
+    SA_expected_parameters = {
+        'ACE' : ['sasa_penalty'],
+        None : [],
     }
 
     class GBSAType(object):
@@ -2064,7 +2069,8 @@ class GBSAForceGenerator(object):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
 
             # Store model parameters.
-            expected_parameters = self.GBSA_expected_parameters[self.model]
+            model = parent.attrib['model']
+            expected_parameters = GBSAForceGenerator.GB_expected_parameters[model]
             provided_parameters = list()
             missing_parameters = list()
             for name in expected_parameters:
@@ -2081,32 +2087,41 @@ class GBSAForceGenerator(object):
                 msg += 'missing parameters: %s' % str(missing_parameters)
                 raise Exception(msg)
 
-    def __init__(self, forcefield, model, sasa_penalty, solvent_dielectric, solute_dielectric):
+    def __init__(self, forcefield, model, SA_model, sasa_penalty, solvent_dielectric, solute_dielectric):
         self.ff = forcefield
         self._gbsa_types = list()
 
-        valid_methods = self.GBSA_expected_parameters.keys()
-        if not model in valid_models:
-            raise Exception('Specified GBSAForce model "%s" not one of valid methods: %s' % (model, valid_model))
+        valid_GB_models = GBSAForceGenerator.GB_expected_parameters.keys()
+        if not model in valid_GB_models:
+            raise Exception('Specified GBSAForce model "%s" not one of valid models: %s' % (model, valid_GB_models))
         self.model = model
+
+        valid_SA_models = GBSAForceGenerator.SA_expected_parameters.keys()
+        if not SA_model in valid_SA_models:
+            raise Exception('Specified GBSAForce SA_model "%s" not one of valid models: %s' % (SA_model, valid_SA_models))
+        self.SA_model = SA_model
         self.sasa_penalty = sasa_penalty
         self.solvent_dielectric = solvent_dielectric
         self.solute_dielectric = solute_dielectric
 
     def registerAtom(self, node, parent):
-        gbsa_type = NonbondedGenerator.GBSAType(node, parent)
+        gbsa_type = GBSAForceGenerator.GBSAType(node, parent)
         self._gbsa_types.append(gbsa_type)
 
     @staticmethod
     def parseElement(element, ff):
         model = element.attrib['model']
-        solvent_dielectric = selement.attric['solventDielectric']
-        solute_dielectric = selement.attric['soluteDielectric']
-        sasa_penalty = _extractQuantity(element, element, 'sasa_penalty')
+        solvent_dielectric = _extractQuantity(element, element, 'solvent_dielectric')
+        solute_dielectric = _extractQuantity(element, element, 'solute_dielectric')
+        SA_model = None
+        sasa_penalty = None
+        if 'SA_model' in element.attrib:
+            SA_model = element.attrib['SA_model']
+            sasa_penalty = _extractQuantity(element, element, 'sasa_penalty')
 
         existing = [f for f in ff._forces if isinstance(f, GBSAForceGenerator)]
         if len(existing) == 0:
-            generator = GBSAForceGenerator(ff, model=model, sasa_penalty=sasa_penalty, solvent_dielectric=solvent_dielectric, solute_dielectric=solute_dielectric)
+            generator = GBSAForceGenerator(ff, model=model, SA_model=SA_model, sasa_penalty=sasa_penalty, solvent_dielectric=solvent_dielectric, solute_dielectric=solute_dielectric)
             ff.registerGenerator(generator)
         else:
             # TODO: Handle case where two different GBSA models are specified by different `<GBSAForce> blocks`
@@ -2124,14 +2139,14 @@ class GBSAForceGenerator(object):
     def createForce(self, system, topology, verbose=False, **args):
         from smarty import gbsaforces
         force_class = getattr(gbsaforces, self.model)
-        force = force_class(solventDielectric=self.solvent_dielectric, soluteDielectric=self.solute_dielectric, SA=self.sasa_penalty)
+        force = force_class(solventDielectric=self.solvent_dielectric, soluteDielectric=self.solute_dielectric, SA_model=self.SA_model)
         system.addForce(force)
 
         # Iterate over all defined GBSA types, allowing later matches to override earlier ones.
         atoms = ValenceDict()
         for gbsa_type in self._gbsa_types:
             for atom_indices in topology.unrollSMIRKSMatches(gbsa_type.smirks, aromaticity_model = self.ff._aromaticity_model):
-                atoms[atom_indices] = ljtype
+                atoms[atom_indices] = gbsa_type
 
         if verbose:
             print('')
@@ -2142,15 +2157,17 @@ class GBSAForceGenerator(object):
             print('')
 
         # Add all GBSA terms to the system.
-        expected_parameters = self.GBSA_expected_parameters[self.model]
+        expected_parameters = GBSAForceGenerator.GB_expected_parameters[self.model]
         # Create all particle parmeters.
         nparams = 1 + len(expected_parameters) # charge + GBSA parameters
-        params = [ 0 for i in range(nparams) ]
+        params = [ 0.0 for i in range(nparams) ]
         for atom in topology.atoms():
             force.addParticle(params)
         # Set the particle Lennard-Jones terms.
+        natoms = sum([1 for atom in topology.atoms()])
         for (atom_indices, gbsa_type) in atoms.items():
             params = [0] + [ getattr(gbsa_type, name) for name in expected_parameters ]
+            print('atom is %d / %d: %s' % (atom_indices[0], natoms, params))
             force.setParticleParameters(atom_indices[0], params)
 
         # Set the partial charges based on reference molecules.
