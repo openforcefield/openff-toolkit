@@ -2048,6 +2048,13 @@ parsers["BondChargeCorrections"] = BondChargeCorrectionGenerator.parseElement
 class GBSAForceGenerator(object):
     """A GBSAForceGenerator constructs GBSA forces."""
 
+    # Global parameters for surface area (SA) component of model
+    SA_expected_parameters = {
+        'ACE' : ['energy_scale', 'solvent_radius'],
+        None : [],
+    }
+
+    # Per-particle parameters for generalized Born (GB) model
     # TODO: Uncomment other models once they are supported.
     GB_expected_parameters = {
         'HCT' : ['radius', 'scale'],
@@ -2055,11 +2062,6 @@ class GBSAForceGenerator(object):
         'OBC2' : ['radius', 'scale'],
         #'GBn' : ['radius', 'scale', 'alpha', 'beta', 'gamma'],
         #'GBn2' : ['radius', 'scale', 'alpha', 'beta', 'gamma'],
-    }
-
-    SA_expected_parameters = {
-        'ACE' : ['sasa_penalty'],
-        None : [],
     }
 
     class GBSAType(object):
@@ -2087,22 +2089,28 @@ class GBSAForceGenerator(object):
                 msg += 'missing parameters: %s' % str(missing_parameters)
                 raise Exception(msg)
 
-    def __init__(self, forcefield, model, SA_model, sasa_penalty, solvent_dielectric, solute_dielectric):
+    def __init__(self, forcefield, element):
         self.ff = forcefield
         self._gbsa_types = list()
 
+        # Initialize GB model
+        gb_model = element.attrib['gb_model']
         valid_GB_models = GBSAForceGenerator.GB_expected_parameters.keys()
-        if not model in valid_GB_models:
-            raise Exception('Specified GBSAForce model "%s" not one of valid models: %s' % (model, valid_GB_models))
-        self.model = model
+        if not gb_model in valid_GB_models:
+            raise Exception('Specified GBSAForce model "%s" not one of valid models: %s' % (gb_model, valid_GB_models))
+        self.gb_model = gb_model
+        self.solvent_dielectric = _extractQuantity(element, element, 'solvent_dielectric')
+        self.solute_dielectric = _extractQuantity(element, element, 'solute_dielectric')
 
+        # Initialize SA model
+        sa_model = element.attrib['sa_model']
         valid_SA_models = GBSAForceGenerator.SA_expected_parameters.keys()
-        if not SA_model in valid_SA_models:
-            raise Exception('Specified GBSAForce SA_model "%s" not one of valid models: %s' % (SA_model, valid_SA_models))
-        self.SA_model = SA_model
-        self.sasa_penalty = sasa_penalty
-        self.solvent_dielectric = solvent_dielectric
-        self.solute_dielectric = solute_dielectric
+        if not sa_model in valid_SA_models:
+            raise Exception('Specified GBSAForce SA_model "%s" not one of valid models: %s' % (sa_model, valid_SA_models))
+        self.sa_model = sa_model
+        if sa_model == 'ACE':
+            self.energy_scale = _extractQuantity(element, element, 'energy_scale')
+            self.solvent_radius = _extractQuantity(element, element, 'solvent_radius')
 
     def registerAtom(self, node, parent):
         gbsa_type = GBSAForceGenerator.GBSAType(node, parent)
@@ -2110,6 +2118,7 @@ class GBSAForceGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
+        # TODO: Generalize check for model compatibility
         model = element.attrib['model']
         solvent_dielectric = _extractQuantity(element, element, 'solvent_dielectric')
         solute_dielectric = _extractQuantity(element, element, 'solute_dielectric')
