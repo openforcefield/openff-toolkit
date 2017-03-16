@@ -430,6 +430,9 @@ DIHE
 [*:1]~[#15:2]-[#6:3]-[*:4]    1  0.000    0.0     1  Frosst X_-P_-CT-X  dummy
 [*:1]~[#15:2]-[#6X3:3]~[*:4]  1  1.000    0.0     1  Frosst X_-P_-CA-X  dummy
 #
+# O-O bonds 
+[*:1]-[#8:2]-[#8:3]-[*:4]    1    0.4         0.000           1   rough estimate from GAFF2 by CCB 3/16/2017  
+[*:1]-[#8:2]-[#8H1:3]-[*:4]   1    1.0         0.000           2  rough estimate from GAFF2 by CCB 3/16/2017 
 # O-N bonds
 [*:1]~[#8X2:2]-[#7:3]~[*:4]          1  0.000    0.0     1  Frosst generic
 [*:1]-[#8X2r5:2]-;@[#7X3r5:3]~[*:4]   1  0.000    0.0     1  Frosst generic het5 endocyclic
