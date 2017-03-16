@@ -109,7 +109,7 @@ The averaging approach would make it easier to avoid this problem without requir
 ### IMPROPER TORSIONS
 
 Impropers are applied in the same manner as proper torsions, via `PeriodicTorsionForce`, but with the `Improper` tag, as in:
-```XML:
+```XML
 <Improper smirks="[*:1]~[#6X3:2](=[#7X2,#7X3+1:3])~[#7:4]" k1="10.5" periodicity1="2" phase1="180."/>
 ...
 ```
@@ -137,6 +137,7 @@ Generalized-Born surface area (GBSA) implicit solvent parameters can also be spe
    <Atom smirks="[#17:1]" radius="0.17" scale="0.8"/>
  </GBSAForce>
 ```
+#### GB model
 In the `<GBSAForce/>` tag, `model` selects from one of the [GBSA models available in OpenMM's `simtk.openmm.app`](http://docs.openmm.org/7.1.0/userguide/application.html#amber-implicit-solvent), currently one of
 * `HCT`: [Hawkins-Cramer-Truhlar](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#hawkins1995) (corresponding to `igb=1` in AMBER): requires `[radius, scale]`
 * `OBC1`: [Onufriev-Bashford-Case](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#onufriev2004) using the GB(OBC)I parameters (corresponding to `igb=2` in AMBER): requires `[radius, scale]`
@@ -144,11 +145,14 @@ In the `<GBSAForce/>` tag, `model` selects from one of the [GBSA models availabl
 * `GBn`: [GBn solvation model](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#mongan2007) (corresponding to `igb=7` in AMBER): requires `[radius, scale, alpha, beta, gamma]`
 * `GBn2`: [GBn2 solvation model](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#nguyen2013) (corresponding to `igb=8` in AMBER): requires `[radius, scale, alpha, beta, gamma]`
 
+The attributes `solvent_dielectric` and `solute_dielectric` specify solvent and solute dielectric constants used by the GB model.
+In this example, `radius` and `scale` are per-particle parameters of the `OBC1` GB model supported by OpenMM, but other models also have additional parameters (such as `alpha`, `beta`, `gamma` for GBn/GBn2).
+Units are for these per-particle parameters (such as `radius_units`) optionally specified in the `<GBSAForce/>` tag.
+
+#### SA model
+
 The `sa_model` attribute specifies the solvent-accessible surface area model ("SA" part of GBSA), which can currently only be `ACE` or omitted (in which case the SA term is omitted).
 The `sasa_penalty` attribute specifies the associated model parameter (a surface area penalty) for the `ACE` model, with units optionally specified by `sasa_penalty_units`.
-The attributes `solvent_dielectric` and `solute_dielectric` specify solvent and solute dielectric constants.
-In this example, `radius` and `scale` are parameters of the `OBC1` GB model supported by OpenMM, but other models also have additional parameters (such as `alpha`, `beta`, `gamma` for GBn/GBn2).
-Units are optionally specified in the `<GBSAForce/>` tag.
 
 ### SPECIAL SECTIONS
 
