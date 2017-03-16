@@ -151,8 +151,12 @@ Units are for these per-particle parameters (such as `radius_units`) optionally 
 
 #### SA model
 
-The `sa_model` attribute specifies the solvent-accessible surface area model ("SA" part of GBSA), which can currently only be `ACE` or omitted (in which case the SA term is omitted).
-The `sasa_penalty` attribute specifies the associated model parameter (a surface area penalty) for the `ACE` model, with units optionally specified by `sasa_penalty_units`.
+The `sa_model` attribute specifies the solvent-accessible surface area model ("SA" part of GBSA) if one should be included; if omitted, no SA term is included.
+
+Currently, only the [analytical continuum electrostatics (ACE) model](http://docs.openmm.org/7.1.0/userguide/theory.html#surface-area-term), designated `ACE`, can be specified.
+The `ACE` model permits two additional parameters to be specified:
+* The `sa_energy_scale` attribute specifies the energy scale E_SA for the `ACE` model (defaults to `2.25936` kJ/mol/nm**2), with units optionally specified by `sasa_penalty_units`.
+* The `sa_solvent_radius` attribute specifies the solvent radius, which defaults to `0.14` nm.
 
 ### SPECIAL SECTIONS
 

@@ -37,7 +37,7 @@ import copy
 from simtk.openmm.app import element as E
 from simtk.openmm import CustomGBForce, Discrete2DFunction
 import simtk.unit as u
-from math import floor
+from math import floor, pi
 
 
 def strip_unit(value, unit):
@@ -46,7 +46,7 @@ def strip_unit(value, unit):
         return value
     return value.value_in_unit(unit)
 
-def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA_model, cutoff, kappa, offset):
+def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA_model, cutoff, kappa, offset, E_SA=None, solvent_radius=None):
     """Add the energy terms to the CustomGBForce.
 
     These are identical for all the GB models.
@@ -65,7 +65,12 @@ def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA_model, cut
         force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*charge^2/B"+params,
                 CustomGBForce.SingleParticle)
     if SA_model=='ACE':
-        force.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6; radius=or+offset"+params, CustomGBForce.SingleParticle)
+        if E_SA is None:
+            E_SA = 2.25936 * u.kilojoules_per_mole / u.nanometers**2
+        if solvent_radius is None:
+            solvent_radius = 0.14 * u.nanometers
+        params += '; pi=%.16g; E_SA=%.16g; solvent_radius=%.16g' % (pi, E_SA, solvent_radius)
+        force.addEnergyTerm("E_SA*4*pi*(radius+solvent_radius)^2*(radius/B)^6; radius=or+offset"+params, CustomGBForce.SingleParticle)
     elif SA_model is not None:
         raise ValueError('Unknown surface area method: '+SA_model)
     if cutoff is None:
