@@ -169,6 +169,8 @@ ANGL
 # note this has to follow the trivalent Nsp3 specification
 [*:1]~[#7X3$(*~[#6X3,#6X2,#7X2+0]):2]~[*:3]  70.  120.    Frosst generic trivalent conjugated Nsp2
 [#1:1]-[#7X3$(*~[#6X3,#6X2,#7X2+0]):2]-[*:3] 50.  120.    Frosst generic trivalent conjugated Nsp2
+# divalent nitrogen
+[*:1]~[#7X2:2]~[*:3]     70   180.    Frosst guess for Nsp 
 [*:1]~[#7X2+0:2]~[*:3]   70.  120.    Frosst generic divalent conjugated Nsp2
 [#1:1]-[#7X2+0:2]~[*:3]  50.  120.    Frosst generic divalent conjugated Nsp2
 # nitro group
