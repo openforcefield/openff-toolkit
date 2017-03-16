@@ -126,6 +126,7 @@ BOND
 [#15:1]~[#9:2]        300.0    1.639   Frosst F_-P calc: B3LYP/6-311G(d,p) Jan 13 2006
 [#15:1]=[#16X1:2]     230.0  1.98    Frosst P-SD RHF/6-31G(d,p) Sept 9 2009 Force constant Taken from OS-P_-> JCC,7,(1986),230
 # bonds to halogen
+# C-halogen
 [#6:1]-[#9:2]                  386.0  1.359   parm99 Csp3 (more generic 3/16/17)
 [#6X4:1]-[#9:2]                  367.0  1.380   parm99
 [#6:1]-[#17:2]                 193.0  1.727   parm99 Csp3 (more generic 3/16/17)
@@ -134,6 +135,11 @@ BOND
 [#6X4:1]-[#35:2]                 159.0  1.944   parm99 Br-CT
 [#6:1]-[#53:2]                  171.0  2.075   parm99 I_-CA Csp3 (more generic 3/16/17)
 [#6X4:1]-[#53:2]                  148.0  2.166   parm99 I_-CT
+# N-halogen
+[#7:1]-[#9:2]    170.   1.4 rough estimate from GAFF2 by CCB 3/16/2017
+[#7:1]-[#17:2]    150.   1.8 rough estimate from GAFF2 by CCB 3/16/2017 
+[#7:1]-[#35:2]   110.   2.0 rough estimate from GAFF2 by CCB 3/16/2017 
+[#7:1]-[#53:2]    80.    2.1 rough estimate from GAFF2 by CCB 3/16/2017 
 # bonds to hydrogen
 [#6X4:1]-[#1:2]                 340.0  1.090   parm99 aliphatic CH
 [#6X3:1]-[#1:2]                 367.0  1.080   parm99 vinylic CH
