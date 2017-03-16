@@ -80,7 +80,7 @@ BOND
 [#6X2:1]-[#6:2]       350.0    1.440   Frosst generic
 [#6X2:1]-[#6X4:2]     350.0    1.468   Frosst C2-CT RHF/6-31G(d,p) opt estimated force constant
 [#6X2:1]=[#6X3:2]     549.0    1.35    smirff generic allene is a regular double bond
-[#6X2:1]#[#7X1:2]     350.0    1.188   Frosst C2-NL from C2-C2
+[#6X2:1]#[#7:2]     350.0    1.188   Frosst C2-NL from C2-C2
 [#6X2:1]#[#6X2:2]     350.0    1.188   Frosst C2-C2 RHF/6-31G(d,p) opt estimated force constant
 [#6X2:1]-[#8X2:2]     350.     1.326   smirff generic estimated from trivalentC-Odivalent
 [#6X2:1]-[#7:2]       427.0    1.38    smirff generic estimated from trivalentC-Ntrivalent
