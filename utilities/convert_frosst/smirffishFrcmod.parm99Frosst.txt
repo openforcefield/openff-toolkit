@@ -140,6 +140,11 @@ BOND
 [#7:1]-[#17:2]    150.   1.8 rough estimate from GAFF2 by CCB 3/16/2017 
 [#7:1]-[#35:2]   110.   2.0 rough estimate from GAFF2 by CCB 3/16/2017 
 [#7:1]-[#53:2]    80.    2.1 rough estimate from GAFF2 by CCB 3/16/2017 
+# P-halogen
+[#15:1]-[#9:2]     440.   1.6   rough estimate from GAFF2 by CCB 3/16/2017
+[#15:1]-[#17:2]    170.   2.0    rough estimate from GAFF2 by CCB 3/16/2017
+[#15:1]-[#35:2]    135.   2.2    rough estimate from GAFF2 by CCB 3/16/2017
+[#15:1]-[#53:2]    70.    2.6    rough estimate from GAFF2 by CCB 3/16/2017
 # bonds to hydrogen
 [#6X4:1]-[#1:2]                 340.0  1.090   parm99 aliphatic CH
 [#6X3:1]-[#1:2]                 367.0  1.080   parm99 vinylic CH
