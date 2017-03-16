@@ -57,7 +57,7 @@ The SMIRFF force field format is documented [here](https://github.com/open-force
 
 ## SMARTY atom type sampler
 
-Check out the example in `examples/parm@frosst/`:
+Check out the example in `examples/smarty/`:
 
 Atom types are specified by SMARTS matches with corresponding parameter names.
 
@@ -82,15 +82,42 @@ We also specify a number of starting types, "initial types" which can be the sam
 We have two sampler options for SMARTY which differ in how focused the sampling is. The original sampler samples over all elements/patterns at once, whereas the elemental sampler focuses on sampling only one specific element. The principle of sampling is the same; the only change is in which elements we sample over. To sample only over a single element, such as oxygen, for example, we use the elemental sampler to focus on that element.
 
 
-### Original sampler
+### Generating New SMARTS patterns 
 
-Command line example: `smarty --samplertype original --basetypes=examples/AlkEtOH/atomtypes/basetypes.smarts --initialtypes=examples/AlkEtOH/atomtypes/basetypes.smarts --decorators=examples/AlkEtOH/atomtypes/new-decorators.smarts  --molecules=examples/AlkEtOH/molecules/test_filt1_tripos.mol2 --reference=examples/AlkEtOH/molecules/test_filt1_ff.mol2 --iterations 100 --temperature=0`
+There are two options for how to change SMARTS patterns when creating new atom types.
+One is using combinatorial decorators (default) and the other is using simple decorators (`--decoratorbehavior=simple-decorators`). However, it should be noted that we have found the simple decorators insufficient at distinguishing atomtypes even for the most simple sets of molecules. 
 
-The original sampler is the default option. Here, smarty samples SMARTS patterns covering all elements contained in the set.
+**Combinatorial Decorators**
 
-Atom type creation moves has two options, one is using simple decorators (`--decoratorbehavior=simple-decorators`) and the other is combinatorial decorators (default).
+The first option (combinatorial-decorator) attempt to create the new atomtype adding an Alpha or Beta substituent to a basetype or an atomtype.
+This decorators are different from the simple-decorator option and do not have atom types or bond information on it.
+The new decorators are listed in `AlkEtOH/atomtypes/new-decorators.smarts` and `parm@frosst/atomtypes/new-decorators.smarts`:
 
- The first option (simple-decorators) attempt to split off a new atom type from a parent atom type by combining (via an "and" operator, `&`) the parent atom type with a "decorator".
+ ```
+ % total connectivity
+ X1             connections-1
+ X2             connections-2
+ X3             connections-3
+ X4             connections-4
+ % total-h-count
+ H0             total-h-count-0
+ H1             total-h-count-1
+ H2             total-h-count-2
+ H3             total-h-count-3
+ % formal charge
+ +0             neutral
+ +1             cationic+1
+ -1             anionic-1
+ % aromatic/aliphatic
+ a              aromatic
+ A              aliphatic
+ ```
+Each decorator has a corresponding string token (no spaces allowed!) that is used to create human-readable versions of the corresponding atom types.
+
+For example, we may find the atom type ```[#6]&H3``` which is `carbon total-h-count-3` for a C atom bonded to three hydrogens.
+
+**Simple Decorators**
+The second option (simple-decorators) attempts to split off a new atom type from a parent atom type by combining (via an "and" operator, `&`) the parent atom type with a "decorator".
 The decorators are listed in `AlkEtOH/atomtypes/decorators.smarts` or `parm@frosst/atomtypes/decorators.smarts`:
 ```
 % bond order
@@ -130,36 +157,7 @@ H3             total-h-count-3
 a              atomatic
 A              aliphatic
 ```
-Each decorator has a corresponding string token (no spaces allowed!) that is used to create human-readable versions of the corresponding atom types.
-
-For example, we may find the atom type ```[#6]&H3``` which is `carbon total-h-count-3` for a C atom bonded to three hydrogens.
-
-The second option (combinatorial-decorator) attempt to create the new atomtype adding an Alpha or Beta substituent to a basetype or an atomtype.
-This decorators are different from the simple-decorator option and do not have atom types or bond information on it.
-The new decorators are listed in `AlkEtOH/atomtypes/new-decorators.smarts` and `parm@frosst/atomtypes/new-decorators.smarts`:
-
- ```
- % total connectivity
- X1             connections-1
- X2             connections-2
- X3             connections-3
- X4             connections-4
- % total-h-count
- H0             total-h-count-0
- H1             total-h-count-1
- H2             total-h-count-2
- H3             total-h-count-3
- % formal charge
- +0             neutral
- +1             cationic+1
- -1             anionic-1
- % aromatic/aliphatic
- a              aromatic
- A              aliphatic
- ```
-This option also has the corresponding string token.
-
-Example: `smarty --basetypes=examples/AlkEtOH/atomtypes/basetypes.smarts --initialtypes=examples/AlkEtOH/atomtypes/basetypes.smarts --decorators=examples/AlkEtOH/atomtypes/new-decorators.smarts  --molecules=examples/AlkEtOH/molecules/test_filt1_tripos.mol2 --reference=examples/AlkEtOH/molecules/test_filt1_ff.mol2 --iterations 1000 --temperature=0.00001`
+This option also has the corresponding string tokens.
 
 Newly proposed atom types are added to the end of the list.
 After a new atom type is proposed, all molecules are reparameterized using the new set of atom types.
@@ -170,13 +168,79 @@ If a proposed type matches zero atoms, the RJMCMC move is rejected.
 
 Currently, the acceptance criteria does not include the full Metropolis-Hastings acceptance criteria that would include the reverse probability.  This needs to be added in.
 
-### Elemental sampler
+### Elemental Decomposition
 
-Command line example: `smarty --samplertype elemental --element=8 --basetypes=examples/AlkEtOH/atomtypes/basetypes.smarts --initialtypes=examples/AlkEtOH/atomtypes/basetypes.smarts --decorators=examples/AlkEtOH/atomtypes/new-decorators.smarts  --molecules=examples/AlkEtOH/molecules/test_filt1_tripos.mol2 --reference=examples/AlkEtOH/molecules/test_filt1_ff.mol2 --iterations 100 --temperature=0`
+The input option `--element` allows a user to specify which atoms types to sample based on atomic number. The default input is 0 (corresponding to no specified atomic number) and will attempt to match all atom types. If an element number is given (i.e. `--element=1` for hydrogen) only atoms with that atomic number are considered. Specifying an element number does not affect any other smarty behavior.  
 
-The elemental sampler has the same principles as the original sampler. However, the sampler will sample only a single element (such as Oxygen, Carbon, Hydrogen, etc), which needs to be specified on the command line.
+Finally, here is a complete list of input options for smarty. Under `usage` all bracketed parameters are optional. 
+```
+Usage:     Sample over atom types, optionally attempting to match atom types in a reference typed set of molecules.
 
-The element number needs to be specified by atomic number (--element=8 for oxygen).
+    usage: smarty --basetypes smartsfile --initialtypes smartsfile 
+            --decorators smartsfile --molecules molfile 
+            [--element atomicnumber --substitutions smartsfile --reference molfile 
+            --decoratorbehavior combinatorial-decorators/simple-decorators 
+            --iterations niterations --temperature temperature --trajectory trajectorfile
+            --plot plotfile]
+
+    example:
+    python smarty --basetypes=atomtypes/basetypes.smarts --initialtypes=atomtypes/initialtypes.smarts \
+            --decorators=atomtypes/decorators.smarts --substitutions=atomtypes/substitutions.smarts \
+            --molecules=molecules/zinc-subset-tripos.mol2.gz --reference=molecules/zinc-subset-parm@frosst.mol2.gz \
+            --iterations 1000 --temperature=0.1
+    
+
+Options:
+  --version             show program's version number and exit
+  -h, --help            show this help message and exit
+  -e ELEMENT, --element=ELEMENT
+                        By default the element value is 0 corresponding to
+                        sampling all atomtypes. If another atomic number is
+                        specified only atoms with that atomic number are
+                        sampled (i.e. --element=8 will only sample atomtypes
+                        for oxygen atoms).
+  -b BASETYPES, --basetypes=BASETYPES
+                        Filename defining base or generic atom types as SMARTS
+                        atom matches; these are indestructible and normally
+                        are elemental atom types.
+  -f BASETYPES, --initialtypes=BASETYPES
+                        Filename defining initial (first) atom types as SMARTS
+                        atom matches.
+  -d DECORATORS, --decorators=DECORATORS
+                        Filename defining decorator atom types as SMARTS atom
+                        matches.
+  -s SUBSTITUTIONS, --substitutions=SUBSTITUTIONS
+                        Filename defining substitution definitions for SMARTS
+                        atom matches (OPTIONAL).
+  -r REFMOL, --reference=REFMOL
+                        Reference typed molecules for computing likelihood
+                        (must match same molecule and atom ordering in
+                        molecules file) (OPTIONAL).
+  -m MOLECULES, --molecules=MOLECULES
+                        Small molecule set (in any OpenEye compatible file
+                        format) containing 'dG(exp)' fields with experimental
+                        hydration free energies.
+  -i ITERATIONS, --iterations=ITERATIONS
+                        MCMC iterations.
+  -t TEMPERATURE, --temperature=TEMPERATURE
+                        Effective temperature for Monte Carlo acceptance,
+                        indicating fractional tolerance of mismatched atoms
+                        (default: 0.1). If 0 is specified, will behave in a
+                        greedy manner.
+  -l TRAJECTORY_FILE, --trajectory=TRAJECTORY_FILE
+                        Name for trajectory file output, trajectory saves only
+                        changes to the list of 'atomtypes' for each iteration.
+                        If the file already exists, it is overwritten.
+  -p PLOT_FILE, --plot=PLOT_FILE
+                        Name for output file of a plot of the score versus
+                        time. If not specified, none will be written. If
+                        provided, needs to use a file extension suitable for
+                        matplotlib/pylab. Currently requires a trajectory file
+                        to be written using -l or --trajectory.
+  -x DECORATOR_BEHAVIOR, --decoratorbehavior=DECORATOR_BEHAVIOR
+                        Choose between simple-decorators or combinatorial-
+                        decorators (default = combinatorial-decorators).
+```
 
 =======
 ##smirky
@@ -309,3 +373,4 @@ It can also be of interest to know what SMIRFF parameters would be applied to pa
 
 [1] Green PJ. Reversible jump Markov chain Monte Carlo computation and Bayesian model determination. Biometrika 82:711, 1995.
 http://dx.doi.org/10.1093/biomet/82.4.711
+
