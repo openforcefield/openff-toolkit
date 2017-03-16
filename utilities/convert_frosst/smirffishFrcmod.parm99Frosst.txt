@@ -112,6 +112,8 @@ BOND
 [#16X4,#16X3:1]~[#7:2]   265.  1.71    Frosst generic
 [#16X4,#16X3:1]-[#8X2:2]  300.0    1.596   Frosst OS-SO
 [#16X4,#16X3:1]~[#8X1:2]   300.  1.44    Frosst generic
+# Carbonothioyl bond
+[#16:1]=[#6:2]    300   1.7  parm@Frosst for CA~SD and CM~SD
 # bonds to P (implied hypervalent)
 [#15:1]~[#6:2]         160.  1.90    Frosst generic
 [#15:1]-[#7:2]        300.0    1.65    smirff generic from Appl.Spec.,v57p970(2006)
