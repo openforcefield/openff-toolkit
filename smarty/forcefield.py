@@ -2047,6 +2047,7 @@ parsers["BondChargeCorrections"] = BondChargeCorrectionGenerator.parseElement
 ## @private
 class GBSAForceGenerator(object):
     """A GBSAForceGenerator constructs GBSA forces."""
+    # TODO: Differentiate between global and per-particle parameters for each model.
 
     # Global parameters for surface area (SA) component of model
     SA_expected_parameters = {
@@ -2116,6 +2117,17 @@ class GBSAForceGenerator(object):
         gbsa_type = GBSAForceGenerator.GBSAType(node, parent)
         self._gbsa_types.append(gbsa_type)
 
+    def checkCompatibility(self, generator):
+        """
+        Check compatibility of this generator with another generators.
+        """
+        generator = existing[0]
+        if (generator.gb_model != self.gb_model):
+            raise ValueError('Found multiple GBSAForce tags with different GB model specifications')
+        if (generator.sa_model != self.sa_model):
+            raise ValueError('Found multiple GBSAForce tags with different SA model specifications')
+        # TODO: Check other attributes (parameters of GB and SA models) automatically?
+
     @staticmethod
     def parseElement(element, ff):
         # TODO: Generalize check for model compatibility
@@ -2129,19 +2141,10 @@ class GBSAForceGenerator(object):
             sasa_penalty = _extractQuantity(element, element, 'sasa_penalty')
 
         existing = [f for f in ff._forces if isinstance(f, GBSAForceGenerator)]
-        if len(existing) == 0:
-            generator = GBSAForceGenerator(ff, model=model, SA_model=SA_model, sasa_penalty=sasa_penalty, solvent_dielectric=solvent_dielectric, solute_dielectric=solute_dielectric)
-            ff.registerGenerator(generator)
-        else:
-            # TODO: Handle case where two different GBSA models are specified by different `<GBSAForce> blocks`
-            # Multiple <GBSAForce> tags were found, probably in different files.  Simply add more types to the existing one.
-            generator = existing[0]
-            if (generator.model != model):
-                raise ValueError('Found multiple GBSAForce tags with different "model" specifications')
-            if (generator.sasa_penalty != sasa_penalty):
-                raise ValueError('Found multiple GBSAForce tags with different "sasa_penalty" specifications')
-            if (generator.solute_dielectric != solute_dielectric) or (generator.solvent_dielectric != solvent_dielectric):
-                raise ValueError('Found multiple GBSAForce tags with different solvent or solute dielectrics')
+        generator = GBSAForceGenerator(ff, element)
+        if len(existing) > 0:
+            generator.checkCompatibility(existing[0])
+        ff.registerGenerator(generator)
         for atom in element.findall('Atom'):
             generator.registerAtom(atom, element)
 
