@@ -99,7 +99,7 @@ BOND
 # O-O peroxide
 [#8X2:1]-[#8X2:2]      300.  1.46    smirff generic   bond length from JACSv106p6146-6149(1984)
 # bonds to divalent S
-[#16:1]-[#6X4:2]                237.0  1.810   parm99 CT-SH
+[#16:1]-[#6:2]                237.0  1.810   parm99 CT-SH (removed X4 3/16/17)
 [#16X2:1]-[#1:2]                274.0  1.336   parm99 SH-HS
 [#16:1]-[#16:2]                 166.0  2.038   parm99 S_-S
 [#16X2,#16X1-1,#16X3+1:1]-[#6X4:2]  237.0  1.81    Frosst generic by analogy with parm99 CT-SH
