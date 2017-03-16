@@ -2,7 +2,13 @@
 # Date: Tue Aug 25 2016
 # Author: C. I. Bayly, OpenEye Scientific Software
 #
+# Date: only last line in this section is used
+DATE
 # Updated: Many times during Fall 2016 - Winter 2017, most recently Fri. March 3, 2017
+Date: March 16, 2017
+# Author: please make sure all authors are on one line, only last one is taken 
+AUTHOR
+C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine
 
 NONBON
 [*:1]   4.  0.25  smirff dummy_generic  a really big soft atom
@@ -102,10 +108,10 @@ BOND
 [#16X2:1]-[#8X2:2]    300.0    1.60    smirff generic by analogy with hypervalent_S-O_divalent
 [#16X2:1]=[#8X1,#7X2:2]  300.0    1.44    smirff generic by analogy with hypervalent_S-O_monovalent
 # bonds to hypervalent S
-[#16X4,#16X3+0:1]-[#6:2]  227.0    1.750   Frosst generic
-[#16X4,#16X3+0:1]~[#7:2]   265.  1.71    Frosst generic
-[#16X4,#16X3+0:1]-[#8X2:2]  300.0    1.596   Frosst OS-SO
-[#16X4,#16X3+0:1]~[#8X1:2]   300.  1.44    Frosst generic
+[#16X4,#16X3!+1:1]-[#6:2]  227.0    1.750   Frosst generic
+[#16X4,#16X3:1]~[#7:2]   265.  1.71    Frosst generic
+[#16X4,#16X3:1]-[#8X2:2]  300.0    1.596   Frosst OS-SO
+[#16X4,#16X3:1]~[#8X1:2]   300.  1.44    Frosst generic
 # bonds to P (implied hypervalent)
 [#15:1]~[#6:2]         160.  1.90    Frosst generic
 [#15:1]-[#7:2]        300.0    1.65    smirff generic from Appl.Spec.,v57p970(2006)
