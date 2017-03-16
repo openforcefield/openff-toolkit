@@ -98,43 +98,43 @@ class CustomAmberGBForceBase(CustomGBForce):
         CustomGBForce.__init__(self)
         self.parameters = []
 
-    def addParticle(self, params):
-        """Add a particle to the force
-
-        Particles are added in order. The number of particles
-        added must match the number of particles in the system.
-
-        Parameters
-        ----------
-        params : list
-            A list of parameters to add to the force. The meaning
-            parameters depends on the model.
-
-        Returns
-        -------
-        list
-            The list of parameters after stripping off units and
-            modifying SCREEN.
-
-        """
-        params = copy.deepcopy(params)
-        params[self.RADIUS_ARG_POSITION] = strip_unit(params[self.RADIUS_ARG_POSITION], u.nanometer) - self.OFFSET
-        params[self.SCREEN_POSITION] *= params[self.RADIUS_ARG_POSITION]
-        self.parameters.append(params)
-        return params
-
-    def finalize(self):
-        """Finalize this force so it can be added to a system.
-
-        This method must be called before the force is added
-        to the system.
-
-        """
-        self._addParticles()
-
-    def _addParticles(self):
-        for params in self.parameters:
-            CustomGBForce.addParticle(self, params)
+    # def addParticle(self, params):
+    #     """Add a particle to the force
+    #
+    #     Particles are added in order. The number of particles
+    #     added must match the number of particles in the system.
+    #
+    #     Parameters
+    #     ----------
+    #     params : list
+    #         A list of parameters to add to the force. The meaning
+    #         parameters depends on the model.
+    #
+    #     Returns
+    #     -------
+    #     list
+    #         The list of parameters after stripping off units and
+    #         modifying SCREEN.
+    #
+    #     """
+    #     params = copy.deepcopy(params)
+    #     params[self.RADIUS_ARG_POSITION] = strip_unit(params[self.RADIUS_ARG_POSITION], u.nanometer) - self.OFFSET
+    #     params[self.SCREEN_POSITION] *= params[self.RADIUS_ARG_POSITION]
+    #     self.parameters.append(params)
+    #     return params
+    #
+    # def finalize(self):
+    #     """Finalize this force so it can be added to a system.
+    #
+    #     This method must be called before the force is added
+    #     to the system.
+    #
+    #     """
+    #     self._addParticles()
+    #
+    # def _addParticles(self):
+    #     for params in self.parameters:
+    #         CustomGBForce.addParticle(self, params)
 
 
 class HCT(CustomAmberGBForceBase):
@@ -172,7 +172,7 @@ class HCT(CustomAmberGBForceBase):
                                    "D=abs(r-scale2)",
                               CustomGBForce.ParticlePairNoExclusions)
 
-        self.addComputedValue("B", "1/(1/or-I)", CustomGBForce.SingleParticle)
+        self.addComputedValue("B", "1/(1/radius-I)", CustomGBForce.SingleParticle)
         _createEnergyTerms(self, solventDielectric, soluteDielectric, SA_model, cutoff, kappa, 0.009)
 
 class OBC1(CustomAmberGBForceBase):
@@ -211,7 +211,7 @@ class OBC1(CustomAmberGBForceBase):
                                     "D=abs(r-scale2)", CustomGBForce.ParticlePairNoExclusions)
 
         self.addComputedValue("B", "1/(1/radius-tanh(0.8*psi+2.909125*psi^3)/radius);"
-                                   "psi=I*radius; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
+                                   "psi=I*radius; radius=radius+offset; offset=0.009", CustomGBForce.SingleParticle)
         _createEnergyTerms(self, solventDielectric, soluteDielectric, SA_model, cutoff, kappa, 0.009)
 
 class OBC2(OBC1):
@@ -246,9 +246,9 @@ class OBC2(OBC1):
         self.addPerParticleParameter("scale") # Scaled offset radius
         self.addComputedValue("I",  "step(r+scale2-radius1)*0.5*(1/L-1/U+0.25*(r-scale2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
                                     "U=r+scale2;"
-                                    "L=max(or1, D);"
+                                    "L=max(radius1, D);"
                                     "D=abs(r-scale2)", CustomGBForce.ParticlePairNoExclusions)
 
-        self.addComputedValue("B", "1/(1/or-tanh(psi-0.8*psi^2+4.85*psi^3)/radius);"
-                                     "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
+        self.addComputedValue("B", "1/(1/radius-tanh(psi-0.8*psi^2+4.85*psi^3)/radius);"
+                                     "psi=I*radius; radius=radius+offset; offset=0.009", CustomGBForce.SingleParticle)
         _createEnergyTerms(self, solventDielectric, soluteDielectric, SA_model, cutoff, kappa, 0.009)

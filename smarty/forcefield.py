@@ -2167,7 +2167,6 @@ class GBSAForceGenerator(object):
         natoms = sum([1 for atom in topology.atoms()])
         for (atom_indices, gbsa_type) in atoms.items():
             params = [0] + [ getattr(gbsa_type, name) for name in expected_parameters ]
-            print('atom is %d / %d: %s' % (atom_indices[0], natoms, params))
             force.setParticleParameters(atom_indices[0], params)
 
         # Set the partial charges based on reference molecules.
@@ -2176,6 +2175,7 @@ class GBSAForceGenerator(object):
             for atom_mapping in atom_mappings:
                 for (atom, atom_index) in zip(reference_molecule.GetAtoms(), atom_mapping):
                     params = force.getParticleParameters(atom_index)
+                    params = list(params)
                     params[0] = atom.GetPartialCharge() * unit.elementary_charge
                     force.setParticleParameters(atom_index, params)
 
