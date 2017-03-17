@@ -122,7 +122,7 @@ First, to eliminate ambiguity, we treat impropers as a [trefoil](https://upload.
 
 Generalized-Born surface area (GBSA) implicit solvent parameters can also be specified in a manner similar to `NonbondedForce`:
 ```XML
- <GBSAForce gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" radius_units="nanometers" sa_model="ACE" energy_scale="2.25936*kJ/mol/nanometers**2" solvent_radius="0.14*nanometers">
+ <GBSAForce gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" radius_units="nanometers" sa_model="ACE" energy_scale="2.25936*kilojoules_per_mole/nanometers**2" solvent_radius="0.14*nanometers">
    <Atom smirks="[#1:1]" radius="0.12" scale="0.85"/>
    <Atom smirks="[#1:1]~[#6]" radius="0.13" scale="0.85"/>
    <Atom smirks="[#1:1]~[#8]" radius="0.08" scale="0.85"/>
@@ -138,25 +138,25 @@ Generalized-Born surface area (GBSA) implicit solvent parameters can also be spe
  </GBSAForce>
 ```
 #### GB model
-In the `<GBSAForce/>` tag, `model` selects from one of the [GBSA models available in OpenMM's `simtk.openmm.app`](http://docs.openmm.org/7.1.0/userguide/application.html#amber-implicit-solvent), currently one of
+In the `<GBSAForce/>` tag, `gb_model` selects which GB model is used.
+Currently, this can be selected from a subset of the [GBSA models available in OpenMM's `simtk.openmm.app`](http://docs.openmm.org/7.1.0/userguide/application.html#amber-implicit-solvent):
 * `HCT`: [Hawkins-Cramer-Truhlar](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#hawkins1995) (corresponding to `igb=1` in AMBER): requires `[radius, scale]`
 * `OBC1`: [Onufriev-Bashford-Case](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#onufriev2004) using the GB(OBC)I parameters (corresponding to `igb=2` in AMBER): requires `[radius, scale]`
 * `OBC2`: [Onufriev-Bashford-Case](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#onufriev2004) using the GB(OBC)II parameters (corresponding to `igb=5` in AMBER): requires `[radius, scale]`
-* `GBn`: [GBn solvation model](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#mongan2007) (corresponding to `igb=7` in AMBER): requires `[radius, scale, alpha, beta, gamma]`
-* `GBn2`: [GBn2 solvation model](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#nguyen2013) (corresponding to `igb=8` in AMBER): requires `[radius, scale, alpha, beta, gamma]`
 
+Each GB model can possess several attributes.
 The attributes `solvent_dielectric` and `solute_dielectric` specify solvent and solute dielectric constants used by the GB model.
-In this example, `radius` and `scale` are per-particle parameters of the `OBC1` GB model supported by OpenMM, but other models also have additional parameters (such as `alpha`, `beta`, `gamma` for GBn/GBn2).
+In this example, `radius` and `scale` are per-particle parameters of the `OBC1` GB model supported by OpenMM.
 Units are for these per-particle parameters (such as `radius_units`) optionally specified in the `<GBSAForce/>` tag.
 
 #### SA model
 
 The `sa_model` attribute specifies the solvent-accessible surface area model ("SA" part of GBSA) if one should be included; if omitted, no SA term is included.
 
-Currently, only the [analytical continuum electrostatics (ACE) model](http://docs.openmm.org/7.1.0/userguide/theory.html#surface-area-term), designated `ACE`, can be specified.
+Currently, only the [analytical continuum electrostatics (ACE) model](http://docs.openmm.org/7.1.0/userguide/theory.html#surface-area-term), designated `ACE`, can be specified, but there are plans to add more models in the future, such as the Gaussian solvation energy component of [EEF1](https://www.ncbi.nlm.nih.gov/pubmed/10223287).
 The `ACE` model permits two additional parameters to be specified:
-* The `sa_energy_scale` attribute specifies the energy scale E_SA for the `ACE` model (defaults to `2.25936` kJ/mol/nm**2), with units optionally specified by `sasa_penalty_units`.
-* The `sa_solvent_radius` attribute specifies the solvent radius, which defaults to `0.14` nm.
+* The `sa_energy_scale` attribute specifies the energy scale E_SA for the `ACE` model (defaults to `2.25936*kilojoules_per_mole/nanometers**2`).
+* The `sa_solvent_radius` attribute specifies the solvent radius, which defaults to `0.14*nanometers`.
 
 ### SPECIAL SECTIONS
 
