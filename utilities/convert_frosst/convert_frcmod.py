@@ -59,6 +59,38 @@ def _parse_impr_line( line ):
     params['periodicity1'] = str(int(np.abs(float(tmp[3]))))
     return params
 
+def add_date_and_author(inxml, date, author):
+    """
+    Updates the template xml file with the date and authors in the
+    input Frcmodish file.
+    Parameters
+    ----------
+    inxml: str, template xml file
+    date: str, date from input Frcmod file
+    author: str, author list from input Frcmod file
+    """
+    # read input file
+    f = open(inxml,'r')
+    input_lines = f.readlines()
+    f.close()
+
+    output_lines = list()
+    # Save lines, only change those for Date and Author
+    for l in input_lines:
+        start = l.strip().split('>')[0]
+        if start == '<Date':
+            output_lines.append("<Date>%s</Date>\n" % date.strip())
+        elif start == '<Author':
+            output_lines.append("<Author>%s</Author>\n" % author.strip())
+        else:
+            output_lines.append(l)
+
+    # write fixed lines to ffxml tempate
+    f = open(inxml,'w')
+    input_lines = f.writelines(output_lines)
+    f.close()
+
+
 # Main conversion functionality
 def convert_frcmod_to_ffxml( infile, inxml, outxml ):
     """Convert a modified AMBER frcmod (with SMIRKS replacing atom types) to SMIRFF ffxml format by inserting parameters into a template ffxml file.
@@ -76,7 +108,6 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
     -------
     Input XML file will normally be the template of a SMIRFF XML file without any parameters present (but with requisite force types already specified).
     """
-
 
     # Obtain sections from target file
     file = open(infile, 'r')
@@ -105,13 +136,22 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
         if tmp[0] in secnames:
             thissec = tmp[0]
             sections[thissec] = []
+
+        elif tmp[0] in ['DATE','AUTHOR']:
+            thissec = tmp[0]
         # Otherwise store
         else:
-            sections[thissec].append(line)
+            if thissec == 'DATE':
+                date = line.strip()
+            elif thissec == 'AUTHOR':
+                author = line.strip()
+            else:
+                sections[thissec].append(line)
 
         ct+=1
 
-
+    # fix date and author in inxml file:
+    add_date_and_author(inxml, date, author)
     # Read template forcefield file
     ff = ForceField(inxml)
     # Use functions to parse sections from target file and add parameters to force field

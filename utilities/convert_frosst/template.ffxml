@@ -3,8 +3,8 @@
 <SMIRFF version="0.1" aromaticity_model="OEAroModel_MDL">
 
 <!-- SMIRKS (SMIRKS Force Field) template file -->
-<Date>Date: Nov. 7, 2016</Date>
-  <Author>C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine</Author>
+<Date>Date: March 16, 2017</Date>
+<Author>C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine</Author>
   <!-- This file is meant for processing via smarty.forcefield -->
 
 <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
