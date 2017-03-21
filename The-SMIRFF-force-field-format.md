@@ -122,7 +122,7 @@ First, to eliminate ambiguity, we treat impropers as a [trefoil](https://upload.
 
 Generalized-Born surface area (GBSA) implicit solvent parameters can also be specified in a manner similar to `NonbondedForce`:
 ```XML
- <GBSAForce gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" radius_units="nanometers" sa_model="ACE" surface_area_penalty="5.4*calories_per_mole/angstroms**2" solvent_radius="1.4*angstroms">
+ <GBSAForce gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" radius_units="nanometers" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
    <Atom smirks="[#1:1]" radius="0.12" scale="0.85"/>
    <Atom smirks="[#1:1]~[#6]" radius="0.13" scale="0.85"/>
    <Atom smirks="[#1:1]~[#8]" radius="0.08" scale="0.85"/>
