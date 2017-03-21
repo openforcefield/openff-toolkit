@@ -2051,18 +2051,15 @@ class GBSAForceGenerator(object):
 
     # Global parameters for surface area (SA) component of model
     SA_expected_parameters = {
-        'ACE' : ['energy_scale', 'solvent_radius'],
+        'ACE' : ['surface_area_penalty', 'solvent_radius'],
         None : [],
     }
 
     # Per-particle parameters for generalized Born (GB) model
-    # TODO: Uncomment other models once they are supported.
     GB_expected_parameters = {
         'HCT' : ['radius', 'scale'],
         'OBC1' : ['radius', 'scale'],
         'OBC2' : ['radius', 'scale'],
-        #'GBn' : ['radius', 'scale', 'alpha', 'beta', 'gamma'],
-        #'GBn2' : ['radius', 'scale', 'alpha', 'beta', 'gamma'],
     }
 
     class GBSAType(object):
@@ -2072,8 +2069,8 @@ class GBSAForceGenerator(object):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
 
             # Store model parameters.
-            model = parent.attrib['model']
-            expected_parameters = GBSAForceGenerator.GB_expected_parameters[model]
+            gb_model = parent.attrib['gb_model']
+            expected_parameters = GBSAForceGenerator.GB_expected_parameters[gb_model]
             provided_parameters = list()
             missing_parameters = list()
             for name in expected_parameters:
@@ -2085,7 +2082,7 @@ class GBSAForceGenerator(object):
                     missing_parameters.append(name)
             if len(missing_parameters) > 0:
                 msg  = 'GBSAForce: missing per-atom parameters for tag %s' % str(node)
-                msg += 'model "%s" requires specification of per-atom parameters %s\n' % (model, str(expected_parameters))
+                msg += 'model "%s" requires specification of per-atom parameters %s\n' % (gb_model, str(expected_parameters))
                 msg += 'provided parameters : %s\n' % str(provided_parameters)
                 msg += 'missing parameters: %s' % str(missing_parameters)
                 raise Exception(msg)
@@ -2100,8 +2097,6 @@ class GBSAForceGenerator(object):
         if not gb_model in valid_GB_models:
             raise Exception('Specified GBSAForce model "%s" not one of valid models: %s' % (gb_model, valid_GB_models))
         self.gb_model = gb_model
-        self.solvent_dielectric = _extractQuantity(element, element, 'solvent_dielectric')
-        self.solute_dielectric = _extractQuantity(element, element, 'solute_dielectric')
 
         # Initialize SA model
         sa_model = element.attrib['sa_model']
@@ -2109,9 +2104,10 @@ class GBSAForceGenerator(object):
         if not sa_model in valid_SA_models:
             raise Exception('Specified GBSAForce SA_model "%s" not one of valid models: %s' % (sa_model, valid_SA_models))
         self.sa_model = sa_model
-        if sa_model == 'ACE':
-            self.energy_scale = _extractQuantity(element, element, 'energy_scale')
-            self.solvent_radius = _extractQuantity(element, element, 'solvent_radius')
+
+        # Store parameters for GB and SA models
+        # TODO: Deep copy?
+        self.parameters = element.attrib
 
     def registerAtom(self, node, parent):
         gbsa_type = GBSAForceGenerator.GBSAType(node, parent)
@@ -2130,16 +2126,6 @@ class GBSAForceGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        # TODO: Generalize check for model compatibility
-        model = element.attrib['model']
-        solvent_dielectric = _extractQuantity(element, element, 'solvent_dielectric')
-        solute_dielectric = _extractQuantity(element, element, 'solute_dielectric')
-        SA_model = None
-        sasa_penalty = None
-        if 'SA_model' in element.attrib:
-            SA_model = element.attrib['SA_model']
-            sasa_penalty = _extractQuantity(element, element, 'sasa_penalty')
-
         existing = [f for f in ff._forces if isinstance(f, GBSAForceGenerator)]
         generator = GBSAForceGenerator(ff, element)
         if len(existing) > 0:
@@ -2150,8 +2136,8 @@ class GBSAForceGenerator(object):
 
     def createForce(self, system, topology, verbose=False, **args):
         from smarty import gbsaforces
-        force_class = getattr(gbsaforces, self.model)
-        force = force_class(solventDielectric=self.solvent_dielectric, soluteDielectric=self.solute_dielectric, SA_model=self.SA_model)
+        force_class = getattr(gbsaforces, self.gb_model)
+        force = force_class(**self.parameters)
         system.addForce(force)
 
         # Iterate over all defined GBSA types, allowing later matches to override earlier ones.
@@ -2169,7 +2155,7 @@ class GBSAForceGenerator(object):
             print('')
 
         # Add all GBSA terms to the system.
-        expected_parameters = GBSAForceGenerator.GB_expected_parameters[self.model]
+        expected_parameters = GBSAForceGenerator.GB_expected_parameters[self.gb_model]
         # Create all particle parmeters.
         nparams = 1 + len(expected_parameters) # charge + GBSA parameters
         params = [ 0.0 for i in range(nparams) ]

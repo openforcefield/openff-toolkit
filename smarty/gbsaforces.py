@@ -36,224 +36,204 @@ from collections import defaultdict
 import copy
 from simtk.openmm.app import element as E
 from simtk.openmm import CustomGBForce, Discrete2DFunction
-import simtk.unit as u
+from simtk import unit
 from math import floor, pi
 
 
+
+#=============================================================================================
+# CONSTANTS
+#=============================================================================================
+
+ONE_4PI_EPS0 = 138.935456 # OpenMM constant for Coulomb interactions (openmm/platforms/reference/include/SimTKOpenMMRealType.h) in OpenMM units
+                          # TODO: Replace this with an import from simtk.openmm.constants once these constants are available there
+
+OFFSET = 0.009 # Radius offset (in nm) for all GB models
+
+#=============================================================================================
+# SUBROUTINES
+#=============================================================================================
+
 def strip_unit(value, unit):
     """Strip off any units and return value in unit"""
-    if not u.is_quantity(value):
+    if not unit.is_quantity(value):
         return value
     return value.value_in_unit(unit)
 
-def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA_model, cutoff, kappa, offset, E_SA=None, solvent_radius=None):
-    """Add the energy terms to the CustomGBForce.
+def _get_option_stripped(kwargs, name, default, dtype=None, compatible_units=None):
+    """Return the specified option, converted to float in md_unit_system units.
 
-    These are identical for all the GB models.
-
+    Parameters
+    ----------
+    kwargs : dict
+       Dictionary from which options are taken.
+    name : str
+       Name of the option to be retrieved.
+    default : simtk.unit.Quantity or float
+       Default value
+    dtype : type
+       If specified, will force to this type
+    compatible_units : simtk.unit.Unit
+       If not None, will ensure that quantity is compatible with these units.
     """
-    params = "; solventDielectric=%.16g; soluteDielectric=%.16g; kappa=%.16g; offset=%.16g" % (solventDielectric, soluteDielectric, kappa, offset)
-    if cutoff is not None:
-        params += "; cutoff=%.16g" % cutoff
-    if kappa > 0:
-        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-exp(-kappa*B)/solventDielectric)*charge^2/B"+params,
-                CustomGBForce.SingleParticle)
-    elif kappa < 0:
-        # Do kappa check here to avoid repeating code everywhere
-        raise ValueError('kappa/ionic strength must be >= 0')
+    if name in kwargs:
+        x = kwargs[name]
+        # Force to specified type
+        if dtype is unit.Quantity:
+            x = eval(x, unit.__dict__)
+        elif dtype is not None:
+            x = dtype(x)
     else:
-        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*charge^2/B"+params,
-                CustomGBForce.SingleParticle)
-    if SA_model=='ACE':
-        if E_SA is None:
-            E_SA = 2.25936 * u.kilojoules_per_mole / u.nanometers**2
-        if solvent_radius is None:
-            solvent_radius = 0.14 * u.nanometers
-        params += '; pi=%.16g; E_SA=%.16g; solvent_radius=%.16g' % (pi, E_SA, solvent_radius)
-        force.addEnergyTerm("E_SA*4*pi*(radius+solvent_radius)^2*(radius/B)^6; radius=or+offset"+params, CustomGBForce.SingleParticle)
-    elif SA_model is not None:
-        raise ValueError('Unknown surface area method: '+SA_model)
-    if cutoff is None:
-        if kappa > 0:
-            force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*charge1*charge2/f;"
-                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
-        else:
-            force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*charge1*charge2/f;"
-                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
+        x = default
+
+    if not unit.is_quantity(x):
+        return x
     else:
-        if kappa > 0:
-            force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*charge1*charge2*(1/f-"+str(1/cutoff)+");"
-                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
-        else:
-            force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*charge1*charge2*(1/f-"+str(1/cutoff)+");"
-                                "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
+        if (compatible_units is not None):
+            # Check unit compatibility, raising exception if not compatible
+            x = x.in_units_of(compatible_units)
+
+        return default.value_in_unit_system(unit.md_unit_system)
+
+#=============================================================================================
+# GBSA MODELS
+#=============================================================================================
 
 class CustomAmberGBForceBase(CustomGBForce):
-    """Base class for all of the Amber custom GB forces.
+    """Base class for all of the Amber custom GBSA forces.
 
-    Should not be instantiated directly, use one of its
-    derived classes instead.
-
+    Should not be instantiated directly, use one of its derived classes instead.
     """
-    OFFSET = 0.009
-    RADIUS_ARG_POSITION = 1
-    SCREEN_POSITION = 2
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         CustomGBForce.__init__(self)
-        self.parameters = []
 
-    # def addParticle(self, params):
-    #     """Add a particle to the force
-    #
-    #     Particles are added in order. The number of particles
-    #     added must match the number of particles in the system.
-    #
-    #     Parameters
-    #     ----------
-    #     params : list
-    #         A list of parameters to add to the force. The meaning
-    #         parameters depends on the model.
-    #
-    #     Returns
-    #     -------
-    #     list
-    #         The list of parameters after stripping off units and
-    #         modifying SCREEN.
-    #
-    #     """
-    #     params = copy.deepcopy(params)
-    #     params[self.RADIUS_ARG_POSITION] = strip_unit(params[self.RADIUS_ARG_POSITION], u.nanometer) - self.OFFSET
-    #     params[self.SCREEN_POSITION] *= params[self.RADIUS_ARG_POSITION]
-    #     self.parameters.append(params)
-    #     return params
-    #
-    # def finalize(self):
-    #     """Finalize this force so it can be added to a system.
-    #
-    #     This method must be called before the force is added
-    #     to the system.
-    #
-    #     """
-    #     self._addParticles()
-    #
-    # def _addParticles(self):
-    #     for params in self.parameters:
-    #         CustomGBForce.addParticle(self, params)
+        self.addPerParticleParameter("charge")
+        self.addPerParticleParameter("radius")
+        self.addPerParticleParameter("scale")
 
+        self.offset_terms_single = ("sr=scale*or;"
+                                    "or=(radius-OFFSET);"
+                                    "OFFSET=%.16f;" % OFFSET)
+
+        self.offset_terms_pair = ("sr1=scale1*or1;"
+                                  "or1=(radius1-OFFSET);"
+                                  "sr2=scale2*or2;"
+                                  "or2=(radius2-OFFSET);"
+                                  "OFFSET=%.16f;" % OFFSET)
+
+    def _createGBEnergyTerms(self, **kwargs):
+        """Add energy terms for the GB model to the CustomGBForce.
+
+        Parametes
+        ---------
+        cutoff : simtk.unit.Quantity with units compatible with distance
+           If a cutoff is not None, the cutoff for GB interactions.
+        kwargs : dict
+           Optional arguments required for GB models (e.g. 'solventDielectric', 'soluteDielectric', 'kappa')
+
+        """
+
+        # Construct GB energy function
+        energy_expression = "-0.5*ONE_4PI_EPS0*(1/soluteDielectric-kappa_coeff/solventDielectric)*charge^2/B"
+
+        # Add dielectric constants
+        solvent_dielectric = _get_option_stripped(kwargs, 'solvent_dielectric', 78.5, dtype=float)
+        solute_dielectric = _get_option_stripped(kwargs, 'solute_dielectric', 1.0, dtype=float)
+        energy_expression += "; solventDielectric=%.16g; soluteDielectric=%.16g" % (solvent_dielectric, solute_dielectric)
+
+        # Salt screening term
+        kappa = _get_option_stripped(kwargs, 'kappa', None, dtype=unit.Quantity, compatible_units=1.0/unit.nanometers)
+        if kappa is not None:
+            if (kappa < 0):
+                raise ValueError('kappa/ionic strength must be >= 0')
+            energy_expression += "; kappa_coeff = exp(-kappa*B); kappa=%.16f" % (kappa)
+        else:
+            energy_expression += "; kappa_coeff = 1"
+
+        # Add constants
+        energy_expression += "; ONE_4PI_EPS0=%.16g" % (ONE_4PI_EPS0)
+
+        # Add force term
+        self.addEnergyTerm(energy_expression, CustomGBForce.SingleParticle)
+
+    def _createSAEnergyTerms(self, sa_model=None, **kwargs):
+        """Add the energy terms for the SA model to the CustomGBForce.
+
+        """
+
+        if sa_model=='ACE':
+            surface_area_penalty = _get_option_stripped(kwargs, 'surface_area_penalty', 5.4 * unit.calories / unit.mole / unit.angstrom**2,
+                dtype=unit.Quantity, compatible_units=unit.calories / unit.mole / unit.angstrom**2)
+            solvent_radius = _get_option_stripped(kwargs, 'solvent_radius', 0.14 * unit.nanometers,
+                dtype=unit.Quantity, compatible_units=unit.nanometers)
+            energy_expression  = 'surface_area_penalty*4*pi*(radius+solvent_radius)^2*(radius/B)^6'
+            energy_expression += '; pi=%.16g;' % pi
+            energy_expression += '; surface_area_penalty=%.16g;' % surface_area_penalty
+            energy_expression += '; solvent_radius=%.16f' % solvent_radius
+            self.addEnergyTerm(energy_expression, CustomGBForce.SingleParticle)
+
+        elif sa_model is not None:
+            raise ValueError("Unknown surface area method '%s'. Must be one of ['ACE', None]" % (sa_model))
 
 class HCT(CustomAmberGBForceBase):
     """This class is equivalent to Amber ``igb=1``
 
     The list of parameters to ``addParticle`` is: ``[charge, radius, scale]``.
-
-    Parameters
-    ----------
-    solventDielectric: float
-        Dielectric constant for the solvent
-    soluteDielectric: float
-        Dielectric constant for the solute
-    SA_model: string or None
-        Surface area model to use ['ACE', None]
-    cutoff: float or Quantity or None
-        Cutoff distance to use. If float, value is in nm. If ``None``,
-        then no cutoffs are used.
-    kappa: float or Quantity
-        Debye kappa parameter related to modelling salt in GB. It has
-        units of 1 / length with 1 / nanometer assumed if a float
-        is given. A value of zero corresponds to zero salt concentration.
-
     """
-    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA_model=None,
-                 cutoff=None, kappa=0.0):
-        CustomAmberGBForceBase.__init__(self)
+    def __init__(self, **kwargs):
+        CustomAmberGBForceBase.__init__(self, **kwargs)
 
-        self.addPerParticleParameter("charge")
-        self.addPerParticleParameter("radius") # Offset radius
-        self.addPerParticleParameter("scale") # Scaled offset radius
-        self.addComputedValue("I", "step(r+scale2-radius1)*0.5*(1/L-1/U+0.25*(r-scale2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
-                                   "U=r+scale2;"
-                                   "L=max(radius1, D);"
-                                   "D=abs(r-scale2)",
-                              CustomGBForce.ParticlePairNoExclusions)
+        I_expression = ("step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+                        "U=r+sr2;"
+                        "L=max(or1, D);"
+                        "D=abs(r-sr2);") + self.offset_terms_pair
+        self.addComputedValue("I", I_expression, CustomGBForce.ParticlePairNoExclusions)
 
-        self.addComputedValue("B", "1/(1/radius-I)", CustomGBForce.SingleParticle)
-        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA_model, cutoff, kappa, 0.009)
+        B_expression = "1/(1/or-I);" + self.offset_terms_single
+        self.addComputedValue("B", B_expression, CustomGBForce.SingleParticle)
+
+        self._createGBEnergyTerms(**kwargs)
+        self._createSAEnergyTerms(**kwargs)
 
 class OBC1(CustomAmberGBForceBase):
     """This class is equivalent to Amber ``igb=2``
 
     The list of parameters to ``addParticle`` is: ``[charge, radius, scale]``.
-
-    Parameters
-    ----------
-    solventDielectric: float
-        Dielectric constant for the solvent
-    soluteDielectric: float
-        Dielectric constant for the solute
-    SA_model: string or None
-        Surface area model to use ['ACE', None]
-    cutoff: float or Quantity or None
-        Cutoff distance to use. If float, value is in nm. If ``None``,
-        then no cutoffs are used.
-    kappa: float or Quantity
-        Debye kappa parameter related to modelling salt in GB. It has
-        units of 1 / length with 1 / nanometer assumed if a float
-        is given. A value of zero corresponds to zero salt concentration.
-
     """
-    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA_model=None,
-                 cutoff=None, kappa=0.0):
+    def __init__(self, **kwargs):
+        CustomAmberGBForceBase.__init__(self, **kwargs)
 
-        CustomAmberGBForceBase.__init__(self)
+        I_expression = ("step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+                        "U=r+sr2;"
+                        "L=max(or1, D);"
+                        "D=abs(r-sr2);") + self.offset_terms_pair
+        self.addComputedValue("I",  I_expression, CustomGBForce.ParticlePairNoExclusions)
 
-        self.addPerParticleParameter("charge")
-        self.addPerParticleParameter("radius") # Offset radius
-        self.addPerParticleParameter("scale") # Scaled offset radius
-        self.addComputedValue("I",  "step(r+scale2-radius1)*0.5*(1/L-1/U+0.25*(r-scale2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
-                                    "U=r+scale2;"
-                                    "L=max(radius1, D);"
-                                    "D=abs(r-scale2)", CustomGBForce.ParticlePairNoExclusions)
+        B_expression = ("1/(1/or-tanh(0.8*psi+2.909125*psi^3)/radius);"
+                        "psi=I*or;") + self.offset_terms_single
+        self.addComputedValue("B", B_expression, CustomGBForce.SingleParticle)
 
-        self.addComputedValue("B", "1/(1/radius-tanh(0.8*psi+2.909125*psi^3)/radius);"
-                                   "psi=I*radius; radius=radius+offset; offset=0.009", CustomGBForce.SingleParticle)
-        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA_model, cutoff, kappa, 0.009)
+        self._createGBEnergyTerms(**kwargs)
+        self._createSAEnergyTerms(**kwargs)
 
-class OBC2(OBC1):
+class OBC2(CustomAmberGBForceBase):
     """This class is equivalent to Amber ``igb=5``
 
     The list of parameters to ``addParticle`` is: ``[charge, radius, scale]``.
-
-    Parameters
-    ----------
-    solventDielectric: float
-        Dielectric constant for the solvent
-    soluteDielectric: float
-        Dielectric constant for the solute
-    SA_model: string or None
-        Surface area model to use ['ACE', None]
-    cutoff: float or Quantity or None
-        Cutoff distance to use. If float, value is in nm. If ``None``,
-        then no cutoffs are used.
-    kappa: float or Quantity
-        Debye kappa parameter related to modelling salt in GB. It has
-        units of 1 / length with 1 / nanometer assumed if a float
-        is given. A value of zero corresponds to zero salt concentration.
-
     """
-    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA_model=None,
-                 cutoff=None, kappa=0.0):
+    def __init__(self, **kwargs):
+        CustomAmberGBForceBase.__init__(self, **kwargs)
 
-        CustomAmberGBForceBase.__init__(self)
+        I_expression = ("step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+                        "U=r+sr2;"
+                        "L=max(or1, D);"
+                        "D=abs(r-sr2);") + self.offset_terms_pair
+        self.addComputedValue("I",  I_expression, CustomGBForce.ParticlePairNoExclusions)
 
-        self.addPerParticleParameter("charge")
-        self.addPerParticleParameter("radius") # Offset radius
-        self.addPerParticleParameter("scale") # Scaled offset radius
-        self.addComputedValue("I",  "step(r+scale2-radius1)*0.5*(1/L-1/U+0.25*(r-scale2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
-                                    "U=r+scale2;"
-                                    "L=max(radius1, D);"
-                                    "D=abs(r-scale2)", CustomGBForce.ParticlePairNoExclusions)
+        B_expression = ("1/(1/or-tanh(psi-0.8*psi^2+4.85*psi^3)/radius);"
+                        "psi=I*or;") + self.offset_terms_single
+        self.addComputedValue("B", B_expression, CustomGBForce.SingleParticle)
 
-        self.addComputedValue("B", "1/(1/radius-tanh(psi-0.8*psi^2+4.85*psi^3)/radius);"
-                                     "psi=I*radius; radius=radius+offset; offset=0.009", CustomGBForce.SingleParticle)
-        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA_model, cutoff, kappa, 0.009)
+        self._createGBEnergyTerms(**kwargs)
+        self._createSAEnergyTerms(**kwargs)
