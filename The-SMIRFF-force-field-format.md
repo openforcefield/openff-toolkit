@@ -144,7 +144,7 @@ Currently, this can be selected from a subset of the [GBSA models available in O
 * `OBC1`: [Onufriev-Bashford-Case](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#onufriev2004) using the GB(OBC)I parameters (corresponding to `igb=2` in AMBER): requires `[radius, scale]`
 * `OBC2`: [Onufriev-Bashford-Case](http://docs.openmm.org/7.1.0/userguide/zbibliography.html#onufriev2004) using the GB(OBC)II parameters (corresponding to `igb=5` in AMBER): requires `[radius, scale]`
 
-Each GB model can possess several attributes.
+Each GB model can possess several attributes, which may be unitless (`1.0`, `78.5`) or unit-bearing quantities (`1.4*angstrom`, `5.4*calories/mole/angstrom**2`).
 The attributes `solvent_dielectric` and `solute_dielectric` specify solvent and solute dielectric constants used by the GB model.
 In this example, `radius` and `scale` are per-particle parameters of the `OBC1` GB model supported by OpenMM.
 Units are for these per-particle parameters (such as `radius_units`) optionally specified in the `<GBSAForce/>` tag.
@@ -155,8 +155,8 @@ The `sa_model` attribute specifies the solvent-accessible surface area model ("S
 
 Currently, only the [analytical continuum electrostatics (ACE) model](http://docs.openmm.org/7.1.0/userguide/theory.html#surface-area-term), designated `ACE`, can be specified, but there are plans to add more models in the future, such as the Gaussian solvation energy component of [EEF1](https://www.ncbi.nlm.nih.gov/pubmed/10223287).
 The `ACE` model permits two additional parameters to be specified:
-* The `sa_energy_scale` attribute specifies the energy scale E_SA for the `ACE` model (defaults to `2.25936*kilojoules_per_mole/nanometers**2`).
-* The `sa_solvent_radius` attribute specifies the solvent radius, which defaults to `0.14*nanometers`.
+* The `surface_area_penalty` attribute specifies the surface area penalty for the `ACE` model (defaults to `5.4*calories/mole/angstroms**2`).
+* The `solvent_radius` attribute specifies the solvent radius, which defaults to `1.4*angstroms`.
 
 ### SPECIAL SECTIONS
 
