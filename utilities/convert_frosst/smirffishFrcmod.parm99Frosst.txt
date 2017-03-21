@@ -2,13 +2,7 @@
 # Date: Tue Aug 25 2016
 # Author: C. I. Bayly, OpenEye Scientific Software
 #
-# Date: only last line in this section is used
-DATE
 # Updated: Many times during Fall 2016 - Winter 2017, most recently Fri. March 3, 2017
-Date: March 16, 2017
-# Author: please make sure all authors are on one line, only last one is taken 
-AUTHOR
-C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine
 
 NONBON
 [*:1]   4.  0.25  smirff dummy_generic  a really big soft atom
@@ -80,7 +74,7 @@ BOND
 [#6X2:1]-[#6:2]       350.0    1.440   Frosst generic
 [#6X2:1]-[#6X4:2]     350.0    1.468   Frosst C2-CT RHF/6-31G(d,p) opt estimated force constant
 [#6X2:1]=[#6X3:2]     549.0    1.35    smirff generic allene is a regular double bond
-[#6X2:1]#[#7:2]     350.0    1.188   Frosst C2-NL from C2-C2
+[#6X2:1]#[#7X1:2]     350.0    1.188   Frosst C2-NL from C2-C2
 [#6X2:1]#[#6X2:2]     350.0    1.188   Frosst C2-C2 RHF/6-31G(d,p) opt estimated force constant
 [#6X2:1]-[#8X2:2]     350.     1.326   smirff generic estimated from trivalentC-Odivalent
 [#6X2:1]-[#7:2]       427.0    1.38    smirff generic estimated from trivalentC-Ntrivalent
@@ -99,7 +93,7 @@ BOND
 # O-O peroxide
 [#8X2:1]-[#8X2:2]      300.  1.46    smirff generic   bond length from JACSv106p6146-6149(1984)
 # bonds to divalent S
-[#16:1]-[#6:2]                237.0  1.810   parm99 CT-SH (removed X4 3/16/17)
+[#16:1]-[#6X4:2]                237.0  1.810   parm99 CT-SH
 [#16X2:1]-[#1:2]                274.0  1.336   parm99 SH-HS
 [#16:1]-[#16:2]                 166.0  2.038   parm99 S_-S
 [#16X2,#16X1-1,#16X3+1:1]-[#6X4:2]  237.0  1.81    Frosst generic by analogy with parm99 CT-SH
@@ -108,16 +102,11 @@ BOND
 [#16X2:1]-[#8X2:2]    300.0    1.60    smirff generic by analogy with hypervalent_S-O_divalent
 [#16X2:1]=[#8X1,#7X2:2]  300.0    1.44    smirff generic by analogy with hypervalent_S-O_monovalent
 # bonds to hypervalent S
-[#16X4,#16X3!+1:1]-[#6:2]  227.0    1.750   Frosst generic
-[#16X4,#16X3:1]~[#7:2]   265.  1.71    Frosst generic
-[#16X4,#16X3:1]-[#8X2:2]  300.0    1.596   Frosst OS-SO
-[#16X4,#16X3:1]~[#8X1:2]   300.  1.44    Frosst generic
-# Carbonothioyl bond
-[#16:1]=[#6:2]    300   1.7  parm@Frosst for CA~SD and CM~SD
-# S-P
-[#16:1]-[#15:2]   150   2.1  rough estimate from GAFF2 by CCB 3/16/2017
+[#16X4,#16X3+0:1]-[#6:2]  227.0    1.750   Frosst generic
+[#16X4,#16X3+0:1]~[#7:2]   265.  1.71    Frosst generic
+[#16X4,#16X3+0:1]-[#8X2:2]  300.0    1.596   Frosst OS-SO
+[#16X4,#16X3+0:1]~[#8X1:2]   300.  1.44    Frosst generic
 # bonds to P (implied hypervalent)
-[#15:1]-[#1:2]        200.   1.4     rough estimate from GAFF2 by CCB 3/16/2017
 [#15:1]~[#6:2]         160.  1.90    Frosst generic
 [#15:1]-[#7:2]        300.0    1.65    smirff generic from Appl.Spec.,v57p970(2006)
 [#15:1]=[#7:2]        400.0    1.5     smirff generic guess
@@ -126,25 +115,14 @@ BOND
 [#15:1]~[#9:2]        300.0    1.639   Frosst F_-P calc: B3LYP/6-311G(d,p) Jan 13 2006
 [#15:1]=[#16X1:2]     230.0  1.98    Frosst P-SD RHF/6-31G(d,p) Sept 9 2009 Force constant Taken from OS-P_-> JCC,7,(1986),230
 # bonds to halogen
-# C-halogen
-[#6:1]-[#9:2]                  386.0  1.359   parm99 Csp3 (more generic 3/16/17)
 [#6X4:1]-[#9:2]                  367.0  1.380   parm99
-[#6:1]-[#17:2]                 193.0  1.727   parm99 Csp3 (more generic 3/16/17)
+[#6X3:1]-[#9:2]                  386.0  1.359   parm99
 [#6X4:1]-[#17:2]                 232.0  1.766   parm99
-[#6:1]-[#35:2]                 172.0  1.890   parm99 Br-CA Csp3 (more generic 3/16/17)
+[#6X3:1]-[#17:2]                 193.0  1.727   parm99
 [#6X4:1]-[#35:2]                 159.0  1.944   parm99 Br-CT
-[#6:1]-[#53:2]                  171.0  2.075   parm99 I_-CA Csp3 (more generic 3/16/17)
+[#6X3:1]-[#35:2]                 172.0  1.890   parm99 Br-CA
 [#6X4:1]-[#53:2]                  148.0  2.166   parm99 I_-CT
-# N-halogen
-[#7:1]-[#9:2]    170.   1.4 rough estimate from GAFF2 by CCB 3/16/2017
-[#7:1]-[#17:2]    150.   1.8 rough estimate from GAFF2 by CCB 3/16/2017 
-[#7:1]-[#35:2]   110.   2.0 rough estimate from GAFF2 by CCB 3/16/2017 
-[#7:1]-[#53:2]    80.    2.1 rough estimate from GAFF2 by CCB 3/16/2017 
-# P-halogen
-[#15:1]-[#9:2]     440.   1.6   rough estimate from GAFF2 by CCB 3/16/2017
-[#15:1]-[#17:2]    170.   2.0    rough estimate from GAFF2 by CCB 3/16/2017
-[#15:1]-[#35:2]    135.   2.2    rough estimate from GAFF2 by CCB 3/16/2017
-[#15:1]-[#53:2]    70.    2.6    rough estimate from GAFF2 by CCB 3/16/2017
+[#6X3:1]-[#53:2]                  171.0  2.075   parm99 I_-CA
 # bonds to hydrogen
 [#6X4:1]-[#1:2]                 340.0  1.090   parm99 aliphatic CH
 [#6X3:1]-[#1:2]                 367.0  1.080   parm99 vinylic CH
@@ -183,8 +161,6 @@ ANGL
 # note this has to follow the trivalent Nsp3 specification
 [*:1]~[#7X3$(*~[#6X3,#6X2,#7X2+0]):2]~[*:3]  70.  120.    Frosst generic trivalent conjugated Nsp2
 [#1:1]-[#7X3$(*~[#6X3,#6X2,#7X2+0]):2]-[*:3] 50.  120.    Frosst generic trivalent conjugated Nsp2
-# divalent nitrogen
-[*:1]~[#7X2:2]~[*:3]     70   180.    Frosst guess for Nsp 
 [*:1]~[#7X2+0:2]~[*:3]   70.  120.    Frosst generic divalent conjugated Nsp2
 [#1:1]-[#7X2+0:2]~[*:3]  50.  120.    Frosst generic divalent conjugated Nsp2
 # nitro group
@@ -441,9 +417,6 @@ DIHE
 [*:1]~[#15:2]-[#6:3]-[*:4]    1  0.000    0.0     1  Frosst X_-P_-CT-X  dummy
 [*:1]~[#15:2]-[#6X3:3]~[*:4]  1  1.000    0.0     1  Frosst X_-P_-CA-X  dummy
 #
-# O-O bonds 
-[*:1]-[#8:2]-[#8:3]-[*:4]    1    0.4         0.000           1   rough estimate from GAFF2 by CCB 3/16/2017  
-[*:1]-[#8:2]-[#8H1:3]-[*:4]   1    1.0         0.000           2  rough estimate from GAFF2 by CCB 3/16/2017 
 # O-N bonds
 [*:1]~[#8X2:2]-[#7:3]~[*:4]          1  0.000    0.0     1  Frosst generic
 [*:1]-[#8X2r5:2]-;@[#7X3r5:3]~[*:4]   1  0.000    0.0     1  Frosst generic het5 endocyclic
