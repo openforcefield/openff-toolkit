@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='ASCII'?>
 <SMIRFF version="0.1" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRKS (SMIRKS Force Field) template file -->
-  <Date>Date: Nov. 7, 2016</Date>
+  <Date>Date: Mar. 3, 2017</Date>
   <Author>C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine</Author>
   <!-- This file is meant for processing via smarty.forcefield -->
   <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
@@ -207,71 +207,72 @@
     <Proper smirks="[#7X1:1]~[#7X2:2]-[#6X4:3]~[#1:4]" id="t82" idivf1="1" k1="0.000" periodicity1="2" phase1="0.0"/>
     <Proper smirks="[*:1]-[#6X4:2]-[#8X2:3]-[#1:4]" id="t83" idivf1="3" k1="0.500" periodicity1="3" phase1="0.0"/>
     <Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2H1:3]-[#1:4]" id="t84" idivf1="1" k1="0.160" periodicity1="3" phase1="0.0" phase2="0.0" k2="0.250" periodicity2="1" idivf2="1"/>
-    <Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2H0:3]-[#6X4:4]" id="t85" idivf1="1" k1="0.383" periodicity1="3" phase1="0.0" phase2="180.0" k2="0.100" periodicity2="2" idivf2="1"/>
-    <Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X3:4]" id="t86" idivf1="1" k1="0.383" periodicity1="3" phase1="0.0" phase2="180.0" k2="0.800" periodicity2="1" idivf2="1"/>
-    <Proper smirks="[#6X4:1]-[#8X2:2]-[#6X4:3]-[#8X2:4]" id="t87" idivf1="1" k1="0.100" periodicity1="3" phase1="0.0" phase2="180.0" k2="0.850" periodicity2="2" idivf2="1" phase3="180.0" idivf3="1" k3="1.350" periodicity3="1"/>
-    <Proper smirks="[#6X4:1]-[#8X2:2]-[#6X4:3]-[#7X3:4]" id="t88" idivf1="1" k1="0.383" periodicity1="3" phase1="0.0" phase2="0.0" k2="0.650" periodicity2="2" idivf2="1"/>
-    <Proper smirks="[#6X3:1]-[#8X2:2]-[#6X4;r3:3]-@[#6X4;r3:4]" id="t89" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[#6X3:1]-[#8X2:2]-[#6X4;r3:3]-[#1:4]" id="t90" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[#1:1]-[#8X2:2]-[#6X4;r3:3]-[#1:4]" id="t91" idivf1="1" k1="0.400" periodicity1="3" phase1="0.0" phase2="0.0" k2="0.500" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="0.700" periodicity3="1"/>
-    <Proper smirks="[#1:1]-[#8X2:2]-[#6X4;r3:3]-[#6X4:4]" id="t92" idivf1="1" k1="0.400" periodicity1="3" phase1="0.0" phase2="0.0" k2="0.500" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="0.700" periodicity3="1"/>
-    <Proper smirks="[#1:1]-[#8X2:2]-[#6X4;r3:3]-[#6X4;r3:4]" id="t93" idivf1="1" k1="0.400" periodicity1="3" phase1="0.0" phase2="0.0" k2="0.500" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="0.700" periodicity3="1"/>
-    <Proper smirks="[*:1]~[#6X3:2]-[#8X2:3]-[*:4]" id="t94" idivf1="1" k1="1.050" periodicity1="2" phase1="180.0"/>
-    <Proper smirks="[*:1]~[#6X3:2]-[#8X2:3]-[#1:4]" id="t95" idivf1="1" k1="0.900" periodicity1="2" phase1="180.0"/>
-    <Proper smirks="[*:1]~[#6X3:2](=[#8,#16,#7])-[#8X2H0:3]-[*:4]" id="t96" idivf1="1" k1="2.700" periodicity1="2" phase1="180.0"/>
-    <Proper smirks="[*:1]~[#6X3:2](=[#8,#16,#7])-[#8:3]-[#1:4]" id="t97" idivf1="1" k1="2.300" periodicity1="2" phase1="180.0"/>
-    <Proper smirks="[#1:1]-[#8X2:2]-[#6X3:3]=[#8X1:4]" id="t98" idivf1="1" k1="2.300" periodicity1="2" phase1="180.0" phase2="0.0" k2="1.900" periodicity2="1" idivf2="1"/>
-    <Proper smirks="[#8,#16,#7:1]=[#6X3:2]-[#8X2H0:3]-[#6X4:4]" id="t99" idivf1="1" k1="2.700" periodicity1="2" phase1="180.0" phase2="180.0" k2="1.400" periodicity2="1" idivf2="1"/>
-    <Proper smirks="[#1:1]-[#8X2H1:2]-@[#6X3:3]~[*:4]" id="t100" idivf1="1" k1="2.500" periodicity1="2" phase1="180.0"/>
-    <Proper smirks="[*:1]-[#8X2+1:2]=[#6X3:3]-[*:4]" id="t101" idivf1="1" k1="3." periodicity1="2" phase1="180.0"/>
-    <Proper smirks="[*:1]=[#8X2+1:2]-[#6:3]~[*:4]" id="t102" idivf1="1" k1="0.5" periodicity1="2" phase1="180.0"/>
-    <Proper smirks="[*:1]-[#16X2,#16X3+1:2]-[#6:3]~[*:4]" id="t103" idivf1="1" k1="0.333" periodicity1="2" phase1="180.0"/>
-    <Proper smirks="[*:1]-[#16X2,#16X3+1:2]-[#6:3]-[#1:4]" id="t104" idivf1="1" k1="0.250" periodicity1="3" phase1="0.0"/>
-    <Proper smirks="[#6X3:1]-@[#16X2,#16X1-1,#16X3+1:2]-@[#6X3,#7X2;r5:3]=@[#6,#7;r5:4]" id="t105" idivf1="1" k1="2." periodicity1="2" phase1="180.0"/>
-    <Proper smirks="[*:1]~[#16X4,#16X3+0:2]-[#6X4:3]-[*:4]" id="t106" idivf1="1" k1="0.000" periodicity1="3" phase1="0.0"/>
-    <Proper smirks="[#6X4:1]-[#16X4,#16X3+0:2]-[#6X4:3]-[#1:4]" id="t107" idivf1="1" k1="0.250" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[#6X4:1]-[#16X4,#16X3+0:2]-[#6X4:3]~[#6X4:4]" id="t108" idivf1="1" k1="0.800" periodicity1="3" phase1="0.0"/>
-    <Proper smirks="[*:1]~[#16X4,#16X3+0:2]-[#6X3:3]~[*:4]" id="t109" idivf1="1" k1="1.750" periodicity1="2" phase1="180.0"/>
-    <Proper smirks="[#6:1]-[#16X4,#16X3+0:2]-[#6X3:3]~[*:4]" id="t110" idivf1="1" k1="0.750" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[*:1]~[#15:2]-[#6:3]-[*:4]" id="t111" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[*:1]~[#15:2]-[#6X3:3]~[*:4]" id="t112" idivf1="1" k1="1.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[*:1]~[#8X2:2]-[#7:3]~[*:4]" id="t113" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[*:1]-[#8X2r5:2]-;@[#7X3r5:3]~[*:4]" id="t114" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[*:1]-[#8X2r5:2]-;@[#7X2r5:3]~[*:4]" id="t115" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[*:1]-[#7X4,#7X3:2]-[#7X4,#7X3:3]-[*:4]" id="t116" idivf1="1" k1="0." periodicity1="3" phase1="0.0"/>
-    <Proper smirks="[#1:1]-[#7X4,#7X3:2]-[#7X4,#7X3:3]-[#1:4]" id="t117" idivf1="1" k1="0.125" periodicity1="3" phase1="0.0" phase2="0.0" k2="1.875" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="0.750" periodicity3="1"/>
-    <Proper smirks="[#6X4:1]-[#7X4,#7X3:2]-[#7X4,#7X3:3]-[#1:4]" id="t118" idivf1="1" k1="0.400" periodicity1="3" phase1="0.0" phase2="0.0" k2="2.150" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="1.200" periodicity3="1"/>
-    <Proper smirks="[#6X4:1]-[#7X4,#7X3:2]-[#7X4,#7X3:3]-[#6X4:4]" id="t119" idivf1="1" k1="0.375" periodicity1="3" phase1="0.0" phase2="0.0" k2="2.125" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="1.500" periodicity3="1"/>
-    <Proper smirks="[*:1]-[#7X4,#7X3:2]-[#7X3$(*~[#6X3,#6X2]):3]~[*:4]" id="t120" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[*:1]-[#7X3$(*-[#6X3,#6X2]):2]-[#7X3$(*-[#6X3,#6X2]):3]-[*:4]" id="t121" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[*:1]-[#7X3$(*-[#6X3,#6X2])r5:2]-@[#7X3$(*-[#6X3,#6X2])r5:3]~[*:4]" id="t122" idivf1="1" k1="3.600" periodicity1="2" phase1="180.0"/>
-    <Proper smirks="[*:1]~[#7X2:2]-[#7X3:3]~[*:4]" id="t123" idivf1="1" k1="0.625" periodicity1="1" phase1="180.0"/>
-    <Proper smirks="[*:1]=[#7X2:2]-[#7X2:3]=[*:4]" id="t124" idivf1="1" k1="1.4" periodicity1="1" phase1="180.0"/>
-    <Proper smirks="[*:1]~[#7X2:2]=,:[#7X2:3]~[*:4]" id="t125" idivf1="1" k1="6.000" periodicity1="1" phase1="180.0"/>
-    <Proper smirks="[*:1]~[#7X3+1:2]=,:[#7X2:3]~[*:4]" id="t126" idivf1="1" k1="3.000" periodicity1="1" phase1="180.0"/>
-    <Proper smirks="[#6:1]-[#7X2:2]~[#7X2:3]~[#7X1:4]" id="t127" idivf1="1" k1="0.000" periodicity1="2" phase1="0.0"/>
-    <Proper smirks="[*:1]-[#16X2,#16X3+1:2]-[!#6:3]~[*:4]" id="t128" idivf1="1" k1="0.0" periodicity1="2" phase1="180.0"/>
-    <Proper smirks="[*:1]~[#16X4,#16X3+0:2]-[#7:3]~[*:4]" id="t129" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[#6X4:1]-[#16X4,#16X3+0:2]-[#7X4,#7X3:3]-[#1:4]" id="t130" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4,#7X3:3]-[#1:4]" id="t131" idivf1="1" k1="0.500" periodicity1="3" phase1="0.0"/>
-    <Proper smirks="[#6X4:1]-[#16X4,#16X3+0:2]-[#7X4,#7X3:3]-[#6X4:4]" id="t132" idivf1="1" k1="2.500" periodicity1="1" phase1="0.0" phase2="0.0" k2="0.750" periodicity2="3" idivf2="1"/>
-    <Proper smirks="[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4,#7X3:3]-[#6X4:4]" id="t133" idivf1="1" k1="0.500" periodicity1="3" phase1="0.0" phase2="0.0" k2="1.750" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="1.500" periodicity3="1"/>
-    <Proper smirks="[#8X1:1]~[#16X4,#16X3+0:2]-[#7X4,#7X3:3]-[#1:4]" id="t134" idivf1="1" k1="1.000" periodicity1="1" phase1="180.0" phase2="0.0" k2="0.250" periodicity2="3" idivf2="1"/>
-    <Proper smirks="[#8X1:1]~[#16X4,#16X3+0:2]-[#7X4,#7X3:3]-[#6X4:4]" id="t135" idivf1="1" k1="0.200" periodicity1="3" phase1="0.0" phase2="180.0" k2="0.300" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="0.700" periodicity3="1"/>
-    <Proper smirks="[#6X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]" id="t136" idivf1="1" k1="0.500" periodicity1="3" phase1="0.0" phase2="0.0" k2="1.750" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="1.500" periodicity3="1"/>
-    <Proper smirks="[#6X4:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]" id="t137" idivf1="1" k1="0.500" periodicity1="3" phase1="90.0" phase2="0.0" k2="1.375" periodicity2="2" idivf2="1"/>
-    <Proper smirks="[#8X1:1]~[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]" id="t138" idivf1="1" k1="0.750" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[#8X1:1]~[#16X4,#16X3+0:2]-[#7X3:3]-[#7X2:4]" id="t139" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[*:1]~[#16X4,#16X3+0:2]=,:[#7X2:3]-,:[*:4]" id="t140" idivf1="1" k1="0." periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]" id="t141" idivf1="1" k1="0.040" periodicity1="6" phase1="0.0" phase2="0.0" k2="0.407" periodicity2="5" idivf2="1" phase3="0.0" idivf3="1" k3="0.013" periodicity3="4" phase4="0.0" idivf4="1" k4="0.018" periodicity4="3" k5="1.329" periodicity5="2" phase5="180.0" idivf5="1" k6="0.927" periodicity6="1" phase6="0.0" idivf6="1"/>
-    <Proper smirks="[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]" id="t142" idivf1="1" k1="0.071" periodicity1="6" phase1="0.0" phase2="0.0" k2="0.697" periodicity2="5" idivf2="1" phase3="180.0" idivf3="1" k3="0.208" periodicity3="4" phase4="180.0" idivf4="1" k4="3.931" periodicity4="2" k5="1.940" periodicity5="3" phase5="180.0" idivf5="1" k6="2.448" periodicity6="1" phase6="0.0" idivf6="1"/>
-    <Proper smirks="[*:1]~[#16X4,#16X3+0:2]-[#8X2:3]-[*:4]" id="t143" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[*:1]-[#16X2,#16X3+1:2]-[#16X2,#16X3+1:3]-[*:4]" id="t144" idivf1="1" k1="3.500" periodicity1="2" phase1="0.0" phase2="0.0" k2="0.600" periodicity2="3" idivf2="1"/>
-    <Proper smirks="[*:1]-[#8X2:2]-[#15:3]~[*:4]" id="t145" idivf1="1" k1="0.750" periodicity1="3" phase1="0.0"/>
-    <Proper smirks="[#8X2:1]-[#15:2]-[#8X2:3]-[#6X4:4]" id="t146" idivf1="1" k1="0.250" periodicity1="3" phase1="0.0" phase2="0.0" k2="1.200" periodicity2="2" idivf2="1"/>
-    <Proper smirks="[*:1]-[*:2]#[*:3]-[*:4]" id="t147" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[*:1]~[*:2]-[*:3]#[*:4]" id="t148" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[*:1]~[*:2]=[#6,#7,#16,#15;X2:3]=[*:4]" id="t149" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[*:1]-[#6X4:2]-[#8X2H0:3]-[*:4]" id="t85" idivf1="3" k1="1.15" periodicity1="3" phase1="0.0"/>
+    <Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2H0:3]-[#6X4:4]" id="t86" idivf1="1" k1="0.383" periodicity1="3" phase1="0.0" phase2="180.0" k2="0.100" periodicity2="2" idivf2="1"/>
+    <Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X3:4]" id="t87" idivf1="1" k1="0.383" periodicity1="3" phase1="0.0" phase2="180.0" k2="0.800" periodicity2="1" idivf2="1"/>
+    <Proper smirks="[#6X4:1]-[#8X2:2]-[#6X4:3]-[#8X2:4]" id="t88" idivf1="1" k1="0.100" periodicity1="3" phase1="0.0" phase2="180.0" k2="0.850" periodicity2="2" idivf2="1" phase3="180.0" idivf3="1" k3="1.350" periodicity3="1"/>
+    <Proper smirks="[#6X4:1]-[#8X2:2]-[#6X4:3]-[#7X3:4]" id="t89" idivf1="1" k1="0.383" periodicity1="3" phase1="0.0" phase2="0.0" k2="0.650" periodicity2="2" idivf2="1"/>
+    <Proper smirks="[#6X3:1]-[#8X2:2]-[#6X4;r3:3]-@[#6X4;r3:4]" id="t90" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[#6X3:1]-[#8X2:2]-[#6X4;r3:3]-[#1:4]" id="t91" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[#1:1]-[#8X2:2]-[#6X4;r3:3]-[#1:4]" id="t92" idivf1="1" k1="0.400" periodicity1="3" phase1="0.0" phase2="0.0" k2="0.500" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="0.700" periodicity3="1"/>
+    <Proper smirks="[#1:1]-[#8X2:2]-[#6X4;r3:3]-[#6X4:4]" id="t93" idivf1="1" k1="0.400" periodicity1="3" phase1="0.0" phase2="0.0" k2="0.500" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="0.700" periodicity3="1"/>
+    <Proper smirks="[#1:1]-[#8X2:2]-[#6X4;r3:3]-[#6X4;r3:4]" id="t94" idivf1="1" k1="0.400" periodicity1="3" phase1="0.0" phase2="0.0" k2="0.500" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="0.700" periodicity3="1"/>
+    <Proper smirks="[*:1]~[#6X3:2]-[#8X2:3]-[*:4]" id="t95" idivf1="1" k1="1.050" periodicity1="2" phase1="180.0"/>
+    <Proper smirks="[*:1]~[#6X3:2]-[#8X2:3]-[#1:4]" id="t96" idivf1="1" k1="0.900" periodicity1="2" phase1="180.0"/>
+    <Proper smirks="[*:1]~[#6X3:2](=[#8,#16,#7])-[#8X2H0:3]-[*:4]" id="t97" idivf1="1" k1="2.700" periodicity1="2" phase1="180.0"/>
+    <Proper smirks="[*:1]~[#6X3:2](=[#8,#16,#7])-[#8:3]-[#1:4]" id="t98" idivf1="1" k1="2.300" periodicity1="2" phase1="180.0"/>
+    <Proper smirks="[#1:1]-[#8X2:2]-[#6X3:3]=[#8X1:4]" id="t99" idivf1="1" k1="2.300" periodicity1="2" phase1="180.0" phase2="0.0" k2="1.900" periodicity2="1" idivf2="1"/>
+    <Proper smirks="[#8,#16,#7:1]=[#6X3:2]-[#8X2H0:3]-[#6X4:4]" id="t100" idivf1="1" k1="2.700" periodicity1="2" phase1="180.0" phase2="180.0" k2="1.400" periodicity2="1" idivf2="1"/>
+    <Proper smirks="[#1:1]-[#8X2H1:2]-@[#6X3:3]~[*:4]" id="t101" idivf1="1" k1="2.500" periodicity1="2" phase1="180.0"/>
+    <Proper smirks="[*:1]-[#8X2+1:2]=[#6X3:3]-[*:4]" id="t102" idivf1="1" k1="3." periodicity1="2" phase1="180.0"/>
+    <Proper smirks="[*:1]=[#8X2+1:2]-[#6:3]~[*:4]" id="t103" idivf1="1" k1="0.5" periodicity1="2" phase1="180.0"/>
+    <Proper smirks="[*:1]-[#16X2,#16X3+1:2]-[#6:3]~[*:4]" id="t104" idivf1="1" k1="0.333" periodicity1="2" phase1="180.0"/>
+    <Proper smirks="[*:1]-[#16X2,#16X3+1:2]-[#6:3]-[#1:4]" id="t105" idivf1="1" k1="0.250" periodicity1="3" phase1="0.0"/>
+    <Proper smirks="[#6X3:1]-@[#16X2,#16X1-1,#16X3+1:2]-@[#6X3,#7X2;r5:3]=@[#6,#7;r5:4]" id="t106" idivf1="1" k1="2." periodicity1="2" phase1="180.0"/>
+    <Proper smirks="[*:1]~[#16X4,#16X3+0:2]-[#6X4:3]-[*:4]" id="t107" idivf1="1" k1="0.000" periodicity1="3" phase1="0.0"/>
+    <Proper smirks="[#6X4:1]-[#16X4,#16X3+0:2]-[#6X4:3]-[#1:4]" id="t108" idivf1="1" k1="0.250" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[#6X4:1]-[#16X4,#16X3+0:2]-[#6X4:3]~[#6X4:4]" id="t109" idivf1="1" k1="0.800" periodicity1="3" phase1="0.0"/>
+    <Proper smirks="[*:1]~[#16X4,#16X3+0:2]-[#6X3:3]~[*:4]" id="t110" idivf1="1" k1="1.750" periodicity1="2" phase1="180.0"/>
+    <Proper smirks="[#6:1]-[#16X4,#16X3+0:2]-[#6X3:3]~[*:4]" id="t111" idivf1="1" k1="0.750" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[*:1]~[#15:2]-[#6:3]-[*:4]" id="t112" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[*:1]~[#15:2]-[#6X3:3]~[*:4]" id="t113" idivf1="1" k1="1.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[*:1]~[#8X2:2]-[#7:3]~[*:4]" id="t114" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[*:1]-[#8X2r5:2]-;@[#7X3r5:3]~[*:4]" id="t115" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[*:1]-[#8X2r5:2]-;@[#7X2r5:3]~[*:4]" id="t116" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[*:1]-[#7X4,#7X3:2]-[#7X4,#7X3:3]-[*:4]" id="t117" idivf1="1" k1="0." periodicity1="3" phase1="0.0"/>
+    <Proper smirks="[#1:1]-[#7X4,#7X3:2]-[#7X4,#7X3:3]-[#1:4]" id="t118" idivf1="1" k1="0.125" periodicity1="3" phase1="0.0" phase2="0.0" k2="1.875" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="0.750" periodicity3="1"/>
+    <Proper smirks="[#6X4:1]-[#7X4,#7X3:2]-[#7X4,#7X3:3]-[#1:4]" id="t119" idivf1="1" k1="0.400" periodicity1="3" phase1="0.0" phase2="0.0" k2="2.150" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="1.200" periodicity3="1"/>
+    <Proper smirks="[#6X4:1]-[#7X4,#7X3:2]-[#7X4,#7X3:3]-[#6X4:4]" id="t120" idivf1="1" k1="0.375" periodicity1="3" phase1="0.0" phase2="0.0" k2="2.125" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="1.500" periodicity3="1"/>
+    <Proper smirks="[*:1]-[#7X4,#7X3:2]-[#7X3$(*~[#6X3,#6X2]):3]~[*:4]" id="t121" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[*:1]-[#7X3$(*-[#6X3,#6X2]):2]-[#7X3$(*-[#6X3,#6X2]):3]-[*:4]" id="t122" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[*:1]-[#7X3$(*-[#6X3,#6X2])r5:2]-@[#7X3$(*-[#6X3,#6X2])r5:3]~[*:4]" id="t123" idivf1="1" k1="3.600" periodicity1="2" phase1="180.0"/>
+    <Proper smirks="[*:1]~[#7X2:2]-[#7X3:3]~[*:4]" id="t124" idivf1="1" k1="0.625" periodicity1="1" phase1="180.0"/>
+    <Proper smirks="[*:1]=[#7X2:2]-[#7X2:3]=[*:4]" id="t125" idivf1="1" k1="1.4" periodicity1="1" phase1="180.0"/>
+    <Proper smirks="[*:1]~[#7X2:2]=,:[#7X2:3]~[*:4]" id="t126" idivf1="1" k1="6.000" periodicity1="1" phase1="180.0"/>
+    <Proper smirks="[*:1]~[#7X3+1:2]=,:[#7X2:3]~[*:4]" id="t127" idivf1="1" k1="3.000" periodicity1="1" phase1="180.0"/>
+    <Proper smirks="[#6:1]-[#7X2:2]~[#7X2:3]~[#7X1:4]" id="t128" idivf1="1" k1="0.000" periodicity1="2" phase1="0.0"/>
+    <Proper smirks="[*:1]-[#16X2,#16X3+1:2]-[!#6:3]~[*:4]" id="t129" idivf1="1" k1="0.0" periodicity1="2" phase1="180.0"/>
+    <Proper smirks="[*:1]~[#16X4,#16X3+0:2]-[#7:3]~[*:4]" id="t130" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[#6X4:1]-[#16X4,#16X3+0:2]-[#7X4,#7X3:3]-[#1:4]" id="t131" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4,#7X3:3]-[#1:4]" id="t132" idivf1="1" k1="0.500" periodicity1="3" phase1="0.0"/>
+    <Proper smirks="[#6X4:1]-[#16X4,#16X3+0:2]-[#7X4,#7X3:3]-[#6X4:4]" id="t133" idivf1="1" k1="2.500" periodicity1="1" phase1="0.0" phase2="0.0" k2="0.750" periodicity2="3" idivf2="1"/>
+    <Proper smirks="[#6X3:1]-[#16X4,#16X3+0:2]-[#7X4,#7X3:3]-[#6X4:4]" id="t134" idivf1="1" k1="0.500" periodicity1="3" phase1="0.0" phase2="0.0" k2="1.750" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="1.500" periodicity3="1"/>
+    <Proper smirks="[#8X1:1]~[#16X4,#16X3+0:2]-[#7X4,#7X3:3]-[#1:4]" id="t135" idivf1="1" k1="1.000" periodicity1="1" phase1="180.0" phase2="0.0" k2="0.250" periodicity2="3" idivf2="1"/>
+    <Proper smirks="[#8X1:1]~[#16X4,#16X3+0:2]-[#7X4,#7X3:3]-[#6X4:4]" id="t136" idivf1="1" k1="0.200" periodicity1="3" phase1="0.0" phase2="180.0" k2="0.300" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="0.700" periodicity3="1"/>
+    <Proper smirks="[#6X3:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]" id="t137" idivf1="1" k1="0.500" periodicity1="3" phase1="0.0" phase2="0.0" k2="1.750" periodicity2="2" idivf2="1" phase3="0.0" idivf3="1" k3="1.500" periodicity3="1"/>
+    <Proper smirks="[#6X4:1]-[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]" id="t138" idivf1="1" k1="0.500" periodicity1="3" phase1="90.0" phase2="0.0" k2="1.375" periodicity2="2" idivf2="1"/>
+    <Proper smirks="[#8X1:1]~[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]" id="t139" idivf1="1" k1="0.750" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[#8X1:1]~[#16X4,#16X3+0:2]-[#7X3:3]-[#7X2:4]" id="t140" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[*:1]~[#16X4,#16X3+0:2]=,:[#7X2:3]-,:[*:4]" id="t141" idivf1="1" k1="0." periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]" id="t142" idivf1="1" k1="0.040" periodicity1="6" phase1="0.0" phase2="0.0" k2="0.407" periodicity2="5" idivf2="1" phase3="0.0" idivf3="1" k3="0.013" periodicity3="4" phase4="0.0" idivf4="1" k4="0.018" periodicity4="3" k5="1.329" periodicity5="2" phase5="180.0" idivf5="1" k6="0.927" periodicity6="1" phase6="0.0" idivf6="1"/>
+    <Proper smirks="[#8X1:1]~[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]" id="t143" idivf1="1" k1="0.071" periodicity1="6" phase1="0.0" phase2="0.0" k2="0.697" periodicity2="5" idivf2="1" phase3="180.0" idivf3="1" k3="0.208" periodicity3="4" phase4="180.0" idivf4="1" k4="3.931" periodicity4="2" k5="1.940" periodicity5="3" phase5="180.0" idivf5="1" k6="2.448" periodicity6="1" phase6="0.0" idivf6="1"/>
+    <Proper smirks="[*:1]~[#16X4,#16X3+0:2]-[#8X2:3]-[*:4]" id="t144" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[*:1]-[#16X2,#16X3+1:2]-[#16X2,#16X3+1:3]-[*:4]" id="t145" idivf1="1" k1="3.500" periodicity1="2" phase1="0.0" phase2="0.0" k2="0.600" periodicity2="3" idivf2="1"/>
+    <Proper smirks="[*:1]-[#8X2:2]-[#15:3]~[*:4]" id="t146" idivf1="1" k1="0.750" periodicity1="3" phase1="0.0"/>
+    <Proper smirks="[#8X2:1]-[#15:2]-[#8X2:3]-[#6X4:4]" id="t147" idivf1="1" k1="0.250" periodicity1="3" phase1="0.0" phase2="0.0" k2="1.200" periodicity2="2" idivf2="1"/>
+    <Proper smirks="[*:1]-[*:2]#[*:3]-[*:4]" id="t148" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[*:1]~[*:2]-[*:3]#[*:4]" id="t149" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
+    <Proper smirks="[*:1]~[*:2]=[#6,#7,#16,#15;X2:3]=[*:4]" id="t150" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
   </PeriodicTorsionForce>
   <!-- WARNING: AMBER formats typically use r_0/2=r_min/2 to describe the relevant distance parameter, where r0 = 2^(1/6)*sigma. The difference is important, and the two conventions can be used here by specifying sigma or rmin_half. -->
   <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
