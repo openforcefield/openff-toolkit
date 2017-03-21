@@ -2043,3 +2043,175 @@ class BondChargeCorrectionGenerator(object):
                     force.setParticleParameters(atom_indices[1], charge1, sigma1, epsilon1)
 
 parsers["BondChargeCorrections"] = BondChargeCorrectionGenerator.parseElement
+
+## @private
+class GBSAForceGenerator(object):
+    """A GBSAForceGenerator constructs GBSA forces."""
+    # TODO: Differentiate between global and per-particle parameters for each model.
+
+    # Global parameters for surface area (SA) component of model
+    SA_expected_parameters = {
+        'ACE' : ['surface_area_penalty', 'solvent_radius'],
+        None : [],
+    }
+
+    # Per-particle parameters for generalized Born (GB) model
+    GB_expected_parameters = {
+        'HCT' : ['radius', 'scale'],
+        'OBC1' : ['radius', 'scale'],
+        'OBC2' : ['radius', 'scale'],
+    }
+
+    class GBSAType(object):
+        """A SMIRFF GBSA type."""
+        def __init__(self, node, parent):
+            """Create a GBSAType"""
+            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+
+            # Store model parameters.
+            gb_model = parent.attrib['gb_model']
+            expected_parameters = GBSAForceGenerator.GB_expected_parameters[gb_model]
+            provided_parameters = list()
+            missing_parameters = list()
+            for name in expected_parameters:
+                if name in node.attrib:
+                    provided_parameters.append(name)
+                    value = _extractQuantity(node, parent, name)
+                    setattr(self, name, value)
+                else:
+                    missing_parameters.append(name)
+            if len(missing_parameters) > 0:
+                msg  = 'GBSAForce: missing per-atom parameters for tag %s' % str(node)
+                msg += 'model "%s" requires specification of per-atom parameters %s\n' % (gb_model, str(expected_parameters))
+                msg += 'provided parameters : %s\n' % str(provided_parameters)
+                msg += 'missing parameters: %s' % str(missing_parameters)
+                raise Exception(msg)
+
+    def __init__(self, forcefield, element):
+        self.ff = forcefield
+        self._gbsa_types = list()
+
+        # Initialize GB model
+        gb_model = element.attrib['gb_model']
+        valid_GB_models = GBSAForceGenerator.GB_expected_parameters.keys()
+        if not gb_model in valid_GB_models:
+            raise Exception('Specified GBSAForce model "%s" not one of valid models: %s' % (gb_model, valid_GB_models))
+        self.gb_model = gb_model
+
+        # Initialize SA model
+        sa_model = element.attrib['sa_model']
+        valid_SA_models = GBSAForceGenerator.SA_expected_parameters.keys()
+        if not sa_model in valid_SA_models:
+            raise Exception('Specified GBSAForce SA_model "%s" not one of valid models: %s' % (sa_model, valid_SA_models))
+        self.sa_model = sa_model
+
+        # Store parameters for GB and SA models
+        # TODO: Deep copy?
+        self.parameters = element.attrib
+
+    def registerAtom(self, node, parent):
+        gbsa_type = GBSAForceGenerator.GBSAType(node, parent)
+        self._gbsa_types.append(gbsa_type)
+
+    def checkCompatibility(self, generator):
+        """
+        Check compatibility of this generator with another generators.
+        """
+        generator = existing[0]
+        if (generator.gb_model != self.gb_model):
+            raise ValueError('Found multiple GBSAForce tags with different GB model specifications')
+        if (generator.sa_model != self.sa_model):
+            raise ValueError('Found multiple GBSAForce tags with different SA model specifications')
+        # TODO: Check other attributes (parameters of GB and SA models) automatically?
+
+    @staticmethod
+    def parseElement(element, ff):
+        existing = [f for f in ff._forces if isinstance(f, GBSAForceGenerator)]
+        generator = GBSAForceGenerator(ff, element)
+        if len(existing) > 0:
+            generator.checkCompatibility(existing[0])
+        ff.registerGenerator(generator)
+        for atom in element.findall('Atom'):
+            generator.registerAtom(atom, element)
+
+    def createForce(self, system, topology, verbose=False, **args):
+        from smarty import gbsaforces
+        force_class = getattr(gbsaforces, self.gb_model)
+        force = force_class(**self.parameters)
+        system.addForce(force)
+
+        # Iterate over all defined GBSA types, allowing later matches to override earlier ones.
+        atoms = ValenceDict()
+        for gbsa_type in self._gbsa_types:
+            for atom_indices in topology.unrollSMIRKSMatches(gbsa_type.smirks, aromaticity_model = self.ff._aromaticity_model):
+                atoms[atom_indices] = gbsa_type
+
+        if verbose:
+            print('')
+            print('GBSAForceGenerator:')
+            print('')
+            for gbsa_type in self._gbsa_types:
+                print('%64s : %8d matches' % (gbsa_type.smirks, len(topology.unrollSMIRKSMatches(gbsa_type.smirks, aromaticity_model = self.ff._aromaticity_model))))
+            print('')
+
+        # Add all GBSA terms to the system.
+        expected_parameters = GBSAForceGenerator.GB_expected_parameters[self.gb_model]
+        # Create all particle parmeters.
+        nparams = 1 + len(expected_parameters) # charge + GBSA parameters
+        params = [ 0.0 for i in range(nparams) ]
+        for atom in topology.atoms():
+            force.addParticle(params)
+        # Set the particle Lennard-Jones terms.
+        natoms = sum([1 for atom in topology.atoms()])
+        for (atom_indices, gbsa_type) in atoms.items():
+            params = [0] + [ getattr(gbsa_type, name) for name in expected_parameters ]
+            force.setParticleParameters(atom_indices[0], params)
+
+        # Set the partial charges based on reference molecules.
+        for reference_molecule in topology._reference_molecules:
+            atom_mappings = topology._reference_to_topology_atom_mappings[reference_molecule]
+            for atom_mapping in atom_mappings:
+                for (atom, atom_index) in zip(reference_molecule.GetAtoms(), atom_mapping):
+                    params = force.getParticleParameters(atom_index)
+                    params = list(params)
+                    params[0] = atom.GetPartialCharge() * unit.elementary_charge
+                    force.setParticleParameters(atom_index, params)
+
+    def postprocessSystem(self, system, topology, verbose=False, **args):
+        pass
+
+    def labelForce(self, oemol, verbose=False, **kwargs):
+        """Take a provided OEMol and parse HarmonicBondForce terms for this molecule.
+
+        Parameters
+        ----------
+            oemol : OEChem OEMol object for molecule to be examined
+
+        Returns
+        ---------
+            force_terms: list
+                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
+        """
+
+        # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
+        atoms = ValenceDict()
+        for gbsa_type in self._ljtypes:
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, gbsa_type.smirks, aromaticity_model = self.ff._aromaticity_model):
+                atoms[atom_indices] = gbsa_type
+
+        if verbose:
+            print('')
+            print('GBSAForceGenerator:')
+            print('')
+            for ljtype in self._ljtypes:
+                print('%64s : %8d matches' % (gbsa_type.smirks, len(getSMIRKSMatches_OEMol(oemol, gbsa_type.smirks, aromaticity_model = self.ff._aromaticity_model))))
+            print('')
+
+        # Add all GBSA terms to the output list
+        force_terms = []
+        for (atom_indices, gbsa_type) in atoms.items():
+            force_terms.append( ([atom_indices[0]], gbsa_type.pid, gbsa_type.smirks) )
+
+        return force_terms
+
+parsers["GBSAForce"] = GBSAForceGenerator.parseElement
