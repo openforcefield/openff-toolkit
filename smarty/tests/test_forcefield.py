@@ -355,7 +355,7 @@ def check_boxes(forcefield, description="", chargeMethod=None, verbose=False):
     if verbose: print('%d reference molecules loaded' % len(mols))
 
     # Read systems.
-    boxes = ['methanol_water_1_300.pdb', 'ethanol_water_1_300.pdb', 'propanol_water_1_300.pdb', 'butanol_water_1_300.pdb', 'cyclohexane_water_1_300.pdb',
+    boxes = ['ethanol_water_1_300.pdb', 'butanol_water_1_300.pdb', 'cyclohexane_water_1_300.pdb',
         'cyclohexane_ethanol_0.4_0.6.pdb', 'propane_methane_butanol_0.2_0.3_0.5.pdb']
     from simtk.openmm.app import PDBFile
     for box in boxes:
