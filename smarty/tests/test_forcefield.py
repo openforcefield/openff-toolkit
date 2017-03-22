@@ -90,6 +90,23 @@ ffxml_contents = u"""\
   <BondChargeCorrection smirks="[#6X4:1]-[#8:2]" increment="+0.0718" id="c0003" parent_id="c0003"/> <!-- tetrahedral carbon bonded to an oxygen :    13   11   31    1   0.0718 -->
 </BondChargeCorrections>
 
+<Constraints distance_unit="angstroms">
+  <!-- constrain all bonds to hydrogen to their equilibrium bond length -->
+  <Constraint smirks="[#1:1]-[*:2]" id="constraint0001"/>
+</Constraints>
+
+<GBSAForce gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" radius_units="nanometers" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
+  <Atom smirks="[#1:1]" radius="0.12" scale="0.85" id="gb0001"/>
+  <Atom smirks="[#6:1]" radius="0.22" scale="0.72" id="gb0002"/>
+  <Atom smirks="[#7:1]" radius="0.155" scale="0.79" id="gb0003"/>
+  <Atom smirks="[#8:1]" radius="0.15" scale="0.85" id="gb0004"/>
+  <Atom smirks="[#9:1]" radius="0.15" scale="0.88" id="gb0005"/>
+  <Atom smirks="[#14:1]" radius="0.21" scale="0.8" id="gb0006"/>
+  <Atom smirks="[#15:1]" radius="0.185" scale="0.86" id="gb0007"/>
+  <Atom smirks="[#16:1]" radius="0.18" scale="0.96" id="gb0008"/>
+  <Atom smirks="[#17:1]" radius="0.17" scale="0.8" id="gb0009"/>
+</GBSAForce>
+
 </SMIRFF>
 """
 
