@@ -232,6 +232,41 @@ class _Topology(Topology):
         # Get/initialize bond orders
         self._updateBondOrders()
 
+        # Track constraints
+        self._constrainedAtomPairIndices = dict()
+
+    def constrainAtomPair(self, iatom, jatom):
+        """
+        Mark a pair of atoms as constrained.
+
+        Parameters
+        ----------
+        iatom, jatom : int
+            Indices of atoms to mark as constrained.
+        """
+        self._constrainedAtomPairIndices[(iatom,jatom)] = 1
+        self._constrainedAtomPairIndices[(jatom,iatom)] = 1
+
+    def atomPairIsConstrained(self, iatom, jatom):
+        """
+        Check if a pair of atoms are marked as constrained.
+
+        Parameters
+        ----------
+        iatom, jatom : int
+            Indices of atoms to mark as constrained.
+
+        Returns
+        -------
+        is_constrained : bool
+            True if constrained, False otherwise
+
+        """
+        if (iatom,jatom) in self._constrainedAtomPairIndices:
+            return True
+        else:
+            return False
+
     def angles(self):
         """
         Get an iterator over all i-j-k angles.
@@ -618,7 +653,12 @@ class ForceField(object):
 
     def registerGenerator(self, generator):
         """Register a new generator."""
-        self._forces.append(generator)
+        # Special case: ConstraintGenerator has to come before HarmonicBondGenerator and HarmonicAngleGenerator.
+        # TODO: Figure out a more general way to allow generators to specify enforced orderings.
+        if isinstance(generator, ConstraintGenerator):
+            self._force.insert(0, generator)
+        else:
+            self._forces.append(generator)
 
     def getParameter(self, smirks = None, paramID=None, force_type='Implied'):
         """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
@@ -1243,6 +1283,109 @@ class ImproperDict(TransformedDict):
 # Force generators
 #=============================================================================================
 
+#=============================================================================================
+# Force generators
+#=============================================================================================
+
+## @private
+class ConstraintGenerator(object):
+    """A ConstraintGenerator adds constraints.
+
+    The ConstraintGenerator must be applied before HarmonicBondGenerator and
+    HarmonicAngleGenerator if constrained bonds are to not also have harmonic bond terms added.
+
+    """
+
+    class ConstraintType(object):
+        """A SMIRFF constraint type."""
+        def __init__(self, node, parent):
+            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            self.pid = _extractQuantity(node, parent, 'id')
+            self.distance = _extractQuantity(node, parent, 'distance')
+
+    def __init__(self, forcefield):
+        self.ff = forcefield
+        self._constraint_types = list()
+
+    def registerConstraint(self, node, parent):
+        """Register a SMIRFF constraint type definition."""
+        constraint = ConstraintGenerator.ConstraintType(node, parent)
+        self._constraint_types.append(constraint)
+
+    @staticmethod
+    def parseElement(element, ff):
+        # Find existing force generator or create new one.
+        existing = [f for f in ff._forces if isinstance(f, ConstraintGenerator)]
+        if len(existing) == 0:
+            generator = ConstraintGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
+
+        # Register all SMIRFF constraint definitions.
+        for constraint in element.findall('Constraint'):
+            generator.registerConstraint(constraint, element)
+
+    def createForce(self, system, topology, verbose=False, **kwargs):
+        # Iterate over all defined constraint types, allowing later matches to override earlier ones.
+        constraints = ValenceDict()
+        for constraint in self._constraint_types:
+            for atom_indices in topology.unrollSMIRKSMatches(constraint.smirks, aromaticity_model = self.ff._aromaticity_model):
+                constraints[atom_indices] = constraint
+
+        if verbose:
+            print('')
+            print('ConstraintGenerator:')
+            print('')
+            for constraint in self._constraint_types:
+                print('%64s : %8d matches' % (constraint.smirks, len(topology.unrollSMIRKSMatches(constraint.smirks, aromaticity_model = self.ff._aromaticity_model))))
+            print('')
+
+        # Add all bonds to the system.
+        for (atom_indices, constraint) in constraints.items():
+            # Add constraint
+            system.addConstraint(atom_indices[0], atom_indices[1], constraint.distance)
+            # Update constrained atom pairs in topology
+            topology.constrainAtomPair(atom_indices[0], atom_indices[1])
+
+        if verbose: print('%d constraints added' % (len(constraints)))
+
+    def labelForce(self, oemol, verbose=False, **kwargs):
+        """Take a provided OEMol and parse Constraint terms for this molecule.
+
+        Parameters
+        ----------
+            oemol : OEChem OEMol object for molecule to be examined
+
+        Returns
+        ---------
+            force_terms: list
+                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
+        """
+
+        # Iterate over all defined constraint SMIRKS, allowing later matches to override earlier ones.
+        constraints = ValenceDict()
+        for constraint in self._constraint_types:
+            for atom_indices in topology.unrollSMIRKSMatches(constraint.smirks, aromaticity_model = self.ff._aromaticity_model):
+                constraints[atom_indices] = constraint
+
+        if verbose:
+            print('')
+            print('ConstraintGenerator:')
+            print('')
+            for constraint in self._constraint_types:
+                print('%64s : %8d matches' % (constraint.smirks, len(topology.unrollSMIRKSMatches(constraint.smirks, aromaticity_model = self.ff._aromaticity_model))))
+            print('')
+
+        # Add all bonds to the output list
+        force_terms = []
+        for (atom_indices, constraint) in constraints.items():
+            force_terms.append( ([atom_indices[0], atom_indices[1]], constraint.pid, constraint.smirks) )
+
+        return force_terms
+
+parsers["Constraints"] = ConstraintGenerator.parseElement
+
 ## @private
 class HarmonicBondGenerator(object):
     """A HarmonicBondGenerator constructs a HarmonicBondForce."""
@@ -1327,9 +1470,15 @@ class HarmonicBondGenerator(object):
             print('')
 
         # Add all bonds to the system.
+        skipped_constrained_bonds = 0 # keep track of how many bonds were constrained (and hence skipped)
         for (atom_indices, bond) in bonds.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
+
+            if topology.atomPairIsConstrained(*atom_indices):
+                # Atom pair is constrained; we don't need to add a bond term.
+                skipped_constrained_bonds += 1
+                continue
 
             if bond.fractional_bondorder==None:
                 force.addBond(atom_indices[0], atom_indices[1], bond.length, bond.k)
@@ -1348,7 +1497,7 @@ class HarmonicBondGenerator(object):
                 else:
                     raise Exception("Partial bondorder treatment %s is not implemented." % bond.fractional_bondorder)
 
-        if verbose: print('%d bonds added' % (len(bonds)))
+        if verbose: print('%d bonds added (%d skipped due to constraints)' % (len(bonds) - skipped_constrained_bonds, skipped_constrained_bonds))
 
         # Check that no topological bonds are missing force parameters
         _check_for_missing_valence_terms('HarmonicBondForce', topology, bonds.keys(), topology.bonds())
@@ -1455,14 +1604,20 @@ class HarmonicAngleGenerator(object):
             print('')
 
         # Add all angles to the system.
+        skipped_constrained_angles = 0 # keep track of how many angles were constrained (and hence skipped)
         for (atom_indices, angle) in angles.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
             assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
 
+            if topology.atomPairIsConstrained(atom_indices[0], atom_indices[1]) and topology.atomPairIsConstrained(atom_indices[1], atom_indices[2]) and topology.atomPairIsConstrained(atom_indices[0], atom_indices[2]):
+                # Angle is constrained; we don't need to add an angle term.
+                skipped_constrained_angles += 1
+                continue
+
             force.addAngle(atom_indices[0], atom_indices[1], atom_indices[2], angle.angle, angle.k)
 
-        if verbose: print('%d angles added' % (len(angles)))
+        if verbose: print('%d angles added (%d skipped due to constraints)' % (len(angles) - skipped_constrained_angles, skipped_constrained_angles))
 
         # Check that no topological angles are missing force parameters
         _check_for_missing_valence_terms('HarmonicAngleForce', topology, angles.keys(), topology.angles())
