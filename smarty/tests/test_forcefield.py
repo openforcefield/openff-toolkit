@@ -18,11 +18,7 @@ import os
 
 # This is a test forcefield that is not meant for actual use.
 # It just tests various capabilities.
-ffxml_contents = u"""\
-<?xml version="1.0"?>
-
-<SMIRFF use_fractional_bondorder="True">
-
+ffxml_standard = u"""\
 <!-- Header block (optional) -->
 <Date>Date: May-September 2016</Date>
 <Author>C. I. Bayly, OpenEye Scientific Software and David Mobley, UCI</Author>
@@ -49,6 +45,7 @@ ffxml_contents = u"""\
    <Angle smirks="[#1:1]-[#6X3:2]~[*:3]" angle="120." id="a11" parent_id="a11" k="100.0"/> <!-- Christopher Bayly from parm99, Aug 2016 -->
    <Angle smirks="[#1:1]-[#6X3:2]-[#1:3]" angle="120." id="a12" parent_id="a12" k="70.0"/> <!-- Christopher Bayly from parm99, Aug 2016 -->
 </HarmonicAngleForce>
+
 <PeriodicTorsionForce phase_unit="degrees" k_unit="kilocalories_per_mole">
    <Proper smirks="[a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]" idivf1="9" periodicity1="3" phase1="0.0" k1="1.40" id="t0001" parent_id="t0001"/> <!-- X -CT-CT-X from frcmod.Frosst_AlkEthOH -->
    <Proper smirks="[a,A:1]-[#6X4:2]-[#8X2:3]-[#1:4]" idivf1="3" periodicity1="3" phase1="0.0" k1="0.50" id="t0002" parent_id="t0002"/> <!--X -CT-OH-X from frcmod.Frosst_AlkEthOH -->
@@ -69,6 +66,7 @@ ffxml_contents = u"""\
     <Proper smirks="[*:1]-[#6X3:2]=[#6X3:3]-[*:4]" id="t21" parent_id="t21" idivf1="1" k1="6." periodicity1="2" phase1="180.0"/> <!-- parm99 generic, Bayly, Aug 2016 -->
    <Improper smirks="[a,A:1]~[#6X3:2]([a,A:3])~[OX1:4]" periodicity1="2" phase1="180.0" k1="10.5" id="i0001" parent_id="i0001"/> <!-- X -X -C -O  from frcmod.Frosst_AlkEthOH; none in set but here as format placeholder -->
 </PeriodicTorsionForce>
+
 <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
    <!-- sigma is in angstroms, epsilon is in kcal/mol -->
    <Atom smirks="[#1:1]" rmin_half="1.4870" epsilon="0.0157" id="n0001" parent_id="n0001"/> <!-- making HC the generic hydrogen -->
@@ -89,9 +87,61 @@ ffxml_contents = u"""\
   <BondChargeCorrection smirks="[#6X4:1]-[#6X3a:2]-[#7]" increment="-0.0943" id="c0002" parent_id="c0002"/> <!-- tetrahedral carbon bonded to aromatic carbon (bonded to a nitrogen) -->
   <BondChargeCorrection smirks="[#6X4:1]-[#8:2]" increment="+0.0718" id="c0003" parent_id="c0003"/> <!-- tetrahedral carbon bonded to an oxygen :    13   11   31    1   0.0718 -->
 </BondChargeCorrections>
+"""
+
+ffxml_constraints = u"""\
+<Constraints distance_unit="angstroms">
+  <!-- constrain all bonds to hydrogen to their equilibrium bond length -->
+  <Constraint smirks="[#1:1]-[*:2]" id="constraint0001"/>
+</Constraints>
+"""
+
+ffxml_gbsa = u"""\
+<GBSAForce gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" radius_units="nanometers" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
+  <Atom smirks="[#1:1]" radius="0.12" scale="0.85" id="gb0001"/>
+  <Atom smirks="[#6:1]" radius="0.22" scale="0.72" id="gb0002"/>
+  <Atom smirks="[#7:1]" radius="0.155" scale="0.79" id="gb0003"/>
+  <Atom smirks="[#8:1]" radius="0.15" scale="0.85" id="gb0004"/>
+  <Atom smirks="[#9:1]" radius="0.15" scale="0.88" id="gb0005"/>
+  <Atom smirks="[#14:1]" radius="0.21" scale="0.8" id="gb0006"/>
+  <Atom smirks="[#15:1]" radius="0.185" scale="0.86" id="gb0007"/>
+  <Atom smirks="[#16:1]" radius="0.18" scale="0.96" id="gb0008"/>
+  <Atom smirks="[#17:1]" radius="0.17" scale="0.8" id="gb0009"/>
+</GBSAForce>
+"""
+
+ffxml_contents_gbsa = u"""\
+<?xml version="1.0"?>
+
+<SMIRFF use_fractional_bondorder="True">
+
+%(ffxml_standard)s
+%(ffxml_constraints)s
+%(ffxml_gbsa)s
 
 </SMIRFF>
-"""
+""" % globals()
+
+ffxml_contents_noconstraints = u"""\
+<?xml version="1.0"?>
+
+<SMIRFF use_fractional_bondorder="True">
+
+%(ffxml_standard)s
+
+</SMIRFF>
+""" % globals()
+
+ffxml_contents = u"""\
+<?xml version="1.0"?>
+
+<SMIRFF use_fractional_bondorder="True">
+
+%(ffxml_standard)s
+%(ffxml_constraints)s
+
+</SMIRFF>
+""" % globals()
 
 # Set up another, super minimal FF to test that alternate aromaticity
 # models implemented properly
@@ -267,7 +317,7 @@ def check_AlkEtOH(forcefield, description="", chargeMethod=None, verbose=False):
 def test_create_system_molecules_features(verbose=False):
     """Test creation of a System object from small molecules to test various ffxml features
     """
-    ffxml = StringIO(ffxml_contents)
+    ffxml = StringIO(ffxml_contents_gbsa)
     forcefield = ForceField(ffxml)
 
     for chargeMethod in [None, 'BCC', 'OECharges_AM1BCCSym']:
@@ -293,7 +343,7 @@ def check_boxes(forcefield, description="", chargeMethod=None, verbose=False):
     """
     # Read monomers
     mols = list()
-    monomers = ['cyclohexane', 'ethanol', 'propane', 'methane', 'butanol']
+    monomers = ['water', 'cyclohexane', 'ethanol', 'propane', 'methane', 'butanol']
     from openeye import oechem
     mol = oechem.OEGraphMol()
     for monomer in monomers:
@@ -305,7 +355,8 @@ def check_boxes(forcefield, description="", chargeMethod=None, verbose=False):
     if verbose: print('%d reference molecules loaded' % len(mols))
 
     # Read systems.
-    boxes = ['cyclohexane_ethanol_0.4_0.6.pdb', 'propane_methane_butanol_0.2_0.3_0.5.pdb']
+    boxes = ['methanol_water_1_300.pdb', 'ethanol_water_1_300.pdb', 'propanol_water_1_300.pdb', 'butanol_water_1_300.pdb', 'cyclhexane_water_1_300.pdb',
+        'cyclohexane_ethanol_0.4_0.6.pdb', 'propane_methane_butanol_0.2_0.3_0.5.pdb']
     from simtk.openmm.app import PDBFile
     for box in boxes:
         filename = get_data_filename(os.path.join('systems', 'packmol_boxes', box))
@@ -441,7 +492,7 @@ def test_partial_bondorder(verbose = False):
     oechem.OETriposAtomNames(mol)
     topology = generateTopologyFromOEMol(mol)
     # Load forcefield from above
-    ffxml = StringIO(ffxml_contents)
+    ffxml = StringIO(ffxml_contents_noconstraints)
     ff = ForceField(ffxml)
 
     # Set up once using AM1BCC charges
