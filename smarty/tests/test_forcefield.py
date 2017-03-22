@@ -203,6 +203,11 @@ def test_read_ffxml():
     """
     forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
 
+def test_read_ffxml_gbsa():
+    """Test reading of ffxml files with GBSA support.
+    """
+    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH_GBSA.ffxml'))
+
 def check_system_creation_from_molecule(forcefield, mol, chargeMethod=None, verbose=False):
     """
     Generate a System from the given OEMol and SMIRFF forcefield and check that its energy is finite.
@@ -273,6 +278,13 @@ def test_create_system_molecules_parmatfrosst(verbose=False):
     """Test creation of a System object from small molecules to test parm@frosst forcefield.
     """
     forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
+    for f in check_AlkEtOH(forcefield, "to test Parm@Frosst parameters", verbose=verbose):
+        yield f
+
+def test_create_system_molecules_parmatfrosst_gbsa(verbose=False):
+    """Test creation of a System object from small molecules to test parm@frosst forcefield with GBSA support.
+    """
+    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH_GBSA.ffxml'))
     for f in check_AlkEtOH(forcefield, "to test Parm@Frosst parameters", verbose=verbose):
         yield f
 
