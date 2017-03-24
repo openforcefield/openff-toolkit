@@ -36,6 +36,7 @@ ffxml_standard = u"""\
 
 <HarmonicAngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
    <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50" k="100.0" id="a0001" parent_id="a0001"/> <!-- consensus matches all X-Csp3-X -->
+   <Angle smirks="[*:1]~[#8:2]~[*:3]" angle="113." k="100.0" id="a0001b" parent_id="a0001"/> <!-- consensus matches all X-O-X, such as in water -->
    <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50" k="70.0" id="a0002" parent_id="a0001"/> <!-- H1-CT-H1 from frcmod.Frosst_AlkEthOH -->
    <Angle smirks="[#6X4:1]-[#6X4:2]-[#6X4:3]" angle="109.50" k="80.0" id="a0003" parent_id="a0001"/> <!-- CT-CT-CT from frcmod.Frosst_AlkEthOH -->
    <Angle smirks="[#8X2:1]-[#6X4:2]-[#8X2:3]" angle="109.50" k="140.0" id="a0004" parent_id="a0001"/> <!-- O_-CT-O_ from frcmod.Frosst_AlkEthOH -->
@@ -355,7 +356,7 @@ def check_boxes(forcefield, description="", chargeMethod=None, verbose=False):
     if verbose: print('%d reference molecules loaded' % len(mols))
 
     # Read systems.
-    boxes = ['ethanol_water_1_300.pdb', 'butanol_water_1_300.pdb', 'cyclohexane_water_1_300.pdb',
+    boxes = ['ethanol_water.pdb',  'cyclohexane_water.pdb',
         'cyclohexane_ethanol_0.4_0.6.pdb', 'propane_methane_butanol_0.2_0.3_0.5.pdb']
     from simtk.openmm.app import PDBFile
     for box in boxes:
@@ -374,10 +375,10 @@ def test_create_system_boxes_features(verbose=False):
         for f in check_boxes(forcefield, description="to test Parm@frosst parameters with charge method %s" % str(chargeMethod), chargeMethod=chargeMethod, verbose=verbose):
             yield f
 
-def test_create_system_boxes_parmatfrosst(verbose=False):
+def test_create_system_boxes_smirff99Frosst(verbose=False):
     """Test creation of a System object from some boxes of mixed solvents to test parm@frosst forcefield.
     """
-    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH.ffxml'))
+    forcefield = ForceField(get_data_filename('forcefield/smirff99Frosst.ffxml'))
     for f in check_boxes(forcefield, description="to test Parm@frosst parameters", verbose=verbose):
         yield f
 
