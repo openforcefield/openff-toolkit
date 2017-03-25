@@ -172,6 +172,38 @@ Here is an example not intended for actual use:
 ```
 The charge model specified must be a method understood by the OpenEye toolkits, and the charge correction `increment` (in units of proton charge) will be applied on top of this by subtracting `increment` from the atom tagged as 1 and adding it to the atom tagged as 2.
 
+### CONSTRAINTS
+
+Bond length constraints can be specified through a `<Constraints/>` block, which can constrain bonds to their equilibrium lengths or specify an interatomic constraint distance.
+Two atoms must be tagged in the `smirks` attribute of each `<Constraint/>` record.
+
+To constrain two atoms to their equilibrium bond length, it is critical that a `<HarmonicBondForce/>` record be specified for those atoms:
+```XML
+<Constraints>
+  <!-- constrain all bonds to hydrogen to their equilibrium bond length -->
+  <Constraint smirks="[#1:1]-[*:2]" />
+</Constraints>
+```
+However, this constraint distance can be overridden, or two atoms that are not directly bonded constrained, by specifying the `distance` attribute (and optional `distance_unit` attribute for the `<Constraints/>` tag):
+```XML
+<Constraints distance_unit="angstroms">
+  <!-- constrain water O-H bond to equilibrium bond length (overrides earlier constraint) -->
+  <Constraint smirks="[#1:1]-[#8X2H2:2]-[#1]" distance="0.9572"/>
+  <!-- constrain water H...H, calculating equilibrium length from H-O-H equilibrium angle and H-O equilibrium bond lengths -->
+  <Constraint smirks="[#1:1]-[#8X2H2]-[#1:2]" distance="1.8532"/>
+</Constraints>
+```
+Typical molecular simulation practice is to constrain all bonds to hydrogen to their equilibrium bond lengths and enforce rigid TIP3P geometry on water molecules:
+```XML
+<Constraints distance_unit="angstroms">
+  <!-- constrain all bonds to hydrogen to their equilibrium bond length -->
+  <Constraint smirks="[#1:1]-[*:2]" />
+  <!-- TIP3P rigid water -->
+  <Constraint smirks="[#1:1]-[#8X2H2:2]-[#1]" distance="0.9572"/>
+  <Constraint smirks="[#1:1]-[#8X2H2]-[#1:2]" distance="1.8532"/>
+</Constraints>
+```
+
 ## Advanced features
 
 Standard usage is expected to rely primarily on the features documented above and potentially new features. However, some advanced features are also currently supported.
