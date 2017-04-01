@@ -5,17 +5,8 @@
 This repository contains a number of tools from the [Open Force Field Group](http://github.com/open-forcefield-group) for the development and use of modern molecular mechanics forcefields based on direct chemical perception and parameterized with rigorous statistical methods.
 
 This repository hosts tools that we have committed to stably maintain throughout their lifetimes:
-* The SMIRks Native Open Force Field (SMIRNOFF) direct chemical perception forcefield specification language
+* The [SMIRks Native Open Force Field (SMIRNOFF)](https://github.com/open-forcefield-group/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md) direct chemical perception forcefield specification language
 * Tools for direct chemical environment perception and manipulation
-
-## Manifest
-
-* `examples/` - some examples - look here to get started
-* `openforcefield/` - openforcefield tools
-* `devtools/` - continuous integration and packaging scripts and utilities
-* `utilities/` - some utility functionality relating to the project; initially, for conversion of parm@frosst modified `frcmod` files to SMIRNOFF XML.
-* `oe_license.txt.enc` - encrypted OpenEye license for continuous integration testing
-* `.travis.yml` - travis-ci continuous integration file
 
 ## Installation
 
@@ -35,11 +26,11 @@ Install `openforcefield` tools via conda:
 conda install --yes -c omnia openforcefield
 ```
 
-# Provided Tools
+# Tools
 
 ## `SMIRNOFF`: SMIRks Native Open Force Field
 
-This repository houses the SMIRNOFF SMIRKS-based force field format, along with classes to parameterize OpenMM systems given [SMIRNOFF `.ffxml` format files](https://github.com/open-forcefield-group/smarty/blob/master/The-SMIRNOFF-force-field-format.md).
+This repository houses the SMIRNOFF SMIRKS-based force field format, along with classes to parameterize OpenMM systems given [SMIRNOFF `.ffxml` format files](https://github.com/open-forcefield-group/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md).
 
 The SMIRNOFF force field format is documented [here](https://github.com/open-forcefield-group/smirnoff/blob/master/The-SMIRNOFF-force-field-format.md).
 
@@ -55,6 +46,15 @@ It can also be of interest to know what SMIRNOFF parameters would be applied to 
 ## `ChemicalEnvironment`: Tools for chemical environment perception and manipulation
 
 Documentation forthcoming
+
+# Manifest
+
+* `examples/` - some examples - look here to get started
+* `openforcefield/` - openforcefield tools
+* `devtools/` - continuous integration and packaging scripts and utilities
+* `utilities/` - utilities; scripts to convert parm@frosst modified `frcmod` files to SMIRNOFF XML
+* `oe_license.txt.enc` - encrypted OpenEye license for continuous integration testing
+* `.travis.yml` - travis-ci continuous integration file
 
 # Contributors
 
