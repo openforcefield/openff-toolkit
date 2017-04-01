@@ -47,13 +47,14 @@ import openeye.oequacpac
 
 from openeye import oechem, oequacpac
 
+from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
+
 from simtk import openmm, unit
 
 import time
 
 import networkx
 
-import smarty.environment as env
 import itertools
 
 #=============================================================================================
@@ -1675,11 +1676,11 @@ class PeriodicTorsionGenerator(object):
 
             # Check that the SMIRKS pattern matches the type it's supposed to
             try:
-                chemenv = env.ChemicalEnvironment(self.smirks)
+                chemenv = ChemicalEnvironment(self.smirks)
                 thistype = chemenv.getType()
                 if thistype != 'Torsion':
                     raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Proper'))
-            except env.SMIRKSParsingError:
+            except SMIRKSParsingError:
                 print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
 
 
@@ -1717,11 +1718,11 @@ class PeriodicTorsionGenerator(object):
 
             # Check that the SMIRKS pattern matches the type it's supposed to
             try:
-                chemenv = env.ChemicalEnvironment(self.smirks)
+                chemenv = ChemicalEnvironment(self.smirks)
                 thistype = chemenv.getType()
                 if thistype != 'Improper':
                     raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Improper'))
-            except env.SMIRKSParsingError:
+            except SMIRKSParsingError:
                 print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
 
 
