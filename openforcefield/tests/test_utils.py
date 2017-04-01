@@ -1,7 +1,7 @@
 from functools import partial
 from unittest import TestCase
 
-import openforcefield import utils
+from openforcefield import utils
 
 class TestUtils(TestCase):
     def test_read_molecules(self):
