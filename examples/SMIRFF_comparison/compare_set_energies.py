@@ -1,20 +1,22 @@
 #!/bin/env python
 
-from smarty.forcefield_utils import *
+from openforcefield.utils import *
+from openforcefield.typing.engines.smirnoff import ForceField
+
 import os
 import glob
 
-# Cross-check energies of molecules from AlkEthOH set using SMIRFF xml file 
+# Cross-check energies of molecules from AlkEthOH set using SMIRFF xml file
 # versus energies from AMBER .prmtop and .crd files (parm@frosst params)
 
-#datapath = './AlkEthOH_inputfiles/AlkEthOH_chain_filt1' 
-datapath = './AlkEthOH_inputfiles/AlkEthOH_rings_filt1' 
+#datapath = './AlkEthOH_inputfiles/AlkEthOH_chain_filt1'
+datapath = './AlkEthOH_inputfiles/AlkEthOH_rings_filt1'
 
 #Check if this is a directory, if not, extract it
 # Check if we have this data file; if not we have to extract the archive
-if not os.path.isdir( datapath ):  
+if not os.path.isdir( datapath ):
     print "Extracting archived molecule files."
-    tarfile = 'AlkEthOH_inputfiles.tar.gz' 
+    tarfile = 'AlkEthOH_inputfiles.tar.gz'
     os.system('tar -xf AlkEthOH_inputfiles.tar.gz')
 
 #Obtain list of molecules

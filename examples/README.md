@@ -1,8 +1,8 @@
-# Examples for Bayesian atomtype sampler
+# Examples for openforcefield tools
 
 ## Manifest
 * `parm@frosst/` - example illustrating attempt to recover parm@frosst atom types
-* `smarty_simulations/` - examples to implement smarty, a tool to rediscover parm@frosst atomtypes on the AlkEthOH molecules set 
+* `smarty_simulations/` - examples to implement smarty, a tool to rediscover parm@frosst atomtypes on the AlkEthOH molecules set
 * `SMIRFF_comparison/` - temporary example (waiting for permanent home) of cross-comparison of molecule energies from SMIRFF with same molecule energies from .prmtop and .crd.
 * `SMIRFF_simulation/` - gives a simple example of simulating a molecule in the gas phase beginning from a molecular structure and the SMIRFF forcefield format.
 * `forcefield_modification/` - gives example of modifying a forcefield parameter, evaluating how it changes an energy (IPython notebook).

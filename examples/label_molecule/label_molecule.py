@@ -1,8 +1,8 @@
 #!/bin/env python
 
-from openeye.oechem import *
-from smarty.utils import get_data_filename
-from smarty.forcefield import *
+
+from openforcefield.utils import *
+from openforcefield.typing.engines.smirnoff import get_molecule_parameterIDs, ForceField
 
 # Create an oemol
 mol = OEMol()

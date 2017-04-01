@@ -7,7 +7,9 @@ from simtk.openmm import Platform
 from simtk.unit import *
 import numpy as np
 from mdtraj.reporters import NetCDFReporter
-from smarty import *
+
+from openforcefield.utils import *
+from openforcefield.typing.engines.smirnoff import ForceField
 
 #Define what molecule to work on, and a few simulation parameters
 molname = 'AlkEthOH_r51'
@@ -15,7 +17,7 @@ mol_filename =  molname+'.mol2'
 time_step = 2 #Femtoseconds
 temperature = 300 #kelvin
 friction = 1 # per picosecond
-num_steps = 100000 
+num_steps = 100000
 trj_freq = 1000 #steps
 data_freq = 1000 #steps
 
