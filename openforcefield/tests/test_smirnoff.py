@@ -1,5 +1,5 @@
 from functools import partial
-from openforcefield.typing.engines.smirnoff import ForceField
+from openforcefield.typing.engines.smirnoff import *
 from openforcefield.utils import get_data_filename, generateTopologyFromOEMol, read_molecules
 import openeye
 from openeye import oechem
@@ -295,7 +295,7 @@ def check_system_creation_from_topology(forcefield, topology, mols, positions, c
         Charge method to use in creating system
 
     """
-    from simtk.openmm.app import CutoffPeriodic
+    from openforcefield.typing.engines.smirnoff import CutoffPeriodic
     system = forcefield.createSystem(topology, mols, verbose=verbose, chargeMethod=chargeMethod, nonbondedMethod=CutoffPeriodic)
     # Test energy computation.
     check_energy_is_finite(system, positions)
@@ -738,6 +738,7 @@ def test_merge_system():
     prmtop = get_data_filename( prefix+'.prmtop')
     incrd = get_data_filename( prefix+'.inpcrd')
 
+    from openforcefield.typing.engines.smirnoff import create_system_from_amber
     topology0, system0, positions0 = create_system_from_amber( prmtop, incrd )
 
     from openeye import oechem
