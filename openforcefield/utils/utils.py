@@ -28,6 +28,10 @@ from openeye.oechem import *
 from openeye.oeomega import *
 from openeye.oequacpac import *
 
+from simtk.openmm import app
+from simtk.openmm.app import element as elem
+from simtk.openmm.app import Topology
+
 import time
 from simtk import unit
 
