@@ -1,4 +1,4 @@
-language: c
+openforcefieldlanguage: c
 sudo: false
 
 branches:
@@ -25,7 +25,7 @@ script:
   # Build the recipe
   - conda build devtools/conda-recipe
   # Install
-  - conda install --yes --use-local smarty
+  - conda install --yes --use-local openforcefield
   # Run tests
   - conda install --yes nose nose-timer
   - cd devtools && nosetests -vv --nocapture --with-timer $PACKAGENAME && cd ..
@@ -38,7 +38,7 @@ env:
 
   global:
     - ORGNAME="omnia"
-    - PACKAGENAME="smarty"
+    - PACKAGENAME="openforcefield"
     # OpenEye toolkit
     - OE_LICENSE="$HOME/oe_license.txt"
     - OPENEYE_CHANNEL="-i https://pypi.anaconda.org/openeye/channel/main/simple"
