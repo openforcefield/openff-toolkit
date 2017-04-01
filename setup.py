@@ -21,7 +21,16 @@ setup(
     license = "MIT",
     keywords = "molecular mechanics, forcefield, Bayesian parameterization",
     url = "http://github.com/open-forcefield-group/openforcefield",
-    packages=['openforcefield', 'openforcefield/tests', 'openforcefield/data'],
+    packages=[
+        'openforcefield',
+        'openforcefield/tests',
+        'openforcefield/data',
+        'openforcefield/typing',
+        'openforcefield/typing/chemistry',
+        'openforcefield/typing/engines',
+        'openforcefield/typing/engines/smirnoff',
+        'openforcefield/utils',        
+        ],
     long_description=read('README.md'),
     classifiers=[
         "Development Status :: 3 - Alpha",
