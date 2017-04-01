@@ -2,6 +2,7 @@ from functools import partial
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils import get_data_filename, generateTopologyFromOEMol, read_molecules
 import openeye
+from openeye import oechem
 import os
 from simtk.openmm import app
 from simtk.openmm.app import element as elem
