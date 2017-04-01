@@ -1,10 +1,8 @@
 from functools import partial
-from smarty import ForceField
-from smarty import generateTopologyFromOEMol
-import smarty
+from openforcefield.typing.engines.smirnoff import ForceField
+from openforcefield.utils import get_data_filename, generateTopologyFromOEMol
 import openeye
 import os
-from smarty.utils import get_data_filename
 from simtk.openmm import app
 from simtk.openmm.app import element as elem
 from simtk.openmm.app import Topology
@@ -261,7 +259,7 @@ def test_read_ffxml_gbsa():
 
 def check_system_creation_from_molecule(forcefield, mol, chargeMethod=None, verbose=False):
     """
-    Generate a System from the given OEMol and SMIRFF forcefield and check that its energy is finite.
+    Generate a System from the given OEMol and SMIRNOFF forcefield and check that its energy is finite.
 
     Parameters
     ----------
@@ -274,7 +272,6 @@ def check_system_creation_from_molecule(forcefield, mol, chargeMethod=None, verb
 
     """
 
-    from smarty.forcefield import generateTopologyFromOEMol
     topology = generateTopologyFromOEMol(mol)
     system = forcefield.createSystem(topology, [mol], chargeMethod=chargeMethod, verbose=verbose)
     # Test energy computation.
