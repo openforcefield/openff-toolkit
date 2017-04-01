@@ -19,7 +19,7 @@ setup(
     author_email = "john.chodera@choderalab.org",
     description = ("Open Force Field Group tools"),
     license = "MIT",
-    keywords = "Bayesian atomtype sampling forcefield parameterization",
+    keywords = "molecular mechanics, forcefield, Bayesian parameterization",
     url = "http://github.com/open-forcefield-group/openforcefield",
     packages=['openforcefield', 'openforcefield/tests', 'openforcefield/data'],
     long_description=read('README.md'),
