@@ -33,6 +33,7 @@ import lxml.etree as etree
 
 from simtk.openmm.app import element as elem
 from simtk.openmm.app import Topology
+from openforcefield.utils import generateTopologyFromOEMol
 
 import os
 import math
