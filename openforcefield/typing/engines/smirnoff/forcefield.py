@@ -2286,7 +2286,7 @@ class GBSAForceGenerator(object):
             generator.registerAtom(atom, element)
 
     def createForce(self, system, topology, verbose=False, **args):
-        from smarty import gbsaforces
+        from openforcefield.typing.engines.smirnoff import gbsaforces
         force_class = getattr(gbsaforces, self.gb_model)
         force = force_class(**self.parameters)
         system.addForce(force)
