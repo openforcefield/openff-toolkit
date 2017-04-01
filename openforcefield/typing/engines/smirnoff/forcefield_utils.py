@@ -21,9 +21,8 @@ parts from John Chodera and Kyle Beauchamp.
 #=============================================================================================
 
 import os
-import smarty
-from smarty import ForceField
-from smarty.utils import get_data_filename
+from openforcefield.typing.engines.smirnoff import ForceField
+from openforcefield.utils import get_data_filename
 import simtk.openmm
 from simtk.openmm import app
 import simtk.openmm as mm
@@ -81,7 +80,7 @@ def create_system_from_molecule(forcefield, mol, verbose=False):
 
     Parameters
     ----------
-    forcefield : smarty.ForceField
+    forcefield : ForceField
         SMIRFF forcefield
     mol : oechem.OEMol
         Molecule to test (must have coordinates)
@@ -94,7 +93,7 @@ def create_system_from_molecule(forcefield, mol, verbose=False):
     positions : initial atomic positions (OpenMM)
     """
     # Create system
-    from smarty.forcefield import generateTopologyFromOEMol
+    from openforcefield.utils import generateTopologyFromOEMol
     topology = generateTopologyFromOEMol(mol)
     system = forcefield.createSystem(topology, [mol], verbose=verbose)
 
@@ -235,7 +234,7 @@ def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True, ski
         Filename of input AMBER format prmtop file
     crd_filename : str (filename)
         Filename of input AMBER format crd file
-    forcefield : smarty.ForceField
+    forcefield : ForceField
         SMIRFF forcefield
     mol : oechem.OEMol
         Molecule to test
