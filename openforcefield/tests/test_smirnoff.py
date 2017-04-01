@@ -1,6 +1,6 @@
 from functools import partial
 from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.utils import get_data_filename, generateTopologyFromOEMol
+from openforcefield.utils import get_data_filename, generateTopologyFromOEMol, read_molecules
 import openeye
 import os
 from simtk.openmm import app
@@ -9,7 +9,6 @@ from simtk.openmm.app import Topology
 from simtk import unit, openmm
 import numpy as np
 from io import StringIO
-from smarty.forcefield_utils import *
 import tempfile
 import parmed
 import os
@@ -263,7 +262,7 @@ def check_system_creation_from_molecule(forcefield, mol, chargeMethod=None, verb
 
     Parameters
     ----------
-    forcefield : smarty.ForceField
+    forcefield : ForceField
         SMIRFF forcefield
     mol : oechem.OEMol
         Molecule to test (need not have coordinates)
@@ -284,7 +283,7 @@ def check_system_creation_from_topology(forcefield, topology, mols, positions, c
 
     Parameters
     ----------
-    forcefield : smarty.ForceField
+    forcefield : ForceField
         SMIRFF forcefield
     topology : simtk.openmm.app.Topology
         Topology to construct system from
@@ -295,7 +294,7 @@ def check_system_creation_from_topology(forcefield, topology, mols, positions, c
         Charge method to use in creating system
 
     """
-    from smarty.forcefield import CutoffPeriodic
+    from simtk.openmm.app import CutoffPeriodic
     system = forcefield.createSystem(topology, mols, verbose=verbose, chargeMethod=chargeMethod, nonbondedMethod=CutoffPeriodic)
     # Test energy computation.
     check_energy_is_finite(system, positions)
@@ -408,7 +407,7 @@ def test_smirff_energies_vs_parmatfrosst(verbose=False):
 
 def test_label_molecules(verbose=False):
     """Test labeling/getting stats on labeling molecules"""
-    molecules = smarty.utils.read_molecules(get_data_filename('molecules/AlkEtOH-tripos.mol2.gz'), verbose=verbose)
+    molecules = read_molecules(get_data_filename('molecules/AlkEtOH-tripos.mol2.gz'), verbose=verbose)
     ffxml = get_data_filename('forcefield/Frosst_AlkEtOH.ffxml')
     get_molecule_parameterIDs( molecules, ffxml)
 
@@ -568,7 +567,6 @@ def test_change_parameters(verbose=False):
     ffxml = get_data_filename('forcefield/Frosst_AlkEtOH.ffxml')
     ff = ForceField(ffxml)
 
-    from smarty.forcefield import generateTopologyFromOEMol
     topology = generateTopologyFromOEMol(mol)
     # Create initial system
     system = ff.createSystem(topology, [mol], verbose=verbose)
