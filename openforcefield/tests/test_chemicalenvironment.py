@@ -1,8 +1,6 @@
 from functools import partial
-import smarty
-import smarty.environment
-from smarty.environment import *
-from smarty.utils import get_data_filename
+from openforcefield.typing.chemistry import *
+from openforcefield.utils import get_data_filename
 from unittest import TestCase
 import openeye.oechem
 from openeye.oechem import *
