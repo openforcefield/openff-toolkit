@@ -1,13 +1,13 @@
-# The Smirks Force Field (SMIRFF) format and its use
+# The SMIRks Native Open Force Field (SMIRNOFF) format and its use
 
-The SMIRFF format is based on the [`OpenMM`](http://openmm.org) [`ForceField`](http://docs.openmm.org/7.0.0/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField) class and provides an XML format for encoding force fields based on [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html)-based chemical perception.
+The SMIRNOFF format is based on the [`OpenMM`](http://openmm.org) [`ForceField`](http://docs.openmm.org/7.0.0/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField) class and provides an XML format for encoding force fields based on [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html)-based chemical perception.
 While designed for [`OpenMM`](http://openmm.org), parameters encoded in this format can be applied to systems and then these systems converted via [`ParmEd`](http://parmed.github.io/ParmEd) and [`InterMol`](https://github.com/shirtsgroup/InterMol) for simulations in a variety of other simulation packages.
 
 ## Basic structure
 
-The SMIRFF format provides XML `ffxml` files that are parseable by the `ForceField` class of the `smarty.forcefield` module.
+The SMIRNOFF format provides XML `ffxml` files that are parseable by the `ForceField` class of the `openforcefield.typing.smirnoff` module.
 These encode parameters for a force field based on a SMIRKS-based specification of the chemical environment the parameters are to be applied to.
-The file has tags corresponding to OpenMM force terms (`HarmonicBondForce`, `HarmonicAngleForce`, `PeriodicTorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example ffxml](https://github.com/open-forcefield-group/smarty/blob/master/smarty/data/forcefield/Frosst_AlkEtOH.ffxml)):
+The file has tags corresponding to OpenMM force terms (`HarmonicBondForce`, `HarmonicAngleForce`, `PeriodicTorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example ffxml](https://github.com/open-forcefield-group/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEtOH.ffxml)):
 ```XML
    <HarmonicAngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
 ```       
@@ -21,7 +21,7 @@ Under each of these force terms, there are tags for individual parameter lines s
 The first of these specifies the `[a,A:1]-[#6X4:2]-[a,A:3]` SMIRKS pattern for an angle, with a tetravalent carbon at the center with single bonds to two atoms of any type.
 Atoms are labeled 1, 2, and 3, with 2 being the central atom. Equilibrium angle values are provided, along with force constants (with units as given above).
 
-**SMIRFF parameters are hierarchical** in that parameters which come later in a file override those which come earlier if they match the same pattern.
+**SMIRNOFF parameters are hierarchical** in that parameters which come later in a file override those which come earlier if they match the same pattern.
  This can be seen in the example above, where the first line provides a generic angle parameter for any tetravalent carbon (single bond) angle, and the second line overrides this for the specific case of a hydrogen-(tetravalent carbon)-hydrogen angle.
 
 This hierarchical structure means that a typical parameter file will tend to have generic parameters early in the section for each force type, with more specialized parameters assigned later.
@@ -30,7 +30,7 @@ This hierarchical structure means that a typical parameter file will tend to hav
 
 ## Functional forms, etc.
 
-**Functional form**: The SMIRFF format specifies parameters; once specified, these are processed by the SMIRFF `ForceField` class and used to assign parameters to OpenMM Forces.
+**Functional form**: The SMIRNOFF format specifies parameters; once specified, these are processed by the SMIRNOFF `ForceField` class and used to assign parameters to OpenMM Forces.
 This means that specific forces are generally implemented as discussed in the [OpenMM Documentation](http://docs.openmm.org/7.0.0/userguide/theory.html), see especially [Section 19 on Standard Forces](http://docs.openmm.org/7.0.0/userguide/theory.html#standard-forces) for functional forms. In some cases, typically for consistency with the AMBER force field philosophy motivating some of the authors, we do some manipulation of parameters from these files as discussed below in "Parameter sections".
 
 **Charges**: In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), we at least initially treat partial charges as something to be obtained separately from the rest of the force field (bonds, angles, impropers, torsions [BAIT] and vdW terms), typically via QM calculations or a method such as Bayly's [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach, thus, for system setup we provide the option of specifying a charging method, though charges are not normally specified in the FFXML itself.
@@ -38,7 +38,7 @@ This means that specific forces are generally implemented as discussed in the [O
 
 ## Parameter sections
 
-For this section it will help to have on hand an example SMIRFF file, such as that the [AlkEthOH example ffxml](https://github.com/open-forcefield-group/smarty/blob/master/smarty/data/forcefield/Frosst_AlkEtOH.ffxml) or the larger prototype [SMIRFF99Frosst ffxml](https://github.com/open-forcefield-group/smirff99Frosst/blob/master/smirff99Frosst.ffxml).
+For this section it will help to have on hand an example SMIRNOFF file, such as that the [AlkEthOH example ffxml](https://github.com/open-forcefield-group/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEtOH.ffxml) or the larger prototype [SMIRNOFF99Frosst ffxml](https://github.com/open-forcefield-group/SMIRNOFF99Frosst/blob/master/SMIRNOFF99Frosst.ffxml).
 
 Before getting in to individual sections, it's worth noting that the XML parser ignores attributes in the XML that it does not understand, so providing a parameter line for an angle that specifies (for example) a second force constant `k2` will lead to no effect.
 
@@ -67,7 +67,7 @@ Bond parameters are specified via the [`HarmonicBondForce`](http://docs.openmm.o
 ```
 
 **AMBER functional forms define the force constant `k` in a manner that differs by a factor of two---we do not use that convention here, electing to use the standard harmonic definition `U(r) = (k/2)*(r-length)^2` instead.**
-Thus, comparing a SMIRFF file to a corresponding AMBER parameter file or `.frcmod` will make it appear that force constants here are twice as large as they ought to be.
+Thus, comparing a SMIRNOFF file to a corresponding AMBER parameter file or `.frcmod` will make it appear that force constants here are twice as large as they ought to be.
 
 ### ANGLE PARAMETERS
 
@@ -81,7 +81,7 @@ Angle parameters are specified via the [`HarmonicAngleForce`](http://docs.openmm
 ```
 
 **AMBER functional forms drop the factor of 2 in the angle energy term, which we elect not to do here.**
-Thus, comparing a SMIRFF file to a corresponding AMBER parameter file or .frcmod will make it appear that force constants here are twice as large as they ought to be.
+Thus, comparing a SMIRNOFF file to a corresponding AMBER parameter file or .frcmod will make it appear that force constants here are twice as large as they ought to be.
 
 ### PROPER TORSIONS
 
@@ -230,26 +230,26 @@ Currently the Wiberg bond order is used, which will be obtained automatically fr
 
 Important usage notes:
 * An interpolation scheme must be specified in the `HarmonicBondForce` attributes; currently only `interpolate-linear` is supported, though a spline interpolation may be preferable (this needs to be explored)
-* If it is desired to use fractional bond orders, the introductory SMIRFF tag for the file must specify that the force field will use these via `<SMIRFF use_fractional_bondorder="True">` or similar. Otherwise, no partial bond orders will be obtained for possible later use.
+* If it is desired to use fractional bond orders, the introductory SMIRNOFF tag for the file must specify that the force field will use these via `<SMIRNOFF use_fractional_bondorder="True">` or similar. Otherwise, no partial bond orders will be obtained for possible later use.
 * This feature is only implemented for bonds at present, though it needs to be extended to angles and torsions; possibly also it may have value for vdW parameters (which could vary depending on bond order) though this needs to be explored
 
 ### Aromaticity models
 
 Before conduct SMIRKS substructure searches, molecules are prepared by applying one of OpenEye's aromaticity models, with the default model used unless otherwise requested.
 Alternate aromaticity models can be requested by the force field, such as
-`<SMIRFF version="0.1" aromaticity_model="OEAroModel_MDL">` used by SMIRFF99Frosst (a choice by Christopher Bayly to simplify handling of certain heteroaromatic compounds).
+`<SMIRNOFF version="0.1" aromaticity_model="OEAroModel_MDL">` used by SMIRNOFF99Frosst (a choice by Christopher Bayly to simplify handling of certain heteroaromatic compounds).
 Any of the names of the [aromaticity models available in the OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/oechemtk/aromaticity.html) can be used.
 
 ### Future advanced features
 
-At present, the SMIRFF format basically defaults to AMBER- or OpenMM-style decisions on many issues.
+At present, the SMIRNOFF format basically defaults to AMBER- or OpenMM-style decisions on many issues.
 For example, AMBER-style (Lorentz-Berthelot) combining rules are used, and the AMBER force field functional form.
 Angles potentials are assumed to be harmonic.  
 However, we have plans to support other combination rules, functional forms, and angle potentials.
-In keeping with the above, whole-force field decisions will be handled as attributes of the SMIRFF tag.
+In keeping with the above, whole-force field decisions will be handled as attributes of the SMIRNOFF tag.
 For example, alternate combination rules or functional forms might be handled as follows:
-* Geometric mean combining rule: `<SMIRFF combining_rule="geometric_mean">`
-* A Halgren buffered 14-7 potential for vdW could be handled as `<SMIRFF NonbondedForm="buffered_14_7">`
+* Geometric mean combining rule: `<SMIRNOFF combining_rule="geometric_mean">`
+* A Halgren buffered 14-7 potential for vdW could be handled as `<SMIRNOFF NonbondedForm="buffered_14_7">`
 * Selection of the type of angle force applied would be handled in a similar manner, via an `AngleForce="harmonic"` tag or similar. [This feature is being planned.](https://github.com/open-forcefield-group/smarty/issues/179)
 
 
@@ -268,12 +268,11 @@ See the Issue tracker for a more thorough list, though some major areas are high
 
 ## Use for parameterization of systems
 
-A relatively extensive set of examples is available under [smarty/examples](https://github.com/open-forcefield-group/smarty/tree/master/examples). Basic usage works as follows in python, however:
+A relatively extensive set of examples is available under [`examples/`](https://github.com/open-forcefield-group/openforcefield/tree/master/examples). Basic usage works as follows in python, however:
 
 ```python
 from simtk import openmm, unit
 import numpy as np
-import smarty
 import oechem
 mol = oechem.OEGraphMol()
 ifs = oechem.oemolistream(mol_filename)
@@ -283,15 +282,17 @@ oechem.OEReadMolecule(ifs, mol)
 oechem.OETriposAtomNames(mol)
 
 # Load forcefield
-forcefield = smarty.ForceField(smarty.get_data_filename('forcefield/Frosst_AlkEtOH_parmAtFrosst.ffxml'))
+from openforcefield.typing import smirnoff
+forcefield = smirnoff.ForceField(smarty.get_data_filename('forcefield/Frosst_AlkEtOH_parmAtFrosst.ffxml'))
 
 # Generate an OpenMM Topology and create an OpenMM System
-topology = smarty.generateTopologyFromOEMol(mol)
+import openforcefield.tools
+topology = openforcefield.tools.generateTopologyFromOEMol(mol)
 system = forcefield.createSystem(topology, [mol])
 ```
 This example can essentially trivially be extended to handle the case of beginning from a SMILES string rather than a `.mol2` file.
 
-The SMIRFF_simulation example in the examples directory shows how to extend the example above to simulate this molecule in the gas phase.
+The SMIRNOFF_simulation example in the examples directory shows how to extend the example above to simulate this molecule in the gas phase.
 
 `createSystem()` can also handle a system consisting of a mixture of molecules; we've tested it on cyclohexane/ethanol and propane/methanol/butanol mixtures for example.
 As input it is necessary to provide a Topology file representing the system, and a list of OpenEye molecules for the components of that Topology.
@@ -305,7 +306,7 @@ One important note is that the OpenEye molecules currently must have atom names,
 
 In general, other XML attributes can be specified and will be ignored by `ForceField` unless they are specifically handled by the parser (and specified in this document).
 
-One attribute we have found helpful in actual parsing is the `id` attribute for a specific parameter line, and we *recommend* that SMIRFF forcefields utilize this as effectively a parameter serial number, such as in:
+One attribute we have found helpful in actual parsing is the `id` attribute for a specific parameter line, and we *recommend* that SMIRNOFF forcefields utilize this as effectively a parameter serial number, such as in:
 ```XML
  <Bond smirks="[#6X3:1]-[#6X3:2]" id="b5" k="820.0" length="1.45"/>
 ```
@@ -321,12 +322,11 @@ So use generics sparingly unless it is your intention to provide generics that s
 
 ## Requirements
 
-Requirements match those of the SMARTY package and will be provided in more detail on the main page for SMARTY in SMARTY's `README.md`.
 Currently, [OpenEye toolkits](http://www.eyesopen.com/toolkit-development) (free for academic use, but they require a license) are utilized for most of our chemistry.
 [OpenMM](http://openmm.org) is also required, as are a variety of other relatively standard python packages and other toolkits available via [`conda`](http://conda.pydata.org/docs/building/meta-yaml.html).
 
-The easiest way to install SMARTY along with its dependencies is via `conda`:
+The easiest way to install SMIRNOFF along with its dependencies is via `conda`:
 ```bash
 conda config --add channels omnia
-conda install --yes smarty
+conda install --yes openforcefield
 ```
