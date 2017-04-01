@@ -1,4 +1,4 @@
-openforcefieldlanguage: c
+language: python
 sudo: false
 
 branches:
