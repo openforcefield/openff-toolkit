@@ -131,41 +131,6 @@ def getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model = None):
 # Augmented Topology
 #=============================================================================================
 
-def generateTopologyFromOEMol(molecule):
-    """
-    Generate an OpenMM Topology object from an OEMol molecule.
-
-    Parameters
-    ----------
-    molecule : openeye.oechem.OEMol
-        The molecule from which a Topology object is to be generated.
-
-    Returns
-    -------
-    topology : simtk.openmm.app.Topology
-        The Topology object generated from `molecule`.
-
-    """
-    # Create a Topology object with one Chain and one Residue.
-    from simtk.openmm.app import Topology
-    topology = Topology()
-    chain = topology.addChain()
-    resname = molecule.GetTitle()
-    residue = topology.addResidue(resname, chain)
-
-    # Create atoms in the residue.
-    for atom in molecule.GetAtoms():
-        name = atom.GetName()
-        element = elem.Element.getByAtomicNumber(atom.GetAtomicNum())
-        atom = topology.addAtom(name, element, residue)
-
-    # Create bonds.
-    atoms = { atom.name : atom for atom in topology.atoms() }
-    for bond in molecule.GetBonds():
-        topology.addBond(atoms[bond.GetBgn().GetName()], atoms[bond.GetEnd().GetName()])
-
-    return topology
-
 def generateGraphFromTopology(topology):
     """Geneate a NetworkX graph from a Topology object.
 
