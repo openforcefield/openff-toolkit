@@ -330,6 +330,11 @@ Without this attribute, there is no way to uniquely identify a specific paramete
 However, use of generic parameters (i.e. `[*:1]~[*:2]` for a bond) in your FFXML will result in parameters being assigned everywhere, bypassing this exception.
 So use generics sparingly unless it is your intention to provide generics that should be used.
 
+## Version history
+
+### 0.1
+
+Initial draft specification.
 
 ## Requirements
 
