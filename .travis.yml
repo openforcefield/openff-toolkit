@@ -1,4 +1,4 @@
-language: c
+language: python
 sudo: false
 
 branches:
@@ -9,7 +9,7 @@ install:
   - source devtools/travis-ci/install.sh
   - export PYTHONUNBUFFERED=true
   # Unpack encrypted OpenEye license file
-  - if [ "$TRAVIS_SECURE_ENV_VARS" == true ]; then openssl aes-256-cbc -K $encrypted_3873fe98916e_key -iv $encrypted_3873fe98916e_iv -in oe_license.txt.enc -out $OE_LICENSE -d; fi
+  - if [ "$TRAVIS_SECURE_ENV_VARS" == true ]; then openssl aes-256-cbc -K $encrypted_5f58236b8908_key -iv $encrypted_5f58236b8908_iv -in oe_license.txt.enc -out $OE_LICENSE -d; fi
   - if [ "$TRAVIS_SECURE_ENV_VARS" == false ]; then echo "OpenEye license will not be installed in forks."; fi
 
 script:
@@ -25,7 +25,7 @@ script:
   # Build the recipe
   - conda build devtools/conda-recipe
   # Install
-  - conda install --yes --use-local smarty
+  - conda install --yes --use-local openforcefield
   # Run tests
   - conda install --yes nose nose-timer
   - cd devtools && nosetests -vv --nocapture --with-timer $PACKAGENAME && cd ..
@@ -38,7 +38,7 @@ env:
 
   global:
     - ORGNAME="omnia"
-    - PACKAGENAME="smarty"
+    - PACKAGENAME="openforcefield"
     # OpenEye toolkit
     - OE_LICENSE="$HOME/oe_license.txt"
     - OPENEYE_CHANNEL="-i https://pypi.anaconda.org/openeye/channel/main/simple"
