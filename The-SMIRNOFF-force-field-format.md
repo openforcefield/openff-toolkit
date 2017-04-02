@@ -208,6 +208,17 @@ Typical molecular simulation practice is to constrain all bonds to hydrogen to t
 
 Standard usage is expected to rely primarily on the features documented above and potentially new features. However, some advanced features are also currently supported.
 
+### Versioning
+
+The SMIRNOFF forcefield format supports versioning via the `version` attribute to the root `<SMIRNOFF>` tag, e.g.:
+```XML
+<SMIRNOFF version="0.1">
+...
+</SMIRNOFF>
+```
+The version format is `x.y`, where `x` denotes the major version and `y` denotes the minor version.
+SMIRNOFF versions are guaranteed to be backward-compatible within the *same major version number series*, but it is possible major version increments will break backwards-compatibility.
+
 ### Partial bond orders
 Partial bond orders can be used to allow interpolation of parameters. For example, these parameters:
 ```XML
