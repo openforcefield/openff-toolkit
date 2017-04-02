@@ -48,6 +48,10 @@ It can also be of interest to know what SMIRNOFF parameters would be applied to 
 The SMIRNOFF `ForceField` class is essentially a drop-in replacement for the [OpenMM `ForceField` class](http://docs.openmm.org/7.1.0/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField), with the additional requirement that an OpenEye `OEMol`-compatible object must also be provided to allow for chemical environment perception (and optionally charges).
 For example, if we have an `OEMol` named `mol`, we can create an OpenMM `System` object with the following code:
 ```python
+# Import the SMIRNOFF forcefield engine and some useful tools
+from openforcefield.typing.engines.smirnoff import ForceField
+from openforcefield.utils import get_data_filename, extractPositionsFromOEMol, generateTopologyFromOEMol
+
 # Get positions and topology in OpenMM-compatible format
 topology = generateTopologyFromOEMol(mol)
 
