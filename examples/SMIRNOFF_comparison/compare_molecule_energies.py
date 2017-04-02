@@ -1,7 +1,7 @@
 #!/bin/env python
 
 from openforcefield.utils import *
-from openforcefield.typing.engines.smirnoff import ForceField
+from openforcefield.typing.engines.smirnoff import * 
 
 import os
 
