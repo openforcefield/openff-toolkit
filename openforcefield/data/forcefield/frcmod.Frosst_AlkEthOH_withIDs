@@ -1,0 +1,85 @@
+PARM99+parm@Frosst subset for alkanes, alcohols, and ethers
+CT 12.01         0.878   PrmIdMass001   sp3 aliphatic C
+HC 1.008         0.135   PrmIdMass002   H aliph. bond. to C without electrwd.group
+H1 1.008         0.135   PrmIdMass002   H aliph. bond. to C with 1 electrwd. group
+H2 1.008         0.135   PrmIdMass002   H aliph. bond. to C with 2 electrwd.groups
+H3 1.008         0.135   PrmIdMass002   H aliph. bond. to C with 3 eletrwd.groups
+HO 1.008         0.135   PrmIdMass002   hydroxyl group
+OH 16.00         0.465   PrmIdMass003   oxygen in hydroxyl group
+OS 16.00         0.465   PrmIdMass003   ether and ester oxygen
+
+C   H   HO  OH  OS
+CT-CT  310.0    1.526  PrmIdBond001    JCC,7,(1986),230; AA, SUGARS
+CT-HC  340.0    1.090  PrmIdBond002    changed from 331 bsd on NMA nmodes; AA, SUGARS
+CT-H1  340.0    1.090  PrmIdBond002    changed from 331 bsd on NMA nmodes; AA, RIBOSE
+CT-H2  340.0    1.090  PrmIdBond002    changed from 331 bsd on NMA nmodes; SUGARS
+CT-H3  340.0    1.090  PrmIdBond002    changed from 331 bsd on NMA nmodes; not assigned
+CT-OH  320.0    1.410  PrmIdBond003    JCC,7,(1986),230; SUGARS
+CT-OS  320.0    1.370  PrmIdBond004    Gro, JACS,V112,4165('90); R0 from a Merck X-ray
+HO-OH  553.0    0.960  PrmIdBond005    JCC,7,(1986),230; SUGARS,SER,TYR
+
+H1-CT-H1    35.0      109.50 PrmIdBond001
+H2-CT-H2    35.0      109.50 PrmIdBond001  AA lys
+HC-CT-HC    35.0      109.50 PrmIdBond001
+H1-CT-OH    50.0      109.50 PrmIdBond002  changed based on NMA nmodes 
+H2-CT-OH    50.0      109.50 PrmIdBond002  guess Bayly 2016apr30 analogy with H2-CT-OS
+H3-CT-OH    50.0      109.50 PrmIdBond002  guess Bayly 2016apr30 analogy with H2-CT-OS
+H1-CT-OS    50.0      109.50 PrmIdBond002  changed based on NMA nmodes 
+H2-CT-OS    50.0      109.50 PrmIdBond002  changed based on NMA nmodes
+H3-CT-OS    50.0      109.50 PrmIdBond002  guess Bayly 2016apr30 analogy with H2-CT-OS
+CT-CT-HC    50.0      109.50 PrmIdBond002  changed based on NMA nmodes
+CT-CT-H1    50.0      109.50 PrmIdBond002  changed based on NMA nmodes
+CT-CT-H2    50.0      109.50 PrmIdBond002  changed based on NMA nmodes
+CT-CT-OH    50.0      109.50 PrmIdBond002
+CT-CT-OS    50.0      109.50 PrmIdBond002
+CT-CT-CT    40.0      109.50 PrmIdBond003
+OS-CT-OS    70.0      109.50 PrmIdBond004  guess april 11 2000
+OS-CT-OH    70.0      109.50 PrmIdBond004  guess Bayly 2016apr30 analogy with OS-CT-OS
+CT-OH-HO    55.0      108.50 PrmIdBond005
+CT-OS-CT    60.0      109.50 PrmIdBond006
+
+X -CT-CT-X    9    1.40          0.0   3. PrmIdTor0001   JCC,7,(1986),230
+X -CT-OH-X    3    0.50          0.0   3. PrmIdTor0002   JCC,7,(1986),230
+X -CT-OS-X    3    1.15          0.0   3. PrmIdTor0003   JCC,7,(1986),230
+HC-CT-CT-HC   1    0.15          0.0   3. PrmIdTor0004   Junmei et al, 1999
+HC-CT-CT-CT   1    0.16          0.0   3. PrmIdTor0005   Junmei et al, 1999
+HO-OH-CT-CT   1    0.16          0.0  -3. PrmIdTorCont   Junmei et al, 1999
+HO-OH-CT-CT   1    0.25          0.0   1. PrmIdTor0006   Junmei et al, 1999
+CT-CT-CT-CT   1    0.18          0.0  -3. PrmIdTorCont   Junmei et al, 1999
+CT-CT-CT-CT   1    0.25        180.0  -2. PrmIdTorCont   Junmei et al, 1999
+CT-CT-CT-CT   1    0.20        180.0   1. PrmIdTor0007   Junmei et al, 1999
+CT-CT-OS-CT   1    0.383         0.0  -3. PrmIdTorCont
+CT-CT-OS-CT   1    0.1         180.0   2. PrmIdTor0008
+CT-OS-CT-OS   1    0.10          0.0  -3. PrmIdTorCont   Junmei et al, 1999
+CT-OS-CT-OS   1    0.85        180.0  -2. PrmIdTorCont   Junmei et al, 1999
+CT-OS-CT-OS   1    1.35        180.0   1. PrmIdTor0009   Junmei et al, 1999
+OS-CT-CT-OS   1    0.144         0.0  -3. PrmIdTorCont   parm98, TC,PC,PAK
+OS-CT-CT-OS   1    1.175         0.0   2. PrmIdTor0010   Piotr et al.     
+OS-CT-CT-OH   1    0.144         0.0  -3. PrmIdTorCont   parm98, TC,PC,PAK
+OS-CT-CT-OH   1    1.175         0.0   2. PrmIdTor0010   parm98, TC,PC,PAK
+OH-CT-CT-OH   1    0.144         0.0  -3. PrmIdTorCont   parm98, TC,PC,PAK
+OH-CT-CT-OH   1    1.175         0.0   2. PrmIdTor0010   parm98, TC,PC,PAK 
+H1-CT-CT-OS   1    0.000         0.0  -3. PrmIdTorCont   JCC,7,(1986),230
+H1-CT-CT-OS   1    0.25          0.0   1. PrmIdTor0012   Junmei et al, 1999
+H1-CT-CT-OH   1    0.000         0.0  -3. PrmIdTorCont   JCC,7,(1986),230
+H1-CT-CT-OH   1    0.25          0.0   1. PrmIdTor0012   Junmei et al, 1999
+HC-CT-CT-OS   1    0.000         0.0  -3. PrmIdTorCont   JCC,7,(1986),230
+HC-CT-CT-OS   1    0.25          0.0   1. PrmIdTor0012   Junmei et al, 1999
+HC-CT-CT-OH   1    0.000         0.0  -3. PrmIdTorCont   JCC,7,(1986),230
+HC-CT-CT-OH   1    0.25          0.0   1. PrmIdTor0012   Junmei et al, 1999
+
+
+
+
+MOD4      RE
+  HO          0.0000  0.0000  PrmIdVdw001    OPLS Jorgensen, JACS,110,(1988),1657
+  HC          1.4870  0.0157  PrmIdVdw002    OPLS
+  H1          1.3870  0.0157  PrmIdVdw003    Veenstra et al JCC,8,(1992),963 
+  H2          1.2870  0.0157  PrmIdVdw004    Veenstra et al JCC,8,(1992),963 
+  H3          1.1870  0.0157  PrmIdVdw005    Veenstra et al JCC,8,(1992),963 
+  OH          1.7210  0.2104  PrmIdVdw006    OPLS 
+  OS          1.6837  0.1700  PrmIdVdw007    OPLS ether
+  CT          1.9080  0.1094  PrmIdVdw008    Spellmeyer
+ 
+END
+

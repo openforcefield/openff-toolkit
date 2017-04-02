@@ -1,8 +1,7 @@
 #!/bin/env python
 
-from smarty.utils import *
-from smarty.forcefield import *
-from smarty.forcefield_utils import get_molecule_parameterIDs
+from openforcefield.utils import *
+from openforcefield.typing.engines.smirnoff import get_molecule_parameterIDs
 
 oemols = read_molecules(get_data_filename('molecules/AlkEtOH-tripos.mol2.gz'))
 ffxml = get_data_filename('forcefield/Frosst_AlkEtOH.ffxml')

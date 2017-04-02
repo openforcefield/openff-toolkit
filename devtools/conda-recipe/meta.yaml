@@ -1,5 +1,5 @@
 package:
-  name: smarty
+  name: openforcefield
   version: 0.0.0
 
 source:
@@ -30,8 +30,8 @@ test:
     - nose
     - nose-timer
   imports:
-    - smarty
+    - openforcefield
 
 about:
-  home: https://github.com/open-forcefield-group/smarty
+  home: https://github.com/open-forcefield-group/openforcefield
   license: MIT

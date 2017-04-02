@@ -13,21 +13,30 @@ def find_package_data(data_root, package_root):
     return files
 
 setup(
-    name = "smarty",
+    name = "openforcefield",
     version = "0.1.6",
     author = "John Chodera, David Mobley, and others",
     author_email = "john.chodera@choderalab.org",
-    description = ("Automated Bayesian atomtype sampling"),
+    description = ("Open Force Field Group tools"),
     license = "MIT",
-    keywords = "Bayesian atomtype sampling forcefield parameterization",
-    url = "http://github.com/open-forcefield-group/smarty",
-    packages=['smarty', 'smarty/tests', 'smarty/data'],
+    keywords = "molecular mechanics, forcefield, Bayesian parameterization",
+    url = "http://github.com/open-forcefield-group/openforcefield",
+    packages=[
+        'openforcefield',
+        'openforcefield/tests',
+        'openforcefield/data',
+        'openforcefield/typing',
+        'openforcefield/typing/chemistry',
+        'openforcefield/typing/engines',
+        'openforcefield/typing/engines/smirnoff',
+        'openforcefield/utils',        
+        ],
     long_description=read('README.md'),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
         "License :: OSI Approved :: MIT",
     ],
-    entry_points={'console_scripts': ['smarty = smarty.cli_smarty:main', 'smirky = smarty.cli_smirky:main']},
-    package_data={'smarty': find_package_data('smarty/data', 'smarty')},
+    entry_points={'console_scripts': []},
+    package_data={'openforcefield': find_package_data('openforcefield/data', 'openforcefield')},
 )
