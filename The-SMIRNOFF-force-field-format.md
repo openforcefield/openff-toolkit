@@ -1,4 +1,4 @@
-# The SMIRks Native Open Force Field (SMIRNOFF) specification
+# The SMIRks Native Open Force Field (SMIRNOFF) v0.1
 
 The SMIRNOFF format is based on the [`OpenMM`](http://openmm.org) [`ForceField`](http://docs.openmm.org/7.0.0/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField) class and provides an XML format for encoding force fields based on [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html)-based chemical perception.
 While designed for [`OpenMM`](http://openmm.org), parameters encoded in this format can be applied to systems and then these systems converted via [`ParmEd`](http://parmed.github.io/ParmEd) and [`InterMol`](https://github.com/shirtsgroup/InterMol) for simulations in a variety of other simulation packages.
@@ -208,6 +208,17 @@ Typical molecular simulation practice is to constrain all bonds to hydrogen to t
 
 Standard usage is expected to rely primarily on the features documented above and potentially new features. However, some advanced features are also currently supported.
 
+### Versioning
+
+The SMIRNOFF forcefield format supports versioning via the `version` attribute to the root `<SMIRNOFF>` tag, e.g.:
+```XML
+<SMIRNOFF version="0.1">
+...
+</SMIRNOFF>
+```
+The version format is `x.y`, where `x` denotes the major version and `y` denotes the minor version.
+SMIRNOFF versions are guaranteed to be backward-compatible within the *same major version number series*, but it is possible major version increments will break backwards-compatibility.
+
 ### Partial bond orders
 Partial bond orders can be used to allow interpolation of parameters. For example, these parameters:
 ```XML
@@ -319,6 +330,11 @@ Without this attribute, there is no way to uniquely identify a specific paramete
 However, use of generic parameters (i.e. `[*:1]~[*:2]` for a bond) in your FFXML will result in parameters being assigned everywhere, bypassing this exception.
 So use generics sparingly unless it is your intention to provide generics that should be used.
 
+## Version history
+
+### 0.1
+
+Initial draft specification.
 
 ## Requirements
 

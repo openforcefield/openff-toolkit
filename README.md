@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/open-forcefield-group/smirnoff.svg?branch=master)](https://travis-ci.org/open-forcefield-group/smirnoff?branch=master)
+[![Build Status](https://travis-ci.org/open-forcefield-group/openforcefield.svg?branch=master)](https://travis-ci.org/open-forcefield-group/openforcefield?branch=master)
 
 # Open Forcefield Group toolkit
 
