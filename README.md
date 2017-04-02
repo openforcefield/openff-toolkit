@@ -43,9 +43,26 @@ the forcefield as it was actually implemented (containing several bugs as noted 
 
 It can also be of interest to know what SMIRNOFF parameters would be applied to particular molecules. Utility functionality for this is provided under `forcefield_labeler.py`, which has generally similar structure to `forcefield.py` but instead of providing OpenMM systems with parameters, it can be applied to specific molecules and returns information about what parameters would be applied.
 
+### Example usage
+
+The SMIRNOFF `ForceField` class is essentially a drop-in replacement for the [OpenMM `ForceField` class](http://docs.openmm.org/7.1.0/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField), with the additional requirement that an OpenEye `OEMol`-compatible object must also be provided to allow for chemical environment perception (and optionally charges).
+For example, if we have an `OEMol` named `mol`, we can create an OpenMM `System` object with the following code:
+```python
+# Get positions and topology in OpenMM-compatible format
+topology = generateTopologyFromOEMol(mol)
+
+# Load a SMIRNOFF small molecule forcefield for alkanes, ethers, and alcohols
+forcefield = ForceField('Frosst_AlkEtOH_parmAtFrosst.ffxml')
+
+# Create the OpenMM system, additionally specifying a list of OEMol objects for the unique molecules in the system
+system = forcefield.createSystem(topology, [mol])
+```
+See `examples/SMIRNOFF_simulation/` for a complete example of how SMIRNOFF can be used for small molecule vacuum simulations.
+
 ## `ChemicalEnvironment`: Tools for chemical environment perception and manipulation
 
-Documentation forthcoming
+Documentation forthcoming.
+See `examples/chemicalEnvironments/` for now.
 
 # Manifest
 
