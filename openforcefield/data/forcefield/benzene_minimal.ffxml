@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='ASCII'?>
-<SMIRFF version="0.1" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.1" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRKS FORCE FIELD (SMIRFF) FILE -->
   <Date>Date: Sept. 22, 2016</Date>
   <Author>D. L. Mobley, UC Irvine</Author>
@@ -23,4 +23,4 @@
     <Atom smirks="[#1:1]-[#6X3]" epsilon="0.0150" id="n8" rmin_half="1.4590"/>
     <Atom smirks="[#6:1]" epsilon="0.0860" id="n15" rmin_half="1.9080"/>
   </NonbondedForce>
-</SMIRFF>
+</SMIRNOFF>

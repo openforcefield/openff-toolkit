@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 
-<SMIRFF>
+<SMIRNOFF>
 
 <!-- SMIRKS (SMIRKS Force Field) mockup1.0 for alkanes, ethers, and alcohols -->
 <Date>Date: Tue May  3 2016</Date>
@@ -73,4 +73,4 @@
   <Atom smirks="[#16:1]" radius="0.18" scale="0.96"/>
   <Atom smirks="[#17:1]" radius="0.17" scale="0.8"/>
 </GBSAForce>
-</SMIRFF>
+</SMIRNOFF>
