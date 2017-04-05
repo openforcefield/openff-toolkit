@@ -76,12 +76,12 @@ def create_system_from_amber( prmtop_filename, crd_filename, verbose = False ):
 
 def create_system_from_molecule(forcefield, mol, verbose=False):
     """
-    Generate a System from the given OEMol and SMIRFF forcefield, return the resulting System.
+    Generate a System from the given OEMol and SMIRNOFF forcefield, return the resulting System.
 
     Parameters
     ----------
     forcefield : ForceField
-        SMIRFF forcefield
+        SMIRNOFF forcefield
     mol : oechem.OEMol
         Molecule to test (must have coordinates)
 
@@ -110,7 +110,7 @@ def create_system_from_molecule(forcefield, mol, verbose=False):
 
     return topology, system, positions
 
-def compare_system_energies( topology0, topology1, system0, system1, positions0, positions1=None, label0="AMBER system", label1 = "SMIRFF system", verbose = True, skip_assert = False, skip_improper = False ):
+def compare_system_energies( topology0, topology1, system0, system1, positions0, positions1=None, label0="AMBER system", label1 = "SMIRNOFF system", verbose = True, skip_assert = False, skip_improper = False ):
     """
     Given two OpenMM systems, check that their energies and component-wise
     energies are consistent, and return these. The same positions will be used
@@ -125,7 +125,7 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
     system0 : OpenMM System
         First system for comparison (usually from AMBER)
     system1 : OpenMM System
-        Second system for comparison (usually from SMIRFF)
+        Second system for comparison (usually from SMIRNOFF)
     positions0 : simtk.unit.Quantity wrapped
         Positions to use for energy evaluation comparison
     positions1 (optional) : simtk.unit.Quantity wrapped (optional)
@@ -134,7 +134,7 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
     label0 (optional) : str
         String labeling system0 for output. Default, "AMBER system"
     label1 (optional) : str
-        String labeling system1 for output. Default, "SMIRFF system"
+        String labeling system1 for output. Default, "SMIRNOFF system"
     verbose (optional) : bool
         Print out info on energies, True/False (default True)
     skip_assert (optional) : bool
@@ -224,7 +224,7 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
 def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True, skip_assert=False, skip_improper = False):
     """
     Compare energies for OpenMM Systems/topologies created from an AMBER prmtop
-    and crd versus from a SMIRFF forcefield file and OEMol which should
+    and crd versus from a SMIRNOFF forcefield file and OEMol which should
     parameterize the same system with same parameters.
 
 
@@ -235,7 +235,7 @@ def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True, ski
     crd_filename : str (filename)
         Filename of input AMBER format crd file
     forcefield : ForceField
-        SMIRFF forcefield
+        SMIRNOFF forcefield
     mol : oechem.OEMol
         Molecule to test
     verbose (optional): Bool
@@ -272,7 +272,7 @@ def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True, ski
 
 
 def get_molecule_parameterIDs( oemols, ffxml):
-    """Process a list of oemols with a specified SMIRFF ffxml file and determine which parameters are used by which molecules, returning collated results.
+    """Process a list of oemols with a specified SMIRNOFF ffxml file and determine which parameters are used by which molecules, returning collated results.
 
 
     Parameters
@@ -335,14 +335,14 @@ def get_molecule_parameterIDs( oemols, ffxml):
     return parameters_by_molecule, parameters_by_ID
 
 def getMolParamIDToAtomIndex( oemol, ff):
-    """Take an OEMol and a SMIRFF forcefield object and return a dictionary, keyed by parameter ID, where each entry is a tuple of ( smirks, [[atom1, ... atomN], [atom1, ... atomN]) giving the SMIRKS corresponding to that parameter ID and a list of the atom groups in that molecule that parameter is applied to.
+    """Take an OEMol and a SMIRNOFF forcefield object and return a dictionary, keyed by parameter ID, where each entry is a tuple of ( smirks, [[atom1, ... atomN], [atom1, ... atomN]) giving the SMIRKS corresponding to that parameter ID and a list of the atom groups in that molecule that parameter is applied to.
 
     Parameters
     ----------
     oemol : OEMol
         OpenEye OEMol with the molecule to investigate.
     ff : ForceField
-        SMIRFF ForceField object (obtained from an ffxml via ForceField(ffxml)) containing FF of interest.
+        SMIRNOFF ForceField object (obtained from an ffxml via ForceField(ffxml)) containing FF of interest.
 
     Returns
     -------
@@ -363,7 +363,7 @@ def getMolParamIDToAtomIndex( oemol, ff):
 
     return param_usage
 
-def merge_system( topology0, topology1, system0, system1, positions0, positions1, label0="AMBER system", label1 = "SMIRFF system", verbose = True):
+def merge_system( topology0, topology1, system0, system1, positions0, positions1, label0="AMBER system", label1 = "SMIRNOFF system", verbose = True):
     """Merge two given OpenMM systems. Returns the merged OpenMM System.
 
     Parameters
@@ -375,7 +375,7 @@ def merge_system( topology0, topology1, system0, system1, positions0, positions1
     system0 : OpenMM System
         First system for merging (usually from AMBER)
     system1 : OpenMM System
-        Second system for merging (usually from SMIRFF)
+        Second system for merging (usually from SMIRNOFF)
     positions0 : simtk.unit.Quantity wrapped
         Positions to use for energy evaluation comparison
     positions1 (optional) : simtk.unit.Quantity wrapped (optional)
@@ -383,7 +383,7 @@ def merge_system( topology0, topology1, system0, system1, positions0, positions1
     label0 (optional) : str
         String labeling system0 for output. Default, "AMBER system"
     label1 (optional) : str
-        String labeling system1 for output. Default, "SMIRFF system"
+        String labeling system1 for output. Default, "SMIRNOFF system"
     verbose (optional) : bool
         Print out info on topologies, True/False (default True)
 
