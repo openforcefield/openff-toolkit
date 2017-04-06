@@ -1,7 +1,7 @@
 # Filtering Molecule Sets
 
 There are a number of molecule sets that have been used in the open-forcefield effort. 
-In an effort to test the SMIRFFparm99Frosst it became increasingly evident that some of these molecules sets include molecules outside what we want to currently test our tools. 
+In an effort to test the SMIRNOFFparm99Frosst it became increasingly evident that some of these molecules sets include molecules outside what we want to currently test our tools. 
 
 Molecule sets currently included in this directory are listed below, although when filtering is finalized, molecule sets should be moved to smart/data/molecules 
 
