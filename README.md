@@ -61,7 +61,7 @@ forcefield = ForceField('Frosst_AlkEtOH_parmAtFrosst.ffxml')
 # Create the OpenMM system, additionally specifying a list of OEMol objects for the unique molecules in the system
 system = forcefield.createSystem(topology, [mol])
 ```
-See `examples/SMIRNOFF_simulation/` for a complete example of how SMIRNOFF can be used for small molecule vacuum simulations.
+See `examples/SMIRNOFF_simulation/` for a complete example of how SMIRNOFF can be used for small molecule vacuum simulations, and `examples/mixedFF_structure` for how to set up a system which uses an AMBER forcefield (in this case, AMBER99SB-ILDN) for a protein in combination with SMIRNOFF for a small molecules. Via ParmEd, this can be translated into GROMACS, AMBER, or CHARMM formats for use elsewhere (and additional formats via InterMol).
 
 ## `ChemicalEnvironment`: Tools for chemical environment perception and manipulation
 
