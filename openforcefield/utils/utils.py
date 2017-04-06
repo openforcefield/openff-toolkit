@@ -55,7 +55,7 @@ def generateSMIRNOFFStructure(molecule):
     generate a ParmEd structure using the SMIRNOFF forcefield parameters.
     """
     from openforcefield.typing.engines.smirnoff import ForceField
-    from smarty.forcefield_utils import create_system_from_molecule
+    from openforcefield.typing.engines.smirnoff.forcefield_utils import create_system_from_molecule
 
     ff = get_data_filename('forcefield/smirnoff99Frosst.ffxml')
     with open(ff) as ffxml:
