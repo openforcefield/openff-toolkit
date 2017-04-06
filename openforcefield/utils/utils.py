@@ -131,7 +131,7 @@ def combinePostions(proteinPositions, molPositions):
 def mergeStructure(proteinStructure, molStructure):
     """
     Combines the parametrized ParmEd structures of the protein and ligand to
-    create the Structure for the protein:ligand complex, while retaining the SMIRFF
+    create the Structure for the protein:ligand complex, while retaining the SMIRNOFF
     parameters on the ligand. Preserves positions and box vectors.
     (Not as easily achieved using native OpenMM tools).
     Parameters
