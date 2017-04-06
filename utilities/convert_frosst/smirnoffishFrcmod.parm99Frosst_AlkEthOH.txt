@@ -1,4 +1,4 @@
-# SMIRFF (SMIRKS Force Field) hybrid with parm99.dat and parm@Frosst to capture their chemistry
+# SMIRNOFF (SMIRKS Native Open Force Field) hybrid with parm99.dat and parm@Frosst to capture their chemistry
 # Date: Tue Aug 25 2016
 # Author: C. I. Bayly, OpenEye Scientific Software
 #
