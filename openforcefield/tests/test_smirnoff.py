@@ -112,34 +112,34 @@ ffxml_gbsa = u"""\
 ffxml_contents_gbsa = u"""\
 <?xml version="1.0"?>
 
-<SMIRFF use_fractional_bondorder="True">
+<SMIRNOFF use_fractional_bondorder="True">
 
 %(ffxml_standard)s
 %(ffxml_constraints)s
 %(ffxml_gbsa)s
 
-</SMIRFF>
+</SMIRNOFF>
 """ % globals()
 
 ffxml_contents_noconstraints = u"""\
 <?xml version="1.0"?>
 
-<SMIRFF use_fractional_bondorder="True">
+<SMIRNOFF use_fractional_bondorder="True">
 
 %(ffxml_standard)s
 
-</SMIRFF>
+</SMIRNOFF>
 """ % globals()
 
 ffxml_contents = u"""\
 <?xml version="1.0"?>
 
-<SMIRFF use_fractional_bondorder="True">
+<SMIRNOFF use_fractional_bondorder="True">
 
 %(ffxml_standard)s
 %(ffxml_constraints)s
 
-</SMIRFF>
+</SMIRNOFF>
 """ % globals()
 
 # Set up another, super minimal FF to test that alternate aromaticity
@@ -147,7 +147,7 @@ ffxml_contents = u"""\
 ffxml_MDL_contents = u"""\
 <?xml version="1.0"?>
 
-<SMIRFF version="0.1" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.1" aromaticity_model="OEAroModel_MDL">
 
 !-- SMIRKS (SMIRKS Force Field) minimal file, not intended for use -->
   <Date>Date: Sept. 7, 2016</Date>
@@ -167,7 +167,7 @@ ffxml_MDL_contents = u"""\
     <Atom smirks="[*:1]" epsilon="0.2100" id="n1" rmin_half="1.6612"/>
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n2" rmin_half="0.6000"/>
   </NonbondedForce>
-</SMIRFF>
+</SMIRNOFF>
 """
 
 def positions_from_oemol(mol):
@@ -264,7 +264,7 @@ def check_system_creation_from_molecule(forcefield, mol, chargeMethod=None, verb
     Parameters
     ----------
     forcefield : ForceField
-        SMIRFF forcefield
+        SMIRNOFF forcefield
     mol : oechem.OEMol
         Molecule to test (need not have coordinates)
     chargeMethod : str, optional, default=None
@@ -280,12 +280,12 @@ def check_system_creation_from_molecule(forcefield, mol, chargeMethod=None, verb
 
 def check_system_creation_from_topology(forcefield, topology, mols, positions, chargeMethod=None, verbose=False):
     """
-    Generate a System from the given topology, OEMols matching the contents of the topology, and SMIRFF forcefield and check that its energy is finite.
+    Generate a System from the given topology, OEMols matching the contents of the topology, and SMIRNOFF forcefield and check that its energy is finite.
 
     Parameters
     ----------
     forcefield : ForceField
-        SMIRFF forcefield
+        SMIRNOFF forcefield
     topology : simtk.openmm.app.Topology
         Topology to construct system from
     mols : list of oechem.OEMol
@@ -372,14 +372,14 @@ def test_create_system_boxes_features(verbose=False):
         for f in check_boxes(forcefield, description="to test Parm@frosst parameters with charge method %s" % str(chargeMethod), chargeMethod=chargeMethod, verbose=verbose):
             yield f
 
-def test_create_system_boxes_smirff99Frosst(verbose=False):
+def test_create_system_boxes_smirnoff99Frosst(verbose=False):
     """Test creation of a System object from some boxes of mixed solvents to test parm@frosst forcefield.
     """
-    forcefield = ForceField(get_data_filename('forcefield/smirff99Frosst.ffxml'))
+    forcefield = ForceField(get_data_filename('forcefield/smirnoff99Frosst.ffxml'))
     for f in check_boxes(forcefield, description="to test Parm@frosst parameters", verbose=verbose):
         yield f
 
-def test_smirff_energies_vs_parmatfrosst(verbose=False):
+def test_smirnoff_energies_vs_parmatfrosst(verbose=False):
     """Test evaluation of energies from parm@frosst ffxml files versus energies of equivalent systems."""
 
     from openeye import oechem
@@ -531,7 +531,7 @@ def test_improper(verbose = False):
     # Check that torsional energies the same to 1 in 10^6
     rel_error = np.abs(( g0['torsion']-g1['torsion'])/ g0['torsion'])
     if rel_error > 2e-5: #Note that this will not be tiny because we use six-fold impropers and they use a single improper
-        raise Exception("Improper torsion energy for benzene differs too much (relative error %.4g) between AMBER and SMIRFF." % rel_error )
+        raise Exception("Improper torsion energy for benzene differs too much (relative error %.4g) between AMBER and SMIRNOFF." % rel_error )
 
 
 def test_MDL_aromaticity(verbose=False):
@@ -731,7 +731,7 @@ def test_component_combination():
             raise Exception('Error: Residue %s in cyclohexane-ethanol test system has a charge of zero, which is incorrect.' % resnr)
 
 def test_merge_system():
-    """Test merging of a system created from AMBER and another created from SMIRFF."""
+    """Test merging of a system created from AMBER and another created from SMIRNOFF."""
 
     #Create System from AMBER
     prefix = os.path.join('systems', 'amber', 'cyclohexane_ethanol_0.4_0.6')

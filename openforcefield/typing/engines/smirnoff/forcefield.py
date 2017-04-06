@@ -521,12 +521,12 @@ class ForceField(object):
     """
 
     def __init__(self, *files):
-        """Load one or more XML parameter definition files and create a SMIRFF ForceField object based on them.
+        """Load one or more XML parameter definition files and create a SMIRNOFF ForceField object based on them.
 
         Parameters
         ----------
         files : list
-            A list of XML files defining the SMIRFF force field.
+            A list of XML files defining the SMIRNOFF force field.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory (for built in force fields), or an open file-like object with a read() method from which the forcefield XML data can be loaded.
 
         """
@@ -534,12 +534,12 @@ class ForceField(object):
         self.loadFile(files)
 
     def loadFile(self, files):
-        """Load a SMIRFF XML file and add the definitions from it to this ForceField.
+        """Load a SMIRNOFF XML file and add the definitions from it to this ForceField.
 
         Parameters
         ----------
         files : string or file or tuple
-            An XML file or tuple of XML files containing SMIRFF force field definitions.
+            An XML file or tuple of XML files containing SMIRNOFF force field definitions.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory (for built in force fields), or an open file-like object with a read() method from which the forcefield XML data can be loaded.
         """
 
@@ -589,7 +589,8 @@ class ForceField(object):
 
         # Store forcefield version info and, if present, aromaticity model
         root = trees[0].getroot()
-        if root.tag=='SMIRFF':
+        # Formerly known as SMIRFF, now SMIRNOFF
+        if root.tag=='SMIRFF' or root.tag=='SMIRNOFF':
             if 'version' in root.attrib:
                 #TO DO: Should this be a float, a string, or something else?
                 self.version = float(root.attrib['version'])
@@ -604,7 +605,7 @@ class ForceField(object):
             else:
                 self._use_fractional_bondorder = False
         else:
-            raise ValueError("Error: ForceField parses a SMIRFF forcefield, but this does not appear to be one as the root tag is %s." % root.tag)
+            raise ValueError("Error: ForceField parses a SMIRNOFF forcefield, but this does not appear to be one as the root tag is %s." % root.tag)
 
         # Load force definitions
         for tree in trees:
@@ -1278,7 +1279,7 @@ class ConstraintGenerator(object):
     """
 
     class ConstraintType(object):
-        """A SMIRFF constraint type."""
+        """A SMIRNOFF constraint type."""
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.pid = _extractQuantity(node, parent, 'id')
@@ -1294,7 +1295,7 @@ class ConstraintGenerator(object):
         self._constraint_types = list()
 
     def registerConstraint(self, node, parent):
-        """Register a SMIRFF constraint type definition."""
+        """Register a SMIRNOFF constraint type definition."""
         constraint = ConstraintGenerator.ConstraintType(node, parent)
         self._constraint_types.append(constraint)
 
@@ -1308,7 +1309,7 @@ class ConstraintGenerator(object):
         else:
             generator = existing[0]
 
-        # Register all SMIRFF constraint definitions.
+        # Register all SMIRNOFF constraint definitions.
         for constraint in element.findall('Constraint'):
             generator.registerConstraint(constraint, element)
 
@@ -1378,7 +1379,7 @@ class HarmonicBondGenerator(object):
     """A HarmonicBondGenerator constructs a HarmonicBondForce."""
 
     class BondType(object):
-        """A SMIRFF bond type."""
+        """A SMIRNOFF bond type."""
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.pid = _extractQuantity(node, parent, 'id')
@@ -1411,7 +1412,7 @@ class HarmonicBondGenerator(object):
         self._bondtypes = list()
 
     def registerBond(self, node, parent):
-        """Register a SMIRFF bondtype definition."""
+        """Register a SMIRNOFF bondtype definition."""
         bond = HarmonicBondGenerator.BondType(node, parent)
         self._bondtypes.append(bond)
 
@@ -1425,7 +1426,7 @@ class HarmonicBondGenerator(object):
         else:
             generator = existing[0]
 
-        # Register all SMIRFF bond definitions.
+        # Register all SMIRNOFF bond definitions.
         for bond in element.findall('Bond'):
             generator.registerBond(bond, element)
 
@@ -1541,7 +1542,7 @@ class HarmonicAngleGenerator(object):
     """A HarmonicAngleGenerator constructs a HarmonicAngleForce."""
 
     class AngleType(object):
-        """A SMIRFF angle type."""
+        """A SMIRNOFF angle type."""
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.angle = _extractQuantity(node, parent, 'angle')
@@ -1557,7 +1558,7 @@ class HarmonicAngleGenerator(object):
         self._angletypes = list()
 
     def registerAngle(self, node, parent):
-        """Register a SMIRFF angletype definition."""
+        """Register a SMIRNOFF angletype definition."""
         angle = HarmonicAngleGenerator.AngleType(node, parent)
         self._angletypes.append(angle)
 
@@ -1571,7 +1572,7 @@ class HarmonicAngleGenerator(object):
         else:
             generator = existing[0]
 
-        # Register all SMIRFF angle definitions.
+        # Register all SMIRNOFF angle definitions.
         for angle in element.findall('Angle'):
             generator.registerAngle(angle, element)
 
@@ -1663,7 +1664,7 @@ class PeriodicTorsionGenerator(object):
 
     class ProperTorsionType(object):
 
-        """A SMIRFF torsion type for proper torsions."""
+        """A SMIRNOFF torsion type for proper torsions."""
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.periodicity = list()
@@ -1706,7 +1707,7 @@ class PeriodicTorsionGenerator(object):
 
     class ImproperTorsionType(object):
 
-        """A SMIRFF torsion type for improper torsions."""
+        """A SMIRNOFF torsion type for improper torsions."""
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.periodicity = list()
@@ -1742,7 +1743,7 @@ class PeriodicTorsionGenerator(object):
                     idivf = _extractQuantity(node, parent, 'idivf%d' % index)
                     self.k[-1] /= float(idivf)
                 index += 1
-                # SMIRFF applies trefoil (six-fold) impropers unlike AMBER
+                # SMIRNOFF applies trefoil (six-fold) impropers unlike AMBER
                 # If it's an improper, divide by the factor of six internally
                 if node.tag=='Improper':
                     self.k[-1] /= 6.
@@ -1757,12 +1758,12 @@ class PeriodicTorsionGenerator(object):
         self._impropertorsiontypes = list()
 
     def registerProperTorsion(self, node, parent):
-        """Register a SMIRFF torsiontype definition for a proper."""
+        """Register a SMIRNOFF torsiontype definition for a proper."""
         torsion = PeriodicTorsionGenerator.ProperTorsionType(node, parent)
         self._propertorsiontypes.append(torsion)
 
     def registerImproperTorsion(self, node, parent):
-        """Register a SMIRFF torsiontype definition for an improper."""
+        """Register a SMIRNOFF torsiontype definition for an improper."""
         torsion = PeriodicTorsionGenerator.ImproperTorsionType(node, parent)
         self._impropertorsiontypes.append(torsion)
 
@@ -1776,7 +1777,7 @@ class PeriodicTorsionGenerator(object):
         else:
             generator = existing[0]
 
-        # Register all SMIRFF torsion definitions.
+        # Register all SMIRNOFF torsion definitions.
         for torsion in element.findall('Proper'):
             generator.registerProperTorsion(torsion, element)
         for torsion in element.findall('Improper'):
@@ -1911,7 +1912,7 @@ class NonbondedGenerator(object):
     SCALETOL = 1e-5
 
     class LennardJonesType(object):
-        """A SMIRFF Lennard-Jones type."""
+        """A SMIRNOFF Lennard-Jones type."""
         def __init__(self, node, parent):
             """Currently we support radius definition via 'sigma' or 'rmin_half'."""
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
@@ -2084,7 +2085,7 @@ class BondChargeCorrectionGenerator(object):
     """A BondChargeCorrectionGenerator handles <BondChargeCorrections>."""
 
     class BondChargeCorrectionType(object):
-        """A SMIRFF bond type."""
+        """A SMIRNOFF bond type."""
         def __init__(self, node, parent):
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
             self.increment = _extractQuantity(node, parent, 'increment')
@@ -2102,7 +2103,7 @@ class BondChargeCorrectionGenerator(object):
             raise Exception("BondChargeCorrectionGenerator: initialChargeMethod attribute was '%s', but '%s' was not found in oequacpac available methods." % (initialChargeMethod, self._oechargemethod))
 
     def registerBondChargeCorrection(self, node, parent):
-        """Register a SMIRFF bondtype definition."""
+        """Register a SMIRNOFF bondtype definition."""
         bond = BondChargeCorrectionGenerator.BondChargeCorrectionType(node, parent)
         self._bondChargeCorrections.append(bond)
 
@@ -2120,7 +2121,7 @@ class BondChargeCorrectionGenerator(object):
 
             generator = existing[0]
 
-        # Register all SMIRFF bond definitions.
+        # Register all SMIRNOFF bond definitions.
         for bond in element.findall('BondChargeCorrection'):
             generator.registerBondChargeCorrection(bond, element)
 
@@ -2214,7 +2215,7 @@ class GBSAForceGenerator(object):
     }
 
     class GBSAType(object):
-        """A SMIRFF GBSA type."""
+        """A SMIRNOFF GBSA type."""
         def __init__(self, node, parent):
             """Create a GBSAType"""
             self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
