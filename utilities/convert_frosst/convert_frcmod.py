@@ -93,20 +93,20 @@ def add_date_and_author(inxml, date, author):
 
 # Main conversion functionality
 def convert_frcmod_to_ffxml( infile, inxml, outxml ):
-    """Convert a modified AMBER frcmod (with SMIRKS replacing atom types) to SMIRFF ffxml format by inserting parameters into a template ffxml file.
+    """Convert a modified AMBER frcmod (with SMIRKS replacing atom types) to SMIRNOFF ffxml format by inserting parameters into a template ffxml file.
 
     Parameters
     ----------
     infile : str
         File name of input SMIRKS-ified frcmod file containing parameters
     inxml : str
-        File name of template SMIRFF FFXML file into which to insert these parameters.
+        File name of template SMIRNOFF FFXML file into which to insert these parameters.
     outxml : str
-        File name of resulting output SMIRFF FFXML
+        File name of resulting output SMIRNOFF FFXML
 
     Notes:
     -------
-    Input XML file will normally be the template of a SMIRFF XML file without any parameters present (but with requisite force types already specified).
+    Input XML file will normally be the template of a SMIRNOFF XML file without any parameters present (but with requisite force types already specified).
     """
 
     # Obtain sections from target file
@@ -216,7 +216,7 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
                     param_id_by_section[name] += 1
 
 
-    # Write SMIRFF XML file
+    # Write SMIRNOFF XML file
     ff.writeFile(outxml)
 
     # Roundtrip to fix formatting (for some reason etree won't format it properly on first write after modification)
@@ -227,15 +227,15 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
 if __name__=="__main__":
     from optparse import OptionParser
     usage_string="""\
-    Convert specified SMIRKS-ified AMBER frcmod file into SMIRFF FFXML format, inserting converted parameters into a template FFXML file and writing to a new output file.
+    Convert specified SMIRKS-ified AMBER frcmod file into SMIRNOFF FFXML format, inserting converted parameters into a template FFXML file and writing to a new output file.
 
     usage: convert_frcmod.py --frcmod test.frcmod --template template.ffxml --xml test.ffxml
     """
     parser = OptionParser(usage=usage_string)
 
     parser.add_option('-f', '--frcmod', type = "string", dest='infile', default = None, action="store", help="Name of input smirks-ified frcmod file.")
-    parser.add_option('-t', '--template', type="string", dest='inxml', default = None, action ="store", help="Name of template SMIRFF ffxml file.")
-    parser.add_option('-o', '--xml', type="string", dest='outxml', default =None, action="store", help="Name of output SMIRFF ffxml file.")
+    parser.add_option('-t', '--template', type="string", dest='inxml', default = None, action ="store", help="Name of template SMIRNOFF ffxml file.")
+    parser.add_option('-o', '--xml', type="string", dest='outxml', default =None, action="store", help="Name of output SMIRNOFF ffxml file.")
     (options,args) = parser.parse_args()
 
     if (options.infile is None) or (options.inxml is None) or (options.outxml is None):
