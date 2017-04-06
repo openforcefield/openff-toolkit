@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='ASCII'?>
-<SMIRFF version="0.1" aromaticity_model="OEAroModel_MDL">
-  <!-- SMIRKS (SMIRKS Force Field) template file -->
+<SMIRNOFF version="0.1" aromaticity_model="OEAroModel_MDL">
+  <!-- SMIRNOFF (SMIRKS Native Open Force Field) template file -->
   <Date>Date: April 4, 2017</Date>
   <Author>C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine</Author>
   <!-- This file is meant for processing via smarty.forcefield -->
@@ -329,4 +329,4 @@
     <Atom smirks="[#35:1]" epsilon="0.320" id="n26" rmin_half="2.22"/>
     <Atom smirks="[#53:1]" epsilon="0.40" id="n27" rmin_half="2.35"/>
   </NonbondedForce>
-</SMIRFF>
+</SMIRNOFF>
