@@ -372,14 +372,14 @@ def test_create_system_boxes_features(verbose=False):
         for f in check_boxes(forcefield, description="to test Parm@frosst parameters with charge method %s" % str(chargeMethod), chargeMethod=chargeMethod, verbose=verbose):
             yield f
 
-def test_create_system_boxes_smirff99Frosst(verbose=False):
+def test_create_system_boxes_smirnoff99Frosst(verbose=False):
     """Test creation of a System object from some boxes of mixed solvents to test parm@frosst forcefield.
     """
-    forcefield = ForceField(get_data_filename('forcefield/smirff99Frosst.ffxml'))
+    forcefield = ForceField(get_data_filename('forcefield/smirnoff99Frosst.ffxml'))
     for f in check_boxes(forcefield, description="to test Parm@frosst parameters", verbose=verbose):
         yield f
 
-def test_smirff_energies_vs_parmatfrosst(verbose=False):
+def test_smirnoff_energies_vs_parmatfrosst(verbose=False):
     """Test evaluation of energies from parm@frosst ffxml files versus energies of equivalent systems."""
 
     from openeye import oechem
