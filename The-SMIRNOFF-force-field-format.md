@@ -51,6 +51,7 @@ Nonbonded parameters (currently, Lennard-Jones parameters) are specified via the
    <Atom smirks="[$([#1]-[#6]):1]" rmin_half="1.4870" epsilon="0.0157"/>
    ...
 </NonbondedForce>
+```
 Scaling terms for 1-4 interactions should be specified in attributes for the `NonbondedForce` tag, along with units.
 
 For compatibility, the size property of an atom can be specified either via providing the `sigma` attribute, such as `sigma="1.3"`, or via the `r_0/2` (`rmin/2`) values used in AMBER force fields (here denoted `rmin_half` as in the example above). The two are related by `r0 = 2^(1/6)*sigma` and conversion is done internally in `ForceField` into the `sigma` values used in OpenMM. `epsilon` denotes the well depth.
