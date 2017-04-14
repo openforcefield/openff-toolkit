@@ -50,10 +50,3 @@ a) Reading in a smirnoffishFrcmod file (here smirnoffishFrcmod.parm99Frosst.txt)
 b) Reading in a database of molecules and applying to them the smirnoff ffxml from part (a).
 c) Analyzing the result of (b) to see which molecules get which parameters, including a depiction function which will depict a molecule highlighting the atoms associated with a specific parameter.
 
-## Intermediate Files
-A variety of intermediate files were generated during the conversion process. 
-Only updated "smirnoff" frcmod files and resulting ffxml files are stored here, we have kept the intermediate files for future reference.
-They are stored in `smirnoffish_archive` 
-
-The supporting intermediate files consist mostly of the building up of smirnoffishFrcmod.parm99Frosst.txt by gradually adding Bonds, VdW, and Angles in that order. Then Impropers (a very few parameters) were added. With Torsions, the intermediate files were done first for parm99 and then parm@Frosst. Then the Torsions were combined into smirnoffishFrcmod.Torsions.parm99withParmFrosst.txt and harmonized. This file was then introduced into smirnoffishFrcmod.parm99Frosst.txt, replacing the parm99-only torsions. This was then iteratively improved based on how well the parm@Frosst zinc 7505 molecule set was parameterized in parameter_usage.ipynb. With the 2016sep06 version, there were only 17 molecules requiring thegeneric torsion, most of those having broken chemistry (e.g. pentavalent nitrogens or carbons).
-
