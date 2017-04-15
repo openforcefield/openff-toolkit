@@ -469,16 +469,19 @@ class ChemicalEnvironment(object):
         new_atom = self.addAtom(None, newORtypes = OR, newANDtypes = AND, newAtomIndex = index)
         atoms[idx] = new_atom
 
-        while len(leftover) > 0 and leftover.find('[') != -1:
+        while len(leftover) > 0:
             idx += 1
 
             # Check for branching
             if leftover[0] == ')':
                 bondingTo = store.pop()
                 leftover = leftover[1:]
+                continue
+
             if leftover[0] == '(':
                 store.append(bondingTo)
                 leftover = leftover[1:]
+                continue
 
             # find beginning and end of next [atom]
             atom_string, start, end = _find_embedded_brackets(leftover, '\[', '\]')
@@ -492,9 +495,10 @@ class ChemicalEnvironment(object):
                 bond_string = bond_split[0]
                 atom_string = '['+bond_split[1]+']'
                 # update leftover for this condition
-                leftover = ''.join(bond_split[2:])
                 if start != -1: # ther is at least 1 more bracketed atom
                     leftover = ''.join(bond_split[2:])+leftover[start:]
+                else:
+                    leftover = ''.join(bond_split[2:])
 
             else: # next atom is in the brackets [atom]
                 # bond and atom string stay the same, update leftover
