@@ -636,6 +636,13 @@ class ChemicalEnvironment(object):
         """
         given bond strings returns ORtypes and ANDtypes
         """
+        # blank bond string is single or aromatic
+        # empty ORtypes in Chemical Environments are treated as ~ bonds
+        if bond == "":
+            ANDtypes = list()
+            ORtypes = [ ('-', []), (':', []) ]
+            return ORtypes, ANDtypes
+
         # AND types indicated by ; at the end
         split = bond.split(';')
         ANDtypes = list()
@@ -646,6 +653,8 @@ class ChemicalEnvironment(object):
         ORList = split[0].split(',')
         ORtypes = list()
         for OR in ORList:
+            if OR == '~':
+                continue
             or_divide = re.findall(self.bond_regs, OR)
             if len(or_divide) > 0:
                 ORtypes.append( (or_divide[0], or_divide[1:]))
