@@ -80,7 +80,6 @@ def _convert_embedded_SMIRKS(smirks):
     # new_smirks = [#1:1]~[#6]
     """
     a_out = 0
-    print("SMIRKS in: %s" % smirks)
     while smirks.find('$(') != -1:
         # Find first atom
         atom, a_in, a_out = _find_embedded_brackets(smirks, '\[', '\]')
@@ -95,6 +94,14 @@ def _convert_embedded_SMIRKS(smirks):
         # Store the smirks pattern before and after the relevant atom
         pre_smirks = smirks[:a_in]
         post_smirks = smirks[a_out+1:]
+
+        # Check for ring index, i.e. the 1s in "[#6:1]1-CCCCC1"
+        match = re.match(r'(\d+)',post_smirks)
+        if match is not None: # leftover starts with int
+            ring = re.findall(r'(\d+)',post_smirks)[0]
+            leftover = post_smirks[match.end():]
+        else:
+            ring = ''
 
         embedded, p_in, p_out = _find_embedded_brackets(atom, '\(', '\)')
         # two forms of embedded strings $(*~stuff) or $([..]~stuff)
@@ -113,17 +120,16 @@ def _convert_embedded_SMIRKS(smirks):
             embedded = '('+embedded[2:]
 
         # Make new smirks
-        smirks = pre_smirks+new_atom+embedded+post_smirks
+        smirks = pre_smirks+new_atom+ring+embedded+post_smirks
 
-    print("SMIRKS OUT: %s\n" % smirks)
     return smirks
 
-def _remove_blanks_repeats(init_list):
+def _remove_blanks_repeats(init_list, remove_list = ['']):
     """
     Returns the input list 'init_list'
     without any repeating entries or blank strings ''
     """
-    final_list = [item for item in init_list if item != '']
+    final_list = [item for item in init_list if item not in remove_list]
     return list( set(final_list) )
 
 class SMIRKSMismatchError(Exception):
@@ -157,7 +163,7 @@ class ChemicalEnvironment(object):
         ANDtypes : list of string
             The descriptor types  that will be combined with logical AND
         """
-        def __init__(self, ORtypes = [], ANDtypes = [], index = None):
+        def __init__(self, ORtypes = [], ANDtypes = [], index = None, ring = None):
             """Initialize an Atom object with optional descriptors.
 
             Parameters
@@ -170,6 +176,8 @@ class ChemicalEnvironment(object):
                 optional, default = None
             index : int, optional, default=None
                 If not None, the specified index will be attached as a SMIRKS index (e.g. '[#6:1]')
+            ring : int, optional, default = None
+                If not None, the specified ring index will be attached at the end of the atom i.e. '[#6:1]1'
             """
             # dictionary of ORbases and ORdecorators
             self.ORtypes = copy.deepcopy(ORtypes)
@@ -178,6 +186,7 @@ class ChemicalEnvironment(object):
             self.ANDtypes = list(copy.deepcopy(ANDtypes))
 
             self.index = index
+            self.ring = ring
             self._atom = True
 
         def asSMARTS(self):
@@ -211,7 +220,10 @@ class ChemicalEnvironment(object):
             if len(self.ANDtypes) > 0:
                 smarts += ';' + ';'.join(self.ANDtypes)
 
-            return smarts + ']'
+            if self.ring is not None:
+                return smarts + ']' + str(self.ring)
+            else:
+                return smarts + ']'
 
         def asSMIRKS(self):
             """Return the atom representation as SMIRKS.
@@ -229,7 +241,11 @@ class ChemicalEnvironment(object):
 
             # Add label to the end of SMARTS
             else:
-                return smirks[:-1] + ':' + str(self.index) + smirks[-1]
+                sub_string, start, end = _find_embedded_brackets(smirks, '\[','\]')
+                if self.ring is not None:
+                    return sub_string[:-1] + ':' + str(self.index) + ']'+str(self.ring)
+                else:
+                    return sub_string[:-1] + ':' + str(self.index) + ']'
 
         def addORtype(self, ORbase, ORdecorators):
             """
@@ -240,7 +256,7 @@ class ChemicalEnvironment(object):
             ORbase: string, such as '#6'
             ORdecorators: list of strings, such as ['X4','+0']
             """
-            ORdecorators = _remove_blanks_repeats(ORdecorators)
+            ORdecorators = _remove_blanks_repeats(ORdecorators, ['',ORbase])
             self.ORtypes.append((ORbase, ORdecorators))
 
         def addANDtype(self, ANDtype):
@@ -273,7 +289,8 @@ class ChemicalEnvironment(object):
             self.ORtypes = list()
             if newORtypes is not None:
                 for (base, decs) in newORtypes:
-                    self.ORtypes.append(base, _remove_blanks_repeats(decs) )
+                    adjusted_decs = _remove_blanks_repeats(decs, ['', base])
+                    self.ORtypes.append(base, adjusted_decs )
 
         def getANDtypes(self):
             """
@@ -321,7 +338,7 @@ class ChemicalEnvironment(object):
                 This is for book keeping inside environments and will not be shown in SMARTS or SMIRKS
                 example: bond1 in a Bond is the bond between atom1 and atom2
             """
-            super(ChemicalEnvironment.Bond,self).__init__(ORtypes, ANDtypes, None)
+            super(ChemicalEnvironment.Bond,self).__init__(ORtypes, ANDtypes, None, None)
             self._atom = False
             return
 
@@ -370,7 +387,7 @@ class ChemicalEnvironment(object):
             orderList = [orderDict[base] for (base, decor) in self.ORtypes]
             return min(orderList)
 
-    def __init__(self, smirks = None, label = None, replacements = []):
+    def __init__(self, smirks = None, label = None, replacements = None):
         """Initialize a chemical environment abstract base class.
 
         smirks = string, optional
@@ -387,7 +404,7 @@ class ChemicalEnvironment(object):
         # That is a # followed by one or more ints w/or w/o at ! in front '!#16'
         element_num = "!?[#]\d+"
         # covers element symbols, i.e. N,C,O,Br not followed by a number
-        element_sym = "!?[A-Z][a-z]?(?=\D)"
+        element_sym = "!?[A-Z][a-z]?"
         # replacement strings
         replace_str = "\$\w+"
         # a or A w/ or w/o a ! in front 'A'
@@ -444,8 +461,9 @@ class ChemicalEnvironment(object):
         """
         qmol = OEQMol()
         if smirks is None:
-            smirks = self.asSMIRKS()
-        smirks = OESmartsLexReplace(smirks, self.replacements)
+            smirks = self._asSMIRKS()
+        if self.replacements is not None:
+            smirks = OESmartsLexReplace(smirks, self.replacements)
         return OEParseSmarts(qmol, smirks)
 
     def _parse_smirks(self,input_smirks):
@@ -458,17 +476,44 @@ class ChemicalEnvironment(object):
         store = list() # to store indices while branching
         bondingTo = idx # which atom are we going to bond to
 
-        atom, start, end = _find_embedded_brackets(smirks, '\[', '\]')
-        if start != 0:
-            raise SMIRKSParsingError("Provided SMIRKS: %s should begin with '[' instead of %s" % (smirks, smirks[0]))
+        atom_string, start, end = _find_embedded_brackets(smirks, '\[', '\]')
 
-        atom = atom[1:-1]
-        OR, AND, index = self._getAtomInfo(atom)
-        leftover = smirks[end+1:]
+        if start != 0: # first atom is not in square brackets
+            if start != -1:
+                start_string = smirks[:start]
+            else:
+                start_string = smirks
 
-        new_atom = self.addAtom(None, newORtypes = OR, newANDtypes = AND, newAtomIndex = index)
+            # Check for atoms not between square brackets
+            reg = r'(\$\w+|[A-Z][a-z]?)'
+            split = re.split(reg, start_string)
+            atom_string = split[1]
+
+            # update leftover for this condition
+            if start != -1: # there is at least 1 more bracketed atom
+                leftover = ''.join(split[2:])+leftover[start:]
+            else:
+                leftover = ''.join(split[2:])
+
+        else: # First atom is in square brackets
+            leftover = smirks[end+1:]
+            # remove square brackets for parsing
+            atom_string = atom_string[1:-1]
+
+        # Check for ring index, i.e. the 1s in "[#6:1]1-CCCCC1"
+        match = re.match(r'(\d+)',leftover)
+        if match is not None: # leftover starts with int
+            ring = re.findall(r'(\d+)',leftover)[0]
+            leftover = leftover[match.end():]
+        else:
+            ring = None
+
+        OR, AND, index = self._getAtomInfo(atom_string)
+        new_atom = self.addAtom(None, newORtypes = OR, newANDtypes = AND,
+                newAtomIndex = index, newAtomRing = ring, beyondBeta = True)
         atoms[idx] = new_atom
 
+        print("First leftover: %s" % leftover)
         while len(leftover) > 0:
             idx += 1
 
@@ -485,15 +530,21 @@ class ChemicalEnvironment(object):
 
             # find beginning and end of next [atom]
             atom_string, start, end = _find_embedded_brackets(leftover, '\[', '\]')
-            bond_string = leftover[:start]
+
+            if start != -1: # no more square brackets
+                bond_string = leftover[:start]
+            else:
+                bond_string = leftover
+
             # Check for atoms not between square brackets
             reg = r'(\$\w+|[A-Z][a-z]?)'
             bond_split = re.split(reg, bond_string)
-
+            print(bond_split)
             # Next atom is not in brackets for example C in "[#7:1]-C"
             if len(bond_split) > 1:
                 bond_string = bond_split[0]
                 atom_string = '['+bond_split[1]+']'
+                print("atom_string: %s" % atom_string)
                 # update leftover for this condition
                 if start != -1: # ther is at least 1 more bracketed atom
                     leftover = ''.join(bond_split[2:])+leftover[start:]
@@ -508,9 +559,23 @@ class ChemicalEnvironment(object):
             bOR, bAND = self._getBondInfo(bond_string)
             aOR, aAND, index = self._getAtomInfo(atom_string[1:-1])
 
-            # create new atom
-            new_atom = self.addAtom(atoms[bondingTo], bOR, bAND, aOR, aAND, index)
+            print("Other leftover: '%s'" % leftover)
+            # Check for ring index, i.e. the 1s in "[#6:1]1-CCCCC1"
+            match = re.match(r'(\d+)',leftover)
+            if match is not None: # leftover starts with int
+                ring = re.findall(r'(\d+)',leftover)[0]
+                leftover = leftover[match.end():]
+                print("found a ring: %s" % ring)
+                print("new leftover: '%s'" % leftover)
+            else:
+                ring = None
 
+            # create new atom
+            new_atom = self.addAtom(atoms[bondingTo], bondORtypes=bOR,
+                    bondANDtypes=bAND, newORtypes=aOR, newANDtypes=aAND,
+                    newAtomIndex=index, newAtomRing=ring, beyondBeta=True)
+
+            print("new atom ring: %s" % new_atom.ring)
             # update state
             atoms[idx] = new_atom
             bondingTo = idx
@@ -564,7 +629,9 @@ class ChemicalEnvironment(object):
         if len(split) == 0:
             return None, []
 
-        return split[0], split[1:]
+        base = split[0]
+        decs = _remove_blanks_repeats(split[1:], ['',base])
+        return base, decs
 
     def _getBondInfo(self, bond):
         """
@@ -771,7 +838,7 @@ class ChemicalEnvironment(object):
 
     def addAtom(self, bondToAtom, bondORtypes= None, bondANDtypes = None,
             newORtypes = None, newANDtypes = None, newAtomIndex = None,
-            beyondBeta = False):
+            newAtomRing = None, beyondBeta = False):
         """Add an atom to the specified target atom.
 
         Parameters
@@ -802,7 +869,7 @@ class ChemicalEnvironment(object):
             if newType == None:
                 newType = 0
 
-            newAtom = self.Atom(newORtypes, newANDtypes, newAtomIndex)
+            newAtom = self.Atom(newORtypes, newANDtypes, newAtomIndex, newAtomRing)
             self._graph.add_node(newAtom, atom_type = newType)
             return newAtom
 
@@ -826,7 +893,7 @@ class ChemicalEnvironment(object):
         newBond = self.Bond(bondORtypes, bondANDtypes)
 
         # create new atom
-        newAtom = self.Atom(newORtypes, newANDtypes, newAtomIndex)
+        newAtom = self.Atom(newORtypes, newANDtypes, newAtomIndex, newAtomRing)
 
         # Add node for newAtom
         self._graph.add_node(newAtom, atom_type = newType)
