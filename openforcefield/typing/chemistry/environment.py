@@ -519,7 +519,6 @@ class ChemicalEnvironment(object):
                 newAtomIndex = index, newAtomRing = ring, beyondBeta = True)
         atoms[idx] = new_atom
 
-        print("First leftover: %s" % leftover)
         while len(leftover) > 0:
             idx += 1
 
@@ -545,12 +544,10 @@ class ChemicalEnvironment(object):
             # Check for atoms not between square brackets
             reg = r'(\$\w+|[A-Z][a-z]?)'
             bond_split = re.split(reg, bond_string)
-            print(bond_split)
             # Next atom is not in brackets for example C in "[#7:1]-C"
             if len(bond_split) > 1:
                 bond_string = bond_split[0]
                 atom_string = '['+bond_split[1]+']'
-                print("atom_string: %s" % atom_string)
                 # update leftover for this condition
                 if start != -1: # ther is at least 1 more bracketed atom
                     leftover = ''.join(bond_split[2:])+leftover[start:]
@@ -565,14 +562,11 @@ class ChemicalEnvironment(object):
             bOR, bAND = self._getBondInfo(bond_string)
             aOR, aAND, index = self._getAtomInfo(atom_string[1:-1])
 
-            print("Other leftover: '%s'" % leftover)
             # Check for ring index, i.e. the 1s in "[#6:1]1-CCCCC1"
             match = re.match(r'(\d+)',leftover)
             if match is not None: # leftover starts with int
                 ring = re.findall(r'(\d+)',leftover)[0]
                 leftover = leftover[match.end():]
-                print("found a ring: %s" % ring)
-                print("new leftover: '%s'" % leftover)
             else:
                 ring = None
 
@@ -581,7 +575,6 @@ class ChemicalEnvironment(object):
                     bondANDtypes=bAND, newORtypes=aOR, newANDtypes=aAND,
                     newAtomIndex=index, newAtomRing=ring, beyondBeta=True)
 
-            print("new atom ring: %s" % new_atom.ring)
             # update state
             atoms[idx] = new_atom
             bondingTo = idx
@@ -928,12 +921,10 @@ class ChemicalEnvironment(object):
         """
         # labeled atoms can't be removed
         if atom.index is not None:
-            # print("Cannot remove labeled atom %s" % atom.asSMIRKS())
             return False
 
         # Atom connected to more than one other atom cannot be removed
         if len(self._graph.neighbors(atom)) > 1:
-            #print("Cannot remove atom %s because it connects two atoms" % atom.asSMIRKS())
             return False
 
         # if you can remove "decorated atoms" remove it
