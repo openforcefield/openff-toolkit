@@ -163,7 +163,7 @@ class ChemicalEnvironment(object):
         ANDtypes : list of string
             The descriptor types  that will be combined with logical AND
         """
-        def __init__(self, ORtypes = [], ANDtypes = [], index = None, ring = None):
+        def __init__(self, ORtypes = None, ANDtypes = None, index = None, ring = None):
             """Initialize an Atom object with optional descriptors.
 
             Parameters
@@ -179,11 +179,17 @@ class ChemicalEnvironment(object):
             ring : int, optional, default = None
                 If not None, the specified ring index will be attached at the end of the atom i.e. '[#6:1]1'
             """
-            # dictionary of ORbases and ORdecorators
-            self.ORtypes = copy.deepcopy(ORtypes)
+            # List of 2 tuples in the form [ (ORbase, ORdecorator), ...]
+            if ORtypes is not None:
+                self.ORtypes = copy.deepcopy(ORtypes)
+            else:
+                self.ORtypes = list()
 
             # Set of strings that will be AND'd to the the end
-            self.ANDtypes = list(copy.deepcopy(ANDtypes))
+            if ANDtypes is not None:
+                self.ANDtypes = list(copy.deepcopy(ANDtypes))
+            else:
+                self.ANDtypes = list()
 
             self.index = index
             self.ring = ring
@@ -290,7 +296,7 @@ class ChemicalEnvironment(object):
             if newORtypes is not None:
                 for (base, decs) in newORtypes:
                     adjusted_decs = _remove_blanks_repeats(decs, ['', base])
-                    self.ORtypes.append(base, adjusted_decs )
+                    self.ORtypes.append( (base, adjusted_decs) )
 
         def getANDtypes(self):
             """
