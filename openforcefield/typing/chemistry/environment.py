@@ -331,7 +331,7 @@ class ChemicalEnvironment(object):
         """
         # Implementation identical to atoms apart from what is put in the asSMARTS/asSMIRKS strings
 
-        def __init__(self, ORtypes = [], ANDtypes = []):
+        def __init__(self, ORtypes = None, ANDtypes = None):
             """
             Parameters
             -----------
@@ -387,6 +387,10 @@ class ChemicalEnvironment(object):
             for multiple ORtypes or ~ it returns the minimum possible order
             the intended application is for checking valence around a given atom
             """
+            # Minimum order for empty ORtypes is 1:
+            if not self.ORtypes:
+                return 1
+
             orderDict = {'~':1.,
                     '-':1., ':': 1.5, '=':2., '#':3.,
                     '!-':1.5, '!:':1., '!=':1., '!#':1.}
@@ -443,8 +447,18 @@ class ChemicalEnvironment(object):
         if smirks is not None:
             # Check that it is a valid SMIRKS
             if not self.isValid(smirks):
-                raise SMIRKSParsingError("Error Provided SMIRKS: %s was not \
-                        parseable" % smirks)
+                raise SMIRKSParsingError("Error Provided SMIRKS ('%s') was \
+not parseable with OpenEye tools" % smirks)
+
+            # Check for SMIRKS not supported by Chemical Environments
+            if smirks.find('.') != -1:
+                raise SMIRKSParsingError("Error: Provided SMIRKS ('%s') \
+contains a '.' indicating multiple molecules in the same pattern. This type \
+of pattern is not parseable into ChemicalEnvironments" % smirks)
+            if smirks.find('>') != -1:
+                raise SMIRKSParsingError("Error: Provided SMIRKS ('%s') \
+contains a '>' indicating a reaction. This type of pattern is not parseable \
+into ChemicalEnvironments." % smirks)
 
             # try parsing into environment object
             try:
@@ -497,7 +511,7 @@ class ChemicalEnvironment(object):
 
             # update leftover for this condition
             if start != -1: # there is at least 1 more bracketed atom
-                leftover = ''.join(split[2:])+leftover[start:]
+                leftover = ''.join(split[2:])+smirks[start:]
             else:
                 leftover = ''.join(split[2:])
 
@@ -514,6 +528,7 @@ class ChemicalEnvironment(object):
         else:
             ring = None
 
+        # Get atom information and create first atom
         OR, AND, index = self._getAtomInfo(atom_string)
         new_atom = self.addAtom(None, newORtypes = OR, newANDtypes = AND,
                 newAtomIndex = index, newAtomRing = ring, beyondBeta = True)
