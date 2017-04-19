@@ -65,8 +65,34 @@ See `examples/SMIRNOFF_simulation/` for a complete example of how SMIRNOFF can b
 
 ## `ChemicalEnvironment`: Tools for chemical environment perception and manipulation
 
-Documentation forthcoming.
-See `examples/chemicalEnvironments/` for now.
+ChemicalEnvironments are a python class used to parse and manipulate SMIRKS strings. 
+They were created with the goal of being able to automatically and randomly generate parameters for SMIRKS Native-Open Force Fields. 
+These are initiated with SMIRKS strings and then the information is stored for each atom and bond in the initial fragment. 
+
+```python
+from openforcefield.typing.chemistry import environment
+
+smirks = "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
+angle = environment.AngleChemicalEnvironment(smirks = smirks)
+print(angle.asSMIRKS())
+# "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
+
+# add a new atom
+atom3 = angle.selectAtom(3)
+alpha_ORtypes = [('#8', ['X2'])]
+alpha_bondANDtypes = ['!@']
+alpha = angle.addAtom(atom3, bondANDtypes = alpha_bondANDtypes, newORtypes = alpha_ORtypes)
+print(alpha.asSMIRKS()) # smirks for atom only
+# "[#8X2H1;R0]"
+print(angle.asSMIRKS())
+# "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]~;!@[#8X2]"
+```
+If you are not familiar with the SMIRKS language, take a look at these Daylight resources: 
+* [SMILES](http://www.daylight.com/dayhtml_tutorials/languages/smiles/index.html)
+* [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html)
+* [SMIRKS](http://www.daylight.com/dayhtml_tutorials/languages/smirks/index.html)
+
+For more detailed examples see README and `using_environment.ipynb` in  `examples/chemicalEnvironments/` 
 
 # Manifest
 
