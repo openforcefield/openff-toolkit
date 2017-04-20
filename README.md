@@ -50,16 +50,20 @@ For example, if we have an `OEMol` named `mol`, we can create an OpenMM `System`
 ```python
 # Import the SMIRNOFF forcefield engine and some useful tools
 from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.utils import get_data_filename, extractPositionsFromOEMol, generateTopologyFromOEMol
+from openforcefield.utils import read_molecules, get_data_filename, generateTopologyFromOEMol 
+
+# read in molecule from file in openforcefield/data/molecules/
+mols = read_molecules('benzene.mol2')
 
 # Get positions and topology in OpenMM-compatible format
-topology = generateTopologyFromOEMol(mol)
+topology = generateTopologyFromOEMol(mols[0])
 
 # Load a SMIRNOFF small molecule forcefield for alkanes, ethers, and alcohols
-forcefield = ForceField('Frosst_AlkEtOH_parmAtFrosst.ffxml')
+FF_filename = get_data_filename('forcefield/Frosst_AlkEtOH_parmAtFrosst.ffxml')
+forcefield = ForceField(FF_filename)
 
 # Create the OpenMM system, additionally specifying a list of OEMol objects for the unique molecules in the system
-system = forcefield.createSystem(topology, [mol])
+system = forcefield.createSystem(topology, mols)
 ```
 See `examples/SMIRNOFF_simulation/` for a complete example of how SMIRNOFF can be used for small molecule vacuum simulations.
 
