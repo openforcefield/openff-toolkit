@@ -87,7 +87,7 @@ class TestChemicalEnvironments(TestCase):
                 [ "[#1:1]-[#6&X4:2](-[#8:3])-[*:4](-[#6&H1])-[#8:5]", None, ChemicalEnvironment],
                 [ "[#6$(*~[#6]=[#8])$(*-,=$ewg2)]", None, ChemicalEnvironment],
                 [ "CCC", None, ChemicalEnvironment],
-                [ "[#6:1]1(-;!@[#1,#6])=;@[#6]-;@[#6]1", None, ChemicalEnvironment],
+                [ "[#6:1]1(-;!@[#1,#6])=;@[#6]-;@[#6]1", 'VdW', ChemicalEnvironment],
                 [ "C(O-[#7,#8])CC=[*]", None, ChemicalEnvironment],
                 [ "[#6$([#6X4](~[$ewg1])(~[#8]~[#1])):1]-[#6X2H2;+0:2]-,=,:;!@;!#[$ewg2:3]-[#4:4]", 'Torsion', TorsionChemicalEnvironment],
                 [ "[#6$([#6X4](~[$ewg1])(~[#8]~[#1])):1]1=CCCC1", 'VdW', AtomChemicalEnvironment] ]
