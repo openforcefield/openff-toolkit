@@ -75,6 +75,9 @@ class TestChemicalEnvironments(TestCase):
         """
         Test creating environments with SMIRKS
         """
+        replacements = [ ('ewg1', '[#7!-1,#8!-1,#16!-1,#9,#17,#35,#53]'),
+                ('ewg2', '[#7!-1,#8,#16]') ]
+
         smirksList = [ ["[#6](-[#1])-[#8]", None, ChemicalEnvironment],
                 ["[#6&X4&H0:1](-[#1])-[#6&X4]", 'VdW', AtomChemicalEnvironment],
                 [ "[#6&X4&H0:1](-[#1])-[#6&X4:2]", 'Bond', BondChemicalEnvironment],
@@ -90,7 +93,7 @@ class TestChemicalEnvironments(TestCase):
                 [ "[#6$([#6X4](~[$ewg1])(~[#8]~[#1])):1]1=CCCC1", 'VdW', AtomChemicalEnvironment] ]
 
         for [smirks, checkType, chemEnv] in smirksList:
-            env = chemEnv(smirks)
+            env = chemEnv(smirks = smirks, replacements = replacements)
             Type = env.getType()
             self.assertEqual(Type,checkType,
                     "SMIRKS (%s) clasified as %s instead of %s" % (smirks, Type, checkType))
