@@ -1,7 +1,8 @@
 #!/bin/env python
 
-from openforcefield.utils import *
-from openforcefield.typing.engines.smirnoff import ForceField
+from openeye import oechem
+from openforcefield.utils import get_data_filename
+from openforcefield.typing.engines.smirnoff import ForceField, compare_molecule_energies
 
 import os
 

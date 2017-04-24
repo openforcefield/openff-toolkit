@@ -75,16 +75,25 @@ class TestChemicalEnvironments(TestCase):
         """
         Test creating environments with SMIRKS
         """
+        replacements = [ ('ewg1', '[#7!-1,#8!-1,#16!-1,#9,#17,#35,#53]'),
+                ('ewg2', '[#7!-1,#8,#16]') ]
+
         smirksList = [ ["[#6](-[#1])-[#8]", None, ChemicalEnvironment],
                 ["[#6&X4&H0:1](-[#1])-[#6&X4]", 'VdW', AtomChemicalEnvironment],
                 [ "[#6&X4&H0:1](-[#1])-[#6&X4:2]", 'Bond', BondChemicalEnvironment],
                 [ "[*:1]-[*:2](-[#6&X4])-[*:3]", 'Angle', AngleChemicalEnvironment],
                 [ "[#6&X4&H0:1](-[#1])-[#6&X4:2]-[#6&X4&H0:3](-[#1])-[#6&X4:4]", 'Torsion', TorsionChemicalEnvironment],
                 [ "[#1:1]-[#6&X4:2](-[#8:3])-[#1:4]", 'Improper', ImproperChemicalEnvironment],
-                [ "[#1:1]-[#6&X4:2](-[#8:3])-[*:4](-[#6&H1])-[#8:5]", None, ChemicalEnvironment] ]
+                [ "[#1:1]-[#6&X4:2](-[#8:3])-[*:4](-[#6&H1])-[#8:5]", None, ChemicalEnvironment],
+                [ "[#6$(*~[#6]=[#8])$(*-,=$ewg2)]", None, ChemicalEnvironment],
+                [ "CCC", None, ChemicalEnvironment],
+                [ "[#6:1]1(-;!@[#1,#6])=;@[#6]-;@[#6]1", 'VdW', ChemicalEnvironment],
+                [ "C(O-[#7,#8])CC=[*]", None, ChemicalEnvironment],
+                [ "[#6$([#6X4](~[$ewg1])(~[#8]~[#1])):1]-[#6X2H2;+0:2]-,=,:;!@;!#[$ewg2:3]-[#4:4]", 'Torsion', TorsionChemicalEnvironment],
+                [ "[#6$([#6X4](~[$ewg1])(~[#8]~[#1])):1]1=CCCC1", 'VdW', AtomChemicalEnvironment] ]
 
         for [smirks, checkType, chemEnv] in smirksList:
-            env = chemEnv(smirks)
+            env = chemEnv(smirks = smirks, replacements = replacements)
             Type = env.getType()
             self.assertEqual(Type,checkType,
                     "SMIRKS (%s) clasified as %s instead of %s" % (smirks, Type, checkType))
