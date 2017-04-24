@@ -70,9 +70,12 @@ See `examples/SMIRNOFF_simulation/` for a complete example of how SMIRNOFF can b
 ## `ChemicalEnvironment`: Tools for chemical environment perception and manipulation
 
 ChemicalEnvironments are a python class used to parse and manipulate SMIRKS strings. 
-They were created with the goal of being able to automatically and randomly generate parameters for SMIRKS Native-Open Force Fields. 
-These are initiated with SMIRKS strings and then the information is stored for each atom and bond in the initial fragment. 
+They were created with the goal of being able to automatically sample over chemical perceptions space. 
+Someday they will be used to generate SMIRKS patterns for SMIRKS Native-Open Force Fields parameters. 
+These are initiated with SMIRKS strings for single molecules fragements`*` and then the information is stored for each atom and bond in the initial fragment. 
 
+`*` NOTE SMIRKS can be used to show how a reaction would happen between fragments in different molecules. This is done with `'.'` between molecules and `'>>'` to indicate a reaction. Chemical Environments can only parse SMIRKS strings for fragments of a single molecule.  
+ 
 ```python
 from openforcefield.typing.chemistry import environment
 
