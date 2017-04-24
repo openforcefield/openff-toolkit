@@ -50,23 +50,56 @@ For example, if we have an `OEMol` named `mol`, we can create an OpenMM `System`
 ```python
 # Import the SMIRNOFF forcefield engine and some useful tools
 from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.utils import get_data_filename, extractPositionsFromOEMol, generateTopologyFromOEMol
+from openforcefield.utils import read_molecules, get_data_filename, generateTopologyFromOEMol 
+
+# read in molecule from file in openforcefield/data/molecules/
+mols = read_molecules('benzene.mol2')
 
 # Get positions and topology in OpenMM-compatible format
-topology = generateTopologyFromOEMol(mol)
+topology = generateTopologyFromOEMol(mols[0])
 
 # Load a SMIRNOFF small molecule forcefield for alkanes, ethers, and alcohols
-forcefield = ForceField('Frosst_AlkEtOH_parmAtFrosst.ffxml')
+FF_filename = get_data_filename('forcefield/Frosst_AlkEtOH_parmAtFrosst.ffxml')
+forcefield = ForceField(FF_filename)
 
 # Create the OpenMM system, additionally specifying a list of OEMol objects for the unique molecules in the system
-system = forcefield.createSystem(topology, [mol])
+system = forcefield.createSystem(topology, mols)
 ```
 See `examples/SMIRNOFF_simulation/` for a complete example of how SMIRNOFF can be used for small molecule vacuum simulations, and `examples/mixedFF_structure` for how to set up a system which uses an AMBER forcefield (in this case, AMBER99SB-ILDN) for a protein in combination with SMIRNOFF for a small molecules. Via ParmEd, this can be translated into GROMACS, AMBER, or CHARMM formats for use elsewhere (and additional formats via InterMol).
 
 ## `ChemicalEnvironment`: Tools for chemical environment perception and manipulation
 
-Documentation forthcoming.
-See `examples/chemicalEnvironments/` for now.
+ChemicalEnvironments are a python class used to parse and manipulate SMIRKS strings. 
+They were created with the goal of being able to automatically sample over chemical perceptions space. 
+Someday they will be used to generate SMIRKS patterns for SMIRKS Native-Open Force Fields parameters. 
+These are initiated with SMIRKS strings for single molecules fragements`*` and then the information is stored for each atom and bond in the initial fragment. 
+
+`*` NOTE SMIRKS can be used to show how a reaction would happen between fragments in different molecules. This is done with `'.'` between molecules and `'>>'` to indicate a reaction. Chemical Environments can only parse SMIRKS strings for fragments of a single molecule.  
+ 
+```python
+from openforcefield.typing.chemistry import environment
+
+smirks = "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
+angle = environment.AngleChemicalEnvironment(smirks = smirks)
+print(angle.asSMIRKS())
+# "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
+
+# add a new atom
+atom3 = angle.selectAtom(3)
+alpha_ORtypes = [('#8', ['X2'])]
+alpha_bondANDtypes = ['!@']
+alpha = angle.addAtom(atom3, bondANDtypes = alpha_bondANDtypes, newORtypes = alpha_ORtypes)
+print(alpha.asSMIRKS()) # smirks for atom only
+# "[#8X2H1;R0]"
+print(angle.asSMIRKS())
+# "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]~;!@[#8X2]"
+```
+If you are not familiar with the SMIRKS language, take a look at these Daylight resources: 
+* [SMILES](http://www.daylight.com/dayhtml_tutorials/languages/smiles/index.html)
+* [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html)
+* [SMIRKS](http://www.daylight.com/dayhtml_tutorials/languages/smirks/index.html)
+
+For more detailed examples see README and `using_environment.ipynb` in  `examples/chemicalEnvironments/` 
 
 # Manifest
 
