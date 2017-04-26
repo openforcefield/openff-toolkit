@@ -2,8 +2,8 @@
 
 import lxml.etree as etree
 import numpy as np
-from smarty import ForceField
-from smarty import environment
+from openforcefield.typing.engines.smirnoff.forcefield import ForceField
+from openforcefield.typing.chemistry import environment
 
 # Function definitions for parsing sections within parameter file
 def _parse_nonbon_line( line ):
