@@ -6,7 +6,9 @@
 DATE
 # Updated: Many times during Fall 2016 - Winter 2017, small change with ethers Fri. March 3, 2017
 # Significant updates added in early spring 2017 
-Date: April 4, 2017
+# Date: April 4, 2017
+Date: April 26, 2017
+
 # Author: please make sure all authors are on one line, only last line will be used 
 AUTHOR
 C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine
@@ -19,7 +21,7 @@ NONBON
 [#1:1]-[#6X4]-[#7,#8,#9,#16,#17,#35]  1.3870  0.0157  parm99 H1 Veenstra et al JCC,8,(1992),963
 [#1:1]-[#6X4](-[#7,#8,#9,#16,#17,#35])-[#7,#8,#9,#16,#17,#35]  1.2870  0.0157  parm99 H2 Veenstra et al JCC,8,(1992),963
 [#1:1]-[#6X4](-[#7,#8,#9,#16,#17,#35])(-[#7,#8,#9,#16,#17,#35])-[#7,#8,#9,#16,#17,#35]  1.1870  0.0157  parm99 H3 Veenstra et al JCC,8,(1992),963
-[#1:1]-[#6X4]~[*;+1;+2]  1.1000  0.0157  parm99 HP Veenstra et al JCC,8,(1992),963
+[#1:1]-[#6X4]~[*+1,*+2]  1.1000  0.0157  parm99 HP Veenstra et al JCC,8,(1992),963
 [#1:1]-[#6X3]    1.4590  0.0150  parm99 HA Spellmeyer
 [#1:1]-[#6X3]~[#7,#8,#9,#16,#17,#35]  1.4090  0.0150  parm99 H4 Spellmeyer, one electrowithdr. neighbor
 [#1:1]-[#6X3](~[#7,#8,#9,#16,#17,#35])~[#7,#8,#9,#16,#17,#35]  1.3590  0.0150  parm99 H5 Spellmeyer, two electrowithdr. neighbor
