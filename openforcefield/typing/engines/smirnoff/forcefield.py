@@ -557,7 +557,6 @@ class ForceField(object):
             except IOError:
                 temp_file = get_data_filename(file)
                 tree = etree.parse(temp_file, parser)
-                #tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file), parser)
             except Exception as e:
                 # Fail with an error message about which file could not be read.
                 # TODO: Also handle case where fallback to 'data' directory encounters problems,
