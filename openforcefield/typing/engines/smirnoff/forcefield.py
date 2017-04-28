@@ -33,7 +33,7 @@ import lxml.etree as etree
 
 from simtk.openmm.app import element as elem
 from simtk.openmm.app import Topology
-from openforcefield.utils import generateTopologyFromOEMol
+from openforcefield.utils import generateTopologyFromOEMol, get_data_filename
 
 import os
 import math
@@ -555,7 +555,9 @@ class ForceField(object):
                 # this handles either filenames or open file-like objects
                 tree = etree.parse(file, parser)
             except IOError:
-                tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file), parser)
+                temp_file = get_data_filename(file)
+                tree = etree.parse(temp_file, parser)
+                #tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file), parser)
             except Exception as e:
                 # Fail with an error message about which file could not be read.
                 # TODO: Also handle case where fallback to 'data' directory encounters problems,
