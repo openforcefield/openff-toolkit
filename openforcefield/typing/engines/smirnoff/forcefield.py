@@ -2020,7 +2020,7 @@ class NonbondedGenerator(object):
             for atom_mapping in atom_mappings:
                 for (atom_index, map_atom_index) in atom_mapping.items():
                     # Retrieve NB params for reference atom (charge not set yet)
-                    [charge, sigma, epsilon] = force.getParticleParameters(atom_index)
+                    charge, sigma, epsilon = force.getParticleParameters(map_atom_index)
                     # Look up the charge on the atom in the reference molecule
                     charge = charge_by_atom[atom_index]*unit.elementary_charge
 
