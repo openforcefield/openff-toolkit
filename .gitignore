@@ -62,7 +62,7 @@ target/
 # Ipython notebook checkpoints
 *.ipynb_checkpoints/
 
-# ignore files created during tests
-smarty/tests/*.pdf
-smarty/tests/*.log
-smarty/tests/*.csv
+# ignore large files created during examples
+examples/testing/test_system_conversion/out.*
+examples/testing/test_system_conversion/out2.*
+examples/testing/test_system_conversion/system.*
