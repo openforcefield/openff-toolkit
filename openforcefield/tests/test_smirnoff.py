@@ -664,6 +664,42 @@ def test_gromacs_roundtrip():
     os.remove(grofile)
 
 
+def test_tip3p_constraints():
+    """Test that TIP3P distance costraints are correctly applied."""
+    # TIP3P constrained distances.
+    tip3p_oh_distance = 0.9572  # angstrom
+    tip3p_hoh_angle = 104.52  # angle
+    tip3p_hh_distance = tip3p_oh_distance * np.sin(np.radians(tip3p_hoh_angle/2)) * 2
+    expected_distances = [tip3p_oh_distance, tip3p_oh_distance, tip3p_hh_distance]
+
+    # Load tip3p molecule as OEMol.
+    tip3p_mol2_filepath = get_data_filename(os.path.join('systems', 'monomers', 'tip3p_water.mol2'))
+    tip3p_oemol = read_molecules(tip3p_mol2_filepath, verbose=False)[0]
+
+    # Extract topology and positions.
+    tip3p_topology = generateTopologyFromOEMol(tip3p_oemol)
+    tip3p_positions = positions_from_oemol(tip3p_oemol)
+
+    # Create tip3p water system.
+    ff = ForceField('forcefield/tip3p.ffxml')
+    system = ff.createSystem(tip3p_topology, [tip3p_oemol])
+
+    # Run dynamics.
+    integrator = openmm.VerletIntegrator(2.0*unit.femtoseconds)
+    context = openmm.Context(system, integrator)
+    context.setPositions(tip3p_positions)
+    integrator.step(50)
+
+    # Constrained distances are correct.
+    state = context.getState(getPositions=True)
+    new_positions = state.getPositions(asNumpy=True) / unit.angstroms
+    distances = []
+    for atom_1, atom_2 in [(0, 1), (0, 2), (1, 2)]:  # pair of atoms O-H1, O-H2, H1-H2
+        distances.append(np.linalg.norm(new_positions[atom_1] - new_positions[atom_2]))
+    err_msg = 'expected distances [O-H1, O-H2, H1-H2]: {} A, new distances: {} A'
+    assert np.allclose(expected_distances, distances), err_msg.format(expected_distances, distances)
+
+
 def test_tip3p_solvated_molecule_energy():
     """Check the energy of a TIP3P solvated molecule is the same with SMIRNOFF and OpenMM.
 
