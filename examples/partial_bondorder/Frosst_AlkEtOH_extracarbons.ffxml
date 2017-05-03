@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 
-<SMIRFF>
+<SMIRNOFF version="0.1" use_fractional_bondorder="True">
 
 <!-- SMIRKS (SMIRKS Force Field) mockup1.0 for alkanes, ethers, and alcohols -->
 <Date>Date: Sept 2, 2016</Date>
@@ -68,4 +68,4 @@
    <Atom smirks="[#8X2+0$(*-[#1]):1]" rmin_half="1.7210" epsilon="0.2104" id="n0011" parent_id="n0009"/> <!-- OH from frcmod.Frosst_AlkEthOH -->
 </NonbondedForce>
 
-</SMIRFF>
+</SMIRNOFF>
