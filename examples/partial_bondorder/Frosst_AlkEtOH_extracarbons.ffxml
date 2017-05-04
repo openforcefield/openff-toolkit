@@ -2,7 +2,7 @@
 
 <SMIRNOFF version="0.1" use_fractional_bondorder="True">
 
-<!-- SMIRKS (SMIRKS Force Field) mockup1.0 for alkanes, ethers, and alcohols -->
+<!-- SMIRNOFF (SMIRKS Native Open Force Field) mockup1.0 for alkanes, ethers, and alcohols -->
 <Date>Date: Sept 2, 2016</Date>
 <Author>C. I. Bayly, OpenEye Scientific Software and David Mobley, UCI</Author>
 <!-- This mockup is based on frcmod.Frosst_AlkEthOH, the minimal subset of parm99/parm@Frosst -->

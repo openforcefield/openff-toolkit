@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.1" aromaticity_model="OEAroModel_MDL">
-  <!-- SMIRKS (SMIRKS Force Field) template file -->
+  <!-- SMIRNOFF (SMIRKS Native Open Force Field) template file -->
   <Date>Date: Aug. 23, 2016</Date>
   <Author>D. L. Mobley, UC Irvine</Author>
   <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
