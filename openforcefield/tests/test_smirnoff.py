@@ -1,12 +1,8 @@
 from functools import partial
 from openforcefield.typing.engines.smirnoff import *
 from openforcefield.utils import get_data_filename, generateTopologyFromOEMol, read_molecules
-import openeye
 from openeye import oechem
-import os
 from simtk.openmm import app
-from simtk.openmm.app import element as elem
-from simtk.openmm.app import Topology
 from simtk import unit, openmm
 import numpy as np
 from io import StringIO
@@ -666,6 +662,118 @@ def test_gromacs_roundtrip():
     # Remove temp files
     os.remove(topfile)
     os.remove(grofile)
+
+
+def test_tip3p_constraints():
+    """Test that TIP3P distance costraints are correctly applied."""
+    # TIP3P constrained distances.
+    tip3p_oh_distance = 0.9572  # angstrom
+    tip3p_hoh_angle = 104.52  # angle
+    tip3p_hh_distance = tip3p_oh_distance * np.sin(np.radians(tip3p_hoh_angle/2)) * 2
+    expected_distances = [tip3p_oh_distance, tip3p_oh_distance, tip3p_hh_distance]
+
+    # Load tip3p molecule as OEMol.
+    tip3p_mol2_filepath = get_data_filename(os.path.join('systems', 'monomers', 'tip3p_water.mol2'))
+    tip3p_oemol = read_molecules(tip3p_mol2_filepath, verbose=False)[0]
+
+    # Extract topology and positions.
+    tip3p_topology = generateTopologyFromOEMol(tip3p_oemol)
+    tip3p_positions = positions_from_oemol(tip3p_oemol)
+
+    # Create tip3p water system.
+    ff = ForceField('forcefield/tip3p.ffxml')
+    system = ff.createSystem(tip3p_topology, [tip3p_oemol])
+
+    # Run dynamics.
+    integrator = openmm.VerletIntegrator(2.0*unit.femtoseconds)
+    context = openmm.Context(system, integrator)
+    context.setPositions(tip3p_positions)
+    integrator.step(50)
+
+    # Constrained distances are correct.
+    state = context.getState(getPositions=True)
+    new_positions = state.getPositions(asNumpy=True) / unit.angstroms
+    distances = []
+    for atom_1, atom_2 in [(0, 1), (0, 2), (1, 2)]:  # pair of atoms O-H1, O-H2, H1-H2
+        distances.append(np.linalg.norm(new_positions[atom_1] - new_positions[atom_2]))
+    err_msg = 'expected distances [O-H1, O-H2, H1-H2]: {} A, new distances: {} A'
+    assert np.allclose(expected_distances, distances), err_msg.format(expected_distances, distances)
+
+
+def test_tip3p_solvated_molecule_energy():
+    """Check the energy of a TIP3P solvated molecule is the same with SMIRNOFF and OpenMM.
+
+    This test makes also use of defining the force field with multiple FFXML files,
+    and test the energy of mixture systems (i.e. molecule plus water).
+
+    """
+    # TODO remove this function when ParmEd#868 is fixed
+    def add_water_bonds(system):
+        """Hack to make tip3p waters work with ParmEd Structure.createSystem.
+
+        Bond parameters need to be specified even when constrained.
+        """
+        k_tip3p = 462750.4*unit.kilojoule_per_mole/unit.nanometers**2
+        length_tip3p = 0.09572*unit.nanometers
+        for force in system.getForces():
+            if isinstance(force, openmm.HarmonicBondForce):
+                force.addBond(particle1=0, particle2=1, length=length_tip3p, k=k_tip3p)
+                force.addBond(particle1=0, particle2=2, length=length_tip3p, k=k_tip3p)
+
+
+    monomers_dir = get_data_filename(os.path.join('systems', 'monomers'))
+
+    # Load tip3p molecule as OEMol.
+    tip3p_mol2_filepath = os.path.join(monomers_dir, 'tip3p_water.mol2')
+    tip3p_oemol = read_molecules(tip3p_mol2_filepath, verbose=False)[0]
+
+    # Create OpenMM-parametrized water ParmEd Structure.
+    tip3p_openmm_ff = openmm.app.ForceField('tip3p.xml')
+    tip3p_topology = generateTopologyFromOEMol(tip3p_oemol)
+    tip3p_positions = positions_from_oemol(tip3p_oemol)
+    tip3p_openmm_system = tip3p_openmm_ff.createSystem(tip3p_topology)
+
+    # TODO remove this line when ParmEd#868 is fixed
+    # Hack to make tip3p waters work with ParmEd Structure.createSystem.
+    add_water_bonds(tip3p_openmm_system)
+
+    tip3p_openmm_structure = parmed.openmm.topsystem.load_topology(
+        tip3p_topology, tip3p_openmm_system, tip3p_positions)
+
+    # Test case: monomer_filename
+    test_cases = [('smirnoff99Frosst.ffxml', 'ethanol.mol2'),
+                  ('smirnoff99Frosst.ffxml', 'methane.mol2')]
+
+    for ff_name, molecule_filename in test_cases:
+        # Load molecule as OEMol.
+        molecule_filepath = os.path.join(monomers_dir, molecule_filename)
+        molecule_oemol = read_molecules(molecule_filepath, verbose=False)[0]
+
+        # Create molecule parametrized ParmEd args.
+        molecule_ff = ForceField('forcefield/' + ff_name)
+        molecule_args = forcefield_utils.create_system_from_molecule(molecule_ff, molecule_oemol)
+        molecule_structure = parmed.openmm.topsystem.load_topology(*molecule_args)
+        _, _, molecule_positions = molecule_args
+
+        # Merge molecule and OpenMM TIP3P water.
+        structure = tip3p_openmm_structure + molecule_structure
+        structure.positions = np.append(tip3p_positions, molecule_positions, axis=0)
+        system = structure.createSystem()
+        energy_openmm = get_energy(system, structure.positions)
+
+        # Test the creation of system with multiple force field files.
+        ff = ForceField('forcefield/' + ff_name, 'forcefield/tip3p.ffxml')
+        system = ff.createSystem(structure.topology, [tip3p_oemol, molecule_oemol])
+
+        # TODO remove this line when ParmEd#868 is fixed
+        # Add bonds to match ParmEd hack above.
+        add_water_bonds(system)
+
+        energy_smirnoff = get_energy(system, structure.positions)
+
+        # The energies of the systems must be the same.
+        assert np.isclose(energy_openmm, energy_smirnoff), 'OpenMM: {}, SMIRNOFF: {}'.format(
+            energy_openmm, energy_smirnoff)
 
 
 def test_component_combination():

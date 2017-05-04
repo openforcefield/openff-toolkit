@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='ASCII'?>
+<SMIRNOFF version="0.1">
+  <!-- SMIRks Native Open Force Field (SMIRNOFF) file -->
+  <Date>2017-04-29</Date>
+  <Author>J. D. Chodera, MSKCC; A. Rizzi, Weill Cornell; C. C. Bannan, UC Irvine</Author>
+  <!-- SMIRNOFF file implementing TIP3P water model. -->
+  <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="nanometers" epsilon_unit="kilojoules_per_mole">
+    <!-- TIP3P water oxygen with charge override -->
+    <!-- WARNING: charges are not supported yet (see issue openforcefield#25), and they are currently here only for documentation -->
+    <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" id="n1" sigma="0.31507524065751241" epsilon="0.635968" charge="-0.834"/>
+    <!-- TIP3P water hydrogen with charge override -->
+    <!-- WARNING: charges are not supported yet (see issue openforcefield#25), and they are currently here only for documentation -->
+    <Atom smirks="[#1:1]-[#8X2H2+0]-[#1]" id="n2" sigma="1" epsilon="0" charge="0.417"/>
+  </NonbondedForce>
+  <Constraints distance_unit="angstroms">
+    <!-- constrain water O-H bond to equilibrium bond length (overrides earlier constraint) -->
+    <Constraint smirks="[#1:1]-[#8X2H2+0:2]-[#1]" id="c1" distance="0.9572"/>
+    <!-- constrain water H...H, calculating equilibrium length from H-O-H equilibrium angle and H-O equilibrium bond lengths -->
+    <Constraint smirks="[#1:1]-[#8X2H2+0]-[#1:2]" id="c2" distance="1.5139006545247014"/>
+  </Constraints>
+</SMIRNOFF>
