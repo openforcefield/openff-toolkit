@@ -17,7 +17,7 @@ An ipython notebook was created to more carefully filter the molecule sets,
 It illustrates how we maximized the number of atomtypes or force field parameters
 in a minimal number of molecules. 
 It results in the `MiniDrugBank_atyped` molecule set. 
-This is the final set added to /smarty/data/molecules/
+This is the final set added to /openforcefield/data/molecules/
 
 
  The main python script for this directory is `filter_molecule_sets.py` 

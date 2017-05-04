@@ -1,4 +1,4 @@
-# SMIRNOFF FFXML files for smarty.forcefield
+# SMIRNOFF FFXML files for openforcefield.typing.engines.smirnoff.forcefield
 
 ## Manifest
 - `Frosst_AlkEtOH.ffxml`: Original FFXML file for the AlkEthOH region of chemical space/set as hand created by Christopher Bayly
