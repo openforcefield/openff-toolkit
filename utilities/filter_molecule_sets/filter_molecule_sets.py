@@ -71,22 +71,22 @@ def filter_molecules(input_molstream, output_molstream, allow_repeats = False,
     """
     errs = oechem.oeosstream()
     oechem.OEThrow.SetOutputStream(errs)
-    
+
     molecule = oechem.OECreateOEGraphMol()
     smiles = list()
-    
+
     count = 0
     warnings = 0
     smile_count = 0
     saved = 0
-    
+
     while oechem.OEReadMolecule(input_molstream, molecule):
         count +=1
         if ("warning" in errs.str().lower()) and not allow_warnings:
             warnings += 1
             errs.clear()
             continue
-        
+
         smi = oechem.OECreateIsoSmiString(molecule)
         mol_copy = oechem.OEMol(molecule)
         if explicitHs:
@@ -94,7 +94,7 @@ def filter_molecules(input_molstream, output_molstream, allow_repeats = False,
         new_smile = smi not in smiles
         if not new_smile:
             smile_count += 1
-        
+
         if new_smile or allow_repeats:
             keep = keep_molecule(mol_copy, max_heavy_atoms, remove_smirks, max_metals, elements, check_type)
             if keep:
@@ -123,7 +123,7 @@ if __name__=="__main__":
         --metals 0 --hydrogens True
         """
     parser = OptionParser(usage = usage_string)
-    
+
     parser.add_option('-f', '--input', type = 'string', dest = 'input_file', default = None, action = 'store',
                       help = "Name of initial molecule file")
     parser.add_option('-o', '--output', type ='string', dest = 'output_file', default = 'output_molecules.mol2.gz', action = 'store',
@@ -150,9 +150,9 @@ if __name__=="__main__":
     parser.add_option('-y', '--flavor', type = 'choice', dest = 'flavor', default = 'tripos',
                       choices = ['tripos', 'ff'],
                       help = "If you want to include different flavor - options: tripos or ff")
-                      
+
     (opt, args) = parser.parse_args()
-                      
+
     # Check input files
     if (opt.input_file is None) or (opt.output_file is None):
         parser.print_help()
@@ -172,16 +172,16 @@ if __name__=="__main__":
     if not ofs.IsValid():
         parser.print_help()
         parser.error("Error: output_file (%s) was not valid" % opt.output_file)
-    
+
     smirks = smarty.utils.parse_odds_file(opt.smirks_file, False)
     smirks = smirks[0]
-    
+
     print opt.atoms
     repeats = opt.repeats == 'True'
     warnings = opt.warnings == 'True'
     hydrogens = opt.hydrogens == 'True'
-    
+
     filter_molecules(ifs, ofs, repeats, warnings, opt.heavy, smirks, opt.metals, hydrogens, opt.atoms, opt.atomtype)
-    
+
     ifs.close()
     ofs.close()

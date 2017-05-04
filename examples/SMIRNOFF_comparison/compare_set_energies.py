@@ -7,7 +7,7 @@ from openforcefield.typing.engines.smirnoff import ForceField, compare_molecule_
 import os
 import glob
 
-# Cross-check energies of molecules from AlkEthOH set using SMIRFF xml file
+# Cross-check energies of molecules from AlkEthOH set using SMIRNOFF xml file
 # versus energies from AMBER .prmtop and .crd files (parm@frosst params)
 
 #datapath = './AlkEthOH_inputfiles/AlkEthOH_chain_filt1'

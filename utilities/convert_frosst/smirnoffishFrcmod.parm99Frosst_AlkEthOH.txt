@@ -4,7 +4,7 @@
 #
 
 NONBON
-[*:1]   4.  0.25  smirff dummy_generic  a really big soft atom
+[*:1]   4.  0.25  smirnoff dummy_generic  a really big soft atom
 # hydrogen
 [#1:1]           0.6000  0.0157  parm99 generic by analogy with H,HS assuming electroneg bond partner
 [#1:1]-[#6X4]    1.4870  0.0157  parm99 HC OPLS
@@ -51,7 +51,7 @@ BOND
 [#6X3:1]:[#6X3:2]               469.0  1.40    parm99 generic
 [#6X3:1]=[#6X3:2]               549.0  1.35    parm99 generic
 # Csp2-N(trivalent) here is where we have conjugation and fractional bond order matters
-[#6:1]-[#7:2]                 367.0  1.47    smirff generic C-N is like Csp3-ammonium
+[#6:1]-[#7:2]                 367.0  1.47    smirnoff generic C-N is like Csp3-ammonium
 [#6X3:1]-[#7X3:2]             427.0  1.38    parm99 generic conjugated Csp2-Nsp2
 [#6X4:1]-[#7X3:2]-[#6X3]=[#8X1+0]  337.0  1.449   parm99 CT-N peptide backbone N-Csp3
 [#6X3:1](=[#8X1+0])-[#7X3:2]  490.0  1.335   parm99 peptide C_-N amide C-N
@@ -72,13 +72,13 @@ BOND
 # bonds to Csp (alkynes, nitriles, allenes)
 [#6X2:1]-[#6:2]       350.0    1.440   Frosst generic
 [#6X2:1]-[#6X4:2]     350.0    1.468   Frosst C2-CT RHF/6-31G(d,p) opt estimated force constant
-[#6X2:1]=[#6X3:2]     549.0    1.35    smirff generic allene is a regular double bond
+[#6X2:1]=[#6X3:2]     549.0    1.35    smirnoff generic allene is a regular double bond
 [#6X2:1]#[#7X1:2]     350.0    1.188   Frosst C2-NL from C2-C2
 [#6X2:1]#[#6X2:2]     350.0    1.188   Frosst C2-C2 RHF/6-31G(d,p) opt estimated force constant
-[#6X2:1]-[#8X2:2]     350.     1.326   smirff generic estimated from trivalentC-Odivalent
-[#6X2:1]-[#7:2]       427.0    1.38    smirff generic estimated from trivalentC-Ntrivalent
-[#6X2:1]=[#7:2]       427.0    1.17    smirff R0 from -N=C=S CanJChem_v50p1315(1976)
-[#6X2:1]=[#16:2]      427.0    1.54    smirff R0 from -N=C=S CanJChem_v50p1315(1976)
+[#6X2:1]-[#8X2:2]     350.     1.326   smirnoff generic estimated from trivalentC-Odivalent
+[#6X2:1]-[#7:2]       427.0    1.38    smirnoff generic estimated from trivalentC-Ntrivalent
+[#6X2:1]=[#7:2]       427.0    1.17    smirnoff R0 from -N=C=S CanJChem_v50p1315(1976)
+[#6X2:1]=[#16:2]      427.0    1.54    smirnoff R0 from -N=C=S CanJChem_v50p1315(1976)
 # N-N bonds
 [#7X3:1]-[#7X3:2]      380.  1.40    Frosst generic
 [#7X3:1]-[#7X2:2]      340.  1.33    Frosst generic
@@ -90,7 +90,7 @@ BOND
 [#7:1]-[#8X2:2]        300.  1.40    Frosst generic
 [#7:1]~[#8X1:2]        350.  1.30    Frosst generic
 # O-O peroxide
-[#8X2:1]-[#8X2:2]      300.  1.46    smirff generic   bond length from JACSv106p6146-6149(1984)
+[#8X2:1]-[#8X2:2]      300.  1.46    smirnoff generic   bond length from JACSv106p6146-6149(1984)
 # bonds to divalent S
 [#16:1]-[#6X4:2]                237.0  1.810   parm99 CT-SH
 [#16X2:1]-[#1:2]                274.0  1.336   parm99 SH-HS
@@ -98,8 +98,8 @@ BOND
 [#16X2,#16X1-1,#16X3+1:1]-[#6X4:2]  237.0  1.81    Frosst generic by analogy with parm99 CT-SH
 [#16X2,#16X1-1,#16X3+1:1]-[#6X3:2]  300.0    1.74    Frosst generic
 [#16X2:1]-[#7:2]      300.0    1.69    Frosst generic
-[#16X2:1]-[#8X2:2]    300.0    1.60    smirff generic by analogy with hypervalent_S-O_divalent
-[#16X2:1]=[#8X1,#7X2:2]  300.0    1.44    smirff generic by analogy with hypervalent_S-O_monovalent
+[#16X2:1]-[#8X2:2]    300.0    1.60    smirnoff generic by analogy with hypervalent_S-O_divalent
+[#16X2:1]=[#8X1,#7X2:2]  300.0    1.44    smirnoff generic by analogy with hypervalent_S-O_monovalent
 # bonds to hypervalent S
 [#16X4,#16X3+0:1]-[#6:2]  227.0    1.750   Frosst generic
 [#16X4,#16X3+0:1]~[#7:2]   265.  1.71    Frosst generic
@@ -107,8 +107,8 @@ BOND
 [#16X4,#16X3+0:1]~[#8X1:2]   300.  1.44    Frosst generic
 # bonds to P (implied hypervalent)
 [#15:1]~[#6:2]         160.  1.90    Frosst generic
-[#15:1]-[#7:2]        300.0    1.65    smirff generic from Appl.Spec.,v57p970(2006)
-[#15:1]=[#7:2]        400.0    1.5     smirff generic guess
+[#15:1]-[#7:2]        300.0    1.65    smirnoff generic from Appl.Spec.,v57p970(2006)
+[#15:1]=[#7:2]        400.0    1.5     smirnoff generic guess
 [#15:1]~[#8X2:2]                230.0  1.610   parm99 OS,OH-P
 [#15:1]~[#8X1:2]                525.0  1.480   parm99 O2-P
 [#15:1]~[#9:2]        300.0    1.639   Frosst F_-P calc: B3LYP/6-311G(d,p) Jan 13 2006
@@ -131,7 +131,7 @@ BOND
 
 ANGL
 # begin section from parm99
-[*:1]~[*:2]~[*:3]         80.0      120.0   smirff generic is sp2 hybridized
+[*:1]~[*:2]~[*:3]         80.0      120.0   smirnoff generic is sp2 hybridized
 # Csp3 general
 [*:1]~[#6X4:2]-[*:3]      50.  109.5   parm99 generic Csp3
 [#1:1]-[#6X4:2]-[#1:3]    35.  109.5   parm99 generic Csp3
@@ -153,7 +153,7 @@ ANGL
 # carboxylic acid, ester, carboxylate
 [#8X1:1]~[#6X3:2]~[#8:3]  80.0  126.00  parm99 generic
 # Csp
-[*:1]~[#6X2:2]~[*:3]      80.   180.0   parm99 generic smirff only sp carbons are linear
+[*:1]~[#6X2:2]~[*:3]      80.   180.0   parm99 generic smirnoff only sp carbons are linear
 # Nsp3 trivalent and divalent: aliphatic N, ie not attached to Csp2 or Csp
 # note aliphatic trivalent Nsp3 must be defined before conjugated trivalent Nsp2
 [*:1]-[#7X4,#7X3,#7X2-1:2]-[*:3]  70.  109.5 parm99 generic Nsp3 tetravalent
@@ -168,7 +168,7 @@ ANGL
 [#6:1]-[#7X3:2](~[#8X1])~[#8X1:3]  70.000  117.700  Frosst CA-N2-O2 from fit to rhf/6-31G* from T.Halgren 1/26/99
 [#8X1:1]~[#7X3:2]~[#8X1:3]  70.000  124.500  Frosst O2-N2-O2 from fit to rhf/6-31G* from T.Halgren 1/26/99
 # Nsp
-[*:1]~[#7X2:2]~[#7X1:3]   70.0  180.0   Frosst generic smirff only sp carbons are linear
+[*:1]~[#7X2:2]~[#7X1:3]   70.0  180.0   Frosst generic smirnoff only sp carbons are linear
 # oxygen including endocyclic het5 (a la furan)
 [*:1]-[#8:2]-[*:3]        50.  113.    Frosst generic divalent oxygen including endocyclic het5
 [#6X4:1]-[#8X2:2]-[#1:3]  55.  108.5   parm99 CT-OH-HO AlkEthOH
@@ -408,8 +408,8 @@ DIHE
 [#8,#16,#7:1]=[#6X3:2]-[#8X2H0:3]-[#6X4:4]    1  2.700  180.0  -2.0  parm99 O_-C_-OS-CT Junmei et al, 1999
 [#8,#16,#7:1]=[#6X3:2]-[#8X2H0:3]-[#6X4:4]    1  1.400  180.0   1.0  parm99 O_-C_-OS-CT Junmei et al, 1999
 [#1:1]-[#8X2H1:2]-@[#6X3:3]~[*:4]         1  2.500  180.0     2  Frosst generic endocyclic
-[*:1]-[#8X2+1:2]=[#6X3:3]-[*:4]           1  3.     180.0     2  smirff generic oxonium guess
-[*:1]=[#8X2+1:2]-[#6:3]~[*:4]             1  0.5    180.0     2  smirff generic oxonium guess
+[*:1]-[#8X2+1:2]=[#6X3:3]-[*:4]           1  3.     180.0     2  smirnoff generic oxonium guess
+[*:1]=[#8X2+1:2]-[#6:3]~[*:4]             1  0.5    180.0     2  smirnoff generic oxonium guess
 #
 # S-C bonds
 # divalent S-C
@@ -459,7 +459,7 @@ DIHE
 [#6:1]-[#7X2:2]~[#7X2:3]~[#7X1:4]    1  0.000    0.0     2  Frosst generic
 #
 # divalent S-N (or S-notCarbon)
-[*:1]-[#16X2,#16X3+1:2]-[!#6:3]~[*:4]  1  0.0    180.0   2  smirff placeholder guess
+[*:1]-[#16X2,#16X3+1:2]-[!#6:3]~[*:4]  1  0.0    180.0   2  smirnoff placeholder guess
 # hypS-N
 [*:1]~[#16X4,#16X3+0:2]-[#7:3]~[*:4]  1  0.000    0.0     1   Frosst generic
 # hypS-Nsp3 trivalent : assumes N is not conjugated (although it could be on the other substituent on the N)
@@ -484,7 +484,7 @@ DIHE
 [#8X1:1]~[#16X4,#16X3+0:2]-[#7X3:3]-[#6X3:4]  1  0.750    0.0     1  Frosst O_-SO-N3-CA  similar to case with CT instead of CA
 [#8X1:1]~[#16X4,#16X3+0:2]-[#7X3:3]-[#7X2:4]  1  0.000    0.0     1  Frosst O_-SO-N3-NB  guess
 # hypS-Nsp2 divalent
-[*:1]~[#16X4,#16X3+0:2]=,:[#7X2:3]-,:[*:4]    1  0.     0.0  1  smirff generic TEMPORARY PLACEHOLDER
+[*:1]~[#16X4,#16X3+0:2]=,:[#7X2:3]-,:[*:4]    1  0.     0.0  1  smirnoff generic TEMPORARY PLACEHOLDER
 [#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.040  0.0  -6  Frosst  CT-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
 [#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.407  0.0  -5  Frosst  CT-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
 [#6X4:1]-[#16X4,#16X3+0:2]-[#7X2:3]~[#6X3:4]  1  0.013  0.0  -4  Frosst  CT-SO-NB-C*  RHF/6-31G(d)  Mar  7  2007  
@@ -512,7 +512,7 @@ DIHE
 # torsions involving linear bonds (acetylene, nitrile, azide) cannot have a real torsion angle
 [*:1]-[*:2]#[*:3]-[*:4]     1  0.000    0.0     1  Frosst generic
 [*:1]~[*:2]-[*:3]#[*:4]     1  0.000    0.0     1  Frosst generic
-[*:1]~[*:2]=[#6,#7,#16,#15;X2:3]=[*:4]  1  0.000    0.0     1  smirff generic allene-like or isothiocyanate-like
+[*:1]~[*:2]=[#6,#7,#16,#15;X2:3]=[*:4]  1  0.000    0.0     1  smirnoff generic allene-like or isothiocyanate-like
 #
 
 
