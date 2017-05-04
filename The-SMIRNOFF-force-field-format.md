@@ -295,7 +295,8 @@ oechem.OETriposAtomNames(mol)
 
 # Load forcefield
 from openforcefield.typing import smirnoff
-forcefield = smirnoff.ForceField(smarty.get_data_filename('forcefield/Frosst_AlkEtOH_parmAtFrosst.ffxml'))
+from openforcefield.utils import get_data_filename
+forcefield = smirnoff.ForceField(get_data_filename('forcefield/Frosst_AlkEtOH_parmAtFrosst.ffxml'))
 
 # Generate an OpenMM Topology and create an OpenMM System
 import openforcefield.tools
