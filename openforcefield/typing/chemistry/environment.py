@@ -415,20 +415,22 @@ class ChemicalEnvironment(object):
         element_num = "!?[#]\d+"
         # covers element symbols, i.e. N,C,O,Br not followed by a number
         element_sym = "!?[A-Z][a-z]?"
+        # covers element symbols that are aromatic:
+        aro_sym = "!?[cnops]"
         # replacement strings
         replace_str = "\$\w+"
         # a or A w/ or w/o a ! in front 'A'
         aro_ali = "!?[aA]"
         # the decorators (D,H,j,r,V,X,^) followed by one or more integers
         needs_int = "!?[DHjrVX^]\d+"
-        # R, +, - do not need to be followed by a integer w/ or w/o a ! 'R2'
-        optional_int = "!?[R+-]\d*"
+        # R(x), +, - do not need to be followed by a integer w/ or w/o a ! 'R2'
+        optional_int = "!?[Rx+-]\d*"
         # chirality options, "@", "@@", "@int" w/ or w/o a ! in front
         chirality = "!?[@]\d+|!?[@]@?"
 
         # Generate RegEx string for decorators:
         self.atom_reg = '|'.join([element_num, aro_ali, needs_int,
-            optional_int, chirality, element_sym, replace_str])
+            optional_int, chirality, replace_str, element_sym, aro_sym])
         self.atom_reg = r'('+self.atom_reg+')'
 
         # Define bond regular expression options below in order:
