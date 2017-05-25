@@ -29,7 +29,7 @@ oechem.OEReadMolecule(ifs, mol )
 oechem.OETriposAtomNames(mol)
 
 # Load forcefield
-forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH_parmAtFrosst.ffxml'))
+forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.ffxml'))
 
 # Compare energies
 prmtop = os.path.join( datapath, molname+'.top')

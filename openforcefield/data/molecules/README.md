@@ -3,7 +3,7 @@
 This is a list of the molecule files provided here
 including a brieg description when possible
 
-* `AlkEtOH-tripos.mol2.gz`: set of 42 alkanes, ethers, and alcohols
+* `AlkEthOH-tripos.mol2.gz`: set of 42 alkanes, ethers, and alcohols
 * `*.crd`, `*.mol2`, and `*.top` for the following AlkEthOH molecules
         - `AlkEthOH_c100`
         - `AlkEthOH_c1161`

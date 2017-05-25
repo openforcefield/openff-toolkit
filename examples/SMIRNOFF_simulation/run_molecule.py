@@ -38,7 +38,7 @@ oechem.OETriposAtomNames(mol)
 positions = extractPositionsFromOEMol(mol)
 
 # Load a SMIRNOFF small molecule forcefield for alkanes, ethers, and alcohols
-forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH_parmAtFrosst.ffxml'))
+forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.ffxml'))
 
 # Create the OpenMM system
 topology = generateTopologyFromOEMol(mol)
