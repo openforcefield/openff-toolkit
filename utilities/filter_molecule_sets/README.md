@@ -25,6 +25,7 @@ python filter_molecule_sets.py --input DrugBank_atyped.oeb \
 **Python Scripts**
 * `filter_molecule_sets.py` - This script was developed to filter unwanted molecules out of a larger set and was created to be as general as possible. See details below. 
 * `coordinates_for_DrugBank.py` - This script specifically starts with `openforcefield/data/molecules/DrugBank_atyped.oeb` and generates 3D coordinates for as many molecules as possible. It generates `DrugBank_ff.mol2` and `DrugBank_tripos.mol2` that are available in the `data/molecules/` directory. Note that a time limit for conformer generation was created to prevent memory crashes on the UC Irvine cluster, 289 of 7133 initial molecules ran out of the designated time, oeomega failed to generate 3D coordinates for another 916 molecules.  
+* `oeb-to-FF-and-tripos-mol2.py` - utility to convert oeb file with parm@Frosst atomtypes to two `*.mol2` files with tripos and parm@frosst atomtypes
 
 **Input Files**
 * `elements_exclude.txt` - File with element numbers that you do not want in your set of molecules.
