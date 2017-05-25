@@ -48,7 +48,7 @@ Nonbonded parameters (currently, Lennard-Jones parameters) are specified via the
 ```XML
 <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
    <Atom smirks="[#1:1]" rmin_half="1.4870" epsilon="0.0157"/>
-   <Atom smirks="[$([#1]-[#6]):1]" rmin_half="1.4870" epsilon="0.0157"/>
+   <Atom smirks="[#1:1]-[#6]" rmin_half="1.4870" epsilon="0.0157"/>
    ...
 </NonbondedForce>
 ```
