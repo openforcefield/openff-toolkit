@@ -14,7 +14,7 @@ def find_package_data(data_root, package_root):
 
 setup(
     name = "openforcefield",
-    version = "0.1.6",
+    version = "0.0.3",
     author = "John Chodera, David Mobley, and others",
     author_email = "john.chodera@choderalab.org",
     description = ("Open Force Field Group tools"),
@@ -29,7 +29,7 @@ setup(
         'openforcefield/typing/chemistry',
         'openforcefield/typing/engines',
         'openforcefield/typing/engines/smirnoff',
-        'openforcefield/utils',        
+        'openforcefield/utils',
         ],
     long_description=read('README.md'),
     classifiers=[
