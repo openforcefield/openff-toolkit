@@ -367,3 +367,58 @@ def extractPositionsFromOEMol(molecule):
     for index in range(molecule.NumAtoms()):
         positions[index,:] = unit.Quantity(coords[index], unit.angstroms)
     return positions
+
+def read_typelist(filename):
+    """
+    Read a parameter type or decorator list from a file.
+    Lines in these files have the format
+    "SMARTS/SMIRKS  shorthand"
+    lines beginning with '%' are ignored
+
+    Parameters
+    ----------
+    filename : str
+        Path and name of file to be read
+        Could be file in openforcefield/data/
+
+    Returns
+    -------
+    typelist : list of tuples
+        Typelist[i] is element i of the typelist in format (smarts, shorthand)
+    """
+    if filename is None:
+        return None
+
+    if not os.path.exists(filename):
+        built_in = get_data_filename(filename)
+        if not os.path.exists(built_in):
+            raise Exception("File '%s' not found." % filename)
+        filename = built_in
+
+    typelist = list()
+    ifs = open(filename)
+    lines = ifs.readlines()
+    used_typenames = list()
+
+    for line in lines:
+        # Strip trailing comments
+        index = line.find('%')
+        if index != -1:
+            line = line[0:index]
+
+        # Split into tokens.
+        tokens = line.split()
+        # Process if we have enough tokens
+        if len(tokens) >= 2:
+            smarts = tokens[0]
+            typename = ' '.join(tokens[1:])
+            if typename not in used_typenames:
+                typelist.append([smarts,typename])
+                used_typenames.append(typename)
+            else:
+                raise Exception("Error in file '%s' -- each entry must "
+                        "have a unique name." % filename )
+
+    ifs.close()
+
+    return typelist
