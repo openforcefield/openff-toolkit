@@ -23,7 +23,7 @@ pip install -i https://pypi.anaconda.org/OpenEye/simple OpenEye-toolkits
 ```
 Install `openforcefield` tools via conda:
 ```bash
-conda install --yes -c omnia openforcefield
+conda install --yes -c conda-forge -c omnia openforcefield
 ```
 
 # Tools
