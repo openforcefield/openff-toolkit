@@ -9,6 +9,7 @@ This repository hosts tools that we have committed to stably maintain throughout
 * Tools for direct chemical environment perception and manipulation
 
 ## Installation
+We currently support Python 2.7, 3.5 and 3.6.
 
 We recommend the [miniconda](http://conda.pydata.org/miniconda.html) Python distribution.
 To install `miniconda` on `osx` with `bash`, this is:
