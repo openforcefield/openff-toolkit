@@ -191,12 +191,15 @@ def generateTopologyFromOEMol(molecule):
     for atom in mol.GetAtoms():
         name = atom.GetName()
         element = elem.Element.getByAtomicNumber(atom.GetAtomicNum())
-        atom = topology.addAtom(name, element, residue)
+        openmm_atom = topology.addAtom(name, element, residue)
 
     # Create bonds.
     atoms = { atom.name : atom for atom in topology.atoms() }
     for bond in mol.GetBonds():
-        topology.addBond(atoms[bond.GetBgn().GetName()], atoms[bond.GetEnd().GetName()])
+        aromatic = None
+        if bond.IsAromatic(): aromatic = 'Aromatic'
+        # Add bond, preserving order assessed by OEChem
+        topology.addBond(atoms[bond.GetBgn().GetName()], atoms[bond.GetEnd().GetName()], type=aromatic, order=bond.GetOrder())
 
     return topology
 
