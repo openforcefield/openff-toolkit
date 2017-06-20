@@ -169,22 +169,33 @@ def generateTopologyFromOEMol(molecule):
         The Topology object generated from `molecule`.
 
     """
+    # Avoid manipulating the molecule
+    mol = OEMol(molecule)
+
     # Create a Topology object with one Chain and one Residue.
     from simtk.openmm.app import Topology
     topology = Topology()
     chain = topology.addChain()
-    resname = molecule.GetTitle()
+    resname = mol.GetTitle()
     residue = topology.addResidue(resname, chain)
 
+    # Make sure the atoms have names, otherwise bonds won't be created properly below
+    if any([atom.GetName() =='' for atom in mol.GetAtoms()]):
+        oechem.OETriposAtomNames(mol)
+    # Check names are unique; non-unique names will also cause a problem
+    atomnames = [ atom.GetName() for atom in mol.GetAtoms())
+    if any( atomnames.count(atom.GetName())>1 for atom in mol.GetAtoms()):
+        raise Exception("Error: Reference molecule must have unique atom names in order to create a Topology.")
+
     # Create atoms in the residue.
-    for atom in molecule.GetAtoms():
+    for atom in mol.GetAtoms():
         name = atom.GetName()
         element = elem.Element.getByAtomicNumber(atom.GetAtomicNum())
         atom = topology.addAtom(name, element, residue)
 
     # Create bonds.
     atoms = { atom.name : atom for atom in topology.atoms() }
-    for bond in molecule.GetBonds():
+    for bond in mol.GetBonds():
         topology.addBond(atoms[bond.GetBgn().GetName()], atoms[bond.GetEnd().GetName()])
 
     return topology
