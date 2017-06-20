@@ -183,7 +183,7 @@ def generateTopologyFromOEMol(molecule):
     if any([atom.GetName() =='' for atom in mol.GetAtoms()]):
         oechem.OETriposAtomNames(mol)
     # Check names are unique; non-unique names will also cause a problem
-    atomnames = [ atom.GetName() for atom in mol.GetAtoms())
+    atomnames = [ atom.GetName() for atom in mol.GetAtoms() ]
     if any( atomnames.count(atom.GetName())>1 for atom in mol.GetAtoms()):
         raise Exception("Error: Reference molecule must have unique atom names in order to create a Topology.")
 
