@@ -1355,7 +1355,7 @@ class ConstraintGenerator(object):
         # Iterate over all defined constraint SMIRKS, allowing later matches to override earlier ones.
         constraints = ValenceDict()
         for constraint in self._constraint_types:
-            for atom_indices in topology.unrollSMIRKSMatches(constraint.smirks, aromaticity_model = self.ff._aromaticity_model):
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, constraint.smirks, aromaticity_model = self.ff._aromaticity_model):
                 constraints[atom_indices] = constraint
 
         if verbose:
@@ -1363,7 +1363,7 @@ class ConstraintGenerator(object):
             print('ConstraintGenerator:')
             print('')
             for constraint in self._constraint_types:
-                print('%64s : %8d matches' % (constraint.smirks, len(topology.unrollSMIRKSMatches(constraint.smirks, aromaticity_model = self.ff._aromaticity_model))))
+                print('%64s : %8d matches' % (constraint.smirks, len(getSMIRKSMatches_OEMol(oemol, constraint.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all bonds to the output list
