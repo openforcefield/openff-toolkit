@@ -2,6 +2,17 @@
 # Date: Tue Aug 25 2016
 # Author: C. I. Bayly, OpenEye Scientific Software
 #
+DATE
+# Updated: Many times during Fall 2016 - Winter 2017, small change with ethers Fri. March 3, 2017
+# Significant updates added in early spring 2017
+# Date: April 4, 2017
+# Date: April 26, 2017
+#Date: May 25, 2017
+Date: Aug. 3, 2017
+
+# Author: please make sure all authors are on one line, only last line will be used
+AUTHOR
+C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine
 
 NONBON
 [*:1]   4.  0.25  smirnoff dummy_generic  a really big soft atom
@@ -38,6 +49,16 @@ NONBON
 [#17:1]          1.948  0.265   parm99 Cl Fox, JPCB,102,8070,(98),flex.mdl CHCl3
 [#35:1]           2.22  0.320   parm99 Br Junmei(?)
 [#53:1]           2.35  0.40    parm99 I JCC,7,(1986),230;
+# Monovalent ions from parm99
+[#3+1:1]          1.025     0.0279896   Joung/Cheatham TIP3P
+[#11+1:1]         1.369     0.0874393   Joung/Cheatham TIP3P
+[#19+1:1]         1.705     0.1936829   Joung/Cheatham TIP3P
+[#37+1:1]         1.813     0.3278219   Joung/Cheatham TIP3P
+[#55+1:1]         1.976     0.4065394   Joung/Cheatham TIP3P
+[#9X0-1:1]        2.303     0.0033640   Joung/Cheatham TIP3P
+[#17X0-1:1]       2.513     0.0355910   Joung/Cheatham TIP3P
+[#35X0-1:1]       2.608     0.0586554   Joung/Cheatham TIP3P
+[#53X0-1:1]       2.860     0.0536816   Joung/Cheatham TIP3P
 
 BOND
 [*:1]~[*:2]      1000.0        4.0    a really long super-tight bond
