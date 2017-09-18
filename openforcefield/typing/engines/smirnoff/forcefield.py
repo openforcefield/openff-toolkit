@@ -33,7 +33,7 @@ import lxml.etree as etree
 
 from simtk.openmm.app import element as elem
 from simtk.openmm.app import Topology
-from openforcefield.utils import generateTopologyFromOEMol
+from openforcefield.utils import generateTopologyFromOEMol, get_data_filename
 
 import os
 import math
@@ -554,7 +554,8 @@ class ForceField(object):
                 # this handles either filenames or open file-like objects
                 tree = etree.parse(file, parser)
             except IOError:
-                tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file), parser)
+                temp_file = get_data_filename(file)
+                tree = etree.parse(temp_file, parser)
             except Exception as e:
                 # Fail with an error message about which file could not be read.
                 # TODO: Also handle case where fallback to 'data' directory encounters problems,
@@ -1353,7 +1354,7 @@ class ConstraintGenerator(object):
         # Iterate over all defined constraint SMIRKS, allowing later matches to override earlier ones.
         constraints = ValenceDict()
         for constraint in self._constraint_types:
-            for atom_indices in topology.unrollSMIRKSMatches(constraint.smirks, aromaticity_model = self.ff._aromaticity_model):
+            for atom_indices in getSMIRKSMatches_OEMol(oemol, constraint.smirks, aromaticity_model = self.ff._aromaticity_model):
                 constraints[atom_indices] = constraint
 
         if verbose:
@@ -1361,7 +1362,7 @@ class ConstraintGenerator(object):
             print('ConstraintGenerator:')
             print('')
             for constraint in self._constraint_types:
-                print('%64s : %8d matches' % (constraint.smirks, len(topology.unrollSMIRKSMatches(constraint.smirks, aromaticity_model = self.ff._aromaticity_model))))
+                print('%64s : %8d matches' % (constraint.smirks, len(getSMIRKSMatches_OEMol(oemol, constraint.smirks, aromaticity_model = self.ff._aromaticity_model))))
             print('')
 
         # Add all bonds to the output list
@@ -2018,7 +2019,7 @@ class NonbondedGenerator(object):
             for atom_mapping in atom_mappings:
                 for (atom_index, map_atom_index) in atom_mapping.items():
                     # Retrieve NB params for reference atom (charge not set yet)
-                    [charge, sigma, epsilon] = force.getParticleParameters(atom_index)
+                    charge, sigma, epsilon = force.getParticleParameters(map_atom_index)
                     # Look up the charge on the atom in the reference molecule
                     charge = charge_by_atom[atom_index]*unit.elementary_charge
 

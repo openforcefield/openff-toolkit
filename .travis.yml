@@ -13,8 +13,9 @@ install:
   - if [ "$TRAVIS_SECURE_ENV_VARS" == false ]; then echo "OpenEye license will not be installed in forks."; fi
 
 script:
-  # Add omnia channel
+  # Add omnia and conda-forge channel
   - conda config --add channels ${ORGNAME}
+  - conda config --add channels conda-forge
   # Create and activate test environment
   - conda create --yes -n test python=$python
   - source activate test
@@ -33,8 +34,8 @@ script:
 env:
   matrix:
     - python=2.7  CONDA_PY=27
-    - python=3.4  CONDA_PY=34
     - python=3.5  CONDA_PY=35
+    - python=3.6  CONDA_PY=36
 
   global:
     - ORGNAME="omnia"

@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.1" aromaticity_model="OEAroModel_MDL">
-  <!-- SMIRKS FORCE FIELD (SMIRFF) FILE -->
+  <!-- SMIRKS NATIVE OPEN FORCE FIELD (SMIRNOFF) FILE -->
   <Date>Date: Sept. 22, 2016</Date>
   <Author>D. L. Mobley, UC Irvine</Author>
-  <!-- Minimal SMIRFF file implementing parm99 parameters for benzene or similars. -->
+  <!-- Minimal SMIRNOFF file implementing parm99 parameters for benzene or similars. -->
   <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
   <HarmonicBondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
     <Bond smirks="[#6X3:1]:[#6X3:2]" id="b6" k="938.0" length="1.40"/>

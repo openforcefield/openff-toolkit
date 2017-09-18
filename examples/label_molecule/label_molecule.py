@@ -10,7 +10,7 @@ OEParseSmiles(mol, 'CCC')
 OEAddExplicitHydrogens(mol)
 
 
-ff = ForceField( get_data_filename('forcefield/Frosst_AlkEtOH.ffxml') )
+ff = ForceField( get_data_filename('forcefield/Frosst_AlkEthOH.ffxml') )
 
 labels= ff.labelMolecules( [mol], verbose = True )
 print labels

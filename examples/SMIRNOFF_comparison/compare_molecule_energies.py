@@ -1,11 +1,12 @@
 #!/bin/env python
 
-from openforcefield.utils import *
-from openforcefield.typing.engines.smirnoff import ForceField
+from openeye import oechem
+from openforcefield.utils import get_data_filename
+from openforcefield.typing.engines.smirnoff import ForceField, compare_molecule_energies
 
 import os
 
-# Cross-check energies of molecules from AlkEthOH set using SMIRFF xml file
+# Cross-check energies of molecules from AlkEthOH set using SMIRNOFF xml file
 # versus energies from AMBER .prmtop and .crd files (parm@frosst params)
 
 datapath = './AlkEthOH_inputfiles/AlkEthOH_rings_filt1'
@@ -28,7 +29,7 @@ oechem.OEReadMolecule(ifs, mol )
 oechem.OETriposAtomNames(mol)
 
 # Load forcefield
-forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEtOH_parmAtFrosst.ffxml'))
+forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.ffxml'))
 
 # Compare energies
 prmtop = os.path.join( datapath, molname+'.top')

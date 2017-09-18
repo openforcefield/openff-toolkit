@@ -19,6 +19,7 @@ import copy
 import re
 import numpy
 import random
+import parmed
 
 import openeye.oechem
 import openeye.oeomega
@@ -38,6 +39,120 @@ from simtk import unit
 #=============================================================================================
 # UTILITY ROUTINES
 #=============================================================================================
+def checkCharges(molecule):
+    # Check that molecule is charged.
+    #is_charged = False
+    for atom in molecule.GetAtoms():
+        if atom.GetPartialCharge() != 0.0:
+            return True
+        else:
+            print('WARNING: Molecule %s has no charges; input molecules must be charged.' % molecule.GetTitle())
+            return False
+
+def generateSMIRNOFFStructure(molecule):
+    """
+    Given an OpenEye molecule (oechem.OEMol), create an OpenMM System and use to
+    generate a ParmEd structure using the SMIRNOFF forcefield parameters.
+    """
+    from openforcefield.typing.engines.smirnoff import ForceField
+    from openforcefield.typing.engines.smirnoff.forcefield_utils import create_system_from_molecule
+
+    ff = get_data_filename('forcefield/smirnoff99Frosst.ffxml')
+    with open(ff) as ffxml:
+        mol_ff = ForceField(ffxml)
+
+    if not checkCharges(molecule):
+        from openmoltools.openeye import get_charges
+        print("Assigning charges to molecule.")
+        charged_molecule = get_charges(molecule)
+    else:
+        charged_molecule = molecule
+    mol_top, mol_sys, mol_pos = create_system_from_molecule(mol_ff, charged_molecule)
+    molecule_structure = parmed.openmm.load_topology(mol_top, mol_sys, xyz=mol_pos)
+
+    return molecule_structure
+
+def generateProteinStructure(proteinpdb, protein_forcefield='amber99sbildn.xml', solvent_forcefield='tip3p.xml'):
+    """
+    Given an OpenMM PDBFile, create the OpenMM System of the protein and
+    then generate the parametrized ParmEd Structure of the protein.
+    Parameters
+    ----------
+    proteinpdb : openmm.app.PDBFile object,
+        Loaded PDBFile object of the protein.
+    protein_forcefield : xml file, default='amber99sbildn.xml'
+        Forcefield parameters for protein
+    solvent_forcefield : xml file, default='tip3p.xml'
+        Forcefield parameters for solvent
+    Returns
+    -------
+    solv_structure : parmed.structure.Structure
+        The parameterized Structure of the protein with solvent molecules. (No ligand).
+    """
+    #Generate protein Structure object
+    forcefield = app.ForceField(protein_forcefield, solvent_forcefield)
+    protein_system = forcefield.createSystem( proteinpdb.topology )
+    protein_structure = parmed.openmm.load_topology(proteinpdb.topology,
+                                                    protein_system,
+                                                    xyz=proteinpdb.positions)
+    return protein_structure
+
+def combinePostions(proteinPositions, molPositions):
+    """
+    Loops through the positions from the ParmEd structures of the protein and ligand,
+    divides by unit.angstroms which will ensure both positions arrays are in the same units.
+    Parameters
+    ----------
+    proteinPositions : list of 3-element Quantity tuples.
+        Positions list taken directly from the protein Structure.
+    molPositions : list of 3-element Quantity tuples.
+        Positions list taken directly from the molecule Structure.
+    Returns
+    -------
+    positions : list of 3-element Quantity tuples.
+        ex. unit.Quantity(positions, positions_unit)
+        Combined positions of the protein and molecule Structures.
+    """
+    positions_unit = unit.angstroms
+    positions0_dimensionless = numpy.array(proteinPositions / positions_unit)
+    positions1_dimensionless = numpy.array(molPositions / positions_unit)
+    coordinates = numpy.vstack(
+        (positions0_dimensionless, positions1_dimensionless))
+    natoms = len(coordinates)
+    positions = numpy.zeros([natoms, 3], numpy.float32)
+    for index in range(natoms):
+            (x, y, z) = coordinates[index]
+            positions[index, 0] = x
+            positions[index, 1] = y
+            positions[index, 2] = z
+    positions = unit.Quantity(positions, positions_unit)
+    return positions
+
+def mergeStructure(proteinStructure, molStructure):
+    """
+    Combines the parametrized ParmEd structures of the protein and ligand to
+    create the Structure for the protein:ligand complex, while retaining the SMIRNOFF
+    parameters on the ligand. Preserves positions and box vectors.
+    (Not as easily achieved using native OpenMM tools).
+    Parameters
+    ----------
+    proteinStructure : parmed.structure.Structure
+        The parametrized structure of the protein.
+    moleculeStructure : parmed.structure.Structure
+        The parametrized structure of the ligand.
+    Returns
+    -------
+    structure : parmed.structure.Structure
+        The parametrized structure of the protein:ligand complex.
+    """
+    structure = proteinStructure + molStructure
+    positions = combinePostions(proteinStructure.positions, molStructure.positions)
+    # Concatenate positions arrays (ensures same units)
+    structure.positions = positions
+    # Restore original box vectors
+    structure.box = proteinStructure.box
+    return structure
+
 
 def generateTopologyFromOEMol(molecule):
     """
@@ -54,23 +169,37 @@ def generateTopologyFromOEMol(molecule):
         The Topology object generated from `molecule`.
 
     """
+    # Avoid manipulating the molecule
+    mol = OEMol(molecule)
+
     # Create a Topology object with one Chain and one Residue.
     from simtk.openmm.app import Topology
     topology = Topology()
     chain = topology.addChain()
-    resname = molecule.GetTitle()
+    resname = mol.GetTitle()
     residue = topology.addResidue(resname, chain)
 
+    # Make sure the atoms have names, otherwise bonds won't be created properly below
+    if any([atom.GetName() =='' for atom in mol.GetAtoms()]):
+        oechem.OETriposAtomNames(mol)
+    # Check names are unique; non-unique names will also cause a problem
+    atomnames = [ atom.GetName() for atom in mol.GetAtoms() ]
+    if any( atomnames.count(atom.GetName())>1 for atom in mol.GetAtoms()):
+        raise Exception("Error: Reference molecule must have unique atom names in order to create a Topology.")
+
     # Create atoms in the residue.
-    for atom in molecule.GetAtoms():
+    for atom in mol.GetAtoms():
         name = atom.GetName()
         element = elem.Element.getByAtomicNumber(atom.GetAtomicNum())
-        atom = topology.addAtom(name, element, residue)
+        openmm_atom = topology.addAtom(name, element, residue)
 
     # Create bonds.
     atoms = { atom.name : atom for atom in topology.atoms() }
-    for bond in molecule.GetBonds():
-        topology.addBond(atoms[bond.GetBgn().GetName()], atoms[bond.GetEnd().GetName()])
+    for bond in mol.GetBonds():
+        aromatic = None
+        if bond.IsAromatic(): aromatic = 'Aromatic'
+        # Add bond, preserving order assessed by OEChem
+        topology.addBond(atoms[bond.GetBgn().GetName()], atoms[bond.GetEnd().GetName()], type=aromatic, order=bond.GetOrder())
 
     return topology
 
@@ -252,3 +381,58 @@ def extractPositionsFromOEMol(molecule):
     for index in range(molecule.NumAtoms()):
         positions[index,:] = unit.Quantity(coords[index], unit.angstroms)
     return positions
+
+def read_typelist(filename):
+    """
+    Read a parameter type or decorator list from a file.
+    Lines in these files have the format
+    "SMARTS/SMIRKS  shorthand"
+    lines beginning with '%' are ignored
+
+    Parameters
+    ----------
+    filename : str
+        Path and name of file to be read
+        Could be file in openforcefield/data/
+
+    Returns
+    -------
+    typelist : list of tuples
+        Typelist[i] is element i of the typelist in format (smarts, shorthand)
+    """
+    if filename is None:
+        return None
+
+    if not os.path.exists(filename):
+        built_in = get_data_filename(filename)
+        if not os.path.exists(built_in):
+            raise Exception("File '%s' not found." % filename)
+        filename = built_in
+
+    typelist = list()
+    ifs = open(filename)
+    lines = ifs.readlines()
+    used_typenames = list()
+
+    for line in lines:
+        # Strip trailing comments
+        index = line.find('%')
+        if index != -1:
+            line = line[0:index]
+
+        # Split into tokens.
+        tokens = line.split()
+        # Process if we have enough tokens
+        if len(tokens) >= 2:
+            smarts = tokens[0]
+            typename = ' '.join(tokens[1:])
+            if typename not in used_typenames:
+                typelist.append([smarts,typename])
+                used_typenames.append(typename)
+            else:
+                raise Exception("Error in file '%s' -- each entry must "
+                        "have a unique name." % filename )
+
+    ifs.close()
+
+    return typelist
