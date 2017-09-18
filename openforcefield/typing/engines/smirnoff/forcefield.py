@@ -107,6 +107,7 @@ def getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model = None):
         # avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
         oechem.OEAssignHybridization( mol)
         oechem.OEAssignFormalCharges( mol)
+        oechem.OEAssignImplicitHydrogens( mol)
 
     # Perform matching on each mol
     matches = list()
