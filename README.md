@@ -67,6 +67,7 @@ forcefield = ForceField(FF_filename)
 system = forcefield.createSystem(topology, mols)
 ```
 See `examples/SMIRNOFF_simulation/` for a complete example of how SMIRNOFF can be used for small molecule vacuum simulations, and `examples/mixedFF_structure` for how to set up a system which uses an AMBER forcefield (in this case, AMBER99SB-ILDN) for a protein in combination with SMIRNOFF for a small molecules. Via ParmEd, this can be translated into GROMACS, AMBER, or CHARMM formats for use elsewhere (and additional formats via InterMol).
+** For an especially complete worked example, see complete setup of a host-guest simulation in water with SMIRNOFF**, including docking, 2D and 3D visualization, etc., in `examples/host_guest_simulation/smirnoff_host_guest.ipynb`` (Jupyter notebook).
 
 ## `ChemicalEnvironment`: Tools for chemical environment perception and manipulation
 
@@ -104,7 +105,7 @@ For more detailed examples see README and `using_environment.ipynb` in  `example
 
 # Manifest
 
-* `examples/` - some examples - look here to get started
+* `examples/` - some examples - look here to get started; see especially `host_guest_simulation` for a detailed worked example of SMIRNOFF simulation of host-guest binding.
 * `openforcefield/` - openforcefield tools
 * `devtools/` - continuous integration and packaging scripts and utilities
 * `utilities/` - utilities; scripts to convert parm@frosst modified `frcmod` files to SMIRNOFF XML
