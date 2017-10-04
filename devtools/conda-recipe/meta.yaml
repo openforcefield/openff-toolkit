@@ -18,7 +18,7 @@ requirements:
   run:
     - python
     - numpy
-    - networkx
+    - networkx ==1.11
     - lxml
     - icu 58*  # This is a lxml dependency but sometimes conda installs version 56
     - openmoltools >=0.7.3
