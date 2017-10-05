@@ -263,25 +263,25 @@ If unspecified these also default to zero.
 In the SMIRNOFF format, these are encoded as:
 ```XML
 <VirtualSites distanceUnits="angstroms" angleUnits="degrees" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
-<!-- sigma hole for halogens: "distance" denotes distance along the 2->1 bond vector, measured from atom 2 -->
-<!-- Specify that 0.2 charge from atom 1 and 0.1 charge units from atom 2 are to be moved to the virtual site, and a small Lennard-Jones site is to be added (sigma = 0.1*angstroms, epsilon=0.05*kcal/mol) -->
-<VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]" distance="0.30" charge1increment="+0.2" charge2increment="+0.1" sigma="0.1" epsilon="0.05" />
-<!-- Charge increments can extend out to as many atoms as are labeled, e.g. with a third atom: -->
-<VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]~[*:3]" distance="0.30" charge1increment="+0.1" charge2increment="+0.1" charge3increment="+0.05" sigma="0.1" epsilon="0.05" />
-<!-- monovalent lone pairs: carbonyl -->
-<!-- X denotes the charge site, and P denotes the projection of the charge site into the plane of 1 and 2. -->
-<!-- inPlaneAngle is angle point P makes with 1 and 2, i.e. P-1-2 -->
-<!-- outOfPlaneAngle is angle charge site (X) makes out of the plane of 2-1-3 (and P) measured from 1 -->
-<!-- Since unspecified here, sigma and epsilon for the virtual site default to zero -->
-<VirtualSite type="MonovalentLonePair" smirks="[O:1]=[C:2]-[*:3]" distance="0.30" outOfPlaneAngle="0" inPlaneAngle="120" charge1increment="+0.2" />
-<!-- divalent lone pair: pyrimidine, TIP4P, TIP5P -->
-<!-- The atoms 2-1-3 define the X-Y plane, with Z perpendicular. If outOfPlaneAngle is 0, the charge site is a specified distance along the in-plane vector which bisects the angle left by taking 360 degrees minus angle(2,1,3). If outOfPlaneAngle is nonzero, the charge sites lie out of the plane by the specified angle (at the specified distance) and their in-plane projection lines along the angle's bisector. -->
-<VirtualSite type="DivalentLonePair" smirks="[*:2]~[#7X2:1]~[*:3]" distance="0.30" OfPlaneAngle="0.0" charge1increment="+0.1" />
-<!-- trivalent nitrogen lone pair -->
-<!-- charge sites lie above and below the nitrogen at specified distances from the nitrogen, along the vector perpendicular to the plane of (2,3,4) that passes through the nitrogen. If the nitrogen is co-planar with the connected atom, charge sites are simply above and below the plane-->
-<!-- Positive and negative values refer to above or below the nitrogen as measured relative to the plane of (2,3,4), i.e. below the nitrogen means nearer the 2,3,4 plane unless they are co-planar -->
-<VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="0.30" charge1increment="+0.1"/>
-<VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="-0.30" charge1increment="+0.1"/>
+    <!-- sigma hole for halogens: "distance" denotes distance along the 2->1 bond vector, measured from atom 2 -->
+    <!-- Specify that 0.2 charge from atom 1 and 0.1 charge units from atom 2 are to be moved to the virtual site, and a small Lennard-Jones site is to be added (sigma = 0.1*angstroms, epsilon=0.05*kcal/mol) -->
+    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]" distance="0.30" charge1increment="+0.2" charge2increment="+0.1" sigma="0.1" epsilon="0.05" />
+    <!-- Charge increments can extend out to as many atoms as are labeled, e.g. with a third atom: -->
+    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]~[*:3]" distance="0.30" charge1increment="+0.1" charge2increment="+0.1" charge3increment="+0.05" sigma="0.1" epsilon="0.05" />
+    <!-- monovalent lone pairs: carbonyl -->
+    <!-- X denotes the charge site, and P denotes the projection of the charge site into the plane of 1 and 2. -->
+    <!-- inPlaneAngle is angle point P makes with 1 and 2, i.e. P-1-2 -->
+    <!-- outOfPlaneAngle is angle charge site (X) makes out of the plane of 2-1-3 (and P) measured from 1 -->
+    <!-- Since unspecified here, sigma and epsilon for the virtual site default to zero -->
+    <VirtualSite type="MonovalentLonePair" smirks="[O:1]=[C:2]-[*:3]" distance="0.30" outOfPlaneAngle="0" inPlaneAngle="120" charge1increment="+0.2" />
+    <!-- divalent lone pair: pyrimidine, TIP4P, TIP5P -->
+    <!-- The atoms 2-1-3 define the X-Y plane, with Z perpendicular. If outOfPlaneAngle is 0, the charge site is a specified distance along the in-plane vector which bisects the angle left by taking 360 degrees minus angle(2,1,3). If outOfPlaneAngle is nonzero, the charge sites lie out of the plane by the specified angle (at the specified distance) and their in-plane projection lines along the angle's bisector. -->
+    <VirtualSite type="DivalentLonePair" smirks="[*:2]~[#7X2:1]~[*:3]" distance="0.30" OfPlaneAngle="0.0" charge1increment="+0.1" />
+    <!-- trivalent nitrogen lone pair -->
+    <!-- charge sites lie above and below the nitrogen at specified distances from the nitrogen, along the vector perpendicular to the plane of (2,3,4) that passes through the nitrogen. If the nitrogen is co-planar with the connected atom, charge sites are simply above and below the plane-->
+    <!-- Positive and negative values refer to above or below the nitrogen as measured relative to the plane of (2,3,4), i.e. below the nitrogen means nearer the 2,3,4 plane unless they are co-planar -->
+    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="0.30" charge1increment="+0.1"/>
+    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="-0.30" charge1increment="+0.1"/>
 </VirtualSites>
 ```
 
