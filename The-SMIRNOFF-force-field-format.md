@@ -283,7 +283,7 @@ In the SMIRNOFF format, these are encoded as:
 <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="0.30" charge1increment="+0.1"/>
 <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="-0.30" charge1increment="+0.1"/>
 </VirtualSites>
-'''
+```
 
 ### Aromaticity models
 
