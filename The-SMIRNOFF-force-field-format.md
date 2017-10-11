@@ -249,10 +249,11 @@ Important usage notes:
 
 We have implemented experimental support for placement of off-center (off-atom) charges in a variety of contexts which may be chemically important in order to allow easy exploration of when these will be warranted.
 Currently we support the following different types or geometries of off-center charges (as diagrammed below):
-- `BondCharge`: This supports placement of a virtual site along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. <img src="figures/vsite_bondcharge.jpg" width="200">
-- `MonovalentLonePair`: This is originally intended for situations like a carbonyl, and allows placement of a virtual site at a specified distance, `inPlaneAngle`, and `outOfPlaneAngle` relative to a central atom and two connected atoms. <img src="figures/vsite_monovalent.jpg" width=200>
-- `DivalentLonePair`: This is suitable for cases like four-point and five-point water models as well as pyrimidine; a charge site lies a specified distance from the central atom among three atoms along the bisector of the angle between the atoms (if `outOfPlaneAngle` is zero) or out of the plane by the specified angle (if `outOfPlaneAngle` is nonzero) with its projection along the bisector. <img src="figures/vsite_divalent.jpg" width=200>
-- `TrivalentLonePair`: This is suitable for planar or tetrahedral nitrogen lone pairs; charge sites lie above and below the central atom (e.g. nitrogen) along the vector perpendicular to the plane of the three connected atoms (2,3,4). <img src="figures/vsite_trivalent.jpg" width=200>
+- `BondCharge`: This supports placement of a virtual site along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. 
+<img src="figures/vsite_bondcharge.jpg" width="200">
+- `MonovalentLonePair`: This is originally intended for situations like a carbonyl, and allows placement of a virtual site at a specified distance, `inPlaneAngle`, and `outOfPlaneAngle` relative to a central atom and two connected atoms. <img src="figures/vsite_monovalent.jpg" width=400>
+- `DivalentLonePair`: This is suitable for cases like four-point and five-point water models as well as pyrimidine; a charge site lies a specified distance from the central atom among three atoms along the bisector of the angle between the atoms (if `outOfPlaneAngle` is zero) or out of the plane by the specified angle (if `outOfPlaneAngle` is nonzero) with its projection along the bisector. <img src="figures/vsite_divalent.jpg" width=500>
+- `TrivalentLonePair`: This is suitable for planar or tetrahedral nitrogen lone pairs; charge sites lie above and below the central atom (e.g. nitrogen) along the vector perpendicular to the plane of the three connected atoms (2,3,4). <img src="figures/vsite_trivalent.jpg" width=500>
 
 Each virtual site receives charge which is transferred from the desired atoms specified in the SMIRKS pattern via a `chargeNincrement` parameter, e.g., if `charge1increment=+0.1` then the virtual site will receive a charge of -0.1 and the atom labeled `1` will have its charge adjusted upwards by +0.1.
 N may index any indexed atom.
