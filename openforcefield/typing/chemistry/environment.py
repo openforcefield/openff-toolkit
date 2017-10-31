@@ -749,7 +749,7 @@ into ChemicalEnvironments." % smirks)
             initialAtom = self.getAtoms()[0]
 
         if neighbors is None:
-            neighbors = self._graph_neighors(initialAtom))
+            neighbors = self._graph_neighbors(initialAtom)
 
         # sort neighbors to guarantee order is constant
         neighbors = sorted(neighbors, key=lambda atom: atom.asSMIRKS())
@@ -938,7 +938,7 @@ into ChemicalEnvironments." % smirks)
             return newAtom
 
         # Check if we can get past beta position
-        bondToType = self._graph_nodes(data=True)[bondToATom]['atom_type']
+        bondToType = self._graph_nodes(data=True)[bondToAtom]['atom_type']
         if bondToType < 0 and not beyondBeta:
             return None
 
@@ -1226,7 +1226,7 @@ into ChemicalEnvironments." % smirks)
         any bond counts as 1.0
         """
         order = 0.
-        for a1, a2, info in self._graph_edges(atom, data=True):
+        for a1, a2, info in self._graph_edges(data=True, node=atom):
             order += info['bond'].getOrder()
         return order
 
