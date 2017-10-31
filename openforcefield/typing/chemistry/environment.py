@@ -711,7 +711,7 @@ into ChemicalEnvironments." % smirks)
             initialAtom = self.getAtoms()[0]
 
         if neighbors is None:
-            neighbors = self._graph.neighbors(initialAtom)
+            neighbors = list(self._graph.neighbors(initialAtom))
 
         # sort neighbors to guarantee order is constant
         neighbors = sorted(neighbors, key=lambda atom: atom.asSMIRKS())
@@ -726,10 +726,11 @@ into ChemicalEnvironments." % smirks)
         for idx, neighbor in enumerate(neighbors):
             # get the SMIRKS for the bond between these atoms
             # bonds are the same if smarts or smirks
-            bondSMIRKS = self._graph.edge[initialAtom][neighbor]['bond'].asSMIRKS()
+            bond_edge = self._graph.get_edge_data(initialAtom, neighbor)
+            bondSMIRKS = bond_edge['bond'].asSMIRKS()
 
             # Get the neighbors for this neighbor
-            new_neighbors = self._graph.neighbors(neighbor)
+            new_neighbors = list(self._graph.neighbors(neighbor))
             # Remove initialAtom so it doesn't get reprinted
             new_neighbors.remove(initialAtom)
 
@@ -950,7 +951,7 @@ into ChemicalEnvironments." % smirks)
             return False
 
         # Atom connected to more than one other atom cannot be removed
-        if len(self._graph.neighbors(atom)) > 1:
+        if len(list(self._graph.neighbors(atom))) > 1:
             return False
 
         # if you can remove "decorated atoms" remove it
@@ -972,7 +973,7 @@ into ChemicalEnvironments." % smirks)
         -------
         list of atoms in the environment
         """
-        return self._graph.nodes()
+        return list(self._graph.nodes())
 
     def getBonds(self, atom = None):
         """
@@ -986,10 +987,10 @@ into ChemicalEnvironments." % smirks)
         a complete list of bonds in the fragment
         """
         if atom == None:
-            bonds = [self._graph.edge[a1][a2]['bond'] for (a1,a2) in self._graph.edges()]
+            bonds = [data['bond'] for a1, a2, data in self._graph.edges(data=True)]
         else:
             bonds = []
-            for (a1, a2, info) in self._graph.edges_iter(atom, True):
+            for (a1, a2, info) in self._graph.edges(atom, data=True):
                 bonds.append(info['bond'])
 
         return bonds
@@ -1006,8 +1007,8 @@ into ChemicalEnvironments." % smirks)
         --------
         bond object between the atoms or None if no bond there
         """
-        if atom2 in self._graph.edge[atom1]:
-            return self._graph.edge[atom1][atom2]['bond']
+        if atom2 in self._graph.neighbors(atom1):
+            return self._graph.get_edge_data(atom1, atom2)['bond']
         else:
             return None
 
@@ -1016,7 +1017,7 @@ into ChemicalEnvironments." % smirks)
         returns the list of Atom objects with an index
         """
         index_atoms = []
-        for atom, info in self._graph.nodes_iter(True):
+        for atom, info in self._graph.nodes(data=True):
             if info['atom_type'] > 0:
                 index_atoms.append(atom)
         return index_atoms
@@ -1026,7 +1027,7 @@ into ChemicalEnvironments." % smirks)
         returns a list of Atom objects that are not indexed
         """
         unindexed_atoms = []
-        for atom, info in self._graph.nodes_iter(True):
+        for atom, info in self._graph.nodes(data=True):
             if info['atom_type'] < 1:
                 unindexed_atoms.append(atom)
         return unindexed_atoms
@@ -1037,7 +1038,7 @@ into ChemicalEnvironments." % smirks)
             that are not also indexed
         """
         alpha_atoms = []
-        for atom, info in self._graph.nodes_iter(True):
+        for atom, info in self._graph.nodes(data=True):
             if info['atom_type'] == 0:
                 alpha_atoms.append(atom)
 
@@ -1049,7 +1050,7 @@ into ChemicalEnvironments." % smirks)
             that are not alpha or indexed atoms
         """
         beta_atoms = []
-        for atom, info in self._graph.nodes_iter(True):
+        for atom, info in self._graph.nodes(data=True):
             if info['atom_type'] == -1:
                 beta_atoms.append(atom)
         return beta_atoms
@@ -1169,14 +1170,14 @@ into ChemicalEnvironments." % smirks)
         Returns atoms that are bound to the given atom
         in the form of a list of Atom objects
         """
-        return self._graph.neighbors(atom)
+        return list(self._graph.neighbors(atom))
 
     def getValence(self, atom):
         """
         Returns the valence (number of neighboring atoms)
         around the given atom
         """
-        return len(self._graph.neighbors(atom))
+        return len(list(self._graph.neighbors(atom)))
 
     def getBondOrder(self, atom):
         """
@@ -1186,7 +1187,7 @@ into ChemicalEnvironments." % smirks)
         any bond counts as 1.0
         """
         order = 0.
-        for (a1, a2, info) in self._graph.edges_iter(atom, True):
+        for a1, a2, info in self._graph.edges(atom, data=True):
             order += info['bond'].getOrder()
         return order
 
@@ -1250,10 +1251,10 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
         smarts = self.atom1.asSMARTS()[:-1]
 
         for idx, neighbor in enumerate(self._graph.neighbors(self.atom1)):
-            new_neighbors = self._graph.neighbors(neighbor)
+            new_neighbors = list(self._graph.neighbors(neighbor))
             new_neighbors.remove(self.atom1)
 
-            bondSMARTS = self._graph.edge[self.atom1][neighbor]['bond'].asSMARTS()
+            bondSMARTS = self._graph.get_edge_data(self.atom1, neighbor)['bond'].asSMARTS()
             neighborSMARTS = self._asSMIRKS(neighbor, new_neighbors, True)
 
             smarts += '$(*' + bondSMARTS + neighborSMARTS + ')'
@@ -1285,7 +1286,7 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
         if self.atom2 == None:
             raise Exception("Error: Bonds need 2 indexed atoms, there were not enough in %s" % smirks)
 
-        self.bond1 = self._graph.edge[self.atom1][self.atom2]['bond']
+        self.bond1 = self._graph.get_edge_data(self.atom1, self.atom2)['bond']
 
     def _checkType(self):
         return (self.getType() == 'Bond'), 'Bond'
@@ -1312,7 +1313,7 @@ class AngleChemicalEnvironment(BondChemicalEnvironment):
 
         # Add initial atom
         self.atom3 = self.selectAtom(3)
-        self.bond2 = self._graph.edge[self.atom2][self.atom3]['bond']
+        self.bond2 = self._graph.get_edge_data(self.atom2, self.atom3)['bond']
 
     def _checkType(self):
         return (self.getType() == 'Angle'), 'Angle'
@@ -1339,7 +1340,7 @@ class TorsionChemicalEnvironment(AngleChemicalEnvironment):
 
         # Add initial atom
         self.atom4 = self.selectAtom(4)
-        self.bond3 = self._graph.edge[self.atom3][self.atom4]['bond']
+        self.bond3 = self._graph.get_edge_data(self.atom3, self.atom4)['bond']
 
     def _checkType(self):
         return (self.getType() == 'Torsion'), 'Torsion'
@@ -1364,7 +1365,7 @@ class ImproperChemicalEnvironment(AngleChemicalEnvironment):
 
         # Add initial atom
         self.atom4 = self.selectAtom(4)
-        self.bond3 = self._graph.edge[self.atom2][self.atom4]['bond']
+        self.bond3 = self._graph.get_edge_data(self.atom2, self.atom4)['bond']
 
     def _checkType(self):
         return (self.getType() == 'Improper'), 'Improper'
