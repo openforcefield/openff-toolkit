@@ -315,6 +315,9 @@ So, for example, one can read a PDB file describing a mixture and provide OpenEy
 
 One important note is that the OpenEye molecules currently must have atom names, hence the [`OETriposAtomNames`](https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemFunctions/OETriposAtomNames.html) above.
 
+**Use with protein force fields**: While SMIRNOFF format force fields can cover a wide range of biological systems, an initial focus is on small molecule force fields, meaning that users may have considerable interest in combining SMIRNOFF small molecule parameters to systems in combination with traditional biopolymer parameters from conventional force fields, such as the AMBER family of protein/nucleic acid force fields.
+Thus, we provide an example of setting up a mixed system in [`examples/mixedFF_structure`](examples/mixedFF_structure), where an AMBER family force field is used for a protein and smirnoff99Frosst for a small molecule.
+
 ### `id` and other XML attributes
 
 In general, other XML attributes can be specified and will be ignored by `ForceField` unless they are specifically handled by the parser (and specified in this document).
