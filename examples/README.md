@@ -9,4 +9,4 @@
 * `mixedFF_structure` - example of how to use SMIRNOFF forcefields for small molecules in combination with more conventional force fields for proteins and other components of your system.
 * `partial_bondorder/` - example of using partial bond orders for parameterizing molecules, and showing how the SMIRNOFF format extends; see https://github.com/open-forcefield-group/smarty/issues/53
 * `host_guest_simulation/` - example of setting up a basic MD simulation for a host-guest system using the SMIRNOFF force fields.
-* `label_molecule/` - example showng how to check which parameters are used in which molecules, do parameter usage statistics, etc. 
+* `label_molecule/` - example showing how to check which parameters are used in which molecules, do parameter usage statistics, etc. 
