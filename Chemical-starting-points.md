@@ -7,7 +7,8 @@ Specifically, to apply SMIRNOFF to a system, you must either:
 1. Provide molecules (currently `OEMol` objects, but an RDKit version is in development) corresponding to the components of your system, or
 2. Provide an OpenMM `Topology` which includes bond orders and thus can be converted to molecules corresponding to the components of your system
 
-Without this information, identifying the chemical identity of the molecules comprising your system becomes a matter of guesswork rather than certainty.
+Without this information, our direct chemical perception cannot be applied to your molecule, as it requires the chemical identity of the molecules in your system -- that is, bond order and formal charge as well as atoms and connectivity.
+Unless you provide the full chemical identity in this sense, we must attempt to guess or infer the chemical identity of your molecules, which is a recipe for trouble.
 Different molecules can have the same chemical graph but differ in bond order and formal charge, or different resonance structures may be treated rather differently by some force fields (e.g. `c1cc(ccc1c2cc[nH+]cc2)[O-]` vs `C1=CC(C=CC1=C2C=CNC=C2)=O`, where the central bond is rotatable in one resonance structure but not in the other) even though they have identical formal charge and connectivity (chemical graph).
 A force field which uses the chemical identity of molecules to assign parameters needs to know what those molecules are, first.
 
