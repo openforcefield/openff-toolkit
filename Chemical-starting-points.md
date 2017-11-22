@@ -10,7 +10,7 @@ Specifically, to apply SMIRNOFF to a system, you must either:
 Without this information, our direct chemical perception cannot be applied to your molecule, as it requires the chemical identity of the molecules in your system -- that is, bond order and formal charge as well as atoms and connectivity.
 Unless you provide the full chemical identity in this sense, we must attempt to guess or infer the chemical identity of your molecules, which is a recipe for trouble.
 Different molecules can have the same chemical graph but differ in bond order and formal charge, or different resonance structures may be treated rather differently by some force fields (e.g. `c1cc(ccc1c2cc[nH+]cc2)[O-]` vs `C1=CC(C=CC1=C2C=CNC=C2)=O`, where the central bond is rotatable in one resonance structure but not in the other) even though they have identical formal charge and connectivity (chemical graph).
-A force field which uses the chemical identity of molecules to assign parameters needs to know what those molecules are, first.
+A force field which uses the chemical identity of molecules to assign parameters needs to know the exact chemical identity of the molecule you are intending to parameterize.
 
 ## Can I use an AMBER (or GROMACS) topology/coordinate file as a starting point for applying a SMIRNOFF force field?
 
@@ -31,7 +31,7 @@ For our purposes here, however, we assume you begin with the coordinates of all 
 Given a PDB file of a hypothetical biomolecular system of interest containing a small molecule, there are several routes available to you for treating the small molecule present:
 - Use a cheminformatics toolkit (see above) to infer bond orders
 - Identify your ligand from a database; e.g. if it is in the Protein Data Bank (PDB), it will be present in the [Ligand Expo](http://ligand-expo.rcsb.org) meaning that it has a database entry and code you can use to look up its putative chemical identity
-- Identify your ligand from the literature or your collaborators: If the above fail, you will have to find out what ligand is supposed to be in the structure you are working with.
+- Identify your ligand by name or SMILES string (or similar) from the literature or your collaborators
 
 ## What do you recommend as a starting point?
 

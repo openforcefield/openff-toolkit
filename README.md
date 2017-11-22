@@ -70,10 +70,10 @@ See `examples/SMIRNOFF_simulation/` for a complete example of how SMIRNOFF can b
 **For an especially complete worked example, see complete setup of a host-guest simulation in water with SMIRNOFF**, including docking, 2D and 3D visualization, etc., in `examples/host_guest_simulation/smirnoff_host_guest.ipynb` (Jupyter notebook).
 
 ### FAQs:
-See `Chemical-starting-points.md` for answers to a variety of common problems, such as:
+See [`Chemical-starting-points.md`](Chemical-starting-points.md) for answers to a variety of common problems, such as:
 - Why do I need to provide molecules corresponding to the components of my system, or a Topology with bond orders?
 - Can I use an AMBER (or GROMACS) topology/coordinate file as a starting point for applying a SMIRNOFF force field?
-- What about starting from a PDB file? 
+- What about starting from a PDB file?
 
 ## `ChemicalEnvironment`: Tools for chemical environment perception and manipulation
 
