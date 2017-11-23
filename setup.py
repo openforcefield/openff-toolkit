@@ -14,7 +14,7 @@ def find_package_data(data_root, package_root):
 
 setup(
     name = "openforcefield",
-    version = "0.0.3",
+    version = "0.0.4",
     author = "John Chodera, David Mobley, and others",
     author_email = "john.chodera@choderalab.org",
     description = ("Open Force Field Group tools"),
