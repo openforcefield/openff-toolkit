@@ -157,8 +157,14 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
     # Use functions to parse sections from target file and add parameters to force field
     param_id_by_section={}
     param_prefix_by_sec = {'NONBON':'n' , 'BOND':'b', 'ANGL':'a', 'DIHE':'t', 'IMPR':'i'}
+    env_method_by_sec = {'NONBON': environment.AtomChemicalEnvironment,
+            'BOND': environment.BondChemicalEnvironment,
+            'ANGL': environment.AngleChemicalEnvironment,
+            'DIHE': environment.TorsionChemicalEnvironment,
+            'IMPR': environment.ImproperChemicalEnvironment}
     for (idx, name) in enumerate(secnames):
         param_id_by_section[name] = 1
+        env_method = env_method_by_sec[name]
         for line in sections[name]:
             # Parse line for parameters
             if name=='NONBON':
@@ -177,7 +183,7 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
 
             smirks = params['smirks']
             #Check smirks is valid for chemical enviroment parsing:
-            env = environment.ChemicalEnvironment(smirks)
+            env = env_method(smirks)
 
             # If it's not a torsion, just store in straightforward way
             if not (name=='IMPR' or name=='DIHE'):
