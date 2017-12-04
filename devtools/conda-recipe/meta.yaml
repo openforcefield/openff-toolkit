@@ -26,13 +26,6 @@ requirements:
     - matplotlib
     - pandas
 
-test:
-  requires:
-    - nose
-    - nose-timer
-  imports:
-    - openforcefield
-
 about:
   home: https://github.com/open-forcefield-group/openforcefield
   license: MIT
