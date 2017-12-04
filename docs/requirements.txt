@@ -1,8 +1,1 @@
-matplotlib
-boto
-jinja2
-runipy
-openmm
-pytables
-scikit-learn
 sphinx_bootstrap_theme
