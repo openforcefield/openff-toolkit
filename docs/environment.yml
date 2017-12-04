@@ -20,4 +20,4 @@ dependencies:
     - openmoltools >=0.7.3
     - matplotlib
     - pandas
-    - nbxphinx
+    - nbsphinx
