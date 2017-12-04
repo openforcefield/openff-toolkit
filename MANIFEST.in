@@ -1,0 +1,2 @@
+include versioneer.py
+include openforcefield/_version.py
