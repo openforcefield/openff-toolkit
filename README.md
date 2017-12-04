@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/open-forcefield-group/openforcefield.svg?branch=master)](https://travis-ci.org/open-forcefield-group/openforcefield?branch=master)
+[![Documentation Status](https://readthedocs.org/projects/open-forcefield-toolkit/badge/?version=latest)](http://open-forcefield-toolkit.readthedocs.io/en/latest/?badge=latest)
 
 # Open Forcefield Group toolkit
 
