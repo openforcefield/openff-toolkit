@@ -21,5 +21,6 @@ Modules
 .. toctree::
   :maxdepth: 2
 
+  topology
   typing
   utils
