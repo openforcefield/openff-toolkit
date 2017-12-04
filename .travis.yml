@@ -20,7 +20,6 @@ script:
   - conda create --yes -n test python=$python
   - source activate test
   # Install OpenEye toolkit
-  #- pip install $OPENEYE_CHANNEL openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
   # Use beta version for partial bond orders
   - pip install --pre -i https://pypi.anaconda.org/openeye/label/beta/simple openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
   # Build the recipe
@@ -42,7 +41,6 @@ env:
     - PACKAGENAME="openforcefield"
     # OpenEye toolkit
     - OE_LICENSE="$HOME/oe_license.txt"
-    - OPENEYE_CHANNEL="-i https://pypi.anaconda.org/openeye/channel/main/simple"
     # encrypted BINSTAR_TOKEN for push of dev package to binstar
     - secure: "Iw2yv40ElSbS/TstXS9YnsbJFbxsbFQ25fkWlq8H/O3SPJwpX2/PRoCo99R1Scc0mO9BiVMwGDJQeM9y1VoYo3ozv5SIhPvc+0cMOE3AzkRiFEpZeTtDUTxOWsb+k/x5dH5/AapXRtJeKhY3cWe3lhKdv9N+yWrhY29lawXgfU4WsOEl6ON9BPwwPzvKK1sP4z8kIMzDNjt6gJ3m1HzdEQe/ibrOJIEk6Z4kTLQo9z4F9dm73/L4scEgnW6SOACC39nuYCL8PK4zPNKTqpAoVkm18uyrRz62+qPYSl3RCBNOFtbAuz7fz+ShSMA6g//LpAobNptpQeQpWXkHhYk5ALc6xzH2zScVgrPytKAPwi8mYKq9gYZnUPYgpOdjK3bNyfkGjeV9I4sQwNCBYlKtGHoqZ1l+l6oYsbx+Ti+nIeK67ufGmAugH4GJ3dhZvP6ZR73/irOrvSWiJJgqI1/k4c9Ela4wDpQHDp9sRf03HgSrRTX2gQ3E/JmPx8s56tMdkmrIDIgy6Edc80AN6zEKX0+3YVGcH6ltUViDidRGDlZ7xbUUXYtjqMJXuJEh2SV/wbeVmrBM8Pn+IfsBzLKnd1jqe3pXfoCqbCtvNwW8Sr4qMgWBEHvEtB4C5KvO5CydmRx95q/0ziRGb/VEV6QOnGxT7EIJDfyQeUqNqJD7Bdo="
     # encrypted AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
