@@ -1,0 +1,24 @@
+name: openforcefield
+channels:
+    - omnia
+    - conda-forge
+dependencies:
+    - python
+    - cython
+    - numpy
+    - scipy
+    - setuptools
+    - six
+    - openmm
+    - parmed
+    - numpydoc
+    - netCDF4
+    - pyyaml
+    - python
+    - networkx
+    - lxml
+    - icu 58*  # This is a lxml dependency but sometimes conda installs version 56
+    - openmoltools >=0.7.3
+    - matplotlib
+    - pandas
+    - nbxphinx
