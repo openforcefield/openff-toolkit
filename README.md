@@ -1,12 +1,12 @@
-[![Build Status](https://travis-ci.org/open-forcefield-group/openforcefield.svg?branch=master)](https://travis-ci.org/open-forcefield-group/openforcefield?branch=master)
+[![Build Status](https://travis-ci.org/openforcefield/openforcefield.svg?branch=master)](https://travis-ci.org/openforcefield/openforcefield?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/open-forcefield-toolkit/badge/?version=latest)](http://open-forcefield-toolkit.readthedocs.io/en/latest/?badge=latest)
 
 # Open Forcefield Group toolkit
 
-This repository contains a number of tools from the [Open Force Field Group](http://github.com/open-forcefield-group) for the development and use of modern molecular mechanics forcefields based on direct chemical perception and parameterized with rigorous statistical methods.
+This repository contains a number of tools from the [Open Forcefield Consortium](http://github.com/openforcefield) for the development and use of modern molecular mechanics forcefields based on direct chemical perception and parameterized with rigorous statistical methods.
 
 This repository hosts tools that we have committed to stably maintain throughout their lifetimes:
-* The [SMIRks Native Open Force Field (SMIRNOFF)](https://github.com/open-forcefield-group/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md) direct chemical perception forcefield specification language
+* The [SMIRks Native Open Force Field (SMIRNOFF)](https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md) direct chemical perception forcefield specification language
 * Tools for direct chemical environment perception and manipulation
 
 ## Installation
@@ -32,9 +32,9 @@ conda install --yes -c conda-forge -c omnia openforcefield
 
 ## `SMIRNOFF`: SMIRks Native Open Force Field
 
-This repository houses the SMIRNOFF SMIRKS-based force field format, along with classes to parameterize OpenMM systems given [SMIRNOFF `.ffxml` format files](https://github.com/open-forcefield-group/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md).
+This repository houses the SMIRNOFF SMIRKS-based force field format, along with classes to parameterize OpenMM systems given [SMIRNOFF `.ffxml` format files](https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md).
 
-The SMIRNOFF force field format is documented [here](https://github.com/open-forcefield-group/smirnoff/blob/master/The-SMIRNOFF-force-field-format.md).
+The SMIRNOFF force field format is documented [here](https://github.com/openforcefield/smirnoff/blob/master/The-SMIRNOFF-force-field-format.md).
 
 The SMIRNOFF forcefield format is available in sample form under `data/forcefield`, and is handled by `forcefield.py`.
  An example comparing SMIRNOFF versus AMBER energies for the parm@frosst forcefield is provided under
@@ -47,7 +47,7 @@ It can also be of interest to know what SMIRNOFF parameters would be applied to 
 
 ### Example usage
 
-The SMIRNOFF `ForceField` class is essentially a drop-in replacement for the [OpenMM `ForceField` class](http://docs.openmm.org/7.1.0/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField), with the additional requirement that an OpenEye `OEMol`-compatible object must also be provided to allow for chemical environment perception (and optionally charges).
+The SMIRNOFF `ForceField` class is essentially a drop-in replacement for the [OpenMM `ForceField` class](http://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField), with the additional requirement that an OpenEye `OEMol`-compatible object must also be provided to allow for chemical environment perception (and optionally charges).
 For example, if we have an `OEMol` named `mol`, we can create an OpenMM `System` object with the following code:
 ```python
 # Import the SMIRNOFF forcefield engine and some useful tools

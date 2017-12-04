@@ -15,9 +15,9 @@ def find_package_data(data_root, package_root):
 
 setup(
     name = "openforcefield",
-    author = "John Chodera, David Mobley, and others",
+    author = "Open Forcefield Consortium",
     author_email = "john.chodera@choderalab.org",
-    description = ("Open Force Field Group tools"),
+    description = ("Open Forcefield Toolkit"),
     license = "MIT",
     keywords = "molecular mechanics, forcefield, Bayesian parameterization",
     url = "http://github.com/open-forcefield-group/openforcefield",
