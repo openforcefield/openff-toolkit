@@ -4,3 +4,5 @@ try:
 except Exception as e:
     print(e)
     print('Warning: Cannot import openeye toolkit; not all functionality will be available.')
+
+from topology import Topology

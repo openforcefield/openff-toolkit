@@ -195,7 +195,15 @@ class Molecule(ChemicalEntity):
         TODO: Do we need to return a Torsion object that collects information about fractional bond orders?
 
     """
-    def __init__(self):
+    def __init__(self, other=None):
+        """
+        Parameters
+        ----------
+        other : optional, default=None
+            If specified, attempt to construct a copy of the Molecule from the specified object.
+            This might be a Molecule object, or a file that can be used to construct a Molecule object
+            or serialized Molecule object.
+        """
         pass
 
     @staticmethod
@@ -307,15 +315,19 @@ class Topology(ChemicalEntity):
         Iterate over all improper torsions in the topology
         TODO: Do we need to return a Torsion object that collects information about fractional bond orders?
 
+    Examples
+    --------
+    
+
     """
-    def __init__(self):
+    def __init__(self, other=None):
         """
         Parameters
         ----------
-        topology : simtk.openmm.app.Topology
-            The Topology object to initialize this one from.
-        reference_molecules : list of openeye.oechem.OEMol or rdkit.RDMol
-            The list of reference molecules in the Topology.
+        other : optional, default=None
+            If specified, attempt to construct a copy of the Topology from the specified object.
+            This might be a Topology object, or a file that can be used to construct a Topology object
+            or serialized Topology object.
 
         """
         pass
