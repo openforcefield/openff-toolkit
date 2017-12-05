@@ -53,48 +53,123 @@ import itertools
 
 class Atom(object):
     """
-    Atom representation
+    A chemical atom
 
-    TODO: Should Atom be immutable?
-
-    Parameters
-    ----------
-    name : str
-        An arbitrary label assigned to the atom
-    element : str
-        Element name
+    Note that non-chemical virtual sites are represented by the ``VirtualSite`` object
 
     .. todo::
-
-       Do we want to support the addition of arbitrary additional properties?
-
-    Properties
-    ----------
-    atomic_number : int
-        The atomic number
-    mass : float
-        The atomic mass
-
-    TODO: Do we want to support the following properties, which would require an Atom to belong to only one Molecule/Residue/Topology?
-
-    bonds : list of Bond
-        List of bonds this atom is involved in
-    bonded_to : list of Atom
-        List of atoms this atom is bonded to
-    molecule : Molecule
-        The molecule this atom belongs to, if any
-
-    TODO: Should Atoms be mutable or immutable?
+        * Should ``Atom`` objects be immutable or mutable?
+        * Should an ``Atom`` be able to belong to more than one ``Topology`` object?
+        * Do we want to support the addition of arbitrary additional properties,
+          such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial`` index in a PDB file),
+          or string labels (such as Lennard-Jones types)?
+        * Should we be able to create ``Atom`` objects on their own, or only in the context of a ``Topology`` object they belong to?
 
     """
-    def __init__(self, other=None):
+    def __init__(self, name, element):
         """
         Create an Atom object.
 
         Parameters
         ----------
-        other : Atom, optional, default=None
-            If an Atom is specified, a deep copy will be generated.
+        name : str
+            A unique name for this atom
+        element : str
+            The element name
+
+        """
+        pass
+
+    @property
+    def index(self):
+        """
+        The unique index of this atom within a Topology
+
+        """
+        pass
+
+    @property
+    def name(self):
+        """
+        An arbitrary label assigned to the atom.
+
+        """
+        pass
+
+    @property
+    def element(self):
+        """
+        The element name
+
+        """
+        pass
+
+    @property
+    def atomic_number(self):
+        """
+        The integer atomic number of the atom.
+
+        """
+        pass
+
+    @property
+    def mass(self):
+        """
+        The atomic mass of the atomic site.
+
+        """
+        pass
+
+    @property
+    def bonds(self):
+        """
+        The list of ``Bond`` objects this atom is involved in.
+
+        """
+        pass
+
+    @property
+    def bonded_to(self):
+        """
+        The list of ``Atom`` objects this atom is involved in
+
+        """
+        pass
+
+    @property
+    def molecule(self):
+        """
+        The ``Molecule`` this atom is part of.
+
+        .. todo::
+            * Should we have a single unique ``Molecule`` for each molecule type in the system,
+            or if we have multiple copies of the same molecule, should we have multiple ``Molecule``s?
+        """
+        pass
+
+class VirtualSite(object):
+    """
+    A virtual (non-atom) site.
+
+    .. todo::
+        * Should virtual sites be attached to one atom only, or more than one atom?
+          OpenMM defines them as belonging to two or more atoms.
+        * Should a virtual site be able to belong to more than one Topology?
+        * Should virtual sites be immutable or mutable?
+
+    """
+    def __init__(self):
+        """
+        Create a virtual site
+
+        """
+        pass
+
+    @property
+    def index(self):
+        """
+        The index of this VirtualSite within a ``Topology``
+
         """
         pass
 
@@ -104,7 +179,7 @@ class Bond(object):
 
     TODO: Should Bond be immutable?
 
-    Properties
+    Attributes
     ----------
     atom1, atom2 : Atom
         Atoms involved in the bond
@@ -122,38 +197,80 @@ class ChemicalEntity(object):
     """
     Mixin class for properties shared by chemical entities containing more than one atom.
 
-    Properties
-    ----------
-    atoms : list of Atom
-        Iterate over all Atom objects in the molecule
-        TODO:
-        * Should we iterate over all atoms in hierarchical order (chains,residues,atoms) or in file order?
-        * How can we select different iteration orders?
-    bonds :
-        Iterate over all Bond objects in the molecule
-    angles : tuple of Atom
-        Iterate over all angles (Atom tuples) in the molecule
-        TODO: Do we need to return an Angle object that collects information about fractional bond orders?
-    torsions :
-        Iterate over all torsions (propers and impropers) in the molecule
-        TODO: Do we need to return a Torsion object that collects information about fractional bond orders?
-    propers :
-        TODO: Do we need to return a Torsion object that collects information about fractional bond orders?
-        Iterate over all proper torsions in the molecule
-    impropers :
-        Iterate over all improper torsions in the molecule
-        TODO: Do we need to return a Torsion object that collects information about fractional bond orders?
-
     """
+
+    @property
+    def atoms(self):
+        """
+        Iterate over all Atom objects in the molecule
+
+        .. todo::
+            * Should we iterate over all atoms in hierarchical order (chains,residues,atoms) or in file order?
+            * How can we select different iteration orders?
+
+        """
+        pass
+
+    @property
+    def bonds(self):
+        """
+        Iterate over all Bond objects in the molecule
+
+        """
+        pass
+
+    def angles(self):
+        """
+        Iterate over all angles (Atom tuples) in the molecule
+
+        .. todo::
+            * Do we need to return an Angle object that collects information about fractional bond orders?
+
+        """
+        pass
+
+    @property
+    def torsions(self):
+        """
+        Iterate over all torsions (propers and impropers) in the molecule
+
+        .. todo::
+            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
+            * Should we call this ``dihedrals`` instead of ``torsions``?
+
+        """
+        pass
+
+    @property
+    def propers(self):
+        """
+        Iterate over all proper torsions in the molecule
+
+        .. todo::
+            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
+        """
+        pass
+
+    @property
+    def impropers(self):
+        """
+        Iterate over all proper torsions in the molecule
+
+        .. todo::
+            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
+        """
+        pass
 
 class Residue(ChemicalEntity):
     """
     Polymeric residue object
 
-    Properties
+    Attributes
     ----------
-    residues :
-    molecules :
+    atoms : list of Atom
+        The atoms that belong to this residue
+    molecule : Molecule
+        The Molecule that this residue belongs to
 
     """
     pass
@@ -162,12 +279,19 @@ class Chain(ChemicalEntity):
     """
     Polymeric chain container representation
 
-    (May contain more than one molecule)
+    (May contain more than one molecule, as in a PDB chain containing waters)
 
-    Properties
+    .. todo::
+        * It seems like the hierarchical view (chains, residues, atoms) is arbitrary and should be simply
+          left as annotation added to atoms to allow iterating over them in this hierarchical way if desired,
+          rather than as first-class objects
+
+    Attributes
     ----------
-    residues :
-    molecules :
+    residues : list of Residue
+        The residues within this chain
+    molecule : list of Molecules
+        The molecules associated with this chain
 
     """
     pass
@@ -175,33 +299,6 @@ class Chain(ChemicalEntity):
 class Molecule(ChemicalEntity):
     """
     Chemical representation of a molecule.
-
-    Properties
-    ----------
-
-    These properties are also present in Topology:
-
-    residues : list of Residue
-        Iterate over all Residue objects in the molecule
-    atoms : list of Atom
-        Iterate over all Atom objects in the molecule
-        TODO:
-        * Should we iterate over all atoms in hierarchical order (chains,residues,atoms) or in file order?
-        * How can we select different iteration orders?
-    bonds :
-        Iterate over all Bond objects in the molecule
-    angles : tuple of Atom
-        Iterate over all angles (Atom tuples) in the molecule
-        TODO: Do we need to return an Angle object that collects information about fractional bond orders?
-    torsions :
-        Iterate over all torsions (propers and impropers) in the molecule
-        TODO: Do we need to return a Torsion object that collects information about fractional bond orders?
-    propers :
-        TODO: Do we need to return a Torsion object that collects information about fractional bond orders?
-        Iterate over all proper torsions in the molecule
-    impropers :
-        Iterate over all improper torsions in the molecule
-        TODO: Do we need to return a Torsion object that collects information about fractional bond orders?
 
     """
     def __init__(self, other=None):
@@ -286,13 +383,13 @@ class Topology(ChemicalEntity):
     """
     Chemical representation of a system containing one or more molecules.
 
-    Properties
+    .. todo::
+        * Should these properties return deepcopy lists, generators that yield mutable objects, or allow direct mutable access via indexing?
+        * Should these be properties or functions?
+
+
+    Attributes
     ----------
-
-    TODO:
-    * Should these properties return deepcopy lists, generators that yield mutable objects, or allow direct mutable access via indexing?
-    * Should these be properties or functions?
-
     chains : list of Chain
         Iterate over all Chain objects in the topology
     molecules : list of Molecule
@@ -300,33 +397,11 @@ class Topology(ChemicalEntity):
     unique_molecules : list of Molecule
         Iterate over all unique Molecule objects in the topology
 
-    These properties are also present in Molecule:
-
-    residues : list of Residue
-        Iterate over all Residue objects in the topology
-    atoms : list of Atom
-        Iterate over all Atom objects in the topology
-        TODO:
-        * Should we iterate over all atoms in hierarchical order (chains,residues,atoms) or in file order?
-        * How can we select different iteration orders?
-    bonds :
-        Iterate over all Bond objects in the topology
-    angles : tuple of Atom
-        Iterate over all angles (Atom tuples) in the topology
-        TODO: Do we need to return an Angle object that collects information about fractional bond orders?
-    torsions :
-        Iterate over all torsions (propers and impropers) in the topology
-        TODO: Do we need to return a Torsion object that collects information about fractional bond orders?
-    propers :
-        TODO: Do we need to return a Torsion object that collects information about fractional bond orders?
-        Iterate over all proper torsions in the topology
-    impropers :
-        Iterate over all improper torsions in the topology
-        TODO: Do we need to return a Torsion object that collects information about fractional bond orders?
 
     Examples
     --------
-
+    Create a Topology copy
+    >>> topology_copy = Topology(topology)
 
     """
     def __init__(self, other=None):
