@@ -32,12 +32,6 @@ import re
 import numpy
 import random
 
-import openeye.oechem
-import openeye.oeomega
-import openeye.oequacpac
-
-from openeye import oechem, oequacpac
-
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
 from simtk import openmm, unit
