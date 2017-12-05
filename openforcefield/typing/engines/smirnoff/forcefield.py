@@ -42,12 +42,6 @@ import re
 import numpy
 import random
 
-import openeye.oechem
-import openeye.oeomega
-import openeye.oequacpac
-
-from openeye import oechem, oequacpac
-
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
 from simtk import openmm, unit
@@ -81,6 +75,7 @@ def getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model = None):
         matches[index] is an N-tuple of atom numbers from the oemol
         Matches are returned in no guaranteed order.
     """
+    from openeye import oechem
 
     # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
     mol = oechem.OEMol(oemol)
@@ -843,24 +838,25 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         This conformer generation may or may not be necessary if the calculation is only to obtain bond orders; this will have to be investigated separately so it is retained for now.
         """
         # TODO: Cache charged molecules here to save time in future calls to createSystem
+        from openeye import oechem, oeomega, oequacpac
 
         # Expand conformers
-        if not openeye.oechem.OEChemIsLicensed(): raise(ImportError("Need License for OEChem!"))
-        if not openeye.oeomega.OEOmegaIsLicensed(): raise(ImportError("Need License for OEOmega!"))
-        omega = openeye.oeomega.OEOmega()
+        if not oechem.OEChemIsLicensed(): raise(ImportError("Need License for OEChem!"))
+        if not oeomega.OEOmegaIsLicensed(): raise(ImportError("Need License for OEOmega!"))
+        omega = oeomega.OEOmega()
         omega.SetMaxConfs(800)
         omega.SetCanonOrder(False)
         omega.SetSampleHydrogens(True)
         omega.SetEnergyWindow(15.0)
         omega.SetRMSThreshold(1.0)
         omega.SetStrictStereo(True) #Don't generate random stereoisomer if not specified
-        charged_copy = openeye.oechem.OEMol(molecule)
+        charged_copy = oechem.OEMol(molecule)
         status = omega(charged_copy)
         if not status:
             raise(RuntimeError("Omega returned error code %s" % status))
 
         # Assign charges
-        status = openeye.oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, oechargemethod), False, False)
+        status = oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, oechargemethod), False, False)
         if not status:
             raise(RuntimeError("OEAssignPartialCharges returned error code %s" % status))
         # Our copy has the charges we want but not the right conformation. Copy charges over. Also copy over Wiberg bond orders if present
@@ -951,6 +947,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
                 # Don't charge molecules if no bond charge corrections were found
                 oechargemethod = None
         elif type(chargeMethod) == str:
+            from openeye import oequacpac
             # Check if the user has provided a manually-specified charge method
             if hasattr(oequacpac, chargeMethod):
                 oechargemethod = chargeMethod
@@ -1093,6 +1090,8 @@ def _validateSMIRKS(smirks, node=None):
        Node of etree with 'sourceline' attribute.
 
     """
+    from openeye import oechem
+
     qmol = oechem.OEQMol()
     if not oechem.OEParseSmarts(qmol, smirks):
         if (node is not None) and ('sourceline' in node.attrib):
@@ -2094,6 +2093,7 @@ class BondChargeCorrectionGenerator(object):
                 self.increment *= unit.elementary_charge
 
     def __init__(self, forcefield, initialChargeMethod):
+        from openeye import oequacpac
         self.ff = forcefield
         self._bondChargeCorrections = list()
         self._initialChargeMethod = initialChargeMethod
