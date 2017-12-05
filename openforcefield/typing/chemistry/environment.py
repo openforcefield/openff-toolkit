@@ -153,8 +153,8 @@ class ChemicalEnvironment(object):
     class Atom(object):
         """Atom representation, which may have some ORtypes and ANDtypes properties.
 
-        Properties
-        -----------
+        Attributes
+        ----------
         ORtypes : list of tuples in the form (base, [list of decorators])
             where bases and decorators are both strings
             The descriptor types that will be combined with logical OR
@@ -318,8 +318,9 @@ class ChemicalEnvironment(object):
 
     class Bond(Atom):
         """Bond representation, which may have ORtype and ANDtype descriptors.
-        Properties
-        -----------
+
+        Attributes
+        ----------
         ORtypes : list of tuples of ORbases and ORdecorators
             in form (base: [list of decorators])
             The ORtype types that will be combined with logical OR
@@ -785,8 +786,8 @@ into ChemicalEnvironments." % smirks)
     def selectAtom(self, descriptor = None):
         """Select a random atom fitting the descriptor.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         descriptor: optional, None
             None - returns any atom with equal probability
             int - will return an atom with that index
@@ -868,8 +869,8 @@ into ChemicalEnvironments." % smirks)
     def selectBond(self, descriptor = None):
         """Select a random bond fitting the descriptor.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         descriptor: optional, None
             None - returns any bond with equal probability
             int - will return an bond with that index
@@ -1013,7 +1014,7 @@ into ChemicalEnvironments." % smirks)
 
     def getBonds(self, atom = None):
         """
-        Parameter
+        Parameters
         ----------
         atom: Atom object, optional, returns bonds connected to atom
         returns all bonds in fragment if atom is None
