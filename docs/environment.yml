@@ -4,17 +4,11 @@ channels:
     - conda-forge
 dependencies:
     - python
-    - cython
     - numpy
-    - scipy
     - setuptools
-    - six
     - openmm
     - parmed
     - numpydoc
-    - netCDF4
-    - pyyaml
-    - python
     - networkx
     - lxml
     - openmoltools >=0.7.3
@@ -22,4 +16,3 @@ dependencies:
     - pandas
     - nbsphinx
     - sphinx_bootstrap_theme
-    - lxml
