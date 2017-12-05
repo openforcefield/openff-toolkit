@@ -21,14 +21,6 @@ import numpy
 import random
 import parmed
 
-import openeye.oechem
-import openeye.oeomega
-import openeye.oequacpac
-
-from openeye.oechem import *
-from openeye.oeomega import *
-from openeye.oequacpac import *
-
 from simtk.openmm import app
 from simtk.openmm.app import element as elem
 from simtk.openmm.app import Topology
@@ -169,8 +161,10 @@ def generateTopologyFromOEMol(molecule):
         The Topology object generated from `molecule`.
 
     """
+    from openeye import oechem
+
     # Avoid manipulating the molecule
-    mol = OEMol(molecule)
+    mol = oechem.OEMol(molecule)
 
     # Create a Topology object with one Chain and one Residue.
     from simtk.openmm.app import Topology
@@ -234,15 +228,16 @@ def normalize_molecules(molecules):
     molecules (list of OEMol) - molecules to be normalized (in place)
 
     """
+    from openeye import oechem
 
     # Add explicit hydrogens.
     for molecule in molecules:
-        openeye.oechem.OEAddExplicitHydrogens(molecule)
+        oechem.OEAddExplicitHydrogens(molecule)
 
     # Build a conformation for all molecules with Omega.
     print("Building conformations for all molecules...")
-    import openeye.oeomega
-    omega = openeye.oeomega.OEOmega()
+    from openeye import oeomega
+    omega = oeomega.OEOmega()
     omega.SetMaxConfs(1)
     omega.SetFromCT(True)
     for molecule in molecules:
@@ -259,10 +254,10 @@ def normalize_molecules(molecules):
         os.makedirs(ligand_mol2_dirname)
     ligand_mol2_filename = ligand_mol2_dirname + '/temp' + os.path.basename(mcmcDbName) + '.mol2'
     start_time = time.time()
-    omolstream = openeye.oechem.oemolostream(ligand_mol2_filename)
+    omolstream = oechem.oemolostream(ligand_mol2_filename)
     for molecule in molecules:
         # Write molecule as mol2, changing molecule through normalization.
-        openeye.oechem.OEWriteMolecule(omolstream, molecule)
+        oechem.OEWriteMolecule(omolstream, molecule)
     omolstream.close()
     end_time = time.time()
     elapsed_time = end_time - start_time
@@ -309,6 +304,7 @@ def read_molecules(filename, verbose=True):
         List of molecules read from file
 
     """
+    from openeye import oechem
 
     if not os.path.exists(filename):
         built_in = get_data_filename('molecules/%s' % filename)
@@ -319,20 +315,19 @@ def read_molecules(filename, verbose=True):
     if verbose: print("Loading molecules from '%s'..." % filename)
     start_time = time.time()
     molecules = list()
-    input_molstream = oemolistream(filename)
+    input_molstream = oechem.oemolistream(filename)
 
-    from openeye import oechem
     flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
     input_molstream.SetFlavor(oechem.OEFormat_MOL2, flavor)
 
-    molecule = OECreateOEGraphMol()
-    while OEReadMolecule(input_molstream, molecule):
+    molecule = oechem.OECreateOEGraphMol()
+    while oechem.OEReadMolecule(input_molstream, molecule):
         # If molecule has no title, try getting SD 'name' tag
         if molecule.GetTitle() == '':
-            name = OEGetSDData(molecule, 'name').strip()
+            name = oechem.OEGetSDData(molecule, 'name').strip()
             molecule.SetTitle(name)
         # Append to list.
-        molecule_copy = OEMol(molecule)
+        molecule_copy = oechem.OEMol(molecule)
         molecules.append(molecule_copy)
     input_molstream.close()
     if verbose: print("%d molecules read" % len(molecules))
@@ -352,6 +347,8 @@ def setPositionsInOEMol(molecule, positions):
     positions : Nx3 array
         Unit-bearing via simtk.unit Nx3 array of coordinates
     """
+    from openeye import oechem
+    
     if molecule.NumAtoms() != len(positions): raise ValueError("Number of atoms in molecule does not match length of position array.")
     pos_unitless = positions/unit.angstroms
 
@@ -359,7 +356,7 @@ def setPositionsInOEMol(molecule, positions):
     for idx in range(len(pos_unitless)):
         for j in range(3):
             coordlist.append( pos_unitless[idx][j])
-    molecule.SetCoords(OEFloatArray(coordlist))
+    molecule.SetCoords(oechem.OEFloatArray(coordlist))
 
 def extractPositionsFromOEMol(molecule):
     """Get the positions from an OEMol and return in a position array with units via simtk.unit, i.e. foramtted for OpenMM.
