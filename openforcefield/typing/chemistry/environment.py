@@ -26,9 +26,6 @@ import networkx as nx
 import re
 import copy
 
-import openeye.oechem
-from openeye.oechem import *
-
 import numpy as np
 from numpy import random
 
@@ -519,12 +516,13 @@ into ChemicalEnvironments." % smirks)
         Returns if the atom is valid, that is if it
         creates a parseable SMIRKS string.
         """
-        qmol = OEQMol()
+        from openeye import oechem
+        qmol = oechem.OEQMol()
         if smirks is None:
             smirks = self._asSMIRKS()
         if self.replacements is not None:
-            smirks = OESmartsLexReplace(smirks, self.replacements)
-        return OEParseSmarts(qmol, smirks)
+            smirks = oechem.OESmartsLexReplace(smirks, self.replacements)
+        return oechem.OEParseSmarts(qmol, smirks)
 
     def _parse_smirks(self,input_smirks):
         """
@@ -1408,4 +1406,3 @@ class ImproperChemicalEnvironment(AngleChemicalEnvironment):
 
     def _checkType(self):
         return (self.getType() == 'Improper'), 'Improper'
-
