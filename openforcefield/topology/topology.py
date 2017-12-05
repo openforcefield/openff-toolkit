@@ -66,9 +66,13 @@ class Atom(object):
     Parameters
     ----------
     name : str
-        Unique name (arbitrary)
+        An arbitrary label assigned to the atom
     element : str
         Element name
+
+    .. todo::
+
+       Do we want to support the addition of arbitrary additional properties?
 
     Properties
     ----------
@@ -86,8 +90,19 @@ class Atom(object):
     molecule : Molecule
         The molecule this atom belongs to, if any
 
+    TODO: Should Atoms be mutable or immutable?
+
     """
-    pass
+    def __init__(self, other=None):
+        """
+        Create an Atom object.
+
+        Parameters
+        ----------
+        other : Atom, optional, default=None
+            If an Atom is specified, a deep copy will be generated.
+        """
+        pass
 
 class Bond(object):
     """
@@ -317,7 +332,7 @@ class Topology(ChemicalEntity):
 
     Examples
     --------
-    
+
 
     """
     def __init__(self, other=None):
