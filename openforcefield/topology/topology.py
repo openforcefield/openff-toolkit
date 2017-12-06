@@ -401,6 +401,7 @@ class Molecule(ChemicalEntity):
               or just return the charge array?
             * How do we add enough flexibility to specify the toolkit and optional parameters, such as:
               ``oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, 'OECharges_AM1BCCSym'), False, False)``
+            * What will we do about virtual sites, since this only assigns partial atomic charges?
 
         Parameters
         ----------
