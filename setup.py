@@ -20,7 +20,7 @@ setup(
     description = ("Open Forcefield Toolkit"),
     license = "MIT",
     keywords = "molecular mechanics, forcefield, Bayesian parameterization",
-    url = "http://github.com/open-forcefield-group/openforcefield",
+    url = "http://github.com/openforcefield/openforcefield",
     packages=[
         'openforcefield',
         'openforcefield/tests',

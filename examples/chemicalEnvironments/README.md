@@ -1,14 +1,14 @@
 # Chemical Environment usage examples
 
-This directory shows how to use Chemical Environments. First we will outline how they are structured with some example code snippets. 
-For a more hands on tutorial you can look at the jupyter notebook `using_environments.py`. 
+This directory shows how to use Chemical Environments. First we will outline how they are structured with some example code snippets.
+For a more hands on tutorial you can look at the jupyter notebook `using_environments.py`.
 
 ### Initiating ChemicalEnvironments
 
-All Chemical Environments can be initated using SMIRKS strings. 
+All Chemical Environments can be initated using SMIRKS strings.
 If a `ChemicalEnvironment` is initiated with no SMIRKS pattern, it is an empty structure.
 However, there are 5 subtypes of `ChemicalEnvironments` that match the types of parameters found in the SMIRNOFF format.
-If they are initiated with no SMIRKS pattern, their structure matches a generic for that parameter type, for example `[*:1]~[*:2]` for a bond (that is any atom connected to any other atom by any bond). 
+If they are initiated with no SMIRKS pattern, their structure matches a generic for that parameter type, for example `[*:1]~[*:2]` for a bond (that is any atom connected to any other atom by any bond).
 The 5 subtypes are listed below with their expected number of indexed atoms and the corresponding SMIRKS structure:
 
 * `AtomChemicalEnvironment`
@@ -23,9 +23,9 @@ The 5 subtypes are listed below with their expected number of indexed atoms and 
 * `TorsionChemicalEnvironment`
     - expects 4 indexed atoms in a proper dihedral angle
     - default/generic SMIRKS: `"[*:1]~[*:2]~[*:3]~[*:4]"`
-* `ImproperChemicalEnvironment` 
+* `ImproperChemicalEnvironment`
     - expects 4 indexed atoms in an improper dihedral angle
-    - default/generic SMIRKS: `"[*:1]~[*:2](~[*:3])~[*:4]"` 
+    - default/generic SMIRKS: `"[*:1]~[*:2](~[*:3])~[*:4]"`
 
 Here is an example for initiating a chemical environment:
 ```python
@@ -38,10 +38,10 @@ angle = env.AngleChemicalEnvironment(smirks = smirks)
 
 After being initiated with a SMIRKS string, `ChemicalEnvironments` separate and store
 information about the fragment in a NetworkX graph. This information is stored in the same
-way a chemist might think about a fragment, that is there are atoms connected by bonds. 
+way a chemist might think about a fragment, that is there are atoms connected by bonds.
 The descriptors for both atoms and bonds are broken down into ORtypes, decorators OR'd together with a ','
-and ANDtypes, decorators AND'd to the end of an atom or bond with a ';'. 
-ORtypes are further broken down into bases and decorators. A base is typically an atomic number or symbol.  
+and ANDtypes, decorators AND'd to the end of an atom or bond with a ';'.
+ORtypes are further broken down into bases and decorators. A base is typically an atomic number or symbol.
 
 As an example, consider atom 1 above ('[#6X3,#7X2,#7X3;+0:1]'):
 * ORtypes (base, [list of decorators] )
@@ -50,7 +50,7 @@ As an example, consider atom 1 above ('[#6X3,#7X2,#7X3;+0:1]'):
 * ANDtypes
     - `['+0']`
 
-You can set and get ORtypes and ANDtypes for atoms and bonds. You can also addORtypes and addANDtypes for atoms and bonds. 
+You can set and get ORtypes and ANDtypes for atoms and bonds. You can also addORtypes and addANDtypes for atoms and bonds.
 For example:
 ```python
 old_SMIRKS = angle.asSMIRKS()
@@ -76,14 +76,14 @@ print("\nNew SMIRKS: '%s'" % angle.asSMIRKS())
 ### Adding and removing atoms
 
 You can add new atoms to an environment by specifying an atom to connect
-to and the OR and AND types for the new bond and new atom. 
+to and the OR and AND types for the new bond and new atom.
 
 You can also remove existing atoms with the function `removeAtom` which returns True if the atom was removed and False if it was not.
 There are two conditions which will always results in the atom not being removed:
 * The atom is indexed, has a `':number'` at the end
-* The atom is connected to more than one atom. 
-Note, in these cases the `removeAtom` function returns false and the chemical graph remains unchanged. 
-When an atom is removed the bond connecting it is also removed. 
+* The atom is connected to more than one atom.
+Note, in these cases the `removeAtom` function returns false and the chemical graph remains unchanged.
+When an atom is removed the bond connecting it is also removed.
 
 ```python
 atom3 = angle.selectAtom(3)
@@ -91,7 +91,7 @@ atom3 = angle.selectAtom(3)
 alpha_ORtypes = [('#8', ['X2', 'H1'])]
 alpha_ANDtypes = ['R0']
 alpha_bondANDtypes = ['!@']
-alpha = angle.addAtom(atom3, bondANDtypes = alpha_bondANDtypes, 
+alpha = angle.addAtom(atom3, bondANDtypes = alpha_bondANDtypes,
                       newORtypes = alpha_ORtypes, newANDtypes = alpha_ANDtypes)
 print("Alpha Atom SMIRKS: %s" % alpha.asSMIRKS())
 # Alpha Atom SMIRKS: [#8X2H1;R0]
@@ -115,8 +115,8 @@ print("Updated SMIRKS string: %s" % angle.asSMIRKS())
 
 0. Selecting atoms and bonds
 ```python
-# when given an integer selectAtom or selectBond returns that atom or bond with that index 
-# otherwise it returns a random atom or bond that meets the specified requirement 
+# when given an integer selectAtom or selectBond returns that atom or bond with that index
+# otherwise it returns a random atom or bond that meets the specified requirement
 # If no atom or bond with that type is found then None is returned
 alpha = angle.selectAtom('alpha')
 atom4 = angle.selectAtom(4) # None, angle has 3 indexed atoms
@@ -127,7 +127,7 @@ beta_bond = angle.selectBond('beta') # bond between an alpha and beta atom
 ```python
 # Check if the alpha atom above is any of the following
 angle.isIndexed(alpha) # False
-angle.isUnindexed(alpha) # True 
+angle.isUnindexed(alpha) # True
 angle.isAlpha(alpha) # True
 angle.isBeta(alpha) # False
 # NOTE - These methods can take an atom or a bond as an argument
@@ -168,30 +168,30 @@ bondAB = angle.getBond(atomA, atomB) # returns None if no bond found
 ```python
 # get the neighbors for each indexed atom
 atomA = angle.selectAtom(A)
-neighbor_list = angle.getNeighbors(atomA) 
+neighbor_list = angle.getNeighbors(atomA)
 ```
 
 ### Not yet covered
 
 Types of SMIRKS patterns that cannot be read into `ChemicalEnvironments`:
 
-* SMIRKS for multiple molecules. The symbol `'.'` can be used in SMIRKS to denote fragments in separate molecules, `ChemicalEnvironments` will fail if the given pattern has multiple molecules. 
-* Similarly, SMIRKS for reactions are not parseable into `ChemicalEnvironments`. These are denoted with `'>>'` to indicate the fragment changing in a reaction.  
+* SMIRKS for multiple molecules. The symbol `'.'` can be used in SMIRKS to denote fragments in separate molecules, `ChemicalEnvironments` will fail if the given pattern has multiple molecules.
+* Similarly, SMIRKS for reactions are not parseable into `ChemicalEnvironments`. These are denoted with `'>>'` to indicate the fragment changing in a reaction.
 
 
 ### `using_environments.ipynb`
 
-This notebook should be your first stop for interactively understanding and using `ChemicalEnvironments`. 
-It includes all of the examples shown above and more in a jupyter notebook so you can play with the different method options. 
+This notebook should be your first stop for interactively understanding and using `ChemicalEnvironments`.
+It includes all of the examples shown above and more in a jupyter notebook so you can play with the different method options.
 
 ### Making moves with Chemical Environments
 
-Here our goal is to show how to use Chemical Environments to make "moves" in chemical perception space. First a list of weighted moves were generated and saved to output files. Then, a seconds notebook is used to make these moves in chemical space. 
+Here our goal is to show how to use Chemical Environments to make "moves" in chemical perception space. First a list of weighted moves were generated and saved to output files. Then, a seconds notebook is used to make these moves in chemical space.
 
-These notebooks were generated in the early planning stages for smirky, the first attempt at sampling chemical perception for SMIRNOFF parameter types.  
+These notebooks were generated in the early planning stages for smirky, the first attempt at sampling chemical perception for SMIRNOFF parameter types.
 
-* `create_move_types_and_weights.ipynb` - used to create lists of moves and their probabilities based on the type of parameter (vdw, bond, angle, torsion, improper). Created the text files `moveTrees.uniq.*.txt` where `*` refers to the parameter type.  
+* `create_move_types_and_weights.ipynb` - used to create lists of moves and their probabilities based on the type of parameter (vdw, bond, angle, torsion, improper). Created the text files `moveTrees.uniq.*.txt` where `*` refers to the parameter type.
 
-* `moves_using_environments.ipynb` - uses the `moveTrees.uniq.*.txt` files to illustrate how to make moves in chemical perception space. 
+* `moves_using_environments.ipynb` - uses the `moveTrees.uniq.*.txt` files to illustrate how to make moves in chemical perception space.
 
-For a more thorough and automated tool for using `ChemicalEnvironments` to make changes to chemical perception see [smirky](https://github.com/open-forcefield-group/smarty), a tool we developed to rediscover SMIRNOFF parameters. 
+For a more thorough and automated tool for using `ChemicalEnvironments` to make changes to chemical perception see [smirky](https://github.com/openforcefield/smarty), a tool we developed to rediscover SMIRNOFF parameters.
