@@ -392,6 +392,52 @@ class Molecule(ChemicalEntity):
         """
         pass
 
+    def assign_partial_charges(self, method='am1-bcc', toolkit=None, **kwargs):
+        """Assign partial atomic charges.
+
+        .. todo::
+            * Is it OK that the ``Molecule`` object does not store geometry, but will create it using ``openeye.omega`` or ``rdkit``?
+            * Should this method assign charges to the ``Atom``s in the molecule, a separate ``charges`` molecule property,
+              or just return the charge array?
+            * How do we add enough flexibility to specify the toolkit and optional parameters, such as:
+              ``oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, 'OECharges_AM1BCCSym'), False, False)``
+
+        Parameters
+        ----------
+        method : str, optional, default='am1-bcc'
+            The name of the charge method to use.
+            Options are:
+            * 'am1-bcc' : symmetrized ELF AM1-BCC charges using best practices
+        toolkit : str, optional, default=None
+            If specified, the provided toolkit module will be used; otherwise, all toolkits will be tried in undefined order.
+            Currently supported options:
+            * 'openeye' : generate conformations with ``openeye.omega`` and assign charges with ``openeye.oequacpac``
+            * 'rdkit' : generate conformations with ``rdkit`` and assign charges with ``antechamber``
+            ``kwargs`` will be passed to the toolkit.
+        """
+        pass
+
+    def assign_fractional_bond_orders(self, method='Wiberg', toolkit=None, **kwargs):
+        """Assign fractional bond orders.
+
+        .. todo::
+            * Is it OK that the ``Molecule`` object does not store geometry, but will create it using ``openeye.omega`` or ``rdkit``?
+            * Should this method assign fractional bond orders to the ``Bond``s in the molecule, a separate ``bond_orders`` molecule property,
+              or just return the array of bond orders?
+            * How do we add enough flexibility to specify the toolkit and optional parameters, such as:
+              ``oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, 'OECharges_AM1BCCSym'), False, False)``
+
+        method : str, optional, default='Wiberg'
+            The name of the charge method to use.
+            Options are:
+            * 'Wiberg' : Wiberg bond order
+        toolkit : str, optional, default=None
+            If specified, the provided toolkit module will be used; otherwise, all toolkits will be tried in undefined order.
+            Currently supported options:
+            * 'openeye' : generate conformations with ``openeye.omega`` and assign Wiberg bond order with ``openeye.oequacpac`` using OECharges_AM1BCCSym
+        """
+        pass
+
 class Topology(ChemicalEntity):
     """
     Chemical representation of a system containing one or more molecules.
