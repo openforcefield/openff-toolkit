@@ -11,10 +11,12 @@ These classes offer several advantages over corresponding ``Topology`` objects i
     :nosignatures:
     :toctree: api/generated/
 
-    Topology
-    Chain
-    Molecule
-    Residue
-    ChemicalEntity
+    Particle
     Atom
     Bond
+    VirtualSite
+    ChemicalEntity
+    Molecule
+    Topology
+    Chain
+    Residue

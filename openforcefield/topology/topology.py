@@ -51,7 +51,28 @@ import itertools
 # TOPOLOGY OBJECTS
 #=============================================================================================
 
-class Atom(object):
+class Particle(object):
+    """
+    A particle in a system
+
+    This could be an ``Atom`` or a ``VirtualSite``
+
+    """
+    def __init__(self):
+        """
+        Create a particle.
+        """
+        pass
+
+    @property
+    def index(self):
+        """
+        The unique index of this particle within a Topology
+
+        """
+        pass
+
+class Atom(Particle):
     """
     A chemical atom
 
@@ -76,14 +97,6 @@ class Atom(object):
             A unique name for this atom
         element : str
             The element name
-
-        """
-        pass
-
-    @property
-    def index(self):
-        """
-        The unique index of this atom within a Topology
 
         """
         pass
@@ -147,7 +160,7 @@ class Atom(object):
         """
         pass
 
-class VirtualSite(object):
+class VirtualSite(Particle):
     """
     A virtual (non-atom) site.
 
