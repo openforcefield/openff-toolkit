@@ -1,6 +1,6 @@
-# The SMIRks Native Open Force Field (SMIRNOFF) v0.1
+# The SMIRks Native Open Force Field (SMIRNOFF) v0.2
 
-The SMIRNOFF format is based on the [`OpenMM`](http://openmm.org) [`ForceField`](http://docs.openmm.org/7.0.0/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField) class and provides an XML format for encoding force fields based on [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html)-based chemical perception.
+The SMIRNOFF format is based on the [`OpenMM`](http://openmm.org) [`ForceField`](http://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField) class and provides an XML format for encoding force fields based on [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html)-based chemical perception.
 While designed for [`OpenMM`](http://openmm.org), parameters encoded in this format can be applied to systems and then these systems converted via [`ParmEd`](http://parmed.github.io/ParmEd) and [`InterMol`](https://github.com/shirtsgroup/InterMol) for simulations in a variety of other simulation packages.
 
 ## Basic structure
@@ -42,29 +42,30 @@ For this section it will help to have on hand an example SMIRNOFF file, such as 
 
 Before getting in to individual sections, it's worth noting that the XML parser ignores attributes in the XML that it does not understand, so providing a parameter line for an angle that specifies (for example) a second force constant `k2` will lead to no effect.
 
-### NONBONDED PARAMETERS (E.G. LENNARD-JONES)
+### STERICS PARAMETERS
 
-Nonbonded parameters (currently, Lennard-Jones parameters) are specified via the [`NonbondedForce`](http://docs.openmm.org/7.0.0/userguide/theory.html#nonbondedforce) tag with sub-tags for individual `Atom` entries, such as:
+Nonbonded sterics parameters are specified via the [`StericsForce`](http://docs.openmm.org/7.0.0/userguide/theory.html#nonbondedforce) tag with sub-tags for individual `Atom` entries, such as:
 ```XML
-<NonbondedForce coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+<StericsForce functional_form="Lennard-Jones" coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
    <Atom smirks="[#1:1]" rmin_half="1.4870" epsilon="0.0157"/>
    <Atom smirks="[#1:1]-[#6]" rmin_half="1.4870" epsilon="0.0157"/>
    ...
-</NonbondedForce>
+</StericsForce>
 ```
-Scaling terms for 1-4 interactions should be specified in attributes for the `NonbondedForce` tag, along with units.
+Scaling terms applied to the energies of 1-4 interactions should be specified in attributes for the `StericsForce` tag, along with units.
 
+Currently, only `functional_form="Lennard-Jones"` is supported.
 For compatibility, the size property of an atom can be specified either via providing the `sigma` attribute, such as `sigma="1.3"`, or via the `r_0/2` (`rmin/2`) values used in AMBER force fields (here denoted `rmin_half` as in the example above). The two are related by `r0 = 2^(1/6)*sigma` and conversion is done internally in `ForceField` into the `sigma` values used in OpenMM. `epsilon` denotes the well depth.
 
 ### BOND PARAMETERS
 
-Bond parameters are specified via the [`HarmonicBondForce`](http://docs.openmm.org/7.0.0/userguide/theory.html#harmonicbondforce) tag with individual `Bond` tags providing equilibrium bond length `length` and force constant `k` values for specific bonds, for example:
+Bond parameters are specified via the `BondForce` tag with individual `Bond` tags providing equilibrium bond length `length` and force constant `k` values for specific bonds, for example:
 ```XML
-<HarmonicBondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
+<BondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
    <Bond smirks="[#6X4:1]-[#6X4:2]" length="1.526" k="620.0"/>
    <Bond smirks="[#6X4:1]-[#1:2]" length="1.090" k="680.0"/>
 ...
-</HarmonicBondForce>
+</BondForce>
 ```
 
 **AMBER functional forms define the force constant `k` in a manner that differs by a factor of two---we do not use that convention here, electing to use the standard harmonic definition `U(r) = (k/2)*(r-length)^2` instead.**
@@ -72,13 +73,13 @@ Thus, comparing a SMIRNOFF file to a corresponding AMBER parameter file or `.frc
 
 ### ANGLE PARAMETERS
 
-Angle parameters are specified via the [`HarmonicAngleForce`](http://docs.openmm.org/7.0.0/userguide/theory.html#harmonicangleforce) tag with individual `Angle` tags providing parameters (equilibrium angle `angle` and force constant `k`), as in this example:
+Angle parameters are specified via the `AngleForce` tag with individual `Angle` tags providing parameters (equilibrium angle `angle` and force constant `k`), as in this example:
 ```XML
-<HarmonicAngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
+<AngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
    <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50" k="100.0"/>
    <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50" k="70.0"/>
 ...
-</HarmonicAngleForce>
+</AngleForce>
 ```
 
 **AMBER functional forms drop the factor of 2 in the angle energy term, which we elect not to do here.**
@@ -86,14 +87,14 @@ Thus, comparing a SMIRNOFF file to a corresponding AMBER parameter file or .frcm
 
 ### PROPER TORSIONS
 
-Torsions are implemented as a [`PeriodicTorsionForce`](http://docs.openmm.org/7.0.0/userguide/theory.html#periodictorsionforce) tag with child tags for `Proper` (discussed here) and `Improper` (discussed below) parameters, for example:
+Proper torsions are specified via a `ProperTorsionForce` tag with `Proper` child tags:
 ```XML
-<PeriodicTorsionForce phase_unit="degrees" k_unit="kilocalories_per_mole">
+<ProperTorsionForce phase_unit="degrees" k_unit="kilocalories_per_mole">
    <Proper smirks="[a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]" idivf1="9" periodicity1="3" phase1="0.0" k1="1.40"/>
 ...
    <Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]" idivf1="1" periodicity1="3" phase1="0.0" k1="0.383" idivf2="1" periodicity2="2" phase2="180.0" k2="0.1"/>
 ...
-</PeriodicTorsionForce>
+</ProperTorsionForce>
 ```
 
 Here, child `Proper` tags specify at least `k1`, `phase1`, and `periodicity1` attributes for the corresponding parameters of the first force term applied to this torsion.
@@ -109,10 +110,12 @@ The averaging approach would make it easier to avoid this problem without requir
 
 ### IMPROPER TORSIONS
 
-Impropers are applied in the same manner as proper torsions, via `PeriodicTorsionForce`, but with the `Improper` tag, as in:
+Impropers are applied in the same manner as proper torsions, via `ImproperTorsionForce`, with `Improper` child tags, as in:
 ```XML
+<ImproperTorsionForce>
 <Improper smirks="[*:1]~[#6X3:2](=[#7X2,#7X3+1:3])~[#7:4]" k1="10.5" periodicity1="2" phase1="180."/>
 ...
+</ImproperTorsionForce>
 ```
 
 **Improper torsions deviate profoundly from AMBER handling of impropers** in two ways.

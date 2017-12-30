@@ -7,8 +7,10 @@
 """
 Representation of molecular topologies.
 
-TODO:
-* Move this to a more permanent home.
+.. todo::
+
+   * Make all classes (like Particle, Atom, VirtualSite) hashable
+     Use class boilerplate suggestion from Kyle?
 
 """
 
@@ -17,42 +19,41 @@ TODO:
 #=============================================================================================
 
 import sys
+import os
+import re
+import time
+import math
+import copy
 import string
+import random
+import itertools
 
 import lxml.etree as etree
 
-from simtk.openmm.app import element as elem
-from simtk.openmm.app import Topology
-from openforcefield.utils import generateTopologyFromOEMol, get_data_filename
-
-import os
-import math
-import copy
-import re
 import numpy
-import random
-
-from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
-
-from simtk import openmm, unit
-
-import time
 
 import networkx
 
-import itertools
+from simtk import openmm, unit
+from simtk.openmm.app import element as elem
+from simtk.openmm.app import Topology
+
+from openforcefield.utils import generateTopologyFromOEMol, get_data_filename
+from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
 #=============================================================================================
 # GLOBAL PARAMETERS
 #=============================================================================================
 
 DEFAULT_AROMATICITY_MODEL = 'MDL' # TODO: Is there a more specific spec for this?
+DEFAULT_FRACTIONAL_BONDORDER_MODEL = 'Wiberg' # TODO: Is there a more specific spec for this?
+DEFAULT_CHARGE_MODEL = 'AM1-BCC' # TODO: Should this be `AM1` so that BCCs can appear in the SMIRNOFF forcefield?
 
 #=============================================================================================
 # PRIVATE SUBROUTINES
 #=============================================================================================
 
-def getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model=None):
+def _getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model=None):
     """Find all sets of atoms in the provided oemol that match the provided SMIRKS strings.
 
     Parameters
@@ -189,7 +190,7 @@ class _Topology(Topology):
         self._updateBondOrders()
 
         # Track constraints
-        self._constrainedAtomPairs = dict()
+        self._constrained_atom_pairs = dict()
 
     def angles(self):
         """
@@ -373,7 +374,7 @@ class _Topology(Topology):
             order = self._bondorders_by_atomindices[topat1][topat2]
             self._bondorders.append(order)
 
-    def unrollSMIRKSMatches(self, smirks, aromaticity_model=None):
+    def _unrollSMIRKSMatches(self, smirks, aromaticity_model=None):
         """Find all sets of atoms in the topology that match the provided SMIRKS strings.
 
         Parameters
@@ -513,11 +514,22 @@ class Particle(object):
         pass
 
     @property
-    def index(self):
+    def particle_index(self):
         """
-        The unique index of this particle within a Topology
+        Index of this particle within the ``Topology``
+
+        .. todo::
+
+           Should this just be called ``index``, or does that risk confusion within
+           the index within ``topology.atoms``?
 
         """
+        pass
+
+    def __repr__(self):
+        pass
+
+    def __str__(self):
         pass
 
 class Atom(Particle):
@@ -554,13 +566,6 @@ class Atom(Particle):
         """
         An arbitrary label assigned to the atom.
 
-        """
-        pass
-
-    @property
-    def particle_index(self):
-        """
-        Index of this atom within the Topology
         """
         pass
 
@@ -615,10 +620,17 @@ class Atom(Particle):
         """
         pass
 
-    def __repr__(self):
-        pass
+    @property
+    def atom_index(self):
+        """
+        The index of this Atom within the the list of atoms in ``Topology``.
+        Note that this can be different from ``particle_index``.
 
-    def __str__(self):
+        .. todo::
+
+           Do we need this?
+
+        """
         pass
 
 class VirtualSite(Particle):
@@ -642,15 +654,21 @@ class VirtualSite(Particle):
             weights[index] is the weight of particles[index] contributing to the position of the virtual site.
         particles : list of Particle of shape [N]
             particles[index] is the corresponding particle for weights[index]
+            The ``VirtualSite`` is bound to the ``Particle``s in the list specified here.
 
         """
-        self._weights = np.array(weights)
-        self._particle = [ particle for particle in particles ]
+        self._weights = np.array(weights) # make a copy and convert to array internally
+        self._particle = [ particle for particle in particles ] # create a list of Particles
 
     @property
-    def index(self):
+    def virtual_site_index(self):
         """
-        The index of this VirtualSite within a ``Topology``
+        The index of this VirtualSite within the list of virtual sites within ``Topology``
+        Note that this can be different from ``particle_index``.
+
+        .. todo::
+
+           Do we need this?
 
         """
         pass
@@ -764,11 +782,31 @@ class ChemicalEntity(object):
         """
         # Resolve to SMIRKS if needed
         if hasattr(query, 'asSMIRKS'):
-            query = query.asSMIRKS()
+            smirks = query.asSMIRKS()
+        else:
+            smirks = query
 
         # TODO: Enumerate matches using the currently selected toolkit.
+        if self._toolkit == 'oechem':
 
-        pass
+            oemol = molecule.as_oemol()
+            matches = _getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model=self._aromaticity_model)
+
+        # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
+        matches = list()
+        for molecule in self.unique_molecules:
+            # Find all atomsets that match this definition in the reference molecule
+            refmol_matches = molecule.chemical_environment_matches(smirks)
+
+            # Loop over matches
+            for reference_atom_indices in refmol_matches:
+                # Unroll corresponding atom indices over all instances of this molecule
+                for reference_to_topology_atom_mapping in self._reference_to_topology_atom_mappings[reference_molecule]:
+                    # Create match.
+                    atom_indices = tuple([ reference_to_topology_atom_mapping[atom_index] for atom_index in reference_atom_indices ])
+                    matches.append(atom_indices)
+
+        return matches
 
 class Residue(ChemicalEntity):
     """
@@ -997,11 +1035,16 @@ class Topology(ChemicalEntity):
 
         """
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
+        self._fractional_bondorder_model = DEFAULT_FRACTIONAL_BONDORDER_MODEL
+        self._charge_model = DEFAULT_CHARGE_MODEL
+        self._constrained_atom_pairs = dict()
         pass
 
+    # QUESTION: Should aromaticity model instead be specified only when getting SMARTS matches?
+    # QUESTION: Should we allow representations with mutliple aromaticity models to be cached?
     def set_aromaticity_model(self, aromaticity_model):
         """
-        Set the aromaticity model for all molecules in the topology.
+        Set the aromaticity model applied to all molecules in the topology.
 
         Parameters
         ----------
@@ -1012,6 +1055,72 @@ class Topology(ChemicalEntity):
         self._aromaticity_model = aromaticity_model
         for molecule in self.molecules:
             molecule.set_aromaticity_model(aromaticity_model)
+
+    # QUESTION: Should fractional bond order model instead be specified only when retrieving fractional bond orders?
+    # QUESTION: Should we allow fractional bond orders with multiple bondorder models to be cached?
+    def set_fractional_bondorder_model(self, fractional_bondorder_model):
+        """
+        Set the fractional bond order model applied to all molecules in the topology.
+
+        Parameters
+        ----------
+        fractional_bondorder_model : str
+            Fractional bond order model to use. One of: ['Wiberg']
+
+        """
+        self._fractional_bondorder_model = fractional_bondorder_model
+        for molecule in self.molecules:
+            molecule.set_fractional_bondorder_model(fractional_bondorder_model)
+
+    # QUESTION: Should charge model instead be specified only when retrieving partial charges?
+    # QUESTION: Should we allow partial charge sets with multiple charge models to be cached?
+    def set_charge_model(self, charge_model):
+        """
+        Set the fractional bond order model applied to all molecules in the topology.
+
+        Parameters
+        ----------
+        charge_model : str
+            Charge model to use. One of: ['AM1', 'AM1-BCC', 'Mulliken']
+
+        """
+        self._charge_model = charge_model
+        for molecule in self.molecules:
+            molecule.set_charge_model(charge_model)
+
+    def chemical_environment_matches(self, query):
+        """Retrieve all matches for a given chemical environment query.
+
+        TODO:
+        * Do we want to generalize this to other kinds of queries too, like mdtraj DSL, pymol selections, atom index slices, etc?
+          We could just call it topology.matches(query)
+
+        Parameters
+        ----------
+        query : str or ChemicalEnvironment
+            SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query
+            Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
+
+        Returns
+        -------
+        matches : list of Atom tuples
+            A list of all matching Atom tuples
+        """
+        # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
+        matches = list()
+        for molecule in self.unique_molecules:
+            # Find all atomsets that match this definition in the reference molecule
+            refmol_matches = molecule.chemical_environment_matches(smirks)
+
+            # Loop over matches
+            for reference_match in refmol_matches:
+                # Unroll corresponding atom indices over all instances of this molecule
+                for reference_to_topology_atom_mapping in self._reference_to_topology_atom_mappings[reference_molecule]:
+                    # Create match.
+                    match = tuple([ reference_to_topology_atom_mapping[atom] for atom in reference_match ])
+                    matches.append(match)
+
+        return matches
 
     @staticmethod
     def from_openmm(openmm_topology, molecules):
@@ -1113,9 +1222,11 @@ class Topology(ChemicalEntity):
         molecule.set_aromaticity_model(self._aromaticity_model)
         pass
 
-    def constrain_atom_pair(self, iatom, jatom, distance=True):
+    def add_constraint(self, iatom, jatom, distance=True):
         """
         Mark a pair of atoms as constrained.
+
+        Constraints between atoms that are not bonded (e.g., rigid waters) are permissible.
 
         Parameters
         ----------
@@ -1129,19 +1240,19 @@ class Topology(ChemicalEntity):
 
         """
         # Check that constraint hasn't already been specified.
-        if (iatom,jatom) in self._constrainedAtomPairs:
-            existing_distance = self._constrainedAtomPairs[(iatom,jatom)]
+        if (iatom,jatom) in self._constrained_atom_pairs:
+            existing_distance = self._constrained_atom_pairs[(iatom,jatom)]
             if unit.is_quantity(existing_distance) and (distance is True):
                 raise Exception('Atoms (%d,%d) already constrained with distance %s but attempting to override with unspecified distance' % (iatom, jatom, existing_distance))
             if (existing_distance is True) and (distance is True):
                 raise Exception('Atoms (%d,%d) already constrained with unspecified distance but attempting to override with unspecified distance' % (iatom, jatom))
             if distance is False:
-                del self._constrainedAtomPairs[(iatom,jatom)]
-                del self._constrainedAtomPairs[(jatom,iatom)]
+                del self._constrained_atom_pairs[(iatom,jatom)]
+                del self._constrained_atom_pairs[(jatom,iatom)]
                 return
 
-        self._constrainedAtomPairs[(iatom,jatom)] = distance
-        self._constrainedAtomPairs[(jatom,iatom)] = distance
+        self._constrained_atom_pairs[(iatom,jatom)] = distance
+        self._constrained_atom_pairs[(jatom,iatom)] = distance
 
     def is_constrained(self, iatom, jatom):
         """
@@ -1159,8 +1270,8 @@ class Topology(ChemicalEntity):
             Distance if constraint has already been added to System
 
         """
-        if (iatom,jatom) in self._constrainedAtomPairs:
-            return self._constrainedAtomPairs[(iatom,jatom)]
+        if (iatom,jatom) in self._constrained_atom_pairs:
+            return self._constrained_atom_pairs[(iatom,jatom)]
         else:
             return False
 

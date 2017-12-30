@@ -12,9 +12,11 @@ Parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 .. codeauthor:: Peter K. Eastman <peastman@stanford.edu>
 
 .. todo::
-    * Use xml parser with 'sourceline' node attributes to aid debugging
+    * Use XML parser with 'sourceline' node attributes to aid debugging
     http://stackoverflow.com/questions/6949395/is-there-a-way-to-get-a-line-number-from-an-elementtree-element
-    * Use logger instead of debug printing
+    * How can we enforce ordering in ForceGenerator execution? Can we use dependency resolution?
+    We can add optional ``_EXECUTE_AFTER`` and ``_EXECUTE_BEFORE`` fields to constrain the execution order.
+    see also: https://pypi.python.org/pypi/data-depgraph/0.4.0
 
 """
 
@@ -226,7 +228,7 @@ def _check_for_missing_valence_terms(name, topology, assigned_terms, topological
 
     if set(assigned_set) != set(topology_set):
         msg = '%s: Mismatch between valence terms added and topological terms expected.\n' % name
-        atoms = [ atom for atom in topology.atoms() ]
+        atoms = [ atom for atom in topology.atoms ]
         if len(assigned_set.difference(topology_set)) > 0:
             msg += 'Valence terms created that are not present in Topology:\n'
             msg += render_atoms(assigned_set.difference(topology_set))
@@ -681,7 +683,7 @@ class ForceField(object):
 
         # Create the System and add atoms
         system = openmm.System()
-        for atom in topology.atoms():
+        for atom in topology.atoms:
             # Add the particle to the OpenMM system.
             # QUESTION: Do we need an option to have SMARTS-specified fractional masses for compatibility with other forcefields?
             system.addParticle(atom.element.mass)
@@ -691,7 +693,7 @@ class ForceField(object):
         if hydrogenMass is not None:
             if not unit.is_quantity(hydrogenMass):
                 hydrogenMass *= unit.dalton
-            for atom1, atom2 in topology.bonds():
+            for atom1, atom2 in topology.bonds:
                 if atom1.element == elem.hydrogen:
                     (atom1, atom2) = (atom2, atom1)
                 if atom2.element == elem.hydrogen and atom1.element not in (elem.hydrogen, None):
@@ -950,7 +952,7 @@ class ConstraintGenerator(ForceGenerator):
         constraints = self.getMatches(topology)
         for (atoms, constraint) in constraints.items():
             # Update constrained atom pairs in topology
-            topology.constrain_atom_pair(*atoms, constraint.distance)
+            topology.add_constraint(*atoms, constraint.distance)
             # If a distance is specified (constraint.distance != True), add the constraint here.
             # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondGenerator
             if constraint.distance is not True:
@@ -1036,7 +1038,7 @@ class BondGenerator(ForceGenerator):
                 # Check if we need to add the constraint here to the equilibrium bond length.
                 if topology.atom_pair_is_constrained(*atoms) is True:
                     # Mark that we have now assigned a specific constraint distance to this constraint.
-                    topology.constrain_atom_pair(*atoms, length)
+                    topology.add_constraint(*atoms, length)
                     # Add the constraint to the System.
                     system.addConstraint(*particle_indices, length)
                 continue
@@ -1047,7 +1049,7 @@ class BondGenerator(ForceGenerator):
         logger.info('{} bonds added ({} skipped due to constraints)'.format(len(bonds) - skipped_constrained_bonds, skipped_constrained_bonds))
 
         # Check that no topological bonds are missing force parameters
-        _check_for_missing_valence_terms('BondForce', topology, bonds.keys(), topology.bonds())
+        _check_for_missing_valence_terms('BondForce', topology, bonds.keys(), topology.bonds)
 
 parsers[BondGenerator._TAGNAME] = BondGenerator.parseElement
 
@@ -1334,29 +1336,15 @@ class NonbondedGenerator(ForceGenerator):
 
         # Check that no atoms are missing force parameters
         # QUESTION: Don't we want to allow atoms without force parameters? Or perhaps just *particles* without force parameters, but not atoms?
-        _check_for_missing_valence_terms('NonbondedForce Lennard-Jones parameters', topology, atoms.keys(), topology.atoms())
+        _check_for_missing_valence_terms('NonbondedForce Lennard-Jones parameters', topology, atoms.keys(), topology.atoms)
 
-        # Set the partial charges based on reference molecules.
-        for reference_molecule in topology._reference_molecules:
-            atom_mappings = topology._reference_to_topology_atom_mappings[reference_molecule]
-            # Retrieve charges from reference molecule, stored by atom index
-            charge_by_atom = {}
-            for atom in reference_molecule.GetAtoms():
-                charge_by_atom[atom.GetIdx()] = atom.GetPartialCharge()
-
-            # Loop over mappings and copy NB parameters from reference molecule
-            # to other instances of the molecule
-            for atom_mapping in atom_mappings:
-                for (atom_index, map_atom_index) in atom_mapping.items():
-                    # Retrieve NB params for reference atom (charge not set yet)
-                    charge, sigma, epsilon = force.getParticleParameters(map_atom_index)
-                    # Look up the charge on the atom in the reference molecule
-                    charge = charge_by_atom[atom_index]*unit.elementary_charge
-
-                    # Set parameters for equivalent atom in other instance of
-                    # this molecule
-                    force.setParticleParameters(map_atom_index, charge, sigma, epsilon)
-        # TODO: Should we check that there are no missing charges?
+        # Set the partial charges
+        # TODO: We need to make sure we have already assigned partial charges to the Topology reference molecules
+        for atom in topology.atoms:
+            # Retrieve nonbonded parameters for reference atom (charge not set yet)
+            _, sigma, epsilon = force.getParticleParameters(atom.particle_index)
+            # Set the nonbonded force with the partial charge
+            force.setParticleParameters(atom.particle_index, atom.charge, sigma, epsilon)
 
     def postprocessSystem(self, system, topology, **args):
         # Create exceptions based on bonds.
@@ -1389,7 +1377,7 @@ class BondChargeCorrectionGenerator(ForceGenerator):
     _OPENMMTYPE = openmm.NonbondedForce # OpenMM force class to create or utilize
 
     def __init__(self, forcefield):
-        super(NonbondedForceGenerator, self).__init__(forcefield)
+        super(BondChargeCorrectionGenerator, self).__init__(forcefield)
 
     #if element.attrib['method'] != existing[0]._initialChargeMethod:
     #raise Exception("Existing BondChargeCorrectionGenerator uses initial charging method '%s' while new BondChargeCorrectionGenerator requests '%s'" % (existing[0]._initialChargeMethod, element.attrib['method']))
@@ -1399,17 +1387,13 @@ class BondChargeCorrectionGenerator(ForceGenerator):
         pass
 
     # TODO: Move chargeMethod to SMIRNOFF spec
-    def postprocessSystem(self, system, topology, chargeMethod=None, **args):
-        if chargeMethod != 'BCC':
-            # Only apply charge corrections if chargeMethod is 'BCC'
-            return
-
-        # Iterate over all defined bond charge corrections, allowing later matches to override earlier ones
+    def postprocessSystem(self, system, topology **kwargs):
         bonds = self.getMatches(topology)
 
-        # Apply bond charge increments
+        # Apply bond charge increments to all appropriate force groups
+        # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?
         for force in system.getForces():
-            if force.__class__.__name__ in ['NonbondedForce']:
+            if force.__class__.__name__ in ['NonbondedForce']: # TODO: We need to apply this to all Force types that involve charges
                 for (atoms, bond) in bonds.items():
                     # Get corresponding particle indices in Topology
                     particle_indices = tuple([ atom.particle_index for atom in atoms ])
