@@ -7,10 +7,10 @@ While designed for [`OpenMM`](http://openmm.org), parameters encoded in this for
 
 The SMIRNOFF format provides XML `ffxml` files that are parseable by the `ForceField` class of the `openforcefield.typing.smirnoff` module.
 These encode parameters for a force field based on a SMIRKS-based specification of the chemical environment the parameters are to be applied to.
-The file has tags corresponding to OpenMM force terms (`HarmonicBondForce`, `HarmonicAngleForce`, `PeriodicTorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example ffxml](https://github.com/open-forcefield-group/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.ffxml)):
+The file has tags corresponding to OpenMM force terms (`HarmonicBondForce`, `HarmonicAngleForce`, `PeriodicTorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example ffxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.ffxml)):
 ```XML
    <HarmonicAngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
-```       
+```
 which introduces following `Angle` terms which will use units of degrees for the angle and kilocalories per mole per square radian for the force constant.
 
 Under each of these force terms, there are tags for individual parameter lines such as these:
@@ -38,7 +38,7 @@ This means that specific forces are generally implemented as discussed in the [O
 
 ## Parameter sections
 
-For this section it will help to have on hand an example SMIRNOFF file, such as that the [AlkEthOH example ffxml](https://github.com/open-forcefield-group/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.ffxml) or the larger prototype [SMIRNOFF99Frosst ffxml](https://github.com/open-forcefield-group/SMIRNOFF99Frosst/blob/master/SMIRNOFF99Frosst.ffxml).
+For this section it will help to have on hand an example SMIRNOFF file, such as that the [AlkEthOH example ffxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.ffxml) or the larger prototype [SMIRNOFF99Frosst ffxml](https://github.com/openforcefield/SMIRNOFF99Frosst/blob/master/SMIRNOFF99Frosst.ffxml).
 
 Before getting in to individual sections, it's worth noting that the XML parser ignores attributes in the XML that it does not understand, so providing a parameter line for an angle that specifies (for example) a second force constant `k2` will lead to no effect.
 
@@ -102,7 +102,7 @@ However, additional values are allowed in the form kN, phaseN, and periodicityN,
 Optionally, an `idivfN` attribute may be specified for each torsional term (for easier compatibility with AMBER files); this specifies a numerical value (in AMBER, always an integer) which is used as a divisor for the barrier height when assigning the torsion; i.e., a torsion with `idivf1="9"` is assigned a barrier height `k1` that is 1/9th the specified value.
 If `idivfN` is not specified, the barrier height is applied as stated.
 
-In the future, we may switch to a model where torsional barriers are [automatically divided by the number of torsions along a bond](https://github.com/open-forcefield-group/smarty/issues/131), effectively resulting in the torsional barrier being the average of all barriers applied to that bond, rather than the current model where barriers are summed.
+In the future, we may switch to a model where torsional barriers are [automatically divided by the number of torsions along a bond](https://github.com/openforcefield/smarty/issues/131), effectively resulting in the torsional barrier being the average of all barriers applied to that bond, rather than the current model where barriers are summed.
 (Barrier heights would need to be increased accordingly.)
 This would result in better handling of some cases where a small change in a molecule (such as a change in tautomer) could currently (as in AMBER) result in a dramatically different applied barrier height because of a change in the number of torsions passing through that bond.
 The averaging approach would make it easier to avoid this problem without requiring as many different torsional terms.
@@ -256,16 +256,16 @@ Any of the names of the [aromaticity models available in the OpenEye toolkit](ht
 
 At present, the SMIRNOFF format basically defaults to AMBER- or OpenMM-style decisions on many issues.
 For example, AMBER-style (Lorentz-Berthelot) combining rules are used, and the AMBER force field functional form.
-Angles potentials are assumed to be harmonic.  
+Angles potentials are assumed to be harmonic.
 However, we have plans to support other combination rules, functional forms, and angle potentials.
 In keeping with the above, whole-force field decisions will be handled as attributes of the SMIRNOFF tag.
 For example, alternate combination rules or functional forms might be handled as follows:
 * Geometric mean combining rule: `<SMIRNOFF combining_rule="geometric_mean">`
 * A Halgren buffered 14-7 potential for vdW could be handled as `<SMIRNOFF NonbondedForm="buffered_14_7">`
-* Selection of the type of angle force applied would be handled in a similar manner, via an `AngleForce="harmonic"` tag or similar. [This feature is being planned.](https://github.com/open-forcefield-group/smarty/issues/179)
+* Selection of the type of angle force applied would be handled in a similar manner, via an `AngleForce="harmonic"` tag or similar. [This feature is being planned.](https://github.com/openforcefield/smarty/issues/179)
 
 
-[Generalized Born parameters and models will also be supported](https://github.com/open-forcefield-group/smarty/issues/165) and implementation is being planned.
+[Generalized Born parameters and models will also be supported](https://github.com/openforcefield/smarty/issues/165) and implementation is being planned.
 
 
 ### Additional plans for future development
@@ -275,12 +275,12 @@ See the Issue tracker for a more thorough list, though some major areas are high
 * Implementing partial bond order use for other parameter types
 * Modifications discussed above to handling of torsions
 * Possible modifications to make it easier to support other force field families
-* [Off-atom charges](https://github.com/open-forcefield-group/smarty/issues/132)
+* [Off-atom charges](https://github.com/openforcefield/smarty/issues/132)
 * Additional functional forms for vdW interactions
 
 ## Use for parameterization of systems
 
-A relatively extensive set of examples is available under [`examples/`](https://github.com/open-forcefield-group/openforcefield/tree/master/examples). Basic usage works as follows in python, however:
+A relatively extensive set of examples is available under [`examples/`](https://github.com/openforcefield/openforcefield/tree/master/examples). Basic usage works as follows in python, however:
 
 ```python
 from simtk import openmm, unit

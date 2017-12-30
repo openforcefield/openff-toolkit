@@ -27,5 +27,5 @@ requirements:
     - pandas
 
 about:
-  home: https://github.com/open-forcefield-group/openforcefield
+  home: https://github.com/openforcefield/openforcefield
   license: MIT
