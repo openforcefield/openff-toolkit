@@ -5,460 +5,53 @@
 #=============================================================================================
 
 """
-forcefield.py
+Parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 
-OpenMM ForceField replacement using SMIRKS-based matching.
+.. codeauthor:: John D. Chodera <john.chodera@choderalab.org>
+.. codeauthor:: David L. Mobley <dmobley@mobleylab.org>
+.. codeauthor:: Peter K. Eastman <peastman@stanford.edu>
 
-AUTHORS
+.. todo::
+    * Use xml parser with 'sourceline' node attributes to aid debugging
+    http://stackoverflow.com/questions/6949395/is-there-a-way-to-get-a-line-number-from-an-elementtree-element
+    * Use logger instead of debug printing
 
-John D. Chodera <john.chodera@choderalab.org>
-David L. Mobley <dmobley@mobleylab.org>
-
-Baseed on simtk.openmm.app.forcefield written by Peter Eastman.
-
-TODO:
-* Constraint handling
-* Move utility functions like 'generateTopologyFromOEMol()' elsewhere?
-* Use xml parser with 'sourceline' node attributes to aid debugging
-http://stackoverflow.com/questions/6949395/is-there-a-way-to-get-a-line-number-from-an-elementtree-element
 """
+
 #=============================================================================================
 # GLOBAL IMPORTS
 #=============================================================================================
 
+import os
+import re
 import sys
+import math
+import copy
+import time
 import string
+import random
+import logger
+import itertools
+
+import numpy
 
 import lxml.etree as etree
 
-from simtk.openmm.app import element as elem
-from simtk.openmm.app import Topology
-from openforcefield.utils import generateTopologyFromOEMol, get_data_filename
-
-import os
-import math
-import copy
-import re
-import numpy
-import random
-
-from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
-
 from simtk import openmm, unit
+from simtk.openmm.app import element as elem
 
-import time
-
-import networkx
-
-import itertools
-
-#=============================================================================================
-# PRIVATE SUBROUTINES
-#=============================================================================================
-
-def getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model = None):
-    """Find all sets of atoms in the provided oemol that match the provided SMIRKS strings.
-
-    Parameters
-    ----------
-    oemol : OpenEye oemol
-        oemol to process with the SMIRKS in order to find matches
-    smirks : str
-        SMIRKS string with tagged atoms.
-        If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
-    aromaticity_model : str (optional)
-        OpenEye aromaticity model designation as a string, such as "OEAroModel_MDL". Default: None. If none is provided, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
-
-    Returns
-    -------
-    matches : list of tuples of atoms numbers
-        matches[index] is an N-tuple of atom numbers from the oemol
-        Matches are returned in no guaranteed order.
-    """
-    from openeye import oechem
-
-    # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
-    mol = oechem.OEMol(oemol)
-
-    # Set up query.
-    qmol = oechem.OEQMol()
-    if not oechem.OEParseSmarts(qmol, smirks):
-        raise Exception("Error parsing SMIRKS '%s'" % smirks)
-
-    # Determine aromaticity model
-    if aromaticity_model:
-        if type(aromaticity_model) == str:
-            # Check if the user has provided a manually-specified aromaticity_model
-            if hasattr(oechem, aromaticity_model):
-                oearomodel = getattr(oechem, aromaticity_model)
-            else:
-                raise ValueError("Error: provided aromaticity model not recognized by oechem.")
-        else:
-            raise ValueError("Error: provided aromaticity model must be a string.")
-
-        # If aromaticity model was provided, prepare molecule
-        oechem.OEClearAromaticFlags( mol)
-        oechem.OEAssignAromaticFlags( mol, oearomodel)
-        # avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
-        oechem.OEAssignHybridization( mol)
-
-    # Perform matching on each mol
-    matches = list()
-
-    # We require non-unique matches, i.e. all matches
-    unique = False
-    ss = oechem.OESubSearch(qmol)
-    matches = []
-    for match in ss.Match( mol, unique):
-        # Compile list of atom indices that match the pattern tags
-        atom_indices = dict()
-        for ma in match.GetAtoms():
-            if ma.pattern.GetMapIdx() != 0:
-                atom_indices[ma.pattern.GetMapIdx()-1] = ma.target.GetIdx()
-        # Compress into list
-        atom_indices = [ atom_indices[index] for index in range(len(atom_indices)) ]
-        # Store
-        matches.append( tuple(atom_indices) )
-
-    return matches
+from openforcefield.utils import get_data_filename
+from openforcefield.topology import Topology
+from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError # TODO: Get rid of this?
 
 #=============================================================================================
-# Augmented Topology
+# CONFIGURE LOGGER
 #=============================================================================================
 
-def generateGraphFromTopology(topology):
-    """Geneate a NetworkX graph from a Topology object.
-
-    Parameters
-    ----------
-    topology : simtk.openmm.app.Topology
-        The source topology.
-
-    Returns
-    -------
-    graph : networkx.Graph
-        The resulting graph, with nodes labeled with atom indices and elements
-
-    """
-    import networkx as nx
-    # Create graph of atoms connected by bonds.
-    G = nx.Graph()
-    for atom in topology.atoms():
-        G.add_node(atom.index, element=atom.element)
-    for (atom1, atom2) in topology.bonds():
-        G.add_edge(atom1.index, atom2.index)
-
-    return G
-
-class _Topology(Topology):
-    """Augmented Topology object which adds:
-
-    self._reference_molecules is a list of OEMol for the reference molecules
-    self._reference_to_topology_atom_mappings[reference_molecule] is a list of dicts, where each dict maps the atom indices of atoms in the reference molecule onto an equivalent atom index for a topology atom.
-    self._bondorders is a list of floating point bond orders for the bonds in the Topology.
-    self._bondorders_by_atomindices is a dict of floating point bond orders for the bonds in the Topology, keyed by indices of the atoms involved.
-
-    Assumes class is immutable.
-
-    """
-    def __init__(self, topology, reference_molecules):
-        """
-        Parameters
-        ----------
-        topology : simtk.openmm.app.Topology
-            The Topology object to initialize this one from.
-        reference_molecules : list of openeye.oechem.OEMol
-            The list of reference molecules in the Topology.
-
-        """
-        # Initialize.
-        super(_Topology, self).__init__()
-
-        # TODO: Find a way to avoid having this be fragile based on internal representation of Topology.
-        # TODO: Should this also use a deepcopy of 'topology' first?
-        self._chains = topology._chains
-        self._numResidues = topology._numResidues
-        self._numAtoms = topology._numAtoms
-        self._bonds = topology._bonds
-        self._periodicBoxVectors = topology._periodicBoxVectors
-
-        # Store reference molecules.
-        # TODO: Deep copy?
-        self._reference_molecules = reference_molecules
-
-        # Identify all molecules and atom mappings.
-        self._identifyMolecules()
-
-        # Get/initialize bond orders
-        self._updateBondOrders()
-
-        # Track constraints
-        self._constrainedAtomPairs = dict()
-
-    def constrainAtomPair(self, iatom, jatom, distance=True):
-        """
-        Mark a pair of atoms as constrained.
-
-        Parameters
-        ----------
-        iatom, jatom : int
-            Indices of atoms to mark as constrained.
-        distance : simtk.unit.Quantity, optional, default=True
-            Constraint distance if constraint has been applied,
-            or True if no constraint has yet been applied
-        """
-        # Check that constraint hasn't already been specified.
-        if (iatom,jatom) in self._constrainedAtomPairs:
-            existing_distance = self._constrainedAtomPairs[(iatom,jatom)]
-            if unit.is_quantity(existing_distance) and (distance is True):
-                raise Exception('Atoms (%d,%d) already constrained with distance %s but attempting to override with unspecified distance' % (iatom, jatom, existing_distance))
-            if (existing_distance is True) and (distance is True):
-                raise Exception('Atoms (%d,%d) already constrained with unspecified distance but attempting to override with unspecified distance' % (iatom, jatom))
-
-        self._constrainedAtomPairs[(iatom,jatom)] = distance
-        self._constrainedAtomPairs[(jatom,iatom)] = distance
-
-    def atomPairIsConstrained(self, iatom, jatom):
-        """
-        Check if a pair of atoms are marked as constrained.
-
-        Parameters
-        ----------
-        iatom, jatom : int
-            Indices of atoms to mark as constrained.
-
-        Returns
-        -------
-        distance : simtk.unit.Quantity or bool
-            True if constrained but constraints have not yet been applied
-            Distance if constraint has already been added to System
-
-        """
-        if (iatom,jatom) in self._constrainedAtomPairs:
-            return self._constrainedAtomPairs[(iatom,jatom)]
-        else:
-            return False
-
-    def angles(self):
-        """
-        Get an iterator over all i-j-k angles.
-        """
-        if not hasattr(self, '_angles'):
-            self._construct_bonded_atoms_list()
-            self._angles = set()
-            for atom1 in self._atoms:
-                for atom2 in self._bondedAtoms[atom1]:
-                    for atom3 in self._bondedAtoms[atom2]:
-                        if atom1 == atom3:
-                            continue
-                        if atom1.index < atom3.index:
-                            self._angles.add( (atom1, atom2, atom3) )
-                        else:
-                            self._angles.add( (atom3, atom2, atom1) )
-
-        return iter(self._angles)
-
-    def torsions(self):
-        """
-        Get an iterator over all i-j-k-l torsions.
-        Note that i-j-k-i torsions are excluded.
-        """
-        if not hasattr(self, '_torsions'):
-            self._construct_bonded_atoms_list()
-
-            self._torsions = set()
-            for atom1 in self._atoms:
-                for atom2 in self._bondedAtoms[atom1]:
-                    for atom3 in self._bondedAtoms[atom2]:
-                        if atom1 == atom3:
-                            continue
-                        for atom4 in self._bondedAtoms[atom3]:
-                            if atom4 == atom2:
-                                continue
-                            # Exclude i-j-k-i
-                            if atom1 == atom4:
-                                continue
-                            if atom1.index < atom4.index:
-                                self._torsions.add( (atom1, atom2, atom3, atom4) )
-                            else:
-                                self._torsions.add( (atom4, atom3, atom2, atom1) )
-
-        return iter(self._torsions)
-
-    def _construct_bonded_atoms_list(self):
-        """
-        Construct list of all atoms each atom is bonded to.
-        """
-        if not hasattr(self, '_bondedAtoms'):
-            self._atoms = [ atom for atom in self.atoms() ]
-            self._bondedAtoms = dict()
-            for atom in self._atoms:
-                self._bondedAtoms[atom] = set()
-            for bond in self._bonds:
-                self._bondedAtoms[bond[0]].add(bond[1])
-                self._bondedAtoms[bond[1]].add(bond[0])
-
-    def _isBonded(self, atom_index_1, atom_index_2):
-        """Return True if atoms are bonded, False if not.
-
-        Parameters
-        ----------
-        atom_index_1 : int
-        atom_index_2 : int
-            Atom indices
-
-        Returns
-        -------
-        is_bonded : bool
-            True if atoms are bonded, False otherwise
-
-        TODO
-        ----
-        This assumes _Topology is immutable.
-        """
-        self._construct_bonded_atoms_list()
-        atom1 = self._atoms[atom_index_1]
-        atom2 = self._atoms[atom_index_2]
-        return atom2 in self._bondedAtoms[atom1]
-
-    def _identifyMolecules(self):
-        """Identify all unique reference molecules and atom mappings to all instances in the Topology.
-        """
-        import networkx as nx
-        from networkx.algorithms import isomorphism
-
-        # Generate list of topology atoms.
-        atoms = [ atom for atom in self.atoms() ]
-
-        # Generate graphs for reference molecules.
-        self._reference_molecule_graphs = list()
-        for reference_molecule in self._reference_molecules:
-            # Generate Topology
-            reference_molecule_topology = generateTopologyFromOEMol(reference_molecule)
-            # Generate Graph
-            reference_molecule_graph = generateGraphFromTopology(reference_molecule_topology)
-            self._reference_molecule_graphs.append(reference_molecule_graph)
-
-        # Generate a graph for the current topology.
-        G = generateGraphFromTopology(self)
-
-        # Extract molecules (as connected component subgraphs).
-        self._reference_to_topology_atom_mappings = { reference_molecule : list() for reference_molecule in self._reference_molecules }
-        for molecule_graph in nx.connected_component_subgraphs(G):
-            # Check if we have already stored a reference molecule for this molecule.
-            reference_molecule_exists = False
-            for (reference_molecule_graph, reference_molecule) in zip(self._reference_molecule_graphs, self._reference_molecules):
-                GM = isomorphism.GraphMatcher(molecule_graph, reference_molecule_graph)
-                if GM.is_isomorphic():
-                    # This molecule is present in the list of unique reference molecules.
-                    reference_molecule_exists = True
-                    # Add the reference atom mappings.
-                    reference_to_topology_atom_mapping = dict()
-                    for (topology_atom, reference_atom) in GM.mapping.items():
-                        reference_to_topology_atom_mapping[reference_atom] = topology_atom
-                    self._reference_to_topology_atom_mappings[reference_molecule].append(reference_to_topology_atom_mapping)
-                    # Break out of the search loop.
-                    break
-
-            # If the reference molecule could not be found, throw an exception.
-            if not reference_molecule_exists:
-                msg = 'No provided molecule matches topology molecule:\n'
-                for index in sorted(list(molecule_graph)):
-                    msg += 'Atom %8d %5s %5d %3s\n' % (atoms[index].index, atoms[index].name, atoms[index].residue.index, atoms[index].residue.name)
-                raise Exception(msg)
-
-    def _updateBondOrders(self, Wiberg = False):
-        """Update and store list of bond orders for the molecules in this Topology. Can be used for initialization of bondorders list, or for updating bond orders in the list.
-
-        Parameters:
-        ----------
-        Wiberg : bool (optional)
-            Default False. If False, uses bond orders OEChem assigns to bonds on the molecule. If True, instead uses Wiberg bond orders stored on bonds in the molecule. These must already be present, i.e. from assignPartialCharges with an AM1 method.
-
-        """
-        # Initialize
-        self._bondorders=list()
-        self._bondorders_by_atomindices = {}
-        # Loop over reference molecules and pull bond orders
-
-        for mol in self._reference_molecules:
-            # Pull mappings for this molecule
-            mappings = self._reference_to_topology_atom_mappings[mol]
-            # Loop over bonds
-            for idx,bond in enumerate(mol.GetBonds()):
-                # Get atom indices involved in bond
-                at1 = bond.GetBgn().GetIdx()
-                at2 = bond.GetEnd().GetIdx()
-                # Get bond order
-                if not Wiberg:
-                    order = bond.GetOrder()
-                else:
-                    order = bond.GetData('WibergBondOrder')
-                # Convert atom numbers to topology atom numbers; there may be multiple matches
-                for mapping in mappings:
-                    topat1 = None
-                    topat2 = None
-                    for mapatom in mapping:
-                        if mapatom==at1:
-                            topat1 = mapping[mapatom]
-                        elif mapatom==at2:
-                            topat2 = mapping[mapatom]
-                    if topat1==None or topat2==None:
-                        raise ValueError("No mapping found for these topology atoms (indices %s-%s)." % (at1, at2))
-                    # Store bond order to re-use below and elsewhere; store in both directions
-                    if not topat1 in self._bondorders_by_atomindices:
-                        self._bondorders_by_atomindices[topat1] = {}
-                    if not topat2 in self._bondorders_by_atomindices:
-                        self._bondorders_by_atomindices[topat2] = {}
-                    self._bondorders_by_atomindices[topat2][topat1] = order
-                    self._bondorders_by_atomindices[topat1][topat2] = order
-
-        # Loop over bonds in topology and store orders in the same order
-        for bond in self._bonds:
-            # See if we have in the 0-1 order and store
-            topat1 = bond[0].index
-            topat2 = bond[1].index
-            order = self._bondorders_by_atomindices[topat1][topat2]
-            self._bondorders.append(order)
-
-    def unrollSMIRKSMatches(self, smirks, aromaticity_model = None):
-        """Find all sets of atoms in the topology that match the provided SMIRKS strings.
-
-        Parameters
-        ----------
-        smirks : str
-            SMIRKS string with tagged atoms.
-            If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
-        aromaticity_model : str (optional)
-            Default None. Aromaticity model used in SMIRKS matching, as per getSMIRKSMatches_OEMol docs. If provided, pre-processes molecule with this model prior to matching. Otherwise, uses provided oemol.
-
-        Returns
-        -------
-        matches : list of tuples of Atom
-            matches[index] is an N-tuple of Atom entries from the topology
-            Matches are returned in no guaranteed order.
-
-        """
-
-        # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
-        matches = list()
-        for reference_molecule in self._reference_molecules:
-            # Find all atomsets that match this definition in the reference molecule
-            refmol_matches = getSMIRKSMatches_OEMol( reference_molecule, smirks, aromaticity_model = aromaticity_model)
-
-            # Loop over matches
-            for reference_atom_indices in refmol_matches:
-                # Unroll corresponding atom indices over all instances of this molecule
-                for reference_to_topology_atom_mapping in self._reference_to_topology_atom_mappings[reference_molecule]:
-                    # Create match.
-                    atom_indices = tuple([ reference_to_topology_atom_mapping[atom_index] for atom_index in reference_atom_indices ])
-                    matches.append(atom_indices)
-
-        return matches
-
+logger = logging.getLogger(__name__)
 
 #=============================================================================================
-# FORCEFIELD
+# ENUMERATED TYPES
 #=============================================================================================
 
 # Enumerated values for nonbonded method
@@ -505,8 +98,165 @@ class HAngles(object):
         return 'HAngles'
 HAngles = HAngles()
 
-# A map of functions to parse elements of the XML file.
+#=============================================================================================
+# PRIVATE METHODS
+#=============================================================================================
 
+def _validateSMIRKS(smirks, node=None):
+    """Validate the specified SMIRKS string.
+
+    Parameters
+    ----------
+    smirks : str
+       The SMIRKS string to be validated
+    node : xml.etree.ElementTree.Element
+       Node of etree with 'sourceline' attribute.
+
+    .. todo::
+
+        * Can we make this not dependent on OEChem?
+        * Should we move this into ``openforcefield.topology.Topology`` or ``openforcefield.chemistry``?
+
+    """
+    from openeye import oechem
+
+    qmol = oechem.OEQMol()
+    if not oechem.OEParseSmarts(qmol, smirks):
+        if (node is not None) and ('sourceline' in node.attrib):
+            raise Exception("Line %s: Error parsing SMIRKS '%s'" % (node.attrib['sourceline'], node.attrib['smirks']))
+        else:
+            raise Exception("Error parsing SMIRKS '%s'" % (node.attrib['smirks']))
+
+    return smirks
+
+def _extractQuantity(node, parent, name, unit_name=None, default=None):
+    """
+    Form a (potentially unit-bearing) quantity from the specified attribute name.
+
+    node : xml.etree.ElementTree.Element
+       Node of etree corresponding to force type entry.
+    parent : xml.etree.ElementTree.Element
+       Node of etree corresponding to parent Force.
+    name : str
+       Name of parameter to extract from attributes.
+    unit_name : str, optional, default=None
+       If specified, use this attribute name of 'parent' to look up units
+    default : optional, default=None
+       If not None, the value in ``default`` will be returned if ``name`` is not found
+       instead of raising an exception.
+
+    """
+    # Check for expected attributes
+    if (name not in node.attrib):
+        if default is not None:
+            if 'sourceline' in node.attrib:
+                raise Exception("Line %d : Expected XML attribute '%s' not found" % (node.attrib['sourceline'], name))
+            else:
+                raise Exception("Expected XML attribute '%s' not found" % (name))
+        else:
+            return default
+
+    # Most attributes will be converted to floats, but some are strings
+    string_names = ['parent_id', 'id']
+    # Handle case where this is a normal quantity
+    if name not in string_names:
+        quantity = float(node.attrib[name])
+    # Handle label or string
+    else:
+        quantity = node.attrib[name]
+        return quantity
+
+    if unit_name is None:
+        unit_name = name + '_unit'
+
+    if unit_name in parent.attrib:
+        # TODO: This is very dangerous.
+        string = '(%s * %s).value_in_unit_system(md_unit_system)' % (node.attrib[name], parent.attrib[unit_name])
+        quantity = eval(string, unit.__dict__)
+
+    return quantity
+
+def _check_for_missing_valence_terms(name, topology, assigned_terms, topological_terms):
+    """
+    Check to ensure there are no missing valence terms.
+
+    Parameters
+    ----------
+    name : str
+        Name of the calling force generator
+    topology : openforcefield.topology.Topology
+        The Topology object
+    assigned_terms : iterable of ints or int tuples
+        Atom index tuples defining added valence terms
+    topological_terms : iterable of atoms or atom tuples
+        Atom tuples defining topological valence atomsets to which forces should be assigned
+
+    """
+    # Convert to lists
+    assigned_terms = [ item for item in assigned_terms ]
+    topological_terms = [ item for item in topological_terms ]
+
+    def ordered_tuple(atoms):
+        atoms = list(atoms)
+        if atoms[0] < atoms[-1]:
+            return tuple(atoms)
+        else:
+            return tuple(reversed(atoms))
+    try:
+        topology_set = set([ ordered_tuple( atom.index for atom in atomset ) for atomset in topological_terms ])
+        assigned_set = set([ ordered_tuple( index for index in atomset ) for atomset in assigned_terms ])
+    except TypeError as te:
+        topology_set = set([ atom.index for atom in topological_terms ])
+        assigned_set = set([ atomset[0] for atomset in assigned_terms ])
+
+    def render_atoms(atomsets):
+        msg = ""
+        for atomset in atomsets:
+            msg += '%30s :' % str(atomset)
+            try:
+                for atom_index in atomset:
+                    atom = atoms[atom_index]
+                    msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
+            except TypeError as te:
+                atom = atoms[atomset]
+                msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
+
+            msg += '\n'
+        return msg
+
+    if set(assigned_set) != set(topology_set):
+        msg = '%s: Mismatch between valence terms added and topological terms expected.\n' % name
+        atoms = [ atom for atom in topology.atoms() ]
+        if len(assigned_set.difference(topology_set)) > 0:
+            msg += 'Valence terms created that are not present in Topology:\n'
+            msg += render_atoms(assigned_set.difference(topology_set))
+        if len(topology_set.difference(assigned_set)) > 0:
+            msg += 'Topological atom sets not assigned parameters:\n'
+            msg += render_atoms(topology_set.difference(assigned_set))
+        msg += 'topology_set:\n'
+        msg += str(topology_set) + '\n'
+        msg += 'assigned_set:\n'
+        msg += str(assigned_set) + '\n'
+        raise Exception(msg)
+
+def assert_bonded(topology, atom1, atom2):
+    """
+    Raise an exception if the specified atoms are not bonded in the topology.
+
+    Parameters
+    ----------
+    topology : openforcefield.topology.Topology
+        The Topology object to check for bonded atoms
+    atom1, atom2 : openforcefield.topology.Atom
+        The atoms to check to ensure they are bonded
+    """
+    assert topology.is_bonded(atom1, atom2), 'Atoms {} and {} are not bonded in topology'.format(atom1, atom2)
+
+#=============================================================================================
+# FORCEFIELD
+#=============================================================================================
+
+# A map of functions to parse elements of the XML file.
 parsers = {}
 
 class ForceField(object):
@@ -566,9 +316,6 @@ class ForceField(object):
 
         # Retain XML trees internally
         self._XMLTrees = trees
-        # Store whether this has been modified or not; if modified, it will
-        # trigger re-parsing/loading of XML on system creation
-        self._XMLModified = False
 
         # Parse XML, get force definitions
         self.parseXMLTrees()
@@ -594,6 +341,9 @@ class ForceField(object):
                 self._aromaticity_model = root.attrib['aromaticity_model']
             else:
                 self._aromaticity_model = None
+
+            # QUESTION: Do we really want to specify whether or not to use fractional bond order at the root level when we can easily
+            # determine whether individual Force components use it? Perhaps just specify a ``fractional_bondorder_method`` or ``model`` at root level?
             if 'use_fractional_bondorder' in root.attrib:
                 self._use_fractional_bondorder = root.attrib['use_fractional_bondorder'] == 'True'
             else:
@@ -618,8 +368,19 @@ class ForceField(object):
             # Now actually load
             for child in root:
                 if child.tag in parsers:
-                    parsers[child.tag](child, self)
+                    parsers[child.tag](child.tag, child, self)
 
+        # Reset flag tracking whether stored XML has been modified since the last parse
+        self._XMLModified = False
+
+    def _reparse_xml_if_needed(self):
+        """
+        Ensure the XML trees have been parsed if they have been changed.
+
+        """
+        if self._XMLModified:
+            if verbose: print("Re-parsing XML because it was modified.")
+            self.parseXMLTrees()
 
     def getGenerators(self):
         """Get the list of all registered generators."""
@@ -634,39 +395,39 @@ class ForceField(object):
         else:
             self._forces.append(generator)
 
+    # TODO: Rework the API
     def getParameter(self, smirks = None, paramID=None, force_type='Implied'):
         """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
 
-    Parameters
-    ----------
-    smirks (optional) : str
-        Default None. If specified, will pull parameters on line containing this `smirks`.
-    paramID : str
-        Default None. If specified, will pull parameters on line with this `id`
-    force_type : str
-        Default "Implied". Optionally, specify a particular force type such as
-        "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a
-        matching ID or SMIRKS.
+        Parameters
+        ----------
+        smirks (optional) : str
+            Default None. If specified, will pull parameters on line containing this `smirks`.
+        paramID : str
+            Default None. If specified, will pull parameters on line with this `id`
+        force_type : str
+            Default "Implied". Optionally, specify a particular force type such as
+            "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a
+            matching ID or SMIRKS.
 
+        Returns
+        -------
+        params : dict
+            Dictionary of attributes (parameters and their descriptions) from XML
 
-    Returns
-    -------
-    params : dict
-        Dictionary of attributes (parameters and their descriptions) from XML
+        Usage notes: SMIRKS or parameter ID must be specified.
 
+        .. todo::
+           *  Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
 
-Usage notes: SMIRKS or parameter ID must be specified.
-
-To do: Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
-"""
+        """
         # Check for valid input
         if smirks and paramID:
             raise ValueError("Error: Specify SMIRKS OR parameter ID but not both.")
-        if smirks==None and paramID==None:
+        if (smirks is None) and (paramID is None):
             raise ValueError("Error: Must specify SMIRKS or parameter ID.")
 
-
-        trees=self._XMLTrees
+        trees = self._XMLTrees
         # Loop over XML files we read
         for tree in trees:
             # Loop over tree
@@ -675,7 +436,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
                 checksection = True
                 if force_type is not 'Implied':
                     # See whether this has the tag we want to check
-                    checksection= (child.tag==force_type)
+                    checksection = (child.tag==force_type)
 
                 if checksection:
                     #Loop over descendants
@@ -683,38 +444,40 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
                         if (smirks and elem.attrib['smirks']==smirks) or (paramID and elem.attrib['id']==paramID):
                             return copy.deepcopy(elem.attrib)
 
-
+    # TODO: Rework the API
     def setParameter(self, params, smirks=None, paramID=None, force_type="Implied"):
         """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
 
-    Parameters
-    ----------
-    params : dict
-        Dictionary of attributes (parameters and their descriptions) for XML,
-        i.e. as output by getParameter.
-    smirks (optional) : str
-        Default None. If specified, will set parameters on line containing this `smirks`.
-    paramID (optional) : str
-        Default None. If specified, will set parameters on line with this `id`
-    force_type (optional) : str
-        Default "Implied". Optionally, specify a particular force type such as
-        "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a
-        matching ID or SMIRKS.
+        Parameters
+        ----------
+        params : dict
+            Dictionary of attributes (parameters and their descriptions) for XML,
+            i.e. as output by getParameter.
+        smirks (optional) : str
+            Default None. If specified, will set parameters on line containing this `smirks`.
+        paramID (optional) : str
+            Default None. If specified, will set parameters on line with this `id`
+        force_type (optional) : str
+            Default "Implied". Optionally, specify a particular force type such as
+            "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a
+            matching ID or SMIRKS.
 
+        Returns
+        -------
+        success : bool
+            True/False as to whether that parameter was found and successfully set
 
-    Returns
-    -------
-    status : bool
-        True/False as to whether that parameter was found and successfully set
+        Usage notes: SMIRKS or parameter ID must be specified.
 
-Usage notes: SMIRKS or parameter ID must be specified.
+        .. todo::
+            * Update set/get parameter API.
+            * Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
 
-To do: Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
-"""
+        """
         # Check for valid input
         if smirks and paramID:
             raise ValueError("Error: Specify SMIRKS OR parameter ID but not both.")
-        if smirks==None and paramID==None:
+        if (smirks is None) and (paramID is None):
             raise ValueError("Error: Must specify SMIRKS or parameter ID.")
         if not params:
             raise ValueError("Error, parameters must be specified.")
@@ -736,8 +499,8 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
             return names
 
         # Set parameters
-        trees=self._XMLTrees
-        status = False
+        trees = self._XMLTrees
+        success = False
         # Loop over XML files we read
         for tree in trees:
             # Loop over tree
@@ -761,129 +524,88 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
                             for tag in params.keys():
                                 elem.set( tag, params[tag])
 
-                            # Found parameters and set, so update status
-                            status = True
+                            # Found parameters and set, so update success flag
+                            success = True
 
-
-        # If we made any changes to XML, set flag so it will be reprocessed prior
-        # to system creation
-        if status:
+        # If we made any changes to XML, set flag so it will be reprocessed prior to system creation
+        if success:
             self._XMLModified = True
 
-        return status
+        return success
 
+    # TODO: Rework the API
     def addParameter(self, params, smirks, force_type, tag):
         """Add specified SMIRKS/parameter in the section under the specified force type.
 
-    Parameters
-    ----------
-    params : dict
-        Dictionary of attributes (parameters and their descriptions) for XML,
-        i.e. as output by getParameter.
-    smirks : str
-        SMIRKS pattern to associate with this parameter
-    force_type : str
-        Specify a particular force type such as "HarmonicBondForce" or "HarmonicAngleForce" in which to add this parameter
-    tag : str
-        Tag to use identifying this parameter, i.e. 'Bond' for a HarmonicBondForce, etc.
+        Parameters
+        ----------
+        params : dict
+            Dictionary of attributes (parameters and their descriptions) for XML,
+            i.e. as output by getParameter.
+        smirks : str
+            SMIRKS pattern to associate with this parameter
+        force_type : str
+            Specify a particular force type such as "HarmonicBondForce" or "HarmonicAngleForce" in which to add this parameter
+        tag : str
+            Tag to use identifying this parameter, i.e. 'Bond' for a HarmonicBondForce, etc.
 
+        Returns
+        -------
+        success : bool
+            Returns ``True`` on success, or ``False`` on failure.
 
-    Returns
-    -------
-    status : Bool
-        Successful? True or False.
+        .. todo::
+            * Update set/get parameter API.
 
+        """
 
-"""
-
-        trees=self._XMLTrees
+        trees = self._XMLTrees
         # Loop over XML files we read
-        found = False
+        success = False
         for tree in trees:
             # Loop over tree
             for child in tree.getroot():
                 if child.tag==force_type:
-                    found = True
+                    success = True
                     addl = etree.Element( tag, smirks=smirks, attrib = params)
                     child.append(addl)
-        return found
 
+        # If we made any changes to XML, set flag so it will be reprocessed prior to system creation
+        if success:
+            self._XMLModified = True
+
+        return success
 
     def writeFile(self, files):
-        """Write forcefield trees out to specified files."""
+        """Write forcefield trees out to specified files.
+
+        .. todo::
+            * Overhaul API
+
+        Parameters
+        ----------
+        files : str or tuple of str
+            File or files to write XML trees to.
+
+        """
 
         # Ensure that we are working with a tuple of files.
         if not isinstance(files, tuple):
             files = (files,)
 
         for idx, filenm in enumerate(files):
-            tree=self._XMLTrees[idx]
-            tree.write( filenm, xml_declaration=True, pretty_print=True)
+            tree = self._XMLTrees[idx]
+            tree.write(filenm, xml_declaration=True, pretty_print=True)
 
-    def _assignPartialCharges(self, molecule, oechargemethod, modifycharges = True):
-        """Assign partial charges to the specified molecule using best practices.
-
-        Parameters
-        ----------
-        molecule : OEMol
-            The molecule to be charged.
-            NOTE: The molecule will be modified when charges are added.
-        oechargemethod : str
-            The name of the charge method from oequacpac to use (e.g. 'OECharges_AM1BCCSym')
-        modifycharges : bool (optional)
-            If False, don't actually assign partial charges; use the charge calculation solely to update the Wiberg bond orders.
-
-        Notes:
-        As per Christopher Bayly and http://docs.eyesopen.com/toolkits/cookbook/python/modeling/am1-bcc.html, OEAssignPartialCharges needs multiple conformations to ensure well-behaved charges. This implements that recipe for conformer generation.
-        This conformer generation may or may not be necessary if the calculation is only to obtain bond orders; this will have to be investigated separately so it is retained for now.
-        """
-        # TODO: Cache charged molecules here to save time in future calls to createSystem
-        from openeye import oechem, oeomega, oequacpac
-
-        # Expand conformers
-        if not oechem.OEChemIsLicensed(): raise(ImportError("Need License for OEChem!"))
-        if not oeomega.OEOmegaIsLicensed(): raise(ImportError("Need License for OEOmega!"))
-        omega = oeomega.OEOmega()
-        omega.SetMaxConfs(800)
-        omega.SetCanonOrder(False)
-        omega.SetSampleHydrogens(True)
-        omega.SetEnergyWindow(15.0)
-        omega.SetRMSThreshold(1.0)
-        omega.SetStrictStereo(True) #Don't generate random stereoisomer if not specified
-        charged_copy = oechem.OEMol(molecule)
-        status = omega(charged_copy)
-        if not status:
-            raise(RuntimeError("Omega returned error code %s" % status))
-
-        # Assign charges
-        status = oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, oechargemethod), False, False)
-        if not status:
-            raise(RuntimeError("OEAssignPartialCharges returned error code %s" % status))
-        # Our copy has the charges we want but not the right conformation. Copy charges over. Also copy over Wiberg bond orders if present
-        partial_charges = []
-        partial_bondorders = []
-        if modifycharges:
-            for atom in charged_copy.GetAtoms():
-                partial_charges.append( atom.GetPartialCharge() )
-            for (idx,atom) in enumerate(molecule.GetAtoms()):
-                atom.SetPartialCharge( partial_charges[idx] )
-        for bond in charged_copy.GetBonds():
-            partial_bondorders.append( bond.GetData("WibergBondOrder"))
-        for (idx, bond) in enumerate(molecule.GetBonds()):
-            bond.SetData("WibergBondOrder", partial_bondorders[idx])
-
-
-    def createSystem(self, topology, molecules, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
+    def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
                      chargeMethod=None, verbose=False, **kwargs):
         """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
 
         Parameters
         ----------
-        topology : Topology
-            The Topology for which to create a System
-        molecules : list of openeye.oechem.OEMol
-            List of molecules appearing in the topology
+        topology : openforcefield.topology.Topology
+            The ``Topology`` corresponding to the ``System`` object to be created.
         nonbondedMethod : object=NoCutoff
             The method to use for nonbonded interactions.  Allowed values are
             NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
@@ -921,69 +643,51 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
         Returns
         -------
-        system
-            the newly created System
+        system : simtk.openmm.System
+            The newly created System
+
+        .. todo::
+
+            * Replace ``verbose`` with log level selection.
+
+            * Should the ``Topology`` be modified by ``createSystem``?
+              There are a number of optional argument that we may want to make only defined by the SMIRNOFF forcefield:
+
+                * ``chargeMethod``
+                * ``hydrogenMass``
+                * ``constraints``
+                * ``rigidWater``
+
         """
-        # XML modified? If so, re-parse by generators
-        if self._XMLModified:
-            if verbose: print("Re-parsing XML because it was modified.")
-            self.parseXMLTrees()
+        # Re-parse XML by generators if XML was modified
+        self._reparse_xml_if_needed()
 
-        # Make a deep copy of the input molecules so they are not modified by charging
-        molecules = copy.deepcopy(molecules)
+        # Make a deep copy of the topology so we don't accidentaly modify it
+        topology = copy.deepcopy(topology)
 
-        # Charge molecules, if needed
-        if chargeMethod == None:
-            # Don't charge molecules
-            if verbose: print('Charges specified in provided molecules will be used.')
-            oechargemethod = None
-        elif chargeMethod == 'BCC':
-            # Check if we have a BondChargeCorrectionGenerator populated
-            force_generators = { force.__class__.__name__ : force for force in self._forces }
-            if ('BondChargeCorrectionGenerator' in force_generators):
-                oechargemethod = force_generators['BondChargeCorrectionGenerator']._oechargemethod
-                if verbose: print('Applying oechem.oequacpac.OEAssignPartialCharges with initial charge method "%s" followed by bond charge corrections.' % oechargemethod)
-            else:
-                # Don't charge molecules if no bond charge corrections were found
-                oechargemethod = None
-        elif type(chargeMethod) == str:
-            from openeye import oequacpac
-            # Check if the user has provided a manually-specified charge method
-            if hasattr(oequacpac, chargeMethod):
-                oechargemethod = chargeMethod
-                if verbose: print('Applying oechem.oequacpac.OEAssignPartialCharges with specified charge method "%s".' % oechargemethod)
-            else:
-                raise Exception("Unknown chargeMethod '%s'"% chargeMethod)
-        else:
-            raise Exception("Unknown chargeMethod ''%s'"% str(chargeMethod))
+        # Set aromaticity model to that used by forcefield
+        topology.set_aromaticity_model(self._aromaticity_model)
 
         # Charge molecules if a valid charging method was identified
-        if oechargemethod is not None:
-            for molecule in molecules:
-                self._assignPartialCharges(molecule, oechargemethod)
-
-        # Work with a modified form of the topology that provides additional accessors.
-        topology = _Topology(topology, molecules)
-
-        # If the charge method was not an OpenEye AM1 method and we need Wiberg bond orders, obtain Wiberg bond orders
-        if not (type(chargeMethod) == str and 'AM1' in chargeMethod) and self._use_fractional_bondorder:
-            if verbose: print("Doing an AM1 calculation to get Wiberg bond orders.")
-            for molecule in molecules:
-                # Do AM1 calculation just to get bond orders on moleules (discarding charges)
-                self._assignPartialCharges(molecule, "OECharges_AM1", modifycharges = False)
-
+        # TODO: chargeMethod should be part of the SMIRNOFF spec.
+        if chargeMethod is not None:
+            for molecule in topology.molecules:
+                topology.assign_partial_charges(method=chargeMethod)
 
         # Update bond orders stored in the topology if needed
-        if self._use_fractional_bondorder:
-            topology._updateBondOrders(Wiberg = True )
+        if self.bondOrderMethod is not None:
+            for molecule in topology.molecules:
+                topology.assign_fractional_bond_orders(method=self.bondOrderMethod)
 
         # Create the System and add atoms
         system = openmm.System()
         for atom in topology.atoms():
             # Add the particle to the OpenMM system.
-            system.addParticle(atom.element.mass) # TODO: Add option to use a different mass than the integral elemental mass?
+            # QUESTION: Do we need an option to have SMARTS-specified fractional masses for compatibility with other forcefields?
+            system.addParticle(atom.element.mass)
 
         # Adjust hydrogen masses if requested.
+        # QUESTION: Do we need the capability to modify hydrogen masses via a keyword argument?
         if hydrogenMass is not None:
             if not unit.is_quantity(hydrogenMass):
                 hydrogenMass *= unit.dalton
@@ -1002,21 +706,24 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         elif nonbondedMethod not in [NoCutoff, CutoffNonPeriodic]:
             raise ValueError('Requested periodic boundary conditions for a Topology that does not specify periodic box dimensions')
 
-        # TODO: Convert requested bonds and angles to use constraints
+        # Apply keyword-specified constraints.
+        # QUESTION: Do we need the capability to enforce constraints specified via a keyword argument in addition to SMIRNOFF-specified constraints??
         if constraints != None:
             raise Exception("Constraints are not implemented yet.")
 
-        # Set nonbonded method.
+        # Allow the nonbonded method to be overridden
+        # QUESTION: Do we want to make the choice of nonbonded method part of the forcefield spec?
         kwargs['nonbondedMethod'] = nonbondedMethod
         kwargs['nonbondedCutoff'] = nonbondedCutoff
 
-        # Set user-specified charge method.
+        # Set user-specified charge method
+        # QUESTION: If the charge method is part of the forcefield spec, do we really want users to be able to override it?
         kwargs['chargeMethod'] = chargeMethod
 
         # Add forces to the System
         for force in self._forces:
             if 'createForce' in dir(force):
-                force.createForce(system, topology, verbose=verbose, **kwargs)
+                force.createForce(system, topology, **kwargs)
 
         # Add center-of-mass motion removal, if requested
         if removeCMMotion:
@@ -1029,45 +736,39 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
         return system
 
-    def labelMolecules(self, oemols, verbose = False):
-        """Return labels for a list of OEMols corresponding to parameters from this force field. For each oemol, a dictionary of force types is returned, and for each force type, each force term is provided with the atoms involved, the parameter id assigned, and the corresponding SMIRKS.
+    def labelMolecules(self, molecules, verbose=False):
+        """Return labels for a list of molecules corresponding to parameters from this force field.
+        For each molecule, a dictionary of force types is returned, and for each force type,
+        each force term is provided with the atoms involved, the parameter id assigned, and the corresponding SMIRKS.
 
         Parameters
         ----------
-        oemols : list of OEMols
-            The OpenEye OEChem OEMol objects as a list; these will be labeled. Should include all atoms with the correct ordering atom atom numbers will be returned along with corresponding labeling.
-        verbose : bool
-            If True, verbose output will be printed
+        molecules : list of openforcefield.topology.Molecule
+            The molecules to be labeled.
 
         Returns
         -------
         molecule_labels : list
-            list of labels for molecules. Each entry in the list corresponds to
-            one molecule from the provided list of oemols and is a dictionary
-            keyed by force type, i.e. molecule_labels[0]['HarmonicBondForce']
+            List of labels for molecules. Each entry in the list corresponds to
+            one molecule from the provided list of molecules and is a dictionary
+            keyed by force type, i.e., ``molecule_labels[0]['HarmonicBondForce']``
             gives details for the harmonic bond parameters for the first
-            molecule. Each element is a list of the form [ ( [ atom1, ...,
-            atomN], parameter_id, SMIRKS), ... ]
+            molecule. Each element is a list of the form:
+            ``[ ( [ atom1, ..., atomN], parameter_id, SMIRKS), ... ]``
 
         """
-
-        # XML modified? If so, re-parse by generators
-        if self._XMLModified:
-            if verbose: print("Re-parsing XML because it was modified.")
-            self.parseXMLTrees()
-
-        # Storage for labels
-        molecule_labels = []
+        self._ensure_xml_has_been_parsed()
 
         # Loop over molecules and label
-        for idx,mol in enumerate(oemols):
-            molecule_labels.append({})
+        molecule_labels = list()
+        for (idx, mol) in enumerate(molecules):
+            molecule_labels.append(dict())
             for force in self._forces:
-                # Initialize dictionary storage for this force type
-                forcelabel = force.__class__.__name__
+                matches = force.getMatches(mol)
+                # TODO Reformat matches
+                # QUESTION: Do we want to store these by OpenMM force type (e.g., `HarmonicBondForce`) or by SMIRNOFF tag name (`BondForce`)
+                molecule_labels[idx][force._TAGNAME] = matches
 
-                # Grab force terms of this type for this molecule and store
-                molecule_labels[idx][forcelabel] = force.labelForce( mol, verbose=verbose )
         return molecule_labels
 
 #=============================================================================================
@@ -1079,131 +780,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 # The static method should be added to the parsers map.
 #=============================================================================================
 
-def _validateSMIRKS(smirks, node=None):
-    """Validate the specified SMIRKS string.
-
-    Parameters
-    ----------
-    smirks : str
-       The SMIRKS string to be validated
-    node : xml.etree.ElementTree.Element
-       Node of etree with 'sourceline' attribute.
-
-    """
-    from openeye import oechem
-
-    qmol = oechem.OEQMol()
-    if not oechem.OEParseSmarts(qmol, smirks):
-        if (node is not None) and ('sourceline' in node.attrib):
-            raise Exception("Line %s: Error parsing SMIRKS '%s'" % (node.attrib['sourceline'], node.attrib['smirks']))
-        else:
-            raise Exception("Error parsing SMIRKS '%s'" % (node.attrib['smirks']))
-
-    return smirks
-
-def _extractQuantity(node, parent, name, unit_name=None):
-    """
-    Form a (potentially unit-bearing) quantity from the specified attribute name.
-
-    node : xml.etree.ElementTree.Element
-       Node of etree corresponding to force type entry.
-    parent : xml.etree.ElementTree.Element
-       Node of etree corresponding to parent Force.
-    name : str
-       Name of parameter to extract from attributes.
-    unit_name : str, optional, default=None
-       If specified, use this attribute name of 'parent' to look up units
-
-    """
-    # Check for expected attributes
-    if name not in node.attrib:
-        if 'sourceline' in node.attrib:
-            raise Exception("Line %d : Expected XML attribute '%s' not found" % (node.attrib['sourceline'], name))
-        else:
-            raise Exception("Expected XML attribute '%s' not found" % (name))
-
-    # Most attributes will be converted to floats, but some are strings
-    string_names = ['parent_id', 'id']
-    # Handle case where this is a normal quantity
-    if name not in string_names:
-        quantity = float(node.attrib[name])
-    # Handle label or string
-    else:
-        quantity = node.attrib[name]
-        return quantity
-
-    if unit_name is None:
-        unit_name = name + '_unit'
-
-    if unit_name in parent.attrib:
-        # TODO: This is very dangerous.
-        string = '(%s * %s).value_in_unit_system(md_unit_system)' % (node.attrib[name], parent.attrib[unit_name])
-        quantity = eval(string, unit.__dict__)
-
-    return quantity
-
-def _check_for_missing_valence_terms(name, topology, assigned_terms, topological_terms):
-    """
-    Check to ensure there are no missing valence terms.
-
-    Parameters
-    ----------
-    name : str
-        Name of the calling force generator
-    topology : simtk.openmm.app.Topology
-        The Topology object
-    assigned_terms : iterable of ints or int tuples
-        Atom index tuples defining added valence terms
-    topological_terms : iterable of atoms or atom tuples
-        Atom tuples defining topological valence atomsets to which forces should be assigned
-
-    """
-    # Convert to lists
-    assigned_terms = [ item for item in assigned_terms ]
-    topological_terms = [ item for item in topological_terms ]
-
-    def ordered_tuple(atoms):
-        atoms = list(atoms)
-        if atoms[0] < atoms[-1]:
-            return tuple(atoms)
-        else:
-            return tuple(reversed(atoms))
-    try:
-        topology_set = set([ ordered_tuple( atom.index for atom in atomset ) for atomset in topological_terms ])
-        assigned_set = set([ ordered_tuple( index for index in atomset ) for atomset in assigned_terms ])
-    except TypeError as te:
-        topology_set = set([ atom.index for atom in topological_terms ])
-        assigned_set = set([ atomset[0] for atomset in assigned_terms ])
-
-    def render_atoms(atomsets):
-        msg = ""
-        for atomset in atomsets:
-            msg += '%30s :' % str(atomset)
-            try:
-                for atom_index in atomset:
-                    atom = atoms[atom_index]
-                    msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
-            except TypeError as te:
-                atom = atoms[atomset]
-                msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
-
-            msg += '\n'
-        return msg
-
-    if set(assigned_set) != set(topology_set):
-        msg = '%s: Mismatch between valence terms added and topological terms expected.\n' % name
-        atoms = [ atom for atom in topology.atoms() ]
-        if len(assigned_set.difference(topology_set)) > 0:
-            msg += 'Valence terms created that are not present in Topology:\n'
-            msg += render_atoms(assigned_set.difference(topology_set))
-        if len(topology_set.difference(assigned_set)) > 0:
-            msg += 'Topological atom sets not assigned parameters:\n'
-            msg += render_atoms(topology_set.difference(assigned_set))
-        msg += 'topology_set:\n'
-        msg += str(topology_set) + '\n'
-        msg += 'assigned_set:\n'
-        msg += str(assigned_set) + '\n'
-        raise Exception(msg)
+# TODO: Move these collections to a utility file like ``openforcefield.utils`` or ``openforcefield.collections``?
 
 import collections
 class TransformedDict(collections.MutableMapping):
@@ -1261,126 +838,135 @@ class ImproperDict(TransformedDict):
 # Force generators
 #=============================================================================================
 
-#=============================================================================================
-# Force generators
-#=============================================================================================
-
 ## @private
-class ConstraintGenerator(object):
-    """A ConstraintGenerator adds constraints.
-
-    The ConstraintGenerator must be applied before HarmonicBondGenerator and HarmonicAngleGenerator if constrained bonds are to not also have harmonic bond terms added.
-
-    ConstraintGenerator will mark bonds as being constrained for HarmonicBondGenerator to assign constraints to equilibrium bond lengths,
-    while constraints with distances specified will be assigned by ConstraintGenerator.
-
+class ForceGenerator(object):
+    """Base class for force generators.
     """
-
-    class ConstraintType(object):
-        """A SMIRNOFF constraint type."""
-        def __init__(self, node, parent):
-            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.pid = _extractQuantity(node, parent, 'id')
-            if 'distance' in node.attrib:
-                # Constraint distance is specified, will be handled by ConstraintGenerator
-                self.distance = _extractQuantity(node, parent, 'distance')
-            else:
-                # Constraint to equilibrium bond length, handled by HarmonicBondGenerator
-                self.distance = True
+    _TAGNAME = None # str of XML element name handled by this ForceGenerator
+    _INFOTYPE = None # container class with type information that will be stored in self._types
+    _OPENMMTYPE = None # OpenMM Force class (or None if no equivalent)
 
     def __init__(self, forcefield):
-        self.ff = forcefield
-        self._constraint_types = list()
+        self.ff = forcefield # the ForceField that this ForceGenerator is registered with
+        self._types = list() # list of ForceType objects of type cls._INFOTYPE
 
-    def registerConstraint(self, node, parent):
-        """Register a SMIRNOFF constraint type definition."""
-        constraint = ConstraintGenerator.ConstraintType(node, parent)
-        self._constraint_types.append(constraint)
+    def getMatches(self, topology, **kwargs):
+        """Retrieve all force terms for a chemical entity.
 
-    @staticmethod
-    def parseElement(element, ff):
+        Parameters
+        ----------
+        entity : openforcefield.topology.ChemicalEntity
+            Chemical entity for which constraints are to be enumerated
+
+        Returns
+        ---------
+        matches : ValenceDict
+            matches[atoms] is the ForceType object corresponding to the tuple of Atom objects ``Atoms``
+
+        """
+        logger.info(self.__class__.__name__)
+        matches = ValenceDict()
+        for force_type in self._types:
+            matches_for_this_type = { atoms : force_type for atoms in topology.chemical_environment_matches(force_type.smirks) }
+            matches.update(matches_for_this_type)
+            logger.info('{:64} : {:8} matches'.format(force_type.smirks, len(matches_for_this_type)))
+
+        logger.info('{} matches identified'.format(len(matches)))
+        return matches
+
+    @classmethod
+    def parseElement(cls, tag, element, ff):
         # Find existing force generator or create new one.
-        existing = [f for f in ff._forces if isinstance(f, ConstraintGenerator)]
+        existing = [f for f in ff._forces if isinstance(f, cls)]
         if len(existing) == 0:
-            generator = ConstraintGenerator(ff)
+            generator = cls(ff)
             ff.registerGenerator(generator)
         else:
             generator = existing[0]
 
-        # Register all SMIRNOFF constraint definitions.
-        for constraint in element.findall('Constraint'):
-            generator.registerConstraint(constraint, element)
+        # Register all SMIRNOFF definitions for all occurrences of its registered tag
+        for section in element.findall(tag):
+            generator.registerType(section, element)
 
-    def createForce(self, system, topology, verbose=False, **kwargs):
-        # Iterate over all defined constraint types, allowing later matches to override earlier ones.
-        constraints = ValenceDict()
-        for constraint in self._constraint_types:
-            for atom_indices in topology.unrollSMIRKSMatches(constraint.smirks, aromaticity_model = self.ff._aromaticity_model):
-                constraints[atom_indices] = constraint
+    def registerType(self, node, parent):
+        """Register a SMIRNOFF constraint type definition."""
+        if self._INFOTYPE:
+            self._types.append(self._INFOTYPE(node, parent))
 
-        if verbose:
-            print('')
-            print('ConstraintGenerator:')
-            print('')
-            for constraint in self._constraint_types:
-                print('%64s : %8d matches' % (constraint.smirks, len(topology.unrollSMIRKSMatches(constraint.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
+    def createForce(self, system, topology, **kwargs):
+        force = None
+        if self._OPENMMTYPE:
+            # Find existing force or create new one.
+            existing = [ system.getForce(i) for i in range(system.getNumForces()) ]
+            existing = [ f for f in existing if type(f) == openmm.HarmonicBondForce ]
+            if len(existing) == 0:
+                force = _OPENMMTYPE()
+                system.addForce(force)
+            else:
+                force = existing[0]
 
-        for (atom_indices, constraint) in constraints.items():
-            # Update constrained atom pairs in topology
-            topology.constrainAtomPair(atom_indices[0], atom_indices[1], constraint.distance)
-            # If a distance is specified, add the constraint here.
-            # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondGenerator
-            if constraint.distance is not True:
-                system.addConstraint(atom_indices[0], atom_indices[1], constraint.distance)
+        return force
 
-        if verbose: print('%d constraints added' % (len(constraints)))
-
-    def labelForce(self, oemol, verbose=False, **kwargs):
-        """Take a provided OEMol and parse Constraint terms for this molecule.
-
-        Parameters
-        ----------
-            oemol : OEChem OEMol object for molecule to be examined
-
-        Returns
-        ---------
-            force_terms: list
-                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
-        """
-
-        # Iterate over all defined constraint SMIRKS, allowing later matches to override earlier ones.
-        constraints = ValenceDict()
-        for constraint in self._constraint_types:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, constraint.smirks, aromaticity_model = self.ff._aromaticity_model):
-                constraints[atom_indices] = constraint
-
-        if verbose:
-            print('')
-            print('ConstraintGenerator:')
-            print('')
-            for constraint in self._constraint_types:
-                print('%64s : %8d matches' % (constraint.smirks, len(getSMIRKSMatches_OEMol(oemol, constraint.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
-
-        # Add all bonds to the output list
-        force_terms = []
-        for (atom_indices, constraint) in constraints.items():
-            force_terms.append( ([atom_indices[0], atom_indices[1]], constraint.pid, constraint.smirks) )
-
-        return force_terms
-
-parsers["Constraints"] = ConstraintGenerator.parseElement
+    def postprocessSystem(self, system, topology, **args):
+        pass
 
 ## @private
-class HarmonicBondGenerator(object):
-    """A HarmonicBondGenerator constructs a HarmonicBondForce."""
-
-    class BondType(object):
-        """A SMIRNOFF bond type."""
-        def __init__(self, node, parent):
-            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+class ForceType(object):
+    """
+    Base class for force types.
+    """
+    def __init__(self, node, parent):
+        """
+        Create a ForceType that stores ``smirks`` and ``id`` attributes.
+        """
+        self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+        if 'id' in node.attrib:
             self.pid = _extractQuantity(node, parent, 'id')
+
+## @private
+class ConstraintGenerator(ForceGenerator):
+    """Handle SMIRNOFF ``<Constraints>`` tags
+
+    ``ConstraintGenerator`` must be applied before ``HarmonicBondGenerator`` and ``HarmonicAngleGenerator``,
+    since those classes add constraints for which equilibrium geometries are needed from those tags.
+    """
+    class ConstraintType(ForceType):
+        """A SMIRNOFF constraint type"""
+        def __init__(self, node, parent):
+            super(ConstraintType, self).__init__(node, parent) # Base class handles ``smirks`` and ``id`` fields
+            if 'distance' in node.attrib:
+                self.distance = _extractQuantity(node, parent, 'distance') # Constraint with specified distance will be added by ConstraintGenerator
+            else:
+                self.distance = True # Constraint to equilibrium bond length will be added by HarmonicBondGenerator
+
+    _TAGNAME = 'Constraint'
+    _INFOTYPE = ConstraintType
+    _OPENMMTYPE = None # don't create a corresponding OpenMM Force class
+
+    def __init__(self, forcefield):
+        super(ConstraintGenerator, self).__init__(forcefield)
+
+    def createForce(self, system, topology, **kwargs):
+        constraints = self.getMatches(topology)
+        for (atoms, constraint) in constraints.items():
+            # Update constrained atom pairs in topology
+            topology.constrain_atom_pair(*atoms, constraint.distance)
+            # If a distance is specified (constraint.distance != True), add the constraint here.
+            # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondGenerator
+            if constraint.distance is not True:
+                system.addConstraint(*atoms, constraint.distance)
+
+# QUESTION: Would we want all subclasses of ForceGenerator automatically register themselves?
+parsers[ConstraintGenerator._TAGNAME] = ConstraintGenerator.parseElement
+
+## @private
+class BondGenerator(ForceGenerator):
+    """Handle SMIRNOFF ``<BondForce>`` tags"""
+
+    class BondType(ForceType):
+        """A SMIRNOFF bond type"""
+        def __init__(self, node, parent):
+            super(ConstraintType, self).__init__(node, parent) # Base class handles ``smirks`` and ``id`` fields
 
             # Determine if we are using fractional bond orders for this bond
             # First, check if this force uses fractional bond orders
@@ -1401,280 +987,138 @@ class HarmonicBondGenerator(object):
                 self.fractional_bondorder = None
 
             # If no fractional bond orders, just get normal length and k
-            if self.fractional_bondorder == None:
+            if self.fractional_bondorder is None:
                 self.length = _extractQuantity(node, parent, 'length')
                 self.k = _extractQuantity(node, parent, 'k')
 
+    _TAGNAME = 'BondForce' # SMIRNOFF tag name to process
+    _INFOTYPE = BondType # class to hold force type info
+    _OPENMMTYPE = openmm.HarmonicBondForce # OpenMM force class to create
+
     def __init__(self, forcefield):
-        self.ff = forcefield
-        self._bondtypes = list()
+        super(HarmonicBondGenerator, self).__init__(forcefield)
 
-    def registerBond(self, node, parent):
-        """Register a SMIRNOFF bondtype definition."""
-        bond = HarmonicBondGenerator.BondType(node, parent)
-        self._bondtypes.append(bond)
-
-    @staticmethod
-    def parseElement(element, ff):
-        # Find existing force generator or create new one.
-        existing = [f for f in ff._forces if isinstance(f, HarmonicBondGenerator)]
-        if len(existing) == 0:
-            generator = HarmonicBondGenerator(ff)
-            ff.registerGenerator(generator)
-        else:
-            generator = existing[0]
-
-        # Register all SMIRNOFF bond definitions.
-        for bond in element.findall('Bond'):
-            generator.registerBond(bond, element)
-
-    def createForce(self, system, topology, verbose=False, **kwargs):
-        # Find existing force or create new one.
-        existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == openmm.HarmonicBondForce]
-        if len(existing) == 0:
-            force = openmm.HarmonicBondForce()
-            system.addForce(force)
-        else:
-            force = existing[0]
-
-        # Iterate over all defined bond types, allowing later matches to override earlier ones.
-        bonds = ValenceDict()
-        bondorders = ValenceDict()
-        for bond in self._bondtypes:
-            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks, aromaticity_model = self.ff._aromaticity_model):
-                bonds[atom_indices] = bond
-                # Retrieve bond orders
-                bondorders[atom_indices] = topology._bondorders_by_atomindices[atom_indices[0]][atom_indices[1]]
-
-        if verbose:
-            print('')
-            print('HarmonicBondGenerator:')
-            print('')
-            for bond in self._bondtypes:
-                print('%64s : %8d matches' % (bond.smirks, len(topology.unrollSMIRKSMatches(bond.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
+    def createForce(self, system, topology, **kwargs):
+        # Create or retrieve existing OpenMM Force object
+        force = super(BondGenerator, self).createForce(system, topology, **kwargs)
 
         # Add all bonds to the system.
+        bonds = self.getMatches(topology)
         skipped_constrained_bonds = 0 # keep track of how many bonds were constrained (and hence skipped)
-        for (atom_indices, bond) in bonds.items():
+        for (atoms, bond) in bonds.items():
+            # Get corresponding particle indices in Topology
+            particle_indices = tuple([ atom.particle_index for atom in atoms ])
+
             # Ensure atoms are actually bonded correct pattern in Topology
-            assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
+            assert_bonded(atoms[0], atoms[1])
 
             # Compute equilibrium bond length and spring constant.
-            if bond.fractional_bondorder==None:
+            if bond.fractional_bondorder is None:
                 [k, length] = [bond.k, bond.length]
             else:
                 # This bond uses partial bond orders
                 # Make sure forcefield asks for fractional bond orders
+                # TODO: Why shouldn't fractional bond orders just be automatically supported if used? This seems like a problem with setting this flag.
                 if not self.ff._use_fractional_bondorder:
                     raise ValueError("Error: your forcefield file does not request to use fractional bond orders in its header, but a harmonic bond attempts to use them.")
                 # Proceed to do interpolation
-                order = bondorders[atom_indices]
-                if bond.fractional_bondorder=='interpolate-linear':
+                order = topology.get_fractional_bond_order(*atoms)
+                if bond.fractional_bondorder == 'interpolate-linear':
                     k = bond.k[0] + (bond.k[1]-bond.k[0])*(order-1.)
                     length = bond.length[0] + (bond.length[1]-bond.length[0])*(order-1.)
                 else:
                     raise Exception("Partial bondorder treatment %s is not implemented." % bond.fractional_bondorder)
 
             # Handle constraints.
-            if topology.atomPairIsConstrained(*atom_indices):
+            if topology.atom_pair_is_constrained(*atoms):
                 # Atom pair is constrained; we don't need to add a bond term.
                 skipped_constrained_bonds += 1
                 # Check if we need to add the constraint here to the equilibrium bond length.
-                if topology.atomPairIsConstrained(*atom_indices) is True:
+                if topology.atom_pair_is_constrained(*atoms) is True:
                     # Mark that we have now assigned a specific constraint distance to this constraint.
-                    topology.constrainAtomPair(atom_indices[0], atom_indices[1], length)
+                    topology.constrain_atom_pair(*atoms, length)
                     # Add the constraint to the System.
-                    system.addConstraint(atom_indices[0], atom_indices[1], length)
+                    system.addConstraint(*particle_indices, length)
                 continue
 
-            # Add bond
-            force.addBond(atom_indices[0], atom_indices[1], length, k)
+            # Add harmonic bond to HarmonicBondForce
+            force.addBond(*particle_indices, length, k)
 
-        if verbose: print('%d bonds added (%d skipped due to constraints)' % (len(bonds) - skipped_constrained_bonds, skipped_constrained_bonds))
+        logger.info('{} bonds added ({} skipped due to constraints)'.format(len(bonds) - skipped_constrained_bonds, skipped_constrained_bonds))
 
         # Check that no topological bonds are missing force parameters
-        _check_for_missing_valence_terms('HarmonicBondForce', topology, bonds.keys(), topology.bonds())
+        _check_for_missing_valence_terms('BondForce', topology, bonds.keys(), topology.bonds())
 
-    def labelForce(self, oemol, verbose=False, **kwargs):
-        """Take a provided OEMol and parse HarmonicBondForce terms for this molecule.
-
-        Parameters
-        ----------
-            oemol : OEChem OEMol object for molecule to be examined
-
-        Returns
-        ---------
-            force_terms: list
-                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
-        """
-
-        # Iterate over all defined bond SMIRKS, allowing later matches to override earlier ones.
-        bonds = ValenceDict()
-        for bond in self._bondtypes:
-            for atom_indices in getSMIRKSMatches_OEMol( oemol, bond.smirks, aromaticity_model = self.ff._aromaticity_model ):
-                bonds[atom_indices] = bond
-
-        if verbose:
-            print('')
-            print('HarmonicBondGenerator:')
-            print('')
-            for bond in self._bondtypes:
-                print('%64s : %8d matches' % (bond.smirks, len(getSMIRKSMatches_OEMol(oemol, bond.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
-
-        # Add all bonds to the output list
-        force_terms = []
-        for (atom_indices, bond) in bonds.items():
-            force_terms.append( ([atom_indices[0], atom_indices[1]], bond.pid, bond.smirks) )
-
-        return force_terms
-
-parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
+parsers[BondGenerator._TAGNAME] = BondGenerator.parseElement
 
 #=============================================================================================
 
 ## @private
-class HarmonicAngleGenerator(object):
-    """A HarmonicAngleGenerator constructs a HarmonicAngleForce."""
+class AngleGenerator(ForceGenerator):
+    """Handle SMIRNOFF ``<AngleForce>`` tags"""
 
-    class AngleType(object):
+    class AngleType(ForceType):
         """A SMIRNOFF angle type."""
         def __init__(self, node, parent):
-            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            super(AngleType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
             self.angle = _extractQuantity(node, parent, 'angle')
             self.k = _extractQuantity(node, parent, 'k')
-            self.pid = _extractQuantity(node, parent, 'id')
             if 'fractional_bondorder' in parent.attrib:
                 self.fractional_bondorder = parent.attrib['fractional_bondorder']
             else:
                 self.fractional_bondorder = None
 
+    _TAGNAME = 'AngleForce' # SMIRNOFF tag name to process
+    _INFOTYPE = AngleType # class to hold force type info
+    _OPENMMTYPE = openmm.HarmonicAngleForce # OpenMM force class to create
+
     def __init__(self, forcefield):
-        self.ff = forcefield
-        self._angletypes = list()
+        super(AngleGenerator, self).__init__(forcefield)
 
-    def registerAngle(self, node, parent):
-        """Register a SMIRNOFF angletype definition."""
-        angle = HarmonicAngleGenerator.AngleType(node, parent)
-        self._angletypes.append(angle)
-
-    @staticmethod
-    def parseElement(element, ff):
-        # Find existing force generator or create new one.
-        existing = [f for f in ff._forces if isinstance(f, HarmonicAngleGenerator)]
-        if len(existing) == 0:
-            generator = HarmonicAngleGenerator(ff)
-            ff.registerGenerator(generator)
-        else:
-            generator = existing[0]
-
-        # Register all SMIRNOFF angle definitions.
-        for angle in element.findall('Angle'):
-            generator.registerAngle(angle, element)
-
-    def createForce(self, system, topology, verbose=False, **kwargs):
-        # Find existing force or create new one.
-        existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == openmm.HarmonicAngleForce]
-        if len(existing) == 0:
-            force = openmm.HarmonicAngleForce()
-            system.addForce(force)
-        else:
-            force = existing[0]
-
-        # Iterate over all defined angle types, allowing later matches to override earlier ones.
-        angles = ValenceDict()
-        for angle in self._angletypes:
-            for atom_indices in topology.unrollSMIRKSMatches(angle.smirks, aromaticity_model = self.ff._aromaticity_model):
-                angles[atom_indices] = angle
-
-        if verbose:
-            print('')
-            print('HarmonicAngleGenerator:')
-            print('')
-            for angle in self._angletypes:
-                print('%64s : %8d matches' % (angle.smirks, len(topology.unrollSMIRKSMatches(angle.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
+    def createForce(self, system, topology, **kwargs):
+        force = super(AngleGenerator, self).createForce(system, topology, **kwargs)
 
         # Add all angles to the system.
+        angles = self.getMatches(topology)
         skipped_constrained_angles = 0 # keep track of how many angles were constrained (and hence skipped)
-        for (atom_indices, angle) in angles.items():
-            # Ensure atoms are actually bonded correct pattern in Topology
-            assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
-            assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
+        for (atoms, angle) in angles.items():
+            # Get corresponding particle indices in Topology
+            particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
-            if topology.atomPairIsConstrained(atom_indices[0], atom_indices[1]) and topology.atomPairIsConstrained(atom_indices[1], atom_indices[2]) and topology.atomPairIsConstrained(atom_indices[0], atom_indices[2]):
+            # Ensure atoms are actually bonded correct pattern in Topology
+            for (i,j) in [ (0,1), (1,2) ]:
+                assert_bonded(topology, atoms[i], atoms[j])
+
+            if topology.is_constrained(atoms[0], atoms[1]) and topology.is_constrained(atoms[1], atoms[2]) and topology.is_constrained(atoms[0], atoms[2]):
                 # Angle is constrained; we don't need to add an angle term.
                 skipped_constrained_angles += 1
                 continue
 
-            force.addAngle(atom_indices[0], atom_indices[1], atom_indices[2], angle.angle, angle.k)
+            force.addAngle(*particle_indices, angle.angle, angle.k)
 
-        if verbose: print('%d angles added (%d skipped due to constraints)' % (len(angles) - skipped_constrained_angles, skipped_constrained_angles))
+        logger.info('{} angles added ({} skipped due to constraints)'.format(len(angles) - skipped_constrained_angles, skipped_constrained_angles))
 
         # Check that no topological angles are missing force parameters
-        _check_for_missing_valence_terms('HarmonicAngleForce', topology, angles.keys(), topology.angles())
+        _check_for_missing_valence_terms('AngleForce', topology, angles.keys(), topology.angles())
 
-    def labelForce(self, oemol, verbose=False, **kwargs):
-        """Take a provided OEMol and parse HarmonicAngleForce terms for this molecule.
-
-        Parameters
-        ----------
-            oemol : OEChem OEMol object for molecule to be examined
-
-        Returns
-        ---------
-            force_terms: list
-                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
-        """
-
-        # Iterate over all defined angle types, allowing later matches to override earlier ones.
-        angles = ValenceDict()
-        for angle in self._angletypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, angle.smirks, aromaticity_model = self.ff._aromaticity_model):
-                angles[atom_indices] = angle
-
-        if verbose:
-            print('')
-            print('HarmonicAngleGenerator:')
-            print('')
-            for angle in self._angletypes:
-                print('%64s : %8d matches' % (angle.smirks, len(getSMIRKSMatches_OEMol(oemol, angle.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
-
-        # Add all angles to the output list
-        force_terms = []
-        for (atom_indices, angle) in angles.items():
-            force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[2]], angle.pid, angle.smirks) )
-
-        return force_terms
-
-parsers["HarmonicAngleForce"] = HarmonicAngleGenerator.parseElement
-
+parsers[AngleForce._TAGNAME] = AngleGenerator.parseElement
 
 #=============================================================================================
 
 ## @private
-class PeriodicTorsionGenerator(object):
-    """A PeriodicTorsionForceGenerator constructs a PeriodicTorsionForce."""
+class ProperTorsionGenerator(ForceGenerator):
+    """Handle SMIRNOFF ``<ProperTorsionForce>`` tags"""
 
-    class ProperTorsionType(object):
-
+    class ProperTorsionType(ForceType):
         """A SMIRNOFF torsion type for proper torsions."""
         def __init__(self, node, parent):
-            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            super(ProperTorsionType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
             self.periodicity = list()
             self.phase = list()
             self.k = list()
-            self.pid = _extractQuantity(node, parent, 'id')
-
-            # Doublecheck type of torsion
-            if node.tag != 'Proper':
-                raise ValueError("Error: Attempting to process an invalid torsion type as a Proper.")
 
             # Check that the SMIRKS pattern matches the type it's supposed to
+            # TODO: Do we need this check?
             try:
                 chemenv = ChemicalEnvironment(self.smirks)
                 thistype = chemenv.getType()
@@ -1683,11 +1127,11 @@ class PeriodicTorsionGenerator(object):
             except SMIRKSParsingError:
                 print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
 
-
             if 'fractional_bondorder' in parent.attrib:
                 self.fractional_bondorder = parent.attrib['fractional_bondorder']
             else:
                 self.fractional_bondorder = None
+
             # Store parameters.
             index = 1
             while 'phase%d'%index in node.attrib:
@@ -1699,22 +1143,50 @@ class PeriodicTorsionGenerator(object):
                     idivf = _extractQuantity(node, parent, 'idivf%d' % index)
                     self.k[-1] /= float(idivf)
                 index += 1
+
             # Check for errors, i.e. 'phase' instead of 'phase1'
+            # TODO: Can we raise a more useful error if there is no ``id``?
             if len(self.phase)==0:
                raise Exception("Error: Torsion with id %s has no parseable phase entries." % self.pid)
 
-    class ImproperTorsionType(object):
+    _TAGNAME = 'ProperTorsionForce' # SMIRNOFF tag name to process
+    _INFOTYPE = ProperTorsionType # info type to store
+    _OPENMMTYPE = openmm.PeriodicTorsionForce # OpenMM force class to create
 
+    def __init__(self, forcefield):
+        super(ProperTorsionGenerator, self).__init__(forcefield)
+
+    def createForce(self, system, topology, **kwargs):
+        force = super(ProperTorsionGenerator, self).createForce(system, topology, **kwargs)
+
+        # Add all proper torsions to the system.
+        torsions = self.getMatches(topology)
+        for (atoms, torsion) in torsions.items():
+            # Ensure atoms are actually bonded correct pattern in Topology
+            for (i,j) in [ (0,1), (1,2), (2,3) ]:
+                assert_bonded(topology, atoms[i], atoms[j])
+
+            for (periodicity, phase, k) in zip(torsion.periodicity, torsion.phase, torsion.k):
+                force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
+
+        logger.info('{} torsions added'.format(len(torsions)))
+
+        # Check that no topological torsions are missing force parameters
+        _check_for_missing_valence_terms('ProperTorsionForce', topology, torsions.keys(), topology.torsions())
+
+parsers[ProperTorsionGenerator._TAGNAME] = ProperTorsionGenerator.parseElement
+
+## @private
+class ImproperTorsionGenerator(ForceGenerator):
+    """Handle SMIRNOFF ``<ImproperTorsionForce>`` tags"""
+
+    class ImproperTorsionType(ForceType):
         """A SMIRNOFF torsion type for improper torsions."""
         def __init__(self, node, parent):
-            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            super(ImproperTorsionType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
             self.periodicity = list()
             self.phase = list()
             self.k = list()
-            self.pid = _extractQuantity(node, parent, 'id')
-
-            if node.tag != 'Improper':
-                raise ValueError("Error: Attempting to process an invalid torsion type as an improper.")
 
             # Check that the SMIRKS pattern matches the type it's supposed to
             try:
@@ -1725,11 +1197,11 @@ class PeriodicTorsionGenerator(object):
             except SMIRKSParsingError:
                 print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
 
-
             if 'fractional_bondorder' in parent.attrib:
                 self.fractional_bondorder = parent.attrib['fractional_bondorder']
             else:
                 self.fractional_bondorder = None
+
             # Store parameters.
             index = 1
             while 'phase%d'%index in node.attrib:
@@ -1745,98 +1217,29 @@ class PeriodicTorsionGenerator(object):
                 # If it's an improper, divide by the factor of six internally
                 if node.tag=='Improper':
                     self.k[-1] /= 6.
+
             # Check for errors, i.e. 'phase' instead of 'phase1'
+            # TODO: What can we do if there is no ``id``?
             if len(self.phase)==0:
                raise Exception("Error: Torsion with id %s has no parseable phase entries." % self.pid)
 
+    _TAGNAME = 'ImproperTorsionForce' # SMIRNOFF tag name to process
+    _INFOTYPE = ImproperTorsionType # info type to store
+    _OPENMMTYPE = openmm.PeriodicTorsionForce # OpenMM force class to create
 
     def __init__(self, forcefield):
-        self.ff = forcefield
-        self._propertorsiontypes = list()
-        self._impropertorsiontypes = list()
+        super(ImproperTorsionGenerator, self).__init__(forcefield)
 
-    def registerProperTorsion(self, node, parent):
-        """Register a SMIRNOFF torsiontype definition for a proper."""
-        torsion = PeriodicTorsionGenerator.ProperTorsionType(node, parent)
-        self._propertorsiontypes.append(torsion)
-
-    def registerImproperTorsion(self, node, parent):
-        """Register a SMIRNOFF torsiontype definition for an improper."""
-        torsion = PeriodicTorsionGenerator.ImproperTorsionType(node, parent)
-        self._impropertorsiontypes.append(torsion)
-
-    @staticmethod
-    def parseElement(element, ff):
-        # Find existing force generator or create new one.
-        existing = [f for f in ff._forces if isinstance(f, PeriodicTorsionGenerator)]
-        if len(existing) == 0:
-            generator = PeriodicTorsionGenerator(ff)
-            ff.registerGenerator(generator)
-        else:
-            generator = existing[0]
-
-        # Register all SMIRNOFF torsion definitions.
-        for torsion in element.findall('Proper'):
-            generator.registerProperTorsion(torsion, element)
-        for torsion in element.findall('Improper'):
-            generator.registerImproperTorsion(torsion, element)
-
-    def createForce(self, system, topology, verbose=False, **kwargs):
-        # Find existing force or create new one.
-        existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == openmm.PeriodicTorsionForce]
-        if len(existing) == 0:
-            force = openmm.PeriodicTorsionForce()
-            system.addForce(force)
-        else:
-            force = existing[0]
-
-        # Iterate over all defined torsion types, allowing later matches to override earlier ones.
-        torsions = ValenceDict()
-        for torsion in self._propertorsiontypes:
-            for atom_indices in topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
-                torsions[atom_indices] = torsion
-        # Handle impropers in similar manner
-        impropers = ImproperDict()
-        for improper in self._impropertorsiontypes:
-            for atom_indices in topology.unrollSMIRKSMatches(improper.smirks, aromaticity_model = self.ff._aromaticity_model):
-                impropers[atom_indices] = improper
-
-
-        if verbose:
-            print('')
-            print('PeriodicTorsionGenerator Propers:')
-            print('')
-            for torsion in self._propertorsiontypes:
-                print('%64s : %8d matches' % (torsion.smirks, len(topology.unrollSMIRKSMatches(torsion.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
-            print('PeriodicTorsionGenerator Impropers:')
-            print('')
-            for improper in self._impropertorsiontypes:
-                print('%64s : %8d matches' % (improper.smirks, len(topology.unrollSMIRKSMatches(improper.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
-
-        # Add all proper torsions to the system.
-        for (atom_indices, torsion) in torsions.items():
-            # Ensure atoms are actually bonded correct pattern in Topology
-            assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
-            assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
-            assert topology._isBonded(atom_indices[2], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[2], atom_indices[3])
-
-            for (periodicity, phase, k) in zip(torsion.periodicity, torsion.phase, torsion.k):
-                force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
-        if verbose: print('%d torsions added' % (len(torsions)))
-
-        # Check that no topological torsions are missing force parameters
-        _check_for_missing_valence_terms('PeriodicTorsionForce', topology, torsions.keys(), topology.torsions())
+    def createForce(self, system, topology, **kwargs):
+        force = super(ImproperTorsionGenerator, self).createForce(system, topology, **kwargs)
 
         # Add all improper torsions to the system
+        torsions = self.getMatches(topology)
         for (atom_indices, improper) in impropers.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             # For impropers, central atom is atom 1
-            assert topology._isBonded(atom_indices[0], atom_indices[1]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[0], atom_indices[1])
-            assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
-            assert topology._isBonded(atom_indices[1], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[3])
+            for (i,j) in [ (0,1), (1,2), (1,3) ]:
+                assert_bonded(topology, atoms[i], atoms[j])
 
             # Impropers are applied to all six paths around the trefoil
             for (periodicity, phase, k) in zip(improper.periodicity, improper.phase, improper.k):
@@ -1845,81 +1248,26 @@ class PeriodicTorsionGenerator(object):
                 for p in itertools.permutations( others ):
                     force.addTorsion(p[0], atom_indices[1], p[1], p[2], periodicity, phase, k)
 
-        if verbose: print('%d impropers added, each applied in a six-fold manner' % (len(impropers)))
+        logger.info('{} impropers added, each applied in a six-fold trefoil' % (len(impropers)))
 
+        # Check that no topological torsions are missing force parameters
+        _check_for_missing_valence_terms('ImproperTorsionForce', topology, torsions.keys(), topology.impropers())
 
-
-
-    def labelForce(self, oemol, verbose=False, **kwargs):
-        """Take a provided OEMol and parse PeriodicTorsionForce terms for this molecule.
-
-        Parameters
-        ----------
-            oemol : OEChem OEMol object for molecule to be examined
-
-        Returns
-        ---------
-            force_terms: list
-                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
-        """
-
-
-        # Iterate over all defined torsion types, allowing later matches to override earlier ones.
-        torsions = ValenceDict()
-        for torsion in self._propertorsiontypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, torsion.smirks, aromaticity_model = self.ff._aromaticity_model):
-                torsions[atom_indices] = torsion
-        # Handle impropers in similar manner
-        impropers = ImproperDict()
-        for improper in self._impropertorsiontypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, improper.smirks, aromaticity_model = self.ff._aromaticity_model):
-                impropers[atom_indices] = improper
-
-        if verbose:
-            print('')
-            print('PeriodicTorsionGenerator:')
-            print('')
-            for torsion in self._propertorsiontypes:
-                print('%64s : %8d matches' % (torsion.smirks, len(getSMIRKSMatches_OEMol(oemol, torsion.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
-            print('PeriodicTorsionGenerator Impropers:')
-            print('')
-            for improper in self._impropertorsiontypes:
-                print('%64s : %8d matches' % (improper.smirks, len(getSMIRKSMatches_OEMol(oemol, improper.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
-
-        # Add all torsions to the output list
-        force_terms = []
-        for (atom_indices, torsion) in torsions.items():
-            force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3]], torsion.pid, torsion.smirks) )
-        # Add all impropers to the output list
-        for (atom_indices, improper) in impropers.items():
-            # Permute non-central atoms
-            others = [ atom_indices[0], atom_indices[2], atom_indices[3] ]
-            for p in itertools.permutations( others ):
-                force_terms.append( ([p[0], atom_indices[1], p[1], p[2]], improper.pid, improper.smirks) )
-
-        return force_terms
-
-parsers["PeriodicTorsionForce"] = PeriodicTorsionGenerator.parseElement
+parsers[ImproperTorsionGenerator._TAGNAME] = ImproperTorsionGenerator.parseElement
 
 ## @private
-class NonbondedGenerator(object):
-    """A NonbondedGenerator constructs a NonbondedForce."""
+class NonbondedGenerator(ForceGenerator):
+    """Handle SMIRNOFF ``<NonbondedGenerator>`` tags"""
 
     SCALETOL = 1e-5
 
-    class LennardJonesType(object):
+    class NonbondedType(ForceType):
         """A SMIRNOFF Lennard-Jones type."""
         def __init__(self, node, parent):
-            """Currently we support radius definition via 'sigma' or 'rmin_half'."""
-            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
-            self.pid = _extractQuantity(node, parent, 'id')
-            if 'fractional_bondorder' in parent.attrib:
-                self.fractional_bondorder = parent.attrib['fractional_bondorder']
-            else:
-                self.fractional_bondorder = None
+            # NOTE: Currently we support radius definition via 'sigma' or 'rmin_half'.
+            super(NonbondedType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
 
+            # TODO: Do we want to add an attribute ``type='LennardJones'``?
             # Make sure we don't have BOTH rmin_half AND sigma
             try:
                 a = _extractQuantity(node, parent, 'sigma')
@@ -1928,7 +1276,7 @@ class NonbondedGenerator(object):
             except:
                 pass
 
-            #Handle sigma
+            # Handle Lennard-Jones sigma
             try:
                 self.sigma = _extractQuantity(node, parent, 'sigma')
             #Handle rmin_half, AMBER-style
@@ -1937,32 +1285,26 @@ class NonbondedGenerator(object):
                 self.sigma = 2.*rmin_half/(2.**(1./6.))
             self.epsilon = _extractQuantity(node, parent, 'epsilon')
 
+    _TAGNAME = 'NonbondedForce' # SMIRNOFF tag name to process
+    _INFOTYPE = NonbondedType # info type to store
+    _OPENMMTYPE = openmm.NonbondedForce # OpenMM force class to create
+
     def __init__(self, forcefield, coulomb14scale, lj14scale):
-        self.ff = forcefield
+        super(NonbondedForceGenerator, self).__init__(forcefield)
         self.coulomb14scale = coulomb14scale
         self.lj14scale = lj14scale
-        self._ljtypes = list()
 
-    def registerAtom(self, node, parent):
-        ljtype = NonbondedGenerator.LennardJonesType(node, parent)
-        self._ljtypes.append(ljtype)
 
-    @staticmethod
-    def parseElement(element, ff):
-        existing = [f for f in ff._forces if isinstance(f, NonbondedGenerator)]
-        if len(existing) == 0:
-            generator = NonbondedGenerator(ff, float(element.attrib['coulomb14scale']), float(element.attrib['lj14scale']))
-            ff.registerGenerator(generator)
-        else:
-            # Multiple <NonbondedForce> tags were found, probably in different files.  Simply add more types to the existing one.
-            generator = existing[0]
-            if abs(generator.coulomb14scale - float(element.attrib['coulomb14scale'])) > NonbondedGenerator.SCALETOL or \
-                    abs(generator.lj14scale - float(element.attrib['lj14scale'])) > NonbondedGenerator.SCALETOL:
-                raise ValueError('Found multiple NonbondedForce tags with different 1-4 scales')
-        for atom in element.findall('Atom'):
-            generator.registerAtom(atom, element)
+    # TODO: Handle the case where multiple <NonbondedForce> tags are found
+    # if abs(generator.coulomb14scale - float(element.attrib['coulomb14scale'])) > NonbondedGenerator.SCALETOL or \
+    #                 abs(generator.lj14scale - float(element.attrib['lj14scale'])) > NonbondedGenerator.SCALETOL:
+    #            raise ValueError('Found multiple NonbondedForce tags with different 1-4 scales')
+    #    for atom in element.findall('Atom'):
+    #        generator.registerAtom(atom, element)
 
-    def createForce(self, system, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=0.9, verbose=False, **args):
+    def createForce(self, system, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=0.9, **args):
+        force = super(NonbondedForceGenerator, self).createForce(system, topology)
+
         methodMap = {NoCutoff:openmm.NonbondedForce.NoCutoff,
                      CutoffNonPeriodic:openmm.NonbondedForce.CutoffNonPeriodic,
                      CutoffPeriodic:openmm.NonbondedForce.CutoffPeriodic,
@@ -1980,28 +1322,18 @@ class NonbondedGenerator(object):
         system.addForce(force)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
-        atoms = ValenceDict()
-        for ljtype in self._ljtypes:
-            for atom_indices in topology.unrollSMIRKSMatches(ljtype.smirks, aromaticity_model = self.ff._aromaticity_model):
-                atoms[atom_indices] = ljtype
+        atoms = self.getMatches(topology)
 
-        if verbose:
-            print('')
-            print('NonbondedForceGenerator:')
-            print('')
-            for ljtype in self._ljtypes:
-                print('%64s : %8d matches' % (ljtype.smirks, len(topology.unrollSMIRKSMatches(ljtype.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
-
-        # Add all Lennard-Jones terms to the system.
         # Create all particles.
-        for atom in topology.atoms():
+        for particle in topology.particles:
             force.addParticle(0.0, 1.0, 0.0)
-        # Set the particle Lennard-Jones terms.
-        for (atom_indices, ljtype) in atoms.items():
-            force.setParticleParameters(atom_indices[0], 0.0, ljtype.sigma, ljtype.epsilon)
 
-        # Check that no topological torsions are missing force parameters
+        # Set the particle Lennard-Jones terms.
+        for (atoms, ljtype) in atoms.items():
+            force.setParticleParameters(atoms[0].particle_index, 0.0, ljtype.sigma, ljtype.epsilon)
+
+        # Check that no atoms are missing force parameters
+        # QUESTION: Don't we want to allow atoms without force parameters? Or perhaps just *particles* without force parameters, but not atoms?
         _check_for_missing_valence_terms('NonbondedForce Lennard-Jones parameters', topology, atoms.keys(), topology.atoms())
 
         # Set the partial charges based on reference molecules.
@@ -2026,178 +1358,76 @@ class NonbondedGenerator(object):
                     force.setParticleParameters(map_atom_index, charge, sigma, epsilon)
         # TODO: Should we check that there are no missing charges?
 
-    def postprocessSystem(self, system, topology, verbose=False, **args):
-        atoms = [ atom for atom in topology.atoms() ]
-        natoms = len(atoms)
-
+    def postprocessSystem(self, system, topology, **args):
         # Create exceptions based on bonds.
-        bondIndices = []
-        for (atom1, atom2) in topology.bonds():
-            if (atom1.index < 0) or (atom2.index < 0) or (atom1.index >= natoms) or (atom2.index >= natoms):
-                raise Exception('atom indices out of bounds')
-            bondIndices.append((atom1.index, atom2.index))
+        # QUESTION: Will we want to do this for *all* cases, or would we ever want flexibility here?
+        bond_particle_indices = [ (atom1.particle_index, atom2.particle_index) for (atom1, atom2) in topology.bonds ]
+        for force in system.getForces():
+            # TODO: Should we just store which `Force` object we are adding to and use that instead,
+            # to prevent interference with other kinds of forces in the future?
+            # TODO: Can we generalize this to allow for `CustomNonbondedForce` implementations too?
+            if isinstance(force, openmm.NonbondedForce):
+                nonbonded.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self.lj14scale)
 
-        # Create the exceptions.
-        nonbonded = [f for f in system.getForces() if isinstance(f, openmm.NonbondedForce)][0]
-        nonbonded.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)
-
-    def labelForce(self, oemol, verbose=False, **kwargs):
-        """Take a provided OEMol and parse HarmonicBondForce terms for this molecule.
-
-        Parameters
-        ----------
-            oemol : OEChem OEMol object for molecule to be examined
-
-        Returns
-        ---------
-            force_terms: list
-                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
-        """
-
-        # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
-        atoms = ValenceDict()
-        for ljtype in self._ljtypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, ljtype.smirks, aromaticity_model = self.ff._aromaticity_model):
-                atoms[atom_indices] = ljtype
-
-        if verbose:
-            print('')
-            print('NonbondedForceGenerator:')
-            print('')
-            for ljtype in self._ljtypes:
-                print('%64s : %8d matches' % (ljtype.smirks, len(getSMIRKSMatches_OEMol(oemol, ljtype.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
-
-        # Add all Lennard-Jones terms to the output list
-        force_terms = []
-        for (atom_indices, ljtype) in atoms.items():
-            force_terms.append( ([atom_indices[0]], ljtype.pid, ljtype.smirks) )
-
-        return force_terms
-
-
-parsers["NonbondedForce"] = NonbondedGenerator.parseElement
+parsers[NonbondedGenerator._TAGNAME] = NonbondedGenerator.parseElement
 
 ## @private
-class BondChargeCorrectionGenerator(object):
-    """A BondChargeCorrectionGenerator handles <BondChargeCorrections>."""
+class BondChargeCorrectionGenerator(ForceGenerator):
+    """Handle SMIRNOFF ``<BondChargeCorrection>`` tags"""
 
-    class BondChargeCorrectionType(object):
-        """A SMIRNOFF bond type."""
+    class BondChargeCorrectionType(ForceType):
+        """A SMIRNOFF bond charge correction type."""
         def __init__(self, node, parent):
-            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            super(BondChargeCorrectionGenerator, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
             self.increment = _extractQuantity(node, parent, 'increment')
-            self.pid = _extractQuantity(node, parent, 'id')
             # If no units are specified, assume elementary charge
             if type(self.increment) == float:
                 self.increment *= unit.elementary_charge
 
-    def __init__(self, forcefield, initialChargeMethod):
-        from openeye import oequacpac
-        self.ff = forcefield
-        self._bondChargeCorrections = list()
-        self._initialChargeMethod = initialChargeMethod
-        self._oechargemethod = 'OECharges_' + initialChargeMethod
-        if not hasattr(oequacpac, self._oechargemethod):
-            raise Exception("BondChargeCorrectionGenerator: initialChargeMethod attribute was '%s', but '%s' was not found in oequacpac available methods." % (initialChargeMethod, self._oechargemethod))
+    _TAGNAME = 'BondChargeCorrection' # SMIRNOFF tag name to process
+    _INFOTYPE = BondChargeCorrectionType # info type to store
+    _OPENMMTYPE = openmm.NonbondedForce # OpenMM force class to create or utilize
 
-    def registerBondChargeCorrection(self, node, parent):
-        """Register a SMIRNOFF bondtype definition."""
-        bond = BondChargeCorrectionGenerator.BondChargeCorrectionType(node, parent)
-        self._bondChargeCorrections.append(bond)
+    def __init__(self, forcefield):
+        super(NonbondedForceGenerator, self).__init__(forcefield)
 
-    @staticmethod
-    def parseElement(element, ff):
-        # Find existing force generator or create new one.
-        existing = [f for f in ff._forces if isinstance(f, BondChargeCorrectionGenerator)]
-        if len(existing) == 0:
-            generator = BondChargeCorrectionGenerator(ff, element.attrib['method'])
-            ff.registerGenerator(generator)
-        else:
-            # Check that new bond charge generator doesn't request a different method from existing one.
-            if element.attrib['method'] != existing[0]._initialChargeMethod:
-                raise Exception("Existing BondChargeCorrectionGenerator uses initial charging method '%s' while new BondChargeCorrectionGenerator requests '%s'" % (existing[0]._initialChargeMethod, element.attrib['method']))
+    #if element.attrib['method'] != existing[0]._initialChargeMethod:
+    #raise Exception("Existing BondChargeCorrectionGenerator uses initial charging method '%s' while new BondChargeCorrectionGenerator requests '%s'" % (existing[0]._initialChargeMethod, element.attrib['method']))
 
-            generator = existing[0]
-
-        # Register all SMIRNOFF bond definitions.
-        for bond in element.findall('BondChargeCorrection'):
-            generator.registerBondChargeCorrection(bond, element)
-
-    def createForce(self, system, topology, verbose=False, **args):
+    def createForce(self, system, topology, **args):
         # No forces are created by this generator.
         pass
 
-    def labelForce(self, oemol, verbose=False, **kwargs):
-        """Take a provided OEMol and parse BondChargeCorrection terms for this molecule.
-
-        Parameters:
-        -----------
-        oemol : OEChem OEMol object for molecule to be examined
-
-        Returns
-        -------
-        parameter_terms : list
-            Returns a list of tuples, [ ([atom id 1, atom id 2], parameter id, smirks), (...), ...] for all sets of atoms to which this parameter would be applied.
-        """
-        bccs = {}
-        for bcc in self._bondChargeCorrections:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, bcc.smirks, aromaticity_model = self.ff._aromaticity_model):
-                bccs[atom_indices] = bcc
-
-        if verbose:
-            print('')
-            print('BondChargeCorrectionGenerator:')
-            print('')
-            for bcc in self._bondChargeCorrections:
-                print('%64s : %8d matches' % (bcc.smirks, len(getSMIRKSMatches_OEMol(oemol, bcc.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
-
-        # Add all BCCs to the output list
-        force_terms = []
-        for (atom_indices, bcc) in bccs.items():
-            force_terms.append( ([atom_indices[0], atom_indices[1]], bcc.pid, bcc.smirks) )
-
-        return force_terms
-
-    def postprocessSystem(self, system, topology, verbose=False, chargeMethod=None, **args):
+    # TODO: Move chargeMethod to SMIRNOFF spec
+    def postprocessSystem(self, system, topology, chargeMethod=None, **args):
         if chargeMethod != 'BCC':
             # Only apply charge corrections if chargeMethod is 'BCC'
             return
 
-        # Iterate over all defined bond charge corrections, allowing later matches to override earlier ones.
-        bonds = ValenceDict()
-        for bond in self._bondChargeCorrections:
-            for atom_indices in topology.unrollSMIRKSMatches(bond.smirks, aromaticity_model = self.ff._aromaticity_model):
-                bonds[atom_indices] = bond
-
-        if verbose:
-            print('')
-            print('Bond charge corrections:')
-            print('')
-            for bond in self._bondChargeCorrections:
-                print('%64s %12.6f : %8d matches' % (bond.smirks, bond.increment / unit.elementary_charge, len(topology.unrollSMIRKSMatches(bond.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
+        # Iterate over all defined bond charge corrections, allowing later matches to override earlier ones
+        bonds = self.getMatches(topology)
 
         # Apply bond charge increments
         for force in system.getForces():
             if force.__class__.__name__ in ['NonbondedForce']:
-                for (atom_indices, bond) in bonds.items():
+                for (atoms, bond) in bonds.items():
+                    # Get corresponding particle indices in Topology
+                    particle_indices = tuple([ atom.particle_index for atom in atoms ])
                     # Retrieve parameters
-                    [charge0, sigma0, epsilon0] = force.getParticleParameters(atom_indices[0])
-                    [charge1, sigma1, epsilon1] = force.getParticleParameters(atom_indices[1])
+                    [charge0, sigma0, epsilon0] = force.getParticleParameters(particle_indices[0])
+                    [charge1, sigma1, epsilon1] = force.getParticleParameters(particle_indices[1])
                     # Apply bond charge increment
                     charge0 -= bond.increment
                     charge1 += bond.increment
                     # Update charges
-                    force.setParticleParameters(atom_indices[0], charge0, sigma0, epsilon0)
-                    force.setParticleParameters(atom_indices[1], charge1, sigma1, epsilon1)
+                    force.setParticleParameters(particle_indices[0], charge0, sigma0, epsilon0)
+                    force.setParticleParameters(particle_indices[1], charge1, sigma1, epsilon1)
 
-parsers["BondChargeCorrections"] = BondChargeCorrectionGenerator.parseElement
+parsers[BondChargeCorrectionGenerator._TAGNAME] = BondChargeCorrectionGenerator.parseElement
 
 ## @private
-class GBSAForceGenerator(object):
-    """A GBSAForceGenerator constructs GBSA forces."""
+class GBSAForceGenerator(ForceGenerator):
+    """Handle SMIRNOFF ``<GBSAForceGenerator>`` tags"""
     # TODO: Differentiate between global and per-particle parameters for each model.
 
     # Global parameters for surface area (SA) component of model
@@ -2213,11 +1443,10 @@ class GBSAForceGenerator(object):
         'OBC2' : ['radius', 'scale'],
     }
 
-    class GBSAType(object):
+    class GBSAType(ForceType):
         """A SMIRNOFF GBSA type."""
         def __init__(self, node, parent):
-            """Create a GBSAType"""
-            self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+            super(GBSAType, self).__init__(node, parent)
 
             # Store model parameters.
             gb_model = parent.attrib['gb_model']
@@ -2238,10 +1467,11 @@ class GBSAForceGenerator(object):
                 msg += 'missing parameters: %s' % str(missing_parameters)
                 raise Exception(msg)
 
-    def __init__(self, forcefield, element):
-        self.ff = forcefield
-        self._gbsa_types = list()
+    def __init__(self, forcefield):
+        super(GBSAForceGenerator, self).__init__(forcefield)
 
+    # TODO: Fix this
+    def parseElement(self):
         # Initialize GB model
         gb_model = element.attrib['gb_model']
         valid_GB_models = GBSAForceGenerator.GB_expected_parameters.keys()
@@ -2260,10 +1490,7 @@ class GBSAForceGenerator(object):
         # TODO: Deep copy?
         self.parameters = element.attrib
 
-    def registerAtom(self, node, parent):
-        gbsa_type = GBSAForceGenerator.GBSAType(node, parent)
-        self._gbsa_types.append(gbsa_type)
-
+    # TODO: Generalize this
     def checkCompatibility(self, generator):
         """
         Check compatibility of this generator with another generators.
@@ -2275,94 +1502,27 @@ class GBSAForceGenerator(object):
             raise ValueError('Found multiple GBSAForce tags with different SA model specifications')
         # TODO: Check other attributes (parameters of GB and SA models) automatically?
 
-    @staticmethod
-    def parseElement(element, ff):
-        existing = [f for f in ff._forces if isinstance(f, GBSAForceGenerator)]
-        generator = GBSAForceGenerator(ff, element)
-        if len(existing) > 0:
-            generator.checkCompatibility(existing[0])
-        ff.registerGenerator(generator)
-        for atom in element.findall('Atom'):
-            generator.registerAtom(atom, element)
-
-    def createForce(self, system, topology, verbose=False, **args):
+    def createForce(self, system, topology, **args):
+        # TODO: Rework this
         from openforcefield.typing.engines.smirnoff import gbsaforces
         force_class = getattr(gbsaforces, self.gb_model)
         force = force_class(**self.parameters)
         system.addForce(force)
 
-        # Iterate over all defined GBSA types, allowing later matches to override earlier ones.
-        atoms = ValenceDict()
-        for gbsa_type in self._gbsa_types:
-            for atom_indices in topology.unrollSMIRKSMatches(gbsa_type.smirks, aromaticity_model = self.ff._aromaticity_model):
-                atoms[atom_indices] = gbsa_type
-
-        if verbose:
-            print('')
-            print('GBSAForceGenerator:')
-            print('')
-            for gbsa_type in self._gbsa_types:
-                print('%64s : %8d matches' % (gbsa_type.smirks, len(topology.unrollSMIRKSMatches(gbsa_type.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
-
         # Add all GBSA terms to the system.
         expected_parameters = GBSAForceGenerator.GB_expected_parameters[self.gb_model]
-        # Create all particle parmeters.
+
+        # Create all particles with parameters set to zero
+        atoms = self.getMatches(topology)
         nparams = 1 + len(expected_parameters) # charge + GBSA parameters
         params = [ 0.0 for i in range(nparams) ]
-        for atom in topology.atoms():
+        for particle in topology.particles():
             force.addParticle(params)
-        # Set the particle Lennard-Jones terms.
-        natoms = sum([1 for atom in topology.atoms()])
-        for (atom_indices, gbsa_type) in atoms.items():
-            params = [0] + [ getattr(gbsa_type, name) for name in expected_parameters ]
-            force.setParticleParameters(atom_indices[0], params)
+        # Set the GBSA parameters (keeping charges at zero for now)
+        for (atoms, gbsa_type) in atoms.items():
+            atom = atoms[0]
+            # Set per-particle parameters for assigned parameters
+            params = [atom.charge] + [ getattr(gbsa_type, name) for name in expected_parameters ]
+            force.setParticleParameters(atom.particle_index, params)
 
-        # Set the partial charges based on reference molecules.
-        for reference_molecule in topology._reference_molecules:
-            atom_mappings = topology._reference_to_topology_atom_mappings[reference_molecule]
-            for atom_mapping in atom_mappings:
-                for (atom, atom_index) in zip(reference_molecule.GetAtoms(), atom_mapping):
-                    params = force.getParticleParameters(atom_index)
-                    params = list(params)
-                    params[0] = atom.GetPartialCharge() * unit.elementary_charge
-                    force.setParticleParameters(atom_index, params)
-
-    def postprocessSystem(self, system, topology, verbose=False, **args):
-        pass
-
-    def labelForce(self, oemol, verbose=False, **kwargs):
-        """Take a provided OEMol and parse HarmonicBondForce terms for this molecule.
-
-        Parameters
-        ----------
-            oemol : OEChem OEMol object for molecule to be examined
-
-        Returns
-        ---------
-            force_terms: list
-                Returns a list of tuples, [ ([atom id 1, ... atom id N], parameter id, smirks) , (....), ... ] for all forces of this type which would be applied.
-        """
-
-        # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
-        atoms = ValenceDict()
-        for gbsa_type in self._ljtypes:
-            for atom_indices in getSMIRKSMatches_OEMol(oemol, gbsa_type.smirks, aromaticity_model = self.ff._aromaticity_model):
-                atoms[atom_indices] = gbsa_type
-
-        if verbose:
-            print('')
-            print('GBSAForceGenerator:')
-            print('')
-            for ljtype in self._ljtypes:
-                print('%64s : %8d matches' % (gbsa_type.smirks, len(getSMIRKSMatches_OEMol(oemol, gbsa_type.smirks, aromaticity_model = self.ff._aromaticity_model))))
-            print('')
-
-        # Add all GBSA terms to the output list
-        force_terms = []
-        for (atom_indices, gbsa_type) in atoms.items():
-            force_terms.append( ([atom_indices[0]], gbsa_type.pid, gbsa_type.smirks) )
-
-        return force_terms
-
-parsers["GBSAForce"] = GBSAForceGenerator.parseElement
+parsers[GBSAForceGenerator._TAGNAME] = GBSAForceGenerator.parseElement
