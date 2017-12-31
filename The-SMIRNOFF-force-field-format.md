@@ -7,7 +7,7 @@ While designed for [`OpenMM`](http://openmm.org), parameters encoded in this for
 
 The SMIRNOFF format provides XML `ffxml` files that are parseable by the `ForceField` class of the `openforcefield.typing.smirnoff` module.
 These encode parameters for a force field based on a SMIRKS-based specification of the chemical environment the parameters are to be applied to.
-The file has tags corresponding to OpenMM force terms (`HarmonicBondForce`, `HarmonicAngleForce`, `PeriodicTorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example ffxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.ffxml)):
+The file has tags corresponding to OpenMM force terms (`BondForce`, `AngleForce`, `TorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example ffxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.ffxml)):
 ```XML
 <AngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
    ...
@@ -32,6 +32,20 @@ Equilibrium angle values are provided, along with force constants (with units as
 This hierarchical structure means that a typical parameter file will tend to have generic parameters early in the section for each force type, with more specialized parameters assigned later.
 
 **Technical note**: Because this is an XML format, certain special characters that occur in valid SMIRKS patterns (such as ampersand symbols `&`) must be treated specially to process.
+See [this entry](https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references) for more details.
+
+## Units
+
+If not specified by a `*_unit` attribute, the [standard OpenMM unit system](http://docs.openmm.org/latest/userguide/theory.html#units) is assumed:
+* distances are specified in `nanometers`
+* mass is specified in `daltons`
+* time is specified in `picoseconds`
+* charge is specified in `elementary_charge`,
+* temperature is specified in `kelvin`
+* quantity is specified in `moles`
+* angles are specified in `radians`
+
+Allowed values for units are given in [`simtk.unit`](https://github.com/pandegroup/openmm/blob/master/wrappers/python/simtk/unit/unit_definitions.py).
 
 ## Functional forms, etc.
 
@@ -52,23 +66,46 @@ Before getting in to individual sections, it's worth noting that the XML parser 
 
 Nonbonded sterics parameters, which model repulsive and dispersive forces, are specified via the `StericsForce` tag with sub-tags for individual `Atom` entries, such as:
 ```XML
-<StericsForce potential="Lennard-Jones" coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+<StericsForce potential="Lennard-Jones" scale12="0.0" scale13="0.0" scale14="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
    <Atom smirks="[#1:1]" rmin_half="1.4870" epsilon="0.0157"/>
    <Atom smirks="[#1:1]-[#6]" rmin_half="1.4870" epsilon="0.0157"/>
    ...
 </StericsForce>
 ```
-Scaling terms applied to the energies of 1-4 interactions should be specified in attributes for the `StericsForce` tag, along with units.
+Attributes in the `<StericsForce>` tag specify the scaling terms applied to the energies of 1-2 (`scale12`, default: 0), 1-3 (`scale13`, default: 0), and 1-4 (`scale14`, default: 0.5) interactions.
 
 Currently, only `potential="Lennard-Jones"` is supported:
 ```
 U(r) = 4*epsilon*((sigma/r)^12 - (sigma/r)^6)
 ```
 Later revisions will add support for additional potential types (e.g., Buckingham exp-6) and the ability to support arbitrary algebraic functional forms.
+If the `potential` attribute is omitted, it defaults to `Lennard-Jones`.
 
 For compatibility, the size property of an atom can be specified either via providing the `sigma` attribute, such as `sigma="1.3"`, or via the `r_0/2` (`rmin/2`) values used in AMBER force fields (here denoted `rmin_half` as in the example above).
 The two are related by `r0 = 2^(1/6)*sigma` and conversion is done internally in `ForceField` into the `sigma` values used in OpenMM.
 `epsilon` denotes the well depth.
+
+### `<ElectrostaticsForce>`
+
+Electrostatic interactions are specified via the `<ElectrostaticsForce>` tag.
+```XML
+<ElectrostaticsForce method="PME" scale12="0.0" scale13="0.0" scale14="0.833333"/>
+```
+The `method` attribute specifies the manner in which electrostatic interactions are to be computed:
+* `PME` - [particle mesh Ewald](http://docs.openmm.org/latest/userguide/theory.html#coulomb-interaction-with-particle-mesh-ewald) should be used (DEFAULT)
+* `reaction-field` - [reaction-field electrostatics](http://docs.openmm.org/latest/userguide/theory.html#coulomb-interaction-with-cutoff) should be used
+* `Coulomb` - direct Coulomb interactions (with no reaction-field attenuation) should be used
+
+The interaction scaling parameters applied to atoms connected by a few bonds are
+* `scale12` (default: 0) specifies the scaling applied to 1-2 bonds
+* `scale13` (default: 0) specifies the scaling applied to 1-3 bonds
+* `scale14` (default: 0.833333) specifies the scaling applied to 1-4 bonds
+
+Currently, no child tags are used because the charge model is specified via different means (currently library charges or BCCs).
+
+**QUESTION:** Should we also also require the `cutoff` (or lack thereof) to be specified?
+
+**QUESTION:** Should we also also require the `switch` (or lack thereof) to be specified, since this can also have a large effect on the forces near the cutoff?
 
 ### `<BondForce>`
 
@@ -86,6 +123,7 @@ Currently, only `potential="harmonic"` is supported, where we utilize the standa
 U(r) = (k/2)*(r-length)^2
 ```
 Later revisions will add support for additional potential types and the ability to support arbitrary algebraic functional forms.
+If the `potential` attribute is omitted, it defaults to `harmonic`.
 
 **Note that AMBER and CHARMM define a modified functional form**, such that `U(r) = k*(r-length)^2`, so that force constants would need to be multiplied by two in order to be used in the SMIRNOFF format.
 
@@ -106,6 +144,7 @@ Currently, only `potential="harmonic"` is supported, where we utilize the standa
 U(r) = (k/2)*(theta-angle)^2
 ```
 Later revisions will add support for additional potential types and the ability to support arbitrary algebraic functional forms.
+If the `potential` attribute is omitted, it defaults to `harmonic`.
 
 **Note that AMBER and CHARMM define a modified functional form**, such that `U(r) = k*(theta-angle)^2`, so that force constants would need to be multiplied by two in order to be used in the SMIRNOFF format.
 
@@ -127,6 +166,7 @@ Currently, only `potential="charmm"` is supported, where we utilize the function
 U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 ```
 **Note that AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
+If the `potential` attribute is omitted, it defaults to `charmm`.
 
 Optionally, an `idivfN` attribute may be specified for each torsional term (for easier compatibility with AMBER files); this specifies a numerical value (in AMBER, always an integer) which is used as a divisor for the barrier height when assigning the torsion; i.e., a torsion with `idivf1="9"` is assigned a barrier height `k1` that is 1/9th the specified value.
 If `idivfN` is not specified, the barrier height is applied as stated.
@@ -150,6 +190,7 @@ Currently, only `potential="charmm"` is supported, where we utilize the function
 U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 ```
 **Note that AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
+If the `potential` attribute is omitted, it defaults to `charmm`.
 
 **Improper torsion definitions deviate profoundly from AMBER handling of impropers** in two ways.
 First, to eliminate ambiguity, we treat impropers as a [trefoil](https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Trefoil_knot_left.svg/2000px-Trefoil_knot_left.svg.png) and apply the same set of parameters to all six paths around the trefoil.
@@ -183,6 +224,8 @@ Currently, this can be selected from a subset of the [GBSA models available in O
 * `OBC1`: [Onufriev-Bashford-Case](http://docs.openmm.org/latest/userguide/zbibliography.html#onufriev2004) using the GB(OBC)I parameters (corresponding to `igb=2` in AMBER): requires `[radius, scale]`
 * `OBC2`: [Onufriev-Bashford-Case](http://docs.openmm.org/latest/userguide/zbibliography.html#onufriev2004) using the GB(OBC)II parameters (corresponding to `igb=5` in AMBER): requires `[radius, scale]`
 
+If the `gb_model` attribute is omitted, it defaults to `OBC1`.
+
 Each GB model can possess several attributes, which may be unitless (`1.0`, `78.5`) or unit-bearing quantities (`1.4*angstrom`, `5.4*calories/mole/angstrom**2`).
 The attributes `solvent_dielectric` and `solute_dielectric` specify solvent and solute dielectric constants used by the GB model.
 In this example, `radius` and `scale` are per-particle parameters of the `OBC1` GB model supported by OpenMM.
@@ -193,39 +236,41 @@ Units are for these per-particle parameters (such as `radius_units`) optionally 
 The `sa_model` attribute specifies the solvent-accessible surface area model ("SA" part of GBSA) if one should be included; if omitted, no SA term is included.
 
 Currently, only the [analytical continuum electrostatics (ACE) model](http://docs.openmm.org/latest/userguide/theory.html#surface-area-term), designated `ACE`, can be specified, but there are plans to add more models in the future, such as the Gaussian solvation energy component of [EEF1](https://www.ncbi.nlm.nih.gov/pubmed/10223287).
+If `sa_model` is not specified, it defaults to `ACE`.
+
 The `ACE` model permits two additional parameters to be specified:
-* The `surface_area_penalty` attribute specifies the surface area penalty for the `ACE` model (defaults to `5.4*calories/mole/angstroms**2`).
-* The `solvent_radius` attribute specifies the solvent radius, which defaults to `1.4*angstroms`.
+* The `surface_area_penalty` attribute specifies the surface area penalty for the `ACE` model. (Default: `5.4*calories/mole/angstroms**2`)
+* The `solvent_radius` attribute specifies the solvent radius. (Default: `1.4*angstroms`)
 
 ### `<BondChargeCorrections>`
 
 Bond charge corrections similar to those used in the [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) charge model from Christopher Bayly can be applied via a `<BondChargeCorrections>...</BondChargeCorrections>` section with child tags specifying specific `<BondChargeCorrection/>` terms.
 Here is an example not intended for actual use:
 ```XML
-<BondChargeCorrections method="AM1" increment_unit="elementary_charge">
+<BondChargeCorrections method="AM1/CM2" increment_unit="elementary_charge">
   <BondChargeCorrection smirks="[#6X4:1]-[#6X3a:2]" increment="+0.0073"/>
   <BondChargeCorrection smirks="[#6X4:1]-[#6X3a:2]-[#7]" increment="-0.0943"/>
   <BondChargeCorrection smirks="[#6X4:1]-[#8:2]" increment="+0.0718"/>
 </BondChargeCorrections>
 ```
-The `method="AM1"` attribute specifies that AM1-CM2 charges should be used to create initial partial charges, while `elementary_charge` specifies the units used for the `increment` attribute in the `<BondChargeCorrection/>` tags.
+The `method="AM1/CM2"` attribute specifies that a CM2 population analysis should be applied to an AM1 wavefunction to compute initial partial charges, while `elementary_charge` specifies the units used for the `increment` attribute in the `<BondChargeCorrection/>` tags.
 The charge correction `increment` (in units of proton charge) will be applied on top of this by subtracting `increment` from the atom tagged as 1 and adding it to the atom tagged as 2.
-
-**QUESTION:** Should we split this to `qm_method="AM1"` and `charge_partitioning_method="CM2"`?
 
 ### `<Constraints>`
 
 Distance constraints can be specified through a `<Constraints/>` block, which can constrain bonds to their equilibrium lengths or specify an interatomic constraint distance.
 Two atoms must be tagged in the `smirks` attribute of each `<Constraint/>` record.
 
-To constrain two atoms to their equilibrium bond length, it is critical that a `<HarmonicBondForce/>` record be specified for those atoms:
+To constrain two atoms to their equilibrium bond length, it is critical that a `<BondForce/>` record be specified for those atoms:
 ```XML
 <Constraints>
   <!-- constrain all bonds to hydrogen to their equilibrium bond length -->
   <Constraint smirks="[#1:1]-[*:2]" />
 </Constraints>
 ```
-However, this constraint distance can be overridden, or two atoms that are not directly bonded constrained, by specifying the `distance` attribute (and optional `distance_unit` attribute for the `<Constraints/>` tag):
+Note that the two atoms must be bonded in the specified `Topology` for the equilibrium bond length to be used.
+
+To specify the constraint distance, or constrain two atoms that are not directly bonded (such as the hydrogens in rigid water models), specify the `distance` attribute (and optional `distance_unit` attribute for the `<Constraints/>` tag):
 ```XML
 <Constraints distance_unit="angstroms">
   <!-- constrain water O-H bond to equilibrium bond length (overrides earlier constraint) -->
@@ -270,21 +315,15 @@ Partial bond orders can be used to allow interpolation of parameters. For exampl
     <Bond smirks="[#6X3:1]=[#6X3:2]" k="1098.0" length="1.35"/>
     ...
 ```
-can be replaced by a single parameter line:
+can be replaced by a single parameter line by first invoking the `fractional_bondorder_method` attribute to specify a method for computing the fractional bond order and `fractional_bondorder_interpolation` for specifying the procedure for interpolating parameters between specified integral bond orders:
 ```XML
-<BondForce potential="harmonic" length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2" fractional_bondorder="interpolate-linear">
+<BondForce potential="harmonic" length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2" fractional_bondorder_method="Wiberg" fractional_bondorder_interpolation="linear">
     <Bond smirks="[#6X3:1]!#[#6X3:2]" k_bondorder1="820.0" k_bondorder2="1098" length_bondorder1="1.45" length_bondorder2="1.35"/>
     ...
 ```
 This allows specification of force constants and lengths for bond orders 1 and 2, and then interpolation between those based on the partial bond order.
-Currently the Wiberg bond order is used, which will be obtained automatically from an AM1-based charge calculation using the OpenEye toolkits if a beta version (or later) of the October 2016 toolkits is used.
-
-Important usage notes:
-* An interpolation scheme must be specified in the `BondForce` attributes; currently only `interpolate-linear` is supported, though a spline interpolation may be preferable (this needs to be explored)
-* If it is desired to use fractional bond orders, the introductory SMIRNOFF tag for the file must specify that the force field will use these via `<SMIRNOFF use_fractional_bondorder="True">` or similar. Otherwise, no partial bond orders will be obtained for possible later use.
-* This feature is only implemented for bonds at present, though it needs to be extended to angles and torsions; possibly also it may have value for vdW parameters (which could vary depending on bond order) though this needs to be explored.
-
-**QUESTION: Should we not require `use_fractional_bondorder` be specified at root level? It seems more appropriate at the force level.**
+* `fractional_bondorder_method` defaults to `none`, but the `Wiberg` method is supported.
+* `fractional_bondorder_interpolation` defaults to `linear`, which is the only supported scheme for now.
 
 ### Aromaticity models
 
@@ -325,8 +364,7 @@ See the [`openforcefield` GitHub issue tracker](https://github.com/openforcefiel
 A relatively extensive set of examples is available under [`examples/`](https://github.com/openforcefield/openforcefield/tree/master/examples). Basic usage works as follows in python, however:
 
 ```python
-from simtk import openmm, unit
-import numpy as np
+# Read in a small molecule using the OpenEye toolkit
 import oechem
 mol = oechem.OEGraphMol()
 ifs = oechem.oemolistream(mol_filename)
@@ -345,6 +383,7 @@ topology = Topology()
 topology.add_molecule(mol)
 
 # Create an OpenMM System from the openforcefield Topology
+from simtk import openmm, unit
 system = forcefield.createSystem(topology)
 ```
 This example can essentially trivially be extended to handle the case of beginning from a SMILES string rather than a `.mol2` file.
@@ -383,27 +422,27 @@ So use generics sparingly unless it is your intention to provide generics that s
 
 ### 0.2
 
-Overhaul of draft specification along with `ForceField` refactor.
+Overhaul of draft specification along with `ForceField` refactor:
+* Aromaticity model now defaults to `MDL`, and aromaticity model names drop OpenEye-specific prefixes
+* Added a description of default units if `*_unit` attributes are omitted.
 * Forces were renamed to be more general:
     * `<NonbondedForce>` was renamed to `<StericsForce>`
     * `<HarmonicBondForce>` was renamed to `<BondForce>`
     * `<HarmonicAngleForce>` was renamed to `<AngleForce>`
 * `<PeriodicTorsionForce>` was split into `<ProperTorsionForce>` and `<ImproperTorsionForce>`
-* The `potential` attribute was added to most forces to allow flexibility in extending forces to additional functional forms in the future.
-* Section heading names were cleaned up
-* Example was updated to reflect new `openforcefield.topology.Topology` class
+* `<StericsForce>` now specifies 1-2, 1-3, and 1-4 scaling factors via `scale12` (default: 0), `scale13` (default: 0), and `scale14` (default: 0.5) attributes. Coulomb scaling parameters have been removed from `StericsForce`.
+* Added the `<ElectrostaticsForce>` tag to separately specify 1-2, 1-3, and 1-4 scaling factors for electrostatics, as well as the method used to compute electrostatics (`PME`, `reaction-field`, `Coulomb`) since this has a huge effect on the energetics of the system.
+* Made it clear that `Constraint` entries do not have to be between bonded atoms.
+* The `potential` attribute was added to most forces to allow flexibility in extending forces to additional functional forms (or algebraic expressions) in the future. `potential` defaults to the current recommended scheme if omitted.
+* `GBSAForce` now has defaults specified for `gb_method` and `sa_method`
+* Changes to how fractional bond orders are handled:
+    * Use of fractional bond order is now are specified at the force tag level, rather than the root level
+    * The fractional bond order method is specified via the `fractional_bondorder_method` attribute
+    * The fractional bond order interpolation scheme is specified via the `fractional_bondorder_interpolation`
+* Section heading names were cleaned up.
+* Example was updated to reflect use of the new `openforcefield.topology.Topology` class
+* Eliminated "Requirements" section, since it specified requirements for the software, rather than described an aspect of the SMIRNOFF specification
 
 ### 0.1
 
 Initial draft specification.
-
-## Requirements
-
-Currently, [OpenEye toolkits](http://www.eyesopen.com/toolkit-development) (free for academic use, but they require a license) are utilized for most of our chemistry.
-[OpenMM](http://openmm.org) is also required, as are a variety of other relatively standard python packages and other toolkits available via [`conda`](http://conda.pydata.org/docs/building/meta-yaml.html).
-
-The easiest way to install SMIRNOFF along with its dependencies is via `conda`:
-```bash
-conda config --add channels omnia
-conda install --yes openforcefield
-```
