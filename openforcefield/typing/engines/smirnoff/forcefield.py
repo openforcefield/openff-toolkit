@@ -104,6 +104,9 @@ HAngles = HAngles()
 # PRIVATE METHODS
 #=============================================================================================
 
+def _all_subclasses(cls):
+    return cls.__subclasses__() + [ g for s in cls.__subclasses__() for g in _all_subclasses(s) ]
+
 def _validateSMIRKS(smirks, node=None):
     """Validate the specified SMIRKS string.
 
@@ -258,11 +261,14 @@ def assert_bonded(topology, atom1, atom2):
 # FORCEFIELD
 #=============================================================================================
 
-# A map of functions to parse elements of the XML file.
-parsers = {}
-
 class ForceField(object):
     """A ForceField constructs OpenMM System objects based on a Topology.
+
+    Attributes
+    ----------
+    parsers : dict of str : ForceGenerator
+        parsers[tagname] is the ``ForceGenerator`` that will be called to process XML block ``tagname``
+        All subclasses of ``ForceGenerator`` are automatically registered as available parsers upon instantiation of ``ForceField``.
     """
 
     def __init__(self, *files):
@@ -277,6 +283,25 @@ class ForceField(object):
         """
         self._forces = []
         self.loadFile(files)
+        self.parsers = self._find_force_generators()
+
+    @staticmethod
+    def _find_force_generators():
+        """Identify all imported subclasses of ForceGenerator and register them in a dict().
+
+        Returns
+        -------
+        parsers : dict of str : ForceGenerator
+            parsers[tagname] is the ForceGenerator for the correspondiong tagname
+        """
+        parsers = dict()
+        for subclass in _all_subclasses(ForceGenerator):
+            tagname = subclass._TAGNAME
+            if tagname is not None:
+                if tagname in parsers.keys():
+                    raise Exception("ForceGenerator {} provides a parser for tag '{}', but ForceGemerator {} has already been registered to handle that tag.".format(subclass, tagname, self.parsers[tagname]))
+                parsers[tagname] = subclass
+        return parsers
 
     def loadFile(self, files):
         """Load a SMIRNOFF XML file and add the definitions from it to this ForceField.
@@ -293,6 +318,7 @@ class ForceField(object):
             files = (files,)
 
         # Load in all XML trees.
+        # QUESTION: Should we allow users to specify forcefield URLs so they can pull forcefield definitions from the web too?
         trees = list()
         for file in files:
             parser = etree.XMLParser(remove_blank_text=True) # For pretty print on write
@@ -343,13 +369,6 @@ class ForceField(object):
                 self._aromaticity_model = root.attrib['aromaticity_model']
             else:
                 self._aromaticity_model = None
-
-            # QUESTION: Do we really want to specify whether or not to use fractional bond order at the root level when we can easily
-            # determine whether individual Force components use it? Perhaps just specify a ``fractional_bondorder_method`` or ``model`` at root level?
-            if 'use_fractional_bondorder' in root.attrib:
-                self._use_fractional_bondorder = root.attrib['use_fractional_bondorder'] == 'True'
-            else:
-                self._use_fractional_bondorder = False
         else:
             raise ValueError("Error: ForceField parses a SMIRNOFF forcefield, but this does not appear to be one as the root tag is %s." % root.tag)
 
@@ -370,7 +389,10 @@ class ForceField(object):
             # Now actually load
             for child in root:
                 if child.tag in parsers:
-                    parsers[child.tag](child.tag, child, self)
+                    self.parsers[child.tag].parseElement(child.tag, child, self)
+                else:
+                    msg = "There is no registered parser for the tag '{}'. Parsers are registered for the following tags: {}".format(tagname, self.parsers.keys())
+                    raise Exception(msg)
 
         # Reset flag tracking whether stored XML has been modified since the last parse
         self._XMLModified = False
@@ -397,8 +419,8 @@ class ForceField(object):
         else:
             self._forces.append(generator)
 
-    # TODO: Rework the API
-    def getParameter(self, smirks = None, paramID=None, force_type='Implied'):
+    # TODO: Rework the API for getting, setting, and adding parameters
+    def getParameter(self, smirks=None, paramID=None, force_type='Implied'):
         """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
 
         Parameters
@@ -446,7 +468,7 @@ class ForceField(object):
                         if (smirks and elem.attrib['smirks']==smirks) or (paramID and elem.attrib['id']==paramID):
                             return copy.deepcopy(elem.attrib)
 
-    # TODO: Rework the API
+    # TODO: Rework the API for getting, setting, and adding parameters
     def setParameter(self, params, smirks=None, paramID=None, force_type="Implied"):
         """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
 
@@ -535,7 +557,7 @@ class ForceField(object):
 
         return success
 
-    # TODO: Rework the API
+    # TODO: Rework the API for getting, setting, and adding parameters
     def addParameter(self, params, smirks, force_type, tag):
         """Add specified SMIRKS/parameter in the section under the specified force type.
 
@@ -578,11 +600,9 @@ class ForceField(object):
 
         return success
 
+    # TODO: Rework the API for writing ffxml parameters, since writing to multiple files is currently ambiguous
     def writeFile(self, files):
         """Write forcefield trees out to specified files.
-
-        .. todo::
-            * Overhaul API
 
         Parameters
         ----------
@@ -599,6 +619,7 @@ class ForceField(object):
             tree = self._XMLTrees[idx]
             tree.write(filenm, xml_declaration=True, pretty_print=True)
 
+    # TODO: Prune many of these options.
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
                      chargeMethod=None, verbose=False, **kwargs):
@@ -689,7 +710,7 @@ class ForceField(object):
             system.addParticle(atom.element.mass)
 
         # Adjust hydrogen masses if requested.
-        # QUESTION: Do we need the capability to modify hydrogen masses via a keyword argument?
+        # QUESTION: Do we need the capability to modify hydrogen masses via a keyword argument, or should this be part of the forcefield spec?
         if hydrogenMass is not None:
             if not unit.is_quantity(hydrogenMass):
                 hydrogenMass *= unit.dalton
@@ -709,7 +730,7 @@ class ForceField(object):
             raise ValueError('Requested periodic boundary conditions for a Topology that does not specify periodic box dimensions')
 
         # Apply keyword-specified constraints.
-        # QUESTION: Do we need the capability to enforce constraints specified via a keyword argument in addition to SMIRNOFF-specified constraints??
+        # QUESTION: Do we need the capability to enforce constraints specified via a keyword argument in addition to SMIRNOFF-specified constraints?
         if constraints != None:
             raise Exception("Constraints are not implemented yet.")
 
@@ -768,7 +789,7 @@ class ForceField(object):
             for force in self._forces:
                 matches = force.getMatches(mol)
                 # TODO Reformat matches
-                # QUESTION: Do we want to store these by OpenMM force type (e.g., `HarmonicBondForce`) or by SMIRNOFF tag name (`BondForce`)
+                # QUESTION: Do we want to store labeled force terms by OpenMM force type (e.g., `HarmonicBondForce`) or by SMIRNOFF tag name (`BondForce`)
                 molecule_labels[idx][force._TAGNAME] = matches
 
         return molecule_labels
@@ -958,9 +979,6 @@ class ConstraintGenerator(ForceGenerator):
             if constraint.distance is not True:
                 system.addConstraint(*atoms, constraint.distance)
 
-# QUESTION: Would we want all subclasses of ForceGenerator automatically register themselves?
-parsers[ConstraintGenerator._TAGNAME] = ConstraintGenerator.parseElement
-
 ## @private
 class BondGenerator(ForceGenerator):
     """Handle SMIRNOFF ``<BondForce>`` tags"""
@@ -1051,8 +1069,6 @@ class BondGenerator(ForceGenerator):
         # Check that no topological bonds are missing force parameters
         _check_for_missing_valence_terms('BondForce', topology, bonds.keys(), topology.bonds)
 
-parsers[BondGenerator._TAGNAME] = BondGenerator.parseElement
-
 #=============================================================================================
 
 ## @private
@@ -1102,8 +1118,6 @@ class AngleGenerator(ForceGenerator):
 
         # Check that no topological angles are missing force parameters
         _check_for_missing_valence_terms('AngleForce', topology, angles.keys(), topology.angles())
-
-parsers[AngleForce._TAGNAME] = AngleGenerator.parseElement
 
 #=============================================================================================
 
@@ -1175,8 +1189,6 @@ class ProperTorsionGenerator(ForceGenerator):
 
         # Check that no topological torsions are missing force parameters
         _check_for_missing_valence_terms('ProperTorsionForce', topology, torsions.keys(), topology.torsions())
-
-parsers[ProperTorsionGenerator._TAGNAME] = ProperTorsionGenerator.parseElement
 
 ## @private
 class ImproperTorsionGenerator(ForceGenerator):
@@ -1254,8 +1266,6 @@ class ImproperTorsionGenerator(ForceGenerator):
 
         # Check that no topological torsions are missing force parameters
         _check_for_missing_valence_terms('ImproperTorsionForce', topology, torsions.keys(), topology.impropers())
-
-parsers[ImproperTorsionGenerator._TAGNAME] = ImproperTorsionGenerator.parseElement
 
 ## @private
 class NonbondedGenerator(ForceGenerator):
@@ -1357,8 +1367,6 @@ class NonbondedGenerator(ForceGenerator):
             if isinstance(force, openmm.NonbondedForce):
                 nonbonded.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self.lj14scale)
 
-parsers[NonbondedGenerator._TAGNAME] = NonbondedGenerator.parseElement
-
 ## @private
 class BondChargeCorrectionGenerator(ForceGenerator):
     """Handle SMIRNOFF ``<BondChargeCorrection>`` tags"""
@@ -1406,8 +1414,6 @@ class BondChargeCorrectionGenerator(ForceGenerator):
                     # Update charges
                     force.setParticleParameters(particle_indices[0], charge0, sigma0, epsilon0)
                     force.setParticleParameters(particle_indices[1], charge1, sigma1, epsilon1)
-
-parsers[BondChargeCorrectionGenerator._TAGNAME] = BondChargeCorrectionGenerator.parseElement
 
 ## @private
 class GBSAForceGenerator(ForceGenerator):
@@ -1508,5 +1514,3 @@ class GBSAForceGenerator(ForceGenerator):
             # Set per-particle parameters for assigned parameters
             params = [atom.charge] + [ getattr(gbsa_type, name) for name in expected_parameters ]
             force.setParticleParameters(atom.particle_index, params)
-
-parsers[GBSAForceGenerator._TAGNAME] = GBSAForceGenerator.parseElement
