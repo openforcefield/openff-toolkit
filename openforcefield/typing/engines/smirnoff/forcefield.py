@@ -14,10 +14,7 @@ Parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 .. todo::
     * Use XML parser with 'sourceline' node attributes to aid debugging
     http://stackoverflow.com/questions/6949395/is-there-a-way-to-get-a-line-number-from-an-elementtree-element
-    * How can we enforce ordering in ForceGenerator execution? Can we use dependency resolution?
-    We can add optional ``_EXECUTE_AFTER`` and ``_EXECUTE_BEFORE`` fields to constrain the execution order.
-    see also: https://pypi.python.org/pypi/data-depgraph/0.4.0
-
+    
 """
 
 #=============================================================================================
@@ -412,8 +409,8 @@ class ForceField(object):
 
     def registerGenerator(self, generator):
         """Register a new generator."""
-        # Special case: ConstraintGenerator has to come before HarmonicBondGenerator and HarmonicAngleGenerator.
-        # TODO: Figure out a more general way to allow generators to specify enforced orderings.
+        # Special case: ConstraintGenerator has to come before BondGenerator and AngleGenerator.
+        # TODO: Figure out a more general way to allow generators to specify enforced orderings via dependencies.
         if isinstance(generator, ConstraintGenerator):
             self._forces.insert(0, generator)
         else:
@@ -619,6 +616,23 @@ class ForceField(object):
             tree = self._XMLTrees[idx]
             tree.write(filenm, xml_declaration=True, pretty_print=True)
 
+    def _resolve_force_generator_order(self):
+        """Resolve the order in which ForceGenerator objects should execute to satisfy constraints.
+        """
+        ordered_force_generators = list()
+        # Create a DAG expressing dependencies
+        import networkx as nx
+        G = nx.DiGraph()
+        for force_generator in self.parsers.items():
+            G.add_node(force_generator._TAGNAME)
+            if force_generator._DEPENDENCIES is not None:
+                for dependency in force_generator._DEPENDENCIES:
+                    G.add_edge(dependency._TAGNAME, force_generator._TAGNAME)
+        # TODO: Check to make sure DAG isn't cyclic
+        # Resolve order
+        ordered_force_generators = [ self.parsers[tagname] for tagname in nx.topological_sort(G) ]
+        return ordered_force_generators
+
     # TODO: Prune many of these options.
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
@@ -743,19 +757,20 @@ class ForceField(object):
         # QUESTION: If the charge method is part of the forcefield spec, do we really want users to be able to override it?
         kwargs['chargeMethod'] = chargeMethod
 
+        # Determine the order in which to process ForceGenerator objects
+        force_generators = self._resolve_force_generator_order()
+
         # Add forces to the System
-        for force in self._forces:
-            if 'createForce' in dir(force):
-                force.createForce(system, topology, **kwargs)
+        for force_generator in force_generators:
+            force_generator.createForce(system, topology, **kwargs)
 
         # Add center-of-mass motion removal, if requested
         if removeCMMotion:
             system.addForce(openmm.CMMotionRemover())
 
         # Let force generators do postprocessing
-        for force in self._forces:
-            if 'postprocessSystem' in dir(force):
-                force.postprocessSystem(system, topology, **kwargs)
+        for force_generator in force_generators:
+            force_generator.postprocessSystem(system, topology, **kwargs)
 
         return system
 
@@ -868,6 +883,7 @@ class ForceGenerator(object):
     _TAGNAME = None # str of XML element name handled by this ForceGenerator
     _INFOTYPE = None # container class with type information that will be stored in self._types
     _OPENMMTYPE = None # OpenMM Force class (or None if no equivalent)
+    _DEPENDENCIES = None # list of ForceGenerator classes that must precede this, or None
 
     def __init__(self, forcefield):
         self.ff = forcefield # the ForceField that this ForceGenerator is registered with
@@ -990,7 +1006,7 @@ class BondGenerator(ForceGenerator):
 
             # Determine if we are using fractional bond orders for this bond
             # First, check if this force uses fractional bond orders
-            if 'fractional_bondorder' in parent.attrib:
+            if 'fractional_bondorder_method' in parent.attrib:
                 # If it does, see if this parameter line provides fractional bond order parameters
                 if 'length_bondorder1' in node.attrib and 'k_bondorder1' in node.attrib:
                     # Store what interpolation scheme we're using
@@ -1014,6 +1030,7 @@ class BondGenerator(ForceGenerator):
     _TAGNAME = 'BondForce' # SMIRNOFF tag name to process
     _INFOTYPE = BondType # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicBondForce # OpenMM force class to create
+    _DEPENDENCIES = [ConstraintGenerator] # ConstraintGenerator must be executed first
 
     def __init__(self, forcefield):
         super(HarmonicBondGenerator, self).__init__(forcefield)
@@ -1036,18 +1053,14 @@ class BondGenerator(ForceGenerator):
             if bond.fractional_bondorder is None:
                 [k, length] = [bond.k, bond.length]
             else:
-                # This bond uses partial bond orders
-                # Make sure forcefield asks for fractional bond orders
-                # TODO: Why shouldn't fractional bond orders just be automatically supported if used? This seems like a problem with setting this flag.
-                if not self.ff._use_fractional_bondorder:
-                    raise ValueError("Error: your forcefield file does not request to use fractional bond orders in its header, but a harmonic bond attempts to use them.")
-                # Proceed to do interpolation
+                # Interpolate using fractional bond orders
+                # TODO: Do we really want to allow per-bond specification of interpolation schemes?
                 order = topology.get_fractional_bond_order(*atoms)
-                if bond.fractional_bondorder == 'interpolate-linear':
+                if bond.fractional_bondorder_interpolation == 'interpolate-linear':
                     k = bond.k[0] + (bond.k[1]-bond.k[0])*(order-1.)
                     length = bond.length[0] + (bond.length[1]-bond.length[0])*(order-1.)
                 else:
-                    raise Exception("Partial bondorder treatment %s is not implemented." % bond.fractional_bondorder)
+                    raise Exception("Partial bondorder treatment {} is not implemented.".format(bond.fractional_bondorder))
 
             # Handle constraints.
             if topology.atom_pair_is_constrained(*atoms):
@@ -1133,8 +1146,8 @@ class ProperTorsionGenerator(ForceGenerator):
             self.phase = list()
             self.k = list()
 
-            # Check that the SMIRKS pattern matches the type it's supposed to
-            # TODO: Do we need this check?
+            # Check the SMIRKS patterns specifies a torsion
+            # TODO: Shouldn't we check this for all SMIRKS patterns?
             try:
                 chemenv = ChemicalEnvironment(self.smirks)
                 thistype = chemenv.getType()
@@ -1143,7 +1156,8 @@ class ProperTorsionGenerator(ForceGenerator):
             except SMIRKSParsingError:
                 print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
 
-            if 'fractional_bondorder' in parent.attrib:
+            # TODO: Fractional bond orders should be processed on the per-force basis instead of per-bond basis
+            if 'fractional_bondorder_method' in parent.attrib:
                 self.fractional_bondorder = parent.attrib['fractional_bondorder']
             else:
                 self.fractional_bondorder = None
@@ -1268,18 +1282,20 @@ class ImproperTorsionGenerator(ForceGenerator):
         _check_for_missing_valence_terms('ImproperTorsionForce', topology, torsions.keys(), topology.impropers())
 
 ## @private
-class NonbondedGenerator(ForceGenerator):
-    """Handle SMIRNOFF ``<NonbondedGenerator>`` tags"""
+class StericsGenerator(ForceGenerator):
+    """Handle SMIRNOFF ``<StericsForce>`` tags"""
 
+    # TODO: Is this necessary
     SCALETOL = 1e-5
 
-    class NonbondedType(ForceType):
-        """A SMIRNOFF Lennard-Jones type."""
+    class StericsType(ForceType):
+        """A SMIRNOFF StericsForce type."""
         def __init__(self, node, parent):
             # NOTE: Currently we support radius definition via 'sigma' or 'rmin_half'.
-            super(NonbondedType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
+            super(StericsType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
 
-            # TODO: Do we want to add an attribute ``type='LennardJones'``?
+            # TODO: Dispatch based on parent 'potential' tag
+
             # Make sure we don't have BOTH rmin_half AND sigma
             try:
                 a = _extractQuantity(node, parent, 'sigma')
@@ -1314,6 +1330,7 @@ class NonbondedGenerator(ForceGenerator):
     #    for atom in element.findall('Atom'):
     #        generator.registerAtom(atom, element)
 
+    # TODO: nonbondedMethod and nonbondedCutoff should now be specified by StericsForce attributes
     def createForce(self, system, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=0.9, **args):
         force = super(NonbondedForceGenerator, self).createForce(system, topology)
 
@@ -1480,7 +1497,7 @@ class GBSAForceGenerator(ForceGenerator):
         # TODO: Deep copy?
         self.parameters = element.attrib
 
-    # TODO: Generalize this
+    # TODO: Generalize this to allow forces to know when their OpenMM Force objects can be combined
     def checkCompatibility(self, generator):
         """
         Check compatibility of this generator with another generators.
