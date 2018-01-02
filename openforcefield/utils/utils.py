@@ -348,7 +348,7 @@ def setPositionsInOEMol(molecule, positions):
         Unit-bearing via simtk.unit Nx3 array of coordinates
     """
     from openeye import oechem
-    
+
     if molecule.NumAtoms() != len(positions): raise ValueError("Number of atoms in molecule does not match length of position array.")
     pos_unitless = positions/unit.angstroms
 

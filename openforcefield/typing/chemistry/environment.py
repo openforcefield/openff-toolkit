@@ -18,6 +18,9 @@ with contributions from John Chodera, Memorial Sloan Kettering Cancer Center
 and David Mobley, UC Irvine.
 
 """
+
+# QUESTION: should we ditch camelCase and go with PEP8 standard snake_case?
+
 #==============================================================================
 # GLOBAL IMPORTS
 #==============================================================================
@@ -1173,6 +1176,8 @@ into ChemicalEnvironments." % smirks)
         else:
             return component._bond_type == -1
 
+    # TODO: We may want to overhaul ChemicalEnvironment.getType() to return one of ['atom', 'bond', 'angle', 'proper', 'improper']
+    # and check to make sure the expected connectivity is represented in the SMIRKS expression.
     def getType(self):
         """
         Uses number of indexed atoms and bond connectivity

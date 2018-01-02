@@ -11,10 +11,6 @@ Parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 .. codeauthor:: David L. Mobley <dmobley@mobleylab.org>
 .. codeauthor:: Peter K. Eastman <peastman@stanford.edu>
 
-.. todo::
-    * Use XML parser with 'sourceline' node attributes to aid debugging
-    http://stackoverflow.com/questions/6949395/is-there-a-way-to-get-a-line-number-from-an-elementtree-element
-    
 """
 
 #=============================================================================================
@@ -104,6 +100,11 @@ HAngles = HAngles()
 def _all_subclasses(cls):
     return cls.__subclasses__() + [ g for s in cls.__subclasses__() for g in _all_subclasses(s) ]
 
+
+# TODO: Replace this with a scheme that uses ChemicalEnvironment to validate that
+# the SMIRKS string is well-formed and labels the expected atoms (atom, bond, angle, proper, improper).
+# TODO: We may want to overhaul ChemicalEnvironment.getType() to return one of ['atom', 'bond', 'angle', 'proper', 'improper']
+# and check to make sure the expected connectivity is represented in the SMIRKS expression.
 def _validateSMIRKS(smirks, node=None):
     """Validate the specified SMIRKS string.
 
@@ -112,20 +113,16 @@ def _validateSMIRKS(smirks, node=None):
     smirks : str
        The SMIRKS string to be validated
     node : xml.etree.ElementTree.Element
-       Node of etree with 'sourceline' attribute.
-
-    .. todo::
-
-        * Can we make this not dependent on OEChem?
-        * Should we move this into ``openforcefield.topology.Topology`` or ``openforcefield.chemistry``?
+       Node of etree
 
     """
+    # TODO: Don't make this dependent on OEChem
     from openeye import oechem
 
     qmol = oechem.OEQMol()
     if not oechem.OEParseSmarts(qmol, smirks):
-        if (node is not None) and ('sourceline' in node.attrib):
-            raise Exception("Line %s: Error parsing SMIRKS '%s'" % (node.attrib['sourceline'], node.attrib['smirks']))
+        if (node is not None) and hasattr(node, 'sourceline'):
+            raise Exception("Line %s: Error parsing SMIRKS '%s'" % (node.sourceline, node.attrib['smirks']))
         else:
             raise Exception("Error parsing SMIRKS '%s'" % (node.attrib['smirks']))
 
@@ -151,8 +148,8 @@ def _extractQuantity(node, parent, name, unit_name=None, default=None):
     # Check for expected attributes
     if (name not in node.attrib):
         if default is not None:
-            if 'sourceline' in node.attrib:
-                raise Exception("Line %d : Expected XML attribute '%s' not found" % (node.attrib['sourceline'], name))
+            if hasattr(node, 'sourceline'):
+                raise Exception("Line %d : Expected XML attribute '%s' not found" % (node.sourceline, name))
             else:
                 raise Exception("Expected XML attribute '%s' not found" % (name))
         else:
@@ -268,7 +265,7 @@ class ForceField(object):
         All subclasses of ``ForceGenerator`` are automatically registered as available parsers upon instantiation of ``ForceField``.
     """
 
-    def __init__(self, *files):
+    def __init__(self, *files, force_generators=None):
         """Load one or more XML parameter definition files and create a SMIRNOFF ForceField object based on them.
 
         Parameters
@@ -276,11 +273,25 @@ class ForceField(object):
         files : list
             A list of XML files defining the SMIRNOFF force field.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory (for built in force fields), or an open file-like object with a read() method from which the forcefield XML data can be loaded.
+        force_generators : iterable of ForceGenerator objects, optional, default=None
+            If not None, the specified set of ForceGenerator objects will be used to parse the XML tags.
+            By default, all imported subclasses of ForceGenerator are automatically registered to parse XML tags.
 
         """
         self._forces = []
         self.loadFile(files)
-        self.parsers = self._find_force_generators()
+
+        if force_generators is None:
+            # Find all imported subclasses of ForceGenerator
+            force_generators = self._find_force_generators()
+        self._register_parsers(force_generators)
+
+    @property
+    def parsers(self):
+        """
+        Retrieve a read-only list of ForceGenerators listed as parsers.
+        """
+        return copy.deepcopy(self._parsers)
 
     @staticmethod
     def _find_force_generators():
@@ -291,8 +302,12 @@ class ForceField(object):
         parsers : dict of str : ForceGenerator
             parsers[tagname] is the ForceGenerator for the correspondiong tagname
         """
+        return _all_subclasses(ForceGenerator)
+
+    @staticmethod
+    def _register_parsers(force_generators):
         parsers = dict()
-        for subclass in _all_subclasses(ForceGenerator):
+        for force_generator in force_generators:
             tagname = subclass._TAGNAME
             if tagname is not None:
                 if tagname in parsers.keys():

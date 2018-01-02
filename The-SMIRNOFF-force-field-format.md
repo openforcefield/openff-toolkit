@@ -410,7 +410,9 @@ One attribute we have found helpful in parameter file development is the `id` at
  <Bond smirks="[#6X3:1]-[#6X3:2]" id="b5" k="820.0" length="1.45"/>
 ```
 Some functionality in `ForceField`, such as `ForceField.labelMolecules`, looks for the `id` attribute.
-Without this attribute, there is no way to uniquely identify a specific parameter line in the XML file without referring to it by its smirks string, and since some smirks strings can become long and relatively unwieldly (especially for torsions) this provides a more human- and search-friendly way of referring to specific sets of parameters.
+Without this attribute, there is no way to uniquely identify a specific parameter line in the XML file without referring to it by its smirks string, and since some smirks strings can become long and relatively unwieldy (especially for torsions) this provides a more human- and search-friendly way of referring to specific sets of parameters.
+
+The `parent_id` attribute is also frequently used to denote parameters from which the current parameter is derived in some manner.
 
 ### A remark about parameter availability
 

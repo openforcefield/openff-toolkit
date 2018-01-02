@@ -32,7 +32,7 @@ import lxml.etree as etree
 
 import numpy
 
-import networkx
+import networkx as nx
 
 from simtk import openmm, unit
 from simtk.openmm.app import element as elem
@@ -45,9 +45,17 @@ from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingEr
 # GLOBAL PARAMETERS
 #=============================================================================================
 
+# TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
+# TODO: Should these be the Python equivalent of enumerated types.
+
 DEFAULT_AROMATICITY_MODEL = 'MDL' # TODO: Is there a more specific spec for this?
+ALLOWED_AROMATICITY_MODELS = ['MDL']
+
 DEFAULT_FRACTIONAL_BONDORDER_MODEL = 'Wiberg' # TODO: Is there a more specific spec for this?
-DEFAULT_CHARGE_MODEL = 'AM1-BCC' # TODO: Should this be `AM1` so that BCCs can appear in the SMIRNOFF forcefield?
+ALLOWED_FRACTIONAL_BONDORDER_MODELS = ['Wiberg']
+
+DEFAULT_CHARGE_MODEL = 'AM1-CM2' # TODO: Should this be `AM1-BCC`?
+ALLOWED_CHARGE_MODELS = ['AM1-CM2', 'AM1-BCC', 'Mulliken'] # TODO: Which models do we want to support?
 
 #=============================================================================================
 # PRIVATE SUBROUTINES
@@ -94,10 +102,10 @@ def _getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model=None):
             raise ValueError("Error: provided aromaticity model must be a string.")
 
         # If aromaticity model was provided, prepare molecule
-        oechem.OEClearAromaticFlags( mol)
-        oechem.OEAssignAromaticFlags( mol, oearomodel)
+        oechem.OEClearAromaticFlags(mol)
+        oechem.OEAssignAromaticFlags(mol, oearomodel)
         # avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
-        oechem.OEAssignHybridization( mol)
+        oechem.OEAssignHybridization(mol)
 
     # Perform matching on each mol
     matches = list()
@@ -122,30 +130,6 @@ def _getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model=None):
 #=============================================================================================
 # Augmented Topology
 #=============================================================================================
-
-def generateGraphFromTopology(topology):
-    """Geneate a NetworkX graph from a Topology object.
-
-    Parameters
-    ----------
-    topology : simtk.openmm.app.Topology
-        The source topology.
-
-    Returns
-    -------
-    graph : networkx.Graph
-        The resulting graph, with nodes labeled with atom indices and elements
-
-    """
-    import networkx as nx
-    # Create graph of atoms connected by bonds.
-    G = nx.Graph()
-    for atom in topology.atoms():
-        G.add_node(atom.index, element=atom.element)
-    for (atom1, atom2) in topology.bonds():
-        G.add_edge(atom1.index, atom2.index)
-
-    return G
 
 class _Topology(Topology):
     """Augmented Topology object which adds:
@@ -192,133 +176,7 @@ class _Topology(Topology):
         # Track constraints
         self._constrained_atom_pairs = dict()
 
-    def angles(self):
-        """
-        Get an iterator over all i-j-k angles.
-        """
-        if not hasattr(self, '_angles'):
-            self._construct_bonded_atoms_list()
-            self._angles = set()
-            for atom1 in self._atoms:
-                for atom2 in self._bondedAtoms[atom1]:
-                    for atom3 in self._bondedAtoms[atom2]:
-                        if atom1 == atom3:
-                            continue
-                        if atom1.index < atom3.index:
-                            self._angles.add( (atom1, atom2, atom3) )
-                        else:
-                            self._angles.add( (atom3, atom2, atom1) )
 
-        return iter(self._angles)
-
-    def torsions(self):
-        """
-        Get an iterator over all i-j-k-l torsions.
-        Note that i-j-k-i torsions are excluded.
-        """
-        if not hasattr(self, '_torsions'):
-            self._construct_bonded_atoms_list()
-
-            self._torsions = set()
-            for atom1 in self._atoms:
-                for atom2 in self._bondedAtoms[atom1]:
-                    for atom3 in self._bondedAtoms[atom2]:
-                        if atom1 == atom3:
-                            continue
-                        for atom4 in self._bondedAtoms[atom3]:
-                            if atom4 == atom2:
-                                continue
-                            # Exclude i-j-k-i
-                            if atom1 == atom4:
-                                continue
-                            if atom1.index < atom4.index:
-                                self._torsions.add( (atom1, atom2, atom3, atom4) )
-                            else:
-                                self._torsions.add( (atom4, atom3, atom2, atom1) )
-
-        return iter(self._torsions)
-
-    def _construct_bonded_atoms_list(self):
-        """
-        Construct list of all atoms each atom is bonded to.
-        """
-        if not hasattr(self, '_bondedAtoms'):
-            self._atoms = [ atom for atom in self.atoms() ]
-            self._bondedAtoms = dict()
-            for atom in self._atoms:
-                self._bondedAtoms[atom] = set()
-            for bond in self._bonds:
-                self._bondedAtoms[bond[0]].add(bond[1])
-                self._bondedAtoms[bond[1]].add(bond[0])
-
-    def _isBonded(self, atom_index_1, atom_index_2):
-        """Return True if atoms are bonded, False if not.
-
-        Parameters
-        ----------
-        atom_index_1 : int
-        atom_index_2 : int
-            Atom indices
-
-        Returns
-        -------
-        is_bonded : bool
-            True if atoms are bonded, False otherwise
-
-        TODO
-        ----
-        This assumes _Topology is immutable.
-        """
-        self._construct_bonded_atoms_list()
-        atom1 = self._atoms[atom_index_1]
-        atom2 = self._atoms[atom_index_2]
-        return atom2 in self._bondedAtoms[atom1]
-
-    def _identifyMolecules(self):
-        """Identify all unique reference molecules and atom mappings to all instances in the Topology.
-        """
-        import networkx as nx
-        from networkx.algorithms import isomorphism
-
-        # Generate list of topology atoms.
-        atoms = [ atom for atom in self.atoms() ]
-
-        # Generate graphs for reference molecules.
-        self._reference_molecule_graphs = list()
-        for reference_molecule in self._reference_molecules:
-            # Generate Topology
-            reference_molecule_topology = generateTopologyFromOEMol(reference_molecule)
-            # Generate Graph
-            reference_molecule_graph = generateGraphFromTopology(reference_molecule_topology)
-            self._reference_molecule_graphs.append(reference_molecule_graph)
-
-        # Generate a graph for the current topology.
-        G = generateGraphFromTopology(self)
-
-        # Extract molecules (as connected component subgraphs).
-        self._reference_to_topology_atom_mappings = { reference_molecule : list() for reference_molecule in self._reference_molecules }
-        for molecule_graph in nx.connected_component_subgraphs(G):
-            # Check if we have already stored a reference molecule for this molecule.
-            reference_molecule_exists = False
-            for (reference_molecule_graph, reference_molecule) in zip(self._reference_molecule_graphs, self._reference_molecules):
-                GM = isomorphism.GraphMatcher(molecule_graph, reference_molecule_graph)
-                if GM.is_isomorphic():
-                    # This molecule is present in the list of unique reference molecules.
-                    reference_molecule_exists = True
-                    # Add the reference atom mappings.
-                    reference_to_topology_atom_mapping = dict()
-                    for (topology_atom, reference_atom) in GM.mapping.items():
-                        reference_to_topology_atom_mapping[reference_atom] = topology_atom
-                    self._reference_to_topology_atom_mappings[reference_molecule].append(reference_to_topology_atom_mapping)
-                    # Break out of the search loop.
-                    break
-
-            # If the reference molecule could not be found, throw an exception.
-            if not reference_molecule_exists:
-                msg = 'No provided molecule matches topology molecule:\n'
-                for index in sorted(list(molecule_graph)):
-                    msg += 'Atom %8d %5s %5d %3s\n' % (atoms[index].index, atoms[index].name, atoms[index].residue.index, atoms[index].residue.name)
-                raise Exception(msg)
 
     def _updateBondOrders(self, Wiberg = False):
         """Update and store list of bond orders for the molecules in this Topology. Can be used for initialization of bondorders list, or for updating bond orders in the list.
@@ -469,7 +327,6 @@ class _Topology(Topology):
                 # Do AM1 calculation just to get bond orders on moleules (discarding charges)
                 self._assignPartialCharges(molecule, "OECharges_AM1", modifycharges = False)
 
-
     def _charge_molecules(self, chargeMethod='AM1-BCC'):
         # Charge molecules, if needed
         if chargeMethod == None:
@@ -502,29 +359,51 @@ class _Topology(Topology):
 
 class Particle(object):
     """
-    A particle in a system
+    Base class for all particles in the system.
 
-    This could be an ``Atom`` or a ``VirtualSite``
+    A particle object could be an ``Atom`` or a ``VirtualSite``.
 
     """
-    def __init__(self):
+    def __init__(self, name):
         """
         Create a particle.
         """
-        pass
+        self._name = name
+        self._topology = None # the Topology object this Particle belongs to
 
+    @property
+    def topology(self):
+        """
+        The Topology object that owns this particle, or None.
+        """
+        return self._topology
+
+    @property
+    def name(self):
+        """
+        An arbitrary label assigned to the particle.
+
+        """
+        return self._name
+
+    # TODO: Should this just be index?
     @property
     def particle_index(self):
         """
-        Index of this particle within the ``Topology``
+        Index of this particle within the ``Topology`` or corresponding OpenMM ``System`` object.
 
         .. todo::
 
-           Should this just be called ``index``, or does that risk confusion within
-           the index within ``topology.atoms``?
+           Should ``atom.particle_index`` just be called ``index``, or does that risk confusion within
+           the index within ``topology.atoms``, which will differ if the system has virtual sites?
 
         """
-        pass
+        if self._topology is None:
+            raise Exception('This particle does not belong to a Topology')
+        # Return index of this particle within the Topology
+        # TODO: This will be slow; can we cache this and update it only when needed?
+        #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
+        return self._topology._particles.index(self)
 
     def __repr__(self):
         pass
@@ -534,9 +413,9 @@ class Particle(object):
 
 class Atom(Particle):
     """
-    A chemical atom
+    A particle representing a chemical atom.
 
-    Note that non-chemical virtual sites are represented by the ``VirtualSite`` object
+    Note that non-chemical virtual sites are represented by the ``VirtualSite`` object.
 
     .. todo::
         * Should ``Atom`` objects be immutable or mutable?
@@ -547,7 +426,7 @@ class Atom(Particle):
         * Should we be able to create ``Atom`` objects on their own, or only in the context of a ``Topology`` object they belong to?
 
     """
-    def __init__(self, name, element):
+    def __init__(self, name, element, topology=None):
         """
         Create an Atom object.
 
@@ -559,15 +438,8 @@ class Atom(Particle):
             The element name
 
         """
-        pass
-
-    @property
-    def name(self):
-        """
-        An arbitrary label assigned to the atom.
-
-        """
-        pass
+        super(Atom, self).__init__(name)
+        self._element = element # TODO: Validate and store Element
 
     @property
     def element(self):
@@ -633,32 +505,52 @@ class Atom(Particle):
         """
         pass
 
+    def __repr__(self):
+        # TODO: Also include particle_index and which topology this atom belongs to?
+        return "Atom(name={}, element={})".format(self.name, self.element)
+
+    def __str__(self):
+        # TODO: Also include particle_index and which topology this atom belongs to?
+        return "<Atom name='{}' element='{}'>".format(self.name, self.element)
+
+
 class VirtualSite(Particle):
     """
-    A virtual (non-atom) site.
+    A particle representing a virtual site whose position is defined in terms of ``Atom`` positions.
+
+    Note that chemical atoms are represented by the ``Atom``.
 
     .. todo::
-        * Should virtual sites be attached to one atom only, or more than one atom?
-          OpenMM defines them as belonging to two or more atoms.
         * Should a virtual site be able to belong to more than one Topology?
         * Should virtual sites be immutable or mutable?
 
     """
-    def __init__(self, weights, particles):
+
+    # TODO: This will need to be generalized for virtual sites to allow out-of-plane sites.
+    # TODO: How do we want users to specify virtual site type?
+    def __init__(self, name, sitetype, weights, atoms):
         """
-        Create a virtual site, defined by a linear combination of multiple particles.
+        Create a virtual site whose position is defined by a linear combination of multiple Atoms.
 
         Parameters
         ----------
+        name : str
+            The name of this virtual site
+        sitetype : str
+            The virtual site type.
         weights : list of floats of shape [N]
             weights[index] is the weight of particles[index] contributing to the position of the virtual site.
-        particles : list of Particle of shape [N]
-            particles[index] is the corresponding particle for weights[index]
-            The ``VirtualSite`` is bound to the ``Particle``s in the list specified here.
+        atoms : list of Atom of shape [N]
+            atoms[index] is the corresponding Atom for weights[index]
+        virtual_site_type : str
+            Virtual site type.
+            TODO: What types are allowed?
 
         """
+        self._name = name
+        self._type = sitetype # TODO: Validate this
         self._weights = np.array(weights) # make a copy and convert to array internally
-        self._particle = [ particle for particle in particles ] # create a list of Particles
+        self._atoms = [ atom for atom in atoms ] # create a list of Particles
 
     @property
     def virtual_site_index(self):
@@ -673,11 +565,25 @@ class VirtualSite(Particle):
         """
         pass
 
+    @property
+    def atoms(self):
+        """
+        Atoms on whose position this VirtualSite depends.
+        """
+        for atom in self._atoms:
+            yield atom
+
+    def __repr__(self):
+        # TODO: Also include particle_index, which topology this atom belongs to, and which atoms/weights it is defined by?
+        return "VirtualSite(name={}, type={}, weights={}, atoms={})".format(self.name, self.type, self.weights, self.atoms)
+
+    def __str__(self):
+        # TODO: Also include particle_index, which topology this atom belongs to, and which atoms/weights it is defined by?
+        return "<VirtualSite name={} type={} weights={}, atoms={}>".format(self.name, self.type, self.weights, self.atoms)
+
 class Bond(object):
     """
-    Chemical bond representation
-
-    TODO: Should Bond be immutable?
+    Chemical bond representation.
 
     Attributes
     ----------
@@ -686,45 +592,167 @@ class Bond(object):
     bondtype : int
         Discrete bond type representation for the Open Forcefield aromaticity model
         TODO: Do we want to pin ourselves to a single standard aromaticity model?
-    order : float
-        Fractional bond order
+    type : str
+        String based bond type
+    order : int
+        Integral bond order
+    fractional_bondorder : float, optional
+        Fractional bond order, or None.
 
     """
-    def __init__(self):
-        pass
+    def __init__(self, atom1, atom2, bondtype, fractional_bondorder=None):
+        """
+        Create a new chemical bond.
+        """
+        # TODO: Make sure atom1 and atom2 are both Atom types
+        self._atom1 = atom1
+        self._atom2 = atom2
+        self._type = bondtype
+        self._fractional_bondorder = fractional_bondorder
 
+    # TODO: add getters for each of these bond properties
+
+    @property
+    def atom1(self):
+        return self._atom1
+
+    @property
+    def atom2(self):
+        return self._atom2
+
+    @property
+    def atoms(self):
+        return (self._atom1, self._atom2)
+
+    def type(self):
+        return self._type
+
+    @property
+    def fractional_bondorder(self):
+        return self._fractional_bondorder
+
+    @fractional_bondorder.setter
+    def fractional_bondorder(self, value):
+        self._fractional_bondorder = value
+
+# TODO: Should this be a mixin?
 class ChemicalEntity(object):
     """
     Mixin class for properties shared by chemical entities containing more than one atom.
 
     """
+    def __init__(self, other=None):
+        """
+        Create a new ChemicalEntity.
+        """
+        self._particles = list()
+        self._bonds = None
+
+    def _invalidate_cached_properties(self):
+        """
+        Indicate that the chemical entity has been altered.
+        """
+        # List of all possible cached property names
+        CACHED_PROPERTY_NAMES = ['_angles', '_propers', '_impropers', '_charges']
+        # Delete any cached proprties
+        for property_name in CACHED_PROPERTY_NAMES:
+            if hasattr(self, property_name):
+                delattr(self, property_name)
+
+    def add_atom(self, atom):
+        """
+        Add an Atom.
+
+        Parameters
+        ----------
+        atom : Atom
+            The Atom to add.
+        """
+        self._particles.append(atom)
+        self._invalidate_cached_properties()
+
+    def add_virtual_site(self, virtual_site):
+        """
+        Add a Virtual Site.
+
+        Parameters
+        ----------
+        virtual_site : VirtualSite
+            The VirtualSite to add.
+        """
+        # Make sure that all Atoms referenced in the virtual site are already present in the entity.
+        for atom in virtual_site.atoms:
+            if atom not in self._particles:
+                raise Exception("{} depends on {}, which is not present in the chemical entity".format(virtual_site, atom))
+        self._particles.append(virtual_site)
+
+    def n_particles(self):
+        """
+        The number of Particle objects, which corresponds to how many positions must be used.
+        """
+        return sum([1 for particle in self.particles])
+
+    @property
+    def n_atoms(self):
+        """
+        The number of Atom objects.
+        """
+        return sum([1 for atom in self.atoms])
+
+    @property
+    def n_virtual_sites(self):
+        """
+        The number of VirtualSite objects.
+        """
+        return sum([1 for virtual_site in self.virtual_sites])
+
+    @property
+    def n_bonds(self):
+        """
+        The number of Bond objects.
+        """
+        return sum([1 for bond in self.bonds])
+
+    @property
+    def particles(self):
+        """
+        Iterate over all Particle objects.
+        """
+        for particle in self._particles:
+            yield particle
 
     @property
     def atoms(self):
         """
-        Iterate over all Atom objects in the molecule
-
-        .. todo::
-            * Should we iterate over all atoms in hierarchical order (chains,residues,atoms) or in file order?
-            * How can we select different iteration orders?
+        Iterate over all Atom objects.
 
         """
-        pass
+        for particle in self._particles:
+            if isinstance(particle, Atom):
+                yield particle
+
+    @property
+    def virtual_sites(self):
+        """
+        Iterate over all VirtualSite objects.
+        """
+        for particle in self._particles:
+            if isinstance(particle, VirtualSite):
+                yield particle
 
     @property
     def bonds(self):
         """
-        Iterate over all Bond objects in the molecule
+        Iterate over all Bond objects.
 
         """
-        pass
+        for bond in self._bonds:
+            yield bond
 
+    @property
     def angles(self):
         """
         Iterate over all angles (Atom tuples) in the molecule
-
-        .. todo::
-            * Do we need to return an Angle object that collects information about fractional bond orders?
 
         """
         pass
@@ -854,35 +882,10 @@ class Molecule(ChemicalEntity):
         ----------
         other : optional, default=None
             If specified, attempt to construct a copy of the Molecule from the specified object.
-            This might be a Molecule object, or a file that can be used to construct a Molecule object
-            or serialized Molecule object.
+            This might be a Molecule object, a file that can be used to construct a Molecule object,
+            a serialized Molecule object, or an OEChem or RDKit molecule representation.
         """
         pass
-
-    def set_aromaticity_model(self, aromaticity_model):
-        """
-        Set the aromaticity model to use for representing this molecule.
-
-        Parameters
-        ----------
-        aromaticity_model : str
-            Aromaticity model to use for this molecule. One of ['MDL']
-
-        """
-        # TODO: Validate aromaticity model against allowed models
-        self._aromaticity_model = aromaticity_model
-
-    def get_aromaticity_model(self):
-        """
-        Retrieve aromaticity model for this molecule.
-
-        Returns
-        -------
-        aromaticity_model : str
-            The aromaticity model in use for this molecule.
-
-        """
-        return self._aromaticity_model
 
     @staticmethod
     def from_rdkit(rdmol):
@@ -904,7 +907,7 @@ class Molecule(ChemicalEntity):
         """
         pass
 
-    def to_rdkit(self):
+    def to_rdkit(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an RDKit molecule
 
@@ -937,7 +940,7 @@ class Molecule(ChemicalEntity):
         """
         pass
 
-    def to_openeye(self):
+    def to_openeye(self, positions=None, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an OpenEye molecule
 
@@ -947,9 +950,81 @@ class Molecule(ChemicalEntity):
         -------
         oemol : openeye.oechem.OEMol
             An OpenEye molecule
+        positions : simtk.unit.Quantity with shape [nparticles,3], optional, default=None
+            Positions to use in constructing OEMol.
+            If virtual sites are present in the Topology, these indices will be skipped.
+
+        NOTE: This comes from https://github.com/oess/oeommtools/blob/master/oeommtools/utils.py
 
         """
-        pass
+        oe_mol = oechem.OEMol()
+        molecule_atom_to_oe_atom = {} # Mapping dictionary between Molecule atoms and oe atoms
+
+        # Python set used to identify atoms that are not in protein residues
+        keep = set(proteinResidues).union(dnaResidues).union(rnaResidues)
+
+        for chain in topology.chains():
+            for res in chain.residues():
+                # Create an OEResidue
+                oe_res = oechem.OEResidue()
+                # Set OEResidue name
+                oe_res.SetName(res.name)
+                # If the atom is not a protein atom then set its heteroatom
+                # flag to True
+                if res.name not in keep:
+                    oe_res.SetFragmentNumber(chain.index + 1)
+                    oe_res.SetHetAtom(True)
+                # Set OEResidue Chain ID
+                oe_res.SetChainID(chain.id)
+                # res_idx = int(res.id) - chain.index * len(chain._residues)
+                # Set OEResidue number
+                oe_res.SetResidueNumber(int(res.id))
+
+                for openmm_at in res.atoms():
+                    # Create an OEAtom  based on the atomic number
+                    oe_atom = oe_mol.NewAtom(openmm_at.element._atomic_number)
+                    # Set atom name
+                    oe_atom.SetName(openmm_at.name)
+                    # Set Symbol
+                    oe_atom.SetType(openmm_at.element.symbol)
+                    # Set Atom index
+                    oe_res.SetSerialNumber(openmm_at.index + 1)
+                    # Commit the changes
+                    oechem.OEAtomSetResidue(oe_atom, oe_res)
+                    # Update the dictionary OpenMM to OE
+                    openmm_atom_to_oe_atom[openmm_at] = oe_atom
+
+        if self.n_atoms != oe_mol.NumAtoms():
+            raise Exception("OEMol has an unexpected number of atoms: "
+                            "Molecule has {} atoms, while OEMol has {} atoms".format(topology.n_atom, oe_mol.NumAtoms()))
+
+        # Create bonds
+        for off_bond in self.bonds():
+            oe_mol.NewBond(oe_atoms[bond.atom1], oe_atoms[bond.atom2], bond.bond_order)
+            if off_bond.type:
+                if off_bond.type == 'Aromatic':
+                    oe_atom0.SetAromatic(True)
+                    oe_atom1.SetAromatic(True)
+                    oe_bond.SetAromatic(True)
+                    oe_bond.SetType("Aromatic")
+                elif off_bond.type in ["Single", "Double", "Triple", "Amide"]:
+                    oe_bond.SetType(omm_bond.type)
+                else:
+                    oe_bond.SetType("")
+
+        if self.n_bonds != oe_mol.NumBonds():
+            oechem.OEThrow.Erorr("OEMol has an unexpected number of bonds:: "
+                                 "Molecule has {} bonds, while OEMol has {} bonds".format(self.n_bond, oe_mol.NumBonds()))
+
+        if positions is not None:
+            # Set the OEMol positions
+            particle_indices = [ atom.particle_index for atom in self.atoms ] # get particle indices
+            pos = positions[particle_indices].value_in_units_of(unit.angstrom)
+            pos = list(itertools.chain.from_iterable(pos))
+            oe_mol.SetCoords(pos)
+            oechem.OESetDimensionFromCoords(oe_mol)
+
+        return oe_mol
 
     def assign_partial_charges(self, method='AM1-BCC', toolkit=None, **kwargs):
         """Assign partial atomic charges.
@@ -999,14 +1074,96 @@ class Molecule(ChemicalEntity):
         """
         pass
 
+    # TODO: Compute terms for each unique molecule, then use mapping to molecules to enumerate all terms
+    def angles(self):
+        """
+        Get an iterator over all i-j-k angles.
+        """
+        # TODO: This assumes molecules are immutable. If they are mutable, we have to delete ``_angles`` when the atom/bond table is modified.
+        if not hasattr(self, '_angles'):
+            self._construct_bonded_atoms_list()
+            self._angles = set()
+            for atom1 in self._atoms:
+                for atom2 in self._bondedAtoms[atom1]:
+                    for atom3 in self._bondedAtoms[atom2]:
+                        if atom1 == atom3:
+                            continue
+                        if atom1.index < atom3.index:
+                            self._angles.add( (atom1, atom2, atom3) )
+                        else:
+                            self._angles.add( (atom3, atom2, atom1) )
+
+        return iter(self._angles)
+
+    # TODO: Compute terms for each unique molecule, then use mapping to molecules to enumerate all terms
+    # TODO: This assumes molecules are immutable. If they are mutable, we have to delete ``_torsions`` when the atom/bond table is modified.
+    def torsions(self):
+        """
+        Get an iterator over all i-j-k-l torsions.
+        Note that i-j-k-i torsions are excluded.
+        """
+        if not hasattr(self, '_torsions'):
+            self._construct_bonded_atoms_list()
+
+            self._torsions = set()
+            for atom1 in self._atoms:
+                for atom2 in self._bondedAtoms[atom1]:
+                    for atom3 in self._bondedAtoms[atom2]:
+                        if atom1 == atom3:
+                            continue
+                        for atom4 in self._bondedAtoms[atom3]:
+                            if atom4 == atom2:
+                                continue
+                            # Exclude i-j-k-i
+                            if atom1 == atom4:
+                                continue
+                            if atom1.index < atom4.index:
+                                self._torsions.add( (atom1, atom2, atom3, atom4) )
+                            else:
+                                self._torsions.add( (atom4, atom3, atom2, atom1) )
+
+        return iter(self._torsions)
+
+    def _construct_bonded_atoms_list(self):
+        """
+        Construct list of all atoms each atom is bonded to.
+        """
+        if not hasattr(self, '_bondedAtoms'):
+            self._atoms = [ atom for atom in self.atoms() ]
+            self._bondedAtoms = dict()
+            for atom in self._atoms:
+                self._bondedAtoms[atom] = set()
+            for bond in self._bonds:
+                self._bondedAtoms[bond[0]].add(bond[1])
+                self._bondedAtoms[bond[1]].add(bond[0])
+
+    def _isBonded(self, atom_index_1, atom_index_2):
+        """Return True if atoms are bonded, False if not.
+
+        Parameters
+        ----------
+        atom_index_1 : int
+        atom_index_2 : int
+            Atom indices
+
+        Returns
+        -------
+        is_bonded : bool
+            True if atoms are bonded, False otherwise
+
+        TODO
+        ----
+        This assumes _Topology is immutable.
+        """
+        self._construct_bonded_atoms_list()
+        atom1 = self._atoms[atom_index_1]
+        atom2 = self._atoms[atom_index_2]
+        return atom2 in self._bondedAtoms[atom1]
+
+
 class Topology(ChemicalEntity):
     """
     Chemical representation of a system containing one or more molecules.
-
-    .. todo::
-        * Should these properties return deepcopy lists, generators that yield mutable objects, or allow direct mutable access via indexing?
-        * Should these be properties or functions?
-
 
     Attributes
     ----------
@@ -1016,7 +1173,6 @@ class Topology(ChemicalEntity):
         Iterate over all Molecule objects in the system in the topology
     unique_molecules : list of Molecule
         Iterate over all unique Molecule objects in the topology
-
 
     Examples
     --------
@@ -1038,10 +1194,10 @@ class Topology(ChemicalEntity):
         self._fractional_bondorder_model = DEFAULT_FRACTIONAL_BONDORDER_MODEL
         self._charge_model = DEFAULT_CHARGE_MODEL
         self._constrained_atom_pairs = dict()
+
+        # TODO: Try to construct Topology copy from `other`
         pass
 
-    # QUESTION: Should aromaticity model instead be specified only when getting SMARTS matches?
-    # QUESTION: Should we allow representations with mutliple aromaticity models to be cached?
     def set_aromaticity_model(self, aromaticity_model):
         """
         Set the aromaticity model applied to all molecules in the topology.
@@ -1052,12 +1208,22 @@ class Topology(ChemicalEntity):
             Aromaticity model to use. One of: ['MDL']
 
         """
+        if not aromaticity_model in ALLOWED_AROMATICITY_MODELS:
+            raise ValueError("Aromaticity model must be one of {}; specified '{}'".format(ALLOWED_AROMATICITY_MODELS, aromaticity_model))
         self._aromaticity_model = aromaticity_model
-        for molecule in self.molecules:
-            molecule.set_aromaticity_model(aromaticity_model)
 
-    # QUESTION: Should fractional bond order model instead be specified only when retrieving fractional bond orders?
-    # QUESTION: Should we allow fractional bond orders with multiple bondorder models to be cached?
+    def get_aromaticity_model(self):
+        """
+        Get the aromaticity model applied to all molecules in the topology.
+
+        Returns
+        -------
+        aromaticity_model : str
+            Aromaticity model in use.
+
+        """
+        return self._aromaticity_model
+
     def set_fractional_bondorder_model(self, fractional_bondorder_model):
         """
         Set the fractional bond order model applied to all molecules in the topology.
@@ -1068,12 +1234,22 @@ class Topology(ChemicalEntity):
             Fractional bond order model to use. One of: ['Wiberg']
 
         """
+        if not fractional_bondorder_model in ALLOWED_FRACTIONAL_BONDORDER_MODELS:
+            raise ValueError("Fractional bond order model must be one of {}; specified '{}'".format(ALLOWED_FRACTIONAL_BONDORDER_MODELS, fractional_bondorder_model))
         self._fractional_bondorder_model = fractional_bondorder_model
-        for molecule in self.molecules:
-            molecule.set_fractional_bondorder_model(fractional_bondorder_model)
 
-    # QUESTION: Should charge model instead be specified only when retrieving partial charges?
-    # QUESTION: Should we allow partial charge sets with multiple charge models to be cached?
+    def get_fractional_bond_order(self):
+        """
+        Get the fractional bond order model for the Topology.
+
+        Returns
+        -------
+        fractional_bondorder_model : str
+            Fractional bond order model in use.
+
+        """
+        return self._fractional_bondorder_model
+
     def set_charge_model(self, charge_model):
         """
         Set the fractional bond order model applied to all molecules in the topology.
@@ -1081,14 +1257,15 @@ class Topology(ChemicalEntity):
         Parameters
         ----------
         charge_model : str
-            Charge model to use. One of: ['AM1', 'AM1-BCC', 'Mulliken']
-
+            Charge model to use for all molecules in the Topology.
+            Allowed values: ['AM1-CM2', 'AM1-BCC', 'Mulliken']
+            * ``AM1-CM2``: AM1 wavefunction with CM2 population analysis
+            * ``AM1-BCC``: Canonical AM1-BCC scheme
+            * ``Mulliken``: Mulliken charges
         """
         self._charge_model = charge_model
-        for molecule in self.molecules:
-            molecule.set_charge_model(charge_model)
 
-    def chemical_environment_matches(self, query):
+    def chemical_environment_matches(self, query, aromaticity_model='MDL'):
         """Retrieve all matches for a given chemical environment query.
 
         TODO:
@@ -1100,6 +1277,9 @@ class Topology(ChemicalEntity):
         query : str or ChemicalEnvironment
             SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query
             Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
+        aromaticity_model : str
+            Override the default aromaticity model for this topology and use the specified aromaticity model instead.
+            Allowed values: ['MDL']
 
         Returns
         -------
@@ -1122,8 +1302,76 @@ class Topology(ChemicalEntity):
 
         return matches
 
+    # TODO: Should edges be labeled with discrete bond types in some aromaticity model?
+    # TODO: Should edges be labeled with fractional bond order if a method is specified?
+    def to_networkx(self):
+        """Geneate a NetworkX undirected graph from the Topology.
+
+        Nodes are Atoms labeled with particle indices and atomic elements (via the ``element`` node atrribute).
+        Edges denote chemical bonds between Atoms.
+        Virtual sites are not included, since they lack a concept of chemical connectivity.
+
+        Returns
+        -------
+        graph : networkx.Graph
+            The resulting graph, with nodes labeled with atom indices and elements
+
+        """
+        G = nx.Graph()
+        for atom in topology.atoms():
+            G.add_node(atom.particle_index, element=atom.element)
+        for (atom1, atom2) in topology.bonds():
+            G.add_edge(atom1.index, atom2.index)
+
+        return G
+
+    # TODO: Overhaul this whole function
+    def _identify_molecules(self):
+        """Identify all unique reference molecules and atom mappings to all instances in the Topology.
+        """
+        # Generate list of topology atoms.
+        atoms = [ atom for atom in self.atoms() ]
+
+        # Generate graphs for reference molecules.
+        self._reference_molecule_graphs = list()
+        for reference_molecule in self._reference_molecules:
+            # Generate Topology
+            reference_molecule_topology = generateTopologyFromOEMol(reference_molecule)
+            # Generate Graph
+            reference_molecule_graph = reference_molecule_topology.to_networkx()
+            self._reference_molecule_graphs.append(reference_molecule_graph)
+
+        # Generate a graph for the current topology.
+        G = self.to_networkx()
+
+        # Extract molecules (as connected component subgraphs).
+        from networkx.algorithms import isomorphism
+        self._reference_to_topology_atom_mappings = { reference_molecule : list() for reference_molecule in self._reference_molecules }
+        for molecule_graph in nx.connected_component_subgraphs(G):
+            # Check if we have already stored a reference molecule for this molecule.
+            reference_molecule_exists = False
+            for (reference_molecule_graph, reference_molecule) in zip(self._reference_molecule_graphs, self._reference_molecules):
+                GM = isomorphism.GraphMatcher(molecule_graph, reference_molecule_graph)
+                if GM.is_isomorphic():
+                    # This molecule is present in the list of unique reference molecules.
+                    reference_molecule_exists = True
+                    # Add the reference atom mappings.
+                    reference_to_topology_atom_mapping = dict()
+                    for (topology_atom, reference_atom) in GM.mapping.items():
+                        reference_to_topology_atom_mapping[reference_atom] = topology_atom
+                    self._reference_to_topology_atom_mappings[reference_molecule].append(reference_to_topology_atom_mapping)
+                    # Break out of the search loop.
+                    break
+
+            # If the reference molecule could not be found, throw an exception.
+            if not reference_molecule_exists:
+                msg = 'No provided molecule matches topology molecule:\n'
+                for index in sorted(list(molecule_graph)):
+                    msg += 'Atom %8d %5s %5d %3s\n' % (atoms[index].index, atoms[index].name, atoms[index].residue.index, atoms[index].residue.name)
+                raise Exception(msg)
+
     @staticmethod
-    def from_openmm(openmm_topology, molecules):
+    def from_openmm(openmm_topology, unique_molecules=None):
         """
         Construct an openforcefield Topology object from an OpenMM Topology object.
 
@@ -1131,12 +1379,19 @@ class Topology(ChemicalEntity):
         ----------
         openmm_topology : simtk.openmm.app.Topology
             An OpenMM Topology object
-        reference_molecules : list of openeye.oechem.OEMol or rdkit.RDMol
-            The list of reference molecules in the Topology.
+        unique_molecules : iterable of objects that can be used to construct Molecule objects
+            ``unique_molecules`` must contain exactly one of each molecule that appears in the Topology.
+            The atomic elements and bond connectivity will be used to match the reference molecules
+            to molecule graphs appearing in the OpenMM ``Topology``. If bond orders are present in the
+            OpenMM ``Topology``, these will be used in matching as well.
+            If all bonds have bond orders assigned, these bond orders will be used to attempt to construct
+            ``unique_molecules`` if the argument is omitted.
+            An effort will be made to ensure the same atom ordering appears in identical molecules,
+            but this is not guaranteed.
 
         Returns
         -------
-        topology : openforcefield.Topology
+        topology : openforcefield.topology.Topology
             An openforcefield Topology object
         """
         pass
@@ -1161,8 +1416,15 @@ class Topology(ChemicalEntity):
         ----------
         mdtraj_topology : mdtraj.Topology
             An MDTraj Topology object
-        reference_molecules : list of openeye.oechem.OEMol or rdkit.RDMol
-            The list of reference molecules in the Topology.
+        unique_molecules : iterable of objects that can be used to construct Molecule objects
+            ``unique_molecules`` must contain exactly one of each molecule that appears in the Topology.
+            The atomic elements and bond connectivity will be used to match the reference molecules
+            to molecule graphs appearing in the OpenMM ``Topology``. If bond orders are present in the
+            OpenMM ``Topology``, these will be used in matching as well.
+            If all bonds have bond orders assigned, these bond orders will be used to attempt to construct
+            ``unique_molecules`` if the argument is omitted.
+            An effort will be made to ensure the same atom ordering appears in identical molecules,
+            but this is not guaranteed.
 
         Returns
         -------
