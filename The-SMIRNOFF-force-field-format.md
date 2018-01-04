@@ -1,4 +1,4 @@
-# The SMIRks Native Open Force Field (SMIRNOFF) v0.2
+# The SMIRks Native Open Force Field (SMIRNOFF) v1.0
 
 The SMIRNOFF format is based on the [`OpenMM`](http://openmm.org) [`ForceField`](http://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField) class and provides an XML format for encoding force fields based on [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html)-based chemical perception.
 While designed for [`OpenMM`](http://openmm.org), parameters encoded in this format can be applied to systems and then these systems converted via [`ParmEd`](http://parmed.github.io/ParmEd) and [`InterMol`](https://github.com/shirtsgroup/InterMol) for simulations in a variety of other simulation packages.
@@ -81,6 +81,26 @@ U(r) = 4*epsilon*((sigma/r)^12 - (sigma/r)^6)
 Later revisions will add support for additional potential types (e.g., Buckingham exp-6) and the ability to support arbitrary algebraic functional forms.
 If the `potential` attribute is omitted, it defaults to `Lennard-Jones`.
 
+**QUESTION:** We need to specify mixing rules as well. How should we do this? Via a single attribute like `mixing_rules="Lorentz-Berthelot"`, via multiple attributes like `sigma_mixing_rule="geometric" epsilon_mixing_rule="arithmetic"`, or via a block like
+```XML
+<StericsForce energy_expression="4*epsilon*((sigma/r)^12-(sigma/r)^6)" scale12="0.0" scale13="0.0" scale14="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+   <CombiningRules>
+      <CombiningRule parameter="sigma" function="(sigma1+sigma2)/2"/>
+      <CombiningRule parameter="epsilon" function="sqrt(epsilon1*epsilon2)"/>
+   </CombiningRules>
+   ...
+</StericsForce>
+```
+
+**QUESTION:** How would we specify an LJ interaction table among SMIRKS-specified types? Perhaps via an `<AtomPair/>` tag?
+```XML
+<StericsForce potential="Lennard-Jones" scale12="0.0" scale13="0.0" scale14="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+   <AtomPair smirks1="[#1:1]" smirks2="[#6:2]" sigma="1.4870" epsilon="0.0157"/>   
+   ...
+```
+
+**QUESTION:** Should we include cutoff, switch, and long-range correction flags, or whether LJPME is used? For LJ, there are ways to select these so that physical and binding properties are less dependent on these properties, but this may not be true of other kinds of potentials.
+
 For compatibility, the size property of an atom can be specified either via providing the `sigma` attribute, such as `sigma="1.3"`, or via the `r_0/2` (`rmin/2`) values used in AMBER force fields (here denoted `rmin_half` as in the example above).
 The two are related by `r0 = 2^(1/6)*sigma` and conversion is done internally in `ForceField` into the `sigma` values used in OpenMM.
 `epsilon` denotes the well depth.
@@ -106,6 +126,8 @@ Currently, no child tags are used because the charge model is specified via diff
 **QUESTION:** Should we also also require the `cutoff` (or lack thereof) to be specified?
 
 **QUESTION:** Should we also also require the `switch` (or lack thereof) to be specified, since this can also have a large effect on the forces near the cutoff?
+
+**TODO:** Also add the dispersion correction behavior to `StericsForce`.
 
 ### `<BondForce>`
 
@@ -328,12 +350,6 @@ This allows specification of force constants and lengths for bond orders 1 and 2
 ### Aromaticity models
 
 Before conduct SMIRKS substructure searches, molecules are prepared using one of the supported aromaticity models, with the default model (`MDL`) used unless otherwise requested.
-Alternate aromaticity models can be requested by the force field, such as
-```
-<SMIRNOFF version="0.2" aromaticity_model="MDL">
-```
-used by SMIRNOFF99Frosst (a choice by Christopher Bayly to simplify handling of certain heteroaromatic compounds).
-
 The only aromaticity model currently widely supported (by both the [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/oechemtk/aromaticity.html) and [RDKit](http://www.rdkit.org/docs/RDKit_Book.html)) is the `MDL` model.
 
 ### Future advanced features
@@ -422,9 +438,9 @@ So use generics sparingly unless it is your intention to provide generics that s
 
 ## Version history
 
-### 0.2
+### 1.0
 
-Overhaul of draft specification along with `ForceField` refactor:
+Backwards-incompatible overhaul of draft specification along with `ForceField` refactor:
 * Aromaticity model now defaults to `MDL`, and aromaticity model names drop OpenEye-specific prefixes
 * Added a description of default units if `*_unit` attributes are omitted.
 * Forces were renamed to be more general:
