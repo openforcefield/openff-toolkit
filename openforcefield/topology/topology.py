@@ -1067,7 +1067,7 @@ class Molecule(ChemicalEntity):
             molecule.add_bond(oe_atom_to_openmm_at[oe_bond.GetBgn()], oe_atom_to_openmm_at[oe_bond.GetEnd()],
                               type=off_bondtype, order=oe_bond.GetOrder())
 
-        if molecule.n_bonds != mol.NumBonds():
+        if molecule.n_bondsphe != mol.NumBonds():
             oechem.OEThrow.Error("OpenMM topology and OEMol number of bonds mismatching: "
                                  "OpenMM = {} vs OEMol  = {}".format(omm_bond_count, mol.NumBonds()))
 
@@ -1694,3 +1694,12 @@ class Topology(ChemicalEntity):
         # computing it lazily if needed.
 
         pass
+
+    @property
+    def is_periodic(self):
+        """
+        True if the system is periodic; False otherwise
+        """
+        return self._is_periodic
+
+    #QUESTION: Should Topology store box vectors?

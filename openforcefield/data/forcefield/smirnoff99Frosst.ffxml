@@ -305,7 +305,7 @@
     <Proper smirks="[*:1]~[*:2]=[#6,#7,#16,#15;X2:3]=[*:4]" id="t159" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
   </ProperTorsionForce>
   <!-- WARNING: AMBER formats typically use r_0/2=r_min/2 to describe the relevant distance parameter, where r0 = 2^(1/6)*sigma. The difference is important, and the two conventions can be used here by specifying sigma or rmin_half. -->
-  <StericsForce scale14="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+  <vdWForce potential="Lennard-Jones-12-6" scale14="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
     <Atom smirks="[*:1]" epsilon="0.25" id="n1" rmin_half="4."/>
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n2" rmin_half="0.6000"/>
     <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n3" rmin_half="1.4870"/>
@@ -342,6 +342,6 @@
     <Atom smirks="[#17X0-1:1]" epsilon="0.0355910" id="n34" rmin_half="2.513"/>
     <Atom smirks="[#35X0-1:1]" epsilon="0.0586554" id="n35" rmin_half="2.608"/>
     <Atom smirks="[#53X0-1:1]" epsilon="0.0536816" id="n36" rmin_half="2.860"/>
-  </StericsForce>
+  </vdWForce>
   <ElectrostaticsForce method="PME" scale14="0.833333" />
 </SMIRNOFF>

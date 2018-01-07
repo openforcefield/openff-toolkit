@@ -278,9 +278,10 @@ class ForceField(object):
             By default, all imported subclasses of ForceGenerator are automatically registered to parse XML tags.
 
         """
-        self._forces = []
+        # Load all XML files containing parameter definitions
         self.loadFile(files)
 
+        # Register all ForceGenerator objects that will handle SMIRNOFF tags in processing XML files
         if force_generators is None:
             # Find all imported subclasses of ForceGenerator
             force_generators = self._find_force_generators()
@@ -648,44 +649,13 @@ class ForceField(object):
         ordered_force_generators = [ self.parsers[tagname] for tagname in nx.topological_sort(G) ]
         return ordered_force_generators
 
-    # TODO: Prune many of these options.
-    def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
-                     chargeMethod=None, verbose=False, **kwargs):
+    def createSystem(self, topology, verbose=False, **kwargs):
         """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
 
         Parameters
         ----------
         topology : openforcefield.topology.Topology
             The ``Topology`` corresponding to the ``System`` object to be created.
-        nonbondedMethod : object=NoCutoff
-            The method to use for nonbonded interactions.  Allowed values are
-            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
-        nonbondedCutoff : distance=1*nanometer
-            The cutoff distance to use for nonbonded interactions
-        constraints : object=None
-            Specifies which bonds and angles should be implemented with constraints.
-            Allowed values are None, HBonds, AllBonds, or HAngles.
-        rigidWater : boolean=True
-            If true, water molecules will be fully rigid regardless of the value
-            passed for the constraints argument
-        removeCMMotion : boolean=True
-            If true, a CMMotionRemover will be added to the System
-        hydrogenMass : mass=None
-            The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
-            added to a hydrogen is subtracted from the heavy atom to keep
-            their total mass the same.
-        residueTemplates : dict=dict()
-           Key: Topology Residue object
-           Value: string, name of _TemplateData residue template object to use for
-                  (Key) residue
-           This allows user to specify which template to apply to particular Residues
-           in the event that multiple matching templates are available (e.g Fe2+ and Fe3+
-           templates in the ForceField for a monoatomic iron ion in the topology).
-        chargeMethod : str, optional, default=None
-           If 'BCC' is specified, bond charge corrections defined the `ForceField` will be applied to AM1-derived charges, otherwise charges from provided `molecules` will be used. (DEFAULT)
-           If one of the `openeye.oequacpac.OECharges_` options is specified as a string (e.g. 'OECharges_AM1BCCSym'), this will be used and no bond charge corrections will be applied.
-           If `None`, charges from the provided `molecules` will be used and no bond charge corrections will be applied.
         verbose : bool
            If True, verbose output will be printed.
         kwargs
@@ -698,20 +668,10 @@ class ForceField(object):
         system : simtk.openmm.System
             The newly created System
 
-        .. todo::
-
-            * Replace ``verbose`` with log level selection.
-
-            * Should the ``Topology`` be modified by ``createSystem``?
-              There are a number of optional argument that we may want to make only defined by the SMIRNOFF forcefield:
-
-                * ``chargeMethod``
-                * ``hydrogenMass``
-                * ``constraints``
-                * ``rigidWater``
-
         """
-        # Re-parse XML by generators if XML was modified
+        # TODO: Have `verbose` flag set whether logging info is displayed or not.
+
+        # Re-parse XML by ForceGenerator objects if loaded XML files have been added or modified
         self._reparse_xml_if_needed()
 
         # Make a deep copy of the topology so we don't accidentaly modify it
@@ -720,68 +680,33 @@ class ForceField(object):
         # Set aromaticity model to that used by forcefield
         topology.set_aromaticity_model(self._aromaticity_model)
 
-        # Charge molecules if a valid charging method was identified
-        # TODO: chargeMethod should be part of the SMIRNOFF spec.
-        if chargeMethod is not None:
-            for molecule in topology.molecules:
-                topology.assign_partial_charges(method=chargeMethod)
-
-        # Update bond orders stored in the topology if needed
-        if self.bondOrderMethod is not None:
-            for molecule in topology.molecules:
-                topology.assign_fractional_bond_orders(method=self.bondOrderMethod)
-
-        # Create the System and add atoms
+        # Create the System
         system = openmm.System()
+
+        # Add particles
+        # TODO: Optionally allow SMARTS-specified masses
         for atom in topology.atoms:
-            # Add the particle to the OpenMM system.
-            # QUESTION: Do we need an option to have SMARTS-specified fractional masses for compatibility with other forcefields?
             system.addParticle(atom.element.mass)
 
-        # Adjust hydrogen masses if requested.
-        # QUESTION: Do we need the capability to modify hydrogen masses via a keyword argument, or should this be part of the forcefield spec?
-        if hydrogenMass is not None:
-            if not unit.is_quantity(hydrogenMass):
-                hydrogenMass *= unit.dalton
-            for atom1, atom2 in topology.bonds:
-                if atom1.element == elem.hydrogen:
-                    (atom1, atom2) = (atom2, atom1)
-                if atom2.element == elem.hydrogen and atom1.element not in (elem.hydrogen, None):
-                    transferMass = hydrogenMass-system.getParticleMass(atom2.index)
-                    system.setParticleMass(atom2.index, hydrogenMass)
-                    system.setParticleMass(atom1.index, system.getParticleMass(atom1.index)-transferMass)
-
         # Set periodic boundary conditions.
-        boxVectors = topology.getPeriodicBoxVectors()
-        if boxVectors is not None:
-            system.setDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2])
-        elif nonbondedMethod not in [NoCutoff, CutoffNonPeriodic]:
-            raise ValueError('Requested periodic boundary conditions for a Topology that does not specify periodic box dimensions')
+        # TODO: Will Topology contain box vectors, or should we get them from an argument?
+        if topology.is_periodic:
+            system.setDefaultPeriodicBoxVectors(topology.box_vectors)
 
-        # Apply keyword-specified constraints.
-        # QUESTION: Do we need the capability to enforce constraints specified via a keyword argument in addition to SMIRNOFF-specified constraints?
-        if constraints != None:
-            raise Exception("Constraints are not implemented yet.")
-
-        # Allow the nonbonded method to be overridden
-        # QUESTION: Do we want to make the choice of nonbonded method part of the forcefield spec?
-        kwargs['nonbondedMethod'] = nonbondedMethod
-        kwargs['nonbondedCutoff'] = nonbondedCutoff
-
-        # Set user-specified charge method
-        # QUESTION: If the charge method is part of the forcefield spec, do we really want users to be able to override it?
-        kwargs['chargeMethod'] = chargeMethod
-
-        # Determine the order in which to process ForceGenerator objects
+        # Determine the order in which to process ForceGenerator objects in order to satisfy dependencies
         force_generators = self._resolve_force_generator_order()
+
+        # Check if any kwargs have been provided that aren't handled by force generators
+        known_kwargs = set([ force_generator.KWARGS for force_generator in force_generators ])
+        unknown_kwargs = set(kwargs.keys()).difference(known_kwargs)
+        if len(unknown_kwargs) > 0:
+            msg = "The following keyword arguments to createSystem() are not used by any registered force generator: {}\n".format(unknown_kwargs)
+            msg += "Known keyword arguments: {}".format(known_kwargs)
+            raise Exception(msg)
 
         # Add forces to the System
         for force_generator in force_generators:
             force_generator.createForce(system, topology, **kwargs)
-
-        # Add center-of-mass motion removal, if requested
-        if removeCMMotion:
-            system.addForce(openmm.CMMotionRemover())
 
         # Let force generators do postprocessing
         for force_generator in force_generators:
@@ -789,6 +714,7 @@ class ForceField(object):
 
         return system
 
+    # TODO: Rework this
     def labelMolecules(self, molecules, verbose=False):
         """Return labels for a list of molecules corresponding to parameters from this force field.
         For each molecule, a dictionary of force types is returned, and for each force type,
@@ -899,6 +825,8 @@ class ForceGenerator(object):
     _INFOTYPE = None # container class with type information that will be stored in self._types
     _OPENMMTYPE = None # OpenMM Force class (or None if no equivalent)
     _DEPENDENCIES = None # list of ForceGenerator classes that must precede this, or None
+    _DEFAULTS = {} # dict of attributes and their default values at tag-level
+    _KWARGS = [] # list of keyword arguments accepted by the force generator on initialization
 
     def __init__(self, forcefield):
         self.ff = forcefield # the ForceField that this ForceGenerator is registered with
@@ -1297,25 +1225,32 @@ class ImproperTorsionGenerator(ForceGenerator):
         _check_for_missing_valence_terms('ImproperTorsionForce', topology, torsions.keys(), topology.impropers())
 
 ## @private
-class StericsGenerator(ForceGenerator):
-    """Handle SMIRNOFF ``<StericsForce>`` tags"""
+class vdWGenerator(ForceGenerator):
+    """Handle SMIRNOFF ``<vdWForce>`` tags"""
 
     # TODO: Is this necessary
     SCALETOL = 1e-5
 
-    class StericsType(ForceType):
-        """A SMIRNOFF StericsForce type."""
+    # DEFAULTS
+    _DEFAULTS = {
+        'potential' : 'Lennard-Jones-12-6',
+        'scale12' : 0.0,
+        'scale13' : 0.0,
+        'scale14' : 0.5,
+        'scale15' : 1.0,
+    }
+
+    class vdWType(ForceType):
+        """A SMIRNOFF vdWForce type."""
         def __init__(self, node, parent):
             # NOTE: Currently we support radius definition via 'sigma' or 'rmin_half'.
             super(StericsType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
-
-            # TODO: Dispatch based on parent 'potential' tag
 
             # Make sure we don't have BOTH rmin_half AND sigma
             try:
                 a = _extractQuantity(node, parent, 'sigma')
                 a = _extractQuantity(node, parent, 'rmin_half')
-                raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the .ffxml file.")
+                raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the forcefield file.")
             except:
                 pass
 
@@ -1328,14 +1263,16 @@ class StericsGenerator(ForceGenerator):
                 self.sigma = 2.*rmin_half/(2.**(1./6.))
             self.epsilon = _extractQuantity(node, parent, 'epsilon')
 
-    _TAGNAME = 'NonbondedForce' # SMIRNOFF tag name to process
-    _INFOTYPE = NonbondedType # info type to store
+    _TAGNAME = 'vdWForce' # SMIRNOFF tag name to process
+    _INFOTYPE = vdWType # info type to store
     _OPENMMTYPE = openmm.NonbondedForce # OpenMM force class to create
 
-    def __init__(self, forcefield, coulomb14scale, lj14scale):
+    def __init__(self, forcefield):
         super(NonbondedForceGenerator, self).__init__(forcefield)
-        self.coulomb14scale = coulomb14scale
-        self.lj14scale = lj14scale
+
+        # Extract potential type and scale factors
+        for attribute in _DEFAULTS.keys():
+            setattr(self, attribute, _extractQuantity(node, parent, attribute, default=DEFAULTS[attribute]))
 
 
     # TODO: Handle the case where multiple <NonbondedForce> tags are found
