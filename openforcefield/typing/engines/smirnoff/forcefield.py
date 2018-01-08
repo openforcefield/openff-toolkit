@@ -46,54 +46,6 @@ from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingEr
 logger = logging.getLogger(__name__)
 
 #=============================================================================================
-# ENUMERATED TYPES
-#=============================================================================================
-
-# Enumerated values for nonbonded method
-
-class NoCutoff(object):
-    def __repr__(self):
-        return 'NoCutoff'
-NoCutoff = NoCutoff()
-
-class CutoffNonPeriodic(object):
-    def __repr__(self):
-        return 'CutoffNonPeriodic'
-CutoffNonPeriodic = CutoffNonPeriodic()
-
-class CutoffPeriodic(object):
-    def __repr__(self):
-        return 'CutoffPeriodic'
-CutoffPeriodic = CutoffPeriodic()
-
-class Ewald(object):
-    def __repr__(self):
-        return 'Ewald'
-Ewald = Ewald()
-
-class PME(object):
-    def __repr__(self):
-        return 'PME'
-PME = PME()
-
-# Enumerated values for constraint type
-
-class HBonds(object):
-    def __repr__(self):
-        return 'HBonds'
-HBonds = HBonds()
-
-class AllBonds(object):
-    def __repr__(self):
-        return 'AllBonds'
-AllBonds = AllBonds()
-
-class HAngles(object):
-    def __repr__(self):
-        return 'HAngles'
-HAngles = HAngles()
-
-#=============================================================================================
 # PRIVATE METHODS
 #=============================================================================================
 
@@ -273,7 +225,7 @@ class ForceField(object):
         files : list
             A list of XML files defining the SMIRNOFF force field.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory (for built in force fields), or an open file-like object with a read() method from which the forcefield XML data can be loaded.
-        force_generators : iterable of ForceGenerator objects, optional, default=None
+        force_generators : iterable of ForceGenerator classes, optional, default=None
             If not None, the specified set of ForceGenerator objects will be used to parse the XML tags.
             By default, all imported subclasses of ForceGenerator are automatically registered to parse XML tags.
 
@@ -284,7 +236,7 @@ class ForceField(object):
         # Register all ForceGenerator objects that will handle SMIRNOFF tags in processing XML files
         if force_generators is None:
             # Find all imported subclasses of ForceGenerator
-            force_generators = self._find_force_generators()
+            force_generators = self._find_force_generator_classes()
         self._register_parsers(force_generators)
 
     @property
@@ -295,13 +247,13 @@ class ForceField(object):
         return copy.deepcopy(self._parsers)
 
     @staticmethod
-    def _find_force_generators():
-        """Identify all imported subclasses of ForceGenerator and register them in a dict().
+    def _find_force_generator_classes():
+        """Identify all imported subclasses of ForceGenerator.
 
         Returns
         -------
-        parsers : dict of str : ForceGenerator
-            parsers[tagname] is the ForceGenerator for the correspondiong tagname
+        force_generators : list of ForceGenerator subclasses
+            List of ForceGenerator subclasses (not objects)
         """
         return _all_subclasses(ForceGenerator)
 
@@ -362,7 +314,10 @@ class ForceField(object):
         self.parseXMLTrees()
 
     def parseXMLTrees(self):
-        """Parse XML trees, load force definitions."""
+        """
+        Initialize all registered ForceGenerator objects by p[arsing loaded XML files.
+
+        """
 
         trees = self._XMLTrees
 
@@ -866,6 +821,10 @@ class ForceGenerator(object):
         else:
             generator = existing[0]
 
+        # Extract all tag-level attributes (or their defaults)
+        for attribute in _DEFAULTS.keys():
+            setattr(self, attribute, _extractQuantity(node, parent, attribute, default=DEFAULTS[attribute]))
+
         # Register all SMIRNOFF definitions for all occurrences of its registered tag
         for section in element.findall(tag):
             generator.registerType(section, element)
@@ -1269,10 +1228,6 @@ class vdWGenerator(ForceGenerator):
 
     def __init__(self, forcefield):
         super(NonbondedForceGenerator, self).__init__(forcefield)
-
-        # Extract potential type and scale factors
-        for attribute in _DEFAULTS.keys():
-            setattr(self, attribute, _extractQuantity(node, parent, attribute, default=DEFAULTS[attribute]))
 
 
     # TODO: Handle the case where multiple <NonbondedForce> tags are found
