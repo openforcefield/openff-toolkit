@@ -236,7 +236,7 @@ class ForceField(object):
         # Register all ForceGenerator objects that will handle SMIRNOFF tags in processing XML files
         if force_generators is None:
             # Find all imported subclasses of ForceGenerator
-            force_generators = self._find_force_generator_classes()
+            force_generators = self._find_force_generators()
         self._register_parsers(force_generators)
 
     @property
@@ -247,7 +247,7 @@ class ForceField(object):
         return copy.deepcopy(self._parsers)
 
     @staticmethod
-    def _find_force_generator_classes():
+    def _find_force_generators():
         """Identify all imported subclasses of ForceGenerator.
 
         Returns
@@ -311,6 +311,10 @@ class ForceField(object):
         self._XMLTrees = trees
 
         # Parse XML, get force definitions
+        # TODO: Use lazy instantiation to only parse XML trees when we need to.
+        # QUESTION: If we only parse XML trees when needed, we may run into the problem where a call to ForceField(*files) is successful
+        # and we *think* the files are valid, but we don't actually parse the file and find there is a problem until we actually use it.
+        # Would this create problems for debugging? Maybe we can have an optional `parse_immediately=True` flag?
         self.parseXMLTrees()
 
     def parseXMLTrees(self):
@@ -782,12 +786,14 @@ class ForceGenerator(object):
     _DEPENDENCIES = None # list of ForceGenerator classes that must precede this, or None
     _DEFAULTS = {} # dict of attributes and their default values at tag-level
     _KWARGS = [] # list of keyword arguments accepted by the force generator on initialization
+    _SMIRNOFF_VERSION_INTRODUCED = 0.0 # the earliest version of SMIRNOFF spec that supports this ForceGenerator
+    _SMIRNOFF_VERSION_DEPRECATED = None # if deprecated, the first SMIRNOFF version number it is no longer used
 
     def __init__(self, forcefield):
-        self.ff = forcefield # the ForceField that this ForceGenerator is registered with
+        self.ff = forcefield # the ForceField object that this ForceGenerator is registered with
         self._types = list() # list of ForceType objects of type cls._INFOTYPE
 
-    def getMatches(self, topology, **kwargs):
+    def getMatches(self, topology):
         """Retrieve all force terms for a chemical entity.
 
         Parameters
@@ -811,9 +817,21 @@ class ForceGenerator(object):
         logger.info('{} matches identified'.format(len(matches)))
         return matches
 
+    # QUESTION: Is it legally allowed by the SMIROFF spec to have the same force tag appear more than once?
+    #           If so, what should the behavior be?
     @classmethod
     def parseElement(cls, tag, element, ff):
-        # Find existing force generator or create new one.
+        """
+        Parse the XML tag/section this ForceGenerator is registered for.
+
+        SMIRNOFF sections may be split across multiple files or otherwise appear multiple times,
+        so we need to be able to handle multiple calls to parseElement().
+
+        Parameters
+        ----------
+
+
+        """
         existing = [f for f in ff._forces if isinstance(f, cls)]
         if len(existing) == 0:
             generator = cls(ff)
