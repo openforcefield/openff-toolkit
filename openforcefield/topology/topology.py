@@ -161,7 +161,6 @@ class _Topology(Topology):
         self._numResidues = topology._numResidues
         self._numAtoms = topology._numAtoms
         self._bonds = topology._bonds
-        self._periodicBoxVectors = topology._periodicBoxVectors
 
         # Store reference molecules.
         # TODO: Deep copy?
@@ -1701,5 +1700,3 @@ class Topology(ChemicalEntity):
         True if the system is periodic; False otherwise
         """
         return self._is_periodic
-
-    #QUESTION: Should Topology store box vectors?

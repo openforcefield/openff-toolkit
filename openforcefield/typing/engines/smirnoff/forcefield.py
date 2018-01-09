@@ -608,15 +608,19 @@ class ForceField(object):
         ordered_force_generators = [ self.parsers[tagname] for tagname in nx.topological_sort(G) ]
         return ordered_force_generators
 
-    def createSystem(self, topology, verbose=False, **kwargs):
+    def createSystem(self, topology, box_vectors=None, verbose=False, **kwargs):
         """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
 
         Parameters
         ----------
         topology : openforcefield.topology.Topology
             The ``Topology`` corresponding to the ``System`` object to be created.
+        default_box_vectors : simtk.unit.Quanity of shape [3,3] with units compatible with nanometers, optional, default=None
+            Default box vectors to use.
+            If not specified, default box vectors will be set to 1.0 nm edges.
+            Note that, for periodic systems, after creating a Context, box vectors *must* be set to the appropriate dimensions.
         verbose : bool
-           If True, verbose output will be printed.
+            If True, verbose output will be printed.
         kwargs
              Arbitrary additional keyword arguments may also be specified.
              This allows extra parameters to be specified that are specific to
@@ -647,10 +651,9 @@ class ForceField(object):
         for atom in topology.atoms:
             system.addParticle(atom.element.mass)
 
-        # Set periodic boundary conditions.
-        # TODO: Will Topology contain box vectors, or should we get them from an argument?
-        if topology.is_periodic:
-            system.setDefaultPeriodicBoxVectors(topology.box_vectors)
+        # Set periodic boundary conditions if specified
+        if default_box_vectors is not None:
+            system.setDefaultPeriodicBoxVectors(default_box_vectors)
 
         # Determine the order in which to process ForceGenerator objects in order to satisfy dependencies
         force_generators = self._resolve_force_generator_order()
