@@ -65,8 +65,7 @@ class Parser(object):
             string_list.append(s_common_name)
         return string_list
 
-    @staticmethod
-    def _build_proprty_dict(pure_or_mixture_data, components_string, only_emethod=False):
+    def _build_proprty_dict(self, pure_or_mixture_data, components_string, only_emethod=False):
         # Build the list of properties (things we are observing)
         property_dict = {}
         for Property in pure_or_mixture_data.Property:
@@ -76,7 +75,8 @@ class Parser(object):
             e_method_name = property_content.eMethodName
             s_method_name = property_content.sMethodName
             # Compound ID number
-            n_org_number = Property.Property_MethodID.RegNum.nOrgNum
+
+            compound = self._parse_compounds(Property.Property_MethodID)
             # if n_org_number is None:
             #     compound_name = components_string
             # else:
@@ -88,7 +88,7 @@ class Parser(object):
             e_prop_phase = Property.PropPhaseID[0].ePropPhase  # ASSUMING LENGTH 1
             single_property_dict = {'method': true_method_name,
                                     'type': e_prop_name,
-                                    'compound': n_org_number,
+                                    'compound': compound,
                                     'phase': e_prop_phase}
             property_dict[n_prop_number] = single_property_dict
         return property_dict
@@ -126,12 +126,8 @@ class Parser(object):
             # Assume length 1, haven't found counterexample yet.
             variable_type = variable_type.orderedContent()[0].value
             compound = self._parse_compounds(Variable)
-            derived_compound = self._parse_compounds(Variable.Solvent)
-            if derived_compound is not None:
-                derived_compound = list(set(derived_compound) - set(compound))
             variable_data = {'type': variable_type,
-                             'compound': compound,
-                             'derived_compound': derived_compound}
+                             'compound': compound}
             variable_dict[n_var_number] = variable_data
         return variable_dict
 
@@ -144,7 +140,10 @@ class Parser(object):
         if reg_num is None:
             compound = None
         else:
-            compound = [x.nOrgNum for x in reg_num]
+            try:
+                compound = [x.nOrgNum for x in reg_num]
+            except TypeError:
+                compound = reg_num.nOrgNum
         return compound
 
     def _update_state(self, state, *data):
@@ -184,8 +183,8 @@ class Parser(object):
         # Missing 1 item means we can deduce the last mole fraction
         if count_invalid_mol_fracs == 1:
             missing_mol_frac['Mole fraction'] = 1-net_composition
-        # if net_composition == 1.0 and all([(value['Mole fraction'] is not None) for value in composition.values()]):
-            # I commented this line out because its unreliable
+        if net_composition == 1.0 and all([(value['Mole fraction'] is not None) for value in composition.values()]):
+            # This will only catch all but the MOST rigid data.
             # E.g. solubility in binary fluid: je500991b.xml
             # The data reported are the solubility of the solid in the binary fluid, but only the mole fraction
             # of one of the fluid components is reported. We have to deduce the other one.
@@ -194,8 +193,6 @@ class Parser(object):
             # derived for the Solvent purity, pre-measurement, so Xa + Xm = 1, but the urea component is also listed
             # so going only on the component list will lead to undefined mixture.
             # If we have to do context-specific learning, this gets MUCH harder.
-
-        if net_composition <= 1:
             composition_good = True
         if state_good and composition_good:
             return True
