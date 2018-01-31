@@ -28,35 +28,29 @@ We generally use the concept of a liquid or gas `Mixture`, which is a subclass o
 A simple liquid has only one component:
 ```python
 liquid = Mixture()
-liquid.addComponent('water')
+liquid.add_component('water')
 ```
 
 A binary mixture has two components:
 ```python
 binary_mixture = Mixture()
-binary_mixture.addComponent('water', mole_fraction=0.2)
-binary_mixture.addComponent('methanol') # assumed to be rest of mixture if no mole_fraction specified
+binary_mixture.add_component('water', mole_fraction=0.2)
+binary_mixture.add_component('methanol') # assumed to be rest of mixture if no mole_fraction specified
 ```
 
 A ternary mixture has three components:
 ```python
 ternary_mixture = Mixture()
-ternary_mixture.addComponent('ethanol', mole_fraction=0.2)
-ternary_mixture.addComponent('methanol', mole_fraction=0.2)
-ternary_mixture.addComponent('water')
+ternary_mixture.add_component('ethanol', mole_fraction=0.2)
+ternary_mixture.add_component('methanol', mole_fraction=0.2)
+ternary_mixture.add_component('water')
 ```
 
 The infinite dilution of one solute within a solvent or mixture is also specified as a `Mixture`, where the solute has zero mole fraction:
 ```python
 infinite_dilution = Mixture()
-infinite_dilution.addComponent('phenol', impurity=True) # infinite dilution; one copy only of the impurity
-infinite_dilution.addComponent('water')
-```
-
-For testing against synthetic data, we also make use of `isolatedMolecule` objects (also subclasses of `Substance`) that represent a single molecule:
-```python
-phenol = IsolatedMolecule(iupac='phenol')
-ethane = IsolatedMolecule(smiles='CC')
+infinite_dilution.add_component('phenol', impurity=True) # infinite dilution; one copy only of the impurity
+infinite_dilution.add_component('water')
 ```
 
 You can iterate over the components in a mixture:
@@ -80,7 +74,8 @@ if component.impurity == True:
 
 #### Thermodynamic states
 
-A `ThermodynamicState` specifies a combination of thermodynamic parameters (e.g. temperature, pressure) at which a measurement is performed.
+A `ThermodynamicState` specifies a combination of thermodynamic parameters (e.g. temperature, pressure) at which a 
+measurement is performed.
 ```python
 from simtk import unit
 thermodynamic_state = ThermodynamicState(pressure=500*unit.kilopascals, temperature=298.15*unit.kelvin)
@@ -89,7 +84,8 @@ We use the `simtk.unit` unit system from [OpenMM](http://openmm.org) for units (
 
 #### Measurement methods
 
-A `MeasurementMethod` subclass has information specific to the particular method used to measure a property (such as experimental uncertainty guidance).
+A `MeasurementMethod` subclass has information specific to the particular method used to measure a property 
+(such as experimental uncertainty guidance).
 
 Some examples:
 * `FlowCalorimetry` for `HeatCapacity` or `ExcessMolarEnthalpy`
@@ -97,7 +93,8 @@ Some examples:
 
 #### Physical property measurements
 
-A `MeasuredPhysicalProperty` is a combination of `Substance`, `ThermodynamicState`, and a unit-bearing measured property `value` and `uncertainty`:
+A `MeasuredPhysicalProperty` is a combination of `Substance`, `ThermodynamicState`, and a unit-bearing measured 
+property `value` and `uncertainty`:
 ```python
 # Define mixture
 mixture = Mixture()
@@ -108,7 +105,8 @@ thermodynamic_state = ThermodynamicState(pressure=500*unit.kilopascals, temperat
 # Define measurement
 measurement = ExcessMolarEnthalpy(substance, thermodynamic_state, value=83.3863244*unit.kilojoules_per_mole, uncertainty=0.1220794866*unit.kilojoules_per_mole)
 ```
-The various properties are all subclasses of `MeasuredPhysicalProperty` and generally follow the `<ePropName/>` ThermoML tag names.
+The various properties are all subclasses of `MeasuredPhysicalProperty` and generally follow the `<ePropName/>` 
+ThermoML tag names.
 
 Some examples of `MeasuredPhysicalProperty`:
 * `MassDensity` - mass density
@@ -117,23 +115,17 @@ Some examples of `MeasuredPhysicalProperty`:
 
 There are also some examples of measured physical properties we use exclusively for testing against synthetic data:
 * `MeanPotentialEnergy` - mean potential energy of a system
-* `BondMoment` - the `n`th moment (mean `E[x]` if n==1, or central moment `E[(x-E[x])^n]` if n >= 2) of a specified bond of an isolated molecule
-* `AngleMoment` - the `n`th moment (mean `E[x]` if n==1, or central moment `E[(x-E[x])^n]` if n >= 2) of a specified angle of an isolated molecule
+* `BondMoment` - the `n`th moment (mean `E[x]` if n==1, or central moment `E[(x-E[x])^n]` if n >= 2) of a specified 
+   bond of an isolated molecule
+* `AngleMoment` - the `n`th moment (mean `E[x]` if n==1, or central moment `E[(x-E[x])^n]` if n >= 2) of a specified 
+   angle of an isolated molecule
 * `TorsionMoment` - the `n`th circular moment (`E[e^{i*n*phi}]`) of a specified torsion of an isolated molecule
 
-For example:
-```python
-molecule = IsolatedMolecule(smiles=smiles)
-thermodynamic_state = ThermodynamicState(temperature=300*unit.kelvin)
-mean_potential = MeanPotentialEnergy(molecule, thermodynamic_state, value=124.4*unit.kilojoules_per_mole, uncertainty=14.5*unit.kilojoules_per_mole)
-bond_average = BondMoment(molecule, thermodynamic_state, value=1.12*unit.angstroms, uncertainty=0.02*unit.angstroms, moment=1, smirks='[#6:1]-[#6:2]')
-bond_variance = BondMoment(molecule, thermodynamic_state, value=0.05*unit.angstroms**2, uncertainty=0.02*unit.angstroms**2, moment=2, smirks='[#6:1]-[#6:2]')
-angle_average = AngleMoment(molecule, thermodynamic_state, value=20*unit.degrees, uncertainty=0.05*unit.degrees, moment=1, smirks='[#6:1]-[#6:2]-[#6:3]')
-torsion_moment = TorsionMoment(molecule, thermodynamic_state, value=(0.5, 0.3), uncertainty=(0.05, 0.03), moment=1, smirks='[#6:1]-[#6:2]-[#6:3]-[#6:4]')
-```
 **QUESTIONS**
-* Is it useful to average over any bonds that match the SMARTS strings? How would you even construct those SMARTS strings algorithmically for the molecules in the set, to avoid matching anything else?
-* Note that we need the first noncentral moment (average), so I had an exception where we don't compute the central moments for `moment == 1`
+* Is it useful to average over any bonds that match the SMARTS strings? How would you even construct those SMARTS 
+  strings algorithmically for the molecules in the set, to avoid matching anything else?
+* Note that we need the first non-central moment (average), so I had an exception where we don't compute the central 
+  moments for `moment == 1`
 * Do we really want the variance (second central moment) instead of the standard deviation?
 
 A [roadmap of physical properties to be implemented](https://github.com/open-forcefield-group/open-forcefield-tools/wiki/Physical-Properties-for-Calculation) is available.
@@ -183,12 +175,12 @@ Direct access to the [NIST ThermoML Archive](http://trc.nist.gov/ThermoML.html) 
 
 For example, to retrieve [the ThermoML dataset](http://trc.boulder.nist.gov/ThermoML/10.1016/j.jct.2005.03.012) that accompanies [this paper](http://www.sciencedirect.com/science/article/pii/S0021961405000741), we can simply use the DOI `10.1016/j.jct.2005.03.012` as a key for creating a `PhysicalPropertyDataset` subclassed object from the ThermoML Archive:
 ```python
-dataset = ThermoMLDataset(keys='10.1016/j.jct.2005.03.012')
+dataset = ThermoMLDataset(doi='10.1016/j.jct.2005.03.012')
 ```
 You can also specify multiple ThermoML Archive keys to create a dataset from multiple ThermoML files:
 ```python
 thermoml_keys = ['10.1021/acs.jced.5b00365', '10.1021/acs.jced.5b00474']
-dataset = ThermoMLDataset(keys=thermoml_keys)
+dataset = ThermoMLDataset(doi=thermoml_keys)
 ```
 
 It is also possible to specify ThermoML datasets housed at other locations, such as
@@ -201,12 +193,12 @@ dataset = ThermoMLDataset(url='file:///Users/choderaj/thermoml')
 ```
 or
 ```python
-dataset = ThermoMLDataset(keys=['10.1021/acs.jced.5b00365', '10.1021/acs.jced.5b00474'], url='http://openforcefieldgroup.org/thermoml-datasets')
+dataset = ThermoMLDataset(doi=['10.1021/acs.jced.5b00365', '10.1021/acs.jced.5b00474'], url='http://openforcefieldgroup.org/thermoml-datasets')
 ```
 or from ThermoML and a different URL:
 ```python
-dataset = ThermoMLDataset(keys=thermoml_keys)
-dataset.retrieve(keys=local_keys, url='http://openforcefieldgroup.org/thermoml-datasets')
+dataset = ThermoMLDataset(doi=thermoml_keys)
+dataset.retrieve(doi=local_keys, url='http://openforcefieldgroup.org/thermoml-datasets')
 ```
 
 You can see which DOIs contribute to the current `ThermoMLDataset` with the convenience functions:
@@ -218,7 +210,7 @@ NIST has compiled a JSON frame of corrections to uncertainties.
 These can be used to update or correct data uncertainties and discard outliers using `applyNISTUncertainties()`:
 ```python
 # Modify uncertainties according to NIST evaluation
-dataset.applyNISTUncertainties(nist_uncertainties, adjust_uncertainties=True, discard_outliers=True)
+dataset.apply_nist_uncertainties(nist_uncertainties, adjust_uncertainties=True, discard_outliers=True)
 ```
 
 **TODO:**

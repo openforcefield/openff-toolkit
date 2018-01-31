@@ -25,6 +25,7 @@ requirements:
     - parmed
     - matplotlib
     - pandas
+    - pyxb
 
 test:
   requires:
