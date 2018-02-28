@@ -31,6 +31,8 @@ Equilibrium angle values are provided, along with force constants (with units as
 
 This hierarchical structure means that a typical parameter file will tend to have generic parameters early in the section for each force type, with more specialized parameters assigned later.
 
+**QUESTION:** Can a SMIRNOFF section appear more than once? If so, what is the defined behavior there?
+
 **Technical note**: Because this is an XML format, certain special characters that occur in valid SMIRKS patterns (such as ampersand symbols `&`) must be treated specially to process.
 See [this entry](https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references) for more details.
 
@@ -45,12 +47,19 @@ If not specified by a `*_unit` attribute, the [standard OpenMM unit system](http
 * quantity is specified in `moles`
 * angles are specified in `radians`
 
+**QUESTION:** Should we *require* the units instead of making them optional in order to minimize the possibility for mistakes?
+
 Allowed values for units are given in [`simtk.unit`](https://github.com/pandegroup/openmm/blob/master/wrappers/python/simtk/unit/unit_definitions.py).
 
 ## Functional forms, etc.
 
 **Functional form**: The SMIRNOFF format specifies parameters; once specified, these are processed by the SMIRNOFF `ForceField` class and used to assign parameters to OpenMM Forces.
-This means that specific forces are generally implemented as discussed in the [OpenMM Documentation](http://docs.openmm.org/latest/userguide/theory.html), see especially [Section 19 on Standard Forces](http://docs.openmm.org/latest/userguide/theory.html#standard-forces) for functional forms.
+
+Each `Force` section specifies the functional form for the interaction using the `potential` attribute.
+Common defaults are defined, but the goal is to eventually allow these to be overridden by alternative choices or even algebraic expressions in the future.
+The format will distinguish between functional forms available in all common molecular simulation packages and those experimental features available in a few packages (especially OpenMM, which supports a flexible set of custom forces defined by algebraic expressions) with an *EXPERIMENTAL* category.
+
+Many of the specific forces are implemented as discussed in the [OpenMM Documentation](http://docs.openmm.org/latest/userguide/theory.html); see especially [Section 19 on Standard Forces](http://docs.openmm.org/latest/userguide/theory.html#standard-forces) for mathematical descriptions of these functional forms.
 In some cases, typically for consistency with the AMBER force field philosophy motivating some of the authors, we do some manipulation of parameters from these files as discussed below in "Parameter sections".
 
 **Charges**: In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), we at least initially treat partial charges as something to be obtained separately from the rest of the force field (BAIT, which includes bonds, angles, impropers, and torsions; and vdW terms), typically via QM calculations or a method such as the [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach from Christopher Bayly, thus, for system setup we provide the option of specifying a charging method, though charges are not normally specified in the FFXML itself.
@@ -62,41 +71,43 @@ For this section it will help to have on hand an example SMIRNOFF file, such as 
 
 Before getting in to individual sections, it's worth noting that the XML parser ignores attributes in the XML that it does not understand, so providing a parameter line for an angle that specifies (for example) a second force constant `k2` will lead to no effect.
 
-### `<StericsForce>`
+### `<vdWForce>`
 
-Nonbonded sterics parameters, which model repulsive and dispersive forces, are specified via the `StericsForce` tag with sub-tags for individual `Atom` entries, such as:
+van der Waals force parameters, which include repulsive forces arising from Pauli exclusion and attractive forces arising from dispersion, are specified via the `StericsForce` tag with sub-tags for individual `Atom` entries, such as:
 ```XML
-<StericsForce potential="Lennard-Jones" scale12="0.0" scale13="0.0" scale14="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+<vdWForce potential="Lennard-Jones" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
    <Atom smirks="[#1:1]" rmin_half="1.4870" epsilon="0.0157"/>
    <Atom smirks="[#1:1]-[#6]" rmin_half="1.4870" epsilon="0.0157"/>
    ...
-</StericsForce>
+</vdWForce>
 ```
-Attributes in the `<StericsForce>` tag specify the scaling terms applied to the energies of 1-2 (`scale12`, default: 0), 1-3 (`scale13`, default: 0), and 1-4 (`scale14`, default: 0.5) interactions.
+Attributes in the `<vdWForce>` tag specify the scaling terms applied to the energies of 1-2 (`scale12`, default: 0), 1-3 (`scale13`, default: 0), and 1-4 (`scale14`, default: 0.5) interactions, (`scale15`. default: 1.0).
 
-Currently, only `potential="Lennard-Jones"` is supported:
+Currently, only `potential="Lennard-Jones-12-6"` is supported:
 ```
 U(r) = 4*epsilon*((sigma/r)^12 - (sigma/r)^6)
 ```
-Later revisions will add support for additional potential types (e.g., Buckingham exp-6) and the ability to support arbitrary algebraic functional forms.
-If the `potential` attribute is omitted, it defaults to `Lennard-Jones`.
+Later revisions will add support for additional potential types (e.g., `Buckingham-exp-6`) and the ability to support arbitrary algebraic functional forms.
+If the `potential` attribute is omitted, it defaults to `Lennard-Jones-12-6`.
 
 **QUESTION:** We need to specify mixing rules as well. How should we do this? Via a single attribute like `mixing_rules="Lorentz-Berthelot"`, via multiple attributes like `sigma_mixing_rule="geometric" epsilon_mixing_rule="arithmetic"`, or via a block like
 ```XML
-<StericsForce energy_expression="4*epsilon*((sigma/r)^12-(sigma/r)^6)" scale12="0.0" scale13="0.0" scale14="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+<vdWForce energy_expression="4*epsilon*((sigma/r)^12-(sigma/r)^6)" scale12="0.0" scale13="0.0" scale14="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
    <CombiningRules>
       <CombiningRule parameter="sigma" function="(sigma1+sigma2)/2"/>
       <CombiningRule parameter="epsilon" function="sqrt(epsilon1*epsilon2)"/>
    </CombiningRules>
    ...
-</StericsForce>
+</vdWForce>
 ```
+Other [possibilities](https://en.wikipedia.org/wiki/Combining_rules) we can support later: `Waldman-Hagler`, `Fender-Halsey`, `Kong`, `Tang-Toennies`, `Pena`, `Hudson-McCoubrey`, `Sikora`.
 
 **QUESTION:** How would we specify an LJ interaction table among SMIRKS-specified types? Perhaps via an `<AtomPair/>` tag?
 ```XML
-<StericsForce potential="Lennard-Jones" scale12="0.0" scale13="0.0" scale14="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+<vdWForce potential="Lennard-Jones-12-6" scale12="0.0" scale13="0.0" scale14="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
    <AtomPair smirks1="[#1:1]" smirks2="[#6:2]" sigma="1.4870" epsilon="0.0157"/>   
    ...
+</vdWForce>   
 ```
 
 **QUESTION:** Should we include cutoff, switch, and long-range correction flags, or whether LJPME is used? For LJ, there are ways to select these so that physical and binding properties are less dependent on these properties, but this may not be true of other kinds of potentials.

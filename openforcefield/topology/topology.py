@@ -10,7 +10,7 @@ Representation of molecular topologies.
 .. todo::
 
    * Make all classes (like Particle, Atom, VirtualSite) hashable
-     Use class boilerplate suggestion from Kyle?
+   * Use class boilerplate suggestion from Kyle?
 
 """
 
@@ -27,6 +27,7 @@ import copy
 import string
 import random
 import itertools
+import collections
 
 import lxml.etree as etree
 
@@ -46,49 +47,65 @@ from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingEr
 #=============================================================================================
 
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
-# TODO: Should these be the Python equivalent of enumerated types.
+# TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
+# TODO: Should these be imported from `openforcefield.cheminformatics.aromaticity_models` and `.bondorder_models`?
 
-DEFAULT_AROMATICITY_MODEL = 'MDL' # TODO: Is there a more specific spec for this?
+DEFAULT_AROMATICITY_MODEL = 'MDL' # TODO: Is there a more specific name and reference for the aromaticity model?
 ALLOWED_AROMATICITY_MODELS = ['MDL']
 
-DEFAULT_FRACTIONAL_BONDORDER_MODEL = 'Wiberg' # TODO: Is there a more specific spec for this?
+DEFAULT_FRACTIONAL_BONDORDER_MODEL = 'Wiberg' # TODO: Is there a more specific name and reference for the aromatciity model?
 ALLOWED_FRACTIONAL_BONDORDER_MODELS = ['Wiberg']
 
-DEFAULT_CHARGE_MODEL = 'AM1-CM2' # TODO: Should this be `AM1-BCC`?
+DEFAULT_CHARGE_MODEL = 'AM1-CM2' # TODO: Should this be `AM1-BCC`, or should we encode BCCs explicitly?
 ALLOWED_CHARGE_MODELS = ['AM1-CM2', 'AM1-BCC', 'Mulliken'] # TODO: Which models do we want to support?
 
 #=============================================================================================
 # PRIVATE SUBROUTINES
 #=============================================================================================
 
-def _getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model=None):
-    """Find all sets of atoms in the provided oemol that match the provided SMIRKS strings.
+from openforcefield.utils import requires_openeye_licenses
+
+@requires_openeye_licenses('oechem')
+def _getSMARTSMatches_OEMol(oemol, smarts, aromaticity_model=None):
+    """Find all sets of atoms in the provided oemol that match the provided SMARTS string.
 
     Parameters
     ----------
-    oemol : OpenEye oemol
+    oemol : openeye.oechem.OEMol or similar
         oemol to process with the SMIRKS in order to find matches
-    smirks : str
-        SMIRKS string with tagged atoms.
+    smarts : str
+        SMARTS string with any number of sequentially tagged atoms.
         If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
-    aromaticity_model : str (optional)
-        OpenEye aromaticity model designation as a string, such as "OEAroModel_MDL". Default: None. If none is provided, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
+    aromaticity_model : str, optional, default=None
+        OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
+        If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
 
     Returns
     -------
-    matches : list of tuples of atoms numbers
-        matches[index] is an N-tuple of atom numbers from the oemol
+    matches : list of tuples of atoms indices within the ``oemol``
+        matches[index] is an N-tuple of atom numbers from the ``oemol``
         Matches are returned in no guaranteed order.
+        # TODO: What is returned if no matches are found? An empty list, or None?
+        # TODO: Ensure that SMARTS numbers 1, 2, 3... are rendered into order of returnd matches indexed by 0, 1, 2...
+
+
+    .. notes ::
+
+       * Raises ``LicenseError`` if valid OpenEye tools license is not found, rather than causing program to terminate
+       * Raises ``ValueError`` if ``smarts`` query is malformed
+
     """
+    # We have wrapped the function with @requires_openeye_licenses so that if valid license is not found,
+    # a LicenseError will be raised instead of the program abruptly terminating.
     from openeye import oechem
 
     # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
     mol = oechem.OEMol(oemol)
 
-    # Set up query.
+    # Set up query
     qmol = oechem.OEQMol()
-    if not oechem.OEParseSmarts(qmol, smirks):
-        raise Exception("Error parsing SMIRKS '%s'" % smirks)
+    if not oechem.OEParseSmarts(qmol, smarts):
+        raise ValueError("Error parsing SMARTS '%s'" % smarts)
 
     # Determine aromaticity model
     if aromaticity_model:
@@ -104,25 +121,24 @@ def _getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model=None):
         # If aromaticity model was provided, prepare molecule
         oechem.OEClearAromaticFlags(mol)
         oechem.OEAssignAromaticFlags(mol, oearomodel)
-        # avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
+        # Avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
         oechem.OEAssignHybridization(mol)
 
-    # Perform matching on each mol
+    # Build list of matches
+    # TODO: Update the logic here to preserve ordering of template molecule for equivalent atoms
+    #       and speed matching for larger molecules.
+    unique = False # We require all matches, not just one of each kind
+    substructure_search = oechem.OESubSearch(qmol)
     matches = list()
-
-    # We require non-unique matches, i.e. all matches
-    unique = False
-    ss = oechem.OESubSearch(qmol)
-    matches = []
-    for match in ss.Match( mol, unique):
+    for match in substructure_search.Match(mol, unique):
         # Compile list of atom indices that match the pattern tags
         atom_indices = dict()
-        for ma in match.GetAtoms():
-            if ma.pattern.GetMapIdx() != 0:
-                atom_indices[ma.pattern.GetMapIdx()-1] = ma.target.GetIdx()
+        for matched_atom in match.GetAtoms():
+            if matched_atom.pattern.GetMapIdx() != 0:
+                atom_indices[matched_atom.pattern.GetMapIdx()-1] = matched_atom.target.GetIdx()
         # Compress into list
         atom_indices = [ atom_indices[index] for index in range(len(atom_indices)) ]
-        # Store
+        # Convert to tuple
         matches.append( tuple(atom_indices) )
 
     return matches
@@ -174,8 +190,6 @@ class _Topology(Topology):
 
         # Track constraints
         self._constrained_atom_pairs = dict()
-
-
 
     def _updateBondOrders(self, Wiberg = False):
         """Update and store list of bond orders for the molecules in this Topology. Can be used for initialization of bondorders list, or for updating bond orders in the list.
@@ -512,7 +526,6 @@ class Atom(Particle):
         # TODO: Also include particle_index and which topology this atom belongs to?
         return "<Atom name='{}' element='{}'>".format(self.name, self.element)
 
-
 class VirtualSite(Particle):
     """
     A particle representing a virtual site whose position is defined in terms of ``Atom`` positions.
@@ -638,6 +651,9 @@ class Bond(object):
 class ChemicalEntity(object):
     """
     Mixin class for properties shared by chemical entities containing more than one atom.
+
+    A ``ChemicalEntity`` can be queried for SMARTS matches.
+    # TODO: Should only molecules be queryable for SMARTS matches?
 
     """
     def __init__(self, other=None):
@@ -1295,6 +1311,56 @@ class Molecule(ChemicalEntity):
         atom2 = self._atoms[atom_index_2]
         return atom2 in self._bondedAtoms[atom1]
 
+class _TransformedDict(collections.MutableMapping):
+    """A dictionary that applies an arbitrary key-altering
+       function before accessing the keys"""
+
+    def __init__(self, *args, **kwargs):
+        self.store = dict()
+        self.update(dict(*args, **kwargs))  # use the free update to set keys
+
+    def __getitem__(self, key):
+        return self.store[self.__keytransform__(key)]
+
+    def __setitem__(self, key, value):
+        self.store[self.__keytransform__(key)] = value
+
+    def __delitem__(self, key):
+        del self.store[self.__keytransform__(key)]
+
+    def __iter__(self):
+        return iter(self.store)
+
+    def __len__(self):
+        return len(self.store)
+
+    def __keytransform__(self, key):
+        return key
+
+class ValenceDict(_TransformedDict):
+    """Enforce uniqueness in atom indices"""
+    def __keytransform__(self, key):
+        """Reverse tuple if first element is larger than last element."""
+        # Ensure key is a tuple.
+        key = tuple(key)
+        # Reverse the key if the first element is bigger than the last.
+        if key[0] > key[-1]:
+            key = tuple(reversed(key))
+        return key
+
+class ImproperDict(_TransformedDict):
+    """Symmetrize improper torsions"""
+    def __keytransform__(self,key):
+        """Reorder tuple in numerical order except for element[1] which is the central atom; it retains its position."""
+        # Ensure key is a tuple
+        key = tuple(key)
+        # Retrieve connected atoms
+        connectedatoms = [key[0], key[2], key[3]]
+        # Sort connected atoms
+        connectedatoms.sort()
+        # Re-store connected atoms
+        key = tuple( [connectedatoms[0], key[1], connectedatoms[1], connectedatoms[2]])
+        return(key)
 
 class Topology(ChemicalEntity):
     """
@@ -1325,12 +1391,15 @@ class Topology(ChemicalEntity):
             or serialized Topology object.
 
         """
+        # Assign cheminformatics models
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
         self._fractional_bondorder_model = DEFAULT_FRACTIONAL_BONDORDER_MODEL
         self._charge_model = DEFAULT_CHARGE_MODEL
+
+        # Initialize storage
         self._constrained_atom_pairs = dict()
 
-        # TODO: Try to construct Topology copy from `other`
+        # TODO: Try to construct Topology copy from `other` if specified
         pass
 
     def set_aromaticity_model(self, aromaticity_model):
@@ -1398,6 +1467,8 @@ class Topology(ChemicalEntity):
             * ``AM1-BCC``: Canonical AM1-BCC scheme
             * ``Mulliken``: Mulliken charges
         """
+        if not charge_model in ALLOWED_CHARGE_MODELS:
+            raise ValueError("Charge model must be one of {}; specified '{}'".format(ALLOWED_CHARGE_MODELS, charge_model))
         self._charge_model = charge_model
 
     def chemical_environment_matches(self, query, aromaticity_model='MDL'):
@@ -1411,7 +1482,7 @@ class Topology(ChemicalEntity):
         ----------
         query : str or ChemicalEnvironment
             SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query
-            Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
+            Query will internally be resolved to SMARTS using ``query.as_smarts()`` if it has an ``.as_smarts`` method.
         aromaticity_model : str
             Override the default aromaticity model for this topology and use the specified aromaticity model instead.
             Allowed values: ['MDL']
@@ -1420,12 +1491,22 @@ class Topology(ChemicalEntity):
         -------
         matches : list of Atom tuples
             A list of all matching Atom tuples
+
         """
+        # Render the query to a SMARTS string
+        if type(query) is str:
+            smarts = query
+        elif type(query) is ChemicalEnvironment:
+            smarts = query.as_smarts()
+        else:
+            raise ValueError("Don't know how to convert query '%s' into SMARTS string" % query)
+
         # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
         matches = list()
         for molecule in self.unique_molecules:
             # Find all atomsets that match this definition in the reference molecule
-            refmol_matches = molecule.chemical_environment_matches(smirks)
+            # This will automatically attempt to match chemically identical atoms in a canonical order within the Topology
+            refmol_matches = molecule.chemical_environment_matches(smarts)
 
             # Loop over matches
             for reference_match in refmol_matches:
@@ -1459,6 +1540,8 @@ class Topology(ChemicalEntity):
             G.add_edge(atom1.index, atom2.index)
 
         return G
+
+    # TODO: Do we need a from_networkx() method? If so, what would the Graph be required to provide?
 
     # TODO: Overhaul this whole function
     def _identify_molecules(self):
@@ -1514,22 +1597,20 @@ class Topology(ChemicalEntity):
         ----------
         openmm_topology : simtk.openmm.app.Topology
             An OpenMM Topology object
-        unique_molecules : iterable of objects that can be used to construct Molecule objects
-            ``unique_molecules`` must contain exactly one of each molecule that appears in the Topology.
+        unique_molecules : iterable of objects that can be used to construct unique Molecule objects
+            All unique molecules mult be provided, in any order, though multiple copies of each molecule are allowed.
             The atomic elements and bond connectivity will be used to match the reference molecules
             to molecule graphs appearing in the OpenMM ``Topology``. If bond orders are present in the
             OpenMM ``Topology``, these will be used in matching as well.
-            If all bonds have bond orders assigned, these bond orders will be used to attempt to construct
-            ``unique_molecules`` if the argument is omitted.
-            An effort will be made to ensure the same atom ordering appears in identical molecules,
-            but this is not guaranteed.
+            If all bonds have bond orders assigned in ``mdtraj_topology``, these bond orders will be used to attempt to construct
+            the list of unique Molecules if the ``unique_molecules`` argument is omitted.
 
         Returns
         -------
         topology : openforcefield.topology.Topology
             An openforcefield Topology object
         """
-        pass
+        raise NotImplementedError
 
     def to_openmm(self):
         """
@@ -1540,10 +1621,10 @@ class Topology(ChemicalEntity):
         openmm_topology : simtk.openmm.app.Topology
             An OpenMM Topology object
         """
-        pass
+        raise NotImplementedError
 
     @staticmethod
-    def from_mdtraj(mdtraj_topology, molecules):
+    def from_mdtraj(mdtraj_topology, unique_molecules=None):
         """
         Construct an openforcefield Topology object from an MDTraj Topology object.
 
@@ -1551,15 +1632,13 @@ class Topology(ChemicalEntity):
         ----------
         mdtraj_topology : mdtraj.Topology
             An MDTraj Topology object
-        unique_molecules : iterable of objects that can be used to construct Molecule objects
-            ``unique_molecules`` must contain exactly one of each molecule that appears in the Topology.
+        unique_molecules : iterable of objects that can be used to construct unique Molecule objects
+            All unique molecules mult be provided, in any order, though multiple copies of each molecule are allowed.
             The atomic elements and bond connectivity will be used to match the reference molecules
-            to molecule graphs appearing in the OpenMM ``Topology``. If bond orders are present in the
-            OpenMM ``Topology``, these will be used in matching as well.
-            If all bonds have bond orders assigned, these bond orders will be used to attempt to construct
-            ``unique_molecules`` if the argument is omitted.
-            An effort will be made to ensure the same atom ordering appears in identical molecules,
-            but this is not guaranteed.
+            to molecule graphs appearing in the MDTraj ``Topology``. If bond orders are present in the
+            MDTraj ``Topology``, these will be used in matching as well.
+            If all bonds have bond orders assigned in ``mdtraj_topology``, these bond orders will be used to attempt to construct
+            the list of unique Molecules if the ``unique_molecules`` argument is omitted.
 
         Returns
         -------
@@ -1578,6 +1657,46 @@ class Topology(ChemicalEntity):
             An MDTraj Topology object
         """
         pass
+
+    @staticmethod
+    def from_parmed(parmed_structure, unique_molecules=None):
+        """
+        Construct an openforcefield Topology object from a ParmEd Structure object.
+
+        Parameters
+        ----------
+        mdtraj_topology : mdtraj.Topology
+            An MDTraj Topology object
+        unique_molecules : iterable of objects that can be used to construct unique Molecule objects
+            All unique molecules mult be provided, in any order, though multiple copies of each molecule are allowed.
+            The atomic elements and bond connectivity will be used to match the reference molecules
+            to molecule graphs appearing in the structure's ``topology`` object. If bond orders are present in the
+            structure's ``topology`` object, these will be used in matching as well.
+            If all bonds have bond orders assigned in the structure's ``topology`` object,
+            these bond orders will be used to attempt to construct
+            the list of unique Molecules if the ``unique_molecules`` argument is omitted.
+
+        Returns
+        -------
+        topology : openforcefield.Topology
+            An openforcefield Topology object
+        """
+        import parmed
+        # TODO: Implement functionality
+        raise NotImplementedError
+
+    def to_parmed(self):
+        """
+        Create a ParmEd Structure object.
+
+        Returns
+        ----------
+        parmed_structure : parmed.Structure
+            A ParmEd Structure objecft
+        """
+        import parmed
+        # TODO: Implement functionality
+        raise NotImplementedError
 
     def is_bonded(self, i, j):
         """Returns True of two atoms are bonded
@@ -1637,7 +1756,7 @@ class Topology(ChemicalEntity):
 
         """
         # Check that constraint hasn't already been specified.
-        if (iatom,jatom) in self._constrained_atom_pairs:
+        if (iatom, jatom) in self._constrained_atom_pairs:
             existing_distance = self._constrained_atom_pairs[(iatom,jatom)]
             if unit.is_quantity(existing_distance) and (distance is True):
                 raise Exception('Atoms (%d,%d) already constrained with distance %s but attempting to override with unspecified distance' % (iatom, jatom, existing_distance))
@@ -1697,6 +1816,6 @@ class Topology(ChemicalEntity):
     @property
     def is_periodic(self):
         """
-        True if the system is periodic; False otherwise
+        ``True`` if the topology represents a periodic system; ``False`` otherwise
         """
         return self._is_periodic

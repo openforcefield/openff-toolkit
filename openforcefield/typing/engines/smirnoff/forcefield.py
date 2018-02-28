@@ -27,6 +27,7 @@ import string
 import random
 import logger
 import itertools
+import collections
 
 import numpy
 
@@ -35,8 +36,8 @@ import lxml.etree as etree
 from simtk import openmm, unit
 from simtk.openmm.app import element as elem
 
-from openforcefield.utils import get_data_filename
-from openforcefield.topology import Topology
+from openforcefield.utils import get_data_filename, all_subclasses
+from openforcefield.topology import Topology, ValenceDict, ImproperDict
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError # TODO: Get rid of this?
 
 #=============================================================================================
@@ -49,38 +50,50 @@ logger = logging.getLogger(__name__)
 # PRIVATE METHODS
 #=============================================================================================
 
-def _all_subclasses(cls):
-    return cls.__subclasses__() + [ g for s in cls.__subclasses__() for g in _all_subclasses(s) ]
-
-
 # TODO: Replace this with a scheme that uses ChemicalEnvironment to validate that
 # the SMIRKS string is well-formed and labels the expected atoms (atom, bond, angle, proper, improper).
 # TODO: We may want to overhaul ChemicalEnvironment.getType() to return one of ['atom', 'bond', 'angle', 'proper', 'improper']
 # and check to make sure the expected connectivity is represented in the SMIRKS expression.
-def _validateSMIRKS(smirks, node=None):
-    """Validate the specified SMIRKS string.
+def _validate_smarts(smarts, node=None, valence_type=None):
+    """Validate the specified SMARTS string can be used to assign forcefield parameters.
+
+    This checks to ensure the SMARTS string
+    * is a valid SMARTS string
+    * the tagged atoms form a fully connected subset of atoms
+    * if ``type`` is specified, the tagged atoms define the appropriate atom, bond, angle, torsion
 
     Parameters
     ----------
-    smirks : str
-       The SMIRKS string to be validated
-    node : xml.etree.ElementTree.Element
-       Node of etree
+    smarts : str
+       The SMARTS string to be validated
+    node : xml.etree.ElementTree.Element, optional, default=None
+       Node of etree, used only for reporting errors
+    valence_type : str, optional, default=None
+       If not None, will check to ensure tagged atoms specify appropriate valence types
+       One of the supported ChemicalEnvironment getType() types: ['Atom', 'Bond', 'Angle', 'ProperTorsion', 'ImproperTorsion']
 
     """
-    # TODO: Don't make this dependent on OEChem
-    from openeye import oechem
-
-    qmol = oechem.OEQMol()
-    if not oechem.OEParseSmarts(qmol, smirks):
-        if (node is not None) and hasattr(node, 'sourceline'):
-            raise Exception("Line %s: Error parsing SMIRKS '%s'" % (node.sourceline, node.attrib['smirks']))
+    def _raise_exception(msg):
+        if (node is not None):
+            if hasattr(node, 'sourceline'):
+                raise ValueError("Line %s : %s\n%s" % (node.sourceline, str(node), msg))
+            else:
+                raise ValueError("%s\n%s" % (str(node), msg))
         else:
-            raise Exception("Error parsing SMIRKS '%s'" % (node.attrib['smirks']))
+            raise Exception(msg)
 
-    return smirks
+    # Create a chemical environment to see if this is a valid SMARTS string
+    try:
+        chemenv = ChemicalEnvironment(smarts)
+    except Exception as e:
+        _raise_exception("Error parsing SMARTS '%s' : %s" % (smarts, str(e))
 
-def _extractQuantity(node, parent, name, unit_name=None, default=None):
+    # Check type, if specified
+    actual_type = chemenv.getType()
+    if valence_type != actual_type:
+        _raise_exception("Tagged atoms in SMARTS specify '%s', expected '%s'." % (actual_type, valence_type))
+
+def _extract_quantity_from_xml_element(node, parent, name, unit_name=None, default=None):
     """
     Form a (potentially unit-bearing) quantity from the specified attribute name.
 
@@ -143,7 +156,7 @@ def _check_for_missing_valence_terms(name, topology, assigned_terms, topological
         Atom tuples defining topological valence atomsets to which forces should be assigned
 
     """
-    # Convert to lists
+    # Convert assigned terms and topological terms to lists
     assigned_terms = [ item for item in assigned_terms ]
     topological_terms = [ item for item in topological_terms ]
 
@@ -176,6 +189,7 @@ def _check_for_missing_valence_terms(name, topology, assigned_terms, topological
         return msg
 
     if set(assigned_set) != set(topology_set):
+        # Form informative error message
         msg = '%s: Mismatch between valence terms added and topological terms expected.\n' % name
         atoms = [ atom for atom in topology.atoms ]
         if len(assigned_set.difference(topology_set)) > 0:
@@ -190,7 +204,7 @@ def _check_for_missing_valence_terms(name, topology, assigned_terms, topological
         msg += str(assigned_set) + '\n'
         raise Exception(msg)
 
-def assert_bonded(topology, atom1, atom2):
+def _assert_bonded(topology, atom1, atom2):
     """
     Raise an exception if the specified atoms are not bonded in the topology.
 
@@ -255,7 +269,7 @@ class ForceField(object):
         force_generators : list of ForceGenerator subclasses
             List of ForceGenerator subclasses (not objects)
         """
-        return _all_subclasses(ForceGenerator)
+        return all_subclasses(ForceGenerator)
 
     @staticmethod
     def _register_parsers(force_generators):
@@ -276,6 +290,13 @@ class ForceField(object):
         files : string or file or tuple
             An XML file or tuple of XML files containing SMIRNOFF force field definitions.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory (for built in force fields), or an open file-like object with a read() method from which the forcefield XML data can be loaded.
+
+        .. notes ::
+
+           * New SMIRNOFF tags are handled independently, as if they were specified in the same file.
+           * If a SMIRNOFF tag that has already been read appears again, its definitions are appended to the end of the previously-read
+             definitions if the tags are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
+
         """
 
         # Ensure that we are working with a tuple of files.
@@ -319,7 +340,13 @@ class ForceField(object):
 
     def parseXMLTrees(self):
         """
-        Initialize all registered ForceGenerator objects by p[arsing loaded XML files.
+        Initialize all registered ForceGenerator objects by parsing loaded XML files.
+
+        .. notes ::
+
+           * New SMIRNOFF tags are handled independently, as if they were specified in the same file.
+           * If a SMIRNOFF tag that has already been read appears again, its definitions are appended to the end of the previously-read
+             definitions if the tags are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
 
         """
 
@@ -622,9 +649,9 @@ class ForceField(object):
         verbose : bool
             If True, verbose output will be printed.
         kwargs
-             Arbitrary additional keyword arguments may also be specified.
-             This allows extra parameters to be specified that are specific to
-             particular force fields.
+            Arbitrary additional keyword arguments may also be specified.
+            This allows extra parameters to be specified that are specific to particular force fields.
+            A ``ValueError`` will be raised if parameters are specified that are not used by any force generators.
 
         Returns
         -------
@@ -659,12 +686,14 @@ class ForceField(object):
         force_generators = self._resolve_force_generator_order()
 
         # Check if any kwargs have been provided that aren't handled by force generators
-        known_kwargs = set([ force_generator.KWARGS for force_generator in force_generators ])
+        known_kwargs = set()
+        for force_generator in force_generators:
+            known_args.update(force_generator.known_kwargs)
         unknown_kwargs = set(kwargs.keys()).difference(known_kwargs)
         if len(unknown_kwargs) > 0:
             msg = "The following keyword arguments to createSystem() are not used by any registered force generator: {}\n".format(unknown_kwargs)
             msg += "Known keyword arguments: {}".format(known_kwargs)
-            raise Exception(msg)
+            raise ValueError(msg)
 
         # Add forces to the System
         for force_generator in force_generators:
@@ -721,60 +750,6 @@ class ForceField(object):
 # The static method should be added to the parsers map.
 #=============================================================================================
 
-# TODO: Move these collections to a utility file like ``openforcefield.utils`` or ``openforcefield.collections``?
-
-import collections
-class TransformedDict(collections.MutableMapping):
-    """A dictionary that applies an arbitrary key-altering
-       function before accessing the keys"""
-
-    def __init__(self, *args, **kwargs):
-        self.store = dict()
-        self.update(dict(*args, **kwargs))  # use the free update to set keys
-
-    def __getitem__(self, key):
-        return self.store[self.__keytransform__(key)]
-
-    def __setitem__(self, key, value):
-        self.store[self.__keytransform__(key)] = value
-
-    def __delitem__(self, key):
-        del self.store[self.__keytransform__(key)]
-
-    def __iter__(self):
-        return iter(self.store)
-
-    def __len__(self):
-        return len(self.store)
-
-    def __keytransform__(self, key):
-        return key
-
-class ValenceDict(TransformedDict):
-    """Enforce uniqueness in atom indices"""
-    def __keytransform__(self, key):
-        """Reverse tuple if first element is larger than last element."""
-        # Ensure key is a tuple.
-        key = tuple(key)
-        # Reverse the key if the first element is bigger than the last.
-        if key[0] > key[-1]:
-            key = tuple(reversed(key))
-        return key
-
-class ImproperDict(TransformedDict):
-    """Symmetrize improper torsions"""
-    def __keytransform__(self,key):
-        """Reorder tuple in numerical order except for element[1] which is the central atom; it retains its position."""
-        # Ensure key is a tuple
-        key = tuple(key)
-        # Retrieve connected atoms
-        connectedatoms = [key[0], key[2], key[3]]
-        # Sort connected atoms
-        connectedatoms.sort()
-        # Re-store connected atoms
-        key = tuple( [connectedatoms[0], key[1], connectedatoms[1], connectedatoms[2]])
-        return(key)
-
 #=============================================================================================
 # Force generators
 #=============================================================================================
@@ -784,6 +759,7 @@ class ForceGenerator(object):
     """Base class for force generators.
     """
     _TAGNAME = None # str of XML element name handled by this ForceGenerator
+    _VALENCE_TYPE = None # ChemicalEnvironment valence type string expected by SMARTS string for this Generator
     _INFOTYPE = None # container class with type information that will be stored in self._types
     _OPENMMTYPE = None # OpenMM Force class (or None if no equivalent)
     _DEPENDENCIES = None # list of ForceGenerator classes that must precede this, or None
@@ -795,6 +771,13 @@ class ForceGenerator(object):
     def __init__(self, forcefield):
         self.ff = forcefield # the ForceField object that this ForceGenerator is registered with
         self._types = list() # list of ForceType objects of type cls._INFOTYPE
+
+    @property
+    def known_kwargs(self):
+        """List of kwargs that can be parsed by the function.
+        """
+        # TODO: Should we use introspection to inspect the function signature instead?
+        return set(self._KWARGS)
 
     def getMatches(self, topology):
         """Retrieve all force terms for a chemical entity.
@@ -820,8 +803,7 @@ class ForceGenerator(object):
         logger.info('{} matches identified'.format(len(matches)))
         return matches
 
-    # QUESTION: Is it legally allowed by the SMIROFF spec to have the same force tag appear more than once?
-    #           If so, what should the behavior be?
+    # TODO: Handle appending tags
     @classmethod
     def parseElement(cls, tag, element, ff):
         """
@@ -844,7 +826,7 @@ class ForceGenerator(object):
 
         # Extract all tag-level attributes (or their defaults)
         for attribute in _DEFAULTS.keys():
-            setattr(self, attribute, _extractQuantity(node, parent, attribute, default=DEFAULTS[attribute]))
+            setattr(self, attribute, _extract_quantity_from_xml_element(node, parent, attribute, default=DEFAULTS[attribute]))
 
         # Register all SMIRNOFF definitions for all occurrences of its registered tag
         for section in element.findall(tag):
@@ -881,9 +863,11 @@ class ForceType(object):
         """
         Create a ForceType that stores ``smirks`` and ``id`` attributes.
         """
-        self.smirks = _validateSMIRKS(node.attrib['smirks'], node=node)
+        self.smirks = _validate_smarts(node.attrib['smirks'], node=node, valence_type=_VALENCE_TYPE)
         if 'id' in node.attrib:
-            self.pid = _extractQuantity(node, parent, 'id')
+            self.pid = _extract_quantity_from_xml_element(node, parent, 'id')
+
+#=============================================================================================
 
 ## @private
 class ConstraintGenerator(ForceGenerator):
@@ -897,11 +881,12 @@ class ConstraintGenerator(ForceGenerator):
         def __init__(self, node, parent):
             super(ConstraintType, self).__init__(node, parent) # Base class handles ``smirks`` and ``id`` fields
             if 'distance' in node.attrib:
-                self.distance = _extractQuantity(node, parent, 'distance') # Constraint with specified distance will be added by ConstraintGenerator
+                self.distance = _extract_quantity_from_xml_element(node, parent, 'distance') # Constraint with specified distance will be added by ConstraintGenerator
             else:
                 self.distance = True # Constraint to equilibrium bond length will be added by HarmonicBondGenerator
 
     _TAGNAME = 'Constraint'
+    _VALENCE_TYPE = 'Bond' # ChemicalEnvironment valence type expected for SMARTS # TODO: Do we support more exotic types as well?
     _INFOTYPE = ConstraintType
     _OPENMMTYPE = None # don't create a corresponding OpenMM Force class
 
@@ -917,6 +902,8 @@ class ConstraintGenerator(ForceGenerator):
             # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondGenerator
             if constraint.distance is not True:
                 system.addConstraint(*atoms, constraint.distance)
+
+#=============================================================================================
 
 ## @private
 class BondGenerator(ForceGenerator):
@@ -938,8 +925,8 @@ class BondGenerator(ForceGenerator):
                     self.k = list()
                     self.length = list()
                     for ct in range(1,3):
-                        self.length.append( _extractQuantity(node, parent, 'length_bondorder%s' % ct, unit_name = 'length_unit') )
-                        self.k.append( _extractQuantity(node, parent, 'k_bondorder%s' % ct, unit_name = 'k_unit') )
+                        self.length.append( _extract_quantity_from_xml_element(node, parent, 'length_bondorder%s' % ct, unit_name = 'length_unit') )
+                        self.k.append( _extract_quantity_from_xml_element(node, parent, 'k_bondorder%s' % ct, unit_name = 'k_unit') )
                 else:
                     self.fractional_bondorder = None
             else:
@@ -947,10 +934,11 @@ class BondGenerator(ForceGenerator):
 
             # If no fractional bond orders, just get normal length and k
             if self.fractional_bondorder is None:
-                self.length = _extractQuantity(node, parent, 'length')
-                self.k = _extractQuantity(node, parent, 'k')
+                self.length = _extract_quantity_from_xml_element(node, parent, 'length')
+                self.k = _extract_quantity_from_xml_element(node, parent, 'k')
 
     _TAGNAME = 'BondForce' # SMIRNOFF tag name to process
+    _VALENCE_TYPE = 'Bond' # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = BondType # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicBondForce # OpenMM force class to create
     _DEPENDENCIES = [ConstraintGenerator] # ConstraintGenerator must be executed first
@@ -970,7 +958,7 @@ class BondGenerator(ForceGenerator):
             particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
             # Ensure atoms are actually bonded correct pattern in Topology
-            assert_bonded(atoms[0], atoms[1])
+            _assert_bonded(atoms[0], atoms[1])
 
             # Compute equilibrium bond length and spring constant.
             if bond.fractional_bondorder is None:
@@ -1015,14 +1003,15 @@ class AngleGenerator(ForceGenerator):
         """A SMIRNOFF angle type."""
         def __init__(self, node, parent):
             super(AngleType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
-            self.angle = _extractQuantity(node, parent, 'angle')
-            self.k = _extractQuantity(node, parent, 'k')
+            self.angle = _extract_quantity_from_xml_element(node, parent, 'angle')
+            self.k = _extract_quantity_from_xml_element(node, parent, 'k')
             if 'fractional_bondorder' in parent.attrib:
                 self.fractional_bondorder = parent.attrib['fractional_bondorder']
             else:
                 self.fractional_bondorder = None
 
     _TAGNAME = 'AngleForce' # SMIRNOFF tag name to process
+    _VALENCE_TYPE = 'Angle' # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = AngleType # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicAngleForce # OpenMM force class to create
 
@@ -1041,7 +1030,7 @@ class AngleGenerator(ForceGenerator):
 
             # Ensure atoms are actually bonded correct pattern in Topology
             for (i,j) in [ (0,1), (1,2) ]:
-                assert_bonded(topology, atoms[i], atoms[j])
+                _assert_bonded(topology, atoms[i], atoms[j])
 
             if topology.is_constrained(atoms[0], atoms[1]) and topology.is_constrained(atoms[1], atoms[2]) and topology.is_constrained(atoms[0], atoms[2]):
                 # Angle is constrained; we don't need to add an angle term.
@@ -1069,16 +1058,6 @@ class ProperTorsionGenerator(ForceGenerator):
             self.phase = list()
             self.k = list()
 
-            # Check the SMIRKS patterns specifies a torsion
-            # TODO: Shouldn't we check this for all SMIRKS patterns?
-            try:
-                chemenv = ChemicalEnvironment(self.smirks)
-                thistype = chemenv.getType()
-                if thistype != 'Torsion':
-                    raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Proper'))
-            except SMIRKSParsingError:
-                print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
-
             # TODO: Fractional bond orders should be processed on the per-force basis instead of per-bond basis
             if 'fractional_bondorder_method' in parent.attrib:
                 self.fractional_bondorder = parent.attrib['fractional_bondorder']
@@ -1088,12 +1067,12 @@ class ProperTorsionGenerator(ForceGenerator):
             # Store parameters.
             index = 1
             while 'phase%d'%index in node.attrib:
-                self.periodicity.append( int(_extractQuantity(node, parent, 'periodicity%d' % index)) )
-                self.phase.append( _extractQuantity(node, parent, 'phase%d' % index, unit_name='phase_unit') )
-                self.k.append( _extractQuantity(node, parent, 'k%d' % index, unit_name='k_unit') )
+                self.periodicity.append( int(_extract_quantity_from_xml_element(node, parent, 'periodicity%d' % index)) )
+                self.phase.append( _extract_quantity_from_xml_element(node, parent, 'phase%d' % index, unit_name='phase_unit') )
+                self.k.append( _extract_quantity_from_xml_element(node, parent, 'k%d' % index, unit_name='k_unit') )
                 # Optionally handle 'idivf', which divides the periodicity by the specified value
                 if ('idivf%d' % index) in node.attrib:
-                    idivf = _extractQuantity(node, parent, 'idivf%d' % index)
+                    idivf = _extract_quantity_from_xml_element(node, parent, 'idivf%d' % index)
                     self.k[-1] /= float(idivf)
                 index += 1
 
@@ -1103,6 +1082,7 @@ class ProperTorsionGenerator(ForceGenerator):
                raise Exception("Error: Torsion with id %s has no parseable phase entries." % self.pid)
 
     _TAGNAME = 'ProperTorsionForce' # SMIRNOFF tag name to process
+    _VALENCE_TYPE = 'ProperTorsion' # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = ProperTorsionType # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce # OpenMM force class to create
 
@@ -1117,7 +1097,7 @@ class ProperTorsionGenerator(ForceGenerator):
         for (atoms, torsion) in torsions.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             for (i,j) in [ (0,1), (1,2), (2,3) ]:
-                assert_bonded(topology, atoms[i], atoms[j])
+                _assert_bonded(topology, atoms[i], atoms[j])
 
             for (periodicity, phase, k) in zip(torsion.periodicity, torsion.phase, torsion.k):
                 force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
@@ -1156,12 +1136,12 @@ class ImproperTorsionGenerator(ForceGenerator):
             # Store parameters.
             index = 1
             while 'phase%d'%index in node.attrib:
-                self.periodicity.append( int(_extractQuantity(node, parent, 'periodicity%d' % index)) )
-                self.phase.append( _extractQuantity(node, parent, 'phase%d' % index, unit_name='phase_unit') )
-                self.k.append( _extractQuantity(node, parent, 'k%d' % index, unit_name='k_unit') )
+                self.periodicity.append( int(_extract_quantity_from_xml_element(node, parent, 'periodicity%d' % index)) )
+                self.phase.append( _extract_quantity_from_xml_element(node, parent, 'phase%d' % index, unit_name='phase_unit') )
+                self.k.append( _extract_quantity_from_xml_element(node, parent, 'k%d' % index, unit_name='k_unit') )
                 # Optionally handle 'idivf', which divides the periodicity by the specified value
                 if ('idivf%d' % index) in node.attrib:
-                    idivf = _extractQuantity(node, parent, 'idivf%d' % index)
+                    idivf = _extract_quantity_from_xml_element(node, parent, 'idivf%d' % index)
                     self.k[-1] /= float(idivf)
                 index += 1
                 # SMIRNOFF applies trefoil (six-fold) impropers unlike AMBER
@@ -1175,6 +1155,7 @@ class ImproperTorsionGenerator(ForceGenerator):
                raise Exception("Error: Torsion with id %s has no parseable phase entries." % self.pid)
 
     _TAGNAME = 'ImproperTorsionForce' # SMIRNOFF tag name to process
+    _VALENCE_TYPE = 'ImproperTorsion' # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = ImproperTorsionType # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce # OpenMM force class to create
 
@@ -1190,7 +1171,7 @@ class ImproperTorsionGenerator(ForceGenerator):
             # Ensure atoms are actually bonded correct pattern in Topology
             # For impropers, central atom is atom 1
             for (i,j) in [ (0,1), (1,2), (1,3) ]:
-                assert_bonded(topology, atoms[i], atoms[j])
+                _assert_bonded(topology, atoms[i], atoms[j])
 
             # Impropers are applied to all six paths around the trefoil
             for (periodicity, phase, k) in zip(improper.periodicity, improper.phase, improper.k):
@@ -1228,20 +1209,20 @@ class vdWGenerator(ForceGenerator):
 
             # Make sure we don't have BOTH rmin_half AND sigma
             try:
-                a = _extractQuantity(node, parent, 'sigma')
-                a = _extractQuantity(node, parent, 'rmin_half')
+                a = _extract_quantity_from_xml_element(node, parent, 'sigma')
+                a = _extract_quantity_from_xml_element(node, parent, 'rmin_half')
                 raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the forcefield file.")
             except:
                 pass
 
             # Handle Lennard-Jones sigma
             try:
-                self.sigma = _extractQuantity(node, parent, 'sigma')
+                self.sigma = _extract_quantity_from_xml_element(node, parent, 'sigma')
             #Handle rmin_half, AMBER-style
             except:
-                rmin_half = _extractQuantity(node, parent, 'rmin_half', unit_name='sigma_unit')
+                rmin_half = _extract_quantity_from_xml_element(node, parent, 'rmin_half', unit_name='sigma_unit')
                 self.sigma = 2.*rmin_half/(2.**(1./6.))
-            self.epsilon = _extractQuantity(node, parent, 'epsilon')
+            self.epsilon = _extract_quantity_from_xml_element(node, parent, 'epsilon')
 
     _TAGNAME = 'vdWForce' # SMIRNOFF tag name to process
     _INFOTYPE = vdWType # info type to store
@@ -1320,7 +1301,7 @@ class BondChargeCorrectionGenerator(ForceGenerator):
         """A SMIRNOFF bond charge correction type."""
         def __init__(self, node, parent):
             super(BondChargeCorrectionGenerator, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
-            self.increment = _extractQuantity(node, parent, 'increment')
+            self.increment = _extract_quantity_from_xml_element(node, parent, 'increment')
             # If no units are specified, assume elementary charge
             if type(self.increment) == float:
                 self.increment *= unit.elementary_charge
@@ -1391,7 +1372,7 @@ class GBSAForceGenerator(ForceGenerator):
             for name in expected_parameters:
                 if name in node.attrib:
                     provided_parameters.append(name)
-                    value = _extractQuantity(node, parent, name)
+                    value = _extract_quantity_from_xml_element(node, parent, name)
                     setattr(self, name, value)
                 else:
                     missing_parameters.append(name)

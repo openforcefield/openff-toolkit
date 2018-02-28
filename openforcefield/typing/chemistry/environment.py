@@ -1186,14 +1186,14 @@ into ChemicalEnvironments." % smirks)
         Returns
         -------
         chemical environemnt type:
-            'VdW', 'Bond', 'Angle', 'Torsion', 'Improper'
+            'Atom', 'Bond', 'Angle', 'ProperTorsion', 'ImproperTorsion'
             None if number of indexed atoms is 0 or > 4
         """
         index_atoms = self.getIndexedAtoms()
         natoms = len(index_atoms)
 
         if natoms == 1:
-            return "VdW"
+            return "Atom"
         if natoms == 2:
             return "Bond"
         if natoms == 3:
@@ -1203,8 +1203,8 @@ into ChemicalEnvironments." % smirks)
             atom4 = self.selectAtom(4)
             bond24 = self.getBond(atom2, atom4)
             if bond24 != None:
-                return "Improper"
-            return "Torsion"
+                return "ImproperTorsion"
+            return "ProperTorsion"
         else:
             return None
 
@@ -1266,7 +1266,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
         self.atom1 = self.selectAtom(1)
 
     def _checkType(self):
-        return (self.getType() == 'VdW'), 'VdW'
+        return (self.getType() == 'Atom'), 'Atom'
 
     def asSMIRKS(self, smarts = False):
         """
