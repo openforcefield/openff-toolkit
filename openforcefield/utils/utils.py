@@ -57,7 +57,7 @@ def generateSMIRNOFFStructure(molecule):
     from openforcefield.typing.engines.smirnoff import ForceField
     from openforcefield.typing.engines.smirnoff.forcefield_utils import create_system_from_molecule
 
-    ff = get_data_filename('forcefield/smirnoff99Frosst.ffxml')
+    ff = get_data_filename('forcefield/smirnoff99Frosst.offxml')
     with open(ff) as ffxml:
         mol_ff = ForceField(ffxml)
 

@@ -235,13 +235,13 @@ if __name__=="__main__":
     usage_string="""\
     Convert specified SMIRKS-ified AMBER frcmod file into SMIRNOFF FFXML format, inserting converted parameters into a template FFXML file and writing to a new output file.
 
-    usage: convert_frcmod.py --frcmod test.frcmod --template template.ffxml --xml test.ffxml
+    usage: convert_frcmod.py --frcmod test.frcmod --template template.offxml --xml test.offxml
     """
     parser = OptionParser(usage=usage_string)
 
     parser.add_option('-f', '--frcmod', type = "string", dest='infile', default = None, action="store", help="Name of input smirks-ified frcmod file.")
-    parser.add_option('-t', '--template', type="string", dest='inxml', default = None, action ="store", help="Name of template SMIRNOFF ffxml file.")
-    parser.add_option('-o', '--xml', type="string", dest='outxml', default =None, action="store", help="Name of output SMIRNOFF ffxml file.")
+    parser.add_option('-t', '--template', type="string", dest='inxml', default = None, action ="store", help="Name of template SMIRNOFF offxml file.")
+    parser.add_option('-o', '--xml', type="string", dest='outxml', default =None, action="store", help="Name of output SMIRNOFF offxml file.")
     (options,args) = parser.parse_args()
 
     if (options.infile is None) or (options.inxml is None) or (options.outxml is None):

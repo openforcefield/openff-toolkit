@@ -1925,7 +1925,7 @@ class NonbondedGenerator(object):
             try:
                 a = _extractQuantity(node, parent, 'sigma')
                 a = _extractQuantity(node, parent, 'rmin_half')
-                raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the .ffxml file.")
+                raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the .offxml file.")
             except:
                 pass
 

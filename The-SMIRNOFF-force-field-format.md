@@ -7,7 +7,7 @@ While designed for [`OpenMM`](http://openmm.org), parameters encoded in this for
 
 The SMIRNOFF format provides XML `ffxml` files that are parseable by the `ForceField` class of the `openforcefield.typing.smirnoff` module.
 These encode parameters for a force field based on a SMIRKS-based specification of the chemical environment the parameters are to be applied to.
-The file has tags corresponding to OpenMM force terms (`HarmonicBondForce`, `HarmonicAngleForce`, `PeriodicTorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example ffxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.ffxml)):
+The file has tags corresponding to OpenMM force terms (`HarmonicBondForce`, `HarmonicAngleForce`, `PeriodicTorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example ffxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.offxml)):
 ```XML
    <HarmonicAngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
 ```
@@ -38,7 +38,7 @@ This means that specific forces are generally implemented as discussed in the [O
 
 ## Parameter sections
 
-For this section it will help to have on hand an example SMIRNOFF file, such as that the [AlkEthOH example ffxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.ffxml) or the larger prototype [SMIRNOFF99Frosst ffxml](https://github.com/openforcefield/SMIRNOFF99Frosst/blob/master/SMIRNOFF99Frosst.ffxml).
+For this section it will help to have on hand an example SMIRNOFF file, such as that the [AlkEthOH example ffxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.offxml) or the larger prototype [SMIRNOFF99Frosst ffxml](https://github.com/openforcefield/SMIRNOFF99Frosst/blob/master/SMIRNOFF99Frosst.offxml).
 
 Before getting in to individual sections, it's worth noting that the XML parser ignores attributes in the XML that it does not understand, so providing a parameter line for an angle that specifies (for example) a second force constant `k2` will lead to no effect.
 
@@ -296,7 +296,7 @@ oechem.OETriposAtomNames(mol)
 # Load forcefield
 from openforcefield.typing import smirnoff
 from openforcefield.utils import get_data_filename
-forcefield = smirnoff.ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.ffxml'))
+forcefield = smirnoff.ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml'))
 
 # Generate an OpenMM Topology and create an OpenMM System
 import openforcefield.tools

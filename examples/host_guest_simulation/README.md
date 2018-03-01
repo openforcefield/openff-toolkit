@@ -13,5 +13,5 @@ Example provided by David Mobley (UCI)
 
 ## Manifest
 - smirnoff_host_guest.ipynb
-- hbonds.ffxml: Force field XML file for constraining hbonds (from https://github.com/MobleyLab/SMIRNOFF_paper_code/blob/master/scripts/hbonds.ffxml, courtesy Andrea Rizzi )
-- OA.mol2: mol2 file of Octa Acid with AM1-BCC charges, as distributed with SAMPL5 (where it was labeled OAH.mol2). Atom types converted from GAFF to SYBYL via Antechember. 
+- hbonds.offxml: Force field XML file for constraining hbonds (from https://github.com/MobleyLab/SMIRNOFF_paper_code/blob/master/scripts/hbonds.offxml, courtesy Andrea Rizzi )
+- OA.mol2: mol2 file of Octa Acid with AM1-BCC charges, as distributed with SAMPL5 (where it was labeled OAH.mol2). Atom types converted from GAFF to SYBYL via Antechember.

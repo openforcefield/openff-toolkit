@@ -4,7 +4,7 @@ from openforcefield.utils import *
 from openforcefield.typing.engines.smirnoff import get_molecule_parameterIDs
 
 oemols = read_molecules(get_data_filename('molecules/AlkEthOH-tripos.mol2.gz'))
-ffxml = get_data_filename('forcefield/Frosst_AlkEthOH.ffxml')
+ffxml = get_data_filename('forcefield/Frosst_AlkEthOH.offxml')
 
 parameters_by_molecule, parameters_by_ID = get_molecule_parameterIDs( oemols, ffxml)
 
