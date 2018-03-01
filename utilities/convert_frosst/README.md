@@ -37,7 +37,7 @@ Options:
                         Name of output SMIRNOFF ffxml file.
 ```
 
-For exmple, smirnoff99Fross.ffxml was created by calling:
+For exmple, smirnoff99Fross.offxml was created by calling:
 
 ```
 python convert_frcmod.py -f smirnoffishFrcmod.parm99Frosst.txt -t template.offxml -o smirnoff99Frosst.offxml
