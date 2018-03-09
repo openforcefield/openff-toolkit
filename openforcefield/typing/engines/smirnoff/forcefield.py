@@ -50,17 +50,14 @@ logger = logging.getLogger(__name__)
 # PRIVATE METHODS
 #=============================================================================================
 
-# TODO: Replace this with a scheme that uses ChemicalEnvironment to validate that
-# the SMIRKS string is well-formed and labels the expected atoms (atom, bond, angle, proper, improper).
-# TODO: We may want to overhaul ChemicalEnvironment.getType() to return one of ['atom', 'bond', 'angle', 'proper', 'improper']
-# and check to make sure the expected connectivity is represented in the SMIRKS expression.
-def _validate_smarts(smarts, node=None, valence_type=None):
+# TODO: Make this a ForceField class method
+def _validate_smarts(smarts, node=None, ensure_valence_type=None):
     """Validate the specified SMARTS string can be used to assign forcefield parameters.
 
     This checks to ensure the SMARTS string
     * is a valid SMARTS string
     * the tagged atoms form a fully connected subset of atoms
-    * if ``type`` is specified, the tagged atoms define the appropriate atom, bond, angle, torsion
+    * if ``ensure_valence_type`` is specified, ensure the tagged atoms specify the appropriate valence type
 
     Parameters
     ----------
@@ -68,9 +65,10 @@ def _validate_smarts(smarts, node=None, valence_type=None):
        The SMARTS string to be validated
     node : xml.etree.ElementTree.Element, optional, default=None
        Node of etree, used only for reporting errors
-    valence_type : str, optional, default=None
-       If not None, will check to ensure tagged atoms specify appropriate valence types
-       One of the supported ChemicalEnvironment getType() types: ['Atom', 'Bond', 'Angle', 'ProperTorsion', 'ImproperTorsion']
+    ensure_valence_type : str, optional, default=None
+       If not ``None``, will check to ensure tagged atoms specify appropriate valence types
+       Supported ChemicalEnvironment getType() types: ['Atom', 'Bond', 'Angle', 'ProperTorsion', 'ImproperTorsion']
+       If ``None``, will ensure that it is any one of the above valid valence types.
 
     """
     def _raise_exception(msg):
@@ -89,10 +87,15 @@ def _validate_smarts(smarts, node=None, valence_type=None):
         _raise_exception("Error parsing SMARTS '%s' : %s" % (smarts, str(e))
 
     # Check type, if specified
-    actual_type = chemenv.getType()
-    if valence_type != actual_type:
-        _raise_exception("Tagged atoms in SMARTS specify '%s', expected '%s'." % (actual_type, valence_type))
+    ensure_valence_type = chemenv.getType()
+    if ensure_valence_type:
+        if valence_type != ensure_valence_type:
+            _raise_exception("Tagged atoms in SMARTS string '%s' specifies valence type '%s', expected '%s'." % (smarts, valence_type, ensure_valence_type))
+    else:
+        if valence_type is None:
+            _raise_exception("Tagged atoms in SMARTS string '%s' did not tag atoms in a way that correctly specifies a valence type." % smarts)
 
+# TODO: Make this a Forcefield class method
 def _extract_quantity_from_xml_element(node, parent, name, unit_name=None, default=None):
     """
     Form a (potentially unit-bearing) quantity from the specified attribute name.
@@ -140,6 +143,7 @@ def _extract_quantity_from_xml_element(node, parent, name, unit_name=None, defau
 
     return quantity
 
+# TODO: Make this a Forcefield class method
 def _check_for_missing_valence_terms(name, topology, assigned_terms, topological_terms):
     """
     Check to ensure there are no missing valence terms.
@@ -204,6 +208,7 @@ def _check_for_missing_valence_terms(name, topology, assigned_terms, topological
         msg += str(assigned_set) + '\n'
         raise Exception(msg)
 
+# TODO: Make this a ForceField class method
 def _assert_bonded(topology, atom1, atom2):
     """
     Raise an exception if the specified atoms are not bonded in the topology.
@@ -298,7 +303,6 @@ class ForceField(object):
              definitions if the tags are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
 
         """
-
         # Ensure that we are working with a tuple of files.
         if not isinstance(files, tuple):
             files = (files,)
@@ -332,7 +336,7 @@ class ForceField(object):
         self._XMLTrees = trees
 
         # Parse XML, get force definitions
-        # TODO: Use lazy instantiation to only parse XML trees when we need to.
+        # QUESTION: Should we use lazy instantiation to only parse XML trees when we need to so that users will manipulate parameters only via XML tags?
         # QUESTION: If we only parse XML trees when needed, we may run into the problem where a call to ForceField(*files) is successful
         # and we *think* the files are valid, but we don't actually parse the file and find there is a problem until we actually use it.
         # Would this create problems for debugging? Maybe we can have an optional `parse_immediately=True` flag?
@@ -1320,8 +1324,8 @@ class BondChargeCorrectionGenerator(ForceGenerator):
         # No forces are created by this generator.
         pass
 
-    # TODO: Move chargeMethod to SMIRNOFF spec
-    def postprocessSystem(self, system, topology **kwargs):
+    # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
+    def postprocessSystem(self, system, topology, **kwargs):
         bonds = self.getMatches(topology)
 
         # Apply bond charge increments to all appropriate force groups

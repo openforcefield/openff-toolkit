@@ -44,6 +44,7 @@ import parmed
 # UTILITY FUNCTIONS
 #=============================================================================
 
+# TODO: Reorganize this file, moving exporters to openforcefield.exporters
 
 def create_system_from_amber( prmtop_filename, crd_filename, verbose = False ):
     """Utility function. Create and return an OpenMM System given a prmtop and
@@ -220,7 +221,6 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
     # Return
     return groups0, groups1, energy0, energy1
 
-
 def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True, skip_assert=False, skip_improper = False):
     """
     Compare energies for OpenMM Systems/topologies created from an AMBER prmtop
@@ -269,7 +269,6 @@ def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True, ski
                smirfftop, ambersys, smirffsys, amberpos, verbose = verbose, skip_assert = skip_assert, skip_improper = skip_improper )
 
     return groups0, groups1, energy0, energy1
-
 
 def get_molecule_parameterIDs( oemols, ffxml):
     """Process a list of oemols with a specified SMIRNOFF ffxml file and determine which parameters are used by which molecules, returning collated results.
@@ -426,7 +425,6 @@ def merge_system( topology0, topology1, system0, system1, positions0, positions1
 
     return topology, system, positions
 
-
 def save_system_to_amber( topology, system, positions, prmtop, crd ):
     """Save an OpenMM System, with provided topology and positions, to AMBER prmtop and coordinate files.
 
@@ -448,7 +446,6 @@ def save_system_to_amber( topology, system, positions, prmtop, crd ):
     structure = parmed.openmm.topsystem.load_topology( topology, system, positions )
     structure.save( prmtop, overwrite = True, format="amber" )
     structure.save( crd, format='rst7', overwrite = True)
-
 
 def save_system_to_gromacs( topology, system, positions, top, gro ):
     """Save an OpenMM System, with provided topology and positions, to AMBER prmtop and coordinate files.
