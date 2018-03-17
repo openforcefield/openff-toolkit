@@ -221,7 +221,7 @@ For methods where the cutoff is not simply an implementation detail but determin
 
 **TODO:** Also add the dispersion correction behavior to `StericsForce`.
 
-**QUESTION:** I've opted to not make `<LibraryCharges>` and `<BondChargeCorrections>` be sub-tags of `<ElectrostaticsForce>` since, while this may logically make sense, it makes the code *much* harder to make truly modular. For example, adding a polarizable force would require we modify the original code inside the `openforcefield` toolkit, rather than simply create a new experimental `ForceGenerator` outside the toolkit and import it for experimentation. Is this OK, or will it lead to logical problems?
+**QUESTION:** I've opted to not make `<LibraryCharges>` and `<ChargeIncrements>` be sub-tags of `<ElectrostaticsForce>` since, while this may logically make sense, it makes the code *much* harder to make truly modular. For example, adding a polarizable force would require we modify the original code inside the `openforcefield` toolkit, rather than simply create a new experimental `ForceGenerator` outside the toolkit and import it for experimentation. Is this OK, or will it lead to logical problems?
 
 ### `<BondForce>`
 
@@ -358,19 +358,23 @@ The `ACE` model permits two additional parameters to be specified:
 * The `surface_area_penalty` attribute specifies the surface area penalty for the `ACE` model. (Default: `5.4*calories/mole/angstroms**2`)
 * The `solvent_radius` attribute specifies the solvent radius. (Default: `1.4*angstroms`)
 
-### `<BondChargeCorrections>`
+### `<ChargeIncrements>`
 
-Bond charge corrections similar to those used in the [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) charge model from Christopher Bayly can be applied via a `<BondChargeCorrections>...</BondChargeCorrections>` section with child tags specifying specific `<BondChargeCorrection/>` terms.
-Here is an example not intended for actual use:
+Charge corrections applied two sets of two or more bonded atoms, similar to those used in the [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) charge model from Christopher Bayly, can be applied via a `<ChargeIncrements>...</ChargeIncrements>` section with child tags specifying specific `<ChargeIncrement/>` terms.
+
+Here is an example not intended for actual::
 ```XML
-<BondChargeCorrections method="AM1/CM2" increment_unit="elementary_charge">
-  <BondChargeCorrection smirks="[#6X4:1]-[#6X3a:2]" increment="+0.0073"/>
-  <BondChargeCorrection smirks="[#6X4:1]-[#6X3a:2]-[#7]" increment="-0.0943"/>
-  <BondChargeCorrection smirks="[#6X4:1]-[#8:2]" increment="+0.0718"/>
-</BondChargeCorrections>
+<ChargeIncrements method="AM1/CM2" increment_unit="elementary_charge">
+  <!-- Move 0.0073 charge units from sp3 carbon to bonded sp2 carbon -->
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" increment="+0.0073"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" increment="-0.0943"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" increment="+0.0718"/>
+  <ChargeIncrement smirks="[N:1](H:2)(H:3)" increment1="+0.02" increment2="-0.01" increment3="-0.01"/>
+</ChargeIncrements>
 ```
-The `method="AM1/CM2"` attribute specifies that a CM2 population analysis should be applied to an AM1 wavefunction to compute initial partial charges, while `elementary_charge` specifies the units used for the `increment` attribute in the `<BondChargeCorrection/>` tags.
-The charge correction `increment` (in units of proton charge) will be applied on top of this by subtracting `increment` from the atom tagged as 1 and adding it to the atom tagged as 2.
+The `method="AM1/CM2"` attribute specifies that a CM2 population analysis should be applied to an AM1 wavefunction to compute initial partial charges, while `elementary_charge` specifies the units used for the `increment` attribute in the `<ChargeIncrement/>` tags.
+If there are only two tagged atoms, the charge correction `increment` will be subtracted from atom index 1 and added to atom index 2.
+If there are more than two tagged atoms, the increment applied to each is specified by `increment1`, `increment2`, `increment3`, etc.
 
 ### `<Constraints>`
 
@@ -529,7 +533,6 @@ So use generics sparingly unless it is your intention to provide generics that s
 ## Version history
 
 ### 1.0
-**QUESTION:** Should this spec be 1.0 or something earlier (e.g. 0.2)?
 
 Backwards-incompatible overhaul of draft specification along with `ForceField` refactor:
 * Aromaticity model now defaults to `MDL`, and aromaticity model names drop OpenEye-specific prefixes
@@ -538,6 +541,7 @@ Backwards-incompatible overhaul of draft specification along with `ForceField` r
     * `<NonbondedForce>` was renamed to `<StericsForce>`
     * `<HarmonicBondForce>` was renamed to `<BondForce>`
     * `<HarmonicAngleForce>` was renamed to `<AngleForce>`
+    * `<BondChargeCorrections>` was renamed to `<ChargeIncrements>` and generalized to accommodate an arbitrary number of tagged atoms
 * `<PeriodicTorsionForce>` was split into `<ProperTorsionForce>` and `<ImproperTorsionForce>`
 * `<StericsForce>` now specifies 1-2, 1-3, and 1-4 scaling factors via `scale12` (default: 0), `scale13` (default: 0), and `scale14` (default: 0.5) attributes. Coulomb scaling parameters have been removed from `StericsForce`.
 * Added the `<ElectrostaticsForce>` tag to separately specify 1-2, 1-3, and 1-4 scaling factors for electrostatics, as well as the method used to compute electrostatics (`PME`, `reaction-field`, `Coulomb`) since this has a huge effect on the energetics of the system.
