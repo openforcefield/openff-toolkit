@@ -285,7 +285,7 @@ If the `potential` attribute is omitted, it defaults to `harmonic`.
 
 **Note that AMBER and CHARMM define a modified functional form**, such that `U(r) = k*(theta-angle)^2`, so that force constants would need to be multiplied by two in order to be used in the SMIRNOFF format.
 
-### `<ProperTorsions>``
+### `<ProperTorsions>`
 
 Proper torsions are specified via a `<ProperTorsions>...</ProperTorsions>` block, with individual `<Proper/>` tags containing attributes specifying the periodicity (`periodicity#`), phase (`phase#`), and barrier height (`k#`).
 ```XML
