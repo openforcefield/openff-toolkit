@@ -246,12 +246,12 @@ def get_energy(system, positions):
 def test_read_ffxml():
     """Test reading of ffxml files.
     """
-    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.ffxml'))
+    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
 
 def test_read_ffxml_gbsa():
     """Test reading of ffxml files with GBSA support.
     """
-    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_GBSA.ffxml'))
+    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_GBSA.offxml'))
 
 def check_system_creation_from_molecule(forcefield, mol, chargeMethod=None, verbose=False):
     """
@@ -321,14 +321,14 @@ def test_create_system_molecules_features(verbose=False):
 def test_create_system_molecules_parmatfrosst(verbose=False):
     """Test creation of a System object from small molecules to test parm@frosst forcefield.
     """
-    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.ffxml'))
+    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
     for f in check_AlkEthOH(forcefield, "to test Parm@Frosst parameters", verbose=verbose):
         yield f
 
 def test_create_system_molecules_parmatfrosst_gbsa(verbose=False):
     """Test creation of a System object from small molecules to test parm@frosst forcefield with GBSA support.
     """
-    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_GBSA.ffxml'))
+    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_GBSA.offxml'))
     for f in check_AlkEthOH(forcefield, "to test Parm@Frosst parameters", verbose=verbose):
         yield f
 
@@ -371,7 +371,7 @@ def test_create_system_boxes_features(verbose=False):
 def test_create_system_boxes_smirnoff99Frosst(verbose=False):
     """Test creation of a System object from some boxes of mixed solvents to test parm@frosst forcefield.
     """
-    forcefield = ForceField(get_data_filename('forcefield/smirnoff99Frosst.ffxml'))
+    forcefield = ForceField(get_data_filename('forcefield/smirnoff99Frosst.offxml'))
     for f in check_boxes(forcefield, description="to test Parm@frosst parameters", verbose=verbose):
         yield f
 
@@ -389,7 +389,7 @@ def test_smirnoff_energies_vs_parmatfrosst(verbose=False):
         prmtop = get_data_filename( f_prefix+'.top')
         crd = get_data_filename( f_prefix+'.crd')
         # Load special parm@frosst with parm99/parm@frosst bugs re-added for testing
-        forcefield = ForceField( get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.ffxml') )
+        forcefield = ForceField( get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml') )
 
         # Load OEMol
         mol = oechem.OEGraphMol()
@@ -405,7 +405,7 @@ def test_smirnoff_energies_vs_parmatfrosst(verbose=False):
 def test_label_molecules(verbose=False):
     """Test labeling/getting stats on labeling molecules"""
     molecules = read_molecules(get_data_filename('molecules/AlkEthOH-tripos.mol2.gz'), verbose=verbose)
-    ffxml = get_data_filename('forcefield/Frosst_AlkEthOH.ffxml')
+    ffxml = get_data_filename('forcefield/Frosst_AlkEthOH.offxml')
     get_molecule_parameterIDs( molecules, ffxml)
 
 def test_molecule_labeling(verbose = False):
@@ -414,7 +414,7 @@ def test_molecule_labeling(verbose = False):
     mol = oechem.OEMol()
     oechem.OEParseSmiles(mol, 'CCC')
     oechem.OEAddExplicitHydrogens(mol)
-    ff = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.ffxml'))
+    ff = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
     labels = ff.labelMolecules( [mol], verbose = verbose)
 
     # Check that force terms aren't empty
@@ -437,7 +437,7 @@ class TestExceptionHandling(unittest.TestCase):
         oechem.OEParseSmiles(mol, 'CCC')
         oechem.OEAddExplicitHydrogens(mol)
         oechem.OETriposAtomNames(mol)
-        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.ffxml'))
+        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
         topology = generateTopologyFromOEMol(mol)
 
         # Test nonbonded error checking by wiping out required LJ parameter
@@ -447,7 +447,7 @@ class TestExceptionHandling(unittest.TestCase):
         ff.setParameter(paramID='n0002', params=params)
         with self.assertRaises(Exception):
             system = ff.createSystem( topology, [mol])
-        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.ffxml'))
+        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
 
         # Test bond error checking by wiping out a required bond parameter
         params = ff.getParameter(paramID='b0001')
@@ -455,7 +455,7 @@ class TestExceptionHandling(unittest.TestCase):
         ff.setParameter( paramID='b0001', params=params)
         with self.assertRaises(Exception):
             system = ff.createSystem( topology, [mol])
-        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.ffxml'))
+        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
 
         # Test angle error checking by wiping out a required angle parameter
         params = ff.getParameter(paramID='a0001')
@@ -463,7 +463,7 @@ class TestExceptionHandling(unittest.TestCase):
         ff.setParameter( paramID='a0001', params=params)
         with self.assertRaises(Exception):
             system = ff.createSystem( topology, [mol])
-        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.ffxml'))
+        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
 
         # Test torsion error checking by wiping out a required torsion parameter
         params = ff.getParameter(paramID='t0001')
@@ -472,7 +472,7 @@ class TestExceptionHandling(unittest.TestCase):
         ff.setParameter( paramID='t0004', params=params)
         with self.assertRaises(Exception):
             system = ff.createSystem( topology, [mol])
-        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.ffxml'))
+        ff = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
 
 
 
@@ -516,7 +516,7 @@ def test_improper(verbose = False):
     oechem.OEReadMolecule(ifs, mol )
     ifs.close()
     # Load forcefield
-    ffxml = get_data_filename('forcefield/benzene_minimal.ffxml')
+    ffxml = get_data_filename('forcefield/benzene_minimal.offxml')
     ff = ForceField(ffxml)
 
     # Load AMBER files and compare
@@ -561,7 +561,7 @@ def test_change_parameters(verbose=False):
     oechem.OETriposAtomNames(mol)
 
     # Load forcefield file
-    ffxml = get_data_filename('forcefield/Frosst_AlkEthOH.ffxml')
+    ffxml = get_data_filename('forcefield/Frosst_AlkEthOH.offxml')
     ff = ForceField(ffxml)
 
     topology = generateTopologyFromOEMol(mol)
@@ -577,7 +577,7 @@ def test_change_parameters(verbose=False):
     params['k']='0.0'
     ff.setParameter(params, smirks='[a,A:1]-[#6X4:2]-[a,A:3]')
     # Write params
-    ff.writeFile( tempfile.TemporaryFile(suffix='.ffxml') )
+    ff.writeFile( tempfile.TemporaryFile(suffix='.offxml') )
     # Make sure params changed energy! (Test whether they get rebuilt on system creation)
     system=ff.createSystem(topology, [mol], verbose=verbose)
     energy=get_energy(system, positions)
@@ -589,7 +589,7 @@ def test_change_parameters(verbose=False):
 def test_amber_roundtrip():
     """Save a System (a mixture) to AMBER, read back in, verify yields same energy and force terms."""
 
-    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.ffxml'))
+    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
     filename = get_data_filename(os.path.join('systems', 'packmol_boxes', 'cyclohexane_ethanol_0.4_0.6.pdb'))
     from simtk.openmm.app import PDBFile
     pdbfile = PDBFile(filename)
@@ -627,7 +627,7 @@ def test_amber_roundtrip():
 def test_gromacs_roundtrip():
     """Save a System (a mixture) to GROMACS, read back in, verify yields same energy and force terms."""
 
-    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.ffxml'))
+    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
     filename = get_data_filename(os.path.join('systems', 'packmol_boxes', 'cyclohexane_ethanol_0.4_0.6.pdb'))
     from simtk.openmm.app import PDBFile
     pdbfile = PDBFile(filename)
@@ -681,7 +681,7 @@ def test_tip3p_constraints():
     tip3p_positions = positions_from_oemol(tip3p_oemol)
 
     # Create tip3p water system.
-    ff = ForceField('forcefield/tip3p.ffxml')
+    ff = ForceField('forcefield/tip3p.offxml')
     system = ff.createSystem(tip3p_topology, [tip3p_oemol])
 
     # Run dynamics.
@@ -741,8 +741,8 @@ def test_tip3p_solvated_molecule_energy():
         tip3p_topology, tip3p_openmm_system, tip3p_positions)
 
     # Test case: monomer_filename
-    test_cases = [('smirnoff99Frosst.ffxml', 'ethanol.mol2'),
-                  ('smirnoff99Frosst.ffxml', 'methane.mol2')]
+    test_cases = [('smirnoff99Frosst.offxml', 'ethanol.mol2'),
+                  ('smirnoff99Frosst.offxml', 'methane.mol2')]
 
     for ff_name, molecule_filename in test_cases:
         # Load molecule as OEMol.
@@ -762,7 +762,7 @@ def test_tip3p_solvated_molecule_energy():
         energy_openmm = get_energy(system, structure.positions)
 
         # Test the creation of system with multiple force field files.
-        ff = ForceField('forcefield/' + ff_name, 'forcefield/tip3p.ffxml')
+        ff = ForceField('forcefield/' + ff_name, 'forcefield/tip3p.offxml')
         system = ff.createSystem(structure.topology, [tip3p_oemol, molecule_oemol])
 
         # TODO remove this line when ParmEd#868 is fixed
@@ -783,7 +783,7 @@ def test_component_combination():
     # Here we'll try to catch this (and also explicitly check the charges) by re-building
     # a system out of its components
 
-    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.ffxml'))
+    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
     filename = get_data_filename(os.path.join('systems', 'packmol_boxes', 'cyclohexane_ethanol_0.4_0.6.pdb'))
     from simtk.openmm.app import PDBFile
     pdbfile = PDBFile(filename)
@@ -859,7 +859,7 @@ def test_merge_system():
     oechem.OETriposAtomNames(mol)
 
     # Load forcefield file
-    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.ffxml'))
+    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
     topology1, system1, positions1 = create_system_from_molecule(forcefield, mol)
 
     merge_system( topology0, topology1, system0, system1, positions0, positions1, verbose=True )

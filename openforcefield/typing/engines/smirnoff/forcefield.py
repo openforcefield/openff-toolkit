@@ -1215,7 +1215,7 @@ class vdWGenerator(ForceGenerator):
             try:
                 a = _extract_quantity_from_xml_element(node, parent, 'sigma')
                 a = _extract_quantity_from_xml_element(node, parent, 'rmin_half')
-                raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the forcefield file.")
+                raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the .offxml file.")
             except:
                 pass
 
