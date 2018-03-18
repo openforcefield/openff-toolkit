@@ -109,7 +109,7 @@ Some `<...Force>` tags provide attributes that modify the functional form used t
 SMIRNOFF supports several ways for specifying electrostatic models.
 Currently, only classical fixed point charge models are supported, but extensions to the specification will support point multipoles, point polarizable dipoles, Drude oscillators, charge equilibration methods, and so on.
 
-### Library charges
+### Library charges via `<LibraryCharges>`
 
 A mechanism is provided for specifying library charges that can be applied to molecules or residues that match provided templates.
 Library charges are applied first, and atoms for which library charges are applied will be excluded from alternative charging schemes listed below.
@@ -135,23 +135,43 @@ Solvent models or excipients can also have partial charges specified in this man
    <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="+0.417" charge2="-0.834" charge3="+0.417"/>
 </LibraryCharges>
 ```
-
 **QUESTION:** Is everyone OK with the tag `<LibraryCharge>`, or should we name it something else?
 
-### Small molecule charges
+### Small molecule charges: `<ChargeIncrementModel>`
 
-In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), partial charges for small molecules are assigned using a semiempirical method (e.g. AM1) coupled to a population analysis scheme (e.g. CM2) and corrected via a bond charge correction step, as in the highly successful [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach.
+In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), partial charges for small molecules are assigned using a quantum chemical method (usually a semiempirical method such as AM1) and a partial charge determination scheme (such as CM2), subsequently corrected via charge increment rules, as in the highly successful [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach.
 
-Future iterations of SMIRNOFF will provide support for multiconformer RESP fitting to high-level QM.
+Here is an example:
+```XML
+<ChargeIncrementModel capping="H" number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2" increment_unit="elementary_charge">
+  <!-- A fractional charge can be moved along a single bond -->
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" increment="+0.0073"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" increment="-0.0943"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" increment="+0.0718"/>
+  <!--- Alternatively, factional charges can be redistributed among any number of bonded atoms -->
+  <ChargeIncrement smirks="[N:1](H:2)(H:3)" increment1="+0.02" increment2="-0.01" increment3="-0.01"/>
+</ChargeIncrementModel>
+```
+The sum of formal charges for the molecule or fragment will be used to determine the total charge the molecule or fragment will possess.
 
-### Automated generation of biopolymer residue charges
+`<ChargeIncrementModel>` provides several optional attributes to control its behavior:
+* The `capping` attribute (default: `"H"`) is used to specify how fragments with dangling bonds are to be capped to allow these groups to be charged.
+* The `number_of_conformers` attribute (default: `"10"`) is used to specify how many conformers will be generated for the molecule (or capped fragment) prior to charging.
+* The `quantum_chemical_method` attribute (default: `"AM1"`) is used to specify the quantum chemical method applied to the molecule or capped fragment.
+* The `partial_charge_method` attribute (default: `"CM2"`) is used to specify how uncorrected partial charges are to be generated from the quantum chemical wavefunction. Later additions will add restrained electrostatic potential fitting (RESP) capabilities.
 
-Future iterations of SMIRNOFF will provide various schemes for automatically fragmenting and charging residues of biopolymers or very large small molecules.
+The `<ChargeIncrement>` tags specify how the quantum chemical derived charges are to be corrected to produce the final charges.
+If there are only two tagged atoms, the charge correction `increment` will be subtracted from atom index 1 and added to atom index 2.
+If there are more than two tagged atoms, the increment applied to each is specified by `increment1`, `increment2`, `increment3`, etc.
+
+Note that atoms for which library charges have already been applied are excluded from charging via `<ChargeIncrementModel>`.
+
+Future additions will provide options for intelligently fragmenting large molecules and biopolymers.
 
 ### Prespecified charges (reference implementation only)
 
 In our reference implementation of SMIRNOFF in the `openforcefield` toolkit, we also provide a method for specifying partial charges within the `Molecule` objects in the `Topology`.
-If the optional `user_specified_charges=True` flag is passed to `ForceField.createSystem(topology)`, the charges defined in `Molecule` objects in the `Topology` will be used.
+If the optional `user_specified_charges=True` flag is passed to `ForceField.createSystem(topology)`, all charges will be drawn from `Molecule` objects in the `Topology`.
 This method is provided solely for convenience in developing and exploring alternative charging schemes; actual forcefield releases for distribution will use one of the other mechanisms specified above.
 
 ## Parameter sections
@@ -362,24 +382,6 @@ If `sa_model` is not specified, it defaults to `ACE`.
 The `ACE` model permits two additional parameters to be specified:
 * The `surface_area_penalty` attribute specifies the surface area penalty for the `ACE` model. (Default: `5.4*calories/mole/angstroms**2`)
 * The `solvent_radius` attribute specifies the solvent radius. (Default: `1.4*angstroms`)
-
-### `<ChargeIncrements>`
-
-Charge corrections applied two sets of two or more bonded atoms, similar to those used in the [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) charge model from Christopher Bayly, can be applied via a `<ChargeIncrements>...</ChargeIncrements>` section with child tags specifying specific `<ChargeIncrement/>` terms.
-
-Here is an example not intended for actual::
-```XML
-<ChargeIncrements method="AM1/CM2" increment_unit="elementary_charge">
-  <!-- Move 0.0073 charge units from sp3 carbon to bonded sp2 carbon -->
-  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" increment="+0.0073"/>
-  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" increment="-0.0943"/>
-  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" increment="+0.0718"/>
-  <ChargeIncrement smirks="[N:1](H:2)(H:3)" increment1="+0.02" increment2="-0.01" increment3="-0.01"/>
-</ChargeIncrements>
-```
-The `method="AM1/CM2"` attribute specifies that a CM2 population analysis should be applied to an AM1 wavefunction to compute initial partial charges, while `elementary_charge` specifies the units used for the `increment` attribute in the `<ChargeIncrement/>` tags.
-If there are only two tagged atoms, the charge correction `increment` will be subtracted from atom index 1 and added to atom index 2.
-If there are more than two tagged atoms, the increment applied to each is specified by `increment1`, `increment2`, `increment3`, etc.
 
 ### `<Constraints>`
 
