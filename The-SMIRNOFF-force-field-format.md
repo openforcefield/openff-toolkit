@@ -509,13 +509,7 @@ For example, alternate combination rules or functional forms might be handled as
 
 ### Additional plans for future development
 
-See the [`openforcefield` GitHub issue tracker](https://github.com/openforcefield/openforcefield/issues) for a more thorough list, though some major areas are highlighted here:
-* Exploring how use of partial bond order can simplify the environments needed
-* Implementing partial bond order use for other parameter types
-* Modifications discussed above to handling of torsions
-* Possible modifications to make it easier to support other force field families
-* [Off-atom charges](https://github.com/openforcefield/smarty/issues/132)
-* Additional functional forms for vdW interactions
+See the [`openforcefield` GitHub issue tracker](https://github.com/openforcefield/openforcefield/issues) to propose changes to this specification, or read through proposed changes currently being discussed.
 
 ## Using the `openforcefield` Python toolkit to parameterize systems
 
