@@ -22,7 +22,7 @@ While designed for [`OpenMM`](http://openmm.org), parameterized systems created 
 ## Basic structure
 
 The SMIRNOFF format provides XML `ffxml` files that are parseable by the `ForceField` class of the `openforcefield.typing.smirnoff` module.
-These encode parameters for a force field based on a SMIRKS-based specification of the chemical environment the parameters are to be applied to.
+These encode parameters for a force field based on a SMARTS/SMIRKS-based specification of the chemical environment the parameters are to be applied to.
 The file has tags corresponding to OpenMM force terms (`BondForce`, `AngleForce`, `TorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example ffxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.ffxml)):
 ```XML
 <AngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
@@ -31,8 +31,6 @@ The file has tags corresponding to OpenMM force terms (`BondForce`, `AngleForce`
 ```
 which introduces following `Angle` terms which will use units of degrees for the angle and kilocalories per mole per square radian for the force constant.
 
-**QUESTION:** Can we change `smirks` to `smarts` in the attributes, since these are really SMARTS strings augmented with atom tagging (which seems to be broadly supported)?
-
 Under each of these force terms, there are tags for individual parameter lines such as these:
 ```XML
 <AngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
@@ -40,8 +38,12 @@ Under each of these force terms, there are tags for individual parameter lines s
    <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50" k="70.0"/>
 </AngleForce>     
 ```
-The first of these specifies the `[a,A:1]-[#6X4:2]-[a,A:3]` SMIRKS pattern for an angle, with a tetravalent carbon at the center with single bonds to two atoms of any type.
-Atoms are labeled 1, 2, and 3, with 2 being the central atom.
+The first of these specifies the `smirks` attribute as `[a,A:1]-[#6X4:2]-[a,A:3]`, specifying a SMIRKS pattern that matches three connected atoms specifying an angle.
+This particular SMIRKS pattern matches a tetravalent carbon at the center with single bonds to two atoms of any type.
+This pattern is essentially a [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) string with numerical tags to identify atoms in chemically unique environments---these can be thought of as tagged regular expressions for identifying chemical environments, and atoms within those environments.
+Here, `[a,A]` denotes any atom---either aromatic (`a`) or aliphatic (`A`), while `[#6X4]` denotes a carbon by element number (`#6`) that with four substituents (`X4`).
+The symbol `-` joining these groups denotes a single bond.
+The strings `:1`, `:2`, and `:2` label these atoms as indices 1, 2, and 3, with 2 being the central atom.
 Equilibrium angle values are provided, along with force constants (with units as given above).
 
 Before getting in to individual sections, it's worth noting that the XML parser ignores attributes in the XML that it does not understand, so providing a parameter line for an angle that specifies (for example) a second force constant `k2` will lead to no effect.
@@ -52,10 +54,10 @@ Before getting in to individual sections, it's worth noting that the XML parser 
 This hierarchical structure means that a typical parameter file will tend to have generic parameters early in the section for each force type, with more specialized parameters assigned later.
 
 Multiple `.ffxml` files can be loaded in sequence.
-If these files each contain unique `<...Force>` tags, the resulting forcefield will be independent of the order in which the files are loaded.
-If, however, the same tag occurs in multiple files, the contents of the tags are merged, with the tags read later appended to the *end* of the parameters read earlier, provided the `<...Force>` tags have compatible attributes.
-The resulting forcefield will therefore depend on the order in which parameters are read.
-This behavior is intended for limited use in appending very specific parameters (such as solvent models).
+If these files each contain unique top-level tags (such as `<BondForce>`, `<AngleForce>`, etc.), the resulting forcefield will be independent of the order in which the files are loaded.
+If, however, the same tag occurs in multiple files, the contents of the tags are merged, with the tags read later taking precedence over the parameters read earlier, provided the top-level tags have compatible attributes.
+The resulting force field will therefore depend on the order in which parameters are read.
+This behavior is intended for limited use in appending very specific parameters (such as solvent models)
 
 **Technical note**: Because this is an XML format, certain special characters that occur in valid SMIRKS patterns (such as ampersand symbols `&`) must be treated specially to process.
 See [this entry](https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references) for more details.
@@ -98,7 +100,7 @@ Common defaults are defined, but the goal is to eventually allow these to be ove
 The format will distinguish between functional forms available in all common molecular simulation packages and those experimental features available in a few packages (especially OpenMM, which supports a flexible set of custom forces defined by algebraic expressions) with an *EXPERIMENTAL* category.
 
 Many of the specific forces are implemented as discussed in the [OpenMM Documentation](http://docs.openmm.org/latest/userguide/theory.html); see especially [Section 19 on Standard Forces](http://docs.openmm.org/latest/userguide/theory.html#standard-forces) for mathematical descriptions of these functional forms.
-In some cases, typically for consistency with the AMBER force field philosophy motivating some of the authors, we do some manipulation of parameters from these files as discussed below in "Parameter sections".
+Some `<...Force>` tags provide attributes that modify the functional form used to be consistent with packages such as AMBER or CHARMM.
 
 **QUESTION:** Since we're defining potentials instead of forces, do we want to remove the term `Force` from these tags and instead use the simpler `<Bonds/>`, `<Angles/>`, `<Torsions/>`, etc?
 
@@ -109,29 +111,32 @@ Currently, only classical fixed point charge models are supported, but extension
 
 ### Library charges
 
-A mechanism is provided for specifying library charges should be used for molecules or residues that match library charge templates.
+A mechanism is provided for specifying library charges that can be applied to molecules or residues that match provided templates.
+Library charges are applied first, and atoms for which library charges are applied will be excluded from alternative charging schemes listed below.
 
 For example, to assign partial charges
 ```
 <LibraryCharges charge_unit="elementary_charge">
    <!-- match a non-terminal alanine residue -->
-   <Residue name="ALA" smirks="[$([NX3H:1](C)(C)[H:2])][CX4H:3]([CH3X4:4]([H:5][H:6][H:7]))[CX3:8](=[OX1:9])([N])" charge1="-0.4157" charge2="0.2719" charge3="0.0337" charge4="-0.1825" charge5="0.0603" charge6="0.0603" charge7="0.0603" charge8="0.5973" charge9="-0.5679">
+   <LibraryCharge name="ALA" smirks="[$([NX3H:1](C)(C)[H:2])][CX4H:3]([CH3X4:4]([H:5][H:6][H:7]))[CX3:8](=[OX1:9])([N])" charge1="-0.4157" charge2="0.2719" charge3="0.0337" charge4="-0.1825" charge5="0.0603" charge6="0.0603" charge7="0.0603" charge8="0.5973" charge9="-0.5679">
    ...
 </LibraryCharges>
 ```
-In this case, a SMIRKS string defining the residue tags each atom that should receive a partial charge, with the charges specified by `charge#` attributes.
-Note that the first match for a given set of atoms is used, so chemically equivalent atoms should be assigned the same charge to avoid undefined behavior.
+In this case, a SMIRKS string defining the residue tags each atom that should receive a partial charge, with the charges specified by attributes `charge1`, `charge2`, etc.
+The `name` attribute is optional.
+Note that, for a given template, chemically equivalent atoms should be assigned the same charge to avoid undefined behavior.
+If the template matches multiple non-overlapping sets of atoms, all such matches will be assigned the provided charges.
+If multiple templates match the same set of atoms, the last template specified will be used.
 
 Solvent models or excipients can also have partial charges specified in this manner:
 ```
 <LibraryCharges charge_unit="elementary_charge">
    <!-- TIP3P water oxygen with charge override -->
-   <!-- WARNING: charges are not supported yet (see issue openforcefield#25), and they are currently here only for documentation -->
-   <Atom smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="+0.417" charge2="-0.834" charge3="+0.417"/>
+   <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="+0.417" charge2="-0.834" charge3="+0.417"/>
 </LibraryCharges>
 ```
 
-**QUESTION:** Is this an OK way to handle chemically equivalent atoms, like hydrogens? Is there a simpler way to avoid having to specify multiple copies of chemically equivalent atoms?
+**QUESTION:** Is everyone OK with the tag `<LibraryCharge>`, or should we name it something else?
 
 ### Small molecule charges
 
@@ -146,9 +151,8 @@ Future iterations of SMIRNOFF will provide various schemes for automatically fra
 ### Prespecified charges (reference implementation only)
 
 In our reference implementation of SMIRNOFF in the `openforcefield` toolkit, we also provide a method for specifying partial charges within the `Molecule` objects in the `Topology`.
-This method is provided solely for convenience in exploring alternative charging schemes; actual forcefield releases for distribution will use one of the other mechanisms specified above.
-
-**QUESTION:** Do we still want to support being able to pull charges from `OEMol`s for convenience, or is the `<LibraryCharges>` mechanism sufficiently general?
+If the optional `user_specified_charges=True` flag is passed to `ForceField.createSystem(topology)`, the charges defined in `Molecule` objects in the `Topology` will be used.
+This method is provided solely for convenience in developing and exploring alternative charging schemes; actual forcefield releases for distribution will use one of the other mechanisms specified above.
 
 ## Parameter sections
 
@@ -158,13 +162,15 @@ For this section it will help to have on hand an example SMIRNOFF file, such as 
 
 van der Waals force parameters, which include repulsive forces arising from Pauli exclusion and attractive forces arising from dispersion, are specified via the `StericsForce` tag with sub-tags for individual `Atom` entries, such as:
 ```XML
-<vdWForce potential="Lennard-Jones" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+<vdWForce potential="Lennard-Jones" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" cutoff="9.0" long_range_dispersion="isotropic">
    <Atom smirks="[#1:1]" rmin_half="1.4870" epsilon="0.0157"/>
    <Atom smirks="[#1:1]-[#6]" rmin_half="1.4870" epsilon="0.0157"/>
    ...
 </vdWForce>
 ```
-Attributes in the `<vdWForce>` tag specify the scaling terms applied to the energies of 1-2 (`scale12`, default: 0), 1-3 (`scale13`, default: 0), and 1-4 (`scale14`, default: 0.5) interactions, (`scale15`. default: 1.0).
+Attributes in the `<vdWForce>` tag specify the scaling terms applied to the energies of 1-2 (`scale12`, default: 0), 1-3 (`scale13`, default: 0), and 1-4 (`scale14`, default: 0.5) interactions, (`scale15`. default: 1.0),
+as well as the distance at which a switching function is applied (`switch`, default: `"8.0"`), the cutoff (`cutoff`, default: `"9.0"`), and long-range dispersion treatment scheme (`long_range_dispersion`, default: `"isotropic"`).
+If Lennard-Jones PME is to be used, `switch` and `cutoff` are omitted and `long_range_dispersion="LJPME"` is used.
 
 Currently, only `potential="Lennard-Jones-12-6"` is supported:
 ```
@@ -266,7 +272,8 @@ If the `potential` attribute is omitted, it defaults to `harmonic`.
 
 ### `<ProperTorsionForce>``
 
-Proper torsions are specified via a `<ProperTorsionForce>...</ProperTorsionForce>` block, with individual `<Proper/>` tags containing attributes specifying the periodicity (`periodicityN`), phase (`phaseN`), barrier height (`kN`), and optional torsion multiplicity to divide the barrier height by (`idivfN`):
+Proper torsions are specified via a `<ProperTorsionForce>...</ProperTorsionForce>` block, with individual `<Proper/>` tags containing attributes specifying the periodicity (`periodicity#`), phase (`phase#`), and barrier height (`k#`).
+For convenience, and optional attribute specifies a torsion multiplicity by which the barrier height should be divided (`idivf#`):
 ```XML
 <ProperTorsionForce potential="charmm" phase_unit="degrees" k_unit="kilocalories_per_mole">
    <Proper smirks="[a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]" idivf1="9" periodicity1="3" phase1="0.0" k1="1.40"/>
@@ -275,7 +282,7 @@ Proper torsions are specified via a `<ProperTorsionForce>...</ProperTorsionForce
 </ProperTorsionForce>
 ```
 Here, child `Proper` tags specify at least `k1`, `phase1`, and `periodicity1` attributes for the corresponding parameters of the first force term applied to this torsion.
-However, additional values are allowed in the form `kN`, `phaseN`, and `periodicityN`, where all `N` values must be consecutive (e.g., it is impermissible to specify `k1` and `k3` values without a `k2` value) but `N` can go as high as necessary.
+However, additional values are allowed in the form `k#`, `phase#`, and `periodicity#`, where all `#` values must be consecutive (e.g., it is impermissible to specify `k1` and `k3` values without a `k2` value) but `#` can go as high as necessary.
 
 Currently, only `potential="charmm"` is supported, where we utilize the functional form:
 ```
@@ -284,13 +291,12 @@ U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 **Note that AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
 If the `potential` attribute is omitted, it defaults to `charmm`.
 
-Optionally, an `idivfN` attribute may be specified for each torsional term (for easier compatibility with AMBER files); this specifies a numerical value (in AMBER, always an integer) which is used as a divisor for the barrier height when assigning the torsion; i.e., a torsion with `idivf1="9"` is assigned a barrier height `k1` that is 1/9th the specified value.
-If `idivfN` is not specified, the barrier height is applied as stated.
-
 In the future, we may switch to a model where torsional barriers are [automatically divided by the number of torsions along a bond](https://github.com/openforcefield/smarty/issues/131), effectively resulting in the torsional barrier being the average of all barriers applied to that bond, rather than the current model where barriers are summed.
 (Barrier heights would need to be increased accordingly.)
 This would result in better handling of some cases where a small change in a molecule (such as a change in tautomer) could currently (as in AMBER) result in a dramatically different applied barrier height because of a change in the number of torsions passing through that bond.
 The averaging approach would make it easier to avoid this problem without requiring as many different torsional terms.
+
+**QUESTION:** Can we address the above now by adding a `default_idivf` attribute that is either `"auto"` or some number like `"1"`?
 
 ### `<ImproperTorsionForce>`
 
@@ -308,10 +314,9 @@ U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 **Note that AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
 If the `potential` attribute is omitted, it defaults to `charmm`.
 
-**Improper torsion definitions deviate profoundly from AMBER handling of impropers** in two ways.
-First, to eliminate ambiguity, we treat impropers as a [trefoil](https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Trefoil_knot_left.svg/2000px-Trefoil_knot_left.svg.png) and apply the same set of parameters to all six paths around the trefoil.
-*Because of this, all barrier heights are divided by six before we apply them*, for consistency with AMBER force fields.
-Second, the *second* atom in an improper (in the example above, the trivalent carbon) is the central atom in the trefoil.
+The improper torsion energy is computed as the average over all six impropers in a [trefoil](https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Trefoil_knot_left.svg/2000px-Trefoil_knot_left.svg.png).
+This avoids the dependence on arbitrary atom orderings that occur in more traditional typing engines such as those used in AMBER.
+The *second* atom in an improper (in the example above, the trivalent carbon) is the central atom in the trefoil.
 
 ### `<GBSAForce>`
 
