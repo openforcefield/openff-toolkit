@@ -114,7 +114,7 @@ A mechanism is provided for specifying library charges that can be applied to mo
 Library charges are applied first, and atoms for which library charges are applied will be excluded from alternative charging schemes listed below.
 
 For example, to assign partial charges
-```
+```XML
 <LibraryCharges charge_unit="elementary_charge">
    <!-- match a non-terminal alanine residue -->
    <LibraryCharge name="ALA" smirks="[$([NX3H:1](C)(C)[H:2])][CX4H:3]([CH3X4:4]([H:5][H:6][H:7]))[CX3:8](=[OX1:9])([N])" charge1="-0.4157" charge2="0.2719" charge3="0.0337" charge4="-0.1825" charge5="0.0603" charge6="0.0603" charge7="0.0603" charge8="0.5973" charge9="-0.5679">
@@ -128,7 +128,7 @@ If the template matches multiple non-overlapping sets of atoms, all such matches
 If multiple templates match the same set of atoms, the last template specified will be used.
 
 Solvent models or excipients can also have partial charges specified in this manner:
-```
+```XML
 <LibraryCharges charge_unit="elementary_charge">
    <!-- TIP3P water oxygen with charge override -->
    <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="+0.417" charge2="-0.834" charge3="+0.417"/>
@@ -170,7 +170,7 @@ Future additions will provide options for intelligently fragmenting large molecu
 
 In our reference implementation of SMIRNOFF in the `openforcefield` toolkit, we also provide a method for specifying partial charges within the `Molecule` objects in the `Topology`.
 If the optional `user_specified_charges=True` flag is passed to `ForceField.createSystem(topology)`, all charges will be drawn from `Molecule` objects in the `Topology`.
-This method is provided solely for convenience in developing and exploring alternative charging schemes; actual forcefield releases for distribution will use one of the other mechanisms specified above.
+This method is provided solely for convenience in developing and exploring alternative charging schemes; actual force field releases for distribution will use one of the other mechanisms specified above.
 
 ## Parameter sections
 
@@ -420,7 +420,7 @@ Standard usage is expected to rely primarily on the features documented above an
 
 ### Versioning
 
-The SMIRNOFF forcefield format supports versioning via the `version` attribute to the root `<SMIRNOFF>` tag, e.g.:
+The SMIRNOFF force field format supports versioning via the `version` attribute to the root `<SMIRNOFF>` tag, e.g.:
 ```XML
 <SMIRNOFF version="0.2">
 ...
@@ -519,7 +519,7 @@ Thus, we provide an example of setting up a mixed system in [`examples/mixedFF_s
 
 In general, additional optional XML attributes can be specified and will be ignored by `ForceField` unless they are specifically handled by the parser (and specified in this document).
 
-One attribute we have found helpful in parameter file development is the `id` attribute for a specific parameter line, and we *recommend* that SMIRNOFF forcefields utilize this as effectively a parameter serial number, such as in:
+One attribute we have found helpful in parameter file development is the `id` attribute for a specific parameter line, and we *recommend* that SMIRNOFF force fields utilize this as effectively a parameter serial number, such as in:
 ```XML
  <Bond smirks="[#6X3:1]-[#6X3:2]" id="b5" k="820.0" length="1.45"/>
 ```
