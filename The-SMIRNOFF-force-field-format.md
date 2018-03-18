@@ -143,11 +143,11 @@ Here is an example:
 ```XML
 <ChargeIncrementModel capping="H" number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2" increment_unit="elementary_charge">
   <!-- A fractional charge can be moved along a single bond -->
-  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" increment="+0.0073"/>
-  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" increment="-0.0943"/>
-  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" increment="+0.0718"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" charge1increment="-0.0073" charge2increment="+0.0073"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" charge1increment="+0.0943" charge2increment="-0.0943"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge1increment="-0.0718" charge2increment="+0.0718"/>
   <!--- Alternatively, factional charges can be redistributed among any number of bonded atoms -->
-  <ChargeIncrement smirks="[N:1](H:2)(H:3)" increment1="+0.02" increment2="-0.01" increment3="-0.01"/>
+  <ChargeIncrement smirks="[N:1](H:2)(H:3)" charge1increment="+0.02" charge2increment="-0.01" charge3increment="-0.01"/>
 </ChargeIncrementModel>
 ```
 The sum of formal charges for the molecule or fragment will be used to determine the total charge the molecule or fragment will possess.
@@ -159,8 +159,8 @@ The sum of formal charges for the molecule or fragment will be used to determine
 * The `partial_charge_method` attribute (default: `"CM2"`) is used to specify how uncorrected partial charges are to be generated from the quantum chemical wavefunction. Later additions will add restrained electrostatic potential fitting (RESP) capabilities.
 
 The `<ChargeIncrement>` tags specify how the quantum chemical derived charges are to be corrected to produce the final charges.
-If there are only two tagged atoms, the charge correction `increment` will be subtracted from atom index 1 and added to atom index 2.
-If there are more than two tagged atoms, the increment applied to each is specified by `increment1`, `increment2`, `increment3`, etc.
+The `charge#increment` attribute specify how much the charge on the associated tagged atom index (replacing `#`) should be modified.
+The sum of charge increments should equal zero.
 
 Note that atoms for which library charges have already been applied are excluded from charging via `<ChargeIncrementModel>`.
 
@@ -449,6 +449,46 @@ This allows specification of force constants and lengths for bond orders 1 and 2
 * `fractional_bondorder_method` defaults to `none`, but the `Wiberg` method is supported.
 * `fractional_bondorder_interpolation` defaults to `linear`, which is the only supported scheme for now.
 
+### Virtual sites for off-center charges
+
+We have implemented experimental support for placement of off-center (off-atom) charges in a variety of contexts which may be chemically important in order to allow easy exploration of when these will be warranted.
+Currently we support the following different types or geometries of off-center charges (as diagrammed below):
+- `BondCharge`: This supports placement of a virtual site `S` along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom (green in this image). <img src="figures/vsite_bondcharge.jpg" width="200">
+- `MonovalentLonePair`: This is originally intended for situations like a carbonyl, and allows placement of a virtual site `S` at a specified distance `d`, `inPlaneAngle` (theta 1 in the diagram), and `outOfPlaneAngle` (theta 2 in the diagram) relative to a central atom and two connected atoms. <img src="figures/vsite_monovalent.jpg" width=400>
+- `DivalentLonePair`: This is suitable for cases like four-point and five-point water models as well as pyrimidine; a charge site `S` lies a specified distance `d` from the central atom among three atoms (blue) along the bisector of the angle between the atoms (if `outOfPlaneAngle` is zero) or out of the plane by the specified angle (if `outOfPlaneAngle` is nonzero) with its projection along the bisector. For positive values fo the distance `d` the virtual site lies outside the 2-1-3 angle and for negative values it lies inside. <img src="figures/vsite_divalent.jpg" width=500>
+- `TrivalentLonePair`: This is suitable for planar or tetrahedral nitrogen lone pairs; a charge site `S` lies above  the central atom (e.g. nitrogen, blue) a distance `d` along the vector perpendicular to the plane of the three connected atoms (2,3,4). With positive values of `d` the site lies above the nitrogen and with negative values it lies below the nitrogen. <img src="figures/vsite_trivalent.jpg" width=500>
+
+Each virtual site receives charge which is transferred from the desired atoms specified in the SMIRKS pattern via a `charge#increment` parameter, e.g., if `charge1increment=+0.1` then the virtual site will receive a charge of -0.1 and the atom labeled `1` will have its charge adjusted upwards by +0.1.
+N may index any indexed atom.
+Increments which are left unspecified default to zero.
+Additionally, each virtual site can bear Lennard-Jones parameters, specified by `sigma` and `epsilon` or `rmin_half` and `epsilon`.
+If unspecified these also default to zero.
+
+In the SMIRNOFF format, these are encoded as:
+```XML
+<VirtualSites distanceUnits="angstroms" angleUnits="degrees" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+    <!-- sigma hole for halogens: "distance" denotes distance along the 2->1 bond vector, measured from atom 2 -->
+    <!-- Specify that 0.2 charge from atom 1 and 0.1 charge units from atom 2 are to be moved to the virtual site, and a small Lennard-Jones site is to be added (sigma = 0.1*angstroms, epsilon=0.05*kcal/mol) -->
+    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]" distance="0.30" charge1increment="+0.2" charge2increment="+0.1" sigma="0.1" epsilon="0.05" />
+    <!-- Charge increments can extend out to as many atoms as are labeled, e.g. with a third atom: -->
+    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]~[*:3]" distance="0.30" charge1increment="+0.1" charge2increment="+0.1" charge3increment="+0.05" sigma="0.1" epsilon="0.05" />
+    <!-- monovalent lone pairs: carbonyl -->
+    <!-- X denotes the charge site, and P denotes the projection of the charge site into the plane of 1 and 2. -->
+    <!-- inPlaneAngle is angle point P makes with 1 and 2, i.e. P-1-2 -->
+    <!-- outOfPlaneAngle is angle charge site (X) makes out of the plane of 2-1-3 (and P) measured from 1 -->
+    <!-- Since unspecified here, sigma and epsilon for the virtual site default to zero -->
+    <VirtualSite type="MonovalentLonePair" smirks="[O:1]=[C:2]-[*:3]" distance="0.30" outOfPlaneAngle="0" inPlaneAngle="120" charge1increment="+0.2" />
+    <!-- divalent lone pair: pyrimidine, TIP4P, TIP5P -->
+    <!-- The atoms 2-1-3 define the X-Y plane, with Z perpendicular. If outOfPlaneAngle is 0, the charge site is a specified distance along the in-plane vector which bisects the angle left by taking 360 degrees minus angle(2,1,3). If outOfPlaneAngle is nonzero, the charge sites lie out of the plane by the specified angle (at the specified distance) and their in-plane projection lines along the angle's bisector. -->
+    <VirtualSite type="DivalentLonePair" smirks="[*:2]~[#7X2:1]~[*:3]" distance="0.30" OfPlaneAngle="0.0" charge1increment="+0.1" />
+    <!-- trivalent nitrogen lone pair -->
+    <!-- charge sites lie above and below the nitrogen at specified distances from the nitrogen, along the vector perpendicular to the plane of (2,3,4) that passes through the nitrogen. If the nitrogen is co-planar with the connected atom, charge sites are simply above and below the plane-->
+    <!-- Positive and negative values refer to above or below the nitrogen as measured relative to the plane of (2,3,4), i.e. below the nitrogen means nearer the 2,3,4 plane unless they are co-planar -->
+    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="0.30" charge1increment="+0.1"/>
+    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="-0.30" charge1increment="+0.1"/>
+</VirtualSites>
+```
+
 ### Aromaticity models
 
 Before conduct SMIRKS substructure searches, molecules are prepared using one of the supported aromaticity models, with the default model (`MDL`) used unless otherwise requested.
@@ -538,21 +578,22 @@ So use generics sparingly unless it is your intention to provide generics that s
 
 ### 1.0
 
-Backwards-incompatible overhaul of draft specification along with `ForceField` refactor:
+This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specification along with `ForceField` implementation refactor:
 * Aromaticity model now defaults to `MDL`, and aromaticity model names drop OpenEye-specific prefixes
 * Added a description of default units if `*_unit` attributes are omitted.
-* Forces were renamed to be more general:
+* Potential energy component definitions were renamed to be more general:
     * `<NonbondedForce>` was renamed to `<vdW>`
     * `<HarmonicBondForce>` was renamed to `<Bonds>`
     * `<HarmonicAngleForce>` was renamed to `<Angles>`
-    * `<BondChargeCorrections>` was renamed to `<ChargeIncrements>` and generalized to accommodate an arbitrary number of tagged atoms
-    * `<GBSAForce>` was renamed to `<GBSA>`
+    * `<BondChargeCorrections>` was renamed to `<ChargeIncrementModel>` and generalized to accommodate an arbitrary number of tagged atoms
+    * `<GBSAForce>` was renamed to `<GBSA>`    
 * `<PeriodicTorsionForce>` was split into `<ProperTorsions>` and `<ImproperTorsions>`
 * `<vdW>` now specifies 1-2, 1-3, and 1-4 scaling factors via `scale12` (default: 0), `scale13` (default: 0), and `scale14` (default: 0.5) attributes. Coulomb scaling parameters have been removed from `StericsForce`.
 * Added the `<Electrostatics>` tag to separately specify 1-2, 1-3, and 1-4 scaling factors for electrostatics, as well as the method used to compute electrostatics (`PME`, `reaction-field`, `Coulomb`) since this has a huge effect on the energetics of the system.
-* Made it clear that `Constraint` entries do not have to be between bonded atoms.
+* Made it clear that `<Constraint>` entries do not have to be between bonded atoms.
+* `<VirtualSites>` has been added, and the specification of charge increments harmonized with `<ChargeIncrementModel>`
 * The `potential` attribute was added to most forces to allow flexibility in extending forces to additional functional forms (or algebraic expressions) in the future. `potential` defaults to the current recommended scheme if omitted.
-* `GBSAForce` now has defaults specified for `gb_method` and `sa_method`
+* `<GBSA>` now has defaults specified for `gb_method` and `sa_method`
 * Changes to how fractional bond orders are handled:
     * Use of fractional bond order is now are specified at the force tag level, rather than the root level
     * The fractional bond order method is specified via the `fractional_bondorder_method` attribute
