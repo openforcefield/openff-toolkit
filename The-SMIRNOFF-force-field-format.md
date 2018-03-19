@@ -494,19 +494,6 @@ In the SMIRNOFF format, these are encoded as:
 Before conduct SMIRKS substructure searches, molecules are prepared using one of the supported aromaticity models, with the default model (`MDL`) used unless otherwise requested.
 The only aromaticity model currently widely supported (by both the [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/oechemtk/aromaticity.html) and [RDKit](http://www.rdkit.org/docs/RDKit_Book.html)) is the `MDL` model.
 
-### Future advanced features
-
-At present, the SMIRNOFF format basically defaults to AMBER- or OpenMM-style decisions on many issues.
-For example, AMBER-style (Lorentz-Berthelot) combining rules are used, and the AMBER force field functional form.
-Angles potentials are assumed to be harmonic.
-However, we have plans to support other combination rules, functional forms, and angle potentials.
-In keeping with the above, whole-force field decisions will be handled as attributes of the SMIRNOFF tag.
-For example, alternate combination rules or functional forms might be handled as follows:
-* Geometric mean combining rules: `<vdW potential="Lennard-Jones" combining_rule="geometric_mean">`
-* A Halgren buffered 14-7 potential for vdW could be handled as `<CustomForce NonbondedForm="Halgren-buffered-14-7">`
-* Selection of the type of angle force applied would be handled in a similar manner, via an `<Angles potential="harmonic-cos">` tag or similar. [This feature is being planned.](https://github.com/openforcefield/smarty/issues/179)
-* The ability to specify arbitrary functional forms, such as `<vdW potential="A*exp(-B*r)+C*r^(-6)>"`
-
 ### Additional plans for future development
 
 See the [`openforcefield` GitHub issue tracker](https://github.com/openforcefield/openforcefield/issues) to propose changes to this specification, or read through proposed changes currently being discussed.
