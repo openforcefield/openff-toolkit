@@ -1,4 +1,4 @@
-ProperTorsions# The SMIRks Native Open Force Field (SMIRNOFF) v1.0
+# The SMIRks Native Open Force Field (SMIRNOFF) v1.0
 
 SMIRNOFF is a specification for encoding molecular mechanics force fields based on direct chemical perception using the broadly-supported [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) language, utilizing atom tagging extensions from [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html).
 
@@ -9,7 +9,7 @@ The SMIRNOFF format and its reference implementation in the `openforcefield` too
 ## Encodings
 
 Currently, SMIRNOFF supports an XML encoding, which provides a human- and machine-readable form for encoding the parameter set and its typing rules.
-By convention, XML-encoded SMIRNOFF parameter sets are designated with a `.ffxml` extension if written to a filesystem.
+By convention, XML-encoded SMIRNOFF parameter sets are designated with a `.offxml` extension if written to a filesystem.
 
 ## Reference implementation
 
@@ -23,7 +23,7 @@ While designed for [`OpenMM`](http://openmm.org), parameterized systems created 
 
 The SMIRNOFF format provides XML `ffxml` files that are parseable by the `ForceField` class of the `openforcefield.typing.smirnoff` module.
 These encode parameters for a force field based on a SMARTS/SMIRKS-based specification of the chemical environment the parameters are to be applied to.
-The file has tags corresponding to OpenMM force terms (`Bonds`, `Angles`, `TorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example ffxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.ffxml)):
+The file has tags corresponding to OpenMM force terms (`Bonds`, `Angles`, `TorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example ffxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.offxml)):
 ```XML
 <Angles angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
    ...
@@ -53,7 +53,7 @@ Before getting in to individual sections, it's worth noting that the XML parser 
 
 This hierarchical structure means that a typical parameter file will tend to have generic parameters early in the section for each force type, with more specialized parameters assigned later.
 
-Multiple `.ffxml` files can be loaded in sequence.
+Multiple `.offxml` files can be loaded in sequence.
 If these files each contain unique top-level tags (such as `<Bonds>`, `<Angles>`, etc.), the resulting forcefield will be independent of the order in which the files are loaded.
 If, however, the same tag occurs in multiple files, the contents of the tags are merged, with the tags read later taking precedence over the parameters read earlier, provided the top-level tags have compatible attributes.
 The resulting force field will therefore depend on the order in which parameters are read.
@@ -64,18 +64,15 @@ See [this entry](https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_en
 
 ## Units
 
-If not specified by a `*_unit` attribute, the [standard OpenMM unit system](http://docs.openmm.org/latest/userguide/theory.html#units) is assumed:
-* distances are specified in `nanometers`
-* mass is specified in `daltons`
-* time is specified in `picoseconds`
-* charge is specified in `elementary_charge`,
-* temperature is specified in `kelvin`
-* quantity is specified in `moles`
-* angles are specified in `radians`
-
+To minimize the potential for [unit conversion errors](https://en.wikipedia.org/wiki/Mars_Climate_Orbiter#Cause_of_failure), SMIRNOFF forcefields explicitly specify units in a form readable to both humans and computers for all unit-bearing quantities.
 Allowed values for units are given in [`simtk.unit`](https://github.com/pandegroup/openmm/blob/master/wrappers/python/simtk/unit/unit_definitions.py).
-
-Explicit specification of units is highly recommended to avoid the potential for mistakes in translating force fields into SMIRNOFF.
+For example, for the `angle` (equilibrium angle) and `k` (force constant) parameters in the `<Angles>` example block above, the `angle_unit` and `k_unit` top-level attributes specify the corresponding units:
+```XML
+<Angles angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
+...
+</Angles>  
+```
+For more information, see the [standard OpenMM unit system](http://docs.openmm.org/latest/userguide/theory.html#units).
 
 ## Functional forms
 
@@ -113,11 +110,11 @@ Currently, only classical fixed point charge models are supported, but extension
 A mechanism is provided for specifying library charges that can be applied to molecules or residues that match provided templates.
 Library charges are applied first, and atoms for which library charges are applied will be excluded from alternative charging schemes listed below.
 
-For example, to assign partial charges
+For example, to assign partial charges for a non-terminal ALA from the AMBER ff14SB parameter set:
 ```XML
 <LibraryCharges charge_unit="elementary_charge">
-   <!-- match a non-terminal alanine residue -->
-   <LibraryCharge name="ALA" smirks="[$([NX3H:1](C)(C)[H:2])][CX4H:3]([CH3X4:4]([H:5][H:6][H:7]))[CX3:8](=[OX1:9])([N])" charge1="-0.4157" charge2="0.2719" charge3="0.0337" charge4="-0.1825" charge5="0.0603" charge6="0.0603" charge7="0.0603" charge8="0.5973" charge9="-0.5679">
+   <!-- match a non-terminal alanine residue with AMBER ff14SB partial charges-->
+   <LibraryCharge name="ALA" smirks="[NX3:1]([#1:2])([#6])[#6H1:3]([#1:4])([#6:5]([#1:6])([#1:7])[#1:8])[#6:9](=[#8:10])[#7]" charge1="-0.4157" charge2="0.2719" charge3="0.0337" charge4="0.0823" charge5="-0.1825" charge6="0.0603" charge7="0.0603" charge8="0.0603" charge9="0.5973" charge10="-0.5679">
    ...
 </LibraryCharges>
 ```
@@ -137,11 +134,11 @@ Solvent models or excipients can also have partial charges specified in this man
 
 ### Small molecule charges: `<ChargeIncrementModel>`
 
-In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), partial charges for small molecules are assigned using a quantum chemical method (usually a semiempirical method such as AM1) and a partial charge determination scheme (such as CM2), subsequently corrected via charge increment rules, as in the highly successful [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach.
+In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), partial charges for small molecules are usually assigned using a quantum chemical method (usually a semiempirical method such as [AM1](https://en.wikipedia.org/wiki/Austin_Model_1)) and a [partial charge determination scheme](https://en.wikipedia.org/wiki/Partial_charge) (such as [CM2](http://doi.org/10.1021/jp972682r) or [RESP](http://doi.org/10.1021/ja00074a030)), then subsequently corrected via charge increment rules, as in the highly successful [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach.
 
 Here is an example:
 ```XML
-<ChargeIncrementModel capping="H" number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2" increment_unit="elementary_charge">
+<ChargeIncrementModel number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2" increment_unit="elementary_charge">
   <!-- A fractional charge can be moved along a single bond -->
   <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" charge1increment="-0.0073" charge2increment="+0.0073"/>
   <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" charge1increment="+0.0943" charge2increment="-0.0943"/>
@@ -153,7 +150,6 @@ Here is an example:
 The sum of formal charges for the molecule or fragment will be used to determine the total charge the molecule or fragment will possess.
 
 `<ChargeIncrementModel>` provides several optional attributes to control its behavior:
-* The `capping` attribute (default: `"H"`) is used to specify how fragments with dangling bonds are to be capped to allow these groups to be charged.
 * The `number_of_conformers` attribute (default: `"10"`) is used to specify how many conformers will be generated for the molecule (or capped fragment) prior to charging.
 * The `quantum_chemical_method` attribute (default: `"AM1"`) is used to specify the quantum chemical method applied to the molecule or capped fragment.
 * The `partial_charge_method` attribute (default: `"CM2"`) is used to specify how uncorrected partial charges are to be generated from the quantum chemical wavefunction. Later additions will add restrained electrostatic potential fitting (RESP) capabilities.
@@ -164,7 +160,7 @@ The sum of charge increments should equal zero.
 
 Note that atoms for which library charges have already been applied are excluded from charging via `<ChargeIncrementModel>`.
 
-Future additions will provide options for intelligently fragmenting large molecules and biopolymers.
+Future additions will provide options for intelligently fragmenting large molecules and biopolymers, as well as a `capping` attribute to specify how fragments with dangling bonds are to be capped to allow these groups to be charged.
 
 ### Prespecified charges (reference implementation only)
 
@@ -180,7 +176,7 @@ For this section it will help to have on hand an example SMIRNOFF file, such as 
 
 van der Waals force parameters, which include repulsive forces arising from Pauli exclusion and attractive forces arising from dispersion, are specified via the `<vdW>` tag with sub-tags for individual `Atom` entries, such as:
 ```XML
-<vdW potential="Lennard-Jones" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" cutoff="9.0" long_range_dispersion="isotropic">
+<vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" cutoff="9.0" long_range_dispersion="isotropic">
    <Atom smirks="[#1:1]" rmin_half="1.4870" epsilon="0.0157"/>
    <Atom smirks="[#1:1]-[#6]" rmin_half="1.4870" epsilon="0.0157"/>
    ...
@@ -190,9 +186,9 @@ For compatibility, the size property of an atom can be specified either via prov
 The two are related by `r0 = 2^(1/6)*sigma` and conversion is done internally in `ForceField` into the `sigma` values used in OpenMM.
 `epsilon` denotes the well depth.
 
-Attributes in the `<vdW>` tag specify the scaling terms applied to the energies of 1-2 (`scale12`, default: 0), 1-3 (`scale13`, default: 0), and 1-4 (`scale14`, default: 0.5) interactions, (`scale15`. default: 1.0),
+Attributes in the `<vdW>` tag specify the scaling terms applied to the energies of 1-2 (`scale12`, default: 0), 1-3 (`scale13`, default: 0), and 1-4 (`scale14`, default: 0.5) interactions, (`scale15`, default: 1.0),
 as well as the distance at which a switching function is applied (`switch`, default: `"8.0"`), the cutoff (`cutoff`, default: `"9.0"`), and long-range dispersion treatment scheme (`long_range_dispersion`, default: `"isotropic"`).
-If Lennard-Jones PME is to be used, `switch` and `cutoff` are omitted and `long_range_dispersion=""P""` is used.
+If Lennard-Jones PME is to be used, `switch` and `cutoff` are omitted and `long_range_dispersion="PME"` is used.
 
 The `potential` attribute (default: `"none"`) specifies the potential energy function to use.
 Currently, only `potential="Lennard-Jones-12-6"` is supported:
@@ -514,7 +510,7 @@ oechem.OETriposAtomNames(mol)
 
 # Load forcefield
 from openforcefield.typing import smirnoff
-forcefield = smirnoff.ForceField('forcefield/Frosst_AlkEthOH_parmAtFrosst.ffxml')
+forcefield = smirnoff.ForceField('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml')
 
 # Generate an openforcefield Topology and
 from openforcefield.topology import Molecule, Topology
@@ -561,7 +557,7 @@ So use generics sparingly unless it is your intention to provide generics that s
 
 This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specification along with `ForceField` implementation refactor:
 * Aromaticity model now defaults to `MDL`, and aromaticity model names drop OpenEye-specific prefixes
-* Added a description of default units if `*_unit` attributes are omitted.
+* Top-level tags must now specify units for any unit-bearking quantities.
 * Potential energy component definitions were renamed to be more general:
     * `<NonbondedForce>` was renamed to `<vdW>`
     * `<HarmonicBondForce>` was renamed to `<Bonds>`
