@@ -50,178 +50,6 @@ logger = logging.getLogger(__name__)
 # PRIVATE METHODS
 #=============================================================================================
 
-# TODO: Make this a ForceField class method
-def _validate_smarts(smarts, node=None, ensure_valence_type=None):
-    """Validate the specified SMARTS string can be used to assign forcefield parameters.
-
-    This checks to ensure the SMARTS string
-    * is a valid SMARTS string
-    * the tagged atoms form a fully connected subset of atoms
-    * if ``ensure_valence_type`` is specified, ensure the tagged atoms specify the appropriate valence type
-
-    Parameters
-    ----------
-    smarts : str
-       The SMARTS string to be validated
-    node : xml.etree.ElementTree.Element, optional, default=None
-       Node of etree, used only for reporting errors
-    ensure_valence_type : str, optional, default=None
-       If not ``None``, will check to ensure tagged atoms specify appropriate valence types
-       Supported ChemicalEnvironment getType() types: ['Atom', 'Bond', 'Angle', 'ProperTorsion', 'ImproperTorsion']
-       If ``None``, will ensure that it is any one of the above valid valence types.
-
-    """
-    def _raise_exception(msg):
-        if (node is not None):
-            if hasattr(node, 'sourceline'):
-                raise ValueError("Line %s : %s\n%s" % (node.sourceline, str(node), msg))
-            else:
-                raise ValueError("%s\n%s" % (str(node), msg))
-        else:
-            raise Exception(msg)
-
-    # Create a chemical environment to see if this is a valid SMARTS string
-    try:
-        chemenv = ChemicalEnvironment(smarts)
-    except Exception as e:
-        _raise_exception("Error parsing SMARTS '%s' : %s" % (smarts, str(e))
-
-    # Check type, if specified
-    ensure_valence_type = chemenv.getType()
-    if ensure_valence_type:
-        if valence_type != ensure_valence_type:
-            _raise_exception("Tagged atoms in SMARTS string '%s' specifies valence type '%s', expected '%s'." % (smarts, valence_type, ensure_valence_type))
-    else:
-        if valence_type is None:
-            _raise_exception("Tagged atoms in SMARTS string '%s' did not tag atoms in a way that correctly specifies a valence type." % smarts)
-
-# TODO: Make this a Forcefield class method
-def _extract_quantity_from_xml_element(node, parent, name, unit_name=None, default=None):
-    """
-    Form a (potentially unit-bearing) quantity from the specified attribute name.
-
-    node : xml.etree.ElementTree.Element
-       Node of etree corresponding to force type entry.
-    parent : xml.etree.ElementTree.Element
-       Node of etree corresponding to parent Force.
-    name : str
-       Name of parameter to extract from attributes.
-    unit_name : str, optional, default=None
-       If specified, use this attribute name of 'parent' to look up units
-    default : optional, default=None
-       If not None, the value in ``default`` will be returned if ``name`` is not found
-       instead of raising an exception.
-
-    """
-    # Check for expected attributes
-    if (name not in node.attrib):
-        if default is not None:
-            if hasattr(node, 'sourceline'):
-                raise Exception("Line %d : Expected XML attribute '%s' not found" % (node.sourceline, name))
-            else:
-                raise Exception("Expected XML attribute '%s' not found" % (name))
-        else:
-            return default
-
-    # Most attributes will be converted to floats, but some are strings
-    string_names = ['parent_id', 'id']
-    # Handle case where this is a normal quantity
-    if name not in string_names:
-        quantity = float(node.attrib[name])
-    # Handle label or string
-    else:
-        quantity = node.attrib[name]
-        return quantity
-
-    if unit_name is None:
-        unit_name = name + '_unit'
-
-    if unit_name in parent.attrib:
-        # TODO: This is very dangerous.
-        string = '(%s * %s).value_in_unit_system(md_unit_system)' % (node.attrib[name], parent.attrib[unit_name])
-        quantity = eval(string, unit.__dict__)
-
-    return quantity
-
-# TODO: Make this a Forcefield class method
-def _check_for_missing_valence_terms(name, topology, assigned_terms, topological_terms):
-    """
-    Check to ensure there are no missing valence terms.
-
-    Parameters
-    ----------
-    name : str
-        Name of the calling force generator
-    topology : openforcefield.topology.Topology
-        The Topology object
-    assigned_terms : iterable of ints or int tuples
-        Atom index tuples defining added valence terms
-    topological_terms : iterable of atoms or atom tuples
-        Atom tuples defining topological valence atomsets to which forces should be assigned
-
-    """
-    # Convert assigned terms and topological terms to lists
-    assigned_terms = [ item for item in assigned_terms ]
-    topological_terms = [ item for item in topological_terms ]
-
-    def ordered_tuple(atoms):
-        atoms = list(atoms)
-        if atoms[0] < atoms[-1]:
-            return tuple(atoms)
-        else:
-            return tuple(reversed(atoms))
-    try:
-        topology_set = set([ ordered_tuple( atom.index for atom in atomset ) for atomset in topological_terms ])
-        assigned_set = set([ ordered_tuple( index for index in atomset ) for atomset in assigned_terms ])
-    except TypeError as te:
-        topology_set = set([ atom.index for atom in topological_terms ])
-        assigned_set = set([ atomset[0] for atomset in assigned_terms ])
-
-    def render_atoms(atomsets):
-        msg = ""
-        for atomset in atomsets:
-            msg += '%30s :' % str(atomset)
-            try:
-                for atom_index in atomset:
-                    atom = atoms[atom_index]
-                    msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
-            except TypeError as te:
-                atom = atoms[atomset]
-                msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
-
-            msg += '\n'
-        return msg
-
-    if set(assigned_set) != set(topology_set):
-        # Form informative error message
-        msg = '%s: Mismatch between valence terms added and topological terms expected.\n' % name
-        atoms = [ atom for atom in topology.atoms ]
-        if len(assigned_set.difference(topology_set)) > 0:
-            msg += 'Valence terms created that are not present in Topology:\n'
-            msg += render_atoms(assigned_set.difference(topology_set))
-        if len(topology_set.difference(assigned_set)) > 0:
-            msg += 'Topological atom sets not assigned parameters:\n'
-            msg += render_atoms(topology_set.difference(assigned_set))
-        msg += 'topology_set:\n'
-        msg += str(topology_set) + '\n'
-        msg += 'assigned_set:\n'
-        msg += str(assigned_set) + '\n'
-        raise Exception(msg)
-
-# TODO: Make this a ForceField class method
-def _assert_bonded(topology, atom1, atom2):
-    """
-    Raise an exception if the specified atoms are not bonded in the topology.
-
-    Parameters
-    ----------
-    topology : openforcefield.topology.Topology
-        The Topology object to check for bonded atoms
-    atom1, atom2 : openforcefield.topology.Atom
-        The atoms to check to ensure they are bonded
-    """
-    assert topology.is_bonded(atom1, atom2), 'Atoms {} and {} are not bonded in topology'.format(atom1, atom2)
-
 #=============================================================================================
 # FORCEFIELD
 #=============================================================================================
@@ -286,6 +114,179 @@ class ForceField(object):
                     raise Exception("ForceGenerator {} provides a parser for tag '{}', but ForceGemerator {} has already been registered to handle that tag.".format(subclass, tagname, self.parsers[tagname]))
                 parsers[tagname] = subclass
         return parsers
+
+    @staticmethod
+    def _validate_smarts(smarts, node=None, ensure_valence_type=None):
+        """Validate the specified SMARTS string can be used to assign forcefield parameters.
+
+        This checks to ensure the SMARTS string
+        * is a valid SMARTS string
+        * the tagged atoms form a fully connected subset of atoms
+        * if ``ensure_valence_type`` is specified, ensure the tagged atoms specify the appropriate valence type
+
+        Parameters
+        ----------
+        smarts : str
+           The SMARTS string to be validated
+        node : xml.etree.ElementTree.Element, optional, default=None
+           Node of etree, used only for reporting errors
+        ensure_valence_type : str, optional, default=None
+           If not ``None``, will check to ensure tagged atoms specify appropriate valence types
+           Supported ChemicalEnvironment getType() types: ['Atom', 'Bond', 'Angle', 'ProperTorsion', 'ImproperTorsion']
+           If ``None``, will ensure that it is any one of the above valid valence types.
+
+        """
+        def _raise_exception(msg):
+            if (node is not None):
+                if hasattr(node, 'sourceline'):
+                    raise ValueError("Line %s : %s\n%s" % (node.sourceline, str(node), msg))
+                else:
+                    raise ValueError("%s\n%s" % (str(node), msg))
+            else:
+                raise Exception(msg)
+
+        # Create a chemical environment to see if this is a valid SMARTS string
+        try:
+            chemenv = ChemicalEnvironment(smarts)
+        except Exception as e:
+            _raise_exception("Error parsing SMARTS '%s' : %s" % (smarts, str(e))
+
+        # Check type, if specified
+        ensure_valence_type = chemenv.getType()
+        if ensure_valence_type:
+            if valence_type != ensure_valence_type:
+                _raise_exception("Tagged atoms in SMARTS string '%s' specifies valence type '%s', expected '%s'." % (smarts, valence_type, ensure_valence_type))
+        else:
+            if valence_type is None:
+                _raise_exception("Tagged atoms in SMARTS string '%s' did not tag atoms in a way that correctly specifies a valence type." % smarts)
+
+    @staticmethod
+    def _extract_quantity_from_xml_element(node, parent, name, unit_name=None, default=None):
+        """
+        Form a (potentially unit-bearing) quantity from the specified attribute name.
+
+        node : xml.etree.ElementTree.Element
+           Node of etree corresponding to force type entry.
+        parent : xml.etree.ElementTree.Element
+           Node of etree corresponding to parent Force.
+        name : str
+           Name of parameter to extract from attributes.
+        unit_name : str, optional, default=None
+           If specified, use this attribute name of 'parent' to look up units
+        default : optional, default=None
+           If not None, the value in ``default`` will be returned if ``name`` is not found
+           instead of raising an exception.
+
+        """
+        # Check for expected attributes
+        if (name not in node.attrib):
+            if default is not None:
+                if hasattr(node, 'sourceline'):
+                    raise Exception("Line %d : Expected XML attribute '%s' not found" % (node.sourceline, name))
+                else:
+                    raise Exception("Expected XML attribute '%s' not found" % (name))
+            else:
+                return default
+
+        # Most attributes will be converted to floats, but some are strings
+        string_names = ['parent_id', 'id']
+        # Handle case where this is a normal quantity
+        if name not in string_names:
+            quantity = float(node.attrib[name])
+        # Handle label or string
+        else:
+            quantity = node.attrib[name]
+            return quantity
+
+        if unit_name is None:
+            unit_name = name + '_unit'
+
+        if unit_name in parent.attrib:
+            # TODO: This is very dangerous.
+            string = '(%s * %s).value_in_unit_system(md_unit_system)' % (node.attrib[name], parent.attrib[unit_name])
+            quantity = eval(string, unit.__dict__)
+
+        return quantity
+
+    @staticmethod
+    def _check_for_missing_valence_terms(name, topology, assigned_terms, topological_terms):
+        """
+        Check to ensure there are no missing valence terms.
+
+        Parameters
+        ----------
+        name : str
+            Name of the calling force generator
+        topology : openforcefield.topology.Topology
+            The Topology object
+        assigned_terms : iterable of ints or int tuples
+            Atom index tuples defining added valence terms
+        topological_terms : iterable of atoms or atom tuples
+            Atom tuples defining topological valence atomsets to which forces should be assigned
+
+        """
+        # Convert assigned terms and topological terms to lists
+        assigned_terms = [ item for item in assigned_terms ]
+        topological_terms = [ item for item in topological_terms ]
+
+        def ordered_tuple(atoms):
+            atoms = list(atoms)
+            if atoms[0] < atoms[-1]:
+                return tuple(atoms)
+            else:
+                return tuple(reversed(atoms))
+        try:
+            topology_set = set([ ordered_tuple( atom.index for atom in atomset ) for atomset in topological_terms ])
+            assigned_set = set([ ordered_tuple( index for index in atomset ) for atomset in assigned_terms ])
+        except TypeError as te:
+            topology_set = set([ atom.index for atom in topological_terms ])
+            assigned_set = set([ atomset[0] for atomset in assigned_terms ])
+
+        def render_atoms(atomsets):
+            msg = ""
+            for atomset in atomsets:
+                msg += '%30s :' % str(atomset)
+                try:
+                    for atom_index in atomset:
+                        atom = atoms[atom_index]
+                        msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
+                except TypeError as te:
+                    atom = atoms[atomset]
+                    msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
+
+                msg += '\n'
+            return msg
+
+        if set(assigned_set) != set(topology_set):
+            # Form informative error message
+            msg = '%s: Mismatch between valence terms added and topological terms expected.\n' % name
+            atoms = [ atom for atom in topology.atoms ]
+            if len(assigned_set.difference(topology_set)) > 0:
+                msg += 'Valence terms created that are not present in Topology:\n'
+                msg += render_atoms(assigned_set.difference(topology_set))
+            if len(topology_set.difference(assigned_set)) > 0:
+                msg += 'Topological atom sets not assigned parameters:\n'
+                msg += render_atoms(topology_set.difference(assigned_set))
+            msg += 'topology_set:\n'
+            msg += str(topology_set) + '\n'
+            msg += 'assigned_set:\n'
+            msg += str(assigned_set) + '\n'
+            raise Exception(msg)
+
+    @staticmethod
+    def _assert_bonded(topology, atom1, atom2):
+        """
+        Raise an exception if the specified atoms are not bonded in the topology.
+
+        Parameters
+        ----------
+        topology : openforcefield.topology.Topology
+            The Topology object to check for bonded atoms
+        atom1, atom2 : openforcefield.topology.Atom
+            The atoms to check to ensure they are bonded
+        """
+        assert topology.is_bonded(atom1, atom2), 'Atoms {} and {} are not bonded in topology'.format(atom1, atom2)
+
 
     def loadFile(self, files):
         """Load a SMIRNOFF XML file and add the definitions from it to this ForceField.
@@ -771,6 +772,7 @@ class ForceGenerator(object):
     _KWARGS = [] # list of keyword arguments accepted by the force generator on initialization
     _SMIRNOFF_VERSION_INTRODUCED = 0.0 # the earliest version of SMIRNOFF spec that supports this ForceGenerator
     _SMIRNOFF_VERSION_DEPRECATED = None # if deprecated, the first SMIRNOFF version number it is no longer used
+    _REQUIRE_UNITS = None # list of parameters that require units to be defined
 
     def __init__(self, forcefield):
         self.ff = forcefield # the ForceField object that this ForceGenerator is registered with
@@ -836,6 +838,8 @@ class ForceGenerator(object):
         for section in element.findall(tag):
             generator.registerType(section, element)
 
+        # TODO: Check that all required units are defined in the top-level tag attributes
+
     def registerType(self, node, parent):
         """Register a SMIRNOFF constraint type definition."""
         if self._INFOTYPE:
@@ -893,6 +897,7 @@ class ConstraintGenerator(ForceGenerator):
     _VALENCE_TYPE = 'Bond' # ChemicalEnvironment valence type expected for SMARTS # TODO: Do we support more exotic types as well?
     _INFOTYPE = ConstraintType
     _OPENMMTYPE = None # don't create a corresponding OpenMM Force class
+    _REQUIRED_UNITS = ['distance']
 
     def __init__(self, forcefield):
         super(ConstraintGenerator, self).__init__(forcefield)

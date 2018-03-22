@@ -381,7 +381,7 @@ class Particle(object):
         """
         Create a particle.
         """
-        self._name = name
+        self._name = name # the particle name
         self._topology = None # the Topology object this Particle belongs to
 
     @property
@@ -399,7 +399,6 @@ class Particle(object):
         """
         return self._name
 
-    # TODO: Should this just be index?
     @property
     def particle_index(self):
         """
@@ -416,7 +415,7 @@ class Particle(object):
         # Return index of this particle within the Topology
         # TODO: This will be slow; can we cache this and update it only when needed?
         #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
-        return self._topology._particles.index(self)
+        return self._topology.particles.index(self)
 
     def __repr__(self):
         pass
@@ -511,12 +510,12 @@ class Atom(Particle):
         The index of this Atom within the the list of atoms in ``Topology``.
         Note that this can be different from ``particle_index``.
 
-        .. todo::
-
-           Do we need this?
-
         """
-        pass
+        if self._topology is None:
+            raise ValueError('This Atom does not belong to a Topology object')
+        # TODO: This will be slow; can we cache this and update it only when needed?
+        #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
+        return self._topology.atoms.index(self)
 
     def __repr__(self):
         # TODO: Also include particle_index and which topology this atom belongs to?
@@ -560,7 +559,7 @@ class VirtualSite(Particle):
 
         """
         self._name = name
-        self._type = sitetype # TODO: Validate this
+        self._type = sitetype # TODO: Validate site types against allowed values
         self._weights = np.array(weights) # make a copy and convert to array internally
         self._atoms = [ atom for atom in atoms ] # create a list of Particles
 
@@ -570,12 +569,12 @@ class VirtualSite(Particle):
         The index of this VirtualSite within the list of virtual sites within ``Topology``
         Note that this can be different from ``particle_index``.
 
-        .. todo::
-
-           Do we need this?
-
         """
-        pass
+        if self._topology is None:
+            raise ValueError('This VirtualSite does not belong to a Topology object')
+        # TODO: This will be slow; can we cache this and update it only when needed?
+        #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
+        return self._topology.virtual_sites.index(self)
 
     @property
     def atoms(self):
@@ -966,6 +965,7 @@ class Molecule(ChemicalEntity):
         oe_atom_to_openmm_at = {}
 
         for chain in hv.GetChains():
+            # TODO: Fail if hv contains more than one molecule.
 
             # Create empty OpenMM Chain
             openmm_chain = topology.addChain(chain.GetChainID())
@@ -1697,6 +1697,248 @@ class Topology(ChemicalEntity):
         import parmed
         # TODO: Implement functionality
         raise NotImplementedError
+
+
+    @staticmethod
+    def from_openeye(oemol):
+        """
+        Create a Molecule from an OpenEye molecule.
+
+        Requires the OpenEye toolkit to be installed.
+
+        Parameters
+        ----------
+        oemol : openeye.oechem.OEMol
+            An OpenEye molecule
+
+        Returns
+        -------
+        molecule : openforcefield.Molecule
+            An openforcefield molecule
+
+        """
+        # OE Hierarchical molecule view
+        hv = oechem.OEHierView(mol, oechem.OEAssumption_BondedResidue +
+                               oechem.OEAssumption_ResPerceived +
+                               oechem.OEAssumption_PDBOrder)
+
+        # Create empty OpenMM Topology
+        topology = app.Topology()
+        # Dictionary used to map oe atoms to openmm atoms
+        oe_atom_to_openmm_at = {}
+
+        for chain in hv.GetChains():
+            # TODO: Fail if hv contains more than one molecule.
+
+            # Create empty OpenMM Chain
+            openmm_chain = topology.addChain(chain.GetChainID())
+
+            for frag in chain.GetFragments():
+
+                for hres in frag.GetResidues():
+
+                    # Get OE residue
+                    oe_res = hres.GetOEResidue()
+                    # Create OpenMM residue
+                    openmm_res = topology.addResidue(oe_res.GetName(), openmm_chain)
+
+                    for oe_at in hres.GetAtoms():
+                        # Select atom element based on the atomic number
+                        element = app.element.Element.getByAtomicNumber(oe_at.GetAtomicNum())
+                        # Add atom OpenMM atom to the topology
+                        openmm_at = topology.addAtom(oe_at.GetName(), element, openmm_res)
+                        openmm_at.index = oe_at.GetIdx()
+                        # Add atom to the mapping dictionary
+                        oe_atom_to_openmm_at[oe_at] = openmm_at
+
+        if topology.getNumAtoms() != mol.NumAtoms():
+            oechem.OEThrow.Error("OpenMM topology and OEMol number of atoms mismatching: "
+                                 "OpenMM = {} vs OEMol  = {}".format(topology.getNumAtoms(), mol.NumAtoms()))
+
+        # Count the number of bonds in the openmm topology
+        omm_bond_count = 0
+
+        def IsAmideBond(oe_bond):
+            # TODO: Can this be replaced by a SMARTS query?
+
+            # This supporting function checks if the passed bond is an amide bond or not.
+            # Our definition of amide bond C-N between a Carbon and a Nitrogen atom is:
+            #          O
+            #          ║
+            #  CA or O-C-N-
+            #            |
+
+            # The amide bond C-N is a single bond
+            if oe_bond.GetOrder() != 1:
+                return False
+
+            atomB = oe_bond.GetBgn()
+            atomE = oe_bond.GetEnd()
+
+            # The amide bond is made by Carbon and Nitrogen atoms
+            if not (atomB.IsCarbon() and atomE.IsNitrogen() or
+                    (atomB.IsNitrogen() and atomE.IsCarbon())):
+                return False
+
+            # Select Carbon and Nitrogen atoms
+            if atomB.IsCarbon():
+                C_atom = atomB
+                N_atom = atomE
+            else:
+                C_atom = atomE
+                N_atom = atomB
+
+            # Carbon and Nitrogen atoms must have 3 neighbour atoms
+            if not (C_atom.GetDegree() == 3 and N_atom.GetDegree() == 3):
+                return False
+
+            double_bonds = 0
+            single_bonds = 0
+
+            for bond in C_atom.GetBonds():
+                # The C-O bond can be single or double.
+                if (bond.GetBgn() == C_atom and bond.GetEnd().IsOxygen()) or \
+                        (bond.GetBgn().IsOxygen() and bond.GetEnd() == C_atom):
+                    if bond.GetOrder() == 2:
+                        double_bonds += 1
+                    if bond.GetOrder() == 1:
+                        single_bonds += 1
+                # The CA-C bond is single
+                if (bond.GetBgn() == C_atom and bond.GetEnd().IsCarbon()) or \
+                        (bond.GetBgn().IsCarbon() and bond.GetEnd() == C_atom):
+                    if bond.GetOrder() == 1:
+                        single_bonds += 1
+            # Just one double and one single bonds are connected to C
+            # In this case the bond is an amide bond
+            if double_bonds == 1 and single_bonds == 1:
+                return True
+            else:
+                return False
+
+        # Creating bonds
+        for oe_bond in mol.GetBonds():
+            # Set the bond type
+            if oe_bond.GetType() is not "":
+                if oe_bond.GetType() in ['Single', 'Double', 'Triple', 'Aromatic', 'Amide']:
+                    off_bondtype = oe_bond.GetType()
+                else:
+                    off_bondtype = None
+            else:
+                if oe_bond.IsAromatic():
+                    oe_bond.SetType("Aromatic")
+                    off_bondtype = "Aromatic"
+                elif oe_bond.GetOrder() == 2:
+                    oe_bond.SetType("Double")
+                    off_bondtype = "Double"
+                elif oe_bond.GetOrder() == 3:
+                    oe_bond.SetType("Triple")
+                    off_bond_type = "Triple"
+                elif IsAmideBond(oe_bond):
+                    oe_bond.SetType("Amide")
+                    off_bond_type = "Amide"
+                elif oe_bond.GetOrder() == 1:
+                    oe_bond.SetType("Single")
+                    off_bond_type = "Single"
+                else:
+                    off_bond_type = None
+
+            molecule.add_bond(oe_atom_to_openmm_at[oe_bond.GetBgn()], oe_atom_to_openmm_at[oe_bond.GetEnd()],
+                              type=off_bondtype, order=oe_bond.GetOrder())
+
+        if molecule.n_bondsphe != mol.NumBonds():
+            oechem.OEThrow.Error("OpenMM topology and OEMol number of bonds mismatching: "
+                                 "OpenMM = {} vs OEMol  = {}".format(omm_bond_count, mol.NumBonds()))
+
+        dic = mol.GetCoords()
+        positions = [Vec3(v[0], v[1], v[2]) for k, v in dic.items()] * unit.angstrom
+
+        return topology, positions
+
+    def to_openeye(self, positions=None, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+        """
+        Create an OpenEye molecule
+
+        Requires the OpenEye toolkit to be installed.
+
+        Returns
+        -------
+        oemol : openeye.oechem.OEMol
+            An OpenEye molecule
+        positions : simtk.unit.Quantity with shape [nparticles,3], optional, default=None
+            Positions to use in constructing OEMol.
+            If virtual sites are present in the Topology, these indices will be skipped.
+
+        NOTE: This comes from https://github.com/oess/oeommtools/blob/master/oeommtools/utils.py
+
+        """
+        oe_mol = oechem.OEMol()
+        molecule_atom_to_oe_atom = {} # Mapping dictionary between Molecule atoms and oe atoms
+
+        # Python set used to identify atoms that are not in protein residues
+        keep = set(proteinResidues).union(dnaResidues).union(rnaResidues)
+
+        for chain in topology.chains():
+            for res in chain.residues():
+                # Create an OEResidue
+                oe_res = oechem.OEResidue()
+                # Set OEResidue name
+                oe_res.SetName(res.name)
+                # If the atom is not a protein atom then set its heteroatom
+                # flag to True
+                if res.name not in keep:
+                    oe_res.SetFragmentNumber(chain.index + 1)
+                    oe_res.SetHetAtom(True)
+                # Set OEResidue Chain ID
+                oe_res.SetChainID(chain.id)
+                # res_idx = int(res.id) - chain.index * len(chain._residues)
+                # Set OEResidue number
+                oe_res.SetResidueNumber(int(res.id))
+
+                for openmm_at in res.atoms():
+                    # Create an OEAtom  based on the atomic number
+                    oe_atom = oe_mol.NewAtom(openmm_at.element._atomic_number)
+                    # Set atom name
+                    oe_atom.SetName(openmm_at.name)
+                    # Set Symbol
+                    oe_atom.SetType(openmm_at.element.symbol)
+                    # Set Atom index
+                    oe_res.SetSerialNumber(openmm_at.index + 1)
+                    # Commit the changes
+                    oechem.OEAtomSetResidue(oe_atom, oe_res)
+                    # Update the dictionary OpenMM to OE
+                    openmm_atom_to_oe_atom[openmm_at] = oe_atom
+
+        if self.n_atoms != oe_mol.NumAtoms():
+            raise Exception("OEMol has an unexpected number of atoms: "
+                            "Molecule has {} atoms, while OEMol has {} atoms".format(topology.n_atom, oe_mol.NumAtoms()))
+
+        # Create bonds
+        for off_bond in self.bonds():
+            oe_mol.NewBond(oe_atoms[bond.atom1], oe_atoms[bond.atom2], bond.bond_order)
+            if off_bond.type:
+                if off_bond.type == 'Aromatic':
+                    oe_atom0.SetAromatic(True)
+                    oe_atom1.SetAromatic(True)
+                    oe_bond.SetAromatic(True)
+                    oe_bond.SetType("Aromatic")
+                elif off_bond.type in ["Single", "Double", "Triple", "Amide"]:
+                    oe_bond.SetType(omm_bond.type)
+                else:
+                    oe_bond.SetType("")
+
+        if self.n_bonds != oe_mol.NumBonds():
+            oechem.OEThrow.Erorr("OEMol has an unexpected number of bonds:: "
+                                 "Molecule has {} bonds, while OEMol has {} bonds".format(self.n_bond, oe_mol.NumBonds()))
+
+        if positions is not None:
+            # Set the OEMol positions
+            particle_indices = [ atom.particle_index for atom in self.atoms ] # get particle indices
+            pos = positions[particle_indices].value_in_units_of(unit.angstrom)
+            pos = list(itertools.chain.from_iterable(pos))
+            oe_mol.SetCoords(pos)
+            oechem.OESetDimensionFromCoords(oe_mol)
+
+        return oe_mol        
 
     def is_bonded(self, i, j):
         """Returns True of two atoms are bonded
