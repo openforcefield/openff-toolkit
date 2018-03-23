@@ -25,6 +25,7 @@ requirements:
     - parmed
     - matplotlib
     - pandas
+    - packaging
 
 about:
   home: https://github.com/openforcefield/openforcefield

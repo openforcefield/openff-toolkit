@@ -30,6 +30,7 @@ import itertools
 import collections
 
 import numpy
+import packaging
 
 import lxml.etree as etree
 
@@ -38,7 +39,7 @@ from simtk.openmm.app import element as elem
 
 from openforcefield.utils import get_data_filename, all_subclasses
 from openforcefield.topology import Topology, ValenceDict, ImproperDict
-from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError # TODO: Get rid of this?
+from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
 #=============================================================================================
 # CONFIGURE LOGGER
@@ -50,33 +51,49 @@ logger = logging.getLogger(__name__)
 # PRIVATE METHODS
 #=============================================================================================
 
+MAX_SUPPORTED_VERION = '1.0' # maximum version of the SMIRNOFF spec supported by this SMIRNOFF forcefield
+
 #=============================================================================================
 # FORCEFIELD
 #=============================================================================================
 
+# QUESTION: Should we process the XML files only when the ForceField is created, or should we be able to read more XML files later?
+
 class ForceField(object):
-    """A ForceField constructs OpenMM System objects based on a Topology.
+    """A factory initialized from a SMIRNOFF force field that constructs OpenMM System objects from corresponding openforcefield Topology objects.
 
     Attributes
     ----------
-    parsers : dict of str : ForceGenerator
+    parsers : dict of str : openforcefield.typing.engines.smirnoff.ForceGenerator
+        Registered list of parsers that will handle forcefield tags.
         parsers[tagname] is the ``ForceGenerator`` that will be called to process XML block ``tagname``
-        All subclasses of ``ForceGenerator`` are automatically registered as available parsers upon instantiation of ``ForceField``.
+        Parsers are registered when the ForceField object is created.
+
     """
 
-    def __init__(self, *files, force_generators=None):
-        """Load one or more XML parameter definition files and create a SMIRNOFF ForceField object based on them.
+    def __init__(self, *files, force_generators=None, disable_version_check=False):
+        """Create a new ForceField object from one or more SMIRNOFF XML parameter definition files.
 
         Parameters
         ----------
         files : list
             A list of XML files defining the SMIRNOFF force field.
-            Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory (for built in force fields), or an open file-like object with a read() method from which the forcefield XML data can be loaded.
+            Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
+            (for built in force fields), or an open file-like object with a read() method from which the forcefield XML data can be loaded.
+            If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
+            with files appearing later in the sequence resulting in parameters that have higher precedence.
+            Support for multiple files is primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
         force_generators : iterable of ForceGenerator classes, optional, default=None
             If not None, the specified set of ForceGenerator objects will be used to parse the XML tags.
             By default, all imported subclasses of ForceGenerator are automatically registered to parse XML tags.
+        disable_version_check : bool, optional, default=False
+            If True, will disable checks against the current highest supported forcefield version.
 
         """
+        self._aromaticity_model = None # denote uninitialized
+
+        self.disable_version_check = disable_version_check
+
         # Load all XML files containing parameter definitions
         self.loadFile(files)
 
@@ -116,6 +133,16 @@ class ForceField(object):
         return parsers
 
     @staticmethod
+    def _raise_xml_exception(node=None, msg=None):
+        if (node is not None):
+            if hasattr(node, 'sourceline'):
+                raise ValueError("Line %s : %s\n%s" % (node.sourceline, str(node), msg))
+            else:
+                raise ValueError("%s\n%s" % (str(node), msg))
+        else:
+            raise Exception(msg)
+
+    @staticmethod
     def _validate_smarts(smarts, node=None, ensure_valence_type=None):
         """Validate the specified SMARTS string can be used to assign forcefield parameters.
 
@@ -136,29 +163,20 @@ class ForceField(object):
            If ``None``, will ensure that it is any one of the above valid valence types.
 
         """
-        def _raise_exception(msg):
-            if (node is not None):
-                if hasattr(node, 'sourceline'):
-                    raise ValueError("Line %s : %s\n%s" % (node.sourceline, str(node), msg))
-                else:
-                    raise ValueError("%s\n%s" % (str(node), msg))
-            else:
-                raise Exception(msg)
-
         # Create a chemical environment to see if this is a valid SMARTS string
         try:
             chemenv = ChemicalEnvironment(smarts)
         except Exception as e:
-            _raise_exception("Error parsing SMARTS '%s' : %s" % (smarts, str(e))
+            self._raise_xml_exception(node, "Error parsing SMARTS '%s' : %s" % (smarts, str(e)))
 
         # Check type, if specified
         ensure_valence_type = chemenv.getType()
         if ensure_valence_type:
             if valence_type != ensure_valence_type:
-                _raise_exception("Tagged atoms in SMARTS string '%s' specifies valence type '%s', expected '%s'." % (smarts, valence_type, ensure_valence_type))
+                self._raise_xml_exception(node, "Tagged atoms in SMARTS string '%s' specifies valence type '%s', expected '%s'." % (smarts, valence_type, ensure_valence_type))
         else:
             if valence_type is None:
-                _raise_exception("Tagged atoms in SMARTS string '%s' did not tag atoms in a way that correctly specifies a valence type." % smarts)
+                self._raise_xml_exception(node, "Tagged atoms in SMARTS string '%s' did not tag atoms in a way that correctly specifies a valence type." % smarts)
 
     @staticmethod
     def _extract_quantity_from_xml_element(node, parent, name, unit_name=None, default=None):
@@ -180,13 +198,7 @@ class ForceField(object):
         """
         # Check for expected attributes
         if (name not in node.attrib):
-            if default is not None:
-                if hasattr(node, 'sourceline'):
-                    raise Exception("Line %d : Expected XML attribute '%s' not found" % (node.sourceline, name))
-                else:
-                    raise Exception("Expected XML attribute '%s' not found" % (name))
-            else:
-                return default
+            self._raise_xml_exception(node, "Expected XML attribute '%s' not found" % (name))
 
         # Most attributes will be converted to floats, but some are strings
         string_names = ['parent_id', 'id']
@@ -202,7 +214,7 @@ class ForceField(object):
             unit_name = name + '_unit'
 
         if unit_name in parent.attrib:
-            # TODO: This is very dangerous.
+            # TODO: This is very dangerous. Replace it with safer scheme from YANK.
             string = '(%s * %s).value_in_unit_system(md_unit_system)' % (node.attrib[name], parent.attrib[unit_name])
             quantity = eval(string, unit.__dict__)
 
@@ -343,6 +355,43 @@ class ForceField(object):
         # Would this create problems for debugging? Maybe we can have an optional `parse_immediately=True` flag?
         self.parseXMLTrees()
 
+    def _parse_version(self, root):
+        """Parse the forcefield version number and make sure it is supported.
+
+        Parameters
+        ----------
+        root : etree.Element
+            The document root
+
+        """
+        if 'version' in root.attrib:
+            version = root.attrib['version']
+            # Use PEP-440 compliant version number comparison, if requested
+            if (not self.disable_version_check) and (packaging.version.parse(version) > packaging.version.parse(MAX_SUPPORTED_VERION)):
+                self._raise_xml_exception(root, 'SMIRNOFF offxml file was written with version %s, but this version of ForceField only supports up to version %s' % (self.version, MAX_SUPPORTED_VERSION))
+        else:
+            self._raise_xml_exception(root, "'version' attribute must be specified in SMIRNOFF tag")
+
+    def _parse_aromaticity_model(self, root):
+        """Parse the aromaticity model, make sure it is supported, and make sure it does not contradict previously-specified aromaticity models.
+
+        Parameters
+        ----------
+        root : etree.Element
+            The document root
+
+        """
+        if not 'aromaticity_model' in root.attrib:
+            self._raise_xml_exception(root, "'aromaticity_model' attribute must be specified in top-level tag")
+
+        aromaticity_model = root.attrib['aromaticity_model']
+
+        if aromaticity_model not in topology.ALLOWED_AROMATICITY_MODELS:
+            self._raise_xml_exception(root, "'aromaticity_model' (%s) must be one of the supported models: " % (aromaticity_model, topology.ALLOWED_AROMATICITY_MODELS))
+
+        if (self._aromaticity_model is not None) and (self._aromaticity_model != aromaticity_model):
+            self._raise_xml_exception(root, "'aromaticity_model' (%s) does not match earlier read 'aromaticity_model' (%s)" % (aromaticity_model, self._aromaticity_model))
+
     def parseXMLTrees(self):
         """
         Initialize all registered ForceGenerator objects by parsing loaded XML files.
@@ -354,43 +403,24 @@ class ForceField(object):
              definitions if the tags are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
 
         """
-
         trees = self._XMLTrees
 
-        # We'll be creating all forces again from scratch by re-parsing
-        self._forces = []
-
-        # Store forcefield version info and, if present, aromaticity model
-        root = trees[0].getroot()
-        # Formerly known as SMIRFF, now SMIRNOFF
-        if root.tag=='SMIRFF' or root.tag=='SMIRNOFF':
-            if 'version' in root.attrib:
-                #TO DO: Should this be a float, a string, or something else?
-                self.version = float(root.attrib['version'])
-            else:
-                self.version = 0.0
-            if 'aromaticity_model' in root.attrib:
-                self._aromaticity_model = root.attrib['aromaticity_model']
-            else:
-                self._aromaticity_model = None
-        else:
-            raise ValueError("Error: ForceField parses a SMIRNOFF forcefield, but this does not appear to be one as the root tag is %s." % root.tag)
+        # Create all ForceGenerator objects from scratch
+        self._forces = list()
 
         # Load force definitions
         for tree in trees:
             root = tree.getroot()
 
-            # Before loading, do some error checking/consistency checking.
-            # Warn if version number is not consistent
-            if 'version' in root.attrib:
-                if float(root.attrib['version']) != self.version:
-                    print("Warning: Inconsistent version number in parsed FFXML files.")
-            # Throw an exception if aromaticity model is not consistent
-            if 'aromaticity_model' in root.attrib:
-                if root.attrib['aromaticity_model'] != self._aromaticity_model:
-                    raise ValueError("Error: Aromaticity model specified in FFXML files is inconsistent.")
+            # Formerly known as SMIRFF, now SMIRNOFF
+            if not root.tag in ['SMIRFF',  'SMIRNOFF']:
+                self._raise_xml_exception(root, "Error: ForceField parses a SMIRNOFF forcefield, but this does not appear to be one as the root tag is %s." % root.tag)
 
-            # Now actually load
+            # Parse attributes from top-level tag
+            self._parse_version(root)
+            self._parse_aromaticity_model(root)
+
+            # Load force parameters using registered parsers
             for child in root:
                 if child.tag in parsers:
                     self.parsers[child.tag].parseElement(child.tag, child, self)

@@ -21,8 +21,15 @@ While designed for [`OpenMM`](http://openmm.org), parameterized systems created 
 
 ## Basic structure
 
-The SMIRNOFF format provides XML `ffxml` files that are parseable by the `ForceField` class of the `openforcefield.typing.smirnoff` module.
-These encode parameters for a force field based on a SMARTS/SMIRKS-based specification of the chemical environment the parameters are to be applied to.
+The SMIRNOFF format provides XML `offxml` files that are parseable by the `ForceField` class of the `openforcefield.typing.smirnoff` module.
+A SMIRNOFF forcefield XML specification always is enclosed in a `<SMIRNOFF>...</SMIRNOFF>` tag, with certain attributes provided.
+```XML
+<SMIRNOFF version="1.0" aromaticity_model="MDL">
+...
+</SMIRNOFF>
+The `version` attributes specifies the version number of the specification this forcefield complies with, and the `aromaticity_model` specifies the aromaticity model used for chemical perception (here, "MDL"; see below).
+
+Within the `<SMIRNOFF>...</SMIRNOFF>` block, top-level tags encode parameters for a force field based on a SMARTS/SMIRKS-based specification describing the chemical environment the parameters are to be applied to.
 The file has tags corresponding to OpenMM force terms (`Bonds`, `Angles`, `TorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example ffxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.offxml)):
 ```XML
 <Angles angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
@@ -418,7 +425,7 @@ Standard usage is expected to rely primarily on the features documented above an
 
 The SMIRNOFF force field format supports versioning via the `version` attribute to the root `<SMIRNOFF>` tag, e.g.:
 ```XML
-<SMIRNOFF version="0.2">
+<SMIRNOFF version="1.0" aromaticity_model="MDL">
 ...
 </SMIRNOFF>
 ```
@@ -491,7 +498,7 @@ In the SMIRNOFF format, these are encoded as:
 
 ### Aromaticity models
 
-Before conduct SMIRKS substructure searches, molecules are prepared using one of the supported aromaticity models, with the default model (`MDL`) used unless otherwise requested.
+Before conduct SMIRKS substructure searches, molecules are prepared using one of the supported aromaticity models, which must be specified with the `aromaticity_model` attribute.
 The only aromaticity model currently widely supported (by both the [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/oechemtk/aromaticity.html) and [RDKit](http://www.rdkit.org/docs/RDKit_Book.html)) is the `MDL` model.
 
 ### Additional plans for future development
