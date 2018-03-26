@@ -1843,10 +1843,11 @@ class PeriodicTorsionGenerator(object):
             for (periodicity, phase, k) in zip(improper.periodicity, improper.phase, improper.k):
                 # Permute non-central atoms
                 others = [ atom_indices[0], atom_indices[2], atom_indices[3] ]
-                for p in itertools.permutations( others ):
-                    force.addTorsion(p[0], atom_indices[1], p[1], p[2], periodicity, phase, k)
-
-        if verbose: print('%d impropers added, each applied in a six-fold manner' % (len(impropers)))
+                #for p in itertools.permutations( others ):
+                #    force.addTorsion(p[0], atom_indices[1], p[1], p[2], periodicity, phase, k)
+                # TEMPORARY DEBUGGING: Don't permute, just add in the order in which they are
+                force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
+        #if verbose: print('%d impropers added, each applied in a six-fold manner' % (len(impropers)))
 
 
 
