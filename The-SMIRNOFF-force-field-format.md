@@ -27,6 +27,7 @@ A SMIRNOFF forcefield XML specification always is enclosed in a `<SMIRNOFF>...</
 <SMIRNOFF version="1.0" aromaticity_model="MDL">
 ...
 </SMIRNOFF>
+```
 The `version` attributes specifies the version number of the specification this forcefield complies with, and the `aromaticity_model` specifies the aromaticity model used for chemical perception (here, "MDL"; see below).
 
 Within the `<SMIRNOFF>...</SMIRNOFF>` block, top-level tags encode parameters for a force field based on a SMARTS/SMIRKS-based specification describing the chemical environment the parameters are to be applied to.
