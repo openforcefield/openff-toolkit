@@ -6,7 +6,7 @@
 This repository contains a number of tools from the [Open Forcefield Consortium](http://github.com/openforcefield) for the development and use of modern molecular mechanics forcefields based on direct chemical perception and parameterized with rigorous statistical methods.
 
 This repository hosts tools that we have committed to stably maintain throughout their lifetimes:
-* The [SMIRks Native Open Force Field (SMIRNOFF)](https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md) direct chemical perception forcefield specification language
+* The [SMIRKS Native Open Force Field (SMIRNOFF)](https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md) direct chemical perception forcefield specification language
 * Tools for direct chemical environment perception and manipulation
 
 ## Installation
@@ -30,7 +30,7 @@ conda install --yes -c conda-forge -c omnia openforcefield
 
 # Tools
 
-## `SMIRNOFF`: SMIRks Native Open Force Field
+## `SMIRNOFF`: SMIRKS Native Open Force Field
 
 This repository houses the SMIRNOFF SMIRKS-based force field format, along with classes to parameterize OpenMM systems given [SMIRNOFF `.offxml` format files](https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md).
 
