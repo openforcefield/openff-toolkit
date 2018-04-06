@@ -1742,10 +1742,10 @@ class PeriodicTorsionGenerator(object):
                     idivf = _extractQuantity(node, parent, 'idivf%d' % index)
                     self.k[-1] /= float(idivf)
                 index += 1
-                # SMIRNOFF applies trefoil (six-fold) impropers unlike AMBER
-                # If it's an improper, divide by the factor of six internally
+                # SMIRNOFF applies trefoil (three-fold, because of right-hand rule) impropers unlike AMBER
+                # If it's an improper, divide by the factor of three internally
                 if node.tag=='Improper':
-                    self.k[-1] /= 6.
+                    self.k[-1] /= 3.
             # Check for errors, i.e. 'phase' instead of 'phase1'
             if len(self.phase)==0:
                raise Exception("Error: Torsion with id %s has no parseable phase entries." % self.pid)
