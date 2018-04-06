@@ -1839,15 +1839,13 @@ class PeriodicTorsionGenerator(object):
             assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
             assert topology._isBonded(atom_indices[1], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[3])
 
-            # Impropers are applied to all six paths around the trefoil
+            # Impropers are applied in three paths around the trefoil having the same handedness
             for (periodicity, phase, k) in zip(improper.periodicity, improper.phase, improper.k):
-                # Permute non-central atoms
                 others = [ atom_indices[0], atom_indices[2], atom_indices[3] ]
-                #for p in itertools.permutations( others ):
-                #    force.addTorsion(p[0], atom_indices[1], p[1], p[2], periodicity, phase, k)
-                # TEMPORARY DEBUGGING: Don't permute, just add in the order in which they are
-                force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
-        #if verbose: print('%d impropers added, each applied in a six-fold manner' % (len(impropers)))
+                force.addTorsion(atom_indices[1], atom_indices[0], atom_indices[2], atom_indices[3], periodicity, phase, k)
+                force.addTorsion(atom_indices[1], atom_indices[2], atom_indices[3], atom_indices[0], periodicity, phase, k)
+                force.addTorsion(atom_indices[1], atom_indices[3], atom_indices[0], atom_indices[2], periodicity, phase, k)
+        if verbose: print('%d impropers added, three per each smirks pattern' % (len(impropers)*3))
 
 
 

@@ -529,6 +529,53 @@ def test_improper(verbose = False):
     if rel_error > 2e-5: #Note that this will not be tiny because we use six-fold impropers and they use a single improper
         raise Exception("Improper torsion energy for benzene differs too much (relative error %.4g) between AMBER and SMIRNOFF." % rel_error )
 
+def test_improper_pyramidal(verbose = False):
+    """Test implement of impropers on ammonia."""
+    from openeye import oeomega
+    from openeye import oequacpac
+    from oeommtools.utils import oemol_to_openmmTop, openmmTop_to_oemol
+    from openforcefield.utils import get_data_filename, extractPositionsFromOEMol
+    # Prepare ammonia
+    mol = oechem.OEMol()
+    oechem.OESmilesToMol(mol, 'N')
+    oechem.OEAddExplicitHydrogens(mol)
+    omega = oeomega.OEOmega()
+    omega.SetMaxConfs(100)
+    omega.SetIncludeInput(False)
+    omega.SetStrictStereo(False)
+    # Generate charges
+    chargeEngine = oequacpac.OEAM1BCCCharges()
+    status = omega(mol)
+    oequacpac.OEAssignCharges(mol, chargeEngine)
+    # Assign atom names
+    oechem.OETriposAtomTypes(mol)
+    oechem.OETriposAtomNames(mol)
+    # Set up minimization
+    ff = ForceField('ammonia_minimal.offxml')
+    topology, positions = oemol_to_openmmTop(mol)
+    system = ff.createSystem(topology, [mol], verbose=verbose)
+    positions = extractPositionsFromOEMol(mol)
+    integrator = openmm.VerletIntegrator(2.0*unit.femtoseconds)
+    simulation = app.Simulation(topology, system, integrator)
+    simulation.context.setPositions(positions)
+    # Minimize energy
+    simulation.minimizeEnergy()
+    state = simulation.context.getState(getEnergy=True, getPositions=True)
+    energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
+    newpositions = state.getPositions()
+    outmol = openmmTop_to_oemol(topology, state.getPositions())
+    # Sum angles around the N atom
+    for atom in outmol.GetAtoms(oechem.OEIsInvertibleNitrogen()):
+        aidx = atom.GetIdx()
+        nbors = list(atom.GetAtoms())
+        ang1 = math.degrees(oechem.OEGetAngle(outmol, nbors[0],atom,nbors[1]))
+        ang2 = math.degrees(oechem.OEGetAngle(outmol, nbors[1],atom,nbors[2]))
+        ang3 = math.degrees(oechem.OEGetAngle(outmol, nbors[2],atom,nbors[0]))
+    ang_sum = math.fsum([ang1,ang2,ang3])
+    # Check that sum of angles around N is within 1 degree of 352
+    if abs(ang_sum-352.) > 1.0:
+        raise Exception("Improper torsion for ammonia differs too much from partly pyramidal geometry having sum of H-N-H angles (3x) at 352 degrees.")
+
 
 def test_MDL_aromaticity(verbose=False):
     """Test support for alternate aromaticity models."""
