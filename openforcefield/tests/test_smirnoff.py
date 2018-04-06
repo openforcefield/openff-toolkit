@@ -576,7 +576,6 @@ def test_improper_pyramidal(verbose = False):
     if abs(ang_sum-352.) > 1.0:
         raise Exception("Improper torsion for ammonia differs too much from partly pyramidal geometry having sum of H-N-H angles (3x) at 352 degrees.")
 
-
 def test_MDL_aromaticity(verbose=False):
     """Test support for alternate aromaticity models."""
     ffxml = StringIO(ffxml_MDL_contents)

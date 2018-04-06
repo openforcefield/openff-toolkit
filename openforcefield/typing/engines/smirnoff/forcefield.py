@@ -1841,7 +1841,6 @@ class PeriodicTorsionGenerator(object):
 
             # Impropers are applied in three paths around the trefoil having the same handedness
             for (periodicity, phase, k) in zip(improper.periodicity, improper.phase, improper.k):
-                others = [ atom_indices[0], atom_indices[2], atom_indices[3] ]
                 force.addTorsion(atom_indices[1], atom_indices[0], atom_indices[2], atom_indices[3], periodicity, phase, k)
                 force.addTorsion(atom_indices[1], atom_indices[2], atom_indices[3], atom_indices[0], periodicity, phase, k)
                 force.addTorsion(atom_indices[1], atom_indices[3], atom_indices[0], atom_indices[2], periodicity, phase, k)
@@ -1894,10 +1893,9 @@ class PeriodicTorsionGenerator(object):
             force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3]], torsion.pid, torsion.smirks) )
         # Add all impropers to the output list
         for (atom_indices, improper) in impropers.items():
-            # Permute non-central atoms
-            others = [ atom_indices[0], atom_indices[2], atom_indices[3] ]
-            for p in itertools.permutations( others ):
-                force_terms.append( ([p[0], atom_indices[1], p[1], p[2]], improper.pid, improper.smirks) )
+            force_terms.append( ([atom_indices[1], atom_indices[0], atom_indices[2], atom_indices[3]], improper.pid, improper.smirks) )
+            force_terms.append( ([atom_indices[1], atom_indices[2], atom_indices[3], atom_indices[0]], improper.pid, improper.smirks) )
+            force_terms.append( ([atom_indices[1], atom_indices[3], atom_indices[0], atom_indices[2]], improper.pid, improper.smirks) )
 
         return force_terms
 
