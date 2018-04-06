@@ -551,7 +551,7 @@ def test_improper_pyramidal(verbose = False):
     oechem.OETriposAtomTypes(mol)
     oechem.OETriposAtomNames(mol)
     # Set up minimization
-    ff = ForceField('ammonia_minimal.offxml')
+    ff = ForceField(get_data_filename('forcefield/ammonia_minimal.offxml'))
     topology, positions = oemol_to_openmmTop(mol)
     system = ff.createSystem(topology, [mol], verbose=verbose)
     positions = extractPositionsFromOEMol(mol)
