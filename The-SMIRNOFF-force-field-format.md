@@ -1,4 +1,4 @@
-# The SMIRks Native Open Force Field (SMIRNOFF) v0.1
+# The SMIRKS Native Open Force Field (SMIRNOFF) v0.1
 
 The SMIRNOFF format is based on the [`OpenMM`](http://openmm.org) [`ForceField`](http://docs.openmm.org/7.0.0/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField) class and provides an XML format for encoding force fields based on [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html)-based chemical perception.
 While designed for [`OpenMM`](http://openmm.org), parameters encoded in this format can be applied to systems and then these systems converted via [`ParmEd`](http://parmed.github.io/ParmEd) and [`InterMol`](https://github.com/shirtsgroup/InterMol) for simulations in a variety of other simulation packages.

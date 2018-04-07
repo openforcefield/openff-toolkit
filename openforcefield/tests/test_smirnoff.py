@@ -526,7 +526,7 @@ def test_improper(verbose = False):
 
     # Check that torsional energies the same to 1 in 10^6
     rel_error = np.abs(( g0['torsion']-g1['torsion'])/ g0['torsion'])
-    if rel_error > 6e-3: #Note that this will not be tiny because we use six-fold impropers and they use a single improper
+    if rel_error > 6e-3: #Note that this will not be tiny because we use three-fold impropers and they use a single improper
         raise Exception("Improper torsion energy for benzene differs too much (relative error %.4g) between AMBER and SMIRNOFF." % rel_error )
 
 def test_improper_pyramidal(verbose = False):
