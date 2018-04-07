@@ -116,8 +116,8 @@ Impropers are applied in the same manner as proper torsions, via `PeriodicTorsio
 ```
 
 **Improper torsions deviate profoundly from AMBER handling of impropers** in two ways.
-First, to eliminate ambiguity, we treat impropers as a [trefoil](https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Trefoil_knot_left.svg/2000px-Trefoil_knot_left.svg.png) and apply the same set of parameters to all six paths around the trefoil.
-*Because of this, all barrier heights are divided by six before we apply them*, for consistency with AMBER force fields. Second, the *second* atom in an improper (in the example above, the trivalent carbon) is the central atom in the trefoil.
+First, to eliminate ambiguity, we treat impropers as a [trefoil](https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Trefoil_knot_left.svg/2000px-Trefoil_knot_left.svg.png) and apply the same set of parameters to all three paths around the trefoil that have the same handedness.
+*Because of this, all barrier heights are divided by three before we apply them*, for consistency with AMBER force fields. Second, the *second* atom in an improper (in the example above, the trivalent carbon) is the central atom in the trefoil.
 
 ### GBSA parameters
 
