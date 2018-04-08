@@ -25,6 +25,8 @@ script:
   - pip install --pre -i https://pypi.anaconda.org/openeye/simple openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
   # Build the recipe
   - conda build devtools/conda-recipe
+  # Use oeommtools for improper test
+  - conda install --yes -c openeye/label/Orion oeommtools -c omnia
   # Install
   - conda install --yes --use-local openforcefield
   # Run tests
