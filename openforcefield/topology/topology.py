@@ -1402,6 +1402,18 @@ class Topology(ChemicalEntity):
         # TODO: Try to construct Topology copy from `other` if specified
         pass
 
+    def assert_bonded(atom1, atom2):
+        """
+        Raise an exception if the specified atoms are not bonded in the topology.
+
+        Parameters
+        ----------
+        atom1, atom2 : openforcefield.topology.Atom
+            The atoms to check to ensure they are bonded
+        """
+        # TODO: Should atom1 and atom2 be int or Atom objects?
+        assert self.is_bonded(atom1, atom2), 'Atoms {} and {} are not bonded in topology'.format(atom1, atom2)
+
     def set_aromaticity_model(self, aromaticity_model):
         """
         Set the aromaticity model applied to all molecules in the topology.
@@ -1938,7 +1950,7 @@ class Topology(ChemicalEntity):
             oe_mol.SetCoords(pos)
             oechem.OESetDimensionFromCoords(oe_mol)
 
-        return oe_mol        
+        return oe_mol
 
     def is_bonded(self, i, j):
         """Returns True of two atoms are bonded

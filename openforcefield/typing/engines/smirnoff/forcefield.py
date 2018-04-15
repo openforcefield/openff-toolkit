@@ -59,8 +59,25 @@ MAX_SUPPORTED_VERION = '1.0' # maximum version of the SMIRNOFF spec supported by
 
 # QUESTION: Should we process the XML files only when the ForceField is created, or should we be able to read more XML files later?
 
+# QUESTION: How should we document private object fields?
+
+# TODO: How do we serialize/deserialize this object?
+
+# TODO: Should we add methods to retrieve string XML representations?
+
+# QUESTION: How should we support other non-XML representations in future?
+
 class ForceField(object):
     """A factory initialized from a SMIRNOFF force field that constructs OpenMM System objects from corresponding openforcefield Topology objects.
+
+    When a ``ForceField`` object is created from one or more specified XML files, all ``ForceGenerator`` subclasses currently imported are identified
+    and registered to handle different sections of the SMIRNOFF forcefield definition file(s). The files are then processed by the generators to populate
+    internal data structures.
+
+    Processing a ``Topology`` object defining a chemical system will then call all ``ForceGenerator`` objects in an order guaranteed to satisfy the
+    declared processing order constraints of each ``ForceGenerator``.
+
+    A programmatic API can be used to modify loaded parameters or write out the new parameter set.
 
     Attributes
     ----------
@@ -90,12 +107,13 @@ class ForceField(object):
             If True, will disable checks against the current highest supported forcefield version.
 
         """
-        self._aromaticity_model = None # denote uninitialized
+        self._aromaticity_model = None # the aromaticity model to use for parsing; denote uninitialized
 
-        self.disable_version_check = disable_version_check
+        self.disable_version_check = disable_version_check # if True, we won't check which SMIRNOFF version number we're parsing
 
         # Load all XML files containing parameter definitions
-        self.loadFile(files)
+        # TODO: We may not store XML files, but instead parse them right away
+        self.load_file(files)
 
         # Register all ForceGenerator objects that will handle SMIRNOFF tags in processing XML files
         if force_generators is None:
@@ -110,6 +128,9 @@ class ForceField(object):
         """
         return copy.deepcopy(self._parsers)
 
+    # TODO: We need to change this to just find all ForceGenerator objects in this file;
+    # otherwise, we can't define two different ForceGenerator subclasses to compare for a new type of energy term
+    # since both will try to register themselves for the same XML tag and an Exception will be raised.
     @staticmethod
     def _find_force_generators():
         """Identify all imported subclasses of ForceGenerator.
@@ -123,6 +144,14 @@ class ForceField(object):
 
     @staticmethod
     def _register_parsers(force_generators):
+        """Register all force generators with their ``_TAGNAME`` tag namesself.
+
+        Parameters
+        ----------
+        force_generators : list of ForceGenerator subclasses
+            The force generators to register.
+
+        """
         parsers = dict()
         for force_generator in force_generators:
             tagname = subclass._TAGNAME
@@ -133,7 +162,17 @@ class ForceField(object):
         return parsers
 
     @staticmethod
-    def _raise_xml_exception(node=None, msg=None):
+    def _raise_parsing_exception(node=None, msg=None):
+        """Raise a ValueError during XML file parsing, printing the source line number to aid debugging if the XML parsing library supports itself.
+
+        Parameters
+        ----------
+        node : lxml.etree.Node like, optional, default=None
+            XML DOM node object, which may optionally have a ``sourceline`` field
+        msg : str, optional, default=None
+            Exception message to include in ValueError
+
+        """
         if (node is not None):
             if hasattr(node, 'sourceline'):
                 raise ValueError("Line %s : %s\n%s" % (node.sourceline, str(node), msg))
@@ -167,16 +206,16 @@ class ForceField(object):
         try:
             chemenv = ChemicalEnvironment(smarts)
         except Exception as e:
-            self._raise_xml_exception(node, "Error parsing SMARTS '%s' : %s" % (smarts, str(e)))
+            self._raise_parsing_exception(node, "Error parsing SMARTS '%s' : %s" % (smarts, str(e)))
 
         # Check type, if specified
         ensure_valence_type = chemenv.getType()
         if ensure_valence_type:
             if valence_type != ensure_valence_type:
-                self._raise_xml_exception(node, "Tagged atoms in SMARTS string '%s' specifies valence type '%s', expected '%s'." % (smarts, valence_type, ensure_valence_type))
+                self._raise_parsing_exception(node, "Tagged atoms in SMARTS string '%s' specifies valence type '%s', expected '%s'." % (smarts, valence_type, ensure_valence_type))
         else:
             if valence_type is None:
-                self._raise_xml_exception(node, "Tagged atoms in SMARTS string '%s' did not tag atoms in a way that correctly specifies a valence type." % smarts)
+                self._raise_parsing_exception(node, "Tagged atoms in SMARTS string '%s' did not tag atoms in a way that correctly specifies a valence type." % smarts)
 
     @staticmethod
     def _extract_quantity_from_xml_element(node, parent, name, unit_name=None, default=None):
@@ -198,7 +237,7 @@ class ForceField(object):
         """
         # Check for expected attributes
         if (name not in node.attrib):
-            self._raise_xml_exception(node, "Expected XML attribute '%s' not found" % (name))
+            self._raise_parsing_exception(node, "Expected XML attribute '%s' not found" % (name))
 
         # Most attributes will be converted to floats, but some are strings
         string_names = ['parent_id', 'id']
@@ -223,7 +262,7 @@ class ForceField(object):
     @staticmethod
     def _check_for_missing_valence_terms(name, topology, assigned_terms, topological_terms):
         """
-        Check to ensure there are no missing valence terms.
+        Check to ensure there are no missing valence terms in the given topology, identifying potential gaps in parameter coverage.
 
         Parameters
         ----------
@@ -283,24 +322,9 @@ class ForceField(object):
             msg += str(topology_set) + '\n'
             msg += 'assigned_set:\n'
             msg += str(assigned_set) + '\n'
-            raise Exception(msg)
+            raise Exception(msg) # TODO: Should we raise a more specific exception here?
 
-    @staticmethod
-    def _assert_bonded(topology, atom1, atom2):
-        """
-        Raise an exception if the specified atoms are not bonded in the topology.
-
-        Parameters
-        ----------
-        topology : openforcefield.topology.Topology
-            The Topology object to check for bonded atoms
-        atom1, atom2 : openforcefield.topology.Atom
-            The atoms to check to ensure they are bonded
-        """
-        assert topology.is_bonded(atom1, atom2), 'Atoms {} and {} are not bonded in topology'.format(atom1, atom2)
-
-
-    def loadFile(self, files):
+    def load_file(self, files):
         """Load a SMIRNOFF XML file and add the definitions from it to this ForceField.
 
         Parameters
@@ -355,6 +379,20 @@ class ForceField(object):
         # Would this create problems for debugging? Maybe we can have an optional `parse_immediately=True` flag?
         self.parseXMLTrees()
 
+    def save_file(self, filename, format="XML"):
+        """Write the current forcefield parameter set to a file.
+
+        Parameters
+        ----------
+        filename : str
+            The name of the file to be written.
+        format : str, optional, default="XML"
+            The format of the file to be written.
+            One of ['XML']
+
+        """
+        raise NotImplementedError('Feature implemented yet.')
+
     def _parse_version(self, root):
         """Parse the forcefield version number and make sure it is supported.
 
@@ -368,9 +406,9 @@ class ForceField(object):
             version = root.attrib['version']
             # Use PEP-440 compliant version number comparison, if requested
             if (not self.disable_version_check) and (packaging.version.parse(version) > packaging.version.parse(MAX_SUPPORTED_VERION)):
-                self._raise_xml_exception(root, 'SMIRNOFF offxml file was written with version %s, but this version of ForceField only supports up to version %s' % (self.version, MAX_SUPPORTED_VERSION))
+                self._raise_parsing_exception(root, 'SMIRNOFF offxml file was written with version %s, but this version of ForceField only supports up to version %s' % (self.version, MAX_SUPPORTED_VERSION))
         else:
-            self._raise_xml_exception(root, "'version' attribute must be specified in SMIRNOFF tag")
+            self._raise_parsing_exception(root, "'version' attribute must be specified in SMIRNOFF tag")
 
     def _parse_aromaticity_model(self, root):
         """Parse the aromaticity model, make sure it is supported, and make sure it does not contradict previously-specified aromaticity models.
@@ -382,15 +420,15 @@ class ForceField(object):
 
         """
         if not 'aromaticity_model' in root.attrib:
-            self._raise_xml_exception(root, "'aromaticity_model' attribute must be specified in top-level tag")
+            self._raise_parsing_exception(root, "'aromaticity_model' attribute must be specified in top-level tag")
 
         aromaticity_model = root.attrib['aromaticity_model']
 
         if aromaticity_model not in topology.ALLOWED_AROMATICITY_MODELS:
-            self._raise_xml_exception(root, "'aromaticity_model' (%s) must be one of the supported models: " % (aromaticity_model, topology.ALLOWED_AROMATICITY_MODELS))
+            self._raise_parsing_exception(root, "'aromaticity_model' (%s) must be one of the supported models: " % (aromaticity_model, topology.ALLOWED_AROMATICITY_MODELS))
 
         if (self._aromaticity_model is not None) and (self._aromaticity_model != aromaticity_model):
-            self._raise_xml_exception(root, "'aromaticity_model' (%s) does not match earlier read 'aromaticity_model' (%s)" % (aromaticity_model, self._aromaticity_model))
+            self._raise_parsing_exception(root, "'aromaticity_model' (%s) does not match earlier read 'aromaticity_model' (%s)" % (aromaticity_model, self._aromaticity_model))
 
     def parseXMLTrees(self):
         """
@@ -414,7 +452,7 @@ class ForceField(object):
 
             # Formerly known as SMIRFF, now SMIRNOFF
             if not root.tag in ['SMIRFF',  'SMIRNOFF']:
-                self._raise_xml_exception(root, "Error: ForceField parses a SMIRNOFF forcefield, but this does not appear to be one as the root tag is %s." % root.tag)
+                self._raise_parsing_exception(root, "Error: ForceField parses a SMIRNOFF forcefield, but this does not appear to be one as the root tag is %s." % root.tag)
 
             # Parse attributes from top-level tag
             self._parse_version(root)
@@ -997,7 +1035,7 @@ class BondGenerator(ForceGenerator):
             particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
             # Ensure atoms are actually bonded correct pattern in Topology
-            _assert_bonded(atoms[0], atoms[1])
+            topology.assert_bonded(atoms[0], atoms[1])
 
             # Compute equilibrium bond length and spring constant.
             if bond.fractional_bondorder is None:
@@ -1069,7 +1107,7 @@ class AngleGenerator(ForceGenerator):
 
             # Ensure atoms are actually bonded correct pattern in Topology
             for (i,j) in [ (0,1), (1,2) ]:
-                _assert_bonded(topology, atoms[i], atoms[j])
+                topology.assert_bonded(atoms[i], atoms[j])
 
             if topology.is_constrained(atoms[0], atoms[1]) and topology.is_constrained(atoms[1], atoms[2]) and topology.is_constrained(atoms[0], atoms[2]):
                 # Angle is constrained; we don't need to add an angle term.
@@ -1136,7 +1174,7 @@ class ProperTorsionGenerator(ForceGenerator):
         for (atoms, torsion) in torsions.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             for (i,j) in [ (0,1), (1,2), (2,3) ]:
-                _assert_bonded(topology, atoms[i], atoms[j])
+                topology.assert_bonded(atoms[i], atoms[j])
 
             for (periodicity, phase, k) in zip(torsion.periodicity, torsion.phase, torsion.k):
                 force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
@@ -1210,7 +1248,7 @@ class ImproperTorsionGenerator(ForceGenerator):
             # Ensure atoms are actually bonded correct pattern in Topology
             # For impropers, central atom is atom 1
             for (i,j) in [ (0,1), (1,2), (1,3) ]:
-                _assert_bonded(topology, atoms[i], atoms[j])
+                topology.assert_bonded(atoms[i], atoms[j])
 
             # Impropers are applied to all six paths around the trefoil
             for (periodicity, phase, k) in zip(improper.periodicity, improper.phase, improper.k):
