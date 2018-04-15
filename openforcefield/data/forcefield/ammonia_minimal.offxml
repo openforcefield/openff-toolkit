@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='ASCII'?>
+<SMIRNOFF version="0.1" aromaticity_model="OEAroModel_MDL">
+  <!-- SMIRNOFF (SMIRKS Native Open Force Field) file -->
+  <Date>Date: Apr. 05, 2018</Date>
+  <Author>V. T. Lim, UC Irvine</Author>
+  <!-- Minimal SMIRNOFF file for testing partly pyramidal geometry of ammonia. -->
+  <!-- This file is meant for processing via openforcefield.typing.engines.smirnoff -->
+  <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
+  <HarmonicBondForce length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
+    <Bond smirks="[#7:1]-[#1:2]" id="b86" k="868.0" length="1.010"/>
+  </HarmonicBondForce>
+  <!-- WARNING: AMBER functional forms drop the factor of 2 in the angle energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
+  <HarmonicAngleForce angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
+    <Angle smirks="[*:1]-[#7X4,#7X3,#7X2-1:2]-[*:3]" angle="109.5" id="a17" k="140.0"/>
+    <Angle smirks="[#1:1]-[#7X4,#7X3,#7X2-1:2]-[*:3]" angle="109.5" id="a18" k="100.0"/>
+  </HarmonicAngleForce>
+  <PeriodicTorsionForce phase_unit="degrees" k_unit="kilocalories_per_mole">
+    <Improper smirks="[#1:1]~[#7X3:2](~[#1:3])~[#1:4]" id="i3" k1="100" periodicity1="2" phase1="150."/>
+  </PeriodicTorsionForce>
+  <!-- WARNING: AMBER formats typically use r_0/2=r_min/2 to describe the relevant distance parameter, where r0 = 2^(1/6)*sigma. The difference is important, and the two conventions can be used here by specifying sigma or rmin_half. -->
+  <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+    <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
+    <Atom smirks="[#1:1]-[#7]" epsilon="0.0157" id="n11" rmin_half="0.6000"/>
+    <Atom smirks="[#7:1]" epsilon="0.1700" id="n20" rmin_half="1.8240"/>
+  </NonbondedForce>
+</SMIRNOFF>

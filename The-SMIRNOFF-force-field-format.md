@@ -335,7 +335,7 @@ U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 **Note that AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
 If the `potential` attribute is omitted, it defaults to `charmm`.
 
-The improper torsion energy is computed as the average over all six impropers in a [trefoil](https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Trefoil_knot_left.svg/2000px-Trefoil_knot_left.svg.png).
+The improper torsion energy is computed as the average over all three impropers (all with the same handedness) in a [trefoil](https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Trefoil_knot_left.svg/2000px-Trefoil_knot_left.svg.png).
 This avoids the dependence on arbitrary atom orderings that occur in more traditional typing engines such as those used in AMBER.
 The *second* atom in an improper (in the example above, the trivalent carbon) is the central atom in the trefoil.
 

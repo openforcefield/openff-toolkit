@@ -1221,11 +1221,10 @@ class ImproperTorsionGenerator(ForceGenerator):
                     idivf = _extract_quantity_from_xml_element(node, parent, 'idivf%d' % index)
                     self.k[-1] /= float(idivf)
                 index += 1
-                # SMIRNOFF applies trefoil (six-fold) impropers unlike AMBER
-                # If it's an improper, divide by the factor of six internally
+                # SMIRNOFF applies trefoil (three-fold, because of right-hand rule) impropers unlike AMBER
+                # If it's an improper, divide by the factor of three internally
                 if node.tag=='Improper':
-                    self.k[-1] /= 6.
-
+                    self.k[-1] /= 3.
             # Check for errors, i.e. 'phase' instead of 'phase1'
             # TODO: What can we do if there is no ``id``?
             if len(self.phase)==0:
@@ -1250,12 +1249,12 @@ class ImproperTorsionGenerator(ForceGenerator):
             for (i,j) in [ (0,1), (1,2), (1,3) ]:
                 topology.assert_bonded(atoms[i], atoms[j])
 
-            # Impropers are applied to all six paths around the trefoil
+            # Impropers are applied in three paths around the trefoil having the same handedness
             for (periodicity, phase, k) in zip(improper.periodicity, improper.phase, improper.k):
                 # Permute non-central atoms
                 others = [ atom_indices[0], atom_indices[2], atom_indices[3] ]
-                for p in itertools.permutations( others ):
-                    force.addTorsion(p[0], atom_indices[1], p[1], p[2], periodicity, phase, k)
+                for p in [ (others[i], others[j], others[k]) for (i,j,k) in [(0,1,2), (1,2,0), (2,0,1)] ]
+                    force.addTorsion(atom_indices[1], p[0], p[1], p[2], periodicity, phase, k)
 
         logger.info('{} impropers added, each applied in a six-fold trefoil' % (len(impropers)))
 
