@@ -5,11 +5,11 @@
 #=============================================================================================
 
 """
-Representation of molecular topologies.
+Representation of particles, atoms, and virtual sites.
 
 .. todo::
 
-   * Make all classes (like Particle, Atom, VirtualSite) hashable
+   * Make all classes (like Particle, Atom, VirtualSite) hashable and serializable
    * Use class boilerplate suggestion from Kyle?
 
 """

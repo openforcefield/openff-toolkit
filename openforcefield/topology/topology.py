@@ -9,7 +9,7 @@ Representation of molecular topologies.
 
 .. todo::
 
-   * Make all classes (like Particle, Atom, VirtualSite) hashable
+   * Make all classes (like Particle, Atom, VirtualSite) hashable and serializable.
    * Use class boilerplate suggestion from Kyle?
 
 """

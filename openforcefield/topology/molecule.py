@@ -9,6 +9,7 @@ Representation of molecular chemical entities.
 
 .. todo::
 
+   * Make all classes (like Particle, Atom, VirtualSite) hashable and serializable.
    * Use class boilerplate suggestion from Kyle?
 
 """
@@ -146,6 +147,61 @@ def _getSMARTSMatches_OEMol(oemol, smarts, aromaticity_model=None):
 # TOPOLOGY OBJECFTS
 #=============================================================================================
 
+
+class Bond(object):
+    """
+    Chemical bond representation.
+
+    Attributes
+    ----------
+    atom1, atom2 : Atom
+        Atoms involved in the bond
+    bondtype : int
+        Discrete bond type representation for the Open Forcefield aromaticity model
+        TODO: Do we want to pin ourselves to a single standard aromaticity model?
+    type : str
+        String based bond type
+    order : int
+        Integral bond order
+    fractional_bondorder : float, optional
+        Fractional bond order, or None.
+
+    """
+    def __init__(self, atom1, atom2, bondtype, fractional_bondorder=None):
+        """
+        Create a new chemical bond.
+        """
+        # TODO: Make sure atom1 and atom2 are both Atom types
+        self._atom1 = atom1
+        self._atom2 = atom2
+        self._type = bondtype
+        self._fractional_bondorder = fractional_bondorder
+
+    # TODO: add getters for each of these bond properties
+
+    @property
+    def atom1(self):
+        return self._atom1
+
+    @property
+    def atom2(self):
+        return self._atom2
+
+    @property
+    def atoms(self):
+        return (self._atom1, self._atom2)
+
+    def type(self):
+        return self._type
+
+    @property
+    def fractional_bondorder(self):
+        return self._fractional_bondorder
+
+    @fractional_bondorder.setter
+    def fractional_bondorder(self, value):
+        self._fractional_bondorder = value
+        
 # TODO: Should this be a mixin?
 class ChemicalEntity(object):
     """
