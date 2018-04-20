@@ -18,6 +18,9 @@ with contributions from John Chodera, Memorial Sloan Kettering Cancer Center
 and David Mobley, UC Irvine.
 
 """
+
+# QUESTION: should we ditch camelCase and go with PEP8 standard snake_case?
+
 #==============================================================================
 # GLOBAL IMPORTS
 #==============================================================================
@@ -25,9 +28,6 @@ and David Mobley, UC Irvine.
 import networkx as nx
 import re
 import copy
-
-import openeye.oechem
-from openeye.oechem import *
 
 import numpy as np
 from numpy import random
@@ -156,8 +156,8 @@ class ChemicalEnvironment(object):
     class Atom(object):
         """Atom representation, which may have some ORtypes and ANDtypes properties.
 
-        Properties
-        -----------
+        Attributes
+        ----------
         ORtypes : list of tuples in the form (base, [list of decorators])
             where bases and decorators are both strings
             The descriptor types that will be combined with logical OR
@@ -321,8 +321,9 @@ class ChemicalEnvironment(object):
 
     class Bond(Atom):
         """Bond representation, which may have ORtype and ANDtype descriptors.
-        Properties
-        -----------
+
+        Attributes
+        ----------
         ORtypes : list of tuples of ORbases and ORdecorators
             in form (base: [list of decorators])
             The ORtype types that will be combined with logical OR
@@ -519,12 +520,13 @@ into ChemicalEnvironments." % smirks)
         Returns if the atom is valid, that is if it
         creates a parseable SMIRKS string.
         """
-        qmol = OEQMol()
+        from openeye import oechem
+        qmol = oechem.OEQMol()
         if smirks is None:
             smirks = self._asSMIRKS()
         if self.replacements is not None:
-            smirks = OESmartsLexReplace(smirks, self.replacements)
-        return OEParseSmarts(qmol, smirks)
+            smirks = oechem.OESmartsLexReplace(smirks, self.replacements)
+        return oechem.OEParseSmarts(qmol, smirks)
 
     def _parse_smirks(self,input_smirks):
         """
@@ -787,8 +789,8 @@ into ChemicalEnvironments." % smirks)
     def selectAtom(self, descriptor = None):
         """Select a random atom fitting the descriptor.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         descriptor: optional, None
             None - returns any atom with equal probability
             int - will return an atom with that index
@@ -870,8 +872,8 @@ into ChemicalEnvironments." % smirks)
     def selectBond(self, descriptor = None):
         """Select a random bond fitting the descriptor.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         descriptor: optional, None
             None - returns any bond with equal probability
             int - will return an bond with that index
@@ -1015,7 +1017,7 @@ into ChemicalEnvironments." % smirks)
 
     def getBonds(self, atom = None):
         """
-        Parameter
+        Parameters
         ----------
         atom: Atom object, optional, returns bonds connected to atom
         returns all bonds in fragment if atom is None
@@ -1174,6 +1176,8 @@ into ChemicalEnvironments." % smirks)
         else:
             return component._bond_type == -1
 
+    # TODO: We may want to overhaul ChemicalEnvironment.getType() to return one of ['atom', 'bond', 'angle', 'proper', 'improper']
+    # and check to make sure the expected connectivity is represented in the SMIRKS expression.
     def getType(self):
         """
         Uses number of indexed atoms and bond connectivity
@@ -1182,14 +1186,14 @@ into ChemicalEnvironments." % smirks)
         Returns
         -------
         chemical environemnt type:
-            'VdW', 'Bond', 'Angle', 'Torsion', 'Improper'
+            'Atom', 'Bond', 'Angle', 'ProperTorsion', 'ImproperTorsion'
             None if number of indexed atoms is 0 or > 4
         """
         index_atoms = self.getIndexedAtoms()
         natoms = len(index_atoms)
 
         if natoms == 1:
-            return "VdW"
+            return "Atom"
         if natoms == 2:
             return "Bond"
         if natoms == 3:
@@ -1199,8 +1203,8 @@ into ChemicalEnvironments." % smirks)
             atom4 = self.selectAtom(4)
             bond24 = self.getBond(atom2, atom4)
             if bond24 != None:
-                return "Improper"
-            return "Torsion"
+                return "ImproperTorsion"
+            return "ProperTorsion"
         else:
             return None
 
@@ -1262,7 +1266,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
         self.atom1 = self.selectAtom(1)
 
     def _checkType(self):
-        return (self.getType() == 'VdW'), 'VdW'
+        return (self.getType() == 'Atom'), 'Atom'
 
     def asSMIRKS(self, smarts = False):
         """
@@ -1408,4 +1412,3 @@ class ImproperChemicalEnvironment(AngleChemicalEnvironment):
 
     def _checkType(self):
         return (self.getType() == 'Improper'), 'Improper'
-
