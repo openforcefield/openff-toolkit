@@ -121,9 +121,9 @@ def _convert_embedded_SMIRKS(smirks):
             embedded = embedded[2:]
 
         else: # embedded starts with a "no bracket" atom such as 'C'
+            embedded = embedded[1:] # remove leading '('
             # atoms by symbol don't need brackets, this covers atomic symbols and aromatic atoms
             no_bracket = r'(!?[A-Z][a-z]?|!?[cnops])'
-            embedded = embedded[1:] # remove leading '('
             match = re.match(no_bracket, embedded)
             if match is not None:
                 new_atom = atom[:d]+embedded[:match.end()]+atom[p_out+1:]
