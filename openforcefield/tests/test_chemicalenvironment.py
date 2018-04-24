@@ -93,7 +93,8 @@ class TestChemicalEnvironments(TestCase):
                 [ "[#6$([#6X4](~[$ewg1])(~[#8]~[#1])):1]1=CCCC1", 'Atom', AtomChemicalEnvironment],
                 [ "[*:1]-[#7X3:2](-[#6a$(*1ccc(-[#8-1X1])cc1):3])-[*:4]", 'ImproperTorsion', ImproperChemicalEnvironment],
                 [ "[#6X4:1]1~[*:2]~[*$(*~[#1]):3]1", 'Angle', AngleChemicalEnvironment],
-                [ "[$([#7]1~[#6]-CC1)]", None, ChemicalEnvironment]
+                [ "[$([#7]1~[#6]-CC1)]", None, ChemicalEnvironment],
+                [ "[$(c1ccccc1)]", None, ChemicalEnvironment],
                 ]
 
         for [smirks, checkType, chemEnv] in smirksList:

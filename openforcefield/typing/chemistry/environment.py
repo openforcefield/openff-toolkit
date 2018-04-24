@@ -121,13 +121,8 @@ def _convert_embedded_SMIRKS(smirks):
             embedded = embedded[2:]
 
         else: # embedded starts with a "no bracket" atom such as 'C'
-            # covers element symbols, i.e. N,C,O,Br not followed by a number
-            element_sym = "!?[A-Z][a-z]?"
-            # covers element symbols that are aromatic:
-            aro_sym = "!?[cnops]"
-            # replacement strings
-            replace_str = "\$\w+"
-            no_bracket = r'('+'|'.join([element_sym, aro_sym, replace_str])+')'
+            # atoms by symbol don't need brackets, this covers atomic symbols and aromatic atoms
+            no_bracket = r'(!?[A-Z][a-z]?|!?[cnops])'
             embedded = embedded[1:] # remove leading '('
             match = re.match(no_bracket, embedded)
             if match is not None:
@@ -554,6 +549,7 @@ into ChemicalEnvironments." % smirks)
             smirks = self._asSMIRKS()
         if self.replacements is not None:
             smirks = oechem.OESmartsLexReplace(smirks, self.replacements)
+            print("replaced SMIRKS", smirks)
         return oechem.OEParseSmarts(qmol, smirks)
 
     def _parse_smirks(self,input_smirks):
