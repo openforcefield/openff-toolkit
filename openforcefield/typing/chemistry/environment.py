@@ -79,7 +79,6 @@ def _convert_embedded_SMIRKS(smirks):
     new_smirks = _convert_embedded_SMIRKS(initial_smirks)
     # new_smirks = [#1:1]~[#6]
     """
-    print('input smirks', smirks)
     a_out = 0
     while smirks.find('$(') != -1:
         # Find first atom
@@ -98,13 +97,12 @@ def _convert_embedded_SMIRKS(smirks):
 
         # Check for ring index, i.e. the 1s in "[#6:1]1-CCCCC1"
         match = re.match(r'(\d+)',post_smirks)
-        print('looking for a ring in embedded', post_smirks)
         if match is not None: # leftover starts with int
-            print('Found ring in embedded conversion', post_smirks)
-            ring = re.findall(r'(\d+)',post_smirks)[0]
-            leftover = post_smirks[match.end():]
+            ring_out = re.findall(r'(\d+)',post_smirks)[0]
+            # update post_smirks
+            post_smirks = post_smirks[match.end():]
         else:
-            ring = ''
+            ring_out = ''
 
         embedded, p_in, p_out = _find_embedded_brackets(atom, '\(', '\)')
         # two forms of embedded strings $(*~stuff) or $([..]~stuff)
@@ -113,19 +111,44 @@ def _convert_embedded_SMIRKS(smirks):
             first, f_in, f_out = _find_embedded_brackets(embedded, '\[','\]')
             first = _convert_embedded_SMIRKS(first)
             new_atom = atom[:d]+first[1:-1]+atom[p_out+1:]
-            embedded = '('+embedded[f_out+1:]
+            embedded = embedded[f_out+1:]
             # if embedded is empty between brackets, remove it
             if embedded.replace('(','').replace(')','') == '':
                 embedded = ''
 
-        else: # embedded[1] = *
+        elif embedded[1] == '*': # embedded[1] = *
             new_atom = atom[:d]+atom[p_out+1:]
-            embedded = '('+embedded[2:]
+            embedded = embedded[2:]
+
+        else: # embedded starts with a "no bracket" atom such as 'C'
+            # covers element symbols, i.e. N,C,O,Br not followed by a number
+            element_sym = "!?[A-Z][a-z]?"
+            # covers element symbols that are aromatic:
+            aro_sym = "!?[cnops]"
+            # replacement strings
+            replace_str = "\$\w+"
+            no_bracket = r'('+'|'.join([element_sym, aro_sym, replace_str])+')'
+            embedded = embedded[1:] # remove leading '('
+            match = re.match(no_bracket, embedded)
+            if match is not None:
+                new_atom = atom[:d]+embedded[:match.end()]+atom[p_out+1:]
+                embedded = embedded[match.end():]
+            else:
+                new_atom = atom[:d]+atom[p_out+1]
+
+        # Look for ring insided embedded SMIRKS "[#6$(*1CCC1)]"
+        match = re.match(r'(\d+)', embedded)
+        if match is not None: # embedded starts with an int
+            ring_in = re.findall(r'(\d+)', embedded)[0]
+            embedded = '(' + embedded[match.end():]
+        else:
+            ring_in = ''
+            if embedded != '':
+                embedded = '(' + embedded
 
         # Make new smirks
-        smirks = pre_smirks+new_atom+ring+embedded+post_smirks
+        smirks = pre_smirks+new_atom+ring_out+ring_in+embedded+post_smirks
 
-    print('returning smirks', smirks)
     return smirks
 
 def _remove_blanks_repeats(init_list, remove_list = ['']):
@@ -569,7 +592,6 @@ into ChemicalEnvironments." % smirks)
         # Check for ring index, i.e. the 1s in "[#6:1]1-CCCCC1"
         match = re.match(r'(\d+)',leftover)
         if match is not None: # leftover starts with int
-            print("Found a ring in ", leftover)
             ring = re.findall(r'(\d+)',leftover)[0]
             leftover = leftover[match.end():]
         else:
@@ -582,7 +604,6 @@ into ChemicalEnvironments." % smirks)
         atoms[idx] = new_atom
 
         while len(leftover) > 0:
-            print(leftover)
             idx += 1
 
             # Check for branching
@@ -608,7 +629,6 @@ into ChemicalEnvironments." % smirks)
             bond_split = re.split(self.no_bracket_atom_reg, bond_string)
             # Next atom is not in brackets for example C in "[#7:1]-C"
             if len(bond_split) > 1:
-                print('found no bracket atom', bond_split)
                 bond_string = bond_split[0]
                 atom_string = '['+bond_split[1]+']'
                 # update leftover for this condition
@@ -1392,7 +1412,7 @@ class TorsionChemicalEnvironment(AngleChemicalEnvironment):
         self.bond3 = self._graph_get_edge_data(self.atom3, self.atom4)['bond']
 
     def _checkType(self):
-        return (self.getType() == 'Torsion'), 'Torsion'
+        return (self.getType() == 'ProperTorsion'), 'ProperTorsion'
 
 class ImproperChemicalEnvironment(AngleChemicalEnvironment):
     """Chemical environment matching four marked atoms (improper).
@@ -1417,4 +1437,4 @@ class ImproperChemicalEnvironment(AngleChemicalEnvironment):
         self.bond3 = self._graph_get_edge_data(self.atom2, self.atom4)['bond']
 
     def _checkType(self):
-        return (self.getType() == 'Improper'), 'Improper'
+        return (self.getType() == 'ImproperTorsion'), 'ImproperTorsion'
