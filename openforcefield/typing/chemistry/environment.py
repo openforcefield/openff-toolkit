@@ -421,7 +421,7 @@ class ChemicalEnvironment(object):
             orderList = [orderDict[base] for (base, decor) in self.ORtypes]
             return min(orderList)
 
-    def __init__(self, smirks = None, label = None, replacements = None):
+    def __init__(self, smirks = None, label = None, replacements = None, toolkit='openeye'):
         """Initialize a chemical environment abstract base class.
 
         smirks = string, optional
@@ -433,6 +433,22 @@ class ChemicalEnvironment(object):
         replacements = list of lists, optional,
             [substitution, smarts] form for parsing SMIRKS
         """
+        if toolkit.lower() == 'openeye':
+            try:
+                from openeye import oechem
+                print('I found openeye')
+                self.toolkit = 'openeye'
+            except:
+                raise Exception("Could not import openeye.oechem")
+        elif toolkit.lower() == 'rdkit':
+            try:
+                from rdkit import Chem
+                self.toolkit = 'rdkit'
+            except:
+                raise Exception("Could not import rdkit.Chem")
+        else:
+            raise Exception("Toolkit %s was not recognized, please use openeye or rdkit" % toolkit)
+
         # Define the regular expressions used for all SMIRKS decorators
         # There are a limited number of descriptors for smirks string they are:
         # That is a # followed by one or more ints w/or w/o at ! in front '!#16'
@@ -540,16 +556,35 @@ into ChemicalEnvironments." % smirks)
 
     def isValid(self, smirks = None):
         """
+        Returns if the environment is valid, that is if it
+        creates a parseable SMIRKS string.
+        """
+        if smirks is None:
+            smirks = self._asSMIRKS()
+        if self.toolkit == 'openeye':
+            return self._oe_isValid(smirks)
+        elif self.toolkit == 'rdkit':
+            return self._rdk_isValid(smirks)
+        else:
+            raise Exception("Could not import openeye.oechem or rdkit.Chem")
+
+    def _rdk_isValid(self, smirks):
+        from rdkit import Chem
+        if self.replacements is not None:
+            for substring, replace_with in self.replacements:
+                smirks = smirks.replace(substring, '('+replace_with+')')
+        ss = Chem.MolFromSmarts(smirks)
+        return ss is not None
+
+    def _oe_isValid(self, smirks):
+        """
         Returns if the atom is valid, that is if it
         creates a parseable SMIRKS string.
         """
         from openeye import oechem
         qmol = oechem.OEQMol()
-        if smirks is None:
-            smirks = self._asSMIRKS()
         if self.replacements is not None:
             smirks = oechem.OESmartsLexReplace(smirks, self.replacements)
-            print("replaced SMIRKS", smirks)
         return oechem.OEParseSmarts(qmol, smirks)
 
     def _parse_smirks(self,input_smirks):
@@ -1260,7 +1295,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching one labeled atom.
 
     """
-    def __init__(self, smirks = "[*:1]", label = None, replacements = None):
+    def __init__(self, smirks = "[*:1]", label = None, replacements = None, toolkit='openeye'):
         """Initialize a chemical environment corresponding to matching a single atom.
 
         Parameters
@@ -1280,7 +1315,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
             # prints: "[#6,#7,#8;+0:1]"
         """
         # Initialize base class
-        super(AtomChemicalEnvironment,self).__init__(smirks, label, replacements)
+        super(AtomChemicalEnvironment,self).__init__(smirks, label, replacements, toolkit)
         correct, expected = self._checkType()
         if not correct:
             assigned = self.getType()
@@ -1329,7 +1364,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
 class BondChemicalEnvironment(AtomChemicalEnvironment):
     """Chemical environment matching two labeled atoms (or a bond).
     """
-    def __init__(self, smirks = "[*:1]~[*:2]", label = None, replacements = None):
+    def __init__(self, smirks = "[*:1]~[*:2]", label = None, replacements = None, toolkit='openeye'):
         """Initialize a chemical environment corresponding to matching two atoms (bond).
 
         Parameters
@@ -1344,7 +1379,7 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
 
         """
         # Initialize base class
-        super(BondChemicalEnvironment,self).__init__(smirks, label, replacements)
+        super(BondChemicalEnvironment,self).__init__(smirks, label, replacements, toolkit)
 
         # Add initial atom
         self.atom2 = self.selectAtom(2)
@@ -1359,7 +1394,7 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
 class AngleChemicalEnvironment(BondChemicalEnvironment):
     """Chemical environment matching three marked atoms (angle).
     """
-    def __init__(self, smirks = "[*:1]~[*:2]~[*:3]", label = None, replacements = None):
+    def __init__(self, smirks = "[*:1]~[*:2]~[*:3]", label = None, replacements = None, toolkit='openeye'):
 
         """Initialize a chemical environment corresponding to matching three atoms.
 
@@ -1374,7 +1409,7 @@ class AngleChemicalEnvironment(BondChemicalEnvironment):
             [substitution, smarts] form for parsing SMIRKS
         """
         # Initialize base class
-        super(AngleChemicalEnvironment,self).__init__(smirks, label, replacements)
+        super(AngleChemicalEnvironment,self).__init__(smirks, label, replacements, toolkit)
 
         # Add initial atom
         self.atom3 = self.selectAtom(3)
@@ -1386,7 +1421,7 @@ class AngleChemicalEnvironment(BondChemicalEnvironment):
 class TorsionChemicalEnvironment(AngleChemicalEnvironment):
     """Chemical environment matching four marked atoms (torsion).
     """
-    def __init__(self, smirks = "[*:1]~[*:2]~[*:3]~[*:4]", label = None, replacements = None):
+    def __init__(self, smirks = "[*:1]~[*:2]~[*:3]~[*:4]", label = None, replacements = None, toolkit='openeye'):
         """Initialize a chemical environment corresponding to matching four atoms (torsion).
 
         Parameters
@@ -1401,7 +1436,7 @@ class TorsionChemicalEnvironment(AngleChemicalEnvironment):
             [substitution, smarts] form for parsing SMIRKS
         """
         # Initialize base class
-        super(TorsionChemicalEnvironment,self).__init__(smirks, label, replacements)
+        super(TorsionChemicalEnvironment,self).__init__(smirks, label, replacements, toolkit)
 
         # Add initial atom
         self.atom4 = self.selectAtom(4)
@@ -1413,7 +1448,7 @@ class TorsionChemicalEnvironment(AngleChemicalEnvironment):
 class ImproperChemicalEnvironment(AngleChemicalEnvironment):
     """Chemical environment matching four marked atoms (improper).
     """
-    def __init__(self, smirks = "[*:1]~[*:2](~[*:3])~[*:4]", label = None, replacements = None):
+    def __init__(self, smirks = "[*:1]~[*:2](~[*:3])~[*:4]", label = None, replacements = None, toolkit='openeye'):
         """Initialize a chemical environment corresponding four atoms (improper).
 
         Parameters
@@ -1426,7 +1461,7 @@ class ImproperChemicalEnvironment(AngleChemicalEnvironment):
             could be a string, int, or float, or anything
         """
         # Initialize base class
-        super(ImproperChemicalEnvironment,self).__init__(smirks, label, replacements)
+        super(ImproperChemicalEnvironment,self).__init__(smirks, label, replacements, toolkit)
 
         # Add initial atom
         self.atom4 = self.selectAtom(4)

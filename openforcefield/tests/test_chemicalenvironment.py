@@ -97,11 +97,12 @@ class TestChemicalEnvironments(TestCase):
                 [ "[$(c1ccccc1)]", None, ChemicalEnvironment],
                 ]
 
-        for [smirks, checkType, chemEnv] in smirksList:
-            env = chemEnv(smirks = smirks, replacements = replacements)
-            Type = env.getType()
-            self.assertEqual(Type,checkType,
-                    "SMIRKS (%s) clasified as %s instead of %s" % (smirks, Type, checkType))
+        for toolkit in ['openeye', 'rdkit']:
+            for [smirks, checkType, chemEnv] in smirksList:
+                env = chemEnv(smirks = smirks, replacements = replacements, toolkit=toolkit)
+                Type = env.getType()
+                self.assertEqual(Type,checkType,
+                        "SMIRKS (%s) clasified as %s instead of %s using %s toolkit" % (smirks, Type, checkType, toolkit))
 
     def test_environment_functions(self):
         """
