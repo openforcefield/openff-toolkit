@@ -85,7 +85,7 @@ class TestChemicalEnvironments(TestCase):
                 [ "[#6&X4&H0:1](-[#1])-[#6&X4:2]-[#6&X4&H0:3](-[#1])-[#6&X4:4]", 'ProperTorsion', TorsionChemicalEnvironment],
                 [ "[#1:1]-[#6&X4:2](-[#8:3])-[#1:4]", 'ImproperTorsion', ImproperChemicalEnvironment],
                 [ "[#1:1]-[#6&X4:2](-[#8:3])-[*:4](-[#6&H1])-[#8:5]", None, ChemicalEnvironment],
-                [ "[#6$(*~[#6]=[#8])$(*-,=$ewg2)]", None, ChemicalEnvironment],
+                [ "[#6$(*~[#6]=[#8])$(*-,=[$ewg2,#7])]", None, ChemicalEnvironment],
                 [ "CCC", None, ChemicalEnvironment],
                 [ "[#6:1]1(-;!@[#1,#6])=;@[#6]-;@[#6]1", 'Atom', ChemicalEnvironment],
                 [ "C(O-[#7,#8])CC=[*]", None, ChemicalEnvironment],
