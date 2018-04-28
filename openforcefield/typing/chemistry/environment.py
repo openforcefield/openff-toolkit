@@ -436,7 +436,6 @@ class ChemicalEnvironment(object):
         if toolkit.lower() == 'openeye':
             try:
                 from openeye import oechem
-                print('I found openeye')
                 self.toolkit = 'openeye'
             except:
                 raise Exception("Could not import openeye.oechem")
@@ -491,7 +490,7 @@ class ChemicalEnvironment(object):
             # Check that it is a valid SMIRKS
             if not self.isValid(smirks):
                 raise SMIRKSParsingError("Error Provided SMIRKS ('%s') was \
-not parseable with OpenEye tools" % smirks)
+not parseable with %s tools" % (smirks, self.toolkit))
 
             # Check for SMIRKS not supported by Chemical Environments
             if smirks.find('.') != -1:
@@ -574,6 +573,8 @@ into ChemicalEnvironments." % smirks)
             for substring, replace_with in self.replacements:
                 smirks = smirks.replace(substring, '('+replace_with+')')
         ss = Chem.MolFromSmarts(smirks)
+        if ss is None:
+            print(smirks, 'not parsed')
         return ss is not None
 
     def _oe_isValid(self, smirks):
