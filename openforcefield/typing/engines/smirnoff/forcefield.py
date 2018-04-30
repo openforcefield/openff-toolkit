@@ -1679,7 +1679,7 @@ class PeriodicTorsionGenerator(object):
             try:
                 chemenv = ChemicalEnvironment(self.smirks)
                 thistype = chemenv.getType()
-                if thistype != 'Torsion':
+                if thistype != 'ProperTorsion':
                     raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Proper'))
             except SMIRKSParsingError:
                 print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
@@ -1721,7 +1721,7 @@ class PeriodicTorsionGenerator(object):
             try:
                 chemenv = ChemicalEnvironment(self.smirks)
                 thistype = chemenv.getType()
-                if thistype != 'Improper':
+                if thistype != 'ImproperTorsion':
                     raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Improper'))
             except SMIRKSParsingError:
                 print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
