@@ -1135,6 +1135,16 @@ class ProperTorsionGenerator(ForceGenerator):
             self.phase = list()
             self.k = list()
 
+            # Check that the SMIRKS pattern matches the type it's supposed to
+            try:
+                chemenv = ChemicalEnvironment(self.smirks)
+                thistype = chemenv.getType()
+                if thistype != 'ProperTorsion':
+                    raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Proper'))
+            except SMIRKSParsingError:
+                print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
+
+
             # TODO: Fractional bond orders should be processed on the per-force basis instead of per-bond basis
             if 'fractional_bondorder_method' in parent.attrib:
                 self.fractional_bondorder = parent.attrib['fractional_bondorder']
@@ -1200,7 +1210,7 @@ class ImproperTorsionGenerator(ForceGenerator):
             try:
                 chemenv = ChemicalEnvironment(self.smirks)
                 thistype = chemenv.getType()
-                if thistype != 'Improper':
+                if thistype != 'ImproperTorsion':
                     raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Improper'))
             except SMIRKSParsingError:
                 print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))

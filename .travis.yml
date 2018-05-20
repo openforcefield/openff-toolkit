@@ -22,6 +22,8 @@ script:
   # Install OpenEye toolkit
   # Use beta version for partial bond orders
   - pip install --pre -i https://pypi.anaconda.org/openeye/simple openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
+  # Install RDKit
+  - conda install --yes -c rdkit rdkit
   # Build the recipe
   - conda build devtools/conda-recipe
   # Use oeommtools for improper test
@@ -34,7 +36,6 @@ script:
 
 env:
   matrix:
-    - python=2.7  CONDA_PY=27
     - python=3.5  CONDA_PY=35
     - python=3.6  CONDA_PY=36
 
