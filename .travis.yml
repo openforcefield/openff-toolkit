@@ -1,55 +1,75 @@
 language: python
-sudo: false
 
-branches:
-  only:
-    - master
+# Run jobs on container-based infrastructure, can be overridden per job
+dist: trusty
+
+matrix:
+  include:
+    # Test osx with RDKit
+    - os: osx
+      language: generic
+      env: PYTHON_VER=3.5 RDKIT=true
+    - os: osx
+      language: generic
+      env: PYTHON_VER=3.6 RDKIT=true
+
+    # Test RDKit compatibility
+    - os: linux
+      python: 3.5
+      env: PYTHON_VER=3.5 RDKIT=true
+    - os: linux
+      python: 3.6
+      env: PYTHON_VER=3.6 RDKIT=true
+
+    # Test OpenEye compatibility
+    - os: linux
+      python: 3.5
+      env: PYTHON_VER=3.5 OPENEYE=true
+    - os: linux
+      python: 3.6
+      env: PYTHON_VER=3.6 OPENEYE=true
+
+    # Test case where both OpenEye and RDKit are installed
+    - os: linux
+      python: 3.6
+      env: PYTHON_VER=3.5 OPENEYE=true RDKIT=true
+
+before_install:
+    # Additional info about the build
+  - uname -a
+  - df -h
+  - ulimit -a
+
+    # Install the Python environemt
+  - source devtools/travis-ci/before_install.sh
+  - python -V
+  # Unpack encrypted OpenEye license file
+  - if [[ "$OPENEYE" == true && "$TRAVIS_SECURE_ENV_VARS" == true ]]; then openssl aes-256-cbc -K $encrypted_5f58236b8908_key -iv $encrypted_5f58236b8908_iv -in oe_license.txt.enc -out $OE_LICENSE -d; fi
+  - if [[ "$OPENEYE" == true && "$TRAVIS_SECURE_ENV_VARS" == false ]]; then echo "OpenEye license will not be installed in forks."; fi
 
 install:
-  - source devtools/travis-ci/install.sh
-  - export PYTHONUNBUFFERED=true
-  # Unpack encrypted OpenEye license file
-  - if [ "$TRAVIS_SECURE_ENV_VARS" == true ]; then openssl aes-256-cbc -K $encrypted_5f58236b8908_key -iv $encrypted_5f58236b8908_iv -in oe_license.txt.enc -out $OE_LICENSE -d; fi
-  - if [ "$TRAVIS_SECURE_ENV_VARS" == false ]; then echo "OpenEye license will not be installed in forks."; fi
+  # Create test environment for package
+  - conda create -n test python=$PYTHON_VER pip pytest pytest-cov
+  - source activate test
+
+  # Use beta version for partial bond orders
+  - if [[ "$OPENEYE" == true ]]; then conda install --yes -c openeye/label/Orion openeye-toolkits oeommtools && python -c "import openeye; print(openeye.__version__)"; fi
+
+  # Install RDKit
+  - if [[ "$RDKIT" == true ]]; then conda install --yes -c rdkit rdkit; fi
+
+  # Install pip only modules
+  - pip install codecov
+
+  # Build and install package
+  - conda build --python=$PYTHON_VER devtools/conda-recipe
+  - conda install --use-local openforcefield
 
 script:
-  # Add omnia and conda-forge channel
-  - conda config --add channels ${ORGNAME}
-  - conda config --add channels conda-forge
-  # Create and activate test environment
-  - conda create --yes -n test python=$python
-  - source activate test
-  # Install OpenEye toolkit
-  # Use beta version for partial bond orders
-  - pip install --pre -i https://pypi.anaconda.org/openeye/simple openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
-  # Install RDKit
-  - conda install --yes -c rdkit rdkit
-  # Build the recipe
-  - conda build devtools/conda-recipe
-  # Use oeommtools for improper test
-  - conda install --yes -c openeye/label/Orion oeommtools -c omnia
-  # Install
-  - conda install --yes --use-local openforcefield
-  # Run tests
-  - conda install --yes nose nose-timer
-  - cd devtools && nosetests -vv --nocapture --with-timer $PACKAGENAME && cd ..
+  - pytest -v --cov=openforcefield openforcefield/tests/
 
-env:
-  matrix:
-    - python=3.5  CONDA_PY=35
-    - python=3.6  CONDA_PY=36
+notifications:
+    email: false
 
-  global:
-    - ORGNAME="omnia"
-    - PACKAGENAME="openforcefield"
-    # OpenEye toolkit
-    - OE_LICENSE="$HOME/oe_license.txt"
-    # encrypted BINSTAR_TOKEN for push of dev package to binstar
-    - secure: "Iw2yv40ElSbS/TstXS9YnsbJFbxsbFQ25fkWlq8H/O3SPJwpX2/PRoCo99R1Scc0mO9BiVMwGDJQeM9y1VoYo3ozv5SIhPvc+0cMOE3AzkRiFEpZeTtDUTxOWsb+k/x5dH5/AapXRtJeKhY3cWe3lhKdv9N+yWrhY29lawXgfU4WsOEl6ON9BPwwPzvKK1sP4z8kIMzDNjt6gJ3m1HzdEQe/ibrOJIEk6Z4kTLQo9z4F9dm73/L4scEgnW6SOACC39nuYCL8PK4zPNKTqpAoVkm18uyrRz62+qPYSl3RCBNOFtbAuz7fz+ShSMA6g//LpAobNptpQeQpWXkHhYk5ALc6xzH2zScVgrPytKAPwi8mYKq9gYZnUPYgpOdjK3bNyfkGjeV9I4sQwNCBYlKtGHoqZ1l+l6oYsbx+Ti+nIeK67ufGmAugH4GJ3dhZvP6ZR73/irOrvSWiJJgqI1/k4c9Ela4wDpQHDp9sRf03HgSrRTX2gQ3E/JmPx8s56tMdkmrIDIgy6Edc80AN6zEKX0+3YVGcH6ltUViDidRGDlZ7xbUUXYtjqMJXuJEh2SV/wbeVmrBM8Pn+IfsBzLKnd1jqe3pXfoCqbCtvNwW8Sr4qMgWBEHvEtB4C5KvO5CydmRx95q/0ziRGb/VEV6QOnGxT7EIJDfyQeUqNqJD7Bdo="
-    # encrypted AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
-    #- secure: "SrSd1JoI8dBXQxDAX0xBTYBinTusRBQoPETnxHrBAgKdoty1pkzaghTKNMsrGsk78iwkkj1hAyttIY9trdFQkmx+OTx0fLKFmDHsMkgko4RzTtrgLgoxuRIs/gruID2cN1XKEbxlhRmQF14+q8/X1q6iGGdYMrxo51JcYPuEOSo="
-    #- secure: "br6QRMYXhHltYTEh/d+zejxcunT3GsqwQvxxLmqnLxi+LIxX4j7eymR6p4fPBd5mCRxyvkQEjnSZxF6e7JlEKxWVcMG28I/dBWzVIRW3EKQQNRmyI+JL1dfNaqj68kHJD+FknBwHK9LD238JPcyqXPdVrm9iPkDijPczvPBxvDs="
-
-#after_success:
-#  - echo "after_success"
-#  - if [ "$TRAVIS_SECURE_ENV_VARS" == true ]; then ./devtools/travis-ci/after_success.sh; fi
+after_success:
+  - codecov
