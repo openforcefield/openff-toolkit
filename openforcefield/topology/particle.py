@@ -18,22 +18,7 @@ Representation of particles, atoms, and virtual sites.
 # GLOBAL IMPORTS
 #=============================================================================================
 
-import sys
-import os
-import re
-import time
-import math
-import copy
-import string
-import random
-import itertools
-import collections
-
-import lxml.etree as etree
-
-import numpy
-
-import networkx as nx
+import numpy as np
 
 from simtk import openmm, unit
 from simtk.openmm.app import element as elem
@@ -56,7 +41,7 @@ from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingEr
 
 class Particle(object):
     """
-    Base class for all particles in the system.
+    Base class for all particles in a molecule.
 
     A particle object could be an ``Atom`` or a ``VirtualSite``.
 

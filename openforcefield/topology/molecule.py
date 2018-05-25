@@ -201,7 +201,7 @@ class Bond(object):
     @fractional_bondorder.setter
     def fractional_bondorder(self, value):
         self._fractional_bondorder = value
-        
+
 # TODO: Should this be a mixin?
 class ChemicalEntity(object):
     """
@@ -417,9 +417,35 @@ class Molecule(ChemicalEntity):
         ----------
         other : optional, default=None
             If specified, attempt to construct a copy of the Molecule from the specified object.
-            This might be a Molecule object, a file that can be used to construct a Molecule object,
-            a serialized Molecule object, or an OEChem or RDKit molecule representation.
+            This might be a :class:`Molecule` object, a file that can be used to construct a :class:`Molecule` object,
+            a serialized :class:`Molecule` object, an ``openeye.oechem.OEMol``, or an ``rdkit.Chem.rdchem.Mol``.
         """
+        # Initialize base class
+        super(self, Molecule).__init__(other=other)
+
+        if other is not None:
+            # TODO: Can we check interface compliance (in a try..except) instead of checking instances?
+            if isinstance(other, openforcefield.topology.Molecule):
+                self._copy_initializer(other)
+            elif issubclass(other, openeye.oechem.OEMolBase):
+                mol = Molecule.from_openeye(other)
+                self._copy_initializer(mol)
+            elif isinstance(other, rdkit.Chem.rdchem.Mol):
+                mol = Molecule.from_rdkit(other)
+                self._copy_initializer(mol)
+            elif isinstance(other, str):
+                self.__setstate__(other)
+            else:
+                msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(other)
+                msg += 'other must be '
+                raise Exception(msg)
+
+    def __setstate__(self, state):
+        # TODO: Implement deserialization
+        pass
+
+    def __getstate__(self):
+        # TODO: Implement serialization
         pass
 
     @staticmethod

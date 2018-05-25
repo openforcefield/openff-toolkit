@@ -39,6 +39,7 @@ from simtk.openmm.app import element as elem
 
 from openforcefield.utils import get_data_filename, all_subclasses
 from openforcefield.topology import Topology, ValenceDict, ImproperDict
+from openforcefield.topology import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
 #=============================================================================================
@@ -65,99 +66,106 @@ MAX_SUPPORTED_VERION = '1.0' # maximum version of the SMIRNOFF spec supported by
 
 # TODO: Should we add methods to retrieve string XML representations?
 
-# QUESTION: How should we support other non-XML representations in future?
+# QUESTION: How should we support other non-XML representations in future? Should we integrate these representations throughout, or collect all the XML reading/writing in one place?
 
 class ForceField(object):
-    """A factory initialized from a SMIRNOFF force field that constructs OpenMM System objects from corresponding openforcefield Topology objects.
+    """A factory initialized from a SMIRNOFF force field definition that assigns parameters to a molecular system.
 
-    When a ``ForceField`` object is created from one or more specified XML files, all ``ForceGenerator`` subclasses currently imported are identified
-    and registered to handle different sections of the SMIRNOFF forcefield definition file(s). The files are then processed by the generators to populate
-    internal data structures.
+    Specifically, :class:`ForceField` is a factory that constructs an OpenMM :class:`simtk.openmm.System` object from a :class:`openforcefield.topology.Topology` object.
 
-    Processing a ``Topology`` object defining a chemical system will then call all ``ForceGenerator`` objects in an order guaranteed to satisfy the
-    declared processing order constraints of each ``ForceGenerator``.
+    When a :class:`ForceField` object is created from one or more specified XML files, all :class:`ParameterHandler` subclasses
+    currently imported are identified and registered to handle different sections of the SMIRNOFF force field definition file(s).
+    The force field definition is processed by these Handlers to populate internal parameter definition data structures that
+    can be manipulated via the API.
 
-    A programmatic API can be used to modify loaded parameters or write out the new parameter set.
+    Processing a :class:`Topology` object defining a chemical system will then call all :class`ParameterHandler` objects in an order
+    guaranteed to satisfy the declared processing order constraints of each :class`ParameterHandler`.
 
     Attributes
     ----------
-    parsers : dict of str : openforcefield.typing.engines.smirnoff.ForceGenerator
+    parsers : dict of str : openforcefield.typing.engines.smirnoff.ParameterHandler
         Registered list of parsers that will handle forcefield tags.
-        parsers[tagname] is the ``ForceGenerator`` that will be called to process XML block ``tagname``
-        Parsers are registered when the ForceField object is created.
+        parsers[tagname] is the ``ParameterHandler`` that will be called to process the force field definition section ``tagname``
+        Parsers are registered when the ForceField object is created, but can be manipulated afterwards.
 
     """
 
-    def __init__(self, *files, force_generators=None, disable_version_check=False):
-        """Create a new ForceField object from one or more SMIRNOFF XML parameter definition files.
+    def __init__(self, *sources, parameter_handlers=None, disable_version_check=False):
+        """Create a new :class:`ForceField` object from one or more SMIRNOFF parameter definition files.
 
         Parameters
         ----------
-        files : list
-            A list of XML files defining the SMIRNOFF force field.
+        sources : string or file-like object or open file handle or URL (or iterable of these)
+            A list of files defining the SMIRNOFF force field to be loaded
+            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
-            (for built in force fields), or an open file-like object with a read() method from which the forcefield XML data can be loaded.
+            (for built in force fields), or an open file-like object with a ``read()`` method from which the forcefield XML data can be loaded.
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
             with files appearing later in the sequence resulting in parameters that have higher precedence.
             Support for multiple files is primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
-        force_generators : iterable of ForceGenerator classes, optional, default=None
-            If not None, the specified set of ForceGenerator objects will be used to parse the XML tags.
-            By default, all imported subclasses of ForceGenerator are automatically registered to parse XML tags.
+        parameter_handlers : iterable of ParameterHandler classes, optional, default=None
+            If not None, the specified set of ParameterHandler objects will be used to parse the XML tags.
+            By default, all imported subclasses of ParameterHandler are automatically registered to parse XML tags.
         disable_version_check : bool, optional, default=False
             If True, will disable checks against the current highest supported forcefield version.
+            This option is primarily intended for forcefield development.
 
         """
-        self._aromaticity_model = None # the aromaticity model to use for parsing; denote uninitialized
+        # Clear all object fields
+        self._initialize()
 
+        # Store initialization options
         self.disable_version_check = disable_version_check # if True, we won't check which SMIRNOFF version number we're parsing
 
-        # Load all XML files containing parameter definitions
-        # TODO: We may not store XML files, but instead parse them right away
-        self.load_file(files)
+        # Register all ParameterHandler objects that will process SMIRNOFF force definitions
+        # TODO: Should force Handlers be specified as classes or objects?
+        # TODO: Should we call them something besides parameter_handlers?
+        if parameter_handlers is None:
+            # Find all imported subclasses of ParameterHandler
+            parameter_handlers = self._find_parameter_handlers()
+        self._register_parsers(parameter_handlers)
 
-        # Register all ForceGenerator objects that will handle SMIRNOFF tags in processing XML files
-        if force_generators is None:
-            # Find all imported subclasses of ForceGenerator
-            force_generators = self._find_force_generators()
-        self._register_parsers(force_generators)
+        # Parse all sources containing SMIRNOFF parameter definitions
+        self.parse(sources)
 
-    @property
-    def parsers(self):
+    def _initialize(self):
+        """Initialize all object fields.
         """
-        Retrieve a read-only list of ForceGenerators listed as parsers.
-        """
-        return copy.deepcopy(self._parsers)
+        self.disable_version_check = False # if True, will disable checking compatibility version
+        self.aromaticity_model = DEFAULT_AROMATICITY_MODEL # aromaticity model
+        self.parameter_handlers = OrderedDict() # ParameterHandler classes to handle parameter types
+        self.parameters = OrderedDict() # ParameterHandler objects instantiated fro parameter type
 
-    # TODO: We need to change this to just find all ForceGenerator objects in this file;
-    # otherwise, we can't define two different ForceGenerator subclasses to compare for a new type of energy term
+    # TODO: We need to change this to just find all ParameterHandler objects in this file;
+    # otherwise, we can't define two different ParameterHandler subclasses to compare for a new type of energy term
     # since both will try to register themselves for the same XML tag and an Exception will be raised.
     @staticmethod
-    def _find_force_generators():
-        """Identify all imported subclasses of ForceGenerator.
+    def _find_parameter_handlers():
+        """Identify all imported subclasses of ParameterHandler.
 
         Returns
         -------
-        force_generators : list of ForceGenerator subclasses
-            List of ForceGenerator subclasses (not objects)
+        parameter_handlers : list of ParameterHandler subclasses
+            List of ParameterHandler subclasses (not objects)
         """
-        return all_subclasses(ForceGenerator)
+        return all_subclasses(ParameterHandler)
 
     @staticmethod
-    def _register_parsers(force_generators):
-        """Register all force generators with their ``_TAGNAME`` tag namesself.
+    def _register_parsers(parameter_handlers):
+        """Register all force Handlers with their ``_TAGNAME`` tag namesself.
 
         Parameters
         ----------
-        force_generators : list of ForceGenerator subclasses
-            The force generators to register.
+        parameter_handlers : list of ParameterHandler subclasses
+            The force Handlers to register.
 
         """
         parsers = dict()
-        for force_generator in force_generators:
+        for parameter_handler in parameter_handlers:
             tagname = subclass._TAGNAME
             if tagname is not None:
                 if tagname in parsers.keys():
-                    raise Exception("ForceGenerator {} provides a parser for tag '{}', but ForceGemerator {} has already been registered to handle that tag.".format(subclass, tagname, self.parsers[tagname]))
+                    raise Exception("ParameterHandler {} provides a parser for tag '{}', but ParameterHandler {} has already been registered to handle that tag.".format(subclass, tagname, self.parsers[tagname]))
                 parsers[tagname] = subclass
         return parsers
 
@@ -267,7 +275,7 @@ class ForceField(object):
         Parameters
         ----------
         name : str
-            Name of the calling force generator
+            Name of the calling force Handler
         topology : openforcefield.topology.Topology
             The Topology object
         assigned_terms : iterable of ints or int tuples
@@ -324,74 +332,154 @@ class ForceField(object):
             msg += str(assigned_set) + '\n'
             raise Exception(msg) # TODO: Should we raise a more specific exception here?
 
-    def load_file(self, files):
-        """Load a SMIRNOFF XML file and add the definitions from it to this ForceField.
+    def parse(self, sources):
+        """Parse a SMIRNOFF force field definition.
 
         Parameters
         ----------
-        files : string or file or tuple
-            An XML file or tuple of XML files containing SMIRNOFF force field definitions.
-            Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory (for built in force fields), or an open file-like object with a read() method from which the forcefield XML data can be loaded.
+        sources : string or file-like object or open file handle or URL (or iterable of these)
+            A list of files defining the SMIRNOFF force field to be loaded
+            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
+            Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
+            (for built in force fields), or an open file-like object with a ``read()`` method from which the forcefield XML data can be loaded.
+            If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
+            with files appearing later in the sequence resulting in parameters that have higher precedence.
+            Support for multiple files is primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
 
         .. notes ::
 
-           * New SMIRNOFF tags are handled independently, as if they were specified in the same file.
-           * If a SMIRNOFF tag that has already been read appears again, its definitions are appended to the end of the previously-read
-             definitions if the tags are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
+           * New SMIRNOFF sections are handled independently, as if they were specified in the same file.
+           * If a SMIRNOFF section that has already been read appears again, its definitions are appended to the end of the previously-read
+             definitions if the sections are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
 
         """
-        # Ensure that we are working with a tuple of files.
-        if not isinstance(files, tuple):
-            files = (files,)
+        # Ensure that we are working with an iterable
+        try:
+            some_object_iterator = iter(files)
+        except TypeError as te:
+            # Make iterable object
+            files = [files]
 
-        # Load in all XML trees.
-        # QUESTION: Should we allow users to specify forcefield URLs so they can pull forcefield definitions from the web too?
+        # Process all SMIRNOFF definition files or objects
+        # QUESTION: Allow users to specify forcefield URLs so they can pull forcefield definitions from the web too?
         trees = list()
-        for file in files:
-            parser = etree.XMLParser(remove_blank_text=True) # For pretty print on write
+        for source in sources:
+            # TODO: Load content from source
+
+            # Parse content depending on type
             try:
-                # this handles either filenames or open file-like objects
-                tree = etree.parse(file, parser)
-            except IOError:
-                temp_file = get_data_filename(file)
-                tree = etree.parse(temp_file, parser)
-            except Exception as e:
-                # Fail with an error message about which file could not be read.
-                # TODO: Also handle case where fallback to 'data' directory encounters problems,
-                # but this is much less worrisome because we control those files.
-                msg  = str(e) + '\n'
-                if hasattr(file, 'name'):
-                    filename = file.name
-                else:
-                    filename = str(file)
-                msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
+                self.parse_xml(source_string)
+            except ParseError:
+                msg = "Source {} does not appear to be in a known SMIRNOFF encoding.\n".format(source)
+                msg += "Valid encodings are: ['XML']"
                 raise Exception(msg)
 
-            trees.append(tree)
+    def parse_xml(self, xml):
+        """Parse a SMIRNOFF force field definition in XML format.
 
-        # Retain XML trees internally
-        self._XMLTrees = trees
+        A ``ParseError`` is raised if the XML cannot be processed.
 
-        # Parse XML, get force definitions
-        # QUESTION: Should we use lazy instantiation to only parse XML trees when we need to so that users will manipulate parameters only via XML tags?
-        # QUESTION: If we only parse XML trees when needed, we may run into the problem where a call to ForceField(*files) is successful
-        # and we *think* the files are valid, but we don't actually parse the file and find there is a problem until we actually use it.
-        # Would this create problems for debugging? Maybe we can have an optional `parse_immediately=True` flag?
-        self.parseXMLTrees()
+        Parameters
+        ----------
+        xml : string
+            A SMIRNOFF force field definition in `the SMIRNOFF XML format <https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md>`_.
 
-    def save_file(self, filename, format="XML"):
-        """Write the current forcefield parameter set to a file.
+        .. notes ::
+
+           * New SMIRNOFF sections are handled independently, as if they were specified in the same file.
+           * If a SMIRNOFF section that has already been read appears again, its definitions are appended to the end of the previously-read
+             definitions if the sections are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
+        """
+
+        parser = etree.XMLParser(remove_blank_text=True) # For pretty print on write
+        try:
+            # this handles either filenames or open file-like objects
+            tree = etree.parse(file, parser)
+        except IOError:
+            temp_file = get_data_filename(file)
+            tree = etree.parse(temp_file, parser)
+        except Exception as e:
+            # Fail with an error message about which file could not be read.
+            # TODO: Also handle case where fallback to 'data' directory encounters problems,
+            # but this is much less worrisome because we control those files.
+            msg  = str(e) + '\n'
+            if hasattr(file, 'name'):
+                filename = file.name
+            else:
+                filename = str(file)
+            msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
+            raise Exception(msg)
+
+        # Run through parsers
+
+    def save(self, filename):
+        """Write the current forcefield parameter set to a file, autodetecting the type from the extension.
 
         Parameters
         ----------
         filename : str
             The name of the file to be written.
-        format : str, optional, default="XML"
-            The format of the file to be written.
-            One of ['XML']
+            The `.offxml` file extension is auto-detected.
 
         """
-        raise NotImplementedError('Feature implemented yet.')
+        (basename, extension) = os.path.splitext(filename)
+        if extension == '.offxml':
+            xml = self.to_xml()
+            with open(filename, 'w') as f:
+                f.write(xml)
+        else:
+            msg = 'Export to extension {} not implemented yet.\n'.format(extension)
+            msg += "Supported choices are: ['.offxml']"
+            raise NotImplementedError(msg)
+
+    @staticmethod
+    def from_xml(xml):
+        """Construct a ForceField object from a SMIRNOFF XML file.
+        """
+        return ForceField(xml)
+
+    def to_lxml(self):
+        """Render the forcefield parameter set to an lxml.etree
+
+        Returns
+        -------
+        root : lxml.etree
+            Root node
+        """
+        # Create the XML tree
+        root = etree.XML('<SMIRNOFF/>')
+        # Populate top-level attributes
+        root['version'] = MAX_SUPPORTED_VERSION # TODO: Should we instead store a version?
+        root['aromaticity_mode'] = self.aromaticity_model
+        # Render all force Handlers
+        for tag, parameter_handler in self.parameter_handlers.items():
+            subtree = parameter_handler.to_lxml()
+            root.insert(len(root), subtree)
+
+        return root
+
+    def to_xml(self):
+        """Render the forcefield parameter set to XML.
+
+        Returns
+        -------
+        xml : str
+            The SMIRNOFF parameter set rendered as XML.
+        """
+        return etree.tostring(self.to_lxml())
+
+    # TODO: Do we need this? Should we use built-in dict-based serialization?
+    def __getstate__(self):
+        """Serialize to XML.
+        """
+        return self.to_xml()
+
+    # TODO: Do we need this? Should we use built-in dict-based serialization?
+    def __setstate__(self, state):
+        """Deserialize from XML.
+        """
+        self._initialize()
+        self.parse_xml(state)
 
     def _parse_version(self, root):
         """Parse the forcefield version number and make sure it is supported.
@@ -432,7 +520,7 @@ class ForceField(object):
 
     def parseXMLTrees(self):
         """
-        Initialize all registered ForceGenerator objects by parsing loaded XML files.
+        Initialize all registered ParameterHandler objects by parsing loaded XML files.
 
         .. notes ::
 
@@ -443,7 +531,7 @@ class ForceField(object):
         """
         trees = self._XMLTrees
 
-        # Create all ForceGenerator objects from scratch
+        # Create all ParameterHandler objects from scratch
         self._forces = list()
 
         # Load force definitions
@@ -478,199 +566,18 @@ class ForceField(object):
             if verbose: print("Re-parsing XML because it was modified.")
             self.parseXMLTrees()
 
-    def getGenerators(self):
-        """Get the list of all registered generators."""
+    def getHandlers(self):
+        """Get the list of all registered Handlers."""
         return self._forces
 
-    def registerGenerator(self, generator):
-        """Register a new generator."""
-        # Special case: ConstraintGenerator has to come before BondGenerator and AngleGenerator.
-        # TODO: Figure out a more general way to allow generators to specify enforced orderings via dependencies.
-        if isinstance(generator, ConstraintGenerator):
-            self._forces.insert(0, generator)
+    def registerHandler(self, Handler):
+        """Register a new Handler."""
+        # Special case: ConstraintHandler has to come before BondHandler and AngleHandler.
+        # TODO: Figure out a more general way to allow Handlers to specify enforced orderings via dependencies.
+        if isinstance(Handler, ConstraintHandler):
+            self._forces.insert(0, Handler)
         else:
-            self._forces.append(generator)
-
-    # TODO: Rework the API for getting, setting, and adding parameters
-    def getParameter(self, smirks=None, paramID=None, force_type='Implied'):
-        """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
-
-        Parameters
-        ----------
-        smirks (optional) : str
-            Default None. If specified, will pull parameters on line containing this `smirks`.
-        paramID : str
-            Default None. If specified, will pull parameters on line with this `id`
-        force_type : str
-            Default "Implied". Optionally, specify a particular force type such as
-            "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a
-            matching ID or SMIRKS.
-
-        Returns
-        -------
-        params : dict
-            Dictionary of attributes (parameters and their descriptions) from XML
-
-        Usage notes: SMIRKS or parameter ID must be specified.
-
-        .. todo::
-           *  Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
-
-        """
-        # Check for valid input
-        if smirks and paramID:
-            raise ValueError("Error: Specify SMIRKS OR parameter ID but not both.")
-        if (smirks is None) and (paramID is None):
-            raise ValueError("Error: Must specify SMIRKS or parameter ID.")
-
-        trees = self._XMLTrees
-        # Loop over XML files we read
-        for tree in trees:
-            # Loop over tree
-            for child in tree.getroot():
-                # Check a particular section?
-                checksection = True
-                if force_type is not 'Implied':
-                    # See whether this has the tag we want to check
-                    checksection = (child.tag==force_type)
-
-                if checksection:
-                    #Loop over descendants
-                    for elem in child.iterdescendants(tag=etree.Element):
-                        if (smirks and elem.attrib['smirks']==smirks) or (paramID and elem.attrib['id']==paramID):
-                            return copy.deepcopy(elem.attrib)
-
-    # TODO: Rework the API for getting, setting, and adding parameters
-    def setParameter(self, params, smirks=None, paramID=None, force_type="Implied"):
-        """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
-
-        Parameters
-        ----------
-        params : dict
-            Dictionary of attributes (parameters and their descriptions) for XML,
-            i.e. as output by getParameter.
-        smirks (optional) : str
-            Default None. If specified, will set parameters on line containing this `smirks`.
-        paramID (optional) : str
-            Default None. If specified, will set parameters on line with this `id`
-        force_type (optional) : str
-            Default "Implied". Optionally, specify a particular force type such as
-            "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a
-            matching ID or SMIRKS.
-
-        Returns
-        -------
-        success : bool
-            True/False as to whether that parameter was found and successfully set
-
-        Usage notes: SMIRKS or parameter ID must be specified.
-
-        .. todo::
-            * Update set/get parameter API.
-            * Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
-
-        """
-        # Check for valid input
-        if smirks and paramID:
-            raise ValueError("Error: Specify SMIRKS OR parameter ID but not both.")
-        if (smirks is None) and (paramID is None):
-            raise ValueError("Error: Must specify SMIRKS or parameter ID.")
-        if not params:
-            raise ValueError("Error, parameters must be specified.")
-
-        # Below, we should do due dilegence that we're working on a parameter line which has
-        # roughly the same types of parameters (though for torsions (or bonds, if we have partial bond orders),
-        # the number of terms might differ), so define a utility function to give
-        # back the basic names of parameters (i.e. k) without suffixes
-        def get_param_names( param_keys ):
-            names = set()
-            for param in param_keys:
-                ct = 1
-                while param[-ct].isdigit():
-                    ct+=1
-                if ct > 1:
-                    names.add( param[:-(ct-1)])
-                else:
-                    names.add( param )
-            return names
-
-        # Set parameters
-        trees = self._XMLTrees
-        success = False
-        # Loop over XML files we read
-        for tree in trees:
-            # Loop over tree
-            for child in tree.getroot():
-                # Check a particular section?
-                checksection = True
-                if force_type is not 'Implied':
-                    # See whether this has the tag we want to check
-                    checksection= (child.tag==force_type)
-
-                if checksection:
-                    #Loop over descendants
-                    for elem in child.iterdescendants(tag=etree.Element):
-                        if (smirks and elem.attrib['smirks']==smirks) or (paramID and elem.attrib['id']==paramID):
-                            # Try to set parameters
-                            old_params=elem.attrib
-                            if get_param_names(old_params.keys()) != get_param_names(params.keys()):
-                                raise ValueError('Error: Provided parameters have different keys (%s) than existing parameters (%s).' % (', '.join(old_params.keys()), ', '.join(params.keys())))
-
-                            # Loop over attributes, change values
-                            for tag in params.keys():
-                                elem.set( tag, params[tag])
-
-                            # Found parameters and set, so update success flag
-                            success = True
-
-        # If we made any changes to XML, set flag so it will be reprocessed prior to system creation
-        if success:
-            self._XMLModified = True
-
-        return success
-
-    # TODO: Rework the API for getting, setting, and adding parameters
-    def addParameter(self, params, smirks, force_type, tag):
-        """Add specified SMIRKS/parameter in the section under the specified force type.
-
-        Parameters
-        ----------
-        params : dict
-            Dictionary of attributes (parameters and their descriptions) for XML,
-            i.e. as output by getParameter.
-        smirks : str
-            SMIRKS pattern to associate with this parameter
-        force_type : str
-            Specify a particular force type such as "HarmonicBondForce" or "HarmonicAngleForce" in which to add this parameter
-        tag : str
-            Tag to use identifying this parameter, i.e. 'Bond' for a HarmonicBondForce, etc.
-
-        Returns
-        -------
-        success : bool
-            Returns ``True`` on success, or ``False`` on failure.
-
-        .. todo::
-            * Update set/get parameter API.
-
-        """
-
-        trees = self._XMLTrees
-        # Loop over XML files we read
-        success = False
-        for tree in trees:
-            # Loop over tree
-            for child in tree.getroot():
-                if child.tag==force_type:
-                    success = True
-                    addl = etree.Element( tag, smirks=smirks, attrib = params)
-                    child.append(addl)
-
-        # If we made any changes to XML, set flag so it will be reprocessed prior to system creation
-        if success:
-            self._XMLModified = True
-
-        return success
+            self._forces.append(Handler)
 
     # TODO: Rework the API for writing ffxml parameters, since writing to multiple files is currently ambiguous
     def writeFile(self, files):
@@ -691,22 +598,22 @@ class ForceField(object):
             tree = self._XMLTrees[idx]
             tree.write(filenm, xml_declaration=True, pretty_print=True)
 
-    def _resolve_force_generator_order(self):
-        """Resolve the order in which ForceGenerator objects should execute to satisfy constraints.
+    def _resolve_parameter_handler_order(self):
+        """Resolve the order in which ParameterHandler objects should execute to satisfy constraints.
         """
-        ordered_force_generators = list()
+        ordered_parameter_handlers = list()
         # Create a DAG expressing dependencies
         import networkx as nx
         G = nx.DiGraph()
-        for force_generator in self.parsers.items():
-            G.add_node(force_generator._TAGNAME)
-            if force_generator._DEPENDENCIES is not None:
-                for dependency in force_generator._DEPENDENCIES:
-                    G.add_edge(dependency._TAGNAME, force_generator._TAGNAME)
+        for parameter_handler in self.parsers.items():
+            G.add_node(parameter_handler._TAGNAME)
+            if parameter_handler._DEPENDENCIES is not None:
+                for dependency in parameter_handler._DEPENDENCIES:
+                    G.add_edge(dependency._TAGNAME, parameter_handler._TAGNAME)
         # TODO: Check to make sure DAG isn't cyclic
         # Resolve order
-        ordered_force_generators = [ self.parsers[tagname] for tagname in nx.topological_sort(G) ]
-        return ordered_force_generators
+        ordered_parameter_handlers = [ self.parsers[tagname] for tagname in nx.topological_sort(G) ]
+        return ordered_parameter_handlers
 
     def createSystem(self, topology, box_vectors=None, verbose=False, **kwargs):
         """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
@@ -724,7 +631,7 @@ class ForceField(object):
         kwargs
             Arbitrary additional keyword arguments may also be specified.
             This allows extra parameters to be specified that are specific to particular force fields.
-            A ``ValueError`` will be raised if parameters are specified that are not used by any force generators.
+            A ``ValueError`` will be raised if parameters are specified that are not used by any force Handlers.
 
         Returns
         -------
@@ -734,7 +641,7 @@ class ForceField(object):
         """
         # TODO: Have `verbose` flag set whether logging info is displayed or not.
 
-        # Re-parse XML by ForceGenerator objects if loaded XML files have been added or modified
+        # Re-parse XML by ParameterHandler objects if loaded XML files have been added or modified
         self._reparse_xml_if_needed()
 
         # Make a deep copy of the topology so we don't accidentaly modify it
@@ -755,26 +662,26 @@ class ForceField(object):
         if default_box_vectors is not None:
             system.setDefaultPeriodicBoxVectors(default_box_vectors)
 
-        # Determine the order in which to process ForceGenerator objects in order to satisfy dependencies
-        force_generators = self._resolve_force_generator_order()
+        # Determine the order in which to process ParameterHandler objects in order to satisfy dependencies
+        parameter_handlers = self._resolve_parameter_handler_order()
 
-        # Check if any kwargs have been provided that aren't handled by force generators
+        # Check if any kwargs have been provided that aren't handled by force Handlers
         known_kwargs = set()
-        for force_generator in force_generators:
-            known_args.update(force_generator.known_kwargs)
+        for parameter_handler in parameter_handlers:
+            known_args.update(parameter_handler.known_kwargs)
         unknown_kwargs = set(kwargs.keys()).difference(known_kwargs)
         if len(unknown_kwargs) > 0:
-            msg = "The following keyword arguments to createSystem() are not used by any registered force generator: {}\n".format(unknown_kwargs)
+            msg = "The following keyword arguments to createSystem() are not used by any registered force Handler: {}\n".format(unknown_kwargs)
             msg += "Known keyword arguments: {}".format(known_kwargs)
             raise ValueError(msg)
 
         # Add forces to the System
-        for force_generator in force_generators:
-            force_generator.createForce(system, topology, **kwargs)
+        for parameter_handler in parameter_handlers:
+            parameter_handler.createForce(system, topology, **kwargs)
 
-        # Let force generators do postprocessing
-        for force_generator in force_generators:
-            force_generator.postprocessSystem(system, topology, **kwargs)
+        # Let force Handlers do postprocessing
+        for parameter_handler in parameter_handlers:
+            parameter_handler.postprocessSystem(system, topology, **kwargs)
 
         return system
 
@@ -815,36 +722,36 @@ class ForceField(object):
         return molecule_labels
 
 #=============================================================================================
-# The following classes are generators that know how to create Force subclasses and add them to a System that is being
-# created.  Each generator class must define three methods: 1) a static method that takes an etree Element and a ForceField,
-# and returns the corresponding generator object; 2) a createForce() method that constructs the Force object and adds it
+# The following classes are Handlers that know how to create Force subclasses and add them to a System that is being
+# created.  Each Handler class must define three methods: 1) a static method that takes an etree Element and a ForceField,
+# and returns the corresponding Handler object; 2) a createForce() method that constructs the Force object and adds it
 # to the System; and 3) a labelForce() method that provides access to which
 # terms are applied to which atoms in specified oemols.
 # The static method should be added to the parsers map.
 #=============================================================================================
 
 #=============================================================================================
-# Force generators
+# Force Handlers
 #=============================================================================================
 
 ## @private
-class ForceGenerator(object):
-    """Base class for force generators.
+class ParameterHandler(object):
+    """Base class for parameter type handlers.
     """
-    _TAGNAME = None # str of XML element name handled by this ForceGenerator
-    _VALENCE_TYPE = None # ChemicalEnvironment valence type string expected by SMARTS string for this Generator
+    _TAGNAME = None # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
+    _VALENCE_TYPE = None # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
     _INFOTYPE = None # container class with type information that will be stored in self._types
     _OPENMMTYPE = None # OpenMM Force class (or None if no equivalent)
-    _DEPENDENCIES = None # list of ForceGenerator classes that must precede this, or None
+    _DEPENDENCIES = None # list of ParameterHandler classes that must precede this, or None
     _DEFAULTS = {} # dict of attributes and their default values at tag-level
-    _KWARGS = [] # list of keyword arguments accepted by the force generator on initialization
-    _SMIRNOFF_VERSION_INTRODUCED = 0.0 # the earliest version of SMIRNOFF spec that supports this ForceGenerator
+    _KWARGS = [] # list of keyword arguments accepted by the force Handler on initialization
+    _SMIRNOFF_VERSION_INTRODUCED = 0.0 # the earliest version of SMIRNOFF spec that supports this ParameterHandler
     _SMIRNOFF_VERSION_DEPRECATED = None # if deprecated, the first SMIRNOFF version number it is no longer used
     _REQUIRE_UNITS = None # list of parameters that require units to be defined
 
     def __init__(self, forcefield):
-        self.ff = forcefield # the ForceField object that this ForceGenerator is registered with
-        self._types = list() # list of ForceType objects of type cls._INFOTYPE
+        self._forcefield = forcefield # the ForceField object that this ParameterHandler is registered with
+        self.parameters = list() # list of ParmaeterType objects
 
     @property
     def known_kwargs(self):
@@ -864,7 +771,7 @@ class ForceGenerator(object):
         Returns
         ---------
         matches : ValenceDict
-            matches[atoms] is the ForceType object corresponding to the tuple of Atom objects ``Atoms``
+            matches[atoms] is the ParameterType object corresponding to the tuple of Atom objects ``Atoms``
 
         """
         logger.info(self.__class__.__name__)
@@ -881,22 +788,25 @@ class ForceGenerator(object):
     @classmethod
     def parseElement(cls, tag, element, ff):
         """
-        Parse the XML tag/section this ForceGenerator is registered for.
+        Parse the XML tag/section this ParameterHandler is registered for.
 
         SMIRNOFF sections may be split across multiple files or otherwise appear multiple times,
         so we need to be able to handle multiple calls to parseElement().
 
         Parameters
         ----------
-
+        tag : str
+        element : lxml.Element
+        ff : openforcefield.typing.engines.smirnoff.ForceField
+            The ForceField object parsing the element
 
         """
         existing = [f for f in ff._forces if isinstance(f, cls)]
         if len(existing) == 0:
-            generator = cls(ff)
-            ff.registerGenerator(generator)
+            Handler = cls(ff)
+            ff.registerHandler(Handler)
         else:
-            generator = existing[0]
+            Handler = existing[0]
 
         # Extract all tag-level attributes (or their defaults)
         for attribute in _DEFAULTS.keys():
@@ -904,7 +814,7 @@ class ForceGenerator(object):
 
         # Register all SMIRNOFF definitions for all occurrences of its registered tag
         for section in element.findall(tag):
-            generator.registerType(section, element)
+            Handler.registerType(section, element)
 
         # TODO: Check that all required units are defined in the top-level tag attributes
 
@@ -930,36 +840,52 @@ class ForceGenerator(object):
     def postprocessSystem(self, system, topology, **args):
         pass
 
-## @private
-class ForceType(object):
+# TODO: Rename to better reflect role as parameter base class?
+class ParameterType(object):
     """
-    Base class for force types.
+    Base class for SMIRNOFF parameter types.
+
     """
-    def __init__(self, node, parent):
+    def __init__(self, smirks, **kwargs):
         """
-        Create a ForceType that stores ``smirks`` and ``id`` attributes.
+        Create a ParameterType
+
+        Parameters
+        ----------
+
         """
-        self.smirks = _validate_smarts(node.attrib['smirks'], node=node, valence_type=_VALENCE_TYPE)
+        # Store SMIRKS
+        self.smirks = smirks # TODO: Validate SMIRKS is appropriate for this type?
+        # Store any other attributes provided
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @staticmethod
+    def from_xml(node, parent):
+        smirks = _validate_smarts(node.attrib['smirks'], node=node, valence_type=_VALENCE_TYPE)
+        # TODO: Generally process other node attributes?
+        kwargs = dict()
         if 'id' in node.attrib:
-            self.pid = _extract_quantity_from_xml_element(node, parent, 'id')
+            kwargs['id'] = _extract_quantity_from_xml_element(node, parent, 'id')
+        return ParameterType(smirks, **kwargs)
 
 #=============================================================================================
 
 ## @private
-class ConstraintGenerator(ForceGenerator):
+class ConstraintHandler(ParameterHandler):
     """Handle SMIRNOFF ``<Constraints>`` tags
 
-    ``ConstraintGenerator`` must be applied before ``HarmonicBondGenerator`` and ``HarmonicAngleGenerator``,
+    ``ConstraintHandler`` must be applied before ``BondHandler`` and ``AngleHandler``,
     since those classes add constraints for which equilibrium geometries are needed from those tags.
     """
-    class ConstraintType(ForceType):
+    class ConstraintType(ParameterType):
         """A SMIRNOFF constraint type"""
         def __init__(self, node, parent):
             super(ConstraintType, self).__init__(node, parent) # Base class handles ``smirks`` and ``id`` fields
             if 'distance' in node.attrib:
-                self.distance = _extract_quantity_from_xml_element(node, parent, 'distance') # Constraint with specified distance will be added by ConstraintGenerator
+                self.distance = _extract_quantity_from_xml_element(node, parent, 'distance') # Constraint with specified distance will be added by ConstraintHandler
             else:
-                self.distance = True # Constraint to equilibrium bond length will be added by HarmonicBondGenerator
+                self.distance = True # Constraint to equilibrium bond length will be added by HarmonicBondHandler
 
     _TAGNAME = 'Constraint'
     _VALENCE_TYPE = 'Bond' # ChemicalEnvironment valence type expected for SMARTS # TODO: Do we support more exotic types as well?
@@ -968,7 +894,7 @@ class ConstraintGenerator(ForceGenerator):
     _REQUIRED_UNITS = ['distance']
 
     def __init__(self, forcefield):
-        super(ConstraintGenerator, self).__init__(forcefield)
+        super(ConstraintHandler, self).__init__(forcefield)
 
     def createForce(self, system, topology, **kwargs):
         constraints = self.getMatches(topology)
@@ -976,18 +902,18 @@ class ConstraintGenerator(ForceGenerator):
             # Update constrained atom pairs in topology
             topology.add_constraint(*atoms, constraint.distance)
             # If a distance is specified (constraint.distance != True), add the constraint here.
-            # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondGenerator
+            # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondHandler
             if constraint.distance is not True:
                 system.addConstraint(*atoms, constraint.distance)
 
 #=============================================================================================
 
 ## @private
-class BondGenerator(ForceGenerator):
+class BondHandler(ParameterHandler):
     """Handle SMIRNOFF ``<BondForce>`` tags"""
 
-    class BondType(ForceType):
-        """A SMIRNOFF bond type"""
+    class BondType(ParameterType):
+        """A SMIRNOFF Bond parameter type"""
         def __init__(self, node, parent):
             super(ConstraintType, self).__init__(node, parent) # Base class handles ``smirks`` and ``id`` fields
 
@@ -1018,14 +944,14 @@ class BondGenerator(ForceGenerator):
     _VALENCE_TYPE = 'Bond' # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = BondType # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicBondForce # OpenMM force class to create
-    _DEPENDENCIES = [ConstraintGenerator] # ConstraintGenerator must be executed first
+    _DEPENDENCIES = [ConstraintHandler] # ConstraintHandler must be executed first
 
     def __init__(self, forcefield):
-        super(HarmonicBondGenerator, self).__init__(forcefield)
+        super(HarmonicBondHandler, self).__init__(forcefield)
 
     def createForce(self, system, topology, **kwargs):
         # Create or retrieve existing OpenMM Force object
-        force = super(BondGenerator, self).createForce(system, topology, **kwargs)
+        force = super(BondHandler, self).createForce(system, topology, **kwargs)
 
         # Add all bonds to the system.
         bonds = self.getMatches(topology)
@@ -1073,10 +999,10 @@ class BondGenerator(ForceGenerator):
 #=============================================================================================
 
 ## @private
-class AngleGenerator(ForceGenerator):
+class AngleHandler(ParameterHandler):
     """Handle SMIRNOFF ``<AngleForce>`` tags"""
 
-    class AngleType(ForceType):
+    class AngleType(ParameterType):
         """A SMIRNOFF angle type."""
         def __init__(self, node, parent):
             super(AngleType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
@@ -1093,10 +1019,10 @@ class AngleGenerator(ForceGenerator):
     _OPENMMTYPE = openmm.HarmonicAngleForce # OpenMM force class to create
 
     def __init__(self, forcefield):
-        super(AngleGenerator, self).__init__(forcefield)
+        super(AngleHandler, self).__init__(forcefield)
 
     def createForce(self, system, topology, **kwargs):
-        force = super(AngleGenerator, self).createForce(system, topology, **kwargs)
+        force = super(AngleHandler, self).createForce(system, topology, **kwargs)
 
         # Add all angles to the system.
         angles = self.getMatches(topology)
@@ -1124,10 +1050,10 @@ class AngleGenerator(ForceGenerator):
 #=============================================================================================
 
 ## @private
-class ProperTorsionGenerator(ForceGenerator):
+class ProperTorsionHandler(ParameterHandler):
     """Handle SMIRNOFF ``<ProperTorsionForce>`` tags"""
 
-    class ProperTorsionType(ForceType):
+    class ProperTorsionType(ParameterType):
         """A SMIRNOFF torsion type for proper torsions."""
         def __init__(self, node, parent):
             super(ProperTorsionType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
@@ -1174,10 +1100,10 @@ class ProperTorsionGenerator(ForceGenerator):
     _OPENMMTYPE = openmm.PeriodicTorsionForce # OpenMM force class to create
 
     def __init__(self, forcefield):
-        super(ProperTorsionGenerator, self).__init__(forcefield)
+        super(ProperTorsionHandler, self).__init__(forcefield)
 
     def createForce(self, system, topology, **kwargs):
-        force = super(ProperTorsionGenerator, self).createForce(system, topology, **kwargs)
+        force = super(ProperTorsionHandler, self).createForce(system, topology, **kwargs)
 
         # Add all proper torsions to the system.
         torsions = self.getMatches(topology)
@@ -1195,10 +1121,10 @@ class ProperTorsionGenerator(ForceGenerator):
         _check_for_missing_valence_terms('ProperTorsionForce', topology, torsions.keys(), topology.torsions())
 
 ## @private
-class ImproperTorsionGenerator(ForceGenerator):
+class ImproperTorsionHandler(ParameterHandler):
     """Handle SMIRNOFF ``<ImproperTorsionForce>`` tags"""
 
-    class ImproperTorsionType(ForceType):
+    class ImproperTorsionType(ParameterType):
         """A SMIRNOFF torsion type for improper torsions."""
         def __init__(self, node, parent):
             super(ImproperTorsionType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
@@ -1246,10 +1172,10 @@ class ImproperTorsionGenerator(ForceGenerator):
     _OPENMMTYPE = openmm.PeriodicTorsionForce # OpenMM force class to create
 
     def __init__(self, forcefield):
-        super(ImproperTorsionGenerator, self).__init__(forcefield)
+        super(ImproperTorsionHandler, self).__init__(forcefield)
 
     def createForce(self, system, topology, **kwargs):
-        force = super(ImproperTorsionGenerator, self).createForce(system, topology, **kwargs)
+        force = super(ImproperTorsionHandler, self).createForce(system, topology, **kwargs)
 
         # Add all improper torsions to the system
         torsions = self.getMatches(topology)
@@ -1272,7 +1198,7 @@ class ImproperTorsionGenerator(ForceGenerator):
         _check_for_missing_valence_terms('ImproperTorsionForce', topology, torsions.keys(), topology.impropers())
 
 ## @private
-class vdWGenerator(ForceGenerator):
+class vdWHandler(ParameterHandler):
     """Handle SMIRNOFF ``<vdWForce>`` tags"""
 
     # TODO: Is this necessary
@@ -1287,7 +1213,7 @@ class vdWGenerator(ForceGenerator):
         'scale15' : 1.0,
     }
 
-    class vdWType(ForceType):
+    class vdWType(ParameterType):
         """A SMIRNOFF vdWForce type."""
         def __init__(self, node, parent):
             # NOTE: Currently we support radius definition via 'sigma' or 'rmin_half'.
@@ -1315,19 +1241,19 @@ class vdWGenerator(ForceGenerator):
     _OPENMMTYPE = openmm.NonbondedForce # OpenMM force class to create
 
     def __init__(self, forcefield):
-        super(NonbondedForceGenerator, self).__init__(forcefield)
+        super(NonbondedParameterHandler, self).__init__(forcefield)
 
 
     # TODO: Handle the case where multiple <NonbondedForce> tags are found
-    # if abs(generator.coulomb14scale - float(element.attrib['coulomb14scale'])) > NonbondedGenerator.SCALETOL or \
-    #                 abs(generator.lj14scale - float(element.attrib['lj14scale'])) > NonbondedGenerator.SCALETOL:
+    # if abs(Handler.coulomb14scale - float(element.attrib['coulomb14scale'])) > NonbondedHandler.SCALETOL or \
+    #                 abs(Handler.lj14scale - float(element.attrib['lj14scale'])) > NonbondedHandler.SCALETOL:
     #            raise ValueError('Found multiple NonbondedForce tags with different 1-4 scales')
     #    for atom in element.findall('Atom'):
-    #        generator.registerAtom(atom, element)
+    #        Handler.registerAtom(atom, element)
 
     # TODO: nonbondedMethod and nonbondedCutoff should now be specified by StericsForce attributes
     def createForce(self, system, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=0.9, **args):
-        force = super(NonbondedForceGenerator, self).createForce(system, topology)
+        force = super(NonbondedParameterHandler, self).createForce(system, topology)
 
         methodMap = {NoCutoff:openmm.NonbondedForce.NoCutoff,
                      CutoffNonPeriodic:openmm.NonbondedForce.CutoffNonPeriodic,
@@ -1380,13 +1306,13 @@ class vdWGenerator(ForceGenerator):
                 nonbonded.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self.lj14scale)
 
 ## @private
-class BondChargeCorrectionGenerator(ForceGenerator):
+class BondChargeCorrectionHandler(ParameterHandler):
     """Handle SMIRNOFF ``<BondChargeCorrection>`` tags"""
 
-    class BondChargeCorrectionType(ForceType):
+    class BondChargeCorrectionType(ParameterType):
         """A SMIRNOFF bond charge correction type."""
         def __init__(self, node, parent):
-            super(BondChargeCorrectionGenerator, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
+            super(BondChargeCorrectionHandler, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
             self.increment = _extract_quantity_from_xml_element(node, parent, 'increment')
             # If no units are specified, assume elementary charge
             if type(self.increment) == float:
@@ -1397,13 +1323,13 @@ class BondChargeCorrectionGenerator(ForceGenerator):
     _OPENMMTYPE = openmm.NonbondedForce # OpenMM force class to create or utilize
 
     def __init__(self, forcefield):
-        super(BondChargeCorrectionGenerator, self).__init__(forcefield)
+        super(BondChargeCorrectionHandler, self).__init__(forcefield)
 
     #if element.attrib['method'] != existing[0]._initialChargeMethod:
-    #raise Exception("Existing BondChargeCorrectionGenerator uses initial charging method '%s' while new BondChargeCorrectionGenerator requests '%s'" % (existing[0]._initialChargeMethod, element.attrib['method']))
+    #raise Exception("Existing BondChargeCorrectionHandler uses initial charging method '%s' while new BondChargeCorrectionHandler requests '%s'" % (existing[0]._initialChargeMethod, element.attrib['method']))
 
     def createForce(self, system, topology, **args):
-        # No forces are created by this generator.
+        # No forces are created by this Handler.
         pass
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
@@ -1428,8 +1354,8 @@ class BondChargeCorrectionGenerator(ForceGenerator):
                     force.setParticleParameters(particle_indices[1], charge1, sigma1, epsilon1)
 
 ## @private
-class GBSAForceGenerator(ForceGenerator):
-    """Handle SMIRNOFF ``<GBSAForceGenerator>`` tags"""
+class GBSAParameterHandler(ParameterHandler):
+    """Handle SMIRNOFF ``<GBSAParameterHandler>`` tags"""
     # TODO: Differentiate between global and per-particle parameters for each model.
 
     # Global parameters for surface area (SA) component of model
@@ -1445,14 +1371,14 @@ class GBSAForceGenerator(ForceGenerator):
         'OBC2' : ['radius', 'scale'],
     }
 
-    class GBSAType(ForceType):
+    class GBSAType(ParameterType):
         """A SMIRNOFF GBSA type."""
         def __init__(self, node, parent):
             super(GBSAType, self).__init__(node, parent)
 
             # Store model parameters.
             gb_model = parent.attrib['gb_model']
-            expected_parameters = GBSAForceGenerator.GB_expected_parameters[gb_model]
+            expected_parameters = GBSAParameterHandler.GB_expected_parameters[gb_model]
             provided_parameters = list()
             missing_parameters = list()
             for name in expected_parameters:
@@ -1470,20 +1396,20 @@ class GBSAForceGenerator(ForceGenerator):
                 raise Exception(msg)
 
     def __init__(self, forcefield):
-        super(GBSAForceGenerator, self).__init__(forcefield)
+        super(GBSAParameterHandler, self).__init__(forcefield)
 
     # TODO: Fix this
     def parseElement(self):
         # Initialize GB model
         gb_model = element.attrib['gb_model']
-        valid_GB_models = GBSAForceGenerator.GB_expected_parameters.keys()
+        valid_GB_models = GBSAParameterHandler.GB_expected_parameters.keys()
         if not gb_model in valid_GB_models:
             raise Exception('Specified GBSAForce model "%s" not one of valid models: %s' % (gb_model, valid_GB_models))
         self.gb_model = gb_model
 
         # Initialize SA model
         sa_model = element.attrib['sa_model']
-        valid_SA_models = GBSAForceGenerator.SA_expected_parameters.keys()
+        valid_SA_models = GBSAParameterHandler.SA_expected_parameters.keys()
         if not sa_model in valid_SA_models:
             raise Exception('Specified GBSAForce SA_model "%s" not one of valid models: %s' % (sa_model, valid_SA_models))
         self.sa_model = sa_model
@@ -1493,14 +1419,14 @@ class GBSAForceGenerator(ForceGenerator):
         self.parameters = element.attrib
 
     # TODO: Generalize this to allow forces to know when their OpenMM Force objects can be combined
-    def checkCompatibility(self, generator):
+    def checkCompatibility(self, Handler):
         """
-        Check compatibility of this generator with another generators.
+        Check compatibility of this Handler with another Handlers.
         """
-        generator = existing[0]
-        if (generator.gb_model != self.gb_model):
+        Handler = existing[0]
+        if (Handler.gb_model != self.gb_model):
             raise ValueError('Found multiple GBSAForce tags with different GB model specifications')
-        if (generator.sa_model != self.sa_model):
+        if (Handler.sa_model != self.sa_model):
             raise ValueError('Found multiple GBSAForce tags with different SA model specifications')
         # TODO: Check other attributes (parameters of GB and SA models) automatically?
 
@@ -1512,7 +1438,7 @@ class GBSAForceGenerator(ForceGenerator):
         system.addForce(force)
 
         # Add all GBSA terms to the system.
-        expected_parameters = GBSAForceGenerator.GB_expected_parameters[self.gb_model]
+        expected_parameters = GBSAParameterHandler.GB_expected_parameters[self.gb_model]
 
         # Create all particles with parameters set to zero
         atoms = self.getMatches(topology)

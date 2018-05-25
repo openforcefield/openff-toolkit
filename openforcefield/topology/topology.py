@@ -5,11 +5,12 @@
 #=============================================================================================
 
 """
-Representation of molecular topologies.
+A Topology describes a collection of Molecules in a system.
 
 .. todo::
 
-   * Make all classes (like Particle, Atom, VirtualSite) hashable and serializable.
+   * Make all classes hashable and serializable.
+   * JSON/BSON representations?
    * Use class boilerplate suggestion from Kyle?
 
 """
@@ -107,7 +108,7 @@ class ImproperDict(_TransformedDict):
 
 class Topology(ChemicalEntity):
     """
-    Chemical representation of a system containing one or more molecules.
+    A Topology is a chemical representation of a system containing one or more molecules appearing in a specified order.
 
     Attributes
     ----------
@@ -120,7 +121,9 @@ class Topology(ChemicalEntity):
 
     Examples
     --------
+
     Create a Topology copy
+
     >>> topology_copy = Topology(topology)
 
     """
