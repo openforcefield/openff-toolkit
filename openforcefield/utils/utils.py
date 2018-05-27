@@ -8,23 +8,24 @@ Utility subroutines for open forcefield tools
 # GLOBAL IMPORTS
 #=============================================================================================
 
+import os
+import re
 import sys
+import math
+import copy
 import string
 
 from optparse import OptionParser # For parsing of command line arguments
 
-import os
-import math
-import copy
-import re
-import numpy
-import random
+import numpy as np
+
 import parmed
 
 from simtk import unit, openmm
 from simtk.openmm import app
-from simtk.openmm.app import element as elem
-from simtk.openmm.app import Topology
+
+from openforcefield.topology import Molecule, Topology
+from openforcefield.typing.engines.smirnoff import ForceField
 
 from openmoltools import system_checker
 
@@ -38,57 +39,81 @@ from simtk import unit
 def all_subclasses(cls):
     return cls.__subclasses__() + [ g for s in cls.__subclasses__() for g in all_subclasses(s) ]
 
-def checkCharges(molecule):
+# TODO: Can we get rid fo this?
+def checkCharges(oemol):
+    """Return True if any atom has nonzero charges.
+
+    Parameters
+    ----------
+    oemol : openeye.oechem.OEMol
+        OpenEye molecule
+
+    """
     # Check that molecule is charged.
     #is_charged = False
-    for atom in molecule.GetAtoms():
+    for atom in oemol.GetAtoms():
         if atom.GetPartialCharge() != 0.0:
             return True
         else:
-            print('WARNING: Molecule %s has no charges; input molecules must be charged.' % molecule.GetTitle())
+            print('WARNING: Molecule %s has no charges; input molecules must be charged.' % oemol.GetTitle())
             return False
 
-def generateSMIRNOFFStructure(molecule):
+# TODO: Can we get rid of this, or convert it to use Molecule instead?
+def generateSMIRNOFFStructure(oemol):
     """
     Given an OpenEye molecule (oechem.OEMol), create an OpenMM System and use to
     generate a ParmEd structure using the SMIRNOFF forcefield parameters.
-    """
-    from openforcefield.typing.engines.smirnoff import ForceField
-    from openforcefield.typing.engines.smirnoff.forcefield_utils import create_system_from_molecule
 
-    ff = get_data_filename('forcefield/smirnoff99Frosst.offxml')
+    Parameters
+    ----------
+    oemol : openeye.oechem.OEMol
+        OpenEye molecule
+
+    Returns
+    -------
+    molecule_structure : parmed.Structure
+        The resulting Structure
+
+    """
+    ff = get_testdata_filename('forcefield/smirnoff99Frosst.offxml')
     with open(ff) as ffxml:
         mol_ff = ForceField(ffxml)
 
-    if not checkCharges(molecule):
+    # TODO: Charges should be handled by ForceField now, so charging isn't necessary
+    if not checkCharges(oemol):
         from openmoltools.openeye import get_charges
         print("Assigning charges to molecule.")
-        charged_molecule = get_charges(molecule)
+        charged_molecule = get_charges(oemol)
     else:
-        charged_molecule = molecule
+        charged_molecule = oemol
+
+    # TODO: This method has moved to the tests, but can be tackled in two or three lines
     mol_top, mol_sys, mol_pos = create_system_from_molecule(mol_ff, charged_molecule)
+
     molecule_structure = parmed.openmm.load_topology(mol_top, mol_sys, xyz=mol_pos)
 
     return molecule_structure
 
 def generateProteinStructure(proteinpdb, protein_forcefield='amber99sbildn.xml', solvent_forcefield='tip3p.xml'):
     """
-    Given an OpenMM PDBFile, create the OpenMM System of the protein and
-    then generate the parametrized ParmEd Structure of the protein.
+    Given an OpenMM PDBFile, create the OpenMM System of the protein using OpenMM's ForceField and then generate the parametrized ParmEd Structure of the protein.
+
     Parameters
     ----------
-    proteinpdb : openmm.app.PDBFile object,
+    proteinpdb : simtk.openmm.app.PDBFile object,
         Loaded PDBFile object of the protein.
     protein_forcefield : xml file, default='amber99sbildn.xml'
         Forcefield parameters for protein
     solvent_forcefield : xml file, default='tip3p.xml'
         Forcefield parameters for solvent
+
     Returns
     -------
     solv_structure : parmed.structure.Structure
         The parameterized Structure of the protein with solvent molecules. (No ligand).
+
     """
-    #Generate protein Structure object
+    # Generate protein Structure object using OpenMM ForceField
     forcefield = app.ForceField(protein_forcefield, solvent_forcefield)
     protein_system = forcefield.createSystem( proteinpdb.topology )
     protein_structure = parmed.openmm.load_topology(proteinpdb.topology,
@@ -100,25 +125,28 @@ def combinePostions(proteinPositions, molPositions):
     """
     Loops through the positions from the ParmEd structures of the protein and ligand,
     divides by unit.angstroms which will ensure both positions arrays are in the same units.
+
     Parameters
     ----------
     proteinPositions : list of 3-element Quantity tuples.
         Positions list taken directly from the protein Structure.
     molPositions : list of 3-element Quantity tuples.
         Positions list taken directly from the molecule Structure.
+
     Returns
     -------
     positions : list of 3-element Quantity tuples.
         ex. unit.Quantity(positions, positions_unit)
         Combined positions of the protein and molecule Structures.
     """
+
     positions_unit = unit.angstroms
-    positions0_dimensionless = numpy.array(proteinPositions / positions_unit)
-    positions1_dimensionless = numpy.array(molPositions / positions_unit)
-    coordinates = numpy.vstack(
+    positions0_dimensionless = np.array(proteinPositions / positions_unit)
+    positions1_dimensionless = np.array(molPositions / positions_unit)
+    coordinates = np.vstack(
         (positions0_dimensionless, positions1_dimensionless))
     natoms = len(coordinates)
-    positions = numpy.zeros([natoms, 3], numpy.float32)
+    positions = np.zeros([natoms, 3], np.float32)
     for index in range(natoms):
             (x, y, z) = coordinates[index]
             positions[index, 0] = x
@@ -133,12 +161,14 @@ def mergeStructure(proteinStructure, molStructure):
     create the Structure for the protein:ligand complex, while retaining the SMIRNOFF
     parameters on the ligand. Preserves positions and box vectors.
     (Not as easily achieved using native OpenMM tools).
+
     Parameters
     ----------
     proteinStructure : parmed.structure.Structure
         The parametrized structure of the protein.
     moleculeStructure : parmed.structure.Structure
         The parametrized structure of the ligand.
+
     Returns
     -------
     structure : parmed.structure.Structure
@@ -152,7 +182,7 @@ def mergeStructure(proteinStructure, molStructure):
     structure.box = proteinStructure.box
     return structure
 
-
+# TODO: Migrate into Molecule
 def generateTopologyFromOEMol(molecule):
     """
     Generate an OpenMM Topology object from an OEMol molecule.
@@ -191,7 +221,7 @@ def generateTopologyFromOEMol(molecule):
     # Create atoms in the residue.
     for atom in mol.GetAtoms():
         name = atom.GetName()
-        element = elem.Element.getByAtomicNumber(atom.GetAtomicNum())
+        element = app.element.Element.getByAtomicNumber(atom.GetAtomicNum())
         openmm_atom = topology.addAtom(name, element, residue)
 
     # Create bonds.
@@ -204,7 +234,7 @@ def generateTopologyFromOEMol(molecule):
 
     return topology
 
-def get_data_filename(relative_path):
+def get_testdata_filename(relative_path):
     """Get the full path to one of the reference files in testsystems.
 
     In the source distribution, these files are in ``openforcefield/data/``,
@@ -226,6 +256,7 @@ def get_data_filename(relative_path):
 
     return fn
 
+# TODO: Do we need this?
 def normalize_molecules(molecules):
     """
     Normalize all molecules in specified set.
@@ -296,6 +327,7 @@ def normalize_molecules(molecules):
 
     return
 
+# TODO: Migrate into Molecule
 def read_molecules(filename, verbose=True):
     """
     Read molecules from an OpenEye-supported file.
@@ -314,7 +346,7 @@ def read_molecules(filename, verbose=True):
     from openeye import oechem
 
     if not os.path.exists(filename):
-        built_in = get_data_filename('molecules/%s' % filename)
+        built_in = get_testdata_filename('molecules/%s' % filename)
         if not os.path.exists(built_in):
             raise Exception("File '%s' not found." % filename)
         filename = built_in
@@ -344,34 +376,36 @@ def read_molecules(filename, verbose=True):
 
     return molecules
 
-def setPositionsInOEMol(molecule, positions):
+# TODO: Migrate into Molecule
+def setPositionsInOEMol(oemol, positions):
     """Set the positions in an OEMol using a position array with units from simtk.unit, i.e. from OpenMM. Atoms must have same order.
 
     Arguments:
     ---------
-    molecule : OEMol
+    oemol : OEMol
         OpenEye molecule
     positions : Nx3 array
         Unit-bearing via simtk.unit Nx3 array of coordinates
     """
     from openeye import oechem
 
-    if molecule.NumAtoms() != len(positions): raise ValueError("Number of atoms in molecule does not match length of position array.")
+    if oemol.NumAtoms() != len(positions): raise ValueError("Number of atoms in molecule does not match length of position array.")
     pos_unitless = positions/unit.angstroms
 
     coordlist = []
     for idx in range(len(pos_unitless)):
         for j in range(3):
-            coordlist.append( pos_unitless[idx][j])
-    molecule.SetCoords(oechem.OEFloatArray(coordlist))
+            coordlist.append(pos_unitless[idx][j])
+    oemol.SetCoords(oechem.OEFloatArray(coordlist))
 
-def extractPositionsFromOEMol(molecule):
+# TODO: Migrate into Molecule
+def extractPositionsFromOEMol(oemol):
     """Get the positions from an OEMol and return in a position array with units via simtk.unit, i.e. foramtted for OpenMM.
     Adapted from choderalab/openmoltools test function extractPositionsFromOEMOL
 
     Arguments:
     ----------
-    molecule : OEMol
+    oemol : OEMol
         OpenEye molecule
 
     Returns:
@@ -379,10 +413,9 @@ def extractPositionsFromOEMol(molecule):
     positions : Nx3 array
         Unit-bearing via simtk.unit Nx3 array of coordinates
     """
-
-    positions = unit.Quantity(numpy.zeros([molecule.NumAtoms(), 3], numpy.float32), unit.angstroms)
-    coords = molecule.GetCoords()
-    for index in range(molecule.NumAtoms()):
+    positions = unit.Quantity(np.zeros([molecule.NumAtoms(), 3], np.float32), unit.angstroms)
+    coords = oemol.GetCoords()
+    for index in range(oemol.NumAtoms()):
         positions[index,:] = unit.Quantity(coords[index], unit.angstroms)
     return positions
 
@@ -408,7 +441,7 @@ def read_typelist(filename):
         return None
 
     if not os.path.exists(filename):
-        built_in = get_data_filename(filename)
+        built_in = get_testdata_filename(filename)
         if not os.path.exists(built_in):
             raise Exception("File '%s' not found." % filename)
         filename = built_in
@@ -593,235 +626,15 @@ def get_energy(system, positions):
 
 # TODO: Reorganize this file, moving exporters to openforcefield.exporters
 
-def create_system_from_amber(prmtop_filename, crd_filename, verbose = False):
-    """Utility function. Create and return an OpenMM System given a prmtop and
-       crd, AMBER format files.
+def get_molecule_parameterIDs(molecules, forcefield):
+    """Process a list of molecules with a specified SMIRNOFF ffxml file and determine which parameters are used by which molecules, returning collated results.
 
     Parameters
     ----------
-    prmtop_filename : str (filename)
-        Filename of input AMBER format prmtop file
-    crd_filename : str (filename)
-        Filename of input AMBER format crd file
-
-    Returns
-    _______
-    topology : OpenMM Topology
-    system : OpenMM System
-    positions : initial atomic positions (OpenMM)
-    """
-
-    # Create System object
-    prmtop = app.AmberPrmtopFile(prmtop_filename)
-    topology = prmtop.topology
-    system = prmtop.createSystem(nonbondedMethod = app.NoCutoff, constraints = None, implicitSolvent = None )
-
-    # Read coordinates
-    crd = app.AmberInpcrdFile( crd_filename )
-    positions = crd.getPositions()
-
-    return (topology, system, positions)
-
-def create_system_from_molecule(forcefield, mol, verbose=False):
-    """
-    Generate a System from the given OEMol and SMIRNOFF forcefield, return the resulting System.
-
-    Parameters
-    ----------
-    forcefield : ForceField
-        SMIRNOFF forcefield
-    mol : oechem.OEMol
-        Molecule to test (must have coordinates)
-
-
-    Returns
-    ----------
-    topology : OpenMM Topology
-    system : OpenMM System
-    positions : initial atomic positions (OpenMM)
-    """
-    # Create system
-    from openforcefield.utils import generateTopologyFromOEMol
-    topology = generateTopologyFromOEMol(mol)
-    system = forcefield.createSystem(topology, [mol], verbose=verbose)
-
-    # Get positions
-    coordinates = mol.GetCoords()
-    natoms = len(coordinates)
-    positions = np.zeros([natoms,3], np.float32)
-    for index in range(natoms):
-        (x,y,z) = coordinates[index]
-        positions[index,0] = x
-        positions[index,1] = y
-        positions[index,2] = z
-    positions = unit.Quantity(positions, unit.angstroms)
-
-    return topology, system, positions
-
-def compare_system_energies( topology0, topology1, system0, system1, positions0, positions1=None, label0="AMBER system", label1 = "SMIRNOFF system", verbose = True, skip_assert = False, skip_improper = False ):
-    """
-    Given two OpenMM systems, check that their energies and component-wise
-    energies are consistent, and return these. The same positions will be used
-    for both systems unless a second set of positions is provided.
-
-    Parameters
-    ----------
-    topology0 : OpenMM Topology
-        Topology of first system
-    topology1 : OpenMM Topology
-        Topology of second system
-    system0 : OpenMM System
-        First system for comparison (usually from AMBER)
-    system1 : OpenMM System
-        Second system for comparison (usually from SMIRNOFF)
-    positions0 : simtk.unit.Quantity wrapped
-        Positions to use for energy evaluation comparison
-    positions1 (optional) : simtk.unit.Quantity wrapped (optional)
-        Positions to use for second OpenMM system; original positions are used
-        if this is not provided
-    label0 (optional) : str
-        String labeling system0 for output. Default, "AMBER system"
-    label1 (optional) : str
-        String labeling system1 for output. Default, "SMIRNOFF system"
-    verbose (optional) : bool
-        Print out info on energies, True/False (default True)
-    skip_assert (optional) : bool
-        Skip assertion that energies must be equal within specified tolerance. Default False.
-    skip_improper (optional) : bool
-        Skip detailed checking of force terms on impropers (helpful here if comparing with AMBER force fields using different definitions of impropers.) Default False.
-
-    Returns
-    ----------
-        groups0 : dict
-            As returned by openmoltools.system_checker.check_energy_groups,
-            a dictionary with keys "bond", "angle", "nb", "torsion" and values
-            corresponding to the energies of these components for the first simulation object
-        groups1 : dict
-            As returned by openmoltools.system_checker.check_energy_groups,
-            a dictionary with keys "bond", "angle", "nb", "torsion" and values
-            corresponding to the energies of these components for the second simulation object
-        energy0 : simtk.unit.Quantity
-            Energy of first system
-        energy1 : simtk.unit.Quantity
-            Energy of second system
-
-    TO DO:
-        Allow energy extraction/comparison of terms specified by particular
-        SMARTS queries i.e. for specific bond, angle, or torsional terms.
-    """
-
-    # Create integrator
-    timestep = 1.0 * unit.femtoseconds
-    integrator0 = simtk.openmm.VerletIntegrator( timestep )
-    integrator1 = simtk.openmm.VerletIntegrator( timestep )
-
-    # Grab second positions
-    if positions1 == None:
-        positions1 = copy.deepcopy( positions0 )
-
-    # Create simulations
-    platform = simtk.openmm.Platform.getPlatformByName("Reference")
-    simulation0 = app.Simulation( topology0, system0, integrator0, platform = platform )
-    simulation0.context.setPositions(positions0)
-    simulation1 = app.Simulation( topology1, system1, integrator1, platform = platform )
-    simulation1.context.setPositions(positions1)
-
-    # Print what torsions were found if verbose
-    if verbose:
-        # Build list of atoms for debugging info
-        atoms0 = [ atom for atom in simulation0.topology.atoms() ]
-        atoms1 = [ atom for atom in simulation1.topology.atoms() ]
-        # Loop over first system and print torsion info
-        for force in simulation0.system.getForces():
-            if type(force) == mm.PeriodicTorsionForce:
-                print("Num (type) \t Num (type) \t Num (type) \t Num (type) \t per \t phase \t k0")
-                for k in range(force.getNumTorsions()):
-                    i0, i1, i2, i3, per, phase, k0 = force.getTorsionParameters(k)
-                    print("%3s (%3s)- %3s (%3s)- \t %s (%3s)- \t %3s (%3s)- \t %f \t %f \t %f " % (i0, atoms0[i0].name, i1, atoms0[i1].name, i2, atoms0[i2].name, i3, atoms0[i3].name, per, phase/unit.degree, k0/unit.kilojoule_per_mole) )
-        for force in simulation1.system.getForces():
-            if type(force) == mm.PeriodicTorsionForce:
-                print("Num (type) \t Num (type) \t Num (type) \t Num (type) \t per \t phase \t k0")
-                for k in range(force.getNumTorsions()):
-                    i0, i1, i2, i3, per, phase, k0 = force.getTorsionParameters(k)
-                    print("%3s (%3s)- %3s (%3s)- %3s (%3s)- %3s (%3s) - %f \t %f \t %f " % (i0, atoms1[i0].name, i1, atoms1[i1].name, i2, atoms1[i2].name, i3, atoms1[i3].name, per, phase/unit.degree, k0/unit.kilojoule_per_mole) )
-
-    # Do energy comparison, print info if desired
-    syscheck = system_checker.SystemChecker( simulation0, simulation1 )
-    if not skip_assert:
-        # Only check force terms if we want to make sure energies are identical
-        syscheck.check_force_parameters(skipImpropers = skip_improper)
-    groups0, groups1 = syscheck.check_energy_groups(skip_assert = skip_assert)
-    energy0, energy1 = syscheck.check_energies(skip_assert = skip_assert)
-    if verbose:
-        print("Energy of %s: " % label0, energy0 )
-        print("Energy of %s: " % label1, energy1 )
-        print("\nComponents of %s:" % label0 )
-        for key in groups0.keys():
-            print("%s: " % key, groups0[key] )
-        print("\nComponents of %s:" % label1 )
-        for key in groups1.keys():
-            print("%s: " % key, groups1[key] )
-
-    # Return
-    return groups0, groups1, energy0, energy1
-
-def compare_molecule_energies( prmtop, crd, forcefield, mol, verbose = True, skip_assert=False, skip_improper = False):
-    """
-    Compare energies for OpenMM Systems/topologies created from an AMBER prmtop
-    and crd versus from a SMIRNOFF forcefield file and OEMol which should
-    parameterize the same system with same parameters.
-
-
-    Parameters
-    ----------
-    prmtop_filename : str (filename)
-        Filename of input AMBER format prmtop file
-    crd_filename : str (filename)
-        Filename of input AMBER format crd file
-    forcefield : ForceField
-        SMIRNOFF forcefield
-    mol : oechem.OEMol
-        Molecule to test
-    verbose (optional): Bool
-        Print out info. Default: True
-    skip_assert : bool
-        Skip assertion that energies must be equal within tolerance. Default, False.
-    skip_improper (optional) : bool
-        Skip detailed checking of force terms on impropers (helpful here if comparing with AMBER force fields using different definitions of impropers.) Default False.
-
-
-    Returns
-    --------
-        groups0 : dict
-            As returned by openmoltools.system_checker.check_energy_groups,
-            a dictionary with keys "bond", "angle", "nb", "torsion" and values
-            corresponding to the energies of these components for the first simulation object
-        groups1 : dict
-            As returned by openmoltools.system_checker.check_energy_groups,
-            a dictionary with keys "bond", "angle", "nb", "torsion" and values
-            corresponding to the energies of these components for the second simulation object
-        energy0 : simtk.unit.Quantity
-            Energy of first system
-        energy1 : simtk.unit.Quantity
-            Energy of second system
-    """
-
-    ambertop, ambersys, amberpos = create_system_from_amber( prmtop, crd )
-    smirfftop, smirffsys, smirffpos = create_system_from_molecule(forcefield, mol, verbose = verbose)
-
-    groups0, groups1, energy0, energy1 = compare_system_energies( ambertop,
-               smirfftop, ambersys, smirffsys, amberpos, verbose = verbose, skip_assert = skip_assert, skip_improper = skip_improper )
-
-    return groups0, groups1, energy0, energy1
-
-def get_molecule_parameterIDs( oemols, ffxml):
-    """Process a list of oemols with a specified SMIRNOFF ffxml file and determine which parameters are used by which molecules, returning collated results.
-
-
-    Parameters
-    ----------
-    oemols : list
-        List of OpenEye OEChem molecules to parse; must have explicit hydrogens.
+    molecules : list of openforcefield.topology.Molecule
+        List of molecules (with explicit hydrogens) to parse
+    forcefield : openforcefield.typing.engines.smirnoff.ForceField
+        The ForceField to apply
 
     Returns
     -------
@@ -837,23 +650,24 @@ def get_molecule_parameterIDs( oemols, ffxml):
         in which that parameter occurs. No frequency information is stored.
 
     """
-
     # Create storage
-    parameters_by_molecule = {}
-    parameters_by_ID = {}
+    parameters_by_molecule = dict()
+    parameters_by_ID = dict()
 
-    # Generate isomeric SMILES
-    isosmiles = list()
-    for mol in oemols:
-        smi = oechem.OECreateIsoSmiString(mol)
-        if not smi in isosmiles:
-            isosmiles.append(smi)
-        # If the molecule is already here, raise exception
-        else:
-            raise ValueError("Error: get_molecule_parameterIDs has been provided a list of oemols which contains the same molecule, having isomeric smiles %s, more than once." % smi )
+    # Generate isomeric SMILES for each molecule, ensuring all molecules are unique
+    isosmiles = [ molecule.canonical_isomeric_smiles for molecule in molecules ]
+    already_seen = set()
+    duplicates = set(smiles for smiles in isosmiles if smiles in already_seen or already_seen.add(x))
+    if len(duplicates) > 0:
+        raise ValueError("Error: get_molecule_parameterIDs has been provided a list of oemols which contains some duplicates: {}".format(duplicates))
+
+    # Assemble molecules into a Topology
+    topology = Topology()
+    for molecule in molecules:
+        topology.add_molecule(molecule)
+
     # Label molecules
-    ff = ForceField( ffxml )
-    labels = ff.labelMolecules( oemols )
+    labels = forcefield.label_molecules(topology)
 
     # Organize labels into output dictionary by looping over all molecules/smiles
     for idx in range(len(isosmiles)):
@@ -877,14 +691,14 @@ def get_molecule_parameterIDs( oemols, ffxml):
 
     return parameters_by_molecule, parameters_by_ID
 
-def getMolParamIDToAtomIndex( oemol, ff):
-    """Take an OEMol and a SMIRNOFF forcefield object and return a dictionary, keyed by parameter ID, where each entry is a tuple of ( smirks, [[atom1, ... atomN], [atom1, ... atomN]) giving the SMIRKS corresponding to that parameter ID and a list of the atom groups in that molecule that parameter is applied to.
+def getMolParamIDToAtomIndex(molecule, forcefield):
+    """Take a Molecule and a SMIRNOFF forcefield object and return a dictionary, keyed by parameter ID, where each entry is a tuple of ( smirks, [[atom1, ... atomN], [atom1, ... atomN]) giving the SMIRKS corresponding to that parameter ID and a list of the atom groups in that molecule that parameter is applied to.
 
     Parameters
     ----------
-    oemol : OEMol
-        OpenEye OEMol with the molecule to investigate.
-    ff : ForceField
+    molecule : openforcefield.topology.Molecule
+        Molecule to investigate
+    forcefield : ForceField
         SMIRNOFF ForceField object (obtained from an ffxml via ForceField(ffxml)) containing FF of interest.
 
     Returns
@@ -894,7 +708,10 @@ def getMolParamIDToAtomIndex( oemol, ff):
 
     """
 
-    labels = ff.labelMolecules([oemol])
+    topology = Topology()
+    topology.add_molecule(molecule)
+    labels = ff.labal_molecules(topology)
+
     param_usage = {}
     for mol_entry in range(len(labels)):
         for force in labels[mol_entry].keys():
@@ -969,12 +786,12 @@ def merge_system( topology0, topology1, system0, system1, positions0, positions1
 
     return topology, system, positions
 
-def save_system_to_amber( topology, system, positions, prmtop, crd ):
+def save_system_to_amber(openmm_topology, system, positions, prmtop, inpcrd):
     """Save an OpenMM System, with provided topology and positions, to AMBER prmtop and coordinate files.
 
     Parameters
     ----------
-    topology : OpenMM Topology
+    openmm_topology : OpenMM Topology
         Topology of the system to be saved, perhaps as loaded from a PDB file or similar.
     system : OpenMM System
         Parameterized System to be saved, containing components represented by Topology
@@ -982,21 +799,21 @@ def save_system_to_amber( topology, system, positions, prmtop, crd ):
         Position array containing positions of atoms in topology/system
     prmtop : filename
         AMBER parameter file name to write
-    crd : filename
+    inpcrd : filename
         AMBER coordinate file name (ASCII crd format) to write
 
     """
 
-    structure = parmed.openmm.topsystem.load_topology( topology, system, positions )
-    structure.save( prmtop, overwrite = True, format="amber" )
-    structure.save( crd, format='rst7', overwrite = True)
+    structure = parmed.openmm.topsystem.load_topology(openmm_topology, system, positions)
+    structure.save(prmtop, overwrite = True, format="amber")
+    structure.save(inpcrd, format='rst7', overwrite = True)
 
-def save_system_to_gromacs( topology, system, positions, top, gro ):
+def save_system_to_gromacs(openmm_topology, system, positions, top, gro):
     """Save an OpenMM System, with provided topology and positions, to AMBER prmtop and coordinate files.
 
     Parameters
     ----------
-    topology : OpenMM Topology
+    openmm_topology : OpenMM Topology
         Topology of the system to be saved, perhaps as loaded from a PDB file or similar.
     system : OpenMM System
         Parameterized System to be saved, containing components represented by Topology
@@ -1009,6 +826,6 @@ def save_system_to_gromacs( topology, system, positions, top, gro ):
 
     """
 
-    structure = parmed.openmm.topsystem.load_topology( topology, system, positions )
-    structure.save( top, overwrite = True, format="gromacs")
-    structure.save( gro, overwrite = True, format="gro")
+    structure = parmed.openmm.topsystem.load_topology(openmm_topology, system, positions )
+    structure.save(top, overwrite = True, format="gromacs")
+    structure.save(gro, overwrite = True, format="gro")

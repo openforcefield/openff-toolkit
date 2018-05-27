@@ -5,7 +5,7 @@
 #=============================================================================================
 
 """
-Parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
+Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 
 .. codeauthor:: John D. Chodera <john.chodera@choderalab.org>
 .. codeauthor:: David L. Mobley <dmobley@mobleylab.org>
@@ -65,14 +65,18 @@ MAX_SUPPORTED_VERSION = '1.0' # maximum version of the SMIRNOFF spec supported b
 
 # QUESTION: How should we document private object fields?
 
-# TODO: How do we serialize/deserialize this object?
+# TODO: How do we serialize/deserialize `ForceField`'s object model? Can we rely on pickle?
 
 # TODO: Should we add methods to retrieve string XML representations?
+
+# TODO: Rename `ParameterHandler` to `ForceGenerator`
+
+# TODO: How should we incorporate IO plugins?
 
 class ForceField(object):
     """A factory that assigns SMIRNOFF parameters to a molecular system
 
-    Specifically, :class:`ForceField` is a factory that constructs an OpenMM :class:`simtk.openmm.System` object from a :class:`openforcefield.topology.Topology` object.
+    :class:`ForceField` is a factory that constructs an OpenMM :class:`simtk.openmm.System` object from a :class:`openforcefield.topology.Topology` object defining a (bio)molecular system containing one or more molecules.
 
     When a :class:`ForceField` object is created from one or more specified SMIRNOFF serialized representations,
     all :class:`ParameterHandler` subclasses currently imported are identified and registered to handle different sections of the SMIRNOFF force field definition file(s).
@@ -109,16 +113,48 @@ class ForceField(object):
     Create an OpenMM system from a :class:`openforcefield.topology.Topology` object:
 
     >>> from openforcefield.topology.testsystems import WaterBox
-    >>> system = forcefield.createSystem(WaterBox.topology)
+    >>> system = forcefield.create_system(WaterBox.topology)
+
+    Modify the long-range electrostatics method:
+
+    >>> forcefield.forces['Electrostatics'].method = 'PME'
 
     Inspect the first few vdW parameters:
 
-    >>> print(forcefield.parameters['vdW'][0:3])
+    >>> print(forcefield.forces['vdW'].parameters[0:3])
 
-    Manipulate the child vdW parameters:
+    Retrieve the vdW parameters by SMIRKS string and manipulate it:
 
-    >>> forcefield.parameters['vdW'][-1].smirks += '$(*~[#53])'
-    >>> forcefield.parameters['vdW'][-1].sigma *= 1.02
+    >>> parameter = forcefield.forces['vdW'].parameters['[#1:1]-[#7]']
+    >>> parameter.sigma += 0.1 * unit.angstroms
+    >>> parameter.epsilon *= 1.02
+
+    Make a child vdW type more specific (checking modified SMIRKS for validity):
+
+    >>> forcefield.forces['vdW'].parameters[-1].smirks += '$(*~[#53])'
+
+    .. warning ::
+
+       While we check whether the modified SMIRKS is still valid and has the appropriate valence type,
+       we currently don't check whether the typing remains hierarchical, which could result in some types
+       no longer being assignable because more general types now come *below* them and preferentially match.
+
+    Delete a parameter:
+
+    >>> del forcefield.forces['vdW'].parameters['[#1:1]-[#6X4]']
+
+    .. warning ::
+
+       We currently don't check whether removing a parameter could accidentally remove the root type, so it's possible to no longer type all molecules this way.
+
+    Insert a parameter at a specific point in the parameter tree:
+
+    >>> new_parameter = vdWType(smirks='[*:1]', epsilon=0.0157*unit.kilocalories_per_mole, rmin_half=0.6000*unit.angstroms)
+    >>> forcefield.forces['vdW'].parameters.insert(0, new_parameter)
+
+    .. warning ::
+
+       We currently don't check whether removing a parameter could accidentally remove the root type, so it's possible to no longer type all molecules this way.
 
     """
 
@@ -173,13 +209,16 @@ class ForceField(object):
         self.disable_version_check = disable_version_check # if True, we won't check which SMIRNOFF version number we're parsing
 
         # Register all ParameterHandler objects that will process SMIRNOFF force definitions
+        # TODO: We need to change this to just find all ParameterHandler objects in this file;
+        # otherwise, we can't define two different ParameterHandler subclasses to compare for a new type of energy term
+        # since both will try to register themselves for the same XML tag and an Exception will be raised.
         if parameter_handlers is None:
-            parameter_handlers = self._find_parameter_handlers()
+            parameter_handlers = all_subclasses(ParameterHandler)
         self._register_parameter_handlers(parameter_handlers)
 
         # Register all ParameterHandler objects that will process serialized parameter representations
         if parameter_io_handlers is None:
-            parameter_io_handlers = self._find_parameter_io_handlers()
+            parameter_io_handlers = all_subclasses(ParameterIOHandler)
         self._register_parameter_io_handlers(parameter_io_handlers)
 
         # Parse all sources containing SMIRNOFF parameter definitions
@@ -194,19 +233,24 @@ class ForceField(object):
         self.file_handlers = OrderedDict() # ParameterIO classes to be used for each file type
         self.parameters = ParameterList() # ParameterHandler objects instantiated for each parameter type
 
-    # TODO: We need to change this to just find all ParameterHandler objects in this file;
-    # otherwise, we can't define two different ParameterHandler subclasses to compare for a new type of energy term
-    # since both will try to register themselves for the same XML tag and an Exception will be raised.
-    @staticmethod
-    def _find_parameter_handlers():
-        """Identify all imported subclasses of ParameterHandler.
+    # TODO: Fold this into initializer for ForceField or ParameterSet
 
-        Returns
-        -------
-        parameter_handlers : list of ParameterHandler subclasses
-            List of ParameterHandler subclasses (not objects)
+    def _parse_version(self, root):
+        """Parse the forcefield version number and make sure it is supported.
+
+        Parameters
+        ----------
+        root : etree.Element
+            The document root
+
         """
-        return all_subclasses(ParameterHandler)
+        if 'version' in root.attrib:
+            version = root.attrib['version']
+            # Use PEP-440 compliant version number comparison, if requested
+            if (not self.disable_version_check) and (packaging.version.parse(version) > packaging.version.parse(MAX_SUPPORTED_VERION)):
+                self._raise_parsing_exception(root, 'SMIRNOFF offxml file was written with version %s, but this version of ForceField only supports up to version %s' % (self.version, MAX_SUPPORTED_VERSION))
+        else:
+            self._raise_parsing_exception(root, "'version' attribute must be specified in SMIRNOFF tag")
 
     def _register_parameter_handlers(parameter_handlers):
         """Register all ParameterHandlers, ensuring they specify unique tags to process
@@ -244,103 +288,7 @@ class ForceField(object):
                 parsers[tagname] = subclass
         return parsers
 
-    @staticmethod
-    def _raise_parsing_exception(node=None, msg=None):
-        """Raise a ValueError during XML file parsing, printing the source line number to aid debugging if the XML parsing library supports itself.
-
-        Parameters
-        ----------
-        node : lxml.etree.Node like, optional, default=None
-            XML DOM node object, which may optionally have a ``sourceline`` field
-        msg : str, optional, default=None
-            Exception message to include in ValueError
-
-        """
-        if (node is not None):
-            if hasattr(node, 'sourceline'):
-                raise ValueError("Line %s : %s\n%s" % (node.sourceline, str(node), msg))
-            else:
-                raise ValueError("%s\n%s" % (str(node), msg))
-        else:
-            raise Exception(msg)
-
-    @staticmethod
-    def _validate_smarts(smarts, node=None, ensure_valence_type=None):
-        """Validate the specified SMARTS string can be used to assign forcefield parameters.
-
-        This checks to ensure the SMARTS string
-        * is a valid SMARTS string
-        * the tagged atoms form a fully connected subset of atoms
-        * if ``ensure_valence_type`` is specified, ensure the tagged atoms specify the appropriate valence type
-
-        Parameters
-        ----------
-        smarts : str
-           The SMARTS string to be validated
-        node : xml.etree.ElementTree.Element, optional, default=None
-           Node of etree, used only for reporting errors
-        ensure_valence_type : str, optional, default=None
-           If not ``None``, will check to ensure tagged atoms specify appropriate valence types
-           Supported ChemicalEnvironment getType() types: ['Atom', 'Bond', 'Angle', 'ProperTorsion', 'ImproperTorsion']
-           If ``None``, will ensure that it is any one of the above valid valence types.
-
-        """
-        # Create a chemical environment to see if this is a valid SMARTS string
-        try:
-            chemenv = ChemicalEnvironment(smarts)
-        except Exception as e:
-            self._raise_parsing_exception(node, "Error parsing SMARTS '%s' : %s" % (smarts, str(e)))
-
-        # Check type, if specified
-        ensure_valence_type = chemenv.getType()
-        if ensure_valence_type:
-            if valence_type != ensure_valence_type:
-                self._raise_parsing_exception(node, "Tagged atoms in SMARTS string '%s' specifies valence type '%s', expected '%s'." % (smarts, valence_type, ensure_valence_type))
-        else:
-            if valence_type is None:
-                self._raise_parsing_exception(node, "Tagged atoms in SMARTS string '%s' did not tag atoms in a way that correctly specifies a valence type." % smarts)
-
-    @staticmethod
-    def _extract_quantity_from_xml_element(node, parent, name, unit_name=None, default=None):
-        """
-        Form a (potentially unit-bearing) quantity from the specified attribute name.
-
-        node : xml.etree.ElementTree.Element
-           Node of etree corresponding to force type entry.
-        parent : xml.etree.ElementTree.Element
-           Node of etree corresponding to parent Force.
-        name : str
-           Name of parameter to extract from attributes.
-        unit_name : str, optional, default=None
-           If specified, use this attribute name of 'parent' to look up units
-        default : optional, default=None
-           If not None, the value in ``default`` will be returned if ``name`` is not found
-           instead of raising an exception.
-
-        """
-        # Check for expected attributes
-        if (name not in node.attrib):
-            self._raise_parsing_exception(node, "Expected XML attribute '%s' not found" % (name))
-
-        # Most attributes will be converted to floats, but some are strings
-        string_names = ['parent_id', 'id']
-        # Handle case where this is a normal quantity
-        if name not in string_names:
-            quantity = float(node.attrib[name])
-        # Handle label or string
-        else:
-            quantity = node.attrib[name]
-            return quantity
-
-        if unit_name is None:
-            unit_name = name + '_unit'
-
-        if unit_name in parent.attrib:
-            # TODO: This is very dangerous. Replace it with safer scheme from YANK.
-            string = '(%s * %s).value_in_unit_system(md_unit_system)' % (node.attrib[name], parent.attrib[unit_name])
-            quantity = eval(string, unit.__dict__)
-
-        return quantity
+    # TODO: Do we want to make this optional?
 
     @staticmethod
     def _check_for_missing_valence_terms(name, topology, assigned_terms, topological_terms):
@@ -407,6 +355,38 @@ class ForceField(object):
             msg += str(assigned_set) + '\n'
             raise Exception(msg) # TODO: Should we raise a more specific exception here?
 
+    def get_handler(self, tagname, handler_kwargs):
+        """Retrieve the parameter handlers associated with the provided tagname.
+
+        If the parameter handler has not yet been instantiated, it will be created.
+        If a parameter handler object already exists, it will be checked for compatibility
+        and an Exception raised if it is incompatible with the provided kwargs.
+
+        Parameters
+        ----------
+        tagame : str
+            The name of the parameter to be handled.
+        handler_kwargs : dict
+            Dict to be passed to the handler for construction or checking compatibility.
+
+        """
+        if tagname in forcefield.forces:
+            # If handler already exists, make sure it is compatible
+            handler = forcefield.forces[parameter_name]
+            handler.check_compatibility(**kwargs)
+        else:
+            # Create a new handler
+            try:
+                handler = getattr(forcefield.parameter_handlers, parameter_name)(**handler_kwargs)
+            except AttributeError:
+                msg = "Cannot find a registered parameter handler for tag '{}'\n".format(parameter_name)
+                msg += "Registered parameter handlers: {}\n".format(self.parameter_handlers.keys())
+                raise KeyError(msg)
+
+        return handler
+
+    # TODO: Delegate this to the XML handler
+
     def parse(self, sources):
         """Parse a SMIRNOFF force field definition.
 
@@ -449,24 +429,7 @@ class ForceField(object):
                 msg += "Valid encodings are: ['XML']"
                 raise Exception(msg)
 
-
-    def _parse_version(self, root):
-        """Parse the forcefield version number and make sure it is supported.
-
-        Parameters
-        ----------
-        root : etree.Element
-            The document root
-
-        """
-        if 'version' in root.attrib:
-            version = root.attrib['version']
-            # Use PEP-440 compliant version number comparison, if requested
-            if (not self.disable_version_check) and (packaging.version.parse(version) > packaging.version.parse(MAX_SUPPORTED_VERION)):
-                self._raise_parsing_exception(root, 'SMIRNOFF offxml file was written with version %s, but this version of ForceField only supports up to version %s' % (self.version, MAX_SUPPORTED_VERSION))
-        else:
-            self._raise_parsing_exception(root, "'version' attribute must be specified in SMIRNOFF tag")
-
+    # TODO : Move to initializer
     def _parse_aromaticity_model(self, root):
         """Parse the aromaticity model, make sure it is supported, and make sure it does not contradict previously-specified aromaticity models.
 
@@ -487,18 +450,6 @@ class ForceField(object):
         if (self._aromaticity_model is not None) and (self._aromaticity_model != aromaticity_model):
             self._raise_parsing_exception(root, "'aromaticity_model' (%s) does not match earlier read 'aromaticity_model' (%s)" % (aromaticity_model, self._aromaticity_model))
 
-    def getHandlers(self):
-        """Get the list of all registered Handlers."""
-        return self._forces
-
-    def registerHandler(self, Handler):
-        """Register a new Handler."""
-        # Special case: ConstraintHandler has to come before BondHandler and AngleHandler.
-        # TODO: Figure out a more general way to allow Handlers to specify enforced orderings via dependencies.
-        if isinstance(Handler, ConstraintHandler):
-            self._forces.insert(0, Handler)
-        else:
-            self._forces.append(Handler)
     def _resolve_parameter_handler_order(self):
         """Resolve the order in which ParameterHandler objects should execute to satisfy constraints.
         """
@@ -519,7 +470,12 @@ class ForceField(object):
     # TODO: Should we add convenience methods to parameterize a Topology and export directly to AMBER, gromacs, CHARMM, etc.?
     #       Or should we create an "enhanced" openforcefield System object that knows how to convert to all of these formats?
     #       We could even create a universal applyParameters(format='AMBER') method that allows us to export to whatever system we want.
-    def createSystem(self, topology, box_vectors=None, verbose=False, **kwargs):
+
+    # TODO: Should the Topology contain the default box vectors? Or should we require they be specified externally?
+
+    # TODO: How do we know if the system is periodic or not?
+    # TODO: Should we also accept a Molecule as an alternative to a Topology?
+    def create_system(self, topology, default_box_vectors=None, **kwargs):
         """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
 
         Parameters
@@ -532,10 +488,6 @@ class ForceField(object):
             Note that, for periodic systems, after creating a Context, box vectors *must* be set to the appropriate dimensions.
         verbose : bool
             If True, verbose output will be printed.
-        kwargs
-            Arbitrary additional keyword arguments may also be specified.
-            This allows extra parameters to be specified that are specific to particular force fields.
-            A ``ValueError`` will be raised if parameters are specified that are not used by any force Handlers.
 
         Returns
         -------
@@ -543,33 +495,28 @@ class ForceField(object):
             The newly created OpenMM System
 
         """
-        # TODO: Have `verbose` flag set whether logging info is displayed or not.
-
-        # Re-parse XML by ParameterHandler objects if loaded XML files have been added or modified
-        self._reparse_xml_if_needed()
-
-        # Make a deep copy of the topology so we don't accidentaly modify it
+        # Make a deep copy of the topology so we don't accidentally modify it
         topology = copy.deepcopy(topology)
 
-        # Set aromaticity model to that used by forcefield
+        # Set the topology aromaticity model to that used by the current forcefield
         topology.set_aromaticity_model(self._aromaticity_model)
 
-        # Create the System
+        # Create an empty OpenMM System
         system = openmm.System()
-
-        # Add particles
-        # TODO: Optionally allow SMARTS-specified masses
-        for atom in topology.atoms:
-            system.addParticle(atom.element.mass)
 
         # Set periodic boundary conditions if specified
         if default_box_vectors is not None:
             system.setDefaultPeriodicBoxVectors(default_box_vectors)
 
+        # Add particles (both atoms and virtual sites) with appropriate masses
+        for atom in topology.particles:
+            system.addParticle(atom.particle.mass)
+
         # Determine the order in which to process ParameterHandler objects in order to satisfy dependencies
         parameter_handlers = self._resolve_parameter_handler_order()
 
         # Check if any kwargs have been provided that aren't handled by force Handlers
+        # TODO: Delete this and kwargs from arguments above?
         known_kwargs = set()
         for parameter_handler in parameter_handlers:
             known_args.update(parameter_handler.known_kwargs)
@@ -579,48 +526,76 @@ class ForceField(object):
             msg += "Known keyword arguments: {}".format(known_kwargs)
             raise ValueError(msg)
 
-        # Add forces to the System
+        # Add forces and parameters to the System
+        # TODO: Delete kwargs?
         for parameter_handler in parameter_handlers:
-            parameter_handler.createForce(system, topology, **kwargs)
+            parameter_handler.create_force(system, topology, **kwargs)
 
         # Let force Handlers do postprocessing
+        # TODO: Delete kwargs?
         for parameter_handler in parameter_handlers:
-            parameter_handler.postprocessSystem(system, topology, **kwargs)
+            parameter_handler.postprocess_system(system, topology, **kwargs)
 
         return system
 
-    # TODO: Rework/remove this
-    def labelMolecules(self, molecules, verbose=False):
+    def create_structure(self, topology, positions, default_box_vectors=None, **kwargs):
+        """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
+
+        Parameters
+        ----------
+        topology : openforcefield.topology.Topology
+            The ``Topology`` corresponding to the ``System`` object to be created.
+        positions : simtk.unit.Quantity of dimension (natoms,3) with units compatible with angstroms
+            The positions corresponding to the ``System`` object to be created
+        default_box_vectors : simtk.unit.Quanity of shape [3,3] with units compatible with nanometers, optional, default=None
+            Default box vectors to use.
+            If not specified, default box vectors will be set to 1.0 nm edges.
+            Note that, for periodic systems, after creating a Context, box vectors *must* be set to the appropriate dimensions.
+        verbose : bool
+            If True, verbose output will be printed.
+
+        Returns
+        -------
+        system : simtk.openmm.System
+            The newly created OpenMM System
+
+        """
+        # TODO: Automagically handle expansion of virtual sites? Or is Topology supposed to do that?
+
+        # Create OpenMM System
+        system = self.create_system(topology, default_box_vectors=default_box_vectors, **kwargs):
+
+        # Create a ParmEd Structure object
+        structure = parmed.openmm.topsystem.load_topology(topology.to_openmm(), system, positions)
+
+        return structure
+
+    def label_molecules(self, topology, verbose=False):
         """Return labels for a list of molecules corresponding to parameters from this force field.
         For each molecule, a dictionary of force types is returned, and for each force type,
         each force term is provided with the atoms involved, the parameter id assigned, and the corresponding SMIRKS.
 
         Parameters
         ----------
-        molecules : list of openforcefield.topology.Molecule
-            The molecules to be labeled.
+        topology : openforcefield.topology.Topology
+            A Topology object containing one or more unique molecules to be labeled
 
         Returns
         -------
         molecule_labels : list
-            List of labels for molecules. Each entry in the list corresponds to
-            one molecule from the provided list of molecules and is a dictionary
-            keyed by force type, i.e., ``molecule_labels[0]['HarmonicBondForce']``
-            gives details for the harmonic bond parameters for the first
-            molecule. Each element is a list of the form:
+            List of labels for unique molecules. Each entry in the list corresponds to
+            one unique molecule in the Topology and is a dictionary keyed by force type,
+            i.e., ``molecule_labels[0]['HarmonicBondForce']`` gives details for the harmonic
+            bond parameters for the first molecule. Each element is a list of the form:
             ``[ ( [ atom1, ..., atomN], parameter_id, SMIRKS), ... ]``
 
         """
-        self._ensure_xml_has_been_parsed()
-
         # Loop over molecules and label
         molecule_labels = list()
-        for (idx, mol) in enumerate(molecules):
-            molecule_labels.append(dict())
-            for force in self._forces:
-                matches = force.getMatches(mol)
-                # TODO Reformat matches
-                # QUESTION: Do we want to store labeled force terms by OpenMM force type (e.g., `HarmonicBondForce`) or by SMIRNOFF tag name (`BondForce`)
-                molecule_labels[idx][force._TAGNAME] = matches
-
+        for molecule in enumerate(topology.unique_molecules):
+            current_molecule_labels = dict()
+            for force in self.forces:
+                matches = force.get_matches(molecule)
+                molecule_labels[idx][force.name] = matches
+            molecule_labels.append(current_molecule_labels)
         return molecule_labels

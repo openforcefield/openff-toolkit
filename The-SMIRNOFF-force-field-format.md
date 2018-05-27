@@ -2,9 +2,27 @@
 
 SMIRNOFF is a specification for encoding molecular mechanics force fields based on direct chemical perception using the broadly-supported [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) language, utilizing atom tagging extensions from [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html).
 
+## Open Questions
+
+**QUESTION:** Do we want to allow users to specify atomic or particle masses? This could allow, for example, heavy hydrogens to be specified easily.
+
+```XML
+<!-- Use average atomic masses (averaged over isotopes) except for heavy hydrogens -->
+<Masses default="average-atomic-mass" mass_unit="amu">
+   <!-- Make hydrogens heavy -->
+   <Mass smirks="[#1:1]" mass="3"/>
+</Masses>
+```
+While this won't affect thermodynamic properties, it could affect *kinetic* properties, which may be something our force fields optimize for in the future.
+
 ## Authors
 
-The SMIRNOFF format and its reference implementation in the `openforcefield` toolkit is inspired by the [`OpenMM`](http://openmm.org) [`ForceField`](http://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField) class and its associated XML format, developed by Peter Eastman (Stanford).
+* David L. Mobley (University of California, Irvine) `<dmobley@uci.edu>`
+* John D. Chodera  (Memorial Sloan Kettering Cancer Center) `<john.chodera@choderalab.org>`
+* Christopher I. Bayly (OpenEye Software) `<bayly@eyesopen.com>`
+* Caitlin C. Bannan (University of California, Irvine) `<bannanc@uci.edu>`
+
+The SMIRNOFF format and its reference implementation in the `openforcefield` toolkit was heavily inspired by the [`OpenMM`](http://openmm.org) [`ForceField`](http://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField) class and its associated XML format, developed by Peter Eastman (Stanford).
 
 ## Encodings
 

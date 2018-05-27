@@ -105,6 +105,8 @@ def _attach_units(attrib, attached_units):
 # XML I/O
 #=============================================================================================
 
+# TODO: Instead of subclassing ForceField, what if we had an abstract base class for parameter IO?
+
 class XMLForceField(ForceField):
 
     @staticmethod
@@ -203,16 +205,7 @@ class XMLForceField(ForceField):
                 handler_kwargs, attached_units = _extract_attached_units(section.attrib)
 
                 # Retrieve or create parameter handler
-                if section.tag in forcefield.parameters:
-                    # If handler already exists, make sure it is compatible
-                    handler = forcefield.parameters[parameter_name]
-                    handler.check_compatibility(**attrib)
-                else:
-                    # Create a new handler
-                    try:
-                        handler = getattr(forcefield.parameter_handlers, parameter_name)(**handler_kwargs)
-                    except AttributeError:
-                        raise SMIRKSParsingError("Cannot find a handler for tag '{}'".format(parameter_name))
+                handler = forcefield.get_handler(section.tag, handler_kwargs)
 
                 # Populate handler with parameter definitions
                 for parameter in section:

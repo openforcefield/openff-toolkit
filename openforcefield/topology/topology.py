@@ -150,6 +150,35 @@ class Topology(ChemicalEntity):
         # TODO: Try to construct Topology copy from `other` if specified
         pass
 
+    @staticmethod
+    def from_molecules(molecules):
+        """
+        Create a new Topology object containing one copy of each of the specified molecule(s).
+
+        Parameters
+        ----------
+        molecules : Molecule or iterable of Molecules
+            One or more molecules to be added to the Topology
+
+        Returns
+        -------
+        topology : Topology
+            The Topology created from the specified molecule(s)
+        """
+        # Ensure that we are working with an iterable
+        try:
+            some_object_iterator = iter(files)
+        except TypeError as te:
+            # Make iterable object
+            files = [files]
+
+        # Create Topology and populate it with specified molecules
+        topology = Topology()
+        for molecule in molecules:
+            topology.add_molecule(molecule)
+            
+        return topology
+
     def assert_bonded(atom1, atom2):
         """
         Raise an exception if the specified atoms are not bonded in the topology.

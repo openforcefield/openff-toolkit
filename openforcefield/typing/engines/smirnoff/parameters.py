@@ -66,6 +66,10 @@ class ParameterList(list):
     """
     # TODO: Make this faster by caching SMARTS -> index lookup?
 
+    # TODO: Override __del__ to make sure we don't remove root atom type
+
+    # TODO: Allow retrieval by `id` as well
+
     def __getitem__(self, item):
         """Retrieve item by index or SMIRKS
         """
@@ -80,6 +84,9 @@ class ParameterList(list):
             return ParameterList(result)
         except TypeError:
             return result
+
+    # TODO: Override __setitem__ and __del__ to ensure we can slice by SMIRKS as well
+
     def __contains__(self, item):
         """Check to see if either Parameter or SMIRKS is contained in parameter list.
         """
@@ -99,7 +106,11 @@ class ParameterType(object):
 
     _VALENCE_TYPE = None # ChemicalEnvironment valence type for checking SMIRKS is conformant
 
-    def __init__(self, smirks):
+    # TODO: Allow preferred units for each parameter type to be specified and remembered as well for when we are writing out
+
+    # TODO: Can we provide some shared tools for returning settable/gettable attributes, and checking unit-bearing attributes?
+
+    def __init__(self, smirks=None, id=None, pid=None):
         """
         Create a ParameterType
 
@@ -109,7 +120,14 @@ class ParameterType(object):
             The SMIRKS match for the provided parameter type.
 
         """
+        if smirks is None:
+            raise ValueError("'smirks' must be specified")
         self.smirks = smirks
+
+        if id is not None:
+            self.id = id
+        if pid is not None:
+            self.pid = pid
 
     @property
     def smirks(self):
@@ -119,6 +137,8 @@ class ParameterType(object):
     def set_smirks(self, smirks):
         # Validate the SMIRKS string to ensure it matches the expected parameter type,
         # raising an exception if it is invalid or doesn't tag a valid set of atoms
+        # TODO: Add check to make sure we can't make tree non-hierarchical
+        #       This would require parameter type knows which ParameterList it belongs to
         ChemicalEnvironment.validate(smirks, ensure_valence_type=self.__valence_type)
         self.__smirks = smirks
 
@@ -155,7 +175,7 @@ class ParameterHandler(object):
     # TODO: Do we need to store the parent forcefield object?
     def __init__(self, forcefield):
         self._forcefield = forcefield # the ForceField object that this ParameterHandler is registered with
-        self.parameters = list() # list of ParameterType objects # TODO: Change to method accessor so we can access as list or dict
+        self.parameters = ParameterList() # list of ParameterType objects # TODO: Change to method accessor so we can access as list or dict
 
     # TODO: Do we need to return these, or can we handle this internally
     @property
@@ -578,26 +598,30 @@ class vdWHandler(ParameterHandler):
 
     class vdWType(ParameterType):
         """A SMIRNOFF vdWForce type."""
-        def __init__(self, node, parent):
-            # NOTE: Currently we support radius definition via 'sigma' or 'rmin_half'.
-            super(StericsType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
+        def __init__(self, smirks=None, sigma=None, rmin_half=None, epsilon=None, id=None, parent_id=None):
+            super(vdWType, self).__init__(smirks=smirks, id=id, parent_id=parent_id)
 
-            # Make sure we don't have BOTH rmin_half AND sigma
-            try:
-                a = _extract_quantity_from_xml_element(node, parent, 'sigma')
-                a = _extract_quantity_from_xml_element(node, parent, 'rmin_half')
-                raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the .offxml file.")
-            except:
-                pass
+            if (sigma is None) and (rmin_half is None):
+                raise ValueError("sigma or rmin_half must be specified.")
+            if (sigma is not None) and (rmin_half is not None):
+                raise ValueError("BOTH sigma and rmin_half cannot be specified simultaneously.")
+            if (rmin_half is not None):
+                sigma = 2.*rmin_half/(2.**(1./6.))
+            ensure_compatible_units(sigma, unit.angstroms, 'sigma') # TODO: Will this automatically be ensured by type checking?
+            self.sigma = sigma
 
-            # Handle Lennard-Jones sigma
-            try:
-                self.sigma = _extract_quantity_from_xml_element(node, parent, 'sigma')
-            #Handle rmin_half, AMBER-style
-            except:
-                rmin_half = _extract_quantity_from_xml_element(node, parent, 'rmin_half', unit_name='sigma_unit')
-                self.sigma = 2.*rmin_half/(2.**(1./6.))
-            self.epsilon = _extract_quantity_from_xml_element(node, parent, 'epsilon')
+            if epsilon is None:
+                raise ValueError("epsilon must be specified")
+            ensure_compatible_units(epsilon, unit.kilocalories_per_mole, 'epsilon')
+            self.epsilon = epsilon
+            # TODO: Check unit compatibility
+
+        @property
+        def attrib(self):
+            """Return all storable attributes as a dict.
+            """
+            names = ['smirks', 'sigma', 'epsilon', 'id', 'parent_id']
+            return { name, getattr(self, name) for name in names if hasattr(self, name) }
 
     _TAGNAME = 'vdWForce' # SMIRNOFF tag name to process
     _INFOTYPE = vdWType # info type to store
@@ -657,8 +681,10 @@ class vdWHandler(ParameterHandler):
             # Set the nonbonded force with the partial charge
             force.setParticleParameters(atom.particle_index, atom.charge, sigma, epsilon)
 
+    # TODO: Can we express separate constraints for postprocessing and normal processing?
     def postprocessSystem(self, system, topology, **args):
         # Create exceptions based on bonds.
+        # TODO: This postprocessing must occur after the ChargeIncrementModelHandler
         # QUESTION: Will we want to do this for *all* cases, or would we ever want flexibility here?
         bond_particle_indices = [ (atom1.particle_index, atom2.particle_index) for (atom1, atom2) in topology.bonds ]
         for force in system.getForces():
@@ -668,11 +694,10 @@ class vdWHandler(ParameterHandler):
             if isinstance(force, openmm.NonbondedForce):
                 nonbonded.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self.lj14scale)
 
+class ChargeIncrementModelHandler(ParameterHandler):
+    """Handle SMIRNOFF ``<ChargeIncrementModel>`` tags"""
 
-class BondChargeCorrectionHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<BondChargeCorrection>`` tags"""
-
-    class BondChargeCorrectionType(ParameterType):
+    class ChargeIncrementType(ParameterType):
         """A SMIRNOFF bond charge correction type."""
         def __init__(self, node, parent):
             super(BondChargeCorrectionHandler, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
@@ -681,12 +706,19 @@ class BondChargeCorrectionHandler(ParameterHandler):
             if type(self.increment) == float:
                 self.increment *= unit.elementary_charge
 
-    _TAGNAME = 'BondChargeCorrection' # SMIRNOFF tag name to process
-    _INFOTYPE = BondChargeCorrectionType # info type to store
+    _TAGNAME = 'ChargeIncrementModel' # SMIRNOFF tag name to process
+    _INFOTYPE = ChargeIncrementType # info type to store
     _OPENMMTYPE = openmm.NonbondedForce # OpenMM force class to create or utilize
 
-    def __init__(self, forcefield):
-        super(BondChargeCorrectionHandler, self).__init__(forcefield)
+    def __init__(self, forcefield, number_of_conformers=10, quantum_chemical_method="AM1", partial_charge_method="CM2"):
+        super(ChargeIncrementModelHandler, self).__init__(forcefield)
+
+    def check_compatibility(self, number_of_conformers=10, quantum_chemical_method="AM1", partial_charge_method="CM2"):
+        if (self.number_of_conformers != number_of_conformers) or (self.quantum_chemical_method != quantum_chemical_method) or (self.partial_charge_method != partial_charge_method):
+            msg = "ChargeIncrementModel: Two incompatible sections specified:\n"
+            msg += "First section:   number_of_conformers={}, quantum_chemical_method={}, partial_charge_method={}\n".format(self.number_of_conformers, self.quantum_chemical_method, self.partial_charge_method)
+            msg += "Section section: number_of_conformers={}, quantum_chemical_method={}, partial_charge_method={}\n".format(number_of_conformers, quantum_chemical_method, partial_charge_method)
+            raise IncompatibleTagException(msg)
 
     #if element.attrib['method'] != existing[0]._initialChargeMethod:
     #raise Exception("Existing BondChargeCorrectionHandler uses initial charging method '%s' while new BondChargeCorrectionHandler requests '%s'" % (existing[0]._initialChargeMethod, element.attrib['method']))
@@ -697,12 +729,12 @@ class BondChargeCorrectionHandler(ParameterHandler):
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
     def postprocessSystem(self, system, topology, **kwargs):
-        bonds = self.getMatches(topology)
+        bonds = self.get_matches(topology)
 
         # Apply bond charge increments to all appropriate force groups
         # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?
         for force in system.getForces():
-            if force.__class__.__name__ in ['NonbondedForce']: # TODO: We need to apply this to all Force types that involve charges
+            if force.__class__.__name__ in ['NonbondedForce']: # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and CustomNonbondedForce
                 for (atoms, bond) in bonds.items():
                     # Get corresponding particle indices in Topology
                     particle_indices = tuple([ atom.particle_index for atom in atoms ])
@@ -715,6 +747,7 @@ class BondChargeCorrectionHandler(ParameterHandler):
                     # Update charges
                     force.setParticleParameters(particle_indices[0], charge0, sigma0, epsilon0)
                     force.setParticleParameters(particle_indices[1], charge1, sigma1, epsilon1)
+                    # TODO: Calculate exceptions
 
 
 class GBSAParameterHandler(ParameterHandler):

@@ -410,6 +410,11 @@ class Molecule(ChemicalEntity):
     """
     Chemical representation of a molecule.
 
+    Attributes
+    ----------
+    name : str
+        The name or title of the molecule
+
     """
     def __init__(self, other=None):
         """
@@ -422,6 +427,8 @@ class Molecule(ChemicalEntity):
         """
         # Initialize base class
         super(self, Molecule).__init__(other=other)
+
+        self.name = None # Set the name of the molecule
 
         if other is not None:
             # TODO: Can we check interface compliance (in a try..except) instead of checking instances?
@@ -439,6 +446,51 @@ class Molecule(ChemicalEntity):
                 msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(other)
                 msg += 'other must be '
                 raise Exception(msg)
+
+    @staticmethod
+    @requires_openeye_licenses
+    def from_iupac(iupac_name):
+        """Generate Molecule from IUPAC name
+
+        Parameters
+        ----------
+        iupac_name : str
+            IUPAC name of molecule to be generated.
+
+        Returns
+        -------
+        molecule : Molecule
+            The resulting molecule with position
+
+        """
+        # TODO: Can this work with RDKit? Or will this just be an OpenEye-only feature
+        from openeye import oechem, oeiupac, oeomega
+        oemol = oechem.OEMol()
+        oeiupac.OEParseIUPACName(oemol, iupac_name)
+        oechem.OETriposAtomNames(oemol)
+        # Assign coordinates
+        omega = oeomega.OEOmega()
+        omega.SetMaxConfs(1)
+        omega.SetIncludeInput(False)
+        omega.SetCanonOrder(False)
+        omega.SetSampleHydrogens(True) # Word to the wise: skipping this step can lead to significantly different charges!
+        status = omega(oemol)  # generate conformation
+        # Create Molecule
+        molecule = Molecule.from_openeye(oemol)
+        return molecule
+
+    def to_topology(self):
+        """
+        Return an openforcefield Topology representation containing one copy of this molecule
+
+        Returns
+        -------
+        topology : openforcefield.topology.Topology
+            A Topology representation of this molecule
+        """
+        topology = Topology()
+        topology.add_molecule(self)
+        return topology
 
     def __setstate__(self, state):
         # TODO: Implement deserialization
@@ -463,8 +515,17 @@ class Molecule(ChemicalEntity):
         molecules : Molecule or list of Molecules
             If there is a single molecule in the file, a Molecule is returned;
             otherwise, a list of Molecule objects is returned.
-            
+
         """
+        # TODO: Remove this OpenEye-specific code.
+        from openeye import oechem
+        mol = oechem.OEGraphMol()
+        for monomer in monomers:
+            filename =
+            ifs = oechem.oemolistream(filename)
+            while oechem.OEReadMolecule(ifs, mol):
+                oechem.OETriposAtomNames(mol)
+                mols.append( oechem.OEGraphMol(mol) )
         raise NotImplementedError()
 
     @staticmethod
