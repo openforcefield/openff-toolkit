@@ -449,6 +449,25 @@ class Molecule(ChemicalEntity):
         pass
 
     @staticmethod
+    def from_file(filename):
+        """
+        Create one or more molecules from a file
+
+        Parameters
+        ----------
+        filename : str
+            The name of the file to stream one or more molecules from.
+
+        Returns
+        -------
+        molecules : Molecule or list of Molecules
+            If there is a single molecule in the file, a Molecule is returned;
+            otherwise, a list of Molecule objects is returned.
+            
+        """
+        raise NotImplementedError()
+
+    @staticmethod
     def from_rdkit(rdmol):
         """
         Create a Molecule from an RDKit molecule.

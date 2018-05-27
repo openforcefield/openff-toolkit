@@ -30,9 +30,11 @@ import random
 import itertools
 import collections
 
+from collections import OrderedDict
+
 import lxml.etree as etree
 
-import numpy
+import numpy as np
 
 import networkx as nx
 
@@ -56,7 +58,7 @@ class _TransformedDict(collections.MutableMapping):
        function before accessing the keys"""
 
     def __init__(self, *args, **kwargs):
-        self.store = dict()
+        self.store = OrderedDict()
         self.update(dict(*args, **kwargs))  # use the free update to set keys
 
     def __getitem__(self, key):

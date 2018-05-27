@@ -1,19 +1,26 @@
 # TODO: Eliminate OpenEye dependencies from forcefield tests
 
-from functools import partial
-from openforcefield.typing.engines.smirnoff import *
-from openforcefield.utils import get_data_filename, generateTopologyFromOEMol, read_molecules
-from openeye import oechem
-from simtk.openmm import app
-from simtk import unit, openmm
-import numpy as np
-from io import StringIO
-import tempfile
-import parmed
+# TODO: Split this file into many test files, potentially distributing tests within each subpackage next to the classes they test
+
 import os
-
+import tempfile
 import unittest
+from functools import partial
+from io import StringIO
+from tempfile import TemporaryDirectory
 
+import numpy as np
+from numpy_testing import assert_equal
+
+import parmed
+
+from openforcefield.typing.engines.smirnoff import *
+
+from openforcefield.utils import get_data_filename, generateTopologyFromOEMol, read_molecules
+from openforcefield.utils import check_energy_is_finite, get_energy
+
+from simtk import unit, openmm
+from simtk.openmm import app
 
 # This is a test forcefield that is not meant for actual use.
 # It just tests various capabilities.
@@ -177,245 +184,369 @@ ffxml_MDL_contents = u"""\
 </SMIRNOFF>
 """
 
-# TODO: Move this to a utility file?
-def positions_from_oemol(mol):
-    """
-    Extract OpenMM positions from OEMol.
-
-    Parameters
-    ----------
-    mol : oechem.openeye.OEMol
-        OpenEye molecule from which to extract coordinates.
-
-    Returns
-    -------
-    positions : simtk.unit.Quantity of dimension (nparticles,3)
-
-    """
-    from openeye import oeomega
-    if mol.GetDimension() != 3:
-        # Assign coordinates
-        omega = oeomega.OEOmega()
-        omega.SetMaxConfs(1)
-        omega.SetIncludeInput(False)
-        omega.SetCanonOrder(False)
-        omega.SetSampleHydrogens(True)  # Word to the wise: skipping this step can lead to significantly different charges!
-        status = omega(mol)  # generate conformation
-
-    coordinates = mol.GetCoords()
-    natoms = len(coordinates)
-    positions = np.zeros([natoms,3], np.float32)
-    for index in range(natoms):
-        (x,y,z) = coordinates[index]
-        positions[index,0] = x
-        positions[index,1] = y
-        positions[index,2] = z
-    positions = unit.Quantity(positions, unit.angstroms)
-    return positions
-
-# TODO: Move this to a utility file?
-def check_energy_is_finite(system, positions):
-    """
-    Check the potential energy is not NaN.
-
-    Parameters
-    ----------
-    system : simtk.openmm.System
-        The system to check
-    positions : simtk.unit.Quantity of dimension (natoms,3) with units of length
-        The positions to use
-
-    """
-    integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
-    context = openmm.Context(system, integrator)
-    context.setPositions(positions)
-    state = context.getState(getEnergy=True)
-    energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
-    if np.isnan(energy):
-        raise Exception('Potential energy is NaN')
-
-# TODO: Move this to a utility file?
-def get_energy(system, positions):
-    """
-    Return the potential energy.
-
-    Parameters
-    ----------
-    system : simtk.openmm.System
-        The system to check
-    positions : simtk.unit.Quantity of dimension (natoms,3) with units of length
-        The positions to use
-    Returns
-    ---------
-    energy
+class TestParameterList(object):
+    """Test capabilities of ParameterList.
     """
 
-    integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
-    context = openmm.Context(system, integrator)
-    context.setPositions(positions)
-    state = context.getState(getEnergy=True)
-    energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
-    return energy
+    def test_create(self):
+        """Test creation of a parameter list.
+        """
+        p1 = ParameterType(smirks='[*:1]')
+        p2 = ParameterType(smirks='[#1:1]')
+        parameters = ParameterList([p1, p2])
 
-#
-# Tests for ForceField initializer
-#
+    def test_retrieve_by_smirks(self):
+        """Test ParameterList __getitem__ overloading works correctly.
+        """
+        p1 = ParameterType(smirks='[*:1]')
+        p2 = ParameterType(smirks='[#1:1]')
+        parameters = ParameterList([p1, p2])
+        assert parameters[0] == p1
+        assert parameters[1] == p2
+        assert parameters[p1.smirks] == p1
+        assert parameters[p2.smirks] == p2
 
-def test_create_from_url():
-    """Test creation of a SMIRNOFF ForceField object from URLs
-    """
-    smirnoff99frosst_url = 'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst.offxml'
-    tip3p_url = 'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/tip3p.offxml'
-    # Test creation with smirnoff99frosst URL
-    forcefield = ForceField(smirnoff99frosst_url)
-    # Test creation with multiple URLs
-    forcefield = ForceField([smirnoff99frosst_url, tip3p_url])
+    def test_contains_by_smirks(self):
+        """Test ParameterList __contains__ overloading works correctly.
+        """
+        p1 = ParameterType(smirks='[*:1]')
+        p2 = ParameterType(smirks='[#1:1]')
+        p3 = ParameterType(smirks='[#7:1]')
+        parameters = ParameterList([p1, p2])
+        assert p1 in parameter
+        assert p2 in parameters
+        assert p3 not in parameters
+        assert p1.smirks in parameters
+        assert p2.smirks in parameters
+        assert p3.smirks not in parameters
 
-def test_create_from_strings():
-    """Test creation of a SMIRNOFF ForceField object from strings
-    """
-    # Test creation with one string
-    forcefield = ForceField(ffxml_contents)
-    # Test creation with list of strings
-    forcefield = ForceField([ffxml_standard, ffxml_constraints])
-
-def test_create_from_offxml():
-    """Test creation of aa SMIRNOFF ForceField object from offxml files.
-    """
-    filenames = ['Frosst_AlkEthOH.offxml', 'tip3p.offxml']
-    forcefield = ForceField(filenames[0])
-    forcefield = ForceField(filenames)
-
-def test_create_gbsa():
-    """Test reading of ffxml files with GBSA support.
-    """
-    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_GBSA.offxml'))
-
-#
-# Tests for system creation
-#
-
-def check_system_creation_from_molecule(forcefield, mol, chargeMethod=None, verbose=False):
-    """
-    Generate a System from the given OEMol and SMIRNOFF forcefield and check that its energy is finite.
-
-    Parameters
-    ----------
-    forcefield : ForceField
-        SMIRNOFF forcefield
-    mol : oechem.OEMol
-        Molecule to test (need not have coordinates)
-    chargeMethod : str, optional, default=None
-        Charge method to use in creating system
-
+class TestForceField(object):
+    """Test capabilities of ForceField and its Python API.
     """
 
-    topology = generateTopologyFromOEMol(mol)
-    system = forcefield.createSystem(topology, [mol], chargeMethod=chargeMethod, verbose=verbose)
-    # Test energy computation.
-    positions = positions_from_oemol(mol)
-    check_energy_is_finite(system, positions)
+    def create_forcefield_via_api(self):
+        """Create a minimal ForceField via the API.
+        """
+        # Create a ForceField
+        forcefield = ForceField(version='1.0', aromaticity_model="MDL")
+        # Add bonds
+        handler = forcefield.get_handler('Bonds', potential="harmonic") # TODO: I don't like this API for adding parameter blocks; can we do better?
+        length_unit = unit.angstroms
+        k_unit = unit.kilocalories_per_mole/unit.angstrom
+        handler.add_parameter(smirks="[#6X4:1]-[#6X4:2]", length=1.526*length_unit, k=620.0*k_unit) # TODO: Should the API automagically handle the case where parameters are provided as strings?
+        handler.add_parameter(smirks="[#6X4:1]-[#1:2]", length=1.090*length_unit, k=680.0*k_unit)
+        assert_equal(forcefield.parameters['Bonds'][0].length, 1.526*length_unit)
+        assert_equal(forcefield.parameters['Bonds'][1].k, 680.0*length_unit)
+        assert_equal(forcefield.parameters['Bonds']["[#6X4:1]-[#1:2]"].length, 1.090*length_unit)
+        # Add angles
+        handler = forcefield.get_handler('Angles', potential="harmonic")
+        angle_unit = unit.degrees
+        k_unit = unit.kilocalories_per_mole/unit.radian**2
+        handler.add_parameter(smirks="[a,A:1]-[#6X4:2]-[a,A:3]", angle=109.50*angle_unit, k=100.0*k_unit)
+        handler.add_parameter(smirks="[#1:1]-[#6X4:2]-[#1:3]", angle=109.50*angle_unit, k=70.0*k_unit)
+        assert_equal(forcefield.parameters['Angles'][0].angle, 109.50*angle_unit)
+        assert_equal(forcefield.parameters['Angles'][0].k, 100.0*k_unit)
+        # Add proper torsions
+        handler = forcefield.get_handler('ProperTorsions', potential="charmm")
+        phase_unit = unit.degrees
+        k_unit = unit.kilocalories_per_mole
+        handler.add_parameter(smirks="[a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]", idivf1=9, periodicity1=3, phase1=0.0*phase_unit, k1=1.40*k_unit)
+        handler.add_parameter(smirks="[#6X4:1]-[#6X4:2]-[#8X2:3]-[#6X4:4]", idivf1=1, periodicity1=3, phase1=0.0*phase_unit, k1=0.383*k_unit, idivf2=1, periodicity2=2, phase2=180.0*unit.degrees, k2=0.1*k_unit)
+        # Add improper torsions
+        handler = forcefield.get_handler('ImproperTorsions', potential="charmm", default_idivf="auto")
+        phase_unit = unit.degrees
+        k_unit = unit.kilocalories_per_mole
+        handler.add_parameter(smirks="[*:1]~[#6X3:2](=[#7X2,#7X3+1:3])~[#7:4]", k1=10.5*k_unit, periodicity1=2, phase1=180.0*phase_unit)
+        # Add vdW
+        handler = forcefield.get_handler('vdW', potential="Lennard-Jones-12-6", combining_rules="Loentz-Berthelot", switch=8.0*unit.angstroms, cutoff=9.0*unit.angstroms, long_range_dispersion="isotropic")
+        sigma_unit = unit.angstroms
+        epsilon_unit = unit.kilocalories_per_mole
+        handler.add_parameter(smirks="[#1:1]", sigma=1.4870*sigma_unit, epsilon=0.0157*epsilon_unit)
+        handler.add_parameter(smirks="[#1:1]-[#6]", sigma=1.4870*sigma_unit, epsilon=0.0157*epsilon_unit)
 
-def check_system_creation_from_topology(forcefield, topology, mols, positions, chargeMethod=None, verbose=False):
+        return forcefield
+
+    def test_create(self):
+        """Test creating a ForceFied via the Python API.
+        """
+        forcefield = create_forcefield_via_api()
+
+    def test_modify(self):
+        """Test modifying a ForceField via the Python API.
+        """
+        forcefield = create_forcefield_via_api()
+        # Modify some parameters
+        forcefield.parameters['Bonds'][0].k *= 1.1
+        forcefield.parameters['Bonds'][1].length += 0.01 * unit.nanometers
+        forcefield.parameters['Bonds']["#6X4:1]-[#1:2]"].smirks += "~[#7]"
+        assert "#6X4:1]-[#1:2]" not in forcefield.parameters['Bonds']
+        assert "#6X4:1]-[#1:2]~[#7]" in forcefield.parameters['Bonds']
+
+class TestXMLForceField(object):
+    """Test capabilities of the XML reader/writer for ForceField.
     """
-    Generate a System from the given topology, OEMols matching the contents of the topology, and SMIRNOFF forcefield and check that its energy is finite.
 
-    Parameters
-    ----------
-    forcefield : ForceField
-        SMIRNOFF forcefield
-    topology : simtk.openmm.app.Topology
-        Topology to construct system from
-    mols : list of oechem.OEMol
-        Reference molecules
-    positions : simtk.unit.Quantity with dimension (natoms,3) with units of length
-    chargeMethod : str, optional, default=None
-        Charge method to use in creating system
+    def test_attached_units():
+        from openforcefield.typing.engines.smirnoff.io import _extract_attached_units, _attach_units
+        # Test extraction of units
+        force_attrib = OrderedDict([
+            ('potential', "Lennard-Jones-12-6"),
+            ('combining_rules', "Loentz-Berthelot"),
+            ('scale12', "0.0"), ('scale13', "0.0"), ('scale14', "0.5"),
+            ('sigma_unit', "angstroms"), ('epsilon_unit', "kilocalories_per_mole"),
+            ('switch', "8.0*angstroms"), ('cutoff', "9.0*angstroms"),
+            ('long_range_dispersion', "isotropic"),
+            ])
+        stripped_attrib, attached_units = _extract_attached_units(force_attrib)
+        assert_equal(list(stripped_attrib.keys()), ['potential', 'combining_rules', 'scale12', 'scale13', 'scale14', 'switch', 'cutoff', 'long_range_dispersion'])
+        assert_equal(list(stripped_attrib.values()), ["Lennard-Jones-12-6", "Loentz-Berthelot", "0.0", "0.0", "0.5", "8.0*angstroms", "9.0*angstroms", "isotropic"])
+        assert_equal(list(attached_units.keys()), ['sigma', 'epsilon'])
+        assert_equal(list(attached_units.values()), [unit.angstroms, unit.kilocalories_per_mole])
+        # Test attachment of units
+        parameter_attrib = OrderedDict([
+            ('smirks', "[#1:1]"),
+            ('sigma', "1.4870"),
+            ('epsilon', "0.0157"),
+        ])
+        unit_bearing_attrib = _attach_units(parameter_attrib, attached_units)
+        assert_equal(list(unit_bearing_attrib.keys()), ['smirks', 'sigma', 'epsilon'])
+        assert_equal(list(unit_bearing_attrib.values()), ["[#1:1]", 1.4870*unit.angstroms, 0.0157*unit.kilocalories_per_mole])
 
+    #
+    # Tests for ForceField construction from XML files (.offxml)
+    #
+
+    def test_create_from_offxml():
+        """Test creation of aa SMIRNOFF ForceField object from offxml files.
+        """
+        # These offxml files are located in package data path, which is automatically installed and searched
+        filenames = ['smirnoff99Frosst.offxml', 'tip3p.offxml']
+        # Create a forcefield from a single offxml
+        forcefield = ForceField(filenames[0])
+        # Create a forcefield from multiple offxml files
+        forcefield = ForceField(filenames)
+        # A generator should work as well
+        forcefield = ForceField(iter(filenames))
+
+    def test_create_from_url():
+        """Test creation of a SMIRNOFF ForceField object from URLs
+        """
+        urls = [
+            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst.offxml',
+            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/tip3p.offxml'
+            ]
+        # Test creation with smirnoff99frosst URL
+        forcefield = ForceField(urls[0])
+        # Test creation with multiple URLs
+        forcefield = ForceField(urls)
+        # A generator should work as well
+        forcefield = ForceField(iter(urls))
+
+    def test_create_from_strings():
+        """Test creation of a SMIRNOFF ForceField object from strings
+        """
+        # Test creation with one string
+        forcefield = ForceField(ffxml_contents)
+        # Test creation with list of strings
+        forcefield = ForceField([ffxml_standard, ffxml_constraints])
+        # Test creation with concatenated XML files
+        forcefield = ForceField(ffxml_standard + ffxml_constraints)
+
+    def test_create_gbsa():
+        """Test reading of ffxml files with GBSA support.
+        """
+        gbsa_offxml_filename = get_data_filename('Frosst_AlkEthOH_GBSA.offxml')
+        forcefield = ForceField(gbsa_offxml_filename)
+
+    #
+    # Tests for ForceField writing to XML files
+    #
+
+    def test_save(self):
+        """Test writing and reading of SMIRNOFF in XML format.
+        """
+        forcefield = ForceField('smirnoff99Frosst.offxml')
+        # Write XML to a file
+        with TemporaryDirectory() as tmpdir:
+            offxml_tmpfile = os.path.join(tmpdir, 'forcefield.offxml')
+            forcefield.save(offxml_tmpfile)
+            forcefield2 = ForceField(offxml_tmpfile)
+            assert_forcefields_equal(cls.forcefield, forcefield2, "ForceField written to .offxml does not match original ForceField")
+
+    def test_to_xml(self):
+        forcefield = ForceField('smirnoff99Frosst.offxml')
+        # Retrieve XML as a string
+        xml = forcefield.to_xml()
+        # Restore ForceField from XML
+        forcefield2 = ForceField(xml)
+        assert_forcefields_equal(cls.forcefield, forcefield2, "ForceField serialized to XML does not match original ForceField")
+
+    def test_deep_copy(self):
+        forcefield = ForceField('smirnoff99Frosst.offxml')
+        # Deep copy
+        forcefield2 = copy.deepcopy(cls.forcefield)
+        assert_forcefields_equal(cls.forcefield, forcefield2, "ForceField deep copy does not match original ForceField")
+
+    def test_serialize(self):
+        forcefield = ForceField('smirnoff99Frosst.offxml')
+        # Serialize/deserialize
+        serialized_forcefield = cls.forcefield.__getstate__()
+        forcefield2 = ForceField.__setstate__(serialized_forcefield)
+        assert_forcefields_equal(cls.forcefield, forcefield2, "Deserialized serialized ForceField does not match original ForceField")
+
+class TestApplyForceField(object):
+    """Test the use of ForceField to parameterize Topology objects.
     """
-    from openforcefield.typing.engines.smirnoff import CutoffPeriodic
-    system = forcefield.createSystem(topology, mols, verbose=verbose, chargeMethod=chargeMethod, nonbondedMethod=CutoffPeriodic)
-    # Test energy computation.
-    check_energy_is_finite(system, positions)
 
-def check_AlkEthOH(forcefield, description="", chargeMethod=None, verbose=False):
-    """Test creation of System from AlkEthOH small molecules.
-    """
-    from openeye import oechem
-    ifs = oechem.oemolistream(get_data_filename('molecules/AlkEthOH-tripos.mol2.gz'))
-    mol = oechem.OEGraphMol()
-    while oechem.OEReadMolecule(ifs, mol):
-        args = { 'verbose' : verbose, 'chargeMethod' : chargeMethod }
-        f = partial(check_system_creation_from_molecule, forcefield, mol, **args)
-        f.description ='Testing creation of system object from small molecules (%s) %s' % (mol.GetTitle(), description)
-        yield f
+    # TODO: Refactor these tests into a class with shared setup/teardown code so we don't need to repeat operations like loading molecule sets
 
-def test_create_system_molecules_features(verbose=False):
-    """Test creation of a System object from small molecules to test various ffxml features
-    """
-    ffxml = StringIO(ffxml_contents_gbsa)
-    forcefield = ForceField(ffxml)
+    def check_system_creation_from_molecule(forcefield, molecule):
+        """
+        Generate a System from the given OEMol and SMIRNOFF forcefield and check that its energy is finite.
 
-    for chargeMethod in [None, 'BCC', 'OECharges_AM1BCCSym']:
-        for f in check_AlkEthOH(forcefield, description="to test ffxml features with charge method %s" % str(chargeMethod), chargeMethod=chargeMethod, verbose=verbose):
+        Parameters
+        ----------
+        forcefield : openforcefield.typing.engines.smirnoff.ForceField
+            SMIRNOFF forcefield object
+        molecule : openforcefield.topology.Molecule
+            Molecule to test (which must have coordinates)
+
+        """
+        topology = Topology()
+        topology.add_molecule(molecule)
+        system = forcefield.create_system(topology)
+        check_energy_is_finite(system, molecule.positions)
+
+    def check_system_creation_from_topology(forcefield, topology, positions):
+        """
+        Generate a System from the given topology, OEMols matching the contents of the topology, and SMIRNOFF forcefield and check that its energy is finite.
+
+        Parameters
+        ----------
+        forcefield : ForceField
+            SMIRNOFF forcefield
+        topology : openforcefield.topology.Topology
+            Topology for which System should be constructed
+        positions : simtk.unit.Quantity with dimension (natoms,3) with units of length
+            Positions of all particles
+
+        """
+        system = forcefield.create_system(topology)
+        check_energy_is_finite(system, positions)
+
+    def check_parameter_assignment(offxml_filename='smirnoff99Frosst.offxml', molecules_filename='molecules/AlkEthOH-tripos.mol2.gz'):
+        """Test parameter assignment using specified forcefield on all molecules from specified source.
+
+        Parameters
+        ----------
+        offxml_filename : str, optional, default='smirnoff99Frosst.offxml'
+            Filename from which SMIRNOFF .offxml XML file is to be loaded.
+        molecules_filename : str, optional, default='molecules/AlkEthOH-tripos.mol2.gz
+            Filename from which molecule identities and positions are to be loaded.
+        """
+        forcefield = ForceField(offxml_filename)
+        for molecule in openforcefield.topology.Molecule.from_file(molecules_filename):
+            f = partial(check_system_creation_from_molecule, forcefield, molecule)
+            f.description ='Testing {} parameter assignment using molecule {}'.format(offxml_filename, molecule.name)
             yield f
 
-def test_create_system_molecules_parmatfrosst(verbose=False):
-    """Test creation of a System object from small molecules to test parm@frosst forcefield.
-    """
-    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
-    for f in check_AlkEthOH(forcefield, "to test Parm@Frosst parameters", verbose=verbose):
-        yield f
+    def test_AlkEthOH_smirnoff99Frosst():
+        """Test parameter assignment using smirnoff99Frosst on AlkEthOH.
+        """
+        molecules_filename = get_data_filename('molecules/AlkEthOH-tripos.mol2.gz')
+        offxml_filename = 'smirnoff99Frosst.offxml'
+        check_parameter_assignment(offxml_filename=offxml_filename, molecules_filename=molecules_filename)
 
-def test_create_system_molecules_parmatfrosst_gbsa(verbose=False):
-    """Test creation of a System object from small molecules to test parm@frosst forcefield with GBSA support.
-    """
-    forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_GBSA.offxml'))
-    for f in check_AlkEthOH(forcefield, "to test Parm@Frosst parameters", verbose=verbose):
-        yield f
+    def test_MiniDrugBank_smirnoff99Frosst():
+        """Test parameter assignment using smirnoff99Frosst on MiniDrugBank.
+        """
+        molecules_filename = get_data_filename('molecules/MiniDrugBank_tripos.mol2.gz')
+        offxml_filename = 'smirnoff99Frosst.offxml'
+        check_parameter_assignment(offxml_filename=offxml_filename, molecules_filename=molecules_filename)
 
-def check_boxes(forcefield, description="", chargeMethod=None, verbose=False):
-    """Test creation of System from boxes of mixed solvents.
-    """
-    # Read monomers
-    mols = list()
-    monomers = ['water', 'cyclohexane', 'ethanol', 'propane', 'methane', 'butanol']
-    from openeye import oechem
-    mol = oechem.OEGraphMol()
-    for monomer in monomers:
-        filename = get_data_filename(os.path.join('systems', 'monomers', monomer + '.sdf'))
-        ifs = oechem.oemolistream(filename)
-        while oechem.OEReadMolecule(ifs, mol):
-            oechem.OETriposAtomNames(mol)
-            mols.append( oechem.OEGraphMol(mol) )
-    if verbose: print('%d reference molecules loaded' % len(mols))
+    def test_AlkEthOH_electrostatics_options():
+        """Test parameter assignment using smirnoff99Frosst on AlkEthOH with various long-range electrostatics options.
+        """
+        # TODO: Perhaps we only need to test a subset of molecules?
+        molecules_filename = get_data_filename('molecules/AlkEthOH-tripos.mol2.gz')
+        molecules = openforcefield.topology.Molecule.from_file(molecules_filename)
+        offxml_filename = 'smirnoff99Frosst.offxml'
+        forcefield = ForceField(offxml_filename)
+        for method in ['PME', 'reaction-field', 'Coulomb']:
+            # Change electrostatics method
+            forcefield.forces['Electrostatics'].method = method
+            # Test all molecules
+            for molecule in molecules:
+                f = partial(check_system_creation_from_molecule, forcefield, molecule)
+                f.description ='Testing {} parameter assignment using molecule {}'.format(offxml_filename, molecule.name)
+                yield f
 
-    # Read systems.
-    boxes = ['ethanol_water.pdb',  'cyclohexane_water.pdb',
-        'cyclohexane_ethanol_0.4_0.6.pdb', 'propane_methane_butanol_0.2_0.3_0.5.pdb']
-    from simtk.openmm.app import PDBFile
-    for box in boxes:
-        filename = get_data_filename(os.path.join('systems', 'packmol_boxes', box))
-        pdbfile = PDBFile(filename)
-        f = partial(check_system_creation_from_topology, forcefield, pdbfile.topology, mols, pdbfile.positions, chargeMethod=chargeMethod, verbose=verbose)
-        f.description = 'Test creation of System object from %s %s' % (box, description)
-        yield f
+    def test_create_system_molecules_features(verbose=False):
+        """Test creation of a System object from small molecules to test various ffxml features
+        """
+        ffxml = StringIO(ffxml_contents_gbsa)
+        forcefield = ForceField(ffxml)
 
-def test_create_system_boxes_features(verbose=False):
-    """Test creation of a System object from some boxes of mixed solvents to test ffxml features.
-    """
-    ffxml = StringIO(ffxml_contents)
-    forcefield = ForceField(ffxml)
-    for chargeMethod in [None, 'BCC', 'OECharges_AM1BCCSym']:
-        for f in check_boxes(forcefield, description="to test Parm@frosst parameters with charge method %s" % str(chargeMethod), chargeMethod=chargeMethod, verbose=verbose):
+        for chargeMethod in [None, 'BCC', 'OECharges_AM1BCCSym']:
+            for f in check_AlkEthOH(forcefield, description="to test ffxml features with charge method %s" % str(chargeMethod), chargeMethod=chargeMethod, verbose=verbose):
+                yield f
+
+    def test_create_system_molecules_parmatfrosst(verbose=False):
+        """Test creation of a System object from small molecules to test parm@frosst forcefield.
+        """
+        forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
+        for f in check_AlkEthOH(forcefield, "to test Parm@Frosst parameters", verbose=verbose):
             yield f
 
-def test_create_system_boxes_smirnoff99Frosst(verbose=False):
-    """Test creation of a System object from some boxes of mixed solvents to test parm@frosst forcefield.
-    """
-    forcefield = ForceField(get_data_filename('forcefield/smirnoff99Frosst.offxml'))
-    for f in check_boxes(forcefield, description="to test Parm@frosst parameters", verbose=verbose):
-        yield f
+    def test_create_system_molecules_parmatfrosst_gbsa(verbose=False):
+        """Test creation of a System object from small molecules to test parm@frosst forcefield with GBSA support.
+        """
+        forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_GBSA.offxml'))
+        for f in check_AlkEthOH(forcefield, "to test Parm@Frosst parameters", verbose=verbose):
+            yield f
+
+    def check_boxes(forcefield, description="", chargeMethod=None, verbose=False):
+        """Test creation of System from boxes of mixed solvents.
+        """
+        # Read monomers
+        mols = list()
+        monomers = ['water', 'cyclohexane', 'ethanol', 'propane', 'methane', 'butanol']
+        from openeye import oechem
+        mol = oechem.OEGraphMol()
+        for monomer in monomers:
+            filename = get_data_filename(os.path.join('systems', 'monomers', monomer + '.sdf'))
+            ifs = oechem.oemolistream(filename)
+            while oechem.OEReadMolecule(ifs, mol):
+                oechem.OETriposAtomNames(mol)
+                mols.append( oechem.OEGraphMol(mol) )
+        if verbose: print('%d reference molecules loaded' % len(mols))
+
+        # Read systems.
+        boxes = ['ethanol_water.pdb',  'cyclohexane_water.pdb',
+            'cyclohexane_ethanol_0.4_0.6.pdb', 'propane_methane_butanol_0.2_0.3_0.5.pdb']
+        from simtk.openmm.app import PDBFile
+        for box in boxes:
+            filename = get_data_filename(os.path.join('systems', 'packmol_boxes', box))
+            pdbfile = PDBFile(filename)
+            f = partial(check_system_creation_from_topology, forcefield, pdbfile.topology, mols, pdbfile.positions, chargeMethod=chargeMethod, verbose=verbose)
+            f.description = 'Test creation of System object from %s %s' % (box, description)
+            yield f
+
+    def test_create_system_boxes_features(verbose=False):
+        """Test creation of a System object from some boxes of mixed solvents to test ffxml features.
+        """
+        ffxml = StringIO(ffxml_contents)
+        forcefield = ForceField(ffxml)
+        for chargeMethod in [None, 'BCC', 'OECharges_AM1BCCSym']:
+            for f in check_boxes(forcefield, description="to test Parm@frosst parameters with charge method %s" % str(chargeMethod), chargeMethod=chargeMethod, verbose=verbose):
+                yield f
+
+    def test_create_system_boxes_smirnoff99Frosst(verbose=False):
+        """Test creation of a System object from some boxes of mixed solvents to test parm@frosst forcefield.
+        """
+        forcefield = ForceField(get_data_filename('forcefield/smirnoff99Frosst.offxml'))
+        for f in check_boxes(forcefield, description="to test Parm@frosst parameters", verbose=verbose):
+            yield f
 
 #
 # Tests for energies

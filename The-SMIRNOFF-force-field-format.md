@@ -8,8 +8,15 @@ The SMIRNOFF format and its reference implementation in the `openforcefield` too
 
 ## Encodings
 
+### XML
+
 Currently, SMIRNOFF supports an XML encoding, which provides a human- and machine-readable form for encoding the parameter set and its typing rules.
 By convention, XML-encoded SMIRNOFF parameter sets are designated with a `.offxml` extension if written to a filesystem.
+In XML, numeric quantities appear as strings, like `"1"` or `"2.3"`.
+Integers should always be written without a decimal point, such as `"1"`, `"9"`.
+Non-integral numbers, such as parameter values, should be written with a decimal point, such as `"1.23"`, `"2."`.
+
+**QUESTION:** Should we have an XML Schema?
 
 ## Reference implementation
 
@@ -107,7 +114,6 @@ The format will distinguish between functional forms available in all common mol
 Many of the specific forces are implemented as discussed in the [OpenMM Documentation](http://docs.openmm.org/latest/userguide/theory.html); see especially [Section 19 on Standard Forces](http://docs.openmm.org/latest/userguide/theory.html#standard-forces) for mathematical descriptions of these functional forms.
 Some top-level tags provide attributes that modify the functional form used to be consistent with packages such as AMBER or CHARMM.
 
-
 ## Charge models
 
 SMIRNOFF supports several ways for specifying electrostatic models.
@@ -184,15 +190,15 @@ For this section it will help to have on hand an example SMIRNOFF file, such as 
 
 van der Waals force parameters, which include repulsive forces arising from Pauli exclusion and attractive forces arising from dispersion, are specified via the `<vdW>` tag with sub-tags for individual `Atom` entries, such as:
 ```XML
-<vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" cutoff="9.0" long_range_dispersion="isotropic">
-   <Atom smirks="[#1:1]" rmin_half="1.4870" epsilon="0.0157"/>
-   <Atom smirks="[#1:1]-[#6]" rmin_half="1.4870" epsilon="0.0157"/>
+<vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0*angstroms" cutoff="9.0*angstroms" long_range_dispersion="isotropic">
+   <Atom smirks="[#1:1]" sigma="1.4870" epsilon="0.0157"/>
+   <Atom smirks="[#1:1]-[#6]" sigma="1.4870" epsilon="0.0157"/>
    ...
 </vdW>
 ```
-For compatibility, the size property of an atom can be specified either via providing the `sigma` attribute, such as `sigma="1.3"`, or via the `r_0/2` (`rmin/2`) values used in AMBER force fields (here denoted `rmin_half` as in the example above).
+For standard Lennard-Jones 12-6 potentials (specified via `potential="Lennard-Jones-12-6"`), the `epsilon` parameter denotes the well depth, while the size property can be specified either via providing the `sigma` attribute, such as `sigma="1.3"`, or via the `r_0/2` (`rmin/2`) values used in AMBER force fields (here denoted `rmin_half` as in the example above).
 The two are related by `r0 = 2^(1/6)*sigma` and conversion is done internally in `ForceField` into the `sigma` values used in OpenMM.
-`epsilon` denotes the well depth.
+Note that, if `rmin_half` is specified instead of `sigma`, `rmin_half_unit` should be specified; both can be used in the same block if desired.
 
 Attributes in the `<vdW>` tag specify the scaling terms applied to the energies of 1-2 (`scale12`, default: 0), 1-3 (`scale13`, default: 0), and 1-4 (`scale14`, default: 0.5) interactions, (`scale15`, default: 1.0),
 as well as the distance at which a switching function is applied (`switch`, default: `"8.0"`), the cutoff (`cutoff`, default: `"9.0"`), and long-range dispersion treatment scheme (`long_range_dispersion`, default: `"isotropic"`).
@@ -235,8 +241,8 @@ Electrostatic interactions are specified via the `<Electrostatics>` tag.
 <Electrostatics method="PME" scale12="0.0" scale13="0.0" scale14="0.833333"/>
 ```
 The `method` attribute specifies the manner in which electrostatic interactions are to be computed:
-* `PME` - [particle mesh Ewald](http://docs.openmm.org/latest/userguide/theory.html#coulomb-interaction-with-particle-mesh-ewald) should be used (DEFAULT)
-* `reaction-field` - [reaction-field electrostatics](http://docs.openmm.org/latest/userguide/theory.html#coulomb-interaction-with-cutoff) should be used
+* `PME` - [particle mesh Ewald](http://docs.openmm.org/latest/userguide/theory.html#coulomb-interaction-with-particle-mesh-ewald) should be used (DEFAULT); can only apply to periodic systems
+* `reaction-field` - [reaction-field electrostatics](http://docs.openmm.org/latest/userguide/theory.html#coulomb-interaction-with-cutoff) should be used; can only apply to periodic systems
 * `Coulomb` - direct Coulomb interactions (with no reaction-field attenuation) should be used
 
 The interaction scaling parameters applied to atoms connected by a few bonds are

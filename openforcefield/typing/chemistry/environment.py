@@ -421,6 +421,27 @@ class ChemicalEnvironment(object):
             orderList = [orderDict[base] for (base, decor) in self.ORtypes]
             return min(orderList)
 
+    @staticmethod
+    def validate(smirks, ensure_valence_type=None):
+        """Validate the provided SMIRKS string is valid, and if requested, tags atoms appropriate to the specified valence type.
+
+        Parameters
+        ----------
+        smirks : str
+            The SMIRKS expression to validate
+        ensure_valence_type : str, optional, default=None
+            If specified, ensure the tagged atoms are appropriate to the specified valence type
+
+        This method will raise a :class:`SMIRKSParsingError` if the provided SMIRKS string is not valid.
+
+        """
+        chemenv = ChemicalEnvironment(smarts)
+
+        if ensure_valence_type:
+            valence_type = chemenv.getType()
+            if valence_type != ensure_valence_type:
+                raise SMIRKSParsingError("Tagged atoms in SMARTS string '%s' specifies valence type '%s', expected '%s'." % (smarts, valence_type, ensure_valence_type))
+
     def __init__(self, smirks = None, label = None, replacements = None, toolkit='openeye'):
         """Initialize a chemical environment abstract base class.
 
