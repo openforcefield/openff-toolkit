@@ -54,20 +54,16 @@ logger = logging.getLogger(__name__)
 # PRIVATE METHODS
 #=============================================================================================
 
-# TODO: Instead of having a global version number, alow each Force to have a separate version number?
+# TODO: Instead of having a global version number, alow each Force to have a separate version number
 MAX_SUPPORTED_VERSION = '1.0' # maximum version of the SMIRNOFF spec supported by this SMIRNOFF forcefield
 
 #=============================================================================================
 # FORCEFIELD
 #=============================================================================================
 
-# QUESTION: Should we process the XML files only when the ForceField is created, or should we be able to read more XML files later?
-
 # QUESTION: How should we document private object fields?
 
 # TODO: How do we serialize/deserialize `ForceField`'s object model? Can we rely on pickle?
-
-# TODO: Should we add methods to retrieve string XML representations?
 
 # TODO: Rename `ParameterHandler` to `ForceGenerator`
 
