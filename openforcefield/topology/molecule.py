@@ -675,6 +675,7 @@ class Molecule(ChemicalEntity):
         super(self, Molecule).__init__(other=other)
 
         self.name = None # Set the name of the molecule
+        self.charges = None # TODO: Storage charges
 
         if other is not None:
             # TODO: Can we check interface compliance (in a try..except) instead of checking instances?
@@ -1078,6 +1079,15 @@ class Molecule(ChemicalEntity):
             ``kwargs`` will be passed to the toolkit.
         """
         pass
+
+    def has_partial_charges(self):
+        """Return True if any atom has nonzero charges; False otherwise.
+
+        """
+        if (self.charges is None) or np.all(self.charges == 0.0):
+            return False
+        else:
+            return True
 
     def assign_fractional_bond_orders(self, method='Wiberg', toolkit=None, **kwargs):
         """Assign fractional bond orders.

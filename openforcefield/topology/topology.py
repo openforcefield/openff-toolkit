@@ -9,6 +9,7 @@ A Topology describes a collection of Molecules in a system.
 
 .. todo::
 
+   * Create MoleculeImage, Particle, AtomImage, VirtualSite here. (Or MoleculeCopy? MoleculeInstance?)
    * Make all classes hashable and serializable.
    * JSON/BSON representations?
    * Use class boilerplate suggestion from Kyle?
@@ -176,7 +177,7 @@ class Topology(ChemicalEntity):
         topology = Topology()
         for molecule in molecules:
             topology.add_molecule(molecule)
-            
+
         return topology
 
     def assert_bonded(atom1, atom2):
