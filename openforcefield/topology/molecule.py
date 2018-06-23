@@ -9,6 +9,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 .. todo::
 
+   * Make Atom and Bond an inner class of Molecule?
    * Use attrs? http://www.attrs.org/
    * Generalize this infrastructure to make it easier to support additional cheminformatics toolkits.
 
@@ -36,6 +37,9 @@ from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingEr
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
 # TODO: Should these be imported from `openforcefield.cheminformatics.aromaticity_models` and `.bondorder_models`?
+
+# TODO: Allow all OpenEye aromaticity models to be used with OpenEye names?
+#       Only support OEAroModel_MDL in RDKit version?
 
 DEFAULT_AROMATICITY_MODEL = 'MDL' # TODO: Is there a more specific name and reference for the aromaticity model?
 ALLOWED_AROMATICITY_MODELS = ['MDL']
@@ -110,6 +114,7 @@ class Particle(object):
 #=============================================================================================
 # Atom
 #=============================================================================================
+
 
 class Atom(Particle):
     """
@@ -635,6 +640,8 @@ class ChemicalEntity(object):
         map_list = [ index_map[x] for x in sorted(index_map) ]
 
         # Perform matching
+        # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
+        #       and speed matching for larger molecules.
         matches = list()
         for match in rdmol.GetSubstructMatches(qmol, uniquify=False)
             mas = [ match[x] for x in map_list ]
@@ -699,7 +706,7 @@ class ChemicalEntity(object):
             oechem.OEAssignHybridization(mol)
 
         # Build list of matches
-        # TODO: Update the logic here to preserve ordering of template molecule for equivalent atoms
+        # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
         #       and speed matching for larger molecules.
         unique = False # We require all matches, not just one of each kind
         substructure_search = oechem.OESubSearch(qmol)
@@ -797,13 +804,13 @@ class Molecule(ChemicalEntity):
         """
         return Topology.from_molecules([self])
 
-    def __setstate__(self, state):
-        # TODO: Implement deserialization
-        pass
+    # TODO: Implement specialized deserialization, if needed.
+    #def __setstate__(self, state):
+    #    pass
 
-    def __getstate__(self):
-        # TODO: Implement serialization
-        pass
+    # TODO: Implement specialized serialization, if needed
+    #def __getstate__(self):
+    #    pass
 
     @staticmethod
     def from_file(filename):
@@ -1241,7 +1248,7 @@ class Molecule(ChemicalEntity):
 
 
     # TODO: Rework this.
-    def _assign_parital_charges_using_sqm(sdf_filename, output_filename, charge_model="bcc"):
+    def _assign_partial_charges_using_sqm(sdf_filename, output_filename, charge_model="bcc"):
         """
         Assign partial charges with AmberTools using antechamber/sqm.
 
