@@ -633,7 +633,7 @@ def getMolParamIDToAtomIndex(molecule, forcefield):
 
     return param_usage
 
-def merge_system( topology0, topology1, system0, system1, positions0, positions1, label0="AMBER system", label1 = "SMIRNOFF system", verbose = True):
+def merge_system(topology0, topology1, system0, system1, positions0, positions1, label0="AMBER system", label1="SMIRNOFF system", verbose=True):
     """Merge two given OpenMM systems. Returns the merged OpenMM System.
 
     Parameters

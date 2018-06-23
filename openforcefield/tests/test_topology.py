@@ -1,12 +1,31 @@
+#!/usr/bin/env python
+
+#=============================================================================================
+# MODULE DOCSTRING
+#=============================================================================================
+
+"""
+Tests for Topology
+
+"""
+
+#=============================================================================================
+# GLOBAL IMPORTS
+#=============================================================================================
+
+import pickle
 from functools import partial
 from unittest import TestCase
-import parmed
-from openforcefield import utils
-from openforcefield import topology
-import pickle
+
+from openforcefield import utils, topology
 
 from pytest.mark import skipif
 from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORTED_TOOLKITS
+
+#=============================================================================================
+# TESTS
+#=============================================================================================
+
 
 # TODO: Add tests comparing RDKit and OpenEye aromaticity perception
 
