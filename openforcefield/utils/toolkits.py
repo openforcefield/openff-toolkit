@@ -3,6 +3,10 @@
 """
 Utility subroutines for managing cheminformatics toolkits
 
+.. todo::
+
+   * Generalize this infrastructure to make it easier to support additional cheminformatics toolkits.
+
 """
 #=============================================================================================
 # GLOBAL IMPORTS
@@ -15,6 +19,9 @@ import importlib
 #=============================================================================================
 
 # TODO: Generalize this infrastructure to make it easier to support additional toolkits in future
+
+# Control the precedence order in which cheminformatics toolkits are used
+TOOLKIT_PRECEDENCE = ['openeye', 'rdkit']
 
 # List of supported toolkits and messages indicating how they can be installed
 SUPPORTED_TOOLKITS = {
@@ -78,16 +85,16 @@ def is_openeye_installed(oetools=('oechem', 'oequacpac', 'oeiupac', 'oeomega')):
         return False
     return True
 
-def requires_openeye_licenses(f, *args):
+def requires_openeye(f, *oetools):
     """
-    Decorator to check that OpenEye licenses are found, raising LicenseError if valid license not found
+    Decorator to check that OpenEye licenses are found, raising LicenseError if valid license not found.
 
     """
-    if not is_openeye_installed(oetools=args):
-        # TODO: Include more informative error messages
-        raise LicenseError()
+    if not is_openeye_installed(oetools=oetools):
+        msg = 'This function requires the OpenEye toolkit with licenses for the following tools: {}'.format(oetools)
+        raise LicenseError(msg)
 
-OPENEYE_INSTALLED = is_openeye_installed('oechem') and is_openeye_installed('oequacpac') and is_openeye_installed('oeomega')
+OPENEYE_INSTALLED = is_openeye_installed('oechem') and is_openeye_installed('oequacpac') and is_openeye_installed('oeiupac') and is_openeye_installed('oeomega')
 OPENEYE_UNAVAILABLE = not OPENEYE_INSTALLED
 
 def is_rdkit_installed():
@@ -100,6 +107,14 @@ def is_rdkit_installed():
 RDKIT_INSTALLED = is_rdkit_installed()
 RDKIT_UNAVAILABLE = not RDKIT_INSTALLED
 
+def requires_rdkit(f):
+    """
+    Decorator to check that RDKit is installed.
+
+    """
+    if not is_rdkit_installed():
+        raise Exception('This function requires the RDKit.')
+
 def is_toolkit_installed():
     if is_openeye_installed():
         return True
@@ -109,3 +124,24 @@ def is_toolkit_installed():
 
 TOOLKIT_INSTALLED = is_toolkit_installed()
 TOOLKIT_UNAVAILABLE = not TOOLKIT_INSTALLED
+
+def toolkit_is_available(toolkit_name):
+    """Return True if the requested toolkit is available.
+    """
+    if toolkit_name == 'openeye':
+        return is_openeye_installed()
+    elif toolkit_name == 'rdkit':
+        return is_rdkit_installed()
+    else:
+        raise Exception('Toolkit {} unknown; options are {}'.format(toolkit_name, TOOLKIT_PRECEDENCE))
+
+# Filter toolkits by what is available
+TOOLKIT_PRECEDENCE = [ toolkit for toolkit in TOOLKIT_PRECEDENCE if toolkit_is_available(toolkit) ]
+
+# Warn if no toolkits are available
+if TOOLKIT_UNAVAILABLE:
+    msg = 'WARNING: No cheminfomatics toolkits are available.\n'
+    for (toolkit_name, install_instructions) in SUPPORTED_TOOLKITS.items():
+        msg += 'Please install one of the following toolkits:\n'
+        msg += '{} : {}\n'.format(toolkit_name, install_instructions)
+    print(msg)

@@ -5,14 +5,15 @@
 #=============================================================================================
 
 """
-A Topology describes a collection of Molecules in a system.
+Class definitions to represent a molecular system and its chemical components
 
 .. todo::
 
    * Create MoleculeImage, Particle, AtomImage, VirtualSite here. (Or MoleculeCopy? MoleculeInstance?)
+   * Add hierarchical way of traversing Topology (chains, residues)
    * Make all classes hashable and serializable.
    * JSON/BSON representations?
-   * Use class boilerplate suggestion from Kyle?
+   * Use attrs? http://www.attrs.org/
 
 """
 
@@ -20,24 +21,12 @@ A Topology describes a collection of Molecules in a system.
 # GLOBAL IMPORTS
 #=============================================================================================
 
-import sys
-import os
-import re
-import time
-import math
 import copy
-import string
-import random
 import itertools
-import collections
 
 from collections import OrderedDict
 
-import lxml.etree as etree
-
 import numpy as np
-
-import networkx as nx
 
 from simtk import openmm, unit
 from simtk.openmm.app import element as elem
@@ -107,6 +96,302 @@ class ImproperDict(_TransformedDict):
 
 #=============================================================================================
 # TOPOLOGY OBJECTS
+#=============================================================================================
+
+#=============================================================================================
+# Particle
+#=============================================================================================
+
+class Particle(object):
+    """
+    Base class for all particles in a molecule.
+
+    A particle object could be an ``Atom`` or a ``VirtualSite``.
+
+    """
+    def __init__(self, name):
+        """
+        Create a particle.
+        """
+        self._name = name # the particle name
+        self._topology = None # the Topology object this Particle belongs to
+
+    @property
+    def topology(self):
+        """
+        The Topology object that owns this particle, or None.
+        """
+        return self._topology
+
+    @property
+    def name(self):
+        """
+        An arbitrary label assigned to the particle.
+
+        """
+        return self._name
+
+    @property
+    def particle_index(self):
+        """
+        Index of this particle within the ``Topology`` or corresponding OpenMM ``System`` object.
+
+        .. todo::
+
+           Should ``atom.particle_index`` just be called ``index``, or does that risk confusion within
+           the index within ``topology.atoms``, which will differ if the system has virtual sites?
+
+        """
+        if self._topology is None:
+            raise Exception('This particle does not belong to a Topology')
+        # Return index of this particle within the Topology
+        # TODO: This will be slow; can we cache this and update it only when needed?
+        #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
+        return self._topology.particles.index(self)
+
+    def __repr__(self):
+        pass
+
+    def __str__(self):
+        pass
+
+#=============================================================================================
+# Atom
+#=============================================================================================
+
+class Atom(Particle):
+    """
+    A particle representing a chemical atom.
+
+    Note that non-chemical virtual sites are represented by the ``VirtualSite`` object.
+
+    .. todo::
+        * Should ``Atom`` objects be immutable or mutable?
+        * Should an ``Atom`` be able to belong to more than one ``Topology`` object?
+        * Do we want to support the addition of arbitrary additional properties,
+          such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial`` index in a PDB file),
+          or string labels (such as Lennard-Jones types)?
+        * Should we be able to create ``Atom`` objects on their own, or only in the context of a ``Topology`` object they belong to?
+
+    """
+    def __init__(self, name, element, topology=None):
+        """
+        Create an Atom object.
+
+        Parameters
+        ----------
+        name : str
+            A unique name for this atom
+        element : str
+            The element name
+
+        """
+        super(Atom, self).__init__(name)
+        self._element = element # TODO: Validate and store Element
+
+    @property
+    def element(self):
+        """
+        The element name
+
+        """
+        pass
+
+    @property
+    def atomic_number(self):
+        """
+        The integer atomic number of the atom.
+
+        """
+        pass
+
+    @property
+    def mass(self):
+        """
+        The atomic mass of the atomic site.
+
+        """
+        pass
+
+    @property
+    def bonds(self):
+        """
+        The list of ``Bond`` objects this atom is involved in.
+
+        """
+        pass
+
+    @property
+    def bonded_to(self):
+        """
+        The list of ``Atom`` objects this atom is involved in
+
+        """
+        pass
+
+    @property
+    def molecule(self):
+        """
+        The ``Molecule`` this atom is part of.
+
+        .. todo::
+            * Should we have a single unique ``Molecule`` for each molecule type in the system,
+            or if we have multiple copies of the same molecule, should we have multiple ``Molecule``s?
+        """
+        pass
+
+    @property
+    def atom_index(self):
+        """
+        The index of this Atom within the the list of atoms in ``Topology``.
+        Note that this can be different from ``particle_index``.
+
+        """
+        if self._topology is None:
+            raise ValueError('This Atom does not belong to a Topology object')
+        # TODO: This will be slow; can we cache this and update it only when needed?
+        #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
+        return self._topology.atoms.index(self)
+
+    def __repr__(self):
+        # TODO: Also include particle_index and which topology this atom belongs to?
+        return "Atom(name={}, element={})".format(self.name, self.element)
+
+    def __str__(self):
+        # TODO: Also include particle_index and which topology this atom belongs to?
+        return "<Atom name='{}' element='{}'>".format(self.name, self.element)
+
+#=============================================================================================
+# VirtualSite
+#=============================================================================================
+
+class VirtualSite(Particle):
+    """
+    A particle representing a virtual site whose position is defined in terms of ``Atom`` positions.
+
+    Note that chemical atoms are represented by the ``Atom``.
+
+    .. todo::
+        * Should a virtual site be able to belong to more than one Topology?
+        * Should virtual sites be immutable or mutable?
+
+    """
+
+    # TODO: This will need to be generalized for virtual sites to allow out-of-plane sites.
+    # TODO: How do we want users to specify virtual site type?
+    def __init__(self, name, sitetype, weights, atoms):
+        """
+        Create a virtual site whose position is defined by a linear combination of multiple Atoms.
+
+        Parameters
+        ----------
+        name : str
+            The name of this virtual site
+        sitetype : str
+            The virtual site type.
+        weights : list of floats of shape [N]
+            weights[index] is the weight of particles[index] contributing to the position of the virtual site.
+        atoms : list of Atom of shape [N]
+            atoms[index] is the corresponding Atom for weights[index]
+        virtual_site_type : str
+            Virtual site type.
+            TODO: What types are allowed?
+
+        """
+        self._name = name
+        self._type = sitetype # TODO: Validate site types against allowed values
+        self._weights = np.array(weights) # make a copy and convert to array internally
+        self._atoms = [ atom for atom in atoms ] # create a list of Particles
+
+    @property
+    def virtual_site_index(self):
+        """
+        The index of this VirtualSite within the list of virtual sites within ``Topology``
+        Note that this can be different from ``particle_index``.
+
+        """
+        if self._topology is None:
+            raise ValueError('This VirtualSite does not belong to a Topology object')
+        # TODO: This will be slow; can we cache this and update it only when needed?
+        #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
+        return self._topology.virtual_sites.index(self)
+
+    @property
+    def atoms(self):
+        """
+        Atoms on whose position this VirtualSite depends.
+        """
+        for atom in self._atoms:
+            yield atom
+
+    def __repr__(self):
+        # TODO: Also include particle_index, which topology this atom belongs to, and which atoms/weights it is defined by?
+        return "VirtualSite(name={}, type={}, weights={}, atoms={})".format(self.name, self.type, self.weights, self.atoms)
+
+    def __str__(self):
+        # TODO: Also include particle_index, which topology this atom belongs to, and which atoms/weights it is defined by?
+        return "<VirtualSite name={} type={} weights={}, atoms={}>".format(self.name, self.type, self.weights, self.atoms)
+
+#=============================================================================================
+# Bond
+#=============================================================================================
+
+class Bond(object):
+    """
+    Chemical bond representation.
+
+    Attributes
+    ----------
+    atom1, atom2 : Atom
+        Atoms involved in the bond
+    bondtype : int
+        Discrete bond type representation for the Open Forcefield aromaticity model
+        TODO: Do we want to pin ourselves to a single standard aromaticity model?
+    type : str
+        String based bond type
+    order : int
+        Integral bond order
+    fractional_bondorder : float, optional
+        Fractional bond order, or None.
+
+    """
+    def __init__(self, atom1, atom2, bondtype, fractional_bondorder=None):
+        """
+        Create a new chemical bond.
+        """
+        # TODO: Make sure atom1 and atom2 are both Atom types
+        self._atom1 = atom1
+        self._atom2 = atom2
+        self._type = bondtype
+        self._fractional_bondorder = fractional_bondorder
+
+    # TODO: add getters for each of these bond properties
+
+    @property
+    def atom1(self):
+        return self._atom1
+
+    @property
+    def atom2(self):
+        return self._atom2
+
+    @property
+    def atoms(self):
+        return (self._atom1, self._atom2)
+
+    def type(self):
+        return self._type
+
+    @property
+    def fractional_bondorder(self):
+        return self._fractional_bondorder
+
+    @fractional_bondorder.setter
+    def fractional_bondorder(self, value):
+        self._fractional_bondorder = value
+
+#=============================================================================================
+# TOPOLOGY
 #=============================================================================================
 
 class Topology(ChemicalEntity):
@@ -308,35 +593,12 @@ class Topology(ChemicalEntity):
 
         return matches
 
-    # TODO: Should edges be labeled with discrete bond types in some aromaticity model?
-    # TODO: Should edges be labeled with fractional bond order if a method is specified?
-    def to_networkx(self):
-        """Geneate a NetworkX undirected graph from the Topology.
-
-        Nodes are Atoms labeled with particle indices and atomic elements (via the ``element`` node atrribute).
-        Edges denote chemical bonds between Atoms.
-        Virtual sites are not included, since they lack a concept of chemical connectivity.
-
-        Returns
-        -------
-        graph : networkx.Graph
-            The resulting graph, with nodes labeled with atom indices and elements
-
-        """
-        G = nx.Graph()
-        for atom in topology.atoms():
-            G.add_node(atom.particle_index, element=atom.element)
-        for (atom1, atom2) in topology.bonds():
-            G.add_edge(atom1.index, atom2.index)
-
-        return G
-
-    # TODO: Do we need a from_networkx() method? If so, what would the Graph be required to provide?
-
     # TODO: Overhaul this whole function
     def _identify_molecules(self):
         """Identify all unique reference molecules and atom mappings to all instances in the Topology.
         """
+        import networkx as nx
+
         # Generate list of topology atoms.
         atoms = [ atom for atom in self.atoms() ]
 
@@ -435,7 +697,7 @@ class Topology(ChemicalEntity):
         topology : openforcefield.Topology
             An openforcefield Topology object
         """
-        pass
+        return Topology.from_openmm(mdtraj_topology.to_openmm(), unique_molecules=unique_molecules)
 
     def to_mdtraj(self):
         """
@@ -446,7 +708,7 @@ class Topology(ChemicalEntity):
         mdtraj_topology : mdtraj.Topology
             An MDTraj Topology object
         """
-        pass
+        return md.Topology.from_openmm(self.to_openmm())
 
     @staticmethod
     def from_parmed(parmed_structure, unique_molecules=None):

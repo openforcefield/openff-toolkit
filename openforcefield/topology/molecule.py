@@ -5,12 +5,12 @@
 #=============================================================================================
 
 """
-Representation of molecular chemical entities and their associated operations.
+Molecular chemical entity representation and routines to interface with cheminformatics toolkits
 
 .. todo::
 
-   * Make all classes (like Particle, Atom, VirtualSite) hashable and serializable.
-   * Use class boilerplate suggestion from Kyle?
+   * Use attrs? http://www.attrs.org/
+   * Generalize this infrastructure to make it easier to support additional cheminformatics toolkits.
 
 """
 
@@ -18,28 +18,15 @@ Representation of molecular chemical entities and their associated operations.
 # GLOBAL IMPORTS
 #=============================================================================================
 
-import sys
-import os
-import re
-import time
-import math
-import copy
-import string
-import random
-import itertools
-import collections
+import numpy as np
 
-import lxml.etree as etree
+from distutils.spawn import find_executable
 
-import numpy
-
-import networkx as nx
-
-from simtk import openmm, unit
+from simtk import unit
 from simtk.openmm.app import element as elem
-from simtk.openmm.app import Topology
 
-from openforcefield.utils import generateTopologyFromOEMol, get_data_filename
+from openforcefield.utils.toolkits import OPENEYE_IS_INSTALLED, RDKIT_IS_INSTALLED, TOOLKIT_PRECEDENCE
+from openforcefield.utils.toolkits import requires_rdkit, requires_openeye
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
 #=============================================================================================
@@ -61,90 +48,6 @@ ALLOWED_CHARGE_MODELS = ['AM1-CM2', 'AM1-BCC', 'Mulliken'] # TODO: Which models 
 
 #=============================================================================================
 # PRIVATE SUBROUTINES
-#=============================================================================================
-
-from openforcefield.utils import requires_openeye_licenses
-
-@requires_openeye_licenses('oechem')
-def _getSMARTSMatches_OEMol(oemol, smarts, aromaticity_model=None):
-    """Find all sets of atoms in the provided oemol that match the provided SMARTS string.
-
-    Parameters
-    ----------
-    oemol : openeye.oechem.OEMol or similar
-        oemol to process with the SMIRKS in order to find matches
-    smarts : str
-        SMARTS string with any number of sequentially tagged atoms.
-        If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
-    aromaticity_model : str, optional, default=None
-        OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
-        If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
-
-    Returns
-    -------
-    matches : list of tuples of atoms indices within the ``oemol``
-        matches[index] is an N-tuple of atom numbers from the ``oemol``
-        Matches are returned in no guaranteed order.
-        # TODO: What is returned if no matches are found? An empty list, or None?
-        # TODO: Ensure that SMARTS numbers 1, 2, 3... are rendered into order of returnd matches indexed by 0, 1, 2...
-
-
-    .. notes ::
-
-       * Raises ``LicenseError`` if valid OpenEye tools license is not found, rather than causing program to terminate
-       * Raises ``ValueError`` if ``smarts`` query is malformed
-
-    """
-    # We have wrapped the function with @requires_openeye_licenses so that if valid license is not found,
-    # a LicenseError will be raised instead of the program abruptly terminating.
-    from openeye import oechem
-
-    # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
-    mol = oechem.OEMol(oemol)
-
-    # Set up query
-    qmol = oechem.OEQMol()
-    if not oechem.OEParseSmarts(qmol, smarts):
-        raise ValueError("Error parsing SMARTS '%s'" % smarts)
-
-    # Determine aromaticity model
-    if aromaticity_model:
-        if type(aromaticity_model) == str:
-            # Check if the user has provided a manually-specified aromaticity_model
-            if hasattr(oechem, aromaticity_model):
-                oearomodel = getattr(oechem, 'OEAroModel_' + aromaticity_model)
-            else:
-                raise ValueError("Error: provided aromaticity model not recognized by oechem.")
-        else:
-            raise ValueError("Error: provided aromaticity model must be a string.")
-
-        # If aromaticity model was provided, prepare molecule
-        oechem.OEClearAromaticFlags(mol)
-        oechem.OEAssignAromaticFlags(mol, oearomodel)
-        # Avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
-        oechem.OEAssignHybridization(mol)
-
-    # Build list of matches
-    # TODO: Update the logic here to preserve ordering of template molecule for equivalent atoms
-    #       and speed matching for larger molecules.
-    unique = False # We require all matches, not just one of each kind
-    substructure_search = oechem.OESubSearch(qmol)
-    matches = list()
-    for match in substructure_search.Match(mol, unique):
-        # Compile list of atom indices that match the pattern tags
-        atom_indices = dict()
-        for matched_atom in match.GetAtoms():
-            if matched_atom.pattern.GetMapIdx() != 0:
-                atom_indices[matched_atom.pattern.GetMapIdx()-1] = matched_atom.target.GetIdx()
-        # Compress into list
-        atom_indices = [ atom_indices[index] for index in range(len(atom_indices)) ]
-        # Convert to tuple
-        matches.append( tuple(atom_indices) )
-
-    return matches
-
-#=============================================================================================
-# TOPOLOGY OBJECFTS
 #=============================================================================================
 
 #=============================================================================================
@@ -471,6 +374,32 @@ class ChemicalEntity(object):
             if hasattr(self, property_name):
                 delattr(self, property_name)
 
+    # TODO: Should edges be labeled with discrete bond types in some aromaticity model?
+    # TODO: Should edges be labeled with fractional bond order if a method is specified?
+    def to_networkx(self):
+        """Geneate a NetworkX undirected graph from the Topology.
+
+        Nodes are Atoms labeled with particle indices and atomic elements (via the ``element`` node atrribute).
+        Edges denote chemical bonds between Atoms.
+        Virtual sites are not included, since they lack a concept of chemical connectivity.
+
+        Returns
+        -------
+        graph : networkx.Graph
+            The resulting graph, with nodes labeled with atom indices and elements
+
+        """
+        import networkx as nx
+        G = nx.Graph()
+        for atom in topology.atoms():
+            G.add_node(atom.particle_index, element=atom.element)
+        for (atom1, atom2) in topology.bonds():
+            G.add_edge(atom1.index, atom2.index)
+
+        return G
+
+    # TODO: Do we need a from_networkx() method? If so, what would the Graph be required to provide?
+
     def add_atom(self, atom):
         """
         Add an Atom.
@@ -626,11 +555,14 @@ class ChemicalEntity(object):
         else:
             smirks = query
 
-        # TODO: Enumerate matches using the currently selected toolkit.
-        if self._toolkit == 'oechem':
-
-            oemol = molecule.as_oemol()
-            matches = _getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model=self._aromaticity_model)
+        # Use specified cheminformatics toolkit to determine matches with specified aromaticity model
+        toolkit = TOOLKIT_PRECEDENCE[0]
+        if toolkit == 'oechem':
+            matches = _openye_smirks_matches(self.to_openeye(), smirks, aromaticity_model=self._aromaticity_model)
+        elif toolkit == 'rdkit':
+            matches = _openeye_smirks_matches(self.to_rdkit(), smirks, aromaticity_model=self._aromaticity_model)
+        else:
+            raise Exception('Unknown toolkit {}'.format(toolkit))
 
         # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
         matches = list()
@@ -645,6 +577,143 @@ class ChemicalEntity(object):
                     # Create match.
                     atom_indices = tuple([ reference_to_topology_atom_mapping[atom_index] for atom_index in reference_atom_indices ])
                     matches.append(atom_indices)
+
+        return matches
+
+    @staticmethod
+    @requires_rdkit
+    def _rdkit_smirks_matches(rdmol, smirks, aromaticity_model='OEAroModel_MDL'):
+        """Find all sets of atoms in the provided oemol that match the provided SMARTS string.
+
+        Parameters
+        ----------
+        rdmol : rdkit.Chem.Mol
+            rdmol to process with the SMIRKS in order to find matches
+        smarts : str
+            SMARTS string with any number of sequentially tagged atoms.
+            If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+        aromaticity_model : str, optional, default='OEAroModel_MDL'
+            OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
+            If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
+
+        Returns
+        -------
+        matches : list of tuples of atoms indices within the ``oemol``
+            matches[index] is an N-tuple of atom numbers from the ``oemol``
+            Matches are returned in no guaranteed order.
+            # TODO: What is returned if no matches are found? An empty list, or None?
+            # TODO: Ensure that SMARTS numbers 1, 2, 3... are rendered into order of returnd matches indexed by 0, 1, 2...
+
+        .. notes ::
+
+           * Raises ``LicenseError`` if valid OpenEye tools license is not found, rather than causing program to terminate
+           * Raises ``ValueError`` if ``smarts`` query is malformed
+
+        """
+        from rdkit import Chem
+
+        # Make a copy of the molecule
+        rdmol = Chem.Mol(rdmol)
+        # Use designated aromaticity model
+        if aromaticity_model == 'OEAroModel_MDL':
+            Chem.SanitizeMol(mol, Chem.SANITIZE_ALL^Chem.SANITIZE_SETAROMATICITY)
+            Chem.SetAromaticity(mol, Chem.AromaticityModel.AROMATICITY_MDL)
+        else:
+            raise ValueError('Unknown aromaticity model: {}'.aromaticity_models)
+
+        # Set up query.
+        qmol = Chem.MolFromSmarts(smirks)   #cannot catch the error
+        if qmol is None:
+            raise SMIRKSParsingError('RDKit could not parse the SMIRKS string "{}"'.format(smirks))
+
+        # Create atom mapping for query molecule
+        index_map = dict()
+        for atom in qmol.GetAtoms():
+             smirks_index = atom.GetAtomMapNum()
+             if smirks_index != 0:
+                ind_map[smirks_index - 1] = atom.GetIdx()
+        map_list = [ index_map[x] for x in sorted(index_map) ]
+
+        # Perform matching
+        matches = list()
+        for match in rdmol.GetSubstructMatches(qmol, uniquify=False)
+            mas = [ match[x] for x in map_list ]
+            matches.append(tuple(mas))
+
+        return matches
+
+    @staticmethod
+    @requires_openeye('oechem')
+    def _oechem_smirks_matches(oemol, smirks):
+        """Find all sets of atoms in the provided oemol that match the provided SMARTS string.
+
+        Parameters
+        ----------
+        oemol : openeye.oechem.OEMol or similar
+            oemol to process with the SMIRKS in order to find matches
+        smarts : str
+            SMARTS string with any number of sequentially tagged atoms.
+            If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+        aromaticity_model : str, optional, default=None
+            OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
+            If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
+
+        Returns
+        -------
+        matches : list of tuples of atoms indices within the ``oemol``
+            matches[index] is an N-tuple of atom numbers from the ``oemol``
+            Matches are returned in no guaranteed order.
+            # TODO: What is returned if no matches are found? An empty list, or None?
+            # TODO: Ensure that SMARTS numbers 1, 2, 3... are rendered into order of returnd matches indexed by 0, 1, 2...
+
+        .. notes ::
+
+           * Raises ``LicenseError`` if valid OpenEye tools license is not found, rather than causing program to terminate
+           * Raises ``ValueError`` if ``smarts`` query is malformed
+
+        """
+        from openeye import oechem
+        # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
+        mol = oechem.OEMol(oemol)
+
+        # Set up query
+        qmol = oechem.OEQMol()
+        if not oechem.OEParseSmarts(qmol, smarts):
+            raise ValueError("Error parsing SMARTS '%s'" % smarts)
+
+        # Determine aromaticity model
+        if aromaticity_model:
+            if type(aromaticity_model) == str:
+                # Check if the user has provided a manually-specified aromaticity_model
+                if hasattr(oechem, aromaticity_model):
+                    oearomodel = getattr(oechem, 'OEAroModel_' + aromaticity_model)
+                else:
+                    raise ValueError("Error: provided aromaticity model not recognized by oechem.")
+            else:
+                raise ValueError("Error: provided aromaticity model must be a string.")
+
+            # If aromaticity model was provided, prepare molecule
+            oechem.OEClearAromaticFlags(mol)
+            oechem.OEAssignAromaticFlags(mol, oearomodel)
+            # Avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
+            oechem.OEAssignHybridization(mol)
+
+        # Build list of matches
+        # TODO: Update the logic here to preserve ordering of template molecule for equivalent atoms
+        #       and speed matching for larger molecules.
+        unique = False # We require all matches, not just one of each kind
+        substructure_search = oechem.OESubSearch(qmol)
+        matches = list()
+        for match in substructure_search.Match(mol, unique):
+            # Compile list of atom indices that match the pattern tags
+            atom_indices = dict()
+            for matched_atom in match.GetAtoms():
+                if matched_atom.pattern.GetMapIdx() != 0:
+                    atom_indices[matched_atom.pattern.GetMapIdx()-1] = matched_atom.target.GetIdx()
+            # Compress into list
+            atom_indices = [ atom_indices[index] for index in range(len(atom_indices)) ]
+            # Convert to tuple
+            matches.append( tuple(atom_indices) )
 
         return matches
 
@@ -695,7 +764,7 @@ class Molecule(ChemicalEntity):
                 raise Exception(msg)
 
     @staticmethod
-    @requires_openeye_licenses
+    @requires_openeye('oechem', 'oeiupac')
     def from_iupac(iupac_name):
         """Generate Molecule from IUPAC name
 
@@ -709,22 +778,13 @@ class Molecule(ChemicalEntity):
         molecule : Molecule
             The resulting molecule with position
 
+        This method requires the OpenEye toolkit to be installed.
         """
-        # TODO: Can this work with RDKit? Or will this just be an OpenEye-only feature
-        from openeye import oechem, oeiupac, oeomega
+        from openeye import oechem, oeiupac
         oemol = oechem.OEMol()
         oeiupac.OEParseIUPACName(oemol, iupac_name)
         oechem.OETriposAtomNames(oemol)
-        # Assign coordinates
-        omega = oeomega.OEOmega()
-        omega.SetMaxConfs(1)
-        omega.SetIncludeInput(False)
-        omega.SetCanonOrder(False)
-        omega.SetSampleHydrogens(True) # Word to the wise: skipping this step can lead to significantly different charges!
-        status = omega(oemol)  # generate conformation
-        # Create Molecule
-        molecule = Molecule.from_openeye(oemol)
-        return molecule
+        return Molecule.from_openeye(oemol)
 
     def to_topology(self):
         """
@@ -735,9 +795,7 @@ class Molecule(ChemicalEntity):
         topology : openforcefield.topology.Topology
             A Topology representation of this molecule
         """
-        topology = Topology()
-        topology.add_molecule(self)
-        return topology
+        return Topology.from_molecules([self])
 
     def __setstate__(self, state):
         # TODO: Implement deserialization
@@ -763,19 +821,33 @@ class Molecule(ChemicalEntity):
             If there is a single molecule in the file, a Molecule is returned;
             otherwise, a list of Molecule objects is returned.
 
+        .. todo::
+
+           * Extend this to also include some form of .offmol Open Force Field Molecule format?
+           * Generalize this to also include file-like objects?
+
         """
-        # TODO: Remove this OpenEye-specific code.
-        from openeye import oechem
-        mol = oechem.OEGraphMol()
-        for monomer in monomers:
-            filename =
+        # Use highest-precendence toolkit
+        toolkit = TOOLKIT_PRECEDENCE[0]
+        if toolkit == 'openeye':
+            # Read molecules from an OpenEye-supported file, converting them one by one
+            from openeye import oechem
+            oemol = oechem.OEGraphMol()
             ifs = oechem.oemolistream(filename)
             while oechem.OEReadMolecule(ifs, mol):
-                oechem.OETriposAtomNames(mol)
-                mols.append( oechem.OEGraphMol(mol) )
-        raise NotImplementedError()
+                mol = Molecule.from_openeye(oemol)
+                mols.append(mol)
+        elif toolkit == 'rdkit':
+            from rdkit import Chem
+            for rdmol in Chem.SupplierFromFilename(filename):
+                mol  = Molecule.from_rdkit(rdmol)
+                mols.append(mol)
+        else:
+            raise Exception('Toolkit {} unsupported.'.format(toolkit))
+        return mols
 
     @staticmethod
+    @requires_rdkit
     def from_rdkit(rdmol):
         """
         Create a Molecule from an RDKit molecule.
@@ -793,9 +865,50 @@ class Molecule(ChemicalEntity):
             An openforcefield molecule
 
         """
-        # TODO: Implement this.
-        raise NotImplementedError("RDKit functionality not yet implemented")
+        from rdkit import Chem
 
+        # Create a new openforcefield Molecule
+        mol = Molecule()
+
+        # Add atoms
+        atom_map = dict() # atom_map[rdkit_index] is the Molecule Atom object corresponding to RDKit atom index 'rdkit_index'
+        for atom in rdmol.GetAtoms():
+            rdkit_index = atom.GetIdx()
+            element = elem.Element.getByAtomicNumber(atom.GetAtomicNum())
+            properties = atom.GetPropsAsDict()
+            if '_TriposAtomName' in properties:
+                atom_name = properties['_TriposAtomName']
+            except:
+                # RDKit molecule type does not store unique name string for each atom
+                # TODO: Should we make up a different atom name, or is the RDKit atom index sufficient?
+                atom_name = str(rdkit_index)
+            atom_map[rdkit_index] = mol.add_atom(atom_name, element)
+
+        # Create bonds
+        from rdkit.Chem import rdchem
+        # Mapping from RDKit BondType to openforcefield (type, int_order)
+        # TODO: This mapping may be woefully incomplete
+        BOND_TYPE_MAP = {
+            rdchem.BondType.SINGLE : ('single', 1),
+            rdchem.BondType.DOUBLE : ('double', 2),
+            rdchem.BondType.TRIPLE : ('triple', 3),
+            rdchem.BondType.AROMATIC : ('aromatic', 1),
+        }
+        for bond in rdmol.GetBonds():
+            atom1 = atom_map[bond.GetBeginAtom().GetIdx()]
+            atom2 = atom_map[bond.GetEndAtom().GetIdx()]
+            rdkit_bond_type = bond.GetBondType()
+            if rdkit_bond_type in BOND_TYPE_MAP:
+                bond_type, bond_order = BOND_TYPE_MAP[rdkit_bond_type]
+            else:
+                raise ValueError('RDKit bond type {} cannot be mapped into an openforcefield Molecule bond type.'.format(rdkit_bond_type))
+            mol.add_bond(atom1, atom2, bond_type, bond_order)
+
+        # TODO: Preserve atom and bond stereochemistry
+
+        return mol
+
+    @requires_rdkit
     def to_rdkit(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an RDKit molecule
@@ -807,11 +920,53 @@ class Molecule(ChemicalEntity):
         rdmol : rkit.RDMol
             An RDKit molecule
         """
-        # TODO: Implement this.
-        raise NotImplementedError("RDKit functionality not yet implemented")
+        from rdkit import Chem
 
-    # TODO: Should this method be called from_oemol instead?
+        # Create a new openforcefield Molecule
+        rdmol = Chem.EditableMol()
+
+        # Set name
+        # TODO: What is the best practice for how this should be named?
+        rdmol.SetProp('Name', self.name)
+
+        # Add atoms
+        atom_map = dict() # atom_map[offmol_atom] is the rdkit atom index of openforcefield Atom offmol_atom
+        for atom in self.atoms:
+            rdatom_index = rdmol.AddAtom(Chem.Atom(atom.element_index))
+            rdatom = rdmol.GetAtomWithIdx(rdmol, rdatom_index)
+            rdatom.SetProp('_TriposAtomName', atom.name) # TODO: Should we use a different property name to store the atom name?
+            atom_map[atom] = rdatom_index
+
+        # Add bonds
+        from rdkit.Chem import rdchem
+        # Mapping from RDKit BondType to openforcefield (type, int_order)
+        # TODO: This mapping may be woefully incomplete
+        BOND_TYPE_MAP = {
+            rdchem.BondType.SINGLE : ('single', 1),
+            rdchem.BondType.DOUBLE : ('double', 2),
+            rdchem.BondType.TRIPLE : ('triple', 3),
+            rdchem.BondType.AROMATIC : ('aromatic', 1),
+        }
+        for bond in self.bonds:
+            if bond.type == 'single':
+                rdkit_bond_type = rdchem.BondType.SINGLE
+            elif bond.type == 'double':
+                rdkit_bond_type = rdchem.BondType.DOUBLE
+            elif bond.type == 'triple':
+                rdkit_bond_type = rdchem.BondType.TRIPLE
+            elif bond.type == 'aromatic':
+                rdkit_bond_type = rdchem.BondType.AROMATIC
+            else:
+                raise ValueError('bond type {} unknown'.format(bond.type))
+            rdmol.AddBond(atom_map[bond.atom1], atom_map[bond.atom2], rdkit_bond_type)
+
+        # TODO: Preserve atom and bond stereochemistry
+
+        # Return non-editable version
+        return rdkit.Mol(rdmol)
+
     @staticmethod
+    @requires_openeye('oechem')
     def from_openeye(oemol):
         """
         Create a Molecule from an OpenEye molecule.
@@ -829,6 +984,8 @@ class Molecule(ChemicalEntity):
             An openforcefield molecule
 
         """
+        # TODO: This needs to be rewritten, and the hierarchical traversal moved to Topology
+
         # OE Hierarchical molecule view
         hv = oechem.OEHierView(mol, oechem.OEAssumption_BondedResidue +
                                oechem.OEAssumption_ResPerceived +
@@ -1079,6 +1236,29 @@ class Molecule(ChemicalEntity):
             ``kwargs`` will be passed to the toolkit.
         """
         pass
+
+
+
+
+    # TODO: Rework this.
+    def _assign_parital_charges_using_sqm(sdf_filename, output_filename, charge_model="bcc"):
+        """
+        Assign partial charges with AmberTools using antechamber/sqm.
+
+        Notes
+        -----
+        Currently only sdf file supported as input and mol2 as output
+        https://github.com/choderalab/openmoltools/blob/master/openmoltools/packmol.py
+        """
+        ANTECHAMBER_PATH = find_executable("antechamber")
+        if ANTECHAMBER_PATH is None:
+            raise(IOError("Antechamber not found, cannot run charge_mol()"))
+
+        with temporary_directory() as tmp_dir:
+            # TODO: Remove sqm files after completion
+            # output_filename = tempfile.mktemp(suffix = ".mol2", dir = tmp_dir)
+            os.system("antechamber -i {} -fi sdf -o {} -fo mol2 -pf y -c {}".format(sdf_filename, output_filename, charge_model))
+            os.system("rm sqm.*")
 
     def has_partial_charges(self):
         """Return True if any atom has nonzero charges; False otherwise.
