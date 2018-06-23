@@ -22,26 +22,11 @@ from openforcefield import utils, topology
 from pytest.mark import skipif
 from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORTED_TOOLKITS
 
+from openforcefield.tests.utils.utils import get_amber_system, get_packmol_pdbfile, get_monomer_mol2file
+
 #=============================================================================================
 # TESTS
 #=============================================================================================
-
-
-# TODO: Add tests comparing RDKit and OpenEye aromaticity perception
-
-def assert_molecule_is_equal(molecule1, molecule2, msg):
-    """Compare whether two Molecule objects are equal
-
-    Parameters
-    ----------
-    molecule1, molecule2 : openforcefield.topology.Molecule
-        Molecules to be compared
-    msg : str
-        Message to include if molecules fail to match.
-
-    """
-    # TODO:
-    pass
 
 def test_cheminformatics_toolkit_is_installed():
     """Ensure that at least one supported cheminformatics toolkit is installed."""
@@ -50,85 +35,14 @@ def test_cheminformatics_toolkit_is_installed():
         msg += str(SUPPORTED_TOOLKITS)
         raise Exception(msg)
 
-class TestMolecule(TestCase):
-    from openforcefield.topology import Molecule
+class TestTopology(TestCase):
+    from openforcefield.topology import Topology
 
     def setUp(self):
-        self.molecules = pickle.load('zinc-subset-offmols.pkl')
+        pass
 
-    def test_serialize(self):
-        serialized = pickle.dumps(self.molecules)
-        molecules_copy = pickle.loads(serialized)
-
-    @skipif(RDKIT_UNAVAILABLE)
-    def test_rdkit_roundtrip(self):
-        for molecule in self.molecules:
-            rdmol = molecule.to_rdkit()
-            molecule2 = Molecule.from_rdmol(rdmol)
-            assert_molecule_is_equal(molecule, molecule2, "Molecule.to_rdmol()/from_rdmol() round trip failed")
-            molecule3 = Molecule(rdmol)
-            assert_molecule_is_equal(molecule, molecule3, "Molecule(rdmol) constructor failed")
-
-    @skipif(OPENEYE_UNAVAILABLE)
-    def test_oemol_roundtrip(self):
-        """Test creation of Molecule object from OpenEye OEMol
-        """
-        for molecule in self.molecules:
-            oemol = molecule.to_openeye()
-            molecule2 = Molecule.from_openeye(oemol)
-            assert_molecule_is_equal(molecule, molecule2, "Molecule.to_openeye()/from_openeye() round trip failed")
-            molecule3 = Molecule(oemol)
-            assert_molecule_is_equal(molecule, molecule3, "Molecule(oemol) constructor failed")
-
-    @skipif(OPENEYE_UNAVAILABLE)
-    def test_assign_partial_charges(self):
-        """Test assignment of partial charges
-        """
-        # TODO: Only the OpenEye toolkit currently supports charge models
-        # TODO: Does RDKit support other charge models?
-        for molecule in self.molecules:
-            for charge_model in topology.ALLOWED_CHARGE_MODELS:
-                molecule.assign_partial_charges(method=charge_model)
-
-    @skipif(OPENEYE_UNAVAILABLE)
-    def test_assign_fractional_bond_orders(self):
-        """Test assignment of fractional bond orders
-        """
-        for molecule in self.molecules:
-            for charge_model in topology.ALLOWED_FRACTIONAL_BONDORDER_MODELS:
-                molecule.assign_fractional_bond_orders(method=charge_model)
-
-    def test_bonds(self):
-        """Test iteration over bonds
-        """
-        for molecule in self.molecules:
-            bonds = molecule.bonds()
-            # TODO: Check known cases
-
-    def test_angles(self):
-        """Test iteration over angles
-        """
-        for molecule in self.molecules:
-            angles = molecule.angles()
-            # TODO: Check known cases
-
-    def test_torsions(self):
-        """Test iteration over torsions
-        """
-        for molecule in self.molecules:
-            torsion = molecule.torsions()
-            # TODO: Check known cases
-
-    def test_propers(self):
-        """Test iteration over proper torsions
-        """
-        for molecule in self.molecules:
-            torsion = molecule.propers()
-            # TODO: Check known cases
-
-    def test_impropers(self):
-        """Test iteration over improper torsions
-        """
-        for molecule in self.molecules:
-            torsion = molecule.impropers()
-            # TODO: Check known cases
+    def test_from_openmm(self):
+        """Test creation of an openforcefield Topology object from an OpenMM Topology and component molecules"""
+        pdbfile = app.PDBFile(get_packmol_pdbfile('cyclohexane_ethanol_0.4_0.6.pdb'))
+        molecules = [ Molecule.from_file(get_monomer_mol2file(name)) for name in ('ethanol', 'cyclohexane') ]
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
