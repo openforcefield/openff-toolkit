@@ -26,7 +26,7 @@ from distutils.spawn import find_executable
 from simtk import unit
 from simtk.openmm.app import element as elem
 
-from openforcefield.utils.toolkits import OPENEYE_IS_INSTALLED, RDKIT_IS_INSTALLED, TOOLKIT_PRECEDENCE
+from openforcefield.utils.toolkits import OPENEYE_INSTALLED, RDKIT_INSTALLED, TOOLKIT_PRECEDENCE
 from openforcefield.utils.toolkits import requires_rdkit, requires_openeye
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
