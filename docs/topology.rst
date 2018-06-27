@@ -18,5 +18,3 @@ These classes offer several advantages over corresponding ``Topology`` objects i
     ChemicalEntity
     Molecule
     Topology
-    Chain
-    Residue
