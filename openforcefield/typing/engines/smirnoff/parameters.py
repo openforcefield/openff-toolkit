@@ -568,7 +568,7 @@ class ImproperTorsionHandler(ParameterHandler):
             for (periodicity, phase, k) in zip(improper.periodicity, improper.phase, improper.k):
                 # Permute non-central atoms
                 others = [ atom_indices[0], atom_indices[2], atom_indices[3] ]
-                for p in [ (others[i], others[j], others[k]) for (i,j,k) in [(0,1,2), (1,2,0), (2,0,1)] ]
+                for p in [ (others[i], others[j], others[k]) for (i,j,k) in [(0,1,2), (1,2,0), (2,0,1)] ]:
                     force.addTorsion(atom_indices[1], p[0], p[1], p[2], periodicity, phase, k)
 
         logger.info('{} impropers added, each applied in a six-fold trefoil' % (len(impropers)))
@@ -621,7 +621,7 @@ class vdWHandler(ParameterHandler):
             """Return all storable attributes as a dict.
             """
             names = ['smirks', 'sigma', 'epsilon', 'id', 'parent_id']
-            return { name, getattr(self, name) for name in names if hasattr(self, name) }
+            return { name : getattr(self, name) for name in names if hasattr(self, name) }
 
     _TAGNAME = 'vdWForce' # SMIRNOFF tag name to process
     _INFOTYPE = vdWType # info type to store

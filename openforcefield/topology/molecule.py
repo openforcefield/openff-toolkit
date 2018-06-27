@@ -643,7 +643,7 @@ class ChemicalEntity(object):
         # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
         #       and speed matching for larger molecules.
         matches = list()
-        for match in rdmol.GetSubstructMatches(qmol, uniquify=False)
+        for match in rdmol.GetSubstructMatches(qmol, uniquify=False):
             mas = [ match[x] for x in map_list ]
             matches.append(tuple(mas))
 
@@ -885,7 +885,7 @@ class Molecule(ChemicalEntity):
             properties = atom.GetPropsAsDict()
             if '_TriposAtomName' in properties:
                 atom_name = properties['_TriposAtomName']
-            except:
+            else:
                 # RDKit molecule type does not store unique name string for each atom
                 # TODO: Should we make up a different atom name, or is the RDKit atom index sufficient?
                 atom_name = str(rdkit_index)

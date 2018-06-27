@@ -559,7 +559,7 @@ class ForceField(object):
         # TODO: Automagically handle expansion of virtual sites? Or is Topology supposed to do that?
 
         # Create OpenMM System
-        system = self.create_system(topology, default_box_vectors=default_box_vectors, **kwargs):
+        system = self.create_system(topology, default_box_vectors=default_box_vectors, **kwargs)
 
         # Create a ParmEd Structure object
         structure = parmed.openmm.topsystem.load_topology(topology.to_openmm(), system, positions)
