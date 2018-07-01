@@ -24,16 +24,18 @@ Class definitions to represent a molecular system and its chemical components
 import copy
 import itertools
 
-from collections import OrderedDict
+import collections
 
 import numpy as np
 
 from simtk import openmm, unit
 from simtk.openmm.app import element as elem
-from simtk.openmm.app import Topology
+from simtk.openmm import app
 
-from openforcefield.utils import generateTopologyFromOEMol, get_data_filename
+#from openforcefield.utils import get_data_filename
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
+from openforcefield.topology.molecule import ChemicalEntity
+from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL, DEFAULT_FRACTIONAL_BONDORDER_MODEL, DEFAULT_CHARGE_MODEL
 
 #=============================================================================================
 # GLOBAL PARAMETERS
@@ -48,7 +50,7 @@ class _TransformedDict(collections.MutableMapping):
        function before accessing the keys"""
 
     def __init__(self, *args, **kwargs):
-        self.store = OrderedDict()
+        self.store = collections.OrderedDict()
         self.update(dict(*args, **kwargs))  # use the free update to set keys
 
     def __getitem__(self, key):

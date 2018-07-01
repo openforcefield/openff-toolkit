@@ -1,2 +1,2 @@
-from .molecule import *
-from .topology import *
+from openforcefield.topology.molecule import *
+from openforcefield.topology.topology import *

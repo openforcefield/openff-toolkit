@@ -25,7 +25,7 @@ import copy
 import time
 import string
 import random
-import logger
+import logging
 import itertools
 import collections
 

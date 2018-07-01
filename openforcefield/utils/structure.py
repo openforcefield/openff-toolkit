@@ -29,7 +29,7 @@ from openmoltools import system_checker
 import time
 from simtk import unit
 
-from openforcefield.topology import Molecule, Topology
+#from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff import ForceField
 
 #=============================================================================================

@@ -13,6 +13,7 @@ Utility subroutines for managing cheminformatics toolkits
 #=============================================================================================
 
 import importlib
+from functools import wraps
 
 #=============================================================================================
 # CHEMINFORMATICS TOOLKITS
@@ -85,14 +86,19 @@ def is_openeye_installed(oetools=('oechem', 'oequacpac', 'oeiupac', 'oeomega')):
         return False
     return True
 
-def requires_openeye(f, *oetools):
+def requires_openeye(*oetools):
     """
     Decorator to check that OpenEye licenses are found, raising LicenseError if valid license not found.
 
     """
-    if not is_openeye_installed(oetools=oetools):
-        msg = 'This function requires the OpenEye toolkit with licenses for the following tools: {}'.format(oetools)
-        raise LicenseError(msg)
+    def decorator(func):
+        @wraps(func)
+        def wrapped_function(*args, **kwargs):
+            if not is_openeye_installed(oetools=oetools):
+                msg = 'This function requires the OpenEye toolkit with licenses for the following tools: {}'.format(oetools)
+                raise LicenseError(msg)
+        return wrapped_function
+    return decorator
 
 OPENEYE_INSTALLED = is_openeye_installed('oechem') and is_openeye_installed('oequacpac') and is_openeye_installed('oeiupac') and is_openeye_installed('oeomega')
 OPENEYE_UNAVAILABLE = not OPENEYE_INSTALLED
@@ -107,7 +113,7 @@ def is_rdkit_installed():
 RDKIT_INSTALLED = is_rdkit_installed()
 RDKIT_UNAVAILABLE = not RDKIT_INSTALLED
 
-def requires_rdkit(f):
+def requires_rdkit(func):
     """
     Decorator to check that RDKit is installed.
 
