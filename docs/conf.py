@@ -62,18 +62,23 @@ intersphinx_mapping = {
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
+# Source parsers
+source_parsers = {
+   '.md': 'recommonmark.parser.CommonMarkParser',
+}
+
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-# source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ['.rst', '.md']
+#source_suffix = '.rst'
 
 # The master toctree document.
 master_doc = 'index'
 
 # General information about the project.
 project = 'openforcefield'
-copyright = '2016-2017 Open Forcefield Consortium'
+copyright = '2016-2018 Open Force Field Initiative'
 author = 'Open Forcefield Consortium'
 
 # The version info for the project you're documenting, acts as replacement for

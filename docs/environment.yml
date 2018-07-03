@@ -16,3 +16,4 @@ dependencies:
     - pandas
     - nbsphinx
     - sphinx_bootstrap_theme
+    - recommonmark
