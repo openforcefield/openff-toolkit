@@ -43,7 +43,8 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'nbsphinx'
+    'nbsphinx',
+    'm2r', # render markdown
     ]
 
 autosummary_generate = True
@@ -63,9 +64,9 @@ intersphinx_mapping = {
 templates_path = ['_templates']
 
 # Source parsers
-source_parsers = {
-   '.md': 'recommonmark.parser.CommonMarkParser',
-}
+#source_parsers = {
+#   '.md': 'recommonmark.parser.CommonMarkParser',
+#}
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:

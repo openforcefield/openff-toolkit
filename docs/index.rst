@@ -10,7 +10,7 @@ A modern, extensible library for molecular mechanics forcefield science.
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
    installation
@@ -21,7 +21,7 @@ Modules
 -------
 
 .. toctree::
-  :maxdepth: 2
+  :maxdepth: 1
 
   topology
   typing
