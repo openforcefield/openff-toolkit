@@ -107,8 +107,8 @@ language = None
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
-#pygments_style = 'sphinx'
-pygments_style = 'paraiso-dark'
+pygments_style = 'sphinx'
+#pygments_style = 'paraiso-dark'
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
@@ -192,7 +192,8 @@ html_theme_options = {
     #
     # Options are nothing (default) or the name of a valid theme
     # such as "cosmo" or "sandstone".
-    'bootswatch_theme': "cosmo",
+    #'bootswatch_theme': "cosmo",
+    'bootswatch_theme': "united",
 
     # Choose Bootstrap version.
     # Values: "3" (default) or "2" (in quotes)
