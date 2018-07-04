@@ -1,8 +1,10 @@
-# The SMIRks Native Open Force Field (SMIRNOFF) v1.0
+# The SMIRks Native Open Force Field (SMIRNOFF) specification 1.0
 
-SMIRNOFF is a specification for encoding molecular mechanics force fields based on direct chemical perception using the broadly-supported [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) language, utilizing atom tagging extensions from [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html).
+SMIRNOFF is a specification for encoding molecular mechanics force fields from the [Open Force Field Initiative](http://openforcefield.org) based on direct chemical perception using the broadly-supported [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) language, utilizing atom tagging extensions from [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html).
 
-## Authors
+## Authors and acknowledgments
+
+SMIRNOFF was designed by the [Open Force Field Initiative](http://openforcefield.org). Primary contributors include:
 
 * Caitlin C. Bannan (University of California, Irvine) `<bannanc@uci.edu>`
 * Christopher I. Bayly (OpenEye Software) `<bayly@eyesopen.com>`
@@ -13,16 +15,20 @@ The SMIRNOFF format and its reference implementation in the `openforcefield` too
 
 ## Representations and encodings
 
-A SMIRNOFF parameter set can in principle be encoded in multiple representations.
+A force field in the SMIRNOFF format can be encoded in multiple representations.
+Currently, only an [XML](https://en.wikipedia.org/wiki/XML) representation is supported by the reference implementation of the [openforcefield toolkit](http://github.com/openforcefield/openforcefield).
 
 ### XML
 
-Currently, SMIRNOFF supports an [XML](https://en.wikipedia.org/wiki/XML) representation, which provides a human- and machine-readable form for encoding the parameter set and its typing rules.
+A SMIRNOFF force field can be described in an [XML](https://en.wikipedia.org/wiki/XML) representation, which provides a human- and machine-readable form for encoding the parameter set and its typing rules.
+This document focuses on describing the XML representation of the force field.
 
-* By convention, XML-encoded SMIRNOFF parameter sets are designated with a `.offxml` extension if written to a filesystem.
+* By convention, XML-encoded SMIRNOFF force fields use an `.offxml` extension if written to a file.
 * In XML, numeric quantities appear as strings, like `"1"` or `"2.3"`.
 * Integers should always be written without a decimal point, such as `"1"`, `"9"`.
 * Non-integral numbers, such as parameter values, should be written with a decimal point, such as `"1.23"`, `"2."`.
+* In XML, certain special characters that occur in valid SMARTS/SMIRKS patterns (such as ampersand symbols `&`) must be specially encoded.
+See [this ist of XML and HTML character entity references](https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references) for more details.
 
 ### JSON
 
@@ -38,14 +44,24 @@ While designed for [OpenMM](http://openmm.org), parameterized systems created by
 
 ## Basic structure
 
-The SMIRNOFF format provides XML `offxml` files that are parseable by the `ForceField` class of the `openforcefield.typing.smirnoff` module.
+A reference implementation of a SMIRNOFF force field parser that can process XML representations (denoted by `.offxml` file extensions) can be found in the `ForceField` class of the `openforcefield.typing.engines.smirnoff` module.
+
+Below, we describe the main structure of such an XML representation.
+
+### The enclosing `<SMIRNOFF/>` tag
+
 A SMIRNOFF forcefield XML specification always is enclosed in a `<SMIRNOFF/>` tag, with certain required attributes provided.
 ```XML
 <SMIRNOFF version="1.0" aromaticity_model="MDL">
 ...
 </SMIRNOFF>
 ```
+
+### Versioning
+
 The `version` attributes specifies the version number of the specification this forcefield complies with, and the `aromaticity_model` specifies the aromaticity model used for chemical perception (here, "MDL"; see below).
+
+### Parameter generators
 
 Within the `<SMIRNOFF/>` tag, top-level tags encode parameters for a force field based on a SMARTS/SMIRKS-based specification describing the chemical environment the parameters are to be applied to.
 The file has tags corresponding to OpenMM force terms (`Bonds`, `Angles`, `TorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example offxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.offxml)):
@@ -55,6 +71,8 @@ The file has tags corresponding to OpenMM force terms (`Bonds`, `Angles`, `Torsi
 </Angles>     
 ```
 which introduces following `Angle` terms which will use units of degrees for the angle and kilocalories per mole per square radian for the force constant.
+
+### Specifying parameters
 
 Under each of these force terms, there are tags for individual parameter lines such as these:
 ```XML
@@ -71,22 +89,22 @@ The symbol `-` joining these groups denotes a single bond.
 The strings `:1`, `:2`, and `:2` label these atoms as indices 1, 2, and 3, with 2 being the central atom.
 Equilibrium angle values are provided, along with force constants (with units as given above).
 
-Before getting in to individual sections, it's worth noting that the XML parser ignores attributes in the XML that it does not understand, so providing a parameter line for an angle that specifies (for example) a second force constant `k2` will lead to no effect.
+.. note :: The XML parser ignores attributes in the XML that it does not understand, so providing a parameter line for an angle that specifies (for example) a second force constant `k2` will lead to no effect.
 
-**SMIRNOFF parameters are hierarchical:**
+### SMIRNOFF parameter specification is hierarchical
+
 Parameters that appear later in a file override those which come earlier if they match the same pattern.
 This can be seen in the example above, where the first line provides a generic angle parameter for any tetravalent carbon (single bond) angle, and the second line overrides this for the specific case of a hydrogen-(tetravalent carbon)-hydrogen angle.
 
 This hierarchical structure means that a typical parameter file will tend to have generic parameters early in the section for each force type, with more specialized parameters assigned later.
 
-Multiple `.offxml` files can be loaded in sequence.
+### Multiple SMIRNOFF representations can be processed in sequence
+
+For example, multiple SMIRNOFF `.offxml` can be loaded by the openforcefield `ForceField` in sequence.
 If these files each contain unique top-level tags (such as `<Bonds/>`, `<Angles/>`, etc.), the resulting forcefield will be independent of the order in which the files are loaded.
 If, however, the same tag occurs in multiple files, the contents of the tags are merged, with the tags read later taking precedence over the parameters read earlier, provided the top-level tags have compatible attributes.
 The resulting force field will therefore depend on the order in which parameters are read.
 This behavior is intended for limited use in appending very specific parameters (such as solvent models)
-
-**Technical note**: Because this is an XML format, certain special characters that occur in valid SMIRKS patterns (such as ampersand symbols `&`) must be specially encoded.
-See [this entry](https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references) for more details.
 
 ## Units
 
@@ -111,26 +129,27 @@ The file consists of multiple top-level tags defining individual components of t
    <Bond smirks="[#6X4:1]-[#1:2]" length="1.090" k="680.0"/>
    ...
 </Bonds>
+
 <Angles potential="harmonic" angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
    <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50" k="100.0"/>
    <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50" k="70.0"/>
    ...
 </Angles>
-...
 ```
 Each top-level tag specifying a component of the potential energy has an attribute `potential` for specifying the functional form for the interaction.
 Common defaults are defined, but the goal is to eventually allow these to be overridden by alternative choices or even algebraic expressions in the future.
-The format will distinguish between functional forms available in all common molecular simulation packages and those experimental features available in a few packages (especially OpenMM, which supports a flexible set of custom forces defined by algebraic expressions) with an *EXPERIMENTAL* category.
+
+We distinguish between functional forms available in all common molecular simulation packages and those experimental features available in a few packages (especially OpenMM, which supports a flexible set of custom forces defined by algebraic expressions) with an **EXPERIMENTAL** label.
 
 Many of the specific forces are implemented as discussed in the [OpenMM Documentation](http://docs.openmm.org/latest/userguide/theory.html); see especially [Section 19 on Standard Forces](http://docs.openmm.org/latest/userguide/theory.html#standard-forces) for mathematical descriptions of these functional forms.
 Some top-level tags provide attributes that modify the functional form used to be consistent with packages such as AMBER or CHARMM.
 
-## Charge models
+## Partial charge and electrostatics models
 
 SMIRNOFF supports several ways for specifying electrostatic models.
 Currently, only classical fixed point charge models are supported, but extensions to the specification will support point multipoles, point polarizable dipoles, Drude oscillators, charge equilibration methods, and so on.
 
-### `<LibraryCharges/>`: Library charges
+### `<LibraryCharges/>`: Library charges for polymeric residues
 
 A mechanism is provided for specifying library charges that can be applied to molecules or residues that match provided templates.
 Library charges are applied first, and atoms for which library charges are applied will be excluded from alternative charging schemes listed below.
@@ -149,7 +168,7 @@ Note that, for a given template, chemically equivalent atoms should be assigned 
 If the template matches multiple non-overlapping sets of atoms, all such matches will be assigned the provided charges.
 If multiple templates match the same set of atoms, the last template specified will be used.
 
-Solvent models or excipients can also have partial charges specified in this manner:
+.. note :: Solvent models or excipients can also have partial charges specified via the `<LibraryCharges/>` tag. For example, for TIP3P water:
 ```XML
 <LibraryCharges charge_unit="elementary_charge">
    <!-- TIP3P water oxygen with charge override -->
@@ -190,7 +209,7 @@ Future additions will provide options for intelligently fragmenting large molecu
 ### Prespecified charges (reference implementation only)
 
 In our reference implementation of SMIRNOFF in the `openforcefield` toolkit, we also provide a method for specifying partial charges within the `Molecule` objects in the `Topology`.
-If the optional `user_specified_charges=True` flag is passed to `ForceField.createSystem(topology)`, all charges will be drawn from `Molecule` objects in the `Topology`.
+If the optional `user_specified_charges=True` flag is passed to `ForceField.createSystem(topology)`, all charges will be drawn from `Molecule` objects in the `Topology`, which can be annotated with user-specified charges.
 This method is provided solely for convenience in developing and exploring alternative charging schemes; actual force field releases for distribution will use one of the other mechanisms specified above.
 
 ## Parameter sections
@@ -376,7 +395,7 @@ Generalized-Born surface area (GBSA) implicit solvent parameters are specified v
  </GBSA>
 ```
 
-#### Generalized Born (GB) model
+#### Supported Generalized Born (GB) models
 In the `<GBSA/>` tag, `gb_model` selects which GB model is used.
 Currently, this can be selected from a subset of the [GBSA models available in OpenMM's `simtk.openmm.app`](http://docs.openmm.org/latest/userguide/application.html#amber-implicit-solvent:
 * `HCT`: [Hawkins-Cramer-Truhlar](http://docs.openmm.org/latest/userguide/zbibliography.html#hawkins1995) (corresponding to `igb=1` in AMBER): requires `[radius, scale]`
@@ -403,10 +422,10 @@ The `ACE` model permits two additional parameters to be specified:
 
 ### `<Constraints/>`
 
-Distance constraints can be specified through a `<Constraints/>` block, which can constrain bonds to their equilibrium lengths or specify an interatomic constraint distance.
+Bond length or angle constraints can be specified through a `<Constraints/>` block, which can constrain bonds to their equilibrium lengths or specify an interatomic constraint distance.
 Two atoms must be tagged in the `smirks` attribute of each `<Constraint/>` record.
 
-To constrain two atoms to their equilibrium bond length, it is critical that a `<Bonds/>` record be specified for those atoms:
+To constrain the separation between two atoms to their equilibrium bond length, it is critical that a `<Bonds/>` record be specified for those atoms:
 ```XML
 <Constraints>
   <!-- constrain all bonds to hydrogen to their equilibrium bond length -->
@@ -524,43 +543,44 @@ The only aromaticity model currently widely supported (by both the [OpenEye tool
 
 See the [openforcefield GitHub issue tracker](https://github.com/openforcefield/openforcefield/issues) to propose changes to this specification, or read through proposed changes currently being discussed.
 
-## Using the `openforcefield` Python toolkit to parameterize systems
+## The `openforcefield` reference implementation
 
-A relatively extensive set of examples is available under [examples/](https://github.com/openforcefield/openforcefield/tree/master/examples).
-Basic usage works as follows in python, however:
+A Python reference implementation of a parameterization engine implementing the SMIRNOFF force field specification can be found [online](http://github.com/openforcefield/openforcefield).
+This implementation can use either the free-for-academics (but commercially supported) [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/index.html) or the free and open source [RDKit cheminformatics toolkit](http://www.rdkit.org/).
+See the [installation instructions](https://open-forcefield-toolkit.readthedocs.io/en/topology/installation.html) for information on how to install this implementation and its dependencies.
+
+### Examples
+
+A relatively extensive set of examples is made available on the [reference implementation repository](http://github.com/openforcefield/openforcefield) under [examples/](https://github.com/openforcefield/openforcefield/tree/master/examples).
+
+### Parameterizing a system
+
+Consider parameterizing a simple system containing a the drug imatinib.
 ```python
-# Read in a small molecule using the OpenEye toolkit
-import oechem
-mol = oechem.OEGraphMol()
-ifs = oechem.oemolistream(mol_filename)
-flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
-ifs.SetFlavor(oechem.OEFormat_MOL2, flavor)
-oechem.OEReadMolecule(ifs, mol)
-oechem.OETriposAtomNames(mol)
+# Create a molecule from a mol2 file
+from openforcefield.topology import Molecule
+molecule = Molecule.from_file('imatinib.mol2')
 
-# Load forcefield
-from openforcefield.typing import smirnoff
-forcefield = smirnoff.ForceField('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml')
+# Create a Topology specifying the system to be parameterized containing just the molecule
+topology = molecule.to_topology()
 
-# Generate an openforcefield Topology and
-from openforcefield.topology import Molecule, Topology
-topology = Topology()
-topology.add_molecule(mol)
+# Load the smirnoff99Frosst forcefield
+from openforcefield.typing.engines import smirnoff
+forcefield = smirnoff.ForceField('smirnoff99Frosst.offxml')
 
-# Create an OpenMM System from the openforcefield Topology
-from simtk import openmm, unit
-system = forcefield.createSystem(topology)
+# Create an OpenMM System from the topology
+system = forcefield.create_openmm_system(topology)
 ```
-This example can essentially trivially be extended to handle the case of beginning from a SMILES string rather than a `.mol2` file.
+See `examples/SMIRNOFF_simulation/` for an extension of this example illustrating to simulate this molecule in the gas phase.
 
-The `SMIRNOFF_simulation` example in the examples directory shows how to extend the example above to simulate this molecule in the gas phase.
+The `topology` object provided to `create_openmm_system()` can contain any number of molecules of different types, including biopolymers, ions, buffer molecules, or solvent molecules.
+The openforcefield toolkit provides a number of convenient methods for importing or constructing topologies given PDB files, Sybyl mol2 files, SDF files, SMILES strings, and IUPAC names; see the [toolkit documentation](https://open-forcefield-toolkit.readthedocs.io/) for more information.
+Notably, this `topology` object differs from those found in [OpenMM](http://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.topology.Topology.html#simtk.openmm.app.topology.Topology) or [MDTraj](http://mdtraj.org/1.9.0/api/generated/mdtraj.Topology.html#mdtraj.Topology) in that it contains information on the *chemical identity* of the molecules constituting the system, rather than this atomic elements and covalent connectivity; this additional chemical information is required for the [direct chemical perception](https://doi.org/10.1101/286542) features of SMIRNOFF typing.
 
-`createSystem()` can also handle a system consisting of a mixture of molecules; we've tested it on cyclohexane/ethanol and propane/methanol/butanol mixtures for example.
-As input it is necessary to provide a Topology file representing the system, and a list of OpenEye molecules for the components of that Topology.
-So, for example, one can read a PDB file describing a mixture and provide OpenEye molecules for the components (generated by the Mobleylab's [SolvationToolkit](https://github.com/MobleyLab/SolvationToolkit), for example) and create a system from that.
+### Using SMIRNOFF small molecule forcefields with traditional biopolymer force fields
 
-**Use with protein force fields**: While SMIRNOFF format force fields can cover a wide range of biological systems, the initial focus is on small molecule force fields, meaning that users may have considerable interest in combining SMIRNOFF small molecule parameters to systems in combination with traditional biopolymer parameters from conventional force fields, such as the AMBER family of protein/nucleic acid force fields.
-Thus, we provide an example of setting up a mixed system in [examples/mixedFF_structure](examples/mixedFF_structure), where an AMBER family force field is used for a protein and smirnoff99Frosst for a small molecule.
+While SMIRNOFF format force fields can cover a wide range of biological systems, our initial focus is on gneral small molecule force fields, meaning that users may have considerable interest in combining SMIRNOFF small molecule parameters to systems in combination with traditional biopolymer parameters from conventional force fields, such as the AMBER family of protein/nucleic acid force fields.
+Thus, we provide an example of setting up a mixed protein-ligand system in [examples/mixedFF_structure](examples/mixedFF_structure), where an AMBER family force field is used for a protein and smirnoff99Frosst for a small molecule.
 
 ### The optional `id` and `parent_id` attributes and other XML attributes
 
@@ -579,7 +599,7 @@ The `parent_id` attribute is also frequently used to denote parameters from whic
 
 `ForceField` will currently raise an exception if any parameters are missing where expected for your system---i.e. if a bond is assigned no parameters, an exception will be raised.
 However, use of generic parameters (i.e. `[*:1]~[*:2]` for a bond) in your `.offxml` will result in parameters being assigned everywhere, bypassing this exception.
-So use generics sparingly unless it is your intention to provide generics that should be used.
+We recommend generics be used sparingly unless it is your intention to provide true universal generic parameters.
 
 ## Version history
 
@@ -629,3 +649,9 @@ While this won't affect thermodynamic properties, it could affect *kinetic* prop
 ### Should we have an XML Schema?
 
 An XML Schema would make it easier to validate XML representations of SMIRNOFF to make sure they are compliant and detect errors.
+
+### Handling extra XML tag attributes
+
+Currently, the XML parser ignores attributes in the XML that it does not understand, so providing a parameter line for an angle that specifies (for example) a second force constant `k2` will silently lead to no effect.
+Should we change this behavior to raise an error so that malformed `.offxml` files or typos are not silently processed without warning the user?
+On the one hand, it's useful to specify things like `id` and `parent_id`, and to allow users to extend this, but it makes errors or typos easier to go uncaught.

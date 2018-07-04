@@ -471,13 +471,13 @@ class ForceField(object):
 
     # TODO: How do we know if the system is periodic or not?
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
-    def create_system(self, topology, default_box_vectors=None, **kwargs):
-        """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
+    def create_openmm_system(self, topology, default_box_vectors=None, **kwargs):
+        """Create an OpenMM System representing the interactions for the specified Topology with the currently-loaded force field
 
         Parameters
         ----------
         topology : openforcefield.topology.Topology
-            The ``Topology`` corresponding to the ``System`` object to be created.
+            The ``Topology`` corresponding to the system to be parameterized
         default_box_vectors : simtk.unit.Quanity of shape [3,3] with units compatible with nanometers, optional, default=None
             Default box vectors to use.
             If not specified, default box vectors will be set to 1.0 nm edges.
@@ -488,7 +488,7 @@ class ForceField(object):
         Returns
         -------
         system : simtk.openmm.System
-            The newly created OpenMM System
+            The newly created OpenMM System corresponding to the specified ``topology``
 
         """
         # Make a deep copy of the topology so we don't accidentally modify it
@@ -518,7 +518,7 @@ class ForceField(object):
             known_args.update(parameter_handler.known_kwargs)
         unknown_kwargs = set(kwargs.keys()).difference(known_kwargs)
         if len(unknown_kwargs) > 0:
-            msg = "The following keyword arguments to createSystem() are not used by any registered force Handler: {}\n".format(unknown_kwargs)
+            msg = "The following keyword arguments to create_system() are not used by any registered force Handler: {}\n".format(unknown_kwargs)
             msg += "Known keyword arguments: {}".format(known_kwargs)
             raise ValueError(msg)
 
