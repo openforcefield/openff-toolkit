@@ -16,6 +16,7 @@ A modern, extensible library for molecular mechanics forcefield science.
    installation
    releasehistory
    smirnoff
+   converting
 
 Modules
 -------

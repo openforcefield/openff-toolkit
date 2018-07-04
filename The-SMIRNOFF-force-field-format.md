@@ -4,8 +4,9 @@ SMIRNOFF is a specification for encoding molecular mechanics force fields from t
 
 ## Authors and acknowledgments
 
-SMIRNOFF was designed by the [Open Force Field Initiative](http://openforcefield.org). Primary contributors include:
+The SMIRNOFF specification was designed by the [Open Force Field Initiative](http://openforcefield.org).
 
+Primary contributors include:
 * Caitlin C. Bannan (University of California, Irvine) `<bannanc@uci.edu>`
 * Christopher I. Bayly (OpenEye Software) `<bayly@eyesopen.com>`
 * John D. Chodera  (Memorial Sloan Kettering Cancer Center) `<john.chodera@choderalab.org>`
@@ -28,7 +29,7 @@ This document focuses on describing the XML representation of the force field.
 * Integers should always be written without a decimal point, such as `"1"`, `"9"`.
 * Non-integral numbers, such as parameter values, should be written with a decimal point, such as `"1.23"`, `"2."`.
 * In XML, certain special characters that occur in valid SMARTS/SMIRKS patterns (such as ampersand symbols `&`) must be specially encoded.
-See [this ist of XML and HTML character entity references](https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references) for more details.
+See [this list of XML and HTML character entity references](https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references) for more details.
 
 ### JSON
 
@@ -40,7 +41,8 @@ A reference implementation of the SMIRNOFF XML specification is provided in the 
 
 ## Support by molecular simulation packages
 
-While designed for [OpenMM](http://openmm.org), parameterized systems created by this toolkit can be converted for use in other popular molecular dynamics simulation packages via [ParmEd](http://parmed.github.io/ParmEd) and [InterMol](https://github.com/shirtsgroup/InterMol).
+While designed for [OpenMM](http://openmm.org), parameterized systems created by this toolkit can be converted for use in other popular molecular dynamics simulation packages (such as [AMBER](), [CHARMM](), [NAMD]()) via [ParmEd](http://parmed.github.io/ParmEd) and [InterMol](https://github.com/shirtsgroup/InterMol).
+See [Converting SMIRNOFF parameterized systems to other simulation packages]() for more details.
 
 ## Basic structure
 
@@ -87,20 +89,19 @@ This pattern is essentially a [SMARTS](http://www.daylight.com/dayhtml/doc/theor
 Here, `[a,A]` denotes any atom---either aromatic (`a`) or aliphatic (`A`), while `[#6X4]` denotes a carbon by element number (`#6`) that with four substituents (`X4`).
 The symbol `-` joining these groups denotes a single bond.
 The strings `:1`, `:2`, and `:2` label these atoms as indices 1, 2, and 3, with 2 being the central atom.
-Equilibrium angle values are provided, along with force constants (with units as given above).
+Equilibrium angles are provided as the `angle` attribute, along with force constants as the `k` attribute (with corresponding units as given above by `angle_unit` and `k_unit`, respectively).
 
-.. note :: The XML parser ignores attributes in the XML that it does not understand, so providing a parameter line for an angle that specifies (for example) a second force constant `k2` will lead to no effect.
+.. note :: The XML parser ignores attributes in the XML that it does not know how to process. For example, providing an `<Angle/>` tag that also specifies a second force constant `k2` will simply result in `k2` being silently ignored.
 
 ### SMIRNOFF parameter specification is hierarchical
 
-Parameters that appear later in a file override those which come earlier if they match the same pattern.
+Parameters that appear later in a SMIRNOFF specification override those which come earlier if they match the same pattern.
 This can be seen in the example above, where the first line provides a generic angle parameter for any tetravalent carbon (single bond) angle, and the second line overrides this for the specific case of a hydrogen-(tetravalent carbon)-hydrogen angle.
-
 This hierarchical structure means that a typical parameter file will tend to have generic parameters early in the section for each force type, with more specialized parameters assigned later.
 
 ### Multiple SMIRNOFF representations can be processed in sequence
 
-For example, multiple SMIRNOFF `.offxml` can be loaded by the openforcefield `ForceField` in sequence.
+For example, multiple SMIRNOFF `.offxml` files can be loaded by the openforcefield `ForceField` in sequence.
 If these files each contain unique top-level tags (such as `<Bonds/>`, `<Angles/>`, etc.), the resulting forcefield will be independent of the order in which the files are loaded.
 If, however, the same tag occurs in multiple files, the contents of the tags are merged, with the tags read later taking precedence over the parameters read earlier, provided the top-level tags have compatible attributes.
 The resulting force field will therefore depend on the order in which parameters are read.
