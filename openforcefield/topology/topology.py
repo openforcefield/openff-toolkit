@@ -409,10 +409,31 @@ class Topology(ChemicalEntity):
     unique_molecules : list of Molecule
         Iterate over all unique Molecule objects in the topology
 
+    n_chains : int
+        Number of chains in the topology
+    n_molecules : int
+        Number of molecules in the topology
+    n_unique_molecules : int
+        Number of unique molecules in the topology
+
     Examples
     --------
 
-    Create a Topology copy
+    Create a Topology object from a PDB file and definitions of the molecular contents
+
+    >>> from simtk.openmm import app
+    >>> from openforcefield.tests.utils.utils import get_packmol_pdbfile
+    >>> pdbfile = app.PDBFile(get_packmol_pdbfile('cyclohexane_ethanol_0.4_0.6.pdb'))
+    >>> unique_molecules = [ Molecule.from_iupac(name) for name in ('cyclohexane', 'ethanol') ]
+    >>> topology = Topology.from_openmm_topology(pdbfile.topology, unique_molecules=unique_molecules)
+
+    Create an empty Topology object and add a few molecules
+
+    >>> topology = Topology()
+    >>> molecule = Molecule.from_iupac('benzene')
+    >>> [ topology.add_molecule(molecule) for index in range(10) ]
+
+    Create a deep copy of the Topology and its contents
 
     >>> topology_copy = Topology(topology)
 

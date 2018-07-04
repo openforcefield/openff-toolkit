@@ -10,7 +10,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
 .. todo::
 
    * Make Atom and Bond an inner class of Molecule?
-   * Use attrs? http://www.attrs.org/
+   * Use `attrs <http://www.attrs.org/>`_?
    * Generalize this infrastructure to make it easier to support additional cheminformatics toolkits.
 
 """
@@ -123,12 +123,13 @@ class Atom(Particle):
     Note that non-chemical virtual sites are represented by the ``VirtualSite`` object.
 
     .. todo::
-        * Should ``Atom`` objects be immutable or mutable?
-        * Should an ``Atom`` be able to belong to more than one ``Topology`` object?
-        * Do we want to support the addition of arbitrary additional properties,
-          such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial`` index in a PDB file),
-          or string labels (such as Lennard-Jones types)?
-        * Should we be able to create ``Atom`` objects on their own, or only in the context of a ``Topology`` object they belong to?
+
+       * Should ``Atom`` objects be immutable or mutable?
+       * Should an ``Atom`` be able to belong to more than one ``Topology`` object?
+       * Do we want to support the addition of arbitrary additional properties,
+         such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial`` index in a PDB file),
+         or string labels (such as Lennard-Jones types)?
+       * Should we be able to create ``Atom`` objects on their own, or only in the context of a ``Topology`` object they belong to?
 
     """
     def __init__(self, name, element, topology=None):
@@ -192,8 +193,9 @@ class Atom(Particle):
         The ``Molecule`` this atom is part of.
 
         .. todo::
-            * Should we have a single unique ``Molecule`` for each molecule type in the system,
-            or if we have multiple copies of the same molecule, should we have multiple ``Molecule``s?
+
+           * Should we have a single unique ``Molecule`` for each molecule type in the system,
+           or if we have multiple copies of the same molecule, should we have multiple ``Molecule``s?
         """
         pass
 
@@ -229,8 +231,9 @@ class VirtualSite(Particle):
     Note that chemical atoms are represented by the ``Atom``.
 
     .. todo::
-        * Should a virtual site be able to belong to more than one Topology?
-        * Should virtual sites be immutable or mutable?
+
+       * Should a virtual site be able to belong to more than one Topology?
+       * Should virtual sites be immutable or mutable?
 
     """
 
@@ -509,8 +512,9 @@ class ChemicalEntity(object):
         Iterate over all torsions (propers and impropers) in the molecule
 
         .. todo::
-            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
-            * Should we call this ``dihedrals`` instead of ``torsions``?
+
+           * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
+           * Should we call this ``dihedrals`` instead of ``torsions``?
 
         """
         pass
@@ -521,7 +525,9 @@ class ChemicalEntity(object):
         Iterate over all proper torsions in the molecule
 
         .. todo::
-            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
+
+           * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
+
         """
         pass
 
@@ -531,16 +537,19 @@ class ChemicalEntity(object):
         Iterate over all proper torsions in the molecule
 
         .. todo::
-            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
+
+           * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
+
         """
         pass
 
     def chemical_environment_matches(self, query):
         """Retrieve all matches for a given chemical environment query.
 
-        TODO:
-        * Do we want to generalize this to other kinds of queries too, like mdtraj DSL, pymol selections, atom index slices, etc?
-          We could just call it topology.matches(query)
+        .. todo ::
+
+           * Do we want to generalize this to other kinds of queries too, like mdtraj DSL, pymol selections, atom index slices, etc?
+             We could just call it topology.matches(query)
 
         Parameters
         ----------
@@ -757,17 +766,16 @@ class Molecule(ChemicalEntity):
             # TODO: Can we check interface compliance (in a try..except) instead of checking instances?
             if isinstance(other, openforcefield.topology.Molecule):
                 self._copy_initializer(other)
-            elif issubclass(other, openeye.oechem.OEMolBase):
-                mol = Molecule.from_openeye(other)
-                self._copy_initializer(mol)
-            elif isinstance(other, rdkit.Chem.rdchem.Mol):
-                mol = Molecule.from_rdkit(other)
-                self._copy_initializer(mol)
             elif isinstance(other, str):
                 self.__setstate__(other)
+            elif OPENEYE_INSTALLED and issubclass(other, openeye.oechem.OEMolBase):
+                mol = Molecule.from_openeye(other)
+                self._copy_initializer(mol)
+            elif RDKIT_INSTALLED and isinstance(other, rdkit.Chem.rdchem.Mol):
+                mol = Molecule.from_rdkit(other)
+                self._copy_initializer(mol)
             else:
                 msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(other)
-                msg += 'other must be '
                 raise Exception(msg)
 
     @staticmethod
@@ -778,7 +786,7 @@ class Molecule(ChemicalEntity):
         Parameters
         ----------
         iupac_name : str
-            IUPAC name of molecule to be generated.
+            IUPAC name of molecule to be generated
 
         Returns
         -------
@@ -793,6 +801,34 @@ class Molecule(ChemicalEntity):
         oechem.OETriposAtomNames(oemol)
         return Molecule.from_openeye(oemol)
 
+    @requires_openeye('oechem', 'oeiupac')
+    def to_iupac(self):
+        """Generate IUPAC name from Molecule
+
+        Returns
+        -------
+        iupac_name : str
+            IUPAC name of the molecule
+
+        This method requires the OpenEye toolkit to be installed.
+        """
+        from openeye import oeiupac
+        return oeiupac.OECreateIUPACName(self.to_openeye())
+
+    def from_topology(self, topology):
+        """Return a Molecule representation of a Topology containing a single Molecule object.
+
+        Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+            The Molecule object in the topology
+
+        """
+        if topology.n_molecules != 1:
+            raise Exception('Topology must contain exactly one molecule')
+        molecule = topology.unique_molecules.next()
+        return Molecule(molecule)
+
     def to_topology(self):
         """
         Return an openforcefield Topology representation containing one copy of this molecule
@@ -802,7 +838,7 @@ class Molecule(ChemicalEntity):
         topology : openforcefield.topology.Topology
             A Topology representation of this molecule
         """
-        return Topology.from_molecules([self])
+        return Topology.from_molecules(self)
 
     # TODO: Implement specialized deserialization, if needed.
     #def __setstate__(self, state):
@@ -852,6 +888,24 @@ class Molecule(ChemicalEntity):
         else:
             raise Exception('Toolkit {} unsupported.'.format(toolkit))
         return mols
+
+    # TODO: Support RDKit and select by TOOLKIT_PRECEDENCE
+    @requires_openeye('oechem', 'oechem')
+    def to_file(self, filename):
+        """Write the current molecule to a file, detecting format automatically by filename
+
+        Parameters
+        ----------
+        filename : str
+            The filename to write to
+
+        Currently uses the openeye toolkit
+        """
+        from openeye import oechem
+        oemol = self.to_openeye()
+        ofs = oechem.oemolostream(filename)
+        oechem.OEWriteMolecule(ofs, mol)
+        ofs.close()
 
     @staticmethod
     @requires_rdkit
