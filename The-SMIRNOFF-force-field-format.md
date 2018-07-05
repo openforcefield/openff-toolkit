@@ -666,3 +666,9 @@ While perhaps not immediately useful for combining biopolymers parameterized wit
 ### Are there ways we can simplify the integration of legacy biopolymer force fields?
 
 Are there ways we can make it easy to integrate pre-parameterized systems describing part of the topology (e.g. protein)?
+
+### How will we ensure the SMIRNOFF force field is correctly implemented by molecular simulation packages where nonbonded treatments are encoded by auxiliary input files?
+
+For gromacs, AMBER, and CHARMM, the nonbonded treatments (which are integrally specified by a SMIRNOFF force field) are instead specified by an auxiliary input file.
+Should we generate this auxiliary input file to, or part of it?
+How can we insist that the desired settings be used?
