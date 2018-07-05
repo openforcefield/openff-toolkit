@@ -350,26 +350,77 @@ class Bond(object):
     def fractional_bondorder(self, value):
         self._fractional_bondorder = value
 
+
 #=============================================================================================
-# ChemicalEntity
+# Molecule
 #=============================================================================================
 
-# TODO: Does it still make sense to include ChemicalEntity?
-# TODO: Should this be a mixin?
-class ChemicalEntity(object):
+# TODO: Make Molecule immutable (by default)
+
+class Molecule(object):
     """
-    Mixin class for properties shared by chemical entities containing more than one atom.
-
-    A ``ChemicalEntity`` can be queried for SMARTS matches.
-    # TODO: Should only molecules be queryable for SMARTS matches?
+    Chemical representation of a molecule.
 
     """
     def __init__(self, other=None):
         """
-        Create a new ChemicalEntity.
+        Parameters
+        ----------
+        other : optional, default=None
+            If specified, attempt to construct a copy of the Molecule from the specified object.
+            This can be any one of the following:
+
+            * a :class:`Molecule` object
+            * a file that can be used to construct a :class:`Molecule` object
+            * a serialized :class:`Molecule` object
+            * an ``openeye.oechem.OEMol``
+            * an ``rdkit.Chem.rdchem.Mol``
+
+        Examples
+        --------
+
+        Create a molecule from a mol2 file
+
+        >>> from openforcefield.tests.utils.utils import get_monomer_mol2file
+        >>> mol2_filename = get_monomer_mol2file('cyclohexane')
+        >>> molecule = Molecule.from_file(mol2_filename)
+
+        Create a molecule from an OpenEye molecule
+
+        >>> molecule = Molecule.from_openeye(oemol)
+
+        Create a molecule from an RDKit molecule
+
+        >>> molecule = Molecule.from_rdkit(rdmol)
+
+        Create a molecule from IUPAC name (OpenEye toolkit required)
+
+        >>> molecule = Molecule.from_iupac('imatinib')
+
         """
+        # Initialize base class
+        super(self, Molecule).__init__(other=other)
+
         self._particles = list()
         self._bonds = None
+        self._name = None # Set the name of the molecule
+        self._charges = None # TODO: Storage charges
+
+        if other is not None:
+            # TODO: Can we check interface compliance (in a try..except) instead of checking instances?
+            if isinstance(other, openforcefield.topology.Molecule):
+                self._copy_initializer(other)
+            elif isinstance(other, str):
+                self.__setstate__(other)
+            elif OPENEYE_INSTALLED and issubclass(other, openeye.oechem.OEMolBase):
+                mol = Molecule.from_openeye(other)
+                self._copy_initializer(mol)
+            elif RDKIT_INSTALLED and isinstance(other, rdkit.Chem.rdchem.Mol):
+                mol = Molecule.from_rdkit(other)
+                self._copy_initializer(mol)
+            else:
+                msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(other)
+                raise Exception(msg)
 
     def _invalidate_cached_properties(self):
         """
@@ -382,8 +433,6 @@ class ChemicalEntity(object):
             if hasattr(self, property_name):
                 delattr(self, property_name)
 
-    # TODO: Should edges be labeled with discrete bond types in some aromaticity model?
-    # TODO: Should edges be labeled with fractional bond order if a method is specified?
     def to_networkx(self):
         """Geneate a NetworkX undirected graph from the Topology.
 
@@ -396,6 +445,19 @@ class ChemicalEntity(object):
         graph : networkx.Graph
             The resulting graph, with nodes labeled with atom indices and elements
 
+        .. todo ::
+
+           Do we need a from_networkx() method? If so, what would the Graph be required to provide?
+           Should edges be labeled with discrete bond types in some aromaticity model?
+           Should edges be labeled with fractional bond order if a method is specified?
+
+        Examples
+        --------
+        Retrieve the bond graph for imatinib (OpenEye toolkit required)
+
+        >>> molecule = Molecule.from_iupac('imatinib')
+        >>> nxgraph = molecule.to_networkx()
+
         """
         import networkx as nx
         G = nx.Graph()
@@ -406,8 +468,6 @@ class ChemicalEntity(object):
 
         return G
 
-    # TODO: Do we need a from_networkx() method? If so, what would the Graph be required to provide?
-
     def add_atom(self, atom):
         """
         Add an Atom.
@@ -416,8 +476,24 @@ class ChemicalEntity(object):
         ----------
         atom : Atom
             The Atom to add.
+
         """
+        # TODO: Check to make sure atom does not already exist
         self._particles.append(atom)
+        self._invalidate_cached_properties()
+
+    def add_bond(self, atom1, atom2):
+        """
+        Add an Atom.
+
+        Parameters
+        ----------
+        atom : Atom
+            The Atom to add.
+
+        """
+        # TODO: Check to make sure bond does not already exist
+        self._bonds.append(atom1, atom2)
         self._invalidate_cached_properties()
 
     def add_virtual_site(self, virtual_site):
@@ -428,13 +504,16 @@ class ChemicalEntity(object):
         ----------
         virtual_site : VirtualSite
             The VirtualSite to add.
+
         """
         # Make sure that all Atoms referenced in the virtual site are already present in the entity.
         for atom in virtual_site.atoms:
             if atom not in self._particles:
                 raise Exception("{} depends on {}, which is not present in the chemical entity".format(virtual_site, atom))
         self._particles.append(virtual_site)
+        self._invalidate_cached_properties()
 
+    @property
     def n_particles(self):
         """
         The number of Particle objects, which corresponds to how many positions must be used.
@@ -474,7 +553,6 @@ class ChemicalEntity(object):
     def atoms(self):
         """
         Iterate over all Atom objects.
-
         """
         for particle in self._particles:
             if isinstance(particle, Atom):
@@ -493,7 +571,6 @@ class ChemicalEntity(object):
     def bonds(self):
         """
         Iterate over all Bond objects.
-
         """
         for bond in self._bonds:
             yield bond
@@ -502,7 +579,6 @@ class ChemicalEntity(object):
     def angles(self):
         """
         Iterate over all angles (Atom tuples) in the molecule
-
         """
         pass
 
@@ -515,7 +591,6 @@ class ChemicalEntity(object):
 
            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
            * Should we call this ``dihedrals`` instead of ``torsions``?
-
         """
         pass
 
@@ -527,7 +602,6 @@ class ChemicalEntity(object):
         .. todo::
 
            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
-
         """
         pass
 
@@ -539,7 +613,6 @@ class ChemicalEntity(object):
         .. todo::
 
            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
-
         """
         pass
 
@@ -562,6 +635,13 @@ class ChemicalEntity(object):
         matches : list of Atom tuples
             A list of all matching Atom tuples
 
+        Examples
+        --------
+        Retrieve all the carbon-carbon bond matches in a molecule
+
+        >>> molecule = Molecule.from_iupac('imatinib')
+        >>> matches = molecule.chemical_environment_matches('[#6X3:1]~[#6X3:2]')
+
         """
         # Resolve to SMIRKS if needed
         if hasattr(query, 'asSMIRKS'):
@@ -578,26 +658,12 @@ class ChemicalEntity(object):
         else:
             raise Exception('Unknown toolkit {}'.format(toolkit))
 
-        # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
-        matches = list()
-        for molecule in self.unique_molecules:
-            # Find all atomsets that match this definition in the reference molecule
-            refmol_matches = molecule.chemical_environment_matches(smirks)
-
-            # Loop over matches
-            for reference_atom_indices in refmol_matches:
-                # Unroll corresponding atom indices over all instances of this molecule
-                for reference_to_topology_atom_mapping in self._reference_to_topology_atom_mappings[reference_molecule]:
-                    # Create match.
-                    atom_indices = tuple([ reference_to_topology_atom_mapping[atom_index] for atom_index in reference_atom_indices ])
-                    matches.append(atom_indices)
-
         return matches
 
     @staticmethod
     @requires_rdkit
     def _rdkit_smirks_matches(rdmol, smirks, aromaticity_model='OEAroModel_MDL'):
-        """Find all sets of atoms in the provided oemol that match the provided SMARTS string.
+        """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
         Parameters
         ----------
@@ -620,7 +686,6 @@ class ChemicalEntity(object):
 
         .. notes ::
 
-           * Raises ``LicenseError`` if valid OpenEye tools license is not found, rather than causing program to terminate
            * Raises ``ValueError`` if ``smarts`` query is malformed
 
         """
@@ -661,7 +726,7 @@ class ChemicalEntity(object):
     @staticmethod
     @requires_openeye('oechem')
     def _oechem_smirks_matches(oemol, smirks):
-        """Find all sets of atoms in the provided oemol that match the provided SMARTS string.
+        """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
         Parameters
         ----------
@@ -733,63 +798,6 @@ class ChemicalEntity(object):
 
         return matches
 
-#=============================================================================================
-# Molecule
-#=============================================================================================
-
-# TODO: Make Molecule immutable (by default)
-
-class Molecule(ChemicalEntity):
-    """
-    Chemical representation of a molecule.
-
-    Attributes
-    ----------
-    name
-    atoms
-    n_atoms
-    bonds
-    n_bonds
-    angles
-    torsions
-    propers
-    impropers
-    has_partial_charges
-    virtual_sites
-    n_virtual_sites
-
-    """
-    def __init__(self, other=None):
-        """
-        Parameters
-        ----------
-        other : optional, default=None
-            If specified, attempt to construct a copy of the Molecule from the specified object.
-            This might be a :class:`Molecule` object, a file that can be used to construct a :class:`Molecule` object,
-            a serialized :class:`Molecule` object, an ``openeye.oechem.OEMol``, or an ``rdkit.Chem.rdchem.Mol``.
-        """
-        # Initialize base class
-        super(self, Molecule).__init__(other=other)
-
-        self._name = None # Set the name of the molecule
-        self._charges = None # TODO: Storage charges
-
-        if other is not None:
-            # TODO: Can we check interface compliance (in a try..except) instead of checking instances?
-            if isinstance(other, openforcefield.topology.Molecule):
-                self._copy_initializer(other)
-            elif isinstance(other, str):
-                self.__setstate__(other)
-            elif OPENEYE_INSTALLED and issubclass(other, openeye.oechem.OEMolBase):
-                mol = Molecule.from_openeye(other)
-                self._copy_initializer(mol)
-            elif RDKIT_INSTALLED and isinstance(other, rdkit.Chem.rdchem.Mol):
-                mol = Molecule.from_rdkit(other)
-                self._copy_initializer(mol)
-            else:
-                msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(other)
-                raise Exception(msg)
-
     @property
     def name(self):
         """The name (or title) of the molecule
@@ -799,7 +807,7 @@ class Molecule(ChemicalEntity):
     @staticmethod
     @requires_openeye('oechem', 'oeiupac')
     def from_iupac(iupac_name):
-        """Generate Molecule from IUPAC name
+        """Generate a molecule from IUPAC or common name
 
         Parameters
         ----------
@@ -811,7 +819,7 @@ class Molecule(ChemicalEntity):
         molecule : Molecule
             The resulting molecule with position
 
-        This method requires the OpenEye toolkit to be installed.
+        .. note :: This method requires the OpenEye toolkit to be installed.
         """
         from openeye import oechem, oeiupac
         oemol = oechem.OEMol()
@@ -828,21 +836,27 @@ class Molecule(ChemicalEntity):
         iupac_name : str
             IUPAC name of the molecule
 
-        This method requires the OpenEye toolkit to be installed.
+        .. note :: This method requires the OpenEye toolkit to be installed.
         """
         from openeye import oeiupac
         return oeiupac.OECreateIUPACName(self.to_openeye())
 
     @staticmethod
     def from_topology(topology):
-        """Return a Molecule representation of a Topology containing a single Molecule object.
+        """Return a Molecule representation of an openforcefield Topology containing a single Molecule object.
+
+        Parameters
+        ----------
+        topology : openforcefield.topology.Topology
+            The :class:`Topology` object containing a single :class:`Molecule` object.
+            Note that OpenMM and MDTraj ``Topology`` objects are not supported.
 
         Returns
         -------
         molecule : openforcefield.topology.Molecule
             The Molecule object in the topology
-
         """
+        # TODO: Ensure we are dealing with an openforcefield Topology object
         if topology.n_molecules != 1:
             raise Exception('Topology must contain exactly one molecule')
         molecule = topology.unique_molecules.next()
@@ -856,6 +870,11 @@ class Molecule(ChemicalEntity):
         -------
         topology : openforcefield.topology.Topology
             A Topology representation of this molecule
+
+        Examples
+        --------
+        >>> molecule = Molecule.from_iupac('imatinib')
+        >>> topology = molecule.to_topology()
         """
         return Topology.from_molecules(self)
 
@@ -888,6 +907,12 @@ class Molecule(ChemicalEntity):
            * Extend this to also include some form of .offmol Open Force Field Molecule format?
            * Generalize this to also include file-like objects?
 
+        Examples
+        --------
+        >>> from openforcefield.tests.utils.utils import get_monomer_mol2file
+        >>> mol2_filename = get_monomer_mol2file('cyclohexane')
+        >>> molecule = Molecule.from_file(mol2_filename)
+
         """
         # Use highest-precendence toolkit
         toolkit = TOOLKIT_PRECEDENCE[0]
@@ -918,7 +943,14 @@ class Molecule(ChemicalEntity):
         filename : str
             The filename to write to
 
-        Currently uses the openeye toolkit
+        .. note :: Currently uses the openeye toolkit, but can be adapted to support RDKit as well.
+
+        Examples
+        --------
+
+        >>> molecule = Molecule.from_iupac('imatinib')
+        >>> molecule.to_file('imatinib.mol2')
+
         """
         from openeye import oechem
         oemol = self.to_openeye()
@@ -1291,8 +1323,9 @@ class Molecule(ChemicalEntity):
 
         return oe_mol
 
-    def assign_partial_charges(self, method='AM1-BCC', toolkit=None, **kwargs):
-        """Assign partial atomic charges.
+    # TODO: We have to distinguish between retrieving user-specified partial charges and providing a generalized semiempirical/pop analysis/BCC scheme according to the new SMIRNOFF spec
+    def get_partial_charges(self, method='AM1-BCC', toolkit=None, **kwargs):
+        """Retrieve partial atomic charges.
 
         .. todo::
             * Is it OK that the ``Molecule`` object does not store geometry, but will create it using ``openeye.omega`` or ``rdkit``?
@@ -1338,6 +1371,27 @@ class Molecule(ChemicalEntity):
             os.system("antechamber -i {} -fi sdf -o {} -fo mol2 -pf y -c {}".format(sdf_filename, output_filename, charge_model))
             os.system("rm sqm.*")
 
+    # TODO: Rework this.
+    def _assign_partial_charges_using_quacpac(oemol, charge_model="bcc"):
+        """
+        Assign partial charges with OpenEye quacpac.
+
+        Parameters
+        ----------
+        oemol : openeye.oechem.OEMol
+            OpenEye molecule for which partial charges are to be computed
+        charge_model : str, optional, default='bcc'
+            The charge model to use. One of ['AM1', 'AM1BCC', 'AM1BCCELF10', 'Gasteiger', 'MMFF94']
+
+        Returns
+        -------
+        charges : numpy.array of shape (natoms) of type float
+            The partial charges
+
+        """
+        raise NotImplementedError()
+
+    # TODO: Ditch this in favor of just-in-time computation of partial charges by get_partial_charges()
     @property
     def has_partial_charges(self):
         """Return True if any atom has nonzero charges; False otherwise.

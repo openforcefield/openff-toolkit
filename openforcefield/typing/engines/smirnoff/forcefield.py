@@ -472,7 +472,7 @@ class ForceField(object):
     # TODO: How do we know if the system is periodic or not?
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
     def create_openmm_system(self, topology, default_box_vectors=None, **kwargs):
-        """Create an OpenMM System representing the interactions for the specified Topology with the currently-loaded force field
+        """Create an OpenMM System representing the interactions for the specified Topology with the current force field
 
         Parameters
         ----------
@@ -534,8 +534,10 @@ class ForceField(object):
 
         return system
 
-    def create_structure(self, topology, positions, default_box_vectors=None, **kwargs):
-        """Construct an OpenMM System representing a Topology with this force field. XML will be re-parsed if it is modified prior to system creation.
+    def create_parmed_structure(self, topology, positions, default_box_vectors=None, **kwargs):
+        """Create a ParmEd Structure object representing the interactions for the specified Topology with the current force field
+
+        This method creates a `ParmEd <http://github.com/parmed/parmed>`_ ``Structure`` object containing a topology, positions, and parameters.
 
         Parameters
         ----------
@@ -552,8 +554,8 @@ class ForceField(object):
 
         Returns
         -------
-        system : simtk.openmm.System
-            The newly created OpenMM System
+        structure : parmed.Structure
+            The newly created ``parmed.Structure`` object
 
         """
         # TODO: Automagically handle expansion of virtual sites? Or is Topology supposed to do that?
@@ -584,6 +586,13 @@ class ForceField(object):
             i.e., ``molecule_labels[0]['HarmonicBondForce']`` gives details for the harmonic
             bond parameters for the first molecule. Each element is a list of the form:
             ``[ ( [ atom1, ..., atomN], parameter_id, SMIRKS), ... ]``
+
+        .. todo ::
+
+           What is the most useful API for this method?
+           Should we instead accept :class:`Molecule` objects as input and individually return labels?
+           Should we attach the labels to the :class:`Molecule` object?
+           Or should we label all interactions in a :class:`Topology` instead of just labeling its ``unique_molecules``?
 
         """
         # Loop over molecules and label

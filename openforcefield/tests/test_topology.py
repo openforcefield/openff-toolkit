@@ -21,7 +21,6 @@ from openforcefield import utils, topology
 
 from pytest.mark import skipif
 from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORTED_TOOLKITS
-
 from openforcefield.tests.utils.utils import get_amber_system, get_packmol_pdbfile, get_monomer_mol2file
 
 #=============================================================================================

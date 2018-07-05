@@ -12,8 +12,8 @@ Class definitions to represent a molecular system and its chemical components
    * Create MoleculeImage, Particle, AtomImage, VirtualSite here. (Or MoleculeCopy? MoleculeInstance?)
    * Add hierarchical way of traversing Topology (chains, residues)
    * Make all classes hashable and serializable.
-   * JSON/BSON representations?
-   * Use attrs? http://www.attrs.org/
+   * JSON/BSON representations of objects?
+   * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
 
@@ -34,7 +34,6 @@ from simtk.openmm import app
 
 #from openforcefield.utils import get_data_filename
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
-from openforcefield.topology.molecule import ChemicalEntity
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL, DEFAULT_FRACTIONAL_BONDORDER_MODEL, DEFAULT_CHARGE_MODEL
 
 #=============================================================================================
@@ -396,7 +395,7 @@ class Bond(object):
 # TOPOLOGY
 #=============================================================================================
 
-class Topology(ChemicalEntity):
+class Topology(object):
     """
     A Topology is a chemical representation of a system containing one or more molecules appearing in a specified order.
 
@@ -419,15 +418,27 @@ class Topology(ChemicalEntity):
     Examples
     --------
 
-    Create a Topology object from a PDB file and definitions of the molecular contents
+    Import some utilities
 
     >>> from simtk.openmm import app
-    >>> from openforcefield.tests.utils.utils import get_packmol_pdbfile
-    >>> pdbfile = app.PDBFile(get_packmol_pdbfile('cyclohexane_ethanol_0.4_0.6.pdb'))
-    >>> unique_molecules = [ Molecule.from_iupac(name) for name in ('cyclohexane', 'ethanol') ]
-    >>> topology = Topology.from_openmm_topology(pdbfile.topology, unique_molecules=unique_molecules)
+    >>> from openforcefield.tests.utils.utils import get_monomer_mol2file, get_packmol_pdbfile
+    >>> pdb_filename = get_packmol_pdbfile('cyclohexane_ethanol_0.4_0.6.pdb')
+    >>> monomer_names = ('cyclohexane', 'ethanol')
 
-    Create an empty Topology object and add a few molecules
+    Create a Topology object from a PDB file and mol2 files defining the molecular contents
+
+    >>> pdbfile = app.PDBFile(pdb_filename)
+    >>> mol2_filenames = [ get_monomer_mol2file(name) for name in monomer_names ]
+    >>> unique_molecules = [ Molecule.from_file(mol2_filename) for mol2_filename in mol2_filenames ]
+    >>> topology = Topology.from_openmm(pdbfile.topology, unique_molecules=unique_molecules)
+
+    Create a Topology object from a PDB file and IUPAC names of the molecular contents
+
+    >>> pdbfile = app.PDBFile(pdb_filename)
+    >>> unique_molecules = [ Molecule.from_iupac(name) for name in monomer_names ]
+    >>> topology = Topology.from_openmm(pdbfile.topology, unique_molecules=unique_molecules)
+
+    Create an empty Topology object and add a few copies of a single benzene molecule
 
     >>> topology = Topology()
     >>> molecule = Molecule.from_iupac('benzene')
@@ -436,6 +447,11 @@ class Topology(ChemicalEntity):
     Create a deep copy of the Topology and its contents
 
     >>> topology_copy = Topology(topology)
+
+    .. todo ::
+
+       Should the :class:`Topology` object be able to have optional positions and box vectors?
+       If so, this would make the creation of input files for other molecular simulation packages much easier.
 
     """
     def __init__(self, other=None):
@@ -496,6 +512,9 @@ class Topology(ChemicalEntity):
         ----------
         atom1, atom2 : openforcefield.topology.Atom
             The atoms to check to ensure they are bonded
+
+        .. todo :: Should we move this to ForceField?
+
         """
         # TODO: Should atom1 and atom2 be int or Atom objects?
         assert self.is_bonded(atom1, atom2), 'Atoms {} and {} are not bonded in topology'.format(atom1, atom2)
@@ -616,7 +635,45 @@ class Topology(ChemicalEntity):
 
         return matches
 
-    # TODO: Overhaul this whole function
+    def chemical_environment_matches(self, query):
+        """Retrieve all matches for a given chemical environment query.
+
+        .. todo ::
+
+           * Do we want to generalize this to other kinds of queries too, like mdtraj DSL, pymol selections, atom index slices, etc?
+             We could just call it topology.matches(query)
+
+        Parameters
+        ----------
+        query : str or ChemicalEnvironment
+            SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query
+            Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
+
+        Returns
+        -------
+        matches : list of Atom tuples
+            A list of all matching Atom tuples
+
+        """
+        # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
+        matches = list()
+        for molecule in self.unique_molecules:
+            # Find all atomsets that match this definition in the reference molecule
+            refmol_matches = molecule.chemical_environment_matches(query)
+
+            # Loop over matches
+            for reference_atom_indices in refmol_matches:
+                # Unroll corresponding atom indices over all instances of this molecule
+                # TODO: This is now handled through MoleculeImages
+                for reference_to_topology_atom_mapping in self._reference_to_topology_atom_mappings[reference_molecule]:
+                    # Create match.
+                    atom_indices = tuple([ reference_to_topology_atom_mapping[atom_index] for atom_index in reference_atom_indices ])
+                    matches.append(atom_indices)
+
+        return matches
+
+    # TODO: Overhaul this function so that we identify molecules as they are added to the Topology
+    # TODO: We also need to ensure the order of atoms is matched the same way for each unique_molecule if possible
     def _identify_molecules(self):
         """Identify all unique reference molecules and atom mappings to all instances in the Topology.
         """

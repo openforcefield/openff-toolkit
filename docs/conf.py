@@ -49,7 +49,7 @@ extensions = [
 
 autosummary_generate = True
 autodoc_default_flags = ['members', 'inherited-members']
-autoclass_content = 'both'
+#autoclass_content = 'both'
 # Disable NumPy style attributes/methods expecting every method to have its own docs page
 numpydoc_class_members_toctree = False
 
@@ -232,11 +232,11 @@ htmlhelp_basename = 'openforcefielddoc'
 latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
-    # 'papersize': 'letterpaper',
+    'papersize': 'letterpaper',
 
     # The font size ('10pt', '11pt' or '12pt').
     #
-    # 'pointsize': '10pt',
+    'pointsize': '10pt',
 
     # Additional stuff for the LaTeX preamble.
     #
