@@ -2,6 +2,7 @@ name: openforcefield
 channels:
     - omnia
     - conda-forge
+    - rdkit
 dependencies:
     - python ==3.6
     - numpy
@@ -17,3 +18,4 @@ dependencies:
     - nbsphinx
     - sphinx_bootstrap_theme
     - m2r
+    - rdkit
