@@ -41,8 +41,9 @@ A reference implementation of the SMIRNOFF XML specification is provided in the 
 
 ## Support by molecular simulation packages
 
-While designed for [OpenMM](http://openmm.org), parameterized systems created by this toolkit can be converted for use in other popular molecular dynamics simulation packages (such as [AMBER](), [CHARMM](), [NAMD]()) via [ParmEd](http://parmed.github.io/ParmEd) and [InterMol](https://github.com/shirtsgroup/InterMol).
-See [Converting SMIRNOFF parameterized systems to other simulation packages]() for more details.
+The reference implementation currently generates parameterized systems for the GPU-accelerated [OpenMM](http://openmm.org) molecular simulation toolkit.
+Parameterized systems can subsequently be converted for use in other popular molecular dynamics simulation packages (including [AMBER](http://ambermd.org/), [CHARMM](https://www.charmm.org), [NAMD](http://www.ks.uiuc.edu/Research/namd/), [Desmond](https://www.deshawresearch.com/resources_desmond.html), and [LAMMPS](http://lammps.sandia.gov/)) via [ParmEd](http://parmed.github.io/ParmEd) and [InterMol](https://github.com/shirtsgroup/InterMol).
+See [Converting SMIRNOFF parameterized systems to other simulation packages](https://open-forcefield-toolkit.readthedocs.io/en/latest/converting.html) for more details.
 
 ## Basic structure
 
@@ -656,3 +657,12 @@ An XML Schema would make it easier to validate XML representations of SMIRNOFF t
 Currently, the XML parser ignores attributes in the XML that it does not understand, so providing a parameter line for an angle that specifies (for example) a second force constant `k2` will silently lead to no effect.
 Should we change this behavior to raise an error so that malformed `.offxml` files or typos are not silently processed without warning the user?
 On the one hand, it's useful to specify things like `id` and `parent_id`, and to allow users to extend this, but it makes errors or typos easier to go uncaught.
+
+### Should we integrate ParmEd and InterMol functionality by adding `create()` methods for other simulation packages?
+
+We could integrate ParmEd and InterMol as dependencies in our tooolkit and add methods like `ForceField.create_amber_system()` or `ForceField.create_charmm_system()` that generate input files for other packages without the need to convert.
+While perhaps not immediately useful for combining biopolymers parameterized with traditional force fields with SMIRNOFF-parameterized small molecules, once these legacy force fields are available in SMIRNOFF format or we have new biopolymer SMIRNOFF force fields, this drastically simplifies workflows.
+
+### Are there ways we can simplify the integration of legacy biopolymer force fields?
+
+Are there ways we can make it easy to integrate pre-parameterized systems describing part of the topology (e.g. protein)?
