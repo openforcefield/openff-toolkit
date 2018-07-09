@@ -11,7 +11,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
    * Make Atom and Bond an inner class of Molecule?
    * Use `attrs <http://www.attrs.org/>`_?
-   * Generalize this infrastructure to make it easier to support additional cheminformatics toolkits.
+   * Generalize Molecule infrastructure to provide "plug-in" support for cheminformatics toolkits
 
 """
 
@@ -69,6 +69,8 @@ class Particle(object):
         """
         Create a particle.
         """
+        # TODO: Don't allow a Particle to be constructed directly; only an Atom or VirtualSite
+
         self._name = name # the particle name
         self._topology = None # the Topology object this Particle belongs to
 
@@ -213,11 +215,11 @@ class Atom(Particle):
         return self._topology.atoms.index(self)
 
     def __repr__(self):
-        # TODO: Also include particle_index and which topology this atom belongs to?
+        # TODO: Also include particle_index and which molecule this atom belongs to?
         return "Atom(name={}, element={})".format(self.name, self.element)
 
     def __str__(self):
-        # TODO: Also include particle_index and which topology this atom belongs to?
+        # TODO: Also include particle_index and which molecule this atom belongs to?
         return "<Atom name='{}' element='{}'>".format(self.name, self.element)
 
 #=============================================================================================
@@ -285,11 +287,11 @@ class VirtualSite(Particle):
             yield atom
 
     def __repr__(self):
-        # TODO: Also include particle_index, which topology this atom belongs to, and which atoms/weights it is defined by?
+        # TODO: Also include particle_index, which molecule this atom belongs to?
         return "VirtualSite(name={}, type={}, weights={}, atoms={})".format(self.name, self.type, self.weights, self.atoms)
 
     def __str__(self):
-        # TODO: Also include particle_index, which topology this atom belongs to, and which atoms/weights it is defined by?
+        # TODO: Also include particle_index, which molecule this atom belongs to?
         return "<VirtualSite name={} type={} weights={}, atoms={}>".format(self.name, self.type, self.weights, self.atoms)
 
 #=============================================================================================
@@ -422,16 +424,76 @@ class Molecule(object):
                 msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(other)
                 raise Exception(msg)
 
+    def _eq_(self, other):
+        return self.to_smiles() == other.to_smiles()
+
+    def to_smiles(self):
+        """
+        Return the SMILES representation of the current molecules
+
+        Returns
+        -------
+        smiles : str
+            Canonical isomeric explicit-hydrogen SMILES
+
+        .. note ::
+
+           RDKit and OpenEye versions will not necessarily return the same representation.
+
+        .. todo ::
+
+           Can we ensure RDKit and OpenEye versions return the same representation?
+
+        """
+        toolkit = TOOLKIT_PRECEDENCE[0]
+        if toolkit == 'oechem':
+            oemol = self.to_openeye()
+            return oechem.OEMolToSmiles(oemol)
+        elif toolkit == 'rdkit':
+            rdmol = self.to_rdkit()
+            return Chem.MolToSmiles(rdmol, isomericSmiles=True)
+        else:
+            raise Exception('Unknown toolkit {}'.format(toolkit))
+
+    @staticmethod
+    def from_smiles(smiles):
+        """
+        Construct a Molecule from a SMILES representation
+
+        Parameters
+        ----------
+        smiles : str
+            The SMILES representation of the molecule.
+
+        Returns
+        -------
+        molecule : Molecule
+            The molecule
+
+        Examples
+        --------
+
+        >>> molecule = Molecule.from_smiles('Cc1ccccc1')
+
+        """
+        toolkit = TOOLKIT_PRECEDENCE[0]
+        if toolkit == 'oechem':
+            oemol = oechem.OEMol()
+            if not oechem.OESmilesToMol(oemol, smiles):
+                raise ValueError("Could not process SMILES string: {}".format(smiles))
+            return Molecule.from_openeye(oemol)
+        elif toolkit == 'rdkit':
+            rdmol = Chem.MolFromSmiles(smiles)
+            return Molecule.from_rdkit(rdmol)
+        else:
+            raise Exception('Unknown toolkit {}'.format(toolkit))
+
     def _invalidate_cached_properties(self):
         """
         Indicate that the chemical entity has been altered.
         """
-        # List of all possible cached property names
-        CACHED_PROPERTY_NAMES = ['_angles', '_propers', '_impropers', '_charges']
-        # Delete any cached proprties
-        for property_name in CACHED_PROPERTY_NAMES:
-            if hasattr(self, property_name):
-                delattr(self, property_name)
+        if hasattr(self, '_cached_properties'):
+            delattr(self, '_cached_properties')
 
     def to_networkx(self):
         """Geneate a NetworkX undirected graph from the Topology.
@@ -509,7 +571,7 @@ class Molecule(object):
         # Make sure that all Atoms referenced in the virtual site are already present in the entity.
         for atom in virtual_site.atoms:
             if atom not in self._particles:
-                raise Exception("{} depends on {}, which is not present in the chemical entity".format(virtual_site, atom))
+                raise Exception("{} depends on {}, which is not a mamber of the molecule".format(virtual_site, atom))
         self._particles.append(virtual_site)
         self._invalidate_cached_properties()
 
@@ -661,7 +723,7 @@ class Molecule(object):
         return matches
 
     @staticmethod
-    @requires_rdkit
+    @requires_rdkit # TODO: Have @requires_rdkit behave more like @requires_openeye()
     def _rdkit_smirks_matches(rdmol, smirks, aromaticity_model='OEAroModel_MDL'):
         """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
@@ -1097,142 +1159,60 @@ class Molecule(object):
 
         """
         molecule = Molecule()
-        # TODO: This needs to be rewritten, and the hierarchical traversal moved to Topology
 
-        # # OE Hierarchical molecule view
-        # hv = oechem.OEHierView(mol, oechem.OEAssumption_BondedResidue +
-        #                        oechem.OEAssumption_ResPerceived +
-        #                        oechem.OEAssumption_PDBOrder)
-        #
-        # # Create empty OpenMM Topology
-        # topology = app.Topology()
-        # # Dictionary used to map oe atoms to openmm atoms
-        # oe_atom_to_openmm_at = {}
-        #
-        # for chain in hv.GetChains():
-        #     # TODO: Fail if hv contains more than one molecule.
-        #
-        #     # Create empty OpenMM Chain
-        #     openmm_chain = topology.addChain(chain.GetChainID())
-        #
-        #     for frag in chain.GetFragments():
-        #
-        #         for hres in frag.GetResidues():
-        #
-        #             # Get OE residue
-        #             oe_res = hres.GetOEResidue()
-        #             # Create OpenMM residue
-        #             openmm_res = topology.addResidue(oe_res.GetName(), openmm_chain)
-        #
-        #             for oe_at in hres.GetAtoms():
-        #                 # Select atom element based on the atomic number
-        #                 element = app.element.Element.getByAtomicNumber(oe_at.GetAtomicNum())
-        #                 # Add atom OpenMM atom to the topology
-        #                 openmm_at = topology.addAtom(oe_at.GetName(), element, openmm_res)
-        #                 openmm_at.index = oe_at.GetIdx()
-        #                 # Add atom to the mapping dictionary
-        #                 oe_atom_to_openmm_at[oe_at] = openmm_at
-        #
-        # if topology.getNumAtoms() != mol.NumAtoms():
-        #     oechem.OEThrow.Error("OpenMM topology and OEMol number of atoms mismatching: "
-        #                          "OpenMM = {} vs OEMol  = {}".format(topology.getNumAtoms(), mol.NumAtoms()))
-        #
-        # # Count the number of bonds in the openmm topology
-        # omm_bond_count = 0
-        #
-        # def IsAmideBond(oe_bond):
-        #     # TODO: Can this be replaced by a SMARTS query?
-        #
-        #     # This supporting function checks if the passed bond is an amide bond or not.
-        #     # Our definition of amide bond C-N between a Carbon and a Nitrogen atom is:
-        #     #          O
-        #     #          ║
-        #     #  CA or O-C-N-
-        #     #            |
-        #
-        #     # The amide bond C-N is a single bond
-        #     if oe_bond.GetOrder() != 1:
-        #         return False
-        #
-        #     atomB = oe_bond.GetBgn()
-        #     atomE = oe_bond.GetEnd()
-        #
-        #     # The amide bond is made by Carbon and Nitrogen atoms
-        #     if not (atomB.IsCarbon() and atomE.IsNitrogen() or
-        #             (atomB.IsNitrogen() and atomE.IsCarbon())):
-        #         return False
-        #
-        #     # Select Carbon and Nitrogen atoms
-        #     if atomB.IsCarbon():
-        #         C_atom = atomB
-        #         N_atom = atomE
-        #     else:
-        #         C_atom = atomE
-        #         N_atom = atomB
-        #
-        #     # Carbon and Nitrogen atoms must have 3 neighbour atoms
-        #     if not (C_atom.GetDegree() == 3 and N_atom.GetDegree() == 3):
-        #         return False
-        #
-        #     double_bonds = 0
-        #     single_bonds = 0
-        #
-        #     for bond in C_atom.GetBonds():
-        #         # The C-O bond can be single or double.
-        #         if (bond.GetBgn() == C_atom and bond.GetEnd().IsOxygen()) or \
-        #                 (bond.GetBgn().IsOxygen() and bond.GetEnd() == C_atom):
-        #             if bond.GetOrder() == 2:
-        #                 double_bonds += 1
-        #             if bond.GetOrder() == 1:
-        #                 single_bonds += 1
-        #         # The CA-C bond is single
-        #         if (bond.GetBgn() == C_atom and bond.GetEnd().IsCarbon()) or \
-        #                 (bond.GetBgn().IsCarbon() and bond.GetEnd() == C_atom):
-        #             if bond.GetOrder() == 1:
-        #                 single_bonds += 1
-        #     # Just one double and one single bonds are connected to C
-        #     # In this case the bond is an amide bond
-        #     if double_bonds == 1 and single_bonds == 1:
-        #         return True
-        #     else:
-        #         return False
-        #
-        # # Creating bonds
-        # for oe_bond in mol.GetBonds():
-        #     # Set the bond type
-        #     if oe_bond.GetType() is not "":
-        #         if oe_bond.GetType() in ['Single', 'Double', 'Triple', 'Aromatic', 'Amide']:
-        #             off_bondtype = oe_bond.GetType()
-        #         else:
-        #             off_bondtype = None
-        #     else:
-        #         if oe_bond.IsAromatic():
-        #             oe_bond.SetType("Aromatic")
-        #             off_bondtype = "Aromatic"
-        #         elif oe_bond.GetOrder() == 2:
-        #             oe_bond.SetType("Double")
-        #             off_bondtype = "Double"
-        #         elif oe_bond.GetOrder() == 3:
-        #             oe_bond.SetType("Triple")
-        #             off_bond_type = "Triple"
-        #         elif IsAmideBond(oe_bond):
-        #             oe_bond.SetType("Amide")
-        #             off_bond_type = "Amide"
-        #         elif oe_bond.GetOrder() == 1:
-        #             oe_bond.SetType("Single")
-        #             off_bond_type = "Single"
-        #         else:
-        #             off_bond_type = None
-        #
-        #     molecule.add_bond(oe_atom_to_openmm_at[oe_bond.GetBgn()], oe_atom_to_openmm_at[oe_bond.GetEnd()],
-        #                       type=off_bondtype, order=oe_bond.GetOrder())
-        #
-        # if molecule.n_bondsphe != mol.NumBonds():
-        #     oechem.OEThrow.Error("OpenMM topology and OEMol number of bonds mismatching: "
-        #                          "OpenMM = {} vs OEMol  = {}".format(omm_bond_count, mol.NumBonds()))
-        #
-        # dic = mol.GetCoords()
-        # positions = [Vec3(v[0], v[1], v[2]) for k, v in dic.items()] * unit.angstrom
+        # TODO: What other information should we preserve besides name?
+        molecule.name = oemol.GetTitle()
+
+        # TODO: Copy any attached SD information?
+
+        # TODO: This needs to be rewritten, and the hierarchical traversal moved to Topology
+        # atom map lets you find atoms again
+        map_atoms = dict() # {oe_idx: rd_idx}
+        for openeye_atom in oemol.GetAtoms():
+            oe_idx = openeye_atom.GetIdx()
+            atomic_number = oea.GetAtomicNum()
+            formal_charge = oea.GetFormalCharge()
+            is_aromatic = oea.IsAromatic()
+
+            # Retrieve stereochemistry
+            # TODO: The stereochemistry doesn't really make sense except in the context of other atoms; is there a better way to handle this?
+            cip = oechem.OEPerceiveCIPStereo(oemol, oea)
+            if cip == oechem.OECIPAtomStereo_S:
+                stereochemistry = 'S'
+            if cip == oechem.OECIPAtomStereo_R:
+                stereochemistry = 'R'
+
+            atom = molecule.add_atom(Atom(atomic_number=atomic_number, formal_charge=formal_charge, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
+
+            map_atoms[oe_idx] = atom
+
+        aro_bond = 0
+        for oeb in oemol.GetBonds():
+            # get neighboring rd atoms
+            atom1 = map_atoms[oeb.GetBgnIdx()]
+            atom2 = map_atoms[oeb.GetEndIdx()]
+
+            order = oeb.GetOrder()
+            is_aromatic = oeb.IsAromatic()
+
+            stereochemistry = None
+            # If the bond has specified stereo add the required information to stereo_bonds
+            if oeb.HasStereoSpecified(oechem.OEBondStereo_CisTrans):
+                # OpenEye determined stereo based on neighboring atoms so get two outside atoms
+                n1 = [n for n in oeb.GetBgn().GetAtoms() if n != oeb.GetEnd()][0]
+                n2 = [n for n in oeb.GetEnd().GetAtoms() if n != oeb.GetBgn()][0]
+
+                rd_n1 = map_atoms[n1.GetIdx()]
+                rd_n2 = map_atoms[n2.GetIdx()]
+
+                stereo = oeb.GetStereo([n1,n2], oechem.OEBondStereo_CisTrans)
+                if stereo == oechem.OEBondStereo_Cis:
+                    stereochemistry = 'cis'
+                elif stereo == oechem.OEBondStereo_Trans:
+                    stereochemistry = 'trans'
+
+            # AddBond returns the total number of bonds, so addbond and then get it
+            molecule.add_bond(atom1, atom2, order=order, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
 
         return molecule
 

@@ -448,6 +448,12 @@ class Topology(object):
 
     >>> topology_copy = Topology(topology)
 
+    Create a Topology from an OpenEye Molecule, including perception of chains and residues
+    (requires the OpenEye toolkit)
+
+    >>> oemol = oechem.oemolistream('input.pdb')
+    >>> topology = Topology.from_openeye(oemol)
+
     .. todo ::
 
        Should the :class:`Topology` object be able to have optional positions and box vectors?
@@ -850,7 +856,7 @@ class Topology(object):
 
         """
         # OE Hierarchical molecule view
-        hv = oechem.OEHierView(mol, oechem.OEAssumption_BondedResidue +
+        hv = oechem.OEHierView(oemol, oechem.OEAssumption_BondedResidue +
                                oechem.OEAssumption_ResPerceived +
                                oechem.OEAssumption_PDBOrder)
 
@@ -988,7 +994,7 @@ class Topology(object):
 
     def to_openeye(self, positions=None, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
-        Create an OpenEye molecule
+        Create an OpenEye OEMol from the topology
 
         Requires the OpenEye toolkit to be installed.
 
