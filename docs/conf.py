@@ -150,7 +150,7 @@ html_theme_options = {
     # Note the "1" or "True" value above as the third argument to indicate
     # an arbitrary url.
     'navbar_links': [
-        ("Examples", "https://github.com/openforcefield/openforcefield/tree/master/examples", True),
+        #("Examples", "https://github.com/openforcefield/openforcefield/tree/master/examples", True),
         ("Open Forcefield Consortium", "http://openforcefield.org", True),
     ],
 
