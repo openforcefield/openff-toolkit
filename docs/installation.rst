@@ -29,10 +29,10 @@ On ``osx``, you want to use the ``osx`` binary
    $ bash ./Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda3
    $ export PATH="$HOME/miniconda3/bin:$PATH"
 
-You may want to add the new ```$PATH`` extension to your ``~/.bashrc`` file to ensure Anaconda Python is used by default.
+You may want to add the new ``$PATH`` extension to your ``~/.bashrc`` file to ensure Anaconda Python is used by default.
 Note that ``openforcefield`` will be installed into this local Python installation, so that you will not need to worry about disrupting existing Python installations.
 
-.. note:: ``conda`` installation is the preferred method since all dependencies are automatically fetched and installed for you.
+.. note:: Installation via the conda package manager is the preferred method since all dependencies are automatically fetched and installed for you.
 
 |
 
@@ -48,7 +48,7 @@ You can install the latest stable release build of ``openforcefield`` via the ``
 
 This version is recommended for all users not actively developing new forcefield parameterization algorithms.
 
-.. note:: ``conda`` will automatically dependencies from binary packages automatically, including difficult-to-install packages such as OpenMM, numpy, and scipy. This is really the easiest way to get started.
+.. note:: The conda package manager will automatically dependencies from binary packages automatically, including difficult-to-install packages such as OpenMM, numpy, and scipy. This is really the easiest way to get started.
 
 |
 
