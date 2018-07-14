@@ -55,14 +55,25 @@ Below, we describe the main structure of such an XML representation.
 
 A SMIRNOFF forcefield XML specification always is enclosed in a `<SMIRNOFF/>` tag, with certain required attributes provided.
 ```XML
-<SMIRNOFF version="1.0" aromaticity_model="MDL">
+<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
 ...
 </SMIRNOFF>
 ```
 
 ### Versioning
 
-The `version` attributes specifies the version number of the specification this forcefield complies with, and the `aromaticity_model` specifies the aromaticity model used for chemical perception (here, "MDL"; see below).
+The `version` attributes specifies the version number of the specification this forcefield complies with, and the `aromaticity_model` specifies the aromaticity model used for chemical perception (here, "OEAroModel_MDL"; see below).
+
+### Metadata
+
+Typically, date and author information is included:
+```XML
+<Date>2016-05-25</Date>
+<Author>J. D. Chodera (MSKCC) charge increment tests</Author>
+```
+The `<Date>` tag should conform to [ISO 8601 date formatting guidelines](https://en.wikipedia.org/wiki/ISO_8601), such as `2018-07-14` or `2018-07-14T08:50:48+00:00` (UTC time).
+
+.. todo :: Should we have a separate `<Metadata>` or `<Provenance>` section that users can add whatever they want to? This would minimize the potential for accidentally colliding with other tags we add in the future.
 
 ### Parameter generators
 
@@ -472,7 +483,7 @@ Standard usage is expected to rely primarily on the features documented above an
 
 The SMIRNOFF force field format supports versioning via the `version` attribute to the root `<SMIRNOFF/>` tag, e.g.:
 ```XML
-<SMIRNOFF version="1.0" aromaticity_model="MDL">
+<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
 ...
 </SMIRNOFF>
 ```
@@ -547,7 +558,7 @@ In the SMIRNOFF format, these are encoded as:
 ### Aromaticity models
 
 Before conduct SMIRKS substructure searches, molecules are prepared using one of the supported aromaticity models, which must be specified with the `aromaticity_model` attribute.
-The only aromaticity model currently widely supported (by both the [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/oechemtk/aromaticity.html) and [RDKit](http://www.rdkit.org/docs/RDKit_Book.html)) is the `MDL` model.
+The only aromaticity model currently widely supported (by both the [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/oechemtk/aromaticity.html) and [RDKit](http://www.rdkit.org/docs/RDKit_Book.html)) is the `OEAroModel_MDL` model.
 
 ### Additional plans for future development
 
@@ -616,7 +627,7 @@ We recommend generics be used sparingly unless it is your intention to provide t
 ### 1.0
 
 This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specification along with `ForceField` implementation refactor:
-* Aromaticity model now defaults to `MDL`, and aromaticity model names drop OpenEye-specific prefixes
+* Aromaticity model now defaults to `OEAroModel_MDL`, and aromaticity model names drop OpenEye-specific prefixes
 * Top-level tags must now specify units for any unit-bearking quantities.
 * Potential energy component definitions were renamed to be more general:
     * `<NonbondedForce>` was renamed to `<vdW>`
