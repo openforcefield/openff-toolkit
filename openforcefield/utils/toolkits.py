@@ -31,8 +31,14 @@ SUPPORTED_TOOLKITS = {
 }
 
 class LicenseError(Exception):
+    """This function requires a license that cannot be found."""
     pass
 
+class MissingPackageError(Exception):
+    """This function requires a package that is not installed."""
+    pass
+
+# TODO: Differentiate between is installed and is licensed.
 def is_openeye_installed(oetools=('oechem', 'oequacpac', 'oeiupac', 'oeomega')):
     """
     Check if a given OpenEye tool is installed and Licensed
@@ -86,6 +92,8 @@ def is_openeye_installed(oetools=('oechem', 'oequacpac', 'oeiupac', 'oeomega')):
         return False
     return True
 
+# TODO: Add a method to raise the appropriate exception if OpenEye is not installed or licensed, like assert_openeye_available, assert_rdkit_available
+
 def requires_openeye(*oetools):
     """
     Decorator to check that OpenEye licenses are found, raising LicenseError if valid license not found.
@@ -113,13 +121,20 @@ def is_rdkit_installed():
 RDKIT_INSTALLED = is_rdkit_installed()
 RDKIT_UNAVAILABLE = not RDKIT_INSTALLED
 
-def requires_rdkit(func):
+def requires_rdkit():
     """
-    Decorator to check that RDKit is installed.
+    Decorator to check that rdkit is installed.
 
     """
-    if not is_rdkit_installed():
-        raise Exception('This function requires the RDKit.')
+    def decorator(func):
+        @wraps(func)
+        def wrapped_function(*args, **kwargs):
+            if not is_rdkit_installed():
+                msg = 'This function requires the RDKit toolkit'
+                # TODO: Differentiate between is installed and is licensed with MissingPackageError and LicenseError
+                raise MissingPackageError(msg)
+        return wrapped_function
+    return decorator
 
 def is_toolkit_installed():
     if is_openeye_installed():

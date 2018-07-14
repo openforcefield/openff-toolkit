@@ -530,28 +530,71 @@ class Molecule(object):
 
         return G
 
-    def add_atom(self, atom):
+    def add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=None):
         """
-        Add an Atom.
+        Add an atom
 
         Parameters
         ----------
-        atom : Atom
-            The Atom to add.
+        atomic_number : int
+            Atomic number of the atom
+        formal_charge : int
+            Formal charge of the atom
+        is_aromatic : bool
+            If True, atom is aromatic; if False, not aromatic
+        stereochemistry : str, optional, default=None
+            Either 'R' or 'S' for specified stereochemistry, or None for ambiguous stereochemistry
+
+        Returns
+        -------
+        index : int
+            The index of the atom in the molecule
+
+        Examples
+        --------
+
+        Define a methane molecule
+
+        >>> molecule = Molecule(name='methane')
+        >>> C = molecule.add_atom(6, 0, False)
+        >>> H1 = molecule.add_atom(1, 0, False)
+        >>> H2 = molecule.add_atom(1, 0, False)
+        >>> H3 = molecule.add_atom(1, 0, False)
+        >>> H4 = molecule.add_atom(1, 0, False)
+        >>> molecule.add_bond(C, H1)
+        >>> molecule.add_bond(C, H2)
+        >>> molecule.add_bond(C, H3)
+        >>> molecule.add_bond(C, H4)
+
+        .. warning :: This API experimental and subject to change.
 
         """
-        # TODO: Check to make sure atom does not already exist
-        self._particles.append(atom)
+        # Create an atom
+        atom = Atom(atomic_number=atomic_number, formal_charge=formal_charge, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
+        self._atoms.append(atom)
         self._invalidate_cached_properties()
 
-    def add_bond(self, atom1, atom2):
+    # TODO: Should we allow the removal of atoms too?
+    # TODO: Should invalidation of cached properties be handled via something like a tracked list?
+
+    def add_bond(self, atom1_index, atom2_index, ):
         """
-        Add an Atom.
+        Add a bond between two specified atom indices
 
         Parameters
         ----------
-        atom : Atom
-            The Atom to add.
+        atom1_index : int
+            Index of first atom
+        atom2_index : int
+            Index of second atom
+        order : int
+            Integral bond order of Kekulized form
+        is_aromatic : bool
+            True if this bond is aromatic, False otherwise
+        stereochemistry : str, optional, default=None
+            If None, stereochemistry is ambiguous; otherwise 'E' or 'Z'
+
+        .. warning :: This API experimental and subject to change.
 
         """
         # TODO: Check to make sure bond does not already exist
@@ -723,7 +766,7 @@ class Molecule(object):
         return matches
 
     @staticmethod
-    @requires_rdkit # TODO: Have @requires_rdkit behave more like @requires_openeye()
+    @requires_rdkit()
     def _rdkit_smirks_matches(rdmol, smirks, aromaticity_model='OEAroModel_MDL'):
         """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
@@ -749,6 +792,8 @@ class Molecule(object):
         .. notes ::
 
            * Raises ``ValueError`` if ``smarts`` query is malformed
+
+        .. warning :: This API experimental and subject to change.
 
         """
         from rdkit import Chem
@@ -813,6 +858,8 @@ class Molecule(object):
 
            * Raises ``LicenseError`` if valid OpenEye tools license is not found, rather than causing program to terminate
            * Raises ``ValueError`` if ``smarts`` query is malformed
+
+        .. warning :: This API experimental and subject to change.
 
         """
         from openeye import oechem
@@ -1021,7 +1068,7 @@ class Molecule(object):
         ofs.close()
 
     @staticmethod
-    @requires_rdkit
+    @requires_rdkit()
     def from_rdkit(rdmol):
         """
         Create a Molecule from an RDKit molecule.
@@ -1044,45 +1091,73 @@ class Molecule(object):
         # Create a new openforcefield Molecule
         mol = Molecule()
 
-        # # Add atoms
-        # atom_map = dict() # atom_map[rdkit_index] is the Molecule Atom object corresponding to RDKit atom index 'rdkit_index'
-        # for atom in rdmol.GetAtoms():
-        #     rdkit_index = atom.GetIdx()
-        #     element = elem.Element.getByAtomicNumber(atom.GetAtomicNum())
-        #     properties = atom.GetPropsAsDict()
-        #     if '_TriposAtomName' in properties:
-        #         atom_name = properties['_TriposAtomName']
-        #     else:
-        #         # RDKit molecule type does not store unique name string for each atom
-        #         # TODO: Should we make up a different atom name, or is the RDKit atom index sufficient?
-        #         atom_name = str(rdkit_index)
-        #     atom_map[rdkit_index] = mol.add_atom(atom_name, element)
-        #
-        # # Create bonds
-        # from rdkit.Chem import rdchem
-        # # Mapping from RDKit BondType to openforcefield (type, int_order)
-        # # TODO: This mapping may be woefully incomplete
-        # BOND_TYPE_MAP = {
-        #     rdchem.BondType.SINGLE : ('single', 1),
-        #     rdchem.BondType.DOUBLE : ('double', 2),
-        #     rdchem.BondType.TRIPLE : ('triple', 3),
-        #     rdchem.BondType.AROMATIC : ('aromatic', 1),
-        # }
-        # for bond in rdmol.GetBonds():
-        #     atom1 = atom_map[bond.GetBeginAtom().GetIdx()]
-        #     atom2 = atom_map[bond.GetEndAtom().GetIdx()]
-        #     rdkit_bond_type = bond.GetBondType()
-        #     if rdkit_bond_type in BOND_TYPE_MAP:
-        #         bond_type, bond_order = BOND_TYPE_MAP[rdkit_bond_type]
-        #     else:
-        #         raise ValueError('RDKit bond type {} cannot be mapped into an openforcefield Molecule bond type.'.format(rdkit_bond_type))
-        #     mol.add_bond(atom1, atom2, bond_type, bond_order)
-        #
-        # # TODO: Preserve atom and bond stereochemistry
+        # Store all properties
+        # TODO: Should Title or _Name be a special property?
+        # TODO: Should there be an API point for storing properties?
+        properties = rdmol.GetPropsAsDict()
+        mol.properties = properties
+
+        # We store bond orders as integers regardless of aromaticity.
+        # In order to properly extract these, we need to have the "Kekulized" version of the rdkit mol
+        kekul_mol = Chem.Mol(rdmol)
+        Chem.Kekulize(kekul_mol, True)
+
+        # setting chirality in openeye requires using neighbor atoms
+        # therefore we can't do it until after the atoms and bonds are all added
+        chiral_atoms = dict() # {rd_idx: openeye chirality}
+        for rda in rdmol.GetAtoms():
+            rd_idx = rda.GetIdx()
+
+            # create a new atom
+            atomic_number = oemol.NewAtom(rda.GetAtomicNum())
+            formal_charge = rda.GetFormalCharge()
+            is_aromatic = rda.GetIsAromatic()
+
+            # If chiral, store the chirality to be set later
+            stereochemistry = None
+            tag = rda.GetChiralTag()
+            if tag == Chem.CHI_TETRAHEDRAL_CCW:
+                stereochemistry = 'R'
+            if tag == Chem.CHI_TETRAHEDRAL_CW:
+                stereochemistry = 'S'
+
+            atom_index = mol.add_atom(atomic_number=atomic_number, formal_charge=formal_charge, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
+            map_atoms[rd_idx] = atom_index
+
+        # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
+        stereo_bonds = list()
+        # stereo_bonds stores tuples in the form (oe_bond, rd_idx1, rd_idx2, OE stereo specification)
+        # where rd_idx1 and 2 are the atoms on the outside of the bond
+        # i.e. Cl and F in the example above
+        aro_bond = 0
+        for rdb in rdmol.GetBonds():
+            a1 = rdb.GetBeginAtomIdx()
+            a2 = rdb.GetEndAtomIdx()
+
+            # Determine bond aromaticity and Kekulized bond order
+            is_aromatic = False
+            order = rdb.GetBondTypeAsDouble()
+            if order == 1.5:
+                # get the bond order for this bond in the kekulized molecule
+                order = kekul_mol.GetBondWithIdx(rdb.GetIdx()).GetBondTypeAsDouble()
+                is_aromatic = True
+            # Convert floating-point bond order to integral bond order
+            order = int(order)
+
+            # determine if stereochemistry is needed
+            stereochemistry = None
+            tag = rdb.GetStereo()
+            if tag == Chem.BondStereo.STEREOCIS or tag == Chem.BondStereo.STEREOZ:
+                stereochemistry = 'Z'
+            if tag == Chem.BondStereo.STEREOTRANS or tag == Chem.BondStereo.STEREOE:
+                stereochemistry = 'E'
+
+            # create a new bond
+            bond_index = mol.add_bond(map_atoms[a1], map_atoms[a2], is_aromatic=is_aromatic, order=order, stereochemistry=stereochemistry)
 
         return mol
 
-    @requires_rdkit
+    @requires_rdkit()
     def to_rdkit(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an RDKit molecule
@@ -1158,16 +1233,21 @@ class Molecule(object):
             An openforcefield molecule
 
         """
+        from openeye import oechem
+
         molecule = Molecule()
 
         # TODO: What other information should we preserve besides name?
+        # TODO: How should we preserve the name?
         molecule.name = oemol.GetTitle()
 
-        # TODO: Copy any attached SD information?
+        # Copy any attached SD tag information
+        # TODO: Should we use an API for this?
+        molecule.properties = dict()
+        for dp in oechem.OEGetSDDataPairs(oemol):
+            molecule[dp.GetTag()] = dp.GetValue()
 
-        # TODO: This needs to be rewritten, and the hierarchical traversal moved to Topology
-        # atom map lets you find atoms again
-        map_atoms = dict() # {oe_idx: rd_idx}
+        map_atoms = dict() # {oemol_idx: molecule_idx}
         for openeye_atom in oemol.GetAtoms():
             oe_idx = openeye_atom.GetIdx()
             atomic_number = oea.GetAtomicNum()
@@ -1182,41 +1262,35 @@ class Molecule(object):
             if cip == oechem.OECIPAtomStereo_R:
                 stereochemistry = 'R'
 
-            atom = molecule.add_atom(Atom(atomic_number=atomic_number, formal_charge=formal_charge, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
-
-            map_atoms[oe_idx] = atom
+            atom_index = molecule.add_atom(atomic_number=atomic_number, formal_charge=formal_charge, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
+            map_atoms[oe_idx] = atom_index
 
         aro_bond = 0
         for oeb in oemol.GetBonds():
             # get neighboring rd atoms
-            atom1 = map_atoms[oeb.GetBgnIdx()]
-            atom2 = map_atoms[oeb.GetEndIdx()]
+            atom1_index = map_atoms[oeb.GetBgnIdx()]
+            atom2_index = map_atoms[oeb.GetEndIdx()]
 
             order = oeb.GetOrder()
             is_aromatic = oeb.IsAromatic()
 
             stereochemistry = None
             # If the bond has specified stereo add the required information to stereo_bonds
+            # TODO: Convert this into E/Z
             if oeb.HasStereoSpecified(oechem.OEBondStereo_CisTrans):
-                # OpenEye determined stereo based on neighboring atoms so get two outside atoms
+                # OpenEye determines stereo based on neighboring atoms so get two outside atoms
                 n1 = [n for n in oeb.GetBgn().GetAtoms() if n != oeb.GetEnd()][0]
                 n2 = [n for n in oeb.GetEnd().GetAtoms() if n != oeb.GetBgn()][0]
-
-                rd_n1 = map_atoms[n1.GetIdx()]
-                rd_n2 = map_atoms[n2.GetIdx()]
-
                 stereo = oeb.GetStereo([n1,n2], oechem.OEBondStereo_CisTrans)
                 if stereo == oechem.OEBondStereo_Cis:
                     stereochemistry = 'cis'
                 elif stereo == oechem.OEBondStereo_Trans:
                     stereochemistry = 'trans'
 
-            # AddBond returns the total number of bonds, so addbond and then get it
-            molecule.add_bond(atom1, atom2, order=order, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
+            molecule.add_bond(atom1_index, atom2_index, order=order, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
 
         return molecule
 
-    # TODO: Should this method be called to_oemol instead?
     def to_openeye(self, positions=None, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an OpenEye molecule
@@ -1234,74 +1308,109 @@ class Molecule(object):
         NOTE: This comes from https://github.com/oess/oeommtools/blob/master/oeommtools/utils.py
 
         """
-        oe_mol = oechem.OEMol()
-        # molecule_atom_to_oe_atom = {} # Mapping dictionary between Molecule atoms and oe atoms
-        #
-        # # Python set used to identify atoms that are not in protein residues
-        # keep = set(proteinResidues).union(dnaResidues).union(rnaResidues)
-        #
-        # for chain in topology.chains():
-        #     for res in chain.residues():
-        #         # Create an OEResidue
-        #         oe_res = oechem.OEResidue()
-        #         # Set OEResidue name
-        #         oe_res.SetName(res.name)
-        #         # If the atom is not a protein atom then set its heteroatom
-        #         # flag to True
-        #         if res.name not in keep:
-        #             oe_res.SetFragmentNumber(chain.index + 1)
-        #             oe_res.SetHetAtom(True)
-        #         # Set OEResidue Chain ID
-        #         oe_res.SetChainID(chain.id)
-        #         # res_idx = int(res.id) - chain.index * len(chain._residues)
-        #         # Set OEResidue number
-        #         oe_res.SetResidueNumber(int(res.id))
-        #
-        #         for openmm_at in res.atoms():
-        #             # Create an OEAtom  based on the atomic number
-        #             oe_atom = oe_mol.NewAtom(openmm_at.element._atomic_number)
-        #             # Set atom name
-        #             oe_atom.SetName(openmm_at.name)
-        #             # Set Symbol
-        #             oe_atom.SetType(openmm_at.element.symbol)
-        #             # Set Atom index
-        #             oe_res.SetSerialNumber(openmm_at.index + 1)
-        #             # Commit the changes
-        #             oechem.OEAtomSetResidue(oe_atom, oe_res)
-        #             # Update the dictionary OpenMM to OE
-        #             openmm_atom_to_oe_atom[openmm_at] = oe_atom
-        #
-        # if self.n_atoms != oe_mol.NumAtoms():
-        #     raise Exception("OEMol has an unexpected number of atoms: "
-        #                     "Molecule has {} atoms, while OEMol has {} atoms".format(topology.n_atom, oe_mol.NumAtoms()))
-        #
-        # # Create bonds
-        # for off_bond in self.bonds():
-        #     oe_mol.NewBond(oe_atoms[bond.atom1], oe_atoms[bond.atom2], bond.bond_order)
-        #     if off_bond.type:
-        #         if off_bond.type == 'Aromatic':
-        #             oe_atom0.SetAromatic(True)
-        #             oe_atom1.SetAromatic(True)
-        #             oe_bond.SetAromatic(True)
-        #             oe_bond.SetType("Aromatic")
-        #         elif off_bond.type in ["Single", "Double", "Triple", "Amide"]:
-        #             oe_bond.SetType(omm_bond.type)
-        #         else:
-        #             oe_bond.SetType("")
-        #
-        # if self.n_bonds != oe_mol.NumBonds():
-        #     oechem.OEThrow.Erorr("OEMol has an unexpected number of bonds:: "
-        #                          "Molecule has {} bonds, while OEMol has {} bonds".format(self.n_bond, oe_mol.NumBonds()))
-        #
-        # if positions is not None:
-        #     # Set the OEMol positions
-        #     particle_indices = [ atom.particle_index for atom in self.atoms ] # get particle indices
-        #     pos = positions[particle_indices].value_in_units_of(unit.angstrom)
-        #     pos = list(itertools.chain.from_iterable(pos))
-        #     oe_mol.SetCoords(pos)
-        #     oechem.OESetDimensionFromCoords(oe_mol)
+        oemol = oechem.OEMol()
 
-        return oe_mol
+        # Add atoms
+        oemol_atoms = list() # list of corresponding oemol atoms
+        for atom in self.atoms:
+            oeatom = oemol.NewAtom(atom.atomic_number)
+            oeatom.SetFormalCharge(atom.formal_charge)
+            oeatom.SetAromatic(atom.is_aromatic)
+            oemol_atoms.append(oeatom)
+
+        # Add bonds
+        oemol_bonds = list() # list of corresponding oemol bonds
+        for bond in self.bonds:
+            oebond = oemol.NewBond(oemol_atoms[bond.atom1_index], oemol_atoms[bond.atom2_index])
+            newbond.SetOrder(bond.order)
+            newbond.SetAromatic(bond.is_aromatic)
+            oemol_bonds.append(oebond)
+
+        # Set atom stereochemistry now that all connectivity is in place
+        for atom, oeatom in zip(self.atoms, oemol_atoms):
+            if not atom.stereochemistry:
+                continue
+
+            # Set default stereochemistry of OpenEye atom
+            neighs = [n for n in oeatom.GetAtoms()]
+            oeatom.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Right)
+
+            # Flip chirality if stereochemistry is incorrecft
+            cip = oechem.OEPerceiveCIPStereo(oemol, oeatom)
+            # TODO: Is there a chance the CIP stereo could be other than R and S in corner cases?
+            oeatom_stereochemistry = 'R' if (cip == oechem.OECIPAtomStereo_R) else 'S'
+
+            # Flip chirality if needed
+            if oeatom_stereochemistry != atom.sterechemistry:
+                # Flip the stereochemistry
+                oea.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left)
+                # Verify it matches now
+                cip = oechem.OEPerceiveCIPStereo(oemol, oeatom)
+                # TODO: Is there a chance the CIP stereo could be other than R and S in corner cases?
+                oeatom_stereochemistry = 'R' if (cip == oechem.OECIPAtomStereo_R) else 'S'
+                if cip != chirality:
+                    # Note, I haven't seen this happen yet, but it shouldn't be a problem since there
+                    # is only 2 directions for handedness and we're only running this for chiral atoms
+                    raise Exception('Programming error: OpenEye atom stereochemistry assumptions failed.')
+
+        # Set bond stereochemistry
+        for bond, oebond in zip(self.atoms, oemol_bonds):
+            if not bond.stereochemistry:
+                continue
+
+            oeatom1, oeatom2 = oemol_atoms[bond.atom1_index], oemol_atoms[bond.atom2_index]
+            # Get two neighboring atoms
+            oeatom1_neighbor = [n for n in oeatom1.GetAtoms()][0]
+            oeatom2_neighbor = [n for n in oeatom2.GetAtoms()][0]
+            # Define stereochemistry
+
+
+
+            oestereo = oechem.OEBondStereo_Cis
+            oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oestereo)
+
+            # determine if stereochemistry is needed
+            tag = rdb.GetStereo()
+            if tag == Chem.BondStereo.STEREOCIS or tag == Chem.BondStereo.STEREOZ:
+                stereo_atoms = rdb.GetStereoAtoms()
+                stereo_bonds.append((newbond, stereo_atoms[0], stereo_atoms[1], oechem.OEBondStereo_Cis))
+
+                bond2 = rdmol.GetBondBetweenAtoms(stereo_atoms[0], a1)
+                bond4 = rdmol.GetBondBetweenAtoms(stereo_atoms[1], a2)
+                print(tag, bond2.GetBondDir(), bond4.GetBondDir())
+            if tag == Chem.BondStereo.STEREOTRANS or tag == Chem.BondStereo.STEREOE:
+                stereo_atoms = rdb.GetStereoAtoms()
+                stereo_bonds.append((newbond, stereo_atoms[0], stereo_atoms[1], oechem.OEBondStereo_Trans))
+                bond2 = rdmol.GetBondBetweenAtoms(stereo_atoms[0], a1)
+                bond4 = rdmol.GetBondBetweenAtoms(stereo_atoms[1], a2)
+                print(tag, bond2.GetBondDir(), bond4.GetBondDir())
+
+        # Set stereochemistry using the reference atoms extracted above
+        for oeb, idx1, idx2, oestereo in stereo_bonds:
+            oeb.SetStereo([map_atoms[idx1], map_atoms[idx2]], oechem.OEBondStereo_CisTrans, oestereo)
+
+        # If the rdmol has a conformer, add its coordinates to the oemol
+        # Note, this currently only adds the first conformer, it will need to be adjusted if the
+        # you wanted to convert multiple sets of coordinates
+        if rdmol.GetConformers():
+            print("found an rdmol conformer")
+            conf = rdmol.GetConformer()
+            for rd_idx, oeatom in map_atoms.items():
+                coords = conf.GetAtomPosition(rd_idx)
+                oemol.SetCoords(oeatom, oechem.OEFloatArray(coords))
+
+        # If RDMol has a title save it
+        if rdmol.HasProp("_Name"):
+            oemol.SetTitle(rdmol.GetProp("_Name"))
+
+        # Clean Up phase
+        # The only feature of a molecule that wasn't perceived above seemed to be ring connectivity, better to run it
+        # here then for someone to inquire about ring sizes and get 0 when it shouldn't be
+        oechem.OEFindRingAtomsAndBonds(oemol)
+
+        print('Final Molecule: ', oechem.OEMolToSmiles(oemol))
+        return oemol
+
 
     # TODO: We have to distinguish between retrieving user-specified partial charges and providing a generalized semiempirical/pop analysis/BCC scheme according to the new SMIRNOFF spec
     def get_partial_charges(self, method='AM1-BCC', toolkit=None, **kwargs):
@@ -1328,6 +1437,9 @@ class Molecule(object):
             * 'openeye' : generate conformations with ``openeye.omega`` and assign charges with ``openeye.oequacpac``
             * 'rdkit' : generate conformations with ``rdkit`` and assign charges with ``antechamber``
             ``kwargs`` will be passed to the toolkit.
+
+        .. warning :: This API experimental and subject to change.
+
         """
         pass
 
@@ -1340,6 +1452,9 @@ class Molecule(object):
         -----
         Currently only sdf file supported as input and mol2 as output
         https://github.com/choderalab/openmoltools/blob/master/openmoltools/packmol.py
+
+        .. warning :: This API experimental and subject to change.
+
         """
         ANTECHAMBER_PATH = find_executable("antechamber")
         if ANTECHAMBER_PATH is None:
@@ -1368,6 +1483,8 @@ class Molecule(object):
         charges : numpy.array of shape (natoms) of type float
             The partial charges
 
+        .. warning :: This API experimental and subject to change.
+
         """
         raise NotImplementedError()
 
@@ -1376,14 +1493,16 @@ class Molecule(object):
     def has_partial_charges(self):
         """Return True if any atom has nonzero charges; False otherwise.
 
+        .. warning :: This API experimental and subject to change.
+
         """
         if (self.charges is None) or np.all(self.charges == 0.0):
             return False
         else:
             return True
 
-    def assign_fractional_bond_orders(self, method='Wiberg', toolkit=None, **kwargs):
-        """Assign fractional bond orders.
+    def get_fractional_bond_orders(self, method='Wiberg', toolkit=None, **kwargs):
+        """Get fractional bond orders.
 
         .. todo::
             * Is it OK that the ``Molecule`` object does not store geometry, but will create it using ``openeye.omega`` or ``rdkit``?
@@ -1400,6 +1519,9 @@ class Molecule(object):
             If specified, the provided toolkit module will be used; otherwise, all toolkits will be tried in undefined order.
             Currently supported options:
             * 'openeye' : generate conformations with ``openeye.omega`` and assign Wiberg bond order with ``openeye.oequacpac`` using OECharges_AM1BCCSym
+
+        .. warning :: This API experimental and subject to change.
+
         """
         pass
 
@@ -1431,7 +1553,8 @@ class Molecule(object):
     def torsions(self):
         """
         Get an iterator over all i-j-k-l torsions.
-        Note that i-j-k-i torsions are excluded.
+        Note that i-j-k-i torsions (cycles) are excluded.
+
         """
         if not hasattr(self, '_torsions'):
             self._construct_bonded_atoms_list()
@@ -1458,6 +1581,7 @@ class Molecule(object):
     def _construct_bonded_atoms_list(self):
         """
         Construct list of all atoms each atom is bonded to.
+
         """
         if not hasattr(self, '_bondedAtoms'):
             self._atoms = [ atom for atom in self.atoms() ]
@@ -1485,6 +1609,7 @@ class Molecule(object):
         TODO
         ----
         This assumes _Topology is immutable.
+
         """
         self._construct_bonded_atoms_list()
         atom1 = self._atoms[atom_index_1]

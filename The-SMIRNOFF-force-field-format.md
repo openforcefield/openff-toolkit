@@ -327,6 +327,27 @@ If the `potential` attribute is omitted, it defaults to `harmonic`.
 
 Constrained bonds are handled by a separate `<Constraints>` tag, which can either specify constraint distances or draw them from equilibrium distances specified in `<Bonds>`.
 
+#### Fractional bond orders (EXPERIMENTAL)
+
+Fractional bond orders can be used to allow interpolation of bond parameters.
+For example, these parameters:
+```XML
+<Bonds potential="harmonic" length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
+    <Bond smirks="[#6X3:1]-[#6X3:2]" k="820.0" length="1.45"/>
+    <Bond smirks="[#6X3:1]:[#6X3:2]" k="938.0" length="1.40"/>
+    <Bond smirks="[#6X3:1]=[#6X3:2]" k="1098.0" length="1.35"/>
+    ...
+```
+can be replaced by a single parameter line by first invoking the `fractional_bondorder_method` attribute to specify a method for computing the fractional bond order and `fractional_bondorder_interpolation` for specifying the procedure for interpolating parameters between specified integral bond orders:
+```XML
+<Bonds potential="harmonic" length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2" fractional_bondorder_method="Wiberg" fractional_bondorder_interpolation="linear">
+    <Bond smirks="[#6X3:1]!#[#6X3:2]" k_bondorder1="820.0" k_bondorder2="1098" length_bondorder1="1.45" length_bondorder2="1.35"/>
+    ...
+```
+This allows specification of force constants and lengths for bond orders 1 and 2, and then interpolation between those based on the partial bond order.
+* `fractional_bondorder_method` defaults to `none`, but the `Wiberg` method is supported.
+* `fractional_bondorder_interpolation` defaults to `linear`, which is the only supported scheme for now.
+
 ### `<Angles>`
 
 Angle parameters are specified via an `<Angles>...</Angles>` block, with individual `<Angle>` tags containing attributes specifying the equilibrium angle (`angle`) and force constant (`k`), as in this example:
@@ -490,27 +511,6 @@ The SMIRNOFF force field format supports versioning via the `version` attribute 
 The version format is `x.y`, where `x` denotes the major version and `y` denotes the minor version.
 SMIRNOFF versions are guaranteed to be backward-compatible within the *same major version number series*, but it is possible major version increments will break backwards-compatibility.
 
-### Fractional bond orders
-
-Fractional bond orders can be used to allow interpolation of parameters.
-For example, these parameters:
-```XML
-<Bonds potential="harmonic" length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
-    <Bond smirks="[#6X3:1]-[#6X3:2]" k="820.0" length="1.45"/>
-    <Bond smirks="[#6X3:1]:[#6X3:2]" k="938.0" length="1.40"/>
-    <Bond smirks="[#6X3:1]=[#6X3:2]" k="1098.0" length="1.35"/>
-    ...
-```
-can be replaced by a single parameter line by first invoking the `fractional_bondorder_method` attribute to specify a method for computing the fractional bond order and `fractional_bondorder_interpolation` for specifying the procedure for interpolating parameters between specified integral bond orders:
-```XML
-<Bonds potential="harmonic" length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2" fractional_bondorder_method="Wiberg" fractional_bondorder_interpolation="linear">
-    <Bond smirks="[#6X3:1]!#[#6X3:2]" k_bondorder1="820.0" k_bondorder2="1098" length_bondorder1="1.45" length_bondorder2="1.35"/>
-    ...
-```
-This allows specification of force constants and lengths for bond orders 1 and 2, and then interpolation between those based on the partial bond order.
-* `fractional_bondorder_method` defaults to `none`, but the `Wiberg` method is supported.
-* `fractional_bondorder_interpolation` defaults to `linear`, which is the only supported scheme for now.
-
 ### `<VirtualSites>`: Virtual sites for off-atom charges
 
 We have implemented experimental support for placement of off-atom (off-center) charges in a variety of contexts which may be chemically important in order to allow easy exploration of when these will be warranted.
@@ -649,6 +649,7 @@ This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specificatio
 * Section heading names were cleaned up.
 * Example was updated to reflect use of the new `openforcefield.topology.Topology` class
 * Eliminated "Requirements" section, since it specified requirements for the software, rather than described an aspect of the SMIRNOFF specification
+* Fractional bond orders are described in `<Bonds>`, since they currently only apply to this term.
 
 ### 0.1
 
@@ -670,6 +671,8 @@ This would minimize the potential for accidentally colliding with other tags we 
 </Masses>
 ```
 While this won't affect thermodynamic properties, it could affect *kinetic* properties, which may be something our force fields optimize for in the future.
+
+### Should we expand fractional bond orders beyond `<Bonds>`?
 
 ### Should we have an XML Schema?
 

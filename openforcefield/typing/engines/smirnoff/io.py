@@ -18,7 +18,7 @@ XML I/O parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 #=============================================================================================
 
 import os
-import logger
+import logging
 from collections import OrderedDict
 
 import lxml.etree as etree

@@ -17,15 +17,20 @@ import pickle
 from functools import partial
 from unittest import TestCase
 
-from openforcefield import utils, topology
+import pytest
 
-from pytest.mark import skipif
+from openforcefield import utils, topology
+from openforcefield.topology import Molecule
+from openforcefield.utils import get_data_filename
 from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORTED_TOOLKITS
 
 #=============================================================================================
 # TESTS
 #=============================================================================================
 
+
+_OPENEYE_UNAVAILABLE_MESSAGE = 'requires the OpenEye toolkit'
+_RDKIT_UNAVAILABLE_MESSAGE = 'requires RDKit'
 
 # TODO: Add tests comparing RDKit and OpenEye aromaticity perception
 
@@ -50,17 +55,22 @@ def test_cheminformatics_toolkit_is_installed():
         msg += str(SUPPORTED_TOOLKITS)
         raise Exception(msg)
 
+@pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE) # TODO: Remove this when setUp is openeye-independent
 class TestMolecule(TestCase):
     from openforcefield.topology import Molecule
 
+    @pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE) # TODO: Remove this when setUp is openeye-independent
     def setUp(self):
-        self.molecules = pickle.load('zinc-subset-offmols.pkl')
+        # TODO: Serialize the offmols instead so that we can run this test without OpenEye
+        #self.molecules = pickle.load('zinc-subset-offmols.pkl')
+        filename = get_data_filename('molecules/zinc-subset-tripos.mol2.gz')
+        self.molecules = Molecule.from_file(filename)
 
     def test_serialize(self):
         serialized = pickle.dumps(self.molecules)
         molecules_copy = pickle.loads(serialized)
 
-    @skipif(RDKIT_UNAVAILABLE)
+    @pytest.mark.skipif(RDKIT_UNAVAILABLE, reason=_RDKIT_UNAVAILABLE_MESSAGE)
     def test_rdkit_roundtrip(self):
         for molecule in self.molecules:
             rdmol = molecule.to_rdkit()
@@ -69,7 +79,7 @@ class TestMolecule(TestCase):
             molecule3 = Molecule(rdmol)
             assert_molecule_is_equal(molecule, molecule3, "Molecule(rdmol) constructor failed")
 
-    @skipif(OPENEYE_UNAVAILABLE)
+    @pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason='requires the OpenEye toolkit')
     def test_oemol_roundtrip(self):
         """Test creation of Molecule object from OpenEye OEMol
         """
@@ -80,7 +90,7 @@ class TestMolecule(TestCase):
             molecule3 = Molecule(oemol)
             assert_molecule_is_equal(molecule, molecule3, "Molecule(oemol) constructor failed")
 
-    @skipif(OPENEYE_UNAVAILABLE)
+    @pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)
     def test_assign_partial_charges(self):
         """Test assignment of partial charges
         """
@@ -90,7 +100,7 @@ class TestMolecule(TestCase):
             for charge_model in topology.ALLOWED_CHARGE_MODELS:
                 molecule.assign_partial_charges(method=charge_model)
 
-    @skipif(OPENEYE_UNAVAILABLE)
+    @pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)
     def test_assign_fractional_bond_orders(self):
         """Test assignment of fractional bond orders
         """
