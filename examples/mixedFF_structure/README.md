@@ -1,14 +1,9 @@
-#!/bin/env python
+# Combining a SMIRNOFF parameterized small molecule with an AMBER parameterized protein using ParmEd
 
-"""
-Illustrate how to combine a SMIRNOFF parameterized small molecule with an AMBER parameterized protein using ParmEd.
+This example illustrates how the [ParmEd](http://parmed.github.io/ParmEd/html/index.html) utility can be used to merge a small molecule parameterized by SMIRNOFF with a traditionally parameterized protein (or other biopolymer) to create a fully parameterized protein-ligand system.
 
-"""
-
-#
-# Load and parameterize the small molecule
-#
-
+The essential idea is to first create a ParmEd structure from the SMIRNOFF parameterized small molecule
+```python
 # Load the small molecule
 from openforcefield.utils import get_data_filename
 ligand_filename = get_data_filename('molecules/toluene.mol2')
@@ -20,12 +15,9 @@ forcefield = smirnoff.ForceField('smirnoff99Frosst.offxml')
 
 # Create a ParmEd structure for the molecule
 molecule_structure = forcefield.create_parmed_structure(topology=molecule.to_topology(), positions=molecule.positions)
-print('Molecule:', molecule_structure)
-
-#
-# Load and parameterize the protein
-#
-
+```
+Next, a ParmEd structure is created for the protein (parameterized with AMBER using the OpenMM `app.ForceField` implementation):
+```python
 # Load the protein topology
 from openforcefield.utils import generate_protein_structure
 protein_pdb_filename = get_data_filename('proteins/T4-protein.pdb')
@@ -38,20 +30,16 @@ solvent_forcefield = 'tip3p.xml'
 forcefield = app.ForceField(protein_forcefield, solvent_forcefield)
 
 # Parameterize the protein
+# TODO: Can we create an OpenMM ffxml file for the ligand?
 protein_system = forcefield.createSystem(proteinpdb.topology)
 
 # Create a ParmEd Structure for the protein
 protein_structure = parmed.openmm.load_topology(proteinpdb.topology,
                                                 protein_system,
                                                 xyz=proteinpdb.positions)
-print('Protein:', protein_structure)
-
+```
+Finally, the two ParmEd `Structure` objects can be combined by concatenation:
+```python
 # Combine the ParmEd Structure objects to produce a fully parameterized complex
-# that can now be exported to AMBER, CHARMM, OpenMM, and other packages
-# Note that the addition should always add the small molecule second so the box vectors if the first item (the protein) are to be preserved
 complex_structure = protein_structure + molecule_structure
-print('Complex:', complex_structure)
-
-# TODO: How can we add solvent while ensuring the ligand doesn't overlap with solvent molecules?
-# TODO: Can we have SMIRNOFF ForceField create an OpenMM ffxml file for the ligand, and then use the OpenMM pipeline?
-# TODO: Or can OpenMM just use dummy parameters?
+```

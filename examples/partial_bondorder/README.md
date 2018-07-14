@@ -1,6 +1,15 @@
-# Example/test showing how a SMIRNOFF file with partial bond order information can be used to have a single line give bond parameters relevant for benzene but also singly and doubly-bonded trivalent carbon.
+# Using partial bond orders
 
+In this example, we demonstrate how a SMIRNOFF force field can use partial bond order information to assign bond parameters relevant for benzene as well as singly and doubly-bonded trivalent carbon, all with a single bond entry.
 
-## Manifest
-* `Frosst_AlkEthOH_extracarbons.offxml`: SMIRNOFF FFXML file adding extra carbon parameters to cover benzene (adapted from work by Christopher Bayly, and using partial bond orders to compress the [#6X3]-[#6X3], [#6X3]:[#6X3] and [#6X3]=[#6X3] bond parameters to a single line.
-* `test_partialbondorder.ipynb`: Apply these parameters to benzene and print info about the bonded parameters which are assigned.
+The file `Frosst_AlkEthOH_extracarbons.offxml`: SMIRNOFF FFXML file adding extra carbon parameters to cover benzene (adapted from work by Christopher Bayly) and uses partial bond orders to compress the `[#6X3]-[#6X3]`, `[#6X3]:[#6X3]` and `[#6X3]=[#6X3]` bond parameters to a single line.
+
+The `<Bonds>` section contains
+```XML
+<Bonds potential="harmonic" length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2" fractional_bondorder_method="Wiberg" fractional_bondorder_interpolation="linear">
+   ...
+   <Bond smirks="[#6X3:1]!#[#6X3:2]" k_bondorder1="820.0" k_bondorder2="1098" length_bondorder1="1.45" length_bondorder2="1.35"/> <!-- Christopher Bayly from parm99, Aug 2016 -->
+   <Bond smirks="[#6X3:1]-[#1:2]" k="734.0" length="1.080"/> <!-- Christopher Bayly from parm99, Aug 2016 -->
+</Bonds>
+```
+The jupyter notebook [`test_partialbondorder.ipynb`](https://github.com/openforcefield/openforcefield/blob/master/examples/partial_bondorder/test_partialbondorder.ipynb) illustrates the application of these parameters to benzene, and inspection of the resulting bonded parameters.

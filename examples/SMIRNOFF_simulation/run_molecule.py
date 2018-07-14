@@ -14,11 +14,9 @@ from mdtraj.reporters import NetCDFReporter
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils import get_data_filename, extractPositionsFromOEMol, generateTopologyFromOEMol
 
-# Import the OpenEye toolkit
-from openeye import oechem
-
 # Define what molecule to work on, and a few simulation parameters
 mol_filename = 'AlkEthOH_r51.mol2'
+offxml_filename = get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml') # SMIRNOFF forcefield
 time_step = 2*unit.femtoseconds # simulation timestep
 temperature = 300*unit.kelvin # simulation temperature
 friction = 1/unit.picosecond # collision rate
@@ -26,28 +24,27 @@ num_steps = 100000 # number of steps to run
 trj_freq = 1000 # number of steps per written trajectory frame
 data_freq = 1000 # number of steps per written simulation statistics
 
-# Load molecule using OpenEye tools
-mol = oechem.OEGraphMol()
-ifs = oechem.oemolistream(mol_filename)
-flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
-ifs.SetFlavor( oechem.OEFormat_MOL2, flavor)
-oechem.OEReadMolecule(ifs, mol )
-oechem.OETriposAtomNames(mol)
+# Load molecule
+from openforcefield.topology import Molecule
+molecule = Molecule.from_file(mol_filename)
 
 # Get positions in OpenMM-compatible format
-positions = extractPositionsFromOEMol(mol)
+positions = molecule.positions
+
+# Create an openforcefield Topology
+from openforcefield.topology import Topology
+topology = Topology.from_molecules(molecule)
 
 # Load a SMIRNOFF small molecule forcefield for alkanes, ethers, and alcohols
-forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml'))
+forcefield = ForceField(offxml_filename)
 
 # Create the OpenMM system
-topology = generateTopologyFromOEMol(mol)
-system = forcefield.createSystem(topology, [mol])
+system = forcefield.create_system(topology)
 
 # Set up an OpenMM simulation
 integrator = openmm.LangevinIntegrator(temperature, friction, time_step)
 platform = openmm.Platform.getPlatformByName('Reference')
-simulation = app.Simulation(topology, system, integrator)
+simulation = app.Simulation(topology.to_openmm(), system, integrator)
 simulation.context.setPositions(positions)
 simulation.context.setVelocitiesToTemperature(temperature)
 netcdf_reporter = NetCDFReporter('trajectory.nc', trj_freq)

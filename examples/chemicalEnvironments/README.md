@@ -1,15 +1,16 @@
-# Chemical Environment usage examples
+# `ChemicalEnvironment` usage examples
 
-This directory shows how to use Chemical Environments. First we will outline how they are structured with some example code snippets.
-For a more hands on tutorial you can look at the jupyter notebook `using_environments.py`.
+This directory shows how to use `ChemicalEnvironments`.
+First, we will outline how they are structured with some example code snippets.
+For a more hands on tutorial you can look at the jupyter notebook [`using_environments.ipynb`](https://github.com/openforcefield/openforcefield/blob/master/examples/chemicalEnvironments/using_environments.ipynb).
 
-### Initiating ChemicalEnvironments
+### Creating a `ChemicalEnvironment`
 
-All Chemical Environments can be initated using SMIRKS strings.
-If a `ChemicalEnvironment` is initiated with no SMIRKS pattern, it is an empty structure.
-However, there are 5 subtypes of `ChemicalEnvironments` that match the types of parameters found in the SMIRNOFF format.
-If they are initiated with no SMIRKS pattern, their structure matches a generic for that parameter type, for example `[*:1]~[*:2]` for a bond (that is any atom connected to any other atom by any bond).
-The 5 subtypes are listed below with their expected number of indexed atoms and the corresponding SMIRKS structure:
+A `ChemicalEnvironment` can be creatied using SMIRKS strings.
+If a `ChemicalEnvironment` is created with no SMIRKS pattern, it is an empty structure.
+There are five subtypes of `ChemicalEnvironment` that match the types of parameters found in the SMIRNOFF format.
+If they are created with no SMIRKS pattern, their structure matches a generic for that parameter type---for example, `[*:1]~[*:2]` for a bond (that is any atom connected to any other atom by any bond).
+The five subtypes are listed below with their expected number of indexed atoms and the corresponding SMIRKS structure:
 
 * `AtomChemicalEnvironment`
     - expects 1 indexed atom
@@ -111,7 +112,7 @@ print("Updated SMIRKS string: %s" % angle.asSMIRKS())
 # print("Updated SMIRKS string: %s" % angle.asSMIRKS())
 ```
 
-### Other ChemicalEnvironment Methods
+### Other `ChemicalEnvironment` Methods
 
 0. Selecting atoms and bonds
 ```python
@@ -173,20 +174,20 @@ neighbor_list = angle.getNeighbors(atomA)
 
 ### Not yet covered
 
-Types of SMIRKS patterns that cannot be read into `ChemicalEnvironments`:
+Types of SMIRKS patterns that cannot be read into `ChemicalEnvironment`:
 
-* SMIRKS for multiple molecules. The symbol `'.'` can be used in SMIRKS to denote fragments in separate molecules, `ChemicalEnvironments` will fail if the given pattern has multiple molecules.
-* Similarly, SMIRKS for reactions are not parseable into `ChemicalEnvironments`. These are denoted with `'>>'` to indicate the fragment changing in a reaction.
+* SMIRKS for multiple molecules. The symbol `'.'` can be used in SMIRKS to denote fragments in separate molecules, `ChemicalEnvironment` will fail if the given pattern has multiple molecules.
+* Similarly, SMIRKS for reactions are not parseable into `ChemicalEnvironment`. These are denoted with `'>>'` to indicate the fragment changing in a reaction.
 
+### The demo jupyter notebook `using_environments.ipynb`
 
-### `using_environments.ipynb`
-
-This notebook should be your first stop for interactively understanding and using `ChemicalEnvironments`.
+This notebook should be your first stop for interactively understanding and using `ChemicalEnvironment`.
 It includes all of the examples shown above and more in a jupyter notebook so you can play with the different method options.
 
-### Making moves with Chemical Environments
+### Making Monte Carlo proposals in chemical perception space with `ChemicalEnvironment`
 
-Here our goal is to show how to use Chemical Environments to make "moves" in chemical perception space. First a list of weighted moves were generated and saved to output files. Then, a seconds notebook is used to make these moves in chemical space.
+Here ,our goal is to show how to use `ChemicalEnvironment` to make "moves" in chemical perception space.
+First, a list of weighted moves were generated and saved to output files. Then, a seconds notebook is used to make these moves in chemical space.
 
 These notebooks were generated in the early planning stages for smirky, the first attempt at sampling chemical perception for SMIRNOFF parameter types.
 
