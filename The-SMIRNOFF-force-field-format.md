@@ -216,7 +216,15 @@ This method is provided solely for convenience in developing and exploring alter
 
 ## Parameter sections
 
-For this section it will help to have on hand an example SMIRNOFF file, such as that the [AlkEthOH example offxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.offxml) or the larger prototype [SMIRNOFF99Frosst offxml](https://github.com/openforcefield/SMIRNOFF99Frosst/blob/master/SMIRNOFF99Frosst.offxml).
+A SMIRNOFF force field consists of one or more force field term definition sections.
+For the most part, these sections independently define how a specific component of the potential energy function for a molecular system is supposed to be computed (such as bond stretch energies, or Lennard-Jones interactions), as well as how parameters are to be assigned for this particular term.
+This decoupling of how parameters are assigned for each term provides a great deal of flexibility in composing new force fields while allowing a minimal number of parameters to be used to achieve accurate modeling of intramolecular forces.
+
+Below, we describe the specification for each force field term definition using the XML representation of a SMIRNOFF force field.
+
+As an example of a complete SMIRNOFF force field specification, see the [AlkEthOH example offxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.offxml), or the larger prototype [SMIRNOFF99Frosst offxml](https://github.com/openforcefield/SMIRNOFF99Frosst/blob/master/SMIRNOFF99Frosst.offxml).
+
+.. note :: Not all parameter sections *must* be specified in a SMIRNOFF force field. A wide variety of force field terms are provided in the specification, but a particular force field only needs to define a subset of those terms.
 
 ### `<vdW/>`
 
@@ -379,7 +387,7 @@ The *second* atom in an improper (in the example above, the trivalent carbon) is
 
 ### `<GBSA/>`
 
-Generalized-Born surface area (GBSA) implicit solvent parameters are specified via a `<GBSA>...</GBSA>` using `<Atom/>` tags with GBSA model specific attributes:
+Generalized-Born surface area (GBSA) implicit solvent parameters are optionally specified via a `<GBSA>...</GBSA>` using `<Atom/>` tags with GBSA model specific attributes:
 ```XML
  <GBSA gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" radius_units="nanometers" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
    <Atom smirks="[#1:1]" radius="0.12" scale="0.85"/>
