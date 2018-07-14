@@ -51,9 +51,9 @@ A reference implementation of a SMIRNOFF force field parser that can process XML
 
 Below, we describe the main structure of such an XML representation.
 
-### The enclosing `<SMIRNOFF/>` tag
+### The enclosing `<SMIRNOFF>` tag
 
-A SMIRNOFF forcefield XML specification always is enclosed in a `<SMIRNOFF/>` tag, with certain required attributes provided.
+A SMIRNOFF forcefield XML specification always is enclosed in a `<SMIRNOFF>` tag, with certain required attributes provided.
 ```XML
 <SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
 ...
@@ -77,7 +77,7 @@ The `<Date>` tag should conform to [ISO 8601 date formatting guidelines](https:/
 
 ### Parameter generators
 
-Within the `<SMIRNOFF/>` tag, top-level tags encode parameters for a force field based on a SMARTS/SMIRKS-based specification describing the chemical environment the parameters are to be applied to.
+Within the `<SMIRNOFF>` tag, top-level tags encode parameters for a force field based on a SMARTS/SMIRKS-based specification describing the chemical environment the parameters are to be applied to.
 The file has tags corresponding to OpenMM force terms (`Bonds`, `Angles`, `TorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example offxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/Frosst_AlkEthOH.offxml)):
 ```XML
 <Angles angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
@@ -103,7 +103,7 @@ The symbol `-` joining these groups denotes a single bond.
 The strings `:1`, `:2`, and `:2` label these atoms as indices 1, 2, and 3, with 2 being the central atom.
 Equilibrium angles are provided as the `angle` attribute, along with force constants as the `k` attribute (with corresponding units as given above by `angle_unit` and `k_unit`, respectively).
 
-.. note :: The XML parser ignores attributes in the XML that it does not know how to process. For example, providing an `<Angle/>` tag that also specifies a second force constant `k2` will simply result in `k2` being silently ignored.
+.. note :: The XML parser ignores attributes in the XML that it does not know how to process. For example, providing an `<Angle>` tag that also specifies a second force constant `k2` will simply result in `k2` being silently ignored.
 
 ### SMIRNOFF parameter specification is hierarchical
 
@@ -114,7 +114,7 @@ This hierarchical structure means that a typical parameter file will tend to hav
 ### Multiple SMIRNOFF representations can be processed in sequence
 
 For example, multiple SMIRNOFF `.offxml` files can be loaded by the openforcefield `ForceField` in sequence.
-If these files each contain unique top-level tags (such as `<Bonds/>`, `<Angles/>`, etc.), the resulting forcefield will be independent of the order in which the files are loaded.
+If these files each contain unique top-level tags (such as `<Bonds>`, `<Angles>`, etc.), the resulting forcefield will be independent of the order in which the files are loaded.
 If, however, the same tag occurs in multiple files, the contents of the tags are merged, with the tags read later taking precedence over the parameters read earlier, provided the top-level tags have compatible attributes.
 The resulting force field will therefore depend on the order in which parameters are read.
 This behavior is intended for limited use in appending very specific parameters (such as solvent models)
@@ -123,7 +123,7 @@ This behavior is intended for limited use in appending very specific parameters 
 
 To minimize the potential for [unit conversion errors](https://en.wikipedia.org/wiki/Mars_Climate_Orbiter#Cause_of_failure), SMIRNOFF forcefields explicitly specify units in a form readable to both humans and computers for all unit-bearing quantities.
 Allowed values for units are given in [simtk.unit](https://github.com/pandegroup/openmm/blob/master/wrappers/python/simtk/unit/unit_definitions.py).
-For example, for the `angle` (equilibrium angle) and `k` (force constant) parameters in the `<Angles/>` example block above, the `angle_unit` and `k_unit` top-level attributes specify the corresponding units:
+For example, for the `angle` (equilibrium angle) and `k` (force constant) parameters in the `<Angles>` example block above, the `angle_unit` and `k_unit` top-level attributes specify the corresponding units:
 ```XML
 <Angles angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
 ...
@@ -162,7 +162,7 @@ Some top-level tags provide attributes that modify the functional form used to b
 SMIRNOFF supports several ways for specifying electrostatic models.
 Currently, only classical fixed point charge models are supported, but extensions to the specification will support point multipoles, point polarizable dipoles, Drude oscillators, charge equilibration methods, and so on.
 
-### `<LibraryCharges/>`: Library charges for polymeric residues
+### `<LibraryCharges>`: Library charges for polymeric residues
 
 A mechanism is provided for specifying library charges that can be applied to molecules or residues that match provided templates.
 Library charges are applied first, and atoms for which library charges are applied will be excluded from alternative charging schemes listed below.
@@ -181,7 +181,7 @@ Note that, for a given template, chemically equivalent atoms should be assigned 
 If the template matches multiple non-overlapping sets of atoms, all such matches will be assigned the provided charges.
 If multiple templates match the same set of atoms, the last template specified will be used.
 
-.. note :: Solvent models or excipients can also have partial charges specified via the `<LibraryCharges/>` tag. For example, for TIP3P water:
+.. note :: Solvent models or excipients can also have partial charges specified via the `<LibraryCharges>` tag. For example, for TIP3P water:
 ```XML
 <LibraryCharges charge_unit="elementary_charge">
    <!-- TIP3P water oxygen with charge override -->
@@ -189,7 +189,7 @@ If multiple templates match the same set of atoms, the last template specified w
 </LibraryCharges>
 ```
 
-### `<ChargeIncrementModel/>`: Small molecule and fragment charges
+### `<ChargeIncrementModel>`: Small molecule and fragment charges
 
 In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), partial charges for small molecules are usually assigned using a quantum chemical method (usually a semiempirical method such as [AM1](https://en.wikipedia.org/wiki/Austin_Model_1)) and a [partial charge determination scheme](https://en.wikipedia.org/wiki/Partial_charge) (such as [CM2](http://doi.org/10.1021/jp972682r) or [RESP](http://doi.org/10.1021/ja00074a030)), then subsequently corrected via charge increment rules, as in the highly successful [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach.
 
@@ -206,7 +206,7 @@ Here is an example:
 ```
 The sum of formal charges for the molecule or fragment will be used to determine the total charge the molecule or fragment will possess.
 
-`<ChargeIncrementModel/>` provides several optional attributes to control its behavior:
+`<ChargeIncrementModel>` provides several optional attributes to control its behavior:
 * The `number_of_conformers` attribute (default: `"10"`) is used to specify how many conformers will be generated for the molecule (or capped fragment) prior to charging.
 * The `quantum_chemical_method` attribute (default: `"AM1"`) is used to specify the quantum chemical method applied to the molecule or capped fragment.
 * The `partial_charge_method` attribute (default: `"CM2"`) is used to specify how uncorrected partial charges are to be generated from the quantum chemical wavefunction. Later additions will add restrained electrostatic potential fitting (RESP) capabilities.
@@ -237,7 +237,7 @@ As an example of a complete SMIRNOFF force field specification, see the [AlkEthO
 
 .. note :: Not all parameter sections *must* be specified in a SMIRNOFF force field. A wide variety of force field terms are provided in the specification, but a particular force field only needs to define a subset of those terms.
 
-### `<vdW/>`
+### `<vdW>`
 
 van der Waals force parameters, which include repulsive forces arising from Pauli exclusion and attractive forces arising from dispersion, are specified via the `<vdW>` tag with sub-tags for individual `Atom` entries, such as:
 ```XML
@@ -285,7 +285,7 @@ Later revisions will also provide support for special interactions using the `<A
 </vdW>   
 ```
 
-### `<Electrostatics/>`
+### `<Electrostatics>`
 
 Electrostatic interactions are specified via the `<Electrostatics>` tag.
 ```XML
@@ -305,9 +305,9 @@ Currently, no child tags are used because the charge model is specified via diff
 
 For methods where the cutoff is not simply an implementation detail but determines the potential energy of the system (`reaction-field` and `Coulomb`), the `cutoff` distance must also be specified, and a `switch-width` if a switching function is to be used.
 
-### `<Bonds/>`
+### `<Bonds>`
 
-Bond parameters are specified via a `<Bonds>...</Bonds>` block, with individual `<Bond/>` tags containing attributes specifying the equilibrium bond length (`length`) and force constant (`k`) values for specific bonds.
+Bond parameters are specified via a `<Bonds>...</Bonds>` block, with individual `<Bond>` tags containing attributes specifying the equilibrium bond length (`length`) and force constant (`k`) values for specific bonds.
 For example:
 ```XML
 <Bonds potential="harmonic" length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
@@ -327,9 +327,9 @@ If the `potential` attribute is omitted, it defaults to `harmonic`.
 
 Constrained bonds are handled by a separate `<Constraints>` tag, which can either specify constraint distances or draw them from equilibrium distances specified in `<Bonds>`.
 
-### `<Angles/>`
+### `<Angles>`
 
-Angle parameters are specified via an `<Angles>...</Angles>` block, with individual `<Angle/>` tags containing attributes specifying the equilibrium angle (`angle`) and force constant (`k`), as in this example:
+Angle parameters are specified via an `<Angles>...</Angles>` block, with individual `<Angle>` tags containing attributes specifying the equilibrium angle (`angle`) and force constant (`k`), as in this example:
 ```XML
 <Angles potential="harmonic" angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
    <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50" k="100.0"/>
@@ -346,9 +346,9 @@ If the `potential` attribute is omitted, it defaults to `harmonic`.
 
 **Note that AMBER and CHARMM define a modified functional form**, such that `U(r) = k*(theta-angle)^2`, so that force constants would need to be multiplied by two in order to be used in the SMIRNOFF format.
 
-### `<ProperTorsions/>`
+### `<ProperTorsions>`
 
-Proper torsions are specified via a `<ProperTorsions>...</ProperTorsions>` block, with individual `<Proper/>` tags containing attributes specifying the periodicity (`periodicity#`), phase (`phase#`), and barrier height (`k#`).
+Proper torsions are specified via a `<ProperTorsions>...</ProperTorsions>` block, with individual `<Proper>` tags containing attributes specifying the periodicity (`periodicity#`), phase (`phase#`), and barrier height (`k#`).
 ```XML
 <ProperTorsions potential="charmm" phase_unit="degrees" k_unit="kilocalories_per_mole">
    <Proper smirks="[a,A:1]-[#6X4:2]-[#6X4:3]-[a,A:4]" idivf1="9" periodicity1="3" phase1="0.0" k1="1.40"/>
@@ -376,9 +376,9 @@ U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 **Note that AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
 If the `potential` attribute is omitted, it defaults to `charmm`.
 
-### `<ImproperTorsions/>`
+### `<ImproperTorsions>`
 
-Improper torsions are specified via an `<ImproperTorsions>...</ImproperTorsions>` block, with individual `<Improper/>` tags containing attributes that specify the same properties as `<ProperTorsions>`:
+Improper torsions are specified via an `<ImproperTorsions>...</ImproperTorsions>` block, with individual `<Improper>` tags containing attributes that specify the same properties as `<ProperTorsions>`:
 ```XML
 <ImproperTorsions potential="charmm" phase_unit="degrees" k_unit="kilocalories_per_mole">
     <Improper smirks="[*:1]~[#6X3:2](=[#7X2,#7X3+1:3])~[#7:4]" k1="10.5" periodicity1="2" phase1="180."/>
@@ -396,9 +396,9 @@ The improper torsion energy is computed as the average over all three impropers 
 This avoids the dependence on arbitrary atom orderings that occur in more traditional typing engines such as those used in AMBER.
 The *second* atom in an improper (in the example above, the trivalent carbon) is the central atom in the trefoil.
 
-### `<GBSA/>`
+### `<GBSA>`
 
-Generalized-Born surface area (GBSA) implicit solvent parameters are optionally specified via a `<GBSA>...</GBSA>` using `<Atom/>` tags with GBSA model specific attributes:
+Generalized-Born surface area (GBSA) implicit solvent parameters are optionally specified via a `<GBSA>...</GBSA>` using `<Atom>` tags with GBSA model specific attributes:
 ```XML
  <GBSA gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" radius_units="nanometers" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
    <Atom smirks="[#1:1]" radius="0.12" scale="0.85"/>
@@ -417,7 +417,7 @@ Generalized-Born surface area (GBSA) implicit solvent parameters are optionally 
 ```
 
 #### Supported Generalized Born (GB) models
-In the `<GBSA/>` tag, `gb_model` selects which GB model is used.
+In the `<GBSA>` tag, `gb_model` selects which GB model is used.
 Currently, this can be selected from a subset of the [GBSA models available in OpenMM's `simtk.openmm.app`](http://docs.openmm.org/latest/userguide/application.html#amber-implicit-solvent:
 * `HCT`: [Hawkins-Cramer-Truhlar](http://docs.openmm.org/latest/userguide/zbibliography.html#hawkins1995) (corresponding to `igb=1` in AMBER): requires `[radius, scale]`
 * `OBC1`: [Onufriev-Bashford-Case](http://docs.openmm.org/latest/userguide/zbibliography.html#onufriev2004) using the GB(OBC)I parameters (corresponding to `igb=2` in AMBER): requires `[radius, scale]`
@@ -428,7 +428,7 @@ If the `gb_model` attribute is omitted, it defaults to `OBC1`.
 Each GB model can possess several attributes, which may be unitless (`1.0`, `78.5`) or unit-bearing quantities (`1.4*angstrom`, `5.4*calories/mole/angstrom**2`).
 The attributes `solvent_dielectric` and `solute_dielectric` specify solvent and solute dielectric constants used by the GB model.
 In this example, `radius` and `scale` are per-particle parameters of the `OBC1` GB model supported by OpenMM.
-Units are for these per-particle parameters (such as `radius_units`) optionally specified in the `<GBSAForce/>` tag.
+Units are for these per-particle parameters (such as `radius_units`) optionally specified in the `<GBSA>` tag.
 
 #### Surface area (SA) penalty model
 
@@ -441,12 +441,12 @@ The `ACE` model permits two additional parameters to be specified:
 * The `surface_area_penalty` attribute specifies the surface area penalty for the `ACE` model. (Default: `5.4*calories/mole/angstroms**2`)
 * The `solvent_radius` attribute specifies the solvent radius. (Default: `1.4*angstroms`)
 
-### `<Constraints/>`
+### `<Constraints>`
 
-Bond length or angle constraints can be specified through a `<Constraints/>` block, which can constrain bonds to their equilibrium lengths or specify an interatomic constraint distance.
-Two atoms must be tagged in the `smirks` attribute of each `<Constraint/>` record.
+Bond length or angle constraints can be specified through a `<Constraints>` block, which can constrain bonds to their equilibrium lengths or specify an interatomic constraint distance.
+Two atoms must be tagged in the `smirks` attribute of each `<Constraint>` record.
 
-To constrain the separation between two atoms to their equilibrium bond length, it is critical that a `<Bonds/>` record be specified for those atoms:
+To constrain the separation between two atoms to their equilibrium bond length, it is critical that a `<Bonds>` record be specified for those atoms:
 ```XML
 <Constraints>
   <!-- constrain all bonds to hydrogen to their equilibrium bond length -->
@@ -455,7 +455,7 @@ To constrain the separation between two atoms to their equilibrium bond length, 
 ```
 Note that the two atoms must be bonded in the specified `Topology` for the equilibrium bond length to be used.
 
-To specify the constraint distance, or constrain two atoms that are not directly bonded (such as the hydrogens in rigid water models), specify the `distance` attribute (and optional `distance_unit` attribute for the `<Constraints/>` tag):
+To specify the constraint distance, or constrain two atoms that are not directly bonded (such as the hydrogens in rigid water models), specify the `distance` attribute (and optional `distance_unit` attribute for the `<Constraints>` tag):
 ```XML
 <Constraints distance_unit="angstroms">
   <!-- constrain water O-H bond to equilibrium bond length (overrides earlier constraint) -->
@@ -481,7 +481,7 @@ Standard usage is expected to rely primarily on the features documented above an
 
 ### Versioning
 
-The SMIRNOFF force field format supports versioning via the `version` attribute to the root `<SMIRNOFF/>` tag, e.g.:
+The SMIRNOFF force field format supports versioning via the `version` attribute to the root `<SMIRNOFF>` tag, e.g.:
 ```XML
 <SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
 ...
@@ -511,7 +511,7 @@ This allows specification of force constants and lengths for bond orders 1 and 2
 * `fractional_bondorder_method` defaults to `none`, but the `Wiberg` method is supported.
 * `fractional_bondorder_interpolation` defaults to `linear`, which is the only supported scheme for now.
 
-### `<VirtualSites/>`: Virtual sites for off-atom charges
+### `<VirtualSites>`: Virtual sites for off-atom charges
 
 We have implemented experimental support for placement of off-atom (off-center) charges in a variety of contexts which may be chemically important in order to allow easy exploration of when these will be warranted.
 Currently we support the following different types or geometries of off-center charges (as diagrammed below):
@@ -655,6 +655,10 @@ This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specificatio
 Initial draft specification.
 
 ## Open Questions
+
+### Should we have a separate `<Metadata>` or `<Provenance>` section that users can add whatever they want to?
+
+This would minimize the potential for accidentally colliding with other tags we add in the future.
 
 ### Do we want to allow users to specify atomic or particle masses? This could allow, for example, heavy hydrogens to be specified easily.
 
