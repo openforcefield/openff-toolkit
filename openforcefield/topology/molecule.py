@@ -117,7 +117,6 @@ class Particle(object):
 # Atom
 #=============================================================================================
 
-
 class Atom(Particle):
     """
     A particle representing a chemical atom.

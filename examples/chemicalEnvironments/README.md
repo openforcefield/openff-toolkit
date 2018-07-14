@@ -1,4 +1,4 @@
-# `ChemicalEnvironment` usage examples
+## `ChemicalEnvironment` usage examples
 
 This directory shows how to use `ChemicalEnvironments`.
 First, we will outline how they are structured with some example code snippets.

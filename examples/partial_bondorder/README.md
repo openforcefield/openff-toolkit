@@ -1,4 +1,4 @@
-# Using partial bond orders
+## Using partial bond orders
 
 In this example, we demonstrate how a SMIRNOFF force field can use partial bond order information to assign bond parameters relevant for benzene as well as singly and doubly-bonded trivalent carbon, all with a single bond entry.
 

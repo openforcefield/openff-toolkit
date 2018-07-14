@@ -1,4 +1,4 @@
-# Compare small molecule parm@frosst energies between SMIRNOFF and AMBER `prmtop/inpcrd`
+## Compare small molecule parm@frosst energies between SMIRNOFF and AMBER `prmtop/inpcrd`
 
 This example demonstrates how to compare parm@frosst energies of molecules from the AlkEthOH set between systems generated from a SMIRNOFF `.offxml` file and systems generated from AMBER `prmtop/inpcrd` files.
 
