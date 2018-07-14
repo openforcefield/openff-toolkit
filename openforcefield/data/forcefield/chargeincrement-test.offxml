@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='ASCII'?>
-<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
-  <!-- SMIRNOFF (SMIRKS Native Open Force Field) template file -->
-  <Date>2018-05-25</Date>
+
+<SMIRNOFF version="0.1" aromaticity_model="OEAroModel_MDL">
+  <!-- SMIRKS NATIVE OPEN FORCE FIELD (SMIRNOFF) FILE -->
+  <Date>2016-05-25</Date>
   <Author>J. D. Chodera (MSKCC) charge increment tests</Author>
   <!-- ELF-10 AM1-BCC is encoded here -->
   <ChargeIncrementModel number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2" increment_unit="elementary_charge">

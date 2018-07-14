@@ -1,7 +1,9 @@
 <?xml version='1.0' encoding='ASCII'?>
+
 <SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
+
   <!-- SMIRNOFF (SMIRKS Native Open Force Field) template file -->
-  <Date>Date: Feb. 27, 2018</Date>
+  <Date>2018-07-14</Date>
   <Author>C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine</Author>
   <!-- This file is meant for processing via openforcefield.typing.engines.smirnoff -->
   <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
