@@ -7,7 +7,7 @@
   <Author>J. D. Chodera, MSKCC; A. Rizzi, Weill Cornell; C. C. Bannan, UC Irvine</Author>
 
   <!-- SMIRNOFF file implementing TIP3P water model. -->
-  <vdW coulomb14scale="0.833333" lj14scale="0.5" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0*angstroms" cutoff="9.0*angstroms" long_range_dispersion="isotropic">
     <!-- TIP3P water oxygen with charge override -->
     <!-- WARNING: charges are not supported yet (see issue openforcefield#25), and they are currently here only for documentation -->
     <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" id="n1" sigma="0.31507524065751241" epsilon="0.635968" charge="-0.834"/>
