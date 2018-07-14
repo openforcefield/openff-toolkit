@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='ASCII'?>
 
-<SMIRNOFF version="0.1" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRNOFF (SMIRKS Native Open Force Field) file -->
   <Date>2018-04-05</Date>
   <Author>V. T. Lim, UC Irvine</Author>
