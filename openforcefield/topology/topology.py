@@ -9,7 +9,8 @@ Class definitions to represent a molecular system and its chemical components
 
 .. todo::
 
-   * Create MoleculeImage, Particle, AtomImage, VirtualSite here. (Or MoleculeCopy? MoleculeInstance?)
+   * Create MoleculeImage, ParticleImage, AtomImage, VirtualSiteImage here. (Or ``MoleculeInstance``?)
+   * Create ``MoleculeGraph`` to represent fozen set of atom elements and bonds that can used as a key for compression
    * Add hierarchical way of traversing Topology (chains, residues)
    * Make all classes hashable and serializable.
    * JSON/BSON representations of objects?

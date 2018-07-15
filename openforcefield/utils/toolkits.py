@@ -5,7 +5,9 @@ Utility subroutines for managing cheminformatics toolkits
 
 .. todo::
 
-   * Generalize this infrastructure to make it easier to support additional cheminformatics toolkits.
+   * Generalize this infrastructure to make it easier to support additional cheminformatics toolkits
+   * Wrap toolkits in a much more modular way to make it easier to query their capabilities
+   * Toolkits as objects?
 
 """
 #=============================================================================================
@@ -166,3 +168,8 @@ if TOOLKIT_UNAVAILABLE:
         msg += 'Please install one of the following toolkits:\n'
         msg += '{} : {}\n'.format(toolkit_name, install_instructions)
     print(msg)
+
+# TODO : Wrap toolkits in a much more modular way to make it easier to query their capabilities
+SUPPORTED_FILE_FORMATS = dict()
+SUPPORTED_FILE_FORMATS['openeye'] = ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC', 'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', XYC']
+SUPPORTED_FILE_FORMATS['rdkit'] = ['SDF', 'PDB', 'SMI', 'TDT']

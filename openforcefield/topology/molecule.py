@@ -9,9 +9,17 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 .. todo::
 
-   * Make Atom and Bond an inner class of Molecule?
-   * Use `attrs <http://www.attrs.org/>`_?
+   * Create ``FrozenMolecule`` to represent immutable molecule
+   * Make ``Atom`` and ``Bond`` an inner class of Molecule?
+   * Add ``Molecule.from_smarts()`` or ``.from_tagged_smiles()`` to allow a tagged SMARTS string
+     (where tags are zero-indexed atom indices) to be used to create a molecule with the given atom numbering.
+   * How can we make the ``Molecule`` API more useful to codes like perses that modify molecules on the fly?
+   * Use `attrs <http://www.attrs.org/>`_ for convenient class initialization?
+   * JSON/BSON representations of objects?
    * Generalize Molecule infrastructure to provide "plug-in" support for cheminformatics toolkits
+   * Do we need a way to write a bunch of molecules to a file, or serialize a set of molecules to a file?
+     We currently don't have a way to do that through the ``Molecule`` API, even though there is a way to
+     read multiple molecules via ``Molecules.from_file()``.
 
 """
 
@@ -20,19 +28,22 @@ Molecular chemical entity representation and routines to interface with cheminfo
 #=============================================================================================
 
 import numpy as np
+from copy import deepcopy
 
 from distutils.spawn import find_executable
 
 from simtk import unit
 from simtk.openmm.app import element as elem
 
-from openforcefield.utils.toolkits import OPENEYE_INSTALLED, RDKIT_INSTALLED, TOOLKIT_PRECEDENCE
+from openforcefield.utils.toolkits import OPENEYE_INSTALLED, RDKIT_INSTALLED, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
 from openforcefield.utils.toolkits import requires_rdkit, requires_openeye
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
 #=============================================================================================
 # GLOBAL PARAMETERS
 #=============================================================================================
+
+# TODO: Move these to utils.toolkits?
 
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
@@ -41,8 +52,8 @@ from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingEr
 # TODO: Allow all OpenEye aromaticity models to be used with OpenEye names?
 #       Only support OEAroModel_MDL in RDKit version?
 
-DEFAULT_AROMATICITY_MODEL = 'MDL' # TODO: Is there a more specific name and reference for the aromaticity model?
-ALLOWED_AROMATICITY_MODELS = ['MDL']
+DEFAULT_AROMATICITY_MODEL = 'OEAroModel_MDL' # TODO: Is there a more specific name and reference for the aromaticity model?
+ALLOWED_AROMATICITY_MODELS = ['OEAroModel_MDL']
 
 DEFAULT_FRACTIONAL_BONDORDER_MODEL = 'Wiberg' # TODO: Is there a more specific name and reference for the aromatciity model?
 ALLOWED_FRACTIONAL_BONDORDER_MODELS = ['Wiberg']
@@ -362,9 +373,30 @@ class Molecule(object):
     """
     Chemical representation of a molecule.
 
+    Examples
+    --------
+
+    Create a molecule from a mol2 file
+
+    >>> molecule = Molecule.from_file('molecule.mol2')
+
+    Create a molecule from an OpenEye molecule
+
+    >>> molecule = Molecule.from_openeye(oemol)
+
+    Create a molecule from an RDKit molecule
+
+    >>> molecule = Molecule.from_rdkit(rdmol)
+
+    Create a molecule from IUPAC name (OpenEye toolkit required)
+
+    >>> molecule = Molecule.from_iupac('imatinib')
+
     """
     def __init__(self, other=None):
         """
+        Create a new Molecule object
+
         Parameters
         ----------
         other : optional, default=None
@@ -373,41 +405,52 @@ class Molecule(object):
 
             * a :class:`Molecule` object
             * a file that can be used to construct a :class:`Molecule` object
-            * a serialized :class:`Molecule` object
             * an ``openeye.oechem.OEMol``
             * an ``rdkit.Chem.rdchem.Mol``
+            * a serialized :class:`Molecule` object
+
+        .. todo ::
+
+           * If a filename or file-like object is specified but the file contains more than one molecule, what is the proper behavior?
+           Read just the first molecule, or raise an exception if more than one molecule is found?
+
+           * Should we also support SMILES strings for ``other``?
 
         Examples
         --------
 
-        Create a molecule from a mol2 file
+        Create an empty molecule:
 
-        >>> from openforcefield.tests.utils.utils import get_monomer_mol2file
-        >>> mol2_filename = get_monomer_mol2file('cyclohexane')
-        >>> molecule = Molecule.from_file(mol2_filename)
+        >>> empty_molecule = Molecule()
 
-        Create a molecule from an OpenEye molecule
+        Create a molecule from another molecule:
 
-        >>> molecule = Molecule.from_openeye(oemol)
+        >>> molecule_copy = Molecule(molecule_copy)
 
-        Create a molecule from an RDKit molecule
+        Create a molecule from a file that can be used to construct a molecule,
+        using either a filename or file-like object:
 
-        >>> molecule = Molecule.from_rdkit(rdmol)
+        >>> molecule = Molecule('molecule.mol2')
+        >>> molecule = Molecule(open('molecule.mol2', 'r'))
+        >>> molecule = Molecule(gzip.GzipFile('molecule.mol2.gz', 'r'))
 
-        Create a molecule from IUPAC name (OpenEye toolkit required)
+        Create a molecule from an OpenEye molecule:
 
-        >>> molecule = Molecule.from_iupac('imatinib')
+        >>> molecule = Molecule(oemol)
+
+        Create a molecule from an RDKit molecule:
+
+        >>> molecule = Molecule(rdmol)
+
+        Create a molecule from a serialized molecule object:
+
+        >>> serialized_molecule = molecule.__getstate__()
+        >>> molecule_copy = Molecule(serialized_molecule)
 
         """
-        # Initialize base class
-        super(self, Molecule).__init__(other=other)
-
-        self._particles = list()
-        self._bonds = None
-        self._name = None # Set the name of the molecule
-        self._charges = None # TODO: Storage charges
-
-        if other is not None:
+        if other is None:
+            self._initialize()
+        else:
             # TODO: Can we check interface compliance (in a try..except) instead of checking instances?
             if isinstance(other, openforcefield.topology.Molecule):
                 self._copy_initializer(other)
@@ -419,29 +462,71 @@ class Molecule(object):
             elif RDKIT_INSTALLED and isinstance(other, rdkit.Chem.rdchem.Mol):
                 mol = Molecule.from_rdkit(other)
                 self._copy_initializer(mol)
+            elif isinstance(other, str) or hasattr(other, 'read'):
+                mol = Molecule.from_file(other) # returns a list only if multiple molecules are found
+                if type(mol) == list:
+                    raise ValueError('Specified file or file-like object must contain exactly one molecule')
+                self._copy_initializer(molecule)
             else:
                 msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(other)
                 raise Exception(msg)
 
+    def _initialize(self):
+        """
+        Clear the contents of the current molecule.
+
+        """
+        self._particles = list()
+        self._bonds = None
+        self._name = None # Set the name of the molecule
+        self._charges = None # TODO: Storage charges
+        self._cached_properties = None # clear cached properties
+
+    def _copy_initializer(self, other):
+        """
+        Copy contents of the specified molecule
+
+        Parameters
+        ----------
+        other : optional, default=None
+            If specified, attempt to construct a copy of the Molecule from the specified object.
+            This can be any one of the following:
+
+            * a :class:`Molecule` object
+            * a file that can be used to construct a :class:`Molecule` object
+            * an ``openeye.oechem.OEMol``
+            * an ``rdkit.Chem.rdchem.Mol``
+            * a serialized :class:`Molecule` object
+
+        .. todo :: Should this be a ``@staticmethod`` where we have an explicit copy constructor?
+
+        """
+        assert isinstance(other, type(self)), "can only copy instances of {}".format(typse(self))
+        self.__dict__ = deepcopy(other.__dict__)
+
     def _eq_(self, other):
+        """Test two molecules for equality.
+
+        .. note ::
+
+           Note that this method simply tests whether two molecules are identical chemical species.
+           No effort is made to ensure that the atoms are in the same order or that any annotated properties are preserved.
+
+        """
         return self.to_smiles() == other.to_smiles()
 
     def to_smiles(self):
         """
-        Return the SMILES representation of the current molecules
+        Return a canonical isomeric SMILES representation of the current molecule
+
+        .. note :: RDKit and OpenEye versions will not necessarily return the same representation.
 
         Returns
         -------
         smiles : str
             Canonical isomeric explicit-hydrogen SMILES
 
-        .. note ::
-
-           RDKit and OpenEye versions will not necessarily return the same representation.
-
-        .. todo ::
-
-           Can we ensure RDKit and OpenEye versions return the same representation?
+        .. todo :: Can we ensure RDKit and OpenEye versions return the same representation?
 
         """
         toolkit = TOOLKIT_PRECEDENCE[0]
@@ -508,9 +593,10 @@ class Molecule(object):
 
         .. todo ::
 
-           Do we need a from_networkx() method? If so, what would the Graph be required to provide?
-           Should edges be labeled with discrete bond types in some aromaticity model?
-           Should edges be labeled with fractional bond order if a method is specified?
+           * Do we need a ``from_networkx()`` method? If so, what would the Graph be required to provide?
+           * Should edges be labeled with discrete bond types in some aromaticity model?
+           * Should edges be labeled with fractional bond order if a method is specified?
+           * Should we add other per-atom and per-bond properties (e.g. partial charges) if present?
 
         Examples
         --------
@@ -963,10 +1049,16 @@ class Molecule(object):
         -------
         molecule : openforcefield.topology.Molecule
             The Molecule object in the topology
+
+        Raises
+        ------
+        ValueError
+            If the topology does not contain exactly one molecule.
+
         """
         # TODO: Ensure we are dealing with an openforcefield Topology object
         if topology.n_molecules != 1:
-            raise Exception('Topology must contain exactly one molecule')
+            raise ValueError('Topology must contain exactly one molecule')
         molecule = topology.unique_molecules.next()
         return Molecule(molecule)
 
@@ -986,11 +1078,11 @@ class Molecule(object):
         """
         return Topology.from_molecules(self)
 
-    # TODO: Implement specialized deserialization, if needed.
+    # TODO: Implement specialized JSON/BSON deserialization, if needed.
     #def __setstate__(self, state):
     #    pass
 
-    # TODO: Implement specialized serialization, if needed
+    # TODO: Implement specialized JSON/BSON serialization, if needed
     #def __getstate__(self):
     #    pass
 
@@ -1035,36 +1127,77 @@ class Molecule(object):
         elif toolkit == 'rdkit':
             from rdkit import Chem
             for rdmol in Chem.SupplierFromFilename(filename):
-                mol  = Molecule.from_rdkit(rdmol)
+                mol = Molecule.from_rdkit(rdmol)
                 mols.append(mol)
         else:
             raise Exception('Toolkit {} unsupported.'.format(toolkit))
         return mols
 
-    # TODO: Support RDKit and select by TOOLKIT_PRECEDENCE
-    @requires_openeye('oechem', 'oechem')
-    def to_file(self, filename):
-        """Write the current molecule to a file, detecting format automatically by filename
+    def to_file(self, outfile, format):
+        """Write the current molecule to a file or file-like object
 
         Parameters
         ----------
-        filename : str
-            The filename to write to
+        outfile : str or file-like object
+            A file-like object or the filename of the file to be written to
+        format : str
+            Format specifier, one of ['MOL2', 'MOL2H', 'SDF', 'PDB', 'SMI', 'CAN', 'TDT']
+            Note that not all toolkits support all formats
 
-        .. note :: Currently uses the openeye toolkit, but can be adapted to support RDKit as well.
+        Raises
+        ------
+        ValueError
+            If the requested format is not supported by one of the installed cheminformatics toolkits
 
         Examples
         --------
 
         >>> molecule = Molecule.from_iupac('imatinib')
-        >>> molecule.to_file('imatinib.mol2')
+        >>> molecule.to_file('imatinib.mol2', format='mol2')
+        >>> molecule.to_file('imatinib.sdf', format='sdf')
+        >>> molecule.to_file('imatinib.pdb', format='pdb')
 
         """
-        from openeye import oechem
-        oemol = self.to_openeye()
-        ofs = oechem.oemolostream(filename)
-        oechem.OEWriteMolecule(ofs, mol)
-        ofs.close()
+        # Determine which formats are supported
+        toolkit = None
+        for query_toolkit in TOOLKIT_PRECEDENCE:
+            if format in SUPPORTED_FILE_FORMATS[query_toolkit]:
+                toolkit = query_toolkit
+                break
+
+        # Raise an exception if no toolkit was found to provide the requested format
+        if toolkit == None:
+            supported_formats = set()
+            for toolkit in TOOLKIT_PRECEDENCE:
+                supported_formats.add(SUPPORTED_FILE_FORMATS[toolkit])
+            raise ValueError('The requested file format ({}) is not available from any of the installed toolkits (supported formats: {})'.format(format, supported_formats))
+
+        # Write file
+        if type(outfile) == str:
+            # Open file for writing
+            outfile = open(outfile, 'w')
+            close_file_on_return = True
+        else:
+            close_file_on_return = False
+
+        if toolkit == 'openeye':
+            from openeye import oechem
+            oemol = self.to_openeye()
+            ofs = oechem.oemolostream(outfile)
+            openeye_formats = getattr(oechem, 'OEFormat_' + format)
+            ofs.SetFormat(openeye_formats[format])
+            oechem.OEWriteMolecule(ofs, mol)
+            ofs.close()
+        elif toolkit == 'rdkit':
+            from rdkit import Chem
+            rdmol = self.to_rdkit()
+            rdkit_writers = { 'SDF' : Chem.SDWriter, 'PDB' : Chem.PDBWriter, 'SMI' : Chem.SmilesWriter, 'TDT' : Chem.TDTWriter }
+            writer = rdkit_writers[format](outfile)
+            writer.write(rdmol)
+            writer.close()
+
+        if close_file_on_return:
+            outfile.close()
 
     @staticmethod
     @requires_rdkit()
@@ -1412,7 +1545,7 @@ class Molecule(object):
 
 
     # TODO: We have to distinguish between retrieving user-specified partial charges and providing a generalized semiempirical/pop analysis/BCC scheme according to the new SMIRNOFF spec
-    def get_partial_charges(self, method='AM1-BCC', toolkit=None, **kwargs):
+    def get_partial_charges(self, method='AM1-BCC'):
         """Retrieve partial atomic charges.
 
         .. todo::
@@ -1430,12 +1563,6 @@ class Molecule(object):
             Options are:
             * `AM1` : symmetrized AM1 charges without BCCs
             * 'AM1-BCC' : symmetrized ELF AM1-BCC charges using best practices
-        toolkit : str, optional, default=None
-            If specified, the provided toolkit module will be used; otherwise, all toolkits will be tried in undefined order.
-            Currently supported options:
-            * 'openeye' : generate conformations with ``openeye.omega`` and assign charges with ``openeye.oequacpac``
-            * 'rdkit' : generate conformations with ``rdkit`` and assign charges with ``antechamber``
-            ``kwargs`` will be passed to the toolkit.
 
         .. warning :: This API experimental and subject to change.
 
