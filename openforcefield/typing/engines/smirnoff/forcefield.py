@@ -11,6 +11,10 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
 .. codeauthor:: David L. Mobley <dmobley@mobleylab.org>
 .. codeauthor:: Peter K. Eastman <peastman@stanford.edu>
 
+.. todo ::
+
+   * Speed up overall import time by putting non-global imports only where they are needed
+
 """
 
 #=============================================================================================

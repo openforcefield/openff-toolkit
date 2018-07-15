@@ -20,6 +20,16 @@ def all_subclasses(cls):
     return cls.__subclasses__() + [ g for s in cls.__subclasses__() for g in all_subclasses(s) ]
 
 @contextlib.contextmanager
+def temporary_cd(dir_path):
+    """Context to temporary change the working directory."""
+    prev_dir = os.getcwd()
+    os.chdir(os.path.abspath(dir_path))
+    try:
+        yield
+    finally:
+        os.chdir(prev_dir)
+
+@contextlib.contextmanager
 def temporary_directory():
     """Context for safe creation of temporary directories."""
     tmp_dir = tempfile.mkdtemp()

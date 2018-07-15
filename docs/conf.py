@@ -49,6 +49,7 @@ extensions = [
 
 autosummary_generate = True
 autodoc_default_flags = ['members', 'inherited-members']
+autodoc_member_order = 'bysource' # preserve ordering in source
 #autoclass_content = 'both'
 # Disable NumPy style attributes/methods expecting every method to have its own docs page
 numpydoc_class_members_toctree = False

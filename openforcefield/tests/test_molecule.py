@@ -19,12 +19,13 @@ Only the tests applicable to that toolkit will be run.
 import pickle
 from functools import partial
 from unittest import TestCase
+from numpy.testing import assert_almost_equal
 from tempfile import NamedTemporaryFile
 
 import pytest
 
 from openforcefield import utils, topology
-from openforcefield.topology import Molecule
+from openforcefield.topology import Molecule, ALLOWED_CHARGE_MODELS, ALLOWED_FRACTIONAL_BONDORDER_MODELS
 from openforcefield.utils import get_data_filename
 from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORTED_TOOLKITS, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
 
@@ -172,21 +173,21 @@ class TestMolecule(TestCase):
     def test_angles(self):
         """Test angles property"""
         for molecule in self.molecules:
-            for angle in self.angles:
+            for angle in molecule.angles:
                 # TODO: Check 1-2 and 2-3 bonds
                 pass
 
     def test_propers(self):
         """Test propers property"""
         for molecule in self.molecules:
-            for proper in self.propers:
+            for proper in molecule.propers:
                 # TODO: Check 1-2, 2-3, and 3-4 bonds
                 pass
 
     def test_impropers(self):
         """Test impropers property"""
         for molecule in self.molecules:
-            for improper in self.impropers:
+            for improper in molecule.impropers:
                 # TODO: Check improper bonds
                 pass
 
@@ -194,6 +195,12 @@ class TestMolecule(TestCase):
         """Test torsions property"""
         for molecule in self.molecules:
             assert frozenset(molecule.torsions) == frozenset(set(molecule.propers) + set(molecule.impropers))
+
+    def test_total_charge(self):
+        """Test total charge"""
+        for molecule in self.molecules:
+            total_charge = sum([atom.formal_charge for atom in molecule.atoms])
+            assert total_charge == molecule.total_charge
 
     def test_chemical_environment_matches(self):
         """Test chemical environment matches"""
@@ -278,9 +285,13 @@ class TestMolecule(TestCase):
             for charge_model in ALLOWED_CHARGE_MODELS:
                 for molecule in self.molecules:
                     charges1 = molecule.get_partial_charges(method=charge_model)
+                    # Check total charge
+                    assert_almost_equal(charges1.sum(), molecule.total_charge)
+
                     # Call should be faster second time due to caching
                     charges2 = molecule.get_partial_charges(method=charge_model)
                     assert charges1 == charges2
+
 
         # Restore toolkit precedence
         TOOLKIT_PRECEDENCE = old_toolkit_precedence
@@ -293,8 +304,8 @@ class TestMolecule(TestCase):
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
 
         for molecule in self.molecules:
-            for charge_model in ALLOWED_FRACTIONAL_BONDORDER_MODELS:
-                fbo1 = molecule.assign_fractional_bond_orders(method=charge_model)
+            for method in ALLOWED_FRACTIONAL_BONDORDER_MODELS:
+                fbo1 = molecule.assign_fractional_bond_orders(method=method)
                 # Call should be faster the second time due to caching
-                fbo2 = molecule.assign_fractional_bond_orders(method=charge_model)
+                fbo2 = molecule.assign_fractional_bond_orders(method=method)
                 assert fbo1 == fbo2

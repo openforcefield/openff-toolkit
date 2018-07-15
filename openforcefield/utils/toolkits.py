@@ -8,6 +8,7 @@ Utility subroutines for managing cheminformatics toolkits
    * Generalize this infrastructure to make it easier to support additional cheminformatics toolkits
    * Wrap toolkits in a much more modular way to make it easier to query their capabilities
    * Toolkits as objects?
+   * Change _INSTALLED to _AVAILABLE
 
 """
 #=============================================================================================
@@ -171,5 +172,78 @@ if TOOLKIT_UNAVAILABLE:
 
 # TODO : Wrap toolkits in a much more modular way to make it easier to query their capabilities
 SUPPORTED_FILE_FORMATS = dict()
-SUPPORTED_FILE_FORMATS['openeye'] = ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC', 'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', XYC']
+SUPPORTED_FILE_FORMATS['openeye'] = ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC',
+                                     'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', 'XYC']
 SUPPORTED_FILE_FORMATS['rdkit'] = ['SDF', 'PDB', 'SMI', 'TDT']
+
+@requires_openeye('oechem')
+def openeye_cip_atom_stereochemistry(oemol, oeatom):
+    """
+    .. warning :: This API experimental and subject to change.
+
+    Determine CIP stereochemistry (R/S) for the specified atom
+
+    Parameters
+    ----------
+    oemol : openeye.oechem.OEMolBase
+        The molecule of interest
+    oeatom : openeye.oechem.OEAtomBase
+        The atom whose stereochemistry is to be computed
+
+    Returns
+    -------
+    stereochemistry : str
+        'R', 'S', or None if no stereochemistry is specified or the atom is not a stereocenter
+    """
+    from openeye import oechem
+
+    if not oeatom.HasStereoSpecified():
+        # No stereochemical information has been stored, so this could be unknown stereochemistry
+        # TODO: Should we raise an exception?
+        return None
+
+    cip = oechem.OEPerceiveCIPStereo(oemol, oeatom)
+
+    if cip == oechem.OECIPAtomStereo_S:
+        return 'S'
+    elif cip == oechem.OECIPAtomStereo_R:
+        return 'R'
+    elif cip == oechem.OECIPAtomStereo_NotStereo:
+        # Not a stereocenter
+        # TODO: Should this be a different case from ``None``?
+        return None
+
+def openeye_cip_bond_stereochemistry(oemol, oebond):
+    """
+    .. warning :: This API experimental and subject to change.
+
+    Determine CIP stereochemistry (E/Z) for the specified bond
+
+    Parameters
+    ----------
+    oemol : openeye.oechem.OEMolBase
+        The molecule of interest
+    oebond : openeye.oechem.OEBondBase
+        The bond whose stereochemistry is to be computed
+
+    Returns
+    -------
+    stereochemistry : str
+        'E', 'Z', or None if stereochemistry is unspecified or the bond is not a stereo bond
+
+    """
+    from openeye import oechem
+
+    if not oebond.HasStereoSpecified():
+        # No stereochemical information has been stored, so this could be unknown stereochemistry
+        # TODO: Should we raise an exception?
+        return None
+
+    cip = oechem.OEPerceiveCIPStereo(mol, bond)
+
+    if cip == oechem.OECIPBondStereo_E:
+        return 'E'
+    elif cip == oechem.OECIPBondStereo_Z:
+        return 'Z'
+    elif cip == oechem.OECIPBondStereo_NotStereo:
+        return None
