@@ -1,4 +1,4 @@
-# Examples using SMIRNOFF with the `openforcefield` toolkit
+# Examples using SMIRNOFF with the toolkit
 
 The following examples are available in [the openforcefield toolkit repository](https://github.com/openforcefield/openforcefield/tree/master/examples):
 

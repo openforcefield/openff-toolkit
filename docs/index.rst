@@ -6,18 +6,19 @@
 Open Forcefield Toolkit
 =======================
 
-A modern, extensible library for molecular mechanics forcefield science.
+A modern, extensible library for molecular mechanics force field science.
 
+Contents
+--------
 
 .. toctree::
    :maxdepth: 1
-   :caption: Contents:
 
    installation
    releasehistory
    smirnoff
    examples
-   converting
+   developing
 
 Modules
 -------

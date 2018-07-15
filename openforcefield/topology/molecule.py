@@ -20,6 +20,8 @@ Molecular chemical entity representation and routines to interface with cheminfo
    * Do we need a way to write a bunch of molecules to a file, or serialize a set of molecules to a file?
      We currently don't have a way to do that through the ``Molecule`` API, even though there is a way to
      read multiple molecules via ``Molecules.from_file()``.
+   * Should we allow the removal of atoms too?
+   * Should invalidation of cached properties be handled via something like a tracked list?
 
 """
 
@@ -74,6 +76,8 @@ class Particle(object):
     Base class for all particles in a molecule.
 
     A particle object could be an ``Atom`` or a ``VirtualSite``.
+
+    .. warning :: This API experimental and subject to change.
 
     """
     def __init__(self, name):
@@ -134,6 +138,8 @@ class Atom(Particle):
 
     Note that non-chemical virtual sites are represented by the ``VirtualSite`` object.
 
+    .. warning :: This API experimental and subject to change.
+
     .. todo::
 
        * Should ``Atom`` objects be immutable or mutable?
@@ -142,6 +148,8 @@ class Atom(Particle):
          such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial`` index in a PDB file),
          or string labels (such as Lennard-Jones types)?
        * Should we be able to create ``Atom`` objects on their own, or only in the context of a ``Topology`` object they belong to?
+
+    .. todo :: Allow atoms to have associated properties.
 
     """
     def __init__(self, name, element, topology=None):
@@ -242,6 +250,8 @@ class VirtualSite(Particle):
 
     Note that chemical atoms are represented by the ``Atom``.
 
+    .. warning :: This API experimental and subject to change.
+
     .. todo::
 
        * Should a virtual site be able to belong to more than one Topology?
@@ -325,6 +335,10 @@ class Bond(object):
         Integral bond order
     fractional_bondorder : float, optional
         Fractional bond order, or None.
+
+    .. warning :: This API experimental and subject to change.
+
+    .. todo :: Allow bonds to have associated properties.
 
     """
     def __init__(self, atom1, atom2, bondtype, fractional_bondorder=None):
@@ -474,13 +488,13 @@ class Molecule(object):
     def _initialize(self):
         """
         Clear the contents of the current molecule.
-
         """
         self._particles = list()
         self._bonds = None
         self._name = None # Set the name of the molecule
         self._charges = None # TODO: Storage charges
-        self._cached_properties = None # clear cached properties
+        self._properties = None # Attached properties
+        self._cached_properties = None # Cached properties can be recomputed as needed
 
     def _copy_initializer(self, other):
         """
@@ -658,9 +672,6 @@ class Molecule(object):
         atom = Atom(atomic_number=atomic_number, formal_charge=formal_charge, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
         self._atoms.append(atom)
         self._invalidate_cached_properties()
-
-    # TODO: Should we allow the removal of atoms too?
-    # TODO: Should invalidation of cached properties be handled via something like a tracked list?
 
     def add_bond(self, atom1_index, atom2_index, ):
         """
