@@ -2,7 +2,11 @@
 
 This directory shows how to use `ChemicalEnvironments`.
 First, we will outline how they are structured with some example code snippets.
-For a more hands on tutorial you can look at the jupyter notebook [`using_environments.ipynb`](https://github.com/openforcefield/openforcefield/blob/master/examples/chemicalEnvironments/using_environments.ipynb).
+
+### Demo jupyter notebook
+
+The [using_environments.ipynb](https://github.com/openforcefield/openforcefield/blob/master/examples/chemicalEnvironments/using_environments.ipynb) jupyter notebook should be your first stop for interactively understanding and using `ChemicalEnvironment`.
+It includes all of the examples shown above and more in a jupyter notebook so you can play with the different method options.
 
 ### Creating a `ChemicalEnvironment`
 
@@ -114,7 +118,8 @@ print("Updated SMIRKS string: %s" % angle.asSMIRKS())
 
 ### Other `ChemicalEnvironment` Methods
 
-0. Selecting atoms and bonds
+Selecting atoms and bonds
+
 ```python
 # when given an integer selectAtom or selectBond returns that atom or bond with that index
 # otherwise it returns a random atom or bond that meets the specified requirement
@@ -124,7 +129,8 @@ atom4 = angle.selectAtom(4) # None, angle has 3 indexed atoms
 beta_bond = angle.selectBond('beta') # bond between an alpha and beta atom
 ```
 
-1. Getting information about an atom or bond in an environment (i.e. isAlpha returns a boolean)
+Getting information about an atom or bond in an environment (i.e. `isAlpha()` returns a boolean)
+
 ```python
 # Check if the alpha atom above is any of the following
 angle.isIndexed(alpha) # False
@@ -133,7 +139,9 @@ angle.isAlpha(alpha) # True
 angle.isBeta(alpha) # False
 # NOTE - These methods can take an atom or a bond as an argument
 ```
-2. Get atoms or bonds in each type of position, for example getIndexedAtoms or getAlphaBonds
+
+Get atoms or bonds in each type of position, for example `getIndexedAtoms()` or `getAlphaBonds()`
+
 ```python
 # We will print the SMIRKS for each indexed atom:
 all_atoms = angle.getAtoms()
@@ -143,20 +151,25 @@ alpha_list = angle.getAlphaAtoms()
 beta_list = angle.getBetaAtoms
 # Note - Atoms can be replaced with Bonds in each of the above examples
 ```
-3. Report the minimum order of a bond with Bond.getOrder
-SMIRKS strings can match multiple types of bonds, for example `"[*]-,;,=[*]"` describes any two atoms
-connected by a single, aromatic, or double bond. The getOrder function returns the minimum order for the bond, 1, in this case.
+
+Report the minimum order of a bond with `Bond.getOrder`.
+SMIRKS strings can match multiple types of bonds, for example `"[*]-,;,=[*]"` describes any two atoms connected by a single, aromatic, or double bond. The getOrder function returns the minimum order for the bond, 1, in this case.
+
 ```python
 bond1 = angle.selectBond(1)
 bond1.getOrder() # returns 1
 ```
-4. Report the valence and bond order around an atom can be reported with getValence and getBondORder
+
+Report the valence and bond order around an atom can be reported with `getValence()` and `getBondOrder()`.
+
 ```python
 atom3 = angle.selectAtom(3)
 angle.getValence(atom3) # number of neighbors atom 3 has
 angle.getBondOrder(atom3) # total bond order around atom 3
 ```
-5. Get a bond between two atoms (or determine if the atoms are bonded) with getBond(atom1, atom2)
+
+Get a bond between two atoms (or determine if the atoms are bonded) with `getBond(atom1, atom2)`:
+
 ```python
 # Check for bonds between each pair of indexed atoms
 A = 1
@@ -165,28 +178,25 @@ atomA = angle.selectAtom(A)
 atomB = angle.selectAtom(B)
 bondAB = angle.getBond(atomA, atomB) # returns None if no bond found
 ```
-6. Get atoms bound to a specified atom with getNeighbors
+
+Get atoms bound to a specified atom with `getNeighbors()`:
+
 ```python
 # get the neighbors for each indexed atom
 atomA = angle.selectAtom(A)
 neighbor_list = angle.getNeighbors(atomA)
 ```
 
-### Not yet covered
+### Aspects of SMIRKS not yet implemented
 
 Types of SMIRKS patterns that cannot be read into `ChemicalEnvironment`:
 
 * SMIRKS for multiple molecules. The symbol `'.'` can be used in SMIRKS to denote fragments in separate molecules, `ChemicalEnvironment` will fail if the given pattern has multiple molecules.
 * Similarly, SMIRKS for reactions are not parseable into `ChemicalEnvironment`. These are denoted with `'>>'` to indicate the fragment changing in a reaction.
 
-### The demo jupyter notebook `using_environments.ipynb`
-
-This notebook should be your first stop for interactively understanding and using `ChemicalEnvironment`.
-It includes all of the examples shown above and more in a jupyter notebook so you can play with the different method options.
-
 ### Making Monte Carlo proposals in chemical perception space with `ChemicalEnvironment`
 
-Here ,our goal is to show how to use `ChemicalEnvironment` to make "moves" in chemical perception space.
+Here, our goal is to show how to use `ChemicalEnvironment` to make "moves" in chemical perception space.
 First, a list of weighted moves were generated and saved to output files. Then, a seconds notebook is used to make these moves in chemical space.
 
 These notebooks were generated in the early planning stages for smirky, the first attempt at sampling chemical perception for SMIRNOFF parameter types.
