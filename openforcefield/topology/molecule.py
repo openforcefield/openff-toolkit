@@ -77,9 +77,9 @@ ALLOWED_CHARGE_MODELS = ['AM1-BCC'] # TODO: Which models do we want to support?
 
 class Particle(object):
     """
-    .. warning :: This API experimental and subject to change.
-
     Base class for all particles in a molecule.
+
+    .. warning :: This API experimental and subject to change.
 
     A particle object could be an ``Atom`` or a ``VirtualSite``.
 
@@ -138,9 +138,9 @@ class Particle(object):
 
 class Atom(Particle):
     """
-    .. warning :: This API experimental and subject to change.
-
     A particle representing a chemical atom.
+
+    .. warning :: This API experimental and subject to change.
 
     Note that non-chemical virtual sites are represented by the ``VirtualSite`` object.
 
@@ -260,9 +260,9 @@ class Atom(Particle):
 
 class VirtualSite(Particle):
     """
-    .. warning :: This API experimental and subject to change.
-
     A particle representing a virtual site whose position is defined in terms of ``Atom`` positions.
+
+    .. warning :: This API experimental and subject to change.
 
     Note that chemical atoms are represented by the ``Atom``.
 
@@ -337,9 +337,9 @@ class VirtualSite(Particle):
 
 class Bond(object):
     """
-    .. warning :: This API experimental and subject to change.
-
     Chemical bond representation.
+
+    .. warning :: This API experimental and subject to change.
 
     Attributes
     ----------
@@ -656,9 +656,9 @@ class Molecule(object):
 
     def add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None):
         """
-        .. warning :: This API experimental and subject to change.
-
         Add an atom
+
+        .. warning :: This API experimental and subject to change.
 
         Parameters
         ----------
@@ -702,9 +702,9 @@ class Molecule(object):
 
     def add_bond(self, atom1_index, atom2_index, is_aromatic, order, stereochemistry=None):
         """
-        .. warning :: This API experimental and subject to change.
-
         Add a bond between two specified atom indices
+
+        .. warning :: This API experimental and subject to change.
 
         Parameters
         ----------
@@ -726,9 +726,9 @@ class Molecule(object):
 
     def add_virtual_site(self, virtual_site):
         """
-        .. warning :: This API experimental and subject to change.
-
         Add a Virtual Site.
+
+        .. warning :: This API experimental and subject to change.
 
         Parameters
         ----------
@@ -904,6 +904,8 @@ class Molecule(object):
     def _rdkit_smirks_matches(rdmol, smirks, aromaticity_model='OEAroModel_MDL'):
         """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
+        .. warning :: This API experimental and subject to change.
+
         Parameters
         ----------
         rdmol : rdkit.Chem.Mol
@@ -926,8 +928,6 @@ class Molecule(object):
         .. notes ::
 
            * Raises ``ValueError`` if ``smarts`` query is malformed
-
-        .. warning :: This API experimental and subject to change.
 
         """
         from rdkit import Chem
@@ -969,6 +969,8 @@ class Molecule(object):
     def _oechem_smirks_matches(oemol, smirks):
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
+        .. warning :: This API experimental and subject to change.
+
         Parameters
         ----------
         oemol : openeye.oechem.OEMol or similar
@@ -992,8 +994,6 @@ class Molecule(object):
 
            * Raises ``LicenseError`` if valid OpenEye tools license is not found, rather than causing program to terminate
            * Raises ``ValueError`` if ``smarts`` query is malformed
-
-        .. warning :: This API experimental and subject to change.
 
         """
         from openeye import oechem
@@ -1622,9 +1622,9 @@ class Molecule(object):
     # TODO: We have to distinguish between retrieving user-specified partial charges and providing a generalized semiempirical/pop analysis/BCC scheme according to the new SMIRNOFF spec
     def get_partial_charges(self, method='AM1-BCC'):
         """
-        .. warning :: This API experimental and subject to change.
-
         Retrieve partial atomic charges.
+
+        .. warning :: This API experimental and subject to change.
 
         .. todo::
             * Refine API for this method to better correspond to new SMIRNOFF 1.0 spec
@@ -1663,9 +1663,9 @@ class Molecule(object):
 
     def _assign_partial_charges_using_antechamber(self, charge_model="bcc"):
         """
-        .. warning :: This API experimental and subject to change.
-
         Assign partial charges with AmberTools using antechamber/sqm
+
+        .. warning :: This API experimental and subject to change.
 
         Parameters
         ----------
@@ -1723,9 +1723,9 @@ class Molecule(object):
 
     def _assign_partial_charges_using_quacpac(molecule, charge_model="am1bcc"):
         """
-        .. warning :: This API experimental and subject to change.
-
         Assign partial charges with OpenEye quacpac
+
+        .. warning :: This API experimental and subject to change.
 
         Parameters
         ----------
@@ -1777,6 +1777,8 @@ class Molecule(object):
     def get_fractional_bond_orders(self, method='Wiberg', toolkit=None, **kwargs):
         """Get fractional bond orders.
 
+        .. warning :: This API experimental and subject to change.
+
         .. todo::
             * Is it OK that the ``Molecule`` object does not store geometry, but will create it using ``openeye.omega`` or ``rdkit``?
             * Should this method assign fractional bond orders to the ``Bond``s in the molecule, a separate ``bond_orders`` molecule property,
@@ -1792,8 +1794,6 @@ class Molecule(object):
             If specified, the provided toolkit module will be used; otherwise, all toolkits will be tried in undefined order.
             Currently supported options:
             * 'openeye' : generate conformations with ``openeye.omega`` and assign Wiberg bond order with ``openeye.oequacpac`` using OECharges_AM1BCCSym
-
-        .. warning :: This API experimental and subject to change.
 
         """
         pass
