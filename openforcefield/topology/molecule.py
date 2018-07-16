@@ -160,6 +160,8 @@ class Atom(Particle):
         """
         Create an Atom object.
 
+        .. todo :: Use attrs to validate?
+
         Parameters
         ----------
         atomic_number : int
@@ -173,7 +175,6 @@ class Atom(Particle):
         name : str, optional, default=None
             An optional name to be associated with the atom
 
-        .. todo :: Use attrs to validate?
         """
         super(Atom, self).__init__()
 
@@ -277,6 +278,12 @@ class VirtualSite(Particle):
         """
         Create a virtual site whose position is defined by a linear combination of multiple Atoms.
 
+        .. todo ::
+
+           * This will need to be gneeralized for virtual sites to allow out-of-plane sites, which are not simply a linear combination of atomic positions
+           * Add checking for allowed virtual site types
+           * How do we want users to specify virtual site types?
+
         Parameters
         ----------
         name : str
@@ -289,12 +296,6 @@ class VirtualSite(Particle):
             atoms[index] is the corresponding Atom for weights[index]
         virtual_site_type : str
             Virtual site type.
-
-        .. todo ::
-
-           * This will need to be gneeralized for virtual sites to allow out-of-plane sites, which are not simply a linear combination of atomic positions
-           * Add checking for allowed virtual site types
-           * How do we want users to specify virtual site types?
 
         """
         self._name = name
@@ -341,6 +342,8 @@ class Bond(object):
 
     .. warning :: This API experimental and subject to change.
 
+    .. todo :: Allow bonds to have associated properties.
+
     Attributes
     ----------
     atom1, atom2 : Atom
@@ -354,8 +357,6 @@ class Bond(object):
         Integral bond order
     fractional_bondorder : float, optional
         Fractional bond order, or None.
-
-    .. todo :: Allow bonds to have associated properties.
 
     """
     def __init__(self, atom1, atom2, bondtype, fractional_bondorder=None):
@@ -404,6 +405,11 @@ class Molecule(object):
     """
     Chemical representation of a molecule.
 
+    .. todo ::
+
+       * How do we automatically trigger invalidation of cached properties if an ``Atom``, ``Bond``, or ``VirtualSite`` is modified,
+         rather than added/deleted via the API? The simplest resolution is simply to make them immutable.
+
     Examples
     --------
 
@@ -423,15 +429,17 @@ class Molecule(object):
 
     >>> molecule = Molecule.from_iupac('imatinib')
 
-    .. todo ::
-
-       * How do we automatically trigger invalidation of cached properties if an ``Atom``, ``Bond``, or ``VirtualSite`` is modified,
-         rather than added/deleted via the API? The simplest resolution is simply to make them immutable.
-
     """
     def __init__(self, other=None):
         """
         Create a new Molecule object
+
+        .. todo ::
+
+           * If a filename or file-like object is specified but the file contains more than one molecule, what is the proper behavior?
+           Read just the first molecule, or raise an exception if more than one molecule is found?
+
+           * Should we also support SMILES strings for ``other``?
 
         Parameters
         ----------
@@ -444,13 +452,6 @@ class Molecule(object):
             * an ``openeye.oechem.OEMol``
             * an ``rdkit.Chem.rdchem.Mol``
             * a serialized :class:`Molecule` object
-
-        .. todo ::
-
-           * If a filename or file-like object is specified but the file contains more than one molecule, what is the proper behavior?
-           Read just the first molecule, or raise an exception if more than one molecule is found?
-
-           * Should we also support SMILES strings for ``other``?
 
         Examples
         --------
@@ -523,6 +524,8 @@ class Molecule(object):
         """
         Copy contents of the specified molecule
 
+        .. todo :: Should this be a ``@staticmethod`` where we have an explicit copy constructor?
+
         Parameters
         ----------
         other : optional, default=None
@@ -534,8 +537,6 @@ class Molecule(object):
             * an ``openeye.oechem.OEMol``
             * an ``rdkit.Chem.rdchem.Mol``
             * a serialized :class:`Molecule` object
-
-        .. todo :: Should this be a ``@staticmethod`` where we have an explicit copy constructor?
 
         """
         assert isinstance(other, type(self)), "can only copy instances of {}".format(typse(self))
@@ -558,12 +559,17 @@ class Molecule(object):
 
         .. note :: RDKit and OpenEye versions will not necessarily return the same representation.
 
+        .. todo :: Can we ensure RDKit and OpenEye versions return the same representation?
+
         Returns
         -------
         smiles : str
             Canonical isomeric explicit-hydrogen SMILES
 
-        .. todo :: Can we ensure RDKit and OpenEye versions return the same representation?
+        Examples
+        --------
+
+        >>> smiles = molecule.to_smiles()
 
         """
         toolkit = TOOLKIT_PRECEDENCE[0]
@@ -625,17 +631,17 @@ class Molecule(object):
         Edges denote chemical bonds between Atoms.
         Virtual sites are not included, since they lack a concept of chemical connectivity.
 
-        Returns
-        -------
-        graph : networkx.Graph
-            The resulting graph, with nodes labeled with atom indices and elements
-
         .. todo ::
 
            * Do we need a ``from_networkx()`` method? If so, what would the Graph be required to provide?
            * Should edges be labeled with discrete bond types in some aromaticity model?
            * Should edges be labeled with fractional bond order if a method is specified?
            * Should we add other per-atom and per-bond properties (e.g. partial charges) if present?
+
+        Returns
+        -------
+        graph : networkx.Graph
+            The resulting graph, with nodes labeled with atom indices and elements
 
         Examples
         --------
@@ -1063,6 +1069,18 @@ class Molecule(object):
             The resulting molecule with position
 
         .. note :: This method requires the OpenEye toolkit to be installed.
+
+        Examples
+        --------
+
+        Create a molecule from a common name
+
+        >>> molecule = Molecule.from_iupac('4-[(4-methylpiperazin-1-yl)methyl]-N-(4-methyl-3-{[4-(pyridin-3-yl)pyrimidin-2-yl]amino}phenyl)benzamide')
+
+        Create a molecule from a common name
+
+        >>> molecule = Molecule.from_iupac('imatinib')
+
         """
         from openeye import oechem, oeiupac
         oemol = oechem.OEMol()
@@ -1080,6 +1098,12 @@ class Molecule(object):
             IUPAC name of the molecule
 
         .. note :: This method requires the OpenEye toolkit to be installed.
+
+        Examples
+        --------
+
+        >>> iupac_name = molecule.to_iupac()
+
         """
         from openeye import oeiupac
         return oeiupac.OECreateIUPACName(self.to_openeye())
@@ -1104,6 +1128,13 @@ class Molecule(object):
         ValueError
             If the topology does not contain exactly one molecule.
 
+        Examples
+        --------
+
+        Create a molecule from a Topology object that contains exactly one molecule
+
+        >>> molecule = Molecule.from_topology(topology)
+
         """
         # TODO: Ensure we are dealing with an openforcefield Topology object
         if topology.n_molecules != 1:
@@ -1122,8 +1153,10 @@ class Molecule(object):
 
         Examples
         --------
+
         >>> molecule = Molecule.from_iupac('imatinib')
         >>> topology = molecule.to_topology()
+
         """
         return Topology.from_molecules(self)
 
@@ -1140,6 +1173,11 @@ class Molecule(object):
         """
         Create one or more molecules from a file
 
+        .. todo::
+
+           * Extend this to also include some form of .offmol Open Force Field Molecule format?
+           * Generalize this to also include file-like objects?
+
         Parameters
         ----------
         filename : str
@@ -1150,11 +1188,6 @@ class Molecule(object):
         molecules : Molecule or list of Molecules
             If there is a single molecule in the file, a Molecule is returned;
             otherwise, a list of Molecule objects is returned.
-
-        .. todo::
-
-           * Extend this to also include some form of .offmol Open Force Field Molecule format?
-           * Generalize this to also include file-like objects?
 
         Examples
         --------
@@ -1267,6 +1300,13 @@ class Molecule(object):
         molecule : openforcefield.Molecule
             An openforcefield molecule
 
+        Examples
+        --------
+
+        Create a molecule from an RDKit molecule
+
+        >>> molecule = Molecule.from_rdkit(rdmol)
+
         """
         from rdkit import Chem
 
@@ -1361,10 +1401,23 @@ class Molecule(object):
 
         Requires the RDKit to be installed.
 
+        Parameters
+        ----------
+        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
+            The aromaticity model to use
+
         Returns
         -------
         rdmol : rkit.RDMol
             An RDKit molecule
+
+        Examples
+        --------
+
+        Convert a molecule to RDKit
+
+        >>> rdmol = molecule.to_rdkit()
+
         """
         from rdkit import Chem, Geometry
 
@@ -1492,6 +1545,13 @@ class Molecule(object):
         molecule : openforcefield.topology.Molecule
             An openforcefield molecule
 
+        Examples
+        --------
+
+        Create a Molecule from an OpenEye OEMol
+
+        >>> molecule = Molecule.from_openeye(oemol)
+
         """
         from openeye import oechem
         from openforcefield.utils.toolkits import openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
@@ -1536,15 +1596,31 @@ class Molecule(object):
 
         Requires the OpenEye toolkit to be installed.
 
+        .. todo ::
+
+           * Use stored conformer positions instead of an argument.
+           * Should the aromaticity model be specified in some other way?
+
+        Parameters
+        ----------
+        positions : simtk.unit.Quantity with shape [nparticles,3], optional, default=None
+            Positions to use in constructing OEMol.
+            If virtual sites are present in the Topology, these indices will be skipped.
+        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
+            The aromaticity model to use
+
         Returns
         -------
         oemol : openeye.oechem.OEMol
             An OpenEye molecule
-        positions : simtk.unit.Quantity with shape [nparticles,3], optional, default=None
-            Positions to use in constructing OEMol.
-            If virtual sites are present in the Topology, these indices will be skipped.
 
-        NOTE: This comes from https://github.com/oess/oeommtools/blob/master/oeommtools/utils.py
+        Examples
+        --------
+
+        Create an OpenEye molecule from a Molecule
+
+        >>> molecule = Molecule.from_smiles('CC')
+        >>> oemol = molecule.to_openeye()
 
         """
         from openeye import oechem
@@ -1642,6 +1718,14 @@ class Molecule(object):
             Options are:
             * `AM1-BCC` : symmetrized AM1 charges with BCC (no ELF)
 
+        Examples
+        --------
+
+        Get AM1-BCC charges for imatinib
+
+        >>> molecule = Molecule.from_iupac('imatininb')
+        >>> charges = molecule.get_partial_charges(method='AM1-BCC')
+
         """
         # TODO: Cache charges to speed things up
 
@@ -1667,6 +1751,10 @@ class Molecule(object):
 
         .. warning :: This API experimental and subject to change.
 
+        .. todo ::
+
+           * Do we want to also allow ESP/RESP charges?
+
         Parameters
         ----------
         molecule : Molecule
@@ -1683,10 +1771,6 @@ class Molecule(object):
         -----
         Currently only sdf file supported as input and mol2 as output
         https://github.com/choderalab/openmoltools/blob/master/openmoltools/packmol.py
-
-        .. todo ::
-
-           * Do we want to also allow ESP/RESP charges?
 
         """
         # Check that the requested charge method is supported
@@ -1727,6 +1811,11 @@ class Molecule(object):
 
         .. warning :: This API experimental and subject to change.
 
+        .. todo ::
+
+           * Should the default be ELF?
+           * Can we expose more charge models?
+
         Parameters
         ----------
         molecule : Molecule
@@ -1738,11 +1827,6 @@ class Molecule(object):
         -------
         charges : numpy.array of shape (natoms) of type float
             The partial charges
-
-        .. todo ::
-
-           * Should the default be ELF?
-           * Can we expose more charge models?
 
         """
         oemol = molecule.to_openeye()
@@ -1794,6 +1878,14 @@ class Molecule(object):
             If specified, the provided toolkit module will be used; otherwise, all toolkits will be tried in undefined order.
             Currently supported options:
             * 'openeye' : generate conformations with ``openeye.omega`` and assign Wiberg bond order with ``openeye.oequacpac`` using OECharges_AM1BCCSym
+
+        Examples
+        --------
+
+        Get fractional Wiberg bond orders
+
+        >>> molecule = Molecule.from_iupac('imatinib')
+        >>> fractional_bond-orders = molecule.get_fractional_bond_orders(method='Wiberg')
 
         """
         pass
