@@ -10,8 +10,6 @@ These examples are described in more detail below.
 
 .. mdinclude:: ../examples/forcefield_modification/README.md
 
-.. mdinclude:: ../examples/chemicalEnvironments/README.md
-
 .. mdinclude:: ../examples/mixedFF_structure/README.md
 
 .. mdinclude:: ../examples/partial_bondorder/README.md

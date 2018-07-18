@@ -1,6 +1,6 @@
 ## `ChemicalEnvironment` usage examples
 
-This directory shows how to use `ChemicalEnvironments`.
+Here, we show how to use `ChemicalEnvironments` in detail.
 First, we will outline how they are structured with some example code snippets.
 
 ### Demo jupyter notebook

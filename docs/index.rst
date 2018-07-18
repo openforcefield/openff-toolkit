@@ -8,8 +8,8 @@ Open Forcefield Toolkit
 
 A modern, extensible library for molecular mechanics force field science.
 
-Contents
---------
+User Guide
+----------
 
 .. toctree::
    :maxdepth: 1
@@ -18,10 +18,11 @@ Contents
    releasehistory
    smirnoff
    examples
+   chemicalenvironments
    developing
 
-Modules
--------
+API documentation
+-----------------
 
 .. toctree::
   :maxdepth: 1
