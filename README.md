@@ -64,7 +64,7 @@ If you need to install via source, see the build and run package requirements li
 
 # Features of the `openforcefield` toolkit
 
-## SMIRNOFF: The SMIRKS Native Open Force Field format
+## The SMIRKS Native Open Force Field (SMIRNOFF) format
 
 This repository provides tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) format](https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html), which currently supports an XML representation for force field definition files.
 
@@ -72,9 +72,7 @@ By convention, files containing XML representations of SMIRNOFF force fields car
 
 Example SMIRNOFF `.offxml` force field definitions can be found in `openforcefield/data/forcefield`.
 
-Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/topology/examples.html).
-
-### Using SMIRNOFF
+### Working with SMIRNOFF parameter sets
 
 The SMIRNOFF `ForceField` class is essentially a drop-in replacement for the [OpenMM `ForceField` class](http://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField).
 
@@ -97,12 +95,13 @@ openmm_system = forcefield.create_openmm_system(topology)
 # Load a SMIRNOFF small molecule forcefield for alkanes, ethers, and alcohols
 forcefield = ForceField(offxml_filename)
 ```
+Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/topology/examples.html).
 
-## `ChemicalEnvironment`: Tools for chemical environment perception and manipulation
+## Chemical environments: Tools for chemical environment perception and manipulation
 
 The `ChemicalEnvironments` class can be used to parse and manipulate [tagged SMARTS strings](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) or single-fragment [SMIRKS strings](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html) representing chemical environments with tagged atoms.
 
-### Example usage
+### Working with chemical environments
 
 ```python
 from openforcefield.typing.chemistry import environment
@@ -135,17 +134,6 @@ See [`Chemical-starting-points.md`](Chemical-starting-points.md) for answers to 
 * Why do I need to provide molecules corresponding to the components of my system, or a `Topology` with bond orders?
 * Can I use an AMBER, CHARMM, or gromacs topology/coordinate file as a starting point for applying a SMIRNOFF force field?
 * What if I am starting from a PDB file?
-
-# Manifest
-
-* `examples/` - some examples - look here to get started; see especially `host_guest_simulation` for a detailed worked example of SMIRNOFF simulation of host-guest binding.
-* `openforcefield/` - openforcefield tools
-* `devtools/` - continuous integration and packaging scripts and utilities
-* `utilities/` - utilities; scripts to convert parm@frosst modified `frcmod` files to SMIRNOFF XML
-* `oe_license.txt.enc` - encrypted OpenEye license for continuous integration testing
-* `.travis.yml` - travis-ci continuous integration file
-* `The-SMIRNOFF-force-field-format.md` - specifications for the SMIRNOFF force field format
-* `Chemical-starting-points.md` - discussion of appropriate starting points for applying a SMIRNOFF force field to a system
 
 # Contributors
 
