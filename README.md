@@ -1,7 +1,9 @@
 [![Build Status](https://travis-ci.org/openforcefield/openforcefield.svg?branch=master)](https://travis-ci.org/openforcefield/openforcefield?branch=master)
 [![Documentation](https://readthedocs.org/projects/open-forcefield-toolkit/badge/?version=topology)](http://open-forcefield-toolkit.readthedocs.io/en/topology/?badge=topology)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Anaconda Cloud](https://anaconda.org/openforcefield/openforcefield/badges/downloads.svg)](https://anaconda.org/openforcefield/openforcefield)
+[![Install with Conda](https://anaconda.org/omnia/openforcefield/badges/installer/conda.svg)](https://anaconda.org/omnia/openforcefield)
+[![Anaconda Cloud platforms](https://anaconda.org/omnia/openforcefield/badges/platforms.svg)](https://anaconda.org/omnia/openforcefield)
+[![Anaconda Cloud downloads](https://anaconda.org/omnia/openforcefield/badges/downloads.svg)](https://anaconda.org/openforcefield/openforcefield)
 [![Funding](https://img.shields.io/badge/Funding-Open%20Force%20Field%20Consortium-brightgreen.svg)](http://openforcefield.org)
 
 # Open Forcefield Group toolkit
