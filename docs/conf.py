@@ -82,7 +82,7 @@ master_doc = 'index'
 # General information about the project.
 project = 'openforcefield'
 copyright = '2016-2018 Open Force Field Initiative'
-author = 'Open Forcefield Consortium'
+author = 'Open Force Field Initiative'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -138,10 +138,10 @@ html_logo = "_static/openforcefield.png"
 # theme further.
 html_theme_options = {
     # Navigation bar title. (Default: ``project`` value)
-    'navbar_title': "Open Forcefield Toolkit",
+    'navbar_title': "Open Force Field Toolkit",
 
     # Tab name for entire site. (Default: "Site")
-    'navbar_site_name': "Open Forcefield Toolkit",
+    'navbar_site_name': "Open Force Field Toolkit",
 
     # A list of tuples containing pages or urls to link to.
     # Valid tuples should be in the following forms:
@@ -152,7 +152,7 @@ html_theme_options = {
     # an arbitrary url.
     'navbar_links': [
         #("Examples", "https://github.com/openforcefield/openforcefield/tree/master/examples", True),
-        ("Open Forcefield Consortium", "http://openforcefield.org", True),
+        ("Open Force Field Initiative", "http://openforcefield.org", True),
     ],
 
     # Render the next and previous page links in navbar. (Default: true)
@@ -256,7 +256,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'openforcefield.tex', 'openforcefield Documentation',
-     'Open Forcefield Consortium', 'manual'),
+     'Open Force Field Consortium', 'manual'),
 ]
 
 
@@ -265,7 +265,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'openforcefield', 'openforcefield Documentation',
+    (master_doc, 'openforcefield', 'openforcefield documentation',
      [author], 1)
 ]
 
@@ -276,7 +276,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'openforcefield', 'openforcefield Documentation',
+    (master_doc, 'openforcefield', 'openforcefield documentation',
      author, 'openforcefield', 'One line description of project.',
      'Miscellaneous'),
 ]
