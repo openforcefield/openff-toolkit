@@ -36,6 +36,25 @@ Note that ``openforcefield`` will be installed into this local Python installati
 
 |
 
+Required dependencies
+=======================
+
+The ``openforcefield`` toolkit makes use of the `Omnia <http://www.omnia.md>`_ and `Conda Forge <https://conda-forge.org/>`_ free and open source community package repositories:
+
+.. code-block:: bash
+
+   $ conda config --add channels omnia --add channels conda-forge
+   $ conda update --all
+
+This only needs to be done once.
+
+.. note ::
+
+   If automation is required, provide the ``--yes`` argument to ``conda update`` and ``conda install`` comamnds.
+   More information on the ``conda`` command-line API can be found in the `conda online documentation <https://conda.io/docs/commands.html>`_.
+
+|
+
 Release build
 -------------
 
@@ -60,5 +79,20 @@ To update an earlier ``conda`` installation of ``openforcefield`` to the latest 
 .. code-block:: bash
 
    $ conda update openforcefield
+
+|
+
+Optional dependencies
+---------------------
+
+This toolkit can optionally make use of the `OpenEye toolkit <https://www.eyesopen.com/toolkit-development>`_,  which requires a [license](https://www.eyesopen.com/licensing-philosophy) that is free for academics intending to release results into the public domain, but is non-free for industry or academics intending to use the toolkit to generate intellectual property.
+
+To install the OpenEye toolkits (provided you have a valid license file):
+
+.. code-block:: none
+
+   $ conda install --yes -c openeye openeye-toolkits
+
+None of the ``openforcefield`` release capabilities *require* this toolkit, but the Open Force Field developers make use of it in parameterizing new open source force fields.
 
 |

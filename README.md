@@ -24,41 +24,9 @@ This repository hosts tools that we have committed to stably maintain throughout
 
 ### Installing via conda
 
-We recommend the this project be used with the [miniconda](http://conda.pydata.org/miniconda.html) Python distribution for automatic installation of dependencies.
+Detailed installation instructions can be found [here](https://open-forcefield-toolkit.readthedocs.io/en/topology/installation.html).
 
-To install `miniconda` on `linux`:
-```bash
-wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda
-export PATH="$HOME/miniconda/bin:${PATH}"
-```
-or, on `osx`:
-```bash
-wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
-bash Miniconda3-latest-MacOSX-x86_64.sh -b -p $HOME/miniconda
-export PATH="$HOME/miniconda/bin:${PATH}"
-```
-
-Next, configure your installation to add the `omnia` and `conda-forge` channels:
-```bash
-conda config --add channels omnia --add channels conda-forge
-conda update --yes --all
-```
-
-Finally, install `openforcefield` toolkit:
-```bash
-conda install --yes openforcefield
-```
-
-### Optional dependencies
-
-This toolkit can optionally make use of the OpenEye toolkit (which requires a [license](https://www.eyesopen.com/licensing-philosophy) that is free for academics intending to release results into the public domain):
-```bash
-conda install --yes -c openeye openeye-toolkits
-```
-Currently, the OpenEye toolkit provides features for generating AM1-BCC charges.
-
-### Installing via source
+### Installing from source
 
 If you need to install via source, see the build and run package requirements listed in the [development conda recipe](https://github.com/openforcefield/openforcefield/blob/topology/devtools/conda-recipe/meta.yaml).
 
