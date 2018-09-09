@@ -6,17 +6,17 @@
 [![Anaconda Cloud downloads](https://anaconda.org/omnia/openforcefield/badges/downloads.svg)](https://anaconda.org/openforcefield/openforcefield)
 [![Funding](https://img.shields.io/badge/Funding-Open%20Force%20Field%20Consortium-brightgreen.svg)](http://openforcefield.org)
 
-# Open Forcefield Group toolkit
+# The Open Force Field toolkit
 
-This repository contains a number of tools from the [Open Force Field Consortium](http://openforcefield.org) for the development and use of modern molecular mechanics forcefields based on direct chemical perception and parameterized with rigorous statistical methods.
+This repository contains a number of tools from the [Open Force Field Initiative](http://openforcefield.org) for the development and use of modern molecular mechanics forcefields based on direct chemical perception and parameterized with rigorous statistical methods.
 
 This repository hosts tools that we have committed to stably maintain throughout their lifetimes:
-* The [SMIRKS Native Open Force Field (SMIRNOFF)](https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md) direct chemical perception forcefield specification language
+* Tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) format](https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html)
 * Tools for direct chemical environment perception and manipulation
 
 ## Documentation
 
-Documentation for the `openforcefield` toolkit is hosted at [readthedocs](https://open-forcefield-toolkit.readthedocs.io/en/topology).
+[Documentation](https://open-forcefield-toolkit.readthedocs.io/en/topology) for the `openforcefield` toolkit is hosted at [readthedocs](https://open-forcefield-toolkit.readthedocs.io/en/topology).
 
 ## Installation
 
@@ -50,13 +50,17 @@ Finally, install `openforcefield` toolkit:
 conda install --yes openforcefield
 ```
 
-### Optional installs
+### Optional dependencies
 
 This toolkit can optionally make use of the OpenEye toolkit (which requires a [license](https://www.eyesopen.com/licensing-philosophy) that is free for academics intending to release results into the public domain):
 ```bash
 conda install --yes -c openeye openeye-toolkits
 ```
 Currently, the OpenEye toolkit provides features for generating AM1-BCC charges.
+
+### Installing via source
+
+If you need to install via source, see the build and run package requirements listed in the [development conda recipe](https://github.com/openforcefield/openforcefield/blob/topology/devtools/conda-recipe/meta.yaml).
 
 # Features of the `openforcefield` toolkit
 
