@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/openforcefield/openforcefield.svg?branch=master)](https://travis-ci.org/openforcefield/openforcefield?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/open-forcefield-toolkit/badge/?version=latest)](http://open-forcefield-toolkit.readthedocs.io/en/latest/?badge=latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # Open Forcefield Group toolkit
 
