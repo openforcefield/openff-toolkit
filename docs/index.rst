@@ -20,6 +20,7 @@ User Guide
    examples
    chemicalenvironments
    developing
+   faq
 
 API documentation
 -----------------

@@ -11,7 +11,7 @@
 This repository contains a number of tools from the [Open Force Field Initiative](http://openforcefield.org) for the development and use of modern molecular mechanics forcefields based on direct chemical perception and parameterized with rigorous statistical methods.
 
 This repository hosts tools that we have committed to stably maintain throughout their lifetimes:
-* Tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) format](https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html)
+* Tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) specification](https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html)
 * Tools for direct chemical environment perception and manipulation
 
 ## Documentation
@@ -34,11 +34,11 @@ If you need to install via source, see the build and run package requirements li
 
 ## The SMIRKS Native Open Force Field (SMIRNOFF) format
 
-This repository provides tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) format](https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html), which currently supports an XML representation for force field definition files.
+This repository provides tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) specification](https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html), which currently supports an XML representation for force field definition files.
 
-By convention, files containing XML representations of SMIRNOFF force fields carry `.offxml` extensions.
+By convention, files containing [XML representations](https://en.wikipedia.org/wiki/XML) of SMIRNOFF force fields carry `.offxml` extensions.
 
-Example SMIRNOFF `.offxml` force field definitions can be found in `openforcefield/data/forcefield`.
+Example SMIRNOFF `.offxml` force field definitions can be found in [`openforcefield/data/forcefield`](https://github.com/openforcefield/openforcefield/tree/topology/openforcefield/data/forcefield).
 
 ### Working with SMIRNOFF parameter sets
 
@@ -89,12 +89,9 @@ print(alpha.asSMIRKS()) # smirks for atom only
 print(angle.asSMIRKS())
 # "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]~;!@[#8X2]"
 ```
-If you are not familiar with the SMIRKS language, take a look at these Daylight resources:
-* [SMILES](http://www.daylight.com/dayhtml_tutorials/languages/smiles/index.html)
-* [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html)
-* [SMIRKS](http://www.daylight.com/dayhtml_tutorials/languages/smirks/index.html)
+Daylight provides detailed specifications of the [SMILES](http://www.daylight.com/dayhtml_tutorials/languages/smiles/index.html), [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html), and [SMIRKS](http://www.daylight.com/dayhtml_tutorials/languages/smirks/index.html) languages.
 
-For more detailed examples, see the README and the [`examples/chemicalEnvironments/using_environment.ipynb`](https://github.com/openforcefield/openforcefield/blob/master/examples/chemicalEnvironments/using_environments.ipynb) example notebook.
+For more detailed examples, see [`examples/chemicalEnvironments/README.md`](https://github.com/openforcefield/openforcefield/blob/topology/examples/chemicalEnvironments/README.md) and the corresponding [`examples/chemicalEnvironments/using_environment.ipynb`](https://github.com/openforcefield/openforcefield/blob/master/examples/chemicalEnvironments/using_environments.ipynb) example notebook.
 
 # Frequently asked questions (FAQs)
 
