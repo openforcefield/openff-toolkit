@@ -61,7 +61,7 @@ from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingEr
 DEFAULT_AROMATICITY_MODEL = 'OEAroModel_MDL' # TODO: Is there a more specific name and reference for the aromaticity model?
 ALLOWED_AROMATICITY_MODELS = ['OEAroModel_MDL']
 
-DEFAULT_FRACTIONAL_BONDORDER_MODEL = 'Wiberg' # TODO: Is there a more specific name and reference for the aromatciity model?
+DEFAULT_FRACTIONAL_BONDORDER_MODEL = 'Wiberg' # TODO: Is there a more specific name and reference for the fractional bond order models?
 ALLOWED_FRACTIONAL_BONDORDER_MODELS = ['Wiberg']
 
 DEFAULT_CHARGE_MODEL = 'AM1-BCC' # TODO: Should this be `AM1-BCC`, or should we encode BCCs explicitly via AM1-CM2 preprocessing?
@@ -401,14 +401,14 @@ class Bond(object):
 
 # TODO: Make Molecule immutable (by default)
 
+# TODO: How do we automatically trigger invalidation of cached properties if an ``Atom``, ``Bond``, or ``VirtualSite`` is modified,
+#       rather than added/deleted via the API? The simplest resolution is simply to make them immutable.
+
 class Molecule(object):
     """
-    Chemical representation of a molecule.
+    Chemical representation of a molecule, such as a small molecule or biopolymer.
 
-    .. todo ::
-
-       * How do we automatically trigger invalidation of cached properties if an ``Atom``, ``Bond``, or ``VirtualSite`` is modified,
-         rather than added/deleted via the API? The simplest resolution is simply to make them immutable.
+    .. todo :: What other API calls would be useful for supporting biopolymers as small molecules? Perhaps iterating over chains and residues?
 
     Examples
     --------
@@ -425,9 +425,13 @@ class Molecule(object):
 
     >>> molecule = Molecule.from_rdkit(rdmol)
 
-    Create a molecule from IUPAC name (OpenEye toolkit required)
+    Create a molecule from IUPAC name (requires the OpenEye toolkit)
 
     >>> molecule = Molecule.from_iupac('imatinib')
+
+    Create a molecule from SMILES
+
+    >>> molecule = Molecule.from_smiles('Cc1ccccc1')
 
     """
     def __init__(self, other=None):
@@ -439,7 +443,7 @@ class Molecule(object):
            * If a filename or file-like object is specified but the file contains more than one molecule, what is the proper behavior?
            Read just the first molecule, or raise an exception if more than one molecule is found?
 
-           * Should we also support SMILES strings for ``other``?
+           * Should we also support SMILES strings or IUPAC names for ``other``?
 
         Parameters
         ----------
@@ -512,13 +516,13 @@ class Molecule(object):
         """
         Clear the contents of the current molecule.
         """
-        self._particles = list()
-        self._bonds = None
-        self._name = None # Set the name of the molecule
+        self._particles = list() # List of particles (atoms or virtual sites) # TODO: Should this be a dict?
+        self._bonds = list() # List of bonds between Atom objects # TODO: Should this be a dict?
+        self._name = None # TODO: Should we keep a name, or just store that in _properties?
         self._charges = None # TODO: Storage charges
-        self._properties = None # Attached properties
-        self._cached_properties = None # Cached properties can be recomputed as needed
-        self._conformers = None
+        self._properties = None # Attached properties to be preserved
+        self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
+        self._conformers = None # Optional conformers
 
     def _copy_initializer(self, other):
         """
@@ -528,26 +532,20 @@ class Molecule(object):
 
         Parameters
         ----------
-        other : optional, default=None
-            If specified, attempt to construct a copy of the Molecule from the specified object.
-            This can be any one of the following:
-
-            * a :class:`Molecule` object
-            * a file that can be used to construct a :class:`Molecule` object
-            * an ``openeye.oechem.OEMol``
-            * an ``rdkit.Chem.rdchem.Mol``
-            * a serialized :class:`Molecule` object
+        other : optional
+            Overwrite the state of this Molecule with the specified Molecule object.
+            A deep copy is made.
 
         """
         assert isinstance(other, type(self)), "can only copy instances of {}".format(typse(self))
         self.__dict__ = deepcopy(other.__dict__)
 
     def _eq_(self, other):
-        """Test two molecules for equality.
+        """Test two molecules for equality to see if they are the chemical species, but do not check other annotated properties.
 
         .. note ::
 
-           Note that this method simply tests whether two molecules are identical chemical species.
+           Note that this method simply tests whether two molecules are identical chemical species using equivalence of their canonical isomeric SMILES.
            No effort is made to ensure that the atoms are in the same order or that any annotated properties are preserved.
 
         """
@@ -572,6 +570,18 @@ class Molecule(object):
         >>> smiles = molecule.to_smiles()
 
         """
+        # TODO: Rework this toolkit usage to use a standard ToolkitWrapper interface
+        for toolkit in REGISTERED_TOOLKITS:
+            try:
+                return toolkit.to_smiles(self)
+            catch NotImplementedError as e:
+                pass
+        raise NotImplementedError('No registered toolkits can provide this capability.')
+
+        # TODO: Is there a simmpler scheme that could streamline this?
+        return toolkit_handler.call('to_smiles', self)
+
+        # Old code that does not use a toolkit wrapper
         toolkit = TOOLKIT_PRECEDENCE[0]
         if toolkit == 'oechem':
             oemol = self.to_openeye()
@@ -1553,44 +1563,9 @@ class Molecule(object):
         >>> molecule = Molecule.from_openeye(oemol)
 
         """
-        from openeye import oechem
-        from openforcefield.utils.toolkits import openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
+        return toolkit_registry.call('from_openeye', oemol)
 
-        molecule = Molecule()
-
-        # TODO: What other information should we preserve besides name?
-        # TODO: How should we preserve the name?
-        molecule.name = oemol.GetTitle()
-
-        # Copy any attached SD tag information
-        # TODO: Should we use an API for this?
-        molecule.properties = dict()
-        for dp in oechem.OEGetSDDataPairs(oemol):
-            molecule[dp.GetTag()] = dp.GetValue()
-
-        map_atoms = dict() # {oemol_idx: molecule_idx}
-        for oeatom in oemol.GetAtoms():
-            oe_idx = oeatom.GetIdx()
-            atomic_number = oeatom.GetAtomicNum()
-            formal_charge = oeatom.GetFormalCharge()
-            is_aromatic = oeatom.IsAromatic()
-            stereochemistry = openeye_cip_atom_stereochemistry(oemol, oeatom)
-            atom_index = molecule.add_atom(atomic_number=atomic_number, formal_charge=formal_charge, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
-            map_atoms[oe_idx] = atom_index # store for mapping oeatom to molecule atom indices below
-
-        for oebond in oemol.GetBonds():
-            atom1_index = map_atoms[oebond.GetBgnIdx()]
-            atom2_index = map_atoms[oebond.GetEndIdx()]
-            order = oeb.GetOrder()
-            is_aromatic = oeb.IsAromatic()
-            stereochemistry = openeye_cip_bond_stereochemistry(oemol, oebond)
-            molecule.add_bond(atom1_index, atom2_index, order=order, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
-
-        # TODO: Copy conformations, if present
-
-        return molecule
-
-    def to_openeye(self, positions=None, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    def to_openeye(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an OpenEye molecule
 
@@ -1603,9 +1578,6 @@ class Molecule(object):
 
         Parameters
         ----------
-        positions : simtk.unit.Quantity with shape [nparticles,3], optional, default=None
-            Positions to use in constructing OEMol.
-            If virtual sites are present in the Topology, these indices will be skipped.
         aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
             The aromaticity model to use
 
@@ -1623,77 +1595,7 @@ class Molecule(object):
         >>> oemol = molecule.to_openeye()
 
         """
-        from openeye import oechem
-        from openforcefield.utils.toolkits import openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
-
-        oemol = oechem.OEMol()
-
-        # Add atoms
-        oemol_atoms = list() # list of corresponding oemol atoms
-        for atom in self.atoms:
-            oeatom = oemol.NewAtom(atom.atomic_number)
-            oeatom.SetFormalCharge(atom.formal_charge)
-            oeatom.SetAromatic(atom.is_aromatic)
-            oemol_atoms.append(oeatom)
-
-        # Add bonds
-        oemol_bonds = list() # list of corresponding oemol bonds
-        for bond in self.bonds:
-            oebond = oemol.NewBond(oemol_atoms[bond.atom1_index], oemol_atoms[bond.atom2_index])
-            newbond.SetOrder(bond.order)
-            newbond.SetAromatic(bond.is_aromatic)
-            oemol_bonds.append(oebond)
-
-        # Set atom stereochemistry now that all connectivity is in place
-        for atom, oeatom in zip(self.atoms, oemol_atoms):
-            if not atom.stereochemistry:
-                continue
-
-            # Set arbitrary initial stereochemistry
-            neighs = [n for n in oeatom.GetAtoms()]
-            oeatom.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Right)
-
-            # Flip chirality if stereochemistry is incorrect
-            oeatom_stereochemistry = openeye_cip_atom_stereochemistry(oemol, oeatom)
-            if oeatom_stereochemistry != atom.sterechemistry:
-                # Flip the stereochemistry
-                oea.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left)
-                # Verify it matches now as a sanity check
-                oeatom_stereochemistry = openeye_cip_atom_stereochemistry(oemol, oeatom)
-                if oeatom_stereochemistry != atom.stereochemistry:
-                    raise Exception('Programming error: OpenEye atom stereochemistry assumptions failed.')
-
-        # Set bond stereochemistry
-        for bond, oebond in zip(self.atoms, oemol_bonds):
-            if not bond.stereochemistry:
-                continue
-
-            # Set arbitrary initial stereochemistry
-            oeatom1, oeatom2 = oemol_atoms[bond.atom1_index], oemol_atoms[bond.atom2_index]
-            oeatom1_neighbor = [n for n in oeatom1.GetAtoms()][0]
-            oeatom2_neighbor = [n for n in oeatom2.GetAtoms()][0]
-            oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Cis)
-
-            # Flip stereochemistry if incorrect
-            oebond_stereochemistry = openeye_cip_bond_stereochemistry(oemol, oebond)
-            if oebond_stereochemistry != bond.sterechemistry:
-                # Flip the stereochemistry
-                oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Trans)
-                # Verify it matches now as a sanity check
-                oebond_stereochemistry = openeye_cip_bond_stereochemistry(oemol, oebond)
-                if oebond_stereochemistry != bond.stereochemistry:
-                    raise Exception('Programming error: OpenEye bond stereochemistry assumptions failed.')
-
-        # TODO: Save conformations, if present
-
-        # TODO: Save name and properties, if present
-
-        # Clean Up phase
-        # The only feature of a molecule that wasn't perceived above seemed to be ring connectivity, better to run it
-        # here then for someone to inquire about ring sizes and get 0 when it shouldn't be
-        oechem.OEFindRingAtomsAndBonds(oemol)
-
-        return oemol
+        return toolkit_registry.call('to_openeye', self, aromaticity_model=aromaticity_model)
 
     # TODO: We have to distinguish between retrieving user-specified partial charges and providing a generalized semiempirical/pop analysis/BCC scheme according to the new SMIRNOFF spec
     def get_partial_charges(self, method='AM1-BCC'):
@@ -1703,6 +1605,8 @@ class Molecule(object):
         .. warning :: This API experimental and subject to change.
 
         .. todo::
+            * Generalize to allow specification of both QM method and population analysis method
+            * Should we return the charges or store the charges as atom properties?
             * Refine API for this method to better correspond to new SMIRNOFF 1.0 spec
             * Is it OK that the ``Molecule`` object does not store geometry, but will create it using ``openeye.omega`` or ``rdkit``?
             * Should this method assign charges to the ``Atom``s in the molecule, a separate ``charges`` molecule property,
@@ -1718,6 +1622,11 @@ class Molecule(object):
             Options are:
             * `AM1-BCC` : symmetrized AM1 charges with BCC (no ELF)
 
+        Returns
+        -------
+        charges : numpy.array of shape (natoms) of type float
+            The partial charges
+
         Examples
         --------
 
@@ -1727,138 +1636,11 @@ class Molecule(object):
         >>> charges = molecule.get_partial_charges(method='AM1-BCC')
 
         """
-        # TODO: Cache charges to speed things up
-
-        # TODO: Support methods beyond AM1-BCC
-        if method != 'AM1-BCC':
-            raise NotImplementedError()
-
-        if OPENEYE_INSTALLED:
-            # TODO: Translate charge model and check compatibility
-            charge_model = 'am1bcc'
-            charges = _assign_partial_charges_using_quacpac(charge_model)
-        elif RDKIT_INSTALLED:
-            # TODO: Translate charge model and check compatibility
-            charge_model = 'bcc'
-            charges = _assign_partial_charges_using_antechamber(charge_model)
-
-        # TODO: Add units before returning charges, either here or in private methods below
+        # TODO: Use memoization to speed up subsequent calls; use decorator?
+        charges = toolkit_registry.call('compute_partial_charges', method=method)
         return charges
 
-    def _assign_partial_charges_using_antechamber(self, charge_model="bcc"):
-        """
-        Assign partial charges with AmberTools using antechamber/sqm
-
-        .. warning :: This API experimental and subject to change.
-
-        .. todo ::
-
-           * Do we want to also allow ESP/RESP charges?
-
-        Parameters
-        ----------
-        molecule : Molecule
-            Molecule for which partial charges are to be computed
-        charge_model : str, optional, default='bcc'
-            The charge model to use. One of ['gas', 'mul', 'cm1', 'cm2', 'bcc']
-
-        Returns
-        -------
-        charges : numpy.array of shape (natoms) of type float
-            The partial charges
-
-        Notes
-        -----
-        Currently only sdf file supported as input and mol2 as output
-        https://github.com/choderalab/openmoltools/blob/master/openmoltools/packmol.py
-
-        """
-        # Check that the requested charge method is supported
-        SUPPORTED_ANTECHAMBER_CHARGE_METHODS = ['gas', 'mul', 'cm1', 'cm2', 'bcc']
-        if charge_method not in SUPPORTED_ANTECHAMBER_CHARGE_METHODS:
-            raise ValueError('Requested charge method {} not among supported charge methods {}'.format(charge_method, SUPPORTED_ANTECHAMBER_CHARGE_METHODS))
-
-        # Find the path to antechamber
-        ANTECHAMBER_PATH = find_executable("antechamber")
-        if ANTECHAMBER_PATH is None:
-            raise(IOError("Antechamber not found, cannot run charge_mol()"))
-
-        # Compute charges
-        from openmmtools.utils import temporary_directory, temporary_cd
-        with temporary_directory() as tmpdir:
-            with temporary_cd(tmpdir):
-                net_charge = self.net_charge()
-                # Write out molecule in SDF format
-                self.to_file('molecule.sdf', format='SDF')
-                # Compute desired charges
-                # TODO: Add error handling if antechamber chokes
-                os.system("antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf yes -c {} -nc {}".format(charge_method, net_charge))
-                # Write out just charges
-                os.system("antechamber -i charges.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc -cf charges.txt -pf yes")
-                # Read the charges
-                with open('charges.txt', 'r') as infile:
-                    contents = infile.read()
-                text_charges = contents.split()
-                charges = np.zeros([self.n_atoms], np.float64)
-                for index, token in enumerate(text_charges):
-                    charges[index] = float(token)
-
-        return charges
-
-    def _assign_partial_charges_using_quacpac(molecule, charge_model="am1bcc"):
-        """
-        Assign partial charges with OpenEye quacpac
-
-        .. warning :: This API experimental and subject to change.
-
-        .. todo ::
-
-           * Should the default be ELF?
-           * Can we expose more charge models?
-
-        Parameters
-        ----------
-        molecule : Molecule
-            Molecule for which partial charges are to be computed
-        charge_model : str, optional, default='bcc'
-            The charge model to use. One of ['noop', 'mmff', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'amber', 'amberff94', 'am1bccelf10']
-
-        Returns
-        -------
-        charges : numpy.array of shape (natoms) of type float
-            The partial charges
-
-        """
-        oemol = molecule.to_openeye()
-
-        result = False
-        if name == "noop":
-            result = oequacpac.OEAssignCharges(oemol, oequacpac.OEChargeEngineNoOp())
-        elif name == "mmff" or name == "mmff94":
-            result = oequacpac.OEAssignCharges(oemol, oequacpac.OEMMFF94Charges())
-        elif name == "am1bcc":
-            result = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
-        elif name == "am1bccnosymspt":
-            optimize = True
-            symmetrize = True
-            result = oequacpac.OEAssignCharges(mol, oequacpac.OEAM1BCCCharges(not optimize, not symmetrize))
-        elif name == "amber" or name == "amberff94":
-            result = oequacpac.OEAssignCharges(mol, oequacpac.OEAmberFF94Charges())
-        elif name == "am1bccelf10":
-            result = oequacpac.OEAssignCharges(mol, oequacpac.OEAM1BCCELF10Charges())
-        else:
-            raise ValueError('charge_model {} unknown'.format(charge_model))
-
-        if result is False:
-            raise Exception('Unable to assign charges')
-
-        # Extract and return charges
-        charges = np.zeros([oemol.NumAtoms()], np.float64)
-        for index, atom in enumerate(oemol.GetAtoms()):
-            charges[index] = atom.GetPartialCharge()
-        return charges
-
-    def get_fractional_bond_orders(self, method='Wiberg', toolkit=None, **kwargs):
+    def get_fractional_bond_orders(self, method='Wiberg'):
         """Get fractional bond orders.
 
         .. warning :: This API experimental and subject to change.
@@ -1869,15 +1651,12 @@ class Molecule(object):
               or just return the array of bond orders?
             * How do we add enough flexibility to specify the toolkit and optional parameters, such as:
               ``oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, 'OECharges_AM1BCCSym'), False, False)``
+            * Generalize to allow user to specify both QM method and bond order computation approach (e.g. ``AM1`` and ``Wiberg``)
 
         method : str, optional, default='Wiberg'
             The name of the charge method to use.
             Options are:
             * 'Wiberg' : Wiberg bond order
-        toolkit : str, optional, default=None
-            If specified, the provided toolkit module will be used; otherwise, all toolkits will be tried in undefined order.
-            Currently supported options:
-            * 'openeye' : generate conformations with ``openeye.omega`` and assign Wiberg bond order with ``openeye.oequacpac`` using OECharges_AM1BCCSym
 
         Examples
         --------
@@ -1885,10 +1664,12 @@ class Molecule(object):
         Get fractional Wiberg bond orders
 
         >>> molecule = Molecule.from_iupac('imatinib')
-        >>> fractional_bond-orders = molecule.get_fractional_bond_orders(method='Wiberg')
+        >>> fractional_bond_orders = molecule.get_fractional_bond_orders(method='Wiberg')
 
         """
-        pass
+        # TODO: Use memoization to speed up subsequent calls; use decorator?
+        fractional_bond_orders = toolkit_registry.call('compute_fractional_bond_orders', method=method)
+        return fractional_bond_orders
 
     # TODO: Compute terms for each unique molecule, then use mapping to molecules to enumerate all terms
     @property

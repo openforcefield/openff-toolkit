@@ -146,6 +146,8 @@ class ParameterType(object):
     # For example, if we have a parameter with units energy/distance**2, can we check to make
     # sure the dimensionality is preserved when the parameter is modified?
 
+# TODO: Should we have a parameter handler registry?
+
 class ParameterHandler(object):
     """Virtual base class for parameter handlers.
 
