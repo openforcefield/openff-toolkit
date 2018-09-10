@@ -301,6 +301,8 @@ class ToolkitWrapper(object):
 
         .. warning :: This API experimental and subject to change.
 
+        .. todo :: Is this needed at the base class level?
+
         Parameters
         ----------
         molecule : Molecule
@@ -326,6 +328,8 @@ class ToolkitWrapper(object):
         Create a Molecule object from SMILES
 
         .. warning :: This API experimental and subject to change.
+
+        .. todo :: Is this needed at the base class level?
 
         Parameters
         -------
@@ -840,7 +844,7 @@ class AmberToolsWrapper(ToolkitWrapper):
 
     """
     def __init__(self):
-        # TODO: Find AMBERHOME or executables home
+        # TODO: Find AMBERHOME or executable home
         pass
 
     def compute_partial_charges(self, molecule, charge_model="bcc"):
