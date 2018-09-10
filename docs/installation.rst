@@ -86,7 +86,7 @@ Optional dependencies
 ---------------------
 
 This toolkit can optionally make use of the `OpenEye toolkit <https://www.eyesopen.com/toolkit-development>`_ if the user has a license key installed.
-Academic laboratories intending to release results into the public domain can `obtain a free license key <https://www.eyesopen.com/licensing-philosophy>`_, while other users (including academics intending to use the software for purposes of generating protected intellectual property) must `pay to obtain a license <https://www.eyesopen.com/pricing>_`.
+Academic laboratories intending to release results into the public domain can `obtain a free license key <https://www.eyesopen.com/licensing-philosophy>`_, while other users (including academics intending to use the software for purposes of generating protected intellectual property) must `pay to obtain a license <https://www.eyesopen.com/pricing>`_.
 
 To install the OpenEye toolkits (provided you have a valid license file):
 
