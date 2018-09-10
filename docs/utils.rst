@@ -1,7 +1,7 @@
 .. _typing::
 
-Forcefield typing tools
-=======================
+Utilities
+=========
 
 Toolkit wrappers
 ----------------
