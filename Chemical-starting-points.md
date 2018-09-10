@@ -1,6 +1,6 @@
 # Frequently asked questions (FAQ)
 
-## Appropriate starting points for applying a SMIRNOFF
+## Input files for applying SMIRNOFF parameters
 
 SMIRNOFF force fields use direct chemical perception meaning that, unlike many molecular mechanics (MM) force fields, they apply parameters based on substructure searches acting directly on molecules.
 This creates unique opportunities and allows them to encode a great deal of chemistry quite simply, but it also means that the *starting point* for parameter assignment must be well-defined chemically, giving not just the elements and connectivity for all of the atoms of all of the components of your system, but also providing the formal charges and bond orders.
