@@ -1,4 +1,4 @@
-# The SMIRks Native Open Force Field (SMIRNOFF) specification 1.0
+# The SMIRks Native Open Force Field (SMIRNOFF) specification v1.0
 
 SMIRNOFF is a specification for encoding molecular mechanics force fields from the [Open Force Field Initiative](http://openforcefield.org) based on direct chemical perception using the broadly-supported [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) language, utilizing atom tagging extensions from [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html).
 

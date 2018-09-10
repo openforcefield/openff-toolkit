@@ -10,19 +10,22 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 1.0.0
 -----
 
-This is the first major release of the openforcefield toolkit intended for production use.
+This is the first major release of the toolkit intended for production use.
 
 New features
 """"""""""""
 
-* Complete overhaul of SMIRNOFF format
+* Major overhaul and streamlining of SMIRNOFF format and its XML representation
 * Updated API and infrastructure for :class:`ForceField` with modular reader/writer support for different representations
-* Introduction of new :class:`Topology` format
+* Introduction of :class:`Molecule` and :class:`Topology` classes for representing molecules and biomolecular systems
+* New :class:`ToolkitWrapper` interface to RDKit, OpenEye, and AmberTools toolkits, managed by :class:`ToolkitRegistry`
+* API improvements to more closely follow `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ guidelines
+* Improved documentation and examples
 
 0.1.0
 -----
 
-This is an early preview release of the openforcefield toolkit that matches the functionality described in the preprint describing the SMIRNOFF v0.1 force field format: `[DOI] <https://doi.org/10.1101/286542>`_.
+This is an early preview release of the toolkit that matches the functionality described in the preprint describing the SMIRNOFF v0.1 force field format: `[DOI] <https://doi.org/10.1101/286542>`_.
 
 New features
 """"""""""""
