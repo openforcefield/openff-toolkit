@@ -93,7 +93,7 @@ Daylight provides detailed specifications of the [SMILES](http://www.daylight.co
 
 For more detailed examples, see [`examples/chemicalEnvironments/README.md`](https://github.com/openforcefield/openforcefield/blob/topology/examples/chemicalEnvironments/README.md) and the corresponding [`examples/chemicalEnvironments/using_environment.ipynb`](https://github.com/openforcefield/openforcefield/blob/master/examples/chemicalEnvironments/using_environments.ipynb) example notebook.
 
-# Frequently asked questions (FAQs)
+# Frequently asked questions (FAQ)
 
 See [`Chemical-starting-points.md`](Chemical-starting-points.md) for answers to a variety of common problems, such as:
 * Why do I need to provide molecules corresponding to the components of my system, or a `Topology` with bond orders?
