@@ -45,6 +45,11 @@ from openforcefield.utils.toolkits import OPENEYE_INSTALLED, RDKIT_INSTALLED, TO
 from openforcefield.utils.toolkits import requires_rdkit, requires_openeye
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
+# TODO: Do we need these?
+from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL, ALLOWED_AROMATICITY_MODELS
+from openforcefield.utils.toolkits import DEFAULT_FRACTIONAL_BONDORDER_MODEL, ALLOWED_FRACTIONAL_BONDORDER_MODELS
+from openforcefield.utils.toolkits import DEFAULT_CHARGE_MODEL, ALLOWED_CHARGE_MODELS
+
 #=============================================================================================
 # GLOBAL PARAMETERS
 #=============================================================================================
@@ -57,15 +62,6 @@ from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingEr
 
 # TODO: Allow all OpenEye aromaticity models to be used with OpenEye names?
 #       Only support OEAroModel_MDL in RDKit version?
-
-DEFAULT_AROMATICITY_MODEL = 'OEAroModel_MDL' # TODO: Is there a more specific name and reference for the aromaticity model?
-ALLOWED_AROMATICITY_MODELS = ['OEAroModel_MDL']
-
-DEFAULT_FRACTIONAL_BONDORDER_MODEL = 'Wiberg' # TODO: Is there a more specific name and reference for the fractional bond order models?
-ALLOWED_FRACTIONAL_BONDORDER_MODELS = ['Wiberg']
-
-DEFAULT_CHARGE_MODEL = 'AM1-BCC' # TODO: Should this be `AM1-BCC`, or should we encode BCCs explicitly via AM1-CM2 preprocessing?
-ALLOWED_CHARGE_MODELS = ['AM1-BCC'] # TODO: Which models do we want to support?
 
 #=============================================================================================
 # PRIVATE SUBROUTINES
@@ -574,7 +570,7 @@ class Molecule(object):
         for toolkit in REGISTERED_TOOLKITS:
             try:
                 return toolkit.to_smiles(self)
-            catch NotImplementedError as e:
+            except NotImplementedError as e:
                 pass
         raise NotImplementedError('No registered toolkits can provide this capability.')
 

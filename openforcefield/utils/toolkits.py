@@ -27,6 +27,16 @@ from functools import wraps
 # CHEMINFORMATICS TOOLKITS
 #=============================================================================================
 
+DEFAULT_AROMATICITY_MODEL = 'OEAroModel_MDL' # TODO: Is there a more specific name and reference for the aromaticity model?
+ALLOWED_AROMATICITY_MODELS = ['OEAroModel_MDL']
+
+DEFAULT_FRACTIONAL_BONDORDER_MODEL = 'Wiberg' # TODO: Is there a more specific name and reference for the fractional bond order models?
+ALLOWED_FRACTIONAL_BONDORDER_MODELS = ['Wiberg']
+
+DEFAULT_CHARGE_MODEL = 'AM1-BCC' # TODO: Should this be `AM1-BCC`, or should we encode BCCs explicitly via AM1-CM2 preprocessing?
+ALLOWED_CHARGE_MODELS = ['AM1-BCC'] # TODO: Which models do we want to support?
+
+
 # TODO: Generalize this infrastructure to make it easier to support additional toolkits in future
 
 # Control the precedence order in which cheminformatics toolkits are used
@@ -1018,7 +1028,7 @@ class ToolkitRegistry(object):
                 method = getattr(toolkit, method_name)
                 try:
                     return method
-                catch NotImplementedError as e:
+                except NotImplementedError as e:
                     pass
 
         # No toolkit was found to provide the requested capability
@@ -1058,7 +1068,7 @@ class ToolkitRegistry(object):
         >>> smiles = toolkit_registry.call('to_smiles', molecule)
 
         """
-        # TODO: Catch ValueError and compile list of methods that exist but rejected the specific parameters because they did not implement the requested methods
+        # TODO: catch ValueError and compile list of methods that exist but rejected the specific parameters because they did not implement the requested methods
 
         value_errors = list()
         for toolkit in self._toolkits:
@@ -1067,9 +1077,9 @@ class ToolkitRegistry(object):
                 return method(*args, **kwargs)
                 try:
                     return method
-                catch NotImplementedError as e:
+                except NotImplementedError as e:
                     pass
-                catch ValueError as value_error:
+                except ValueError as value_error:
                     value_errors.append( (toolkit, value_error) )
 
         # No toolkit was found to provide the requested capability
