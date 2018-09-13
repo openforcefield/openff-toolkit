@@ -38,7 +38,7 @@ from copy import deepcopy
 from distutils.spawn import find_executable
 
 from simtk import unit
-from simtk.openmm.app import element as elem
+from simtk.openmm.app import element
 
 import openforcefield
 from openforcefield.utils.toolkits import OPENEYE_INSTALLED, RDKIT_INSTALLED, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
@@ -80,53 +80,7 @@ class Particle(object):
     A particle object could be an ``Atom`` or a ``VirtualSite``.
 
     """
-    def __init__(self):
-        """
-        Create a particle.
-        """
-        # TODO: Don't allow a Particle to be constructed directly; only an Atom or VirtualSite
-        raise Exception('A Particle cannot be created directly; only an Atom or VirtualSite can be created directly')
-        self._name = name # the particle name
-        self._topology = None # the Topology object this Particle belongs to
-
-    @property
-    def topology(self):
-        """
-        The Topology object that owns this particle, or None.
-        """
-        return self._topology
-
-    @property
-    def name(self):
-        """
-        An arbitrary label assigned to the particle.
-
-        """
-        return self._name
-
-    @property
-    def particle_index(self):
-        """
-        Index of this particle within the ``Topology`` or corresponding OpenMM ``System`` object.
-
-        .. todo::
-
-           Should ``atom.particle_index`` just be called ``index``, or does that risk confusion within
-           the index within ``topology.atoms``, which will differ if the system has virtual sites?
-
-        """
-        if self._topology is None:
-            raise Exception('This particle does not belong to a Topology')
-        # Return index of this particle within the Topology
-        # TODO: This will be slow; can we cache this and update it only when needed?
-        #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
-        return self._topology.particles.index(self)
-
-    def __repr__(self):
-        pass
-
-    def __str__(self):
-        pass
+    pass
 
 #=============================================================================================
 # Atom
@@ -154,9 +108,13 @@ class Atom(Particle):
     """
     def __init__(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None):
         """
-        Create an Atom object.
+        Create an immutable Atom object.
+
+        Object is serializable and immutable.
 
         .. todo :: Use attrs to validate?
+
+        .. todo :: We can add setters if we need to.
 
         Parameters
         ----------
@@ -171,12 +129,23 @@ class Atom(Particle):
         name : str, optional, default=None
             An optional name to be associated with the atom
 
+        Examples
+        --------
+
+        Create a non-aromatic carbon atom
+
+        >>> atom = Atom(6, 0, False)
+
+        Create a chiral carbon atom
+
+        >>> atom = Atom(6, 0, False, stereochemistry='R', name='CT')
+
         """
-        super(Atom, self).__init__()
-
-
         self._atomic_number = atomic_number
-        self._element = element # TODO: Validate and store Element
+        self._formal_charge = formal_charge
+        self._is_aromatic = is_aromatic
+        self._stereochemistry = stereochemistry
+        self._name = name
 
     @property
     def element(self):
@@ -184,7 +153,7 @@ class Atom(Particle):
         The element name
 
         """
-        pass
+        return element.Element.getByAtomicNumber(self._atomic_number)
 
     @property
     def atomic_number(self):
@@ -192,15 +161,19 @@ class Atom(Particle):
         The integer atomic number of the atom.
 
         """
-        pass
+        return self._atomic_number
 
     @property
     def mass(self):
         """
-        The atomic mass of the atomic site.
+        The standard atomic weight (abundance-weighted isotopic mass) of the atomic site.
+
+        .. todo :: Should we discriminate between standard atomic weight and most abundant isotopic mass?
 
         """
-        pass
+        return self.element.mass
+
+    # TODO: How are we keeping track of bonds, angles, etc?
 
     @property
     def bonds(self):
@@ -359,13 +332,13 @@ class Bond(object):
         """
         Create a new chemical bond.
         """
-        # TODO: Make sure atom1 and atom2 are both Atom types
+        assert type(atom1) == Atom
+        assert type(atom2) == Atom
         self._atom1 = atom1
         self._atom2 = atom2
+        # TODO: Check bondtype and fractional_bondorder are valid?
         self._type = bondtype
         self._fractional_bondorder = fractional_bondorder
-
-    # TODO: add getters for each of these bond properties
 
     @property
     def atom1(self):
@@ -389,7 +362,6 @@ class Bond(object):
     @fractional_bondorder.setter
     def fractional_bondorder(self, value):
         self._fractional_bondorder = value
-
 
 #=============================================================================================
 # Molecule
@@ -871,8 +843,8 @@ class Molecule(object):
 
         .. todo ::
 
-           * Do we want to generalize this to other kinds of queries too, like mdtraj DSL, pymol selections, atom index slices, etc?
-             We could just call it topology.matches(query)
+           * Do we want to generalize ``query`` to allow other kinds of queries, such as mdtraj DSL, pymol selections, atom index slices, etc?
+             We could call it ``topology.matches(query)`` instead of ``chemical_environment_matches``
 
         Parameters
         ----------
@@ -894,13 +866,16 @@ class Molecule(object):
 
         """
         # Resolve to SMIRKS if needed
-        # TODO: Udpdate
+        # TODO: Update this to use updated ChemicalEnvironment API
         if hasattr(query, 'asSMIRKS'):
             smirks = query.asSMIRKS()
-        else:
+        elif type(query) == str:
             smirks = query
+        else:
+            raise ValueError("'query' must be either a string or a ChemicalEnvironment")
 
         # Use specified cheminformatics toolkit to determine matches with specified aromaticity model
+        # TODO: Move this to toolkit handling
         toolkit = TOOLKIT_PRECEDENCE[0]
         if toolkit == 'oechem':
             matches = _openye_smirks_matches(self.to_openeye(), smirks, aromaticity_model=self._aromaticity_model)
@@ -911,6 +886,7 @@ class Molecule(object):
 
         return matches
 
+    # TODO: Move this to ToolkitWrapper
     @staticmethod
     @requires_rdkit()
     def _rdkit_smirks_matches(rdmol, smirks, aromaticity_model='OEAroModel_MDL'):
@@ -976,6 +952,7 @@ class Molecule(object):
 
         return matches
 
+    # TODO: Move this to ToolkitWrapper
     @staticmethod
     @requires_openeye('oechem')
     def _oechem_smirks_matches(oemol, smirks):

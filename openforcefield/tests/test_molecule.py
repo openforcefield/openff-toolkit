@@ -33,6 +33,7 @@ from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORT
 # TESTS
 #=============================================================================================
 
+# TODO: Generalize this to instead catch ToolkitWrapper exceptions in case the toolkit capability is unavailable
 _OPENEYE_UNAVAILABLE_MESSAGE = 'requires the OpenEye toolkit'
 _RDKIT_UNAVAILABLE_MESSAGE = 'requires RDKit'
 
@@ -59,16 +60,50 @@ def test_cheminformatics_toolkit_is_installed():
         msg += str(SUPPORTED_TOOLKITS)
         raise Exception(msg)
 
-@pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE) # TODO: Remove this when setUp is openeye-independent
 class TestMolecule(TestCase):
-    from openforcefield.topology import Molecule
+    from openforcefield.topology import Atom, Bond, Molecule
 
-    @pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE) # TODO: Remove this when setUp is openeye-independent
     def setUp(self):
-        # TODO: Serialize the offmols instead so that we can run this test without OpenEye
+        # TODO: Serialize the offmols instead so that we can run this test without toolkits
         #self.molecules = pickle.load('zinc-subset-offmols.pkl')
         filename = get_data_filename('molecules/zinc-subset-tripos.mol2.gz')
         self.molecules = Molecule.from_file(filename)
+
+    def test_create_atom(self):
+        """Test Atom creation"""
+        # Create a non-aromatic carbon atom
+        atom = Atom(6, 0, False)
+        # Create a chiral carbon atom
+        atom = Atom(6, 0, False, stereochemistry='R', name='CT')
+
+    def test_atom_properties(self):
+        """Test Atom.element"""
+        from simtk.openmm.app import element
+        formal_charge = 0
+        is_aromatic = False
+        # Attempt to create all elements supported by OpenMM
+        elements = [getattr(element, name) for name in dir(element) if (type(getattr(element, name)) == element.Element)]
+        for element in elements:
+            atom = Atom(element.atomic_number, formal_charge, is_aromatic)
+            assert atom.atomic_number == element.atomic_number
+            assert atom.element == element
+            assert atom.mass == element.mass
+            assert atom.formal_charge == formal_charge
+            assert atom.is_aromatic = is_aromatic
+
+    def test_create_molecule(self):
+        """Test creation of molecule by adding molecules and bonds"""
+        # Define a methane molecule
+        molecule = Molecule(name='methane')
+        C = molecule.add_atom(6, 0, False)
+        H1 = molecule.add_atom(1, 0, False)
+        H2 = molecule.add_atom(1, 0, False)
+        H3 = molecule.add_atom(1, 0, False)
+        H4 = molecule.add_atom(1, 0, False)
+        molecule.add_bond(C, H1, False, 1)
+        molecule.add_bond(C, H2, False, 1)
+        molecule.add_bond(C, H3, False, 1)
+        molecule.add_bond(C, H4, False, 1)
 
     def test_create_empty(self):
         """Test creation of an empty Molecule"""
@@ -174,15 +209,16 @@ class TestMolecule(TestCase):
         """Test angles property"""
         for molecule in self.molecules:
             for angle in molecule.angles:
-                # TODO: Check 1-2 and 2-3 bonds
-                pass
+                assert angle[0].bonded_to(angle[1])
+                assert angle[1].bonded_to(angle[1])
 
     def test_propers(self):
         """Test propers property"""
         for molecule in self.molecules:
             for proper in molecule.propers:
-                # TODO: Check 1-2, 2-3, and 3-4 bonds
-                pass
+                assert angle[0].bonded_to(angle[1])
+                assert angle[1].bonded_to(angle[2])
+                assert angle[2].bonded_to(angle[3])
 
     def test_impropers(self):
         """Test impropers property"""
@@ -204,9 +240,41 @@ class TestMolecule(TestCase):
 
     def test_chemical_environment_matches(self):
         """Test chemical environment matches"""
-        # TODO: Test known cases
+        # Create chiral molecule
+        from simtk.openmm.app import element
+        molecule = Molecule()
+        atom_C = molecule.add_atom(element.carbon.atomic_number, 0, False, stereochemistry='R', name='C')
+        atom_H = molecule.add_atom(element.hydrogen.atomic_number, 0, False, name='H')
+        atom_Cl = molecule.add_atom(element.chlorine.atomic_number, 0, False, name='Cl')
+        atom_Br = molecule.add_atom(element.bromine.atomic_number, 0, False, name='Br')
+        atom_F = molecule.add_atom(element.fluorine.atomic_number, 0, False, name='F')
+        molecule.add_bond(atom_C, atom_H)
+        molecule.add_bond(atom_C, atom_Cl)
+        molecule.add_bond(atom_C, atom_Br)
+        molecule.add_bond(atom_C, atom_F)
+        # Test known cases
+        matches = molecule.chemical_environment_matches('[#6:1]')
+        assert len(matches) == 1 # there should be a unique match, so one atom tuple is returned
+        assert len(matches[0]) == 1 # it should have one tagged atom
+        assert set(matches[0]) = set(atom_C)
+        matches = molecule.chemical_environment_matches('[#6:1]~[#1:2]')
+        assert len(matches) == 1 # there should be a unique match, so one atom tuple is returned
+        assert len(matches[0]) == 2 # it should have two tagged atoms
+        assert set(matches[0]) == set([atom_C, atom_H])
+        matches = molecule.chemical_environment_matches('[Cl:1]-[C:2]-[H:3]')
+        assert len(matches) == 1 # there should be a unique match, so one atom tuple is returned
+        assert len(matches[0]) == 3 # it should have three tagged atoms
+        assert set(matches[0]) == set([atom_Cl, atom_C, atom_H])
+        matches = molecule.chemical_environment_matches('[#6:1]~[*:2]')
+        assert len(matches) == 4 # there should be four matches
+        for match in matches:
+            assert len(match) == 2 # each match should have two tagged atoms
 
-    # TODO: Test ``name`` property
+    def test_name(self):
+        """Test name property"""
+        name = 'benzene'
+        molecule = Molecule(name=name)
+        assert molecule.name == name
 
     @pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)
     def test_iupac_roundtrip(self):

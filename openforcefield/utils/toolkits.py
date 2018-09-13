@@ -36,16 +36,14 @@ ALLOWED_FRACTIONAL_BONDORDER_MODELS = ['Wiberg']
 DEFAULT_CHARGE_MODEL = 'AM1-BCC' # TODO: Should this be `AM1-BCC`, or should we encode BCCs explicitly via AM1-CM2 preprocessing?
 ALLOWED_CHARGE_MODELS = ['AM1-BCC'] # TODO: Which models do we want to support?
 
-
-# TODO: Generalize this infrastructure to make it easier to support additional toolkits in future
-
 # Control the precedence order in which cheminformatics toolkits are used
 TOOLKIT_PRECEDENCE = ['openeye', 'rdkit']
 
 # List of supported toolkits and messages indicating how they can be installed
 SUPPORTED_TOOLKITS = {
     'rdkit' : 'A conda-installable version of the free and open source RDKit cheminformatics toolkit can be found at: https://anaconda.org/rdkit/rdkit',
-    'openeye' : 'The OpenEye toolkit requires a (free for academics) license, and can be found at: https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html'
+    'openeye' : 'The OpenEye toolkit requires a (free for academics) license, and can be found at: https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html',
+    'ambertools' : 'The AmberTools toolkit (free and open source) can be found at https://anaconda.org/omnia/ambertools'
 }
 
 class LicenseError(Exception):
@@ -191,77 +189,19 @@ SUPPORTED_FILE_FORMATS['openeye'] = ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INC
                                      'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', 'XYC']
 SUPPORTED_FILE_FORMATS['rdkit'] = ['SDF', 'PDB', 'SMI', 'TDT']
 
-@requires_openeye('oechem')
-def openeye_cip_atom_stereochemistry(oemol, oeatom):
-    """
-    .. warning :: This API experimental and subject to change.
+#=============================================================================================
+# UTILITY FUNCTIONS
+#=============================================================================================
 
-    Determine CIP stereochemistry (R/S) for the specified atom
+from inspect import getmembers, isfunction
 
-    Parameters
-    ----------
-    oemol : openeye.oechem.OEMolBase
-        The molecule of interest
-    oeatom : openeye.oechem.OEAtomBase
-        The atom whose stereochemistry is to be computed
-
-    Returns
-    -------
-    stereochemistry : str
-        'R', 'S', or None if no stereochemistry is specified or the atom is not a stereocenter
-    """
-    from openeye import oechem
-
-    if not oeatom.HasStereoSpecified():
-        # No stereochemical information has been stored, so this could be unknown stereochemistry
-        # TODO: Should we raise an exception?
-        return None
-
-    cip = oechem.OEPerceiveCIPStereo(oemol, oeatom)
-
-    if cip == oechem.OECIPAtomStereo_S:
-        return 'S'
-    elif cip == oechem.OECIPAtomStereo_R:
-        return 'R'
-    elif cip == oechem.OECIPAtomStereo_NotStereo:
-        # Not a stereocenter
-        # TODO: Should this be a different case from ``None``?
-        return None
-
-def openeye_cip_bond_stereochemistry(oemol, oebond):
-    """
-    .. warning :: This API experimental and subject to change.
-
-    Determine CIP stereochemistry (E/Z) for the specified bond
-
-    Parameters
-    ----------
-    oemol : openeye.oechem.OEMolBase
-        The molecule of interest
-    oebond : openeye.oechem.OEBondBase
-        The bond whose stereochemistry is to be computed
-
-    Returns
-    -------
-    stereochemistry : str
-        'E', 'Z', or None if stereochemistry is unspecified or the bond is not a stereo bond
-
-    """
-    from openeye import oechem
-
-    if not oebond.HasStereoSpecified():
-        # No stereochemical information has been stored, so this could be unknown stereochemistry
-        # TODO: Should we raise an exception?
-        return None
-
-    cip = oechem.OEPerceiveCIPStereo(mol, bond)
-
-    if cip == oechem.OECIPBondStereo_E:
-        return 'E'
-    elif cip == oechem.OECIPBondStereo_Z:
-        return 'Z'
-    elif cip == oechem.OECIPBondStereo_NotStereo:
-        return None
+def inherit_docstrings(cls):
+    for name, func in getmembers(cls, isfunction):
+        if func.__doc__: continue
+        for parent in cls.__mro__[1:]:
+            if hasattr(parent, name):
+                func.__doc__ = getattr(parent, name).__doc__
+    return cls
 
 #=============================================================================================
 # CHEMINFORMATICS TOOLKIT WRAPPERS
@@ -361,10 +301,115 @@ class ToolkitWrapper(object):
         """
         raise NotImplementedError
 
+    def compute_partial_charges(self, molecule, charge_model="bcc"):
+        """
+        Compute partial charges
+
+        .. warning :: This API experimental and subject to change.
+
+        .. todo ::
+
+           * Do we want to also allow ESP/RESP charges?
+
+        Parameters
+        ----------
+        molecule : Molecule
+            Molecule for which partial charges are to be computed
+        charge_model : str, optional, default='bcc'
+            The charge model to use. One of ['gas', 'mul', 'cm1', 'cm2', 'bcc']
+
+        Returns
+        -------
+        charges : numpy.array of shape (natoms) of type float
+            The partial charges
+
+        Raises
+        ------
+        ValueError if the requested charge method could not be handled
+
+        """
+        raise NotImplementedError
+
+@inherit_docstrings
 class OpenEyeToolkitWrapper(object):
     """
     OpenEye toolkit wrapper
     """
+    @staticmethod
+    @requires_openeye('oechem')
+    def _openeye_cip_atom_stereochemistry(oemol, oeatom):
+        """
+        .. warning :: This API experimental and subject to change.
+
+        Determine CIP stereochemistry (R/S) for the specified atom
+
+        Parameters
+        ----------
+        oemol : openeye.oechem.OEMolBase
+            The molecule of interest
+        oeatom : openeye.oechem.OEAtomBase
+            The atom whose stereochemistry is to be computed
+
+        Returns
+        -------
+        stereochemistry : str
+            'R', 'S', or None if no stereochemistry is specified or the atom is not a stereocenter
+        """
+        from openeye import oechem
+
+        if not oeatom.HasStereoSpecified():
+            # No stereochemical information has been stored, so this could be unknown stereochemistry
+            # TODO: Should we raise an exception?
+            return None
+
+        cip = oechem.OEPerceiveCIPStereo(oemol, oeatom)
+
+        if cip == oechem.OECIPAtomStereo_S:
+            return 'S'
+        elif cip == oechem.OECIPAtomStereo_R:
+            return 'R'
+        elif cip == oechem.OECIPAtomStereo_NotStereo:
+            # Not a stereocenter
+            # TODO: Should this be a different case from ``None``?
+            return None
+
+    @staticmethod
+    @requires_openeye('oechem')
+    def _openeye_cip_bond_stereochemistry(oemol, oebond):
+        """
+        .. warning :: This API experimental and subject to change.
+
+        Determine CIP stereochemistry (E/Z) for the specified bond
+
+        Parameters
+        ----------
+        oemol : openeye.oechem.OEMolBase
+            The molecule of interest
+        oebond : openeye.oechem.OEBondBase
+            The bond whose stereochemistry is to be computed
+
+        Returns
+        -------
+        stereochemistry : str
+            'E', 'Z', or None if stereochemistry is unspecified or the bond is not a stereo bond
+
+        """
+        from openeye import oechem
+
+        if not oebond.HasStereoSpecified():
+            # No stereochemical information has been stored, so this could be unknown stereochemistry
+            # TODO: Should we raise an exception?
+            return None
+
+        cip = oechem.OEPerceiveCIPStereo(mol, bond)
+
+        if cip == oechem.OECIPBondStereo_E:
+            return 'E'
+        elif cip == oechem.OECIPBondStereo_Z:
+            return 'Z'
+        elif cip == oechem.OECIPBondStereo_NotStereo:
+            return None
+
     @staticmethod
     @requires_openeye('oechem') # TODO: Is this still needed?
     def from_openeye(oemol):
@@ -391,7 +436,6 @@ class OpenEyeToolkitWrapper(object):
 
         """
         from openeye import oechem
-        from openforcefield.utils.toolkits import openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
 
         molecule = Molecule()
 
@@ -489,12 +533,12 @@ class OpenEyeToolkitWrapper(object):
             oeatom.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Right)
 
             # Flip chirality if stereochemistry is incorrect
-            oeatom_stereochemistry = openeye_cip_atom_stereochemistry(oemol, oeatom)
+            oeatom_stereochemistry = _openeye_cip_atom_stereochemistry(oemol, oeatom)
             if oeatom_stereochemistry != atom.sterechemistry:
                 # Flip the stereochemistry
                 oea.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left)
                 # Verify it matches now as a sanity check
-                oeatom_stereochemistry = openeye_cip_atom_stereochemistry(oemol, oeatom)
+                oeatom_stereochemistry = _openeye_cip_atom_stereochemistry(oemol, oeatom)
                 if oeatom_stereochemistry != atom.stereochemistry:
                     raise Exception('Programming error: OpenEye atom stereochemistry assumptions failed.')
 
@@ -510,18 +554,18 @@ class OpenEyeToolkitWrapper(object):
             oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Cis)
 
             # Flip stereochemistry if incorrect
-            oebond_stereochemistry = openeye_cip_bond_stereochemistry(oemol, oebond)
+            oebond_stereochemistry = _openeye_cip_bond_stereochemistry(oemol, oebond)
             if oebond_stereochemistry != bond.sterechemistry:
                 # Flip the stereochemistry
                 oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Trans)
                 # Verify it matches now as a sanity check
-                oebond_stereochemistry = openeye_cip_bond_stereochemistry(oemol, oebond)
+                oebond_stereochemistry = _openeye_cip_bond_stereochemistry(oemol, oebond)
                 if oebond_stereochemistry != bond.stereochemistry:
                     raise Exception('Programming error: OpenEye bond stereochemistry assumptions failed.')
 
-        # TODO: Save conformations, if present
+        # TODO: Retain conformations, if present
 
-        # TODO: Save name and properties, if present
+        # TODO: Retain name and properties, if present
 
         # Clean Up phase
         # The only feature of a molecule that wasn't perceived above seemed to be ring connectivity, better to run it
@@ -530,8 +574,8 @@ class OpenEyeToolkitWrapper(object):
 
         return oemol
 
-    # TODO: How can we inherit the base class docstring?
     def to_smiles(self, molecule):
+        # inherits base class docstring
         from openeye import oechem
         oemol = self.to_openeye(molecule)
         return oechem.OEMolToSmiles(oemol)
@@ -593,8 +637,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     """
     RDKit toolkit wrapper
     """
-    # TODO: How can we inherit the base class docstring?
     def to_smiles(self, molecule):
+        # inherits base class docstring
         from rdkit import Chem
         rdmol = self.to_rdkit(molecule)
         return Chem.MolToSmiles(rdmol, isomericSmiles=True)

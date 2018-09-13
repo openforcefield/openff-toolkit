@@ -15,12 +15,11 @@ This is the first major release of the toolkit intended for production use.
 New features
 """"""""""""
 
-* Major overhaul and streamlining of SMIRNOFF format and its XML representation
-* Updated API and infrastructure for :class:`ForceField` with modular reader/writer support for different representations
-* Introduction of :class:`Molecule` and :class:`Topology` classes for representing molecules and biomolecular systems
-* New :class:`ToolkitWrapper` interface to RDKit, OpenEye, and AmberTools toolkits, managed by :class:`ToolkitRegistry`
-* API improvements to more closely follow `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ guidelines
-* Improved documentation and examples
+* Major overhaul and streamlining of SMIRNOFF format and its XML representation Updated API and infrastructure for :class:`ForceField` with
+* modular reader/writer support for different representations Introduction of :class:`Molecule` and :class:`Topology` classes for
+* representing molecules and biomolecular systems New :class:`ToolkitWrapper` interface to RDKit, OpenEye, and AmberTools toolkits, managed
+* by :class:`ToolkitRegistry` API improvements to more closely follow `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ guidelines
+* Improved documentation and examplesxz
 
 0.1.0
 -----
