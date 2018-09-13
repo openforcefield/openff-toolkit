@@ -480,13 +480,187 @@ class Molecule(object):
                 msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(other)
                 raise Exception(msg)
 
+    ####################################################################################################
+    # Safe serialization
+    ####################################################################################################
+
+    def to_dict(self):
+        """
+        Return a dictionary representation of the molecule.
+
+        .. todo ::
+
+           * Document the representation standard.
+           * How do we do version control with this standard?
+
+        Returns
+        -------
+        molecule_dict : OrderedDict
+            A dictionary representation of the molecule.
+
+        """
+        molecule_dict = OrderedDict()
+        molecule_dict['name'] = self.name
+        molecule_dict['atoms'] = [ atom.to_dict() for atom in self.atoms ]
+        molecule_dict['virtual_sites'] = [ vsite.to_dict() for vsite in self.virtual_sites ]
+        molecule_dict['bonds'] = [ bond.to_dict() for bond in self.bonds ] # TODO: How do we make sure bonds are serializable?
+        # TODO: Charges
+        # TODO: Properties
+        # TODO: Conformers
+        return molecule_dict
+
+    @staticmethod
+    def from_dict(molecule_dict):
+        """
+        Create a Molecule from a dictionary representation
+
+        Parameters
+        ----------
+        molecule_dict : OrderedDict
+            A dictionary representation of the molecule.
+
+        Returns
+        -------
+        molecule : Molecule
+            A Molecule created from the dictionary representation
+
+        """
+        # TODO: Provide useful exception messages if there are any failures
+        molecule = Molecule(name=molecule_dict['name'])
+        for atom in molecule_dict['atoms']:
+            molecule.add_atom(*atom)
+        for vsite in molecule_dict['virtual_sites']:
+            molecule.add_atom(*vsite)
+        for bond in molecule_dict['bonds']:
+            molecule.add_bond(*bond) # TODO: How is this correctly handled? using indices?
+        # TODO: Charges
+        # TODO: Properties
+        # TODO: Conformers
+        return molecule
+
+    def __getstate__(self):
+        return self.to_dict()
+
+    def __setstate__(self, state):
+        return self.from_dict(state)
+
+    ####################################################################################################
+    # TODO: Separate {to|from}_{json|toml|yaml} into a mixin; add {pickle|bson|messagepack}
+    ####################################################################################################
+
+    def to_json(self):
+        """
+        Return a JSON representation of the molecule.
+
+        Returns
+        -------
+        molecule_json : str
+            A JSON representation of the molecule.
+
+        """
+        import json
+        molecule_dict = self.to_dict()
+        return json.dumps(molecule_dict)
+
+    @staticmethod
+    def from_json(molecule_json):
+        """
+        Return a JSON representation of the molecule.
+
+        Parameters
+        -------
+        molecule_json : str
+            A JSON representation of the molecule.
+
+        Returns
+        -------
+        molecule : Molecule
+            A Molecule created from the dictionary representation
+
+        """
+        import json
+        molecule_dict = json.loads(molecule_json)
+        return Molecule.from_dict(molecule_dict)
+
+    def to_toml(self):
+        """
+        Return a TOML representation of the molecule.
+
+        Returns
+        -------
+        molecule_toml : str
+            A TOML representation of the molecule.
+
+        """
+        import toml
+        molecule_dict = self.to_dict()
+        return toml.dumps(molecule_dict)
+
+    @staticmethod
+    def from_toml(molecule_toml):
+        """
+        Return a TOML representation of the molecule.
+
+        Parameters
+        -------
+        molecule_toml : str
+            A TOML representation of the molecule.
+
+        Returns
+        -------
+        molecule : Molecule
+            A Molecule created from the dictionary representation
+
+        """
+        import toml
+        molecule_dict = toml.loads(molecule_toml)
+        return Molecule.from_dict(molecule_dict)
+
+    def to_yaml(self):
+        """
+        Return a YAML representation of the molecule.
+
+        Returns
+        -------
+        molecule_toml : str
+            A YAML representation of the molecule.
+
+        """
+        import yaml
+        molecule_dict = self.to_dict()
+        return yaml.dumps(molecule_dict)
+
+    @staticmethod
+    def from_yaml(molecule_yaml):
+        """
+        Return a YAML representation of the molecule.
+
+        Parameters
+        -------
+        molecule_yaml : str
+            A YAML representation of the molecule.
+
+        Returns
+        -------
+        molecule : Molecule
+            A Molecule created from the dictionary representation
+
+        """
+        import yaml
+        molecule_dict = yaml.loads(molecule_toml)
+        return Molecule.from_dict(molecule_dict)
+
+    ####################################################################################################
+    # END TODO
+    ####################################################################################################
+
     def _initialize(self):
         """
         Clear the contents of the current molecule.
         """
+        self._name = None # TODO: Should we keep a name, or just store that in _properties?
         self._particles = list() # List of particles (atoms or virtual sites) # TODO: Should this be a dict?
         self._bonds = list() # List of bonds between Atom objects # TODO: Should this be a dict?
-        self._name = None # TODO: Should we keep a name, or just store that in _properties?
         self._charges = None # TODO: Storage charges
         self._properties = None # Attached properties to be preserved
         self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
@@ -1142,14 +1316,6 @@ class Molecule(object):
 
         """
         return Topology.from_molecules(self)
-
-    # TODO: Implement specialized JSON/BSON deserialization, if needed.
-    #def __setstate__(self, state):
-    #    pass
-
-    # TODO: Implement specialized JSON/BSON serialization, if needed
-    #def __getstate__(self):
-    #    pass
 
     @staticmethod
     def from_file(filename):

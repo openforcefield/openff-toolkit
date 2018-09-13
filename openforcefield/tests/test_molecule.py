@@ -69,6 +69,15 @@ class TestMolecule(TestCase):
         filename = get_data_filename('molecules/zinc-subset-tripos.mol2.gz')
         self.molecules = Molecule.from_file(filename)
 
+    # TODO: Test getstate/setstate
+    # TODO: Test {to_from}_{dict|yaml|toml|json|bson|messagepack|pickle}
+    def test_pickle(self):
+        """Test pickling"""
+        serialized = pickle.dumps(self.molecules)
+        molecules_copy = pickle.loads(serialized)
+        for (molecule, molecule_copy) in zip(self.molecules, molecules_copy):
+            assert molecule == molecule_copy
+            
     def test_create_atom(self):
         """Test Atom creation"""
         # Create a non-aromatic carbon atom
@@ -289,13 +298,6 @@ class TestMolecule(TestCase):
         for molecule in self.molecules:
             topology = molecule.to_topology()
             molecule_copy = Molecule.from_topology(topology)
-            assert molecule == molecule_copy
-
-    def test_pickle(self):
-        """Test pickling"""
-        serialized = pickle.dumps(self.molecules)
-        molecules_copy = pickle.loads(serialized)
-        for (molecule, molecule_copy) in zip(self.molecules, molecules_copy):
             assert molecule == molecule_copy
 
     def test_file_roundtrip(self):
