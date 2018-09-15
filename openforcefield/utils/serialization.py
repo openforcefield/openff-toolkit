@@ -23,6 +23,11 @@ class Serializable(object):
     To use this mix-in, the class inheriting from this class must have implemented ``to_dict()`` and ``from_dict()`` methods
     that utilize dictionaries containing only serialiable Python objects.
 
+    .. warning ::
+
+       The serialization/deserialiation schemes used here place some strict constraints on what kinds of ``dict`` objects
+       can be serialized. No effort is made to add further protection to ensure serialization is possible. Use with caution.
+
     Examples
     --------
 
