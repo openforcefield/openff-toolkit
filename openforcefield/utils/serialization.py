@@ -8,9 +8,6 @@ Serialization mix-in
    Currently, the ``openforcefield`` toolkit package requires a number of dependencies to support all of these serialization protocols.
    Instead, should we not include these by default, and instead raise a helpful exception with installation instructions if one of the serialization schemes is called but the requisite library is not installed?
 
-
-.. todo :: Add XML serialization.
-
 """
 #=============================================================================================
 # GLOBAL IMPORTS
@@ -21,9 +18,9 @@ Serialization mix-in
 #=============================================================================================
 
 class Serializable(object):
-    """Mix-in to add serialization via use of ``to_dict()`` and ``from_dict()`` methods.
+    """Mix-in to add serialization and deserialization support via JSON, YAML, BSON, TOML, MessagePack, and XML.
 
-    To use this mix-in, the class must have implemented ``to_dict()`` and ``from_dict()`` methods
+    To use this mix-in, the class inheriting from this class must have implemented ``to_dict()`` and ``from_dict()`` methods
     that utilize dictionaries containing only serialiable Python objects.
 
     Examples
