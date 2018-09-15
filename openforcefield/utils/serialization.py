@@ -282,7 +282,8 @@ class Serializable(object):
         """
         import xmltodict
         d = self.to_dict()
-        return xmltodict.unparse(d, pretty=pretty)
+        root_name = self.__class__.__name__
+        return xmltodict.unparse({root_name : d}, pretty=pretty)
 
     @classmethod
     def from_xml(cls, serialized):
@@ -304,4 +305,5 @@ class Serializable(object):
         """
         import xmltodict
         d = xmltodict.parse(serialized)
-        return cls.from_dict(d)
+        root_name = cls.__name__
+        return cls.from_dict(d[root_name])

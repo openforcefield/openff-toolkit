@@ -22,26 +22,33 @@ from unittest import TestCase
 from openforcefield.utils.serialization import Serializable
 
 class Thing(Serializable):
-    def __init__(self, description):
+    def __init__(self, description, mylist):
         self.description = description
+        self.mylist = mylist
 
     def to_dict(self):
-        return { 'description' : self.description }
+        return {
+            'description' : self.description,
+            'mylist' : self.mylist
+            }
 
     @staticmethod
     def from_dict(d):
-        return Thing(d['description'])
+        return Thing(d['description'], d['mylist'])
 
     def __eq__(self, other):
         """Comparator for asserting object field equality."""
-        return self.description == other.description
+        equality = True
+        equality == equality and (self.description == other.description)
+        equality == equality and (self.mylist == other.mylist)
+        return equality
 
 class TestUtilsSerialization(TestCase):
     """Test serialization and deserialization of a simple class."""
 
     def setUp(self):
         # Create an example object
-        self.thing = Thing('blorb')
+        self.thing = Thing('blorb', [1,2,3])
 
     def test_json(self):
         """Test JSON serialization"""
