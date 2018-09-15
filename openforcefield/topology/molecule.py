@@ -9,6 +9,8 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 .. todo::
 
+   * Our main philosophy here is to keep the object contents of topology objects easily serializable/deserializable
+
    * Have ``Molecule`` raise an exception if loading/creating molecules with unspecified stereochemistry?
    * Create ``FrozenMolecule`` to represent immutable molecule
    * Make ``Atom`` and ``Bond`` an inner class of Molecule?
@@ -146,6 +148,17 @@ class Atom(Particle):
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
         self._name = name
+
+    def to_dict(self):
+        """Return a dict representation of the atom."""
+        # TODO
+        return self.__dict__
+
+    @staticmethod
+    def from_dict(atom_dict):
+        """Create an Atom from a dict representation."""
+        # TODO
+        return Atom(**atom_dict)
 
     @property
     def element(self):

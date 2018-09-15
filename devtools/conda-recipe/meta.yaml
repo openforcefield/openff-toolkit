@@ -26,6 +26,12 @@ requirements:
     - matplotlib
     - pandas
     - packaging
+    # Serialization: Should these be optional?
+    - pyyaml
+    - toml
+    - bson
+    - msgpack-python
+    - xmltodict
 
 about:
   home: https://github.com/openforcefield/openforcefield

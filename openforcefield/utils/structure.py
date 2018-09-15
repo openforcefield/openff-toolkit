@@ -12,6 +12,7 @@ import os
 import re
 import sys
 import math
+import time
 import copy
 import string
 
@@ -19,18 +20,7 @@ from optparse import OptionParser # For parsing of command line arguments
 
 import numpy as np
 
-import parmed
-
-from simtk import unit, openmm
-from simtk.openmm import app
-
-from openmoltools import system_checker
-
-import time
 from simtk import unit
-
-#from openforcefield.topology import Molecule, Topology
-from openforcefield.typing.engines.smirnoff import ForceField
 
 #=============================================================================================
 # PARMED UTILITIES
@@ -53,6 +43,8 @@ def generateSMIRNOFFStructure(oemol):
         The resulting Structure
 
     """
+    from openforcefield.typing.engines.smirnoff import ForceField
+
     ff = get_testdata_filename('forcefield/smirnoff99Frosst.offxml')
     with open(ff) as ffxml:
         mol_ff = ForceField(ffxml)
@@ -67,7 +59,7 @@ def generateSMIRNOFFStructure(oemol):
 
     # TODO: This method has moved to the tests, but can be tackled in two or three lines
     mol_top, mol_sys, mol_pos = create_system_from_molecule(mol_ff, charged_molecule)
-
+    import parmed
     molecule_structure = parmed.openmm.load_topology(mol_top, mol_sys, xyz=mol_pos)
 
     return molecule_structure
@@ -92,6 +84,8 @@ def generateProteinStructure(proteinpdb, protein_forcefield='amber99sbildn.xml',
 
     """
     # Generate protein Structure object using OpenMM ForceField
+    from simtk.openmm import app
+    import parmed
     forcefield = app.ForceField(protein_forcefield, solvent_forcefield)
     protein_system = forcefield.createSystem( proteinpdb.topology )
     protein_structure = parmed.openmm.load_topology(proteinpdb.topology,
@@ -665,6 +659,7 @@ def merge_system(topology0, topology1, system0, system1, positions0, positions1,
     """
 
     #Load OpenMM Systems to ParmEd Structures
+    import parmed
     structure0 = parmed.openmm.load_topology( topology0, system0 )
     structure1 = parmed.openmm.load_topology( topology1, system1 )
 
@@ -714,6 +709,7 @@ def save_system_to_amber(openmm_topology, system, positions, prmtop, inpcrd):
 
     """
 
+    import parmed
     structure = parmed.openmm.topsystem.load_topology(openmm_topology, system, positions)
     structure.save(prmtop, overwrite = True, format="amber")
     structure.save(inpcrd, format='rst7', overwrite = True)
@@ -736,6 +732,7 @@ def save_system_to_gromacs(openmm_topology, system, positions, top, gro):
 
     """
 
+    import parmed
     structure = parmed.openmm.topsystem.load_topology(openmm_topology, system, positions )
     structure.save(top, overwrite = True, format="gromacs")
     structure.save(gro, overwrite = True, format="gro")

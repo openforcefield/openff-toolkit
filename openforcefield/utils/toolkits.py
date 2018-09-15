@@ -893,9 +893,6 @@ class AmberToolsWrapper(ToolkitWrapper):
     """
     AmberTools toolkit wrapper
 
-    This toolkit provides the following features:
-    * compute_partial_charges
-
     """
     def __init__(self):
         # TODO: Find AMBERHOME or executable home

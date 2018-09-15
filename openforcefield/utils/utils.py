@@ -17,6 +17,7 @@ import contextlib
 #=============================================================================================
 
 def all_subclasses(cls):
+    """Recursively retrieve all subclasses of the specified class"""
     return cls.__subclasses__() + [ g for s in cls.__subclasses__() for g in all_subclasses(s) ]
 
 @contextlib.contextmanager
