@@ -20,6 +20,8 @@ Serialization mix-in
 class Serializable(object):
     """Mix-in to add serialization and deserialization support via JSON, YAML, BSON, TOML, MessagePack, and XML.
 
+    For more information on these formats, see: `XML <https://www.w3.org/XML/>`_, `JSON <https://www.json.org/>`_, `YAML <http://yaml.org/>`_, `BSON <http://bsonspec.org/>`_, `TOML <https://github.com/toml-lang/toml>`_, and `MessagePack <https://msgpack.org/index.html>`_
+
     To use this mix-in, the class inheriting from this class must have implemented ``to_dict()`` and ``from_dict()`` methods
     that utilize dictionaries containing only serialiable Python objects.
 
@@ -178,7 +180,7 @@ class Serializable(object):
         Specification: https://github.com/toml-lang/toml
 
         Parameters
-        -------
+        ----------
         serlialized : str
             A TOML serialized representation of the object
 
@@ -216,7 +218,7 @@ class Serializable(object):
         Specification: http://yaml.org/
 
         Parameters
-        -------
+        ----------
         serialized : str
             A YAML serialized representation of the object
 

@@ -281,7 +281,7 @@ class ChemicalEnvironment(object):
             Adds ORtype to the set for this atom.
 
             Parameters
-            --------
+            ----------
             ORbase: string, such as '#6'
             ORdecorators: list of strings, such as ['X4','+0']
             """
@@ -293,7 +293,7 @@ class ChemicalEnvironment(object):
             Adds ANDtype to the set for this atom.
 
             Parameters
-            --------
+            ----------
             ANDtype: string
                 added to the list of ANDtypes for this atom
             """
@@ -376,7 +376,7 @@ class ChemicalEnvironment(object):
             """Return the atom representation as SMARTS.
 
             Returns
-            --------
+            -------
             smarts : str
                 The SMARTS string for just this atom
             """
@@ -396,7 +396,7 @@ class ChemicalEnvironment(object):
         def asSMIRKS(self):
             """
             Returns
-            --------
+            -------
             smarts : str
                 The SMIRKS string for just this bond
             """
@@ -812,7 +812,7 @@ into ChemicalEnvironments." % smirks)
         """Return a SMIRKS representation of the chemical environment.
 
         Parameters
-        -----------
+        ----------
         initalAtom = optional, atom object
             This is randomly selected if not chosen.
         neighbors = optional, list of atom objects
@@ -906,7 +906,7 @@ into ChemicalEnvironments." % smirks)
         Returns a list of atoms or bonds matching the descriptor
 
         Parameters
-        -----------
+        ----------
         component_type: string: 'atom' or 'bond'
         descriptor: string, optional
             'all', 'Indexed', 'Unindexed', 'Alpha', 'Beta'
@@ -962,7 +962,7 @@ into ChemicalEnvironments." % smirks)
             'Beta' - returns a random beta bond
 
         Returns
-        --------
+        -------
         a single Bond object fitting the description
         or None if no such atom exists
         """

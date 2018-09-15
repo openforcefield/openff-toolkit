@@ -404,14 +404,12 @@ class Bond(Serializable):
 # Molecule
 #=============================================================================================
 
-# TODO: Make Molecule immutable (by default)
-
 # TODO: How do we automatically trigger invalidation of cached properties if an ``Atom``, ``Bond``, or ``VirtualSite`` is modified,
 #       rather than added/deleted via the API? The simplest resolution is simply to make them immutable.
 
-class Molecule(Serializable):
+class FrozenMolecule(Serializable):
     """
-    Chemical representation of a molecule, such as a small molecule or biopolymer.
+    Immutable chemical representation of a molecule, such as a small molecule or biopolymer.
 
     .. todo :: What other API calls would be useful for supporting biopolymers as small molecules? Perhaps iterating over chains and residues?
 
@@ -420,28 +418,28 @@ class Molecule(Serializable):
 
     Create a molecule from a mol2 file
 
-    >>> molecule = Molecule.from_file('molecule.mol2')
+    >>> molecule = FrozenMolecule.from_file('molecule.mol2')
 
     Create a molecule from an OpenEye molecule
 
-    >>> molecule = Molecule.from_openeye(oemol)
+    >>> molecule = FrozenMolecule.from_openeye(oemol)
 
     Create a molecule from an RDKit molecule
 
-    >>> molecule = Molecule.from_rdkit(rdmol)
+    >>> molecule = FrozenMolecule.from_rdkit(rdmol)
 
     Create a molecule from IUPAC name (requires the OpenEye toolkit)
 
-    >>> molecule = Molecule.from_iupac('imatinib')
+    >>> molecule = FrozenMolecule.from_iupac('imatinib')
 
     Create a molecule from SMILES
 
-    >>> molecule = Molecule.from_smiles('Cc1ccccc1')
+    >>> molecule = FrozenMolecule.from_smiles('Cc1ccccc1')
 
     """
     def __init__(self, other=None):
         """
-        Create a new Molecule object
+        Create a new FrozenMolecule object
 
         .. todo ::
 
@@ -467,26 +465,26 @@ class Molecule(Serializable):
 
         Create an empty molecule:
 
-        >>> empty_molecule = Molecule()
+        >>> empty_molecule = FrozenMolecule()
 
         Create a molecule from another molecule:
 
-        >>> molecule_copy = Molecule(molecule_copy)
+        >>> molecule_copy = FrozenMolecule(molecule_copy)
 
         Create a molecule from a file that can be used to construct a molecule,
         using either a filename or file-like object:
 
-        >>> molecule = Molecule('molecule.mol2')
-        >>> molecule = Molecule(open('molecule.mol2', 'r'))
-        >>> molecule = Molecule(gzip.GzipFile('molecule.mol2.gz', 'r'))
+        >>> molecule = FrozenMolecule('molecule.mol2')
+        >>> molecule = FrozenMolecule(open('molecule.mol2', 'r'))
+        >>> molecule = FrozenMolecule(gzip.GzipFile('molecule.mol2.gz', 'r'))
 
         Create a molecule from an OpenEye molecule:
 
-        >>> molecule = Molecule(oemol)
+        >>> molecule = FrozenMolecule(oemol)
 
         Create a molecule from an RDKit molecule:
 
-        >>> molecule = Molecule(rdmol)
+        >>> molecule = FrozenMolecule(rdmol)
 
         Create a molecule from a serialized molecule object:
 
@@ -565,11 +563,11 @@ class Molecule(Serializable):
         # TODO: Provide useful exception messages if there are any failures
         molecule = Molecule(name=molecule_dict['name'])
         for atom in molecule_dict['atoms']:
-            molecule.add_atom(*atom)
+            molecule._add_atom(*atom)
         for vsite in molecule_dict['virtual_sites']:
-            molecule.add_atom(*vsite)
+            molecule._add_atom(*vsite)
         for bond in molecule_dict['bonds']:
-            molecule.add_bond(*bond) # TODO: How is this correctly handled? using indices?
+            molecule._add_bond(*bond) # TODO: How is this correctly handled? using indices?
         # TODO: Charges
         # TODO: Properties
         # TODO: Conformers
@@ -609,7 +607,7 @@ class Molecule(Serializable):
         assert isinstance(other, type(self)), "can only copy instances of {}".format(typse(self))
         self.__dict__ = deepcopy(other.__dict__)
 
-    def _eq_(self, other):
+    def __eq__(self, other):
         """Test two molecules for equality to see if they are the chemical species, but do not check other annotated properties.
 
         .. note ::
@@ -739,7 +737,7 @@ class Molecule(Serializable):
 
         return G
 
-    def add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None):
+    def _add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None):
         """
         Add an atom
 
@@ -785,7 +783,7 @@ class Molecule(Serializable):
         self._atoms.append(atom)
         self._invalidate_cached_properties()
 
-    def add_bond(self, atom1_index, atom2_index, is_aromatic, order, stereochemistry=None):
+    def _add_bond(self, atom1_index, atom2_index, is_aromatic, order, stereochemistry=None):
         """
         Add a bond between two specified atom indices
 
@@ -1827,3 +1825,156 @@ class Molecule(Serializable):
         atom1 = self._atoms[atom_index_1]
         atom2 = self._atoms[atom_index_2]
         return atom2 in self._bondedAtoms[atom1]
+
+
+class Molecule(FrozenMolecule):
+    """
+    Mutable chemical representation of a molecule, such as a small molecule or biopolymer.
+
+    .. todo :: What other API calls would be useful for supporting biopolymers as small molecules? Perhaps iterating over chains and residues?
+
+    Examples
+    --------
+
+    Create a molecule from a mol2 file
+
+    >>> molecule = Molecule.from_file('molecule.mol2')
+
+    Create a molecule from an OpenEye molecule
+
+    >>> molecule = Molecule.from_openeye(oemol)
+
+    Create a molecule from an RDKit molecule
+
+    >>> molecule = Molecule.from_rdkit(rdmol)
+
+    Create a molecule from IUPAC name (requires the OpenEye toolkit)
+
+    >>> molecule = Molecule.from_iupac('imatinib')
+
+    Create a molecule from SMILES
+
+    >>> molecule = Molecule.from_smiles('Cc1ccccc1')
+
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Create a new Molecule object
+
+        .. todo ::
+
+           * If a filename or file-like object is specified but the file contains more than one molecule, what is the proper behavior?
+           Read just the first molecule, or raise an exception if more than one molecule is found?
+
+           * Should we also support SMILES strings or IUPAC names for ``other``?
+
+        Parameters
+        ----------
+        other : optional, default=None
+            If specified, attempt to construct a copy of the Molecule from the specified object.
+            This can be any one of the following:
+
+            * a :class:`Molecule` object
+            * a file that can be used to construct a :class:`Molecule` object
+            * an ``openeye.oechem.OEMol``
+            * an ``rdkit.Chem.rdchem.Mol``
+            * a serialized :class:`Molecule` object
+
+        Examples
+        --------
+
+        Create an empty molecule:
+
+        >>> empty_molecule = Molecule()
+
+        Create a molecule from another molecule:
+
+        >>> molecule_copy = Molecule(molecule_copy)
+
+        Create a molecule from a file that can be used to construct a molecule,
+        using either a filename or file-like object:
+
+        >>> molecule = Molecule('molecule.mol2')
+        >>> molecule = Molecule(open('molecule.mol2', 'r'))
+        >>> molecule = Molecule(gzip.GzipFile('molecule.mol2.gz', 'r'))
+
+        Create a molecule from an OpenEye molecule:
+
+        >>> molecule = Molecule(oemol)
+
+        Create a molecule from an RDKit molecule:
+
+        >>> molecule = Molecule(rdmol)
+
+        Create a molecule from a serialized molecule object:
+
+        >>> serialized_molecule = molecule.__getstate__()
+        >>> molecule_copy = Molecule(serialized_molecule)
+
+        """
+        super(self, Molecule).__init__(*args, **kwargs)
+
+    def add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None):
+        """
+        Add an atom
+
+        .. warning :: This API experimental and subject to change.
+
+        Parameters
+        ----------
+        atomic_number : int
+            Atomic number of the atom
+        formal_charge : int
+            Formal charge of the atom
+        is_aromatic : bool
+            If True, atom is aromatic; if False, not aromatic
+        stereochemistry : str, optional, default=None
+            Either 'R' or 'S' for specified stereochemistry, or None if stereochemistry is irrelevant
+        name : str, optional, default=None
+            An optional name for the atom
+
+        Returns
+        -------
+        index : int
+            The index of the atom in the molecule
+
+        Examples
+        --------
+
+        Define a methane molecule
+
+        >>> molecule = Molecule(name='methane')
+        >>> C = molecule.add_atom(6, 0, False)
+        >>> H1 = molecule.add_atom(1, 0, False)
+        >>> H2 = molecule.add_atom(1, 0, False)
+        >>> H3 = molecule.add_atom(1, 0, False)
+        >>> H4 = molecule.add_atom(1, 0, False)
+        >>> molecule.add_bond(C, H1, False, 1)
+        >>> molecule.add_bond(C, H2, False, 1)
+        >>> molecule.add_bond(C, H3, False, 1)
+        >>> molecule.add_bond(C, H4, False, 1)
+
+        """
+        self._add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry, name=name)
+
+    def add_bond(self, atom1_index, atom2_index, is_aromatic, order, stereochemistry=None):
+        """
+        Add a bond between two specified atom indices
+
+        .. warning :: This API experimental and subject to change.
+
+        Parameters
+        ----------
+        atom1_index : int
+            Index of first atom
+        atom2_index : int
+            Index of second atom
+        order : int
+            Integral bond order of Kekulized form
+        is_aromatic : bool
+            True if this bond is aromatic, False otherwise
+        stereochemistry : str, optional, default=None
+            Either 'E' or 'Z' for specified stereochemistry, or None if stereochemistry is irrelevant
+
+        """
+        self._add_bond(atom1_index, atom2_index, is_aromatic, order, stereochemistry=stereochemistry)

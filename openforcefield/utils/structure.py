@@ -16,8 +16,6 @@ import time
 import copy
 import string
 
-from optparse import OptionParser # For parsing of command line arguments
-
 import numpy as np
 
 from simtk import unit

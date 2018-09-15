@@ -11,6 +11,7 @@ Currently supported toolkits:
 
 .. todo::
 
+   * Add singleton global toolkit registry that registers all available toolkits by default when this file is imported
    * Add description fields for each toolkit wrapper
    * Eliminate global variables in favor of a singleton pattern
    * Change global variables from _INSTALLED to _AVAILABLE
@@ -52,6 +53,11 @@ class LicenseError(Exception):
 
 class MissingPackageError(Exception):
     """This function requires a package that is not installed."""
+    pass
+
+class ToolkitUnavailableException(Exception):
+    """The requested toolkit is unavailable."""
+    # TODO: Allow toolkit to be specified and used in formatting/printing exception.
     pass
 
 # TODO: Differentiate between is installed and is licensed.
@@ -282,12 +288,12 @@ class ToolkitWrapper(object):
         .. todo :: Is this needed at the base class level?
 
         Parameters
-        -------
+        ----------
         smiles : str
             SMILES string specifying the molecule
 
         Returns
-        ----------
+        -------
         molecule : Molecule
             The molecule for which canonical isomeric SMILES is to be computed
 
@@ -970,17 +976,23 @@ class ToolkitRegistry(object):
     Examples
     --------
 
-    Register available toolkits in a specified order
+    Register toolkits in a specified order, skipping if unavailable
 
     >>> toolkit_registry = ToolkitRegistry()
-    >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    >>> for toolkit in toolkit_precedence: toolkit_registry.register(toolkit)
+    >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsWrapper]
+    >>> for toolkit in toolkit_precedence: toolkit_registry.register(toolkit, exception_if_unavailable=False)
+
+    Register specified toolkits, raising an exception if one is unavailable
+
+    >>> toolkit_registry = ToolkitRegistry()
+    >>> toolkits = [OpenEyeToolkitWrapper, AmberToolsWrapper]
+    >>> for toolkit in toolkits: toolkit_registry.register(toolkit)
 
     Register all available toolkits in arbitrary order
 
     >>> from openforcefield.utils import all_subclasses
     >>> toolkits = all_subclasses(ToolkitWrapper)
-    >>> for toolkit in toolkit_precedence: toolkit_registry.register_toolkit(toolkit)
+    >>> for toolkit in toolkits: toolkit_registry.register_toolkit(toolkit, exception_if_unavailable)
 
     """
     def __init__(self, register_imported_toolkit_wrappers=False):
@@ -1014,20 +1026,32 @@ class ToolkitRegistry(object):
         """
         return list(self._toolkits)
 
-    def register_toolkit(self, toolkit_wrapper_class):
+    def register_toolkit(self, toolkit_wrapper_class, exception_if_unavailable=True):
         """
         Register the provided toolkit wrapper.
 
         .. warning :: This API experimental and subject to change.
 
+        .. todo ::
+
+           This method should raise an exception if the toolkit is unavailable, unless an optional argument
+           is specified that silently avoids registration of toolkits that are unavailable.
+
         Parameters
         ----------
         toolkit_wrapper_class : subclass of ToolkitWrapper
             The class of the toolkit wrapper to register.
+        exception_if_unavailable : bool, optional, default=True
+            If True, an exception will be raised if the toolkit is unavailable
+
         """
         # TODO: Instantiate class if class, or just add if already instantiated.
-        toolkit_wrapper = toolkit_wrapper_class()
-        self._toolkits.append(toolkit_wrapper)
+        try:
+            toolkit_wrapper = toolkit_wrapper_class()
+            self._toolkits.append(toolkit_wrapper)
+        except ToolkitUnavailableException as e:
+            if exception_if_unavailable:
+                raise e
 
     # TODO: Can we automatically resolve calls to methods that are not explicitly defined using some Python magic?
 
@@ -1084,7 +1108,7 @@ class ToolkitRegistry(object):
 
         .. warning :: This API experimental and subject to change.
 
-        *args and **kwargs are passed to the desired method, and return values of the method are returned
+        ``*args`` and ``**kwargs`` are passed to the desired method, and return values of the method are returned
 
         This is a convenient shorthand for
 

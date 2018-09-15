@@ -170,6 +170,7 @@ class Atom(Particle):
     Note that non-chemical virtual sites are represented by the ``VirtualSite`` object.
 
     .. todo::
+    
         * Should ``Atom`` objects be immutable or mutable?
         * Should an ``Atom`` be able to belong to more than one ``Topology`` object?
         * Do we want to support the addition of arbitrary additional properties,
