@@ -37,6 +37,8 @@ from simtk.openmm import app
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL, DEFAULT_FRACTIONAL_BONDORDER_MODEL, DEFAULT_CHARGE_MODEL
 
+from openforcefield.utils.serialization import Serializable
+
 #=============================================================================================
 # GLOBAL PARAMETERS
 #=============================================================================================
@@ -396,7 +398,7 @@ class Bond(object):
 # TOPOLOGY
 #=============================================================================================
 
-class Topology(object):
+class Topology(Serializable):
     """
     A Topology is a chemical representation of a system containing one or more molecules appearing in a specified order.
 

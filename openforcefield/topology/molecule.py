@@ -52,6 +52,8 @@ from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL, ALLOWED_ARO
 from openforcefield.utils.toolkits import DEFAULT_FRACTIONAL_BONDORDER_MODEL, ALLOWED_FRACTIONAL_BONDORDER_MODELS
 from openforcefield.utils.toolkits import DEFAULT_CHARGE_MODEL, ALLOWED_CHARGE_MODELS
 
+from openforcefield.utils.serialization import Serializable
+
 #=============================================================================================
 # GLOBAL PARAMETERS
 #=============================================================================================
@@ -73,7 +75,7 @@ from openforcefield.utils.toolkits import DEFAULT_CHARGE_MODEL, ALLOWED_CHARGE_M
 # Particle
 #=============================================================================================
 
-class Particle(object):
+class Particle(Serializable):
     """
     Base class for all particles in a molecule.
 
@@ -285,6 +287,17 @@ class VirtualSite(Particle):
         self._weights = np.array(weights) # make a copy and convert to array internally
         self._atoms = [ atom for atom in atoms ] # create a list of Particles
 
+    def to_dict(self):
+        """Return a dict representation of the atom."""
+        # TODO
+        return self.__dict__
+
+    @staticmethod
+    def from_dict(vsite_dict):
+        """Create an Atom from a dict representation."""
+        # TODO
+        return VirtualSite(**vsite_dict)
+
     @property
     def virtual_site_index(self):
         """
@@ -318,7 +331,7 @@ class VirtualSite(Particle):
 # Bond
 #=============================================================================================
 
-class Bond(object):
+class Bond(Serializable):
     """
     Chemical bond representation.
 
@@ -353,6 +366,17 @@ class Bond(object):
         self._type = bondtype
         self._fractional_bondorder = fractional_bondorder
 
+    def to_dict(self):
+        """Return a dict representation of the bond."""
+        # TODO
+        return self.__dict__
+
+    @staticmethod
+    def from_dict(d):
+        """Create an Bond from a dict representation."""
+        # TODO
+        return Bond(**d)
+
     @property
     def atom1(self):
         return self._atom1
@@ -385,7 +409,7 @@ class Bond(object):
 # TODO: How do we automatically trigger invalidation of cached properties if an ``Atom``, ``Bond``, or ``VirtualSite`` is modified,
 #       rather than added/deleted via the API? The simplest resolution is simply to make them immutable.
 
-class Molecule(object):
+class Molecule(Serializable):
     """
     Chemical representation of a molecule, such as a small molecule or biopolymer.
 
@@ -556,116 +580,6 @@ class Molecule(object):
 
     def __setstate__(self, state):
         return self.from_dict(state)
-
-    ####################################################################################################
-    # TODO: Separate {to|from}_{json|toml|yaml} into a mixin; add {pickle|bson|messagepack}
-    ####################################################################################################
-
-    def to_json(self):
-        """
-        Return a JSON representation of the molecule.
-
-        Returns
-        -------
-        molecule_json : str
-            A JSON representation of the molecule.
-
-        """
-        import json
-        molecule_dict = self.to_dict()
-        return json.dumps(molecule_dict)
-
-    @staticmethod
-    def from_json(molecule_json):
-        """
-        Return a JSON representation of the molecule.
-
-        Parameters
-        -------
-        molecule_json : str
-            A JSON representation of the molecule.
-
-        Returns
-        -------
-        molecule : Molecule
-            A Molecule created from the dictionary representation
-
-        """
-        import json
-        molecule_dict = json.loads(molecule_json)
-        return Molecule.from_dict(molecule_dict)
-
-    def to_toml(self):
-        """
-        Return a TOML representation of the molecule.
-
-        Returns
-        -------
-        molecule_toml : str
-            A TOML representation of the molecule.
-
-        """
-        import toml
-        molecule_dict = self.to_dict()
-        return toml.dumps(molecule_dict)
-
-    @staticmethod
-    def from_toml(molecule_toml):
-        """
-        Return a TOML representation of the molecule.
-
-        Parameters
-        -------
-        molecule_toml : str
-            A TOML representation of the molecule.
-
-        Returns
-        -------
-        molecule : Molecule
-            A Molecule created from the dictionary representation
-
-        """
-        import toml
-        molecule_dict = toml.loads(molecule_toml)
-        return Molecule.from_dict(molecule_dict)
-
-    def to_yaml(self):
-        """
-        Return a YAML representation of the molecule.
-
-        Returns
-        -------
-        molecule_toml : str
-            A YAML representation of the molecule.
-
-        """
-        import yaml
-        molecule_dict = self.to_dict()
-        return yaml.dumps(molecule_dict)
-
-    @staticmethod
-    def from_yaml(molecule_yaml):
-        """
-        Return a YAML representation of the molecule.
-
-        Parameters
-        -------
-        molecule_yaml : str
-            A YAML representation of the molecule.
-
-        Returns
-        -------
-        molecule : Molecule
-            A Molecule created from the dictionary representation
-
-        """
-        import yaml
-        molecule_dict = yaml.loads(molecule_toml)
-        return Molecule.from_dict(molecule_dict)
-
-    ####################################################################################################
-    # END TODO
-    ####################################################################################################
 
     def _initialize(self):
         """
