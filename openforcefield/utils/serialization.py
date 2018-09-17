@@ -20,7 +20,7 @@ Serialization mix-in
 class Serializable(object):
     """Mix-in to add serialization and deserialization support via JSON, YAML, BSON, TOML, MessagePack, and XML.
 
-    For more information on these formats, see: `XML <https://www.w3.org/XML/>`_, `JSON <https://www.json.org/>`_, `YAML <http://yaml.org/>`_, `BSON <http://bsonspec.org/>`_, `TOML <https://github.com/toml-lang/toml>`_, and `MessagePack <https://msgpack.org/index.html>`_
+    For more information on these formats, see: `JSON <https://www.json.org/>`_, `BSON <http://bsonspec.org/>`_, `YAML <http://yaml.org/>`_, `TOML <https://github.com/toml-lang/toml>`_, `MessagePack <https://msgpack.org/index.html>`_, and `XML <https://www.w3.org/XML/>`_.
 
     To use this mix-in, the class inheriting from this class must have implemented ``to_dict()`` and ``from_dict()`` methods
     that utilize dictionaries containing only serialiable Python objects.
@@ -35,6 +35,7 @@ class Serializable(object):
 
     Example class using :class:`Serializable` mix-in:
 
+    >>> from openforcefield.utils.serialization import Serializable
     >>> class Thing(Serializable):
     ...     def __init__(self, description):
     ...         self.description = description
@@ -49,34 +50,52 @@ class Serializable(object):
     ... # Create an example object
     ... thing = Thing('blorb')
 
-    Get JSON representation
+    Get `JSON <https://www.json.org/>`_ representation:
 
     >>> json_thing = thing.to_json()
+
+    Reconstruct an object from its `JSON <https://www.json.org/>`_ representation:
+
     >>> thing_from_json = Thing.from_json(json_thing)
 
-    Get YAML representation
-
-    >>> yaml_thing = thing.to_yaml()
-    >>> thing_from_yaml = Thing.from_yaml(yaml_thing)
-
-    Get BSON representation
+    Get `BSON <http://bsonspec.org/>`_ representation:
 
     >>> bson_thing = thing.to_bson()
+
+    Reconstruct an object from its `BSON <http://bsonspec.org/>`_ representation:
+
     >>> thing_from_bson = Thing.from_bson(bson_thing)
 
-    Get TOML representation
+    Get `YAML <http://yaml.org/>`_ representation:
+
+    >>> yaml_thing = thing.to_yaml()
+
+    Reconstruct an object from its `YAML <http://yaml.org/>`_ representation:
+
+    >>> thing_from_yaml = Thing.from_yaml(yaml_thing)
+
+    Get `TOML <https://github.com/toml-lang/toml>`_ representation:
 
     >>> toml_thing = thing.to_toml()
+
+    Reconstruct an objecft from its `TOML <https://github.com/toml-lang/toml>`_ representation:
+
     >>> thing_from_toml = Thing.from_toml(toml_thing)
 
-    Get MessagePack representation
+    Get `MessagePack <https://msgpack.org/index.html>`_ representation:
 
     >>> messagepack_thing = thing.to_messagepack()
+
+    Reconstruct an object from its `MessagePack <https://msgpack.org/index.html>`_ representation:
+
     >>> thing_from_messagepack = Thing.from_messagepack(messagepack_thing)
 
-    Get XML representation
+    Get `XML <https://www.w3.org/XML/>`_ representation:
 
     >>> xml_thing = thing.to_xml()
+
+    Reconstruct an objecft from its `XML <https://www.w3.org/XML/>`_ representation:
+
     >>> thing_from_xml = Thing.from_xml(xml_thing)
 
     """

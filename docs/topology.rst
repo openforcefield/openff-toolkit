@@ -16,7 +16,7 @@ Primary objects
     :nosignatures:
     :toctree: api/generated/
 
-    FrozenMolecule    
+    FrozenMolecule
     Molecule
     Topology
 

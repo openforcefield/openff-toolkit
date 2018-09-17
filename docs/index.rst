@@ -6,7 +6,7 @@
 Open Force Field Toolkit
 =======================
 
-A modern, extensible library for molecular mechanics force field science.
+A modern, extensible library for molecular mechanics force field science from the `Open Force Field Initiative <http://openforcefield.org>`_
 
 User Guide
 ----------

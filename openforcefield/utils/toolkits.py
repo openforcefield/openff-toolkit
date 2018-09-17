@@ -11,6 +11,7 @@ Currently supported toolkits:
 
 .. todo::
 
+   * Should this be under ``openforcefield.utils.toolkits`` or ``openforcefield.toolkits``?
    * Add singleton global toolkit registry that registers all available toolkits by default when this file is imported
    * Add description fields for each toolkit wrapper
    * Eliminate global variables in favor of a singleton pattern
@@ -978,6 +979,7 @@ class ToolkitRegistry(object):
 
     Register toolkits in a specified order, skipping if unavailable
 
+    >>> from openforcefield.utils.toolkits import ToolkitRegistry
     >>> toolkit_registry = ToolkitRegistry()
     >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsWrapper]
     >>> for toolkit in toolkit_precedence: toolkit_registry.register(toolkit, exception_if_unavailable=False)
@@ -992,7 +994,12 @@ class ToolkitRegistry(object):
 
     >>> from openforcefield.utils import all_subclasses
     >>> toolkits = all_subclasses(ToolkitWrapper)
-    >>> for toolkit in toolkits: toolkit_registry.register_toolkit(toolkit, exception_if_unavailable)
+    >>> for toolkit in toolkits: toolkit_registry.register_toolkit(toolkit, exception_if_unavailable=False)
+
+    Retrieve the global singleton toolkit registry, which is created when this module is imported from all available toolkits:
+
+    >>> from openforcefield.utils.toolkits import DEFAULT_TOOLKIT_REGISTRY
+    >>> print(TOOLKIT_REGISTRY.registered_toolkits())
 
     """
     def __init__(self, register_imported_toolkit_wrappers=False):
@@ -1155,3 +1162,9 @@ class ToolkitRegistry(object):
         for toolkit, value_error in value_errors:
             msg += ' {} : {}\n'.format(toolkit, value_error)
         raise NotImplementedError(msg)
+
+# Create global toolkit registry, where all available toolkits are registered
+from openforcefield.utils import all_subclasses
+GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry()
+for toolkit in all_subclasses(ToolkitWrapper):
+    GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit, exception_if_unavailable=False)

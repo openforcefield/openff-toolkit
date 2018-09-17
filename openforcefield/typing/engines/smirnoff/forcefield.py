@@ -108,6 +108,7 @@ class ForceField(object):
 
     Create a new ForceField containing the smirnoff99Frosst parameter set:
 
+    >>> from openforcefield.typing.engines.smirnoff import ForceField
     >>> forcefield = ForceField('smirnoff99Frosst.offxml')
 
     Create an OpenMM system from a :class:`openforcefield.topology.Topology` object:
