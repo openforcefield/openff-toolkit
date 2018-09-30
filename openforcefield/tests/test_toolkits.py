@@ -31,20 +31,20 @@ class TestToolkitWrapper(TestCase):
     def test_compute_partial_charges(self):
         """Test that exceptions are properly raised by supported methods"""
         with self.assertRaises(NotImplementedException) as context:
-            wrapper = ToolkitWrapper()
-            wrapper.compute_partial_charges()
+            toolkit_wrapper = ToolkitWrapper()
+            toolkit_wrapper.compute_partial_charges()
 
     def test_to_smiles(self):
         """Test that exceptions are properly raised by supported methods"""
         with self.assertRaises(NotImplementedException) as context:
-            wrapper = ToolkitWrapper()
-            wrapper.to_smiles()
+            toolkit_wrapper = ToolkitWrapper()
+            toolkit_wrapper.to_smiles()
 
     def test_from_smiles(self):
         """Test that exceptions are properly raised by supported methods"""
         with self.assertRaises(NotImplementedException) as context:
-            wrapper = ToolkitWrapper()
-            wrapper.from_smiles()
+            toolkit_wrapper = ToolkitWrapper()
+            toolkit_wrapper.from_smiles()
 
 class TestOpenEyeToolkitWrapper(TestCase):
     """Test the OpenEyeToolkitWrapper"""

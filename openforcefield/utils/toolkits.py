@@ -11,6 +11,8 @@ Currently supported toolkits:
 
 .. todo::
 
+   * Add checks at the beginning of each toolkit method call to make sure toolkit is licened
+   * Switch toolkit methods to object methods instead of static methods
    * Should this be under ``openforcefield.utils.toolkits`` or ``openforcefield.toolkits``?
    * Add singleton global toolkit registry that registers all available toolkits by default when this file is imported
    * Add description fields for each toolkit wrapper
@@ -87,12 +89,16 @@ class ToolkitWrapper(object):
     _toolkit_name = None # Name of the toolkit
     _toolkit_installation_instructions = None # Installation instructions for the toolkit
 
-    # TODO: implement @requires_toolkit decorator here
     @staticmethod
     def requires_toolkit(f):
-        if not toolkit_is_available():
-            raise ToolkitUnavailableException('{} toolkit is unavailable' + _toolkit_name)
-        return f
+        def decorator(func):
+            @wraps(func)
+            def wrapped_function(*args, **kwargs):
+                if not toolkit_is_available():
+                    msg = 'This function requires the {} toolkit'.format(_toolkit_name)
+                    raise LicenseError(msg)
+            return wrapped_function
+        return decorator
 
     @classmethod
     @property
@@ -409,9 +415,7 @@ class OpenEyeToolkitWrapper(object):
         elif cip == oechem.OECIPBondStereo_NotStereo:
             return None
 
-    @staticmethod
-    @requires_toolkit
-    def from_openeye(oemol):
+    def from_openeye(self, oemol):
         """
         Create a Molecule from an OpenEye molecule.
 
@@ -470,9 +474,7 @@ class OpenEyeToolkitWrapper(object):
 
         return molecule
 
-    @staticmethod
-    @requires_openeye('oechem') # TODO: Is this still needed?
-    def to_openeye(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    def to_openeye(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an OpenEye molecule using the specified aromaticity model
 
@@ -633,7 +635,6 @@ class OpenEyeToolkitWrapper(object):
         return charges
 
     @staticmethod
-    @requires_openeye('oechem')
     def _find_smarts_matches(oemol, smarts):
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
@@ -709,9 +710,7 @@ class OpenEyeToolkitWrapper(object):
 
         return matches
 
-    @staticmethod
-    @requires_openeye('oechem')
-    def find_smarts_matches(molecule, smarts, aromaticity_model='OEAroModel_MDL'):
+    def find_smarts_matches(self, molecule, smarts, aromaticity_model='OEAroModel_MDL'):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
@@ -727,7 +726,7 @@ class OpenEyeToolkitWrapper(object):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        oemol = OpenEyeToolkitWrapper.to_oemol(molecule, aromaticity_model=aromaticity_model)
+        oemol = self.to_oemol(molecule, aromaticity_model=aromaticity_model)
         return _find_smarts_matches(oemol, smarts)
 
 class RDKitToolkitWrapper(ToolkitWrapper):
@@ -775,9 +774,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol = self.to_rdkit(molecule)
         return Chem.MolToSmiles(rdmol, isomericSmiles=True)
 
-    @staticmethod
-    @requires_rdkit()
-    def from_rdkit(rdmol):
+    def from_rdkit(self, rdmol):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -887,9 +884,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         return mol
 
-    @staticmethod
-    @requires_rdkit()
-    def to_rdkit(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    def to_rdkit(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an RDKit molecule
 
@@ -1022,7 +1017,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         return rdkit.Mol(rdmol)
 
     @staticmethod
-    @requires_rdkit()
     def _find_smarts_matches(rdmol, smirks, aromaticity_model='OEAroModel_MDL'):
         """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
@@ -1087,9 +1081,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         return matches
 
-    @staticmethod
-    @requires_rdkit
-    def find_smarts_matches(molecule, smarts, aromaticity_model='OEAroModel_MDL'):
+    def find_smarts_matches(self, molecule, smarts, aromaticity_model='OEAroModel_MDL'):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
@@ -1105,7 +1097,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        rdmol = RDKitToolkitWrapper.to_rdmol(molecule, aromaticity_model=aromaticity_model)
+        rdmol = self.to_rdmol(molecule, aromaticity_model=aromaticity_model)
         return _find_smarts_matches(rdmol, smarts, aromaticity_model='OEAroModel_MDL')
 
 class AmberToolsWrapper(ToolkitWrapper):
@@ -1434,7 +1426,7 @@ for toolkit in all_subclasses(ToolkitWrapper):
 # WARN IF INSUFFICIENT TOOLKITS INSTALLED
 #=============================================================================================
 
-if len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits()) == 0:
+if len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == 0:
     msg = 'WARNING: No cheminfomatics toolkits are available.\n'
     msg += 'Please install at least one of the following toolkits:\n'
     for wrapper in all_subclasses(ToolkitWrapper):
