@@ -937,7 +937,7 @@ class FrozenMolecule(Serializable):
         """Return the total charge on the molecule"""
         return sum([atom.formal_charge for atom in self.atoms])
 
-    def chemical_environment_matches(self, query):
+    def chemical_environment_matches(self, query, toolkit=None):
         """Retrieve all matches for a given chemical environment query.
 
         .. todo ::
@@ -950,6 +950,9 @@ class FrozenMolecule(Serializable):
         query : str or ChemicalEnvironment
             SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query
             Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
+        toolkit : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches,
+            or None if ``GLOBAL_TOOLKIT_REGISTRY`` is to be used
 
         Returns
         -------
@@ -974,158 +977,14 @@ class FrozenMolecule(Serializable):
             raise ValueError("'query' must be either a string or a ChemicalEnvironment")
 
         # Use specified cheminformatics toolkit to determine matches with specified aromaticity model
-        # TODO: Move this to toolkit handling
-        toolkit = TOOLKIT_PRECEDENCE[0]
-        if toolkit == 'oechem':
-            matches = _openye_smirks_matches(self.to_openeye(), smirks, aromaticity_model=self._aromaticity_model)
-        elif toolkit == 'rdkit':
-            matches = _openeye_smirks_matches(self.to_rdkit(), smirks, aromaticity_model=self._aromaticity_model)
+        # TODO: Simplify this by requiring a toolkit registry for the molecule?
+        # TODO: Do we have to pass along an aromaticity model?
+        if isinstance(toolkit, ToolkitRegistry):
+            matches = toolkit.call('find_smarts_matches', self, smirks)
+        elif isinstance(toolkit, ToolkitWrapper):
+            matches = toolkit.find_smarts_matches(self, smirks)
         else:
-            raise Exception('Unknown toolkit {}'.format(toolkit))
-
-        return matches
-
-    # TODO: Move this to ToolkitWrapper
-    @staticmethod
-    @requires_rdkit()
-    def _rdkit_smirks_matches(rdmol, smirks, aromaticity_model='OEAroModel_MDL'):
-        """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
-
-        .. warning :: This API experimental and subject to change.
-
-        Parameters
-        ----------
-        rdmol : rdkit.Chem.Mol
-            rdmol to process with the SMIRKS in order to find matches
-        smarts : str
-            SMARTS string with any number of sequentially tagged atoms.
-            If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
-        aromaticity_model : str, optional, default='OEAroModel_MDL'
-            OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
-            If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
-
-        Returns
-        -------
-        matches : list of tuples of atoms indices within the ``oemol``
-            matches[index] is an N-tuple of atom numbers from the ``oemol``
-            Matches are returned in no guaranteed order.
-            # TODO: What is returned if no matches are found? An empty list, or None?
-            # TODO: Ensure that SMARTS numbers 1, 2, 3... are rendered into order of returnd matches indexed by 0, 1, 2...
-
-        .. notes ::
-
-           * Raises ``ValueError`` if ``smarts`` query is malformed
-
-        """
-        from rdkit import Chem
-
-        # Make a copy of the molecule
-        rdmol = Chem.Mol(rdmol)
-        # Use designated aromaticity model
-        if aromaticity_model == 'OEAroModel_MDL':
-            Chem.SanitizeMol(mol, Chem.SANITIZE_ALL^Chem.SANITIZE_SETAROMATICITY)
-            Chem.SetAromaticity(mol, Chem.AromaticityModel.AROMATICITY_MDL)
-        else:
-            raise ValueError('Unknown aromaticity model: {}'.aromaticity_models)
-
-        # Set up query.
-        qmol = Chem.MolFromSmarts(smirks)   #cannot catch the error
-        if qmol is None:
-            raise SMIRKSParsingError('RDKit could not parse the SMIRKS string "{}"'.format(smirks))
-
-        # Create atom mapping for query molecule
-        index_map = dict()
-        for atom in qmol.GetAtoms():
-             smirks_index = atom.GetAtomMapNum()
-             if smirks_index != 0:
-                ind_map[smirks_index - 1] = atom.GetIdx()
-        map_list = [ index_map[x] for x in sorted(index_map) ]
-
-        # Perform matching
-        # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
-        #       and speed matching for larger molecules.
-        matches = list()
-        for match in rdmol.GetSubstructMatches(qmol, uniquify=False):
-            mas = [ match[x] for x in map_list ]
-            matches.append(tuple(mas))
-
-        return matches
-
-    # TODO: Move this to ToolkitWrapper
-    @staticmethod
-    @requires_openeye('oechem')
-    def _oechem_smirks_matches(oemol, smirks):
-        """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
-
-        .. warning :: This API experimental and subject to change.
-
-        Parameters
-        ----------
-        oemol : openeye.oechem.OEMol or similar
-            oemol to process with the SMIRKS in order to find matches
-        smarts : str
-            SMARTS string with any number of sequentially tagged atoms.
-            If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
-        aromaticity_model : str, optional, default=None
-            OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
-            If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
-
-        Returns
-        -------
-        matches : list of tuples of atoms indices within the ``oemol``
-            matches[index] is an N-tuple of atom numbers from the ``oemol``
-            Matches are returned in no guaranteed order.
-            # TODO: What is returned if no matches are found? An empty list, or None?
-            # TODO: Ensure that SMARTS numbers 1, 2, 3... are rendered into order of returnd matches indexed by 0, 1, 2...
-
-        .. notes ::
-
-           * Raises ``LicenseError`` if valid OpenEye tools license is not found, rather than causing program to terminate
-           * Raises ``ValueError`` if ``smarts`` query is malformed
-
-        """
-        from openeye import oechem
-        # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
-        mol = oechem.OEMol(oemol)
-
-        # Set up query
-        qmol = oechem.OEQMol()
-        if not oechem.OEParseSmarts(qmol, smarts):
-            raise ValueError("Error parsing SMARTS '%s'" % smarts)
-
-        # Determine aromaticity model
-        if aromaticity_model:
-            if type(aromaticity_model) == str:
-                # Check if the user has provided a manually-specified aromaticity_model
-                if hasattr(oechem, aromaticity_model):
-                    oearomodel = getattr(oechem, 'OEAroModel_' + aromaticity_model)
-                else:
-                    raise ValueError("Error: provided aromaticity model not recognized by oechem.")
-            else:
-                raise ValueError("Error: provided aromaticity model must be a string.")
-
-            # If aromaticity model was provided, prepare molecule
-            oechem.OEClearAromaticFlags(mol)
-            oechem.OEAssignAromaticFlags(mol, oearomodel)
-            # Avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
-            oechem.OEAssignHybridization(mol)
-
-        # Build list of matches
-        # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
-        #       and speed matching for larger molecules.
-        unique = False # We require all matches, not just one of each kind
-        substructure_search = oechem.OESubSearch(qmol)
-        matches = list()
-        for match in substructure_search.Match(mol, unique):
-            # Compile list of atom indices that match the pattern tags
-            atom_indices = dict()
-            for matched_atom in match.GetAtoms():
-                if matched_atom.pattern.GetMapIdx() != 0:
-                    atom_indices[matched_atom.pattern.GetMapIdx()-1] = matched_atom.target.GetIdx()
-            # Compress into list
-            atom_indices = [ atom_indices[index] for index in range(len(atom_indices)) ]
-            # Convert to tuple
-            matches.append( tuple(atom_indices) )
+            matches = GLOBAL_TOOLKIT_REGISTRY.find_smarts_matches(self, smirks)
 
         return matches
 

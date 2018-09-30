@@ -23,6 +23,7 @@ from simtk.openmm import app
 # UTILITIES
 #=============================================================================================
 
+
 def get_amber_system(prefix='cyclohexane_ethanol_0.4_0.6'):
     """Get AMBER prmtop and inpcrd test data filenames
 

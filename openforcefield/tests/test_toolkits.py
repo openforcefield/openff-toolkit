@@ -5,7 +5,7 @@
 #=============================================================================================
 
 """
-Tests for cheminformatics toolkit interfaces
+Tests for cheminformatics toolkit wrappers
 
 """
 
@@ -16,6 +16,8 @@ Tests for cheminformatics toolkit interfaces
 from functools import partial
 from unittest import TestCase
 from openforcefield import utils
+
+from pytest.mark import skipif
 
 from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsWrapper, ToolkitRegistry
 
@@ -47,7 +49,7 @@ class TestToolkitWrapper(TestCase):
 class TestOpenEyeToolkitWrapper(TestCase):
     """Test the OpenEyeToolkitWrapper"""
 
-    @requires_openeye('oechem') # TODO: Is this needed?
+    @skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
     def test_smiles(self):
         """Test OpenEyeToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -56,7 +58,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
         smiles2 = molecule.to_smiles()
         assert smiles == smiles2
 
-    @requires_openeye('oechem') # TODO: Is this needed?
+    @OpenEyeToolkitWrapper.requires_toolkit
     def test_openeye(self):
         """Test OpenEyeToolkitWrapper to_openeye() and from_openeye()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -67,7 +69,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
         smiles2 = molecule2.to_smiles()
         assert smiles == smiles2
 
-    @requires_openeye('oechem') # TODO: Is this needed?
+    @OpenEyeToolkitWrapper.requires_toolkit
     def test_compute_partial_charges(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -77,10 +79,10 @@ class TestOpenEyeToolkitWrapper(TestCase):
         partial_charges = toolkit_wrapper.compute_partial_charges(molecule)
         # TODO: Check partial charge invariants (total charge, charge equivalence)
 
-class RDKitToolkitWrapper(TestCase):
+class TestRDKitToolkitWrapper(TestCase):
     """Test the RDKitToolkitWrapper"""
 
-    @requires_rdkit() # TODO: Is this needed?
+    @RDKitToolkitWrapper.requires_toolkit
     def test_smiles(self):
         """Test RDKitToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -89,7 +91,7 @@ class RDKitToolkitWrapper(TestCase):
         smiles2 = molecule.to_smiles()
         assert smiles == smiles2
 
-    @requires_rdkit() # TODO: Is this needed?
+    @RDKitToolkitWrapper.requires_toolkit
     def test_rdkit(self):
         """Test RDKitToolkitWrapper to_rdkit() and from_rdkit()"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -103,8 +105,8 @@ class RDKitToolkitWrapper(TestCase):
 class TestAmberToolsWrapper(TestCase):
     """Test the AmberToolsWraper"""
 
-    @requires_ambertools # TODO: Is this needed?
-    @requires_rdkit # TODO: Is this needed?
+    @RDKitToolkitWrapper.requires_toolkit
+    @AmberToolsToolkitWrapper.requires_toolkit
     def test_compute_partial_charges(self):
         """Test AmberTools compute_partial_charges()"""
         rdkit_toolkit_wrapper = RDKitToolkitWrapper()
@@ -118,7 +120,7 @@ class TestAmberToolsWrapper(TestCase):
 class TestToolkitRegistry(TestCase):
     """Test the ToolkitRegistry"""
 
-    @requires_openeye('oechem') # TODO: Is this needed?
+    @OpenEyeToolkitWrapper.requires_toolkit
     def test_register_openeye(self):
         """Test creation of toolkit registry with OpenEye toolkit"""
         # Test registration of OpenEyeToolkitWrapper
@@ -135,7 +137,7 @@ class TestToolkitRegistry(TestCase):
         smiles2 = registry.call('to_smiles', molecule)
         assert smiles == smiles2
 
-    @requires_rdkit # TODO: Is this needed?
+    @RDKitToolkitWrapper.requires_toolkit
     def test_register_rdkit(self):
         """Test creation of toolkit registry with RDKit toolkit"""
         # Test registration of RDKitToolkitWrapper
@@ -152,8 +154,8 @@ class TestToolkitRegistry(TestCase):
         smiles2 = registry.call('to_smiles', molecule)
         assert smiles == smiles2
 
-    @requires_ambertools # TODO: Is this needed?
-    @requires_rdkit # TODO: Is this needed?
+    @RDKitToolkitWrapper.requires_toolkit
+    @AmberToolsToolkitWrapper.requires_toolkit
     def test_register_ambertools(self):
         """Test creation of toolkit registry with RDKit toolkit"""
         # Test registration of AmberToolsToolkitWrapper

@@ -24,9 +24,12 @@ Currently supported toolkits:
 
 import importlib
 from functools import wraps
+from openforcefield.utils.utils import inherit_docstrings
 
 #=============================================================================================
-# CHEMINFORMATICS TOOLKITS
+# SUPPORTED MODELS
+#
+# TODO: We may no longer need these since we now require SMIRNOFF to specify these models explicitly.
 #=============================================================================================
 
 DEFAULT_AROMATICITY_MODEL = 'OEAroModel_MDL' # TODO: Is there a more specific name and reference for the aromaticity model?
@@ -38,15 +41,9 @@ ALLOWED_FRACTIONAL_BONDORDER_MODELS = ['Wiberg']
 DEFAULT_CHARGE_MODEL = 'AM1-BCC' # TODO: Should this be `AM1-BCC`, or should we encode BCCs explicitly via AM1-CM2 preprocessing?
 ALLOWED_CHARGE_MODELS = ['AM1-BCC'] # TODO: Which models do we want to support?
 
-# Control the precedence order in which cheminformatics toolkits are used
-TOOLKIT_PRECEDENCE = ['openeye', 'rdkit']
-
-# List of supported toolkits and messages indicating how they can be installed
-SUPPORTED_TOOLKITS = {
-    'rdkit' : 'A conda-installable version of the free and open source RDKit cheminformatics toolkit can be found at: https://anaconda.org/rdkit/rdkit',
-    'openeye' : 'The OpenEye toolkit requires a (free for academics) license, and can be found at: https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html',
-    'ambertools' : 'The AmberTools toolkit (free and open source) can be found at https://anaconda.org/omnia/ambertools'
-}
+#=============================================================================================
+# Exceptions
+#=============================================================================================
 
 class LicenseError(Exception):
     """This function requires a license that cannot be found."""
@@ -61,154 +58,20 @@ class ToolkitUnavailableException(Exception):
     # TODO: Allow toolkit to be specified and used in formatting/printing exception.
     pass
 
-# TODO: Differentiate between is installed and is licensed.
-def is_openeye_installed(oetools=('oechem', 'oequacpac', 'oeiupac', 'oeomega')):
-    """
-    Check if a given OpenEye tool is installed and Licensed
-
-    If the OpenEye toolkit is not installed, returns False
-
-    Parameters
-    ----------
-    oetools : str or iterable of strings, Optional, Default: ('oechem', 'oequacpac', 'oeiupac', 'oeomega')
-        Set of tools to check by their string name. Defaults to the complete set that YANK *could* use, depending on
-        feature requested.
-
-        Only checks the subset of tools if passed. Also accepts a single tool to check as a string instead of an
-        iterable of length 1.
-
-    Returns
-    -------
-    all_installed : bool
-        True if all tools in ``oetools`` are installed and licensed, False otherwise
-    """
-    # Complete list of module: License check
-    tools_license = {
-        'oechem': 'OEChemIsLicensed',
-        'oequacpac': 'OEQuacPacIsLicensed',
-        'oeiupac': 'OEIUPACIsLicensed',
-        'oeomega': 'OEOmegaIsLicensed'
-        }
-    tool_keys = tools_license.keys()
-
-    # Cast oetools to tuple if its a single string
-    if type(oetools) is str:
-        oetools = (oetools,)
-    tool_set = set(oetools)
-    valid_tool_set = set(tool_keys)
-    if tool_set & valid_tool_set == set():
-        # Check for empty set intersection
-        raise ValueError("Expected OpenEye tools to have at least of the following {}, "
-                         "but instead got {}".format(tool_keys, oetools))
-    try:
-        for tool in oetools:
-            if tool in tool_keys:
-                # Try loading the module
-                try:
-                    module = importlib.import_module('openeye', tool)
-                except SystemError: # Python 3.4 relative import fix
-                    module = importlib.import_module('openeye.' + tool)
-                # Check that we have the license
-                if not getattr(module, tools_license[tool])():
-                    raise ImportError
-    except ImportError:
-        return False
-    return True
-
-# TODO: Add a method to raise the appropriate exception if OpenEye is not installed or licensed, like assert_openeye_available, assert_rdkit_available
-
-def requires_openeye(*oetools):
-    """
-    Decorator to check that OpenEye licenses are found, raising LicenseError if valid license not found.
-
-    """
-    def decorator(func):
-        @wraps(func)
-        def wrapped_function(*args, **kwargs):
-            if not is_openeye_installed(oetools=oetools):
-                msg = 'This function requires the OpenEye toolkit with licenses for the following tools: {}'.format(oetools)
-                raise LicenseError(msg)
-        return wrapped_function
-    return decorator
-
-OPENEYE_INSTALLED = is_openeye_installed('oechem') and is_openeye_installed('oequacpac') and is_openeye_installed('oeiupac') and is_openeye_installed('oeomega')
-OPENEYE_UNAVAILABLE = not OPENEYE_INSTALLED
-
-def is_rdkit_installed():
-    try:
-        module = importlib.import_module('rdkit', 'Chem')
-        return True
-    except ImportError:
-        return False
-
-RDKIT_INSTALLED = is_rdkit_installed()
-RDKIT_UNAVAILABLE = not RDKIT_INSTALLED
-
-def requires_rdkit():
-    """
-    Decorator to check that rdkit is installed.
-
-    """
-    def decorator(func):
-        @wraps(func)
-        def wrapped_function(*args, **kwargs):
-            if not is_rdkit_installed():
-                msg = 'This function requires the RDKit toolkit'
-                # TODO: Differentiate between is installed and is licensed with MissingPackageError and LicenseError
-                raise MissingPackageError(msg)
-        return wrapped_function
-    return decorator
-
-def is_toolkit_installed():
-    if is_openeye_installed():
-        return True
-    if is_rdkit_installed():
-        return True
-    return False
-
-TOOLKIT_INSTALLED = is_toolkit_installed()
-TOOLKIT_UNAVAILABLE = not TOOLKIT_INSTALLED
-
-def toolkit_is_available(toolkit_name):
-    """Return True if the requested toolkit is available.
-    """
-    if toolkit_name == 'openeye':
-        return is_openeye_installed()
-    elif toolkit_name == 'rdkit':
-        return is_rdkit_installed()
-    else:
-        raise Exception('Toolkit {} unknown; options are {}'.format(toolkit_name, TOOLKIT_PRECEDENCE))
-
-# Filter toolkits by what is available
-TOOLKIT_PRECEDENCE = [ toolkit for toolkit in TOOLKIT_PRECEDENCE if toolkit_is_available(toolkit) ]
-
-# Warn if no toolkits are available
-if TOOLKIT_UNAVAILABLE:
-    msg = 'WARNING: No cheminfomatics toolkits are available.\n'
-    for (toolkit_name, install_instructions) in SUPPORTED_TOOLKITS.items():
-        msg += 'Please install one of the following toolkits:\n'
-        msg += '{} : {}\n'.format(toolkit_name, install_instructions)
-    print(msg)
+#=============================================================================================
+# TOOLKIT UTILITY DECORATORS
+#=============================================================================================
 
 # TODO : Wrap toolkits in a much more modular way to make it easier to query their capabilities
 SUPPORTED_FILE_FORMATS = dict()
 SUPPORTED_FILE_FORMATS['openeye'] = ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC',
                                      'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', 'XYC']
 SUPPORTED_FILE_FORMATS['rdkit'] = ['SDF', 'PDB', 'SMI', 'TDT']
+SUPPORTED_FILE_FORMATS['ambertools'] = ['MOL2']
 
 #=============================================================================================
 # UTILITY FUNCTIONS
 #=============================================================================================
-
-from inspect import getmembers, isfunction
-
-def inherit_docstrings(cls):
-    for name, func in getmembers(cls, isfunction):
-        if func.__doc__: continue
-        for parent in cls.__mro__[1:]:
-            if hasattr(parent, name):
-                func.__doc__ = getattr(parent, name).__doc__
-    return cls
 
 #=============================================================================================
 # CHEMINFORMATICS TOOLKIT WRAPPERS
@@ -220,6 +83,62 @@ class ToolkitWrapper(object):
 
     .. warning :: This API experimental and subject to change.
     """
+    _is_available = None # True if toolkit is available
+    _toolkit_name = None # Name of the toolkit
+    _toolkit_installation_instructions = None # Installation instructions for the toolkit
+
+    # TODO: implement @requires_toolkit decorator here
+    @staticmethod
+    def requires_toolkit(f):
+        if not toolkit_is_available():
+            raise ToolkitUnavailableException('{} toolkit is unavailable' + _toolkit_name)
+        return f
+
+    @classmethod
+    @property
+    def toolkit_name(cls):
+        """
+        The name of the toolkit wrapped by this class.
+        """
+        return cls._toolkit_name
+
+    @classmethod
+    @property
+    def toolkit_installation_instructions(cls):
+        """
+        Instructions on how to install the wrapped toolkit.
+        """
+        return self._toolkit_installation_instructions
+
+    @staticmethod
+    def toolkit_is_available():
+        """
+        Check whether the corresponding toolkit can be imported
+
+        .. note :: This method call may be expensive.
+
+        Returns
+        -------
+        is_installed : bool
+            True if corresponding toolkit is installed, False otherwise.
+
+        """
+        return NotImplementedError
+
+    @classmethod
+    def is_available(cls):
+        """
+        Check whether this toolkit wrapper is available for use because the underlying toolkit can be found.
+
+        .. note :: This method caches the result of any costly checks for file paths or module imports.
+
+        Parameters
+        ----------
+        is_available : bool
+            True if toolkit is available for use, False otherwise
+
+        """
+        return NotImplementedError
 
     def compute_partial_charges(self, molecule, charge_model="bcc"):
         """
@@ -342,8 +261,82 @@ class OpenEyeToolkitWrapper(object):
     """
     OpenEye toolkit wrapper
     """
+    _toolkit_name = 'OpenEye Toolkit'
+    _toolkit_installation_instructions = 'The OpenEye toolkit requires a (free for academics) license, and can be found at: https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html'
+
     @staticmethod
-    @requires_openeye('oechem')
+    def toolkit_is_available(oetools=('oechem', 'oequacpac', 'oeiupac', 'oeomega')):
+        """
+        Check if a given OpenEye toolkit component (or set of components) is installed and Licensed
+
+        If the OpenEye toolkit is not installed, returns False
+
+        Parameters
+        ----------
+        oetools : str or iterable of strings, Optional, Default: ('oechem', 'oequacpac', 'oeiupac', 'oeomega')
+            Set of tools to check by their string name. Defaults to the complete set that YANK *could* use, depending on
+            feature requested.
+
+            Only checks the subset of tools if passed. Also accepts a single tool to check as a string instead of an
+            iterable of length 1.
+
+        Returns
+        -------
+        all_installed : bool
+            True if all tools in ``oetools`` are installed and licensed, False otherwise
+
+        """
+        # Complete list of module: License check
+        tools_license = {
+            'oechem': 'OEChemIsLicensed',
+            'oequacpac': 'OEQuacPacIsLicensed',
+            'oeiupac': 'OEIUPACIsLicensed',
+            'oeomega': 'OEOmegaIsLicensed'
+            }
+        tool_keys = tools_license.keys()
+
+        # Cast oetools to tuple if its a single string
+        if type(oetools) is str:
+            oetools = (oetools,)
+        tool_set = set(oetools)
+        valid_tool_set = set(tool_keys)
+        if tool_set & valid_tool_set == set():
+            # Check for empty set intersection
+            raise ValueError("Expected OpenEye tools to have at least of the following {}, "
+                             "but instead got {}".format(tool_keys, oetools))
+        try:
+            for tool in oetools:
+                if tool in tool_keys:
+                    # Try loading the module
+                    try:
+                        module = importlib.import_module('openeye', tool)
+                    except SystemError: # Python 3.4 relative import fix
+                        module = importlib.import_module('openeye.' + tool)
+                    # Check that we have the license
+                    if not getattr(module, tools_license[tool])():
+                        raise ImportError
+        except ImportError:
+            return False
+        return True
+
+    @classmethod
+    def is_available(cls):
+        """
+        Check whether this toolkit wrapper is available for use because the underlying toolkit can be found.
+
+        .. note :: This method caches the result of any costly checks for file paths or module imports.
+
+        Parameters
+        ----------
+        is_available : bool
+            True if toolkit wrapper is available for use, False otherwise
+
+        """
+        if cls._is_available is None:
+            cls._is_available = cls.toolkit_is_available(oetools=('oechem', 'oequacpac'))
+        return cls._is_available
+
+    @staticmethod
     def _openeye_cip_atom_stereochemistry(oemol, oeatom):
         """
         .. warning :: This API experimental and subject to change.
@@ -381,7 +374,6 @@ class OpenEyeToolkitWrapper(object):
             return None
 
     @staticmethod
-    @requires_openeye('oechem')
     def _openeye_cip_bond_stereochemistry(oemol, oebond):
         """
         .. warning :: This API experimental and subject to change.
@@ -418,7 +410,7 @@ class OpenEyeToolkitWrapper(object):
             return None
 
     @staticmethod
-    @requires_openeye('oechem') # TODO: Is this still needed?
+    @requires_toolkit
     def from_openeye(oemol):
         """
         Create a Molecule from an OpenEye molecule.
@@ -640,10 +632,143 @@ class OpenEyeToolkitWrapper(object):
             charges[index] = atom.GetPartialCharge()
         return charges
 
+    @staticmethod
+    @requires_openeye('oechem')
+    def _find_smarts_matches(oemol, smarts):
+        """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
+
+        .. warning :: This API experimental and subject to change.
+
+        Parameters
+        ----------
+        oemol : openeye.oechem.OEMol or similar
+            oemol to process with the SMIRKS in order to find matches
+        smarts : str
+            SMARTS string with any number of sequentially tagged atoms.
+            If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+        aromaticity_model : str, optional, default=None
+            OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
+            If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
+
+        Returns
+        -------
+        matches : list of tuples of atoms indices within the ``oemol``
+            matches[index] is an N-tuple of atom numbers from the ``oemol``
+            Matches are returned in no guaranteed order.
+            # TODO: What is returned if no matches are found? An empty list, or None?
+            # TODO: Ensure that SMARTS numbers 1, 2, 3... are rendered into order of returnd matches indexed by 0, 1, 2...
+
+        .. notes ::
+
+           * Raises ``LicenseError`` if valid OpenEye tools license is not found, rather than causing program to terminate
+           * Raises ``ValueError`` if ``smarts`` query is malformed
+
+        """
+        from openeye import oechem
+        # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
+        mol = oechem.OEMol(oemol)
+
+        # Set up query
+        qmol = oechem.OEQMol()
+        if not oechem.OEParseSmarts(qmol, smarts):
+            raise ValueError("Error parsing SMARTS '%s'" % smarts)
+
+        # Determine aromaticity model
+        if aromaticity_model:
+            if type(aromaticity_model) == str:
+                # Check if the user has provided a manually-specified aromaticity_model
+                if hasattr(oechem, aromaticity_model):
+                    oearomodel = getattr(oechem, 'OEAroModel_' + aromaticity_model)
+                else:
+                    raise ValueError("Error: provided aromaticity model not recognized by oechem.")
+            else:
+                raise ValueError("Error: provided aromaticity model must be a string.")
+
+            # If aromaticity model was provided, prepare molecule
+            oechem.OEClearAromaticFlags(mol)
+            oechem.OEAssignAromaticFlags(mol, oearomodel)
+            # Avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
+            oechem.OEAssignHybridization(mol)
+
+        # Build list of matches
+        # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
+        #       and speed matching for larger molecules.
+        unique = False # We require all matches, not just one of each kind
+        substructure_search = oechem.OESubSearch(qmol)
+        matches = list()
+        for match in substructure_search.Match(mol, unique):
+            # Compile list of atom indices that match the pattern tags
+            atom_indices = dict()
+            for matched_atom in match.GetAtoms():
+                if matched_atom.pattern.GetMapIdx() != 0:
+                    atom_indices[matched_atom.pattern.GetMapIdx()-1] = matched_atom.target.GetIdx()
+            # Compress into list
+            atom_indices = [ atom_indices[index] for index in range(len(atom_indices)) ]
+            # Convert to tuple
+            matches.append( tuple(atom_indices) )
+
+        return matches
+
+    @staticmethod
+    @requires_openeye('oechem')
+    def find_smarts_matches(molecule, smarts, aromaticity_model='OEAroModel_MDL'):
+        """
+        Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
+
+        Parameters
+        ----------
+        molecule : openforcefield.topology.Molecule
+            The molecule for which all specified SMARTS matches are to be located
+        smarts : str
+            SMARTS string with optional SMIRKS-style atom tagging
+        aromaticity_model : str, optional, default='OEAroModel_MDL'
+            Aromaticity model to use during matching
+
+        .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
+
+        """
+        oemol = OpenEyeToolkitWrapper.to_oemol(molecule, aromaticity_model=aromaticity_model)
+        return _find_smarts_matches(oemol, smarts)
+
 class RDKitToolkitWrapper(ToolkitWrapper):
     """
     RDKit toolkit wrapper
     """
+    _toolkit_name = 'The RDKit'
+    _toolkit_installation_instructions = 'A conda-installable version of the free and open source RDKit cheminformatics toolkit can be found at: https://anaconda.org/rdkit/rdkit'
+
+    @staticmethod
+    def toolkit_is_available():
+        """
+        Check whether the RDKit toolkit can be imported
+
+        Returns
+        -------
+        is_installed : bool
+            True if RDKit is installed, False otherwise.
+
+        """
+        try:
+            module = importlib.import_module('rdkit', 'Chem')
+            return True
+        except ImportError:
+            return False
+
+    @classmethod
+    def is_available(cls):
+        """
+        Check whether toolkit is available for use.
+
+        Parameters
+        ----------
+        is_available : bool
+            True if toolkit is available for use, False otherwise
+
+        """
+        if cls._is_available is None:
+            cls._is_available = cls.toolkit_is_available()
+        return cls._is_available
+
     def to_smiles(self, molecule):
         # inherits base class docstring
         from rdkit import Chem
@@ -896,13 +1021,139 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Return non-editable version
         return rdkit.Mol(rdmol)
 
+    @staticmethod
+    @requires_rdkit()
+    def _find_smarts_matches(rdmol, smirks, aromaticity_model='OEAroModel_MDL'):
+        """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
+
+        .. warning :: This API experimental and subject to change.
+
+        Parameters
+        ----------
+        rdmol : rdkit.Chem.Mol
+            rdmol to process with the SMIRKS in order to find matches
+        smarts : str
+            SMARTS string with any number of sequentially tagged atoms.
+            If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+        aromaticity_model : str, optional, default='OEAroModel_MDL'
+            OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
+            If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
+
+        Returns
+        -------
+        matches : list of tuples of atoms indices within the ``rdmol``
+            matches[index] is an N-tuple of atom numbers from the ``rdmol``
+            Matches are returned in no guaranteed order.
+            # TODO: What is returned if no matches are found? An empty list, or None?
+            # TODO: Ensure that SMARTS numbers 1, 2, 3... are rendered into order of returnd matches indexed by 0, 1, 2...
+
+        .. notes ::
+
+           * Raises ``ValueError`` if ``smarts`` query is malformed
+
+        """
+        from rdkit import Chem
+
+        # Make a copy of the molecule
+        rdmol = Chem.Mol(rdmol)
+        # Use designated aromaticity model
+        if aromaticity_model == 'OEAroModel_MDL':
+            Chem.SanitizeMol(mol, Chem.SANITIZE_ALL^Chem.SANITIZE_SETAROMATICITY)
+            Chem.SetAromaticity(mol, Chem.AromaticityModel.AROMATICITY_MDL)
+        else:
+            # Only the OEAroModel_MDL is supported for now
+            raise ValueError('Unknown aromaticity model: {}'.aromaticity_models)
+
+        # Set up query.
+        qmol = Chem.MolFromSmarts(smirks)   #cannot catch the error
+        if qmol is None:
+            raise SMIRKSParsingError('RDKit could not parse the SMIRKS string "{}"'.format(smirks))
+
+        # Create atom mapping for query molecule
+        index_map = dict()
+        for atom in qmol.GetAtoms():
+             smirks_index = atom.GetAtomMapNum()
+             if smirks_index != 0:
+                ind_map[smirks_index - 1] = atom.GetIdx()
+        map_list = [ index_map[x] for x in sorted(index_map) ]
+
+        # Perform matching
+        # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
+        #       and speed matching for larger molecules.
+        matches = list()
+        for match in rdmol.GetSubstructMatches(qmol, uniquify=False):
+            mas = [ match[x] for x in map_list ]
+            matches.append(tuple(mas))
+
+        return matches
+
+    @staticmethod
+    @requires_rdkit
+    def find_smarts_matches(molecule, smarts, aromaticity_model='OEAroModel_MDL'):
+        """
+        Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
+
+        Parameters
+        ----------
+        molecule : openforcefield.topology.Molecule
+            The molecule for which all specified SMARTS matches are to be located
+        smarts : str
+            SMARTS string with optional SMIRKS-style atom tagging
+        aromaticity_model : str, optional, default='OEAroModel_MDL'
+            Aromaticity model to use during matching
+
+        .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
+
+        """
+        rdmol = RDKitToolkitWrapper.to_rdmol(molecule, aromaticity_model=aromaticity_model)
+        return _find_smarts_matches(rdmol, smarts, aromaticity_model='OEAroModel_MDL')
+
 class AmberToolsWrapper(ToolkitWrapper):
     """
     AmberTools toolkit wrapper
 
     """
+    _toolkit_name = 'AmberToolks'
+    _toolkit_installation_instructions = 'The AmberTools toolkit (free and open source) can be found at https://anaconda.org/omnia/ambertools'
+
+    @staticmethod
+    def toolkit_is_available():
+        """
+        Check whether the AmberTools toolkit is installed
+
+        Returns
+        -------
+        is_installed : bool
+            True if RDKit is installed, False otherwise.
+
+        """
+        # TODO: Check all tools needed
+        # TODO: How should we implement find_executable?
+        ANTECHAMBER_PATH = find_executable("antechamber")
+        if ANTECHAMBER_PATH is None:
+            return False
+        else:
+            return True
+
+    @classmethod
+    def is_available(cls):
+        """
+        Check whether this toolkit wrapper is available for use because the underlying toolkit can be found.
+
+        .. note :: This method caches the result of any costly checks for file paths or module imports.
+
+        Parameters
+        ----------
+        is_available : bool
+            True if toolkit wrapper is available for use, False otherwise
+
+        """
+        if cls._is_available is None:
+            cls._is_available = cls.toolkit_is_available()
+        return cls._is_available
+
     def __init__(self):
-        # TODO: Find AMBERHOME or executable home
+        # TODO: Find AMBERHOME or executable home, checking miniconda if needed
         pass
 
     def compute_partial_charges(self, molecule, charge_model="bcc"):
@@ -943,6 +1194,7 @@ class AmberToolsWrapper(ToolkitWrapper):
             raise ValueError('Requested charge method {} not among supported charge methods {}'.format(charge_method, SUPPORTED_ANTECHAMBER_CHARGE_METHODS))
 
         # Find the path to antechamber
+        # TODO: How should we implement find_executable?
         ANTECHAMBER_PATH = find_executable("antechamber")
         if ANTECHAMBER_PATH is None:
             raise(IOError("Antechamber not found, cannot run charge_mol()"))
@@ -970,6 +1222,10 @@ class AmberToolsWrapper(ToolkitWrapper):
         # TODO: Read the charges back into the molecule?
         return charges
 
+#=============================================================================================
+# Toolkit registry
+#=============================================================================================
+
 class ToolkitRegistry(object):
     """
     Registry for ToolkitWrapper objects
@@ -982,7 +1238,7 @@ class ToolkitRegistry(object):
     >>> from openforcefield.utils.toolkits import ToolkitRegistry
     >>> toolkit_registry = ToolkitRegistry()
     >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsWrapper]
-    >>> for toolkit in toolkit_precedence: toolkit_registry.register(toolkit, exception_if_unavailable=False)
+    >>> [ toolkit_registry.register(toolkit) for toolkit in toolkit_precedence if toolkit.is_available() ]
 
     Register specified toolkits, raising an exception if one is unavailable
 
@@ -994,12 +1250,12 @@ class ToolkitRegistry(object):
 
     >>> from openforcefield.utils import all_subclasses
     >>> toolkits = all_subclasses(ToolkitWrapper)
-    >>> for toolkit in toolkits: toolkit_registry.register_toolkit(toolkit, exception_if_unavailable=False)
+    >>> [ toolkit_registry.register(toolkit) for toolkit in toolkits if toolkit.is_available() ]
 
     Retrieve the global singleton toolkit registry, which is created when this module is imported from all available toolkits:
 
-    >>> from openforcefield.utils.toolkits import DEFAULT_TOOLKIT_REGISTRY
-    >>> print(TOOLKIT_REGISTRY.registered_toolkits())
+    >>> from openforcefield.utils.toolkits import DEFAULT_TOOLKIT_REGISTRY as toolkit_registry
+    >>> print(toolkit_registry.registered_toolkits())
 
     """
     def __init__(self, register_imported_toolkit_wrappers=False):
@@ -1109,6 +1365,7 @@ class ToolkitRegistry(object):
         msg += 'Available toolkits are: {}\n'.format(self.registered_toolkits)
         raise NotImplementedError(msg)
 
+    # TODO: Can we instead register available methods directly with `ToolkitRegistry`, so we can just use `ToolkitRegistry.method()`?
     def call(self, method_name, *args, **kwargs):
         """
         Execute the requested method by attempting to use all registered toolkits in order of precedence.
@@ -1163,8 +1420,24 @@ class ToolkitRegistry(object):
             msg += ' {} : {}\n'.format(toolkit, value_error)
         raise NotImplementedError(msg)
 
+#=============================================================================================
+# GLOBAL TOOLKIT REGISTRY
+#=============================================================================================
+
 # Create global toolkit registry, where all available toolkits are registered
 from openforcefield.utils import all_subclasses
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry()
 for toolkit in all_subclasses(ToolkitWrapper):
     GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit, exception_if_unavailable=False)
+
+#=============================================================================================
+# WARN IF INSUFFICIENT TOOLKITS INSTALLED
+#=============================================================================================
+
+if len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits()) == 0:
+    msg = 'WARNING: No cheminfomatics toolkits are available.\n'
+    msg += 'Please install at least one of the following toolkits:\n'
+    for wrapper in all_subclasses(ToolkitWrapper):
+        if wrapper.toolkit_name is not None:
+            msg += '{} : {}\n'.format(wrapper.toolkit_name, wrapper.installation_instructions)
+    print(msg)

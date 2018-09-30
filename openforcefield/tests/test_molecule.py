@@ -5,7 +5,7 @@
 #=============================================================================================
 
 """
-Tests for Molecule
+Tests for molecular topology representations
 
 At least one supported cheminformatics toolkit must be installed to run these tests.
 Only the tests applicable to that toolkit will be run.
@@ -27,6 +27,7 @@ import pytest
 from openforcefield import utils, topology
 from openforcefield.topology import Molecule, ALLOWED_CHARGE_MODELS, ALLOWED_FRACTIONAL_BONDORDER_MODELS
 from openforcefield.utils import get_data_filename
+# TODO: Will the ToolkitWrapper allow us to pare that down?
 from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORTED_TOOLKITS, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
 
 #=============================================================================================
@@ -77,7 +78,7 @@ class TestMolecule(TestCase):
         molecules_copy = pickle.loads(serialized)
         for (molecule, molecule_copy) in zip(self.molecules, molecules_copy):
             assert molecule == molecule_copy
-            
+
     def test_create_atom(self):
         """Test Atom creation"""
         # Create a non-aromatic carbon atom

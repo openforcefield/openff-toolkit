@@ -11,10 +11,20 @@ import os
 import tempfile
 import shutil
 import contextlib
+from inspect import getmembers, isfunction
 
 #=============================================================================================
 # UTILITY SUBROUTINES
 #=============================================================================================
+
+def inherit_docstrings(cls):
+    """Inherit docstrings from parent class"""
+    for name, func in getmembers(cls, isfunction):
+        if func.__doc__: continue
+        for parent in cls.__mro__[1:]:
+            if hasattr(parent, name):
+                func.__doc__ = getattr(parent, name).__doc__
+    return cls
 
 def all_subclasses(cls):
     """Recursively retrieve all subclasses of the specified class"""
