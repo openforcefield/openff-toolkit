@@ -523,7 +523,7 @@ class ForceField(object):
             known_args.update(parameter_handler.known_kwargs)
         unknown_kwargs = set(kwargs.keys()).difference(known_kwargs)
         if len(unknown_kwargs) > 0:
-            msg = "The following keyword arguments to create_system() are not used by any registered force Handler: {}\n".format(unknown_kwargs)
+            msg = "The following keyword arguments to create_openmm_system() are not used by any registered force Handler: {}\n".format(unknown_kwargs)
             msg += "Known keyword arguments: {}".format(known_kwargs)
             raise ValueError(msg)
 
@@ -566,7 +566,7 @@ class ForceField(object):
         # TODO: Automagically handle expansion of virtual sites? Or is Topology supposed to do that?
 
         # Create OpenMM System
-        system = self.create_system(topology, default_box_vectors=default_box_vectors, **kwargs)
+        system = self.create_openmm_system(topology, default_box_vectors=default_box_vectors, **kwargs)
 
         # Create a ParmEd Structure object
         structure = parmed.openmm.topsystem.load_topology(topology.to_openmm(), system, positions)

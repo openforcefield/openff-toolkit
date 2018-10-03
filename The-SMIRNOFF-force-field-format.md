@@ -636,7 +636,7 @@ We recommend generics be used sparingly unless it is your intention to provide t
 
 This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specification along with `ForceField` implementation refactor:
 * Aromaticity model now defaults to `OEAroModel_MDL`, and aromaticity model names drop OpenEye-specific prefixes
-* Top-level tags must now specify units for any unit-bearking quantities.
+* Top-level tags are now required to specify units for any unit-bearing quantities to avoid the potential for mistakes from implied units.
 * Potential energy component definitions were renamed to be more general:
     * `<NonbondedForce>` was renamed to `<vdW>`
     * `<HarmonicBondForce>` was renamed to `<Bonds>`

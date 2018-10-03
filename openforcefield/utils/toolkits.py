@@ -263,7 +263,7 @@ class ToolkitWrapper(object):
         raise NotImplementedError
 
 @inherit_docstrings
-class OpenEyeToolkitWrapper(object):
+class OpenEyeToolkitWrapper(ToolkitWrapper):
     """
     OpenEye toolkit wrapper
     """

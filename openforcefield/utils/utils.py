@@ -7,11 +7,8 @@ Utility subroutines
 #=============================================================================================
 # GLOBAL IMPORTS
 #=============================================================================================
-import os
-import tempfile
-import shutil
+
 import contextlib
-from inspect import getmembers, isfunction
 
 #=============================================================================================
 # UTILITY SUBROUTINES
@@ -19,6 +16,7 @@ from inspect import getmembers, isfunction
 
 def inherit_docstrings(cls):
     """Inherit docstrings from parent class"""
+    from inspect import getmembers, isfunction
     for name, func in getmembers(cls, isfunction):
         if func.__doc__: continue
         for parent in cls.__mro__[1:]:
@@ -32,7 +30,21 @@ def all_subclasses(cls):
 
 @contextlib.contextmanager
 def temporary_cd(dir_path):
-    """Context to temporary change the working directory."""
+    """Context to temporary change the working directory.
+
+    Parameters
+    ----------
+    dir_path : str
+        The directory path to enter within the context
+
+    Examples
+    --------
+    >>> dir_path = '/tmp'
+    >>> with temporary_cd(dir_path):
+    ...     # do something in dir_path
+
+    """
+    import os
     prev_dir = os.getcwd()
     os.chdir(os.path.abspath(dir_path))
     try:
@@ -43,10 +55,13 @@ def temporary_cd(dir_path):
 @contextlib.contextmanager
 def temporary_directory():
     """Context for safe creation of temporary directories."""
+
+    import tempfile
     tmp_dir = tempfile.mkdtemp()
     try:
         yield tmp_dir
     finally:
+        import shutil
         shutil.rmtree(tmp_dir)
 
 def get_data_filename(relative_path):
@@ -61,6 +76,7 @@ def get_data_filename(relative_path):
     """
 
     from pkg_resources import resource_filename
+    import os
     fn = resource_filename('openforcefield', os.path.join('data', relative_path))
 
     if not os.path.exists(fn):
