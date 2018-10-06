@@ -805,7 +805,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # If RDMol has a title save it
         if rdmol.HasProp("_Name"):
-            self.name == rdmol.GetProp("_Name")
+            mol.name == rdmol.GetProp("_Name")
 
         # Store all properties
         # TODO: Should Title or _Name be a special property?
@@ -915,10 +915,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Set name
         # TODO: What is the best practice for how this should be named?
-        rdmol.SetProp('_Name', self.name)
+        rdmol.SetProp('_Name', molecule.name)
 
         # TODO: Set other properties
-        for name, value in self.properties.items():
+        for name, value in molecule.properties.items():
             if type(value) == str:
                 rdmol.SetProp(name, value)
             elif type(value) == int:
@@ -942,7 +942,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # atom map lets you find atoms again
         map_atoms = dict() # { molecule index : rdkit index }
-        for index, atom in enumerate(self.atoms):
+        for index, atom in enumerate(molecule.atoms):
             rdatom = Chem.Atom(atom.atomic_number)
             rdatom.SetFormalCharge(atom.formal_charge)
             rdatom.SetIsAromatic(atom.is_aromatic)
@@ -954,7 +954,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
             map_atoms[oe_idx] = rdmol.AddAtom(rdatom)
 
-        for bond in self.bonds:
+        for bond in molecule.bonds:
             rdatom1 = map_atoms[bond.atom1_index]
             rdatom2 = map_atoms[bond.atom2_index]
             rdmol.AddBond(rdatom1, rdatom2)
@@ -969,7 +969,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 rdbond.SetIsAromatic(False)
 
         # Assign bond stereochemistry
-        for bond in self.bonds:
+        for bond in molecule.bonds:
             if bond.stereochemistry:
                 # Determine neighbors
                 # TODO: This API needs to be created
@@ -997,8 +997,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Set coordinates if we have them
         # TODO: Fix this once conformer API is defined
-        if self._conformers:
-            for conformer in self._conformers:
+        if molecule._conformers:
+            for conformer in molecule._conformers:
                 rdmol_conformer = Chem.Conformer()
                 for index, rd_idx in map_atoms.items():
                     (x,y,z) = conformer[index,:]
