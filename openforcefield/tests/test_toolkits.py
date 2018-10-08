@@ -17,9 +17,9 @@ from functools import partial
 from unittest import TestCase
 from openforcefield import utils
 
-from pytest.mark import skipif
 
-from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsWrapper, ToolkitRegistry
+import pytest
+from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
 
 #=============================================================================================
 # TESTS
@@ -49,13 +49,23 @@ class TestToolkitWrapper(TestCase):
 class TestOpenEyeToolkitWrapper(TestCase):
     """Test the OpenEyeToolkitWrapper"""
 
-    @skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
     def test_smiles(self):
         """Test OpenEyeToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
         smiles = 'CC'
         molecule = toolkit_wrapper.from_smiles(smiles)
-        smiles2 = molecule.to_smiles()
+        ## From Jeff:  I don't think we can do this since the to_smiles
+        ## function to be tested needs to be the openeye one,
+        ## and the molecule won't know which toolkit it came from
+        #smiles2 = molecule.to_smiles()
+
+        ## Though we could do it from a static method using something
+        ## like
+        #import toolkits.OpeneyeToolkitWrapper.to_smiles as to_smiles
+        ## But this would be nonextensible
+        
+        smiles2 = toolkit_wrapper.to_smiles(molecule)
         assert smiles == smiles2
 
     @OpenEyeToolkitWrapper.requires_toolkit
@@ -66,7 +76,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
         molecule = Molecule.from_smiles(smiles)
         oemol = toolkit_wrapper.to_openeye(molecule)
         molecule2 = toolkit_wrapper.from_openeye(oemol)
-        smiles2 = molecule2.to_smiles()
+        smiles2 = molecule2.to_smiles() 
         assert smiles == smiles2
 
     @OpenEyeToolkitWrapper.requires_toolkit

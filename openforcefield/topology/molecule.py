@@ -43,7 +43,7 @@ from simtk import unit
 from simtk.openmm.app import element
 
 import openforcefield
-from openforcefield.utils.toolkits import OPENEYE_INSTALLED, RDKIT_INSTALLED, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
+from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
 from openforcefield.utils.toolkits import requires_rdkit, requires_openeye
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
@@ -502,10 +502,10 @@ class FrozenMolecule(Serializable):
                 self._copy_initializer(other)
             elif isinstance(other, str):
                 self.__setstate__(other)
-            elif OPENEYE_INSTALLED and issubclass(other, openeye.oechem.OEMolBase):
+            elif OPENEYE_AVAILABLE and issubclass(other, openeye.oechem.OEMolBase):
                 mol = Molecule.from_openeye(other)
                 self._copy_initializer(mol)
-            elif RDKIT_INSTALLED and isinstance(other, rdkit.Chem.rdchem.Mol):
+            elif RDKIT_AVAILABLE and isinstance(other, rdkit.Chem.rdchem.Mol):
                 mol = Molecule.from_rdkit(other)
                 self._copy_initializer(mol)
             elif isinstance(other, str) or hasattr(other, 'read'):

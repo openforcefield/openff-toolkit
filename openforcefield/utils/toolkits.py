@@ -27,6 +27,10 @@ Currently supported toolkits:
 import importlib
 from functools import wraps
 from openforcefield.utils.utils import inherit_docstrings
+from distutils.spawn import find_executable
+
+# Creates circular dependency (which might not be a problem, but is a pain for debugging)
+#from openforcefield.topology.molecule import Molecule
 
 #=============================================================================================
 # SUPPORTED MODELS
@@ -42,6 +46,8 @@ ALLOWED_FRACTIONAL_BONDORDER_MODELS = ['Wiberg']
 
 DEFAULT_CHARGE_MODEL = 'AM1-BCC' # TODO: Should this be `AM1-BCC`, or should we encode BCCs explicitly via AM1-CM2 preprocessing?
 ALLOWED_CHARGE_MODELS = ['AM1-BCC'] # TODO: Which models do we want to support?
+
+
 
 #=============================================================================================
 # Exceptions
@@ -60,9 +66,16 @@ class ToolkitUnavailableException(Exception):
     # TODO: Allow toolkit to be specified and used in formatting/printing exception.
     pass
 
+class NotImplementedException(Exception):
+    """The requested function hasn't been implemented in this toolkit."""
+    pass
+
+
 #=============================================================================================
 # TOOLKIT UTILITY DECORATORS
 #=============================================================================================
+
+
 
 # TODO : Wrap toolkits in a much more modular way to make it easier to query their capabilities
 SUPPORTED_FILE_FORMATS = dict()
@@ -204,7 +217,8 @@ class ToolkitWrapper(object):
         """
         raise NotImplementedError
 
-    @staticmethod
+    
+    #@staticmethod
     def from_smiles(self, smiles):
         """
         Create a Molecule object from SMILES
@@ -439,7 +453,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         from openeye import oechem
-
+        from openforcefield.topology.molecule import Molecule
         molecule = Molecule()
 
         # TODO: What other information should we preserve besides name?
@@ -581,6 +595,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oemol = self.to_openeye(molecule)
         return oechem.OEMolToSmiles(oemol)
 
+    #@staticmethod
+    def from_smiles(self, smiles):
+        from openeye import oechem
+        oemol = oechem.OEGraphMol()
+        oechem.OESmilesToMol(oemol, smiles)
+        molecule = self.from_openeye(oemol)
+        return molecule
+    
     def compute_partial_charges(self, molecule, charge_model="am1bcc"):
         """
         Compute partial charges with OpenEye quacpac
@@ -799,6 +821,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
+        from openforcefield.topology.molecule import Molecule
 
         # Create a new openforcefield Molecule
         mol = Molecule()
@@ -1100,7 +1123,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol = self.to_rdmol(molecule, aromaticity_model=aromaticity_model)
         return _find_smarts_matches(rdmol, smarts, aromaticity_model='OEAroModel_MDL')
 
-class AmberToolsWrapper(ToolkitWrapper):
+class AmberToolsToolkitWrapper(ToolkitWrapper):
     """
     AmberTools toolkit wrapper
 
@@ -1229,13 +1252,13 @@ class ToolkitRegistry(object):
 
     >>> from openforcefield.utils.toolkits import ToolkitRegistry
     >>> toolkit_registry = ToolkitRegistry()
-    >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsWrapper]
+    >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
     >>> [ toolkit_registry.register(toolkit) for toolkit in toolkit_precedence if toolkit.is_available() ]
 
     Register specified toolkits, raising an exception if one is unavailable
 
     >>> toolkit_registry = ToolkitRegistry()
-    >>> toolkits = [OpenEyeToolkitWrapper, AmberToolsWrapper]
+    >>> toolkits = [OpenEyeToolkitWrapper, AmberToolsToolkitWrapper]
     >>> for toolkit in toolkits: toolkit_registry.register(toolkit)
 
     Register all available toolkits in arbitrary order
@@ -1250,7 +1273,7 @@ class ToolkitRegistry(object):
     >>> print(toolkit_registry.registered_toolkits())
 
     """
-    def __init__(self, register_imported_toolkit_wrappers=False):
+    def __init__(self, register_imported_toolkit_wrappers=False, toolkit_precedence=None):
         """
         Create an empty toolkit registry.
 
@@ -1260,14 +1283,26 @@ class ToolkitRegistry(object):
         ----------
         register_imported_toolkit_wrappers : bool, optional, default=False
             If True, will attempt to register all imported ToolkitWrapper subclasses that can be found.
-
+        toolkit_precedence : list, optional, defailt=None
+            List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If None, defaults to [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]. Note that toolkit wrappers not specified in list will not be added.
         """
+
         self._toolkits = list()
 
+        if toolkit_precedence == None:
+            self.toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
+
         if register_imported_toolkit_wrappers:
-            toolkits = all_subclasses(ToolkitWrapper)
-            for toolkit in toolkit_precedence:
-                toolkit_registry.register_toolkit(toolkit)
+            # TODO: The precedence ordering of any non-specified remaining wrappers will be arbitrary.
+            # How do we fix this?
+            all_importable_toolkit_wrappers = all_subclasses(ToolkitWrapper)
+            for toolkit in all_importable_toolkit_wrappers:
+                if toolkit in toolkit_precedence:
+                    continue
+                toolkit_precedence.append(toolkit)
+
+        for toolkit in toolkit_precedence:
+            toolkit_registry.register_toolkit(toolkit)
 
     @property
     def registered_toolkits(self):
@@ -1417,10 +1452,26 @@ class ToolkitRegistry(object):
 #=============================================================================================
 
 # Create global toolkit registry, where all available toolkits are registered
-from openforcefield.utils import all_subclasses
-GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry()
-for toolkit in all_subclasses(ToolkitWrapper):
-    GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit, exception_if_unavailable=False)
+#from openforcefield.utils import all_subclasses
+GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(register_imported_toolkit_wrappers=True)
+#for toolkit in all_subclasses(ToolkitWrapper):
+#    GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit, exception_if_unavailable=False)
+
+#=============================================================================================
+# SET GLOBAL TOOLKIT-AVAIABLE VARIABLES 
+#=============================================================================================
+
+OPENEYE_AVAILABLE = False
+RDKIT_AVAILABLE = False
+AMBERTOOLS_AVAILABLE = False
+
+for toolkit in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
+    if type(toolkit) is OpenEyeToolkitWrapper:
+        OPENEYE_AVAILABLE = True
+    elif type(toolkit) is RDKitToolkitWrapper:
+        RDKIT_AVAILABLE = True
+    elif type(toolkit) is AmberToolsToolkitWrapper:
+        AMBERTOOLS_AVAILABLE = True
 
 #=============================================================================================
 # WARN IF INSUFFICIENT TOOLKITS INSTALLED
