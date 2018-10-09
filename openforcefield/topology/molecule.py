@@ -37,7 +37,6 @@ Molecular chemical entity representation and routines to interface with cheminfo
 import numpy as np
 from copy import deepcopy
 
-from distutils.spawn import find_executable
 
 from simtk import unit
 from simtk.openmm.app import element
@@ -585,13 +584,24 @@ class FrozenMolecule(Serializable):
         """
         Clear the contents of the current molecule.
         """
-        self._name = None # TODO: Should we keep a name, or just store that in _properties?
+        #self._name = None # TODO: Should we keep a name, or just store that in _properties?
+        ## From Jeff:
+        ## Pro: More informative error messages for users when there are parameterization problems
+        ## Pro: Easy way to find molecules of interest in a Topology or other collection of Molecules
+        ## Con: We'd need to make rules about duplicate names in a Topology
+        ## Con: If we have a Topology.select_atoms() function, people would expect names to be searchable and we'd have to implement that
+        ## Opinion: We should store the name in _properties
         self._particles = list() # List of particles (atoms or virtual sites) # TODO: Should this be a dict?
         self._bonds = list() # List of bonds between Atom objects # TODO: Should this be a dict?
         self._charges = None # TODO: Storage charges
         self._properties = None # Attached properties to be preserved
         self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
         self._conformers = None # Optional conformers
+        ## From Jeff: Why is it necessary to know mutliple conformers for the same molecule?
+        ## I get the sense that Molecule objects should just deal with connectivity, not geometry.
+        ## Having a _conformers field would make sense if we're expecting cases where we assign
+        ## different parameters to molecules based on their conformation, but then we might need
+        ## a whole geometry implementation in here.
 
     def _copy_initializer(self, other):
         """
@@ -793,7 +803,10 @@ class FrozenMolecule(Serializable):
         # TODO: Check to make sure bond does not already exist
         ## From Jeff: I may need to sanity check which indexing
         ## system these are in when called from from_openeye
-        self._bonds.append(atom1_index, atom2_index)
+
+        #self._bonds.append(atom1_index, atom2_index)
+        
+
         self._invalidate_cached_properties()
 
     def add_virtual_site(self, virtual_site):
