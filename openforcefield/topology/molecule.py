@@ -43,8 +43,8 @@ from simtk import unit
 from simtk.openmm.app import element
 
 import openforcefield
-from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
-from openforcefield.utils.toolkits import requires_rdkit, requires_openeye
+from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE, AMBERTOOLS_AVAILABLE, GLOBAL_TOOLKIT_REGISTRY, SUPPORTED_FILE_FORMATS
+#from openforcefield.utils.toolkits import requires_rdkit, requires_openeye
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
 # TODO: Do we need these?
@@ -620,13 +620,18 @@ class FrozenMolecule(Serializable):
         """
         return self.to_smiles() == other.to_smiles()
 
-    def to_smiles(self):
+    def to_smiles(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Return a canonical isomeric SMILES representation of the current molecule
 
         .. note :: RDKit and OpenEye versions will not necessarily return the same representation.
 
         .. todo :: Can we ensure RDKit and OpenEye versions return the same representation?
+
+        Parameters
+        ----------
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES conversion
 
         Returns
         -------
@@ -639,10 +644,14 @@ class FrozenMolecule(Serializable):
         >>> smiles = molecule.to_smiles()
 
         """
-        return tookit_registry.call('to_smiles', self)
+        if isinstance(toolkit, ToolkitRegistry):
+            return toolkit_registry.call('to_smiles', molecule)
+        elif isinstance(toolkit, ToolkitWrapper):
+            return toolkit.to_smiles(molecule)
+        #return toolkit_registry.call('to_smiles', self)
 
     @staticmethod
-    def from_smiles(smiles):
+    def from_smiles(smiles, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Construct a Molecule from a SMILES representation
 
@@ -650,6 +659,9 @@ class FrozenMolecule(Serializable):
         ----------
         smiles : str
             The SMILES representation of the molecule.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
         Returns
         -------
@@ -662,7 +674,11 @@ class FrozenMolecule(Serializable):
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
 
         """
-        return tookit_registry.call('from_smiles', smiles)
+        if isinstance(toolkit, ToolkitRegistry):
+            return toolkit_registry.call('from_smiles', smiles)
+        elif isinstance(toolkit, ToolkitWrapper):
+            return toolkit.from_smiles(self, smiles)
+        #return tookit_registry.call('from_smiles', smiles)
 
     def _invalidate_cached_properties(self):
         """
@@ -707,7 +723,7 @@ class FrozenMolecule(Serializable):
 
         return G
 
-    def _add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None):
+    def _add_atom(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None):
         """
         Add an atom
 
@@ -750,7 +766,8 @@ class FrozenMolecule(Serializable):
         """
         # Create an atom
         atom = Atom(atomic_number=atomic_number, formal_charge=formal_charge, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
-        self._atoms.append(atom)
+        #self._atoms.append(atom)
+        self._particles.append(atom)
         self._invalidate_cached_properties()
 
     def _add_bond(self, atom1_index, atom2_index, is_aromatic, order, stereochemistry=None):
@@ -774,7 +791,9 @@ class FrozenMolecule(Serializable):
 
         """
         # TODO: Check to make sure bond does not already exist
-        self._bonds.append(atom1, atom2)
+        ## From Jeff: I may need to sanity check which indexing
+        ## system these are in when called from from_openeye
+        self._bonds.append(atom1_index, atom2_index)
         self._invalidate_cached_properties()
 
     def add_virtual_site(self, virtual_site):
@@ -907,7 +926,7 @@ class FrozenMolecule(Serializable):
         """Return the total charge on the molecule"""
         return sum([atom.formal_charge for atom in self.atoms])
 
-    def chemical_environment_matches(self, query, toolkit=None):
+    def chemical_environment_matches(self, query, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Retrieve all matches for a given chemical environment query.
 
         .. todo ::
@@ -920,9 +939,9 @@ class FrozenMolecule(Serializable):
         query : str or ChemicalEnvironment
             SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query
             Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
-        toolkit : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches,
-            or None if ``GLOBAL_TOOLKIT_REGISTRY`` is to be used
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
+            
 
         Returns
         -------
@@ -954,7 +973,9 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit, ToolkitWrapper):
             matches = toolkit.find_smarts_matches(self, smirks)
         else:
-            matches = GLOBAL_TOOLKIT_REGISTRY.find_smarts_matches(self, smirks)
+            raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
+            #else:
+        #    matches = GLOBAL_TOOLKIT_REGISTRY.find_smarts_matches(self, smirks)
 
         return matches
 
@@ -964,8 +985,11 @@ class FrozenMolecule(Serializable):
         """
         return _name
 
-    @staticmethod
-    @requires_openeye('oechem', 'oeiupac')
+    @staticmethod    
+    #@requires_openeye('oechem', 'oeiupac')
+    #@OpenEyeToolkitWrapper.requires_toolkit()
+    @OpenEyeToolkitWrapper.requires_toolkit(OpenEyeToolkitWrapper)
+
     def from_iupac(iupac_name):
         """Generate a molecule from IUPAC or common name
 
@@ -999,7 +1023,10 @@ class FrozenMolecule(Serializable):
         oechem.OETriposAtomNames(oemol)
         return Molecule.from_openeye(oemol)
 
-    @requires_openeye('oechem', 'oeiupac')
+    #@requires_openeye('oechem', 'oeiupac')
+    ## From Jeff: I don't think we shold need to mention  OEToolkitWrapper
+    ## twice here. I need to come back and fix this.
+    @OpenEyeToolkitWrapper.requires_toolkit(OpenEyeToolkitWrapper)
     def to_iupac(self):
         """Generate IUPAC name from Molecule
 
@@ -1072,7 +1099,7 @@ class FrozenMolecule(Serializable):
         return Topology.from_molecules(self)
 
     @staticmethod
-    def from_file(filename):
+    def from_file(filename, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Create one or more molecules from a file
 
@@ -1086,6 +1113,9 @@ class FrozenMolecule(Serializable):
         filename : str
             The name of the file to stream one or more molecules from.
 
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file loading. If a Toolkit is passed, only the highest-precedence toolkit is used
+            
         Returns
         -------
         molecules : Molecule or list of Molecules
@@ -1100,11 +1130,20 @@ class FrozenMolecule(Serializable):
 
         """
         # TODO: This needs to be cleaned up to use the new ToolkitRegistry and ToolkitWrappers
+        # TODO: Check file extensions for compatible toolkit wrappers
 
         # Use highest-precendence toolkit
-        toolkit = TOOLKIT_PRECEDENCE[0]
+        #toolkit = TOOLKIT_PRECEDENCE[0]
+        if isinstance(toolkit, ToolkitRegistry):
+            toolkit = toolkit_registry.registered_toolkits[0]
+        elif isinstance(toolkit, ToolkitWrapper):
+            toolkit = toolkit_registry
+        else:
+            raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
+        #toolkit = 
         mols = list()
-        if toolkit == 'openeye':
+        
+        if type(toolkit) is OpenEyeToolkitWrapper:
             # Read molecules from an OpenEye-supported file, converting them one by one
             from openeye import oechem
             oemol = oechem.OEGraphMol()
@@ -1112,7 +1151,7 @@ class FrozenMolecule(Serializable):
             while oechem.OEReadMolecule(ifs, oemol):
                 mol = Molecule.from_openeye(oemol)
                 mols.append(mol)
-        elif toolkit == 'rdkit':
+        elif type(toolkit) is RDKitToolkitWrapper:
             from rdkit import Chem
             for rdmol in Chem.SupplierFromFilename(filename):
                 mol = Molecule.from_rdkit(rdmol)
@@ -1121,7 +1160,7 @@ class FrozenMolecule(Serializable):
             raise Exception('Toolkit {} unsupported.'.format(toolkit))
         return mols
 
-    def to_file(self, outfile, format):
+    def to_file(self, outfile, format, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Write the current molecule to a file or file-like object
 
         Parameters
@@ -1131,6 +1170,8 @@ class FrozenMolecule(Serializable):
         format : str
             Format specifier, one of ['MOL2', 'MOL2H', 'SDF', 'PDB', 'SMI', 'CAN', 'TDT']
             Note that not all toolkits support all formats
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file writing. If a Toolkit is passed, only the highest-precedence toolkit is used
 
         Raises
         ------
@@ -1150,7 +1191,7 @@ class FrozenMolecule(Serializable):
 
         # Determine which formats are supported
         toolkit = None
-        for query_toolkit in TOOLKIT_PRECEDENCE:
+        for query_toolkit in toolkit_registry:
             if format in SUPPORTED_FILE_FORMATS[query_toolkit]:
                 toolkit = query_toolkit
                 break
@@ -1190,7 +1231,7 @@ class FrozenMolecule(Serializable):
             outfile.close()
 
     @staticmethod
-    @RDKitToolkitWrapper.requires_toolkit()
+    @RDKitToolkitWrapper.requires_toolkit(RDKitToolkitWrapper)
     def from_rdkit(rdmol):
         """
         Create a Molecule from an RDKit molecule.
@@ -1218,7 +1259,7 @@ class FrozenMolecule(Serializable):
         toolkit = RDKitToolkitWrapper()
         return toolkit.from_rdkit(rdmol)
 
-    @RDKitToolkitWrapper.requires_toolkit()
+    @RDKitToolkitWrapper.requires_toolkit(RDKitToolkitWrapper)
     def to_rdkit(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an RDKit molecule
@@ -1247,7 +1288,7 @@ class FrozenMolecule(Serializable):
         return toolkit.to_rdkit(self, aromaticity_model=aromaticity_model)
 
     @staticmethod
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @OpenEyeToolkitWrapper.requires_toolkit(OpenEyeToolkitWrapper)
     def from_openeye(oemol):
         """
         Create a Molecule from an OpenEye molecule.
@@ -1273,9 +1314,9 @@ class FrozenMolecule(Serializable):
 
         """
         toolkit = OpenEyeToolkitWrapper()
-        return toolkit.from_openeye(rdmol)
+        return toolkit.from_openeye(oemol)
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @OpenEyeToolkitWrapper.requires_toolkit(OpenEyeToolkitWrapper)
     def to_openeye(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an OpenEye molecule
@@ -1560,9 +1601,10 @@ class Molecule(FrozenMolecule):
         >>> molecule_copy = Molecule(serialized_molecule)
 
         """
-        super(self, Molecule).__init__(*args, **kwargs)
+        #super(self, Molecule).__init__(*args, **kwargs)
+        super(Molecule, self).__init__(*args, **kwargs)
 
-    def add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None):
+    def add_atom(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None):
         """
         Add an atom
 

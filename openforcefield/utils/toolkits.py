@@ -27,10 +27,9 @@ Currently supported toolkits:
 import importlib
 from functools import wraps
 from openforcefield.utils.utils import inherit_docstrings
+from openforcefield.utils import all_subclasses
 from distutils.spawn import find_executable
 
-# Creates circular dependency (which might not be a problem, but is a pain for debugging)
-#from openforcefield.topology.molecule import Molecule
 
 #=============================================================================================
 # SUPPORTED MODELS
@@ -218,7 +217,7 @@ class ToolkitWrapper(object):
         raise NotImplementedError
 
     
-    #@staticmethod
+    
     def from_smiles(self, smiles):
         """
         Create a Molecule object from SMILES
@@ -454,17 +453,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
         from openforcefield.topology.molecule import Molecule
-        molecule = Molecule()
-
+    
         # TODO: What other information should we preserve besides name?
         # TODO: How should we preserve the name?
-        molecule.name = oemol.GetTitle()
+        molecule = Molecule()
+        molecule._name = oemol.GetTitle()
+        # From Jeff: I know I shouldn't be using _name, will need to think about this wrt the API
 
         # Copy any attached SD tag information
         # TODO: Should we use an API for this?
-        molecule.properties = dict()
+        molecule._properties = dict()
         for dp in oechem.OEGetSDDataPairs(oemol):
-            molecule[dp.GetTag()] = dp.GetValue()
+            molecule._properties[dp.GetTag()] = dp.GetValue()
 
         map_atoms = dict() # {oemol_idx: molecule_idx}
         for oeatom in oemol.GetAtoms():
@@ -472,16 +472,17 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             atomic_number = oeatom.GetAtomicNum()
             formal_charge = oeatom.GetFormalCharge()
             is_aromatic = oeatom.IsAromatic()
-            stereochemistry = openeye_cip_atom_stereochemistry(oemol, oeatom)
-            atom_index = molecule.add_atom(atomic_number=atomic_number, formal_charge=formal_charge, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
+            #stereochemistry = openeye_cip_atom_stereochemistry(oemol, oeatom)
+            stereochemistry = self._openeye_cip_atom_stereochemistry(oemol, oeatom)
+            atom_index = molecule.add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry)
             map_atoms[oe_idx] = atom_index # store for mapping oeatom to molecule atom indices below
 
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
             atom2_index = map_atoms[oebond.GetEndIdx()]
-            order = oeb.GetOrder()
-            is_aromatic = oeb.IsAromatic()
-            stereochemistry = openeye_cip_bond_stereochemistry(oemol, oebond)
+            order = oebond.GetOrder()
+            is_aromatic = oebond.IsAromatic()
+            stereochemistry = self._openeye_cip_bond_stereochemistry(oemol, oebond)
             molecule.add_bond(atom1_index, atom2_index, order=order, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
 
         # TODO: Copy conformations, if present
@@ -589,13 +590,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return oemol
 
+    @staticmethod
     def to_smiles(self, molecule):
         # inherits base class docstring
         from openeye import oechem
         oemol = self.to_openeye(molecule)
         return oechem.OEMolToSmiles(oemol)
 
-    #@staticmethod
+    
     def from_smiles(self, smiles):
         from openeye import oechem
         oemol = oechem.OEGraphMol()
@@ -790,6 +792,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             cls._is_available = cls.toolkit_is_available()
         return cls._is_available
 
+    @staticmethod
     def to_smiles(self, molecule):
         # inherits base class docstring
         from rdkit import Chem
@@ -1290,7 +1293,7 @@ class ToolkitRegistry(object):
         self._toolkits = list()
 
         if toolkit_precedence == None:
-            self.toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
+            toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
 
         if register_imported_toolkit_wrappers:
             # TODO: The precedence ordering of any non-specified remaining wrappers will be arbitrary.
@@ -1302,7 +1305,7 @@ class ToolkitRegistry(object):
                 toolkit_precedence.append(toolkit)
 
         for toolkit in toolkit_precedence:
-            toolkit_registry.register_toolkit(toolkit)
+            self.register_toolkit(toolkit)
 
     @property
     def registered_toolkits(self):
@@ -1430,9 +1433,9 @@ class ToolkitRegistry(object):
         for toolkit in self._toolkits:
             if hasattr(toolkit, method_name):
                 method = getattr(toolkit, method_name)
-                return method(*args, **kwargs)
+                #return method(*args, **kwargs)
                 try:
-                    return method
+                    return method(*args, **kwargs)
                 except NotImplementedError as e:
                     pass
                 except ValueError as value_error:
@@ -1452,7 +1455,9 @@ class ToolkitRegistry(object):
 #=============================================================================================
 
 # Create global toolkit registry, where all available toolkits are registered
-#from openforcefield.utils import all_subclasses
+
+## From jeff: The commented-out functionality has been moved into the ToolkitRegistry constructor
+
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(register_imported_toolkit_wrappers=True)
 #for toolkit in all_subclasses(ToolkitWrapper):
 #    GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit, exception_if_unavailable=False)
@@ -1465,6 +1470,7 @@ OPENEYE_AVAILABLE = False
 RDKIT_AVAILABLE = False
 AMBERTOOLS_AVAILABLE = False
 
+# Only available toolkits will have made it into the GLOBAL_TOOLKIT_REGISTRY
 for toolkit in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
     if type(toolkit) is OpenEyeToolkitWrapper:
         OPENEYE_AVAILABLE = True

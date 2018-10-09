@@ -18,8 +18,9 @@ from unittest import TestCase
 from openforcefield import utils
 
 
+
 import pytest
-from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
+from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry, NotImplementedException
 
 #=============================================================================================
 # TESTS
@@ -55,16 +56,12 @@ class TestOpenEyeToolkitWrapper(TestCase):
         toolkit_wrapper = OpenEyeToolkitWrapper()
         smiles = 'CC'
         molecule = toolkit_wrapper.from_smiles(smiles)
-        ## From Jeff:  I don't think we can do this since the to_smiles
+        ## From Jeff:  I don't think we can do molecule.to_smiles()
+        ## as a test of openeye because the to_smiles
         ## function to be tested needs to be the openeye one,
         ## and the molecule won't know which toolkit it came from
         #smiles2 = molecule.to_smiles()
-
-        ## Though we could do it from a static method using something
-        ## like
-        #import toolkits.OpeneyeToolkitWrapper.to_smiles as to_smiles
-        ## But this would be nonextensible
-        
+        ## Instead I'll use the toolkit_wrapper's to_smiles function
         smiles2 = toolkit_wrapper.to_smiles(molecule)
         assert smiles == smiles2
 
@@ -76,7 +73,12 @@ class TestOpenEyeToolkitWrapper(TestCase):
         molecule = Molecule.from_smiles(smiles)
         oemol = toolkit_wrapper.to_openeye(molecule)
         molecule2 = toolkit_wrapper.from_openeye(oemol)
-        smiles2 = molecule2.to_smiles() 
+        ## From Jeff:  I don't think we can do this since the to_smiles
+        ## function to be tested needs to be the openeye one,
+        ## and the molecule won't know which toolkit it came from
+        #smiles2 = molecule.to_smiles()
+        #smiles2 = molecule2.to_smiles()
+        toolkit_wrapper
         assert smiles == smiles2
 
     @OpenEyeToolkitWrapper.requires_toolkit
