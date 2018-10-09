@@ -99,7 +99,7 @@ class Serializable(object):
     >>> thing_from_xml = Thing.from_xml(xml_thing)
 
     """
-    def to_json(self):
+    def to_json(self, indent=2):
         """
         Return a JSON serialized representation.
 
@@ -109,11 +109,13 @@ class Serializable(object):
         -------
         serialized : str
             A JSON serialized representation of the object
+        indent : int, optional, default=2
+            If not None, will pretty-print with specified number of spaces for indentation
 
         """
         import json
         d = self.to_dict()
-        return json.dumps(d)
+        return json.dumps(d, indent=2)
 
     @classmethod
     def from_json(cls, serialized):
@@ -289,7 +291,7 @@ class Serializable(object):
         d = msgpack.loads(serialized, raw=False)
         return cls.from_dict(d)
 
-    def to_xml(self, pretty=True, indent=' '*2):
+    def to_xml(self, pretty=True, indent=2):
         """
         Return an XML representation.
 
@@ -299,7 +301,8 @@ class Serializable(object):
         ----------
         pretty : bool, optional, default=True
             If True, will pretty-format the XML by inserting additional spaces
-
+        indent : int, optional, default=2
+            If not None, will pretty-print with specified number of spaces for indentation
 
         Returns
         -------
@@ -311,6 +314,8 @@ class Serializable(object):
         d = self.to_dict()
         root_name = self.__class__.__name__
         #return xmltodict.unparse({root_name : d}, pretty=pretty, indent=indent)
+        if type(indent) == int:
+            indent = ' '*indent
         return xmltodict.unparse(d, pretty=pretty, indent=indent)
 
     @classmethod
