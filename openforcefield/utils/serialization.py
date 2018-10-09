@@ -289,7 +289,7 @@ class Serializable(object):
         d = msgpack.loads(serialized, raw=False)
         return cls.from_dict(d)
 
-    def to_xml(self, pretty=True):
+    def to_xml(self, pretty=True, indent=' '*2):
         """
         Return an XML representation.
 
@@ -300,6 +300,7 @@ class Serializable(object):
         pretty : bool, optional, default=True
             If True, will pretty-format the XML by inserting additional spaces
 
+
         Returns
         -------
         serialized : bytes
@@ -309,7 +310,8 @@ class Serializable(object):
         import xmltodict
         d = self.to_dict()
         root_name = self.__class__.__name__
-        return xmltodict.unparse({root_name : d}, pretty=pretty)
+        #return xmltodict.unparse({root_name : d}, pretty=pretty, indent=indent)
+        return xmltodict.unparse(d, pretty=pretty, indent=indent)
 
     @classmethod
     def from_xml(cls, serialized):
@@ -332,4 +334,49 @@ class Serializable(object):
         import xmltodict
         d = xmltodict.parse(serialized)
         root_name = cls.__name__
-        return cls.from_dict(d[root_name])
+        #return cls.from_dict(d[root_name])
+        return cls.from_dict(d)
+
+    def to_pickle(self):
+        """
+        Return a pickle serialized representation.
+
+        .. warning ::
+
+           This is not recommended for safe, stable storage since the pickle specification
+           may change between Python versions.
+
+        Returns
+        -------
+        serialized : str
+            A pickled representation of the object
+
+        """
+        import pickle
+        d = self.to_dict()
+        return pickle.dumps(d)
+
+    @classmethod
+    def from_pickle(cls, serialized):
+        """
+        Instantiate an object from a pickle serialized representation.
+
+        .. warning ::
+
+           This is not recommended for safe, stable storage since the pickle specification
+           may change between Python versions.
+
+        Parameters
+        ----------
+        serialized : str
+            A pickled representation of the object
+
+        Returns
+        -------
+        instance : cls
+            An instantiated object
+
+        """
+        import pickle
+        d = pickle.loads(serialized)
+        return cls.from_dict(d)
