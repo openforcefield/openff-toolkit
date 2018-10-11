@@ -63,7 +63,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
         toolkit_wrapper = OpenEyeToolkitWrapper()
         ## From Jeff: I had to change this from 'CC' to '[C][C]'
         # TODO: Is this ok?
-        smiles = '[C][C]'
+        smiles = 'CC'
         molecule = toolkit_wrapper.from_smiles(smiles)
         ## From Jeff:  I don't think we can do molecule.to_smiles()
         ## as a test of openeye because the to_smiles
@@ -79,7 +79,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
     def test_openeye(self):
         """Test OpenEyeToolkitWrapper to_openeye() and from_openeye()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = '[C][C]'
+        smiles = 'CC'
         molecule = Molecule.from_smiles(smiles)
         oemol = toolkit_wrapper.to_openeye(molecule)
         molecule2 = toolkit_wrapper.from_openeye(oemol)

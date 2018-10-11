@@ -448,12 +448,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openeye import oechem
         from openforcefield.topology.molecule import Molecule
         #from openforcefield.utils.toolkits.OpenEyeToolkitWrapper import _openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
+
+        # TODO: Decide if this is where we want to add explicit hydrogens
+        result = oechem.OEAddExplicitHydrogens(oemol)
+        if result == False:
+            raise Exception("Addition of explicit hydrogens failed in from_openeye")
+        
         # TODO: What other information should we preserve besides name?
         # TODO: How should we preserve the name?
         
-
         molecule = Molecule()
         molecule._name = oemol.GetTitle()
+        
 
 
         # Copy any attached SD tag information
@@ -636,15 +642,37 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The partial charges
 
         """
+        from openeye import oequacpac
+        from openeye import oeomega
+        from openeye import oechem
+        import numpy as np
         oemol = molecule.to_openeye()
-
+        
+        ## TODO: quacpac calls require geometry. Our molecule class doesn't hold geometry.
+        ## This seems like a big decision. Implemented a simple solution here. Not to be considered final.
+        ## Some discussion at https://github.com/openforcefield/openforcefield/pull/86#issuecomment-350111236
+        ## The following code is taken from the just-openeye version of the openforcefield repo https://github.com/openforcefield/openforcefield/blob/65f6b45954bde02c6cec1059661635c53a7f4e35/openforcefield/typing/engines/smirnoff/forcefield.py#L850
+        omega = oeomega.OEOmega()
+        omega.SetMaxConfs(800)
+        omega.SetCanonOrder(False)
+        omega.SetSampleHydrogens(True)
+        omega.SetEnergyWindow(15.0)
+        omega.SetRMSThreshold(1.0)
+        omega.SetStrictStereo(True) #Don't generate random stereoisomer if not specified
+        ## Taken from https://github.com/openforcefield/openforcefield/blob/65f6b45954bde02c6cec1059661635c53a7f4e35/openforcefield/typing/engines/smirnoff/forcefield.py#L857
+        ## This may prevent us from modifying the original molecule with a bunch of confs
+        charged_copy = oechem.OEMol(oemol)
+        status = omega(charged_copy)
+        #status = omega(charged_copy)
+        if not status:
+            raise(RuntimeError("Omega returned error code %s" % status))
         result = False
         if charge_model == "noop":
-            result = oequacpac.OEAssignCharges(oemol, oequacpac.OEChargeEngineNoOp())
+            result = oequacpac.OEAssignCharges(charged_copy, oequacpac.OEChargeEngineNoOp())
         elif charge_model == "mmff" or charge_model == "mmff94":
-            result = oequacpac.OEAssignCharges(oemol, oequacpac.OEMMFF94Charges())
+            result = oequacpac.OEAssignCharges(charged_copy, oequacpac.OEMMFF94Charges())
         elif charge_model == "am1bcc":
-            result = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
+            result = oequacpac.OEAssignCharges(charged_copy, oequacpac.OEAM1BCCCharges())
         elif charge_model == "am1bccnosymspt":
             optimize = True
             symmetrize = True
@@ -660,8 +688,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             raise Exception('Unable to assign charges')
 
         # Extract and return charges
-        charges = np.zeros([oemol.NumAtoms()], np.float64)
-        for index, atom in enumerate(oemol.GetAtoms()):
+        ## TODO: Make sure this can handle multiple conformations
+        charges = np.zeros([charged_copy.NumAtoms()], np.float64)
+        for index, atom in enumerate(charged_copy.GetAtoms()):
             charges[index] = atom.GetPartialCharge()
         return charges
 

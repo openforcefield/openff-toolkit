@@ -36,7 +36,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 import numpy as np
 from copy import deepcopy
-
+from collections import OrderedDict
 
 from simtk import unit
 from simtk.openmm.app import element
@@ -722,7 +722,8 @@ class FrozenMolecule(Serializable):
         #molecule_dict['properties'] = dict([(key, value._to_dict()) for key.value in self._properties])
         # TODO: Assuming "simple stuff" properties right now, figure out a better standard
         molecule_dict['properties'] = self._properties
-        molecule_dict['cached_properties'] = self._cached_properties
+        if hasattr(self, '_cached_properties'):
+            molecule_dict['cached_properties'] = self._cached_properties
         # TODO: Conformers
         return molecule_dict
 
