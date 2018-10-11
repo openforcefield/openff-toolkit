@@ -53,7 +53,7 @@ from openforcefield.utils.toolkits import DEFAULT_CHARGE_MODEL, ALLOWED_CHARGE_M
 
 from openforcefield.utils.serialization import Serializable
 
-from openforcefield.utils.toolkits import RDKitToolkitWrapper, OpenEyeToolkitWrapper
+from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper
 
 #=============================================================================================
 # GLOBAL PARAMETERS
@@ -111,7 +111,9 @@ class Atom(Particle):
     .. todo :: Allow atoms to have associated properties.
 
     """
-    def __init__(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None):
+    ## From Jeff: This version of the API will push forward with immutable atoms and molecules
+    def __init__(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None,
+                 name=None, molecule=None):
         """
         Create an immutable Atom object.
 
@@ -151,18 +153,73 @@ class Atom(Particle):
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
         self._name = name
+        self._molecule = molecule
+        ## From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
+        #self._molecule_atom_index = molecule_atom_index
+        self._bonds = list()
+
+
+    def add_bond(self, bond):
+        """Adds a bond that this atom is involved in
+        .. todo :: Is this how we want to keep records?
+
+        Parameters
+        ----------
+        bond: an openforcefield.topology.molecule.Bond
+            A bond involving this atom
+
+        """
+        #TODO: I forgot if python will hold a pointer to the molecule, or a copy here
+        self._bonds.append(bond)
+        
 
     def to_dict(self):
         """Return a dict representation of the atom."""
         # TODO
-        return self.__dict__
+        atom_dict = OrderedDict()
+        atom_dict['atomic_number'] = self._atomic_number
+        atom_dict['formal_charge'] = self._formal_charge
+        atom_dict['is_aromatic'] = self._is_aromatic
+        atom_dict['stereochemistry'] = self._stereochemistry
+        # TODO: Should we let atoms have names?
+        atom_dict['name'] = self._name
+        # TODO: Should this be implicit in the atom ordering when saved?
+        #atom_dict['molecule_atom_index'] = self._molecule_atom_index
+        return atom_dict
 
-    @staticmethod
-    def from_dict(atom_dict):
+
+            
+    @classmethod
+    def from_dict(cls, atom_dict):
         """Create an Atom from a dict representation."""
-        # TODO
-        return Atom(**atom_dict)
+        ## TODO: classmethod or static method? Classmethod is needed for Bond, so it have
+        ## its _molecule set and then look up the Atom on each side of it by ID
+        return cls.__init__(*atom_dict)
 
+
+    @property
+    def formal_charge(self):
+        """
+        The atom's formal charge
+        """
+        return self._formal_charge
+
+    @property
+    def is_aromatic(self):
+        """
+        The atom's is_aromatic flag 
+        """
+        return self._is_aromatic
+
+    @property
+    def stereochemistry(self):
+        """
+        The atom's stereochemistry (if defined, otherwise None) 
+        """
+        return self._stereochemistry
+
+    
+    
     @property
     def element(self):
         """
@@ -185,7 +242,8 @@ class Atom(Particle):
         The standard atomic weight (abundance-weighted isotopic mass) of the atomic site.
 
         .. todo :: Should we discriminate between standard atomic weight and most abundant isotopic mass?
-
+        TODO (from jeff): Are there atoms that have different chemical properties based on their isotopes?
+        
         """
         return self.element.mass
 
@@ -197,7 +255,8 @@ class Atom(Particle):
         The list of ``Bond`` objects this atom is involved in.
 
         """
-        pass
+        for bond in self._bonds:
+            yield bond
 
     @property
     def bonded_to(self):
@@ -205,7 +264,11 @@ class Atom(Particle):
         The list of ``Atom`` objects this atom is involved in
 
         """
-        pass
+        for bond in self._bonds:
+            for atom in bond.atoms:
+                if not(atom == self):
+                    # TODO: This seems dangerous. Ask John for a better way
+                    yield atom
 
     @property
     def molecule(self):
@@ -217,10 +280,37 @@ class Atom(Particle):
            * Should we have a single unique ``Molecule`` for each molecule type in the system,
            or if we have multiple copies of the same molecule, should we have multiple ``Molecule``s?
         """
-        pass
+        return self._molecule
 
+
+    
+    @molecule.setter
+    def molecule(self, molecule):
+        """
+        Set the atom's molecule pointer. Note that this will only work if the atom currently 
+        doesn't have a molecule
+        """
+        #TODO: I forgot if python will hold a pointer to the molecule, or some sort of bulky copy here
+        #TODO: Should _molecule be a property?
+        #TODO: Add informative exception here
+        assert self._molecule == None
+        self._molecule = molecule
+
+    
     @property
-    def atom_index(self):
+    def molecule_atom_index(self):
+        """
+        The index of this Atom within the the list of atoms in ``Molecules``.
+        Note that this can be different from ``particle_index``.
+
+        """
+        if self._molecule is None:
+            raise ValueError('This Atom does not belong to a Molecule object')
+        return self._molecule.atoms.index(atom)
+
+    ## From Jeff: Not sure if we actually need this
+    @property
+    def topology_atom_index(self):
         """
         The index of this Atom within the the list of atoms in ``Topology``.
         Note that this can be different from ``particle_index``.
@@ -355,28 +445,70 @@ class Bond(Serializable):
         Fractional bond order, or None.
 
     """
-    def __init__(self, atom1, atom2, bondtype, fractional_bondorder=None):
+    #def __init__(self, atom1, atom2, bondtype, fractional_bondorder=None):
+    def __init__(self, atom1, atom2, bond_order, is_aromatic, stereochemistry=None):
         """
         Create a new chemical bond.
         """
         assert type(atom1) == Atom
         assert type(atom2) == Atom
+        ## From Jeff: For now, I'm assuming each atom can only belong to one molecule
+        # TODO: The molecule equality test just tests for identical SMILESes right now,
+        # need to implement test for object identity
+        assert atom1.molecule == atom2.molecule
+        assert isinstance(atom1.molecule, FrozenMolecule)
+        #if molecule == None:
+        self._molecule = atom1.molecule
+        ## From Jeff: Don't do this -- always perceive the molecule from the Atoms
+        #elif type(molecule) == openforcefield.topology.molecule.Molecule:
+        #    self._molecule = molecule
+        #else:
+        #    raise Exception("Bond created between atoms without a molecule specified, and no molecule provided")
+            ## TODO: It might be interesting to think about some sort of architecture where
+        ## creating a bond between two Molecules could turn them into one molecule...
+        
         self._atom1 = atom1
         self._atom2 = atom2
+        
+        atom1.add_bond(self)
+        atom2.add_bond(self)
         # TODO: Check bondtype and fractional_bondorder are valid?
-        self._type = bondtype
-        self._fractional_bondorder = fractional_bondorder
+        #self._type = bondtype
+        #self._fractional_bondorder = fractional_bondorder
+        self._bond_order = bond_order
+        self._is_aromatic = is_aromatic
+        self._stereochemistry = stereochemistry
+        #self._molecule = molecule
 
+
+        
     def to_dict(self):
         """Return a dict representation of the bond."""
-        # TODO
-        return self.__dict__
+        bond_dict = OrderedDict()
+        bond_dict['atom1'] = self._molecule.atoms.index(self._atom1)
+        bond_dict['atom2'] = self._molecule.atoms.index(self._atom2)
+        bond_dict['bond_order'] = self._bond_order
+        bond_dict['is_aromatic'] = self._is_aromatic
+        bond_dict['stereochemistry'] = self._stereochemistry
+        return bond_dict
 
-    @staticmethod
-    def from_dict(d):
-        """Create an Bond from a dict representation."""
+    @classmethod
+    def from_dict(cls, molecule, d):
+        """Create a Bond from a dict representation."""
         # TODO
-        return Bond(**d)
+        d['molecule'] = molecule
+        d['atom1'] = molecule.atoms[d['atom1']]
+        d['atom2'] = molecule.atoms[d['atom2']]
+        return cls(*d)        
+        #self.__init__(atom1, atom2, bondorder, 
+        #self._molecule = molecule
+        #atom1_index = d['atom1']
+        #atom2_index = d['atom2']
+        #atom1 = self._molecule.atoms(atom1_index)
+        #atom2 = self._molecule.atoms(atom2_index)
+        #bond_order = d['bond_order']
+        #is_aromatic = d['is_aromatic']
+        #stereochemistry = d['stereochemistry']
 
     @property
     def atom1(self):
@@ -390,16 +522,53 @@ class Bond(Serializable):
     def atoms(self):
         return (self._atom1, self._atom2)
 
-    def type(self):
-        return self._type
+    #def type(self):
+    #    return self._type
 
     @property
-    def fractional_bondorder(self):
-        return self._fractional_bondorder
+    def bond_order(self):
+        return self._bond_order
 
-    @fractional_bondorder.setter
-    def fractional_bondorder(self, value):
-        self._fractional_bondorder = value
+    @bond_order.setter
+    def bond_order(self, value):
+        self._bond_order = value
+
+    @property
+    def stereochemistry(self):
+        return self._stereochemistry
+    @property
+    def is_aromatic(self):
+        return self._is_aromatic
+
+    @property
+    def molecule(self):
+        return self._molecule
+
+    @molecule.setter
+    def molecule(self, value):
+        """
+        Sets the Bond's parent molecule. Can not be changed after assignment
+        """
+        assert self._molecule == None
+        self._molecule = value
+
+    @property
+    def molecule_bond_index(self):
+        """
+        The index of this Bond within the the list of bonds in ``Molecules``.
+
+        """
+        if self._molecule is None:
+            raise ValueError('This Atom does not belong to a Molecule object')
+        return self._molecule.bonds.index(bond)
+    
+    #@property
+    #def fractional_bondorder(self):
+    #    return self._fractional_bondorder
+
+    #@fractional_bondorder.setter
+    #def fractional_bondorder(self, value):
+    #    self._fractional_bondorder = value
 
 #=============================================================================================
 # Molecule
@@ -536,17 +705,29 @@ class FrozenMolecule(Serializable):
 
         """
         molecule_dict = OrderedDict()
-        molecule_dict['name'] = self.name
-        molecule_dict['atoms'] = [ atom.to_dict() for atom in self.atoms ]
-        molecule_dict['virtual_sites'] = [ vsite.to_dict() for vsite in self.virtual_sites ]
-        molecule_dict['bonds'] = [ bond.to_dict() for bond in self.bonds ] # TODO: How do we make sure bonds are serializable?
+        molecule_dict['name'] = self._name
+        ## From Jeff: If we go the properties-as-dict route, then _properties should, at
+        ## the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
+        molecule_dict['atoms'] = [ atom.to_dict() for atom in self._atoms ]
+        molecule_dict['virtual_sites'] = [ vsite.to_dict() for vsite in self._virtual_sites ]
+        molecule_dict['bonds'] = [ bond.to_dict() for bond in self._bonds ]
+        # TODO: How do we make sure bonds are serializable?
+        ## From Jeff: Maybe each molecule could have its own atomic ID scheme?
         # TODO: Charges
         # TODO: Properties
+        ## From Jeff: We could have the onerous requirement that all "properties" have to_dict() functions.
+        ## Or we could restrict properties to simple stuff (ints, strings, floats, and the like)
+        ## Or pickle anything unusual
+        ## Or not allow user-defined properties at all (just use our internal _cached_properties)
+        #molecule_dict['properties'] = dict([(key, value._to_dict()) for key.value in self._properties])
+        # TODO: Assuming "simple stuff" properties right now, figure out a better standard
+        molecule_dict['properties'] = self._properties
+        molecule_dict['cached_properties'] = self._cached_properties
         # TODO: Conformers
         return molecule_dict
 
-    @staticmethod
-    def from_dict(molecule_dict):
+    @classmethod
+    def from_dict(cls, molecule_dict):
         """
         Create a Molecule from a dictionary representation
 
@@ -562,13 +743,25 @@ class FrozenMolecule(Serializable):
 
         """
         # TODO: Provide useful exception messages if there are any failures
-        molecule = Molecule(name=molecule_dict['name'])
-        for atom in molecule_dict['atoms']:
-            molecule._add_atom(*atom)
-        for vsite in molecule_dict['virtual_sites']:
-            molecule._add_atom(*vsite)
-        for bond in molecule_dict['bonds']:
-            molecule._add_bond(*bond) # TODO: How is this correctly handled? using indices?
+        molecule = cls(name=molecule_dict['name'])
+        for atom_dict in molecule_dict['atoms']:
+            #atom = Atom.from_dict(atom_dict)
+            ## From Jeff: This is really ugly
+            #atom.set_molecule(self)
+            #self._atoms.append(atom)
+            molecule.add_atom(*atom_dict)
+        #for vsite in molecule_dict['virtual_sites']:
+        #    molecule._add_virtual_site(*vsite)
+        for bond_dict in molecule_dict['bonds']:
+            ## TODO: There's probably a more graceful way to do this than overwriting a bond_dict entry
+            bond_dict['atom1'] = molecule.atoms[bond_dict['atom1']]
+            bond_dict['atom2'] = molecule.atoms[bond_dict['atom2']]
+            molecule.add_bond(*bond_dict)
+            #bond = Bond.from_dict(bond_dict)
+            #bond.set_molecule(
+            #self._bonds.append(bond)
+            
+            #molecule._add_bond(self, bond_dict = bond) # TODO: How is this correctly handled? using indices?
         # TODO: Charges
         # TODO: Properties
         # TODO: Conformers
@@ -584,19 +777,22 @@ class FrozenMolecule(Serializable):
         """
         Clear the contents of the current molecule.
         """
-        #self._name = None # TODO: Should we keep a name, or just store that in _properties?
+        self._name = None # TODO: Should we keep a name, or just store that in _properties?
         ## From Jeff:
         ## Pro: More informative error messages for users when there are parameterization problems
         ## Pro: Easy way to find molecules of interest in a Topology or other collection of Molecules
+        ## Pro: More informative when manually inspecting a serialized file
         ## Con: We'd need to make rules about duplicate names in a Topology
         ## Con: If we have a Topology.select_atoms() function, people would expect names to be searchable and we'd have to implement that
         ## Opinion: We should store the name in _properties
-        self._particles = list() # List of particles (atoms or virtual sites) # TODO: Should this be a dict?
+        self._atoms = list()
+        self._virtual_sites = list()
+        #self._particles = list() # List of particles (atoms or virtual sites) # TODO: Should this be a dict?
         self._bonds = list() # List of bonds between Atom objects # TODO: Should this be a dict?
-        self._charges = None # TODO: Storage charges
+        #self._charges = None # TODO: Storage charges
         self._properties = None # Attached properties to be preserved
         self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
-        self._conformers = None # Optional conformers
+        #self._conformers = None # Optional conformers
         ## From Jeff: Why is it necessary to know mutliple conformers for the same molecule?
         ## I get the sense that Molecule objects should just deal with connectivity, not geometry.
         ## Having a _conformers field would make sense if we're expecting cases where we assign
@@ -654,10 +850,10 @@ class FrozenMolecule(Serializable):
         >>> smiles = molecule.to_smiles()
 
         """
-        if isinstance(toolkit, ToolkitRegistry):
-            return toolkit_registry.call('to_smiles', molecule)
-        elif isinstance(toolkit, ToolkitWrapper):
-            return toolkit.to_smiles(molecule)
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            return toolkit_registry.call('to_smiles', self)
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            return toolkit.to_smiles(self)
         #return toolkit_registry.call('to_smiles', self)
 
     @staticmethod
@@ -684,10 +880,10 @@ class FrozenMolecule(Serializable):
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
 
         """
-        if isinstance(toolkit, ToolkitRegistry):
+        if isinstance(toolkit_registry, ToolkitRegistry):
             return toolkit_registry.call('from_smiles', smiles)
-        elif isinstance(toolkit, ToolkitWrapper):
-            return toolkit.from_smiles(self, smiles)
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            return toolkit_registry.from_smiles(self, smiles)
         #return tookit_registry.call('from_smiles', smiles)
 
     def _invalidate_cached_properties(self):
@@ -733,7 +929,8 @@ class FrozenMolecule(Serializable):
 
         return G
 
-    def _add_atom(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None):
+    def _add_atom(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None,
+                  name=None):
         """
         Add an atom
 
@@ -775,12 +972,13 @@ class FrozenMolecule(Serializable):
 
         """
         # Create an atom
-        atom = Atom(atomic_number=atomic_number, formal_charge=formal_charge, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
-        #self._atoms.append(atom)
-        self._particles.append(atom)
+        atom = Atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry, name=name, molecule=self)
+        self._atoms.append(atom)
+        #self._particles.append(atom)
         self._invalidate_cached_properties()
+        return self._atoms.index(atom)
 
-    def _add_bond(self, atom1_index, atom2_index, is_aromatic, order, stereochemistry=None):
+    def _add_bond(self, atom1, atom2, bond_order, is_aromatic, stereochemistry=None):
         """
         Add a bond between two specified atom indices
 
@@ -788,26 +986,41 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        atom1_index : int
-            Index of first atom
-        atom2_index : int
-            Index of second atom
-        order : int
+        atom1 : int or openforcefield.topology.molecule.Atom
+            Index of first atom or first atom
+        atom2_index : int or openforcefield.topology.molecule.Atom
+            Index of second atom or second atom
+        bond_order : int
             Integral bond order of Kekulized form
         is_aromatic : bool
             True if this bond is aromatic, False otherwise
         stereochemistry : str, optional, default=None
             Either 'E' or 'Z' for specified stereochemistry, or None if stereochemistry is irrelevant
 
+        Returns
+        -------
+        index : int
+            The index of the bond in the molecule
+
         """
+        if isinstance(atom1, int) and isinstance(atom2, int):
+            atom1_atom = self.atoms[atom1]
+            atom2_atom = self.atoms[atom2]
+        elif isinstance(atom1, Atom) and isinstance(atom2, Atom):
+            atom1_atom = atom1
+            atom2_atom = atom2
+        else:
+            raise Exception('Invalid inputs to molecule._add_bond. Expected ints or Atoms. Received {} and {} '.format(type(atom1), type(atom2), atom1))
         # TODO: Check to make sure bond does not already exist
-        ## From Jeff: I may need to sanity check which indexing
-        ## system these are in when called from from_openeye
-
-        #self._bonds.append(atom1_index, atom2_index)
-        
-
+        bond = Bond(atom1_atom, atom2_atom, bond_order, is_aromatic, stereochemistry=stereochemistry)
+        # TODO: This is a bad way to get bond index
+        #bond_index = len(self._bonds)
+        #bond.set_molecule(self, bond_index)
+        #atom1.add_bond(bond)
+        #atom2.add_bond(bond)
+        self._bonds.append(bond)
         self._invalidate_cached_properties()
+        return self._bonds.index(bond)
 
     def add_virtual_site(self, virtual_site):
         """
@@ -869,9 +1082,7 @@ class FrozenMolecule(Serializable):
         """
         Iterate over all Atom objects.
         """
-        for particle in self._particles:
-            if isinstance(particle, Atom):
-                yield particle
+        return self._atoms
 
     @property
     def virtual_sites(self):
@@ -887,8 +1098,7 @@ class FrozenMolecule(Serializable):
         """
         Iterate over all Bond objects.
         """
-        for bond in self._bonds:
-            yield bond
+        return self._bonds
 
     @property
     def angles(self):
@@ -996,13 +1206,12 @@ class FrozenMolecule(Serializable):
     def name(self):
         """The name (or title) of the molecule
         """
-        return _name
+        return self._name
 
     @staticmethod    
     #@requires_openeye('oechem', 'oeiupac')
-    #@OpenEyeToolkitWrapper.requires_toolkit()
-    @OpenEyeToolkitWrapper.requires_toolkit(OpenEyeToolkitWrapper)
-
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    #@OpenEyeToolkitWrapper.requires_toolkit(OpenEyeToolkitWrapper)
     def from_iupac(iupac_name):
         """Generate a molecule from IUPAC or common name
 
@@ -1037,9 +1246,7 @@ class FrozenMolecule(Serializable):
         return Molecule.from_openeye(oemol)
 
     #@requires_openeye('oechem', 'oeiupac')
-    ## From Jeff: I don't think we shold need to mention  OEToolkitWrapper
-    ## twice here. I need to come back and fix this.
-    @OpenEyeToolkitWrapper.requires_toolkit(OpenEyeToolkitWrapper)
+    @OpenEyeToolkitWrapper.requires_toolkit()
     def to_iupac(self):
         """Generate IUPAC name from Molecule
 
@@ -1244,7 +1451,7 @@ class FrozenMolecule(Serializable):
             outfile.close()
 
     @staticmethod
-    @RDKitToolkitWrapper.requires_toolkit(RDKitToolkitWrapper)
+    @RDKitToolkitWrapper.requires_toolkit()
     def from_rdkit(rdmol):
         """
         Create a Molecule from an RDKit molecule.
@@ -1272,7 +1479,7 @@ class FrozenMolecule(Serializable):
         toolkit = RDKitToolkitWrapper()
         return toolkit.from_rdkit(rdmol)
 
-    @RDKitToolkitWrapper.requires_toolkit(RDKitToolkitWrapper)
+    @RDKitToolkitWrapper.requires_toolkit()
     def to_rdkit(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an RDKit molecule
@@ -1301,7 +1508,7 @@ class FrozenMolecule(Serializable):
         return toolkit.to_rdkit(self, aromaticity_model=aromaticity_model)
 
     @staticmethod
-    @OpenEyeToolkitWrapper.requires_toolkit(OpenEyeToolkitWrapper)
+    @OpenEyeToolkitWrapper.requires_toolkit()
     def from_openeye(oemol):
         """
         Create a Molecule from an OpenEye molecule.
@@ -1329,7 +1536,8 @@ class FrozenMolecule(Serializable):
         toolkit = OpenEyeToolkitWrapper()
         return toolkit.from_openeye(oemol)
 
-    @OpenEyeToolkitWrapper.requires_toolkit(OpenEyeToolkitWrapper)
+    #@OpenEyeToolkitWrapper.requires_toolkit(OpenEyeToolkitWrapper)
+    @OpenEyeToolkitWrapper.requires_toolkit()
     def to_openeye(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an OpenEye molecule
@@ -1617,7 +1825,8 @@ class Molecule(FrozenMolecule):
         #super(self, Molecule).__init__(*args, **kwargs)
         super(Molecule, self).__init__(*args, **kwargs)
 
-    def add_atom(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None):
+    def add_atom(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None,
+                 name=None):
         """
         Add an atom
 
@@ -1658,9 +1867,11 @@ class Molecule(FrozenMolecule):
         >>> molecule.add_bond(C, H4, False, 1)
 
         """
-        self._add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry, name=name)
-
-    def add_bond(self, atom1_index, atom2_index, is_aromatic, order, stereochemistry=None):
+        atom_index = self._add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry, name=name)
+        return atom_index
+        
+    def add_bond(self, atom1_index, atom2_index, bond_order, is_aromatic,
+                 stereochemistry=None):
         """
         Add a bond between two specified atom indices
 
@@ -1672,7 +1883,7 @@ class Molecule(FrozenMolecule):
             Index of first atom
         atom2_index : int
             Index of second atom
-        order : int
+        bond_order : int
             Integral bond order of Kekulized form
         is_aromatic : bool
             True if this bond is aromatic, False otherwise
@@ -1680,4 +1891,4 @@ class Molecule(FrozenMolecule):
             Either 'E' or 'Z' for specified stereochemistry, or None if stereochemistry is irrelevant
 
         """
-        self._add_bond(atom1_index, atom2_index, is_aromatic, order, stereochemistry=stereochemistry)
+        bond_index = self._add_bond(atom1_index, atom2_index, bond_order, is_aromatic, stereochemistry=stereochemistry)

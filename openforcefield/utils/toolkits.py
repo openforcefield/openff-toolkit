@@ -65,9 +65,6 @@ class ToolkitUnavailableException(Exception):
     # TODO: Allow toolkit to be specified and used in formatting/printing exception.
     pass
 
-class NotImplementedException(Exception):
-    """The requested function hasn't been implemented in this toolkit."""
-    pass
 
 
 #=============================================================================================
@@ -101,16 +98,36 @@ class ToolkitWrapper(object):
     _toolkit_name = None # Name of the toolkit
     _toolkit_installation_instructions = None # Installation instructions for the toolkit
 
-    @staticmethod
-    def requires_toolkit(f):
+    #@staticmethod
+    ## From Jeff: This is confusing, but I changed things to make it run.
+    ## Did I actually break it?
+    # TODO: Right now, to access the class definition, I have to make this a classmethod
+    # and thereby call it with () on each decorator. Is this wasting time? Are we caching
+    # the is_available results?
+    @classmethod
+    def requires_toolkit(cls): #remember cls is a ToolkitWrapper subclass here
         def decorator(func):
             @wraps(func)
             def wrapped_function(*args, **kwargs):
-                if not toolkit_is_available():
-                    msg = 'This function requires the {} toolkit'.format(_toolkit_name)
+                if not cls.toolkit_is_available:
+                    msg = 'This function requires the {} toolkit'.format(cls._toolkit_name)
                     raise LicenseError(msg)
+                value = func(*args, **kwargs)
+                return value
             return wrapped_function
         return decorator
+
+    
+    #def requires_toolkit(func):
+    #    @wraps(func)
+    #    def wrapper_decorator(*args, **kwargs):
+    #        if not toolkit_is_available():
+    #            msg = 'This function requires the {} toolkit'.format(_toolkit_name)
+    #            raise LicenseError(msg)
+    #        value = func(*args, **kwargs)
+    #        return value
+    #    return wrapped_function
+    
 
     @classmethod
     @property
@@ -158,38 +175,9 @@ class ToolkitWrapper(object):
         """
         return NotImplementedError
 
-    def compute_partial_charges(self, molecule, charge_model="bcc"):
-        """
-        Compute partial charges
 
-        .. warning :: This API experimental and subject to change.
-
-        Parameters
-        ----------
-        molecule : Molecule
-            Molecule for which partial charges are to be computed
-        charge_model : str, optional, default='bcc'
-            The charge model to use. One of ['gas', 'mul', 'cm1', 'cm2', 'bcc']
-
-        Returns
-        -------
-        charges : numpy.array of shape (natoms) of type float
-            The partial charges
-
-        Raises
-        ------
-        ValueError if the requested charge method could not be handled
-
-        Notes
-        -----
-        Currently only sdf file supported as input and mol2 as output
-        https://github.com/choderalab/openmoltools/blob/master/openmoltools/packmol.py
-
-        """
-        raise NotImplementedError
-
-    @staticmethod
-    def to_smiles(molecule):
+    #@staticmethod
+    def to_smiles(self, molecule):
         """
         Return a canonical isomeric SMILES representation of the current molecule
 
@@ -271,6 +259,11 @@ class ToolkitWrapper(object):
         Raises
         ------
         ValueError if the requested charge method could not be handled
+
+        Notes
+        -----
+        Currently only sdf file supported as input and mol2 as output
+        https://github.com/choderalab/openmoltools/blob/master/openmoltools/packmol.py
 
         """
         raise NotImplementedError
@@ -428,7 +421,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         elif cip == oechem.OECIPBondStereo_NotStereo:
             return None
 
-    def from_openeye(self, oemol):
+    @staticmethod
+    def from_openeye(oemol):
         """
         Create a Molecule from an OpenEye molecule.
 
@@ -453,12 +447,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
         from openforcefield.topology.molecule import Molecule
-    
+        #from openforcefield.utils.toolkits.OpenEyeToolkitWrapper import _openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
         # TODO: What other information should we preserve besides name?
         # TODO: How should we preserve the name?
+        
+
         molecule = Molecule()
         molecule._name = oemol.GetTitle()
-        # From Jeff: I know I shouldn't be using _name, will need to think about this wrt the API
+
 
         # Copy any attached SD tag information
         # TODO: Should we use an API for this?
@@ -472,24 +468,28 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             atomic_number = oeatom.GetAtomicNum()
             formal_charge = oeatom.GetFormalCharge()
             is_aromatic = oeatom.IsAromatic()
-            #stereochemistry = openeye_cip_atom_stereochemistry(oemol, oeatom)
-            stereochemistry = self._openeye_cip_atom_stereochemistry(oemol, oeatom)
+            stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
+            #stereochemistry = self._openeye_cip_atom_stereochemistry(oemol, oeatom)
             atom_index = molecule.add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry)
             map_atoms[oe_idx] = atom_index # store for mapping oeatom to molecule atom indices below
 
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
             atom2_index = map_atoms[oebond.GetEndIdx()]
-            order = oebond.GetOrder()
+            bond_order = oebond.GetOrder()
             is_aromatic = oebond.IsAromatic()
-            stereochemistry = self._openeye_cip_bond_stereochemistry(oemol, oebond)
-            molecule.add_bond(atom1_index, atom2_index, order=order, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
+            stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
+            #stereochemistry = self._openeye_cip_bond_stereochemistry(oemol, oebond)
+            molecule.add_bond(atom1_index, atom2_index, bond_order, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
 
         # TODO: Copy conformations, if present
 
         return molecule
 
-    def to_openeye(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    # TODO: We could make this a staticmethod. It seems to have formerly belonged to
+    # the Molecule class
+    @staticmethod
+    def to_openeye(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an OpenEye molecule using the specified aromaticity model
 
@@ -500,6 +500,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Parameters
         ----------
+        molecule : openforcefield.topology.molecule.Molecule object
+            The molecule to convert to an OEMol
         aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
             The aromaticity model to use
 
@@ -519,13 +521,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         from openeye import oechem
-        from openforcefield.utils.toolkits import openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
+        #from openforcefield.utils.toolkits import openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
 
         oemol = oechem.OEMol()
 
         # Add atoms
         oemol_atoms = list() # list of corresponding oemol atoms
-        for atom in self.atoms:
+        for atom in molecule.atoms:
             oeatom = oemol.NewAtom(atom.atomic_number)
             oeatom.SetFormalCharge(atom.formal_charge)
             oeatom.SetAromatic(atom.is_aromatic)
@@ -533,14 +535,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # Add bonds
         oemol_bonds = list() # list of corresponding oemol bonds
-        for bond in self.bonds:
-            oebond = oemol.NewBond(oemol_atoms[bond.atom1_index], oemol_atoms[bond.atom2_index])
-            newbond.SetOrder(bond.order)
-            newbond.SetAromatic(bond.is_aromatic)
+        for bond in molecule.bonds:
+            atom1_index = bond.molecule.atoms.index(bond.atom1)
+            atom2_index = bond.molecule.atoms.index(bond.atom2)
+            oebond = oemol.NewBond(oemol_atoms[atom1_index], oemol_atoms[atom2_index])
+            oebond.SetOrder(bond.bond_order)
+            oebond.SetAromatic(bond.is_aromatic)
             oemol_bonds.append(oebond)
 
         # Set atom stereochemistry now that all connectivity is in place
-        for atom, oeatom in zip(self.atoms, oemol_atoms):
+        for atom, oeatom in zip(molecule.atoms, oemol_atoms):
             if not atom.stereochemistry:
                 continue
 
@@ -549,33 +553,35 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oeatom.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Right)
 
             # Flip chirality if stereochemistry is incorrect
-            oeatom_stereochemistry = _openeye_cip_atom_stereochemistry(oemol, oeatom)
+            oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
             if oeatom_stereochemistry != atom.sterechemistry:
                 # Flip the stereochemistry
                 oea.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left)
                 # Verify it matches now as a sanity check
-                oeatom_stereochemistry = _openeye_cip_atom_stereochemistry(oemol, oeatom)
+                oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
                 if oeatom_stereochemistry != atom.stereochemistry:
                     raise Exception('Programming error: OpenEye atom stereochemistry assumptions failed.')
 
         # Set bond stereochemistry
-        for bond, oebond in zip(self.atoms, oemol_bonds):
+        for bond, oebond in zip(molecule.bonds, oemol_bonds):
             if not bond.stereochemistry:
                 continue
 
+            atom1_index = bond.molecule.atoms.index(bond.atom1)
+            atom2_index = bond.molecule.atoms.index(bond.atom2)
             # Set arbitrary initial stereochemistry
-            oeatom1, oeatom2 = oemol_atoms[bond.atom1_index], oemol_atoms[bond.atom2_index]
+            oeatom1, oeatom2 = oemol_atoms[atom1_index], oemol_atoms[atom2_index]
             oeatom1_neighbor = [n for n in oeatom1.GetAtoms()][0]
             oeatom2_neighbor = [n for n in oeatom2.GetAtoms()][0]
             oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Cis)
 
             # Flip stereochemistry if incorrect
-            oebond_stereochemistry = _openeye_cip_bond_stereochemistry(oemol, oebond)
+            oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
             if oebond_stereochemistry != bond.sterechemistry:
                 # Flip the stereochemistry
                 oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Trans)
                 # Verify it matches now as a sanity check
-                oebond_stereochemistry = _openeye_cip_bond_stereochemistry(oemol, oebond)
+                oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
                 if oebond_stereochemistry != bond.stereochemistry:
                     raise Exception('Programming error: OpenEye bond stereochemistry assumptions failed.')
 
@@ -590,11 +596,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return oemol
 
+    # TODO: Make this a staticmethod, along with to_openeye
     @staticmethod
-    def to_smiles(self, molecule):
+    def to_smiles(molecule):
         # inherits base class docstring
         from openeye import oechem
-        oemol = self.to_openeye(molecule)
+        oemol = OpenEyeToolkitWrapper.to_openeye(molecule)
         return oechem.OEMolToSmiles(oemol)
 
     
@@ -632,19 +639,19 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oemol = molecule.to_openeye()
 
         result = False
-        if name == "noop":
+        if charge_model == "noop":
             result = oequacpac.OEAssignCharges(oemol, oequacpac.OEChargeEngineNoOp())
-        elif name == "mmff" or name == "mmff94":
+        elif charge_model == "mmff" or charge_model == "mmff94":
             result = oequacpac.OEAssignCharges(oemol, oequacpac.OEMMFF94Charges())
-        elif name == "am1bcc":
+        elif charge_model == "am1bcc":
             result = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
-        elif name == "am1bccnosymspt":
+        elif charge_model == "am1bccnosymspt":
             optimize = True
             symmetrize = True
             result = oequacpac.OEAssignCharges(mol, oequacpac.OEAM1BCCCharges(not optimize, not symmetrize))
-        elif name == "amber" or name == "amberff94":
+        elif charge_model == "amber" or charge_model == "amberff94":
             result = oequacpac.OEAssignCharges(mol, oequacpac.OEAmberFF94Charges())
-        elif name == "am1bccelf10":
+        elif charge_model == "am1bccelf10":
             result = oequacpac.OEAssignCharges(mol, oequacpac.OEAM1BCCELF10Charges())
         else:
             raise ValueError('charge_model {} unknown'.format(charge_model))
@@ -793,9 +800,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         return cls._is_available
 
     @staticmethod
-    def to_smiles(self, molecule):
+    def to_smiles(molecule):
         # inherits base class docstring
         from rdkit import Chem
+        raise NotImplementedError("RDKit to_smiles not yet implemented")
         rdmol = self.to_rdkit(molecule)
         return Chem.MolToSmiles(rdmol, isomericSmiles=True)
 
