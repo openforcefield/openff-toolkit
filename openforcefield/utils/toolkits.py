@@ -74,11 +74,12 @@ class ToolkitUnavailableException(Exception):
 
 
 # TODO : Wrap toolkits in a much more modular way to make it easier to query their capabilities
+## From Jeff: Maybe we just put these in the toolkit definitions themselves
 SUPPORTED_FILE_FORMATS = dict()
-SUPPORTED_FILE_FORMATS['openeye'] = ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC',
+SUPPORTED_FILE_FORMATS['OpenEye Toolkit'] = ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC',
                                      'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', 'XYC']
-SUPPORTED_FILE_FORMATS['rdkit'] = ['SDF', 'PDB', 'SMI', 'TDT']
-SUPPORTED_FILE_FORMATS['ambertools'] = ['MOL2']
+SUPPORTED_FILE_FORMATS['The RDKit'] = ['SDF', 'PDB', 'SMI', 'TDT']
+SUPPORTED_FILE_FORMATS['AmberTools'] = ['MOL2']
 
 #=============================================================================================
 # UTILITY FUNCTIONS
@@ -129,13 +130,12 @@ class ToolkitWrapper(object):
     #    return wrapped_function
     
 
-    @classmethod
     @property
-    def toolkit_name(cls):
+    def toolkit_name(self):
         """
         The name of the toolkit wrapped by this class.
         """
-        return cls._toolkit_name
+        return self._toolkit_name
 
     @classmethod
     @property
@@ -143,7 +143,7 @@ class ToolkitWrapper(object):
         """
         Instructions on how to install the wrapped toolkit.
         """
-        return self._toolkit_installation_instructions
+        return cls._toolkit_installation_instructions
 
     @staticmethod
     def toolkit_is_available():
@@ -834,6 +834,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         #raise NotImplementedError("RDKit to_smiles not yet implemented")
         rdmol = cls.to_rdkit(molecule)
+        rdmol = Chem.RemoveHs(rdmol)
         return Chem.MolToSmiles(rdmol, isomericSmiles=True, allHsExplicit=False)
 
     def from_smiles(self, smiles):
@@ -842,7 +843,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         #raise NotImplementedError("RDKit to_smiles not yet implemented")
         rdmol = Chem.MolFromSmiles(smiles)
-        #rdmol = Chem.AddHs(rdmol)
+        rdmol = Chem.AddHs(rdmol)
         molecule = Molecule.from_rdkit(rdmol)
         
         return molecule
@@ -1188,7 +1189,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
     AmberTools toolkit wrapper
 
     """
-    _toolkit_name = 'AmberToolks'
+    _toolkit_name = 'AmberTools'
     _toolkit_installation_instructions = 'The AmberTools toolkit (free and open source) can be found at https://anaconda.org/omnia/ambertools'
 
     @staticmethod
@@ -1231,7 +1232,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         # TODO: Find AMBERHOME or executable home, checking miniconda if needed
         pass
 
-    def compute_partial_charges(self, molecule, charge_model="bcc"):
+    def compute_partial_charges(self, molecule, charge_method="bcc"):
         """
         Compute partial charges with AmberTools using antechamber/sqm
 
@@ -1245,7 +1246,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : Molecule
             Molecule for which partial charges are to be computed
-        charge_model : str, optional, default='bcc'
+        charge_method : str, optional, default='bcc'
             The charge model to use. One of ['gas', 'mul', 'cm1', 'cm2', 'bcc']
 
         Returns
@@ -1263,6 +1264,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         https://github.com/choderalab/openmoltools/blob/master/openmoltools/packmol.py
 
         """
+        import os
         # Check that the requested charge method is supported
         SUPPORTED_ANTECHAMBER_CHARGE_METHODS = ['gas', 'mul', 'cm1', 'cm2', 'bcc']
         if charge_method not in SUPPORTED_ANTECHAMBER_CHARGE_METHODS:
@@ -1275,14 +1277,18 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             raise(IOError("Antechamber not found, cannot run charge_mol()"))
 
         # Compute charges
-        from openmmtools.utils import temporary_directory, temporary_cd
+        from openforcefield.utils import temporary_directory, temporary_cd
         with temporary_directory() as tmpdir:
             with temporary_cd(tmpdir):
-                net_charge = molecule.net_charge()
+                net_charge = molecule.total_charge
                 # Write out molecule in SDF format
-                molecule.to_file('molecule.sdf', format='SDF')
+                ## TODO: Where will this get coordinates from?
+                molecule.to_file('molecule.sdf', outfile_format='sdf')
+                os.system('ls')
+                os.system('cat molecule.sdf')
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
+                # TODO: Add something cleaner than os.system
                 os.system("antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf yes -c {} -nc {}".format(charge_method, net_charge))
                 # Write out just charges
                 os.system("antechamber -i charges.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc -cf charges.txt -pf yes")
@@ -1342,9 +1348,9 @@ class ToolkitRegistry(object):
         Parameters
         ----------
         register_imported_toolkit_wrappers : bool, optional, default=False
-            If True, will attempt to register all imported ToolkitWrapper subclasses that can be found.
+            If True, will attempt to register all imported ToolkitWrapper subclasses that can be found, in no particular order.
         toolkit_precedence : list, optional, defailt=None
-            List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If None, defaults to [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]. Note that toolkit wrappers not specified in list will not be added.
+            List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If None, defaults to [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]. 
         """
 
         self._toolkits = list()

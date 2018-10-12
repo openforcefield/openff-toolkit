@@ -1381,14 +1381,14 @@ class FrozenMolecule(Serializable):
             raise Exception('Toolkit {} unsupported.'.format(toolkit))
         return mols
 
-    def to_file(self, outfile, format, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def to_file(self, outfile, outfile_format, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Write the current molecule to a file or file-like object
 
         Parameters
         ----------
         outfile : str or file-like object
             A file-like object or the filename of the file to be written to
-        format : str
+        outfile_format : str
             Format specifier, one of ['MOL2', 'MOL2H', 'SDF', 'PDB', 'SMI', 'CAN', 'TDT']
             Note that not all toolkits support all formats
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
@@ -1397,32 +1397,32 @@ class FrozenMolecule(Serializable):
         Raises
         ------
         ValueError
-            If the requested format is not supported by one of the installed cheminformatics toolkits
+            If the requested outfile_format is not supported by one of the installed cheminformatics toolkits
 
         Examples
         --------
 
         >>> molecule = Molecule.from_iupac('imatinib')
-        >>> molecule.to_file('imatinib.mol2', format='mol2')
-        >>> molecule.to_file('imatinib.sdf', format='sdf')
-        >>> molecule.to_file('imatinib.pdb', format='pdb')
+        >>> molecule.to_file('imatinib.mol2', outfile_format='mol2')
+        >>> molecule.to_file('imatinib.sdf', outfile_format='sdf')
+        >>> molecule.to_file('imatinib.pdb', outfile_format='pdb')
 
         """
         # TODO: This needs to be cleaned up to use the new ToolkitRegistry and ToolkitWrappers
 
         # Determine which formats are supported
         toolkit = None
-        for query_toolkit in toolkit_registry:
-            if format in SUPPORTED_FILE_FORMATS[query_toolkit]:
+        for query_toolkit in toolkit_registry.registered_toolkits:
+            if outfile_format in SUPPORTED_FILE_FORMATS[query_toolkit.toolkit_name]:
                 toolkit = query_toolkit
                 break
 
-        # Raise an exception if no toolkit was found to provide the requested format
+        # Raise an exception if no toolkit was found to provide the requested outfile_format
         if toolkit == None:
             supported_formats = set()
-            for toolkit in TOOLKIT_PRECEDENCE:
-                supported_formats.add(SUPPORTED_FILE_FORMATS[toolkit])
-            raise ValueError('The requested file format ({}) is not available from any of the installed toolkits (supported formats: {})'.format(format, supported_formats))
+            for toolkit in toolkit_registry.registered_toolkits:
+                supported_formats.add(SUPPORTED_FILE_FORMATS[toolkit.toolkit_name])
+            raise ValueError('The requested file format ({}) is not available from any of the installed toolkits (supported formats: {})'.format(outfile_format, supported_formats))
 
         # Write file
         if type(outfile) == str:
@@ -1436,15 +1436,15 @@ class FrozenMolecule(Serializable):
             from openeye import oechem
             oemol = self.to_openeye()
             ofs = oechem.oemolostream(outfile)
-            openeye_formats = getattr(oechem, 'OEFormat_' + format)
-            ofs.SetFormat(openeye_formats[format])
+            openeye_formats = getattr(oechem, 'OEFormat_' + outfile_format)
+            ofs.SetFormat(openeye_formats[outfile_format])
             oechem.OEWriteMolecule(ofs, mol)
             ofs.close()
         elif toolkit == 'rdkit':
             from rdkit import Chem
             rdmol = self.to_rdkit()
             rdkit_writers = { 'SDF' : Chem.SDWriter, 'PDB' : Chem.PDBWriter, 'SMI' : Chem.SmilesWriter, 'TDT' : Chem.TDTWriter }
-            writer = rdkit_writers[format](outfile)
+            writer = rdkit_writers[outfile_format](outfile)
             writer.write(rdmol)
             writer.close()
 

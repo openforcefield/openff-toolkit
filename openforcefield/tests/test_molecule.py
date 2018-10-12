@@ -28,7 +28,9 @@ from openforcefield import utils, topology
 from openforcefield.topology import Molecule, ALLOWED_CHARGE_MODELS, ALLOWED_FRACTIONAL_BONDORDER_MODELS
 from openforcefield.utils import get_data_filename
 # TODO: Will the ToolkitWrapper allow us to pare that down?
-from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORTED_TOOLKITS, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
+#from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORTED_TOOLKITS, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
+from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
+
 
 #=============================================================================================
 # TESTS
@@ -99,7 +101,7 @@ class TestMolecule(TestCase):
             assert atom.element == element
             assert atom.mass == element.mass
             assert atom.formal_charge == formal_charge
-            assert atom.is_aromatic = is_aromatic
+            assert atom.is_aromatic == is_aromatic
 
     def test_create_molecule(self):
         """Test creation of molecule by adding molecules and bonds"""
@@ -266,7 +268,7 @@ class TestMolecule(TestCase):
         matches = molecule.chemical_environment_matches('[#6:1]')
         assert len(matches) == 1 # there should be a unique match, so one atom tuple is returned
         assert len(matches[0]) == 1 # it should have one tagged atom
-        assert set(matches[0]) = set(atom_C)
+        assert set(matches[0]) == set(atom_C)
         matches = molecule.chemical_environment_matches('[#6:1]~[#1:2]')
         assert len(matches) == 1 # there should be a unique match, so one atom tuple is returned
         assert len(matches[0]) == 2 # it should have two tagged atoms

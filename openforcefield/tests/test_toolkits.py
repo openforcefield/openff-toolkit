@@ -112,7 +112,7 @@ class TestRDKitToolkitWrapper(TestCase):
         molecule = toolkit_wrapper.from_smiles(smiles)
         #smiles2 = molecule.to_smiles()
         smiles2 = toolkit_wrapper.to_smiles(molecule)
-        print(smiles, smiles2)
+        #print(smiles, smiles2)
         assert smiles == smiles2
 
     #@pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available() )
@@ -125,7 +125,7 @@ class TestRDKitToolkitWrapper(TestCase):
         molecule = toolkit_wrapper.from_smiles(smiles)
         rdmol = toolkit_wrapper.to_rdkit(molecule)
         molecule2 = toolkit_wrapper.from_rdkit(rdmol)
-        smiles2 = toolkit_wrapper.to_smiles()
+        smiles2 = toolkit_wrapper.to_smiles(molecule2)
         assert smiles == smiles2
 
 class TestAmberToolsWrapper(TestCase):
@@ -171,7 +171,8 @@ class TestToolkitRegistry(TestCase):
         """Test creation of toolkit registry with RDKit toolkit"""
         # Test registration of RDKitToolkitWrapper
         toolkit_precedence = [RDKitToolkitWrapper]
-        registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence, register_imported_toolkit_wrappers=False)
+        registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence,
+                                   register_imported_toolkit_wrappers=False)
         #registry.register_toolkit(RDKitToolkitWrapper)
         assert set([ type(c) for c in registry.registered_toolkits]) == set([RDKitToolkitWrapper])
 
@@ -186,21 +187,22 @@ class TestToolkitRegistry(TestCase):
 
     @RDKitToolkitWrapper.requires_toolkit()
     @AmberToolsToolkitWrapper.requires_toolkit()
-    #@pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available() )
-    #@pytest.mark.skipif( not AmberToolsToolkitWrapper.toolkit_is_available() )
     def test_register_ambertools(self):
-        """Test creation of toolkit registry with RDKit toolkit"""
+        """Test creation of toolkit registry with AmberToolsToolkitWrapper and RDKitToolkitWrapper
+        """
         # Test registration of AmberToolsToolkitWrapper
-        toolkit_precedence = [AmberToolsToolkitWrapper]
-        registry = ToolkitRegistry(register_imported_toolkit_wrappers=False)
+        toolkit_precedence = [AmberToolsToolkitWrapper, RDKitToolkitWrapper]
+        registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence,
+                                   register_imported_toolkit_wrappers=False)
         #registry.register_toolkit(AmberToolsToolkitWrapper)
-        assert set([ type(c) for c in registry.registered_toolkits]) == set([AmberToolsToolkitWrapper])
+        assert set([ type(c) for c in registry.registered_toolkits]) == set([AmberToolsToolkitWrapper,RDKitToolkitWrapper])
 
         # Test ToolkitRegistry.resolve()
+        registry.resolve('compute_partial_charges')
         assert registry.resolve('compute_partial_charges') == registry.registered_toolkits[0].compute_partial_charges
 
         # Test ToolkitRegistry.call()
         registry.register_toolkit(RDKitToolkitWrapper)
         smiles = 'CC'
         molecule = registry.call('from_smiles', smiles)
-        partial_charges = registry.call('compute_partial_charges', molecule)
+        #partial_charges = registry.call('compute_partial_charges', molecule)
