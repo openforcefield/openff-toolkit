@@ -102,14 +102,14 @@ class ToolkitWrapper(object):
     ## From Jeff: This is confusing, but I changed things to make it run.
     ## Did I actually break it?
     # TODO: Right now, to access the class definition, I have to make this a classmethod
-    # and thereby call it with () on each decorator. Is this wasting time? Are we caching
+    # and thereby call it with () on the outermost decorator. Is this wasting time? Are we caching
     # the is_available results?
     @classmethod
     def requires_toolkit(cls): #remember cls is a ToolkitWrapper subclass here
         def decorator(func):
             @wraps(func)
             def wrapped_function(*args, **kwargs):
-                if not cls.toolkit_is_available:
+                if not cls.toolkit_is_available():
                     msg = 'This function requires the {} toolkit'.format(cls._toolkit_name)
                     raise LicenseError(msg)
                 value = func(*args, **kwargs)
@@ -828,13 +828,24 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             cls._is_available = cls.toolkit_is_available()
         return cls._is_available
 
-    @staticmethod
-    def to_smiles(molecule):
+    @classmethod
+    def to_smiles(cls, molecule):
         # inherits base class docstring
         from rdkit import Chem
-        raise NotImplementedError("RDKit to_smiles not yet implemented")
-        rdmol = self.to_rdkit(molecule)
-        return Chem.MolToSmiles(rdmol, isomericSmiles=True)
+        #raise NotImplementedError("RDKit to_smiles not yet implemented")
+        rdmol = cls.to_rdkit(molecule)
+        return Chem.MolToSmiles(rdmol, isomericSmiles=True, allHsExplicit=False)
+
+    def from_smiles(self, smiles):
+        from openforcefield.topology.molecule import Molecule
+        # inherits base class docstring
+        from rdkit import Chem
+        #raise NotImplementedError("RDKit to_smiles not yet implemented")
+        rdmol = Chem.MolFromSmiles(smiles)
+        #rdmol = Chem.AddHs(rdmol)
+        molecule = Molecule.from_rdkit(rdmol)
+        
+        return molecule
 
     def from_rdkit(self, rdmol):
         """
@@ -884,11 +895,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # setting chirality in openeye requires using neighbor atoms
         # therefore we can't do it until after the atoms and bonds are all added
         chiral_atoms = dict() # {rd_idx: openeye chirality}
+        map_atoms = {}
         for rda in rdmol.GetAtoms():
             rd_idx = rda.GetIdx()
 
             # create a new atom
-            atomic_number = oemol.NewAtom(rda.GetAtomicNum())
+            #atomic_number = oemol.NewAtom(rda.GetAtomicNum())
+            atomic_number = rda.GetAtomicNum()
             formal_charge = rda.GetFormalCharge()
             is_aromatic = rda.GetIsAromatic()
 
@@ -900,7 +913,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             if tag == Chem.CHI_TETRAHEDRAL_CW:
                 stereochemistry = 'S'
 
-            atom_index = mol.add_atom(atomic_number=atomic_number, formal_charge=formal_charge, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
+            atom_index = mol.add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry)
             map_atoms[rd_idx] = atom_index
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
@@ -932,7 +945,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 stereochemistry = 'E'
 
             # create a new bond
-            bond_index = mol.add_bond(map_atoms[a1], map_atoms[a2], is_aromatic=is_aromatic, order=order, stereochemistry=stereochemistry)
+            bond_index = mol.add_bond(map_atoms[a1], map_atoms[a2], order, is_aromatic, stereochemistry=stereochemistry)
 
         # TODO: Save conformer(s), if present
         # If the rdmol has a conformer, store its coordinates
@@ -947,7 +960,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         return mol
 
-    def to_rdkit(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    @staticmethod
+    def to_rdkit(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an RDKit molecule
 
@@ -978,7 +992,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Set name
         # TODO: What is the best practice for how this should be named?
-        rdmol.SetProp('_Name', molecule.name)
+        if not(molecule.name == None):
+            rdmol.SetProp('_Name', molecule.name)
 
         # TODO: Set other properties
         for name, value in molecule.properties.items():
@@ -1014,12 +1029,15 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
             elif atom.stereochemistry == 'R':
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CCW)
-
-            map_atoms[oe_idx] = rdmol.AddAtom(rdatom)
+                
+            rd_index = rdmol.AddAtom(rdatom)
+                
+            map_atoms[index] = rd_index
 
         for bond in molecule.bonds:
-            rdatom1 = map_atoms[bond.atom1_index]
-            rdatom2 = map_atoms[bond.atom2_index]
+            ## TODO: Horribly inefficient lookup. Should get a better atom index method
+            rdatom1 = map_atoms[molecule.atoms.index(bond.atom1)]
+            rdatom2 = map_atoms[molecule.atoms.index(bond.atom2)]
             rdmol.AddBond(rdatom1, rdatom2)
             rdbond = rdmol.GetBondBetweenAtoms(rdatom1, rdatom2)
 
@@ -1028,7 +1046,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 rdbond.SetBondType(_bondtypes[1.5])
                 rdbond.SetIsAromatic(True)
             else:
-                rdbond.SetBondType(_bondtypes[bond.order])
+                rdbond.SetBondType(_bondtypes[bond.bond_order])
                 rdbond.SetIsAromatic(False)
 
         # Assign bond stereochemistry
@@ -1039,9 +1057,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 n1 = [n.index for n in bond.atom1.bonded_atoms if n != bond.atom2][0]
                 n2 = [n.index for n in bond.atom2.bonded_atoms if n != bond.atom1][0]
                 # Get rdmol bonds
+                bond_atom1_index = molecule.atoms.index(bond.atom1)
+                bond_atom2_index = molecule.atoms.index(bond.atom2)
                 bond1 = rdmol.GetBondBetweenAtoms(map_atoms[n1], map_atoms[bond.atom1_index])
-                bond2 = rdmol.GetBondBetweenAtoms(map_atoms[bond.atom1_index], map_atoms[bond.atom2_index])
-                bond3 = rdmol.GetBondBetweenAtoms(map_atoms[bond.atom2_index], map_atoms[n2])
+                bond2 = rdmol.GetBondBetweenAtoms(map_atoms[bond_atom1_index], map_atoms[bon_.atom2_index])
+                bond3 = rdmol.GetBondBetweenAtoms(map_atoms[bond_atom2_index], map_atoms[n2])
                 # Set arbitrary stereochemistry
                 # Since this is relative, the first bond always goes up
                 # as explained above these names come from SMILES slashes so UP/UP is Trans and Up/Down is cis
@@ -1060,13 +1080,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Set coordinates if we have them
         # TODO: Fix this once conformer API is defined
-        if molecule._conformers:
-            for conformer in molecule._conformers:
-                rdmol_conformer = Chem.Conformer()
-                for index, rd_idx in map_atoms.items():
-                    (x,y,z) = conformer[index,:]
-                    rdmol_conformer.SetAtomPosition(rd_idx, Geometry.Point3D(x,y,z))
-                rdmol.AddConformer(rdmol_conformer)
+        #if molecule._conformers:
+        #    for conformer in molecule._conformers:
+        #        rdmol_conformer = Chem.Conformer()
+        #        for index, rd_idx in map_atoms.items():
+        #            (x,y,z) = conformer[index,:]
+        #            rdmol_conformer.SetAtomPosition(rd_idx, Geometry.Point3D(x,y,z))
+        #        rdmol.AddConformer(rdmol_conformer)
 
         # Cleanup the rdmol
         # Note I copied UpdatePropertyCache and GetSSSR from Shuzhe's code to convert oemol to rdmol here:
@@ -1077,7 +1097,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Chem.AssignStereochemistry(rdmol, force=False)
 
         # Return non-editable version
-        return rdkit.Mol(rdmol)
+        return Chem.Mol(rdmol)
 
     @staticmethod
     def _find_smarts_matches(rdmol, smirks, aromaticity_model='OEAroModel_MDL'):
