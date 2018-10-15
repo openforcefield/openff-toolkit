@@ -854,6 +854,7 @@ class FrozenMolecule(Serializable):
         if isinstance(toolkit_registry, ToolkitRegistry):
             return toolkit_registry.call('to_smiles', self)
         elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
             return toolkit.to_smiles(self)
         #return toolkit_registry.call('to_smiles', self)
 
@@ -884,7 +885,8 @@ class FrozenMolecule(Serializable):
         if isinstance(toolkit_registry, ToolkitRegistry):
             return toolkit_registry.call('from_smiles', smiles)
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            return toolkit_registry.from_smiles(self, smiles)
+            toolkit = toolkit_registry
+            return toolkit.from_smiles(smiles)
         #return tookit_registry.call('from_smiles', smiles)
 
     def _invalidate_cached_properties(self):

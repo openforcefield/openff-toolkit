@@ -78,7 +78,7 @@ class ToolkitUnavailableException(Exception):
 SUPPORTED_FILE_FORMATS = dict()
 SUPPORTED_FILE_FORMATS['OpenEye Toolkit'] = ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC',
                                      'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', 'XYC']
-SUPPORTED_FILE_FORMATS['The RDKit'] = ['SDF', 'PDB', 'SMI', 'TDT']
+SUPPORTED_FILE_FORMATS['The RDKit'] = ['SDF', 'PDB', 'SMI', 'TDT'] # Don't put MOL2 in here -- RDKit can only handle corina format and fails on SYBYL 
 SUPPORTED_FILE_FORMATS['AmberTools'] = ['MOL2']
 
 #=============================================================================================
@@ -602,13 +602,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return oemol
 
-    # TODO: Make this a staticmethod, along with to_openeye
     @staticmethod
     def to_smiles(molecule):
         # inherits base class docstring
         from openeye import oechem
         oemol = OpenEyeToolkitWrapper.to_openeye(molecule)
-        return oechem.OEMolToSmiles(oemol)
+        smiles = oechem.OECreateSmiString(oemol,
+                                          oechem.OESMILESFlag_DEFAULT |
+                                          oechem.OESMILESFlag_Hydrogens |
+                                          oechem.OESMILESFlag_Isotopes)
+        return smiles
 
     
     def from_smiles(self, smiles):
@@ -656,7 +659,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         omega.SetMaxConfs(800)
         omega.SetCanonOrder(False)
         omega.SetSampleHydrogens(True)
-        omega.SetEnergyWindow(15.0)
+        omega.SetEnergyWindow(15.0) #unit?
         omega.SetRMSThreshold(1.0)
         omega.SetStrictStereo(True) #Don't generate random stereoisomer if not specified
         ## Taken from https://github.com/openforcefield/openforcefield/blob/65f6b45954bde02c6cec1059661635c53a7f4e35/openforcefield/typing/engines/smirnoff/forcefield.py#L857
@@ -834,8 +837,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         #raise NotImplementedError("RDKit to_smiles not yet implemented")
         rdmol = cls.to_rdkit(molecule)
-        rdmol = Chem.RemoveHs(rdmol)
-        return Chem.MolToSmiles(rdmol, isomericSmiles=True, allHsExplicit=False)
+        #rdmol = Chem.RemoveHs(rdmol)
+        return Chem.MolToSmiles(rdmol, isomericSmiles=True, allHsExplicit=True)
 
     def from_smiles(self, smiles):
         from openforcefield.topology.molecule import Molecule
