@@ -235,21 +235,32 @@ class TestMolecule(TestCase):
         """Test propers property"""
         for molecule in self.molecules:
             for proper in molecule.propers:
-                assert angle[0].bonded_to(angle[1])
-                assert angle[1].bonded_to(angle[2])
-                assert angle[2].bonded_to(angle[3])
+                assert proper[0].is_bonded_to(proper[1])
+                assert proper[1].is_bonded_to(proper[2])
+                assert proper[2].is_bonded_to(proper[3])
+                assert not(proper[0].is_bonded_to(proper[2]))
+                assert not(proper[0].is_bonded_to(proper[3]))
+                assert not(proper[1].is_bonded_to(proper[3]))
 
     def test_impropers(self):
         """Test impropers property"""
         for molecule in self.molecules:
             for improper in molecule.impropers:
-                # TODO: Check improper bonds
-                pass
+                assert improper[0].is_bonded_to(improper[1])
+                assert improper[1].is_bonded_to(improper[2])
+                assert improper[2].is_bonded_to(improper[3])
+                
+                assert ((improper[0].is_bonded_to(improper[2])) or
+                        (improper[0].is_bonded_to(improper[3])) or
+                        (improper[1].is_bonded_to(improper[3])))
+                
+
 
     def test_torsions(self):
         """Test torsions property"""
         for molecule in self.molecules:
-            assert frozenset(molecule.torsions) == frozenset(set(molecule.propers) + set(molecule.impropers))
+            assert frozenset(molecule.torsions) == frozenset(set(molecule.propers) | set(molecule.impropers))
+            assert len(molecule.propers & molecule.impropers) == 0
 
     def test_total_charge(self):
         """Test total charge"""

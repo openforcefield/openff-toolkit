@@ -959,6 +959,8 @@ class FrozenMolecule(Serializable):
         #    delattr(self, '_cached_properties')
         self._conformers = None
         self._partial_charges = None
+        self._propers = None
+        self._impropers = None
 
     def to_networkx(self):
         """Geneate a NetworkX undirected graph from the Topology.
@@ -1226,7 +1228,8 @@ class FrozenMolecule(Serializable):
 
            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
         """
-        pass
+        self._construct_torsions()
+        return self._propers
 
     @property
     def impropers(self):
@@ -1237,10 +1240,8 @@ class FrozenMolecule(Serializable):
 
            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
         """
-        for proper in self.propers:
-            yield proper
-        for improper in self.impropers:
-            yield improper
+        self._construct_torsions()
+        return self._impropers
 
     @property
     def total_charge(self):
@@ -1813,10 +1814,19 @@ class FrozenMolecule(Serializable):
         Note that i-j-k-i torsions (cycles) are excluded.
 
         """
+        self._construct_torsions()
+        return self._torsions
+
+    def _construct_torsions(self):
+        """
+        Construct sets containing the atoms improper and proper torsions
+        """
         if not hasattr(self, '_torsions'):
             self._construct_bonded_atoms_list()
 
-            self._torsions = set()
+            #self._torsions = set()
+            self._propers = set()
+            self._impropers = set()
             for atom1 in self._atoms:
                 for atom2 in self._bondedAtoms[atom1]:
                     for atom3 in self._bondedAtoms[atom2]:
@@ -1828,12 +1838,26 @@ class FrozenMolecule(Serializable):
                             # Exclude i-j-k-i
                             if atom1 == atom4:
                                 continue
+                            
                             if atom1.molecule_atom_index < atom4.molecule_atom_index:
-                                self._torsions.add( (atom1, atom2, atom3, atom4) )
+                                torsion = (atom1, atom2, atom3, atom4) 
                             else:
-                                self._torsions.add( (atom4, atom3, atom2, atom1) )
-
-        return iter(self._torsions)
+                                torsion = (atom4, atom3, atom2, atom1)
+                                
+                            improper = False
+                            if atom1.is_bonded_to(atom3):
+                                improper = True
+                            elif atom1.is_bonded_to(atom4):
+                                improper = True
+                            elif atom2.is_bonded_to(atom4):
+                                improper = True
+                                
+                            if improper:
+                                self._impropers.add(torsion)
+                            else:
+                                self._propers.add(torsion)
+            self._torsions = self._propers | self._impropers  
+        #return iter(self._torsions)
 
     def _construct_bonded_atoms_list(self):
         """
@@ -1982,8 +2006,8 @@ class Molecule(FrozenMolecule):
         value: str
             The new name for the Molecule
         """
-        if not(isinstance(value, str)):
-            raise Exception("Molecule names must be strings. Received {}".format(value))
+        if not(isinstance(value, str) or (value==None)):
+            raise Exception("Molecule names must be strings or None. Received {}".format(value))
         self._name = value
 
     def add_atom(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None,
@@ -2061,6 +2085,7 @@ class Molecule(FrozenMolecule):
 
     def add_conformer(self, coordinates):
         """
+        # TODO: Should this not be public?
         Adds a conformer of the molecule
         
         Parameters
