@@ -113,6 +113,13 @@ class TestOpenEyeToolkitWrapper(TestCase):
         partial_charges = toolkit_wrapper.compute_partial_charges(molecule)
         # TODO: Check partial charge invariants (total charge, charge equivalence)
 
+
+        # TODO: Add test for higher bonds orders
+        # TODO: Add test for aromaticity
+        # TODO: Add test and molecule functionality for isotopes
+
+
+        
 class TestRDKitToolkitWrapper(TestCase):
     """Test the RDKitToolkitWrapper"""
     
@@ -167,6 +174,11 @@ class TestRDKitToolkitWrapper(TestCase):
         smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
 
+        # TODO: Add test for higher bonds orders
+        # TODO: Add test for aromaticity
+        # TODO: Add test and molecule functionality for isotopes
+        
+        
 class TestAmberToolsWrapper(TestCase):
     """Test the AmberToolsWraper"""
 

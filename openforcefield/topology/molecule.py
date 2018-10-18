@@ -35,7 +35,6 @@ Molecular chemical entity representation and routines to interface with cheminfo
 #=============================================================================================
 
 import numpy as np
-from copy import deepcopy
 from collections import OrderedDict
 
 from simtk import unit
@@ -169,7 +168,7 @@ class Atom(Particle):
             A bond involving this atom
 
         """
-        #TODO: I forgot if python will hold a pointer to the molecule, or a copy here
+
         self._bonds.append(bond)
         
 
@@ -270,6 +269,29 @@ class Atom(Particle):
                     # TODO: This seems dangerous. Ask John for a better way
                     yield atom
 
+    
+    def is_bonded_to(self, atom2):
+        """
+        Determine whether this atom is bound to another atom
+
+        Parameters
+        ----------
+        atom2: openforcefield.topology.molecule.Atom
+            a different atom in the same molecule
+        
+        Returns
+        -------
+        bool
+            Whether this atom is bound to atom2
+        """
+        #TODO: Sanity check (check for same molecule?)
+        assert self != atom2
+        for bond in self._bonds:
+            for bonded_atom in bond.atoms:
+                if atom2 == bonded_atom:
+                    return True
+        return False
+
     @property
     def molecule(self):
         """
@@ -306,7 +328,7 @@ class Atom(Particle):
         """
         if self._molecule is None:
             raise ValueError('This Atom does not belong to a Molecule object')
-        return self._molecule.atoms.index(atom)
+        return self._molecule.atoms.index(self)
 
     ## From Jeff: Not sure if we actually need this
     @property
@@ -322,13 +344,20 @@ class Atom(Particle):
         #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
         return self._topology.atoms.index(self)
 
+    @property
+    def name(self):
+        """
+        The name of the atom
+        """
+        return self._name
+    
     def __repr__(self):
         # TODO: Also include particle_index and which molecule this atom belongs to?
-        return "Atom(name={}, element={})".format(self.name, self.element)
+        return "Atom(name={}, atomic number={})".format(self._name, self._atomic_number)
 
     def __str__(self):
         # TODO: Also include particle_index and which molecule this atom belongs to?
-        return "<Atom name='{}' element='{}'>".format(self.name, self.element)
+        return "<Atom name='{}' atomic number='{}'>".format(self._name, self._atomic_number)
 
 #=============================================================================================
 # VirtualSite
@@ -455,7 +484,7 @@ class Bond(Serializable):
         ## From Jeff: For now, I'm assuming each atom can only belong to one molecule
         # TODO: The molecule equality test just tests for identical SMILESes right now,
         # need to implement test for object identity
-        assert atom1.molecule == atom2.molecule
+        assert atom1.molecule is atom2.molecule
         assert isinstance(atom1.molecule, FrozenMolecule)
         #if molecule == None:
         self._molecule = atom1.molecule
@@ -485,8 +514,8 @@ class Bond(Serializable):
     def to_dict(self):
         """Return a dict representation of the bond."""
         bond_dict = OrderedDict()
-        bond_dict['atom1'] = self._molecule.atoms.index(self._atom1)
-        bond_dict['atom2'] = self._molecule.atoms.index(self._atom2)
+        bond_dict['atom1'] = self.atom1.molecule_atom_index
+        bond_dict['atom2'] = self.atom2.molecule_atom_index
         bond_dict['bond_order'] = self._bond_order
         bond_dict['is_aromatic'] = self._is_aromatic
         bond_dict['stereochemistry'] = self._stereochemistry
@@ -517,6 +546,14 @@ class Bond(Serializable):
     @property
     def atom2(self):
         return self._atom2
+
+    @property
+    def atom1_index(self):
+        return self.molecule.atoms.index(self._atom1)
+
+    @property
+    def atom2_index(self):
+        return self.molecule.atoms.index(self._atom2)
 
     @property
     def atoms(self):
@@ -560,7 +597,7 @@ class Bond(Serializable):
         """
         if self._molecule is None:
             raise ValueError('This Atom does not belong to a Molecule object')
-        return self._molecule.bonds.index(bond)
+        return self._molecule.bonds.index(self)
     
     #@property
     #def fractional_bondorder(self):
@@ -629,6 +666,7 @@ class FrozenMolecule(Serializable):
             * an ``openeye.oechem.OEMol``
             * an ``rdkit.Chem.rdchem.Mol``
             * a serialized :class:`Molecule` object
+        
 
         Examples
         --------
@@ -666,24 +704,39 @@ class FrozenMolecule(Serializable):
             self._initialize()
         else:
             # TODO: Can we check interface compliance (in a try..except) instead of checking instances?
-            if isinstance(other, openforcefield.topology.Molecule):
+            loaded = False
+            if isinstance(other, openforcefield.topology.Molecule) and not(loaded):
                 self._copy_initializer(other)
-            elif isinstance(other, str):
+                loaded = True
+            if isinstance(other, OrderedDict) and not(loaded):
                 self.__setstate__(other)
-            elif OPENEYE_AVAILABLE and issubclass(other, openeye.oechem.OEMolBase):
-                mol = Molecule.from_openeye(other)
-                self._copy_initializer(mol)
-            elif RDKIT_AVAILABLE and isinstance(other, rdkit.Chem.rdchem.Mol):
-                mol = Molecule.from_rdkit(other)
-                self._copy_initializer(mol)
-            elif isinstance(other, str) or hasattr(other, 'read'):
+                loaded = True
+            if OPENEYE_AVAILABLE and not(loaded):
+                from openeye import oechem
+                if isinstance(other, oechem.OEMolBase):
+                    mol = Molecule.from_openeye(other)
+                    self._copy_initializer(mol)
+                    loaded = True
+            if RDKIT_AVAILABLE and not(loaded):
+                from rdkit import Chem
+                if isinstance(other, Chem.rdchem.Mol):
+                    mol = Molecule.from_rdkit(other)
+                    self._copy_initializer(mol)
+                    loaded = True
+            # TODO: Make this compatible with file-like objects (I couldn't figure
+            # out how to make an oemolistream from a fileIO object)
+            if (isinstance(other, str) or hasattr(other, 'read')) and not(loaded):
                 mol = Molecule.from_file(other) # returns a list only if multiple molecules are found
                 if type(mol) == list:
                     raise ValueError('Specified file or file-like object must contain exactly one molecule')
-                self._copy_initializer(molecule)
-            else:
+                
+                self._copy_initializer(mol)
+                loaded = True
+            if not(loaded):
                 msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(other)
                 raise Exception(msg)
+            
+            
 
     ####################################################################################################
     # Safe serialization
@@ -730,8 +783,8 @@ class FrozenMolecule(Serializable):
     @classmethod
     def from_dict(cls, molecule_dict):
         """
-        Create a Molecule from a dictionary representation
-
+        Create a new Molecule from a dictionary representation
+        
         Parameters
         ----------
         molecule_dict : OrderedDict
@@ -743,62 +796,64 @@ class FrozenMolecule(Serializable):
             A Molecule created from the dictionary representation
 
         """
+        mol = cls()
+        mol.initialize_from_dict(molecule_dict)
+        return mol
+        
+    def initialize_from_dict(self, molecule_dict):
+        """
+        Initialize this Molecule from a dictionary representation
+
+        Parameters
+        ----------
+        molecule_dict : OrderedDict
+            A dictionary representation of the molecule.
+        """
         # TODO: Provide useful exception messages if there are any failures
-        molecule = cls(name=molecule_dict['name'])
+
+        self._initialize()
+        if molecule_dict['name'] != None:
+            self.name = molecule_dict['name']
         for atom_dict in molecule_dict['atoms']:
-            #atom = Atom.from_dict(atom_dict)
-            ## From Jeff: This is really ugly
-            #atom.set_molecule(self)
-            #self._atoms.append(atom)
-            molecule.add_atom(*atom_dict)
+
+            self.add_atom(**atom_dict)
+        # TODO: Implement vsites
         #for vsite in molecule_dict['virtual_sites']:
         #    molecule._add_virtual_site(*vsite)
         for bond_dict in molecule_dict['bonds']:
             ## TODO: There's probably a more graceful way to do this than overwriting a bond_dict entry
-            bond_dict['atom1'] = molecule.atoms[bond_dict['atom1']]
-            bond_dict['atom2'] = molecule.atoms[bond_dict['atom2']]
-            molecule.add_bond(*bond_dict)
-            #bond = Bond.from_dict(bond_dict)
-            #bond.set_molecule(
-            #self._bonds.append(bond)
-            
-            #molecule._add_bond(self, bond_dict = bond) # TODO: How is this correctly handled? using indices?
+            #bond_dict['atom1'] = molecule.atoms[int(bond_dict['atom1'])]
+            #bond_dict['atom2'] = molecule.atoms[int(bond_dict['atom2'])]
+            bond_dict['atom1'] = int(bond_dict['atom1'])
+            bond_dict['atom2'] = int(bond_dict['atom2'])
+            self.add_bond(**bond_dict)
+
         # TODO: Charges
         # TODO: Properties
         # TODO: Conformers
-        return molecule
+        #return molecule
 
     def __getstate__(self):
         return self.to_dict()
 
     def __setstate__(self, state):
-        return self.from_dict(state)
+        return self.initialize_from_dict(state)
 
     def _initialize(self):
         """
         Clear the contents of the current molecule.
         """
         self._name = None # TODO: Should we keep a name, or just store that in _properties?
-        ## From Jeff:
-        ## Pro: More informative error messages for users when there are parameterization problems
-        ## Pro: Easy way to find molecules of interest in a Topology or other collection of Molecules
-        ## Pro: More informative when manually inspecting a serialized file
-        ## Con: We'd need to make rules about duplicate names in a Topology
-        ## Con: If we have a Topology.select_atoms() function, people would expect names to be searchable and we'd have to implement that
-        ## Opinion: We should store the name in _properties
+
         self._atoms = list()
         self._virtual_sites = list()
         #self._particles = list() # List of particles (atoms or virtual sites) # TODO: Should this be a dict?
         self._bonds = list() # List of bonds between Atom objects # TODO: Should this be a dict?
-        #self._charges = None # TODO: Storage charges
         self._properties = None # Attached properties to be preserved
-        self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
-        #self._conformers = None # Optional conformers
-        ## From Jeff: Why is it necessary to know mutliple conformers for the same molecule?
-        ## I get the sense that Molecule objects should just deal with connectivity, not geometry.
-        ## Having a _conformers field would make sense if we're expecting cases where we assign
-        ## different parameters to molecules based on their conformation, but then we might need
-        ## a whole geometry implementation in here.
+        #self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
+        # TODO: If partial charges will be cached_properties, should conformations also be there? They'll also be invalidated if the 2D molecule is changed
+        self._partial_charges = None # TODO: Decide if we want to store charges here or in _cached_properties
+        self._conformers = None # Optional conformers
 
     def _copy_initializer(self, other):
         """
@@ -813,8 +868,11 @@ class FrozenMolecule(Serializable):
             A deep copy is made.
 
         """
-        assert isinstance(other, type(self)), "can only copy instances of {}".format(typse(self))
-        self.__dict__ = deepcopy(other.__dict__)
+        assert isinstance(other, type(self)), "can only copy instances of {}".format(type(self))
+        other_dict = other.to_dict()
+        self.initialize_from_dict(other_dict)
+        # Warning! The below doesn't work, because Atoms and Bonds record links back to their parent molecule
+        #self.__dict__ = deepcopy(other.__dict__)
 
     def __eq__(self, other):
         """Test two molecules for equality to see if they are the chemical species, but do not check other annotated properties.
@@ -856,6 +914,8 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             return toolkit.to_smiles(self)
+        else:
+            raise Exception('Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
         #return toolkit_registry.call('to_smiles', self)
 
     @staticmethod
@@ -887,14 +947,18 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             return toolkit.from_smiles(smiles)
+        else:
+            raise Exception('Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
         #return tookit_registry.call('from_smiles', smiles)
 
     def _invalidate_cached_properties(self):
         """
         Indicate that the chemical entity has been altered.
         """
-        if hasattr(self, '_cached_properties'):
-            delattr(self, '_cached_properties')
+        #if hasattr(self, '_cached_properties'):
+        #    delattr(self, '_cached_properties')
+        self._conformers = None
+        self._partial_charges = None
 
     def to_networkx(self):
         """Geneate a NetworkX undirected graph from the Topology.
@@ -925,10 +989,10 @@ class FrozenMolecule(Serializable):
         """
         import networkx as nx
         G = nx.Graph()
-        for atom in topology.atoms():
-            G.add_node(atom.particle_index, element=atom.element)
-        for (atom1, atom2) in topology.bonds():
-            G.add_edge(atom1.index, atom2.index)
+        for atom in self.atoms:
+            G.add_node(atom.molecule_atom_index, element=atom.element)
+        for bond in self.bonds:
+            G.add_edge(bond.atom1_index, bond.atom2_index)
 
         return G
 
@@ -1013,10 +1077,9 @@ class FrozenMolecule(Serializable):
             atom1_atom = atom1
             atom2_atom = atom2
         else:
-            raise Exception('Invalid inputs to molecule._add_bond. Expected ints or Atoms. Received {} and {} '.format(type(atom1), type(atom2), atom1))
+            raise Exception('Invalid inputs to molecule._add_bond. Expected ints or Atoms. Received {} (type {}) and {} (type {}) '.format(atom1, type(atom1), atom2, type(atom2)))
         # TODO: Check to make sure bond does not already exist
-        bond = Bond(atom1_atom, atom2_atom, bond_order, is_aromatic, stereochemistry=stereochemistry)
-        # TODO: This is a bad way to get bond index
+        bond = Bond(atom1_atom, atom2_atom, bond_order, is_aromatic, stereochemistry=stereochemistry)        # TODO: This is a bad way to get bond index
         #bond_index = len(self._bonds)
         #bond.set_molecule(self, bond_index)
         #atom1.add_bond(bond)
@@ -1044,6 +1107,39 @@ class FrozenMolecule(Serializable):
         self._particles.append(virtual_site)
         self._invalidate_cached_properties()
 
+
+    def _add_conformer(self, coordinates):
+        """
+        Add a conformation of the molecule
+
+        .. warning :: This API experimental and subject to change.
+
+        Parameters
+        ----------
+        coordinates: A simtk vector wrapped unit quantity
+            The coordinates of the conformer to add.
+        
+        Returns
+        -------
+        index: int
+            The index of this conformer
+
+
+        """
+        new_conf = unit.Quantity(np.zeros((self.n_atoms, 3), np.float), unit.angstrom)
+        try:
+            new_conf[:] = coordinates
+        except AttributeError as e:
+            print(e)
+            raise Exception('Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are of type simtk.units.Quantity')
+
+        if self._conformers == None:
+            self.conformers = []
+        self._conformers.append(new_conf)
+        return len(self._conformers)
+            
+
+        
     @property
     def n_particles(self):
         """
@@ -1103,24 +1199,23 @@ class FrozenMolecule(Serializable):
         """
         return self._bonds
 
-    @property
-    def angles(self):
-        """
-        Iterate over all angles (Atom tuples) in the molecule
-        """
-        pass
+    #@property
+    #def angles(self):
+    #    """
+    #    Iterate over all angles (Atom tuples) in the molecule
+    #    """
+    #    pass
 
-    @property
-    def torsions(self):
-        """
-        Iterate over all torsions (propers and impropers) in the molecule
+    #@property
+    #def torsions(self):
+    #    """
+    #    Iterate over all torsions (propers and impropers) in the molecule
+    #    .. todo::
 
-        .. todo::
-
-           * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
-           * Should we call this ``dihedrals`` instead of ``torsions``?
-        """
-        pass
+    #       * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
+    #       * Should we call this ``dihedrals`` instead of ``torsions``?
+    #    """
+    #    pass
 
     @property
     def propers(self):
@@ -1143,7 +1238,7 @@ class FrozenMolecule(Serializable):
            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
         """
         for proper in self.propers:
-            yield property
+            yield proper
         for improper in self.impropers:
             yield improper
 
@@ -1152,6 +1247,25 @@ class FrozenMolecule(Serializable):
         """Return the total charge on the molecule"""
         return sum([atom.formal_charge for atom in self.atoms])
 
+
+    @property
+    def name(self):
+        """The name (or title) of the molecule
+        """
+        return self._name
+
+
+    @property
+    def properties(self):
+        """The properties dictionary of the molecule
+        """
+        return self._properties
+
+
+
+
+
+    
     def chemical_environment_matches(self, query, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Retrieve all matches for a given chemical environment query.
 
@@ -1194,10 +1308,10 @@ class FrozenMolecule(Serializable):
         # Use specified cheminformatics toolkit to determine matches with specified aromaticity model
         # TODO: Simplify this by requiring a toolkit registry for the molecule?
         # TODO: Do we have to pass along an aromaticity model?
-        if isinstance(toolkit, ToolkitRegistry):
-            matches = toolkit.call('find_smarts_matches', self, smirks)
-        elif isinstance(toolkit, ToolkitWrapper):
-            matches = toolkit.find_smarts_matches(self, smirks)
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            matches = toolkit_registry.call('find_smarts_matches', self, smirks)
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            matches = toolkit_registry.find_smarts_matches(self, smirks)
         else:
             raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
             #else:
@@ -1205,17 +1319,12 @@ class FrozenMolecule(Serializable):
 
         return matches
 
-    @property
-    def name(self):
-        """The name (or title) of the molecule
-        """
-        return self._name
-
-    @staticmethod    
+    #@staticmethod
+    @classmethod
     #@requires_openeye('oechem', 'oeiupac')
     @OpenEyeToolkitWrapper.requires_toolkit()
     #@OpenEyeToolkitWrapper.requires_toolkit(OpenEyeToolkitWrapper)
-    def from_iupac(iupac_name):
+    def from_iupac(cls, iupac_name):
         """Generate a molecule from IUPAC or common name
 
         Parameters
@@ -1246,7 +1355,7 @@ class FrozenMolecule(Serializable):
         oemol = oechem.OEMol()
         oeiupac.OEParseIUPACName(oemol, iupac_name)
         oechem.OETriposAtomNames(oemol)
-        return Molecule.from_openeye(oemol)
+        return cls.from_openeye(oemol)
 
     #@requires_openeye('oechem', 'oeiupac')
     @OpenEyeToolkitWrapper.requires_toolkit()
@@ -1357,9 +1466,9 @@ class FrozenMolecule(Serializable):
 
         # Use highest-precendence toolkit
         #toolkit = TOOLKIT_PRECEDENCE[0]
-        if isinstance(toolkit, ToolkitRegistry):
+        if isinstance(toolkit_registry, ToolkitRegistry):
             toolkit = toolkit_registry.registered_toolkits[0]
-        elif isinstance(toolkit, ToolkitWrapper):
+        elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
         else:
             raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
@@ -1370,17 +1479,39 @@ class FrozenMolecule(Serializable):
             # Read molecules from an OpenEye-supported file, converting them one by one
             from openeye import oechem
             oemol = oechem.OEGraphMol()
-            ifs = oechem.oemolistream(filename)
+            if isinstance(filename, str):
+                ifs = oechem.oemolistream(filename)
+            # If the input is really a file-like object, read it and make the
+            # molecule using a string
+            elif hasattr(filename, 'read'):
+                # TODO: This is very dangerous. I've hardcoded it to assume mol2, but
+                # without seeing the original suffix we might have trouble here
+                file_data = filename.read()
+                ifs = oechem.oemolistream()
+                ifs.openstring(file_data)
+                ifs.SetFormat(oechem.OEFormat_MOL2)
             while oechem.OEReadMolecule(ifs, oemol):
                 mol = Molecule.from_openeye(oemol)
                 mols.append(mol)
         elif type(toolkit) is RDKitToolkitWrapper:
             from rdkit import Chem
-            for rdmol in Chem.SupplierFromFilename(filename):
+            if isinstance(filename, str):
+                for rdmol in Chem.SupplierFromFilename(filename):
+                    mol = Molecule.from_rdkit(rdmol)
+                    mols.append(mol)
+            elif hasattr(filename, 'read'):
+                # TODO: This is very dangerous and only works with MOL format files
+                file_data = filename.read()
+                rdmol = Chem.MolFromMolBlock(file_data)
                 mol = Molecule.from_rdkit(rdmol)
                 mols.append(mol)
         else:
             raise Exception('Toolkit {} unsupported.'.format(toolkit))
+
+        if len(mols) == 0:
+            raise Exception('Unable to read molecule from file: {}'.format(filename))
+        elif len(mols) == 1:
+            return mols[0]
         return mols
 
     def to_file(self, outfile, outfile_format, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
@@ -1440,7 +1571,7 @@ class FrozenMolecule(Serializable):
             ofs = oechem.oemolostream(outfile)
             openeye_formats = getattr(oechem, 'OEFormat_' + outfile_format)
             ofs.SetFormat(openeye_formats[outfile_format])
-            oechem.OEWriteMolecule(ofs, mol)
+            oechem.OEWriteMolecule(ofs, oemol)
             ofs.close()
         elif toolkit == 'rdkit':
             from rdkit import Chem
@@ -1661,9 +1792,12 @@ class FrozenMolecule(Serializable):
             for atom1 in self._atoms:
                 for atom2 in self._bondedAtoms[atom1]:
                     for atom3 in self._bondedAtoms[atom2]:
+                        #atom1_id = atom1.molecule_atom_index
+                        #atom2_id = atom2.molecule_atom_index
+                        #atom3_id = atom3.molecule_atom_index
                         if atom1 == atom3:
                             continue
-                        if atom1.index < atom3.index:
+                        if atom1.molecule_atom_index < atom3.molecule_atom_index:
                             self._angles.add( (atom1, atom2, atom3) )
                         else:
                             self._angles.add( (atom3, atom2, atom1) )
@@ -1694,7 +1828,7 @@ class FrozenMolecule(Serializable):
                             # Exclude i-j-k-i
                             if atom1 == atom4:
                                 continue
-                            if atom1.index < atom4.index:
+                            if atom1.molecule_atom_index < atom4.molecule_atom_index:
                                 self._torsions.add( (atom1, atom2, atom3, atom4) )
                             else:
                                 self._torsions.add( (atom4, atom3, atom2, atom1) )
@@ -1706,14 +1840,17 @@ class FrozenMolecule(Serializable):
         Construct list of all atoms each atom is bonded to.
 
         """
+        # TODO: Add this to cached_properties
         if not hasattr(self, '_bondedAtoms'):
-            self._atoms = [ atom for atom in self.atoms() ]
+            #self._atoms = [ atom for atom in self.atoms() ]
             self._bondedAtoms = dict()
             for atom in self._atoms:
                 self._bondedAtoms[atom] = set()
             for bond in self._bonds:
-                self._bondedAtoms[bond[0]].add(bond[1])
-                self._bondedAtoms[bond[1]].add(bond[0])
+                atom1 = self.atoms[bond.atom1_index]
+                atom2 = self.atoms[bond.atom2_index]
+                self._bondedAtoms[atom1].add(atom2)
+                self._bondedAtoms[atom2].add(atom1)
 
     def _isBonded(self, atom_index_1, atom_index_2):
         """Return True if atoms are bonded, False if not.
@@ -1828,6 +1965,27 @@ class Molecule(FrozenMolecule):
         #super(self, Molecule).__init__(*args, **kwargs)
         super(Molecule, self).__init__(*args, **kwargs)
 
+
+    @property
+    def name(self):
+        """The name (or title) of the molecule
+        """
+        return self._name    
+        
+    @name.setter
+    def name(self, value):
+        """
+        Set the name of the Molecule
+
+        Parameters
+        ----------
+        value: str
+            The new name for the Molecule
+        """
+        if not(isinstance(value, str)):
+            raise Exception("Molecule names must be strings. Received {}".format(value))
+        self._name = value
+
     def add_atom(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None,
                  name=None):
         """
@@ -1873,7 +2031,7 @@ class Molecule(FrozenMolecule):
         atom_index = self._add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry, name=name)
         return atom_index
         
-    def add_bond(self, atom1_index, atom2_index, bond_order, is_aromatic,
+    def add_bond(self, atom1, atom2, bond_order, is_aromatic,
                  stereochemistry=None):
         """
         Add a bond between two specified atom indices
@@ -1882,9 +2040,9 @@ class Molecule(FrozenMolecule):
 
         Parameters
         ----------
-        atom1_index : int
+        atom1 : int or openforcefield.topology.molecule.Atom
             Index of first atom
-        atom2_index : int
+        atom2 : int or openforcefield.topology.molecule.Atom
             Index of second atom
         bond_order : int
             Integral bond order of Kekulized form
@@ -1892,6 +2050,26 @@ class Molecule(FrozenMolecule):
             True if this bond is aromatic, False otherwise
         stereochemistry : str, optional, default=None
             Either 'E' or 'Z' for specified stereochemistry, or None if stereochemistry is irrelevant
-
+        
+        Returns
+        -------
+        index: int
+            Index of the bond in this molecule
         """
-        bond_index = self._add_bond(atom1_index, atom2_index, bond_order, is_aromatic, stereochemistry=stereochemistry)
+        bond_index = self._add_bond(atom1, atom2, bond_order, is_aromatic, stereochemistry=stereochemistry)
+        return bond_index
+
+    def add_conformer(self, coordinates):
+        """
+        Adds a conformer of the molecule
+        
+        Parameters
+        ----------
+        coordinates: simtk.unit.Quantity(np.array) with shape (n_atoms, 3)
+            Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in the Molecule's indexing system.
+        Returns
+        -------
+        index: int
+            Index of the conformer in the Molecule
+        """
+        return self._add_conformer(coordinates)

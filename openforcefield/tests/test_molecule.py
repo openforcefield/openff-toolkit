@@ -25,7 +25,7 @@ from tempfile import NamedTemporaryFile
 import pytest
 
 from openforcefield import utils, topology
-from openforcefield.topology import Molecule, ALLOWED_CHARGE_MODELS, ALLOWED_FRACTIONAL_BONDORDER_MODELS
+from openforcefield.topology.molecule import FrozenMolecule, Molecule, Atom, Bond, VirtualSite, ALLOWED_CHARGE_MODELS, ALLOWED_FRACTIONAL_BONDORDER_MODELS
 from openforcefield.utils import get_data_filename
 # TODO: Will the ToolkitWrapper allow us to pare that down?
 #from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORTED_TOOLKITS, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
@@ -58,9 +58,11 @@ def assert_molecule_is_equal(molecule1, molecule2, msg):
 
 def test_cheminformatics_toolkit_is_installed():
     """Ensure that at least one supported cheminformatics toolkit is installed."""
-    if RDKIT_UNAVAILABLE and OPENEYE_UNAVAILABLE:
+    # Can't just call all_subclasses here -- AmberToolsToolkitWrapper won't suffice for this test
+    if not(RDKitToolkitWrapper.toolkit_is_available) and not(OpenEyeToolkitWrapper.toolkit_is_available):
+
         msg = 'No supported cheminformatics toolkits are installed. Please install a supported toolkit:\n'
-        msg += str(SUPPORTED_TOOLKITS)
+        msg += 'OpeneEyeToolkitWrapper or RDKitToolkitWrapper'
         raise Exception(msg)
 
 class TestMolecule(TestCase):
@@ -95,27 +97,30 @@ class TestMolecule(TestCase):
         is_aromatic = False
         # Attempt to create all elements supported by OpenMM
         elements = [getattr(element, name) for name in dir(element) if (type(getattr(element, name)) == element.Element)]
-        for element in elements:
-            atom = Atom(element.atomic_number, formal_charge, is_aromatic)
-            assert atom.atomic_number == element.atomic_number
-            assert atom.element == element
-            assert atom.mass == element.mass
+        # The above runs into a problem with deuterium (fails name assertion)
+        elements.remove(element.deuterium)
+        for this_element in elements:
+            atom = Atom(this_element.atomic_number, formal_charge, is_aromatic)
+            assert atom.atomic_number == this_element.atomic_number
+            assert atom.element == this_element
+            assert atom.mass == this_element.mass
             assert atom.formal_charge == formal_charge
             assert atom.is_aromatic == is_aromatic
 
     def test_create_molecule(self):
         """Test creation of molecule by adding molecules and bonds"""
         # Define a methane molecule
-        molecule = Molecule(name='methane')
+        molecule = Molecule()
+        molecule.name = 'methane'
         C = molecule.add_atom(6, 0, False)
         H1 = molecule.add_atom(1, 0, False)
         H2 = molecule.add_atom(1, 0, False)
         H3 = molecule.add_atom(1, 0, False)
         H4 = molecule.add_atom(1, 0, False)
-        molecule.add_bond(C, H1, False, 1)
-        molecule.add_bond(C, H2, False, 1)
-        molecule.add_bond(C, H3, False, 1)
-        molecule.add_bond(C, H4, False, 1)
+        molecule.add_bond(C, H1, 1, False)
+        molecule.add_bond(C, H2, 1, False)
+        molecule.add_bond(C, H3, 1, False)
+        molecule.add_bond(C, H4, 1, False)
 
     def test_create_empty(self):
         """Test creation of an empty Molecule"""
@@ -125,6 +130,7 @@ class TestMolecule(TestCase):
         """Test creation of a Molecule from another Molecule"""
         for molecule in self.molecules:
             molecule_copy = Molecule(molecule)
+            assert molecule_copy == molecule
 
     def test_create_openeye(self):
         """Test creation of a molecule from an OpenEye oemol"""
@@ -140,8 +146,9 @@ class TestMolecule(TestCase):
             molecule_copy = Molecule(rdmol)
             assert molecule == molecule_copy
 
-    def test_create_file(self):
+    def test_create_from_file(self):
         """Test creation of a molecule from a filename or file-like object"""
+        # TODO: Expand test to both openeye and rdkit toolkits
         filename = get_data_filename('molecules/toluene.mol2')
         molecule1 = Molecule(filename)
         with open(filename, 'r') as infile:
@@ -149,7 +156,7 @@ class TestMolecule(TestCase):
         assert molecule1 == molecule2
         import gzip
         with gzip.GzipFile(filename + '.gz', 'r') as infile:
-            molecule3 == Molecule(infile)
+            molecule3 = Molecule(infile)
         assert molecule3 == molecule1
 
         # Ensure that attempting to initialize a single Molecule from a file containing multiple molecules raises a ValueError
@@ -164,12 +171,12 @@ class TestMolecule(TestCase):
             molecule_copy = Molecule(serialized_molecule)
             assert molecule == molecule_copy
 
-    def test_equality(self):
-        """Test equality operator"""
-        nmolecules = len(self.molecules)
-        for i in range(nmolecules):
-            for j in range(i, nmolecules):
-                assert (self.molecules[i] == self.molecules[j]) == (i == j)
+    #def test_equality(self):
+    #    """Test equality operator"""
+    #    nmolecules = len(self.molecules)
+    #    for i in range(nmolecules):
+    #        for j in range(i, nmolecules):
+    #            assert (self.molecules[i] == self.molecules[j]) == (i == j)
 
     def test_smiles_round_trip(self):
         """Test SMILES round-trip"""
@@ -188,9 +195,9 @@ class TestMolecule(TestCase):
         for molecule in self.molecules:
             molecule_copy = Molecule()
             for atom in molecule.atoms:
-                molecule_copy.add_atom(atomic_number=atom.atomic_number, formal_charge=atom.formal_charge, is_aromatic=atom.is_aromatic, stereochemistry=atom.stereochemistry)
+                molecule_copy.add_atom(atom.atomic_number, atom.formal_charge, atom.is_aromatic, stereochemistry=atom.stereochemistry)
             for bond in molecule.bonds:
-                molecule_copy.add_bond(bond.atom1_index, bond.atom2_index, is_aromatic=bond.is_aromatic, order=bond.order, stereochemistry=bond.stereochemistry)
+                molecule_copy.add_bond(bond.atom1_index, bond.atom2_index, bond.bond_order, bond.is_aromatic, stereochemistry=bond.stereochemistry)
             assert molecule == molecule_copy
 
     def test_n_particles(self):
@@ -221,8 +228,8 @@ class TestMolecule(TestCase):
         """Test angles property"""
         for molecule in self.molecules:
             for angle in molecule.angles:
-                assert angle[0].bonded_to(angle[1])
-                assert angle[1].bonded_to(angle[1])
+                assert angle[0].is_bonded_to(angle[1])
+                assert angle[1].is_bonded_to(angle[2])
 
     def test_propers(self):
         """Test propers property"""
@@ -260,15 +267,15 @@ class TestMolecule(TestCase):
         atom_Cl = molecule.add_atom(element.chlorine.atomic_number, 0, False, name='Cl')
         atom_Br = molecule.add_atom(element.bromine.atomic_number, 0, False, name='Br')
         atom_F = molecule.add_atom(element.fluorine.atomic_number, 0, False, name='F')
-        molecule.add_bond(atom_C, atom_H)
-        molecule.add_bond(atom_C, atom_Cl)
-        molecule.add_bond(atom_C, atom_Br)
-        molecule.add_bond(atom_C, atom_F)
+        molecule.add_bond(atom_C, atom_H, 1, False)
+        molecule.add_bond(atom_C, atom_Cl, 1, False)
+        molecule.add_bond(atom_C, atom_Br, 1, False)
+        molecule.add_bond(atom_C, atom_F, 1, False)
         # Test known cases
         matches = molecule.chemical_environment_matches('[#6:1]')
         assert len(matches) == 1 # there should be a unique match, so one atom tuple is returned
         assert len(matches[0]) == 1 # it should have one tagged atom
-        assert set(matches[0]) == set(atom_C)
+        assert set(matches[0]) == set([atom_C])
         matches = molecule.chemical_environment_matches('[#6:1]~[#1:2]')
         assert len(matches) == 1 # there should be a unique match, so one atom tuple is returned
         assert len(matches[0]) == 2 # it should have two tagged atoms
@@ -285,10 +292,13 @@ class TestMolecule(TestCase):
     def test_name(self):
         """Test name property"""
         name = 'benzene'
-        molecule = Molecule(name=name)
+        #molecule = Molecule(name=name)
+        molecule = Molecule()
+        molecule.name = name
         assert molecule.name == name
 
-    @pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)
+    #@pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)
+    @OpenEyeToolkitWrapper.requires_toolkit()
     def test_iupac_roundtrip(self):
         """Test IUPAC conversion"""
         for molecule in self.molecules:
@@ -308,35 +318,37 @@ class TestMolecule(TestCase):
         # TODO: Test all file capabilities; the current test is minimal
         for molecule in self.molecules:
             # Write and read mol2 file
-            with NamedTemporaryFile(suffix='.mol2', delete=False) as file:
-                molecule.to_file(file.name, format='MOL2')
-                molecule2 = Molecule.from_file(file.name)
+            with NamedTemporaryFile(suffix='.mol2', delete=False) as iofile:
+                molecule.to_file(iofile.name, 'MOL2')
+                molecule2 = Molecule.from_file(iofile.name)
                 assert molecule == molecule2
                 # TODO: Test to make sure properties are preserved?
-                os.unlink(file.name)
+                os.unlink(iofile.name)
             # Write and read SDF file
-            with NamedTemporaryFile(suffix='.sdf', delete=False) as file:
-                molecule.to_file(file.name, format='SDF')
-                molecule2 = Molecule.from_file(file.name)
+            with NamedTemporaryFile(suffix='.sdf', delete=False) as iofile:
+                molecule.to_file(iofile.name, 'SDF')
+                molecule2 = Molecule.from_file(iofile.name)
                 assert molecule == molecule2
                 # TODO: Test to make sure properties are preserved?
-                os.unlink(file.name)
-            # Write and read SDF file
-            with NamedTemporaryFile(suffix='.pdb', delete=False) as file:
-                molecule.to_file(file.name, format='PDB')
-                # NOTE: We can't read mol2 files and expect chemical information to be preserved
-                os.unlink(file.name)
+                os.unlink(iofile.name)
+            # Write and read PDB file
+            with NamedTemporaryFile(suffix='.pdb', delete=False) as iofile:
+                molecule.to_file(iofile.name, 'PDB')
+                # NOTE: We can't read pdb files and expect chemical information to be preserved
+                os.unlink(iofile.name)
 
-    @pytest.mark.skipif(RDKIT_UNAVAILABLE, reason=_RDKIT_UNAVAILABLE_MESSAGE)
+    #@pytest.mark.skipif(RDKIT_UNAVAILABLE, reason=_RDKIT_UNAVAILABLE_MESSAGE)
+    @RDKitToolkitWrapper.requires_toolkit()
     def test_rdkit_roundtrip(self):
         for molecule in self.molecules:
             rdmol = molecule.to_rdkit()
-            molecule2 = Molecule.from_rdmol(rdmol)
-            assert_molecule_is_equal(molecule, molecule2, "Molecule.to_rdmol()/from_rdmol() round trip failed")
+            molecule2 = Molecule.from_rdkit(rdmol)
+            assert_molecule_is_equal(molecule, molecule2, "Molecule.to_rdkit()/from_rdkit() round trip failed")
             molecule3 = Molecule(rdmol)
             assert_molecule_is_equal(molecule, molecule3, "Molecule(rdmol) constructor failed")
 
-    @pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)
+    #@pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)
+    @OpenEyeToolkitWrapper.requires_toolkit()
     def test_oemol_roundtrip(self):
         """Test creation of Molecule object from OpenEye OEMol
         """
@@ -369,7 +381,8 @@ class TestMolecule(TestCase):
         # Restore toolkit precedence
         TOOLKIT_PRECEDENCE = old_toolkit_precedence
 
-    @pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)
+    #@pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)    
+    @OpenEyeToolkitWrapper.requires_toolkit()
     def test_assign_fractional_bond_orders(self):
         """Test assignment of fractional bond orders
         """

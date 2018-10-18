@@ -29,7 +29,8 @@ from functools import wraps
 from openforcefield.utils.utils import inherit_docstrings
 from openforcefield.utils import all_subclasses
 from distutils.spawn import find_executable
-
+from simtk import unit
+import numpy as np
 
 #=============================================================================================
 # SUPPORTED MODELS
@@ -489,7 +490,22 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             molecule.add_bond(atom1_index, atom2_index, bond_order, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
 
         # TODO: Copy conformations, if present
-
+        # TODO: Come up with some scheme to know when to import coordinates
+        # From SMILES: no
+        # From MOL2: maybe
+        # From other: maybe
+        if hasattr(oemol,'GetConfs'):
+            for conf in oemol.GetConfs():
+                n_atoms = molecule.n_atoms
+                positions = unit.Quantity(np.zeros([n_atoms, 3], np.float), unit.angstrom)
+                for oe_id in conf.GetCoords().keys():
+                    off_atom_coords = unit.Quantity(conf.GetCoords()[oe_id], unit.angstrom)
+                    off_atom_index = map_atoms[oe_id]
+                    positions[off_atom_index,:] = off_atom_coords
+                if (positions == 0*unit.angstrom).all():
+                    continue
+                molecule.add_conformer(positions)
+        
         return molecule
 
     # TODO: We could make this a staticmethod. It seems to have formerly belonged to
@@ -542,8 +558,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Add bonds
         oemol_bonds = list() # list of corresponding oemol bonds
         for bond in molecule.bonds:
-            atom1_index = bond.molecule.atoms.index(bond.atom1)
-            atom2_index = bond.molecule.atoms.index(bond.atom2)
+            #atom1_index = molecule.atoms.index(bond.atom1)
+            #atom2_index = molecule.atoms.index(bond.atom2)
+            atom1_index = bond.atom1_index
+            atom2_index = bond.atom2_index
             oebond = oemol.NewBond(oemol_atoms[atom1_index], oemol_atoms[atom2_index])
             oebond.SetOrder(bond.bond_order)
             oebond.SetAromatic(bond.is_aromatic)
@@ -560,7 +578,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
             # Flip chirality if stereochemistry is incorrect
             oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
-            if oeatom_stereochemistry != atom.sterechemistry:
+            if oeatom_stereochemistry != atom.stereochemistry:
                 # Flip the stereochemistry
                 oea.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left)
                 # Verify it matches now as a sanity check
@@ -698,7 +716,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         return charges
 
     @staticmethod
-    def _find_smarts_matches(oemol, smarts):
+    def _find_smarts_matches(oemol, smarts, aromaticity_model=None):
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
         .. warning :: This API experimental and subject to change.
@@ -789,8 +807,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        oemol = self.to_oemol(molecule, aromaticity_model=aromaticity_model)
-        return _find_smarts_matches(oemol, smarts)
+        #oemol = self.to_oemol(molecule, aromaticity_model=aromaticity_model)
+        oemol = molecule.to_openeye()
+        return self._find_smarts_matches(oemol, smarts)
 
 class RDKitToolkitWrapper(ToolkitWrapper):
     """
@@ -880,16 +899,18 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Create a new openforcefield Molecule
         mol = Molecule()
-
+        
         # If RDMol has a title save it
         if rdmol.HasProp("_Name"):
             mol.name == rdmol.GetProp("_Name")
+        else:
+            mol.name = None
 
         # Store all properties
         # TODO: Should Title or _Name be a special property?
         # TODO: Should there be an API point for storing properties?
         properties = rdmol.GetPropsAsDict()
-        mol.properties = properties
+        mol._properties = properties
 
         # We store bond orders as integers regardless of aromaticity.
         # In order to properly extract these, we need to have the "Kekulized" version of the rdkit mol
@@ -916,7 +937,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 stereochemistry = 'R'
             if tag == Chem.CHI_TETRAHEDRAL_CW:
                 stereochemistry = 'S'
-
+            
             atom_index = mol.add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry)
             map_atoms[rd_idx] = atom_index
 
@@ -957,6 +978,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # you wanted to convert multiple sets of coordinates
         if rdmol.GetConformers():
             conf = rdmol.GetConformer()
+            
             # TODO: Store conformers
             #for rd_idx, oeatom in map_atoms.items():
             #    coords = conf.GetAtomPosition(rd_idx)
