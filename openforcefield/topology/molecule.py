@@ -84,7 +84,81 @@ class Particle(Serializable):
     A particle object could be an ``Atom`` or a ``VirtualSite``.
 
     """
-    pass
+
+    @property
+    def molecule(self):
+        """
+        The ``Molecule`` this atom is part of.
+
+        .. todo::
+
+           * Should we have a single unique ``Molecule`` for each molecule type in the system,
+           or if we have multiple copies of the same molecule, should we have multiple ``Molecule``s?
+        """
+        return self._molecule
+
+
+    
+    @molecule.setter
+    def molecule(self, molecule):
+        """
+        Set the particle's molecule pointer. Note that this will only work if the particle currently 
+        doesn't have a molecule
+        """
+        #TODO: I forgot if python will hold a pointer to the molecule, or some sort of bulky copy here
+        #TODO: Should _molecule be a property?
+        #TODO: Add informative exception here
+        assert self._molecule == None
+        self._molecule = molecule
+
+    @property
+    def molecule_particle_index(self):
+        """
+        Returns the index of this particle in its molecule
+        """
+        return self._molecule.particles.index(self)
+
+    
+    @property
+    def topology(self):
+        """
+        The ``Topology`` this atom is part of.
+
+        .. todo::
+
+           * Should we have a single unique ``Topology`` for each topology type in the system,
+           or if we have multiple copies of the same topology, should we have multiple ``Topology``s?
+        """
+        return self._topology
+
+
+    
+    @topology.setter
+    def topology(self, topology):
+        """
+        Set the particle's topology pointer. Note that this will only work if the particle currently 
+        doesn't have a topology
+        """
+        #TODO: I forgot if python will hold a pointer to the molecule, or some sort of bulky copy here
+        #TODO: Should _molecule be a property?
+        #TODO: Add informative exception here
+        assert self._topology == None
+        self._topology = topology
+
+
+    @property
+    def topology_particle_index(self):
+        """
+        Returns the index of this particle in its parent topology
+        """
+        return self._topology.particles.index(self)
+        
+    @property
+    def name(self):
+        """
+        The name of the particle
+        """
+        return self._name
 
 #=============================================================================================
 # Atom
@@ -156,6 +230,7 @@ class Atom(Particle):
         ## From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
         #self._molecule_atom_index = molecule_atom_index
         self._bonds = list()
+        self._virtual_sites = list()
 
 
     def add_bond(self, bond):
@@ -170,6 +245,20 @@ class Atom(Particle):
         """
 
         self._bonds.append(bond)
+        
+
+    def add_virtual_site(self, vsite):
+        """Adds a bond that this atom is involved in
+        .. todo :: Is this how we want to keep records?
+
+        Parameters
+        ----------
+        bond: an openforcefield.topology.molecule.Bond
+            A bond involving this atom
+
+        """
+
+        self._virtual_sites.append(vsite)
         
 
     def to_dict(self):
@@ -256,7 +345,7 @@ class Atom(Particle):
         """
         for bond in self._bonds:
             yield bond
-
+            
     @property
     def bonded_to(self):
         """
@@ -293,32 +382,14 @@ class Atom(Particle):
         return False
 
     @property
-    def molecule(self):
+    def virtual_sites(self):
         """
-        The ``Molecule`` this atom is part of.
+        The list of ``VirtualSite`` objects this atom is involved in.
 
-        .. todo::
-
-           * Should we have a single unique ``Molecule`` for each molecule type in the system,
-           or if we have multiple copies of the same molecule, should we have multiple ``Molecule``s?
         """
-        return self._molecule
-
-
-    
-    @molecule.setter
-    def molecule(self, molecule):
-        """
-        Set the atom's molecule pointer. Note that this will only work if the atom currently 
-        doesn't have a molecule
-        """
-        #TODO: I forgot if python will hold a pointer to the molecule, or some sort of bulky copy here
-        #TODO: Should _molecule be a property?
-        #TODO: Add informative exception here
-        assert self._molecule == None
-        self._molecule = molecule
-
-    
+        for vsite in self._vsites:
+            yield vsite
+            
     @property
     def molecule_atom_index(self):
         """
@@ -344,13 +415,6 @@ class Atom(Particle):
         #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
         return self._topology.atoms.index(self)
 
-    @property
-    def name(self):
-        """
-        The name of the atom
-        """
-        return self._name
-    
     def __repr__(self):
         # TODO: Also include particle_index and which molecule this atom belongs to?
         return "Atom(name={}, atomic number={})".format(self._name, self._atomic_number)
@@ -378,9 +442,9 @@ class VirtualSite(Particle):
 
     """
 
-    def __init__(self, name, sitetype, weights, atoms):
+    def __init__(self, atoms, charge_increments=None, epsilon=None, sigma=None, rmin_half=None, name=None):
         """
-        Create a virtual site whose position is defined by a linear combination of multiple Atoms.
+        Base class for VirtualSites
 
         .. todo ::
 
@@ -390,36 +454,107 @@ class VirtualSite(Particle):
 
         Parameters
         ----------
-        name : str
-            The name of this virtual site
-        sitetype : str
-            The virtual site type.
-        weights : list of floats of shape [N]
-            weights[index] is the weight of particles[index] contributing to the position of the virtual site.
         atoms : list of Atom of shape [N]
             atoms[index] is the corresponding Atom for weights[index]
+        charge_increments : list of floats of shape [N], optional, default=None
+            The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this list should match the ordering in the atoms list. Default is None.
+        sigma : float, default=None
+            Sigma term for VdW properties of virtual site. Default is None.
+        epsilon : float
+            Epsilon term for VdW properties of virtual site. Default is None.  
+        rmin_half : float
+            Rmin_half term for VdW properties of virtual site. Default is None.
+        name : string or None, default=None
+            The name of this virtual site. Default is None.        
+
+
         virtual_site_type : str
             Virtual site type.
+        name : str or None, default=None
+            The name of this virtual site. Default is None
 
         """
+        
+        # Ensure we have as many charge_increments as we do atoms
+        if not( len(charge_increments) == len(atoms) ):
+            raise Exception("VirtualSite definition must have same number of charge_increments ({}) and atoms({})".format(len(charge_increments), len(atoms)))
+        # VdW parameters can either be epsilon+rmin_half or epsilon+sigma, but not both
+        if not(epsilon == None):
+            if ((rmin_half == None) and (sigma == None)):
+                raise Exception("VirtualSite constructor given epsilon (value : {}) but not given rmin_half (value : {}) or sigma (value : {})".format(epsilon, rmin_half, sigma))
+        elif epsilon == None:
+            if ((rmin_half != None) or (sigma != None)):
+                raise Exception("VirtualSite constructor given rmin_half (value : {}) or sigma (value : {}), but not epsilon (value : {})".format(rmin_half, sigma, epsilon))
+
+        for atom in atoms:
+            assert isinstance(atom, Atom)
+        for atom_index in range(len(atoms)-1):
+            assert atoms[atom_index].molecule is atoms[atom_index+1].molecule
+        assert isinstance(atom1.molecule, FrozenMolecule)
+            
+        # TODO: Unit checks for all arguments
+        assert isinstance(distance, unit.Quantity)
+        
+        if not(charge_increment == None):
+            assert len(atoms) == len(charge_increment)
+        
+        self._atoms = list() 
+        for atom in atoms:
+            atom.add_virtual_site(self)
+            self._atoms.append(atom)
+        self._molecule = atoms[0].molecule
+        self._charge_increment = charge_increment
+        self._sigma = sigma
+        self._rmin_half = rmin_half
+        self._epsilon = epsilon
         self._name = name
-        self._type = sitetype # TODO: Validate site types against allowed values
-        self._weights = np.array(weights) # make a copy and convert to array internally
-        self._atoms = [ atom for atom in atoms ] # create a list of Particles
+        
+        
+        # Subclassing makes _type unnecessary
+        #self._type = None
+        # TODO: Validate site types against allowed values
+        
+
+        #self._weights = np.array(weights) # make a copy and convert to array internally
 
     def to_dict(self):
-        """Return a dict representation of the atom."""
-        # TODO
-        return self.__dict__
+        """Return a dict representation of the virtual site."""
+        # Each subclass should have its own to_dict
+        vsite_dict = OrderedDict()
+        vsite_dict['name'] = self._name
+        vsite_dict['atoms'] = tuple([i.molecule_atom_index for i in self.atoms])
+        vsite_dict['charge_increment'] = self._charge_increment
+        vsite_dict['epsilon'] = self._epsilon
+        vsite_dict['sigma'] = self._sigma
+        vsite_dict['rmin_half'] = self._rmin_half
+        return vsite_dict
+        
+        #return self.__dict__
 
     @staticmethod
     def from_dict(vsite_dict):
-        """Create an Atom from a dict representation."""
-        # TODO
+        """Create a virtual site from a dict representation."""
+        # Each subclass needs to have its own from_dict
         return VirtualSite(**vsite_dict)
 
+
     @property
-    def virtual_site_index(self):
+    def molecule_virtual_site_index(self):
+        """
+        The index of this VirtualSite within the list of virtual sites within ``Topology``
+        Note that this can be different from ``particle_index``.
+        """
+        #if self._topology is None:
+        #    raise ValueError('This VirtualSite does not belong to a Topology object')
+        # TODO: This will be slow; can we cache this and update it only when needed?
+        #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
+        return self._molecule.virtual_sites.index(self)
+
+
+
+        
+    @property
+    def topology_virtual_site_index(self):
         """
         The index of this VirtualSite within the list of virtual sites within ``Topology``
         Note that this can be different from ``particle_index``.
@@ -430,7 +565,7 @@ class VirtualSite(Particle):
         # TODO: This will be slow; can we cache this and update it only when needed?
         #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
         return self._topology.virtual_sites.index(self)
-
+     
     @property
     def atoms(self):
         """
@@ -439,14 +574,274 @@ class VirtualSite(Particle):
         for atom in self._atoms:
             yield atom
 
+    @property
+    def charge_increments(self):
+        """
+        Charges taken from this VirtualSite's atoms and given to the VirtualSite
+        """
+        return self._charge_increments
+
+    @property
+    def epsilon(self):
+        """
+        The VdW epsilon term of this VirtualSite
+        """
+        return self._epsilon
+    
+    @property
+    def sigma(self):
+        """
+        The VdW sigma term of this VirtualSite
+        """
+        return self._sigma
+    
+    @property
+    def rmin_half(self):
+        """
+        The VdW rmin_half term of this VirtualSite
+        """
+        return self._rmin_half
+    
+    @property
+    def name(self):
+        """
+        The name of this VirtualSite
+        """
+        return self._name
+    
+
     def __repr__(self):
         # TODO: Also include particle_index, which molecule this atom belongs to?
-        return "VirtualSite(name={}, type={}, weights={}, atoms={})".format(self.name, self.type, self.weights, self.atoms)
+        return "VirtualSite(name={}, type={}, atoms={})".format(self.name, self.type, self.atoms)
 
     def __str__(self):
         # TODO: Also include particle_index, which molecule this atom belongs to?
-        return "<VirtualSite name={} type={} weights={}, atoms={}>".format(self.name, self.type, self.weights, self.atoms)
+        return "<VirtualSite name={} type={} atoms={}>".format(self.name, self.type, self.atoms)
 
+
+
+    
+class BondChargeVirtualSite(VirtualSite):
+    """
+    A particle representing a "Bond Charge"-type virtual site, in which the location of the charge is specified by the positions of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
+
+    """
+
+    def __init__(self, atoms, distance, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None): 
+        """
+        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
+
+        TODO: One of the examples on https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html#virtualsites-virtual-sites-for-off-atom-charges has a BondCharge defined with three atoms -- How does that work?
+        
+        Parameters
+        ----------
+        atoms : list of openforcefield.topology.molecule.Atom objects of shape [N]
+            The atoms defining the virtual site's position
+        distance : float
+
+        weights : list of floats of shape [N] or None, optional, default=None
+            weights[index] is the weight of particles[index] contributing to the position of the virtual site. Default is None
+        charge_increments : list of floats of shape [N], optional, default=None
+            The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this list should match the ordering in the atoms list. Default is None.
+        epsilon : float
+            Epsilon term for VdW properties of virtual site. Default is None.  
+        sigma : float, default=None
+            Sigma term for VdW properties of virtual site. Default is None.
+        rmin_half : float
+            Rmin_half term for VdW properties of virtual site. Default is None.
+        name : string or None, default=None
+            The name of this virtual site. Default is None.
+            
+        """
+        # In python3, we could just say super().__init__(...), but I'll leave the long version here in case we want reverse compatibility
+        super(VirtualSite, self).__init(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        self._distance = distance
+        
+    def to_dict(self):
+        vsite_dict = super(VirtualSite, self).to_dict()
+        vsite_dict['distance'] = self._distance
+        return vsite_dict
+
+    @staticmethod
+    def from_dict(vsite_dict):
+        base_dict = deepcopy(vsite_dict)
+        base_dict.pop('distance')
+        vsite = from_dict(**base_dict)
+        vsite._distance = vsite_dict['distance']
+        return vsite
+        
+        
+    
+class MonovalentLonePairVirtualSite(VirtualSite):
+    """
+    A particle representing a "Monovalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is originally intended for situations like a carbonyl, and allows placement of a virtual site S at a specified distance d, in_plane_angle, and out_of_plane_angle relative to a central atom and two connected atoms. 
+    """
+
+    def __init__(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+        """
+        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
+
+        TODO : Do "weights" have any meaning here?
+        
+        Parameters
+        ----------
+        atoms : list of three openforcefield.topology.molecule.Atom objects
+            The three atoms defining the virtual site's position
+        distance : float 
+            
+        out_of_plane_angle : float
+            
+        in_plane_angle : float
+            
+        epsilon : float
+            Epsilon term for VdW properties of virtual site. Default is None.  
+        sigma : float, default=None
+            Sigma term for VdW properties of virtual site. Default is None.
+        rmin_half : float
+            Rmin_half term for VdW properties of virtual site. Default is None.
+        name : string or None, default=None
+            The name of this virtual site. Default is None.
+        """
+        super(VirtualSite, self).__init(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        self._distance = distance
+        self._out_of_plane_angle = out_of_plane_angle
+        self._in_plane_angle = in_plane_angle
+        
+        
+    def to_dict(self):
+        vsite_dict = super(VirtualSite, self).to_dict()
+        vsite_dict['distance'] = self._distance
+        vsite_dict['out_of_plane_angle'] = self._out_of_plane_angle
+        vsite_dict['in_plane_angle'] = self._in_plane_angle
+        return vsite_dict
+
+    @staticmethod
+    def from_dict(vsite_dict):
+        base_dict = deepcopy(vsite_dict)
+        base_dict.pop('distance')
+        vsite = from_dict(**base_dict)
+        vsite._distance = vsite_dict['distance']
+        return vsite
+
+
+
+
+    
+class DivalentLonePairVirtualSite(VirtualSite):
+    """
+    A particle representing a "Divalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is suitable for cases like four-point and five-point water models as well as pyrimidine; a charge site S lies a specified distance d from the central atom among three atoms along the bisector of the angle between the atoms (if out_of_plane_angle is zero) or out of the plane by the specified angle (if out_of_plane_angle is nonzero) with its projection along the bisector. For positive values of the distance d the virtual site lies outside the 2-1-3 angle and for negative values it lies inside. 
+    """
+
+    def __init__(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+        """
+        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms. 
+
+        TODO : Do "weights" have any meaning here?
+        
+        Parameters
+        ----------
+        atoms : list of 3 openforcefield.topology.molecule.Atom objects
+            The three atoms defining the virtual site's position
+        distance : float 
+            
+        out_of_plane_angle : float
+            
+        in_plane_angle : float
+            
+        epsilon : float
+            Epsilon term for VdW properties of virtual site. Default is None.  
+        sigma : float, default=None
+            Sigma term for VdW properties of virtual site. Default is None.
+        rmin_half : float
+            Rmin_half term for VdW properties of virtual site. Default is None.
+        name : string or None, default=None
+            The name of this virtual site. Default is None.
+        """
+        assert len(atoms) == 3
+        super(VirtualSite, self).__init(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        self._distance = distance
+        self._out_of_plane_angle = out_of_plane_angle
+        self._in_plane_angle = in_plane_angle
+
+        
+    def to_dict(self):
+        vsite_dict = super(VirtualSite, self).to_dict()
+        vsite_dict['distance'] = self._distance
+        vsite_dict['out_of_plane_angle'] = self._out_of_plane_angle
+        vsite_dict['in_plane_angle'] = self._in_plane_angle
+        return vsite_dict
+
+    @staticmethod
+    def from_dict(vsite_dict):
+        base_dict = deepcopy(vsite_dict)
+        base_dict.pop('distance')
+        vsite = from_dict(**base_dict)
+        vsite._distance = vsite_dict['distance']
+        return vsite
+
+
+
+
+
+        
+class TrivalentLonePairVirtualSite(VirtualSite):
+    """
+    A particle representing a "Trivalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of four atoms. This is suitable for planar or tetrahedral nitrogen lone pairs; a charge site S lies above the central atom (e.g. nitrogen a distance d along the vector perpendicular to the plane of the three connected atoms (2,3,4). With positive values of d the site lies above the nitrogen and with negative values it lies below the nitrogen.
+    """
+
+    def __init__(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+        """
+        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms. 
+
+        TODO : Do "weights" have any meaning here?
+        
+        Parameters
+        ----------
+        atoms : list of 4 openforcefield.topology.molecule.Atom objects
+            The three atoms defining the virtual site's position
+        distance : float 
+            
+        out_of_plane_angle : float
+            
+        in_plane_angle : float
+            
+        epsilon : float
+            Epsilon term for VdW properties of virtual site. Default is None.  
+        sigma : float, default=None
+            Sigma term for VdW properties of virtual site. Default is None.
+        rmin_half : float
+            Rmin_half term for VdW properties of virtual site. Default is None.
+        name : string or None, default=None
+            The name of this virtual site. Default is None.
+        """
+        assert len(atoms) == 4
+        super(VirtualSite, self).__init(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        self._distance = distance
+        self._out_of_plane_angle = out_of_plane_angle
+        self._in_plane_angle = in_plane_angle
+
+
+        
+    def to_dict(self):
+        vsite_dict = super(VirtualSite, self).to_dict()
+        vsite_dict['distance'] = self._distance
+        vsite_dict['out_of_plane_angle'] = self._out_of_plane_angle
+        vsite_dict['in_plane_angle'] = self._in_plane_angle
+        return vsite_dict
+
+    @staticmethod
+    def from_dict(vsite_dict):
+        base_dict = deepcopy(vsite_dict)
+        base_dict.pop('distance')
+        vsite = from_dict(**base_dict)
+        vsite._distance = vsite_dict['distance']
+        return vsite
+
+        
+    
+
+        
+        
 #=============================================================================================
 # Bond
 #=============================================================================================
@@ -818,8 +1213,8 @@ class FrozenMolecule(Serializable):
 
             self.add_atom(**atom_dict)
         # TODO: Implement vsites
-        #for vsite in molecule_dict['virtual_sites']:
-        #    molecule._add_virtual_site(*vsite)
+        for vsite in molecule_dict['virtual_sites']:
+            molecule._add_virtual_site(*vsite)
         for bond_dict in molecule_dict['bonds']:
             ## TODO: There's probably a more graceful way to do this than overwriting a bond_dict entry
             #bond_dict['atom1'] = molecule.atoms[int(bond_dict['atom1'])]
@@ -1047,6 +1442,183 @@ class FrozenMolecule(Serializable):
         self._invalidate_cached_properties()
         return self._atoms.index(atom)
 
+    
+    def add_bond_charge_virtual_site(self, atoms, distance, charge_increments=None,
+                                     weights=None, epsilon=None, sigma=None,
+                                     rmin_half=None, name=None):
+        """
+        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
+        Parameters
+        ----------
+        atoms : list of openforcefield.topology.molecule.Atom objects of shape [N]
+            The atoms defining the virtual site's position
+        distance : float
+
+        weights : list of floats of shape [N] or None, optional, default=None
+            weights[index] is the weight of particles[index] contributing to the position of the virtual site. Default is None
+        charge_increments : list of floats of shape [N], optional, default=None
+            The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this list should match the ordering in the atoms list. Default is None.
+        epsilon : float
+            Epsilon term for VdW properties of virtual site. Default is None.  
+        sigma : float, default=None
+            Sigma term for VdW properties of virtual site. Default is None.
+        rmin_half : float
+            Rmin_half term for VdW properties of virtual site. Default is None.
+        name : string or None, default=None
+            The name of this virtual site. Default is None.
+        """
+       # Check if function was passed list of atoms or atom indices
+        if all([isinstance(atom, int) for atom in atoms]):
+            atom_list = [self.atoms[atom_index] for atom_index in atoms]
+        elif isinstance(atom1, Atom) and isinstance(atom2, Atom):
+            atom_list = atoms
+        else:
+            raise Exception('Invalid inputs to molecule._add_bond_charge_virtual_site. Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
+        # TODO: Check to make sure bond does not already exist
+        vsite = BondChargeVirtualSite(atoms, distance, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        self._virtual_sites.append(vsite)
+        self._invalidate_cached_properties()
+        return self._virtual_sites.index(vsite) 
+
+    def add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+        """
+        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
+
+        TODO : Do "weights" have any meaning here?
+        
+        Parameters
+        ----------
+        atoms : list of three openforcefield.topology.molecule.Atom objects
+            The three atoms defining the virtual site's position
+        distance : float 
+            
+        out_of_plane_angle : float
+            
+        in_plane_angle : float
+            
+        epsilon : float
+            Epsilon term for VdW properties of virtual site. Default is None.  
+        sigma : float, default=None
+            Sigma term for VdW properties of virtual site. Default is None.
+        rmin_half : float
+            Rmin_half term for VdW properties of virtual site. Default is None.
+        name : string or None, default=None
+            The name of this virtual site. Default is None.
+        """
+       # Check if function was passed list of atoms or atom indices
+        if all([isinstance(atom, int) for atom in atoms]):
+            atom_list = [self.atoms[atom_index] for atom_index in atoms]
+        elif isinstance(atom1, Atom) and isinstance(atom2, Atom):
+            atom_list = atoms
+        else:
+            raise Exception('Invalid inputs to molecule._add_monovalent_lone_pair_virtual_site. Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
+        # TODO: Check to make sure bond does not already exist
+        vsite = MonovalentLonePairVirtualSite(atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        self._virtual_sites.append(vsite)
+        self._invalidate_cached_properties()
+        return self._virtual_sites.index(vsite)
+    
+    def add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+        """
+        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms. 
+
+        TODO : Do "weights" have any meaning here?
+        
+        Parameters
+        ----------
+        atoms : list of 3 openforcefield.topology.molecule.Atom objects
+            The three atoms defining the virtual site's position
+        distance : float 
+            
+        out_of_plane_angle : float
+            
+        in_plane_angle : float
+            
+        epsilon : float
+            Epsilon term for VdW properties of virtual site. Default is None.  
+        sigma : float, default=None
+            Sigma term for VdW properties of virtual site. Default is None.
+        rmin_half : float
+            Rmin_half term for VdW properties of virtual site. Default is None.
+        name : string or None, default=None
+            The name of this virtual site. Default is None.
+        """
+       # Check if function was passed list of atoms or atom indices
+        if all([isinstance(atom, int) for atom in atoms]):
+            atom_list = [self.atoms[atom_index] for atom_index in atoms]
+        elif isinstance(atom1, Atom) and isinstance(atom2, Atom):
+            atom_list = atoms
+        else:
+            raise Exception('Invalid inputs to molecule._add_divalent_lone_pair_virtual_site. Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
+        # TODO: Check to make sure bond does not already exist
+        vsite = DivalentLonePairVirtualSite(atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        self._virtual_sites.append(vsite)
+        self._invalidate_cached_properties()
+        return self._virtual_sites.index(vsite)
+
+        
+    def _add_trivalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+        """
+        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms. 
+
+        TODO : Do "weights" have any meaning here?
+        
+        Parameters
+        ----------
+        atoms : list of 4 openforcefield.topology.molecule.Atom objects or atom indices
+            The three atoms defining the virtual site's position
+        distance : float 
+            
+        out_of_plane_angle : float
+            
+        in_plane_angle : float
+            
+        epsilon : float
+            Epsilon term for VdW properties of virtual site. Default is None.  
+        sigma : float, default=None
+            Sigma term for VdW properties of virtual site. Default is None.
+        rmin_half : float
+            Rmin_half term for VdW properties of virtual site. Default is None.
+        name : string or None, default=None
+            The name of this virtual site. Default is None.
+        """
+        # Check if function was passed list of atoms or atom indices
+        if all([isinstance(atom, int) for atom in atoms]):
+            atom_list = [self.atoms[atom_index] for atom_index in atoms]
+        elif isinstance(atom1, Atom) and isinstance(atom2, Atom):
+            atom_list = atoms
+        else:
+            raise Exception('Invalid inputs to molecule._add_trivalent_lone_pair_virtual_site. Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
+        # TODO: Check to make sure bond does not already exist
+        vsite = TrivalentLonePairVirtualSite(atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        self._virtual_sites.append(vsite)
+        self._invalidate_cached_properties()
+        return self._virtual_sites.index(vsite)
+
+ 
+    
+    
+    #def add_virtual_site(self, virtual_site):
+    #    """
+    #    Add a Virtual Site.
+
+    #    .. warning :: This API experimental and subject to change.
+
+    #    Parameters
+    #    ----------
+    #    virtual_site : VirtualSite
+    #        The VirtualSite to add.
+    #
+    #    """
+    #    # Make sure that all Atoms referenced in the virtual site are already present in the entity.
+    #    for atom in virtual_site.atoms:
+    #        if atom not in self._atoms:
+    #            raise Exception("{} depends on {}, which is not a member of the molecule".format(virtual_site, atom))
+    #    self._virtual_sites.append(virtual_site)
+    #    self._invalidate_cached_properties()
+
+    
+
     def _add_bond(self, atom1, atom2, bond_order, is_aromatic, stereochemistry=None):
         """
         Add a bond between two specified atom indices
@@ -1082,32 +1654,9 @@ class FrozenMolecule(Serializable):
             raise Exception('Invalid inputs to molecule._add_bond. Expected ints or Atoms. Received {} (type {}) and {} (type {}) '.format(atom1, type(atom1), atom2, type(atom2)))
         # TODO: Check to make sure bond does not already exist
         bond = Bond(atom1_atom, atom2_atom, bond_order, is_aromatic, stereochemistry=stereochemistry)        # TODO: This is a bad way to get bond index
-        #bond_index = len(self._bonds)
-        #bond.set_molecule(self, bond_index)
-        #atom1.add_bond(bond)
-        #atom2.add_bond(bond)
         self._bonds.append(bond)
         self._invalidate_cached_properties()
         return self._bonds.index(bond)
-
-    def add_virtual_site(self, virtual_site):
-        """
-        Add a Virtual Site.
-
-        .. warning :: This API experimental and subject to change.
-
-        Parameters
-        ----------
-        virtual_site : VirtualSite
-            The VirtualSite to add.
-
-        """
-        # Make sure that all Atoms referenced in the virtual site are already present in the entity.
-        for atom in virtual_site.atoms:
-            if atom not in self._particles:
-                raise Exception("{} depends on {}, which is not a mamber of the molecule".format(virtual_site, atom))
-        self._particles.append(virtual_site)
-        self._invalidate_cached_properties()
 
 
     def _add_conformer(self, coordinates):
@@ -2054,7 +2603,124 @@ class Molecule(FrozenMolecule):
         """
         atom_index = self._add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry, name=name)
         return atom_index
+    
+
+
+    def add_bond_charge_virtual_site(self, atoms, distance, charge_increments=None,
+                                     weights=None, epsilon=None, sigma=None,
+                                     rmin_half=None, name=None):
+        """
+        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
+        Parameters
+        ----------
+        atoms : list of openforcefield.topology.molecule.Atom objects or ints of shape [N
+            The atoms defining the virtual site's position or their indices
+        distance : float
+
+        weights : list of floats of shape [N] or None, optional, default=None
+            weights[index] is the weight of particles[index] contributing to the position of the virtual site. Default is None
+        charge_increments : list of floats of shape [N], optional, default=None
+            The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this list should match the ordering in the atoms list. Default is None.
+        epsilon : float
+            Epsilon term for VdW properties of virtual site. Default is None.  
+        sigma : float, default=None
+            Sigma term for VdW properties of virtual site. Default is None.
+        rmin_half : float
+            Rmin_half term for VdW properties of virtual site. Default is None.
+        name : string or None, default=None
+            The name of this virtual site. Default is None.
+        """
         
+        vsite_index = self._add_bond_charge_virtual_site(atoms, distance, weights=weights, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        return vsite_index
+
+    def add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+        """
+        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
+
+        TODO : Do "weights" have any meaning here?
+        
+        Parameters
+        ----------
+        atoms : list of three openforcefield.topology.molecule.Atom objects or ints
+            The three atoms defining the virtual site's position or their molecule atom indices
+        distance : float 
+            
+        out_of_plane_angle : float
+            
+        in_plane_angle : float
+            
+        epsilon : float
+            Epsilon term for VdW properties of virtual site. Default is None.  
+        sigma : float, default=None
+            Sigma term for VdW properties of virtual site. Default is None.
+        rmin_half : float
+            Rmin_half term for VdW properties of virtual site. Default is None.
+        name : string or None, default=None
+            The name of this virtual site. Default is None.
+        """
+        
+        vsite_index = self._add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        return vsite_index
+
+    
+    def add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+        """
+        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms. 
+
+        TODO : Do "weights" have any meaning here?
+        
+        Parameters
+        ----------
+        atoms : list of 3 openforcefield.topology.molecule.Atom objects or ints
+            The three atoms defining the virtual site's position or their molecule atom indices
+        distance : float 
+            
+        out_of_plane_angle : float
+            
+        in_plane_angle : float
+            
+        epsilon : float
+            Epsilon term for VdW properties of virtual site. Default is None.  
+        sigma : float, default=None
+            Sigma term for VdW properties of virtual site. Default is None.
+        rmin_half : float
+            Rmin_half term for VdW properties of virtual site. Default is None.
+        name : string or None, default=None
+            The name of this virtual site. Default is None.
+        """
+        vsite_index = self._add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        return vsite_index
+        
+    def add_trivalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+        """
+        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms. 
+
+        TODO : Do "weights" have any meaning here?
+        
+        Parameters
+        ----------
+        atoms : list of 4 openforcefield.topology.molecule.Atom objects or ints
+            The three atoms defining the virtual site's position or their molecule atom indices
+        distance : float 
+            
+        out_of_plane_angle : float
+            
+        in_plane_angle : float
+            
+        epsilon : float
+            Epsilon term for VdW properties of virtual site. Default is None.  
+        sigma : float, default=None
+            Sigma term for VdW properties of virtual site. Default is None.
+        rmin_half : float
+            Rmin_half term for VdW properties of virtual site. Default is None.
+        name : string or None, default=None
+            The name of this virtual site. Default is None.
+        """
+        vsite_index = self._add_trivalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        return vsite_index
+        
+    
     def add_bond(self, atom1, atom2, bond_order, is_aromatic,
                  stereochemistry=None):
         """
