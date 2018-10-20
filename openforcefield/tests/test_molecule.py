@@ -21,11 +21,11 @@ from functools import partial
 from unittest import TestCase
 from numpy.testing import assert_almost_equal
 from tempfile import NamedTemporaryFile
-
+from simtk import unit
 import pytest
 
 from openforcefield import utils, topology
-from openforcefield.topology.molecule import FrozenMolecule, Molecule, Atom, Bond, VirtualSite, ALLOWED_CHARGE_MODELS, ALLOWED_FRACTIONAL_BONDORDER_MODELS
+from openforcefield.topology.molecule import FrozenMolecule, Molecule, Atom, Bond, BondChargeVirtualSite, MonovalentLonePairVirtualSite, DivalentLonePairVirtualSite, TrivalentLonePairVirtualSite, ALLOWED_CHARGE_MODELS, ALLOWED_FRACTIONAL_BONDORDER_MODELS
 from openforcefield.utils import get_data_filename
 # TODO: Will the ToolkitWrapper allow us to pare that down?
 #from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORTED_TOOLKITS, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
@@ -199,7 +199,89 @@ class TestMolecule(TestCase):
             for bond in molecule.bonds:
                 molecule_copy.add_bond(bond.atom1_index, bond.atom2_index, bond.bond_order, bond.is_aromatic, stereochemistry=bond.stereochemistry)
             assert molecule == molecule_copy
+            
+    def test_add_bond_charge_virtual_site(self):
+        """Test the addition of a BondChargeVirtualSite to a molecule.
+        Also tests many of the input tests of the parent VirtualSite class"""
+        # TODO: Add test for units in VdW and electrostatic parameters
+        for molecule in self.molecules:
+            atom1 = molecule.atoms[0]
+            atom2 = molecule.atoms[1]
+            atom3 = molecule.atoms[2]
+            atom4 = molecule.atoms[3]
+            # Try to feed in a unitless distance
+            distance = 0.3
+            with self.assertRaises(AssertionError) as context:
+                vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance)
 
+            distance = 0.3 * unit.angstrom
+            vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance)
+            vsite1 = molecule.virtual_sites[vsite1_index]
+            assert atom1 in vsite1.atoms
+            assert atom2 in vsite1.atoms
+            assert atom3 in vsite1.atoms
+            assert vsite1 in atom1.virtual_sites
+            assert vsite1 in atom2.virtual_sites
+            assert vsite1 in atom3.virtual_sites
+            assert vsite1.distance == distance
+
+            # We shouldn't be able to give both rmin_half and sigma VdW parameters.
+            with self.assertRaises(Exception) as context:
+                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=0.1, sigma=0.1, rmin_half=0.1)
+            vsite2_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=0.1, sigma=0.1)
+            vsite3_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=0.1, rmin_half=0.1)
+
+            # We should have to give as many charge increments as atoms
+            with self.assertRaises(Exception) as context:
+                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, charge_increments=[0.1, 0.2, 0.25, 0.3], epsilon=0.1, rmin_half=0.1)
+            vsite4_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, charge_increments=[0.1, 0.2, 0.25])
+            
+    def test_add_monovalent_lone_pair_virtual_site(self):
+        """Test addition of a MonovalentLonePairVirtualSite to the Molecule"""
+        for molecule in self.molecules:
+            atom1 = molecule.atoms[0]
+            atom2 = molecule.atoms[1]
+            atom3 = molecule.atoms[2]
+            atom4 = molecule.atoms[3]
+            distance = 0.3 * unit.angstrom
+            out_of_plane_angle = 30 * unit.degree
+            in_plane_angle = 0.2 * unit.radian
+            vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
+            with self.assertRaises(AssertionError) as context:
+                vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
+
+            out_of_plane_angle = 30 
+            with self.assertRaises(AssertionError) as context:
+                vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
+        
+    def test_add_divalent_lone_pair_virtual_site(self):
+        """Test addition of a DivalentLonePairVirtualSite to the Molecule"""
+        for molecule in self.molecules:
+            atom1 = molecule.atoms[0]
+            atom2 = molecule.atoms[1]
+            atom3 = molecule.atoms[2]
+            atom4 = molecule.atoms[3]
+            distance = 0.3 * unit.angstrom
+            out_of_plane_angle = 30 * unit.degree
+            in_plane_angle = 0.2 * unit.radian
+            vsite1_index = molecule.add_divalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
+            with self.assertRaises(AssertionError) as context:
+                vsite1_index = molecule.add_divalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
+        
+    def test_add_trivalent_lone_pair_virtual_site(self):
+        """Test addition of a TrivalentLonePairVirtualSite to the Molecule"""
+        for molecule in self.molecules:
+            atom1 = molecule.atoms[0]
+            atom2 = molecule.atoms[1]
+            atom3 = molecule.atoms[2]
+            atom4 = molecule.atoms[3]
+            distance = 0.3 * unit.angstrom
+            out_of_plane_angle = 30 * unit.degree
+            in_plane_angle = 0.2 * unit.radian
+            vsite1_index = molecule.add_trivalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
+            with self.assertRaises(AssertionError) as context:
+                vsite1_index = molecule.add_trivalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
+        
     def test_n_particles(self):
         """Test n_particles property"""
         for molecule in self.molecules:

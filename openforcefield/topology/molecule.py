@@ -343,8 +343,9 @@ class Atom(Particle):
         The list of ``Bond`` objects this atom is involved in.
 
         """
-        for bond in self._bonds:
-            yield bond
+        return self._bonds
+        #for bond in self._bonds:
+        #    yield bond
             
     @property
     def bonded_to(self):
@@ -387,8 +388,9 @@ class Atom(Particle):
         The list of ``VirtualSite`` objects this atom is involved in.
 
         """
-        for vsite in self._vsites:
-            yield vsite
+        return self._virtual_sites
+        #for vsite in self._vsites:
+        #    yield vsite
             
     @property
     def molecule_atom_index(self):
@@ -476,10 +478,13 @@ class VirtualSite(Particle):
         """
         
         # Ensure we have as many charge_increments as we do atoms
-        if not( len(charge_increments) == len(atoms) ):
-            raise Exception("VirtualSite definition must have same number of charge_increments ({}) and atoms({})".format(len(charge_increments), len(atoms)))
+        if not(charge_increments == None):
+            if not( len(charge_increments) == len(atoms) ):
+                raise Exception("VirtualSite definition must have same number of charge_increments ({}) and atoms({})".format(len(charge_increments), len(atoms)))
         # VdW parameters can either be epsilon+rmin_half or epsilon+sigma, but not both
         if not(epsilon == None):
+            if ((rmin_half != None) and (sigma != None)):
+                raise Exception("VirtualSite constructor given epsilon (value : {}), rmin_half (value : {}), and sigma (value : {}). If epsilon is nonzero, it should receive either rmin_half OR sigma".format(epsilon, rmin_half, sigma))
             if ((rmin_half == None) and (sigma == None)):
                 raise Exception("VirtualSite constructor given epsilon (value : {}) but not given rmin_half (value : {}) or sigma (value : {})".format(epsilon, rmin_half, sigma))
         elif epsilon == None:
@@ -490,20 +495,17 @@ class VirtualSite(Particle):
             assert isinstance(atom, Atom)
         for atom_index in range(len(atoms)-1):
             assert atoms[atom_index].molecule is atoms[atom_index+1].molecule
-        assert isinstance(atom1.molecule, FrozenMolecule)
+        assert isinstance(atoms[1].molecule, FrozenMolecule)
             
         # TODO: Unit checks for all arguments
-        assert isinstance(distance, unit.Quantity)
         
-        if not(charge_increment == None):
-            assert len(atoms) == len(charge_increment)
         
         self._atoms = list() 
         for atom in atoms:
             atom.add_virtual_site(self)
             self._atoms.append(atom)
         self._molecule = atoms[0].molecule
-        self._charge_increment = charge_increment
+        self._charge_increments = charge_increments
         self._sigma = sigma
         self._rmin_half = rmin_half
         self._epsilon = epsilon
@@ -523,7 +525,7 @@ class VirtualSite(Particle):
         vsite_dict = OrderedDict()
         vsite_dict['name'] = self._name
         vsite_dict['atoms'] = tuple([i.molecule_atom_index for i in self.atoms])
-        vsite_dict['charge_increment'] = self._charge_increment
+        vsite_dict['charge_increments'] = self._charge_increments
         vsite_dict['epsilon'] = self._epsilon
         vsite_dict['sigma'] = self._sigma
         vsite_dict['rmin_half'] = self._rmin_half
@@ -571,8 +573,9 @@ class VirtualSite(Particle):
         """
         Atoms on whose position this VirtualSite depends.
         """
-        for atom in self._atoms:
-            yield atom
+        return self._atoms
+        #for atom in self._atoms:
+        #    yield atom
 
     @property
     def charge_increments(self):
@@ -653,12 +656,13 @@ class BondChargeVirtualSite(VirtualSite):
             The name of this virtual site. Default is None.
             
         """
-        # In python3, we could just say super().__init__(...), but I'll leave the long version here in case we want reverse compatibility
-        super(VirtualSite, self).__init(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        assert unit.angstrom.is_compatible(distance.unit)
+
+        super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         self._distance = distance
         
     def to_dict(self):
-        vsite_dict = super(VirtualSite, self).to_dict()
+        vsite_dict = super().to_dict()
         vsite_dict['distance'] = self._distance
         return vsite_dict
 
@@ -670,7 +674,11 @@ class BondChargeVirtualSite(VirtualSite):
         vsite._distance = vsite_dict['distance']
         return vsite
         
-        
+    @property
+    def distance(self):
+        """The distance parameter of the virtual site"""
+        return self._distance
+    
     
 class MonovalentLonePairVirtualSite(VirtualSite):
     """
@@ -702,14 +710,20 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         name : string or None, default=None
             The name of this virtual site. Default is None.
         """
-        super(VirtualSite, self).__init(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        #assert isinstance(distance, unit.Quantity)
+        # TODO: Check for proper number of atoms
+        assert unit.angstrom.is_compatible(distance.unit)
+        assert unit.degree.is_compatible(in_plane_angle.unit)
+        assert unit.degree.is_compatible(out_of_plane_angle.unit)
+        assert len(atoms) == 3
+        super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         self._distance = distance
         self._out_of_plane_angle = out_of_plane_angle
         self._in_plane_angle = in_plane_angle
         
         
     def to_dict(self):
-        vsite_dict = super(VirtualSite, self).to_dict()
+        vsite_dict = super().to_dict()
         vsite_dict['distance'] = self._distance
         vsite_dict['out_of_plane_angle'] = self._out_of_plane_angle
         vsite_dict['in_plane_angle'] = self._in_plane_angle
@@ -722,8 +736,21 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         vsite = from_dict(**base_dict)
         vsite._distance = vsite_dict['distance']
         return vsite
+    
+    @property
+    def distance(self):
+        """The distance parameter of the virtual site"""
+        return self._distance
+    
+    @property
+    def in_plane_angle(self):
+        """The in_plane_angle parameter of the virtual site"""
+        return self._in_plane_angle
 
-
+    @property
+    def out_of_plane_angle(self):
+        """The out_of_plane_angle parameter of the virtual site"""
+        return self._out_of_plane_angle
 
 
     
@@ -757,15 +784,19 @@ class DivalentLonePairVirtualSite(VirtualSite):
         name : string or None, default=None
             The name of this virtual site. Default is None.
         """
+        #assert isinstance(distance, unit.Quantity)
+        assert unit.angstrom.is_compatible(distance.unit)
+        assert unit.degree.is_compatible(in_plane_angle.unit)
+        assert unit.degree.is_compatible(out_of_plane_angle.unit)
         assert len(atoms) == 3
-        super(VirtualSite, self).__init(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         self._distance = distance
         self._out_of_plane_angle = out_of_plane_angle
         self._in_plane_angle = in_plane_angle
 
         
     def to_dict(self):
-        vsite_dict = super(VirtualSite, self).to_dict()
+        vsite_dict = super().to_dict()
         vsite_dict['distance'] = self._distance
         vsite_dict['out_of_plane_angle'] = self._out_of_plane_angle
         vsite_dict['in_plane_angle'] = self._in_plane_angle
@@ -779,6 +810,21 @@ class DivalentLonePairVirtualSite(VirtualSite):
         vsite._distance = vsite_dict['distance']
         return vsite
 
+
+    @property
+    def distance(self):
+        """The distance parameter of the virtual site"""
+        return self._distance
+    
+    @property
+    def in_plane_angle(self):
+        """The in_plane_angle parameter of the virtual site"""
+        return self._in_plane_angle
+
+    @property
+    def out_of_plane_angle(self):
+        """The out_of_plane_angle parameter of the virtual site"""
+        return self._out_of_plane_angle
 
 
 
@@ -815,7 +861,11 @@ class TrivalentLonePairVirtualSite(VirtualSite):
             The name of this virtual site. Default is None.
         """
         assert len(atoms) == 4
-        super(VirtualSite, self).__init(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        #assert isinstance(distance, unit.Quantity)
+        assert unit.angstrom.is_compatible(distance.unit)
+        assert unit.degree.is_compatible(in_plane_angle.unit)
+        assert unit.degree.is_compatible(out_of_plane_angle.unit)
+        super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         self._distance = distance
         self._out_of_plane_angle = out_of_plane_angle
         self._in_plane_angle = in_plane_angle
@@ -823,7 +873,7 @@ class TrivalentLonePairVirtualSite(VirtualSite):
 
         
     def to_dict(self):
-        vsite_dict = super(VirtualSite, self).to_dict()
+        vsite_dict = super().to_dict()
         vsite_dict['distance'] = self._distance
         vsite_dict['out_of_plane_angle'] = self._out_of_plane_angle
         vsite_dict['in_plane_angle'] = self._in_plane_angle
@@ -838,6 +888,21 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         return vsite
 
         
+    @property
+    def distance(self):
+        """The distance parameter of the virtual site"""
+        return self._distance
+    
+    @property
+    def in_plane_angle(self):
+        """The in_plane_angle parameter of the virtual site"""
+        return self._in_plane_angle
+
+    @property
+    def out_of_plane_angle(self):
+        """The out_of_plane_angle parameter of the virtual site"""
+        return self._out_of_plane_angle
+
     
 
         
@@ -1443,9 +1508,10 @@ class FrozenMolecule(Serializable):
         return self._atoms.index(atom)
 
     
-    def add_bond_charge_virtual_site(self, atoms, distance, charge_increments=None,
-                                     weights=None, epsilon=None, sigma=None,
-                                     rmin_half=None, name=None):
+#    def _add_bond_charge_virtual_site(self, atoms, distance, charge_increments=None,
+#                                     weights=None, epsilon=None, sigma=None,
+#                                     rmin_half=None, name=None):
+    def _add_bond_charge_virtual_site(self, atoms, distance, **kwargs):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
         Parameters
@@ -1470,17 +1536,19 @@ class FrozenMolecule(Serializable):
        # Check if function was passed list of atoms or atom indices
         if all([isinstance(atom, int) for atom in atoms]):
             atom_list = [self.atoms[atom_index] for atom_index in atoms]
-        elif isinstance(atom1, Atom) and isinstance(atom2, Atom):
+        elif all([isinstance(atom, Atom) for atom in atoms]):
             atom_list = atoms
         else:
             raise Exception('Invalid inputs to molecule._add_bond_charge_virtual_site. Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
         # TODO: Check to make sure bond does not already exist
-        vsite = BondChargeVirtualSite(atoms, distance, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        #vsite = BondChargeVirtualSite(atom_list, distance, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        vsite = BondChargeVirtualSite(atom_list, distance, **kwargs)
         self._virtual_sites.append(vsite)
         self._invalidate_cached_properties()
         return self._virtual_sites.index(vsite) 
 
-    def add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    #def _add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    def _add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
 
@@ -1508,17 +1576,19 @@ class FrozenMolecule(Serializable):
        # Check if function was passed list of atoms or atom indices
         if all([isinstance(atom, int) for atom in atoms]):
             atom_list = [self.atoms[atom_index] for atom_index in atoms]
-        elif isinstance(atom1, Atom) and isinstance(atom2, Atom):
+        elif all([isinstance(atom, Atom) for atom in atoms]):
             atom_list = atoms
         else:
             raise Exception('Invalid inputs to molecule._add_monovalent_lone_pair_virtual_site. Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
         # TODO: Check to make sure bond does not already exist
-        vsite = MonovalentLonePairVirtualSite(atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        #vsite = MonovalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        vsite = MonovalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         self._virtual_sites.append(vsite)
         self._invalidate_cached_properties()
         return self._virtual_sites.index(vsite)
     
-    def add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    #def _add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    def _add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
         """
         Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms. 
 
@@ -1546,18 +1616,20 @@ class FrozenMolecule(Serializable):
        # Check if function was passed list of atoms or atom indices
         if all([isinstance(atom, int) for atom in atoms]):
             atom_list = [self.atoms[atom_index] for atom_index in atoms]
-        elif isinstance(atom1, Atom) and isinstance(atom2, Atom):
+        elif all([isinstance(atom, Atom) for atom in atoms]):
             atom_list = atoms
         else:
             raise Exception('Invalid inputs to molecule._add_divalent_lone_pair_virtual_site. Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
         # TODO: Check to make sure bond does not already exist
-        vsite = DivalentLonePairVirtualSite(atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        #vsite = DivalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        vsite = DivalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         self._virtual_sites.append(vsite)
         self._invalidate_cached_properties()
         return self._virtual_sites.index(vsite)
 
         
-    def _add_trivalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    #def _add_trivalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    def _add_trivalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms. 
 
@@ -1585,12 +1657,12 @@ class FrozenMolecule(Serializable):
         # Check if function was passed list of atoms or atom indices
         if all([isinstance(atom, int) for atom in atoms]):
             atom_list = [self.atoms[atom_index] for atom_index in atoms]
-        elif isinstance(atom1, Atom) and isinstance(atom2, Atom):
+        elif all([isinstance(atom, Atom) for atom in atoms]):
             atom_list = atoms
         else:
             raise Exception('Invalid inputs to molecule._add_trivalent_lone_pair_virtual_site. Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
-        # TODO: Check to make sure bond does not already exist
-        vsite = TrivalentLonePairVirtualSite(atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        #vsite = TrivalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        vsite = TrivalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         self._virtual_sites.append(vsite)
         self._invalidate_cached_properties()
         return self._virtual_sites.index(vsite)
@@ -1724,8 +1796,9 @@ class FrozenMolecule(Serializable):
         """
         Iterate over all Particle objects.
         """
-        for particle in self._particles:
-            yield particle
+        return self._particles
+        #for particle in self._particles:
+        #    yield particle
 
     @property
     def atoms(self):
@@ -1739,9 +1812,10 @@ class FrozenMolecule(Serializable):
         """
         Iterate over all VirtualSite objects.
         """
-        for particle in self._particles:
-            if isinstance(particle, VirtualSite):
-                yield particle
+        return self._virtual_sites
+        # Yielding makes it unsubscriptable, and I don't think it lowers the memory footprint (does it?)
+        #for virtual_site in self._virtual_sites:
+        #    yield virtual_site
 
     @property
     def bonds(self):
@@ -2634,7 +2708,8 @@ class Molecule(FrozenMolecule):
         vsite_index = self._add_bond_charge_virtual_site(atoms, distance, weights=weights, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         return vsite_index
 
-    def add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    #def add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    def add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
 
@@ -2660,11 +2735,13 @@ class Molecule(FrozenMolecule):
             The name of this virtual site. Default is None.
         """
         
-        vsite_index = self._add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        #vsite_index = self._add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        vsite_index = self._add_monovalent_lone_pair_virtual_site(atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs) 
         return vsite_index
 
     
-    def add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    #def add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    def add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
         """
         Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms. 
 
@@ -2689,10 +2766,11 @@ class Molecule(FrozenMolecule):
         name : string or None, default=None
             The name of this virtual site. Default is None.
         """
-        vsite_index = self._add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        #vsite_index = self._add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        vsite_index = self._add_divalent_lone_pair_virtual_site(atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         return vsite_index
         
-    def add_trivalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    def add_trivalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms. 
 
@@ -2717,7 +2795,7 @@ class Molecule(FrozenMolecule):
         name : string or None, default=None
             The name of this virtual site. Default is None.
         """
-        vsite_index = self._add_trivalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        vsite_index = self._add_trivalent_lone_pair_virtual_site(atoms, distance, out_of_plane_angle, in_plane_angle, **kwarge)
         return vsite_index
         
     
