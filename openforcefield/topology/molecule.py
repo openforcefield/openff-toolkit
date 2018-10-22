@@ -656,6 +656,7 @@ class BondChargeVirtualSite(VirtualSite):
             The name of this virtual site. Default is None.
             
         """
+        assert hasattr(distance, 'unit')
         assert unit.angstrom.is_compatible(distance.unit)
 
         super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
@@ -712,9 +713,13 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         """
         #assert isinstance(distance, unit.Quantity)
         # TODO: Check for proper number of atoms
+        assert hasattr(distance, 'unit')
         assert unit.angstrom.is_compatible(distance.unit)
+        assert hasattr(in_plane_angle, 'unit')
         assert unit.degree.is_compatible(in_plane_angle.unit)
+        assert hasattr(out_of_plane_angle, 'unit')
         assert unit.degree.is_compatible(out_of_plane_angle.unit)
+
         assert len(atoms) == 3
         super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         self._distance = distance
@@ -785,8 +790,11 @@ class DivalentLonePairVirtualSite(VirtualSite):
             The name of this virtual site. Default is None.
         """
         #assert isinstance(distance, unit.Quantity)
+        assert hasattr(distance, 'unit')
         assert unit.angstrom.is_compatible(distance.unit)
+        assert hasattr(in_plane_angle, 'unit')
         assert unit.degree.is_compatible(in_plane_angle.unit)
+        assert hasattr(out_of_plane_angle, 'unit')
         assert unit.degree.is_compatible(out_of_plane_angle.unit)
         assert len(atoms) == 3
         super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
@@ -862,8 +870,11 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         """
         assert len(atoms) == 4
         #assert isinstance(distance, unit.Quantity)
+        assert hasattr(distance, 'unit')
         assert unit.angstrom.is_compatible(distance.unit)
+        assert hasattr(in_plane_angle, 'unit')
         assert unit.degree.is_compatible(in_plane_angle.unit)
+        assert hasattr(out_of_plane_angle, 'unit')
         assert unit.degree.is_compatible(out_of_plane_angle.unit)
         super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         self._distance = distance
@@ -2795,7 +2806,7 @@ class Molecule(FrozenMolecule):
         name : string or None, default=None
             The name of this virtual site. Default is None.
         """
-        vsite_index = self._add_trivalent_lone_pair_virtual_site(atoms, distance, out_of_plane_angle, in_plane_angle, **kwarge)
+        vsite_index = self._add_trivalent_lone_pair_virtual_site(atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         return vsite_index
         
     

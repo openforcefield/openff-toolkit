@@ -278,9 +278,10 @@ class TestMolecule(TestCase):
             distance = 0.3 * unit.angstrom
             out_of_plane_angle = 30 * unit.degree
             in_plane_angle = 0.2 * unit.radian
-            vsite1_index = molecule.add_trivalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
+            vsite1_index = molecule.add_trivalent_lone_pair_virtual_site([atom1, atom2, atom3, atom4], distance, out_of_plane_angle, in_plane_angle)
+            # Test for assertion when giving too few atoms
             with self.assertRaises(AssertionError) as context:
-                vsite1_index = molecule.add_trivalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
+                vsite1_index = molecule.add_trivalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
         
     def test_n_particles(self):
         """Test n_particles property"""
