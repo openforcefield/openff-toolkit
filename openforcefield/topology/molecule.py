@@ -41,7 +41,7 @@ from simtk import unit
 from simtk.openmm.app import element
 
 import openforcefield
-from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE, AMBERTOOLS_AVAILABLE, GLOBAL_TOOLKIT_REGISTRY, SUPPORTED_FILE_FORMATS
+from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE, AMBERTOOLS_AVAILABLE, GLOBAL_TOOLKIT_REGISTRY
 #from openforcefield.utils.toolkits import requires_rdkit, requires_openeye
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
@@ -1115,7 +1115,7 @@ class FrozenMolecule(Serializable):
     >>> molecule = FrozenMolecule.from_smiles('Cc1ccccc1')
 
     """
-    def __init__(self, other=None):
+    def __init__(self, other=None, file_format=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Create a new FrozenMolecule object
 
@@ -1137,6 +1137,11 @@ class FrozenMolecule(Serializable):
             * an ``openeye.oechem.OEMol``
             * an ``rdkit.Chem.rdchem.Mol``
             * a serialized :class:`Molecule` object
+        file_format : str, optional, default=None
+            If providing a file-like object, you must specify the format of the data. If providing a file, the file format will attempt to be guessed from the suffix.
+        toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
+            
         
 
         Examples
@@ -1197,7 +1202,7 @@ class FrozenMolecule(Serializable):
             # TODO: Make this compatible with file-like objects (I couldn't figure
             # out how to make an oemolistream from a fileIO object)
             if (isinstance(other, str) or hasattr(other, 'read')) and not(loaded):
-                mol = Molecule.from_file(other) # returns a list only if multiple molecules are found
+                mol = Molecule.from_file(other, file_format=file_format, toolkit_registry=toolkit_registry) # returns a list only if multiple molecules are found
                 if type(mol) == list:
                     raise ValueError('Specified file or file-like object must contain exactly one molecule')
                 
@@ -1422,6 +1427,36 @@ class FrozenMolecule(Serializable):
             raise Exception('Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
         #return tookit_registry.call('from_smiles', smiles)
 
+
+
+    def generate_conformers(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY, clear_existing=True):
+        """
+        Generate conformers for this molecule using an underlying toolkit
+
+        Parameters
+        ----------
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+        clear_existing : bool, default=True
+            Whether to overwrite existing conformers for the molecule
+
+        Examples
+        --------
+
+        >>> molecule = Molecule.from_smiles('CCCCCC')
+        >>> molecule.generate_conformers()
+
+        """
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            return toolkit_registry.call('generate_conformers', self)
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            return toolkit.generate_conformers(self)
+        else:
+            raise Exception('Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
+        #return tookit_registry.call('from_smiles', smiles)
+
+        
     def _invalidate_cached_properties(self):
         """
         Indicate that the chemical entity has been altered.
@@ -1768,7 +1803,7 @@ class FrozenMolecule(Serializable):
             raise Exception('Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are of type simtk.units.Quantity')
 
         if self._conformers == None:
-            self.conformers = []
+            self._conformers = []
         self._conformers.append(new_conf)
         return len(self._conformers)
             
@@ -2066,7 +2101,7 @@ class FrozenMolecule(Serializable):
         return Topology.from_molecules(self)
 
     @staticmethod
-    def from_file(filename, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def from_file(filename, file_format=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Create one or more molecules from a file
 
@@ -2077,9 +2112,11 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        filename : str
-            The name of the file to stream one or more molecules from.
-
+        filename : str or file-like object
+            The name of the file or file-like object to stream one or more molecules from.
+        file_format : str, optional, default=None
+            Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
+            Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for your loaded toolkits for details.
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file loading. If a Toolkit is passed, only the highest-precedence toolkit is used
             
@@ -2096,24 +2133,55 @@ class FrozenMolecule(Serializable):
         >>> molecule = Molecule.from_file(mol2_filename)
 
         """
-        # TODO: This needs to be cleaned up to use the new ToolkitRegistry and ToolkitWrappers
-        # TODO: Check file extensions for compatible toolkit wrappers
-
-        # Use highest-precendence toolkit
-        #toolkit = TOOLKIT_PRECEDENCE[0]
+        
+        if file_format == None:
+            if not(isinstance(filename, str)):
+                raise Exception("If providing a file-like object for reading molecules, the format must be specified")
+            # Assume that files ending in ".gz" should use their second-to-last suffix for compatibility check
+            # TODO: Will all cheminformatics packages be OK with gzipped files?
+            if filename[-3:] == '.gz':
+                file_format = filename.split('.')[-2]
+            else:
+                file_format = filename.split('.')[-1]
+        file_format = file_format.upper()
+            
+        
+        # Determine which toolkit to use (highest priority that's
+        # compatible with input type)
         if isinstance(toolkit_registry, ToolkitRegistry):
-            toolkit = toolkit_registry.registered_toolkits[0]
+            toolkit = None
+            supported_read_formats = {}
+            for query_toolkit in toolkit_registry.registered_toolkits:
+                if file_format in query_toolkit.toolkit_file_read_formats:
+                    toolkit = query_toolkit
+                    break
+                supported_read_formats[query_toolkit.toolkit_name] = query_toolkit.toolkit_file_read_formats
+            if toolkit == None:
+                raise Exception("No toolkits in registry can read file {} (format {}). Supported formats in the provided ToolkitRegistry are {}".format(filename, file_format, supported_read_formats))
+            
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
+            if not(file_format in toolkit.toolkit_file_read_formats):
+                raise Exception("Toolkit {} can not read file {} (format {}). Supported formats for this toolkit are {}".format(toolkit.toolkit_name, filename, file_format, toolkit.toolkit_file_read_formats))
         else:
             raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
-        #toolkit = 
-        mols = list()
+
         
+        mols = list()
+
+        if isinstance(filename, str):
+            mols = toolkit.from_file(filename, file_format=file_format)
+        elif hasattr(filename, 'read'):
+            file_obj = filename
+            mols = toolkit.from_file_obj(file_obj, file_format=file_format)
+
+
+
+        '''
         if type(toolkit) is OpenEyeToolkitWrapper:
             # Read molecules from an OpenEye-supported file, converting them one by one
             from openeye import oechem
-            oemol = oechem.OEGraphMol()
+            oemol = oechem.OEMol()
             if isinstance(filename, str):
                 ifs = oechem.oemolistream(filename)
             # If the input is really a file-like object, read it and make the
@@ -2125,24 +2193,38 @@ class FrozenMolecule(Serializable):
                 ifs = oechem.oemolistream()
                 ifs.openstring(file_data)
                 ifs.SetFormat(oechem.OEFormat_MOL2)
+                
             while oechem.OEReadMolecule(ifs, oemol):
                 mol = Molecule.from_openeye(oemol)
                 mols.append(mol)
         elif type(toolkit) is RDKitToolkitWrapper:
             from rdkit import Chem
             if isinstance(filename, str):
-                for rdmol in Chem.SupplierFromFilename(filename):
+                # TODO: Figure out a more graceful test for file type
+                if (filename[-4:].upper() == '.MOL') or (filename[-4:].upper() == '.SDF'):
+                    
+                    for rdmol in Chem.SupplierFromFilename(filename):
+                        mol = Molecule.from_rdkit(rdmol)
+                        mols.append(mol)
+                elif filename[-4:].upper() == '.PDB':
+                    raise Exception("RDKit can not safely read PDBs on their own. Information about bond order and aromaticity is likely to be lost.")
+                    # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
+                    # https://github.com/openforcefield/openforcefield/issues/121
+                    
+                    rdmol = Chem.MolFromPDBFile(filename, removeHs=False)
                     mol = Molecule.from_rdkit(rdmol)
                     mols.append(mol)
+                # TODO: Add SMI, TDT(?) support
             elif hasattr(filename, 'read'):
                 # TODO: This is very dangerous and only works with MOL format files
                 file_data = filename.read()
                 rdmol = Chem.MolFromMolBlock(file_data)
                 mol = Molecule.from_rdkit(rdmol)
                 mols.append(mol)
+            ## TODO: Implement PDB stream support with MolFromPDBFile / PDBBlock?
         else:
             raise Exception('Toolkit {} unsupported.'.format(toolkit))
-
+        '''
         if len(mols) == 0:
             raise Exception('Unable to read molecule from file: {}'.format(filename))
         elif len(mols) == 1:
@@ -2178,20 +2260,28 @@ class FrozenMolecule(Serializable):
         """
         # TODO: This needs to be cleaned up to use the new ToolkitRegistry and ToolkitWrappers
 
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            pass
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
+            toolkit_registry.register_toolkit(toolkit)
+        else:
+            raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
         # Determine which formats are supported
         toolkit = None
         for query_toolkit in toolkit_registry.registered_toolkits:
-            if outfile_format in SUPPORTED_FILE_FORMATS[query_toolkit.toolkit_name]:
+            if outfile_format in query_toolkit.toolkit_file_write_formats:
                 toolkit = query_toolkit
                 break
-
+        
         # Raise an exception if no toolkit was found to provide the requested outfile_format
         if toolkit == None:
             supported_formats = set()
             for toolkit in toolkit_registry.registered_toolkits:
-                supported_formats.add(SUPPORTED_FILE_FORMATS[toolkit.toolkit_name])
+                supported_formats.add(toolkit.toolkit_file_write_formats)
             raise ValueError('The requested file format ({}) is not available from any of the installed toolkits (supported formats: {})'.format(outfile_format, supported_formats))
-
+        
         # Write file
         if type(outfile) == str:
             # Open file for writing
@@ -2200,7 +2290,7 @@ class FrozenMolecule(Serializable):
         else:
             close_file_on_return = False
 
-        if toolkit == 'openeye':
+        if toolkit._toolkit_name == 'OpenEye Toolkit':
             from openeye import oechem
             oemol = self.to_openeye()
             ofs = oechem.oemolostream(outfile)
@@ -2208,7 +2298,8 @@ class FrozenMolecule(Serializable):
             ofs.SetFormat(openeye_formats[outfile_format])
             oechem.OEWriteMolecule(ofs, oemol)
             ofs.close()
-        elif toolkit == 'rdkit':
+            1/0
+        elif toolkit == 'The RDKit':
             from rdkit import Chem
             rdmol = self.to_rdkit()
             rdkit_writers = { 'SDF' : Chem.SDWriter, 'PDB' : Chem.PDBWriter, 'SMI' : Chem.SmilesWriter, 'TDT' : Chem.TDTWriter }

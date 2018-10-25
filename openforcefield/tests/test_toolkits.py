@@ -22,7 +22,8 @@ from openforcefield import utils
 import pytest
 from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
 
-## From Jeff: Where should I get molecules for ToolkitWrapper tests?
+from openforcefield.utils import get_data_filename
+
 from openforcefield.topology.molecule import Molecule
 
 #=============================================================================================
@@ -91,7 +92,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
 
 
     @OpenEyeToolkitWrapper.requires_toolkit()
-    def test_openeye(self):
+    def test_to_from_openeye(self):
         """Test OpenEyeToolkitWrapper to_openeye() and from_openeye()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
         # This differs from RDKit's expected output due to different canonicalization schemes
@@ -101,6 +102,51 @@ class TestOpenEyeToolkitWrapper(TestCase):
         molecule2 = Molecule.from_openeye(oemol)
         smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
+        
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def test_get_sdf_coordinates(self):
+        """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
+        toolkit_wrapper = RDKitToolkitWrapper()
+        filename = get_data_filename('molecules/toluene.sdf')
+        molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        assert len(molecule._conformers) == 1
+        assert molecule._conformers[0].shape == (15,3)
+
+    
+    @pytest.mark.skip #Implement this
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def test_get_multiconformer_sdf_coordinates(self):
+        """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
+        raise NotImplementedError
+        toolkit_wrapper = RDKitToolkitWrapper()
+        filename = get_data_filename('molecules/toluene.sdf')
+        molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        assert len(molecule._conformers) == 1
+        assert molecule._conformers[0].shape == (15,3)
+        
+
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def test_get_mol2_coordinates(self):
+        """Test OpenEyeToolkitWrapper for importing a single set of molecule coordinates"""
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        filename = get_data_filename('molecules/toluene.mol2')
+        molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        assert len(molecule._conformers) == 1
+        assert molecule._conformers[0].shape == (15,3)
+
+
+    #@pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def test_generate_conformers(self):
+        """Test OpenEyeToolkitWrapper generate_conformers()"""
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        smiles = '[H]C([H])([H])C([H])([H])[H]'
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        molecule.generate_conformers()
+        # TODO: Make this test more robust
+        
+
+        
 
     #@pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
     @OpenEyeToolkitWrapper.requires_toolkit()
@@ -162,7 +208,7 @@ class TestRDKitToolkitWrapper(TestCase):
 
     #@pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available() )
     @RDKitToolkitWrapper.requires_toolkit()
-    def test_rdkit(self):
+    def test_to_from_rdkit(self):
         """Test RDKitToolkitWrapper to_rdkit() and from_rdkit()"""
         toolkit_wrapper = RDKitToolkitWrapper()
         # This differs from OE's expected output due to different canonicalization schemes
@@ -173,11 +219,76 @@ class TestRDKitToolkitWrapper(TestCase):
         molecule2 = Molecule.from_rdkit(rdmol)
         smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
+        
+    @RDKitToolkitWrapper.requires_toolkit()
+    def test_get_sdf_coordinates(self):
+        """Test RDKitToolkitWrapper for importing a single set of coordinates from a sdf file"""
+        toolkit_wrapper = RDKitToolkitWrapper()
+        filename = get_data_filename('molecules/toluene.sdf')
+        molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        assert len(molecule._conformers) == 1
+        assert molecule._conformers[0].shape == (15,3)
+    
+    @pytest.mark.skip #Implement this
+    @RDKitToolkitWrapper.requires_toolkit()
+    def test_get_multiconformer_sdf_coordinates(self):
+        """Test RDKitToolkitWrapper for importing a single set of coordinates from a sdf file"""
+        raise NotImplementedError
+        toolkit_wrapper = RDKitToolkitWrapper()
+        filename = get_data_filename('molecules/toluene.sdf')
+        molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        assert len(molecule._conformers) == 1
+        assert molecule._conformers[0].shape == (15,3)
+    
+        
+    # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
+    @pytest.mark.skip
+    @RDKitToolkitWrapper.requires_toolkit()
+    def test_get_pdb_coordinates(self):
+        """Test RDKitToolkitWrapper for importing a single set of coordinates from a pdb file"""
+        toolkit_wrapper = RDKitToolkitWrapper()
+        filename = get_data_filename('molecules/toluene.pdb')
+        molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        assert len(molecule._conformers) == 1
+        assert molecule._conformers[0].shape == (15,3)
 
+
+    # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
+    @pytest.mark.skip
+    @RDKitToolkitWrapper.requires_toolkit()
+    def test_load_aromatic_pdb(self):
+        """Test OpenEyeToolkitWrapper for importing molecule conformers"""
+        toolkit_wrapper = RDKitToolkitWrapper()
+        filename = get_data_filename('molecules/toluene.pdb')
+        molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        assert len(molecule._conformers) == 1
+        assert molecule._conformers[0].shape == (15,3)
+
+
+
+    #@pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
+    @RDKitToolkitWrapper.requires_toolkit()
+    def test_generate_conformers(self):
+        """Test RDKitToolkitWrapper generate_conformers()"""
+        toolkit_wrapper = RDKitToolkitWrapper()
+        smiles = '[H]C([H])([H])C([H])([H])[H]'
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        molecule.generate_conformers()
+        # TODO: Make this test more robust
+        
+
+        
         # TODO: Add test for higher bonds orders
         # TODO: Add test for aromaticity
         # TODO: Add test and molecule functionality for isotopes
-        
+        # TODO: Add read tests for MOL/SDF, SMI
+        # TODO: Add read tests fpr multi-SMI files
+        # TODO: Add read tests for both files and file-like objects
+        # TODO: Add read/write tests for gzipped files
+        # TODO: Add write tests for all formats
+
+
+
         
 class TestAmberToolsWrapper(TestCase):
     """Test the AmberToolsWraper"""

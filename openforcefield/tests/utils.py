@@ -40,7 +40,7 @@ def get_amber_system(prefix='cyclohexane_ethanol_0.4_0.6'):
         Absolute path to the AMBER inpcrd filename in testdata/systems/amber
     """
     prefix = os.path.join('systems', 'amber', prefix)
-    prmtop_filename = get_data_filename)(prefix+'.prmtop')
+    prmtop_filename = get_data_filename(prefix+'.prmtop')
     inpcrd_filename = get_data_filename(prefix+'.inpcrd')
     return prmtop_filename, inpcrd_filename
 

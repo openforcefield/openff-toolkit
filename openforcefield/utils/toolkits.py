@@ -76,11 +76,11 @@ class ToolkitUnavailableException(Exception):
 
 # TODO : Wrap toolkits in a much more modular way to make it easier to query their capabilities
 ## From Jeff: Maybe we just put these in the toolkit definitions themselves
-SUPPORTED_FILE_FORMATS = dict()
-SUPPORTED_FILE_FORMATS['OpenEye Toolkit'] = ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC',
-                                     'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', 'XYC']
-SUPPORTED_FILE_FORMATS['The RDKit'] = ['SDF', 'PDB', 'SMI', 'TDT'] # Don't put MOL2 in here -- RDKit can only handle corina format and fails on SYBYL 
-SUPPORTED_FILE_FORMATS['AmberTools'] = ['MOL2']
+#SUPPORTED_FILE_FORMATS = dict()
+#SUPPORTED_FILE_FORMATS['OpenEye Toolkit'] = ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC',
+#                                     'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', 'XYC']
+#SUPPORTED_FILE_FORMATS['The RDKit'] = ['SDF', 'PDB', 'SMI', 'TDT'] # Don't put MOL2 in here -- RDKit can only handle corina format and fails on SYBYL 
+#SUPPORTED_FILE_FORMATS['AmberTools'] = ['MOL2']
 
 #=============================================================================================
 # UTILITY FUNCTIONS
@@ -99,7 +99,9 @@ class ToolkitWrapper(object):
     _is_available = None # True if toolkit is available
     _toolkit_name = None # Name of the toolkit
     _toolkit_installation_instructions = None # Installation instructions for the toolkit
-
+    _toolkit_file_read_formats = None # The file types that this toolkit can read
+    _toolkit_file_write_formats = None # The file types that this toolkit can write
+    
     #@staticmethod
     ## From Jeff: This is confusing, but I changed things to make it run.
     ## Did I actually break it?
@@ -145,6 +147,22 @@ class ToolkitWrapper(object):
         Instructions on how to install the wrapped toolkit.
         """
         return cls._toolkit_installation_instructions
+    
+    #@classmethod
+    @property
+    def toolkit_file_read_formats(self):
+        """
+        List of file formats that this toolkit can read.
+        """
+        return self._toolkit_file_read_formats
+
+    #@classmethod
+    @property
+    def toolkit_file_write_formats(self):
+        """
+        List of file formats that this toolkit can write.
+        """
+        return self._toolkit_file_write_formats
 
     @staticmethod
     def toolkit_is_available():
@@ -177,6 +195,46 @@ class ToolkitWrapper(object):
         return NotImplementedError
 
 
+    def from_file(self, filename, file_format):
+        """
+        Return an openforcefield.topology.Molecule from a file using this toolkit.
+        
+        Parameters
+        ----------
+        filename : str
+            The file to read the molecule from
+        file_format : str
+            Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
+            Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
+        
+        Returns
+        -------
+        molecules : Molecule or list of Molecules
+            a list of Molecule objects is returned.
+
+        """
+        return NotImplementedError
+     
+    def from_file_obj(self, file_obj, file_format):
+        """
+        Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using this toolkit.
+        
+        Parameters
+        ----------
+        file_obj : file-like object
+            The file-like object to read the molecule from
+        file_format : str
+            Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
+            Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
+        
+        Returns
+        -------
+        molecules : Molecule or list of Molecules
+            a list of Molecule objects is returned.
+        """
+        return NotImplementedError
+     
+     
     #@staticmethod
     def to_smiles(self, molecule):
         """
@@ -276,6 +334,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     """
     _toolkit_name = 'OpenEye Toolkit'
     _toolkit_installation_instructions = 'The OpenEye toolkit requires a (free for academics) license, and can be found at: https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html'
+    _toolkit_file_read_formats =  ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM',
+                                   'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC',
+                                   'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', 'XYC']
+    _toolkit_file_write_formats = ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM',
+                                   'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC',
+                                   'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', 'XYC']
+
 
     @staticmethod
     def toolkit_is_available(oetools=('oechem', 'oequacpac', 'oeiupac', 'oeomega')):
@@ -349,6 +414,66 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             cls._is_available = cls.toolkit_is_available(oetools=('oechem', 'oequacpac'))
         return cls._is_available
 
+    def from_file(self, filename, file_format):
+        """
+        Return an openforcefield.topology.Molecule from a file using this toolkit.
+        
+        Parameters
+        ----------
+        filename : str
+            The file to read the molecule from
+        file_format : str
+            Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
+            Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
+        
+        Returns
+        -------
+        molecules : list of Molecules
+            a list of Molecule objects is returned.
+
+        """
+        from openforcefield.topology import Molecule
+        from openeye import oechem
+        mols = list()
+        oemol = oechem.OEMol()
+        ifs = oechem.oemolistream(filename)
+        while oechem.OEReadMolecule(ifs, oemol):
+            mol = Molecule.from_openeye(oemol)
+            mols.append(mol)
+        return mols
+     
+    def from_file_obj(self, file_obj, file_format):
+        """
+        Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using this toolkit.
+        
+        Parameters
+        ----------
+        file_obj : file-like object
+            The file-like object to read the molecule from
+        file_format : str
+            Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
+            Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
+        
+        Returns
+        -------
+        molecules : Molecule or list of Molecules
+            a list of Molecule objects is returned.
+
+        """
+        from openforcefield.topology import Molecule
+        from openeye import oechem
+        mols = list()
+        oemol = oechem.OEMol()
+        file_data = file_obj.read()
+        ifs = oechem.oemolistream()
+        ifs.openstring(file_data)
+        oeformat = getattr(oechem, 'OEFormat_' + file_format)
+        ifs.SetFormat(oeformat)
+        while oechem.OEReadMolecule(ifs, oemol):
+            mol = Molecule.from_openeye(oemol)
+            mols.append(mol)
+        return mols
+    
     @staticmethod
     def _openeye_cip_atom_stereochemistry(oemol, oeatom):
         """
@@ -505,7 +630,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 if (positions == 0*unit.angstrom).all():
                     continue
                 molecule.add_conformer(positions)
-        
+                
+        ## TODO: Partial charges
+                
         return molecule
 
     # TODO: We could make this a staticmethod. It seems to have formerly belonged to
@@ -639,6 +766,44 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         molecule = self.from_openeye(oemol)
         return molecule
     
+    def generate_conformers(self, molecule, clear_existing=True):
+        """
+        Generate molecule conformers using OpenEye Omega. 
+
+        .. todo ::
+        
+           * which parameters should we expose? (or can we implement a general system with **kwargs?)
+           * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that they'll get reindexed when we convert the input into an OEmol?
+        
+        Parameters
+        ---------
+        molecule : a :class:`Molecule` 
+            The molecule to generate conformers for
+        clear_existing : bool, default=True
+            Whether to overwrite existing conformers for the molecule
+        
+        
+        """
+        from openeye import oeomega
+        oemol = self.to_openeye(molecule)
+        omega = oeomega.OEOmega()
+        omega.SetMaxConfs(800)
+        omega.SetCanonOrder(False)
+        omega.SetSampleHydrogens(True)
+        omega.SetEnergyWindow(15.0) #unit?
+        omega.SetRMSThreshold(1.0)
+        #Don't generate random stereoisomer if not specified
+        omega.SetStrictStereo(True) 
+        status = omega(oemol)
+
+        molecule2 = self.from_openeye(oemol)
+
+        if clear_existing:
+            molecule._conformers = list()
+        
+        for conformer in molecule2._conformers:
+            molecule.add_conformer(conformer)
+        
     def compute_partial_charges(self, molecule, charge_model="am1bcc"):
         """
         Compute partial charges with OpenEye quacpac
@@ -817,6 +982,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     """
     _toolkit_name = 'The RDKit'
     _toolkit_installation_instructions = 'A conda-installable version of the free and open source RDKit cheminformatics toolkit can be found at: https://anaconda.org/rdkit/rdkit'
+    _toolkit_file_read_formats = ['SDF', 'MOL', 'SMI'] #TODO: Add TDT support
+    _toolkit_file_write_formats =['SDF', 'MOL', 'SMI', 'PDB'] 
 
     @staticmethod
     def toolkit_is_available():
@@ -850,11 +1017,107 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             cls._is_available = cls.toolkit_is_available()
         return cls._is_available
 
+
+    def from_file(self, filename, file_format):
+        """
+        Return an openforcefield.topology.Molecule from a file using this toolkit.
+        
+        Parameters
+        ----------
+        filename : str
+            The file to read the molecule from
+        file_format : str
+            Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
+            Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
+        
+        Returns
+        -------
+        molecules : list of Molecules
+            a list of Molecule objects is returned.
+
+        """
+        from openforcefield.topology import Molecule
+        from rdkit import Chem
+        mols = list()
+        if (file_format == 'MOL') or (file_format == 'SDF'):
+            for rdmol in Chem.SupplierFromFilename(filename, removeHs=False):
+                mol = Molecule.from_rdkit(rdmol)
+                mols.append(mol)
+        elif (file_format == 'SMI'):
+            # TODO: We have to do some special stuff when we import SMILES (currently
+            # just adding H's, but could get fancier in the future). It might be
+            # worthwhile to parse the SMILES file ourselves and pass each SMILES
+            # through the from_smiles function instead
+            for rdmol in Chem.SmilesMolSupplier(filename):
+                rdmol = Chem.AddHs(rdmol)
+                mol = Molecule.from_rdkit(rdmol)
+                mols.append(mol)
+                
+
+        elif (file_format == 'PDB'):
+            raise Exception("RDKit can not safely read PDBs on their own. Information about bond order and aromaticity is likely to be lost.")
+            # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
+            # https://github.com/openforcefield/openforcefield/issues/121
+            rdmol = Chem.MolFromPDBFile(filename, removeHs=False)
+            mol = Molecule.from_rdkit(rdmol)
+            mols.append(mol)
+            # TODO: Add SMI, TDT(?) support
+            
+        return mols
+    def from_file_obj(self, file_obj, file_format):
+        """
+        Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using this toolkit.
+        
+        Parameters
+        ----------
+        file_obj : file-like object
+            The file-like object to read the molecule from
+        file_format : str
+            Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
+            Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
+        
+        Returns
+        -------
+        molecules : Molecule or list of Molecules
+            a list of Molecule objects is returned.
+
+        """
+        from openforcefield.topology import Molecule
+        from rdkit import Chem
+        if (file_format == "MOL") or (file_format == "SDF"):
+            # TODO: Iterate over all mols in file_data
+            for rdmol in Chem.ForwardSDMolSupplier(file_obj):
+                mol = Molecule.from_rdkit(rdmol)
+                mols.append(mol)
+            
+        if (file_format == 'SMI'):
+            # TODO: Find a cleaner way to parse SMILES lines
+            file_data = file_obj.read()
+            lines = [line.strip() for line in file_data.split('\n')]
+            # remove blank lines
+            lines.remove('')
+            for line in lines:
+                mol = self.from_smiles(line)
+                mols.append(mol)
+                
+        elif file_format == 'PDB':
+            raise Exception("RDKit can not safely read PDBs on their own. Information about bond order and aromaticity is likely to be lost.")
+            # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
+             # https://github.com/openforcefield/openforcefield/issues/121
+            rdmol = Chem.MolFromPDBBlock(file_data)
+            mol = Molecule.from_rdkit(rdmol)
+            mols.append(mol)
+        # TODO: TDT file support
+        return mols
+
+
+
+
+    
     @classmethod
     def to_smiles(cls, molecule):
         # inherits base class docstring
         from rdkit import Chem
-        #raise NotImplementedError("RDKit to_smiles not yet implemented")
         rdmol = cls.to_rdkit(molecule)
         #rdmol = Chem.RemoveHs(rdmol)
         return Chem.MolToSmiles(rdmol, isomericSmiles=True, allHsExplicit=True)
@@ -863,13 +1126,54 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from openforcefield.topology.molecule import Molecule
         # inherits base class docstring
         from rdkit import Chem
-        #raise NotImplementedError("RDKit to_smiles not yet implemented")
         rdmol = Chem.MolFromSmiles(smiles)
+        # Add explicit hydrogens if they aren't there already
         rdmol = Chem.AddHs(rdmol)
+
         molecule = Molecule.from_rdkit(rdmol)
         
         return molecule
+    
+    
+    def generate_conformers(self, molecule, clear_existing=True):
+        """
+        Generate molecule conformers using RDKit. 
 
+        .. todo ::
+        
+           * which parameters should we expose? (or can we implement a general system with **kwargs?)
+           * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that they'll get reindexed when we convert the input into an RDMol?
+        
+        Parameters
+        ---------
+        molecule : a :class:`Molecule` 
+            The molecule to generate conformers for
+        clear_existing : bool, default=True
+            Whether to overwrite existing conformers for the molecule
+        
+        
+        """
+        from rdkit.Chem import AllChem
+        rdmol = self.to_rdkit(molecule)
+        # TODO: This generates way more conformations than omega, given the same nConds and RMS threshold. Is there some way to set an energy cutoff as well?
+        AllChem.EmbedMultipleConfs(rdmol,
+                                   numConfs=800,
+                                   pruneRmsThresh=1.0,
+                                   randomSeed=1,
+                                   #params=AllChem.ETKDG()
+                                  )
+        molecule2 = self.from_rdkit(rdmol)
+        
+        if clear_existing:
+            molecule._conformers = list()
+        
+        for conformer in molecule2._conformers:
+            molecule.add_conformer(conformer)
+        
+
+        
+    
+    
     def from_rdkit(self, rdmol):
         """
         Create a Molecule from an RDKit molecule.
@@ -900,6 +1204,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Create a new openforcefield Molecule
         mol = Molecule()
         
+        # These checks cause rdkit to choke on one member of our test set: ZINC16448882
+        # http://zinc.docking.org/substance/16448882
+        # This has a pentavalent nitrogen, which I think is really resonance-stabilized.
+        # I think we should allow this as input, since a fractional bond order calculation will probably sort it out.
+        #Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL^Chem.SANITIZE_SETAROMATICITY)
+        #Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
         # If RDMol has a title save it
         if rdmol.HasProp("_Name"):
             mol.name == rdmol.GetProp("_Name")
@@ -976,13 +1286,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # If the rdmol has a conformer, store its coordinates
         # TODO: Note, this currently only adds the first conformer, it will need to be adjusted if the
         # you wanted to convert multiple sets of coordinates
-        if rdmol.GetConformers():
-            conf = rdmol.GetConformer()
+        if len(rdmol.GetConformers()) != 0:
+            for conf in rdmol.GetConformers():
+                n_atoms = mol.n_atoms
+                # TODO: Will this always be angstrom when loading from RDKit?
+                positions = unit.Quantity(np.zeros((n_atoms,3)), unit.angstrom)
+                for rd_idx, off_idx in map_atoms.items():
+                    atom_coords = conf.GetPositions()[rd_idx,:] * unit.angstrom
+                    positions[off_idx,:] = atom_coords
+                mol.add_conformer(positions)
             
-            # TODO: Store conformers
-            #for rd_idx, oeatom in map_atoms.items():
-            #    coords = conf.GetAtomPosition(rd_idx)
-            #    oemol.SetCoords(oeatom, oechem.OEFloatArray(coords))
 
         return mol
 
@@ -1216,6 +1529,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
     """
     _toolkit_name = 'AmberTools'
     _toolkit_installation_instructions = 'The AmberTools toolkit (free and open source) can be found at https://anaconda.org/omnia/ambertools'
+    _toolkit_file_read_formats = [] 
+    _toolkit_file_write_formats = []
 
     @staticmethod
     def toolkit_is_available():
@@ -1386,6 +1701,8 @@ class ToolkitRegistry(object):
         if register_imported_toolkit_wrappers:
             # TODO: The precedence ordering of any non-specified remaining wrappers will be arbitrary.
             # How do we fix this?
+            # Note: The precedence of non-specifid wrappers may be determined by the order in which
+            # they were defined 
             all_importable_toolkit_wrappers = all_subclasses(ToolkitWrapper)
             for toolkit in all_importable_toolkit_wrappers:
                 if toolkit in toolkit_precedence:

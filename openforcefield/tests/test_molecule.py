@@ -152,11 +152,11 @@ class TestMolecule(TestCase):
         filename = get_data_filename('molecules/toluene.mol2')
         molecule1 = Molecule(filename)
         with open(filename, 'r') as infile:
-            molecule2 = Molecule(infile)
+            molecule2 = Molecule(infile, file_format='MOL2')
         assert molecule1 == molecule2
         import gzip
         with gzip.GzipFile(filename + '.gz', 'r') as infile:
-            molecule3 = Molecule(infile)
+            molecule3 = Molecule(infile, file_format='MOL2')
         assert molecule3 == molecule1
 
         # Ensure that attempting to initialize a single Molecule from a file containing multiple molecules raises a ValueError
@@ -171,12 +171,14 @@ class TestMolecule(TestCase):
             molecule_copy = Molecule(serialized_molecule)
             assert molecule == molecule_copy
 
-    #def test_equality(self):
-    #    """Test equality operator"""
-    #    nmolecules = len(self.molecules)
-    #    for i in range(nmolecules):
-    #        for j in range(i, nmolecules):
-    #            assert (self.molecules[i] == self.molecules[j]) == (i == j)
+    # TODO: Takes too long right now -- performance improvements might help
+    @pytest.mark.skip
+    def test_equality(self):
+        """Test equality operator"""
+        nmolecules = len(self.molecules)
+        for i in range(nmolecules):
+            for j in range(i, nmolecules):
+                assert (self.molecules[i] == self.molecules[j]) == (i == j)
 
     def test_smiles_round_trip(self):
         """Test SMILES round-trip"""
