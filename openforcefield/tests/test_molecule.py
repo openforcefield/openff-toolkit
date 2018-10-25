@@ -201,22 +201,87 @@ class TestMolecule(TestCase):
             for bond in molecule.bonds:
                 molecule_copy.add_bond(bond.atom1_index, bond.atom2_index, bond.bond_order, bond.is_aromatic, stereochemistry=bond.stereochemistry)
             assert molecule == molecule_copy
-            
-    def test_add_bond_charge_virtual_site(self):
-        """Test the addition of a BondChargeVirtualSite to a molecule.
-        Also tests many of the input tests of the parent VirtualSite class"""
-        # TODO: Add test for units in VdW and electrostatic parameters
+
+
+    def test_add_virtual_site_units(self):
+        """
+        Tests the unit type checking of the VirtualSite base class
+        """
+        
+        # TODO: Should these be using BondChargeVirtualSite, or should we just call the base class (which does the unit checks) directly?
+        
+        # Prepare values for unit checks
+        distance_unitless = 0.4
+        sigma_unitless = 0.1
+        rmin_half_unitless = 0.2
+        epsilon_unitless = 0.3
+        charge_increments_unitless = [0.1, 0.2, 0.3, 0.4]
+        distance = distance_unitless * unit.angstrom
+        sigma = sigma_unitless * unit.angstrom
+        rmin_half = rmin_half_unitless * unit.angstrom
+        epsilon = epsilon_unitless * (unit.kilojoule/unit.mole)
+        charge_increments = [i*unit.elementary_charge for i in charge_increments_unitless]
+        
         for molecule in self.molecules:
             atom1 = molecule.atoms[0]
             atom2 = molecule.atoms[1]
             atom3 = molecule.atoms[2]
             atom4 = molecule.atoms[3]
-            # Try to feed in a unitless distance
-            distance = 0.3
-            with self.assertRaises(AssertionError) as context:
-                vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance)
 
-            distance = 0.3 * unit.angstrom
+            # Try to feed in unitless sigma
+            with self.assertRaises(Exception) as context:
+                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, sigma=sigma_unitless)
+            
+            # Try to feed in unitless rmin_half
+            with self.assertRaises(Exception) as context:
+                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, rmin_half=rmin_half_unitless)
+
+            # Try to feed in unitless epsilon
+            with self.assertRaises(Exception) as context:
+                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon_unitless, sigma=sigma, rmin_half=rmin_half)
+
+            # Try to feed in unitless charges
+            with self.assertRaises(Exception) as context:
+                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3, atom4], distance, charge_incrtements=charge_increments_unitless)
+            
+
+            # We shouldn't be able to give both rmin_half and sigma VdW parameters.
+            with self.assertRaises(Exception) as context:
+                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half)
+                
+            # Try creating virtual site from sigma+epsilon
+            vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, sigma=sigma)
+            # Try creating virutal site from rmin_half+epsilon
+            vsite2_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, rmin_half=rmin_half)
+
+            # TODO: Test the @property getters for sigma, epsilon, and rmin_half
+            
+            # We should have to give as many charge increments as atoms (len(charge_increments) = 4
+            with self.assertRaises(Exception) as context:
+                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, charge_increments=charge_increments)
+                
+            vsite3_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3, atom4], distance, charge_increments=charge_increments)
+            
+            
+    def test_add_bond_charge_virtual_site(self):
+        """Test the addition of a BondChargeVirtualSite to a molecule.
+        Also tests many of the input tests of the parent VirtualSite class"""
+        for molecule in self.molecules:
+            atom1 = molecule.atoms[0]
+            atom2 = molecule.atoms[1]
+            atom3 = molecule.atoms[2]
+            atom4 = molecule.atoms[3]
+            
+            # Prepare values for unit checks
+            distance_unitless = 0.4
+            distance = distance_unitless * unit.angstrom
+
+            
+            # Try to feed in a unitless distance
+            with self.assertRaises(AssertionError) as context:
+                vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance_unitless)
+                
+
             vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance)
             vsite1 = molecule.virtual_sites[vsite1_index]
             assert atom1 in vsite1.atoms
@@ -227,16 +292,6 @@ class TestMolecule(TestCase):
             assert vsite1 in atom3.virtual_sites
             assert vsite1.distance == distance
 
-            # We shouldn't be able to give both rmin_half and sigma VdW parameters.
-            with self.assertRaises(Exception) as context:
-                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=0.1, sigma=0.1, rmin_half=0.1)
-            vsite2_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=0.1, sigma=0.1)
-            vsite3_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=0.1, rmin_half=0.1)
-
-            # We should have to give as many charge increments as atoms
-            with self.assertRaises(Exception) as context:
-                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, charge_increments=[0.1, 0.2, 0.25, 0.3], epsilon=0.1, rmin_half=0.1)
-            vsite4_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, charge_increments=[0.1, 0.2, 0.25])
             
     def test_add_monovalent_lone_pair_virtual_site(self):
         """Test addition of a MonovalentLonePairVirtualSite to the Molecule"""
@@ -245,16 +300,36 @@ class TestMolecule(TestCase):
             atom2 = molecule.atoms[1]
             atom3 = molecule.atoms[2]
             atom4 = molecule.atoms[3]
-            distance = 0.3 * unit.angstrom
-            out_of_plane_angle = 30 * unit.degree
-            in_plane_angle = 0.2 * unit.radian
-            vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
-            with self.assertRaises(AssertionError) as context:
-                vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
 
-            out_of_plane_angle = 30 
+            # Prepare values for unit checks
+            distance_unitless = 0.3
+            out_of_plane_angle_unitless = 30
+            in_plane_angle_unitless = 0.2
+            distance = distance_unitless * unit.angstrom
+            out_of_plane_angle = out_of_plane_angle_unitless * unit.degree
+            in_plane_angle = in_plane_angle_unitless * unit.radian
+
+            # Try passing in a unitless distance
+            with self.assertRaises(AssertionError) as context:
+                vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance_unitless, out_of_plane_angle, in_plane_angle)
+
+            # Try passing in a unitless out_of_plane_angle
+            with self.assertRaises(AssertionError) as context:
+                vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle_unitless, in_plane_angle)
+                
+            # Try passing in a unitless in_plane_angle
+            with self.assertRaises(AssertionError) as context:
+                vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle_unitless)
+                
+            # Try giving two atoms
             with self.assertRaises(AssertionError) as context:
                 vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
+                
+            # Successfully make a virtual site
+            vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
+            # TODO: Check if we get the same values back out from the @properties
+
+
         
     def test_add_divalent_lone_pair_virtual_site(self):
         """Test addition of a DivalentLonePairVirtualSite to the Molecule"""

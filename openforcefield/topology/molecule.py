@@ -476,39 +476,65 @@ class VirtualSite(Particle):
             The name of this virtual site. Default is None
 
         """
+
         
         # Ensure we have as many charge_increments as we do atoms
         if not(charge_increments == None):
             if not( len(charge_increments) == len(atoms) ):
                 raise Exception("VirtualSite definition must have same number of charge_increments ({}) and atoms({})".format(len(charge_increments), len(atoms)))
+            
         # VdW parameters can either be epsilon+rmin_half or epsilon+sigma, but not both
         if not(epsilon == None):
             if ((rmin_half != None) and (sigma != None)):
                 raise Exception("VirtualSite constructor given epsilon (value : {}), rmin_half (value : {}), and sigma (value : {}). If epsilon is nonzero, it should receive either rmin_half OR sigma".format(epsilon, rmin_half, sigma))
             if ((rmin_half == None) and (sigma == None)):
                 raise Exception("VirtualSite constructor given epsilon (value : {}) but not given rmin_half (value : {}) or sigma (value : {})".format(epsilon, rmin_half, sigma))
+            if (sigma == None):
+                # TODO: Save the 6th root of 2 if this starts being slow.
+                sigma = (2.*rmin_half) / (2. ** (1./6))
+            
         elif epsilon == None:
             if ((rmin_half != None) or (sigma != None)):
                 raise Exception("VirtualSite constructor given rmin_half (value : {}) or sigma (value : {}), but not epsilon (value : {})".format(rmin_half, sigma, epsilon))
-
+            
+            
+        # Perform type-checking
         for atom in atoms:
             assert isinstance(atom, Atom)
         for atom_index in range(len(atoms)-1):
             assert atoms[atom_index].molecule is atoms[atom_index+1].molecule
         assert isinstance(atoms[1].molecule, FrozenMolecule)
+
+        if sigma == None:
+            self._sigma = None
+        else:
+            assert hasattr(sigma, 'unit')
+            assert unit.angstrom.is_compatible(sigma.unit)
+            # TODO: This seems strange -- does it need to be per mole? Or could we allow for small units of just energy? (like, electron-volts?)?
+            self._sigma = sigma.in_units_of(unit.angstrom)
+
+        if epsilon == None:
+            self._epsilon = None
+        else:
+            assert hasattr(epsilon, 'unit')
+            assert (unit.kilojoule/unit.mole).is_compatible(epsilon.unit)
+            self._epsilon = epsilon.in_units_of(unit.kilojoule/unit.mole)
             
-        # TODO: Unit checks for all arguments
-        
-        
+        if charge_increments == None:
+            self._charge_increments = None
+        else:
+            self._charge_increments = []
+            for charge in charge_increments:
+                assert hasattr(charge, 'unit')
+                assert unit.elementary_charges.is_compatible(charge.unit)
+                self._charge_increments.append(charge.in_units_of(unit.elementary_charges)) 
+                
         self._atoms = list() 
         for atom in atoms:
             atom.add_virtual_site(self)
             self._atoms.append(atom)
         self._molecule = atoms[0].molecule
-        self._charge_increments = charge_increments
-        self._sigma = sigma
-        self._rmin_half = rmin_half
-        self._epsilon = epsilon
+        
         self._name = name
         
         
@@ -526,9 +552,10 @@ class VirtualSite(Particle):
         vsite_dict['name'] = self._name
         vsite_dict['atoms'] = tuple([i.molecule_atom_index for i in self.atoms])
         vsite_dict['charge_increments'] = self._charge_increments
+        # TODO: Do unit quantities serialize?
         vsite_dict['epsilon'] = self._epsilon
         vsite_dict['sigma'] = self._sigma
-        vsite_dict['rmin_half'] = self._rmin_half
+        #vsite_dict['rmin_half'] = self._rmin_half
         return vsite_dict
         
         #return self.__dict__
@@ -603,7 +630,9 @@ class VirtualSite(Particle):
         """
         The VdW rmin_half term of this VirtualSite
         """
-        return self._rmin_half
+        rmin = 2.**(1./6) * self._sigma
+        rmin_half = rmin/2
+        return rmin_half
     
     @property
     def name(self):
@@ -660,7 +689,7 @@ class BondChargeVirtualSite(VirtualSite):
         assert unit.angstrom.is_compatible(distance.unit)
 
         super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
-        self._distance = distance
+        self._distance = distance.in_units_of(unit.angstrom)
         
     def to_dict(self):
         vsite_dict = super().to_dict()
@@ -722,9 +751,9 @@ class MonovalentLonePairVirtualSite(VirtualSite):
 
         assert len(atoms) == 3
         super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
-        self._distance = distance
-        self._out_of_plane_angle = out_of_plane_angle
-        self._in_plane_angle = in_plane_angle
+        self._distance = distance.in_units_of(unit.angstrom)
+        self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
+        self._in_plane_angle = in_plane_angle.in_units_of(unit.degree)
         
         
     def to_dict(self):
@@ -798,9 +827,9 @@ class DivalentLonePairVirtualSite(VirtualSite):
         assert unit.degree.is_compatible(out_of_plane_angle.unit)
         assert len(atoms) == 3
         super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
-        self._distance = distance
-        self._out_of_plane_angle = out_of_plane_angle
-        self._in_plane_angle = in_plane_angle
+        self._distance = distance.in_units_of(unit.angstrom)
+        self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
+        self._in_plane_angle = in_plane_angle.in_units_of(unit.degree)
 
         
     def to_dict(self):
@@ -876,10 +905,13 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         assert unit.degree.is_compatible(in_plane_angle.unit)
         assert hasattr(out_of_plane_angle, 'unit')
         assert unit.degree.is_compatible(out_of_plane_angle.unit)
+        
+        
+        
         super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
-        self._distance = distance
-        self._out_of_plane_angle = out_of_plane_angle
-        self._in_plane_angle = in_plane_angle
+        self._distance = distance.in_units_of(unit.angstrom)
+        self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
+        self._in_plane_angle = in_plane_angle.in_units_of(unit.degree)
 
 
         

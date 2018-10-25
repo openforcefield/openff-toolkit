@@ -1155,7 +1155,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
         from rdkit.Chem import AllChem
         rdmol = self.to_rdkit(molecule)
-        # TODO: This generates way more conformations than omega, given the same nConds and RMS threshold. Is there some way to set an energy cutoff as well?
+        # TODO: This generates way more conformations than omega, given the same nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
         AllChem.EmbedMultipleConfs(rdmol,
                                    numConfs=800,
                                    pruneRmsThresh=1.0,
