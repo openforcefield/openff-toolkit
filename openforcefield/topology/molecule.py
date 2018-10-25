@@ -2208,55 +2208,6 @@ class FrozenMolecule(Serializable):
             mols = toolkit.from_file_obj(file_obj, file_format=file_format)
 
 
-
-        '''
-        if type(toolkit) is OpenEyeToolkitWrapper:
-            # Read molecules from an OpenEye-supported file, converting them one by one
-            from openeye import oechem
-            oemol = oechem.OEMol()
-            if isinstance(filename, str):
-                ifs = oechem.oemolistream(filename)
-            # If the input is really a file-like object, read it and make the
-            # molecule using a string
-            elif hasattr(filename, 'read'):
-                # TODO: This is very dangerous. I've hardcoded it to assume mol2, but
-                # without seeing the original suffix we might have trouble here
-                file_data = filename.read()
-                ifs = oechem.oemolistream()
-                ifs.openstring(file_data)
-                ifs.SetFormat(oechem.OEFormat_MOL2)
-                
-            while oechem.OEReadMolecule(ifs, oemol):
-                mol = Molecule.from_openeye(oemol)
-                mols.append(mol)
-        elif type(toolkit) is RDKitToolkitWrapper:
-            from rdkit import Chem
-            if isinstance(filename, str):
-                # TODO: Figure out a more graceful test for file type
-                if (filename[-4:].upper() == '.MOL') or (filename[-4:].upper() == '.SDF'):
-                    
-                    for rdmol in Chem.SupplierFromFilename(filename):
-                        mol = Molecule.from_rdkit(rdmol)
-                        mols.append(mol)
-                elif filename[-4:].upper() == '.PDB':
-                    raise Exception("RDKit can not safely read PDBs on their own. Information about bond order and aromaticity is likely to be lost.")
-                    # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
-                    # https://github.com/openforcefield/openforcefield/issues/121
-                    
-                    rdmol = Chem.MolFromPDBFile(filename, removeHs=False)
-                    mol = Molecule.from_rdkit(rdmol)
-                    mols.append(mol)
-                # TODO: Add SMI, TDT(?) support
-            elif hasattr(filename, 'read'):
-                # TODO: This is very dangerous and only works with MOL format files
-                file_data = filename.read()
-                rdmol = Chem.MolFromMolBlock(file_data)
-                mol = Molecule.from_rdkit(rdmol)
-                mols.append(mol)
-            ## TODO: Implement PDB stream support with MolFromPDBFile / PDBBlock?
-        else:
-            raise Exception('Toolkit {} unsupported.'.format(toolkit))
-        '''
         if len(mols) == 0:
             raise Exception('Unable to read molecule from file: {}'.format(filename))
         elif len(mols) == 1:
