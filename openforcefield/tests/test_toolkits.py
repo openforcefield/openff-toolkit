@@ -16,8 +16,8 @@ Tests for cheminformatics toolkit wrappers
 from functools import partial
 from unittest import TestCase
 from openforcefield import utils
-
-
+from simtk import unit
+import numpy as np
 
 import pytest
 from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
@@ -100,8 +100,28 @@ class TestOpenEyeToolkitWrapper(TestCase):
         molecule = Molecule.from_smiles(smiles)
         oemol = molecule.to_openeye()
         molecule2 = Molecule.from_openeye(oemol)
+        new_conf1 = unit.Quantity(np.array([[1,2,3],[4,5,6],[7,8,9],
+                                           [10,11,12],[13,14,15],[16,17,18],
+                                           [19,20,21],[22,23,24],[25,26,27]],
+                                          dtype=np.float),
+                                 unit.angstrom)
+        new_conf2 = unit.Quantity(np.array([[101,102,103],[104,105,106],[107,108,109],
+                                            [110,111,112],[113,114,115],[116,117,118],
+                                            [119,120,121],[122,123,124],[125,126,127]],
+                                          dtype=np.float),
+                                 unit.angstrom)
+        molecule2.add_conformer(new_conf1)
+        molecule2.add_conformer(new_conf2)
+        
+        
         smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
+        oemol2 = Molecule.to_openeye(molecule2)
+        assert oemol2.NumConfs() == 2
+        molecule3 = Molecule.from_openeye(oemol2)
+        assert len(molecule3._conformers) == 2
+        assert (molecule2._conformers[0] == molecule3._conformers[0]).all()
+        assert (molecule2._conformers[1] == molecule3._conformers[1]).all()
         
     @OpenEyeToolkitWrapper.requires_toolkit()
     def test_get_sdf_coordinates(self):

@@ -737,7 +737,15 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     raise Exception('Programming error: OpenEye bond stereochemistry assumptions failed.')
 
         # TODO: Retain conformations, if present
-
+        # TODO: Are atom indexing schemes preserved between OFF molecules and OE molecules?
+        if molecule._conformers != None:
+            oemol.DeleteConfs()
+            for conf in molecule._conformers:
+                ## TODO: Do we need to do these internal unit checks?
+                flat_coords = (conf.in_units_of(unit.angstrom) / unit.angstrom).flatten()
+                oecoords = oechem.OEFloatArray(flat_coords)
+                oemol.NewConf(oecoords)
+        
         # TODO: Retain name and properties, if present
 
         # Clean Up phase
