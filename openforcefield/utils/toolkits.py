@@ -673,7 +673,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         #from openforcefield.utils.toolkits import openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
 
         oemol = oechem.OEMol()
-
+        map_atoms = {} # {molecule_index : rdkit_index}
         # Add atoms
         oemol_atoms = list() # list of corresponding oemol atoms
         for atom in molecule.atoms:
@@ -681,6 +681,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oeatom.SetFormalCharge(atom.formal_charge)
             oeatom.SetAromatic(atom.is_aromatic)
             oemol_atoms.append(oeatom)
+            map_atoms[atom.molecule_atom_index] = oeatom.GetIdx()
 
         # Add bonds
         oemol_bonds = list() # list of corresponding oemol bonds
@@ -741,13 +742,22 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if molecule._conformers != None:
             oemol.DeleteConfs()
             for conf in molecule._conformers:
-                ## TODO: Do we need to do these internal unit checks?
-                flat_coords = (conf.in_units_of(unit.angstrom) / unit.angstrom).flatten()
+                # OE needs a 1 x (3*n_Atoms) double array as input
+                flat_coords = np.zeros((oemol.NumAtoms()*3), dtype=np.float32)
+                for index, oe_idx in map_atoms.items():
+                    (x,y,z) = conf[index,:] / unit.angstrom
+                    flat_coords[(3*oe_idx)] = x
+                    flat_coords[(3*oe_idx)+1] = y
+                    flat_coords[(3*oe_idx)+2] = z
+                    
+                # TODO: Do we need to do these internal unit checks?
+                # TODO: Is there any risk that the atom indexing systems will change?
+                #flat_coords = (conf.in_units_of(unit.angstrom) / unit.angstrom).flatten()
                 oecoords = oechem.OEFloatArray(flat_coords)
                 oemol.NewConf(oecoords)
         
         # TODO: Retain name and properties, if present
-
+        
         # Clean Up phase
         # The only feature of a molecule that wasn't perceived above seemed to be ring connectivity, better to run it
         # here then for someone to inquire about ring sizes and get 0 when it shouldn't be
@@ -1292,8 +1302,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # TODO: Save conformer(s), if present
         # If the rdmol has a conformer, store its coordinates
-        # TODO: Note, this currently only adds the first conformer, it will need to be adjusted if the
-        # you wanted to convert multiple sets of coordinates
         if len(rdmol.GetConformers()) != 0:
             for conf in rdmol.GetConformers():
                 n_atoms = mol.n_atoms
@@ -1426,14 +1434,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                         raise Exception('Programming error with assumptions about RDKit stereochemistry model')
 
         # Set coordinates if we have them
-        # TODO: Fix this once conformer API is defined
-        #if molecule._conformers:
-        #    for conformer in molecule._conformers:
-        #        rdmol_conformer = Chem.Conformer()
-        #        for index, rd_idx in map_atoms.items():
-        #            (x,y,z) = conformer[index,:]
-        #            rdmol_conformer.SetAtomPosition(rd_idx, Geometry.Point3D(x,y,z))
-        #        rdmol.AddConformer(rdmol_conformer)
+        if molecule._conformers:
+            for conformer in molecule._conformers:
+                rdmol_conformer = Chem.Conformer()
+                for index, rd_idx in map_atoms.items():
+                    (x,y,z) = conformer[index,:] / unit.angstrom
+                    rdmol_conformer.SetAtomPosition(rd_idx, Geometry.Point3D(x,y,z))
+                rdmol.AddConformer(rdmol_conformer)
 
         # Cleanup the rdmol
         # Note I copied UpdatePropertyCache and GetSSSR from Shuzhe's code to convert oemol to rdmol here:

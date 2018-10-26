@@ -2251,6 +2251,9 @@ class FrozenMolecule(Serializable):
             toolkit_registry.register_toolkit(toolkit)
         else:
             raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
+        
+        outfile_format = outfile_format.upper()
+        
         # Determine which formats are supported
         toolkit = None
         for query_toolkit in toolkit_registry.registered_toolkits:
@@ -2260,9 +2263,9 @@ class FrozenMolecule(Serializable):
         
         # Raise an exception if no toolkit was found to provide the requested outfile_format
         if toolkit == None:
-            supported_formats = set()
+            supported_formats = {}
             for toolkit in toolkit_registry.registered_toolkits:
-                supported_formats.add(toolkit.toolkit_file_write_formats)
+                supported_formats[toolkit.toolkit_name] = toolkit.toolkit_file_write_formats
             raise ValueError('The requested file format ({}) is not available from any of the installed toolkits (supported formats: {})'.format(outfile_format, supported_formats))
         
         # Write file
