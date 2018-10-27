@@ -164,22 +164,62 @@ class TestOpenEyeToolkitWrapper(TestCase):
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers()
         # TODO: Make this test more robust
-        
 
-        
-
-    #@pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
+    # @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
     @OpenEyeToolkitWrapper.requires_toolkit()
     def test_compute_partial_charges(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
         smiles = '[H]C([H])([H])C([H])([H])[H]'
         molecule = toolkit_wrapper.from_smiles(smiles)
+        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
+
+        with self.assertRaises(Exception) as context:
+            charge_model = 'notARealChargeModel'
+            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+
         # TODO: Test all supported charge models
-        partial_charges = toolkit_wrapper.compute_partial_charges(molecule)
+        # Note: "amber" and "amberff94" only work for a subset of residue types, so we'll need to find testing data for
+        # those
+        # charge_model = [,'amber','amberff94']
+        for charge_model in ['noop', 'mmff', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']:
+            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+            charge_sum = 0 * unit.elementary_charge
+            for pc in molecule._partial_charges:
+                charge_sum += pc
+            assert charge_sum < 0.001 * unit.elementary_charge
+
+
+    # @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def test_compute_partial_charges_net_charge(self):
+        """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule with a net +1 charge"""
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
+
+        with self.assertRaises(Exception) as context:
+            charge_model = 'notARealChargeModel'
+            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+
+        # TODO: Test all supported charge models
+        # Note: "amber" and "amberff94" only work for a subset of residue types, so we'll need to find testing data for
+        # those
+        # charge_model = [,'amber','amberff94']
+        # The 'noop' charge model doesn't add up to the formal charge, so we shouldn't test it
+        # charge_model = ['noop']
+        for charge_model in ['mmff', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']:
+            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+            charge_sum = 0 * unit.elementary_charge
+            for pc in molecule._partial_charges:
+                charge_sum += pc
+            assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
+
+
         # TODO: Check partial charge invariants (total charge, charge equivalence)
-
-
+        # TODO: Add test for partial charge calculation with formally charged atoms/molecules
+        
         # TODO: Add test for higher bonds orders
         # TODO: Add test for aromaticity
         # TODO: Add test and molecule functionality for isotopes

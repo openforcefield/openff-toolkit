@@ -83,6 +83,13 @@ class TestMolecule(TestCase):
         for (molecule, molecule_copy) in zip(self.molecules, molecules_copy):
             assert molecule == molecule_copy
 
+    def test_to_from_dict(self):
+        """Test to_dict and from_dict functions"""
+        for molecule in self.molecules:
+            serialized = molecule.to_dict()
+            molecule_copy = Molecule.from_dict(serialized)
+            assert molecule == molecule_copy
+
     def test_create_atom(self):
         """Test Atom creation"""
         # Create a non-aromatic carbon atom

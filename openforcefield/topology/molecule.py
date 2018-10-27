@@ -41,7 +41,8 @@ from simtk import unit
 from simtk.openmm.app import element
 
 import openforcefield
-from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE, AMBERTOOLS_AVAILABLE, GLOBAL_TOOLKIT_REGISTRY
+from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE, GLOBAL_TOOLKIT_REGISTRY
+from openforcefield.utils import serialize_numpy, deserialize_numpy
 #from openforcefield.utils.toolkits import requires_rdkit, requires_openeye
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
@@ -450,7 +451,7 @@ class VirtualSite(Particle):
 
         .. todo ::
 
-           * This will need to be gneeralized for virtual sites to allow out-of-plane sites, which are not simply a linear combination of atomic positions
+           * This will need to be generalized for virtual sites to allow out-of-plane sites, which are not simply a linear combination of atomic positions
            * Add checking for allowed virtual site types
            * How do we want users to specify virtual site types?
 
@@ -1272,20 +1273,35 @@ class FrozenMolecule(Serializable):
         molecule_dict['atoms'] = [ atom.to_dict() for atom in self._atoms ]
         molecule_dict['virtual_sites'] = [ vsite.to_dict() for vsite in self._virtual_sites ]
         molecule_dict['bonds'] = [ bond.to_dict() for bond in self._bonds ]
-        # TODO: How do we make sure bonds are serializable?
-        ## From Jeff: Maybe each molecule could have its own atomic ID scheme?
         # TODO: Charges
         # TODO: Properties
-        ## From Jeff: We could have the onerous requirement that all "properties" have to_dict() functions.
-        ## Or we could restrict properties to simple stuff (ints, strings, floats, and the like)
-        ## Or pickle anything unusual
-        ## Or not allow user-defined properties at all (just use our internal _cached_properties)
+        # From Jeff: We could have the onerous requirement that all "properties" have to_dict() functions.
+        # Or we could restrict properties to simple stuff (ints, strings, floats, and the like)
+        # Or pickle anything unusual
+        # Or not allow user-defined properties at all (just use our internal _cached_properties)
         #molecule_dict['properties'] = dict([(key, value._to_dict()) for key.value in self._properties])
         # TODO: Assuming "simple stuff" properties right now, figure out a better standard
         molecule_dict['properties'] = self._properties
         if hasattr(self, '_cached_properties'):
             molecule_dict['cached_properties'] = self._cached_properties
         # TODO: Conformers
+        if self._conformers == None:
+            molecule_dict['conformers'] = None
+        else:
+            molecule_dict['conformers'] = []
+            molecule_dict['conformers_unit'] = 'angstrom' # Have this defined as a class variable?
+            for conf in self._conformers:
+                conf_unitless = (conf / unit.angstrom)
+                serialized_conf = serialize_numpy((conf_unitless))
+                molecule_dict['conformers'].append(serialized_conf)
+        molecule_dict['partial_charges_unit'] = 'elementary_charge'
+        if self._partial_charges == None:
+            molecule_dict['partial_charges'] = None
+        else:
+            charges_unitless = self._partial_charges / unit.elementary_charge
+            serialized_charges = serialize_numpy(charges_unitless)
+            molecule_dict['partial_charges'] = serialized_charges
+
         return molecule_dict
 
     @classmethod
@@ -1304,6 +1320,7 @@ class FrozenMolecule(Serializable):
             A Molecule created from the dictionary representation
 
         """
+        # This  implementation is a compromise to let this remain as a classmethod
         mol = cls()
         mol.initialize_from_dict(molecule_dict)
         return mol
@@ -1329,12 +1346,29 @@ class FrozenMolecule(Serializable):
         for vsite in molecule_dict['virtual_sites']:
             molecule._add_virtual_site(*vsite)
         for bond_dict in molecule_dict['bonds']:
-            ## TODO: There's probably a more graceful way to do this than overwriting a bond_dict entry
-            #bond_dict['atom1'] = molecule.atoms[int(bond_dict['atom1'])]
-            #bond_dict['atom2'] = molecule.atoms[int(bond_dict['atom2'])]
             bond_dict['atom1'] = int(bond_dict['atom1'])
             bond_dict['atom2'] = int(bond_dict['atom2'])
             self.add_bond(**bond_dict)
+
+        if molecule_dict['partial_charges'] == None:
+            self._partial_charges = None
+        else:
+            partial_charges_unitless = deserialize_numpy(molecule_dict['partial_charges'])
+            pc_unit = getattr(unit, molecule_dict['partial_charges_unit'])
+            partial_charges = unit.Quantity(partial_charges_unitless, pc_unit)
+            self._partial_charges = partial_charges
+
+
+
+        if molecule_dict['conformers'] == None:
+            self._conformers = None
+        else:
+            self._conformers = list()
+            for ser_conf in molecule_dict['conformers']:
+                conformer_unitless = deserialize_numpy(ser_conf)
+                c_unit = getattr(unit, molecule_dict['conformers_unit'])
+                conformer = unit.Quantity(conformer_unitless, c_unit)
+                self._conformers.append(conformer)
 
         # TODO: Charges
         # TODO: Properties
@@ -1362,6 +1396,7 @@ class FrozenMolecule(Serializable):
         # TODO: If partial charges will be cached_properties, should conformations also be there? They'll also be invalidated if the 2D molecule is changed
         self._partial_charges = None # TODO: Decide if we want to store charges here or in _cached_properties
         self._conformers = None # Optional conformers
+
 
     def _copy_initializer(self, other):
         """
@@ -1486,7 +1521,37 @@ class FrozenMolecule(Serializable):
             return toolkit.generate_conformers(self)
         else:
             raise Exception('Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
-        #return tookit_registry.call('from_smiles', smiles)
+        
+        
+        
+    def compute_partial_charges(self, charge_model=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Calculate partial atomic charges for this molecule using an underlying toolkit
+        
+        Parameters
+        ----------
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+        clear_existing : bool, default=True
+            Whether to overwrite existing conformers for the molecule
+        
+        Examples
+        --------
+        
+        >>> molecule = Molecule.from_smiles('CCCCCC')
+        >>> molecule.generate_conformers()
+        >>> molecule.compute_partial_charges()
+        
+        
+        """
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            return toolkit_registry.call('compute_partial_charges', self, charge_model=charge_model)
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            return toolkit.compute_partial_charges(self,charge_model=charge_model)
+        else:
+            raise Exception('Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
+
 
         
     def _invalidate_cached_properties(self):
@@ -1839,8 +1904,26 @@ class FrozenMolecule(Serializable):
         self._conformers.append(new_conf)
         return len(self._conformers)
             
+    def set_partial_charges(self, charges):
+        """
+        Set the atomic partial charges for this molecule
 
-        
+        Parameters
+        ----------
+        charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
+            The partial charges to assign to the molecule.
+
+        """
+        assert hasattr(charges, 'unit')
+        assert unit.elementary_charge.is_compatible(charges.unit)
+        assert charges.shape == (self.n_atoms,)
+
+        charges_ec = charges.in_units_of(unit.elementary_charge)
+        self._partial_charges = charges_ec
+
+
+
+
     @property
     def n_particles(self):
         """

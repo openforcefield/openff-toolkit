@@ -79,7 +79,7 @@ class ToolkitUnavailableException(Exception):
 #SUPPORTED_FILE_FORMATS = dict()
 #SUPPORTED_FILE_FORMATS['OpenEye Toolkit'] = ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC',
 #                                     'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', 'XYC']
-#SUPPORTED_FILE_FORMATS['The RDKit'] = ['SDF', 'PDB', 'SMI', 'TDT'] # Don't put MOL2 in here -- RDKit can only handle corina format and fails on SYBYL 
+#SUPPORTED_FILE_FORMATS['The RDKit'] = ['SDF', 'PDB', 'SMI', 'TDT'] # Don't put MOL2 in here -- RDKit can only handle corina format and fails on SYBYL
 #SUPPORTED_FILE_FORMATS['AmberTools'] = ['MOL2']
 
 #=============================================================================================
@@ -89,6 +89,7 @@ class ToolkitUnavailableException(Exception):
 #=============================================================================================
 # CHEMINFORMATICS TOOLKIT WRAPPERS
 #=============================================================================================
+
 
 class ToolkitWrapper(object):
     """
@@ -852,39 +853,24 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         import numpy as np
         oemol = molecule.to_openeye()
         
-        ## TODO: quacpac calls require geometry. Our molecule class doesn't hold geometry.
         ## This seems like a big decision. Implemented a simple solution here. Not to be considered final.
         ## Some discussion at https://github.com/openforcefield/openforcefield/pull/86#issuecomment-350111236
         ## The following code is taken from the just-openeye version of the openforcefield repo https://github.com/openforcefield/openforcefield/blob/65f6b45954bde02c6cec1059661635c53a7f4e35/openforcefield/typing/engines/smirnoff/forcefield.py#L850
-        omega = oeomega.OEOmega()
-        omega.SetMaxConfs(800)
-        omega.SetCanonOrder(False)
-        omega.SetSampleHydrogens(True)
-        omega.SetEnergyWindow(15.0) #unit?
-        omega.SetRMSThreshold(1.0)
-        omega.SetStrictStereo(True) #Don't generate random stereoisomer if not specified
-        ## Taken from https://github.com/openforcefield/openforcefield/blob/65f6b45954bde02c6cec1059661635c53a7f4e35/openforcefield/typing/engines/smirnoff/forcefield.py#L857
-        ## This may prevent us from modifying the original molecule with a bunch of confs
-        charged_copy = oechem.OEMol(oemol)
-        status = omega(charged_copy)
-        #status = omega(charged_copy)
-        if not status:
-            raise(RuntimeError("Omega returned error code %s" % status))
-        result = False
+        
         if charge_model == "noop":
-            result = oequacpac.OEAssignCharges(charged_copy, oequacpac.OEChargeEngineNoOp())
+            result = oequacpac.OEAssignCharges(oemol, oequacpac.OEChargeEngineNoOp())
         elif charge_model == "mmff" or charge_model == "mmff94":
-            result = oequacpac.OEAssignCharges(charged_copy, oequacpac.OEMMFF94Charges())
+            result = oequacpac.OEAssignCharges(oemol, oequacpac.OEMMFF94Charges())
         elif charge_model == "am1bcc":
-            result = oequacpac.OEAssignCharges(charged_copy, oequacpac.OEAM1BCCCharges())
+            result = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
         elif charge_model == "am1bccnosymspt":
             optimize = True
             symmetrize = True
-            result = oequacpac.OEAssignCharges(mol, oequacpac.OEAM1BCCCharges(not optimize, not symmetrize))
+            result = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges(not optimize, not symmetrize))
         elif charge_model == "amber" or charge_model == "amberff94":
-            result = oequacpac.OEAssignCharges(mol, oequacpac.OEAmberFF94Charges())
+            result = oequacpac.OEAssignCharges(oemol, oequacpac.OEAmberFF94Charges())
         elif charge_model == "am1bccelf10":
-            result = oequacpac.OEAssignCharges(mol, oequacpac.OEAM1BCCELF10Charges())
+            result = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCELF10Charges())
         else:
             raise ValueError('charge_model {} unknown'.format(charge_model))
 
@@ -893,10 +879,15 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # Extract and return charges
         ## TODO: Make sure this can handle multiple conformations
-        charges = np.zeros([charged_copy.NumAtoms()], np.float64)
-        for index, atom in enumerate(charged_copy.GetAtoms()):
-            charges[index] = atom.GetPartialCharge()
-        return charges
+        ## TODO: Make sure atom mapping remains constant
+        charges = unit.Quantity(np.zeros([oemol.NumAtoms()], np.float64),
+                                unit.elementary_charge)
+        for index, atom in enumerate(oemol.GetAtoms()):
+            charge = atom.GetPartialCharge()
+            charge = charge * unit.elementary_charge
+            charges[index] = charge
+        molecule.set_partial_charges(charges)
+        
 
     @staticmethod
     def _find_smarts_matches(oemol, smarts, aromaticity_model=None):
@@ -1587,7 +1578,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         # TODO: Find AMBERHOME or executable home, checking miniconda if needed
         pass
 
-    def compute_partial_charges(self, molecule, charge_method="bcc"):
+    def compute_partial_charges(self, molecule, charge_model="bcc"):
         """
         Compute partial charges with AmberTools using antechamber/sqm
 
@@ -1601,7 +1592,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : Molecule
             Molecule for which partial charges are to be computed
-        charge_method : str, optional, default='bcc'
+        charge_model : str, optional, default='bcc'
             The charge model to use. One of ['gas', 'mul', 'cm1', 'cm2', 'bcc']
 
         Returns
@@ -1621,9 +1612,9 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         """
         import os
         # Check that the requested charge method is supported
-        SUPPORTED_ANTECHAMBER_CHARGE_METHODS = ['gas', 'mul', 'cm1', 'cm2', 'bcc']
-        if charge_method not in SUPPORTED_ANTECHAMBER_CHARGE_METHODS:
-            raise ValueError('Requested charge method {} not among supported charge methods {}'.format(charge_method, SUPPORTED_ANTECHAMBER_CHARGE_METHODS))
+        SUPPORTED_ANTECHAMBER_CHARGE_MODELS = ['gas', 'mul', 'cm1', 'cm2', 'bcc']
+        if charge_model not in SUPPORTED_ANTECHAMBER_CHARGE_MODELS:
+            raise ValueError('Requested charge method {} not among supported charge methods {}'.format(charge_model, SUPPORTED_ANTECHAMBER_CHARGE_MODELS))
 
         # Find the path to antechamber
         # TODO: How should we implement find_executable?
@@ -1644,7 +1635,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
                 # TODO: Add something cleaner than os.system
-                os.system("antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf yes -c {} -nc {}".format(charge_method, net_charge))
+                os.system("antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf yes -c {} -nc {}".format(charge_model, net_charge))
                 # Write out just charges
                 os.system("antechamber -i charges.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc -cf charges.txt -pf yes")
                 # Read the charges

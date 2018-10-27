@@ -83,3 +83,55 @@ def get_data_filename(relative_path):
         raise ValueError("Sorry! %s does not exist. If you just added it, you'll have to re-install" % fn)
 
     return fn
+
+def serialize_numpy(np_array):
+    """
+    Serializes a numpy array into a JSON-compatible string. Leverages the numpy.save function,
+    thereby preserving the shape of the input array
+
+    from https://stackoverflow.com/questions/30698004/how-can-i-serialize-a-numpy-array-while-preserving-matrix-dimensions#30699208
+
+    Parameters
+    ----------
+    np_array : A numpy array
+        Input numpy array
+
+    Returns
+    -------
+    serialized : str
+        A serialized representation of the numpy array.
+    """
+    import io
+    import numpy
+    import json
+    memfile = io.BytesIO()
+    numpy.save(memfile, np_array)
+
+    memfile.seek(0)
+    serialized = json.dumps(memfile.read().decode('latin-1'))
+    return serialized
+
+def deserialize_numpy(serialized_np):
+    """
+    Deserializes a numpy array from a JSON-compatible string.
+
+    from https://stackoverflow.com/questions/30698004/how-can-i-serialize-a-numpy-array-while-preserving-matrix-dimensions#30699208
+
+    Parameters
+    ----------
+    serialized_np : str
+        A serialized numpy array
+
+    Returns
+    -------
+    np_array : numpy.ndarray
+        The deserialized numpy array
+    """
+    import io
+    import numpy
+    import json
+    memfile = io.BytesIO()
+    memfile.write(json.loads(serialized_np).encode('latin-1'))
+    memfile.seek(0)
+    np_array = numpy.load(memfile)
+    return np_array
