@@ -62,6 +62,9 @@ docs/_build/
 # PyBuilder
 target/
 
+# PyCharm
+*.idea/vcs.xml
+
 # Ipython notebook checkpoints
 *.ipynb_checkpoints/
 
