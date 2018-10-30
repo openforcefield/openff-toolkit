@@ -133,16 +133,16 @@ class ToolkitWrapper(object):
     #        return value
     #    return wrapped_function
     
-
     @property
+    @classmethod
     def toolkit_name(self):
         """
         The name of the toolkit wrapped by this class.
         """
         return self._toolkit_name
 
-    @classmethod
     @property
+    @classmethod
     def toolkit_installation_instructions(cls):
         """
         Instructions on how to install the wrapped toolkit.
@@ -1894,10 +1894,16 @@ for toolkit in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
 # WARN IF INSUFFICIENT TOOLKITS INSTALLED
 #=============================================================================================
 
-if len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == 0:
-    msg = 'WARNING: No cheminfomatics toolkits are available.\n'
-    msg += 'Please install at least one of the following toolkits:\n'
+# Define basic toolkits that handle essential file I/O
+
+BASIC_CHEMINFORMATICS_TOOLKITS = [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
+
+# Ensure we have at least one basic toolkit
+if sum([tk.toolkit_is_available() for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits if type(tk) in BASIC_CHEMINFORMATICS_TOOLKITS]) == 0:
+    msg = 'WARNING: No basic cheminformatics toolkits are available.\n'
+    msg += 'At least one basic toolkit is required to handle SMARTS matching and file I/O. \n'
+    msg += 'Please install at least one of the following basic toolkits:\n'
     for wrapper in all_subclasses(ToolkitWrapper):
         if wrapper.toolkit_name is not None:
-            msg += '{} : {}\n'.format(wrapper.toolkit_name, wrapper.installation_instructions)
+            msg += '{} : {}\n'.format(wrapper._toolkit_name, wrapper._toolkit_installation_instructions)
     print(msg)

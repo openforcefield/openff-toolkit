@@ -29,7 +29,7 @@ from openforcefield.topology.molecule import FrozenMolecule, Molecule, Atom, Bon
 from openforcefield.utils import get_data_filename
 # TODO: Will the ToolkitWrapper allow us to pare that down?
 #from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORTED_TOOLKITS, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
-from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
+from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry, BASIC_CHEMINFORMATICS_TOOLKITS
 
 
 #=============================================================================================
@@ -56,13 +56,17 @@ def assert_molecule_is_equal(molecule1, molecule2, msg):
     # TODO:
     pass
 
+
+# Skipping this test -- The cheminformatics toolkit test is run inside of toolkits.py
+@pytest.mark.skip
 def test_cheminformatics_toolkit_is_installed():
     """Ensure that at least one supported cheminformatics toolkit is installed."""
-    # Can't just call all_subclasses here -- AmberToolsToolkitWrapper won't suffice for this test
-    if not(RDKitToolkitWrapper.toolkit_is_available) and not(OpenEyeToolkitWrapper.toolkit_is_available):
+    if not(any(tk.toolkit_is_available for tk in toolkits.BASIC_CHEMINFORMATICS_TOOLKITS)):
 
         msg = 'No supported cheminformatics toolkits are installed. Please install a supported toolkit:\n'
-        msg += 'OpeneEyeToolkitWrapper or RDKitToolkitWrapper'
+        for tk in basic_cheminf_toolkits:
+            msg += '{} : {}\n'.format(tk._toolkit_name, tk._toolkit_installation_instructions)
+
         raise Exception(msg)
 
 class TestMolecule(TestCase):
