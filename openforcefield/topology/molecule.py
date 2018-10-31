@@ -41,7 +41,7 @@ from simtk import unit
 from simtk.openmm.app import element
 
 import openforcefield
-from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE, GLOBAL_TOOLKIT_REGISTRY
+from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.utils import serialize_numpy, deserialize_numpy
 #from openforcefield.utils.toolkits import requires_rdkit, requires_openeye
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
