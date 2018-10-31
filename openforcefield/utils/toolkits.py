@@ -235,98 +235,6 @@ class ToolkitWrapper(object):
         """
         return NotImplementedError
      
-     
-    #@staticmethod
-    def to_smiles(self, molecule):
-        """
-        Return a canonical isomeric SMILES representation of the current molecule
-
-        .. warning :: This API experimental and subject to change.
-
-        .. todo :: Is this needed at the base class level?
-
-        Parameters
-        ----------
-        molecule : Molecule
-            The molecule for which canonical isomeric SMILES is to be computed
-
-        Returns
-        -------
-        smiles : str
-            Canonical isomeric explicit-hydrogen SMILES
-
-        Examples
-        --------
-
-        >>> molecule = Molecule.from_smiles('Cc1ccccc1')
-        >>> smiles = toolkit_wrapper.to_smiles(molecule)
-
-        """
-        raise NotImplementedError
-
-    
-    
-    def from_smiles(self, smiles):
-        """
-        Create a Molecule object from SMILES
-
-        .. warning :: This API experimental and subject to change.
-
-        .. todo :: Is this needed at the base class level?
-
-        Parameters
-        ----------
-        smiles : str
-            SMILES string specifying the molecule
-
-        Returns
-        -------
-        molecule : Molecule
-            The molecule for which canonical isomeric SMILES is to be computed
-
-        Examples
-        --------
-
-        >>> molecule = toolkit_wrapper.from_smiles('Cc1ccccc1')
-
-        .. todo :: How is ambiguous stereochemistry and protonation states to be handled?
-
-        """
-        raise NotImplementedError
-
-    def compute_partial_charges(self, molecule, charge_model="bcc"):
-        """
-        Compute partial charges
-
-        .. warning :: This API experimental and subject to change.
-
-        .. todo ::
-
-           * Do we want to also allow ESP/RESP charges?
-
-        Parameters
-        ----------
-        molecule : Molecule
-            Molecule for which partial charges are to be computed
-        charge_model : str, optional, default='bcc'
-            The charge model to use. One of ['gas', 'mul', 'cm1', 'cm2', 'bcc']
-
-        Returns
-        -------
-        charges : numpy.array of shape (natoms) of type float
-            The partial charges
-
-        Raises
-        ------
-        ValueError if the requested charge method could not be handled
-
-        Notes
-        -----
-        Currently only sdf file supported as input and mol2 as output
-        https://github.com/choderalab/openmoltools/blob/master/openmoltools/packmol.py
-
-        """
-        raise NotImplementedError
 
 @inherit_docstrings
 class OpenEyeToolkitWrapper(ToolkitWrapper):
@@ -968,6 +876,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Extract and return charges
         ## TODO: Make sure this can handle multiple conformations
         ## TODO: Make sure atom mapping remains constant
+
         charges = unit.Quantity(np.zeros([oemol.NumAtoms()], np.float64),
                                 unit.elementary_charge)
         for index, atom in enumerate(oemol.GetAtoms()):
@@ -1251,6 +1160,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
+        outfile_format = outfile_format.upper()
         rdmol = self.to_rdkit(molecule)
         rdkit_writers = {'SDF': Chem.SDWriter, 'PDB': Chem.PDBWriter, 'SMI': Chem.SmilesWriter, 'TDT': Chem.TDTWriter}
         writer = rdkit_writers[outfile_format](file_obj)
@@ -1276,6 +1186,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
+        outfile_format = outfile_format.upper()
         with open(outfile, 'w') as file_obj:
             rdmol = self.to_rdkit(molecule)
             rdkit_writers = {'SDF': Chem.SDWriter, 'PDB': Chem.PDBWriter, 'SMI': Chem.SmilesWriter, 'TDT': Chem.TDTWriter}
@@ -1738,7 +1649,10 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
     def __init__(self):
         # TODO: Find AMBERHOME or executable home, checking miniconda if needed
-        pass
+        # Store an instance of an RDKitToolkitWrapper for file I/O
+        self._rdkit_toolkit_wrapper = RDKitToolkitWrapper()
+
+
 
     def compute_partial_charges(self, molecule, charge_model="bcc"):
         """
@@ -1757,10 +1671,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         charge_model : str, optional, default='bcc'
             The charge model to use. One of ['gas', 'mul', 'cm1', 'cm2', 'bcc']
 
-        Returns
-        -------
-        charges : numpy.array of shape (natoms) of type float
-            The partial charges
 
         Raises
         ------
@@ -1773,6 +1683,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
         """
         import os
+        from simtk import unit
         # Check that the requested charge method is supported
         SUPPORTED_ANTECHAMBER_CHARGE_MODELS = ['gas', 'mul', 'cm1', 'cm2', 'bcc']
         if charge_model not in SUPPORTED_ANTECHAMBER_CHARGE_MODELS:
@@ -1784,6 +1695,12 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         if ANTECHAMBER_PATH is None:
             raise(IOError("Antechamber not found, cannot run charge_mol()"))
 
+        if len(molecule._conformers) == 0:
+            raise Exception("No conformers present in molecule submitted for partial charge calculation. Consider "
+                            "loading the molecule from a file with geometry already present or running "
+                            "molecule.generate_conformers() before calling molecule.compute_partial_charges")
+
+
         # Compute charges
         from openforcefield.utils import temporary_directory, temporary_cd
         with temporary_directory() as tmpdir:
@@ -1791,25 +1708,29 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 net_charge = molecule.total_charge
                 # Write out molecule in SDF format
                 ## TODO: Where will this get coordinates from?
-                molecule.to_file('molecule.sdf', outfile_format='sdf')
+                self._rdkit_toolkit_wrapper.to_file(molecule, 'molecule.sdf', outfile_format='sdf')
                 os.system('ls')
                 os.system('cat molecule.sdf')
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
                 # TODO: Add something cleaner than os.system
-                os.system("antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf yes -c {} -nc {}".format(charge_model, net_charge))
+                os.system("antechamber -i molecule.sdf -fi sdf -o charges.mol2 -fo mol2 -pf yes -c {} -nc {}".format(charge_model, net_charge))
+                os.system('cat charges.mol2')
+
                 # Write out just charges
                 os.system("antechamber -i charges.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc -cf charges.txt -pf yes")
                 # Read the charges
                 with open('charges.txt', 'r') as infile:
                     contents = infile.read()
                 text_charges = contents.split()
-                charges = np.zeros([self.n_atoms], np.float64)
+                charges = np.zeros([molecule.n_atoms], np.float64)
                 for index, token in enumerate(text_charges):
                     charges[index] = float(token)
 
-        # TODO: Read the charges back into the molecule?
-        return charges
+        charges = unit.Quantity(charges, unit.elementary_charge)
+
+        molecule.set_partial_charges(charges)
+
 
 #=============================================================================================
 # Toolkit registry

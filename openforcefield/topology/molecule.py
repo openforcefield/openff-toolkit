@@ -2479,7 +2479,7 @@ class FrozenMolecule(Serializable):
         return toolkit.to_openeye(self, aromaticity_model=aromaticity_model)
 
     # TODO: We have to distinguish between retrieving user-specified partial charges and providing a generalized semiempirical/pop analysis/BCC scheme according to the new SMIRNOFF spec
-    def get_partial_charges(self, method='AM1-BCC'):
+    def get_partial_charges(self, method='AM1-BCC', toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Retrieve partial atomic charges.
 
@@ -2502,6 +2502,8 @@ class FrozenMolecule(Serializable):
             The name of the charge method to use.
             Options are:
             * `AM1-BCC` : symmetrized AM1 charges with BCC (no ELF)
+        toolkit_registry : openforcefield.utils.toolkits ToolkitRegistry, optional, default=GLOBAL_TOOLKIT_REGISTRY
+            The toolkit registry to use for molecule operations
 
         Returns
         -------
@@ -2518,10 +2520,12 @@ class FrozenMolecule(Serializable):
 
         """
         # TODO: Use memoization to speed up subsequent calls; use decorator?
-        charges = toolkit_registry.call('compute_partial_charges', method=method)
-        return charges
+        # TODO: Disabled. Is this redundant with FrozenMolecule.compute_partial_charges?
+        return NotImplementedError
+        #charges = toolkit_registry.call('compute_partial_charges', toolkit_registry, method=method)
+        #return charges
 
-    def get_fractional_bond_orders(self, method='Wiberg'):
+    def get_fractional_bond_orders(self, method='Wiberg', toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Get fractional bond orders.
 
         .. warning :: This API experimental and subject to change.
@@ -2538,7 +2542,8 @@ class FrozenMolecule(Serializable):
             The name of the charge method to use.
             Options are:
             * 'Wiberg' : Wiberg bond order
-
+        toolkit_registry : openforcefield.utils.toolkits ToolkitRegistry
+            The toolkit registry to use for molecule operations
         Examples
         --------
 
