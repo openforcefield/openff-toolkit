@@ -387,6 +387,8 @@ class TestAmberToolsWrapper(TestCase):
         partial_charges = amber_toolkit_wrapper.compute_partial_charges(molecule)
         # TODO: Check partial charge invariants (total charge, charge equivalence)
 
+    # TODO: Add separate tests for RDKit/OpenEye - AmberTools pairings
+
 class TestToolkitRegistry(TestCase):
     """Test the ToolkitRegistry"""
 

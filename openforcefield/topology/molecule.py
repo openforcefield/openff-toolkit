@@ -2335,7 +2335,7 @@ class FrozenMolecule(Serializable):
         
         outfile_format = outfile_format.upper()
         
-        # Determine which formats are supported
+        # Take the first toolkit that can write the desired output format
         toolkit = None
         for query_toolkit in toolkit_registry.registered_toolkits:
             if outfile_format in query_toolkit.toolkit_file_write_formats:
@@ -2352,30 +2352,10 @@ class FrozenMolecule(Serializable):
         # Write file
         if type(outfile) == str:
             # Open file for writing
-            outfile = open(outfile, 'w')
-            close_file_on_return = True
+            toolkit.to_file(self, outfile, outfile_format)
         else:
-            close_file_on_return = False
+            toolkit.to_file_obj(self, outfile, outfile_format)
 
-        if toolkit._toolkit_name == 'OpenEye Toolkit':
-            from openeye import oechem
-            oemol = self.to_openeye()
-            ofs = oechem.oemolostream(outfile)
-            openeye_formats = getattr(oechem, 'OEFormat_' + outfile_format)
-            ofs.SetFormat(openeye_formats[outfile_format])
-            oechem.OEWriteMolecule(ofs, oemol)
-            ofs.close()
-            1/0
-        elif toolkit == 'The RDKit':
-            from rdkit import Chem
-            rdmol = self.to_rdkit()
-            rdkit_writers = { 'SDF' : Chem.SDWriter, 'PDB' : Chem.PDBWriter, 'SMI' : Chem.SmilesWriter, 'TDT' : Chem.TDTWriter }
-            writer = rdkit_writers[outfile_format](outfile)
-            writer.write(rdmol)
-            writer.close()
-
-        if close_file_on_return:
-            outfile.close()
 
     @staticmethod
     @RDKitToolkitWrapper.requires_toolkit()

@@ -498,7 +498,68 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             mol = Molecule.from_openeye(oemol)
             mols.append(mol)
         return mols
-    
+
+    def to_file_obj(self, molecule, file_obj, outfile_format):
+        """
+        Writes an OpenFF Molecule to a file-like object
+
+        Parameters
+        ----------
+        molecule : an OpenFF Molecule
+            The molecule to write
+        file_obj
+            The file-like object to write to
+        outfile_format
+            The format for writing the molecule data
+
+        Returns
+        -------
+
+        """
+        from openeye import oechem
+        from openforcefield.utils import temporary_directory, temporary_cd
+
+        oemol = self.to_openeye(molecule)
+
+        # TODO: This is horribly implemented. Is there any way to attach a file-like object to an oemolstream?
+        with temporary_directory() as tmpdir:
+            with temporary_cd(tmpdir):
+                outfile = 'temp_molecule.' + outfile_format
+                ofs = oechem.oemolostream(outfile)
+                openeye_format = getattr(oechem, 'OEFormat_' + outfile_format)
+                ofs.SetFormat(outfile_format)
+                oechem.OEWriteMolecule(ofs, oemol)
+                ofs.close()
+                file_data = open(outfile).read()
+        file_obj.write(file_data)
+
+
+    def to_file(self, molecule, outfile, outfile_format):
+        """
+        Writes an OpenFF Molecule to a file-like object
+
+        Parameters
+        ----------
+        molecule : an OpenFF Molecule
+            The molecule to write
+        outfile
+            The filename to write to
+        outfile_format
+            The format for writing the molecule data
+
+        Returns
+        ------
+
+        """
+        from openeye import oechem
+        oemol = self.to_openeye(molecule)
+        ofs = oechem.oemolostream(outfile)
+        openeye_format = getattr(oechem, 'OEFormat_' + outfile_format)
+        ofs.SetFormat(openeye_format)
+        oechem.OEWriteMolecule(ofs, oemol)
+        ofs.close()
+
+
     @staticmethod
     def _openeye_cip_atom_stereochemistry(oemol, oeatom):
         """
@@ -872,9 +933,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         from openeye import oequacpac
-        from openeye import oeomega
-        from openeye import oechem
         import numpy as np
+
+        if len(molecule._conformers) == 0:
+            raise Exception("No conformers present in molecule submitted for partial charge calculation. Consider "
+                            "loading the molecule from a file with geometry already present or running "
+                            "molecule.generate_conformers() before calling molecule.compute_partial_charges")
         oemol = molecule.to_openeye()
         
         ## This seems like a big decision. Implemented a simple solution here. Not to be considered final.
@@ -1167,6 +1231,57 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         return mols
 
 
+
+
+    def to_file_obj(self, molecule, file_obj, outfile_format):
+        """
+        Writes an OpenFF Molecule to a file-like object
+
+        Parameters
+        ----------
+        molecule : an OpenFF Molecule
+            The molecule to write
+        file_obj
+            The file-like object to write to
+        outfile_format
+            The format for writing the molecule data
+
+        Returns
+        -------
+
+        """
+        from rdkit import Chem
+        rdmol = self.to_rdkit(molecule)
+        rdkit_writers = {'SDF': Chem.SDWriter, 'PDB': Chem.PDBWriter, 'SMI': Chem.SmilesWriter, 'TDT': Chem.TDTWriter}
+        writer = rdkit_writers[outfile_format](file_obj)
+        writer.write(rdmol)
+        writer.close()
+
+
+    def to_file(self, molecule, outfile, outfile_format):
+        """
+        Writes an OpenFF Molecule to a file-like object
+
+        Parameters
+        ----------
+        molecule : an OpenFF Molecule
+            The molecule to write
+        outfile
+            The filename to write to
+        outfile_format
+            The format for writing the molecule data
+
+        Returns
+        ------
+
+        """
+        from rdkit import Chem
+        with open(outfile, 'w') as file_obj:
+            rdmol = self.to_rdkit(molecule)
+            rdkit_writers = {'SDF': Chem.SDWriter, 'PDB': Chem.PDBWriter, 'SMI': Chem.SmilesWriter, 'TDT': Chem.TDTWriter}
+            writer = rdkit_writers[outfile_format](file_obj)
+            writer.write(rdmol)
+            writer.close()
 
 
     
@@ -1593,7 +1708,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         Returns
         -------
         is_installed : bool
-            True if RDKit is installed, False otherwise.
+            True if AmberTools is installed, False otherwise.
 
         """
         # TODO: Check all tools needed
