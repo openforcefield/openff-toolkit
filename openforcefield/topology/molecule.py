@@ -1171,7 +1171,8 @@ class FrozenMolecule(Serializable):
             * an ``rdkit.Chem.rdchem.Mol``
             * a serialized :class:`Molecule` object
         file_format : str, optional, default=None
-            If providing a file-like object, you must specify the format of the data. If providing a file, the file format will attempt to be guessed from the suffix.
+            If providing a file-like object, you must specify the format of the data. If providing a file, the file
+            format will attempt to be guessed from the suffix.
         toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
             
@@ -1220,18 +1221,13 @@ class FrozenMolecule(Serializable):
             if isinstance(other, OrderedDict) and not(loaded):
                 self.__setstate__(other)
                 loaded = True
-            if OPENEYE_AVAILABLE and not(loaded):
-                from openeye import oechem
-                if isinstance(other, oechem.OEMolBase):
-                    mol = Molecule.from_openeye(other)
-                    self._copy_initializer(mol)
-                    loaded = True
-            if RDKIT_AVAILABLE and not(loaded):
-                from rdkit import Chem
-                if isinstance(other, Chem.rdchem.Mol):
-                    mol = Molecule.from_rdkit(other)
-                    self._copy_initializer(mol)
-                    loaded = True
+            # Check through the toolkit registry to find a compatible wrapper for loading
+            if not(loaded):
+                for toolkit_wrapper in toolkit_registry.registered_toolkits:
+                    load_attempt = toolkit_wrapper.from_object(other)
+                    if load_attempt != False:
+                        self._copy_initializer(load_attempt)
+                        loaded = True
             # TODO: Make this compatible with file-like objects (I couldn't figure
             # out how to make an oemolistream from a fileIO object)
             if (isinstance(other, str) or hasattr(other, 'read')) and not(loaded):

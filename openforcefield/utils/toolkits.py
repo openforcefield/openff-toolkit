@@ -415,6 +415,30 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             cls._is_available = cls.toolkit_is_available(oetools=('oechem', 'oequacpac'))
         return cls._is_available
 
+
+    def from_object(self, object):
+        """
+        If given an OEMol (or OEMol-derived object), this function will load it into an openforcefield.topology.molecule
+        Otherwise, it will return False.
+        Parameters
+        ----------
+        object : A molecule-like object
+            An object to by type-checked.
+        Returns
+        -------
+        Molecule or False
+            An openforcefield.topology.molecule Molecule, or False if loading was unsuccessful
+        """
+        # TODO: Add tests for the from_object functions
+        from openeye import oechem
+        if isinstance(object, oechem.OEMolBase):
+            mol = self.from_openeye(object)
+            return mol
+        else:
+            return False
+
+
+
     def from_file(self, filename, file_format):
         """
         Return an openforcefield.topology.Molecule from a file using this toolkit.
@@ -1025,6 +1049,29 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         if cls._is_available is None:
             cls._is_available = cls.toolkit_is_available()
         return cls._is_available
+
+
+    def from_object(self, object):
+        """
+        If given an rdchem.Mol (or rdchem.Mol-derived object), this function will load it into an
+        openforcefield.topology.molecule. Otherwise, it will return False.
+        Parameters
+        ----------
+        object : A molecule-like object
+            An object to by type-checked.
+        Returns
+        -------
+        Molecule or False
+            An openforcefield.topology.molecule Molecule, or False if loading was unsuccessful
+        """
+        # TODO: Add tests for the from_object functions
+        from rdkit import Chem
+        if isinstance(object, Chem.rdchem.Mol):
+            mol = self.from_rdkit(object)
+            return mol
+        else:
+            return False
+
 
 
     def from_file(self, filename, file_format):
@@ -1696,7 +1743,7 @@ class ToolkitRegistry(object):
         register_imported_toolkit_wrappers : bool, optional, default=False
             If True, will attempt to register all imported ToolkitWrapper subclasses that can be found, in no particular order.
         toolkit_precedence : list, optional, defailt=None
-            List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If None, defaults to [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]. 
+            List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If None, defaults to [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper].
         """
 
         self._toolkits = list()
