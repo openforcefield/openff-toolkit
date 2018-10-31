@@ -1292,15 +1292,15 @@ class FrozenMolecule(Serializable):
             molecule_dict['conformers_unit'] = 'angstrom' # Have this defined as a class variable?
             for conf in self._conformers:
                 conf_unitless = (conf / unit.angstrom)
-                serialized_conf = serialize_numpy((conf_unitless))
-                molecule_dict['conformers'].append(serialized_conf)
+                conf_serialized, conf_shape = serialize_numpy((conf_unitless))
+                molecule_dict['conformers'].append(conf_serialized)
         molecule_dict['partial_charges_unit'] = 'elementary_charge'
         if self._partial_charges == None:
             molecule_dict['partial_charges'] = None
         else:
             charges_unitless = self._partial_charges / unit.elementary_charge
-            serialized_charges = serialize_numpy(charges_unitless)
-            molecule_dict['partial_charges'] = serialized_charges
+            charges_serialized, charges_shape = serialize_numpy(charges_unitless)
+            molecule_dict['partial_charges'] = charges_serialized
 
         return molecule_dict
 
@@ -1353,7 +1353,8 @@ class FrozenMolecule(Serializable):
         if molecule_dict['partial_charges'] == None:
             self._partial_charges = None
         else:
-            partial_charges_unitless = deserialize_numpy(molecule_dict['partial_charges'])
+            charges_shape = (self.n_atoms, )
+            partial_charges_unitless = deserialize_numpy(molecule_dict['partial_charges'], charges_shape)
             pc_unit = getattr(unit, molecule_dict['partial_charges_unit'])
             partial_charges = unit.Quantity(partial_charges_unitless, pc_unit)
             self._partial_charges = partial_charges
@@ -1365,7 +1366,8 @@ class FrozenMolecule(Serializable):
         else:
             self._conformers = list()
             for ser_conf in molecule_dict['conformers']:
-                conformer_unitless = deserialize_numpy(ser_conf)
+                conformers_shape = ((self.n_atoms, 3))
+                conformer_unitless = deserialize_numpy(ser_conf, conformers_shape)
                 c_unit = getattr(unit, molecule_dict['conformers_unit'])
                 conformer = unit.Quantity(conformer_unitless, c_unit)
                 self._conformers.append(conformer)

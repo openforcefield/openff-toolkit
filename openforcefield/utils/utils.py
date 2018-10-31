@@ -100,18 +100,24 @@ def serialize_numpy(np_array):
     -------
     serialized : str
         A serialized representation of the numpy array.
+    shape : tuple of ints
+        The shape of the serialized array
     """
-    import io
-    import numpy
-    import json
-    memfile = io.BytesIO()
-    numpy.save(memfile, np_array)
+    # This version ties us to numpy -- Making a more general solution
+    #import io
+    #import numpy
+    #import json
+    #memfile = io.BytesIO()
+    #numpy.save(memfile, np_array)
+    #memfile.seek(0)
+    #serialized = json.dumps(memfile.read().decode('latin-1'))
+    #dt = np.dtype('float')
+    bigendian_array = np_array.newbyteorder('>')
+    serialized =bigendian_array.tobytes()
+    shape = np_array.shape
+    return serialized, shape
 
-    memfile.seek(0)
-    serialized = json.dumps(memfile.read().decode('latin-1'))
-    return serialized
-
-def deserialize_numpy(serialized_np):
+def deserialize_numpy(serialized_np, shape):
     """
     Deserializes a numpy array from a JSON-compatible string.
 
@@ -121,17 +127,24 @@ def deserialize_numpy(serialized_np):
     ----------
     serialized_np : str
         A serialized numpy array
-
+    shape : tuple of ints
+        The shape of the serialized array
     Returns
     -------
     np_array : numpy.ndarray
         The deserialized numpy array
     """
-    import io
-    import numpy
-    import json
-    memfile = io.BytesIO()
-    memfile.write(json.loads(serialized_np).encode('latin-1'))
-    memfile.seek(0)
-    np_array = numpy.load(memfile)
+    #import io
+    #import numpy
+    #import json
+    #memfile = io.BytesIO()
+    #memfile.write(json.loads(serialized_np).encode('latin-1'))
+    #memfile.seek(0)
+    #np_array = numpy.load(memfile)
+    #return np_array
+    import numpy as np
+    dt = np.dtype('float')
+    dt.newbyteorder('>') # set to big-endian
+    np_array = np.frombuffer(serialized_np, dtype=dt)
+    np_array = np_array.reshape(shape)
     return np_array
