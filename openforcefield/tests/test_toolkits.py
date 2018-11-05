@@ -33,6 +33,8 @@ from openforcefield.topology.molecule import Molecule
 class TestToolkitWrapper(TestCase):
     """Test the ToolkitWrapper abstract base class"""
     pass
+
+
 class TestOpenEyeToolkitWrapper(TestCase):
     """Test the OpenEyeToolkitWrapper"""
 
@@ -145,55 +147,91 @@ class TestOpenEyeToolkitWrapper(TestCase):
         molecule.generate_conformers()
         # TODO: Make this test more robust
 
-        # @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
-        @OpenEyeToolkitWrapper.requires_toolkit()
-        def test_compute_partial_charges(self):
-            """Test OpenEyeToolkitWrapper compute_partial_charges()"""
-            toolkit_wrapper = OpenEyeToolkitWrapper()
-            smiles = '[H]C([H])([H])C([H])([H])[H]'
-            molecule = toolkit_wrapper.from_smiles(smiles)
-            molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
+    # @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def test_compute_partial_charges(self):
+        """Test OpenEyeToolkitWrapper compute_partial_charges()"""
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        smiles = '[H]C([H])([H])C([H])([H])[H]'
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        # Ensure that an exception is raised if no conformers are provided
+        with self.assertRaises(Exception) as context:
+            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper)
+        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
+        # Ensure that an exception is raised if an invalid charge model is passed in
+        with self.assertRaises(Exception) as context:
+            charge_model = 'notARealChargeModel'
+            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
 
-            with self.assertRaises(Exception) as context:
-                charge_model = 'notARealChargeModel'
-                molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+        # TODO: Test all supported charge models
+        # Note: "amber" and "amberff94" only work for a subset of residue types, so we'll need to find testing data for
+        # those
+        # charge_model = [,'amber','amberff94']
+        # TODO: 'mmff' and 'mmff94' often assign charges of 0, presumably if the molecule is unrecognized.
+        # charge_model = ['mmff', 'mmff94']
+        for charge_model in ['noop', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']:
+            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+            charge_sum = 0 * unit.elementary_charge
+            for pc in molecule._partial_charges:
+                charge_sum += pc
+            assert charge_sum < 0.001 * unit.elementary_charge
 
-            # TODO: Test all supported charge models
-            # Note: "amber" and "amberff94" only work for a subset of residue types, so we'll need to find testing data for
-            # those
-            # charge_model = [,'amber','amberff94']
-            for charge_model in ['noop', 'mmff', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']:
-                molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
-                charge_sum = 0 * unit.elementary_charge
-                for pc in molecule._partial_charges:
-                    charge_sum += pc
-                assert charge_sum < 0.001 * unit.elementary_charge
+    # @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def test_compute_partial_charges_net_charge(self):
+        """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule with a net +1 charge"""
 
-        # @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
-        @OpenEyeToolkitWrapper.requires_toolkit()
-        def test_compute_partial_charges_net_charge(self):
-            """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule with a net +1 charge"""
-            toolkit_wrapper = OpenEyeToolkitWrapper()
-            smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
-            molecule = toolkit_wrapper.from_smiles(smiles)
-            molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
 
-            with self.assertRaises(Exception) as context:
-                charge_model = 'notARealChargeModel'
-                molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+        with self.assertRaises(Exception) as context:
+            charge_model = 'notARealChargeModel'
+            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
 
-            # TODO: Test all supported charge models
-            # Note: "amber" and "amberff94" only work for a subset of residue types, so we'll need to find testing data for
-            # those
-            # charge_model = [,'amber','amberff94']
-            # The 'noop' charge model doesn't add up to the formal charge, so we shouldn't test it
-            # charge_model = ['noop']
-            for charge_model in ['mmff', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']:
-                molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
-                charge_sum = 0 * unit.elementary_charge
-                for pc in molecule._partial_charges:
-                    charge_sum += pc
-                assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
+        # TODO: Test all supported charge models
+        # TODO: "amber" and "amberff94" only work for a subset of residue types, so we'll need to find testing data for
+        # those
+        # charge_model = [,'amber','amberff94']
+        # The 'noop' charge model doesn't add up to the formal charge, so we shouldn't test it
+        # charge_model = ['noop']
+        for charge_model in ['mmff', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']:
+            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+            charge_sum = 0 * unit.elementary_charge
+            for pc in molecule._partial_charges:
+                charge_sum += pc
+            assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
+
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def test_compute_wiberg_bond_orders(self):
+        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders()"""
+
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        smiles = '[H]C([H])([H])C([H])([H])[H]'
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
+        for charge_model in ['am1','pm3']:
+            molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+            print([bond.fractional_bond_order for bond in molecule.bonds])
+            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def test_compute_wiberg_bond_orders_charged(self):
+        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with net charge +1"""
+
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
+        for charge_model in ['am1','pm3']:
+            molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+
+
+
 
         # TODO: Check partial charge invariants (total charge, charge equivalence)
         # TODO: Add test for partial charge calculation with formally charged atoms/molecules

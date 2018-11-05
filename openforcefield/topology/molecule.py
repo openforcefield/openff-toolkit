@@ -974,12 +974,12 @@ class Bond(Serializable):
         String based bond type
     order : int
         Integral bond order
-    fractional_bondorder : float, optional
+    fractional_bond_order : float, optional
         Fractional bond order, or None.
 
     """
-    #def __init__(self, atom1, atom2, bondtype, fractional_bondorder=None):
-    def __init__(self, atom1, atom2, bond_order, is_aromatic, stereochemistry=None):
+    #def __init__(self, atom1, atom2, bondtype, fractional_bond_order=None):
+    def __init__(self, atom1, atom2, bond_order, is_aromatic, fractional_bond_order=None, stereochemistry=None):
         """
         Create a new chemical bond.
         """
@@ -1005,13 +1005,12 @@ class Bond(Serializable):
         
         atom1.add_bond(self)
         atom2.add_bond(self)
-        # TODO: Check bondtype and fractional_bondorder are valid?
+        # TODO: Check bondtype and fractional_bond_order are valid?
         #self._type = bondtype
-        #self._fractional_bondorder = fractional_bondorder
+        self._fractional_bond_order = fractional_bond_order
         self._bond_order = bond_order
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
-        #self._molecule = molecule
 
 
         
@@ -1023,6 +1022,7 @@ class Bond(Serializable):
         bond_dict['bond_order'] = self._bond_order
         bond_dict['is_aromatic'] = self._is_aromatic
         bond_dict['stereochemistry'] = self._stereochemistry
+        bond_dict['fractional_bond_order'] = self._fractional_bond_order
         return bond_dict
 
     @classmethod
@@ -1066,13 +1066,26 @@ class Bond(Serializable):
     #def type(self):
     #    return self._type
 
+
     @property
     def bond_order(self):
         return self._bond_order
 
+
     @bond_order.setter
     def bond_order(self, value):
         self._bond_order = value
+
+
+    @property
+    def fractional_bond_order(self):
+        return self._fractional_bond_order
+
+
+    @fractional_bond_order.setter
+    def fractional_bond_order(self, value):
+        self._fractional_bond_order = value
+
 
     @property
     def stereochemistry(self):
@@ -1102,14 +1115,6 @@ class Bond(Serializable):
         if self._molecule is None:
             raise ValueError('This Atom does not belong to a Molecule object')
         return self._molecule.bonds.index(self)
-    
-    #@property
-    #def fractional_bondorder(self):
-    #    return self._fractional_bondorder
-
-    #@fractional_bondorder.setter
-    #def fractional_bondorder(self, value):
-    #    self._fractional_bondorder = value
 
 #=============================================================================================
 # Molecule
@@ -1224,10 +1229,14 @@ class FrozenMolecule(Serializable):
             # Check through the toolkit registry to find a compatible wrapper for loading
             if not(loaded):
                 for toolkit_wrapper in toolkit_registry.registered_toolkits:
+                    if not(hasattr(toolkit_wrapper,'from_object')):
+                        continue
                     load_attempt = toolkit_wrapper.from_object(other)
-                    if load_attempt != False:
-                        self._copy_initializer(load_attempt)
-                        loaded = True
+                    # TODO: Come up with a better check for load failure
+                    if type(load_attempt) is bool:
+                        continue
+                    self._copy_initializer(load_attempt)
+                    loaded = True
             # TODO: Make this compatible with file-like objects (I couldn't figure
             # out how to make an oemolistream from a fileIO object)
             if (isinstance(other, str) or hasattr(other, 'read')) and not(loaded):
@@ -1513,45 +1522,70 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('generate_conformers', self)
+            return toolkit_registry.call('generate_conformers', self, clear_existing)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.generate_conformers(self)
+            return toolkit.generate_conformers(self, clear_existing)
         else:
             raise Exception('Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
-        
-        
-        
+
     def compute_partial_charges(self, charge_model=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Calculate partial atomic charges for this molecule using an underlying toolkit
-        
+
         Parameters
         ----------
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
-        clear_existing : bool, default=True
-            Whether to overwrite existing conformers for the molecule
-        
+
+
         Examples
         --------
-        
+
         >>> molecule = Molecule.from_smiles('CCCCCC')
         >>> molecule.generate_conformers()
         >>> molecule.compute_partial_charges()
-        
-        
+
+
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
             return toolkit_registry.call('compute_partial_charges', self, charge_model=charge_model)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.compute_partial_charges(self,charge_model=charge_model)
+            return toolkit.compute_partial_charges(self, charge_model=charge_model)
         else:
-            raise Exception('Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
+            raise Exception(
+                'Invalid toolkit_registry passed to compute_partial_charges. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(
+                    type(toolkit_registry)))
+
+    def compute_wiberg_bond_orders(self, charge_model=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Calculate wiberg bond orders for this molecule using an underlying toolkit
+
+        Parameters
+        ----------
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+        charge_model : string, optional
+            The charge model to use for partial charge calculation
+        Examples
+        --------
+
+        >>> molecule = Molecule.from_smiles('CCCCCC')
+        >>> molecule.generate_conformers()
+        >>> molecule.compute_wiberg_bond_orders()
 
 
-        
+        """
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            return toolkit_registry.call('compute_wiberg_bond_orders', self, charge_model=charge_model)
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            return toolkit.compute_wiberg_bond_orders(self, charge_model=charge_model)
+        else:
+            raise Exception(
+                'Invalid toolkit_registry passed to compute_wiberg_bond_orders. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
+
     def _invalidate_cached_properties(self):
         """
         Indicate that the chemical entity has been altered.
@@ -1832,7 +1866,7 @@ class FrozenMolecule(Serializable):
 
     
 
-    def _add_bond(self, atom1, atom2, bond_order, is_aromatic, stereochemistry=None):
+    def _add_bond(self, atom1, atom2, bond_order, is_aromatic, stereochemistry=None, fractional_bond_order=None):
         """
         Add a bond between two specified atom indices
 
@@ -1850,7 +1884,8 @@ class FrozenMolecule(Serializable):
             True if this bond is aromatic, False otherwise
         stereochemistry : str, optional, default=None
             Either 'E' or 'Z' for specified stereochemistry, or None if stereochemistry is irrelevant
-
+        fractional_bond_order : float, optional, default=None
+            The fractional (eg. Wiberg) bond order
         Returns
         -------
         index : int
@@ -1866,9 +1901,11 @@ class FrozenMolecule(Serializable):
         else:
             raise Exception('Invalid inputs to molecule._add_bond. Expected ints or Atoms. Received {} (type {}) and {} (type {}) '.format(atom1, type(atom1), atom2, type(atom2)))
         # TODO: Check to make sure bond does not already exist
-        bond = Bond(atom1_atom, atom2_atom, bond_order, is_aromatic, stereochemistry=stereochemistry)        # TODO: This is a bad way to get bond index
+        bond = Bond(atom1_atom, atom2_atom, bond_order, is_aromatic,
+                    stereochemistry=stereochemistry, fractional_bond_order=fractional_bond_order)
         self._bonds.append(bond)
         self._invalidate_cached_properties()
+        # TODO: This is a bad way to get bond index
         return self._bonds.index(bond)
 
 
@@ -1955,7 +1992,8 @@ class FrozenMolecule(Serializable):
         """
         Iterate over all Particle objects.
         """
-        return self._particles
+        # TODO: Re-implement this when we see how it interfaces with Topology
+        return self._atoms + self._virtual_sites
         #for particle in self._particles:
         #    yield particle
 
@@ -1965,6 +2003,24 @@ class FrozenMolecule(Serializable):
         Iterate over all Atom objects.
         """
         return self._atoms
+
+    @property
+    def conformers(self):
+        """
+        Iterate over all conformers in this molecule.
+        """
+        return self._conformers
+
+    @property
+    def n_conformers(self):
+        """
+        Iterate over all Atom objects.
+        """
+        if self._conformers == None:
+            return 0
+        return len(self._conformers)
+
+
 
     @property
     def virtual_sites(self):
@@ -2954,7 +3010,7 @@ class Molecule(FrozenMolecule):
         
     
     def add_bond(self, atom1, atom2, bond_order, is_aromatic,
-                 stereochemistry=None):
+                 stereochemistry=None, fractional_bond_order=None):
         """
         Add a bond between two specified atom indices
 
@@ -2972,13 +3028,16 @@ class Molecule(FrozenMolecule):
             True if this bond is aromatic, False otherwise
         stereochemistry : str, optional, default=None
             Either 'E' or 'Z' for specified stereochemistry, or None if stereochemistry is irrelevant
-        
+        fractional_bond_order : float, optional, default=None
+            The fractional (eg. Wiberg) bond order
+
         Returns
         -------
         index: int
             Index of the bond in this molecule
         """
-        bond_index = self._add_bond(atom1, atom2, bond_order, is_aromatic, stereochemistry=stereochemistry)
+        bond_index = self._add_bond(atom1, atom2, bond_order, is_aromatic,
+                                    stereochemistry=stereochemistry, fractional_bond_order=fractional_bond_order)
         return bond_index
 
     def add_conformer(self, coordinates):

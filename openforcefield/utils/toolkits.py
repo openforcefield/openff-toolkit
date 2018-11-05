@@ -831,8 +831,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : Molecule
             Molecule for which partial charges are to be computed
-        charge_model : str, optional, default='bcc'
+        charge_model : str, optional, default=None
             The charge model to use. One of ['noop', 'mmff', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'amber', 'amberff94', 'am1bccelf10']
+            If None, 'am1bcc' will be used.
 
         Returns
         -------
@@ -843,16 +844,19 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openeye import oequacpac
         import numpy as np
 
-        if len(molecule._conformers) == 0:
+        if molecule.n_conformers == 0:
             raise Exception("No conformers present in molecule submitted for partial charge calculation. Consider "
                             "loading the molecule from a file with geometry already present or running "
                             "molecule.generate_conformers() before calling molecule.compute_partial_charges")
         oemol = molecule.to_openeye()
-        
+
         ## This seems like a big decision. Implemented a simple solution here. Not to be considered final.
         ## Some discussion at https://github.com/openforcefield/openforcefield/pull/86#issuecomment-350111236
         ## The following code is taken from the just-openeye version of the openforcefield repo https://github.com/openforcefield/openforcefield/blob/65f6b45954bde02c6cec1059661635c53a7f4e35/openforcefield/typing/engines/smirnoff/forcefield.py#L850
-        
+
+        if charge_model is None:
+            charge_model = "am1bcc"
+
         if charge_model == "noop":
             result = oequacpac.OEAssignCharges(oemol, oequacpac.OEChargeEngineNoOp())
         elif charge_model == "mmff" or charge_model == "mmff94":
@@ -874,7 +878,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             raise Exception('Unable to assign charges')
 
         # Extract and return charges
-        ## TODO: Make sure this can handle multiple conformations
+        ## TODO: Behavior when given multiple conformations?
         ## TODO: Make sure atom mapping remains constant
 
         charges = unit.Quantity(np.zeros([oemol.NumAtoms()], np.float64),
@@ -883,8 +887,66 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             charge = atom.GetPartialCharge()
             charge = charge * unit.elementary_charge
             charges[index] = charge
+
+        if ((charges / unit.elementary_charge) == 0.).all() and not(charge_model=='noop'):
+            # TODO: These will be 0 if the charging failed. What behavior do we want in that case?
+            raise Exception("Partial charge calculation failed. Charges from compute_partial_charges() are all 0.")
         molecule.set_partial_charges(charges)
-        
+
+
+    def compute_wiberg_bond_orders(self, molecule, charge_model=None):
+        """Update and store list of bond orders this molecule. Can be used for initialization of bondorders list, or for updating bond orders in the list.
+        Parameters:
+        ----------
+        molecule : openforcefield.topology.molecule Molecule
+            The molecule to assign wiberg bond orders to
+        charge_model : str, optional, default=None
+            The charge model to use. One of ['am1', 'pm3']. If None, 'am1' will be used.
+
+         """
+        # TODO: Cache charged molecule so we don't have to redo the computation (Can we do this given the different
+        # AM1 interfaces?)
+
+        from openeye import oequacpac
+
+        oemol = self.to_openeye(molecule)
+        if molecule.n_conformers == 0:
+            raise Exception("No conformers present in molecule submitted for wiberg bond order calculation. Consider "
+                            "loading the molecule from a file with geometry already present or running "
+                            "molecule.generate_conformers() before calling molecule.compute_wiberg_bond_orders()")
+
+        if charge_model is None:
+            charge_model = 'am1'
+
+        # Based on example at https://docs.eyesopen.com/toolkits/python/quacpactk/examples_summary_wibergbondorders.html
+        am1 = oequacpac.OEAM1()
+        am1results = oequacpac.OEAM1Results()
+        am1options = am1.GetOptions()
+        if charge_model == "am1":
+            am1options.SetSemiMethod(oequacpac.OEMethodType_AM1)
+        elif charge_model == "pm3":
+            # TODO: Make sure that modifying am1options actually works
+            am1options.SetSemiMethod(oequacpac.OEMethodType_PM3)
+        else:
+            raise ValueError('charge_model {} unknown'.format(charge_model))
+
+        #for conf in oemol.GetConfs():
+        #TODO: How to handle confs here?
+        status = am1.CalcAM1(am1results, oemol)
+
+        if status is False:
+            raise Exception('Unable to assign charges (in the process of calculating Wiberg bond orders)')
+
+
+
+        # TODO: Will bonds always map back to the same index? Consider doing a topology mapping.
+        # Loop over bonds
+        for idx, bond in enumerate(oemol.GetBonds()):
+            # Get bond order
+            order = am1results.GetBondOrder(bond.GetBgnIdx(), bond.GetEndIdx())
+            mol_bond = molecule._bonds[idx]
+            mol_bond.fractional_bond_order = order
+
 
     @staticmethod
     def _find_smarts_matches(oemol, smarts, aromaticity_model=None):
@@ -1654,7 +1716,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
 
 
-    def compute_partial_charges(self, molecule, charge_model="bcc"):
+    def compute_partial_charges(self, molecule, charge_model=None):
         """
         Compute partial charges with AmberTools using antechamber/sqm
 
@@ -1668,8 +1730,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : Molecule
             Molecule for which partial charges are to be computed
-        charge_model : str, optional, default='bcc'
-            The charge model to use. One of ['gas', 'mul', 'cm1', 'cm2', 'bcc']
+        charge_model : str, optional, default=None
+            The charge model to use. One of ['gas', 'mul', 'bcc']. If None, 'bcc' will be used.
 
 
         Raises
@@ -1685,7 +1747,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         import os
         from simtk import unit
         # Check that the requested charge method is supported
-        SUPPORTED_ANTECHAMBER_CHARGE_MODELS = ['gas', 'mul', 'cm1', 'cm2', 'bcc']
+        # Needs to be fixed: 'cm1', 'cm2',
+        SUPPORTED_ANTECHAMBER_CHARGE_MODELS = ['gas', 'mul',  'bcc']
         if charge_model not in SUPPORTED_ANTECHAMBER_CHARGE_MODELS:
             raise ValueError('Requested charge method {} not among supported charge methods {}'.format(charge_model, SUPPORTED_ANTECHAMBER_CHARGE_MODELS))
 
@@ -1700,6 +1763,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                             "loading the molecule from a file with geometry already present or running "
                             "molecule.generate_conformers() before calling molecule.compute_partial_charges")
 
+        if charge_model is None:
+            charge_model = 'bcc'
 
         # Compute charges
         from openforcefield.utils import temporary_directory, temporary_cd
@@ -1707,18 +1772,23 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             with temporary_cd(tmpdir):
                 net_charge = molecule.total_charge
                 # Write out molecule in SDF format
-                ## TODO: Where will this get coordinates from?
+                ## TODO: How should we handle multiple conformers?
                 self._rdkit_toolkit_wrapper.to_file(molecule, 'molecule.sdf', outfile_format='sdf')
                 os.system('ls')
                 os.system('cat molecule.sdf')
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
                 # TODO: Add something cleaner than os.system
-                os.system("antechamber -i molecule.sdf -fi sdf -o charges.mol2 -fo mol2 -pf yes -c {} -nc {}".format(charge_model, net_charge))
-                os.system('cat charges.mol2')
+                os.system("antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf yes -c {} -nc {}".format(charge_model, net_charge))
+                os.system('cat charged.mol2')
 
                 # Write out just charges
-                os.system("antechamber -i charges.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc -cf charges.txt -pf yes")
+                os.system("antechamber -i charged.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc -cf charges.txt -pf yes")
+                os.system('cat charges.txt')
+                # Check to ensure charges were actually produced
+                if not os.path.exists('charges.txt'):
+                    # TODO: copy files into local directory to aid debugging?
+                    raise Exception("Antechamber/sqm partial charge calculation failed on molecule {} (SMILES {})".format(molecule.name, molecule.to_smiles()))
                 # Read the charges
                 with open('charges.txt', 'r') as infile:
                     contents = infile.read()
@@ -1726,6 +1796,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 charges = np.zeros([molecule.n_atoms], np.float64)
                 for index, token in enumerate(text_charges):
                     charges[index] = float(token)
+                # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
 
         charges = unit.Quantity(charges, unit.elementary_charge)
 
