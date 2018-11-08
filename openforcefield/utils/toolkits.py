@@ -104,8 +104,6 @@ class ToolkitWrapper(object):
     _toolkit_file_write_formats = None # The file types that this toolkit can write
     
     #@staticmethod
-    ## From Jeff: This is confusing, but I changed things to make it run.
-    ## Did I actually break it?
     # TODO: Right now, to access the class definition, I have to make this a classmethod
     # and thereby call it with () on the outermost decorator. Is this wasting time? Are we caching
     # the is_available results?
@@ -532,7 +530,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             # TODO: Should we raise an exception?
             return None
 
-        cip = oechem.OEPerceiveCIPStereo(mol, bond)
+        cip = oechem.OEPerceiveCIPStereo(oemol, oebond)
 
         if cip == oechem.OECIPBondStereo_E:
             return 'E'
@@ -578,8 +576,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # TODO: How should we preserve the name?
         
         molecule = Molecule()
-        molecule._name = oemol.GetTitle()
-        
+        molecule.name = oemol.GetTitle()
 
 
         # Copy any attached SD tag information
@@ -596,7 +593,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             is_aromatic = oeatom.IsAromatic()
             stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
             #stereochemistry = self._openeye_cip_atom_stereochemistry(oemol, oeatom)
-            atom_index = molecule.add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry)
+            name = ''
+            if oeatom.HasData('name'):
+                name = oeatom.GetData('name')
+            atom_index = molecule.add_atom(atomic_number, formal_charge, is_aromatic,
+                                           stereochemistry=stereochemistry, name=name)
             map_atoms[oe_idx] = atom_index # store for mapping oeatom to molecule atom indices below
 
         for oebond in oemol.GetBonds():
@@ -605,8 +606,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             bond_order = oebond.GetOrder()
             is_aromatic = oebond.IsAromatic()
             stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
+            if oebond.HasData('fractional_bond_order'):
+                fractional_bond_order = oebond.GetData('fractional_bond_order')
+            else:
+                fractional_bond_order = None
             #stereochemistry = self._openeye_cip_bond_stereochemistry(oemol, oebond)
-            molecule.add_bond(atom1_index, atom2_index, bond_order, is_aromatic=is_aromatic, stereochemistry=stereochemistry)
+            molecule.add_bond(atom1_index, atom2_index, bond_order, is_aromatic=is_aromatic,
+                              stereochemistry=stereochemistry, fractional_bond_order=fractional_bond_order)
 
         # TODO: Copy conformations, if present
         # TODO: Come up with some scheme to know when to import coordinates
@@ -626,7 +632,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 molecule.add_conformer(positions)
                 
         ## TODO: Partial charges
-                
+        partial_charges = unit.Quantity(np.zeros(molecule.n_atoms, dtype=np.float),
+                                       unit=unit.elementary_charge)
+        for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
+            off_idx = map_atoms[oe_idx]
+            charge = oe_atom.GetPartialCharge() * unit.elementary_charge
+            partial_charges[off_idx] = charge
+
+        molecule.set_partial_charges(partial_charges)
+
+
         return molecule
 
     # TODO: We could make this a staticmethod. It seems to have formerly belonged to
@@ -664,16 +679,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         from openeye import oechem
-        #from openforcefield.utils.toolkits import openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
 
         oemol = oechem.OEMol()
-        map_atoms = {} # {molecule_index : rdkit_index}
+        #if not(molecule.name is None):
+        oemol.SetTitle(molecule.name)
+        map_atoms = {} # {off_idx : oe_idx}
         # Add atoms
         oemol_atoms = list() # list of corresponding oemol atoms
         for atom in molecule.atoms:
             oeatom = oemol.NewAtom(atom.atomic_number)
             oeatom.SetFormalCharge(atom.formal_charge)
             oeatom.SetAromatic(atom.is_aromatic)
+            oeatom.SetData('name', atom.name)
             oemol_atoms.append(oeatom)
             map_atoms[atom.molecule_atom_index] = oeatom.GetIdx()
 
@@ -687,6 +704,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oebond = oemol.NewBond(oemol_atoms[atom1_index], oemol_atoms[atom2_index])
             oebond.SetOrder(bond.bond_order)
             oebond.SetAromatic(bond.is_aromatic)
+            if not(bond.fractional_bond_order is None):
+                oebond.SetData('fractional_bond_order', bond.fractional_bond_order)
             oemol_bonds.append(oebond)
 
         # Set atom stereochemistry now that all connectivity is in place
@@ -698,11 +717,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             neighs = [n for n in oeatom.GetAtoms()]
             oeatom.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Right)
 
-            # Flip chirality if stereochemistry is incorrect
+            # Flip chirality if stereochemistry isincorrect
             oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
             if oeatom_stereochemistry != atom.stereochemistry:
                 # Flip the stereochemistry
-                oea.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left)
+                oeatom.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left)
                 # Verify it matches now as a sanity check
                 oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
                 if oeatom_stereochemistry != atom.stereochemistry:
@@ -723,7 +742,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
             # Flip stereochemistry if incorrect
             oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
-            if oebond_stereochemistry != bond.sterechemistry:
+            if oebond_stereochemistry != bond.stereochemistry:
                 # Flip the stereochemistry
                 oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Trans)
                 # Verify it matches now as a sanity check
@@ -731,9 +750,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 if oebond_stereochemistry != bond.stereochemistry:
                     raise Exception('Programming error: OpenEye bond stereochemistry assumptions failed.')
 
-        # TODO: Retain conformations, if present
-        # TODO: Are atom indexing schemes preserved between OFF molecules and OE molecules?
-        if molecule._conformers != None:
+        # Retain conformations, if present
+        if molecule.n_conformers != 0:
             oemol.DeleteConfs()
             for conf in molecule._conformers:
                 # OE needs a 1 x (3*n_Atoms) double array as input
@@ -749,9 +767,23 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 #flat_coords = (conf.in_units_of(unit.angstrom) / unit.angstrom).flatten()
                 oecoords = oechem.OEFloatArray(flat_coords)
                 oemol.NewConf(oecoords)
-        
+
+
+        # Retain charges, if present
+        if not(molecule._partial_charges is None):
+            #for off_atom, oe_atom in zip(molecule.atoms, oemol_atoms):
+            #    charge_unitless = molecule._partial_charges
+
+            oe_indexed_charges = np.zeros((molecule.n_atoms), dtype=np.float)
+            for off_idx, charge in enumerate(molecule._partial_charges):
+                oe_idx = map_atoms[off_idx]
+                charge_unitless = charge / unit.elementary_charge
+                oe_indexed_charges[oe_idx] = charge_unitless
+            for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
+                oe_atom.SetPartialCharge(oe_indexed_charges[oe_idx])
+
         # TODO: Retain name and properties, if present
-        
+
         # Clean Up phase
         # The only feature of a molecule that wasn't perceived above seemed to be ring connectivity, better to run it
         # here then for someone to inquire about ring sizes and get 0 when it shouldn't be
@@ -807,6 +839,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         #Don't generate random stereoisomer if not specified
         omega.SetStrictStereo(True) 
         status = omega(oemol)
+
+        if status is False:
+            raise Exception("OpenEye Omega conformer generation failed")
 
         molecule2 = self.from_openeye(oemol)
 
@@ -1383,6 +1418,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             atomic_number = rda.GetAtomicNum()
             formal_charge = rda.GetFormalCharge()
             is_aromatic = rda.GetIsAromatic()
+            if rda.HasProp('name'):
+                name = rda.GetProp('name')
+            else:
+                name = ''
 
             # If chiral, store the chirality to be set later
             stereochemistry = None
@@ -1392,7 +1431,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             if tag == Chem.CHI_TETRAHEDRAL_CW:
                 stereochemistry = 'S'
             
-            atom_index = mol.add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry)
+            atom_index = mol.add_atom(atomic_number, formal_charge, is_aromatic, name=name, stereochemistry=stereochemistry)
             map_atoms[rd_idx] = atom_index
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
@@ -1474,7 +1513,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Set name
         # TODO: What is the best practice for how this should be named?
         if not(molecule.name == None):
-            rdmol.SetProp('_Name', molecule.name)
+            rdmol.SetProp('name', molecule.name)
 
         # TODO: Set other properties
         for name, value in molecule.properties.items():
@@ -1505,6 +1544,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             rdatom = Chem.Atom(atom.atomic_number)
             rdatom.SetFormalCharge(atom.formal_charge)
             rdatom.SetIsAromatic(atom.is_aromatic)
+            rdatom.SetProp('name',molecule.name)
 
             if atom.stereochemistry == 'S':
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
@@ -1516,9 +1556,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             map_atoms[index] = rd_index
 
         for bond in molecule.bonds:
-            ## TODO: Horribly inefficient lookup. Should get a better atom index method
-            rdatom1 = map_atoms[molecule.atoms.index(bond.atom1)]
-            rdatom2 = map_atoms[molecule.atoms.index(bond.atom2)]
+            #rdatom1 = map_atoms[molecule.atoms.index(bond.atom1)]
+            #rdatom2 = map_atoms[molecule.atoms.index(bond.atom2)]
+            rdatom1 = map_atoms[bond.atom1.molecule_atom_index]
+            rdatom2 = map_atoms[bond.atom2.molecule_atom_index]
             rdmol.AddBond(rdatom1, rdatom2)
             rdbond = rdmol.GetBondBetweenAtoms(rdatom1, rdatom2)
 
@@ -1569,7 +1610,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 rdmol.AddConformer(rdmol_conformer)
 
         # Cleanup the rdmol
-        # Note I copied UpdatePropertyCache and GetSSSR from Shuzhe's code to convert oemol to rdmol here:
         rdmol.UpdatePropertyCache(strict=False)
         Chem.GetSSSR(rdmol)
         # I added AssignStereochemistry which takes the directions of the bond set

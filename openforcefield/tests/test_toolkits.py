@@ -18,6 +18,7 @@ from unittest import TestCase
 from openforcefield import utils
 from simtk import unit
 import numpy as np
+from numpy.testing import assert_almost_equal
 
 import pytest
 from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
@@ -38,18 +39,36 @@ class TestToolkitWrapper(TestCase):
 class TestOpenEyeToolkitWrapper(TestCase):
     """Test the OpenEyeToolkitWrapper"""
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
+
+    # TODO: Make separate smiles_add_H and smiles_explicit_H tests
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_smiles(self):
         """Test OpenEyeToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
+
+        # Pass in an invalid SMILES, which lacks stereochemistry about a central atom
+        smiles = '[H]C(F)(Cl)Br'
+        with self.assertRaises(Exception) as context:
+            molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+
+        # Pass in a version of the above SMILES with defined stereochemistry
+        smiles = '[H][C@@](F)(Cl)Br'
+        molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+
+
         # This differs from RDKit's SMILES due to different canonicalization schemes
+
         smiles = '[H]C([H])([H])C([H])([H])[H]'
         molecule = Molecule.from_smiles(smiles,
                                         toolkit_registry=toolkit_wrapper)
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    # TODO: test_smiles_round_trip
+
+
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_smiles_add_H(self):
         """Test OpenEyeToolkitWrapper for adding explicit hydrogens"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -73,39 +92,102 @@ class TestOpenEyeToolkitWrapper(TestCase):
         assert smiles == smiles2
 
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
-    def test_to_from_openeye(self):
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    def test_to_from_openeye_core_props_filled(self):
         """Test OpenEyeToolkitWrapper to_openeye() and from_openeye()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        # This differs from RDKit's expected output due to different canonicalization schemes
-        smiles = '[H]C([H])([H])C([H])([H])[H]'
-        molecule = Molecule.from_smiles(smiles)
+
+        # Replacing with a simple molecule with stereochemistry
+        input_smiles = 'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
+        expected_output_smiles = '[H]C([H])([H])C(=C(C([H])([H])C(C([H])([H])[H])(Cl)Br)F)F'
+        molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
+        assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
+
+        # Populate core molecule property fields
+        molecule.name = 'Alice'
+        partial_charges = unit.Quantity(np.array([-.9, -.8, -.7, -.6,
+                                                  -.5, -.4, -.3, -.2,
+                                                  -.1,  0.,  .1,  .2,
+                                                   .3,  .4,  .5,  .6,
+                                                   .7,  .8]), unit.elementary_charge)
+        molecule.set_partial_charges(partial_charges)
+        coords = unit.Quantity(np.array([['0.0', '1.0', '2.0'],    ['3.0', '4.0', '5.0'],    ['6.0', '7.0', '8.0'],
+                                         ['9.0', '10.0', '11.0'] , ['12.0', '13.0', '14.0'], ['15.0', '16.0', '17.0'],
+                                         ['18.0', '19.0', '20.0'], ['21.0', '22.0', '23.0'], ['24.0', '25.0', '26.0'],
+                                         ['27.0', '28.0', '29.0'], ['30.0', '31.0', '32.0'], ['33.0', '34.0', '35.0'],
+                                         ['36.0', '37.0', '38.0'], ['39.0', '40.0', '41.0'], ['42.0', '43.0', '44.0'],
+                                         ['45.0', '46.0', '47.0'], ['48.0', '49.0', '50.0'], ['51.0', '52.0', '53.0']]),
+                                    unit.angstrom)
+        molecule.add_conformer(coords)
+        # Populate core atom property fields
+        molecule.atoms[2].name = 'Bob'
+        # Ensure one atom has its stereochemistry specified
+        central_carbon_stereo_specified = False
+        for atom in molecule.atoms:
+            if (atom.atomic_number == 6) and atom.stereochemistry == "S":
+                central_carbon_stereo_specified = True
+        assert central_carbon_stereo_specified
+
+        # Populate bond core property fields
+        fractional_bond_orders = [float(val) for val in range(18)]
+        for fbo, bond in zip(fractional_bond_orders, molecule.bonds):
+            bond.fractional_bond_order = fbo
+
+        # Do a first conversion to/from oemol
         oemol = molecule.to_openeye()
         molecule2 = Molecule.from_openeye(oemol)
-        new_conf1 = unit.Quantity(np.array([[1,2,3],[4,5,6],[7,8,9],
-                                           [10,11,12],[13,14,15],[16,17,18],
-                                           [19,20,21],[22,23,24],[25,26,27]],
-                                          dtype=np.float),
-                                 unit.angstrom)
-        new_conf2 = unit.Quantity(np.array([[101,102,103],[104,105,106],[107,108,109],
-                                            [110,111,112],[113,114,115],[116,117,118],
-                                            [119,120,121],[122,123,124],[125,126,127]],
-                                          dtype=np.float),
-                                 unit.angstrom)
-        molecule2.add_conformer(new_conf1)
-        molecule2.add_conformer(new_conf2)
-        
-        
-        smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
-        assert smiles == smiles2
-        oemol2 = Molecule.to_openeye(molecule2)
-        assert oemol2.NumConfs() == 2
-        molecule3 = Molecule.from_openeye(oemol2)
-        assert len(molecule3._conformers) == 2
-        assert (molecule2._conformers[0] == molecule3._conformers[0]).all()
-        assert (molecule2._conformers[1] == molecule3._conformers[1]).all()
-        
-    @OpenEyeToolkitWrapper.requires_toolkit()
+
+        # Test that properties survived first conversion
+        #assert molecule.to_dict() == molecule2.to_dict()
+        assert molecule.name == molecule2.name
+        # NOTE: This expects the same indexing scheme in the original and new molecule
+
+        central_carbon_stereo_specified = False
+        for atom in molecule2.atoms:
+            if (atom.atomic_number == 6) and atom.stereochemistry == "S":
+                central_carbon_stereo_specified = True
+        assert central_carbon_stereo_specified
+        for atom1, atom2 in zip(molecule.atoms, molecule2.atoms):
+            assert atom1.to_dict() == atom2.to_dict()
+        for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
+            assert bond1.to_dict() == bond2.to_dict()
+        assert (molecule._conformers[0] == molecule2._conformers[0]).all()
+        for pc1, pc2 in zip(molecule._partial_charges, molecule2._partial_charges):
+            pc1_ul = pc1 / unit.elementary_charge
+            pc2_ul = pc2 / unit.elementary_charge
+            assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
+        assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
+        # TODO: This should be its own test
+
+        #charges = unit.Quantity(np.array([ -0.35, -0.25, -0.15, -0.05, 0.05, 0.15, 0.25, 0.35], dtype=np.float),
+        #                         unit.elementary_charge)
+        #fractional_bond_orders = [0.96, 0.97, 0.98, 0.99, 1.0, 1.1, 1.2, 1.3]
+        #molecule2.add_conformer(new_conf1)
+        #molecule2.add_conformer(new_conf2)
+        #molecule2.set_partial_charges(charges)
+        #for bond_idx, bond in enumerate(molecule2.bonds):
+        #    bond.fractional_bond_order = fractional_bond_orders[bond_idx]
+
+        #smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
+        #assert smiles == smiles2
+        #molecule2.name = ''
+        #oemol2 = Molecule.to_openeye(molecule2)
+        #assert oemol2.NumConfs() == 2
+        #molecule3 = Molecule.from_openeye(oemol2)
+        #assert molecule2.name == molecule3.name
+        #assert len(molecule3._conformers) == 2
+        #assert (molecule2._conformers[0] == molecule3._conformers[0]).all()
+        #assert (molecule2._conformers[1] == molecule3._conformers[1]).all()
+        ## Check that partial charges are preserved
+        #for pc1, pc2 in zip(molecule2._partial_charges, molecule3._partial_charges):
+        #    pc1_ul = pc1 / unit.elementary_charge
+        #    pc2_ul = pc2 / unit.elementary_charge
+        #    assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
+        ## Check that fractional bond orders are preserved
+        #for bond1, bond2 in zip(molecule2.bonds, molecule3.bonds):
+        #    assert_almost_equal(bond1.fractional_bond_order, bond2.fractional_bond_order, decimal=6)
+
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -114,20 +196,17 @@ class TestOpenEyeToolkitWrapper(TestCase):
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
 
-    
-    @pytest.mark.skip #Implement this
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_get_multiconformer_sdf_coordinates(self):
-        """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
+        """Test OpenEyeToolkitWrapper for importing multiple sets of coordinates from a sdf file"""
         raise NotImplementedError
         toolkit_wrapper = RDKitToolkitWrapper()
         filename = get_data_filename('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
-        
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of molecule coordinates"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -136,9 +215,19 @@ class TestOpenEyeToolkitWrapper(TestCase):
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
 
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    def test_get_mol2_charges(self):
+        """Test OpenEyeToolkitWrapper for importing a single set of molecule coordinates"""
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        filename = get_data_filename('molecules/toluene.mol2')
+        molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        assert len(molecule._conformers) == 1
+        assert molecule._conformers[0].shape == (15,3)
+        molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper)
+        molecule.to_file('toluene_charged.mol2', 'MOL2', toolkit_registry=toolkit_wrapper)
 
-    #@pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
-    @OpenEyeToolkitWrapper.requires_toolkit()
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_generate_conformers(self):
         """Test OpenEyeToolkitWrapper generate_conformers()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -147,8 +236,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
         molecule.generate_conformers()
         # TODO: Make this test more robust
 
-    # @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_compute_partial_charges(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -176,8 +264,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
                 charge_sum += pc
             assert charge_sum < 0.001 * unit.elementary_charge
 
-    # @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_compute_partial_charges_net_charge(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule with a net +1 charge"""
 
@@ -203,7 +290,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
                 charge_sum += pc
             assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders(self):
         """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders()"""
 
@@ -217,7 +304,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders_charged(self):
         """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with net charge +1"""
 
@@ -245,8 +332,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
 class TestRDKitToolkitWrapper(TestCase):
     """Test the RDKitToolkitWrapper"""
     
-    #@pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available() )
-    @RDKitToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_smiles(self):
         """Test RDKitToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -258,7 +344,9 @@ class TestRDKitToolkitWrapper(TestCase):
         #print(smiles, smiles2)
         assert smiles == smiles2
 
-    @RDKitToolkitWrapper.requires_toolkit()
+    # TODO: test_smiles_round_trip
+
+    @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_smiles_add_H(self):
         """Test RDKitToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -271,7 +359,7 @@ class TestRDKitToolkitWrapper(TestCase):
         assert smiles2 == expected_output_smiles
 
 
-    @RDKitToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_smiles_charged(self):
         """Test RDKitWrapper functions for reading/writing charged SMILES"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -282,8 +370,7 @@ class TestRDKitToolkitWrapper(TestCase):
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
 
-    #@pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available() )
-    @RDKitToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_to_from_rdkit(self):
         """Test RDKitToolkitWrapper to_rdkit() and from_rdkit()"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -318,17 +405,17 @@ class TestRDKitToolkitWrapper(TestCase):
         assert (molecule2._conformers[1] == molecule3._conformers[1]).all()
         
         
-    @RDKitToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_get_sdf_coordinates(self):
         """Test RDKitToolkitWrapper for importing a single set of coordinates from a sdf file"""
         toolkit_wrapper = RDKitToolkitWrapper()
         filename = get_data_filename('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
-        assert molecule._conformers[0].shape == (15,3)
+        assert molecule._conformers[0].shape == (15, 3)
     
-    @pytest.mark.skip #Implement this
-    @RDKitToolkitWrapper.requires_toolkit()
+    @pytest.mark.skip
+    #@pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_get_multiconformer_sdf_coordinates(self):
         """Test RDKitToolkitWrapper for importing a single set of coordinates from a sdf file"""
         raise NotImplementedError
@@ -341,7 +428,7 @@ class TestRDKitToolkitWrapper(TestCase):
         
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip
-    @RDKitToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_get_pdb_coordinates(self):
         """Test RDKitToolkitWrapper for importing a single set of coordinates from a pdb file"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -353,7 +440,7 @@ class TestRDKitToolkitWrapper(TestCase):
 
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip
-    @RDKitToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_load_aromatic_pdb(self):
         """Test OpenEyeToolkitWrapper for importing molecule conformers"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -364,8 +451,7 @@ class TestRDKitToolkitWrapper(TestCase):
 
 
 
-    #@pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
-    @RDKitToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_generate_conformers(self):
         """Test RDKitToolkitWrapper generate_conformers()"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -388,14 +474,11 @@ class TestRDKitToolkitWrapper(TestCase):
 
 
         
-class TestAmberToolsWrapper(TestCase):
-    """Test the AmberToolsWraper"""
+class TestAmberToolsToolkitWrapper(TestCase):
+    """Test the AmberToolsToolkitWrapper"""
 
-
-
-    # @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
-    @RDKitToolkitWrapper.requires_toolkit()
-    @AmberToolsToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available() or not AmberToolsToolkitWrapper.toolkit_is_available(),
+                    reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_compute_partial_charges(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges()"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
@@ -417,9 +500,8 @@ class TestAmberToolsWrapper(TestCase):
             assert charge_sum < 0.01 * unit.elementary_charge
 
 
-    # @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
-    @RDKitToolkitWrapper.requires_toolkit()
-    @AmberToolsToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available() or not AmberToolsToolkitWrapper.toolkit_is_available(),
+                        reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_compute_partial_charges_net_charge(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule with a net +1 charge"""
         toolkit_registry = ToolkitRegistry([AmberToolsToolkitWrapper, RDKitToolkitWrapper])
@@ -444,8 +526,7 @@ class TestAmberToolsWrapper(TestCase):
 class TestToolkitRegistry(TestCase):
     """Test the ToolkitRegistry"""
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
-    #@pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available() )
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_register_openeye(self):
         """Test creation of toolkit registry with OpenEye toolkit"""
         # Test registration of OpenEyeToolkitWrapper
@@ -463,8 +544,7 @@ class TestToolkitRegistry(TestCase):
         smiles2 = registry.call('to_smiles', molecule)
         assert smiles == smiles2
 
-    @RDKitToolkitWrapper.requires_toolkit()
-    #@pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available() )
+    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_register_rdkit(self):
         """Test creation of toolkit registry with RDKit toolkit"""
         # Test registration of RDKitToolkitWrapper
@@ -483,8 +563,9 @@ class TestToolkitRegistry(TestCase):
         smiles2 = registry.call('to_smiles', molecule)
         assert smiles == smiles2
 
-    @RDKitToolkitWrapper.requires_toolkit()
-    @AmberToolsToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif(
+        not RDKitToolkitWrapper.toolkit_is_available() or not AmberToolsToolkitWrapper.toolkit_is_available(),
+        reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_register_ambertools(self):
         """Test creation of toolkit registry with AmberToolsToolkitWrapper and RDKitToolkitWrapper
         """

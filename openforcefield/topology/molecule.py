@@ -226,6 +226,8 @@ class Atom(Particle):
         self._formal_charge = formal_charge
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
+        if name is None:
+            name = ''
         self._name = name
         self._molecule = molecule
         ## From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
@@ -336,6 +338,27 @@ class Atom(Particle):
         """
         return self.element.mass
 
+
+    @property
+    def name(self):
+        """
+        The name of this atom, if any
+        """
+        return self._name
+
+    @name.setter
+    def name(self, other):
+        """
+
+        Parameters
+        ----------
+        other : string
+            The new name for this atom
+        """
+        if not(type(other) is str):
+            raise Exception("In setting atom name. Expected str, received {} (type {})".format(other, type(other)))
+        self._name = other
+
     # TODO: How are we keeping track of bonds, angles, etc?
 
     @property
@@ -403,6 +426,8 @@ class Atom(Particle):
         if self._molecule is None:
             raise ValueError('This Atom does not belong to a Molecule object')
         return self._molecule.atoms.index(self)
+
+
 
     ## From Jeff: Not sure if we actually need this
     @property
@@ -1342,14 +1367,14 @@ class FrozenMolecule(Serializable):
         # TODO: Provide useful exception messages if there are any failures
 
         self._initialize()
-        if molecule_dict['name'] != None:
-            self.name = molecule_dict['name']
+        #if molecule_dict['name'] != None:
+        self.name = molecule_dict['name']
         for atom_dict in molecule_dict['atoms']:
 
             self.add_atom(**atom_dict)
         # TODO: Implement vsites
         for vsite in molecule_dict['virtual_sites']:
-            molecule._add_virtual_site(*vsite)
+            self._add_virtual_site(*vsite)
         for bond_dict in molecule_dict['bonds']:
             bond_dict['atom1'] = int(bond_dict['atom1'])
             bond_dict['atom2'] = int(bond_dict['atom2'])
@@ -1392,16 +1417,15 @@ class FrozenMolecule(Serializable):
         """
         Clear the contents of the current molecule.
         """
-        self._name = None # TODO: Should we keep a name, or just store that in _properties?
+        self._name = '' # TODO: Should we keep a name, or just store that in _properties?
 
         self._atoms = list()
         self._virtual_sites = list()
         #self._particles = list() # List of particles (atoms or virtual sites) # TODO: Should this be a dict?
-        self._bonds = list() # List of bonds between Atom objects # TODO: Should this be a dict?
+        self._bonds = list() # List of bonds between Atom objects
         self._properties = None # Attached properties to be preserved
         #self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
-        # TODO: If partial charges will be cached_properties, should conformations also be there? They'll also be invalidated if the 2D molecule is changed
-        self._partial_charges = None # TODO: Decide if we want to store charges here or in _cached_properties
+        self._partial_charges = None
         self._conformers = None # Optional conformers
 
 
@@ -1466,7 +1490,6 @@ class FrozenMolecule(Serializable):
             return toolkit.to_smiles(self)
         else:
             raise Exception('Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
-        #return toolkit_registry.call('to_smiles', self)
 
     @staticmethod
     def from_smiles(smiles, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
@@ -1499,7 +1522,6 @@ class FrozenMolecule(Serializable):
             return toolkit.from_smiles(smiles)
         else:
             raise Exception('Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
-        #return tookit_registry.call('from_smiles', smiles)
 
 
 
@@ -1598,7 +1620,7 @@ class FrozenMolecule(Serializable):
         self._impropers = None
 
     def to_networkx(self):
-        """Geneate a NetworkX undirected graph from the Topology.
+        """Generate a NetworkX undirected graph from the Topology.
 
         Nodes are Atoms labeled with particle indices and atomic elements (via the ``element`` node atrribute).
         Edges denote chemical bonds between Atoms.
@@ -1610,6 +1632,8 @@ class FrozenMolecule(Serializable):
            * Should edges be labeled with discrete bond types in some aromaticity model?
            * Should edges be labeled with fractional bond order if a method is specified?
            * Should we add other per-atom and per-bond properties (e.g. partial charges) if present?
+           * Can this encode bond/atom chirality?
+
 
         Returns
         -------
@@ -1683,9 +1707,7 @@ class FrozenMolecule(Serializable):
         return self._atoms.index(atom)
 
     
-#    def _add_bond_charge_virtual_site(self, atoms, distance, charge_increments=None,
-#                                     weights=None, epsilon=None, sigma=None,
-#                                     rmin_half=None, name=None):
+
     def _add_bond_charge_virtual_site(self, atoms, distance, **kwargs):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
@@ -1716,13 +1738,11 @@ class FrozenMolecule(Serializable):
         else:
             raise Exception('Invalid inputs to molecule._add_bond_charge_virtual_site. Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
         # TODO: Check to make sure bond does not already exist
-        #vsite = BondChargeVirtualSite(atom_list, distance, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         vsite = BondChargeVirtualSite(atom_list, distance, **kwargs)
         self._virtual_sites.append(vsite)
         self._invalidate_cached_properties()
         return self._virtual_sites.index(vsite) 
 
-    #def _add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
     def _add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
@@ -1756,13 +1776,11 @@ class FrozenMolecule(Serializable):
         else:
             raise Exception('Invalid inputs to molecule._add_monovalent_lone_pair_virtual_site. Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
         # TODO: Check to make sure bond does not already exist
-        #vsite = MonovalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         vsite = MonovalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         self._virtual_sites.append(vsite)
         self._invalidate_cached_properties()
         return self._virtual_sites.index(vsite)
     
-    #def _add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
     def _add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
         """
         Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms. 
@@ -1796,14 +1814,12 @@ class FrozenMolecule(Serializable):
         else:
             raise Exception('Invalid inputs to molecule._add_divalent_lone_pair_virtual_site. Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
         # TODO: Check to make sure bond does not already exist
-        #vsite = DivalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         vsite = DivalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         self._virtual_sites.append(vsite)
         self._invalidate_cached_properties()
         return self._virtual_sites.index(vsite)
 
         
-    #def _add_trivalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
     def _add_trivalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms. 
@@ -1836,7 +1852,6 @@ class FrozenMolecule(Serializable):
             atom_list = atoms
         else:
             raise Exception('Invalid inputs to molecule._add_trivalent_lone_pair_virtual_site. Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
-        #vsite = TrivalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         vsite = TrivalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         self._virtual_sites.append(vsite)
         self._invalidate_cached_properties()
@@ -1901,6 +1916,8 @@ class FrozenMolecule(Serializable):
         else:
             raise Exception('Invalid inputs to molecule._add_bond. Expected ints or Atoms. Received {} (type {}) and {} (type {}) '.format(atom1, type(atom1), atom2, type(atom2)))
         # TODO: Check to make sure bond does not already exist
+        if atom1_atom.is_bonded_to(atom2_atom):
+            raise Exception('Bond already exists between {} and {}'.format(atom1_atom, atom2_atom))
         bond = Bond(atom1_atom, atom2_atom, bond_order, is_aromatic,
                     stereochemistry=stereochemistry, fractional_bond_order=fractional_bond_order)
         self._bonds.append(bond)
@@ -1928,6 +1945,9 @@ class FrozenMolecule(Serializable):
 
         """
         new_conf = unit.Quantity(np.zeros((self.n_atoms, 3), np.float), unit.angstrom)
+        if not(new_conf.shape == coordinates.shape):
+            raise Exception("molecule.add_conformer given input of the wrong shape: Given {}, expected {}".format(coordinates.shape, new_conf.shape))
+
         try:
             new_conf[:] = coordinates
         except AttributeError as e:
@@ -2093,6 +2113,16 @@ class FrozenMolecule(Serializable):
         """
         return self._name
 
+    @name.setter
+    def name(self, other):
+        """Set the name of this molecule
+        """
+        if other is None:
+            self._name = ''
+        elif type(other) is str:
+            self._name = other
+        else:
+            raise Exception("Molecule name must be a string")
 
     @property
     def properties(self):
@@ -2160,9 +2190,7 @@ class FrozenMolecule(Serializable):
 
     #@staticmethod
     @classmethod
-    #@requires_openeye('oechem', 'oeiupac')
     @OpenEyeToolkitWrapper.requires_toolkit()
-    #@OpenEyeToolkitWrapper.requires_toolkit(OpenEyeToolkitWrapper)
     def from_iupac(cls, iupac_name):
         """Generate a molecule from IUPAC or common name
 
@@ -2196,7 +2224,6 @@ class FrozenMolecule(Serializable):
         oechem.OETriposAtomNames(oemol)
         return cls.from_openeye(oemol)
 
-    #@requires_openeye('oechem', 'oeiupac')
     @OpenEyeToolkitWrapper.requires_toolkit()
     def to_iupac(self):
         """Generate IUPAC name from Molecule
@@ -2315,8 +2342,7 @@ class FrozenMolecule(Serializable):
         file_format = file_format.upper()
             
         
-        # Determine which toolkit to use (highest priority that's
-        # compatible with input type)
+        # Determine which toolkit to use (highest priority that's compatible with input type)
         if isinstance(toolkit_registry, ToolkitRegistry):
             toolkit = None
             supported_read_formats = {}
@@ -2499,7 +2525,6 @@ class FrozenMolecule(Serializable):
         toolkit = OpenEyeToolkitWrapper()
         return toolkit.from_openeye(oemol)
 
-    #@OpenEyeToolkitWrapper.requires_toolkit(OpenEyeToolkitWrapper)
     @OpenEyeToolkitWrapper.requires_toolkit()
     def to_openeye(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
@@ -2823,25 +2848,25 @@ class Molecule(FrozenMolecule):
         super(Molecule, self).__init__(*args, **kwargs)
 
 
-    @property
-    def name(self):
-        """The name (or title) of the molecule
-        """
-        return self._name    
+    #@property
+    #def name(self):
+    #    """The name (or title) of the molecule
+    #    """
+    #    return self._name
         
-    @name.setter
-    def name(self, value):
-        """
-        Set the name of the Molecule
-
-        Parameters
-        ----------
-        value: str
-            The new name for the Molecule
-        """
-        if not(isinstance(value, str) or (value==None)):
-            raise Exception("Molecule names must be strings or None. Received {}".format(value))
-        self._name = value
+    #@name.setter
+    #def name(self, value):
+    #    """
+    #    Set the name of the Molecule
+    #
+    #    Parameters
+    #    ----------
+    #    value: str
+    #        The new name for the Molecule
+    #    """
+    #    if not(isinstance(value, str) or (value==None)):
+    #        raise Exception("Molecule names must be strings or None. Received {}".format(value))
+    #    self._name = value
 
     def add_atom(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None,
                  name=None):
@@ -2892,7 +2917,7 @@ class Molecule(FrozenMolecule):
 
     def add_bond_charge_virtual_site(self, atoms, distance, charge_increments=None,
                                      weights=None, epsilon=None, sigma=None,
-                                     rmin_half=None, name=None):
+                                     rmin_half=None, name=''):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
         Parameters
@@ -2911,8 +2936,8 @@ class Molecule(FrozenMolecule):
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
             Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=None
-            The name of this virtual site. Default is None.
+        name : string or None, default=''
+            The name of this virtual site. Default is ''.
         """
         
         vsite_index = self._add_bond_charge_virtual_site(atoms, distance, weights=weights, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
@@ -2941,8 +2966,8 @@ class Molecule(FrozenMolecule):
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
             Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=None
-            The name of this virtual site. Default is None.
+        name : string or None, default=''
+            The name of this virtual site. Default is ''.
         """
         
         #vsite_index = self._add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
@@ -2973,8 +2998,8 @@ class Molecule(FrozenMolecule):
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
             Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=None
-            The name of this virtual site. Default is None.
+        name : string or None, default=''
+            The name of this virtual site. Default is ''.
         """
         #vsite_index = self._add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         vsite_index = self._add_divalent_lone_pair_virtual_site(atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs)
@@ -3002,8 +3027,8 @@ class Molecule(FrozenMolecule):
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
             Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=None
-            The name of this virtual site. Default is None.
+        name : string or None, default=''
+            The name of this virtual site. Default is ''.
         """
         vsite_index = self._add_trivalent_lone_pair_virtual_site(atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         return vsite_index

@@ -111,12 +111,13 @@ class TestMolecule(TestCase):
         # The above runs into a problem with deuterium (fails name assertion)
         elements.remove(element.deuterium)
         for this_element in elements:
-            atom = Atom(this_element.atomic_number, formal_charge, is_aromatic)
+            atom = Atom(this_element.atomic_number, formal_charge, is_aromatic, name=this_element.name)
             assert atom.atomic_number == this_element.atomic_number
             assert atom.element == this_element
             assert atom.mass == this_element.mass
             assert atom.formal_charge == formal_charge
             assert atom.is_aromatic == is_aromatic
+            assert atom.name == this_element.name
 
     def test_create_molecule(self):
         """Test creation of molecule by adding molecules and bonds"""
@@ -133,9 +134,101 @@ class TestMolecule(TestCase):
         molecule.add_bond(C, H3, 1, False)
         molecule.add_bond(C, H4, 1, False)
 
+
+
+    def test_add_conformers(self):
+        """Test addition of conformers to a molecule"""
+        import numpy as np
+        from simtk import unit
+        # Define a methane molecule
+        molecule = Molecule()
+        molecule.name = 'methane'
+        C = molecule.add_atom(6, 0, False)
+        H1 = molecule.add_atom(1, 0, False)
+        H2 = molecule.add_atom(1, 0, False)
+        H3 = molecule.add_atom(1, 0, False)
+        H4 = molecule.add_atom(1, 0, False)
+        molecule.add_bond(C, H1, 1, False)
+        molecule.add_bond(C, H2, 1, False)
+        molecule.add_bond(C, H3, 1, False)
+        molecule.add_bond(C, H4, 1, False)
+
+        assert molecule.n_conformers == 0
+        # Add a conformer that should work
+        conf1 = unit.Quantity(np.array([[ 1., 2.,3.] ,[4. ,5. ,6.],[7., 8., 9.],
+                                        [10.,11.,12.],[13.,14.,15]]),
+                              unit.angstrom)
+        molecule.add_conformer(conf1)
+        assert molecule.n_conformers == 1
+
+        conf2 = unit.Quantity(np.array([[101., 102. ,103.], [104. ,105. ,106.], [107., 108., 109.],
+                                        [110.,111.,112.],   [113.,114.,115]]),
+                              unit.angstrom)
+        molecule.add_conformer(conf2)
+        assert molecule.n_conformers == 2
+
+        # Add conformers with too few coordinates
+        conf_missing_z = unit.Quantity(np.array([[101., 102. ,103.], [104. ,105. ,106.], [107., 108., 109.],
+                                        [110.,111.,112.],   [113.,114.]]),
+                                        unit.angstrom)
+        with self.assertRaises(Exception) as context:
+            molecule.add_conformer(conf_missing_z)
+
+        conf_too_few_atoms = unit.Quantity(np.array([[101., 102. ,103.], [104. ,105. ,106.], [107., 108., 109.],
+                                                     [110.,111.,112.]]),
+                                                     unit.angstrom)
+        with self.assertRaises(Exception) as context:
+            molecule.add_conformer(conf_too_few_atoms)
+
+
+        # Add a conformer with too many coordinates
+        conf_too_many_atoms = unit.Quantity(np.array([[101., 102., 103.], [104., 105., 106.], [107., 108., 109.],
+                                                      [110., 111., 112.], [113., 114., 115.], [116., 117., 118.]]),
+                                            unit.angstrom)
+        with self.assertRaises(Exception) as context:
+            molecule.add_conformer(conf_too_many_atoms)
+
+        # Add a conformer with no coordinates
+        conf_no_coordinates = unit.Quantity(np.array([]),
+                                            unit.angstrom)
+        with self.assertRaises(Exception) as context:
+            molecule.add_conformer(conf_no_coordinates)
+
+        # Add a conforer with units of nanometers
+        conf3 = unit.Quantity(np.array([[ 1., 2.,3.] ,[4. ,5. ,6.],[7., 8., 9.],
+                                        [10.,11.,12.],[13.,14.,15]]),
+                              unit.nanometer)
+        molecule.add_conformer(conf3)
+        assert molecule.n_conformers == 3
+        assert molecule.conformers[2][0][0] == 10. * unit.angstrom
+
+        # Add a conformer with the completely wrong units
+        # Add a conforer with units of nanometers
+        conf_nonsense_units = unit.Quantity(np.array([[ 1., 2.,3.] ,[4. ,5. ,6.],[7., 8., 9.],
+                                        [10.,11.,12.],[13.,14.,15]]),
+                              unit.joule)
+        with self.assertRaises(Exception) as context:
+            molecule.add_conformer(conf_nonsense_units)
+
+        # Add a conformer with no units
+        conf_unitless = np.array([[ 1., 2.,3.] ,[4. ,5. ,6.],[7., 8., 9.],
+                                  [10.,11.,12.],[13.,14.,15]])
+        with self.assertRaises(Exception) as context:
+            molecule.add_conformer(conf_unitless)
+
+
     def test_create_empty(self):
         """Test creation of an empty Molecule"""
         molecule = Molecule()
+
+    def test_molecule_name(self):
+        """Test creation of an empty Molecule"""
+        molecule1 = Molecule()
+        molecule1.name = None
+
+        molecule2 = Molecule()
+        molecule2.name = ''
+        assert molecule1.name == molecule2.name
 
     def test_create_copy(self):
         """Test creation of a Molecule from another Molecule"""
@@ -191,12 +284,15 @@ class TestMolecule(TestCase):
             for j in range(i, nmolecules):
                 assert (self.molecules[i] == self.molecules[j]) == (i == j)
 
-    def test_smiles_round_trip(self):
-        """Test SMILES round-trip"""
-        for molecule in self.molecules:
-            smiles = molecule.to_smiles()
-            molecule_copy = Molecule.from_smiles(smiles)
-            assert molecule == molecule_copy
+    # SMILES round trips should be tested in the toolkits, not here.
+    #def test_smiles_round_trip(self):
+    #    """Test SMILES round-trip"""
+    #    for molecule in self.molecules:
+    #        smiles = molecule.to_smiles()
+    #        molecule_copy = Molecule.from_smiles(smiles)
+    #        assert molecule == molecule_copy
+
+
 
     def test_to_networkx(self):
         """Test generation of NetworkX graphs"""
@@ -213,6 +309,12 @@ class TestMolecule(TestCase):
                 molecule_copy.add_bond(bond.atom1_index, bond.atom2_index, bond.bond_order, bond.is_aromatic,
                                        stereochemistry=bond.stereochemistry,
                                        fractional_bond_order=bond.fractional_bond_order)
+            # Try to add the final bond twice, which should raise an Exception
+            with self.assertRaises(Exception) as context:
+                molecule_copy.add_bond(bond.atom1_index, bond.atom2_index, bond.bond_order, bond.is_aromatic,
+                                       stereochemistry=bond.stereochemistry,
+                                       fractional_bond_order=bond.fractional_bond_order)
+
             assert molecule == molecule_copy
 
 
