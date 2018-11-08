@@ -11,7 +11,8 @@ DATE
 # Date: May 25, 2017
 # Date: Aug. 3, 2017
 # Date: Nov. 28, 2017
-Date: Feb. 27, 2018
+# Date: Feb. 27, 2018
+Date: Nov. 7, 2018
 
 # Author: please make sure all authors are on one line, only last line will be used
 AUTHOR
@@ -170,7 +171,7 @@ BOND
 # bonds to hydrogen
 [#6X4:1]-[#1:2]                 340.0  1.090   parm99 aliphatic CH
 [#6X3:1]-[#1:2]                 367.0  1.080   parm99 vinylic CH
-[#6X2:1]-[#1:2]                 340.0  1.090   parm99 CZ-HZ alkyne #C-H
+[#6X2:1]-[#1:2]                 400.0  1.056   parm99 CZ-HZ alkyne #C-H Correct by CCB 11/7/2018
 [#7:1]-[#1:2]                   434.0  1.010   parm99 any NH
 [#8:1]-[#1:2]                   553.0  0.960   parm99 any OH
 
