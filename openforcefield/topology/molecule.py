@@ -372,9 +372,11 @@ class Atom(Particle):
         #    yield bond
             
     @property
-    def bonded_to(self):
+    #def bonded_to(self):
+    def bonded_atoms(self):
+
         """
-        The list of ``Atom`` objects this atom is involved in
+        The list of ``Atom`` objects this atom is involved in bonds with
 
         """
         for bond in self._bonds:

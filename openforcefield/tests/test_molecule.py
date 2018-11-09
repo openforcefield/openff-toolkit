@@ -584,6 +584,7 @@ class TestMolecule(TestCase):
         molecule.name = name
         assert molecule.name == name
 
+    # TODO: This should be a toolkit test
     #@pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)
     @OpenEyeToolkitWrapper.requires_toolkit()
     def test_iupac_roundtrip(self):
@@ -600,6 +601,7 @@ class TestMolecule(TestCase):
             molecule_copy = Molecule.from_topology(topology)
             assert molecule == molecule_copy
 
+    # TODO: This should be a toolkit test
     def test_file_roundtrip(self):
         """Test to/from file"""
         import os
@@ -626,15 +628,16 @@ class TestMolecule(TestCase):
                 # NOTE: We can't read pdb files and expect chemical information to be preserved
                 os.unlink(iofile.name)
 
+    # Really big round-trip tests have now been added to test_toolkits and aren't necessary here
     #@pytest.mark.skipif(RDKIT_UNAVAILABLE, reason=_RDKIT_UNAVAILABLE_MESSAGE)
-    @RDKitToolkitWrapper.requires_toolkit()
-    def test_rdkit_roundtrip(self):
-        for molecule in self.molecules:
-            rdmol = molecule.to_rdkit()
-            molecule2 = Molecule.from_rdkit(rdmol)
-            assert_molecule_is_equal(molecule, molecule2, "Molecule.to_rdkit()/from_rdkit() round trip failed")
-            molecule3 = Molecule(rdmol)
-            assert_molecule_is_equal(molecule, molecule3, "Molecule(rdmol) constructor failed")
+    ##@RDKitToolkitWrapper.requires_toolkit()
+    #def test_rdkit_roundtrip(self):
+    #    for molecule in self.molecules:
+    #        rdmol = molecule.to_rdkit()
+    #        molecule2 = Molecule.from_rdkit(rdmol)
+    3        assert_molecule_is_equal(molecule, molecule2, "Molecule.to_rdkit()/from_rdkit() round trip failed")
+    #        molecule3 = Molecule(rdmol)
+    #        assert_molecule_is_equal(molecule, molecule3, "Molecule(rdmol) constructor failed")
 
     #@pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)
     @OpenEyeToolkitWrapper.requires_toolkit()

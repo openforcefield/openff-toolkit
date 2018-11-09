@@ -1390,10 +1390,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         #Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL^Chem.SANITIZE_SETAROMATICITY)
         #Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
         # If RDMol has a title save it
-        if rdmol.HasProp("_Name"):
-            mol.name == rdmol.GetProp("_Name")
+        # TODO: This was previously "_Name" -- Is there anything special about that tag?
+        if rdmol.HasProp("name"):
+            mol.name == rdmol.GetProp("name")
         else:
-            mol.name = None
+            mol.name = ""
 
         # Store all properties
         # TODO: Should Title or _Name be a special property?
@@ -1571,18 +1572,25 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 rdbond.SetBondType(_bondtypes[bond.bond_order])
                 rdbond.SetIsAromatic(False)
 
+
+        ## Debugging: We need to somehow clean up the molecule here to make it not crash below. Otherwise it will complain that we didn't call
+        #status = Chem.SanitizeMol(rdmol)
+        #if status == False:
+        #    raise Exception('Unable to sanitize molecule')
+        #rdmol.UpdatePropertyCache()
+        #rdmol = rdmol.AddHs(rdmol)
         # Assign bond stereochemistry
         for bond in molecule.bonds:
             if bond.stereochemistry:
                 # Determine neighbors
                 # TODO: This API needs to be created
-                n1 = [n.index for n in bond.atom1.bonded_atoms if n != bond.atom2][0]
-                n2 = [n.index for n in bond.atom2.bonded_atoms if n != bond.atom1][0]
+                n1 = [n.molecule_atom_index for n in bond.atom1.bonded_atoms if n != bond.atom2][0]
+                n2 = [n.molecule_atom_index for n in bond.atom2.bonded_atoms if n != bond.atom1][0]
                 # Get rdmol bonds
                 bond_atom1_index = molecule.atoms.index(bond.atom1)
                 bond_atom2_index = molecule.atoms.index(bond.atom2)
                 bond1 = rdmol.GetBondBetweenAtoms(map_atoms[n1], map_atoms[bond.atom1_index])
-                bond2 = rdmol.GetBondBetweenAtoms(map_atoms[bond_atom1_index], map_atoms[bon_.atom2_index])
+                bond2 = rdmol.GetBondBetweenAtoms(map_atoms[bond_atom1_index], map_atoms[bond.atom2_index])
                 bond3 = rdmol.GetBondBetweenAtoms(map_atoms[bond_atom2_index], map_atoms[n2])
                 # Set arbitrary stereochemistry
                 # Since this is relative, the first bond always goes up
@@ -1814,17 +1822,17 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # Write out molecule in SDF format
                 ## TODO: How should we handle multiple conformers?
                 self._rdkit_toolkit_wrapper.to_file(molecule, 'molecule.sdf', outfile_format='sdf')
-                os.system('ls')
-                os.system('cat molecule.sdf')
+                #os.system('ls')
+                #os.system('cat molecule.sdf')
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
                 # TODO: Add something cleaner than os.system
                 os.system("antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf yes -c {} -nc {}".format(charge_model, net_charge))
-                os.system('cat charged.mol2')
+                #os.system('cat charged.mol2')
 
                 # Write out just charges
                 os.system("antechamber -i charged.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc -cf charges.txt -pf yes")
-                os.system('cat charges.txt')
+                #os.system('cat charges.txt')
                 # Check to ensure charges were actually produced
                 if not os.path.exists('charges.txt'):
                     # TODO: copy files into local directory to aid debugging?
