@@ -407,7 +407,7 @@ class TestRDKitToolkitWrapper(TestCase):
 
         # Replacing with a simple molecule with stereochemistry
         input_smiles = 'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
-        expected_output_smiles = '[H]C([H])([H])C(=C(C([H])([H])C(C([H])([H])[H])(Cl)Br)F)F'
+        expected_output_smiles = '[H][C]([H])([H])/[C]([F])=[C](\[F])[C]([H])([H])[C@@]([Cl])([Br])[C]([H])([H])[H]'
         molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
         assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 

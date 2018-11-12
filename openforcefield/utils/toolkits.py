@@ -633,7 +633,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 
         ## TODO: Partial charges
         partial_charges = unit.Quantity(np.zeros(molecule.n_atoms, dtype=np.float),
-                                       unit=unit.elementary_charge)
+                                        unit=unit.elementary_charge)
         for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
             off_idx = map_atoms[oe_idx]
             charge = oe_atom.GetPartialCharge() * unit.elementary_charge
@@ -768,10 +768,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 oecoords = oechem.OEFloatArray(flat_coords)
                 oemol.NewConf(oecoords)
 
-
-        # Retain charges, if present
+            # Retain charges, if present
         if not(molecule._partial_charges is None):
-            #for off_atom, oe_atom in zip(molecule.atoms, oemol_atoms):
+            # for off_atom, oe_atom in zip(molecule.atoms, oemol_atoms):
             #    charge_unitless = molecule._partial_charges
 
             oe_indexed_charges = np.zeros((molecule.n_atoms), dtype=np.float)
@@ -1390,14 +1389,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         #Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL^Chem.SANITIZE_SETAROMATICITY)
         #Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
         # If RDMol has a title save it
-        # TODO: This was previously "_Name" -- Is there anything special about that tag?
-        if rdmol.HasProp("name"):
-            mol.name == rdmol.GetProp("name")
+        if rdmol.HasProp("_Name"):
+            #raise Exception('{}'.format(rdmol.GetProp('name')))
+            mol.name = rdmol.GetProp("_Name")
         else:
             mol.name = ""
 
         # Store all properties
-        # TODO: Should Title or _Name be a special property?
         # TODO: Should there be an API point for storing properties?
         properties = rdmol.GetPropsAsDict()
         mol._properties = properties
@@ -1419,8 +1417,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             atomic_number = rda.GetAtomicNum()
             formal_charge = rda.GetFormalCharge()
             is_aromatic = rda.GetIsAromatic()
-            if rda.HasProp('name'):
-                name = rda.GetProp('name')
+            if rda.HasProp('_Name'):
+                name = rda.GetProp('_Name')
             else:
                 name = ''
 
@@ -1463,8 +1461,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             if tag == Chem.BondStereo.STEREOTRANS or tag == Chem.BondStereo.STEREOE:
                 stereochemistry = 'E'
 
+            if rdb.HasProp("fractional_bond_order"):
+                fractional_bond_order = rdb.GetDoubleProp('fractional_bond_order')
+            else:
+                fractional_bond_order = None
             # create a new bond
-            bond_index = mol.add_bond(map_atoms[a1], map_atoms[a2], order, is_aromatic, stereochemistry=stereochemistry)
+            bond_index = mol.add_bond(map_atoms[a1], map_atoms[a2], order, is_aromatic,
+                                      stereochemistry=stereochemistry, fractional_bond_order=fractional_bond_order)
 
         # TODO: Save conformer(s), if present
         # If the rdmol has a conformer, store its coordinates
@@ -1477,8 +1480,23 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     atom_coords = conf.GetPositions()[rd_idx,:] * unit.angstrom
                     positions[off_idx,:] = atom_coords
                 mol.add_conformer(positions)
-            
 
+        partial_charges = unit.Quantity(np.zeros(mol.n_atoms, dtype=np.float),
+                                        unit=unit.elementary_charge)
+
+        any_atom_has_partial_charge = False
+        for rd_idx, rd_atom in enumerate(rdmol.GetAtoms()):
+            off_idx = map_atoms[rd_idx]
+            if rd_atom.HasProp("partial_charge"):
+                charge = rd_atom.GetDoubleProp("partial_charge") * unit.elementary_charge
+                partial_charges[off_idx] = charge
+                any_atom_has_partial_charge = True
+            else:
+                # If some other atoms had partial charges but this one doesn't, raise an Exception
+                if any_atom_has_partial_charge:
+                    raise Exception("Some atoms in rdmol have partial charges, but others do not.")
+
+            mol.set_partial_charges(partial_charges)
         return mol
 
     @staticmethod
@@ -1513,8 +1531,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Set name
         # TODO: What is the best practice for how this should be named?
-        if not(molecule.name == None):
-            rdmol.SetProp('name', molecule.name)
+        if not(molecule.name is None):
+            rdmol.SetProp('_Name', molecule.name)
 
         # TODO: Set other properties
         for name, value in molecule.properties.items():
@@ -1545,7 +1563,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             rdatom = Chem.Atom(atom.atomic_number)
             rdatom.SetFormalCharge(atom.formal_charge)
             rdatom.SetIsAromatic(atom.is_aromatic)
-            rdatom.SetProp('name',molecule.name)
+            rdatom.SetProp('_Name', atom.name)
 
             if atom.stereochemistry == 'S':
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
@@ -1563,7 +1581,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             rdatom2 = map_atoms[bond.atom2.molecule_atom_index]
             rdmol.AddBond(rdatom1, rdatom2)
             rdbond = rdmol.GetBondBetweenAtoms(rdatom1, rdatom2)
-
+            if not(bond.fractional_bond_order is None):
+                rdbond.SetDoubleProp("fractional_bond_order", bond.fractional_bond_order)
             # Assign bond type, which is based on order unless it is aromatic
             if bond.is_aromatic:
                 rdbond.SetBondType(_bondtypes[1.5])
@@ -1573,12 +1592,30 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 rdbond.SetIsAromatic(False)
 
 
-        ## Debugging: We need to somehow clean up the molecule here to make it not crash below. Otherwise it will complain that we didn't call
-        #status = Chem.SanitizeMol(rdmol)
-        #if status == False:
-        #    raise Exception('Unable to sanitize molecule')
-        #rdmol.UpdatePropertyCache()
-        #rdmol = rdmol.AddHs(rdmol)
+
+
+        '''
+        # Assign bond stereochemistry
+        # Based on https://gist.github.com/bannanc/810ccc4636b930a4522636baab1965a6
+        for bond in molecule.bonds:
+            if not(bond.stereochemistry):
+                continue
+            # Get openforcefield atoms that define cis/trans
+            off_a1 = bond.atom1
+            off_a2 = bond.atom2
+            off_n1 = off_a1.bonded_atoms[0]
+            off_n2 = off_a2.bonded_atoms[0]
+
+            # Get rdatoms that define cis/trans
+            rd_a1 = map_atoms[off_a1.molecule_atom_index]
+            rd_a2 = map_atoms[off_a2.molecule_atom_index]
+            rd_n1 = map_atoms[off_n1.molecule_atom_index]
+            rd_n2 = map_atoms[off_n2.molecule_atom_index]
+
+        '''
+
+        Chem.SanitizeMol(rdmol)
+
         # Assign bond stereochemistry
         for bond in molecule.bonds:
             if bond.stereochemistry:
@@ -1600,12 +1637,23 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 # Flip the stereochemistry if it is incorrect
                 # TODO: Clean up _CIPCode atom and bond properties
                 Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
-                if rdmol.GetProp('_CIPCode') != bond.stereochemistry:
+                #raise Exception('bond2.GetStereo() is {} It is type {}. My attempt is {}'.format(bond2.GetStereo(), type(bond2.GetStereo()), Chem.rdchem.BondStereo.STEREOZ == bond2.GetStereo()))
+                #raise Exception('OFF bond stereo is {}. rdmol props are {}. rdbond props are {}'.format(bond.stereochemistry, [i for i in rdmol.GetPropNames()], [dir(bondj) for bondj in rdmol.GetBonds()]))
+                if bond.stereochemistry == 'E':
+                    desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOE
+                elif bond.stereochemistry == 'Z':
+                    desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOZ
+                else:
+                    raise Exception("Unknown bond stereochemistry encountered in to_rdkit : {}".format(bond.stereochemistry))
+
+                if bond2.GetStereo() != desired_rdk_stereo_code:
+                #if rdmol.GetProp('_CIPCode') != bond.stereochemistry:
                     # Flip it
                     bond3.SetBondDir(Chem.BondDir.ENDUPRIGHT)
                     # Validate we have the right stereochemistry as a sanity check
                     Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
-                    if rdmol.GetProp('_CIPCode') != bond.stereochemistry:
+                    #if rdmol.GetProp('_CIPCode') != bond.stereochemistry:
+                    if bond2.GetStereo() != desired_rdk_stereo_code:
                         raise Exception('Programming error with assumptions about RDKit stereochemistry model')
 
         # Set coordinates if we have them
@@ -1616,6 +1664,17 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     (x,y,z) = conformer[index,:] / unit.angstrom
                     rdmol_conformer.SetAtomPosition(rd_idx, Geometry.Point3D(x,y,z))
                 rdmol.AddConformer(rdmol_conformer)
+
+        # Retain charges, if present
+        if not (molecule._partial_charges is None):
+
+            rdk_indexed_charges = np.zeros((molecule.n_atoms), dtype=np.float)
+            for off_idx, charge in enumerate(molecule._partial_charges):
+                rdk_idx = map_atoms[off_idx]
+                charge_unitless = charge / unit.elementary_charge
+                rdk_indexed_charges[rdk_idx] = charge_unitless
+            for rdk_idx, rdk_atom in enumerate(rdmol.GetAtoms()):
+                rdk_atom.SetDoubleProp('partial_charge', rdk_indexed_charges[rdk_idx])
 
         # Cleanup the rdmol
         rdmol.UpdatePropertyCache(strict=False)
