@@ -8,7 +8,6 @@ from .thermodynamics import ThermodynamicState
 
 from typing import List
 
-
 def determine_method_name(e_name, s_name):
     if e_name is None or ("other" in e_name.lower() and s_name is not None):
         return s_name

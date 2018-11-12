@@ -11,6 +11,7 @@ Authors
 -------
 * John D. Chodera <john.chodera@choderalab.org>
 * Levi N. Naden <levi.naden@choderalab.org>
+* Simon Boothroyd <simon.boothroyd@choderalab.org>
 
 TODO
 ----
@@ -20,14 +21,7 @@ TODO
 # GLOBAL IMPORTS
 # =============================================================================================
 
-import os
-import sys
-import time
-import copy
-import numpy as np
-
-from simtk import openmm, unit
-
+from simtk import unit
 from typing import Optional
 
 
@@ -100,56 +94,57 @@ class ThermodynamicState(object):
             value = value.in_units_of(unit.atmospheres)
         self._pressure = value
 
-    def is_compatible_with(self, state):
-        """
-        Determine whether another state is in the same thermodynamic ensemble (e.g. NVT, NPT).
-
-        Parameters
-        ----------
-        state : ThermodynamicState
-            Thermodynamic state whose compatibility is to be determined
-
-        Returns
-        -------
-        is_compatible : bool
-            True if 'state' is of the same ensemble (e.g. both NVT, both NPT), False otherwise
-
-        Examples
-        --------
-
-        Create NVT and NPT states.
-
-        >>> from simtk import unit
-        >>> from openmmtools import testsystems
-        >>> testsystem = testsystems.LennardJonesCluster()
-        >>> [system, positions] = [testsystem.system, testsystem.positions]
-        >>> nvt_state = ThermodynamicState(system=system, temperature=100.0*unit.kelvin)
-        >>> npt_state = ThermodynamicState(system=system, temperature=100.0*unit.kelvin, pressure=1.0*unit.atmospheres)
-
-        Test compatibility.
-
-        >>> test1 = nvt_state.is_compatible_with(nvt_state)
-        >>> test2 = nvt_state.is_compatible_with(npt_state)
-        >>> test3 = npt_state.is_compatible_with(nvt_state)
-        >>> test4 = npt_state.is_compatible_with(npt_state)
-
-        """
-
-        is_compatible = True
-
-        # Make sure systems have the same number of atoms.
-        if ((self.system != None) and (state.system != None)):
-            if (self.system.getNumParticles() != state.system.getNumParticles()):
-                is_compatible = False
-
-        # Make sure other terms are defined for both states.
-        # TODO: Use introspection to get list of parameters?
-        for parameter in ['temperature', 'pressure']:
-            if (parameter in dir(self)) is not (parameter in dir(state)):
-                # parameter is not shared by both states
-                is_compatible = False
-
-        return is_compatible
+    # TODO: This method seems to be in the wrong place?
+    # def is_compatible_with(self, state):
+    #     """
+    #     Determine whether another state is in the same thermodynamic ensemble (e.g. NVT, NPT).
+    #
+    #     Parameters
+    #     ----------
+    #     state : ThermodynamicState
+    #         Thermodynamic state whose compatibility is to be determined
+    #
+    #     Returns
+    #     -------
+    #     is_compatible : bool
+    #         True if 'state' is of the same ensemble (e.g. both NVT, both NPT), False otherwise
+    #
+    #     Examples
+    #     --------
+    #
+    #     Create NVT and NPT states.
+    #
+    #     >>> from simtk import unit
+    #     >>> from openmmtools import testsystems
+    #     >>> testsystem = testsystems.LennardJonesCluster()
+    #     >>> [system, positions] = [testsystem.system, testsystem.positions]
+    #     >>> nvt_state = ThermodynamicState(system=system, temperature=100.0*unit.kelvin)
+    #     >>> npt_state = ThermodynamicState(system=system, temperature=100.0*unit.kelvin, pressure=1.0*unit.atmospheres)
+    #
+    #     Test compatibility.
+    #
+    #     >>> test1 = nvt_state.is_compatible_with(nvt_state)
+    #     >>> test2 = nvt_state.is_compatible_with(npt_state)
+    #     >>> test3 = npt_state.is_compatible_with(nvt_state)
+    #     >>> test4 = npt_state.is_compatible_with(npt_state)
+    #
+    #     """
+    #
+    #     is_compatible = True
+    #
+    #     # Make sure systems have the same number of atoms.
+    #     if ((self.system != None) and (state.system != None)):
+    #         if (self.system.getNumParticles() != state.system.getNumParticles()):
+    #             is_compatible = False
+    #
+    #     # Make sure other terms are defined for both states.
+    #     # TODO: Use introspection to get list of parameters?
+    #     for parameter in ['temperature', 'pressure']:
+    #         if (parameter in dir(self)) is not (parameter in dir(state)):
+    #             # parameter is not shared by both states
+    #             is_compatible = False
+    #
+    #     return is_compatible
 
     def __repr__(self):
         """
