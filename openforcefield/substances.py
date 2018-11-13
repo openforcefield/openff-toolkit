@@ -14,8 +14,13 @@ Authors
 
 TODO
 ----
-* Add methods that construct real System and Topology objects for a specified system size, following the Mobley SolvationToolkit:
-  https://github.com/MobleyLab/SolvationToolkit
+* Add methods that construct real System and Topology objects for a specified system size,
+  following the Mobley SolvationToolkit:
+
+    https://github.com/MobleyLab/SolvationToolkit
+
+TODO: Should this be the responsibility of a Mixture? Would it be modular to have a class dedicated
+      to handling this?
 
 """
 # =============================================================================================
