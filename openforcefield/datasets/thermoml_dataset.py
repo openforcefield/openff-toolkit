@@ -26,7 +26,7 @@ import copy
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-from enum import Enum, unique
+from enum import IntFlag, unique
 
 from xml.etree import ElementTree
 
@@ -35,8 +35,9 @@ from openeye import oeiupac
 
 from simtk import unit
 
+from openforcefield.measurements import Source, MeasuredPhysicalProperty
 from openforcefield.thermodynamics import ThermodynamicState
-# from openforcefield.measurements import MeasuredPhysicalProperty
+from openforcefield.substances import Mixture
 
 from openforcefield.properties import PropertyPhase, PropertyType
 
@@ -44,25 +45,56 @@ from .property_dataset import PhysicalPropertyDataSet
 
 
 # =============================================================================================
+# Temporary Helper Methods
+# =============================================================================================
+
+def unit_from_thermoml_string(full_string):
+    """A non-ideal way to convert a string to a simtk.unit.Unit"""
+
+    full_string_split = full_string.split(',')
+
+    unit_string = full_string_split[1] if len(full_string_split) > 1 else ''
+    unit_string = unit_string.strip()
+
+    if unit_string == 'K':
+        return unit.kelvin
+    elif unit_string == 'kPa':
+        return unit.kilo * unit.pascal
+    elif unit_string == 'kg/m3':
+        return unit.kilogram / unit.meter**3
+    elif unit_string == 'mol/kg':
+        return unit.mole / unit.kilogram
+    elif unit_string == 'mol/dm3':
+        return unit.mole / unit.decimeter**3
+
+    return None
+
+# =============================================================================================
 # ThermoMLConstraintType
 # =============================================================================================
 
 @unique
-class ThermoMLConstraintType(Enum):
+class ThermoMLConstraintType(IntFlag):
 
-    Undefined = 0
-    Temperature = 1
-    Pressure = 2
+    Undefined            = 0x00
+    Temperature          = 0x01
+    Pressure             = 0x02
+    ComponentComposition = 0x04
+    SolventComposistion  = 0x08
 
     @staticmethod
-    def from_string(string):
+    def from_node(node):
 
         constraint_type = ThermoMLConstraintType.Undefined
 
-        if string == 'Temperature, K':
+        if node.tag.find('eTemperature') >= 0 and node.text == 'Temperature, K':
             constraint_type = ThermoMLConstraintType.Temperature
-        elif string == 'Pressure, kPa':
+        elif node.tag.find('ePressure') >= 0 and node.text == 'Pressure, kPa':
             constraint_type = ThermoMLConstraintType.Pressure
+        elif node.tag.find('eComponentComposition') >= 0 and node.text == 'Mole fraction':
+            constraint_type = ThermoMLConstraintType.ComponentComposition
+        elif node.tag.find('eSolventComposition') >= 0 and node.text == 'Mole fraction':
+            constraint_type = ThermoMLConstraintType.SolventComposistion
 
         return constraint_type
 
@@ -78,37 +110,55 @@ class ThermoMLConstraint:
         self.type = ThermoMLConstraintType.Undefined
         self.value = 0.0
 
+        self.solvents = []
+
+        # Describes which component the variable acts upon.
+        self.component_index = None
+
     @classmethod
-    def from_string(cls, constraint_type_string, unitless_value):
+    def from_node(cls, constraint_node, namespace):
+
+        type_node = constraint_node.find('.//ThermoML:ConstraintType/*', namespace)
+        value = float(constraint_node.find('./ThermoML:nConstraintValue', namespace).text)
+
+        unit_type = unit_from_thermoml_string(type_node.text)
+
+        component_index_node = constraint_node.find('./ThermoML:ConstraintID/ThermoML:RegNum/*', namespace)
 
         return_value = cls()
 
-        return_value.type = ThermoMLConstraintType.from_string(constraint_type_string)
-        return_value.value = cls.add_unit_to_value(return_value.type, unitless_value)
+        return_value.type = ThermoMLConstraintType.from_node(type_node)
+        return_value.value = unit.Quantity(value, unit_type)
+
+        if component_index_node is not None:
+            return_value.component_index = int(component_index_node.text)
+
+        if return_value.type is ThermoMLConstraintType.Undefined:
+
+            print('WARNING: An unsupported constraint exists upon the measurement (' +
+                  type_node.text + ') and will be skipped')
+
+        solvent_index_nodes = constraint_node.find('./ThermoML:Solvent//nOrgNum', namespace)
+
+        if solvent_index_nodes is not None:
+            for solvent_index_node in solvent_index_nodes:
+                return_value.solvents.append(int(solvent_index_node))
 
         return return_value
 
     @classmethod
-    def from_enum(cls, constraint_type_enum, unitless_value):
+    def from_variable(cls, variable, value):
 
         return_value = cls()
 
-        return_value.type = constraint_type_enum
-        return_value.value = cls.add_unit_to_value(return_value.type, unitless_value)
+        return_value.type = variable.type
+        return_value.component_index = variable.component_index
+
+        return_value.solvents.extend(variable.solvents)
+
+        return_value.value = value
 
         return return_value
-
-    @staticmethod
-    def add_unit_to_value(constraint_type, unitless_value):
-
-        value = unitless_value
-
-        if constraint_type is ThermoMLConstraintType.Temperature:
-            value *= unit.kelvin
-        elif constraint_type is ThermoMLConstraintType.Pressure:
-            value *= unit.kilo * unit.pascal
-
-        return value
 
 
 # =============================================================================================
@@ -122,6 +172,42 @@ class ThermoMLVariableDefinition:
         self.index = -1
         self.type = ThermoMLConstraintType.Undefined
 
+        self.solvents = []
+        self.default_unit = None
+
+        # Describes which component the variable acts upon.
+        self.component_index = None
+
+    @classmethod
+    def from_node(cls, variable_node, namespace):
+
+        index_node = variable_node.find('ThermoML:nVarNumber', namespace)
+        type_node = variable_node.find('.//ThermoML:VariableType/*', namespace)
+
+        component_index_node = variable_node.find('./ThermoML:VariableID/ThermoML:RegNum/*', namespace)
+
+        return_value = cls()
+
+        return_value.default_unit = unit_from_thermoml_string(type_node.text)
+
+        if component_index_node is not None:
+            return_value.component_index = int(component_index_node.text)
+
+        return_value.index = int(index_node.text)
+        return_value.type = ThermoMLConstraintType.from_node(type_node)
+
+        if return_value.type is ThermoMLConstraintType.Undefined:
+            print('WARNING: An unsupported variable exists upon the measurement (' +
+                  type_node.text + ') and will be skipped')
+
+        solvent_index_nodes = variable_node.find('./ThermoML:Solvent//nOrgNum', namespace)
+
+        if solvent_index_nodes is not None:
+            for solvent_index_node in solvent_index_nodes:
+                return_value.solvents.append(int(solvent_index_node))
+
+        return return_value
+
 
 # =============================================================================================
 # ThermoMLComponent
@@ -132,6 +218,8 @@ class ThermoMLComponent:
     def __init__(self):
 
         self.smiles = None
+        self.iupac_name = None
+
         self.index = -1
 
     # TODO: This functionality should really exist at the
@@ -151,6 +239,17 @@ class ThermoMLComponent:
             return None
 
         return oechem.OEMolToSmiles(temp_molecule)
+    @staticmethod
+    def iupac_from_smiles(smiles):
+
+        temp_molecule = oechem.OEMol()
+
+        parse_smiles_options = oechem.OEParseSmilesOptions(quiet=True)
+
+        if oechem.OEParseSmiles(temp_molecule, smiles, parse_smiles_options) is False:
+            return None
+
+        return oeiupac.OECreateIUPACName(temp_molecule)
 
     @classmethod
     def from_xml_node(cls, node, namespace):
@@ -185,6 +284,8 @@ class ThermoMLComponent:
         return_value = cls()
 
         return_value.smiles = identifier
+        return_value.iupac_name = cls.iupac_from_smiles(identifier)
+
         return_value.index = component_index
 
         return return_value
@@ -194,21 +295,20 @@ class ThermoMLComponent:
 # ThermoMLProperty
 # =============================================================================================
 
-class ThermoMLProperty(object):
+class ThermoMLProperty(MeasuredPhysicalProperty):
 
     def __init__(self):
 
+        super().__init__()
+
         self.index = None
-        self.phase = PropertyPhase.Undefined
 
-        self.type = PropertyType.Undefined
-        self.method_name = None
-
-        self.value = 0.0
-        self.uncertainty = 0.0
+        self.solvents = []
 
         self.property_uncertainty_definitions = {}
         self.combined_uncertainty_definitions = {}
+
+        self.default_unit = None
 
     @staticmethod
     def property_string_to_enum(string):
@@ -217,9 +317,6 @@ class ThermoMLProperty(object):
         return_value = PropertyType.Undefined
 
         property_string = string_split[0] if len(string_split) > 0 else None
-
-        # Do we actually need to check the unit here? Probably not..
-        # unit_string = string_split[0] if len(string_split) > 1 else None
 
         if property_string == 'Mass density':
             return_value = PropertyType.MassDensity
@@ -233,7 +330,7 @@ class ThermoMLProperty(object):
         phase = PropertyPhase.Undefined
 
         if (phase_string.find('liquid') and not phase_string.find('crystal')) or \
-                phase_string.find('fluid') or phase_string.find('solution'):
+            phase_string.find('fluid') or phase_string.find('solution'):
 
             phase = PropertyPhase.Liquid
 
@@ -319,7 +416,7 @@ class ThermoMLProperty(object):
 
         if method_name_node is None:
 
-            method_name_node = property_group_node.find('./eMethodName', namespace)
+            method_name_node = property_group_node.find('./ThermoML:eMethodName', namespace)
 
         if method_name_node is None or property_name_node is None:
 
@@ -339,6 +436,8 @@ class ThermoMLProperty(object):
         return_value.index = property_index
         return_value.phase = phase
 
+        return_value.default_unit = unit_from_thermoml_string(property_name_node.text)
+
         return_value.type = property_type
         return_value.method_name = method_name_node.text
 
@@ -352,14 +451,26 @@ class ThermoMLProperty(object):
         return_value.combined_uncertainty_definitions = combined_uncertainty_definitions
         return_value.property_uncertainty_definitions = property_uncertainty_definitions
 
+        solvent_index_nodes = node.find('./ThermoML:Solvent//nOrgNum', namespace)
+
+        if solvent_index_nodes is not None:
+            for solvent_index_node in solvent_index_nodes:
+                return_value.solvents.append(int(solvent_index_node))
+
         return return_value
 
     def set_value(self, value, uncertainty):
 
-        if self.type is PropertyType.MassDensity:
+        value_quantity = value
+        uncertainty_quantity = uncertainty
 
-            self.value = value / unit.meters ** 3 * unit.kilogram
-            self.uncertainty = uncertainty / unit.meters ** 3 * unit.kilogram
+        if not isinstance(value_quantity, unit.Quantity):
+            value_quantity = unit.Quantity(value, self.default_unit)
+        if not isinstance(uncertainty_quantity, unit.Quantity):
+            uncertainty_quantity = unit.Quantity(uncertainty, self.default_unit)
+
+        self.value = value_quantity
+        self.uncertainty = uncertainty_quantity
 
 
 # =============================================================================================
@@ -368,6 +479,8 @@ class ThermoMLProperty(object):
 
 class ThermoMLPropertyUncertainty:
 
+    # Reduce code redundancy by reusing this class for
+    # both property and combined uncertainties.
     prefix = ''
 
     def __init__(self):
@@ -474,23 +587,22 @@ class ThermoMLPureOrMixtureData:
         return properties
 
     @staticmethod
-    def extract_global_constraints(node, namespace):
+    def extract_global_constraints(node, namespace, components):
 
         constraint_nodes = node.findall('ThermoML:Constraint', namespace)
         constraints = {}
 
         for constraint_node in constraint_nodes:
 
-            type_node = constraint_node.find('.//ThermoML:ConstraintType/*', namespace)
-            value = float(constraint_node.find('./ThermoML:nConstraintValue', namespace).text)
-
-            constraint = ThermoMLConstraint.from_string(type_node.text, value)
+            constraint = ThermoMLConstraint.from_node(constraint_node, namespace)
 
             if constraint.type is ThermoMLConstraintType.Undefined:
+                return None
 
-                print('WARNING: An unsupported constraint exists upon the measurement (' +
-                      type_node.text + ') - the offending PureOrMixtureData entry will be skipped')
+            if constraint.component_index is not None and \
+               constraint.component_index not in components:
 
+                print('WARNING: A constraint exists upon a non-existent component and will be skipped.')
                 return None
 
             constraints[constraint.type] = constraint
@@ -498,26 +610,22 @@ class ThermoMLPureOrMixtureData:
         return constraints
 
     @staticmethod
-    def extract_variable_definitions(node, namespace):
+    def extract_variable_definitions(node, namespace, components):
 
         variable_nodes = node.findall('ThermoML:Variable', namespace)
         variables = {}
 
         for variable_node in variable_nodes:
 
-            index_node = variable_node.find('ThermoML:nVarNumber', namespace)
-            type_node = variable_node.find('.//ThermoML:VariableType/*', namespace)
-
-            variable = ThermoMLVariableDefinition()
-
-            variable.index = int(index_node.text)
-            variable.type = ThermoMLConstraintType.from_string(type_node.text)
+            variable = ThermoMLVariableDefinition.from_node(variable_node, namespace)
 
             if variable.type is ThermoMLConstraintType.Undefined:
+                continue
 
-                print('WARNING: An unsupported variable exists upon the measurement (' +
-                      type_node.text + ') and will be skipped')
+            if variable.component_index is not None and \
+               variable.component_index not in components:
 
+                print('WARNING: A constraint exists upon a non-existent component and will be skipped.')
                 continue
 
             variables[variable.index] = variable
@@ -569,10 +677,76 @@ class ThermoMLPureOrMixtureData:
         return expanded_uncertainty / divisor
 
     @staticmethod
+    def build_mixture(measured_property, constraints, components):
+
+        mixture = Mixture()
+
+        # Handle the easy case where the system has to
+        # be pure
+        if len(components) == 1:
+
+            mixture.add_component(next(iter(components.values())).iupac_name, 1.0)
+            return mixture
+
+        mol_fractions = {}
+
+        number_of_constraints = 0
+        total_mol_fraction = 0.0
+
+        for constraint_type in constraints:
+
+            constraint = constraints[constraint_type]
+
+            if constraint.type != ThermoMLConstraintType.ComponentComposition and \
+               constraint.type != ThermoMLConstraintType.SolventComposistion:
+
+                continue
+
+            mol_fractions[constraint.component_index] = constraint.value / unit.dimensionless
+
+            total_mol_fraction += mol_fractions[constraint.component_index]
+            number_of_constraints += 1
+
+        if number_of_constraints == len(components) and \
+            abs(total_mol_fraction - 1.0) > 0.00001:
+
+            raise RuntimeError('The total mol fraction does not add to 1.0')
+
+        elif number_of_constraints > len(components):
+            raise RuntimeError('There are more concentration constraints than componenents.')
+
+        elif number_of_constraints < len(components) - 1:
+            raise RuntimeError('There are too many unknown mole fractions.')
+
+        elif number_of_constraints == len(components) - 1:
+
+            for component_index in components:
+
+                if component_index in mol_fractions:
+                    continue
+
+                mol_fractions[component_index] = 1.0 - total_mol_fraction
+
+        else:
+
+            raise RuntimeError('Unexpected edge case..')
+
+        for component_index in components:
+
+            if mol_fractions[component_index] < 0.00001:
+                continue
+
+            component = components[component_index]
+            mixture.add_component(component.iupac_name, mol_fractions[component_index])
+
+        return mixture
+
+    @staticmethod
     def extract_measured_properties(node, namespace,
                                     property_definitions,
                                     global_constraints,
-                                    variable_definitions):
+                                    variable_definitions,
+                                    components):
 
         value_nodes = node.findall('ThermoML:NumValues', namespace)
 
@@ -600,15 +774,12 @@ class ThermoMLPureOrMixtureData:
                     break
 
                 variable_definition = variable_definitions[variable_index]
+
                 variable_value = float(variable_node.find('ThermoML:nVarValue', namespace).text)
-
-                if variable_definition.type in constraints:
-
-                    raise RuntimeError('A ThermoML:NumValues entry attempts to define the value of ' +
-                                       variable_definition.type + ' twice')
+                value_as_quantity = unit.Quantity(variable_value, variable_definition.default_unit)
 
                 "Convert the 'variable' into a full constraint entry"
-                constraint = ThermoMLConstraint.from_enum(variable_definition.type, variable_value)
+                constraint = ThermoMLConstraint.from_variable(variable_definition, value_as_quantity)
                 constraints[constraint.type] = constraint
 
             if skip_entry:
@@ -647,11 +818,18 @@ class ThermoMLPureOrMixtureData:
                     continue
 
                 measured_property = copy.deepcopy(property_definition)
+                measured_property.thermodynamic_state = thermodynamic_state
 
                 property_value_node = property_node.find('.//ThermoML:nPropValue', namespace)
 
                 measured_property.set_value(float(property_value_node.text),
                                             float(uncertainty))
+
+                mixture = ThermoMLPureOrMixtureData.build_mixture(measured_property,
+                                                                  constraints,
+                                                                  components)
+
+                measured_property.substance = mixture
 
                 measured_properties.append(measured_property)
 
@@ -688,24 +866,34 @@ class ThermoMLPureOrMixtureData:
             return None
 
         # Extract any constraints on the system e.g pressure, temperature
-        global_constraints = ThermoMLPureOrMixtureData.extract_global_constraints(node, namespace)
+        global_constraints = ThermoMLPureOrMixtureData.extract_global_constraints(node, namespace, components)
 
         if global_constraints is None:
             return None
 
         # Extract any variables set on the system e.g pressure, temperature
         # Only the definition entry and not the value of the variable is extracted
-        variable_definitions = ThermoMLPureOrMixtureData.extract_variable_definitions(node, namespace)
+        variable_definitions = ThermoMLPureOrMixtureData.extract_variable_definitions(node, namespace, components)
 
         if len(global_constraints) == 0 and len(variable_definitions) == 0:
 
             print('WARNING: A PureOrMixtureData entry with no constraints was skipped.')
             return None
 
+        used_components = {}
+
+        for component_index in components:
+
+            if component_index not in component_indices:
+                continue
+
+            used_components[component_index] = components[component_index]
+
         measured_properties = ThermoMLPureOrMixtureData.extract_measured_properties(node, namespace,
                                                                                     property_definitions,
                                                                                     global_constraints,
-                                                                                    variable_definitions)
+                                                                                    variable_definitions,
+                                                                                    used_components)
 
         # TODO: Construct thermodynamic state.
         # TODO: Construct construct Mixture... Need to speak to Levi about challenges..
@@ -751,28 +939,42 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
         # E.g https://trc.nist.gov/ThermoML/10.1016/j.jct.2016.12.009.xml
         doi_url = 'https://trc.nist.gov/ThermoML/' + doi + '.xml'
 
-        return cls.from_url(doi_url)
+        return cls.from_url(doi_url, Source(doi=doi))
 
     @classmethod
-    def from_url(cls, url):
+    def from_url(cls, url, source=None):
 
-        # TODO : Load file from URL
-        data = ''
+        if source is None:
+            source = Source(reference=url)
 
         try:
             with urlopen(url) as response:
 
-                data = response.read()
+                return cls.from_xml(response.read(), source)
 
         except HTTPError as error:
 
             print('WARNING: No ThermoML file could not be found at ' + url)
             return None
 
-        return cls.from_xml(data)
+    @classmethod
+    def from_file(cls, path):
+
+        source = Source(reference=path)
+
+        try:
+
+            with open(path) as file:
+
+                return ThermoMLDataSet.from_xml(file.read(), source)
+
+        except FileNotFoundError as error:
+
+            print('WARNING: No ThermoML file could not be found at ' + path)
+            return None
 
     @classmethod
-    def from_xml(cls, xml):
+    def from_xml(cls, xml, source):
 
         root_node = ElementTree.fromstring(xml)
 
@@ -810,5 +1012,11 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
                 continue
 
             return_value._measured_properties.extend(properties)
+
+        for measured_property in return_value._measured_properties:
+            # Set the source of the data.
+            measured_property.source = source
+
+        return_value.sources.append(source)
 
         return return_value

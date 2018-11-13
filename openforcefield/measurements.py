@@ -21,7 +21,8 @@ TODO
 
 import re
 import numpy as np
-from openforcefield import substances, thermodynamics
+
+from openforcefield import substances, thermodynamics, properties
 
 from abc import ABC, abstractproperty, abstractmethod
 
@@ -69,88 +70,6 @@ def cast_thermoml_string(thermoml_string: str) -> str:
 # MEASURED PHYSICAL PROPERTY CLASS
 # =============================================================================================
 
-class MeasuredPhysicalProperty(object):
-    """
-    A Measured Physical Property is the implementation of property measured and reported in the ThermoML
-    database. It is the combination of a :class:``MeasurementMethod`` method, a :class:``ThermodynamicState``,
-    as :class:``Substance``, and then a measured value and uncertainty.
-
-
-    Implement the :func:`measurement_method` to return the
-
-    Parameters
-    ----------
-    substance : Substance
-        Material/Substance/Chemical that the property was measured for.
-    thermodynamic_state : ThermodynamicState
-        Physical thermodynamic state with temperature and pressure the property was measured at.
-    measurement_method : MeasurementMethod
-        Observable and the method used to measure it. This object must be fully implemented
-    value : simtk.unit.Quantity, float, or None
-        Value the observable was measured at.
-        If None, then this is an unobserved value and just a placeholder (e.g. if its not recorded in database)
-        If a float, then the default units for the ThermoML database are assumed
-    uncertainty : simtk.unit.Quantity, float, or None
-        Uncertainty in the observed measurement
-        If None, then it is assumed uncertainty was unreported for this observable
-        If a float, then the default units for the ThermoML database are assumed
-    source : Source or None, optional, default None
-        Reference from which the measurement was taken,
-    """
-    def __init__(self, substance: substances.Substance,
-                 thermodynamic_state: thermodynamics.ThermodynamicState,
-                 measurement_method: MeasurementMethod,
-                 value: Optional[Union[float, unit.Quantity]]=None,
-                 uncertainty: Optional[Union[float, unit.Quantity]]=None,
-                 source: Optional[Source]=None):
-        self.substance = substance
-        self._thermodynamic_state = thermodynamic_state
-        self.value = value
-        self.uncertainty = uncertainty
-        self._measurement_method = measurement_method
-        self._source = source
-
-    @property
-    def temperature(self) -> unit.Quantity:
-        """Temperature which the property was measured at"""
-        return self._thermodynamic_state.temperature
-
-    @property
-    def pressure(self) -> unit.Quantity:
-        """Pressure the property was measured at"""
-        return self._thermodynamic_state.pressure
-
-    @property
-    def measurement_method(self) -> MeasurementMethod:
-        """The method used to measure this physical property"""
-        return self._measurement_method
-
-    @measurement_method.setter
-    def measurement_method(self, value):
-        raise ValueError("measurement_method is not a property which can be set, only implemented as subclass")
-
-    @property
-    def doi(self) -> Union[str, None]:
-        try:
-            self._source.doi
-        except AttributeError:
-            return None
-
-    @property
-    def reference(self) -> Union[str, None]:
-        return self._fetch_source('reference')
-
-    @property
-    def source(self):
-        return self._source
-
-    def _fetch_source(self, source_attr):
-        try:
-            return getattr(self._source, source_attr)
-        except AttributeError:
-            return None
-
-
 class Source(object):
     """
     Container class for DOI and reference for a given observable
@@ -169,9 +88,120 @@ class Source(object):
     """
     def __init__(self, doi: Optional[str]=None, reference: Optional[str]=None):
         if doi is None and reference is None:
-            raise ValueError("Must set either doi or reference")
+            raise ValueError("Must set either a doi and / or a reference")
         self.doi = doi
         self.reference = reference
+
+
+class MeasuredPhysicalProperty(object):
+    """
+    A Measured Physical Property is the implementation of property measured and reported in the ThermoML
+    database. It is the combination of a :class:``MeasurementMethod`` method, a :class:``ThermodynamicState``,
+    as :class:``Substance``, and then a measured value and uncertainty.
+
+
+    Implement the :func:`measurement_method` to return the
+
+    Parameters
+    ----------
+    substance : Substance
+        Material/Substance/Chemical that the property was measured for.
+    thermodynamic_state : ThermodynamicState
+        Physical thermodynamic state with temperature and pressure the property was measured at.
+    measurement_method : MeasurementMethod
+        Observable and the method used to measure it. This object must be fully implemented
+    property_type : PropertyType
+        The type of property (e.g density) that was measured.
+    property_phase : PropertyType
+        The phase in which the property was measured.
+    value : simtk.unit.Quantity, float, or None
+        Value the observable was measured at.
+        If None, then this is an unobserved value and just a placeholder (e.g. if its not recorded in database)
+        If a float, then the default units for the ThermoML database are assumed
+    uncertainty : simtk.unit.Quantity, float, or None
+        Uncertainty in the observed measurement
+        If None, then it is assumed uncertainty was unreported for this observable
+        If a float, then the default units for the ThermoML database are assumed
+    source : Source or None, optional, default None
+        Reference from which the measurement was taken,
+    """
+    def __init__(self, substance: Optional[substances.Substance] = None,
+                 thermodynamic_state: Optional[thermodynamics.ThermodynamicState] = None,
+                 # measurement_method: MeasurementMethod, TODO: Why do measurement methods implement calc methods?
+                 property_type: Optional[properties.PropertyType] = properties.PropertyType.Undefined,
+                 property_phase: Optional[properties.PropertyPhase] = properties.PropertyPhase.Undefined,
+                 value: Optional[Union[float, unit.Quantity]]=None,
+                 uncertainty: Optional[Union[float, unit.Quantity]]=None,
+                 source: Optional[Source]=None):
+
+        self._thermodynamic_state = thermodynamic_state
+
+        # self._measurement_method = measurement_method
+        self.method_name = None
+
+        self.type = property_type
+        self.phase = property_phase
+
+        self.substance = substance
+
+        self.value = value
+        self.uncertainty = uncertainty
+
+        self._source = source
+
+    @property
+    def temperature(self) -> unit.Quantity:
+        """The temperature which the property was measured at"""
+        return None if self._thermodynamic_state is None else self._thermodynamic_state.temperature
+
+    @property
+    def pressure(self) -> unit.Quantity:
+        """The pressure which the property was measured at"""
+        return None if self._thermodynamic_state is None else self._thermodynamic_state.pressure
+
+    @property
+    def thermodynamic_state(self) -> thermodynamics.ThermodynamicState:
+        """Get the thermodynamic state which the property was measured at"""
+        return self._thermodynamic_state
+
+    @thermodynamic_state.setter
+    def thermodynamic_state(self, thermodynamic_state):
+        """Set the thermodynamic state which the property was measured at"""
+        self._thermodynamic_state = thermodynamic_state
+
+    # @property
+    # def measurement_method(self) -> MeasurementMethod:
+    #     """The method used to measure this physical property"""
+    #     return self._measurement_method
+    #
+    # @measurement_method.setter
+    # def measurement_method(self, value):
+    #     raise ValueError("measurement_method is not a property which can be set, only implemented as subclass")
+
+    @property
+    def doi(self) -> Union[str, None]:
+        """Get the doi of the article in which this property was published"""
+        return None if self._source is None else self._source.doi
+
+    @property
+    def reference(self) -> Union[str, None]:
+        """Get a reference to the location of where this property was published"""
+        return None if self._source is None else self._source.reference
+
+    @property
+    def source(self):
+        """Get the source of this published property"""
+        return self._source
+
+    @source.setter
+    def source(self, source):
+        """Set the source of this published property"""
+        self._source = source
+
+    def set_value(self, value, uncertainty):
+        """Set the value and uncertainty of this property"""
+        self.value = value
+        self.uncertainty = uncertainty
 
 
 # =============================================================================================

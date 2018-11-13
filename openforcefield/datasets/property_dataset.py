@@ -40,6 +40,7 @@ class PhysicalPropertyDataSet(object):
     def __init__(self):
 
         self._measured_properties = []
+        self.sources = []
 
     @property
     def measured_properties(self):

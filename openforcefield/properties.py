@@ -16,7 +16,7 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-from enum import Enum, unique
+from enum import IntFlag, unique
 
 
 # =============================================================================================
@@ -24,10 +24,10 @@ from enum import Enum, unique
 # =============================================================================================
 
 @unique
-class PropertyType(Enum):
+class PropertyType(IntFlag):
 
-    Undefined = 0
-    MassDensity = 1
+    Undefined   = 0x00
+    MassDensity = 0x01
 
     def __str__(self):
         return self.name
@@ -41,12 +41,12 @@ class PropertyType(Enum):
 # =============================================================================================
 
 @unique
-class PropertyPhase(Enum):
+class PropertyPhase(IntFlag):
 
-    Undefined = 0
-    Solid = 1
-    Liquid = 2
-    Gas = 4
+    Undefined = 0x00
+    Solid     = 0x01
+    Liquid    = 0x02
+    Gas       = 0x04
 
     def __str__(self):
         return self.name
