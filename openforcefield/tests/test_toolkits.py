@@ -47,15 +47,6 @@ class TestOpenEyeToolkitWrapper(TestCase):
         """Test OpenEyeToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
 
-        # Pass in an invalid SMILES, which lacks stereochemistry about a central atom
-        smiles = '[H]C(F)(Cl)Br'
-        with self.assertRaises(Exception) as context:
-            molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
-
-        # Pass in a version of the above SMILES with defined stereochemistry
-        smiles = '[H][C@@](F)(Cl)Br'
-        molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
-
 
         # This differs from RDKit's SMILES due to different canonicalization schemes
 
@@ -64,6 +55,27 @@ class TestOpenEyeToolkitWrapper(TestCase):
                                         toolkit_registry=toolkit_wrapper)
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    def test_smiles_missing_stereochemistry(self):
+        """Test OpenEyeToolkitWrapper to_smiles() and from_smiles()"""
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+
+        unspec_chiral_smiles = "C\C(F)=C(/F)CC(C)(Cl)Br"
+        spec_chiral_smiles = "C\C(F)=C(/F)C[C@@](C)(Cl)Br"
+        unspec_db_smiles = "CC(F)=C(F)C[C@@](C)(Cl)Br"
+        spec_db_smiles = "C\C(F)=C(/F)C[C@@](C)(Cl)Br"
+
+        for title, smiles, raises_exception in [("unspec_chiral_smiles", unspec_chiral_smiles, True),
+                                                ("spec_chiral_smiles", spec_chiral_smiles, False),
+                                                ("unspec_db_smiles", unspec_db_smiles, True),
+                                                ("spec_db_smiles", spec_db_smiles, False),
+                                                ]:
+            if raises_exception:
+                with self.assertRaises(Exception) as context:
+                    molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+            else:
+                molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
 
     # TODO: test_smiles_round_trip
 
@@ -192,6 +204,51 @@ class TestOpenEyeToolkitWrapper(TestCase):
         ## Check that fractional bond orders are preserved
         #for bond1, bond2 in zip(molecule2.bonds, molecule3.bonds):
         #    assert_almost_equal(bond1.fractional_bond_order, bond2.fractional_bond_order, decimal=6)
+
+    @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    def test_to_from_openeye_core_props_unset(self):
+        """Test OpenEyeToolkitWrapper to_openeye() and from_openeye() when given empty core property fields"""
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+
+        # Replacing with a simple molecule with stereochemistry
+        input_smiles = 'C\C(F)=C(/F)C[C@](C)(Cl)Br'
+        expected_output_smiles = '[H]C([H])([H])C(=C(C([H])([H])C(C([H])([H])[H])(Cl)Br)F)F'
+        molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
+        assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
+
+        # Ensure one atom has its stereochemistry specified
+        central_carbon_stereo_specified = False
+        for atom in molecule.atoms:
+            if (atom.atomic_number == 6) and atom.stereochemistry == "R":
+                central_carbon_stereo_specified = True
+        assert central_carbon_stereo_specified
+
+        # Do a first conversion to/from oemol
+        rdmol = molecule.to_rdkit()
+        molecule2 = Molecule.from_rdkit(rdmol)
+
+        # Test that properties survived first conversion
+        assert molecule.name == molecule2.name
+        # NOTE: This expects the same indexing scheme in the original and new molecule
+
+        central_carbon_stereo_specified = False
+        for atom in molecule2.atoms:
+            if (atom.atomic_number == 6) and atom.stereochemistry == "R":
+                central_carbon_stereo_specified = True
+        assert central_carbon_stereo_specified
+        for atom1, atom2 in zip(molecule.atoms, molecule2.atoms):
+            assert atom1.to_dict() == atom2.to_dict()
+        for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
+            assert bond1.to_dict() == bond2.to_dict()
+        assert (molecule._conformers == None)
+        assert (molecule2._conformers == None)
+        for pc1, pc2 in zip(molecule._partial_charges, molecule2._partial_charges):
+            pc1_ul = pc1 / unit.elementary_charge
+            pc2_ul = pc2 / unit.elementary_charge
+            assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
+        assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
+
+
 
     @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_get_sdf_coordinates(self):
@@ -370,6 +427,27 @@ class TestRDKitToolkitWrapper(TestCase):
         #print(smiles, smiles2)
         assert smiles == smiles2
 
+    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    def test_smiles_missing_stereochemistry(self):
+        """Test RDKitToolkitWrapper to_smiles() and from_smiles() when given ambiguous stereochemistry"""
+        toolkit_wrapper = RDKitToolkitWrapper()
+
+        unspec_chiral_smiles = "C\C(F)=C(/F)CC(C)(Cl)Br"
+        spec_chiral_smiles = "C\C(F)=C(/F)C[C@@](C)(Cl)Br"
+        unspec_db_smiles = "CC(F)=C(F)C[C@@](C)(Cl)Br"
+        spec_db_smiles = "C\C(F)=C(/F)C[C@@](C)(Cl)Br"
+
+        for title, smiles, raises_exception in [("unspec_chiral_smiles", unspec_chiral_smiles, True),
+                                                ("spec_chiral_smiles", spec_chiral_smiles, False),
+                                                ("unspec_db_smiles", unspec_db_smiles, True),
+                                                ("spec_db_smiles", spec_db_smiles, False),
+                                                ]:
+            if raises_exception:
+                with self.assertRaises(Exception) as context:
+                    molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+            else:
+                molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+
     # TODO: test_smiles_round_trip
 
     @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
@@ -400,9 +478,9 @@ class TestRDKitToolkitWrapper(TestCase):
 
     # TODO: Make a close copy of this test, but with core props unset, and make sure they are equal to the default value both before and after toolkit conversion
 
-    @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_to_from_rdkit_core_props_filled(self):
-        """Test OpenEyeToolkitWrapper to_openeye() and from_openeye()"""
+        """Test RDKitToolkitWrapper to_rdkit() and from_rdkit() when given populated core property fields"""
         toolkit_wrapper = RDKitToolkitWrapper()
 
         # Replacing with a simple molecule with stereochemistry
@@ -466,6 +544,49 @@ class TestRDKitToolkitWrapper(TestCase):
             assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
         # TODO: This should be its own test
+
+    @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    def test_to_from_rdkit_core_props_unset(self):
+        """Test RDKitToolkitWrapper to_rdkit() and from_rdkit() when given empty core property fields"""
+        toolkit_wrapper = RDKitToolkitWrapper()
+
+        # Replacing with a simple molecule with stereochemistry
+        input_smiles = 'C\C(F)=C(/F)C[C@](C)(Cl)Br'
+        expected_output_smiles = '[H][C]([H])([H])/[C]([F])=[C](\[F])[C]([H])([H])[C@]([Cl])([Br])[C]([H])([H])[H]'
+        molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
+        assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
+
+        # Ensure one atom has its stereochemistry specified
+        central_carbon_stereo_specified = False
+        for atom in molecule.atoms:
+            if (atom.atomic_number == 6) and atom.stereochemistry == "R":
+                central_carbon_stereo_specified = True
+        assert central_carbon_stereo_specified
+
+        # Do a first conversion to/from oemol
+        rdmol = molecule.to_rdkit()
+        molecule2 = Molecule.from_rdkit(rdmol)
+
+        # Test that properties survived first conversion
+        assert molecule.name == molecule2.name
+        # NOTE: This expects the same indexing scheme in the original and new molecule
+
+        central_carbon_stereo_specified = False
+        for atom in molecule2.atoms:
+            if (atom.atomic_number == 6) and atom.stereochemistry == "R":
+                central_carbon_stereo_specified = True
+        assert central_carbon_stereo_specified
+        for atom1, atom2 in zip(molecule.atoms, molecule2.atoms):
+            assert atom1.to_dict() == atom2.to_dict()
+        for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
+            assert bond1.to_dict() == bond2.to_dict()
+        assert (molecule._conformers == None)
+        assert (molecule2._conformers == None)
+        for pc1, pc2 in zip(molecule._partial_charges, molecule2._partial_charges):
+            pc1_ul = pc1 / unit.elementary_charge
+            pc2_ul = pc2 / unit.elementary_charge
+            assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
+        assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
 
     #@pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')

@@ -186,8 +186,8 @@ class Atom(Particle):
 
     """
     ## From Jeff: This version of the API will push forward with immutable atoms and molecules
-    def __init__(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None,
-                 name=None, molecule=None):
+    def __init__(self, atomic_number, formal_charge, is_aromatic,
+                 name=None, molecule=None, stereochemistry=None):
         """
         Create an immutable Atom object.
 
@@ -248,6 +248,7 @@ class Atom(Particle):
         """
 
         self._bonds.append(bond)
+        #self._stereochemistry = None
         
 
     def add_virtual_site(self, vsite):
@@ -309,7 +310,18 @@ class Atom(Particle):
         """
         return self._stereochemistry
 
-    
+    @stereochemistry.setter
+    def stereochemistry(self, value):
+        """Set the atoms stereochemistry
+        Parameters
+        ----------
+        value : str
+            The stereochemistry around this atom, allowed values are "CW", "CCW", or None,
+        """
+
+        #if (value != 'CW') and (value != 'CCW') and not(value is None):
+        #    raise Exception("Atom stereochemistry setter expected 'CW', 'CCW', or None. Received {} (type {})".format(value, type(value)))
+        self._stereochemistry = value
     
     @property
     def element(self):
@@ -974,13 +986,71 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         """The out_of_plane_angle parameter of the virtual site"""
         return self._out_of_plane_angle
 
-    
 
-        
-        
-#=============================================================================================
+# =============================================================================================
+# Bond Stereochemistry
+# =============================================================================================
+
+#class BondStereochemistry(Serializable):
+    #"""
+    #Bond stereochemistry representation
+    #"""
+    #def __init__(self, stereo_type, neighbor1, neighbor2):
+    #    """
+    #
+    #    Parameters
+    #    ----------
+    #    stereo_type
+    #    neighbor1
+    #    neighbor2
+    #    """
+    #    assert isinstance(neighbor1, Atom)
+    #    assert isinstance(neighbor2, Atom)
+    #    # Use stereo_type @setter to check stereo type is a permitted value
+    #    self.stereo_type = stereo_type
+    #    self._neighbor1 = neighbor1
+    #    self._neighbor2 = neighbor2
+
+    #def to_dict(self):
+    #    bs_dict = OrderedDict()
+    #    bs_dict['stereo_type'] = self._stereo_type
+    #    bs_dict['neighbor1_index'] = self._neighbor1.molecule_atom_index
+    #    bs_dict['neighbor2_index'] = self._neighbor2.molecule_atom_index
+    #    return bs_dict
+
+    #classmethod
+    #def from_dict(cls, molecule, bs_dict):
+    #    neighbor1 = molecule.atoms[bs_dict['neighbor1_index']]
+    #    neighbor2 = molecule.atoms[bs_dict['neighbor2_index']]
+    #    return cls.__init__(bs_dict['stereo_type'], neighbor1, neighbor2)
+
+    #@property
+    #def stereo_type(self):
+    #    return self._stereo_type
+
+    #@stereo_type.setter
+    #def stereo_type(self, value):
+    #    assert (value == 'CIS') or (value == 'TRANS') or (value is None)
+    #    self._stereo_type = value
+
+    #@property
+    #def neighbor1(self):
+    #    return self._neighbor1
+
+    #@property
+    #def neighbor2(self):
+    #    return self._neighbor2
+
+    #@property
+    #def neighbors(self):
+    #    return (self._neighbor1, self._neighbor2)
+
+
+
+# =============================================================================================
 # Bond
-#=============================================================================================
+# =============================================================================================
+
 
 class Bond(Serializable):
     """
@@ -1013,19 +1083,13 @@ class Bond(Serializable):
         assert type(atom1) == Atom
         assert type(atom2) == Atom
         ## From Jeff: For now, I'm assuming each atom can only belong to one molecule
-        # TODO: The molecule equality test just tests for identical SMILESes right now,
-        # need to implement test for object identity
         assert atom1.molecule is atom2.molecule
         assert isinstance(atom1.molecule, FrozenMolecule)
-        #if molecule == None:
+        #if not(stereochemistry is None):
+        #    assert isinstance(stereochemistry, BondStereochemistry)
         self._molecule = atom1.molecule
-        ## From Jeff: Don't do this -- always perceive the molecule from the Atoms
-        #elif type(molecule) == openforcefield.topology.molecule.Molecule:
-        #    self._molecule = molecule
-        #else:
-        #    raise Exception("Bond created between atoms without a molecule specified, and no molecule provided")
-            ## TODO: It might be interesting to think about some sort of architecture where
-        ## creating a bond between two Molecules could turn them into one molecule...
+        # It might be interesting to think about some sort of architecture where
+        # creating a bond between two Molecules could turn them into one molecule...
         
         self._atom1 = atom1
         self._atom2 = atom2
@@ -1620,6 +1684,8 @@ class FrozenMolecule(Serializable):
         self._partial_charges = None
         self._propers = None
         self._impropers = None
+        for bond in self._bonds:
+            bond.fractional_bond_order = None
 
     def to_networkx(self):
         """Generate a NetworkX undirected graph from the Topology.
@@ -2413,7 +2479,7 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
-            toolkit_registry.register_toolkit(toolkit)
+            toolkit_registry.add_toolkit(toolkit)
         else:
             raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
         

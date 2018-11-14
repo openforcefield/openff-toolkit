@@ -635,7 +635,7 @@ class TestMolecule(TestCase):
     #    for molecule in self.molecules:
     #        rdmol = molecule.to_rdkit()
     #        molecule2 = Molecule.from_rdkit(rdmol)
-    3        assert_molecule_is_equal(molecule, molecule2, "Molecule.to_rdkit()/from_rdkit() round trip failed")
+    #        assert_molecule_is_equal(molecule, molecule2, "Molecule.to_rdkit()/from_rdkit() round trip failed")
     #        molecule3 = Molecule(rdmol)
     #        assert_molecule_is_equal(molecule, molecule3, "Molecule(rdmol) constructor failed")
 

@@ -567,6 +567,21 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openforcefield.topology.molecule import Molecule
         #from openforcefield.utils.toolkits.OpenEyeToolkitWrapper import _openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
 
+        # Check that all stereo is specified
+        unspec_chiral = False
+        unspec_db = False
+        for oeatom in oemol.GetAtoms():
+            if oeatom.IsChiral():
+                if not (oeatom.HasStereoSpecified()):
+                    unspec_chiral = True
+        for oebond in oemol.GetBonds():
+            if oebond.IsChiral():
+                if not (oebond.HasStereoSpecified()):
+                    unspec_db = True
+
+        if (unspec_chiral or unspec_db):
+            raise Exception("Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry")
+
         # TODO: Decide if this is where we want to add explicit hydrogens
         result = oechem.OEAddExplicitHydrogens(oemol)
         if result == False:
@@ -640,6 +655,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             partial_charges[off_idx] = charge
 
         molecule.set_partial_charges(partial_charges)
+
 
 
         return molecule
@@ -1304,7 +1320,21 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from openforcefield.topology.molecule import Molecule
         # inherits base class docstring
         from rdkit import Chem
+        from rdkit.Chem import EnumerateStereoisomers
+
         rdmol = Chem.MolFromSmiles(smiles)
+
+        # Adding H's can hide undefined bond stereochemistry, so we have to test for undefined stereo here
+        unspec_stereo = False
+        rdmol_copy = Chem.Mol(rdmol)
+        enumsi_opt = EnumerateStereoisomers.StereoEnumerationOptions(maxIsomers=2, onlyUnassigned=True)
+        stereoisomers = [isomer for isomer in Chem.EnumerateStereoisomers.EnumerateStereoisomers(rdmol_copy, enumsi_opt)]
+        if len(stereoisomers) != 1:
+            unspec_stereo = True
+
+        if unspec_stereo:
+            raise Exception("Unable to make OFFMol from SMILES: SMILES has unspecified stereochemistry: {}".format(smiles))
+
         # Add explicit hydrogens if they aren't there already
         rdmol = Chem.AddHs(rdmol)
 
@@ -1379,6 +1409,22 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         from openforcefield.topology.molecule import Molecule
 
+
+        # Check for undefined stereochemistry
+        from rdkit.Chem import EnumerateStereoisomers
+        # TODO: Does this work for molecules with 3D geometry?
+        unspec_stereo = False
+        # Use a copy of the input, in case EnumerateStereochemstry changes anything in-place
+        rdmol_copy = Chem.Mol(rdmol)
+        enumsi_opt = EnumerateStereoisomers.StereoEnumerationOptions(maxIsomers=2, onlyUnassigned=True)
+        stereoisomers = [isomer for isomer in Chem.EnumerateStereoisomers.EnumerateStereoisomers(rdmol_copy, enumsi_opt)]
+        # TODO: This will catch undefined tetrahedral centers, but not bond stereochemistry. How can we check for that?
+        if len(stereoisomers) != 1:
+            unspec_stereo = True
+
+        if unspec_stereo:
+            raise Exception("Unable to make OFFMol from RDMol: RDMol has unspecified stereochemistry")
+
         # Create a new openforcefield Molecule
         mol = Molecule()
         
@@ -1409,6 +1455,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # therefore we can't do it until after the atoms and bonds are all added
         chiral_atoms = dict() # {rd_idx: openeye chirality}
         map_atoms = {}
+        map_bonds = {}
         for rda in rdmol.GetAtoms():
             rd_idx = rda.GetIdx()
 
@@ -1440,6 +1487,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # i.e. Cl and F in the example above
         aro_bond = 0
         for rdb in rdmol.GetBonds():
+            rdb_idx = rdb.GetIdx()
             a1 = rdb.GetBeginAtomIdx()
             a2 = rdb.GetEndAtomIdx()
 
@@ -1453,21 +1501,32 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # Convert floating-point bond order to integral bond order
             order = int(order)
 
+            # create a new bond
+            bond_index = mol.add_bond(map_atoms[a1], map_atoms[a2], order, is_aromatic)
+            map_bonds[rdb_idx] = bond_index
+
+        # Now fill in the cached (structure-dependent) properties. We have to have the 2D structure of the molecule
+        # in place first, because each call to add_atom and add_bond invalidates all cached properties
+        for rdb in rdmol.GetBonds():
+            rdb_idx = rdb.GetIdx()
+            offb_idx = map_bonds[rdb_idx]
+            offb = mol.bonds[offb_idx]
             # determine if stereochemistry is needed
             stereochemistry = None
             tag = rdb.GetStereo()
-            if tag == Chem.BondStereo.STEREOCIS or tag == Chem.BondStereo.STEREOZ:
-                stereochemistry = 'Z'
-            if tag == Chem.BondStereo.STEREOTRANS or tag == Chem.BondStereo.STEREOE:
-                stereochemistry = 'E'
-
+            if tag == Chem.BondStereo.STEREOZ:
+                    stereochemistry = 'Z'
+            elif tag == Chem.BondStereo.STEREOE:
+                    stereochemistry = 'E'
+            elif tag == Chem.BondStereo.STEREOTRANS or tag == Chem.BondStereo.STEREOCIS:
+                raise Exception("Expected RDKit bond stereochemistry of E or Z, got {} instead".format(tag))
+            offb._stereochemistry = stereochemistry
+            fractional_bond_order = None
             if rdb.HasProp("fractional_bond_order"):
                 fractional_bond_order = rdb.GetDoubleProp('fractional_bond_order')
-            else:
-                fractional_bond_order = None
-            # create a new bond
-            bond_index = mol.add_bond(map_atoms[a1], map_atoms[a2], order, is_aromatic,
-                                      stereochemistry=stereochemistry, fractional_bond_order=fractional_bond_order)
+                #raise Exception("{}".format(fractional_bond_order))
+            offb.fractional_bond_order = fractional_bond_order
+
 
         # TODO: Save conformer(s), if present
         # If the rdmol has a conformer, store its coordinates
@@ -1956,7 +2015,7 @@ class ToolkitRegistry(object):
         ----------
         register_imported_toolkit_wrappers : bool, optional, default=False
             If True, will attempt to register all imported ToolkitWrapper subclasses that can be found, in no particular order.
-        toolkit_precedence : list, optional, defailt=None
+        toolkit_precedence : list, optional, default=None
             List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If None, defaults to [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper].
         """
 
@@ -2017,6 +2076,22 @@ class ToolkitRegistry(object):
         except ToolkitUnavailableException as e:
             if exception_if_unavailable:
                 raise e
+
+    def add_toolkit(self, toolkit_wrapper):
+        """
+
+        Parameters
+        ----------
+        toolkit_wrapper : The ToolkitWrapper object to add to the list of registered toolkits
+
+
+        """
+        if not isinstance(toolkit_wrapper, ToolkitWrapper):
+            msg = "Something other than a ToolkitWrapper object was passed to ToolkitRegistry.add_toolkit()\n"
+            msg += "Given object {} of type {}".format(toolkit_wrapper, type(toolkit_wrapper))
+            raise Exception(msg)
+        self.registered_toolkits.append(toolkit_wrapper)
+
 
     # TODO: Can we automatically resolve calls to methods that are not explicitly defined using some Python magic?
 
