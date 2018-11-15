@@ -103,116 +103,88 @@ class TestOpenEyeToolkitWrapper(TestCase):
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
 
-        # TODO: Make a close copy of this test, but with core props unset, and make sure they are equal to the default value both before and after toolkit conversion
 
-        @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
-        def test_to_from_openeye_core_props_filled(self):
-            """Test OpenEyeToolkitWrapper to_openeye() and from_openeye()"""
-            toolkit_wrapper = OpenEyeToolkitWrapper()
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    def test_to_from_openeye_core_props_filled(self):
+        """Test OpenEyeToolkitWrapper to_openeye() and from_openeye()"""
+        toolkit_wrapper = OpenEyeToolkitWrapper()
 
-            # Replacing with a simple molecule with stereochemistry
-            input_smiles = 'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
-            expected_output_smiles = '[H]C([H])([H])C(=C(C([H])([H])C(C([H])([H])[H])(Cl)Br)F)F'
-            molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
-            assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
+        # Replacing with a simple molecule with stereochemistry
+        input_smiles = 'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
+        expected_output_smiles = '[H]C([H])([H])/C(=C(/C([H])([H])[C@@](C([H])([H])[H])(Cl)Br)\F)/F'
+        molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
+        assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
-            # Populate core molecule property fields
-            molecule.name = 'Alice'
-            partial_charges = unit.Quantity(np.array([-.9, -.8, -.7, -.6,
-                                                      -.5, -.4, -.3, -.2,
-                                                      -.1, 0., .1, .2,
-                                                      .3, .4, .5, .6,
-                                                      .7, .8]), unit.elementary_charge)
-            molecule.set_partial_charges(partial_charges)
-            coords = unit.Quantity(np.array([['0.0', '1.0', '2.0'], ['3.0', '4.0', '5.0'], ['6.0', '7.0', '8.0'],
-                                             ['9.0', '10.0', '11.0'], ['12.0', '13.0', '14.0'],
-                                             ['15.0', '16.0', '17.0'],
-                                             ['18.0', '19.0', '20.0'], ['21.0', '22.0', '23.0'],
-                                             ['24.0', '25.0', '26.0'],
-                                             ['27.0', '28.0', '29.0'], ['30.0', '31.0', '32.0'],
-                                             ['33.0', '34.0', '35.0'],
-                                             ['36.0', '37.0', '38.0'], ['39.0', '40.0', '41.0'],
-                                             ['42.0', '43.0', '44.0'],
-                                             ['45.0', '46.0', '47.0'], ['48.0', '49.0', '50.0'],
-                                             ['51.0', '52.0', '53.0']]),
-                                   unit.angstrom)
-            molecule.add_conformer(coords)
-            # Populate core atom property fields
-            molecule.atoms[2].name = 'Bob'
-            # Ensure one atom has its stereochemistry specified
-            central_carbon_stereo_specified = False
-            for atom in molecule.atoms:
-                if (atom.atomic_number == 6) and atom.stereochemistry == "S":
-                    central_carbon_stereo_specified = True
-            assert central_carbon_stereo_specified
+        # Populate core molecule property fields
+        molecule.name = 'Alice'
+        partial_charges = unit.Quantity(np.array([-.9, -.8, -.7, -.6,
+                                                  -.5, -.4, -.3, -.2,
+                                                  -.1, 0., .1, .2,
+                                                  .3, .4, .5, .6,
+                                                  .7, .8]), unit.elementary_charge)
+        molecule.set_partial_charges(partial_charges)
+        coords = unit.Quantity(np.array([['0.0', '1.0', '2.0'], ['3.0', '4.0', '5.0'], ['6.0', '7.0', '8.0'],
+                                         ['9.0', '10.0', '11.0'], ['12.0', '13.0', '14.0'],
+                                         ['15.0', '16.0', '17.0'],
+                                         ['18.0', '19.0', '20.0'], ['21.0', '22.0', '23.0'],
+                                         ['24.0', '25.0', '26.0'],
+                                         ['27.0', '28.0', '29.0'], ['30.0', '31.0', '32.0'],
+                                         ['33.0', '34.0', '35.0'],
+                                         ['36.0', '37.0', '38.0'], ['39.0', '40.0', '41.0'],
+                                         ['42.0', '43.0', '44.0'],
+                                         ['45.0', '46.0', '47.0'], ['48.0', '49.0', '50.0'],
+                                         ['51.0', '52.0', '53.0']]),
+                               unit.angstrom)
+        molecule.add_conformer(coords)
+        # Populate core atom property fields
+        molecule.atoms[2].name = 'Bob'
+        # Ensure one atom has its stereochemistry specified
+        central_carbon_stereo_specified = False
+        for atom in molecule.atoms:
+            if (atom.atomic_number == 6) and atom.stereochemistry == "S":
+                central_carbon_stereo_specified = True
+        assert central_carbon_stereo_specified
 
-            # Populate bond core property fields
-            fractional_bond_orders = [float(val) for val in range(18)]
-            for fbo, bond in zip(fractional_bond_orders, molecule.bonds):
-                bond.fractional_bond_order = fbo
+        # Populate bond core property fields
+        fractional_bond_orders = [float(val) for val in range(1, 19)]
+        for fbo, bond in zip(fractional_bond_orders, molecule.bonds):
+            bond.fractional_bond_order = fbo
 
-            # Do a first conversion to/from oemol
-            oemol = molecule.to_openeye()
-            molecule2 = Molecule.from_openeye(oemol)
+        # Do a first conversion to/from oemol
+        oemol = molecule.to_openeye()
+        molecule2 = Molecule.from_openeye(oemol)
 
-            # Test that properties survived first conversion
-            # assert molecule.to_dict() == molecule2.to_dict()
-            assert molecule.name == molecule2.name
-            # NOTE: This expects the same indexing scheme in the original and new molecule
+        # Test that properties survived first conversion
+        # assert molecule.to_dict() == molecule2.to_dict()
+        assert molecule.name == molecule2.name
+        # NOTE: This expects the same indexing scheme in the original and new molecule
 
-            central_carbon_stereo_specified = False
-            for atom in molecule2.atoms:
-                if (atom.atomic_number == 6) and atom.stereochemistry == "S":
-                    central_carbon_stereo_specified = True
-            assert central_carbon_stereo_specified
-            for atom1, atom2 in zip(molecule.atoms, molecule2.atoms):
-                assert atom1.to_dict() == atom2.to_dict()
-            for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
-                assert bond1.to_dict() == bond2.to_dict()
-            assert (molecule._conformers[0] == molecule2._conformers[0]).all()
-            for pc1, pc2 in zip(molecule._partial_charges, molecule2._partial_charges):
-                pc1_ul = pc1 / unit.elementary_charge
-                pc2_ul = pc2 / unit.elementary_charge
-                assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
-            assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
-            # TODO: This should be its own test
+        central_carbon_stereo_specified = False
+        for atom in molecule2.atoms:
+            if (atom.atomic_number == 6) and atom.stereochemistry == "S":
+                central_carbon_stereo_specified = True
+        assert central_carbon_stereo_specified
+        for atom1, atom2 in zip(molecule.atoms, molecule2.atoms):
+            assert atom1.to_dict() == atom2.to_dict()
+        for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
+            assert bond1.to_dict() == bond2.to_dict()
+        assert (molecule._conformers[0] == molecule2._conformers[0]).all()
+        for pc1, pc2 in zip(molecule._partial_charges, molecule2._partial_charges):
+            pc1_ul = pc1 / unit.elementary_charge
+            pc2_ul = pc2 / unit.elementary_charge
+            assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
+        assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
-        #charges = unit.Quantity(np.array([ -0.35, -0.25, -0.15, -0.05, 0.05, 0.15, 0.25, 0.35], dtype=np.float),
-        #                         unit.elementary_charge)
-        #fractional_bond_orders = [0.96, 0.97, 0.98, 0.99, 1.0, 1.1, 1.2, 1.3]
-        #molecule2.add_conformer(new_conf1)
-        #molecule2.add_conformer(new_conf2)
-        #molecule2.set_partial_charges(charges)
-        #for bond_idx, bond in enumerate(molecule2.bonds):
-        #    bond.fractional_bond_order = fractional_bond_orders[bond_idx]
 
-        #smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
-        #assert smiles == smiles2
-        #molecule2.name = ''
-        #oemol2 = Molecule.to_openeye(molecule2)
-        #assert oemol2.NumConfs() == 2
-        #molecule3 = Molecule.from_openeye(oemol2)
-        #assert molecule2.name == molecule3.name
-        #assert len(molecule3._conformers) == 2
-        #assert (molecule2._conformers[0] == molecule3._conformers[0]).all()
-        #assert (molecule2._conformers[1] == molecule3._conformers[1]).all()
-        ## Check that partial charges are preserved
-        #for pc1, pc2 in zip(molecule2._partial_charges, molecule3._partial_charges):
-        #    pc1_ul = pc1 / unit.elementary_charge
-        #    pc2_ul = pc2 / unit.elementary_charge
-        #    assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
-        ## Check that fractional bond orders are preserved
-        #for bond1, bond2 in zip(molecule2.bonds, molecule3.bonds):
-        #    assert_almost_equal(bond1.fractional_bond_order, bond2.fractional_bond_order, decimal=6)
-
-    @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_to_from_openeye_core_props_unset(self):
         """Test OpenEyeToolkitWrapper to_openeye() and from_openeye() when given empty core property fields"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
 
-        # Replacing with a simple molecule with stereochemistry
+        # Using a simple molecule with tetrahedral and bond stereochemistry
         input_smiles = 'C\C(F)=C(/F)C[C@](C)(Cl)Br'
-        expected_output_smiles = '[H]C([H])([H])C(=C(C([H])([H])C(C([H])([H])[H])(Cl)Br)F)F'
+
+        expected_output_smiles = '[H]C([H])([H])/C(=C(/C([H])([H])[C@](C([H])([H])[H])(Cl)Br)\F)/F'
         molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
         assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
@@ -224,8 +196,8 @@ class TestOpenEyeToolkitWrapper(TestCase):
         assert central_carbon_stereo_specified
 
         # Do a first conversion to/from oemol
-        rdmol = molecule.to_rdkit()
-        molecule2 = Molecule.from_rdkit(rdmol)
+        rdmol = molecule.to_openeye()
+        molecule2 = Molecule.from_openeye(rdmol)
 
         # Test that properties survived first conversion
         assert molecule.name == molecule2.name
@@ -263,7 +235,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
     def test_get_multiconformer_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing multiple sets of coordinates from a sdf file"""
         raise NotImplementedError
-        toolkit_wrapper = RDKitToolkitWrapper()
+        toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_filename('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1

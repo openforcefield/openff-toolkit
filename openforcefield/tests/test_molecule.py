@@ -53,8 +53,8 @@ def assert_molecule_is_equal(molecule1, molecule2, msg):
         Message to include if molecules fail to match.
 
     """
-    # TODO:
-    pass
+    if not(molecule1.is_isomorphic(molecule2)):
+        raise Exception(msg)
 
 
 # Skipping this test -- The cheminformatics toolkit test is run inside of toolkits.py
@@ -70,13 +70,25 @@ def test_cheminformatics_toolkit_is_installed():
         raise Exception(msg)
 
 class TestMolecule(TestCase):
-    from openforcefield.topology import Atom, Bond, Molecule
+    @classmethod
+    def setUpClass(cls):
+        """
+        This will have us just load the test molecules once, as the setUp function runs for each test
+        """
+        super(TestMolecule, cls).setUpClass()
+        filename = get_data_filename('molecules/zinc-subset-tripos.mol2.gz')
+
+        molecules = Molecule.from_file(filename, exception_if_undefined_stereo=False)
+        molecules = [mol for mol in molecules if not(mol is None)]
+        cls.test_molecules = molecules
+
 
     def setUp(self):
         # TODO: Serialize the offmols instead so that we can run this test without toolkits
+        import copy
         #self.molecules = pickle.load('zinc-subset-offmols.pkl')
-        filename = get_data_filename('molecules/zinc-subset-tripos.mol2.gz')
-        self.molecules = Molecule.from_file(filename)
+
+        self.molecules = copy.deepcopy(TestMolecule.test_molecules)
 
     # TODO: Test getstate/setstate
     # TODO: Test {to_from}_{dict|yaml|toml|json|bson|messagepack|pickle}
@@ -202,8 +214,7 @@ class TestMolecule(TestCase):
         assert molecule.n_conformers == 3
         assert molecule.conformers[2][0][0] == 10. * unit.angstrom
 
-        # Add a conformer with the completely wrong units
-        # Add a conforer with units of nanometers
+        # Add a conformer with units of nanometers
         conf_nonsense_units = unit.Quantity(np.array([[ 1., 2.,3.] ,[4. ,5. ,6.],[7., 8., 9.],
                                         [10.,11.,12.],[13.,14.,15]]),
                               unit.joule)
@@ -236,6 +247,7 @@ class TestMolecule(TestCase):
             molecule_copy = Molecule(molecule)
             assert molecule_copy == molecule
 
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_create_openeye(self):
         """Test creation of a molecule from an OpenEye oemol"""
         for molecule in self.molecules:
@@ -243,6 +255,7 @@ class TestMolecule(TestCase):
             molecule_copy = Molecule(oemol)
             assert molecule == molecule_copy
 
+    @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_create_rdkit(self):
         """Test creation of a molecule from an RDKit rdmol"""
         for molecule in self.molecules:
@@ -283,15 +296,6 @@ class TestMolecule(TestCase):
         for i in range(nmolecules):
             for j in range(i, nmolecules):
                 assert (self.molecules[i] == self.molecules[j]) == (i == j)
-
-    # SMILES round trips should be tested in the toolkits, not here.
-    #def test_smiles_round_trip(self):
-    #    """Test SMILES round-trip"""
-    #    for molecule in self.molecules:
-    #        smiles = molecule.to_smiles()
-    #        molecule_copy = Molecule.from_smiles(smiles)
-    #        assert molecule == molecule_copy
-
 
 
     def test_to_networkx(self):
@@ -627,17 +631,6 @@ class TestMolecule(TestCase):
                 molecule.to_file(iofile.name, 'PDB')
                 # NOTE: We can't read pdb files and expect chemical information to be preserved
                 os.unlink(iofile.name)
-
-    # Really big round-trip tests have now been added to test_toolkits and aren't necessary here
-    #@pytest.mark.skipif(RDKIT_UNAVAILABLE, reason=_RDKIT_UNAVAILABLE_MESSAGE)
-    ##@RDKitToolkitWrapper.requires_toolkit()
-    #def test_rdkit_roundtrip(self):
-    #    for molecule in self.molecules:
-    #        rdmol = molecule.to_rdkit()
-    #        molecule2 = Molecule.from_rdkit(rdmol)
-    #        assert_molecule_is_equal(molecule, molecule2, "Molecule.to_rdkit()/from_rdkit() round trip failed")
-    #        molecule3 = Molecule(rdmol)
-    #        assert_molecule_is_equal(molecule, molecule3, "Molecule(rdmol) constructor failed")
 
     #@pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)
     @OpenEyeToolkitWrapper.requires_toolkit()

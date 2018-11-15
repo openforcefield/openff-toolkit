@@ -345,7 +345,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
 
 
-    def from_file(self, filename, file_format):
+    def from_file(self, filename, file_format, exception_if_undefined_stereo=True):
         """
         Return an openforcefield.topology.Molecule from a file using this toolkit.
         
@@ -356,7 +356,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        
+        exception_if_undefined_stereo : bool, default=True
+            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
+            loading the molecule.
+
         Returns
         -------
         molecules : list of Molecules
@@ -369,11 +372,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oemol = oechem.OEMol()
         ifs = oechem.oemolistream(filename)
         while oechem.OEReadMolecule(ifs, oemol):
-            mol = Molecule.from_openeye(oemol)
+            oechem.OEPerceiveChiral(oemol)
+            oechem.OEAssignAromaticFlags(oemol)
+            oechem.OE3DToInternalStereo(oemol)
+            mol = Molecule.from_openeye(oemol, exception_if_undefined_stereo=exception_if_undefined_stereo)
             mols.append(mol)
         return mols
      
-    def from_file_obj(self, file_obj, file_format):
+    def from_file_obj(self, file_obj, file_format, exception_if_undefined_stereo=True):
         """
         Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using this toolkit.
         
@@ -384,11 +390,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        
+        exception_if_undefined_stereo : bool, default=True
+            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
+            loading the molecule.
+
         Returns
         -------
         molecules : Molecule or list of Molecules
-            a list of Molecule objects is returned.
+            a list of Molecule objects is
 
         """
         from openforcefield.topology import Molecule
@@ -401,7 +410,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oeformat = getattr(oechem, 'OEFormat_' + file_format)
         ifs.SetFormat(oeformat)
         while oechem.OEReadMolecule(ifs, oemol):
-            mol = Molecule.from_openeye(oemol)
+            oechem.OEPerceiveChiral(oemol)
+            oechem.OEAssignAromaticFlags(oemol)
+            oechem.OE3DToInternalStereo(oemol)
+            mol = Molecule.from_openeye(oemol, exception_if_undefined_stereo=exception_if_undefined_stereo)
             mols.append(mol)
         return mols
 
@@ -540,7 +552,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             return None
 
     @staticmethod
-    def from_openeye(oemol):
+    def from_openeye(oemol, exception_if_undefined_stereo=True):
         """
         Create a Molecule from an OpenEye molecule.
 
@@ -548,6 +560,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         oemol : openeye.oechem.OEMol
             An OpenEye molecule
+        exception_if_undefined_stereo : bool, default=True
+            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
+            loading the molecule.
 
         Returns
         -------
@@ -567,6 +582,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openforcefield.topology.molecule import Molecule
         #from openforcefield.utils.toolkits.OpenEyeToolkitWrapper import _openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
 
+        oechem.OEPerceiveChiral(oemol)
+
         # Check that all stereo is specified
         unspec_chiral = False
         unspec_db = False
@@ -580,7 +597,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     unspec_db = True
 
         if (unspec_chiral or unspec_db):
-            raise Exception("Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry")
+            if exception_if_undefined_stereo:
+                raise Exception("Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry. oemol.GetTitle(): {}".format(oemol.GetTitle()))
+            else:
+                print("Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry. oemol.GetTitle(): {}".format(oemol.GetTitle()))
+                return
 
         # TODO: Decide if this is where we want to add explicit hydrogens
         result = oechem.OEAddExplicitHydrogens(oemol)
@@ -615,6 +636,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                                            stereochemistry=stereochemistry, name=name)
             map_atoms[oe_idx] = atom_index # store for mapping oeatom to molecule atom indices below
 
+        #c=0
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
             atom2_index = map_atoms[oebond.GetEndIdx()]
@@ -626,6 +648,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             else:
                 fractional_bond_order = None
             #stereochemistry = self._openeye_cip_bond_stereochemistry(oemol, oebond)
+            #print('AAA', c, fractional_bond_order)
+            #c+=1
             molecule.add_bond(atom1_index, atom2_index, bond_order, is_aromatic=is_aromatic,
                               stereochemistry=stereochemistry, fractional_bond_order=fractional_bond_order)
 
@@ -645,8 +669,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 if (positions == 0*unit.angstrom).all():
                     continue
                 molecule.add_conformer(positions)
-                
-        ## TODO: Partial charges
+
+        # Copy partial charges, if present
         partial_charges = unit.Quantity(np.zeros(molecule.n_atoms, dtype=np.float),
                                         unit=unit.elementary_charge)
         for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
@@ -669,7 +693,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         .. todo ::
 
-           * Use stored conformer positions instead of an argument.
            * Should the aromaticity model be specified in some other way?
 
         Parameters
@@ -752,15 +775,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             atom2_index = bond.molecule.atoms.index(bond.atom2)
             # Set arbitrary initial stereochemistry
             oeatom1, oeatom2 = oemol_atoms[atom1_index], oemol_atoms[atom2_index]
-            oeatom1_neighbor = [n for n in oeatom1.GetAtoms()][0]
-            oeatom2_neighbor = [n for n in oeatom2.GetAtoms()][0]
-            oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Cis)
+            oeatom1_neighbor = [n for n in oeatom1.GetAtoms() if not n==oeatom2][0]
+            oeatom2_neighbor = [n for n in oeatom2.GetAtoms() if not n==oeatom1][0]
+            #oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Cis)
+            oebond.SetStereo([oeatom1_neighbor, oeatom2_neighbor], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Cis)
 
             # Flip stereochemistry if incorrect
             oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
+            #print('AAAA', oebond_stereochemistry, bond.stereochemistry)
             if oebond_stereochemistry != bond.stereochemistry:
                 # Flip the stereochemistry
-                oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Trans)
+                #oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Trans)
+                oebond.SetStereo([oeatom1_neighbor, oeatom2_neighbor], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Trans)
                 # Verify it matches now as a sanity check
                 oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
                 if oebond_stereochemistry != bond.stereochemistry:
@@ -784,7 +810,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 oecoords = oechem.OEFloatArray(flat_coords)
                 oemol.NewConf(oecoords)
 
-            # Retain charges, if present
+        # Retain charges, if present
         if not(molecule._partial_charges is None):
             # for off_atom, oe_atom in zip(molecule.atoms, oemol_atoms):
             #    charge_unitless = molecule._partial_charges
@@ -797,12 +823,17 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
                 oe_atom.SetPartialCharge(oe_indexed_charges[oe_idx])
 
-        # TODO: Retain name and properties, if present
+        # TODO: Retain properties, if present
+
+
+
 
         # Clean Up phase
         # The only feature of a molecule that wasn't perceived above seemed to be ring connectivity, better to run it
         # here then for someone to inquire about ring sizes and get 0 when it shouldn't be
         oechem.OEFindRingAtomsAndBonds(oemol)
+
+
 
         return oemol
 
@@ -814,7 +845,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         smiles = oechem.OECreateSmiString(oemol,
                                           oechem.OESMILESFlag_DEFAULT |
                                           oechem.OESMILESFlag_Hydrogens |
-                                          oechem.OESMILESFlag_Isotopes)
+                                          oechem.OESMILESFlag_Isotopes |
+                                          oechem.OESMILESFlag_BondStereo |
+                                          oechem.OESMILESFlag_AtomStereo
+                                          )
+        #smiles = oechem.OEMolToSmiles(oemol)
         return smiles
 
     
@@ -1159,7 +1194,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
 
 
-    def from_file(self, filename, file_format):
+    def from_file(self, filename, file_format, exception_if_undefined_stereo=True):
         """
         Return an openforcefield.topology.Molecule from a file using this toolkit.
         
@@ -1170,7 +1205,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        
+        exception_if_undefined_stereo : bool, default=True
+            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
+            loading the molecule.
         Returns
         -------
         molecules : list of Molecules
@@ -1182,7 +1219,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         mols = list()
         if (file_format == 'MOL') or (file_format == 'SDF'):
             for rdmol in Chem.SupplierFromFilename(filename, removeHs=False):
-                mol = Molecule.from_rdkit(rdmol)
+                mol = Molecule.from_rdkit(rdmol, exception_if_undefined_stereo=exception_if_undefined_stereo)
                 mols.append(mol)
         elif (file_format == 'SMI'):
             # TODO: We have to do some special stuff when we import SMILES (currently
@@ -1205,7 +1242,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # TODO: Add SMI, TDT(?) support
             
         return mols
-    def from_file_obj(self, file_obj, file_format):
+    def from_file_obj(self, file_obj, file_format, exception_if_undefined_stereo=True):
         """
         Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using this toolkit.
         
@@ -1216,7 +1253,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        
+        exception_if_undefined_stereo : bool, default=True
+            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
+            loading the molecule.
+
         Returns
         -------
         molecules : Molecule or list of Molecules
@@ -1382,7 +1422,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         
     
     
-    def from_rdkit(self, rdmol):
+    def from_rdkit(self, rdmol, exception_if_undefined_stereo=True):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -1392,6 +1432,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         ----------
         rdmol : rkit.RDMol
             An RDKit molecule
+        exception_if_undefined_stereo : bool, default=True
+            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
+            loading the molecule.
 
         Returns
         -------
@@ -1423,8 +1466,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             unspec_stereo = True
 
         if unspec_stereo:
-            raise Exception("Unable to make OFFMol from RDMol: RDMol has unspecified stereochemistry")
-
+            if exception_if_undefined_stereo:
+                raise Exception("Unable to make OFFMol from RDMol: RDMol has unspecified stereochemistry.")
+            else:
+                print("Unable to make OFFMol from RDMol: RDMol has unspecified stereochemistry.")
         # Create a new openforcefield Molecule
         mol = Molecule()
         

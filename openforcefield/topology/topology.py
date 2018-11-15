@@ -35,7 +35,8 @@ from simtk.openmm import app
 
 #from openforcefield.utils import get_data_filename
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
-from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL, DEFAULT_FRACTIONAL_BONDORDER_MODEL, DEFAULT_CHARGE_MODEL
+from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
+from openforcefield.topology.molecule import Atom, Bond, VirtualSite, BondChargeVirtualSite, MonovalentLonePairVirtualSite, DivalentLonePairVirtualSite, TrivalentLonePairVirtualSite, Molecule
 
 from openforcefield.utils.serialization import Serializable
 
@@ -163,7 +164,7 @@ class Particle(object):
 # Atom
 #=============================================================================================
 
-class Atom(Particle):
+class Atom_unused(Particle):
     """
     A particle representing a chemical atom.
 
@@ -270,7 +271,7 @@ class Atom(Particle):
 # VirtualSite
 #=============================================================================================
 
-class VirtualSite(Particle):
+class VirtualSite_unused(Particle):
     """
     A particle representing a virtual site whose position is defined in terms of ``Atom`` positions.
 
@@ -341,7 +342,7 @@ class VirtualSite(Particle):
 # Bond
 #=============================================================================================
 
-class Bond(object):
+class Bond_unused(object):
     """
     Chemical bond representation.
 
@@ -476,14 +477,21 @@ class Topology(Serializable):
         """
         # Assign cheminformatics models
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
-        self._fractional_bondorder_model = DEFAULT_FRACTIONAL_BONDORDER_MODEL
-        self._charge_model = DEFAULT_CHARGE_MODEL
+        #self._fractional_bondorder_model = DEFAULT_FRACTIONAL_BONDORDER_MODEL
+        #self._charge_model = DEFAULT_CHARGE_MODEL
 
         # Initialize storage
         self._constrained_atom_pairs = dict()
 
+        if other is None:
+            self._initialize()
         # TODO: Try to construct Topology copy from `other` if specified
-        pass
+        if isinstance(other, Topology):
+            self.copy_initializer(other)
+        elif isinstance(other, Molecule):
+            self.from_molecules([other])
+
+
 
     @staticmethod
     def from_molecules(molecules):
@@ -514,7 +522,7 @@ class Topology(Serializable):
 
         return topology
 
-    def assert_bonded(atom1, atom2):
+    def assert_bonded(self, atom1, atom2):
         """
         Raise an exception if the specified atoms are not bonded in the topology.
 

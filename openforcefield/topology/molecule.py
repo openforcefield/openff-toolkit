@@ -1176,6 +1176,7 @@ class Bond(Serializable):
     @fractional_bond_order.setter
     def fractional_bond_order(self, value):
         self._fractional_bond_order = value
+        #print('Setting a fractional bond order')
 
 
     @property
@@ -1309,7 +1310,6 @@ class FrozenMolecule(Serializable):
         if other is None:
             self._initialize()
         else:
-            # TODO: Can we check interface compliance (in a try..except) instead of checking instances?
             loaded = False
             if isinstance(other, openforcefield.topology.Molecule) and not(loaded):
                 self._copy_initializer(other)
@@ -1468,10 +1468,8 @@ class FrozenMolecule(Serializable):
                 conformer = unit.Quantity(conformer_unitless, c_unit)
                 self._conformers.append(conformer)
 
-        # TODO: Charges
-        # TODO: Properties
-        # TODO: Conformers
-        #return molecule
+        self._properties = molecule_dict['properties']
+
 
     def __getstate__(self):
         return self.to_dict()
@@ -1489,7 +1487,7 @@ class FrozenMolecule(Serializable):
         self._virtual_sites = list()
         #self._particles = list() # List of particles (atoms or virtual sites) # TODO: Should this be a dict?
         self._bonds = list() # List of bonds between Atom objects
-        self._properties = None # Attached properties to be preserved
+        self._properties = {} # Attached properties to be preserved
         #self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
         self._partial_charges = None
         self._conformers = None # Optional conformers
@@ -1589,6 +1587,50 @@ class FrozenMolecule(Serializable):
         else:
             raise Exception('Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
 
+    def is_isomorphic(self, other, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Says whether the molecules are isomorphic by comparing their SMILESes
+
+        Parameters
+        ----------
+        other : an openforcefield.topology.molecule.FrozenMolecule
+            The molecule to test for isomorphism
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for molecule-to-smiles conversion
+
+        Returns
+        -------
+        bool
+        """
+        if not(isinstance(other, FrozenMolecule)):
+            other_fm = FrozenMolecule(other)
+        else:
+            other_fm = other
+        self_smiles = self.to_smiles(toolkit_registry=toolkit_registry)
+        other_smiles = other_fm.to_smiles(toolkit_registry=toolkit_registry)
+        return self_smiles == other_smiles
+
+    # @staticmethod
+    # def is_isomorphic(molecule1, molecule2, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    #     """
+    #     Tests two Molecules for isomorphism by comparing their SMILESes
+    #
+    #     Parameters
+    #     ----------
+    #     molecule1 :  an openforcefield.topology.molecule.FrozenMolecule
+    #     molecule2 :  an openforcefield.topology.molecule.FrozenMolecule
+    #     toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+    #         :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for molecule-to-smiles conversion
+    #
+    #     Returns
+    #     -------
+    #     bool
+    #     """
+    #     if not(isinstance(molecule1, FrozenMolecule)):
+    #         molecule1_fm = FrozenMolecule(molecule1)
+    #     else:
+    #         molecule1_fm = molecule1
+    #     return molecule1_fm.is_isomorphic(molecule2, toolkit_registry=toolkit_registry)
 
 
     def generate_conformers(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY, clear_existing=True):
@@ -1684,8 +1726,9 @@ class FrozenMolecule(Serializable):
         self._partial_charges = None
         self._propers = None
         self._impropers = None
-        for bond in self._bonds:
-            bond.fractional_bond_order = None
+        #for bond in self._bonds:
+        #    bond.fractional_bond_order = None
+        #print('BBB')
 
     def to_networkx(self):
         """Generate a NetworkX undirected graph from the Topology.
@@ -2365,7 +2408,7 @@ class FrozenMolecule(Serializable):
         return Topology.from_molecules(self)
 
     @staticmethod
-    def from_file(filename, file_format=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def from_file(filename, file_format=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY, exception_if_undefined_stereo=True):
         """
         Create one or more molecules from a file
 
@@ -2383,7 +2426,9 @@ class FrozenMolecule(Serializable):
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for your loaded toolkits for details.
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file loading. If a Toolkit is passed, only the highest-precedence toolkit is used
-            
+        exception_if_undefined_stereo : bool, default=True
+            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
+            loading the molecule.
         Returns
         -------
         molecules : Molecule or list of Molecules
@@ -2433,10 +2478,10 @@ class FrozenMolecule(Serializable):
         mols = list()
 
         if isinstance(filename, str):
-            mols = toolkit.from_file(filename, file_format=file_format)
+            mols = toolkit.from_file(filename, file_format=file_format, exception_if_undefined_stereo=exception_if_undefined_stereo)
         elif hasattr(filename, 'read'):
             file_obj = filename
-            mols = toolkit.from_file_obj(file_obj, file_format=file_format)
+            mols = toolkit.from_file_obj(file_obj, file_format=file_format, exception_if_undefined_stereo=exception_if_undefined_stereo)
 
 
         if len(mols) == 0:
@@ -2509,7 +2554,7 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     @RDKitToolkitWrapper.requires_toolkit()
-    def from_rdkit(rdmol):
+    def from_rdkit(rdmol, exception_if_undefined_stereo=True):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -2519,6 +2564,9 @@ class FrozenMolecule(Serializable):
         ----------
         rdmol : rkit.RDMol
             An RDKit molecule
+        exception_if_undefined_stereo : bool, default=True
+            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
+            loading the molecule.
 
         Returns
         -------
@@ -2534,7 +2582,7 @@ class FrozenMolecule(Serializable):
 
         """
         toolkit = RDKitToolkitWrapper()
-        return toolkit.from_rdkit(rdmol)
+        return toolkit.from_rdkit(rdmol, exception_if_undefined_stereo=exception_if_undefined_stereo)
 
     @RDKitToolkitWrapper.requires_toolkit()
     def to_rdkit(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
@@ -2566,7 +2614,7 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
-    def from_openeye(oemol):
+    def from_openeye(oemol, exception_if_undefined_stereo=True):
         """
         Create a Molecule from an OpenEye molecule.
 
@@ -2576,6 +2624,9 @@ class FrozenMolecule(Serializable):
         ----------
         oemol : openeye.oechem.OEMol
             An OpenEye molecule
+        exception_if_undefined_stereo : bool, default=True
+            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
+            loading the molecule.
 
         Returns
         -------
@@ -2591,7 +2642,7 @@ class FrozenMolecule(Serializable):
 
         """
         toolkit = OpenEyeToolkitWrapper()
-        return toolkit.from_openeye(oemol)
+        return toolkit.from_openeye(oemol, exception_if_undefined_stereo=exception_if_undefined_stereo)
 
     @OpenEyeToolkitWrapper.requires_toolkit()
     def to_openeye(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
