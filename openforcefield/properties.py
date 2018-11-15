@@ -26,11 +26,14 @@ from enum import IntFlag, unique
 @unique
 class PropertyType(IntFlag):
 
-    Undefined   = 0x00
-    MassDensity = 0x01
+    Undefined          = 0x00
+    MassDensity        = 0x01
+    DielectricConstant = 0x02
 
     def __str__(self):
-        return self.name
+
+        phases = '|'.join([phase.name for phase in PropertyType if self & phase])
+        return phases
 
     def __repr__(self):
         return str(self)
@@ -49,7 +52,9 @@ class PropertyPhase(IntFlag):
     Gas       = 0x04
 
     def __str__(self):
-        return self.name
+
+        phases = '|'.join([phase.name for phase in PropertyPhase if self & phase])
+        return phases
 
     def __repr__(self):
         return str(self)

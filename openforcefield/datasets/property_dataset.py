@@ -20,12 +20,12 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-from enum import Enum, unique
-
 
 # =============================================================================================
 # DATASET
 # =============================================================================================
+from openforcefield.properties import PropertyType
+
 
 class PhysicalPropertyDataSet(object):
     """A data set of physical property measurements.
@@ -40,16 +40,34 @@ class PhysicalPropertyDataSet(object):
     def __init__(self):
 
         self._measured_properties = []
-        self.sources = []
+        self._sources = []
 
     @property
     def measured_properties(self):
         return self._measured_properties
 
-    def filter_by_property(self, property):
+    @property
+    def sources(self):
+        return self._sources
 
-        pass
+    def merge(self, data_set):
 
-    def filter_by_phase(self, property):
+        # TODO: Do we need to check wether merging the same data set here?
+        self._measured_properties.extend(data_set.measured_properties)
+        self._sources.extend(data_set.sources)
 
-        pass
+    def filter_by_function(self, function):
+
+        # This works for now - if we wish to be able to undo a filter then
+        # a 'filtered' list needs to be maintained separately to the main list.
+        self._measured_properties = list(filter(function, self._measured_properties))
+
+    def filter_by_properties(self, property_types):
+
+        def filter_function(x): return x.type & property_types
+        self.filter_by_function(filter_function)
+
+    def filter_by_phases(self, phases):
+
+        def filter_function(x): return x.phase & phases
+        self.filter_by_function(filter_function)

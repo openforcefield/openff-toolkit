@@ -149,46 +149,28 @@ class ThermodynamicState(object):
     def __repr__(self):
         """
         Returns a string representation of a state.
-
-        Examples
-        --------
-        Create an NVT state.
-
-        >>> from simtk import unit
-        >>> from openmmtools import testsystems
-        >>> testsystem = testsystems.LennardJonesCluster()
-        >>> [system, positions] = [testsystem.system, testsystem.positions]
-        >>> state = ThermodynamicState(system=system, temperature=100.0*unit.kelvin)
-
-        Return a representation of the state.
-
-        >>> state_string = repr(state)
-
         """
 
-        r = "ThermodynamicState("
-        n_arguments = 0
-        if self.temperature is not None:
-            if n_arguments > 0:
-                r += ", "
-            r += "temperature={0:s}".format(repr(self.temperature))
-            n_arguments += 1
-        if self.pressure is not None:
-            if n_arguments > 0:
-                r += ", "
-            r += ", pressure = {0:s}".format(repr(self.pressure))
-            n_arguments += 1
-        r += ")"
+        return_value = "ThermodynamicState("
 
-        return r
+        if self.temperature is not None:
+            return_value += "temperature={0:s}, ".format(repr(self.temperature))
+        if self.pressure is not None:
+            return_value += "pressure = {0:s}".format(repr(self.pressure))
+
+        return_value += ")"
+
+        return return_value
 
     def __str__(self):
 
-        r = "<ThermodynamicState object"
-        if self.temperature is not None:
-            r += ", temperature = {0:s}".format(str(self.temperature))
-        if self.pressure is not None:
-            r += ", pressure = {0:s}".format(str(self.pressure))
-        r += ">"
+        return_value = "<ThermodynamicState object"
 
-        return r
+        if self.temperature is not None:
+            return_value += ", temperature = {0:s}".format(str(self.temperature))
+        if self.pressure is not None:
+            return_value += ", pressure = {0:s}".format(str(self.pressure))
+
+        return_value += ">"
+
+        return return_value

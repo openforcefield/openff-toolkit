@@ -11,6 +11,7 @@ Authors
 -------
 * John D. Chodera <john.chodera@choderalab.org>
 * Levi N. Naden <levi.naden@choderalab.org>
+* Simon Boothroyd <simon.boothroyd@choderalab.org>
 
 TODO
 ----
@@ -42,78 +43,18 @@ from typing import Union, Tuple
 # Component
 # =============================================================================================
 
+# TODO: Delete this?
 class Component(object):
 
-    _cached_molecules = dict()  # store cached molecules by IUPAC name
-
-    def _create_molecule(self, iupac_name: str) -> oechem.OEMol:
-        """Create molecule from IUPAC name.
-
-        Best practices for creating initial coordinates can be applied here.
-
-        Parameters
-        ----------
-        iupac_name : str
-            IUPAC name
-
-        Returns
-        -------
-        molecule : OEMol
-            OEMol with 3D coordinates, but no charges
-
-        """
-        # Check cache
-        if iupac_name in self._cached_molecules:
-            return copy.deepcopy(self._cached_molecules[iupac_name])
-
-        # Create molecule from IUPAC name.
-        molecule = oechem.OEMol()
-        if not oeiupac.OEParseIUPACName(molecule, iupac_name):
-            # raise ValueError("The supplied IUPAC name '{}' could not be parsed.".format(iupac_name))
-            # Pass for now to get something
-            molecule.SetTitle(iupac_name)
-            return molecule
-
-        # Set molecule name
-        molecule.SetTitle(iupac_name)
-
-        # Normalize molecule
-        oechem.OEAssignAromaticFlags(molecule, oechem.OEAroModelOpenEye)
-        oechem.OEAddExplicitHydrogens(molecule)
-        oechem.OETriposAtomNames(molecule)
-
-        return molecule
-
-    @staticmethod
-    def _get_iupac_from_molecule(molecule: oechem.OEMol) -> str:
-        """
-
-        Parameters
-        ----------
-        molecule : oechem.OEMolecule
-            Input OpenEye molecule to derive IUPAC name from
-
-        Returns
-        -------
-        name : string
-            IUPAC Name as a string
-
-        """
-        return oeiupac.OECreateIUPACName(molecule)
-
-    def __init__(self, name):
+    def __init__(self, smiles):
         """Create a chemical component.
 
         Parameters
         ----------
-        name : str
-            IUPAC name of component
+        smiles : str
+            SMILES descriptor of the component
         """
-        # TODO: Check that IUPAC name is not stereochemically ambiguous.
-
-        self.molecule = self._create_molecule(name)
-        self.name = name
-        self.iupac_name = self._get_iupac_from_molecule(self.molecule)
+        self.smiles = smiles
 
 
 # =============================================================================================
@@ -133,13 +74,10 @@ class Substance(object):
 # MIXTURE
 # =============================================================================================
 
+# TODO: The name is perhaps misleading as a mixture can be pure...
+# SystemComposition or just Composition perhaps?
 class Mixture(Substance):
-    """A liquid or gas mixture.
-
-    Properties
-    ----------
-    components : dict
-        components[iupac_name] is the mole fraction of the specified component
+    """Defines the components and their amounts in a mixture.
 
     Examples
     --------
@@ -173,10 +111,12 @@ class Mixture(Substance):
 
     class MixtureComponent(Component):
         """Subclass of Component which has mole_fractions and impurity"""
-        def __init__(self, name, mole_fraction=0.0, impurity=False):
+        def __init__(self, smiles, mole_fraction=0.0, impurity=False):
+
             self.mole_fraction = mole_fraction
             self.impurity = impurity
-            super().__init__(name)
+
+            super().__init__(smiles)
 
     def __init__(self):
         """Create a Mixture.
@@ -190,20 +130,20 @@ class Mixture(Substance):
         return sum([component.mole_fraction for component in self.components])
 
     @property
-    def n_components(self) -> int:
+    def number_of_components(self) -> int:
         return len(self.components)
 
     @property
-    def n_impurities(self) -> int:
+    def number_of_impurities(self) -> int:
         return sum([1 for component in self.components if component.impurity is True])
 
-    def add_component(self, name: str, mole_fraction: Union[None, float]=None, impurity: bool=False):
+    def add_component(self, smiles: str, mole_fraction: Union[None, float]=None, impurity: bool=False):
         """Add a component to the mixture.
 
         Parameters
         ----------
-        name : str
-            Name of the component, either common ThermoML or IUPAC name
+        smiles : str
+            SMILES pattern of the component
         mole_fraction : float or None, optional, default=None
             If specified, the mole fraction of this component as a float on the domain [0,1]
             If not specified, this will be the last or only component of the mixture.
@@ -214,75 +154,74 @@ class Mixture(Substance):
 
         mole_fraction, impurity = self._validate_mol_fraction(mole_fraction, impurity)
 
-        component = self.MixtureComponent(name, mole_fraction=mole_fraction, impurity=impurity)
+        component = self.MixtureComponent(smiles, mole_fraction=mole_fraction, impurity=impurity)
         self.components.append(component)
 
-    def get_component(self, name: str) -> MixtureComponent:
+    def get_component(self, smiles: str) -> MixtureComponent:
         """Retrieve component by name.
 
         Parameters
         ----------
-        name : str
-            The name of the component to retrieve
-            Accepts IUPAC or common name
+        smiles : str
+            The smiles of the component to retrieve
 
         """
         for component in self.components:
-            found = False
-            if component.iupac_name == name:
-                found = True
-            elif component.name == name:
-                found = True
-            if found:
-                return component
-        raise Exception("No component with name '{0:s}' found.".format(name))
 
-    def build(self, n_molecules: int=1000,
-              mass_density: Union[None, float, unit.Quantity]=None
-              ) -> Tuple[app.Topology, unit.Quantity, unit.Quantity]:
-        """Build an instance of this mixture.
+            if component.smiles != smiles:
+                continue
 
-        Parameters
-        ----------
-        n_molecules : int, optional, default=True
-            The number of molecules in the system to be created.
-        mass_density : float, simtk.unit.Quantity, or None; optional, default=None
-            If provided, will aid in the selecting an initial box size.
+            return component
 
-        Returns
-        -------
-        topology : simtk.openmm.Topology
-            Topology object describing the system.
-        molecules : list of oechem.OEMol
-            The molecules describing the system (not guaranteed to have charges or 3D coordinates).
-            These are copies of molecules.
-        positions : simtk.unit.Quantity wrapping [n_atoms,3] numpy array with units compatible with angstroms
-            Positions of all atoms in the system.
+        raise Exception("No component with smiles '{0:s}' found.".format(smiles))
 
-        Notes
-        -----
-        The number of molecules of each component need not be deterministic.
-        Repeated calls may generate different numbers of molecules, orders, and positions.
-        Impurities will have exactly one molecule per impurity.
-
-        """
-
-        # Create deep copies of molecules.
-        molecules = [copy.deepcopy(component.molecule) for component in self.components]
-
-        # Determine how many molecules of each type will be present in the system.
-        mole_fractions = np.array([component.mole_fraction for component in self.components])
-        n_copies = np.random.multinomial(n_molecules - self.n_impurities, pvals=mole_fractions)
-
-        # Each impurity must have exactly one molecule
-        for (index, component) in enumerate(self.components):
-            if component.impurity:
-                n_copies[index] = 1
-
-        # Create packed box
-        topology, positions = pack_box(molecules, n_copies, mass_density=mass_density)
-
-        return topology, molecules, positions
+    # TODO: There is probably a better home for this!
+    # def build(self, n_molecules: int=1000,
+    #           mass_density: Union[None, float, unit.Quantity]=None
+    #           ) -> Tuple[app.Topology, unit.Quantity, unit.Quantity]:
+    #     """Build an instance of this mixture.
+    #
+    #     Parameters
+    #     ----------
+    #     n_molecules : int, optional, default=True
+    #         The number of molecules in the system to be created.
+    #     mass_density : float, simtk.unit.Quantity, or None; optional, default=None
+    #         If provided, will aid in the selecting an initial box size.
+    #
+    #     Returns
+    #     -------
+    #     topology : simtk.openmm.Topology
+    #         Topology object describing the system.
+    #     molecules : list of oechem.OEMol
+    #         The molecules describing the system (not guaranteed to have charges or 3D coordinates).
+    #         These are copies of molecules.
+    #     positions : simtk.unit.Quantity wrapping [n_atoms,3] numpy array with units compatible with angstroms
+    #         Positions of all atoms in the system.
+    #
+    #     Notes
+    #     -----
+    #     The number of molecules of each component need not be deterministic.
+    #     Repeated calls may generate different numbers of molecules, orders, and positions.
+    #     Impurities will have exactly one molecule per impurity.
+    #
+    #     """
+    #
+    #     # Create deep copies of molecules.
+    #     molecules = [copy.deepcopy(component.molecule) for component in self.components]
+    #
+    #     # Determine how many molecules of each type will be present in the system.
+    #     mole_fractions = np.array([component.mole_fraction for component in self.components])
+    #     n_copies = np.random.multinomial(n_molecules - self.n_impurities, pvals=mole_fractions)
+    #
+    #     # Each impurity must have exactly one molecule
+    #     for (index, component) in enumerate(self.components):
+    #         if component.impurity:
+    #             n_copies[index] = 1
+    #
+    #     # Create packed box
+    #     topology, positions = pack_box(molecules, n_copies, mass_density=mass_density)
+    #
+    #     return topology, molecules, positions
 
     def _validate_mol_fraction(self, mole_fraction, impurity):
         """
@@ -303,4 +242,5 @@ class Mixture(Substance):
         if (self.total_mole_fraction + mole_fraction) > 1.0:
             raise ValueError("Total mole fraction would exceed "
                              "unity ({0:f}); specified {1:f}".format(self.total_mole_fraction, mole_fraction))
+
         return mole_fraction, impurity
