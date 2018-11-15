@@ -6,7 +6,7 @@
 This repository contains a number of tools from the [Open Forcefield Consortium](http://github.com/openforcefield) for the development and use of modern molecular mechanics forcefields based on direct chemical perception and parameterized with rigorous statistical methods.
 
 This repository hosts tools that we have committed to stably maintain throughout their lifetimes:
-* The [SMIRks Native Open Force Field (SMIRNOFF)](https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md) direct chemical perception forcefield specification language
+* The [SMIRKS Native Open Force Field (SMIRNOFF)](https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md) direct chemical perception forcefield specification language
 * Tools for direct chemical environment perception and manipulation
 
 ## Installation
@@ -30,17 +30,17 @@ conda install --yes -c conda-forge -c omnia openforcefield
 
 # Tools
 
-## `SMIRNOFF`: SMIRks Native Open Force Field
+## `SMIRNOFF`: SMIRKS Native Open Force Field
 
-This repository houses the SMIRNOFF SMIRKS-based force field format, along with classes to parameterize OpenMM systems given [SMIRNOFF `.ffxml` format files](https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md).
+This repository houses the SMIRNOFF SMIRKS-based force field format, along with classes to parameterize OpenMM systems given [SMIRNOFF `.offxml` format files](https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md).
 
 The SMIRNOFF force field format is documented [here](https://github.com/openforcefield/smirnoff/blob/master/The-SMIRNOFF-force-field-format.md).
 
 The SMIRNOFF forcefield format is available in sample form under `data/forcefield`, and is handled by `forcefield.py`.
  An example comparing SMIRNOFF versus AMBER energies for the parm@frosst forcefield is provided under
 examples/SMIRNOFF_comparison, where two scripts can compare energies for a single molecule or for the entire AlkEthOH set.
-Note that two forcefields are currently available in this format, `Frosst_AlkEthOH.ffxml`,
-the parm@frosst forcefield as it should have been for this set, and `Frosst_AlkEthOH_parmAtFrosst.ffxml`,
+Note that two forcefields are currently available in this format, `Frosst_AlkEthOH.offxml`,
+the parm@frosst forcefield as it should have been for this set, and `Frosst_AlkEthOH_parmAtFrosst.offxml`,
 the forcefield as it was actually implemented (containing several bugs as noted in the file itself).
 
 It can also be of interest to know what SMIRNOFF parameters would be applied to particular molecules. Utility functionality for this is provided under `forcefield_labeler.py`, which has generally similar structure to `forcefield.py` but instead of providing OpenMM systems with parameters, it can be applied to specific molecules and returns information about what parameters would be applied.
@@ -61,7 +61,7 @@ mols = read_molecules('benzene.mol2')
 topology = generateTopologyFromOEMol(mols[0])
 
 # Load a SMIRNOFF small molecule forcefield for alkanes, ethers, and alcohols
-FF_filename = get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.ffxml')
+FF_filename = get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml')
 forcefield = ForceField(FF_filename)
 
 # Create the OpenMM system, additionally specifying a list of OEMol objects for the unique molecules in the system

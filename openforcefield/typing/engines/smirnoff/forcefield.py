@@ -1679,7 +1679,7 @@ class PeriodicTorsionGenerator(object):
             try:
                 chemenv = ChemicalEnvironment(self.smirks)
                 thistype = chemenv.getType()
-                if thistype != 'Torsion':
+                if thistype != 'ProperTorsion':
                     raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Proper'))
             except SMIRKSParsingError:
                 print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
@@ -1721,7 +1721,7 @@ class PeriodicTorsionGenerator(object):
             try:
                 chemenv = ChemicalEnvironment(self.smirks)
                 thistype = chemenv.getType()
-                if thistype != 'Improper':
+                if thistype != 'ImproperTorsion':
                     raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Improper'))
             except SMIRKSParsingError:
                 print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
@@ -1742,10 +1742,10 @@ class PeriodicTorsionGenerator(object):
                     idivf = _extractQuantity(node, parent, 'idivf%d' % index)
                     self.k[-1] /= float(idivf)
                 index += 1
-                # SMIRNOFF applies trefoil (six-fold) impropers unlike AMBER
-                # If it's an improper, divide by the factor of six internally
+                # SMIRNOFF applies trefoil (three-fold, because of right-hand rule) impropers unlike AMBER
+                # If it's an improper, divide by the factor of three internally
                 if node.tag=='Improper':
-                    self.k[-1] /= 6.
+                    self.k[-1] /= 3.
             # Check for errors, i.e. 'phase' instead of 'phase1'
             if len(self.phase)==0:
                raise Exception("Error: Torsion with id %s has no parseable phase entries." % self.pid)
@@ -1839,14 +1839,12 @@ class PeriodicTorsionGenerator(object):
             assert topology._isBonded(atom_indices[1], atom_indices[2]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[2])
             assert topology._isBonded(atom_indices[1], atom_indices[3]), 'Atom indices %d and %d are not bonded in topology' % (atom_indices[1], atom_indices[3])
 
-            # Impropers are applied to all six paths around the trefoil
+            # Impropers are applied in three paths around the trefoil having the same handedness
             for (periodicity, phase, k) in zip(improper.periodicity, improper.phase, improper.k):
-                # Permute non-central atoms
-                others = [ atom_indices[0], atom_indices[2], atom_indices[3] ]
-                for p in itertools.permutations( others ):
-                    force.addTorsion(p[0], atom_indices[1], p[1], p[2], periodicity, phase, k)
-
-        if verbose: print('%d impropers added, each applied in a six-fold manner' % (len(impropers)))
+                force.addTorsion(atom_indices[1], atom_indices[0], atom_indices[2], atom_indices[3], periodicity, phase, k)
+                force.addTorsion(atom_indices[1], atom_indices[2], atom_indices[3], atom_indices[0], periodicity, phase, k)
+                force.addTorsion(atom_indices[1], atom_indices[3], atom_indices[0], atom_indices[2], periodicity, phase, k)
+        if verbose: print('%d impropers added, three per each smirks pattern' % (len(impropers)*3))
 
 
 
@@ -1895,10 +1893,9 @@ class PeriodicTorsionGenerator(object):
             force_terms.append( ([atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3]], torsion.pid, torsion.smirks) )
         # Add all impropers to the output list
         for (atom_indices, improper) in impropers.items():
-            # Permute non-central atoms
-            others = [ atom_indices[0], atom_indices[2], atom_indices[3] ]
-            for p in itertools.permutations( others ):
-                force_terms.append( ([p[0], atom_indices[1], p[1], p[2]], improper.pid, improper.smirks) )
+            force_terms.append( ([atom_indices[1], atom_indices[0], atom_indices[2], atom_indices[3]], improper.pid, improper.smirks) )
+            force_terms.append( ([atom_indices[1], atom_indices[2], atom_indices[3], atom_indices[0]], improper.pid, improper.smirks) )
+            force_terms.append( ([atom_indices[1], atom_indices[3], atom_indices[0], atom_indices[2]], improper.pid, improper.smirks) )
 
         return force_terms
 
@@ -1925,7 +1922,7 @@ class NonbondedGenerator(object):
             try:
                 a = _extractQuantity(node, parent, 'sigma')
                 a = _extractQuantity(node, parent, 'rmin_half')
-                raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the .ffxml file.")
+                raise Exception("Error: BOTH sigma and rmin_half cannot be specified simultaneously in the .offxml file.")
             except:
                 pass
 

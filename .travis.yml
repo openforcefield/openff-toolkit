@@ -9,7 +9,7 @@ install:
   - source devtools/travis-ci/install.sh
   - export PYTHONUNBUFFERED=true
   # Unpack encrypted OpenEye license file
-  - if [ "$TRAVIS_SECURE_ENV_VARS" == true ]; then openssl aes-256-cbc -K $encrypted_5f58236b8908_key -iv $encrypted_5f58236b8908_iv -in oe_license.txt.enc -out $OE_LICENSE -d; fi
+  - if [ "$TRAVIS_SECURE_ENV_VARS" == true ]; then openssl aes-256-cbc -K $encrypted_a4fdffb2b55a_key -iv $encrypted_a4fdffb2b55a_iv -in oe_license.txt.enc -out $OE_LICENSE -d; fi
   - if [ "$TRAVIS_SECURE_ENV_VARS" == false ]; then echo "OpenEye license will not be installed in forks."; fi
 
 script:
@@ -22,9 +22,13 @@ script:
   # Install OpenEye toolkit
   #- pip install $OPENEYE_CHANNEL openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
   # Use beta version for partial bond orders
-  - pip install --pre -i https://pypi.anaconda.org/openeye/label/beta/simple openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
+  - pip install --pre -i https://pypi.anaconda.org/openeye/simple openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
+  # Install RDKit
+  - conda install --yes -c rdkit rdkit
   # Build the recipe
   - conda build devtools/conda-recipe
+  # Use oeommtools for improper test
+  - conda install --yes -c openeye/label/Orion oeommtools -c omnia
   # Install
   - conda install --yes --use-local openforcefield
   # Run tests
@@ -33,7 +37,6 @@ script:
 
 env:
   matrix:
-    - python=2.7  CONDA_PY=27
     - python=3.5  CONDA_PY=35
     - python=3.6  CONDA_PY=36
 
