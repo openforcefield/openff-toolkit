@@ -373,7 +373,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ifs = oechem.oemolistream(filename)
         while oechem.OEReadMolecule(ifs, oemol):
             oechem.OEPerceiveChiral(oemol)
-            oechem.OEAssignAromaticFlags(oemol)
+            oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
             oechem.OE3DToInternalStereo(oemol)
             mol = Molecule.from_openeye(oemol, exception_if_undefined_stereo=exception_if_undefined_stereo)
             mols.append(mol)
@@ -411,7 +411,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ifs.SetFormat(oeformat)
         while oechem.OEReadMolecule(ifs, oemol):
             oechem.OEPerceiveChiral(oemol)
-            oechem.OEAssignAromaticFlags(oemol)
+            oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
             oechem.OE3DToInternalStereo(oemol)
             mol = Molecule.from_openeye(oemol, exception_if_undefined_stereo=exception_if_undefined_stereo)
             mols.append(mol)
@@ -2135,7 +2135,7 @@ class ToolkitRegistry(object):
             msg = "Something other than a ToolkitWrapper object was passed to ToolkitRegistry.add_toolkit()\n"
             msg += "Given object {} of type {}".format(toolkit_wrapper, type(toolkit_wrapper))
             raise Exception(msg)
-        self.registered_toolkits.append(toolkit_wrapper)
+        self._toolkits.append(toolkit_wrapper)
 
 
     # TODO: Can we automatically resolve calls to methods that are not explicitly defined using some Python magic?

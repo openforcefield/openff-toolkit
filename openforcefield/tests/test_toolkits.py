@@ -246,20 +246,45 @@ class TestOpenEyeToolkitWrapper(TestCase):
         """Test OpenEyeToolkitWrapper for importing a single set of molecule coordinates"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_filename('molecules/toluene.mol2')
-        molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        assert len(molecule._conformers) == 1
-        assert molecule._conformers[0].shape == (15,3)
+        molecule1 = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        assert len(molecule1._conformers) == 1
+        assert molecule1._conformers[0].shape == (15, 3)
+        assert_almost_equal(molecule1.conformers[0][5][1] / unit.angstrom, 22.98, decimal=2)
+
+        # Test loading from file-like object
+        with open(filename, 'r') as infile:
+            molecule2 = Molecule(infile, file_format='MOL2', toolkit_registry=toolkit_wrapper)
+        assert molecule1.is_isomorphic(molecule2)
+        assert len(molecule2._conformers) == 1
+        assert molecule2._conformers[0].shape == (15, 3)
+        assert_almost_equal(molecule2.conformers[0][5][1] / unit.angstrom, 22.98, decimal=2)
+
+        # Test loading from gzipped mol2
+        import gzip
+        with gzip.GzipFile(filename + '.gz', 'r') as infile:
+            molecule3 = Molecule(infile, file_format='MOL2', toolkit_registry=toolkit_wrapper)
+        assert molecule1.is_isomorphic(molecule3)
+        assert len(molecule3._conformers) == 1
+        assert molecule3._conformers[0].shape == (15, 3)
+        assert_almost_equal(molecule3.conformers[0][5][1] / unit.angstrom, 22.98, decimal=2)
 
     @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_charges(self):
         """Test OpenEyeToolkitWrapper for importing a single set of molecule coordinates"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.mol2')
+        filename = get_data_filename('molecules/toluene_charged.mol2')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
-        molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper)
-        molecule.to_file('toluene_charged.mol2', 'MOL2', toolkit_registry=toolkit_wrapper)
+        target_charges = unit.Quantity(np.array([-0.1342,-0.1271,-0.1271,-0.1310,
+                                                 -0.1310,-0.0765,-0.0541, 0.1314,
+                                                  0.1286, 0.1286, 0.1303, 0.1303,
+                                                  0.0440, 0.0440, 0.0440]),
+                                                unit.elementary_charge)
+        for pc1, pc2 in zip(molecule._partial_charges, target_charges):
+            pc1_ul = pc1 / unit.elementary_charge
+            pc2_ul = pc2 / unit.elementary_charge
+            assert_almost_equal(pc1_ul, pc2_ul, decimal=4)
 
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
@@ -448,7 +473,6 @@ class TestRDKitToolkitWrapper(TestCase):
 
 
 
-    # TODO: Make a close copy of this test, but with core props unset, and make sure they are equal to the default value both before and after toolkit conversion
 
     @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_to_from_rdkit_core_props_filled(self):
@@ -561,40 +585,6 @@ class TestRDKitToolkitWrapper(TestCase):
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
 
-    #@pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
-    #def test_to_from_rdkit(self):
-    #    """Test RDKitToolkitWrapper to_rdkit() and from_rdkit()"""
-    #    toolkit_wrapper = RDKitToolkitWrapper()
-    #    # This differs from OE's expected output due to different canonicalization schemes
-    #    smiles = '[H][C]([H])([H])[C]([H])([H])[H]'
-    #    molecule = Molecule.from_smiles(smiles,
-    #                                    toolkit_registry=toolkit_wrapper)
-    #    rdmol = molecule.to_rdkit()
-    #    molecule2 = Molecule.from_rdkit(rdmol)
-    #    smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
-    #    new_conf1 = unit.Quantity(np.array([[1,2,3],[4,5,6],[7,8,9],
-    #                                       [10,11,12],[13,14,15],[16,17,18],
-    #                                       [19,20,21],[22,23,24]],
-    #                                      dtype=np.float),
-    #                             unit.angstrom)
-    #    new_conf2 = unit.Quantity(np.array([[101,102,103],[104,105,106],[107,108,109],
-    #                                        [110,111,112],[113,114,115],[116,117,118],
-    #                                        [119,120,121],[122,123,124]],
-    #                                      dtype=np.float),
-    #                             unit.angstrom)
-    #    molecule2.add_conformer(new_conf1)
-    #    molecule2.add_conformer(new_conf2)
-    #
-    #
-    #    smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
-    #    assert smiles == smiles2
-    #    oemol2 = Molecule.to_openeye(molecule2)
-    #    assert oemol2.NumConfs() == 2
-    #    molecule3 = Molecule.from_openeye(oemol2)
-    #    assert len(molecule3._conformers) == 2
-    #    assert (molecule2._conformers[0] == molecule3._conformers[0]).all()
-    #    assert (molecule2._conformers[1] == molecule3._conformers[1]).all()
-        
         
     @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_get_sdf_coordinates(self):
@@ -604,7 +594,10 @@ class TestRDKitToolkitWrapper(TestCase):
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15, 3)
-    
+        assert_almost_equal(molecule.conformers[0][5][1] / unit.angstrom, 2.0104, decimal=4)
+
+
+    # Find a multiconformer SDF files
     @pytest.mark.skip
     #@pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_get_multiconformer_sdf_coordinates(self):
@@ -651,6 +644,9 @@ class TestRDKitToolkitWrapper(TestCase):
         molecule.generate_conformers()
         # TODO: Make this test more robust
         
+
+
+
 
         
         # TODO: Add test for higher bonds orders

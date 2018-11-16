@@ -1307,6 +1307,17 @@ class FrozenMolecule(Serializable):
         >>> molecule_copy = Molecule(serialized_molecule)
 
         """
+
+        # Figure out if toolkit_registry is a whole registry, or just a single wrapper
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            pass
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
+            toolkit_registry.add_toolkit(toolkit)
+        else:
+            raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
+
         if other is None:
             self._initialize()
         else:
@@ -2527,7 +2538,7 @@ class FrozenMolecule(Serializable):
             toolkit_registry.add_toolkit(toolkit)
         else:
             raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
-        
+
         outfile_format = outfile_format.upper()
         
         # Take the first toolkit that can write the desired output format

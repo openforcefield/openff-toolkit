@@ -492,6 +492,13 @@ class Topology(Serializable):
             self.from_molecules([other])
 
 
+    def _initialize(self):
+        """
+        Initializes a blank Topology.
+        Returns
+        -------
+
+        """
 
     @staticmethod
     def from_molecules(molecules):
