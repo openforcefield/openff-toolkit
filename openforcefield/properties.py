@@ -27,7 +27,7 @@ from enum import IntFlag, unique
 class PropertyType(IntFlag):
 
     Undefined          = 0x00
-    MassDensity        = 0x01
+    Density            = 0x01
     DielectricConstant = 0x02
 
     def __str__(self):

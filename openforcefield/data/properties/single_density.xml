@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--Created by Guided Data Capture (GDC) Software (http://www.trc.nist.gov)-->
+<DataReport xmlns="http://www.iupac.org/namespaces/ThermoML" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.iupac.org/namespaces/ThermoML http://trc.nist.gov/ThermoML.xsd">
+  <Version>
+    <nVersionMajor>2</nVersionMajor>
+    <nVersionMinor>0</nVersionMinor>
+  </Version>
+  <Citation>
+    <TRCRefID>
+      <yrYrPub>2005</yrYrPub>
+      <sAuthor1>kin</sAuthor1>
+      <sAuthor2>now</sAuthor2>
+      <nAuthorn>0</nAuthorn>
+    </TRCRefID>
+    <eType>journal</eType>
+    <eSourceType>Original</eSourceType>
+    <sAuthor>Kinart, C. M.[Cezary M.]</sAuthor>
+    <sAuthor>Nowak, K.[Katarzyna]</sAuthor>
+    <sAuthor>Kinart, W. J.[Wojciech J.]</sAuthor>
+    <sPubName>J. Chem. Thermodyn.</sPubName>
+    <yrPubYr>2005</yrPubYr>
+    <dateCit>2005-05-05</dateCit>
+    <sTitle>Volumetric properties of binary mixtures of alkoxyethanols with ethyl tert-butyl ether at various temperatures</sTitle>
+    <sKeyword>Ethyl tert-butyl ether</sKeyword>
+    <sKeyword>2-Methoxyethanol</sKeyword>
+    <sKeyword>2-(2-Methoxyethoxy)ethanol</sKeyword>
+    <sKeyword>2-{2-(2-Methoxyethoxy)ethoxy}ethanol</sKeyword>
+    <sKeyword>Density</sKeyword>
+    <sKeyword>Intermolecular interactions</sKeyword>
+    <sVol>37</sVol>
+    <sPage>423-429</sPage>
+  </Citation>
+  <Compound>
+    <RegNum>
+      <nOrgNum>1</nOrgNum>
+    </RegNum>
+    <sCommonName>2-methoxyethanol</sCommonName>
+    <sFormulaMolec>C3H8O2</sFormulaMolec>
+    <Sample>
+      <nSampleNm>1</nSampleNm>
+      <eSource>Commercial source</eSource>
+      <purity>
+        <nStep>1</nStep>
+        <nPurityMol>99</nPurityMol>
+        <nPurityMolDigits>2</nPurityMolDigits>
+        <eAnalMeth>Gas chromatography</eAnalMeth>
+      </purity>
+    </Sample>
+  </Compound>
+  <PureOrMixtureData>
+    <Component>
+      <RegNum>
+        <nOrgNum>1</nOrgNum>
+      </RegNum>
+      <nSampleNm>1</nSampleNm>
+    </Component>
+    <eExpPurpose>Principal objective of the work</eExpPurpose>
+    <sCompiler>JCE</sCompiler>
+    <sContributor>JCE</sContributor>
+    <dateDateAdded>5/5/2005</dateDateAdded>
+    <Property>
+      <nPropNumber>1</nPropNumber>
+      <Property-MethodID>
+        <PropertyGroup>
+          <VolumetricProp>
+            <ePropName>Mass density, kg/m3</ePropName>
+            <eMethodName>Pycnometric method</eMethodName>
+          </VolumetricProp>
+        </PropertyGroup>
+      </Property-MethodID>
+      <PropPhaseID>
+        <ePropPhase>Liquid</ePropPhase>
+      </PropPhaseID>
+      <ePresentation>Direct value, X</ePresentation>
+      <PropUncertainty>
+        <nUncertAssessNum>1</nUncertAssessNum>
+        <sUncertEvaluator>Author</sUncertEvaluator>
+      </PropUncertainty>
+    </Property>
+    <PhaseID>
+      <ePhase>Liquid</ePhase>
+    </PhaseID>
+    <Variable>
+      <nVarNumber>1</nVarNumber>
+      <VariableID>
+        <VariableType>
+          <eTemperature>Temperature, K</eTemperature>
+        </VariableType>
+      </VariableID>
+      <VarUncertainty>
+        <nUncertAssessNum>1</nUncertAssessNum>
+        <sUncertEvaluator>Author</sUncertEvaluator>
+      </VarUncertainty>
+    </Variable>
+    <Variable>
+      <nVarNumber>2</nVarNumber>
+      <VariableID>
+        <VariableType>
+          <ePressure>Pressure, kPa</ePressure>
+        </VariableType>
+      </VariableID>
+    </Variable>
+    <NumValues>
+      <VariableValue>
+        <nVarNumber>1</nVarNumber>
+        <nVarValue>293.15</nVarValue>
+        <nVarDigits>5</nVarDigits>
+      </VariableValue>
+      <VariableValue>
+        <nVarNumber>2</nVarNumber>
+        <nVarValue>101.3</nVarValue>
+        <nVarDigits>4</nVarDigits>
+      </VariableValue>
+      <PropertyValue>
+        <nPropNumber>1</nPropNumber>
+        <nPropValue>964.88</nPropValue>
+        <nPropDigits>5</nPropDigits>
+        <PropUncertainty>
+          <nUncertAssessNum>1</nUncertAssessNum>
+          <nStdUncertValue>.05</nStdUncertValue>
+        </PropUncertainty>
+      </PropertyValue>
+    </NumValues>
+  </PureOrMixtureData>
+</DataReport>

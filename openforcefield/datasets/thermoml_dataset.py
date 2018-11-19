@@ -348,7 +348,7 @@ class ThermoMLProperty(MeasuredPhysicalProperty):
         property_string = string_split[0] if len(string_split) > 0 else None
 
         if property_string == 'Mass density':
-            return_value = PropertyType.MassDensity
+            return_value = PropertyType.Density
         elif property_string == 'Relative permittivity at zero frequency':
             return_value = PropertyType.DielectricConstant
 
@@ -1077,7 +1077,7 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
 
             data_set = cls._from_file(file)
 
-            print('Reading file ', counter, ' of ', len(file_list), ' (', file, ')')
+            logging.info('Reading file ' + str(counter + 1) + ' of ' + str(len(file_list)) + ' (' + file + ')')
             counter += 1
 
             if data_set is None or len(data_set.measured_properties) == 0:
