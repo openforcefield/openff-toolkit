@@ -49,7 +49,7 @@ def test_from_files():
 
 def parse_all_jct_files():
 
-    logging.basicConfig(filename='data_sets.log', filemode='w')
+    logging.basicConfig(filename='data_sets.log', filemode='w', level=logging.INFO)
 
     data_path = '../data/properties/JCT'
     thermoml_files = []
@@ -67,3 +67,5 @@ def parse_all_jct_files():
 
     densities = list(filter(lambda x: x.type & PropertyType.Density, data_set.measured_properties))
     dielectrics = list(filter(lambda x: x.type & PropertyType.DielectricConstant, data_set.measured_properties))
+
+parse_all_jct_files()

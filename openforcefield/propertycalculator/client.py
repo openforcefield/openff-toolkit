@@ -26,14 +26,15 @@ from openforcefield.propertycalculator.runner import PropertyCalculationRunner
 # Helper Classes
 # =============================================================================================
 
+@unique
 class CalculationFidelity(Enum):
     """
         An enum describing the fidelity at which a calculation was performed.
     """
 
-    SurrogateModel:   0x01
-    Reweighting:      0x02
-    DirectSimulation: 0x03
+    SurrogateModel =   1
+    Reweighting =      2
+    DirectSimulation = 3
 
 
 class CalculatedPhysicalProperty(object):
@@ -155,6 +156,7 @@ class PropertyEstimator(object):
         """
 
         if data_set is None or parameter_set is None:
+
             raise ValueError('Both a data set and parameter set must be '
                              'present to compute physical properties.')
 

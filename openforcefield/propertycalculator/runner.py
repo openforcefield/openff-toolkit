@@ -18,11 +18,16 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import os
+import copy
 import logging
 
-from openforcefield.propertycalculator import protocols
-from openforcefield.propertycalculator.protocols import ExtractableStatistics
+from queue import Queue
+from threading import Thread
+from os import path
+from xml.etree import ElementTree
 
+from openforcefield.propertycalculator import protocols
 from openforcefield.properties import PropertyType
 
 
@@ -30,68 +35,87 @@ from openforcefield.properties import PropertyType
 # Calculation Classes
 # =============================================================================================
 
+# TODO: Move into better home.
+class XmlNodeMissingException(Exception):
 
-class DirectPropertyCalculation:
+    def __init__(self, node_name):
+
+        message = 'The calculation template does not contain a <' + str(node_name) + '> node.'
+        super().__init__(message)
+
+
+class DirectPropertyCalculationTemplate:
     """
     Defines the set of protocols required to calculate a certain property.
     """
     def __init__(self):
 
-        self._property_type = PropertyType.Undefined
+        self.property_type = PropertyType.Undefined
+        self.label = ''
+
         self.protocols = []
 
-    @property
-    def property_type(self):
-        return self._property_type
+    @classmethod
+    def from_xml(cls, xml_node, existing_templates):
 
+        return_value = cls()
 
-class DirectDensityCalculation(DirectPropertyCalculation):
+        # Gather up all possible identifiers
+        property_node = xml_node.find('property')
 
-    def __init__(self):
+        if property_node is None:
+            raise XmlNodeMissingException('property')
 
-        super().__init__()
+        return_value.property_type = PropertyType[property_node.text]
 
-        self._property_type = PropertyType.Density
+        label_node = xml_node.find('label')
 
-        build_liquid = protocols.BuildLiquidCoordinates()
-        topology_protocol = protocols.BuildSmirnoffTopology()
+        if label_node is None:
+            raise XmlNodeMissingException('label')
 
-        self.protocols.append((build_liquid, topology_protocol))
+        return_value.label = label_node.text
 
-        energy_minimisation = protocols.RunEnergyMinimisation()
-        run_nvt = protocols.RunNVTSimulation()
+        inherits_node = xml_node.find('inherits')
 
-        self.protocols.append((energy_minimisation, run_nvt))
+        if inherits_node is not None:
 
-        run_npt = protocols.RunNPTSimulation()
+            if inherits_node.text not in existing_templates:
 
-        self.protocols.append(run_npt)
+                raise RuntimeError('The ' + return_value.label + ' template tries to inherit from '
+                                                                 'a non-existent template.')
 
-        statistics = protocols.ExtractableStatistics(ExtractableStatistics.Density)
+            return_value.protocols.extend(existing_templates[inherits_node.text].protocols)
 
-        self.protocols.append(statistics)
+        protocol_nodes = xml_node.find('protocols')
 
+        if label_node is None:
+            raise XmlNodeMissingException('protocols')
 
-class DirectDielectricCalculation(DirectPropertyCalculation):
+        for protocol_node in protocol_nodes:
 
-    def __init__(self):
-        super().__init__()
+            protocol = None
 
-        self._property_type = PropertyType.DielectricConstant
+            # TODO: There must be a cleaner way to do this...
+            if protocol_node.tag == protocols.BuildLiquidCoordinates.__name__:
+                protocol = protocols.BuildLiquidCoordinates.from_xml(protocol_node)
+            elif protocol_node.tag == protocols.BuildSmirnoffTopology.__name__:
+                protocol = protocols.BuildSmirnoffTopology.from_xml(protocol_node)
+            elif protocol_node.tag == protocols.RunEnergyMinimisation.__name__:
+                protocol = protocols.RunEnergyMinimisation.from_xml(protocol_node)
+            elif protocol_node.tag == protocols.RunNVTSimulation.__name__:
+                protocol = protocols.RunNVTSimulation.from_xml(protocol_node)
+            elif protocol_node.tag == protocols.RunNPTSimulation.__name__:
+                protocol = protocols.RunNPTSimulation.from_xml(protocol_node)
+            elif protocol_node.tag == protocols.ExtractStatistics.__name__:
+                protocol = protocols.ExtractStatistics.from_xml(protocol_node)
+            else:
 
-        build_liquid = protocols.BuildLiquidCoordinates()
-        topology_protocol = protocols.BuildSmirnoffTopology()
+                raise RuntimeError('The ' + return_value.label + ' contains an undefined '
+                                                                 'protocol type: ' + protocol_node.tag)
 
-        self.protocols.append((build_liquid, topology_protocol))
+            return_value.protocols.append(protocol)
 
-        energy_minimisation = protocols.RunEnergyMinimisation()
-        run_nvt = protocols.RunNVTSimulation()
-
-        self.protocols.append((energy_minimisation, run_nvt))
-
-        run_npt = protocols.RunNPTSimulation()
-
-        self.protocols.append(run_npt)
+        return return_value
 
 
 class DirectCalculationGraph:
@@ -101,9 +125,11 @@ class DirectCalculationGraph:
     """
     class TreeNode:
 
-        def __init__(self, index):
+        def __init__(self, index, depth):
 
             self.index = index
+            self.depth = depth
+
             self.children = []
 
     def __init__(self):
@@ -113,21 +139,31 @@ class DirectCalculationGraph:
 
         self._leaf_nodes = []
 
+    @property
+    def nodes(self):
+        return self._nodes
+
+    @property
+    def leaf_protocols(self):
+        return [self._master_protocols_list[node.index] for node in self._leaf_nodes]
+
     def _insert_root_node(self, protocol):
 
-            for node in self._nodes:
+        for node in self._nodes:
 
-                existing_protocol = self._master_protocols_list[node.index]
+            existing_protocol = self._master_protocols_list[node.index]
 
-                if type(existing_protocol) != type(protocol):
-                    continue
+            if existing_protocol.compare_to(protocol) is False:
+                continue
 
-                return node
+            return node
 
-            self._master_protocols_list.append(protocol)
+        self._master_protocols_list.append(protocol)
 
-            new_node = self.TreeNode(len(self._master_protocols_list) - 1)
-            self._nodes.append(new_node)
+        new_node = self.TreeNode(len(self._master_protocols_list) - 1, 0)
+        self._nodes.append(new_node)
+
+        return new_node
 
     def _insert_node(self, protocol, tree_node):
 
@@ -135,15 +171,17 @@ class DirectCalculationGraph:
 
             existing_protocol = self._master_protocols_list[node.index]
 
-            if type(existing_protocol) != type(protocol):
+            if existing_protocol.compare_to(protocol) is False:
                 continue
 
             return node
 
         self._master_protocols_list.append(protocol)
 
-        new_node = self.TreeNode(len(self._master_protocols_list) - 1)
-        self._nodes.append(new_node)
+        new_node = self.TreeNode(len(self._master_protocols_list) - 1, tree_node.depth + 1)
+        tree_node.children.append(new_node)
+
+        return new_node
 
     def add_calculation(self, calculation):
 
@@ -154,6 +192,39 @@ class DirectCalculationGraph:
 
         if tree_node is not None and tree_node not in self._leaf_nodes:
             self._leaf_nodes.append(tree_node)
+
+    @staticmethod
+    def worker_thread(task_queue):
+
+        while True:
+
+            parent_tree, tree_node, input_data = task_queue.get()
+            parent_tree.execute(task_queue, input_data, tree_node)
+
+            task_queue.task_done()
+
+    def execute(self, task_queue, protocol_data, tree_node=None):
+
+        nodes = self._nodes if tree_node is None else tree_node.children
+
+        if not path.isdir(protocol_data.root_directory):
+            os.makedirs(protocol_data.root_directory)
+
+        if tree_node is not None:
+
+            protocol = self._master_protocols_list[tree_node.index]
+            protocol_data = protocol.execute(protocol_data)
+
+        for index, node in enumerate(nodes):
+
+            input_data = protocol_data
+
+            if len(nodes) > 1:
+                input_data = protocols.ProtocolData.clone(protocol_data)
+
+            input_data.root_directory = path.join(input_data.root_directory, str(index))
+
+            task_queue.put((self, node, input_data))
 
 
 # =============================================================================================
@@ -166,10 +237,43 @@ class PropertyCalculationRunner:
     is calculated, as well as launching the calculations themselves.
     """
 
-    def __init__(self):
+    def __init__(self, number_of_threads=1):
 
         self._pending_calculations = {}
         self._finished_calculations = {}
+
+        self._number_of_threads = number_of_threads
+
+        self.calculator_templates = {}
+
+        self.load_calculator_templates()
+
+    def load_calculator_templates(self):
+        """
+        Loads the property calculation templates from the default xml file.
+        """
+        templates = {}
+
+        with open('../data/properties/templates.xml') as templates_file:
+
+            xml = templates_file.read()
+            root_node = ElementTree.fromstring(xml)
+
+            for template_node in root_node:
+
+                calculator_template = DirectPropertyCalculationTemplate.from_xml(template_node,
+                                                                                 templates)
+
+                templates[calculator_template.label] = calculator_template
+
+        for template_label in templates:
+
+            template = templates[template_label]
+
+            if template.property_type is PropertyType.Undefined:
+                continue
+
+            self.calculator_templates[template.property_type] = template
 
     def run(self, measured_properties, parameter_set):
 
@@ -229,7 +333,7 @@ class PropertyCalculationRunner:
             if measured_property.type in properties_by_mixture[substance_tag]:
                 continue
 
-            properties_by_mixture[substance_tag].append(measured_property.type)
+            properties_by_mixture[substance_tag].append(measured_property)
 
         # Next, for each property we need to figure out which protocols
         # are required to calculate the properties in properties_by_mixture
@@ -267,36 +371,26 @@ class PropertyCalculationRunner:
         # where chain branches indicate a divergence in protocol
         #
         # More than likely most graphs will diverge at the analysis stage.
-
-        calculation_graphs = {}
-
-        for mixture in properties_by_mixture:
-
-            calculation_graph = DirectCalculationGraph()
-
-            for property_to_calculate in properties_by_mixture[mixture]:
-
-                calculation = None
-
-                if property_to_calculate is PropertyType.Density:
-                    calculation = DirectDensityCalculation()
-                elif property_to_calculate is PropertyType.DielectricConstant:
-                    calculation = DirectDielectricCalculation()
-                else:
-
-                    logging.warning('The property calculator does not support ' +
-                                    property_to_calculate + ' calculations.')
-
-                    continue
-
-                calculation_graph.add_calculation(calculation)
-
-            calculation_graphs[mixture] = calculation_graph
+        calculation_graphs = self.build_calculation_graph(properties_by_mixture)
 
         # Once a list of unique list of protocols to be executed has been constructed
         # the protocols can be fired.
 
-        # TODO : Traverse graph and execute protocols.
+        self.execute_calculation_graph(calculation_graphs,
+                                       parameter_set)
+
+        for mixture in calculation_graphs:
+
+            calculation_graph = calculation_graphs[mixture]
+
+            for leaf_protocol in calculation_graph.leaf_protocols:
+
+                if type(leaf_protocol) is not protocols.ExtractStatistics:
+                    continue
+
+                for calculated_property in leaf_protocol.calculated_properties:
+                    self._finished_calculations[mixture].append(leaf_protocol.calculated_properties[calculated_property])
+
         # TODO : Extract calculated properties from ProtocolData's.
 
         # The results from these calculations would then be stored in some way so that
@@ -308,6 +402,65 @@ class PropertyCalculationRunner:
         #   2) The results would be passed back to the 'client'
 
         return self._finished_calculations
+
+    def build_calculation_graph(self, properties_by_mixture):
+
+        calculation_graphs = {}
+
+        for mixture in properties_by_mixture:
+
+            calculation_graph = DirectCalculationGraph()
+
+            for property_to_calculate in properties_by_mixture[mixture]:
+
+                if property_to_calculate.type not in self.calculator_templates:
+
+                    logging.warning('The property calculator does not support ' +
+                                    property_to_calculate.type + ' calculations.')
+
+                    continue
+
+                calculation = copy.deepcopy(self.calculator_templates[property_to_calculate.type])
+
+                for protocol in calculation.protocols:
+                    protocol.set_measured_property(property_to_calculate)
+
+                calculation_graph.add_calculation(calculation)
+
+            calculation_graphs[mixture] = calculation_graph
+
+        return calculation_graphs
+
+    def execute_calculation_graph(self, calculation_graphs, force_field):
+
+        task_queue = Queue()
+
+        logging.info('Spawning ' + str(self._number_of_threads) + ' worker threads.')
+
+        # Set up the pool of threads.
+        for i in range(self._number_of_threads):
+
+            worker = Thread(target=DirectCalculationGraph.worker_thread, args=(task_queue,))
+            worker.setDaemon(True)
+            worker.start()
+
+        for mixture in calculation_graphs:
+
+            calculation_graph = calculation_graphs[mixture]
+
+            if len(calculation_graph.nodes) == 0:
+                continue
+
+            protocol_data = protocols.ProtocolData()
+
+            protocol_data.root_directory = path.join('property-data', mixture)
+
+            protocol_data.substance_tag = mixture
+            protocol_data.force_field = force_field
+
+            calculation_graph.execute(task_queue, protocol_data)
+
+        task_queue.join()
 
     def attempt_surrogate_extrapolation(self, parameter_set, properties_to_measure):
         """Attempts to calculate properties from a surrogate model"""
