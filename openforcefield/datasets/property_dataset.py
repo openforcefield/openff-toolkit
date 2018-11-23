@@ -71,3 +71,10 @@ class PhysicalPropertyDataSet(object):
 
         def filter_function(x): return x.phase & phases
         self.filter_by_function(filter_function)
+
+    def filter_by_temperature(self, min_temperature, max_temperature):
+
+        def filter_function(x):
+            return min_temperature <= x.thermodynamic_state.temperature <= max_temperature
+
+        self.filter_by_function(filter_function)

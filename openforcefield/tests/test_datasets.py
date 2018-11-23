@@ -68,4 +68,4 @@ def parse_all_jct_files():
     densities = list(filter(lambda x: x.type & PropertyType.Density, data_set.measured_properties))
     dielectrics = list(filter(lambda x: x.type & PropertyType.DielectricConstant, data_set.measured_properties))
 
-parse_all_jct_files()
+# parse_all_jct_files()

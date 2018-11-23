@@ -21,28 +21,23 @@ Authors
 import os
 import copy
 import logging
+import multiprocessing
+import math
 
 from queue import Queue
 from threading import Thread
 from os import path
 from xml.etree import ElementTree
 
+from openforcefield.utils.exceptions import XmlNodeMissingException
 from openforcefield.propertycalculator import protocols
-from openforcefield.properties import PropertyType
+from openforcefield.properties import PropertyType, PropertyPhase, CalculationFidelity, \
+                                      CalculatedPhysicalProperty, CalculatedPropertySet
 
 
 # =============================================================================================
 # Calculation Classes
 # =============================================================================================
-
-# TODO: Move into better home.
-class XmlNodeMissingException(Exception):
-
-    def __init__(self, node_name):
-
-        message = 'The calculation template does not contain a <' + str(node_name) + '> node.'
-        super().__init__(message)
-
 
 class DirectPropertyCalculationTemplate:
     """
@@ -93,26 +88,18 @@ class DirectPropertyCalculationTemplate:
 
         for protocol_node in protocol_nodes:
 
-            protocol = None
+            protocol_class = getattr(protocols, protocol_node.tag)
 
-            # TODO: There must be a cleaner way to do this...
-            if protocol_node.tag == protocols.BuildLiquidCoordinates.__name__:
-                protocol = protocols.BuildLiquidCoordinates.from_xml(protocol_node)
-            elif protocol_node.tag == protocols.BuildSmirnoffTopology.__name__:
-                protocol = protocols.BuildSmirnoffTopology.from_xml(protocol_node)
-            elif protocol_node.tag == protocols.RunEnergyMinimisation.__name__:
-                protocol = protocols.RunEnergyMinimisation.from_xml(protocol_node)
-            elif protocol_node.tag == protocols.RunNVTSimulation.__name__:
-                protocol = protocols.RunNVTSimulation.from_xml(protocol_node)
-            elif protocol_node.tag == protocols.RunNPTSimulation.__name__:
-                protocol = protocols.RunNPTSimulation.from_xml(protocol_node)
-            elif protocol_node.tag == protocols.ExtractStatistics.__name__:
-                protocol = protocols.ExtractStatistics.from_xml(protocol_node)
-            else:
+            if protocol_class is None:
 
-                raise RuntimeError('The ' + return_value.label + ' contains an undefined '
-                                                                 'protocol type: ' + protocol_node.tag)
+                raise RuntimeError('The ' + return_value.label + ' contains an undefined'
+                                                                 ' protocol of type: ' + protocol_node.tag)
 
+            if isinstance(protocol_class, protocols.Protocol):
+
+                raise RuntimeError(protocol_node.tag + ' is not a child of Protocol')
+
+            protocol = protocol_class.from_xml(protocol_node)
             return_value.protocols.append(protocol)
 
         return return_value
@@ -215,6 +202,11 @@ class DirectCalculationGraph:
             protocol = self._master_protocols_list[tree_node.index]
             protocol_data = protocol.execute(protocol_data)
 
+        if protocol_data is None:
+            # Something went wrong and we can't continue down
+            # the hierarchy
+            return
+
         for index, node in enumerate(nodes):
 
             input_data = protocol_data
@@ -222,7 +214,10 @@ class DirectCalculationGraph:
             if len(nodes) > 1:
                 input_data = protocols.ProtocolData.clone(protocol_data)
 
-            input_data.root_directory = path.join(input_data.root_directory, str(index))
+            protocol_type = type(self._master_protocols_list[node.index]).__name__
+
+            input_data.root_directory = path.join(input_data.root_directory,
+                                                  str(index) + '_' + str(protocol_type))
 
             task_queue.put((self, node, input_data))
 
@@ -237,12 +232,29 @@ class PropertyCalculationRunner:
     is calculated, as well as launching the calculations themselves.
     """
 
-    def __init__(self, number_of_threads=1):
+    def __init__(self, worker_threads=1, threads_per_simulation=None):
 
         self._pending_calculations = {}
         self._finished_calculations = {}
 
-        self._number_of_threads = number_of_threads
+        self._worker_threads = worker_threads
+        self._threads_per_simulation = threads_per_simulation
+
+        maximum_threads = multiprocessing.cpu_count()
+
+        if threads_per_simulation is None:
+            threads_per_simulation = math.floor(maximum_threads / worker_threads)
+
+        if worker_threads * threads_per_simulation > maximum_threads:
+
+            raise ValueError('The total number of requested threads (' +
+                             str(worker_threads * threads_per_simulation) +
+                             ') must be less than the available ' + str(maximum_threads))
+
+        logging.info(str(threads_per_simulation) + ' threads will be used per'
+                                                   ' openMM simulation')
+
+        os.environ["OPENMM_NUM_THREADS"] = str(threads_per_simulation)
 
         self.calculator_templates = {}
 
@@ -375,23 +387,11 @@ class PropertyCalculationRunner:
 
         # Once a list of unique list of protocols to be executed has been constructed
         # the protocols can be fired.
-
         self.execute_calculation_graph(calculation_graphs,
                                        parameter_set)
 
-        for mixture in calculation_graphs:
-
-            calculation_graph = calculation_graphs[mixture]
-
-            for leaf_protocol in calculation_graph.leaf_protocols:
-
-                if type(leaf_protocol) is not protocols.ExtractStatistics:
-                    continue
-
-                for calculated_property in leaf_protocol.calculated_properties:
-                    self._finished_calculations[mixture].append(leaf_protocol.calculated_properties[calculated_property])
-
-        # TODO : Extract calculated properties from ProtocolData's.
+        # Finally, extract the calculated properties.
+        self.extract_calculated_properties(calculation_graphs)
 
         # The results from these calculations would then be stored in some way so that
         # the data required for reweighting is retained.
@@ -401,66 +401,8 @@ class PropertyCalculationRunner:
         #   1) The simulation results could be fed into the surrogate model
         #   2) The results would be passed back to the 'client'
 
-        return self._finished_calculations
-
-    def build_calculation_graph(self, properties_by_mixture):
-
-        calculation_graphs = {}
-
-        for mixture in properties_by_mixture:
-
-            calculation_graph = DirectCalculationGraph()
-
-            for property_to_calculate in properties_by_mixture[mixture]:
-
-                if property_to_calculate.type not in self.calculator_templates:
-
-                    logging.warning('The property calculator does not support ' +
-                                    property_to_calculate.type + ' calculations.')
-
-                    continue
-
-                calculation = copy.deepcopy(self.calculator_templates[property_to_calculate.type])
-
-                for protocol in calculation.protocols:
-                    protocol.set_measured_property(property_to_calculate)
-
-                calculation_graph.add_calculation(calculation)
-
-            calculation_graphs[mixture] = calculation_graph
-
-        return calculation_graphs
-
-    def execute_calculation_graph(self, calculation_graphs, force_field):
-
-        task_queue = Queue()
-
-        logging.info('Spawning ' + str(self._number_of_threads) + ' worker threads.')
-
-        # Set up the pool of threads.
-        for i in range(self._number_of_threads):
-
-            worker = Thread(target=DirectCalculationGraph.worker_thread, args=(task_queue,))
-            worker.setDaemon(True)
-            worker.start()
-
-        for mixture in calculation_graphs:
-
-            calculation_graph = calculation_graphs[mixture]
-
-            if len(calculation_graph.nodes) == 0:
-                continue
-
-            protocol_data = protocols.ProtocolData()
-
-            protocol_data.root_directory = path.join('property-data', mixture)
-
-            protocol_data.substance_tag = mixture
-            protocol_data.force_field = force_field
-
-            calculation_graph.execute(task_queue, protocol_data)
-
-        task_queue.join()
+        property_set = CalculatedPropertySet(self._finished_calculations, parameter_set)
+        return property_set
 
     def attempt_surrogate_extrapolation(self, parameter_set, properties_to_measure):
         """Attempts to calculate properties from a surrogate model"""
@@ -507,3 +449,93 @@ class PropertyCalculationRunner:
         reweighting backend.
         """
         return None
+
+    def build_calculation_graph(self, properties_by_mixture):
+
+        calculation_graphs = {}
+
+        for mixture in properties_by_mixture:
+
+            calculation_graph = DirectCalculationGraph()
+
+            for property_to_calculate in properties_by_mixture[mixture]:
+
+                if property_to_calculate.type not in self.calculator_templates:
+
+                    logging.warning('The property calculator does not support ' +
+                                    property_to_calculate.type + ' calculations.')
+
+                    continue
+
+                calculation = copy.deepcopy(self.calculator_templates[property_to_calculate.type])
+
+                for protocol in calculation.protocols:
+                    protocol.set_measured_property(property_to_calculate)
+
+                calculation_graph.add_calculation(calculation)
+
+            calculation_graphs[mixture] = calculation_graph
+
+        return calculation_graphs
+
+    def execute_calculation_graph(self, calculation_graphs, force_field):
+
+        task_queue = Queue()
+
+        logging.info('Spawning ' + str(self._worker_threads) + ' worker threads.')
+
+        # Set up the pool of threads.
+        for i in range(self._worker_threads):
+
+            worker = Thread(target=DirectCalculationGraph.worker_thread, args=(task_queue,))
+            worker.setDaemon(True)
+            worker.start()
+
+        for mixture in calculation_graphs:
+
+            calculation_graph = calculation_graphs[mixture]
+
+            if len(calculation_graph.nodes) == 0:
+                continue
+
+            protocol_data = protocols.ProtocolData()
+
+            protocol_data.root_directory = path.join('property-data', mixture)
+
+            protocol_data.substance_tag = mixture
+            protocol_data.force_field = force_field
+
+            calculation_graph.execute(task_queue, protocol_data)
+
+        task_queue.join()
+
+    def extract_calculated_properties(self, calculation_graphs):
+
+        for mixture in calculation_graphs:
+
+            calculation_graph = calculation_graphs[mixture]
+
+            for leaf_protocol in calculation_graph.leaf_protocols:
+
+                if not isinstance(leaf_protocol, protocols.AveragePropertyProtocol):
+                    continue
+
+                property_type = PropertyType.Undefined
+
+                if isinstance(leaf_protocol, protocols.ExtractAverageDensity):
+                    property_type = PropertyType.Density
+                elif isinstance(leaf_protocol, protocols.ExtractAverageDielectric):
+                    property_type = PropertyType.DielectricConstant
+
+                if property_type is PropertyType.Undefined:
+                    continue
+
+                calculated_property = CalculatedPhysicalProperty(leaf_protocol.substance,
+                                                                 leaf_protocol.thermodynamic_state,
+                                                                 property_type,
+                                                                 PropertyPhase.Liquid,
+                                                                 CalculationFidelity.DirectSimulation,
+                                                                 leaf_protocol.value,
+                                                                 leaf_protocol.uncertainty)
+
+                self._finished_calculations[mixture].append(calculated_property)

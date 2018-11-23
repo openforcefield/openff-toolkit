@@ -9,7 +9,7 @@
 
             <!--Setup-->
             <BuildLiquidCoordinates>
-                <max_molecules>100</max_molecules>
+                <max_molecules>128</max_molecules>
                 <mass_density>1.0</mass_density>
             </BuildLiquidCoordinates>
 
@@ -18,20 +18,22 @@
             <!--Equilibration-->
             <RunEnergyMinimisation/>
 
-            <RunNVTSimulation>
-                <steps>2</steps>
+            <RunOpenMMSimulation>
+                <steps>10000</steps>
                 <thermostat_friction>1.0</thermostat_friction>
-                <timestep>0.002</timestep>
-                <output_frequency>1</output_frequency>
-            </RunNVTSimulation>
+                <timestep>0.001</timestep>
+                <output_frequency>500</output_frequency>
+                <ensemble>NPT</ensemble>
+            </RunOpenMMSimulation>
 
             <!--Production-->
-            <RunNPTSimulation>
-                <steps>2</steps>
+            <RunOpenMMSimulation>
+                <steps>40000</steps>
                 <thermostat_friction>1.0</thermostat_friction>
-                <timestep>0.002</timestep>
-                <output_frequency>1</output_frequency>
-            </RunNPTSimulation>
+                <timestep>0.001</timestep>
+                <output_frequency>500</output_frequency>
+                <ensemble>NPT</ensemble>
+            </RunOpenMMSimulation>
 
         </protocols>
 
@@ -45,9 +47,7 @@
         <protocols>
 
             <!--Analysis-->
-            <ExtractStatistics>
-                <quantity>Density</quantity>
-            </ExtractStatistics>
+            <ExtractAverageDensity/>
 
         </protocols>
 
@@ -61,9 +61,7 @@
         <protocols>
 
             <!--Analysis-->
-            <ExtractStatistics>
-                <quantity>DielectricConstant</quantity>
-            </ExtractStatistics>
+            <ExtractAverageDielectric/>
 
         </protocols>
 

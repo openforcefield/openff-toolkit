@@ -20,18 +20,16 @@ Authors
 
 from __future__ import with_statement
 
-import re
-
-import logging
-
 # import json
 # import ujson as json
 import _pickle as cPickle
+import logging
+import re
+
+from enum import IntEnum, unique
 
 from urllib.error import HTTPError
 from urllib.request import urlopen
-
-from enum import IntEnum, unique
 
 from xml.etree import ElementTree
 
@@ -40,11 +38,9 @@ from openeye import oeiupac
 
 from simtk import unit
 
-from openforcefield.measurements import Source, MeasuredPhysicalProperty
-from openforcefield.thermodynamics import ThermodynamicState
+from openforcefield.properties import PropertyPhase, PropertyType, Source, MeasuredPhysicalProperty
 from openforcefield.substances import Mixture
-
-from openforcefield.properties import PropertyPhase, PropertyType
+from openforcefield.thermodynamics import ThermodynamicState
 
 from .property_dataset import PhysicalPropertyDataSet
 

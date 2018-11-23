@@ -4,24 +4,21 @@ import shutil
 
 from os import path
 
-import simtk.unit as unit
-
-from openforcefield import substances
-
 from openforcefield.datasets import ThermoMLDataSet
 
 from openforcefield.typing.engines import smirnoff
 from openforcefield.utils import get_data_filename
 
-from openforcefield.propertycalculator import protocols
-from openforcefield.propertycalculator import runner
+from openforcefield.propertycalculator import client
 
 
-def run_property_calculator():
+def run_property_estimator():
 
+    # Remove any existing data.
     if path.isdir('property-data'):
         shutil.rmtree('property-data')
 
+    # Set up time-based logging to help debug threading issues.
     formatter = logging.Formatter(fmt='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
                                   datefmt='%H:%M:%S')
 
@@ -32,12 +29,15 @@ def run_property_calculator():
     logger.setLevel(logging.INFO)
     logger.addHandler(screen_handler)
 
+    # data_set = ThermoMLDataSet.from_file_list('../data/properties/single_density.xml')
     # data_set = ThermoMLDataSet.from_file_list('../data/properties/fake_data.xml')
     data_set = ThermoMLDataSet.from_file_list('../data/properties/j.jct.2007.09.004.xml')
     force_field = smirnoff.ForceField(get_data_filename('forcefield/smirnoff99Frosst.offxml'))
 
-    property_calculator = runner.PropertyCalculationRunner(2)
-    results = property_calculator.run(data_set.measured_properties, force_field)
+    property_estimator = client.PropertyEstimator()
+
+    results = property_estimator.compute_properties(data_set.measured_properties, force_field, 2)
+    client.PropertyEstimator.produce_calculation_report(data_set, results)
 
 
-# test_mixture_protocol()
+# run_property_estimator()

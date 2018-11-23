@@ -174,3 +174,14 @@ class ThermodynamicState(object):
         return_value += ">"
 
         return return_value
+
+    def to_tag(self):
+
+        tag = []
+
+        if self._temperature is not None:
+            tag.append(str(self._temperature))
+        if self._pressure is not None:
+            tag.append(str(self._pressure))
+
+        return "|".join(tag)

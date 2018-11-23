@@ -18,117 +18,9 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-from enum import Enum, unique
+import logging
+
 from openforcefield.propertycalculator.runner import PropertyCalculationRunner
-
-
-# =============================================================================================
-# Helper Classes
-# =============================================================================================
-
-@unique
-class CalculationFidelity(Enum):
-    """
-        An enum describing the fidelity at which a calculation was performed.
-    """
-
-    SurrogateModel =   1
-    Reweighting =      2
-    DirectSimulation = 3
-
-
-class CalculatedPhysicalProperty(object):
-    """
-    A CalculatedPhysicalProperty represents a property estimated by either
-    a surrogate model, reweighting existing data, or directly from a simulation.
-
-    Parameters
-    ----------
-    substance : Substance
-        Material/Substance/Chemical that the property was calculated for.
-    thermodynamic_state : ThermodynamicState
-        Physical thermodynamic state with temperature and pressure the property was calculated at.
-    property_type : PropertyType
-        The type of property (e.g density) that was calculated.
-    property_phase : PropertyType
-        The phase in which the property was calculated.
-    fidelity : CalculationFidelity
-        The fidelity (e.g direct simulation) at which the property was calculated.
-    value : simtk.unit.Quantity, float, or None
-        The value of the calculated property.
-    uncertainty : simtk.unit.Quantity, float, or None
-        The uncertainty of the calculated property.
-    """
-    def __init__(self, substance, thermodynamic_state, property_type,
-                 property_phase, fidelity, value, uncertainty):
-
-        self._substance = substance
-        self._thermodynamic_state = thermodynamic_state
-
-        self._type = property_type
-        self._phase = property_phase
-
-        self._fidelity = fidelity
-
-        self._value = value
-        self._uncertainty = uncertainty
-
-    @property
-    def temperature(self):
-        """The temperature which the property was measured at"""
-        return self._thermodynamic_state.temperature
-
-    @property
-    def pressure(self):
-        """The pressure which the property was measured at"""
-        return self._thermodynamic_state.pressure
-
-    @property
-    def value(self):
-        """The value of the calculated property"""
-        return self._value
-
-    @property
-    def uncertainty(self):
-        """The uncertainty in the calculated property"""
-        return self._uncertainty
-
-    @property
-    def type(self):
-        """The type of property calculated."""
-        return self._type
-
-    @property
-    def phase(self):
-        """The phase in which the property was calculated."""
-        return self._phase
-
-    def set_value(self, value, uncertainty):
-        """Set the calculated value and uncertainty."""
-        self._value = value
-        self._uncertainty = uncertainty
-
-
-class CalculatedPropertySet:
-    """
-    A collection of calculated physical properties, calculated using
-    a specific parameter_set.
-    """
-
-    def __init__(self, properties, parameter_set):
-
-        self._calculated_properties = properties
-        self._parameter_set = parameter_set
-
-    @property
-    def calculated_properties(self):
-        """The calculated properties"""
-        return self._calculated_properties
-
-    @property
-    def parameter_set(self):
-        """The parameter set used to calculate the properties"""
-        return self._parameter_set
 
 
 # =============================================================================================
@@ -143,7 +35,7 @@ class PropertyEstimator(object):
     """
 
     @staticmethod
-    def compute_properties(data_set, parameter_set):
+    def compute_properties(data_set, parameter_set, worker_threads = 1):
         """
         Submit the property and parameter set for calculation.
 
@@ -164,7 +56,7 @@ class PropertyEstimator(object):
         # to the backend which will decide what to do with them.
 
         # For now, just create the backend manually on the local device.
-        calculation_runner = PropertyCalculationRunner()
+        calculation_runner = PropertyCalculationRunner(worker_threads)
 
         # In practice such a complicated runner will need to report back
         # detailed diagnostics of what ran and why, and what if anything
@@ -187,6 +79,54 @@ class PropertyEstimator(object):
             The set of calculated properties to analyse.
         """
 
-        return ''
+        # TODO: The way properties are stored needs to be refactored to be uniform.
+        measured_properties = {}
 
+        for measured_property in measured_data_set.measured_properties:
 
+            substance_tag = measured_property.substance.to_tag()
+
+            if substance_tag not in measured_properties:
+                measured_properties[substance_tag] = {}
+
+            state_tag = measured_property.thermodynamic_state.to_tag()
+
+            if state_tag not in measured_properties[substance_tag]:
+                measured_properties[substance_tag][state_tag] = {}
+
+            measured_properties[substance_tag][state_tag][measured_property.type] = measured_property
+
+        calculated_properties = {}
+
+        for substance_tag in calculated_data_set.properties:
+
+            for calculated_property in calculated_data_set.properties[substance_tag]:
+
+                if substance_tag not in calculated_properties:
+                    calculated_properties[substance_tag] = {}
+
+                state_tag = calculated_property.thermodynamic_state.to_tag()
+
+                if state_tag not in calculated_properties[substance_tag]:
+                    calculated_properties[substance_tag][state_tag] = {}
+
+                calculated_properties[substance_tag][state_tag][calculated_property.type] = calculated_property
+
+        for substance in calculated_properties:
+
+            for state in calculated_properties[substance]:
+
+                logging.info('PROPERTIES FOR ' + substance + ' AT ' + state)
+
+                for property_type in calculated_properties[substance][state]:
+
+                    measured_property = measured_properties[substance][state][property_type]
+                    calculated_property = calculated_properties[substance][state][property_type]
+
+                    logging.info('Property: ' + str(property_type) +
+                                 ' Measured: ' + str(measured_property.value) +
+                                 '(' + str(measured_property.uncertainty) + ')' +
+                                 ' Calculated: ' + str(calculated_property.value) +
+                                 '(' + str(calculated_property.uncertainty) + ')')
+
+        return

@@ -18,27 +18,24 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-import time
-import random
+import os
 import copy
 import logging
 
 import mdtraj
 
+import numpy as np
+
 from os import path
 
-from enum import IntFlag, unique
+from enum import Enum, IntFlag, unique
 
-import numpy as np
+from pymbar import timeseries
 
 from openeye import oechem, oeomega
 
-from openforcefield import packmol
-
-from openforcefield.propertycalculator.client import CalculatedPhysicalProperty, CalculationFidelity
-from openforcefield.properties import PropertyType, PropertyPhase
+from openforcefield.utils import packmol
 from openforcefield.typing.engines import smirnoff
-from openforcefield.propertycalculator.runner import XmlNodeMissingException
 
 from simtk import openmm, unit
 from simtk.openmm import app
@@ -47,26 +44,6 @@ from simtk.openmm import app
 # =============================================================================================
 # Protocols
 # =============================================================================================
-
-@unique
-class ExtractableStatistics(IntFlag):
-    """
-    An array describing which properties can be extracted from
-    a standard molecular simulations.
-    """
-
-    Undefined = 0x00
-    Density = 0x01
-    DielectricConstant = 0x02
-
-    def __str__(self):
-
-        phases = '|'.join([phase.name for phase in ExtractableStatistics if self & phase])
-        return phases
-
-    def __repr__(self):
-        return str(self)
-
 
 class ProtocolData:
     """
@@ -230,7 +207,7 @@ class BuildLiquidCoordinates(Protocol):
 
     def execute(self, protocol_data):
 
-        logging.info('Generating coordinates: ' + protocol_data.substance_tag)
+        logging.info('Generating coordinates: ' + protocol_data.root_directory)
 
         if self._substance is None:
 
@@ -312,9 +289,9 @@ class BuildLiquidCoordinates(Protocol):
 
 class BuildSmirnoffTopology(Protocol):
 
-    def execute(self, protocol_data: ProtocolData):
+    def execute(self, protocol_data):
 
-        logging.info('Generating topology: ' + protocol_data.substance_tag)
+        logging.info('Generating topology: ' + protocol_data.root_directory)
 
         system = protocol_data.force_field.createSystem(protocol_data.topology,
                                                         protocol_data.molecules,
@@ -330,7 +307,7 @@ class BuildSmirnoffTopology(Protocol):
 
         protocol_data.system = system
 
-        logging.info('Topology generated: ' + protocol_data.substance_tag)
+        logging.info('Topology generated: ' + protocol_data.root_directory)
 
         return protocol_data
 
@@ -341,8 +318,6 @@ class BuildSmirnoffTopology(Protocol):
         return return_value
 
     def compare_to(self, protocol):
-
-        # TODO: Properly implement comparison
         return super(BuildSmirnoffTopology, self).compare_to(protocol)
 
 
@@ -355,8 +330,7 @@ class RunEnergyMinimisation(Protocol):
 
     def execute(self, protocol_data):
 
-        substance_tag = protocol_data.substance_tag
-        logging.info('Minimising energy: ' + substance_tag)
+        logging.info('Minimising energy: ' + protocol_data.root_directory)
 
         integrator = openmm.VerletIntegrator(0.002 * unit.picoseconds)
 
@@ -374,8 +348,7 @@ class RunEnergyMinimisation(Protocol):
 
         protocol_data.positions = positions
 
-        substance_tag = protocol_data.substance_tag
-        logging.info('Energy minimised: ' + substance_tag)
+        logging.info('Energy minimised: ' + protocol_data.root_directory)
 
         return protocol_data
 
@@ -391,8 +364,12 @@ class RunEnergyMinimisation(Protocol):
         return super(RunEnergyMinimisation, self).compare_to(protocol)
 
 
-# TODO: NVT and NPT classes should really inherit from a common base class.
-class RunNVTSimulation(Protocol):
+class RunOpenMMSimulation(Protocol):
+
+    class Ensemble(Enum):
+
+        NVT = 0
+        NPT = 1
 
     def __init__(self):
 
@@ -405,97 +382,7 @@ class RunNVTSimulation(Protocol):
 
         self.output_frequency = 1000
 
-    def set_measured_property(self, measured_property):
-        self.thermodynamic_state = measured_property.thermodynamic_state
-
-    def execute(self, protocol_data):
-
-        temperature = self.thermodynamic_state.temperature
-        substance_tag = protocol_data.substance_tag
-
-        if temperature is None:
-            logging.warning('A temperature must be set to perform an NVT simulation: ' + substance_tag)
-            return protocol_data
-
-        logging.info('Performing NVT simulation: ' + substance_tag)
-
-        # For now set some 'best guess' thermostat parameters.
-        integrator = openmm.LangevinIntegrator(temperature,
-                                               self.thermostat_friction,
-                                               self.timestep)
-
-        simulation = app.Simulation(protocol_data.topology, protocol_data.system, integrator)
-        simulation.context.setPositions(protocol_data.positions)
-
-        simulation.context.setVelocitiesToTemperature(temperature)
-
-        trajectory_path = path.join(protocol_data.root_directory, 'trajectory.dcd')
-        statistics_path = path.join(protocol_data.root_directory, 'statistics.dat')
-
-        simulation.reporters.append(app.DCDReporter(trajectory_path, self.output_frequency))
-
-        simulation.reporters.append(app.StateDataReporter(statistics_path, self.output_frequency, step=True,
-                                                          potentialEnergy=True, temperature=True))
-
-        simulation.step(self.steps)
-
-        positions = simulation.context.getState(getPositions=True).getPositions()
-
-        protocol_data.positions = positions
-
-        protocol_data.trajectory_path = trajectory_path
-        protocol_data.statistics_path = statistics_path
-
-        logging.info('NVT simulation performed: ' + substance_tag)
-
-        return protocol_data
-
-    @classmethod
-    def from_xml(cls, xml_node):
-
-        return_value = cls()
-
-        steps_node = xml_node.find('steps')
-
-        if steps_node is not None:
-            return_value.steps = int(steps_node.text)
-
-        thermostat_friction_node = xml_node.find('thermostat_friction')
-
-        if thermostat_friction_node is not None:
-            return_value.thermostat_friction = float(thermostat_friction_node.text) / unit.picoseconds
-
-        timestep_node = xml_node.find('timestep')
-
-        if timestep_node is not None:
-            return_value.timestep = float(timestep_node.text) * unit.picoseconds
-
-        output_frequency_node = xml_node.find('output_frequency')
-
-        if output_frequency_node is not None:
-            return_value.output_frequency = int(output_frequency_node.text)
-
-        return return_value
-
-    def compare_to(self, protocol):
-
-        # TODO: Properly implement comparison
-        return super(RunNVTSimulation, self).compare_to(protocol) and \
-               self.thermodynamic_state.temperature == protocol.thermodynamic_state.temperature
-
-
-class RunNPTSimulation(Protocol):
-
-    def __init__(self):
-
-        self.thermodynamic_state = None
-
-        self.steps = 1000
-
-        self.thermostat_friction = 1.0 / unit.picoseconds
-        self.timestep = 0.002 * unit.picoseconds
-
-        self.output_frequency = 1000
+        self.ensemble = self.Ensemble.NPT
 
     def set_measured_property(self, measured_property):
         self.thermodynamic_state = measured_property.thermodynamic_state
@@ -505,28 +392,31 @@ class RunNPTSimulation(Protocol):
         temperature = self.thermodynamic_state.temperature
         pressure = self.thermodynamic_state.pressure
 
-        substance_tag = protocol_data.substance_tag
+        substance_tag = protocol_data.root_directory
 
         if temperature is None:
-            logging.warning('A temperature must be set to perform an NPT simulation: ' + substance_tag)
-            return protocol_data
-        if pressure is None:
-            logging.warning('A pressure must be set to perform an NPT simulation: ' + substance_tag)
-            return protocol_data
+            logging.error('A temperature must be set to perform a simulation in any ensemble: ' + substance_tag)
+            return None
+        if self.ensemble is self.Ensemble.NPT and pressure is None:
+            logging.error('A pressure must be set to perform an NPT simulation: ' + substance_tag)
+            return None
 
-        logging.info('Performing NPT simulation: ' + substance_tag)
+        logging.info('Performing a simulation in the ' + str(self.ensemble) + ' ensemble: ' + substance_tag)
 
         # For now set some 'best guess' thermostat parameters.
         integrator = openmm.LangevinIntegrator(temperature,
                                                self.thermostat_friction,
                                                self.timestep)
 
-        barostat = openmm.MonteCarloBarostat(pressure, temperature)
+        system = protocol_data.system
 
-        cloned_system = copy.deepcopy(protocol_data.system)
-        cloned_system.addForce(barostat)
+        if self.ensemble is self.Ensemble.NPT:
+            barostat = openmm.MonteCarloBarostat(pressure, temperature)
 
-        simulation = app.Simulation(protocol_data.topology, cloned_system, integrator)
+            system = copy.deepcopy(system)
+            system.addForce(barostat)
+
+        simulation = app.Simulation(protocol_data.topology, system, integrator)
         simulation.context.setPositions(protocol_data.positions)
 
         simulation.context.setVelocitiesToTemperature(temperature)
@@ -534,12 +424,21 @@ class RunNPTSimulation(Protocol):
         trajectory_path = path.join(protocol_data.root_directory, 'trajectory.dcd')
         statistics_path = path.join(protocol_data.root_directory, 'statistics.dat')
 
+        configuration_path = path.join(protocol_data.root_directory, 'input.pdb')
+
+        with open(configuration_path, 'w+') as configuration_file:
+            app.PDBFile.writeFile(protocol_data.topology, protocol_data.positions, configuration_file)
+
         simulation.reporters.append(app.DCDReporter(trajectory_path, self.output_frequency))
 
         simulation.reporters.append(app.StateDataReporter(statistics_path, self.output_frequency, step=True,
-                                                          potentialEnergy=True, temperature=True))
+                                                          potentialEnergy=True, temperature=True, volume=True))
 
-        simulation.step(self.steps)
+        try:
+            simulation.step(self.steps)
+        except Exception:
+            logging.warning('Failed to run in ' + protocol_data.root_directory)
+            return None
 
         positions = simulation.context.getState(getPositions=True).getPositions()
 
@@ -548,7 +447,12 @@ class RunNPTSimulation(Protocol):
         protocol_data.trajectory_path = trajectory_path
         protocol_data.statistics_path = statistics_path
 
-        logging.info('NPT simulation performed: ' + substance_tag)
+        logging.info('Simulation performed in the ' + str(self.ensemble) + ' ensemble: ' + substance_tag)
+
+        configuration_path = path.join(protocol_data.root_directory, 'output.pdb')
+
+        with open(configuration_path, 'w+') as configuration_file:
+            app.PDBFile.writeFile(protocol_data.topology, protocol_data.positions, configuration_file)
 
         return protocol_data
 
@@ -577,53 +481,146 @@ class RunNPTSimulation(Protocol):
         if output_frequency_node is not None:
             return_value.output_frequency = int(output_frequency_node.text)
 
+        ensemble_node = xml_node.find('ensemble')
+
+        if ensemble_node is not None and ensemble_node.text in cls.Ensemble:
+                return_value.ensemble = cls.Ensemble[ensemble_node.text]
+
         return return_value
 
     def compare_to(self, protocol):
 
-        return super(RunNPTSimulation, self).compare_to(protocol) and \
+        return super(RunOpenMMSimulation, self).compare_to(protocol) and \
                self.thermodynamic_state.temperature == protocol.thermodynamic_state.temperature and \
-               self.thermodynamic_state.pressure == protocol.thermodynamic_state.pressure
+               self.thermodynamic_state.pressure == protocol.thermodynamic_state.pressure and \
+               self.ensemble == protocol.ensemble
 
 
-class ExtractStatistics(Protocol):
+class AveragePropertyProtocol(Protocol):
 
     def __init__(self):
 
         self.thermodynamic_state = None
         self.substance = None
 
-        self.calculated_properties = {}
-        self.quantity = ExtractableStatistics.Undefined
+        self.value = None
+        self.uncertainty = None
 
     def set_measured_property(self, measured_property):
 
         self.substance = measured_property.substance
         self.thermodynamic_state = measured_property.thermodynamic_state
 
-    def extract_average_density(self, system, trajectory):
+    def execute(self, protocol_data):
+
+        return protocol_data
+
+    @staticmethod
+    def calculate_average_and_error(correlated_data):
+
+        # Compute the indices of the uncorrelated timeseries
+        [equilibration_index, inefficiency, Neff_max] = timeseries.detectEquilibration(correlated_data)
+        equilibrated_data = correlated_data[equilibration_index:]
+
+        # Extract a set of uncorrelated data points.
+        indices = timeseries.subsampleCorrelatedData(equilibrated_data, g=inefficiency)
+        uncorrelated_data = equilibrated_data[indices]
+
+        average = uncorrelated_data.mean()
+        uncertainty = uncorrelated_data.std() * len(uncorrelated_data) ** -0.5
+
+        return average, uncertainty
+
+    @classmethod
+    def from_xml(cls, xml_node):
+        raise NotImplementedError('AveragePropertyProtocol is an abstract class.')
+
+
+class AverageTrajectoryProperty(AveragePropertyProtocol):
+
+    def __init__(self):
+        super().__init__()
+
+        self.trajectory = None
+
+    def execute(self, protocol_data):
+
+        if protocol_data.trajectory_path is None:
+            logging.warning('The AverageTrajectoryProperty protocol '
+                            'requires a previously calculated trajectory')
+
+            return None
+
+        configuration_path = path.join(protocol_data.root_directory, 'configuration.pdb')
+
+        with open(configuration_path, 'w+') as output_file:
+            app.PDBFile.writeFile(protocol_data.topology, protocol_data.positions, output_file)
+
+        self.trajectory = mdtraj.load_dcd(filename=protocol_data.trajectory_path, top=configuration_path)
+
+        return protocol_data
+
+    @classmethod
+    def from_xml(cls, xml_node):
+        raise NotImplementedError('AverageTrajectoryProperty is an abstract class.')
+
+
+class ExtractAverageDensity(AverageTrajectoryProperty):
+
+    def __init__(self):
+        super().__init__()
+
+    def execute(self, protocol_data):
+
+        logging.info('Extracting densities: ' + protocol_data.root_directory)
+
+        if super(ExtractAverageDensity, self).execute(protocol_data) is None:
+            return None
 
         mass_list = []
 
-        for atom_index in range(system.getNumParticles()):
+        for atom_index in range(protocol_data.system.getNumParticles()):
 
-            mass = system.getParticleMass(atom_index)
+            mass = protocol_data.system.getParticleMass(atom_index)
             mass /= (unit.gram / unit.mole)
 
             mass_list.append(mass)
 
-        # TODO: Do proper equilibration detection + averaging + error calculation
-        densities = mdtraj.density(trajectory, mass_list)
+        densities = mdtraj.density(self.trajectory, mass_list)
 
-        return sum(densities) / float(len(densities))
+        self.value, self.uncertainty = self.calculate_average_and_error(densities)
 
-    def extract_average_dielectric(self, system, trajectory):
+        self.value *= unit.kilogram * unit.meter ** -3
+        self.uncertainty *= unit.kilogram * unit.meter ** -3
+
+        logging.info('Extracted densities: ' + protocol_data.root_directory)
+
+        return protocol_data
+
+    @classmethod
+    def from_xml(cls, xml_node):
+
+        return_value = cls()
+        return return_value
+
+
+class ExtractAverageDielectric(AverageTrajectoryProperty):
+
+    def __init__(self):
+        super().__init__()
+
+    def execute(self, protocol_data):
+
+        logging.info('Extracting dielectrics: ' + protocol_data.root_directory)
+
+        if super(ExtractAverageDielectric, self).execute(protocol_data) is None:
+            return None
 
         charge_list = []
 
-        for force_index in range(system.getNumForces()):
+        for force_index in range(protocol_data.system.getNumForces()):
 
-            force = system.getForce(force_index)
+            force = protocol_data.system.getForce(force_index)
 
             if not isinstance(force, openmm.NonbondedForce):
                 continue
@@ -635,56 +632,22 @@ class ExtractStatistics(Protocol):
 
                 charge_list.append(charge)
 
-        # TODO: Do proper equilibration detection + averaging + error calculation
-        dielectric = mdtraj.geometry.static_dielectric(trajectory,
-                                                       charge_list,
-                                                       self.thermodynamic_state.temperature / unit.kelvin)
+        temperature = self.thermodynamic_state.temperature / unit.kelvin
 
-        return dielectric
+        # Determine the frame index at which the dipole moment has
+        # reached equilibrium.
+        # dipoles = mdtraj.geometry.dipole_moments(self.trajectory, charge_list)
+        #
+        # [equilibration_index, inefficiency, Neff_max] = timeseries.detectEquilibration(dipoles)
+        # equilibrated_trajectory = self.trajectory[equilibration_index:]
 
-    def execute(self, protocol_data: ProtocolData):
+        dielectric = mdtraj.geometry.static_dielectric(self.trajectory, charge_list, temperature)
 
-        logging.info('Extracting statistics: ' + protocol_data.substance_tag)
+        # TODO: Calculate uncertainty in dielectric constant
+        self.value = dielectric
+        self.uncertainty = 0.0
 
-        configuration_path = path.join(protocol_data.root_directory, 'configuration.pdb')
-
-        with open(configuration_path, 'w+') as output_file:
-            app.PDBFile.writeFile(protocol_data.topology, protocol_data.positions, output_file)
-
-        trajectory = mdtraj.load_dcd(filename=protocol_data.trajectory_path, top=configuration_path)
-
-        if self.quantity & ExtractableStatistics.Density:
-
-            density = self.extract_average_density(protocol_data.system, trajectory)
-
-            calculated_property = CalculatedPhysicalProperty(self.substance,
-                                                             self.thermodynamic_state,
-                                                             PropertyType.Density,
-                                                             PropertyPhase.Liquid,
-                                                             CalculationFidelity.DirectSimulation,
-                                                             density,
-                                                             0.0)
-
-            self.calculated_properties[PropertyType.Density] = calculated_property
-
-        elif self.quantity & ExtractableStatistics.DielectricConstant:
-
-            dielectric = self.extract_average_dielectric(protocol_data.system, trajectory)
-
-            calculated_property = CalculatedPhysicalProperty(self.substance,
-                                                             self.thermodynamic_state,
-                                                             PropertyType.DielectricConstant,
-                                                             PropertyPhase.Liquid,
-                                                             CalculationFidelity.DirectSimulation,
-                                                             dielectric,
-                                                             0.0)
-
-            self.calculated_properties[PropertyType.DielectricConstant] = calculated_property
-
-        else:
-            raise RuntimeError('ExtractStatistics cannot extract ', str(self.quantity))
-
-        logging.info('Extracted statistics: ' + protocol_data.substance_tag)
+        logging.info('Extracted dielectrics: ' + protocol_data.root_directory)
 
         return protocol_data
 
@@ -692,19 +655,6 @@ class ExtractStatistics(Protocol):
     def from_xml(cls, xml_node):
 
         return_value = cls()
-
-        quantity_node = xml_node.find('quantity')
-
-        if quantity_node is None:
-            raise XmlNodeMissingException('quantity')
-
-        return_value.quantity = ExtractableStatistics[quantity_node.text]
-
         return return_value
 
-    def compare_to(self, protocol):
 
-        return super(ExtractStatistics, self).compare_to(protocol) and \
-               self.quantity == protocol.quantity and \
-               self.thermodynamic_state.temperature == protocol.thermodynamic_state.temperature and \
-               self.thermodynamic_state.pressure == protocol.thermodynamic_state.pressure

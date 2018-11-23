@@ -12,31 +12,10 @@ Authors
 * John D. Chodera <john.chodera@choderalab.org>
 * Levi N. Naden <levi.naden@choderalab.org>
 * Simon Boothroyd <simon.boothroyd@choderalab.org>
-
-TODO
-----
-* Add methods that construct real System and Topology objects for a specified system size,
-  following the Mobley SolvationToolkit:
-
-    https://github.com/MobleyLab/SolvationToolkit
-
-TODO: Should this be the responsibility of a Mixture? Would it be modular to have a class dedicated
-      to handling this?
-
 """
 # =============================================================================================
 # GLOBAL IMPORTS
 # =============================================================================================
-
-import copy
-import numpy as np
-
-from simtk import unit
-from simtk.openmm import app
-from openforcefield.packmol import pack_box
-from openeye import oechem, oeiupac
-
-from typing import Union, Tuple
 
 
 # =============================================================================================
@@ -126,13 +105,13 @@ class Mixture(Substance):
         self._components = list()
 
     @property
-    def total_mole_fraction(self) -> float:
+    def total_mole_fraction(self):
         """Compute the total mole fraction.
         """
         return sum([component.mole_fraction for component in self._components])
 
     @property
-    def number_of_components(self) -> int:
+    def number_of_components(self):
         return len(self._components)
 
     @property
@@ -140,10 +119,10 @@ class Mixture(Substance):
         return self._components
 
     @property
-    def number_of_impurities(self) -> int:
+    def number_of_impurities(self):
         return sum([1 for component in self._components if component.impurity is True])
 
-    def add_component(self, smiles: str, mole_fraction: Union[None, float]=None, impurity: bool=False):
+    def add_component(self, smiles, mole_fraction, impurity=False):
         """Add a component to the mixture.
 
         Parameters
@@ -163,7 +142,7 @@ class Mixture(Substance):
         component = self.MixtureComponent(smiles, mole_fraction=mole_fraction, impurity=impurity)
         self._components.append(component)
 
-    def get_component(self, smiles: str) -> MixtureComponent:
+    def get_component(self, smiles: str):
         """Retrieve component by name.
 
         Parameters
@@ -205,7 +184,7 @@ class Mixture(Substance):
 
     def to_tag(self):
 
-        sorted_smiles = [component.smiles for component in self._components]
-        sorted_smiles.sort()
+        sorted_tags = [component.smiles + '{' + str(component.mole_fraction) + '}' for component in self._components]
+        sorted_tags.sort()
 
-        return "|".join(sorted_smiles)
+        return "|".join(sorted_tags)
