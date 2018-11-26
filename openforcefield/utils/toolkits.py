@@ -587,20 +587,45 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Check that all stereo is specified
         unspec_chiral = False
         unspec_db = False
+        problematic_atoms = list()
+        problematic_bonds = list()
+
         for oeatom in oemol.GetAtoms():
             if oeatom.IsChiral():
                 if not (oeatom.HasStereoSpecified()):
                     unspec_chiral = True
+                    problematic_atoms.append(oeatom)
         for oebond in oemol.GetBonds():
             if oebond.IsChiral():
                 if not (oebond.HasStereoSpecified()):
                     unspec_db = True
-
+                    problematic_bonds.append(oebond)
         if (unspec_chiral or unspec_db):
+            def oeatom_to_str(oeatom):
+                return 'atomic num: {}, name: {}, idx: {}, aromatic: {}, chiral: {}'.format(oeatom.GetAtomicNum(),
+                                                                                            oeatom.GetName(),
+                                                                                            oeatom.GetIdx(),
+                                                                                            oeatom.IsAromatic(),
+                                                                                            oeatom.IsChiral())
+            def oebond_to_str(oebond):
+                return "order: {}, chiral: {}".format(oebond.GetOrder(), oebond.IsChiral())
+            def describe_oeatom(oeatom):
+                description = "Atom {} with bonds:".format(oeatom_to_str(oeatom))
+                for oebond in oeatom.GetBonds():
+                    description += "\nbond {} to atom {}".format(oebond_to_str(oebond), oeatom_to_str(oebond.GetNbr(oeatom)))
+                return description
+
+            msg = "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry. oemol.GetTitle(): {}\n".format(oemol.GetTitle())
+            if len(problematic_atoms) != 0:
+                msg += "Problematic atoms are:\n"
+                for problematic_atom in problematic_atoms:
+                    msg += describe_oeatom(problematic_atom) + '\n'
+            if len(problematic_bonds) != 0:
+                msg += "Problematic bonds are: {}\n".format(problematic_bonds)
             if exception_if_undefined_stereo:
-                raise Exception("Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry. oemol.GetTitle(): {}".format(oemol.GetTitle()))
+                raise Exception(msg)
             else:
-                print("Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry. oemol.GetTitle(): {}".format(oemol.GetTitle()))
+                print(msg)
                 return
 
         # TODO: Decide if this is where we want to add explicit hydrogens

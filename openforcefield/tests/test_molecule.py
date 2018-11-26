@@ -76,8 +76,9 @@ class TestMolecule(TestCase):
         This will have us just load the test molecules once, as the setUp function runs for each test
         """
         super(TestMolecule, cls).setUpClass()
-        filename = get_data_filename('molecules/zinc-subset-tripos.mol2.gz')
-
+        #filename = get_data_filename('molecules/zinc-subset-tripos.mol2.gz')
+        #filename = get_data_filename('molecules/DrugBank_tripos.mol2')
+        filename = get_data_filename('molecules/MiniDrugBank_tripos.mol2')
         molecules = Molecule.from_file(filename, exception_if_undefined_stereo=False)
         molecules = [mol for mol in molecules if not(mol is None)]
         cls.test_molecules = molecules
@@ -263,8 +264,11 @@ class TestMolecule(TestCase):
     @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_create_rdkit(self):
         """Test creation of a molecule from an RDKit rdmol"""
-        known_failures = ['ZINC17060065', 'ZINC16448882', 'ZINC15772239','ZINC11539132',
-                          'ZINC05975187', 'ZINC17111082', 'ZINC00265517']
+        # Using ZINC test set
+        #known_failures = ['ZINC17060065', 'ZINC16448882', 'ZINC15772239','ZINC11539132',
+        #                  'ZINC05975187', 'ZINC17111082', 'ZINC00265517']
+        # Using DrugBank test set
+        known_failures = ['DrugBank_349', 'DrugBank_1420', 'DrugBank_1671']
         failures = []
         fail_smileses = []
         for molecule in self.molecules:
@@ -276,6 +280,7 @@ class TestMolecule(TestCase):
                 failures.append(molecule.name)
                 fail_smileses.append((molecule.to_smiles(), molecule_copy.to_smiles()))
             #assert molecule == molecule_copy
+
         print(failures)
         for name, (smi1, smi2) in zip(failures, fail_smileses):
             print(name)

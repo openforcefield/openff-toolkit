@@ -2528,7 +2528,6 @@ class FrozenMolecule(Serializable):
         >>> molecule.to_file('imatinib.pdb', outfile_format='pdb')
 
         """
-        # TODO: This needs to be cleaned up to use the new ToolkitRegistry and ToolkitWrappers
 
         if isinstance(toolkit_registry, ToolkitRegistry):
             pass

@@ -499,6 +499,8 @@ class Topology(Serializable):
         -------
 
         """
+        self._aromaticity
+
 
     @staticmethod
     def from_molecules(molecules):
