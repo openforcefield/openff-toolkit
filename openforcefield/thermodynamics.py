@@ -175,13 +175,13 @@ class ThermodynamicState(object):
 
         return return_value
 
-    def to_tag(self):
+    def __hash__(self):
+        return hash((str(self.temperature), str(self.pressure)))
 
-        tag = []
+    def __eq__(self, other):
 
-        if self._temperature is not None:
-            tag.append(str(self._temperature))
-        if self._pressure is not None:
-            tag.append(str(self._pressure))
+        return (self.temperature == other.temperature and
+                self.pressure == other.pressure)
 
-        return "|".join(tag)
+    def __ne__(self, other):
+        return not (self == other)

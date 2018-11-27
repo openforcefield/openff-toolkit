@@ -47,7 +47,13 @@ class Substance(object):
     This class is not specific enough to be a chemical species all on its own
     """
 
-    def to_tag(self):
+    def __hash__(self):
+        raise NotImplementedError('A Substance is a purely abstract base class.')
+
+    def __eq__(self, other):
+        raise NotImplementedError('A Substance is a purely abstract base class.')
+
+    def __ne__(self, other):
         raise NotImplementedError('A Substance is a purely abstract base class.')
 
 
@@ -98,6 +104,29 @@ class Mixture(Substance):
             self.impurity = impurity
 
             super().__init__(smiles)
+
+        def __str__(self):
+
+            hash = self.smiles
+
+            if self.mole_fraction is not None:
+                hash += "{%s}" % str(self.mole_fraction)
+            elif self.impurity is not None:
+                hash += "{%s}" % str(self.impurity)
+
+            return hash
+
+        def __hash__(self):
+            return hash(str(self))
+
+        def __eq__(self, other):
+
+            return (self.smiles == other.self and
+                    self.mole_fraction == other.mole_fraction and
+                    self.impurity == other.impurity)
+
+        def __ne__(self, other):
+            return not (self == other)
 
     def __init__(self):
         """Create a Mixture.
@@ -182,9 +211,18 @@ class Mixture(Substance):
 
         return mole_fraction, impurity
 
-    def to_tag(self):
+    def __str__(self):
 
-        sorted_tags = [component.smiles + '{' + str(component.mole_fraction) + '}' for component in self._components]
-        sorted_tags.sort()
+        hash_tags = [str(component) for component in self._components]
+        hash_tags.sort()
 
-        return "|".join(sorted_tags)
+        return "|".join(hash_tags)
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+    def __ne__(self, other):
+        return not (self == other)

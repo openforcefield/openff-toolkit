@@ -11,6 +11,8 @@ Authors
 -------
 * Simon Boothroyd <simon.boothroyd@choderalab.org>
 
+TODO: Need to version as discussed with Jeff.
+
 """
 
 
@@ -32,7 +34,9 @@ from xml.etree import ElementTree
 from openforcefield.utils.exceptions import XmlNodeMissingException
 from openforcefield.propertycalculator import protocols
 from openforcefield.properties import PropertyType, PropertyPhase, CalculationFidelity, \
-                                      CalculatedPhysicalProperty, CalculatedPropertySet
+                                      CalculatedPhysicalProperty
+
+from openforcefield.datasets.property_dataset import CalculatedPropertySet
 
 
 # =============================================================================================
@@ -40,8 +44,7 @@ from openforcefield.properties import PropertyType, PropertyPhase, CalculationFi
 # =============================================================================================
 
 class DirectPropertyCalculationTemplate:
-    """
-    Defines the set of protocols required to calculate a certain property.
+    """Defines the set of protocols required to calculate a certain property.
     """
     def __init__(self):
 
@@ -52,7 +55,20 @@ class DirectPropertyCalculationTemplate:
 
     @classmethod
     def from_xml(cls, xml_node, existing_templates):
+        """ Imports a set of protocols from an xml definition.
 
+        Parameters
+        ----------
+        xml_node : xml.etree.Element
+            The element containing the xml to read from.
+        existing_templates : list(DirectPropertyCalculationTemplate)
+            A list of already loaded calculation templates
+
+        Returns
+        ----------
+        DirectPropertyCalculationTemplate
+            The calculated template created from the xml node.
+        """
         return_value = cls()
 
         # Gather up all possible identifiers
@@ -106,12 +122,20 @@ class DirectPropertyCalculationTemplate:
 
 
 class DirectCalculationGraph:
-    """
-    A hierarchical structure for storing all protocols that
-    need to be executed.
+    """A hierarchical structure for storing all protocols that need to be executed.
     """
     class TreeNode:
+        """A node in the calculation graph.
 
+        Each node represents a protocol to be executed.
+
+        Parameters
+        ----------
+        index: int
+            The index of this node.
+        depth: int
+            The depth of this node.
+        """
         def __init__(self, index, depth):
 
             self.index = index
@@ -128,14 +152,22 @@ class DirectCalculationGraph:
 
     @property
     def nodes(self):
+        """list(TreeNode): Returns the calculation tree nodes."""
         return self._nodes
 
     @property
     def leaf_protocols(self):
+        """list(TreeNode): Returns the leaf nodes of the tree."""
         return [self._master_protocols_list[node.index] for node in self._leaf_nodes]
 
     def _insert_root_node(self, protocol):
+        """Insert a protocol node into the tree as a root node.
 
+        Parameters
+        ----------
+        protocol : Protocol
+            The protocol to insert.
+        """
         for node in self._nodes:
 
             existing_protocol = self._master_protocols_list[node.index]
@@ -153,6 +185,13 @@ class DirectCalculationGraph:
         return new_node
 
     def _insert_node(self, protocol, tree_node):
+        """Insert a protocol node into the tree.
+
+        Parameters
+        ----------
+        protocol : Protocol
+            The protocol to insert.
+        """
 
         for node in tree_node.children:
 
@@ -171,7 +210,13 @@ class DirectCalculationGraph:
         return new_node
 
     def add_calculation(self, calculation):
+        """Insert a calculation into the calculation graph.
 
+        Parameters
+        ----------
+        calculation : DirectPropertyCalculationTemplate
+            The calculation to insert.
+        """
         tree_node = self._insert_root_node(calculation.protocols[0])
 
         for protocol in calculation.protocols[1:]:
@@ -182,6 +227,13 @@ class DirectCalculationGraph:
 
     @staticmethod
     def worker_thread(task_queue):
+        """A method to execute a node from the thread queue.
+
+        Parameters
+        ----------
+        task_queue : Queue
+            The queue of nodes to execute.
+        """
 
         while True:
 
@@ -191,7 +243,17 @@ class DirectCalculationGraph:
             task_queue.task_done()
 
     def execute(self, task_queue, protocol_data, tree_node=None):
+        """Execute the given node on a thread, then queue its children.
 
+        Parameters
+        ----------
+        task_queue : Queue
+            The queue of nodes to execute.
+        protocol_data : ProtocolData
+            The data output by the previous protocol.
+        tree_node : TreeNode, optional
+            The node to execute. If none is passed, all root nodes are queued.
+        """
         nodes = self._nodes if tree_node is None else tree_node.children
 
         if not path.isdir(protocol_data.root_directory):
@@ -227,15 +289,20 @@ class DirectCalculationGraph:
 # =============================================================================================
 
 class PropertyCalculationRunner:
-    """
-    The class responsible for deciding at which fidelity a property
+    """The class responsible for deciding at which fidelity a property
     is calculated, as well as launching the calculations themselves.
+
+    Parameters
+    ----------
+    worker_threads : int
+        The number of threads to run the calculations on.
+    threads_per_simulation : int
+        The number of threads to use per multi-threaded simulation.
     """
 
     def __init__(self, worker_threads=1, threads_per_simulation=None):
 
-        self._pending_calculations = {}
-        self._finished_calculations = {}
+        self.calculated_properties = {}
 
         self._worker_threads = worker_threads
         self._threads_per_simulation = threads_per_simulation
@@ -261,8 +328,7 @@ class PropertyCalculationRunner:
         self.load_calculator_templates()
 
     def load_calculator_templates(self):
-        """
-        Loads the property calculation templates from the default xml file.
+        """Loads the property calculation templates from the default xml file.
         """
         templates = {}
 
@@ -288,26 +354,34 @@ class PropertyCalculationRunner:
             self.calculator_templates[template.property_type] = template
 
     def run(self, measured_properties, parameter_set):
+        """Schedules the calculation of the given properties using the passed parameters.
+
+        Parameters
+        ----------
+        measured_properties : PhysicalPropertyDataSet
+            The properties to attempt to compute.
+        parameter_set : PhysicalPropertyDataSet
+            The force field parameters used to perform the calculations.
+        """
 
         # Make a copy of the properties array so we
         # can easily safely changes to it.
-        properties_to_measure = []
-        properties_to_measure.extend(measured_properties)
+        properties_to_measure = {}
+
+        for substance_hash in measured_properties:
+
+            if substance_hash not in properties_to_measure:
+                properties_to_measure[substance_hash] = []
+
+            properties_to_measure[substance_hash].extend(measured_properties[substance_hash])
 
         # Reset the calculation arrays
-        self._pending_calculations = {}
-        self._finished_calculations = {}
+        self.calculated_properties = {}
 
         # Set up the array to track any pending or
         # finished calculations
-        for measured_property in properties_to_measure:
-
-            substance_tag = measured_property.substance.to_tag()
-
-            if substance_tag not in self._pending_calculations:
-                self._pending_calculations[substance_tag] = []
-            if substance_tag not in self._finished_calculations:
-                self._finished_calculations[substance_tag] = []
+        for substance_hash in properties_to_measure:
+                self.calculated_properties[substance_hash] = []
 
         # First see if any of these properties could be calculated
         # from a surrogate model. If they can, remove them the list
@@ -316,7 +390,7 @@ class PropertyCalculationRunner:
 
         # Exit early if everything is covered by the surrogate
         if len(properties_to_measure) == 0:
-            return self._finished_calculations
+            return self.calculated_properties
 
         # Do a similar thing to check whether reweighting could
         # be employed here for any of the properties.
@@ -324,28 +398,7 @@ class PropertyCalculationRunner:
 
         # Exit early if everything is covered by reweighting
         if len(properties_to_measure) == 0:
-            return self._finished_calculations
-
-        # We are now left with a list of properties that are
-        # going to have to be calculated by direct simulation.
-        #
-        # First split the desired properties into a dict where
-        # the mixture tag is the key. This structure would be the
-        # starting point in grouping together similar calculations
-        # that need to be performed.
-        properties_by_mixture = {}
-
-        for measured_property in properties_to_measure:
-
-            substance_tag = measured_property.substance.to_tag()
-
-            if substance_tag not in properties_by_mixture:
-                properties_by_mixture[substance_tag] = []
-
-            if measured_property.type in properties_by_mixture[substance_tag]:
-                continue
-
-            properties_by_mixture[substance_tag].append(measured_property)
+            return self.calculated_properties
 
         # Next, for each property we need to figure out which protocols
         # are required to calculate the properties in properties_by_mixture
@@ -383,7 +436,7 @@ class PropertyCalculationRunner:
         # where chain branches indicate a divergence in protocol
         #
         # More than likely most graphs will diverge at the analysis stage.
-        calculation_graphs = self.build_calculation_graph(properties_by_mixture)
+        calculation_graphs = self.build_calculation_graph(properties_to_measure)
 
         # Once a list of unique list of protocols to be executed has been constructed
         # the protocols can be fired.
@@ -401,57 +454,65 @@ class PropertyCalculationRunner:
         #   1) The simulation results could be fed into the surrogate model
         #   2) The results would be passed back to the 'client'
 
-        property_set = CalculatedPropertySet(self._finished_calculations, parameter_set)
+        property_set = CalculatedPropertySet(self.calculated_properties, parameter_set)
         return property_set
 
-    def attempt_surrogate_extrapolation(self, parameter_set, properties_to_measure):
+    def attempt_surrogate_extrapolation(self, parameter_set, measured_properties):
         """Attempts to calculate properties from a surrogate model"""
 
         # This loop would be distributed over a number of threads /
         # nodes depending on the available architecture.
-        for measured_property in properties_to_measure[:]:
+        for substance_hash in measured_properties:
 
-            surrogate_result = self.perform_surrogate_extrapolation(measured_property, parameter_set)
+            for measured_property in measured_properties[substance_hash]:
 
-            if surrogate_result is None:
-                continue
+                surrogate_result = self.perform_surrogate_extrapolation(measured_property, parameter_set)
 
-            substance_tag = measured_property.substance.to_tag()
+                if surrogate_result is None:
+                    continue
 
-            self._finished_calculations[substance_tag].append(surrogate_result)
-            properties_to_measure.remove(measured_property)
+                substance_tag = str(measured_property.substance)
+
+                self.calculated_properties[substance_tag].append(surrogate_result)
+                measured_properties[substance_hash].remove(measured_property)
 
     def perform_surrogate_extrapolation(self, measured_property, parameter_set):
-        """
-        A placeholder method that would be used to spawn the surrogate
+        """A placeholder method that would be used to spawn the surrogate
         model backend.
         """
         return None
 
-    def attempt_simulation_reweighting(self, parameter_set, properties_to_measure):
+    def attempt_simulation_reweighting(self, parameter_set, measured_properties):
         """Attempts to calculate properties by reweighting existing data"""
 
-        for measured_property in properties_to_measure[:]:
+        for substance_hash in measured_properties:
 
-            reweighting_result = self.perform_reweighting(measured_property, parameter_set)
+            for measured_property in measured_properties[substance_hash]:
 
-            if reweighting_result is None:
-                continue
+                reweighting_result = self.perform_reweighting(measured_property, parameter_set)
 
-            substance_tag = measured_property.substance.to_tag()
+                if reweighting_result is None:
+                    continue
 
-            self._finished_calculations[substance_tag].append(reweighting_result)
-            properties_to_measure.remove(measured_property)
+                substance_tag = str(measured_property.substance)
+
+                self.calculated_properties[substance_tag].append(reweighting_result)
+                measured_properties[substance_hash].remove(measured_property)
 
     def perform_reweighting(self, measured_property, parameter_set):
-        """
-        A placeholder method that would be used to spawn the property
+        """A placeholder method that would be used to spawn the property
         reweighting backend.
         """
         return None
 
     def build_calculation_graph(self, properties_by_mixture):
+        """ Construct a graph of the protocols needed to calculate a set of properties.
 
+        Parameters
+        ----------
+        properties_by_mixture : PhysicalPropertyDataSet
+            The properties to attempt to compute.
+        """
         calculation_graphs = {}
 
         for mixture in properties_by_mixture:
@@ -479,7 +540,15 @@ class PropertyCalculationRunner:
         return calculation_graphs
 
     def execute_calculation_graph(self, calculation_graphs, force_field):
+        """Execute a graph of calculation protocols using a given parameter set.
 
+        Parameters
+        ----------
+        calculation_graphs : list(DirectCalculationGraph)
+            A list of calculation graphs to execute.
+        force_field : ForceField
+            The force field parameters to use in any simulations.
+        """
         task_queue = Queue()
 
         logging.info('Spawning ' + str(self._worker_threads) + ' worker threads.')
@@ -510,7 +579,13 @@ class PropertyCalculationRunner:
         task_queue.join()
 
     def extract_calculated_properties(self, calculation_graphs):
+        """Extract any properties calculated by a calculation graph.
 
+        Parameters
+        ----------
+        calculation_graphs : list(DirectCalculationGraph)
+            A list of executed calculation graphs.
+        """
         for mixture in calculation_graphs:
 
             calculation_graph = calculation_graphs[mixture]
@@ -530,12 +605,17 @@ class PropertyCalculationRunner:
                 if property_type is PropertyType.Undefined:
                     continue
 
-                calculated_property = CalculatedPhysicalProperty(leaf_protocol.substance,
-                                                                 leaf_protocol.thermodynamic_state,
-                                                                 property_type,
-                                                                 PropertyPhase.Liquid,
-                                                                 CalculationFidelity.DirectSimulation,
-                                                                 leaf_protocol.value,
-                                                                 leaf_protocol.uncertainty)
+                calculated_property = CalculatedPhysicalProperty()
 
-                self._finished_calculations[mixture].append(calculated_property)
+                calculated_property.substance = leaf_protocol.substance
+                calculated_property.thermodynamic_state = leaf_protocol.thermodynamic_state
+
+                calculated_property.type = property_type
+                calculated_property.phase = PropertyPhase.Liquid
+
+                calculated_property.fidelity = CalculationFidelity.DirectSimulation
+
+                calculated_property.value = leaf_protocol.value
+                calculated_property.uncertainty = leaf_protocol.uncertainty
+
+                self.calculated_properties[mixture].append(calculated_property)

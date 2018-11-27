@@ -18,7 +18,6 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-import os
 import copy
 import logging
 
@@ -28,7 +27,7 @@ import numpy as np
 
 from os import path
 
-from enum import Enum, IntFlag, unique
+from enum import Enum
 
 from pymbar import timeseries
 
@@ -70,7 +69,13 @@ class ProtocolData:
 
     @classmethod
     def clone(cls, existing_instance):
+        """Clone an existing ProtocolData.
 
+        Parameters
+        ----------
+        existing_instance : ProtocolData
+            The existing ProtocolData.
+        """
         return_value = cls()
 
         return_value.substance_tag = existing_instance.substance_tag
@@ -97,24 +102,39 @@ class Protocol:
 
     A protocol may for example:
 
-        create the coordiantes of a mixed simulation box
-        set up a bound ligand-protein system
-        build the simulation topology
-        perform an energy minimisation
+        - create the coordiantes of a mixed simulation box
+        - set up a bound ligand-protein system
+        - build the simulation topology
+         - perform an energy minimisation
 
-    Protocols may be chained together, this modularly defining
-    a larger property calculation.
+    Protocols may be chained together, thus defining
+    a larger property calculation from simple building blocks.
 
     """
 
     def set_measured_property(self, measured_property):
+        """Extract any required properties from a given MeasuredPhysicalProperty.
+
+        A protocol, for example, for require a thermodynamic state or substance
+        as input"""
         pass
 
     def execute(self, protocol_data):
-        """
-        Allow protocols to be daisy chained together by passing the output
-        of the previous protocol (coordinates + topol + stats?) to the next
-        in line.
+        """ Execute the protocol.
+
+        Protocols may be chained together by passing the output
+        of the previous protocol as input to the current one.
+
+        Parameters
+        ----------
+        protocol_data : ProtocolData
+            The input data required to execute the protocol.
+
+        Returns
+        ----------
+        ProtocolData or None
+            None if the protocol failed to execute, otherwise the output of the
+            command.
         """
 
         # Return the results of this protocol, ready to pass down the line.
@@ -122,41 +142,73 @@ class Protocol:
 
     @classmethod
     def from_xml(cls, xml_node):
+        """ Creates a protocol from an xml definition.
+
+        Parameters
+        ----------
+        xml_node : xml.etree.Element
+            The element containing the xml to create the protocol from.
+
+        Returns
+        ----------
+        Protocol
+            The protocol created from the xml node.
+        """
         raise NotImplementedError()
 
     def compare_to(self, protocol):
+        """ Compares this protocol with another.
+
+        Parameters
+        ----------
+        protocol : Protocol
+            The protocol to compare against.
+
+        Returns
+        ----------
+        bool
+            True if the protocols would essentialy perform the same task.
+        """
         return type(self) == type(protocol)
 
 
 class BuildLiquidCoordinates(Protocol):
+    """Create 3D coordinates and bond information for a given Substance
+
+    The coordinates are created using packmol.
+
+    Attributes
+    ----------
+    max_molecules : int, optional, default=True
+        The maxmimum number of molecules in the system to be created.
+    mass_density : float, simtk.unit.Quantity, or None; optional, default=None
+        If provided, will aid in the selecting an initial box size.
+    """
 
     _cached_molecules = {}
 
-    # TODO: Determine the maximum number of molecules automatically
     def __init__(self):
-        """
-            Parameters
-            ----------
-            max_molecules : int, optional, default=True
-                The maxmimum number of molecules in the system to be created.
-            mass_density : float, simtk.unit.Quantity, or None; optional, default=None
-                If provided, will aid in the selecting an initial box size.
-        """
 
         self._substance = None
 
+        # TODO: Determine the maximum number of molecules automatically
         self.max_molecules = 100
         self.mass_density = 1.0 * unit.grams / unit.milliliters
 
-    # TODO: Replace with the toolkit function when finished.
     def _create_molecule(self, smiles):
         """
         Create molecule from a smiles pattern.
+
+        Todo
+        ----------
+
+        * Replace with the toolkit function when finished.
 
          Parameters
         ----------
         smiles : str
             Smiles pattern
+
          Returns
         -------
         molecule : OEMol
@@ -259,7 +311,7 @@ class BuildLiquidCoordinates(Protocol):
         with open(path.join(protocol_data.root_directory, 'output.pdb'), 'w+') as minimised_file:
             app.PDBFile.writeFile(topology, positions, minimised_file)
 
-        logging.info('Coordinates generated: ' + self._substance.to_tag())
+        logging.info('Coordinates generated: ' + str(self._substance))
 
         return protocol_data
 
@@ -288,6 +340,8 @@ class BuildLiquidCoordinates(Protocol):
 
 
 class BuildSmirnoffTopology(Protocol):
+    """Parameterise a set of molecules with a given smirnoff force field.
+    """
 
     def execute(self, protocol_data):
 
@@ -322,6 +376,8 @@ class BuildSmirnoffTopology(Protocol):
 
 
 class RunEnergyMinimisation(Protocol):
+    """Minimises the energy of a passed in system.
+    """
 
     def __init__(self):
 
@@ -365,8 +421,23 @@ class RunEnergyMinimisation(Protocol):
 
 
 class RunOpenMMSimulation(Protocol):
+    """Performs a molecular dynamics simulation in a given ensemble using OpenMM
+
+    Attributes
+    ----------
+    steps : int
+        The number of steps to run the simulation for
+    timestep : float
+        The timestep of the integrator.
+    output_frequency : int
+        The frequency with which to store simulation data.
+    ensemble : RunOpenMMSimulation.Ensemble
+        The ensemble to run the simulation in.
+    """
 
     class Ensemble(Enum):
+        """An enum describing the available ensembles.
+        """
 
         NVT = 0
         NPT = 1
@@ -497,6 +568,15 @@ class RunOpenMMSimulation(Protocol):
 
 
 class AveragePropertyProtocol(Protocol):
+    """Calculates the average of a property and its uncertainty.
+
+    Attributes
+    ----------
+    value : float
+        The calculated average value
+    uncertainty : float
+        The uncertainty in the calculated average value
+    """
 
     def __init__(self):
 
@@ -517,6 +597,21 @@ class AveragePropertyProtocol(Protocol):
 
     @staticmethod
     def calculate_average_and_error(correlated_data):
+        """Calculates the average of a property and its uncertainty from
+        a list of possibly correlated data.
+
+        Parameters
+        ----------
+        correlated_data : list(float)
+            The data to average over.
+
+        Returns
+        ----------
+        float
+            The average value
+        float
+            The uncertainty in the average.
+        """
 
         # Compute the indices of the uncorrelated timeseries
         [equilibration_index, inefficiency, Neff_max] = timeseries.detectEquilibration(correlated_data)
@@ -537,10 +632,12 @@ class AveragePropertyProtocol(Protocol):
 
 
 class AverageTrajectoryProperty(AveragePropertyProtocol):
+    """Calculates the average of a property from a simulation trajectory.
+    """
 
     def __init__(self):
-        super().__init__()
 
+        super().__init__()
         self.trajectory = None
 
     def execute(self, protocol_data):
@@ -566,6 +663,8 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
 
 
 class ExtractAverageDensity(AverageTrajectoryProperty):
+    """Extracts the average density from a simulation trajectory.
+    """
 
     def __init__(self):
         super().__init__()
@@ -605,7 +704,8 @@ class ExtractAverageDensity(AverageTrajectoryProperty):
 
 
 class ExtractAverageDielectric(AverageTrajectoryProperty):
-
+    """Extracts the average dielectric constant from a simulation trajectory.
+    """
     def __init__(self):
         super().__init__()
 

@@ -50,7 +50,18 @@ from .property_dataset import PhysicalPropertyDataSet
 # =============================================================================================
 
 def unit_from_thermoml_string(full_string):
-    """A non-ideal way to convert a string to a simtk.unit.Unit"""
+    """A non-ideal way to convert a string to a simtk.unit.Unit
+
+    Parameters
+    ----------
+    full_string : str
+        The string to convert to a simtk Unit
+
+    Returns
+    ----------
+    simtk.unit.Unit, None
+        None if the string is unitless, otherwise a simtk.unit.Unit
+    """
 
     full_string_split = full_string.split(',')
 
@@ -74,7 +85,18 @@ def unit_from_thermoml_string(full_string):
 
 
 def phase_from_thermoml_string(string):
+    """Converts a ThermoML string to a PropertyPhase
 
+        Parameters
+        ----------
+        string : str
+            The string to convert to a PropertyPhase
+
+        Returns
+        ----------
+        PropertyPhase
+            The converted PropertyPhase
+        """
     phase_string = string.lower().strip()
     phase = PropertyPhase.Undefined
 
@@ -100,9 +122,7 @@ def phase_from_thermoml_string(string):
 
 @unique
 class ThermoMLConstraintType(IntEnum):
-
-    """
-    An enum containing the supported types of ThermoML constraints
+    """An enum containing the supported types of ThermoML constraints
     """
 
     Undefined            = 0x00
@@ -113,9 +133,17 @@ class ThermoMLConstraintType(IntEnum):
 
     @staticmethod
     def from_node(node):
+        """Converts either a ConstraintType or VariableType xml node to a ThermoMLConstraintType.
 
-        """
-            Converts either a ConstraintType or VariableType xml node to a ThermoMLConstraintType.
+        Parameters
+        ----------
+        node : Element
+            The xml node to convert.
+
+        Returns
+        ----------
+        ThermoMLConstraintType
+            The converted constraint type.
         """
 
         constraint_type = ThermoMLConstraintType.Undefined
@@ -126,8 +154,8 @@ class ThermoMLConstraintType(IntEnum):
             constraint_type = ThermoMLConstraintType.Pressure
         elif node.tag.find('eComponentComposition') >= 0 and node.text == 'Mole fraction':
             constraint_type = ThermoMLConstraintType.ComponentComposition
-        elif node.tag.find('eSolventComposition') >= 0 and node.text == 'Mole fraction':
-            constraint_type = ThermoMLConstraintType.SolventComposistion
+        # elif node.tag.find('eSolventComposition') >= 0 and node.text == 'Mole fraction':
+        #     constraint_type = ThermoMLConstraintType.SolventComposistion
         else:
             logging.warning(node.tag + '->' + node.text + ' is an unsupported constraint type.')
 
@@ -139,7 +167,8 @@ class ThermoMLConstraintType(IntEnum):
 # =============================================================================================
 
 class ThermoMLConstraint:
-
+    """A wrapper around a ThermoML Constraint node.
+    """
     def __init__(self):
 
         self.type = ThermoMLConstraintType.Undefined
@@ -152,7 +181,20 @@ class ThermoMLConstraint:
 
     @classmethod
     def from_node(cls, constraint_node, namespace):
+        """Creates a ThermoMLConstraint from an xml node.
 
+        Parameters
+        ----------
+        constraint_node : Element
+            The xml node to convert.
+        namespace : str
+            The xml namespace.
+
+        Returns
+        ----------
+        ThermoMLConstraint
+            The created constraint.
+        """
         # Extract the xml nodes.
         type_node = constraint_node.find('.//ThermoML:ConstraintType/*', namespace)
         value_node = constraint_node.find('./ThermoML:nConstraintValue', namespace)
@@ -180,7 +222,20 @@ class ThermoMLConstraint:
 
     @classmethod
     def from_variable(cls, variable, value):
+        """Creates a ThermoMLConstraint from an existing ThermoML variable definition.
 
+        Parameters
+        ----------
+        variable : ThermoMLVariableDefinition
+            The variable to convert.
+        value : simtk.unit.Quantity
+            The value of the constant.
+
+        Returns
+        ----------
+        ThermoMLConstraint
+            The created constraint.
+        """
         return_value = cls()
 
         return_value.type = variable.type
@@ -198,7 +253,8 @@ class ThermoMLConstraint:
 # =============================================================================================
 
 class ThermoMLVariableDefinition:
-
+    """A wrapper around a ThermoML Variable node.
+    """
     def __init__(self):
 
         self.index = -1
@@ -212,7 +268,20 @@ class ThermoMLVariableDefinition:
 
     @classmethod
     def from_node(cls, variable_node, namespace):
+        """Creates a ThermoMLVariableDefinition from an xml node.
 
+        Parameters
+        ----------
+        node : Element
+            The xml node to convert.
+        namespace : str
+            The xml namespace.
+
+        Returns
+        ----------
+        ThermoMLConstraint
+            The created variable definition.
+        """
         # Extract the xml nodes.
         type_node = variable_node.find('.//ThermoML:VariableType/*', namespace)
         index_node = variable_node.find('ThermoML:nVarNumber', namespace)
@@ -242,7 +311,8 @@ class ThermoMLVariableDefinition:
 # =============================================================================================
 
 class ThermoMLCompound:
-
+    """A wrapper around a ThermoML Compound node.
+    """
     def __init__(self):
 
         self.smiles = None
@@ -253,7 +323,20 @@ class ThermoMLCompound:
     # in an OEChem independent way.
     @staticmethod
     def smiles_from_identifier(identifier):
+        """Attempts to create a SMILES pattern from some molecular identifier.
 
+        Relies heavily upon the OECHem OEParseIUPACName method and OEParseSmiles
+
+        Parameters
+        ----------
+        identifier : str
+            The molecular identifier to convert.
+
+        Returns
+        ----------
+        str, None
+            None if the identifier cannot be converted, otherwise the converted SMILES pattern.
+        """
         if identifier is None:
             return None
 
@@ -275,7 +358,20 @@ class ThermoMLCompound:
 
     @classmethod
     def from_xml_node(cls, node, namespace):
+        """Creates a ThermoMLCompound from an xml node.
 
+        Parameters
+        ----------
+        node : Element
+            The xml node to convert.
+        namespace : str
+            The xml namespace.
+
+        Returns
+        ----------
+        ThermoMLCompound
+            The created compound wrapper.
+        """
         # Gather up all possible identifiers
         identifier_nodes = node.findall('ThermoML:sSmiles', namespace)
 
@@ -321,7 +417,8 @@ class ThermoMLCompound:
 # =============================================================================================
 
 class ThermoMLProperty(MeasuredPhysicalProperty):
-
+    """A wrapper around a ThermoML Property node.
+    """
     def __init__(self):
 
         super().__init__()
@@ -337,7 +434,18 @@ class ThermoMLProperty(MeasuredPhysicalProperty):
 
     @staticmethod
     def property_string_to_enum(string):
+        """Converts a ThermoML property string to an internal PropertyType
 
+        Parameters
+        ----------
+        string : str
+            The string to convert.
+
+        Returns
+        ----------
+        str, None
+            None if the string cannot be converted, otherwise the converted property type.
+        """
         string_split = string.split(',')
         return_value = PropertyType.Undefined
 
@@ -354,6 +462,20 @@ class ThermoMLProperty(MeasuredPhysicalProperty):
     def extract_uncertainty_definitions(node, namespace,
                                         property_uncertainty_definitions,
                                         combined_uncertainty_definitions):
+
+        """Extract any property or combined uncertainties from a property xml node.
+
+        Parameters
+        ----------
+        node : Element
+            The xml node to convert.
+        namespace : str
+            The xml namespace.
+        property_uncertainty_definitions : list(ThermoMLPropertyUncertainty)
+            A list of the extracted property uncertainties.
+        combined_uncertainty_definitions : list(ThermoMLPropertyUncertainty)
+            A list of the extracted combined property uncertainties.
+        """
 
         property_nodes = node.findall('ThermoML:CombinedUncertainty', namespace)
 
@@ -385,6 +507,20 @@ class ThermoMLProperty(MeasuredPhysicalProperty):
 
     @classmethod
     def from_xml_node(cls, node, namespace):
+        """Creates a ThermoMLProperty from an xml node.
+
+        Parameters
+        ----------
+        node : Element
+            The xml node to convert.
+        namespace : str
+            The xml namespace.
+
+        Returns
+        ----------
+        ThermoMLCompound
+            The created property.
+        """
 
         # Gather up all possible identifiers
         index_node = node.find('ThermoML:nPropNumber', namespace)
@@ -459,7 +595,15 @@ class ThermoMLProperty(MeasuredPhysicalProperty):
         return return_value
 
     def set_value(self, value, uncertainty):
+        """Set the value and uncertainty of this property, adding units if necessary.
 
+        Parameters
+        ----------
+        value : float, unit.Quantity
+            The value of the property
+        uncertainty : float
+            The uncertainty in the value.
+        """
         value_quantity = value
         uncertainty_quantity = uncertainty
 
@@ -477,6 +621,8 @@ class ThermoMLProperty(MeasuredPhysicalProperty):
 # =============================================================================================
 
 class ThermoMLPropertyUncertainty:
+    """A wrapper around a ThermoML PropUncertainty node.
+    """
 
     # Reduce code redundancy by reusing this class for
     # both property and combined uncertainties.
@@ -489,6 +635,20 @@ class ThermoMLPropertyUncertainty:
 
     @classmethod
     def from_xml(cls, node, namespace):
+        """Creates a ThermoMLPropertyUncertainty from an xml node.
+
+        Parameters
+        ----------
+        node : Element
+            The xml node to convert.
+        namespace : str
+            The xml namespace.
+
+        Returns
+        ----------
+        ThermoMLCompound
+            The created property uncertainty.
+        """
 
         coverage_factor_node = node.find('ThermoML:n' + cls.prefix + 'CoverageFactor', namespace)
         confidence_node = node.find('ThermoML:n' + cls.prefix + 'UncertLevOfConfid', namespace)
@@ -519,6 +679,9 @@ class ThermoMLPropertyUncertainty:
 # =============================================================================================
 
 class ThermoMLCombinedUncertainty(ThermoMLPropertyUncertainty):
+    """A wrapper around a ThermoML CombPropUncertainty node.
+    """
+
     prefix = 'Comb'
 
 
@@ -527,9 +690,22 @@ class ThermoMLCombinedUncertainty(ThermoMLPropertyUncertainty):
 # =============================================================================================
 
 class ThermoMLPureOrMixtureData:
+    """A wrapper around a ThermoML PureOrMixtureData node.
+    """
 
     @staticmethod
     def extract_compound_indices(node, namespace, compounds):
+        """Extract a list of ThermoMLCompounds from a PureOrMixtureData node.
+
+        Parameters
+        ----------
+        node : Element
+            The xml node to read.
+        namespace : str
+            The xml namespace.
+        compounds :
+            The extracted compounds.
+        """
 
         component_nodes = node.findall('ThermoML:Component', namespace)
         compound_indices = []
@@ -559,6 +735,20 @@ class ThermoMLPureOrMixtureData:
 
     @staticmethod
     def extract_property_definitions(node, namespace):
+        """Extract a list of ThermoMLProperty from a PureOrMixtureData node.
+
+        Parameters
+        ----------
+        node : Element
+            The xml node to read.
+        namespace : str
+            The xml namespace.
+
+        Returns
+        ----------
+        dict(int, ThermoMLProperty)
+            The extracted properties.
+        """
 
         property_nodes = node.findall('ThermoML:Property', namespace)
         properties = {}
@@ -581,6 +771,22 @@ class ThermoMLPureOrMixtureData:
 
     @staticmethod
     def extract_global_constraints(node, namespace, compounds):
+        """Extract a list of ThermoMLConstraint from a PureOrMixtureData node.
+
+        Parameters
+        ----------
+        node : Element
+            The xml node to read.
+        namespace : str
+            The xml namespace.
+        compounds : dict(int, ThermoMLCompound)
+            A dictionary of the compounds this PureOrMixtureData was calculated for.
+
+        Returns
+        ----------
+        dict(int, ThermoMLConstraint)
+            The extracted constraints.
+        """
 
         constraint_nodes = node.findall('ThermoML:Constraint', namespace)
         constraints = []
@@ -611,7 +817,22 @@ class ThermoMLPureOrMixtureData:
 
     @staticmethod
     def extract_variable_definitions(node, namespace, compounds):
+        """Extract a list of ThermoMLVariableDefinition from a PureOrMixtureData node.
 
+        Parameters
+        ----------
+        node : Element
+            The xml node to read.
+        namespace : str
+            The xml namespace.
+        compounds : dict(int, ThermoMLCompound)
+            A dictionary of the compounds this PureOrMixtureData was calculated for.
+
+        Returns
+        ----------
+        dict(int, ThermoMLVariableDefinition)
+            The extracted constraints.
+        """
         variable_nodes = node.findall('ThermoML:Variable', namespace)
         variables = {}
 
@@ -694,6 +915,22 @@ class ThermoMLPureOrMixtureData:
 
     @staticmethod
     def build_mixture(measured_property, constraints, compounds):
+        """Build a Mixture object from the extracted constraints and compounds.
+
+        Parameters
+        ----------
+        measured_property : ThermoMLProperty
+            The measured property to build the mixture for.
+        constraints : dict(int, ThermoMLConstraint
+            The ThermoML constraints.
+        compounds : dict(int, ThermoMLCompound)
+            A dictionary of the compounds this PureOrMixtureData was calculated for.
+
+        Returns
+        ----------
+        Mixture
+            The constructed mixture.
+        """
 
         if measured_property.phase != PropertyPhase.Liquid:
 
@@ -768,6 +1005,29 @@ class ThermoMLPureOrMixtureData:
                                     global_constraints,
                                     variable_definitions,
                                     compounds):
+
+        """Extract the measured properties defined by a ThermoML PureOrMixtureData node.
+
+        Parameters
+        ----------
+        node : Element
+            The xml node to read.
+        namespace : str
+            The xml namespace.
+        property_definitions
+            The extracted property definitions.
+        global_constraints
+            The extracted constraints.
+        variable_definitions
+            The extracted variable definitions.
+        compounds
+            The extracted compounds.
+
+        Returns
+        ----------
+        list(MeasuredPhysicalProperty)
+            The extracted measured properties.
+        """
 
         value_nodes = node.findall('ThermoML:NumValues', namespace)
 
@@ -896,6 +1156,22 @@ class ThermoMLPureOrMixtureData:
 
     @staticmethod
     def from_xml_node(node, namespace, compounds):
+        """Extracts all of the data in a ThermoML PureOrMixtureData node.
+
+        Parameters
+        ----------
+        node : Element
+            The xml node to read.
+        namespace : str
+            The xml namespace.
+        namespace : dict(int, ThermoMLCompound
+            A list of the already extracted ThermoMLCompound's.
+
+        Returns
+        ----------
+        list(MeasuredPhysicalProperty)
+            A list of extracted properties.
+        """
 
         # Figure out which compounds are going to be associated with
         # the property entries.
@@ -995,7 +1271,7 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
     You can also specify multiple ThermoML Archive keys to create a dataset from multiple ThermoML files:
 
     >>> thermoml_keys = ['10.1021/acs.jced.5b00365', '10.1021/acs.jced.5b00474']
-    >>> dataset = ThermoMLDataSet(*thermoml_keys)
+    >>> dataset = ThermoMLDataSet.from_doi_list(*thermoml_keys)
 
     """
 
@@ -1005,7 +1281,18 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
 
     @classmethod
     def from_doi_list(cls, *doi_list):
-
+        """Load a ThermoML data set from a list of DOIs
+        
+        Parameters
+        ----------
+        doi_list : *str
+            The list of DOIs to pull data from
+        
+        Returns
+        ----------
+        ThermoMLDataSet
+            The loaded data set. 
+        """
         return_value = None
 
         for doi in doi_list:
@@ -1015,7 +1302,7 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
 
             data_set = cls._from_url(doi_url, Source(doi=doi))
 
-            if data_set is None or len(data_set.measured_properties) == 0:
+            if data_set is None or len(data_set.properties) == 0:
                 continue
 
             if return_value is None:
@@ -1027,6 +1314,18 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
 
     @classmethod
     def from_url_list(cls, *url_list):
+        """Load a ThermoML data set from a list of URLs
+
+        Parameters
+        ----------
+        url_list : *str
+            The list of URLs to pull data from
+
+        Returns
+        ----------
+        ThermoMLDataSet
+            The loaded data set. 
+        """
 
         return_value = None
 
@@ -1034,7 +1333,7 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
 
             data_set = cls._from_url(url)
 
-            if data_set is None or len(data_set.measured_properties) == 0:
+            if data_set is None or len(data_set.properties) == 0:
                 continue
 
             if return_value is None:
@@ -1045,8 +1344,21 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
         return return_value
 
     @classmethod
-    def _from_url(cls, url, source = None):
+    def _from_url(cls, url, source=None):
+        """Load a ThermoML data set from a given URL
 
+        Parameters
+        ----------
+        url : str
+            The URL to pull data from
+        source : Source, optional
+            An optional source which gives more information (e.g DOIs) for the url.
+
+        Returns
+        ----------
+        ThermoMLDataSet
+            The loaded data set. 
+        """
         if source is None:
             source = Source(reference=url)
 
@@ -1065,7 +1377,18 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
 
     @classmethod
     def from_file_list(cls, *file_list):
+        """Load a ThermoML data set from a list of files
 
+        Parameters
+        ----------
+        file_list : *str
+            The list of files to pull data from
+
+        Returns
+        ----------
+        ThermoMLDataSet
+            The loaded data set. 
+        """
         return_value = None
         counter = 0
 
@@ -1076,7 +1399,7 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
             logging.info('Reading file ' + str(counter + 1) + ' of ' + str(len(file_list)) + ' (' + file + ')')
             counter += 1
 
-            if data_set is None or len(data_set.measured_properties) == 0:
+            if data_set is None or len(data_set.properties) == 0:
                 continue
 
             if return_value is None:
@@ -1088,7 +1411,18 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
 
     @classmethod
     def _from_file(cls, path):
+        """Load a ThermoML data set from a given file
 
+        Parameters
+        ----------
+        path : str
+            The file path to pull data from
+
+        Returns
+        ----------
+        ThermoMLDataSet
+            The loaded data set. 
+        """
         source = Source(reference=path)
         return_value = None
 
@@ -1106,7 +1440,20 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
 
     @classmethod
     def from_xml(cls, xml, source):
+        """Load a ThermoML data set from an xml object.
 
+        Parameters
+        ----------
+        xml : ElementTree
+            The xml object to parse.
+        source : Source
+            The source of the xml object.
+
+        Returns
+        ----------
+        ThermoMLDataSet
+            The loaded ThermoML data set.
+        """
         root_node = ElementTree.fromstring(xml)
 
         if root_node is None:
@@ -1146,11 +1493,19 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
             if properties is None or len(properties) == 0:
                 continue
 
-            return_value._measured_properties.extend(properties)
+            for measured_property in properties:
 
-        for measured_property in return_value._measured_properties:
+                substance_hash = str(measured_property.substance)
+
+                if substance_hash not in return_value._properties:
+                    return_value._properties[substance_hash] = []
+
+                return_value._properties[substance_hash].append(measured_property)
+
+        for substance_hash in return_value._properties:
             # Set the source of the data.
-            measured_property.source = source
+            for measured_property in return_value._properties[substance_hash]:
+                measured_property.source = source
 
         return_value._sources.append(source)
 

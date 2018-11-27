@@ -5,7 +5,7 @@
 # =============================================================================================
 
 """
-Property calculator client side API.
+Property estimator client side API.
 
 Authors
 -------
@@ -35,7 +35,7 @@ class PropertyEstimator(object):
     """
 
     @staticmethod
-    def compute_properties(data_set, parameter_set, worker_threads = 1):
+    def compute_properties(data_set, parameter_set, worker_threads=1):
         """
         Submit the property and parameter set for calculation.
 
@@ -45,6 +45,8 @@ class PropertyEstimator(object):
             The set of properties to attempt to compute.
         parameter_set : ParameterSet
             The OpenFF parameter set to use for the calculations.
+        worker_threads : int
+            The number of worker threads to calculate the properties on.
         """
 
         if data_set is None or parameter_set is None:
@@ -66,6 +68,36 @@ class PropertyEstimator(object):
         return calculated_properties
 
     @staticmethod
+    def _store_properties_in_hierarchy(original_set):
+        """Refactor a property list into a hierarchy of substance->state->type.
+
+        Parameters
+        ----------
+        original_set : dict(str, list(PhysicalProperty))
+            The set of properties to refactor.
+        """
+        property_hierarchy = {}
+
+        for substance_tag in original_set:
+
+            for calculated_property in original_set[substance_tag]:
+
+                if substance_tag not in property_hierarchy:
+                    property_hierarchy[substance_tag] = {}
+
+                state_tag = hash(calculated_property.thermodynamic_state)
+
+                if state_tag not in property_hierarchy[substance_tag]:
+                    property_hierarchy[substance_tag][state_tag] = {}
+
+                if calculated_property.type not in property_hierarchy[substance_tag][state_tag]:
+                    property_hierarchy[substance_tag][state_tag][calculated_property.type] = {}
+
+                property_hierarchy[substance_tag][state_tag][calculated_property.type] = calculated_property
+
+        return property_hierarchy
+
+    @staticmethod
     def produce_calculation_report(measured_data_set, calculated_data_set):
         """
         Produce a report detailing how well a measured and calculated data
@@ -73,50 +105,27 @@ class PropertyEstimator(object):
 
         Parameters
         ----------
-        measured_data_set : PropertyDataSet
+        measured_data_set : PhysicalPropertyDataSet
             The set of measured properties to compare against.
-        calculated_data_set : ParameterSet
+        calculated_data_set : CalculatedPropertySet
             The set of calculated properties to analyse.
         """
+        measured_properties = PropertyEstimator._store_properties_in_hierarchy(
+            measured_data_set.properties)
 
-        # TODO: The way properties are stored needs to be refactored to be uniform.
-        measured_properties = {}
-
-        for measured_property in measured_data_set.measured_properties:
-
-            substance_tag = measured_property.substance.to_tag()
-
-            if substance_tag not in measured_properties:
-                measured_properties[substance_tag] = {}
-
-            state_tag = measured_property.thermodynamic_state.to_tag()
-
-            if state_tag not in measured_properties[substance_tag]:
-                measured_properties[substance_tag][state_tag] = {}
-
-            measured_properties[substance_tag][state_tag][measured_property.type] = measured_property
-
-        calculated_properties = {}
-
-        for substance_tag in calculated_data_set.properties:
-
-            for calculated_property in calculated_data_set.properties[substance_tag]:
-
-                if substance_tag not in calculated_properties:
-                    calculated_properties[substance_tag] = {}
-
-                state_tag = calculated_property.thermodynamic_state.to_tag()
-
-                if state_tag not in calculated_properties[substance_tag]:
-                    calculated_properties[substance_tag][state_tag] = {}
-
-                calculated_properties[substance_tag][state_tag][calculated_property.type] = calculated_property
+        calculated_properties = PropertyEstimator._store_properties_in_hierarchy(
+            calculated_data_set.properties)
 
         for substance in calculated_properties:
 
             for state in calculated_properties[substance]:
 
-                logging.info('PROPERTIES FOR ' + substance + ' AT ' + state)
+                if len(calculated_properties[substance][state]) <= 0:
+                    continue
+
+                state_string = next(iter(calculated_properties[substance][state].values())).thermodynamic_state
+
+                logging.info('PROPERTIES FOR ' + substance + ' AT ' + str(state_string))
 
                 for property_type in calculated_properties[substance][state]:
 
