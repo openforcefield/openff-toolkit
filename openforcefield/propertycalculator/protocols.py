@@ -23,6 +23,8 @@ import logging
 
 import mdtraj
 
+import arch.bootstrap
+
 import numpy as np
 
 from os import path
@@ -709,6 +711,33 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
     def __init__(self):
         super().__init__()
 
+    def _find_block_size(self, charges, temperature, block_sizes_to_try=12, num_bootstrap=15):
+        """Taken from https://github.com/MobleyLab/SMIRNOFF_paper_code/tree/master/FreeSolv"""
+
+        block_size_grid = np.logspace(0, np.log10(len(self.trajectory)), block_sizes_to_try).astype('int')
+        # The float -> int conversion sometimes leads to duplicate values, so avoid this
+        block_size_grid = np.unique(block_size_grid)
+
+        epsilon_grid = np.array([self._bootstrap(charges,
+                                                 temperature,
+                                                 block_length,
+                                                 num_bootstrap) for block_length in block_size_grid])
+
+        return block_size_grid[epsilon_grid.argmax()]
+
+    def _bootstrap(self, charges, temperature, block_length, num_bootstrap):
+        """Taken from https://github.com/MobleyLab/SMIRNOFF_paper_code/tree/master/FreeSolv"""
+
+        bootstrap = arch.bootstrap.CircularBlockBootstrap(block_length, trajectory=self.trajectory)
+
+        def bootstrap_func(trajectory):
+            return mdtraj.geometry.static_dielectric(trajectory, charges, temperature)
+
+        results = bootstrap.apply(bootstrap_func, num_bootstrap)
+        epsilon_err = results.std()
+
+        return epsilon_err
+
     def execute(self, protocol_data):
 
         logging.info('Extracting dielectrics: ' + protocol_data.root_directory)
@@ -734,18 +763,14 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
 
         temperature = self.thermodynamic_state.temperature / unit.kelvin
 
-        # Determine the frame index at which the dipole moment has
-        # reached equilibrium.
-        # dipoles = mdtraj.geometry.dipole_moments(self.trajectory, charge_list)
-        #
-        # [equilibration_index, inefficiency, Neff_max] = timeseries.detectEquilibration(dipoles)
-        # equilibrated_trajectory = self.trajectory[equilibration_index:]
+        # TODO: Pull out only equilibrated data.
+        block_length = self._find_block_size(charge_list, temperature)
+        dielectric_sigma = self._bootstrap(charge_list, temperature, block_length, block_length)
 
         dielectric = mdtraj.geometry.static_dielectric(self.trajectory, charge_list, temperature)
 
-        # TODO: Calculate uncertainty in dielectric constant
         self.value = dielectric
-        self.uncertainty = 0.0
+        self.uncertainty = dielectric_sigma
 
         logging.info('Extracted dielectrics: ' + protocol_data.root_directory)
 
