@@ -25,7 +25,8 @@ Class definitions to represent a molecular system and its chemical components
 import copy
 import itertools
 
-import collections
+from collections import MutableMapping
+from collections import OrderedDict
 
 import numpy as np
 
@@ -35,7 +36,7 @@ from simtk.openmm import app
 
 #from openforcefield.utils import get_data_filename
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
-from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
+from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL, ALLOWED_AROMATICITY_MODELS, DEFAULT_FRACTIONAL_BONDORDER_MODEL, ALLOWED_FRACTIONAL_BONDORDER_MODELS, DEFAULT_CHARGE_MODEL, ALLOWED_CHARGE_MODELS
 from openforcefield.topology.molecule import Atom, Bond, VirtualSite, BondChargeVirtualSite, MonovalentLonePairVirtualSite, DivalentLonePairVirtualSite, TrivalentLonePairVirtualSite, Molecule
 
 from openforcefield.utils.serialization import Serializable
@@ -48,12 +49,12 @@ from openforcefield.utils.serialization import Serializable
 # PRIVATE SUBROUTINES
 #=============================================================================================
 
-class _TransformedDict(collections.MutableMapping):
+class _TransformedDict(MutableMapping):
     """A dictionary that applies an arbitrary key-altering
        function before accessing the keys"""
 
     def __init__(self, *args, **kwargs):
-        self.store = collections.OrderedDict()
+        self.store = OrderedDict()
         self.update(dict(*args, **kwargs))  # use the free update to set keys
 
     def __getitem__(self, key):
@@ -396,9 +397,376 @@ class Bond_unused(object):
     def fractional_bondorder(self, value):
         self._fractional_bondorder = value
 
+# =============================================================================================
+# TopologyAtom
+# =============================================================================================
+
+class TopologyAtom(Serializable):
+    """
+
+    """
+
+    def __init__(self, atom, topology_molecule):
+        """
+
+        Parameters
+        ----------
+        atom : An openforcefield.topology.molecule.Atom
+            The reference atom
+        topology_molecule : An openforcefield.topology.topology.TopologyMolecule
+            The TopologyMolecule that this TopologyAtom belongs to
+        """
+        # TODO: Type checks
+        self._atom = atom
+        self._topology_molecule = topology_molecule
+
+    @property
+    def atom(self):
+        """
+        Get the reference Atom for this TopologyAtom.
+
+        Returns
+        -------
+        an openforcefield.topology.molecule.Atom
+        """
+        return self._atom
+
+    @property
+    def topology_molecule(self):
+        """
+        Get the TopologyMolecule that this TopologyAtom belongs to.
+
+        Returns
+        -------
+        openforcefield.topology.topology.TopologyMolecule
+        """
+        return self._topology_molecule
+
+    @property
+    def molecule(self):
+        """
+        Get the reference Molecule that this TopologyAtom belongs to.
+
+        Returns
+        -------
+        openforcefield.topology.molecule.Molecule
+        """
+        return self._topology_molecule.molecule
+
+    @property
+    def topology_bonds(self):
+        """
+        Get the TopologyBonds connected to this TopologyAtom.
+
+        Returns
+        -------
+        iterator of openforcefield.topology.topology.TopologyBonds
+        """
+        for bond in self._atom.bonds:
+            reference_mol_bond_index = bond.molecule_bond_index
+            yield self._topology_molecule.bond(reference_mol_bond_index)
+
+    #@property
+    #def bonds(self):
+    #    """
+    #    Get the Bonds connected to this TopologyAtom.
+    #
+    #    Returns
+    #    -------
+    #    iterator of openforcefield.topology.molecule.Bonds
+    #    """
+    #    for bond in self._atom.bonds:
+    #        yield bond
+
+
+    # TODO: Add all atom properties here? Or just make people use TopologyAtom.atom for that?
+
+
+
 #=============================================================================================
-# TOPOLOGY
+# TopologyBond
 #=============================================================================================
+
+class TopologyBond(Serializable):
+    """
+
+    """
+    def __init__(self, bond, topology_molecule):
+        """
+
+        Parameters
+        ----------
+        bond : An openforcefield.topology.molecule.Bond
+            The reference atom
+        topology_molecule : An openforcefield.topology.topology.TopologyMolecule
+            The TopologyMolecule that this TopologyAtom belongs to
+        """
+        # TODO: Type checks
+        self._bond = bond
+        self._topology_molecule = topology_molecule
+
+    @property
+    def bond(self):
+        """
+        Get the reference Bond for this TopologyBond.
+
+        Returns
+        -------
+        an openforcefield.topology.molecule.Bond
+        """
+        return self._bond
+
+    @property
+    def topology_molecule(self):
+        """
+        Get the TopologyMolecule that this TopologyBond belongs to.
+
+        Returns
+        -------
+        openforcefield.topology.topology.TopologyMolecule
+        """
+        return self._topology_molecule
+
+    @property
+    def molecule(self):
+        """
+        Get the reference Molecule that this TopologyBond belongs to.
+
+        Returns
+        -------
+        openforcefield.topology.molecule.Molecule
+        """
+        return self._topology_molecule.molecule
+
+
+    @property
+    def topology_atoms(self):
+        """
+        Get the TopologyAtoms connected to this TopologyBond.
+
+        Returns
+        -------
+        iterator of openforcefield.topology.topology.TopologyAtom
+        """
+        for atom in self._bond.atoms:
+            reference_mol_atom_index = atom.molecule_atom_index
+            yield self._topology_molecule.atom(reference_mol_atom_index)
+
+
+#=============================================================================================
+# TopologyVirtualSite
+#=============================================================================================
+
+class TopologyVirtualSite(Serializable):
+    """
+
+    """
+
+    def __init__(self, virtual_site, topology_molecule):
+        """
+
+        Parameters
+        ----------
+        virtual_site : An openforcefield.topology.molecule.VirtualSite
+            The reference atom
+        topology_molecule : An openforcefield.topology.topology.TopologyMolecule
+            The TopologyMolecule that this TopologyAtom belongs to
+        """
+        # TODO: Type checks
+        self._virtual_site = virtual_site
+        self._topology_molecule = topology_molecule
+
+    @property
+    def virtual_site(self):
+        """
+        Get the reference VirtualSite for this TopologyVirtualSite.
+
+        Returns
+        -------
+        an openforcefield.topology.molecule.VirtualSite
+        """
+        return self._virtual_site
+
+    @property
+    def topology_molecule(self):
+        """
+        Get the TopologyMolecule that this TopologyVirtualSite belongs to.
+
+        Returns
+        -------
+        openforcefield.topology.topology.TopologyMolecule
+        """
+        return self._topology_molecule
+
+    @property
+    def molecule(self):
+        """
+        Get the reference Molecule that this TopologyVirtualSite belongs to.
+
+        Returns
+        -------
+        openforcefield.topology.molecule.Molecule
+        """
+        return self._topology_molecule.molecule
+
+
+    @property
+    def topology_atoms(self):
+        """
+        Get the TopologyAtoms involved in this TopologyVirtualSite.
+
+        Returns
+        -------
+        iterator of openforcefield.topology.topology.TopologyAtom
+        """
+        for atom in self._virtual_site.atoms:
+            reference_mol_atom_index = atom.molecule_atom_index
+            yield self._topology_molecule.atom(reference_mol_atom_index)
+
+
+
+
+# =============================================================================================
+# TopologyMolecule
+# =============================================================================================
+
+class TopologyMolecule:
+    """
+    TopologyMolecules are built to be an efficient way to store large numbers of copies of the same molecule for
+    parameterization and system preparation.
+    """
+    def __init__(self, reference_molecule, topology):
+        """
+        Create a new TopologyMolecule.
+
+        Parameters
+        ----------
+        reference_molecule : an openforcefield.topology.molecule.Molecule
+            The reference molecule, with details like formal charges, partial charges, bond orders, partial bond orders,
+            and atomic symbols.
+        topology : an openforcefield.topology.topology.Topology
+            The topology that this TopologyMolecule belongs to
+        """
+        # TODO: Type checks
+        self._reference_molecule = reference_molecule
+        self._topology = topology
+
+    @property
+    def topology(self):
+        """
+        Get the topology that this TopologyMolecule belongs to
+
+        Returns
+        -------
+        an openforcefiel.topology.topology.Topology
+        """
+        return self._topology
+
+    @property
+    def reference_molecule(self):
+        """
+        Get the reference molecule for this TopologyMolecule
+
+        Returns
+        -------
+        an openforcefiel.topology.molecule.Molecule
+        """
+        return self._reference_molecule
+
+    def atom(self, index):
+        """
+        Get the TopologyAtom with a given reference molecule index in this TopologyMolecule
+
+        Parameters
+        ----------
+        index : int
+            Index of the TopologyAtom within this TopologyMolecule to retrieve
+
+        Returns
+        -------
+        an openforcefield.topology.topology.TopologyAtom
+        """
+        return TopologyAtom(self.molecule.atoms[index], self)
+
+
+    @property
+    def atoms(self):
+        """
+        Return an iterator of all the TopologyAtoms in this TopologyMolecule
+
+        Returns
+        -------
+        an iterator of openforcefield.topology.topology.TopologyAtoms
+        """
+        for atom in self._reference_molecule.atoms:
+            yield TopologyAtom(atom, self)
+
+
+    def bond(self, index):
+        """
+        Get the TopologyBond with a given reference molecule index in this TopologyMolecule
+
+        Parameters
+        ----------
+        index : int
+            Index of the TopologyBond within this TopologyMolecule to retrieve
+
+        Returns
+        -------
+        an openforcefield.topology.topology.TopologyBond
+        """
+        return TopologyBond(self.molecule.bonds[index], self)
+
+
+
+    @property
+    def bonds(self):
+        """
+        Return an iterator of all the TopologyBonds in this TopologyMolecule
+
+        Returns
+        -------
+        an iterator of openforcefield.topology.topology.TopologyBonds
+        """
+        for bond in self._reference_molecule.bonds:
+            yield TopologyBond(bond, self)
+
+
+    def virtual_site(self, index):
+        """
+        Get the TopologyVirtualSite with a given reference molecule index in this TopologyMolecule
+
+        Parameters
+        ----------
+        index : int
+            Index of the TopologyVirtualSite within this TopologyMolecule to retrieve
+
+        Returns
+        -------
+        an openforcefield.topology.topology.TopologyVirtualSite
+        """
+        return TopologyVirtualSite(self.molecule.virtual_sites[index], self)
+
+    @property
+    def virtual_sites(self):
+        """
+        Return an iterator of all the TopologyVirtualSites in this TopologyMolecules
+
+        Returns
+        -------
+        an iterator of openforcefield.topology.topology.TopologyVirtualSite
+        """
+        for vs in self._reference_molecule.virtual_sites:
+            yield TopologyVirtualSite(vs, self)
+
+    # TODO: pick back up figuring out how we want TopologyMolecules to know their starting TopologyParticle indices
+
+
+# =============================================================================================
+# Topology
+# =============================================================================================
+
+# TODO: Revise documentation and remove chains
 
 class Topology(Serializable):
     """
@@ -406,15 +774,10 @@ class Topology(Serializable):
 
     Attributes
     ----------
-    chains : list of Chain
-        Iterate over all Chain objects in the topology
     molecules : list of Molecule
         Iterate over all Molecule objects in the system in the topology
     unique_molecules : list of Molecule
         Iterate over all unique Molecule objects in the topology
-
-    n_chains : int
-        Number of chains in the topology
     n_molecules : int
         Number of molecules in the topology
     n_unique_molecules : int
@@ -476,20 +839,21 @@ class Topology(Serializable):
 
         """
         # Assign cheminformatics models
-        self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
+        model = DEFAULT_AROMATICITY_MODEL
+        self._aromaticity_model = model
         #self._fractional_bondorder_model = DEFAULT_FRACTIONAL_BONDORDER_MODEL
         #self._charge_model = DEFAULT_CHARGE_MODEL
 
         # Initialize storage
-        self._constrained_atom_pairs = dict()
+        self._initialize()
 
-        if other is None:
-            self._initialize()
         # TODO: Try to construct Topology copy from `other` if specified
         if isinstance(other, Topology):
             self.copy_initializer(other)
         elif isinstance(other, Molecule):
             self.from_molecules([other])
+        elif isinstance(other, OrderedDict):
+            self.initialize_from_dict(other)
 
 
     def _initialize(self):
@@ -499,7 +863,15 @@ class Topology(Serializable):
         -------
 
         """
-        self._aromaticity
+        self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
+        self._constrained_atom_pairs = dict()
+        self._box_vectors = None
+        self._is_periodic = False
+        self._unique_molecules = list()
+        self._unique_molecule_dict_to_unique_molecule = dict()
+        self._molecules = list()
+
+
 
 
     @staticmethod
@@ -519,10 +891,10 @@ class Topology(Serializable):
         """
         # Ensure that we are working with an iterable
         try:
-            some_object_iterator = iter(files)
+            some_object_iterator = iter(molecules)
         except TypeError as te:
             # Make iterable object
-            files = [files]
+            molecules = [molecules]
 
         # Create Topology and populate it with specified molecules
         topology = Topology()
@@ -540,27 +912,13 @@ class Topology(Serializable):
         atom1, atom2 : openforcefield.topology.Atom
             The atoms to check to ensure they are bonded
 
-        .. todo :: Should we move this to ForceField?
 
         """
-        # TODO: Should atom1 and atom2 be int or Atom objects?
-        assert self.is_bonded(atom1, atom2), 'Atoms {} and {} are not bonded in topology'.format(atom1, atom2)
+        assert atom1.is_bonded_to(atom2), 'Atoms {} and {} are not bonded in topology'.format(atom1, atom2)
 
-    def set_aromaticity_model(self, aromaticity_model):
-        """
-        Set the aromaticity model applied to all molecules in the topology.
 
-        Parameters
-        ----------
-        aromaticity_model : str
-            Aromaticity model to use. One of: ['MDL']
-
-        """
-        if not aromaticity_model in ALLOWED_AROMATICITY_MODELS:
-            raise ValueError("Aromaticity model must be one of {}; specified '{}'".format(ALLOWED_AROMATICITY_MODELS, aromaticity_model))
-        self._aromaticity_model = aromaticity_model
-
-    def get_aromaticity_model(self):
+    @property
+    def aromaticity_model(self):
         """
         Get the aromaticity model applied to all molecules in the topology.
 
@@ -568,11 +926,41 @@ class Topology(Serializable):
         -------
         aromaticity_model : str
             Aromaticity model in use.
-
         """
         return self._aromaticity_model
 
-    def set_fractional_bondorder_model(self, fractional_bondorder_model):
+
+    @aromaticity_model.setter
+    def aromaticity_model(self, aromaticity_model):
+        """
+        Set the aromaticity model applied to all molecules in the topology.
+
+        Parameters
+        ----------
+        aromaticity_model : str
+            Aromaticity model to use. One of: ['OEAroModel_MDL']
+
+        """
+        if not aromaticity_model in ALLOWED_AROMATICITY_MODELS:
+            msg = "Aromaticity model must be one of {}; specified '{}'".format(ALLOWED_AROMATICITY_MODELS, aromaticity_model)
+            raise ValueError(msg)
+        self._aromaticity_model = aromaticity_model
+
+    @property
+    def fractional_bond_order(self):
+        """
+        Get the fractional bond order model for the Topology.
+
+        Returns
+        -------
+        fractional_bondorder_model : str
+            Fractional bond order model in use.
+
+        """
+        return self._fractional_bondorder_model
+
+    @fractional_bond_order.setter
+    def fractional_bondorder_model(self, fractional_bondorder_model):
         """
         Set the fractional bond order model applied to all molecules in the topology.
 
@@ -586,19 +974,24 @@ class Topology(Serializable):
             raise ValueError("Fractional bond order model must be one of {}; specified '{}'".format(ALLOWED_FRACTIONAL_BONDORDER_MODELS, fractional_bondorder_model))
         self._fractional_bondorder_model = fractional_bondorder_model
 
-    def get_fractional_bond_order(self):
+
+
+    @property
+    def charge_model(self):
         """
-        Get the fractional bond order model for the Topology.
+        Get the fractional bond order model applied to all molecules in the topology.
 
         Returns
         -------
-        fractional_bondorder_model : str
-            Fractional bond order model in use.
+        charge_model : str
+            Charge model to use for all molecules in the Topology.
+
 
         """
-        return self._fractional_bondorder_model
+        return self._charge_model
 
-    def set_charge_model(self, charge_model):
+    @charge_model.setter
+    def charge_model(self, charge_model):
         """
         Set the fractional bond order model applied to all molecules in the topology.
 
@@ -606,10 +999,8 @@ class Topology(Serializable):
         ----------
         charge_model : str
             Charge model to use for all molecules in the Topology.
-            Allowed values: ['AM1-CM2', 'AM1-BCC', 'Mulliken']
-            * ``AM1-CM2``: AM1 wavefunction with CM2 population analysis
+            Allowed values: ['AM1-BCC']
             * ``AM1-BCC``: Canonical AM1-BCC scheme
-            * ``Mulliken``: Mulliken charges
         """
         if not charge_model in ALLOWED_CHARGE_MODELS:
             raise ValueError("Charge model must be one of {}; specified '{}'".format(ALLOWED_CHARGE_MODELS, charge_model))
@@ -647,15 +1038,16 @@ class Topology(Serializable):
 
         # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
         matches = list()
-        for molecule in self.unique_molecules:
+        for molecule in self._unique_molecules:
             # Find all atomsets that match this definition in the reference molecule
             # This will automatically attempt to match chemically identical atoms in a canonical order within the Topology
             refmol_matches = molecule.chemical_environment_matches(smarts)
 
             # Loop over matches
             for reference_match in refmol_matches:
+                mol_dict = molecule.to_dict
                 # Unroll corresponding atom indices over all instances of this molecule
-                for reference_to_topology_atom_mapping in self._reference_to_topology_atom_mappings[reference_molecule]:
+                for topology_molecule in self._unique_molecule_dict_to_unique_molecule[reference_molecule]:
                     # Create match.
                     match = tuple([ reference_to_topology_atom_mapping[atom] for atom in reference_match ])
                     matches.append(match)
@@ -1134,10 +1526,28 @@ class Topology(Serializable):
         ----------
         molecule : Molecule
             The Molecule to be added.
-            The Topology will take ownership of the Molecule.
+
+        Returns
+        -------
+        index : int
+            The index of this molecule in the topology
         """
-        molecule.set_aromaticity_model(self._aromaticity_model)
-        pass
+        #molecule.set_aromaticity_model(self._aromaticity_model)
+        mol_dict = molecule.to_dict()
+        if not(mol_dict in self._unique_molecules_dicts):
+            # Make and store a static copy of the molecule
+            molecule_copy = copy.deepcopy(molecule)
+            self._unique_molecules.append(molecule_copy)
+            self._molecules.append(molecule_copy)
+            self._unique_molecules_dicts.append(mol_dict) # Could replace with u_m_d_t_u_m.keys()
+            self._unique_molecule_dict_to_unique_molecule[mol_dict] = self._molecules[-1]
+        else:
+            # If the molecule is already in the Topology.unique_molecules, add another reference to it in
+            # Topology.molecules
+            this_mol = self._unique_molecule_dict_to_unique_molecule[mol_dict]
+            self._molecules.append(this_mol)
+
+
 
     def add_constraint(self, iatom, jatom, distance=True):
         """
