@@ -17,6 +17,6 @@ dependencies:
     - pandas
     - nbsphinx
     - sphinx_bootstrap_theme
-    - m2r
+    - m2r >=0.2.1
     - rdkit
     - testpath =0.3.1
