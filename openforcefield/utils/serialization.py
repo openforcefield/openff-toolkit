@@ -99,7 +99,15 @@ class Serializable(object):
     >>> thing_from_xml = Thing.from_xml(xml_thing)
 
     """
-    def to_json(self, indent=None):
+
+
+    def to_dict(self):
+        raise NotImplementedError
+
+    def from_dict(self):
+        raise NotImplementedError
+    
+    def to_json(self):
         """
         Return a JSON serialized representation.
 

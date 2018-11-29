@@ -14,7 +14,7 @@ These toolkit wrappers are generally used through a :class:`ToolkitRegistry`, wh
 
    from openforcefield.utils.toolkits import ToolkitRegistry
    toolkit_registry = ToolkitRegistry()
-   toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsWrapper]
+   toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
    [ toolkit_registry.register(toolkit) for toolkit in toolkit_precedence if toolkit.is_available() ]
 
 Alternatively, the global toolkit registry (which will attempt to register any available toolkits) can be used:
@@ -39,7 +39,7 @@ The toolkit wrappers can then be accessed through the registry:
     ToolkitWrapper
     OpenEyeToolkitWrapper
     RDKitToolkitWrapper
-    AmberToolsWrapper
+    AmberToolsToolkitWrapper
 
 Serialization support
 ---------------------
