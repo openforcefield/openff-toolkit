@@ -100,6 +100,7 @@ class Serializable(object):
 
     """
 
+
     def to_dict(self):
         raise NotImplementedError
 
@@ -116,11 +117,13 @@ class Serializable(object):
         -------
         serialized : str
             A JSON serialized representation of the object
+        indent : int, optional, default=None
+            If not None, will pretty-print with specified number of spaces for indentation
 
         """
         import json
         d = self.to_dict()
-        return json.dumps(d)
+        return json.dumps(d, indent=indent)
 
     @classmethod
     def from_json(cls, serialized):
@@ -220,6 +223,33 @@ class Serializable(object):
         d = toml.loads(serialized)
         return cls.from_dict(d)
 
+    @staticmethod
+    def _represent_odict(dump, tag, mapping, flow_style=None):
+        """Like BaseRepresenter.represent_mapping, but does not issue the sort().
+        """
+        import yaml
+        value = []
+        node = yaml.MappingNode(tag, value, flow_style=flow_style)
+        if dump.alias_key is not None:
+            dump.represented_objects[dump.alias_key] = node
+        best_style = True
+        if hasattr(mapping, 'items'):
+            mapping = mapping.items()
+        for item_key, item_value in mapping:
+            node_key = dump.represent_data(item_key)
+            node_value = dump.represent_data(item_value)
+            if not (isinstance(node_key, yaml.ScalarNode) and not node_key.style):
+                best_style = False
+            if not (isinstance(node_value, yaml.ScalarNode) and not node_value.style):
+                best_style = False
+            value.append((node_key, node_value))
+        if flow_style is None:
+            if dump.default_flow_style is not None:
+                node.flow_style = dump.default_flow_style
+            else:
+                node.flow_style = best_style
+        return node
+
     def to_yaml(self):
         """
         Return a YAML serialized representation.
@@ -233,8 +263,11 @@ class Serializable(object):
 
         """
         import yaml
+        from collections import OrderedDict
+        yaml.SafeDumper.add_representer(OrderedDict,
+            lambda dumper, value: self._represent_odict(dumper, u'tag:yaml.org,2002:map', value))
         d = self.to_dict()
-        return yaml.dump(d)
+        return yaml.safe_dump(d, width=180)
 
     @classmethod
     def from_yaml(cls, serialized):
@@ -255,7 +288,10 @@ class Serializable(object):
 
         """
         import yaml
-        d = yaml.load(serialized)
+        from collections import OrderedDict
+        yaml.SafeDumper.add_representer(OrderedDict,
+            lambda dumper, value: self._represent_odict(dumper, u'tag:yaml.org,2002:map', value))
+        d = yaml.safe_load(serialized)
         return cls.from_dict(d)
 
     def to_messagepack(self):
@@ -296,7 +332,7 @@ class Serializable(object):
         d = msgpack.loads(serialized, raw=False)
         return cls.from_dict(d)
 
-    def to_xml(self, pretty=True):
+    def to_xml(self, indent=2):
         """
         Return an XML representation.
 
@@ -304,8 +340,8 @@ class Serializable(object):
 
         Parameters
         ----------
-        pretty : bool, optional, default=True
-            If True, will pretty-format the XML by inserting additional spaces
+        indent : int, optional, default=2
+            If not None, will pretty-print with specified number of spaces for indentation
 
         Returns
         -------
@@ -316,7 +352,12 @@ class Serializable(object):
         import xmltodict
         d = self.to_dict()
         root_name = self.__class__.__name__
-        return xmltodict.unparse({root_name : d}, pretty=pretty)
+        if indent is not None:
+            pretty = True
+            indent = ' '*indent
+        else:
+            pretty = False
+        return xmltodict.unparse(d, pretty=pretty, indent=indent)
 
     @classmethod
     def from_xml(cls, serialized):
@@ -339,4 +380,48 @@ class Serializable(object):
         import xmltodict
         d = xmltodict.parse(serialized)
         root_name = cls.__name__
-        return cls.from_dict(d[root_name])
+        return cls.from_dict(d)
+
+    def to_pickle(self):
+        """
+        Return a pickle serialized representation.
+
+        .. warning ::
+
+           This is not recommended for safe, stable storage since the pickle specification
+           may change between Python versions.
+
+        Returns
+        -------
+        serialized : str
+            A pickled representation of the object
+
+        """
+        import pickle
+        d = self.to_dict()
+        return pickle.dumps(d)
+
+    @classmethod
+    def from_pickle(cls, serialized):
+        """
+        Instantiate an object from a pickle serialized representation.
+
+        .. warning ::
+
+           This is not recommended for safe, stable storage since the pickle specification
+           may change between Python versions.
+
+        Parameters
+        ----------
+        serialized : str
+            A pickled representation of the object
+
+        Returns
+        -------
+        instance : cls
+            An instantiated object
+
+        """
+        import pickle
+        d = pickle.loads(serialized)
+        return cls.from_dict(d)
