@@ -19,3 +19,4 @@ dependencies:
     - sphinx_bootstrap_theme
     - m2r
     - rdkit
+    - cryptography
