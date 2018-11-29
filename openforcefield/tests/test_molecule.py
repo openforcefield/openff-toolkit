@@ -23,9 +23,9 @@ from numpy.testing import assert_almost_equal
 from tempfile import NamedTemporaryFile
 from simtk import unit
 import pytest
-
+import numpy as np
 from openforcefield import utils, topology
-from openforcefield.topology.molecule import FrozenMolecule, Molecule, Atom, Bond, BondChargeVirtualSite, MonovalentLonePairVirtualSite, DivalentLonePairVirtualSite, TrivalentLonePairVirtualSite, ALLOWED_CHARGE_MODELS, ALLOWED_FRACTIONAL_BONDORDER_MODELS
+from openforcefield.topology.molecule import FrozenMolecule, Molecule, Atom, Bond, BondChargeVirtualSite, MonovalentLonePairVirtualSite, DivalentLonePairVirtualSite, TrivalentLonePairVirtualSite, ALLOWED_CHARGE_MODELS, ALLOWED_FRACTIONAL_BOND_ORDER_MODELS
 from openforcefield.utils import get_data_filename
 # TODO: Will the ToolkitWrapper allow us to pare that down?
 #from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORTED_TOOLKITS, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
@@ -365,9 +365,9 @@ class TestMolecule(TestCase):
         distance = distance_unitless * unit.angstrom
         sigma = sigma_unitless * unit.angstrom
         rmin_half = rmin_half_unitless * unit.angstrom
-        epsilon = epsilon_unitless * (unit.kilojoule/unit.mole)
-        charge_increments = [i*unit.elementary_charge for i in charge_increments_unitless]
-        
+        epsilon = epsilon_unitless * (unit.kilojoule / unit.mole)
+        charge_increments = [i * unit.elementary_charge for i in charge_increments_unitless]
+
         for molecule in self.molecules:
             atom1 = molecule.atoms[0]
             atom2 = molecule.atoms[1]
@@ -411,7 +411,8 @@ class TestMolecule(TestCase):
             
     def test_add_bond_charge_virtual_site(self):
         """Test the addition of a BondChargeVirtualSite to a molecule.
-        Also tests many of the input tests of the parent VirtualSite class"""
+           Also tests many of the inputs of the parent VirtualSite class
+        """
         for molecule in self.molecules:
             atom1 = molecule.atoms[0]
             atom2 = molecule.atoms[1]
@@ -438,7 +439,22 @@ class TestMolecule(TestCase):
             assert vsite1 in atom3.virtual_sites
             assert vsite1.distance == distance
 
-            
+            vsite2_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3],
+                                                                 distance,
+                                                                 sigma=0.1*unit.angstrom,
+                                                                 epsilon=1.0*unit.kilojoule_per_mole,
+                                                                 charge_increments=unit.Quantity(np.array([0.1, 0.2, 0.3]), unit.elementary_charge)
+                                                                 )
+            vsite2 = molecule.virtual_sites[vsite2_index]
+
+            # test serialization
+            molecule_dict = molecule.to_dict()
+            molecule2 = Molecule.from_dict(molecule_dict)
+            assert molecule.to_dict() == molecule2.to_dict()
+            assert 0
+
+    # TODO: Make a test for to_dict and from_dict for VirtualSites (even though they're currently just unloaded using
+    #      (for example) Molecule._add_bond_virtual_site functions
     def test_add_monovalent_lone_pair_virtual_site(self):
         """Test addition of a MonovalentLonePairVirtualSite to the Molecule"""
         for molecule in self.molecules:
@@ -474,7 +490,9 @@ class TestMolecule(TestCase):
             # Successfully make a virtual site
             vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
             # TODO: Check if we get the same values back out from the @properties
-
+            molecule_dict = molecule.to_dict()
+            molecule2 = Molecule.from_dict(molecule_dict)
+            assert molecule.to_dict() == molecule2.to_dict()
 
         
     def test_add_divalent_lone_pair_virtual_site(self):
@@ -490,7 +508,10 @@ class TestMolecule(TestCase):
             vsite1_index = molecule.add_divalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
             with self.assertRaises(AssertionError) as context:
                 vsite1_index = molecule.add_divalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
-        
+            molecule_dict = molecule.to_dict()
+            molecule2 = Molecule.from_dict(molecule_dict)
+            assert molecule.to_dict() == molecule2.to_dict()
+
     def test_add_trivalent_lone_pair_virtual_site(self):
         """Test addition of a TrivalentLonePairVirtualSite to the Molecule"""
         for molecule in self.molecules:
@@ -505,7 +526,11 @@ class TestMolecule(TestCase):
             # Test for assertion when giving too few atoms
             with self.assertRaises(AssertionError) as context:
                 vsite1_index = molecule.add_trivalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
-        
+            molecule_dict = molecule.to_dict()
+            molecule2 = Molecule.from_dict(molecule_dict)
+            assert molecule.to_dict() == molecule2.to_dict()
+
+
     def test_n_particles(self):
         """Test n_particles property"""
         for molecule in self.molecules:

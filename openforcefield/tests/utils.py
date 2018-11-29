@@ -13,8 +13,8 @@ Utilities for testing
 # GLOBAL IMPORTS
 #=============================================================================================
 
-from openforcefield.utils import get_data_filename, generateTopologyFromOEMol, read_molecules
-from openforcefield.utils import check_energy_is_finite, get_energy
+from openforcefield.utils import get_data_filename #, generateTopologyFromOEMol, read_molecules
+#from openforcefield.utils import check_energy_is_finite, get_energy
 
 from simtk import unit, openmm
 from simtk.openmm import app

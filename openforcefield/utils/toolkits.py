@@ -41,8 +41,8 @@ import numpy as np
 DEFAULT_AROMATICITY_MODEL = 'OEAroModel_MDL' # TODO: Is there a more specific name and reference for the aromaticity model?
 ALLOWED_AROMATICITY_MODELS = ['OEAroModel_MDL']
 
-DEFAULT_FRACTIONAL_BONDORDER_MODEL = 'Wiberg' # TODO: Is there a more specific name and reference for the fractional bond order models?
-ALLOWED_FRACTIONAL_BONDORDER_MODELS = ['Wiberg']
+DEFAULT_FRACTIONAL_BOND_ORDER_MODEL = 'Wiberg' # TODO: Is there a more specific name and reference for the fractional bond order models?
+ALLOWED_FRACTIONAL_BOND_ORDER_MODELS = ['Wiberg']
 
 DEFAULT_CHARGE_MODEL = 'AM1-BCC' # TODO: Should this be `AM1-BCC`, or should we encode BCCs explicitly via AM1-CM2 preprocessing?
 ALLOWED_CHARGE_MODELS = ['AM1-BCC'] # TODO: Which models do we want to support?
@@ -580,7 +580,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
         from openforcefield.topology.molecule import Molecule
-        #from openforcefield.utils.toolkits.OpenEyeToolkitWrapper import _openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
+        # from openforcefield.utils.toolkits.OpenEyeToolkitWrapper import _openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
 
         oechem.OEPerceiveChiral(oemol)
 
