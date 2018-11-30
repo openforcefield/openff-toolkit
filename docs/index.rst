@@ -31,3 +31,4 @@ API documentation
   topology
   typing
   utils
+  propertyestimator
