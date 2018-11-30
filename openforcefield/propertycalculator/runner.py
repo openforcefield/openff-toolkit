@@ -26,6 +26,9 @@ import logging
 import multiprocessing
 import math
 
+import uuid
+
+from enum import Enum
 from queue import Queue
 from threading import Thread
 from os import path
@@ -43,15 +46,16 @@ from openforcefield.datasets.property_dataset import CalculatedPropertySet
 # Calculation Classes
 # =============================================================================================
 
-class DirectPropertyCalculationTemplate:
+class DirectCalculationTemplate:
     """Defines the set of protocols required to calculate a certain property.
     """
     def __init__(self):
 
         self.property_type = PropertyType.Undefined
-        self.label = ''
+        self.id = None
 
         self.protocols = []
+        self.protocol_ids = set()
 
     @classmethod
     def from_xml(cls, xml_node, existing_templates):
@@ -66,12 +70,12 @@ class DirectPropertyCalculationTemplate:
 
         Returns
         ----------
-        DirectPropertyCalculationTemplate
+        DirectCalculationTemplate
             The calculated template created from the xml node.
         """
         return_value = cls()
 
-        # Gather up all possible identifiers
+        # Determine which property this calculation will yeild.
         property_node = xml_node.find('property')
 
         if property_node is None:
@@ -79,151 +83,302 @@ class DirectPropertyCalculationTemplate:
 
         return_value.property_type = PropertyType[property_node.text]
 
-        label_node = xml_node.find('label')
+        # Find the unique id of this calculation.
+        id_node = xml_node.find('id')
 
-        if label_node is None:
-            raise XmlNodeMissingException('label')
+        if id_node is None:
+            raise XmlNodeMissingException('id')
 
-        return_value.label = label_node.text
+        return_value.id = id_node.text
 
-        inherits_node = xml_node.find('inherits')
+        # Make sure the id is really unique.
+        if return_value.id in existing_templates:
 
-        if inherits_node is not None:
-
-            if inherits_node.text not in existing_templates:
-
-                raise RuntimeError('The ' + return_value.label + ' template tries to inherit from '
-                                                                 'a non-existent template.')
-
-            return_value.protocols.extend(existing_templates[inherits_node.text].protocols)
+            raise Exception('A calculation with id ' + return_value.id +
+                            ' has been defined more than once.')
 
         protocol_nodes = xml_node.find('protocols')
 
-        if label_node is None:
+        if protocol_nodes is None:
             raise XmlNodeMissingException('protocols')
 
+        # Load in all of the protocols.
         for protocol_node in protocol_nodes:
 
+            # Handle the case where we import the protocols
+            # from an already defined calculation.
+            if protocol_node.tag == 'import':
+
+                if protocol_node.text not in existing_templates:
+
+                    raise RuntimeError('The ' + return_value.id + ' template tries to inherit from '
+                                                                  'a non-existent template.')
+
+                return_value.protocols.extend(copy.deepcopy(existing_templates[protocol_node.text].protocols))
+
+                for protocol in return_value.protocols:
+                    return_value.protocol_ids.add(protocol.id)
+
+                continue
+
+            # Try to automatically find which class corresponds to the xml tag.
             protocol_class = getattr(protocols, protocol_node.tag)
 
             if protocol_class is None:
 
-                raise RuntimeError('The ' + return_value.label + ' contains an undefined'
-                                                                 ' protocol of type: ' + protocol_node.tag)
+                raise RuntimeError('The ' + return_value.id + ' calculation contains an undefined'
+                                                              ' protocol of type: ' + protocol_node.tag)
 
+            # Make sure the found class is actually a protocol.
             if isinstance(protocol_class, protocols.Protocol):
-
                 raise RuntimeError(protocol_node.tag + ' is not a child of Protocol')
 
             protocol = protocol_class.from_xml(protocol_node)
+            # protocol.id = return_value.id + '|' + protocol.id
+
+            if protocol.id in return_value.protocol_ids:
+
+                raise Exception('The ' + return_value.id + ' calculation defines two protocols'
+                                                           ' with the same id: ' + protocol.id)
+
+            return_value.protocol_ids.add(protocol.id)
             return_value.protocols.append(protocol)
 
+        cls.validate_inputs(return_value)
         return return_value
+
+    @staticmethod
+    def validate_inputs(template):
+
+        for protocol in template.protocols:
+
+            for input_reference in protocol.input_references:
+
+                if input_reference.protocol_id == 'global':
+                    # We handle global inputs separately
+                    continue
+
+                # Make sure the other protocol whose output we are interested
+                # in actually exists.
+                if input_reference.protocol_id not in template.protocol_ids:
+
+                    raise Exception('The ' + protocol.id + ' protocol of the ' + template.id + ' template tries to ' +
+                                    'take input from a non-existent protocol: ' + input_reference.protocol_id)
+
+                other_protocol = next(x for x in template.protocols if x.id == input_reference.protocol_id)
+
+                # Make sure the other protocol definitely has the requested output.
+                if input_reference.property_name not in other_protocol.provided_outputs:
+
+                    raise Exception('The ' + other_protocol.id + ' protocol does not provide an ' +
+                                    input_reference.property_name + ' output.')
+
+
+class DirectCalculation:
+    """Defines the property to calculate and template to follow.
+
+    Parameters
+    ----------
+    physical_property: Protocol
+        The protocol this node will execute.
+    force_field: ForceField
+        The force field to use for this calculation.
+    template: CalculationNode, optional
+        The parent of this node.
+    """
+    def __init__(self, physical_property, force_field, template):
+
+        self.physical_property = physical_property
+        self.template = copy.deepcopy(template)
+
+        self.leaf_node_ids = []
+
+        self.uuid = str(uuid.uuid4())
+
+        thermodynamic_state = physical_property.thermodynamic_state
+        substance = physical_property.substance
+
+        for protocol in self.protocols:
+
+            # Try to set global properties on each of the protocols
+            for input_reference in protocol.input_references:
+
+                if input_reference.protocol_id != 'global':
+                    continue
+
+                if input_reference.property_name == 'thermodynamic_state':
+                    protocol.thermodynamic_state = thermodynamic_state
+                elif input_reference.property_name == 'substance':
+                    protocol.substance = substance
+                elif input_reference.property_name == 'force_field':
+                    protocol.force_field = force_field
+                else:
+                    raise Exception('Invalid global property: ' + input_reference.property_name)
+
+            protocol.set_uuid(self.uuid)
+
+    @property
+    def protocols(self):
+        """list(Protocol): The list of protocols to follow to calculate a property."""
+        return self.template.protocols
 
 
 class DirectCalculationGraph:
     """A hierarchical structure for storing all protocols that need to be executed.
     """
-    class TreeNode:
+
+    class CalculationNode:
         """A node in the calculation graph.
 
         Each node represents a protocol to be executed.
 
         Parameters
         ----------
-        index: int
-            The index of this node.
-        depth: int
-            The depth of this node.
+        protocol: Protocol
+            The protocol this node will execute.
+        parent: str, optional
+            The id of the parent of this node.
         """
-        def __init__(self, index, depth):
+        class Status(Enum):
+            """Describes the state of a calculation node."""
+            Queueing = 0
+            Running = 1
+            Failed = 2
+            Finished = 3
 
-            self.index = index
-            self.depth = depth
+        def __init__(self, protocol, parent_node):
+
+            self.protocol = protocol
+
+            self.directory = protocol.id if parent_node is None else \
+                path.join(parent_node.directory, protocol.id)
+
+            self.status = self.Status.Queueing
 
             self.children = []
 
+        @property
+        def id(self):
+            """str: Returns the id of the protocol to execute."""
+            return self.protocol.id
+
     def __init__(self):
 
-        self._master_protocols_list = []
+        self._nodes_by_id = {}
+        self._node_id_map = {}
+
         self._nodes = []
 
-        self._leaf_nodes = []
-
-    @property
-    def nodes(self):
-        """list(TreeNode): Returns the calculation tree nodes."""
-        return self._nodes
-
-    @property
-    def leaf_protocols(self):
-        """list(TreeNode): Returns the leaf nodes of the tree."""
-        return [self._master_protocols_list[node.index] for node in self._leaf_nodes]
-
-    def _insert_root_node(self, protocol):
-        """Insert a protocol node into the tree as a root node.
-
-        Parameters
-        ----------
-        protocol : Protocol
-            The protocol to insert.
-        """
-        for node in self._nodes:
-
-            existing_protocol = self._master_protocols_list[node.index]
-
-            if existing_protocol.compare_to(protocol) is False:
-                continue
-
-            return node
-
-        self._master_protocols_list.append(protocol)
-
-        new_node = self.TreeNode(len(self._master_protocols_list) - 1, 0)
-        self._nodes.append(new_node)
-
-        return new_node
-
-    def _insert_node(self, protocol, tree_node):
+    def _insert_node(self, protocol, parent_node_id=None):
         """Insert a protocol node into the tree.
 
         Parameters
         ----------
         protocol : Protocol
             The protocol to insert.
+        parent_node_id : str
+            The id of node in which to insert the new protocol.
+
+        Returns
+        ----------
+        str
+            The id of the node that was inserted. If an identical node already exists,
+            the id of that node is returned instead.
         """
 
-        for node in tree_node.children:
+        nodes = self._nodes if parent_node_id is None else \
+            self._nodes_by_id[parent_node_id].children
 
-            existing_protocol = self._master_protocols_list[node.index]
+        for input_reference in protocol.input_references:
 
-            if existing_protocol.compare_to(protocol) is False:
+            if input_reference.protocol_id == 'global':
                 continue
 
-            return node
+            input_reference.protocol_id = self._node_id_map[input_reference.protocol_id]
 
-        self._master_protocols_list.append(protocol)
+        for node_id in nodes:
 
-        new_node = self.TreeNode(len(self._master_protocols_list) - 1, tree_node.depth + 1)
-        tree_node.children.append(new_node)
+            node = self._nodes_by_id[node_id]
 
-        return new_node
+            if node.protocol.compare_to(protocol) is False:
+                continue
+
+            return node_id
+
+        parent_node = None if parent_node_id is None else \
+            self._nodes_by_id[parent_node_id]
+
+        new_node = self.CalculationNode(protocol, parent_node)
+
+        self._nodes_by_id[new_node.id] = new_node
+        nodes.append(new_node.id)
+
+        return new_node.id
 
     def add_calculation(self, calculation):
         """Insert a calculation into the calculation graph.
 
         Parameters
         ----------
-        calculation : DirectPropertyCalculationTemplate
+        calculation : DirectCalculation
             The calculation to insert.
         """
-        tree_node = self._insert_root_node(calculation.protocols[0])
+        parent_node_id = None
 
-        for protocol in calculation.protocols[1:]:
-            tree_node = self._insert_node(protocol, tree_node)
+        for protocol in calculation.protocols:
 
-        if tree_node is not None and tree_node not in self._leaf_nodes:
-            self._leaf_nodes.append(tree_node)
+            parent_node_id = self._insert_node(protocol, parent_node_id)
+            self._node_id_map[protocol.id] = parent_node_id
+
+            if protocol.id != parent_node_id:
+                protocol.set_uuid(parent_node_id.split('|')[0])
+
+        if parent_node_id is not None:
+            calculation.leaf_node_ids.append(parent_node_id)
+
+    def execute(self, task_queue, node_id=None):
+        """Execute the given node on a thread, then queue its children.
+
+        Parameters
+        ----------
+        task_queue : Queue
+            The queue of nodes to execute.
+        node_id : str, optional
+            The id of the node to execute. If none is passed,
+            all root nodes are queued to be executed.
+        """
+        if node_id is not None:
+
+            node_to_execute = self._nodes_by_id[node_id]
+
+            if not path.isdir(node_to_execute.directory):
+                os.makedirs(node_to_execute.directory)
+
+            for input_reference in node_to_execute.protocol.input_references:
+
+                if input_reference.protocol_id == 'global':
+                    continue
+
+                output_node = self._nodes_by_id[self._node_id_map[input_reference.protocol_id]]
+
+                if output_node.status != DirectCalculationGraph.CalculationNode.Status.Finished:
+
+                    raise Exception('A node is trying to take input '
+                                    'from an unfinished node: ', output_node.id)
+
+                input_value = getattr(output_node.protocol, input_reference.property_name)
+                setattr(node_to_execute.protocol, input_reference.input_property, input_value)
+
+            if node_to_execute.protocol.execute(node_to_execute.directory) is False:
+                # This node failed to run, can't continue down the tree.
+                return
+
+            node_to_execute.status = DirectCalculationGraph.CalculationNode.Status.Finished
+
+        child_ids = self._nodes if node_id is None else self._nodes_by_id[node_id].children
+
+        for child_id in child_ids:
+            task_queue.put((self, child_id))
 
     @staticmethod
     def worker_thread(task_queue):
@@ -237,51 +392,10 @@ class DirectCalculationGraph:
 
         while True:
 
-            parent_tree, tree_node, input_data = task_queue.get()
-            parent_tree.execute(task_queue, input_data, tree_node)
+            parent_tree, node_id = task_queue.get()
+            parent_tree.execute(task_queue, node_id)
 
             task_queue.task_done()
-
-    def execute(self, task_queue, protocol_data, tree_node=None):
-        """Execute the given node on a thread, then queue its children.
-
-        Parameters
-        ----------
-        task_queue : Queue
-            The queue of nodes to execute.
-        protocol_data : ProtocolData
-            The data output by the previous protocol.
-        tree_node : TreeNode, optional
-            The node to execute. If none is passed, all root nodes are queued.
-        """
-        nodes = self._nodes if tree_node is None else tree_node.children
-
-        if not path.isdir(protocol_data.root_directory):
-            os.makedirs(protocol_data.root_directory)
-
-        if tree_node is not None:
-
-            protocol = self._master_protocols_list[tree_node.index]
-            protocol_data = protocol.execute(protocol_data)
-
-        if protocol_data is None:
-            # Something went wrong and we can't continue down
-            # the hierarchy
-            return
-
-        for index, node in enumerate(nodes):
-
-            input_data = protocol_data
-
-            if len(nodes) > 1:
-                input_data = protocols.ProtocolData.clone(protocol_data)
-
-            protocol_type = type(self._master_protocols_list[node.index]).__name__
-
-            input_data.root_directory = path.join(input_data.root_directory,
-                                                  str(index) + '_' + str(protocol_type))
-
-            task_queue.put((self, node, input_data))
 
 
 # =============================================================================================
@@ -339,14 +453,14 @@ class PropertyCalculationRunner:
 
             for template_node in root_node:
 
-                calculator_template = DirectPropertyCalculationTemplate.from_xml(template_node,
-                                                                                 templates)
+                calculator_template = DirectCalculationTemplate.from_xml(template_node,
+                                                                         templates)
 
-                templates[calculator_template.label] = calculator_template
+                templates[calculator_template.id] = calculator_template
 
-        for template_label in templates:
+        for template_id in templates:
 
-            template = templates[template_label]
+            template = templates[template_id]
 
             if template.property_type is PropertyType.Undefined:
                 continue
@@ -436,15 +550,14 @@ class PropertyCalculationRunner:
         # where chain branches indicate a divergence in protocol
         #
         # More than likely most graphs will diverge at the analysis stage.
-        calculation_graphs = self.build_calculation_graph(properties_to_measure)
+        calculation_graph = self.build_calculation_graph(properties_to_measure, parameter_set)
 
         # Once a list of unique list of protocols to be executed has been constructed
         # the protocols can be fired.
-        self.execute_calculation_graph(calculation_graphs,
-                                       parameter_set)
+        self.execute_calculation_graph(calculation_graph)
 
         # Finally, extract the calculated properties.
-        self.extract_calculated_properties(calculation_graphs)
+        # self.extract_calculated_properties(calculation_graphs)
 
         # The results from these calculations would then be stored in some way so that
         # the data required for reweighting is retained.
@@ -505,7 +618,7 @@ class PropertyCalculationRunner:
         """
         return None
 
-    def build_calculation_graph(self, properties_by_mixture):
+    def build_calculation_graph(self, properties_by_mixture, force_field):
         """ Construct a graph of the protocols needed to calculate a set of properties.
 
         Parameters
@@ -513,11 +626,9 @@ class PropertyCalculationRunner:
         properties_by_mixture : PhysicalPropertyDataSet
             The properties to attempt to compute.
         """
-        calculation_graphs = {}
+        calculation_graph = DirectCalculationGraph()
 
         for mixture in properties_by_mixture:
-
-            calculation_graph = DirectCalculationGraph()
 
             for property_to_calculate in properties_by_mixture[mixture]:
 
@@ -528,18 +639,15 @@ class PropertyCalculationRunner:
 
                     continue
 
-                calculation = copy.deepcopy(self.calculator_templates[property_to_calculate.type])
-
-                for protocol in calculation.protocols:
-                    protocol.set_measured_property(property_to_calculate)
+                calculation = DirectCalculation(property_to_calculate,
+                                                force_field,
+                                                self.calculator_templates[property_to_calculate.type])
 
                 calculation_graph.add_calculation(calculation)
 
-            calculation_graphs[mixture] = calculation_graph
+        return calculation_graph
 
-        return calculation_graphs
-
-    def execute_calculation_graph(self, calculation_graphs, force_field):
+    def execute_calculation_graph(self, calculation_graph):
         """Execute a graph of calculation protocols using a given parameter set.
 
         Parameters
@@ -560,21 +668,7 @@ class PropertyCalculationRunner:
             worker.setDaemon(True)
             worker.start()
 
-        for mixture in calculation_graphs:
-
-            calculation_graph = calculation_graphs[mixture]
-
-            if len(calculation_graph.nodes) == 0:
-                continue
-
-            protocol_data = protocols.ProtocolData()
-
-            protocol_data.root_directory = path.join('property-data', mixture)
-
-            protocol_data.substance_tag = mixture
-            protocol_data.force_field = force_field
-
-            calculation_graph.execute(task_queue, protocol_data)
+        calculation_graph.execute(task_queue)
 
         task_queue.join()
 

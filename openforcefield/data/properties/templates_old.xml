@@ -1,0 +1,70 @@
+<!--All values in this file are temporary and for testing only.-->
+<CalculationTemplates>
+
+    <CalculationTemplate>
+
+        <property>Undefined</property>
+        <label>BaseSimulationTemplate</label>
+        <protocols>
+
+            <!--Setup-->
+            <BuildLiquidCoordinates>
+                <max_molecules>128</max_molecules>
+                <mass_density>1.0</mass_density>
+            </BuildLiquidCoordinates>
+
+            <BuildSmirnoffTopology/>
+
+            <!--Equilibration-->
+            <RunEnergyMinimisation/>
+
+            <RunOpenMMSimulation>
+                <steps>10000</steps>
+                <thermostat_friction>1.0</thermostat_friction>
+                <timestep>0.001</timestep>
+                <output_frequency>500</output_frequency>
+                <ensemble>NPT</ensemble>
+            </RunOpenMMSimulation>
+
+            <!--Production-->
+            <RunOpenMMSimulation>
+                <steps>40000</steps>
+                <thermostat_friction>1.0</thermostat_friction>
+                <timestep>0.001</timestep>
+                <output_frequency>500</output_frequency>
+                <ensemble>NPT</ensemble>
+            </RunOpenMMSimulation>
+
+        </protocols>
+
+    </CalculationTemplate>
+
+    <CalculationTemplate>
+
+        <property>Density</property>
+        <label>DensityTemplate</label>
+        <inherits>BaseSimulationTemplate</inherits>
+        <protocols>
+
+            <!--Analysis-->
+            <ExtractAverageDensity/>
+
+        </protocols>
+
+    </CalculationTemplate>
+
+    <CalculationTemplate>
+
+        <property>DielectricConstant</property>
+        <label>DielectricTemplate</label>
+        <inherits>BaseSimulationTemplate</inherits>
+        <protocols>
+
+            <!--Analysis-->
+            <ExtractAverageDielectric/>
+
+        </protocols>
+
+    </CalculationTemplate>
+
+</CalculationTemplates>

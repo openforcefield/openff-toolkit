@@ -4,34 +4,66 @@
     <CalculationTemplate>
 
         <property>Undefined</property>
-        <label>BaseSimulationTemplate</label>
+        <id>BaseSimulationTemplate</id>
         <protocols>
 
             <!--Setup-->
             <BuildLiquidCoordinates>
+                <id>build_coordinates</id>
+                <inputs>
+                    <input property="substance">global.substance</input>
+                </inputs>
                 <max_molecules>128</max_molecules>
                 <mass_density>1.0</mass_density>
             </BuildLiquidCoordinates>
 
-            <BuildSmirnoffTopology/>
+            <BuildSmirnoffTopology>
+                <id>build_topology</id>
+                <inputs>
+                    <input property="force_field">global.force_field</input>
+                    <input property="topology">build_coordinates.topology</input>
+                    <input property="molecules">build_coordinates.molecules</input>
+                </inputs>
+            </BuildSmirnoffTopology>
 
             <!--Equilibration-->
-            <RunEnergyMinimisation/>
+            <RunEnergyMinimisation>
+                <id>energy_minimisation</id>
+                <inputs>
+                    <input property="positions">build_coordinates.positions</input>
+                    <input property="topology">build_coordinates.topology</input>
+                    <input property="system">build_topology.system</input>
+                </inputs>
+            </RunEnergyMinimisation>
 
             <RunOpenMMSimulation>
-                <steps>10000</steps>
+                <id>npt_equilibration</id>
+                <inputs>
+                    <input property="thermodynamic_state">global.thermodynamic_state</input>
+                    <input property="positions">energy_minimisation.final_positions</input>
+                    <input property="topology">build_coordinates.topology</input>
+                    <input property="system">build_topology.system</input>
+                </inputs>
+                <steps>1</steps>
                 <thermostat_friction>1.0</thermostat_friction>
                 <timestep>0.001</timestep>
-                <output_frequency>500</output_frequency>
+                <output_frequency>2</output_frequency>
                 <ensemble>NPT</ensemble>
             </RunOpenMMSimulation>
 
             <!--Production-->
             <RunOpenMMSimulation>
-                <steps>40000</steps>
+                <id>npt_production</id>
+                <inputs>
+                    <input property="thermodynamic_state">global.thermodynamic_state</input>
+                    <input property="positions">npt_equilibration.final_positions</input>
+                    <input property="topology">build_coordinates.topology</input>
+                    <input property="system">build_topology.system</input>
+                </inputs>
+                <steps>2</steps>
                 <thermostat_friction>1.0</thermostat_friction>
                 <timestep>0.001</timestep>
-                <output_frequency>500</output_frequency>
+                <output_frequency>1</output_frequency>
                 <ensemble>NPT</ensemble>
             </RunOpenMMSimulation>
 
@@ -42,12 +74,21 @@
     <CalculationTemplate>
 
         <property>Density</property>
-        <label>DensityTemplate</label>
-        <inherits>BaseSimulationTemplate</inherits>
+        <id>DensityTemplate</id>
         <protocols>
 
+            <import>BaseSimulationTemplate</import>
+
             <!--Analysis-->
-            <ExtractAverageDensity/>
+            <ExtractAverageDensity>
+                <id>extract_density</id>
+                <inputs>
+                    <input property="positions">npt_production.final_positions</input>
+                    <input property="topology">build_coordinates.topology</input>
+                    <input property="system">build_topology.system</input>
+                    <input property="trajectory_path">npt_production.trajectory</input>
+                </inputs>
+            </ExtractAverageDensity>
 
         </protocols>
 
@@ -56,12 +97,22 @@
     <CalculationTemplate>
 
         <property>DielectricConstant</property>
-        <label>DielectricTemplate</label>
-        <inherits>BaseSimulationTemplate</inherits>
+        <id>DielectricTemplate</id>
         <protocols>
 
+            <import>BaseSimulationTemplate</import>
+
             <!--Analysis-->
-            <ExtractAverageDielectric/>
+            <ExtractAverageDielectric>
+                <id>extract_dielectric</id>
+                <inputs>
+                    <input property="thermodynamic_state">global.thermodynamic_state</input>
+                    <input property="topology">build_coordinates.topology</input>
+                    <input property="system">build_topology.system</input>
+                    <input property="trajectory_path">npt_production.trajectory</input>
+                    <input property="positions">npt_production.final_positions</input>
+                </inputs>
+            </ExtractAverageDielectric>
 
         </protocols>
 
