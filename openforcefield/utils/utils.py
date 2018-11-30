@@ -9,6 +9,7 @@ Utility subroutines
 #=============================================================================================
 
 import contextlib
+from simtk import unit
 
 #=============================================================================================
 # UTILITY SUBROUTINES
@@ -83,6 +84,60 @@ def get_data_filename(relative_path):
         raise ValueError("Sorry! %s does not exist. If you just added it, you'll have to re-install" % fn)
 
     return fn
+
+
+def serialize_quantity(quantity):
+    """
+    Serialized a simtk.unit.Quantity into a dict of {'unitless_value': X, 'unit': Y}
+
+    Parameters
+    ----------
+    quantity : A simtk.unit.Quantity-wrapped value or iterator over values
+        The object to serialize
+
+    Returns
+    -------
+    serialzied : dict
+        The serialized object
+    """
+
+    serialized = dict()
+
+    # If it's None, just return None in all fields
+    if quantity is None:
+        serialized['unitless_value'] = None
+        serialized['unit'] = None
+        return serialized
+
+    # If it's not None, make sure it's a simtk.unit.Quantity
+    assert (hasattr(quantity, 'unit'))
+
+    quantity_unit = str(quantity.unit)
+    unitless_value = quantity / quantity.unit
+    serialized['unitless_value'] = unitless_value
+    serialized['unit'] = quantity_unit
+    return serialized
+
+
+def deserialize_quantity(serialized):
+    """
+    Deserializes a simtk.unit.Quantity.
+
+    Parameters
+    ----------
+    serialized : dict
+        Serialized representation of a simtk.unit.Quantity. Must have keys ["unitless_value", "unit"]
+
+    Returns
+    -------
+    simtk.unit.Quantity
+    """
+    if (serialized['unitless_value'] is None) and (serialized['unit'] is None):
+        return None
+    quantity = unit.Quantity(serialized['unitless_value'], getattr(unit, serialized['unit']))
+    return quantity
+
+
 
 def serialize_numpy(np_array):
     """

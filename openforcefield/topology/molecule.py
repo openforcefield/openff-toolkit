@@ -43,7 +43,7 @@ from simtk.openmm.app import element
 
 import openforcefield
 from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
-from openforcefield.utils import serialize_numpy, deserialize_numpy
+from openforcefield.utils import serialize_numpy, deserialize_numpy, serialize_quantity, deserialize_quantity
 #from openforcefield.utils.toolkits import requires_rdkit, requires_openeye
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
@@ -592,26 +592,34 @@ class VirtualSite(Particle):
         vsite_dict = OrderedDict()
         vsite_dict['name'] = self._name
         vsite_dict['atoms'] = tuple([i.molecule_atom_index for i in self.atoms])
-        if self._charge_increments is None:
-            vsite_dict['charge_increments'] = None
-            vsite_dict['charge_increments_unit'] = None
-        else:
-            vsite_dict['charge_increments'] = tuple(self._charge_increments / unit.elementary_charge)
-            vsite_dict['charge_increments_unit'] = 'elementary_charge'
+        vsite_dict['charge_increments'] = serialize_quantity(self._charge_increments)
+        #if self._charge_increments is None:
+        #    vsite_dict['charge_increments'] = None
+        #    vsite_dict['charge_increments_unit'] = None
+        #else:
+        #    #vsite_dict['charge_increments'] = self._charge_increments / unit.elementary_charge
+        #    charge_increments_unitless = list()
+        #    for ci in self._charge_increments:
+        #        charge_increments_unitless.append(ci/unit.elementary_charge)
+        #    vsite_dict['charge_increments'] = charge_increments_unitless
+        #    vsite_dict['charge_increments_unit'] = 'elementary_charge'
 
-        if self._epsilon is None:
-            vsite_dict['epsilon'] = None
-            vsite_dict['epsilon_unit'] = None
-        else:
-            vsite_dict['epsilon'] = self._epsilon / unit.kilojoule_per_mole
-            vsite_dict['epsilon_unit'] = 'kilojoule_per_mole'
+        vsite_dict['epsilon'] = serialize_quantity(self._epsilon)
+        #if self._epsilon is None:
+        #    vsite_dict['epsilon'] = None
+        #    vsite_dict['epsilon_unit'] = None
+        #else:
+        #    vsite_dict['epsilon'] = self._epsilon / unit.kilojoule_per_mole
+        #    vsite_dict['epsilon_unit'] = 'kilojoule_per_mole'
 
-        if self._sigma is None:
-            vsite_dict['sigma'] = None
-            vsite_dict['sigma_unit'] = None
-        else:
-            vsite_dict['sigma'] = self._sigma / unit.angstrom
-            vsite_dict['sigma_unit'] = 'angstrom'
+
+        vsite_dict['sigma'] = serialize_quantity(self._sigma)
+        #if self._sigma is None:
+        #    vsite_dict['sigma'] = None
+        #    vsite_dict['sigma_unit'] = None
+        #else:
+        #    vsite_dict['sigma'] = self._sigma / unit.angstrom
+        #    vsite_dict['sigma_unit'] = 'angstrom'
         #vsite_dict['rmin_half'] = self._rmin_half
         return vsite_dict
         
@@ -626,24 +634,27 @@ class VirtualSite(Particle):
         vsite_dict_units = deepcopy(vsite_dict)
 
         # Attach units to epsilon term
-        if not (vsite_dict['epsilon'] is None):
-            epsilon_unitless = vsite_dict['epsilon']
-            epsilon_unit = getattr(unit, vsite_dict_units['epsilon_unit'])
-            vsite_dict_units['epsilon'] = unit.Quantity(epsilon_unitless, epsilon_unit)
-        del vsite_dict_units['epsilon_unit']
+        vsite_dict_units['epsilon'] = deserialize_quantity(vsite_dict['epsilon'])
+        vsite_dict_units['sigma'] = deserialize_quantity(vsite_dict['sigma'])
+        vsite_dict_units['charge_increments'] = deserialize_quantity(vsite_dict['charge_increments'])
+        #if not (vsite_dict['epsilon'] is None):
+        #    epsilon_unitless = vsite_dict['epsilon']
+        #    epsilon_unit = getattr(unit, vsite_dict_units['epsilon_unit'])
+        #    vsite_dict_units['epsilon'] = unit.Quantity(epsilon_unitless, epsilon_unit)
+        #del vsite_dict_units['epsilon_unit']
 
         # Attach units to sigma term (Remember! We don't store rmin_half, just sigma!)
-        if not (vsite_dict['sigma'] is None):
-            sigma_unitless = vsite_dict['sigma']
-            sigma_unit = getattr(unit, vsite_dict_units['sigma_unit'])
-            vsite_dict_units['sigma'] = unit.Quantity(sigma_unitless, sigma_unit)
-        del vsite_dict_units['sigma_unit']
+        #if not (vsite_dict['sigma'] is None):
+        #    sigma_unitless = vsite_dict['sigma']
+        #    sigma_unit = getattr(unit, vsite_dict_units['sigma_unit'])
+        #    vsite_dict_units['sigma'] = unit.Quantity(sigma_unitless, sigma_unit)
+        #del vsite_dict_units['sigma_unit']
 
-        if not (vsite_dict['charge_increments'] is None):
-            charge_increments_unitless = vsite_dict['charge_increments']
-            charge_increments_unit = getattr(unit, vsite_dict_units['charge_increment_unit'])
-            vsite_dict_units['charge_increments'] = unit.Quantity(charge_increments_unitless, charge_increments_unit)
-        del vsite_dict_units['charge_increments_unit']
+        #if not (vsite_dict['charge_increments'] is None):
+        #    charge_increments_unitless = vsite_dict['charge_increments']
+        #    charge_increments_unit = getattr(unit, vsite_dict_units['charge_increment_unit'])
+        #    vsite_dict_units['charge_increments'] = unit.Quantity(charge_increments_unitless, charge_increments_unit)
+        #del vsite_dict_units['charge_increments_unit']
         return VirtualSite(**vsite_dict_units)
 
 
@@ -926,9 +937,29 @@ class DivalentLonePairVirtualSite(VirtualSite):
         
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict['distance'] = self._distance
-        vsite_dict['out_of_plane_angle'] = self._out_of_plane_angle
-        vsite_dict['in_plane_angle'] = self._in_plane_angle
+        if self._distance is None:
+            vsite_dict['distance'] = None
+            vsite_dict['distance_units'] = None
+        else:
+            vsite_dict['distance'] = self._distance / unit.angstrom
+            vsite_dict['distance_units'] = 'angstrom'
+
+        if self._in_plane_angle is None:
+            vsite_dict['in_plane_angle'] = None
+            vsite_dict['in_plane_angle_units'] = None
+        else:
+            vsite_dict['in_plane_angle'] = self._in_plane_angle / unit.degree
+            vsite_dict['in_plane_angle_units'] = 'degree'
+
+        if self._out_of_plane_angle is None:
+            vsite_dict['out_of_plane_angle'] = None
+            vsite_dict['out_of_plane_angle_units'] = None
+        else:
+            vsite_dict['out_of_plane_angle'] = self._out_of_plane_angle / unit.degree
+            vsite_dict['out_of_plane_angle_units'] = 'degree'
+
+        #vsite_dict['out_of_plane_angle'] = self._out_of_plane_angle
+        #vsite_dict['in_plane_angle'] = self._in_plane_angle
         vsite_dict['vsite_type'] = "DivalentLonePairVirtualSite"
         return vsite_dict
 
@@ -939,6 +970,7 @@ class DivalentLonePairVirtualSite(VirtualSite):
         # Make sure it's the right type of virtual site
         assert vsite_dict['vsite_type'] == "DivalentLonePairVirtualSite"
         base_dict.pop('vsite_type')
+
 
         base_dict.pop('distance')
         # TODO: Finish this
@@ -1012,8 +1044,6 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
         self._in_plane_angle = in_plane_angle.in_units_of(unit.degree)
 
-
-        
     def to_dict(self):
         vsite_dict = super().to_dict()
         if self._distance is None:
@@ -1476,13 +1506,15 @@ class FrozenMolecule(Serializable):
                 conf_unitless = (conf / unit.angstrom)
                 conf_serialized, conf_shape = serialize_numpy((conf_unitless))
                 molecule_dict['conformers'].append(conf_serialized)
-        molecule_dict['partial_charges_unit'] = 'elementary_charge'
         if self._partial_charges == None:
             molecule_dict['partial_charges'] = None
+            molecule_dict['partial_charges_unit'] = None
+
         else:
             charges_unitless = self._partial_charges / unit.elementary_charge
             charges_serialized, charges_shape = serialize_numpy(charges_unitless)
             molecule_dict['partial_charges'] = charges_serialized
+            molecule_dict['partial_charges_unit'] = 'elementary_charge'
 
         return molecule_dict
 
@@ -1556,7 +1588,7 @@ class FrozenMolecule(Serializable):
             # Attach units to charge_increments
             if not (vsite_dict['charge_increments'] is None):
                 charge_increments_unitless = vsite_dict['charge_increments']
-                charge_increments_unit = getattr(unit, vsite_dict_units['charge_increment_unit'])
+                charge_increments_unit = getattr(unit, vsite_dict_units['charge_increments_unit'])
                 vsite_dict_units['charge_increments'] = unit.Quantity(charge_increments_unitless,
                                                                       charge_increments_unit)
             del vsite_dict_units['charge_increments_unit']
@@ -1565,13 +1597,13 @@ class FrozenMolecule(Serializable):
             if vsite_dict_units['vsite_type'] == "BondChargeVirtualSite":
                 del vsite_dict_units['vsite_type']
                 self._add_bond_charge_virtual_site(**vsite_dict_units)
-            if vsite_dict_units['vsite_type'] == "MonovalentLonePairVirtualSite":
+            elif vsite_dict_units['vsite_type'] == "MonovalentLonePairVirtualSite":
                 del vsite_dict_units['vsite_type']
                 self._add_monovalent_lone_pair_virtual_site(**vsite_dict_units)
-            if vsite_dict_units['vsite_type'] == "DivalentLonePairChargeVirtualSite":
+            elif vsite_dict_units['vsite_type'] == "DivalentLonePairChargeVirtualSite":
                 del vsite_dict_units['vsite_type']
                 self._add_divalent_lone_pair_virtual_site(**vsite_dict_units)
-            if vsite_dict_units['vsite_type'] == "TrivalentLonePairVirtualSite":
+            elif vsite_dict_units['vsite_type'] == "TrivalentLonePairVirtualSite":
                 del vsite_dict_units['vsite_type']
                 self._add_trivalent_lone_pair_virtual_site(**vsite_dict_units)
 

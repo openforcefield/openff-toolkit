@@ -439,6 +439,7 @@ class TestMolecule(TestCase):
             assert vsite1 in atom3.virtual_sites
             assert vsite1.distance == distance
 
+            # Make an "everything bagel" virtual site
             vsite2_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3],
                                                                  distance,
                                                                  sigma=0.1*unit.angstrom,
@@ -451,7 +452,6 @@ class TestMolecule(TestCase):
             molecule_dict = molecule.to_dict()
             molecule2 = Molecule.from_dict(molecule_dict)
             assert molecule.to_dict() == molecule2.to_dict()
-            assert 0
 
     # TODO: Make a test for to_dict and from_dict for VirtualSites (even though they're currently just unloaded using
     #      (for example) Molecule._add_bond_virtual_site functions
