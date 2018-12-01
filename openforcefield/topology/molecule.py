@@ -557,18 +557,17 @@ class VirtualSite(Particle):
             self._epsilon = None
         else:
             assert hasattr(epsilon, 'unit')
-            # TODO: This seems strange -- does it need to be per mole? Or could we allow for small units of just energy? (like, electron-volts?)?
-            assert (unit.kilojoule/unit.mole).is_compatible(epsilon.unit)
-            self._epsilon = epsilon.in_units_of(unit.kilojoule/unit.mole)
+            assert (unit.kilojoule_per_mole).is_compatible(epsilon.unit)
+            self._epsilon = epsilon.in_units_of(unit.kilojoule_per_mole)
             
         if charge_increments == None:
             self._charge_increments = None
         else:
-            self._charge_increments = []
-            for charge in charge_increments:
-                assert hasattr(charge, 'unit')
-                assert unit.elementary_charges.is_compatible(charge.unit)
-                self._charge_increments.append(charge.in_units_of(unit.elementary_charges)) 
+            #self._charge_increments = []
+            #for charge in charge_increments:
+            assert hasattr(charge_increments, 'unit')
+            assert unit.elementary_charges.is_compatible(charge_increments.unit)
+            self._charge_increments = charge_increments.in_units_of(unit.elementary_charges)
                 
         self._atoms = list() 
         for atom in atoms:
@@ -784,7 +783,7 @@ class BondChargeVirtualSite(VirtualSite):
         
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict['distance'] = self._distance
+        vsite_dict['distance'] = serialize_quantity(self._distance)
         vsite_dict['vsite_type'] = 'BondChargeVirtualSite'
         return vsite_dict
 
@@ -792,13 +791,13 @@ class BondChargeVirtualSite(VirtualSite):
     def from_dict(vsite_dict):
         base_dict = deepcopy(vsite_dict)
         # Make sure it's the right type of virtual site
-        assert vsite_dict['vsite_type'] == "BondChargeVirtualSite"
+        assert vsite_dict['vsite_type'] == "TrivalentLonePairVirtualSite"
         base_dict.pop('vsite_type')
-
         base_dict.pop('distance')
-        vsite = from_dict(**base_dict)
-        vsite._distance = vsite_dict['distance']
+        vsite = super().from_dict(**base_dict)
+        vsite._distance = deserialize_quantity(vsite_dict['distance'])
         return vsite
+
         
     @property
     def distance(self):
@@ -854,9 +853,9 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict['distance'] = self._distance
-        vsite_dict['out_of_plane_angle'] = self._out_of_plane_angle
-        vsite_dict['in_plane_angle'] = self._in_plane_angle
+        vsite_dict['distance'] = serialize_quantity(self._distance)
+        vsite_dict['out_of_plane_angle'] = serialize_quantity(self._out_of_plane_angle)
+        vsite_dict['in_plane_angle'] = serialize_quantity(self._in_plane_angle)
         vsite_dict['vsite_type'] = 'MonovalentLonePairVirtualSite'
         return vsite_dict
 
@@ -867,11 +866,13 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         # Make sure it's the right type of virtual site
         assert vsite_dict['vsite_type'] == "MonovalentLonePairVirtualSite"
         base_dict.pop('vsite_type')
-
         base_dict.pop('distance')
-        # TODO: Finish this
-        vsite = from_dict(**base_dict)
-        vsite._distance = vsite_dict['distance']
+        base_dict.pop('out_of_plane_angle')
+        base_dict.pop('in_plane_angle')
+        vsite = super().from_dict(**base_dict)
+        vsite._distance = deserialize_quantity(vsite_dict['distance'])
+        vsite._in_plane_angle= deserialize_quantity(vsite_dict['in_plane_angle'])
+        vsite._out_of_plane_angle = deserialize_quantity(vsite_dict['out_of_plane_angle'])
         return vsite
     
     @property
@@ -937,29 +938,9 @@ class DivalentLonePairVirtualSite(VirtualSite):
         
     def to_dict(self):
         vsite_dict = super().to_dict()
-        if self._distance is None:
-            vsite_dict['distance'] = None
-            vsite_dict['distance_units'] = None
-        else:
-            vsite_dict['distance'] = self._distance / unit.angstrom
-            vsite_dict['distance_units'] = 'angstrom'
-
-        if self._in_plane_angle is None:
-            vsite_dict['in_plane_angle'] = None
-            vsite_dict['in_plane_angle_units'] = None
-        else:
-            vsite_dict['in_plane_angle'] = self._in_plane_angle / unit.degree
-            vsite_dict['in_plane_angle_units'] = 'degree'
-
-        if self._out_of_plane_angle is None:
-            vsite_dict['out_of_plane_angle'] = None
-            vsite_dict['out_of_plane_angle_units'] = None
-        else:
-            vsite_dict['out_of_plane_angle'] = self._out_of_plane_angle / unit.degree
-            vsite_dict['out_of_plane_angle_units'] = 'degree'
-
-        #vsite_dict['out_of_plane_angle'] = self._out_of_plane_angle
-        #vsite_dict['in_plane_angle'] = self._in_plane_angle
+        vsite_dict['distance'] = serialize_quantity(self._distance)
+        vsite_dict['out_of_plane_angle'] = serialize_quantity(self._out_of_plane_angle)
+        vsite_dict['in_plane_angle'] = serialize_quantity(self._in_plane_angle)
         vsite_dict['vsite_type'] = "DivalentLonePairVirtualSite"
         return vsite_dict
 
@@ -970,12 +951,14 @@ class DivalentLonePairVirtualSite(VirtualSite):
         # Make sure it's the right type of virtual site
         assert vsite_dict['vsite_type'] == "DivalentLonePairVirtualSite"
         base_dict.pop('vsite_type')
-
-
         base_dict.pop('distance')
-        # TODO: Finish this
-        vsite = from_dict(**base_dict)
-        vsite._distance = vsite_dict['distance']
+        base_dict.pop('out_of_plane_angle')
+        base_dict.pop('in_plane_angle')
+        vsite = super().from_dict(**base_dict)
+        vsite._distance = deserialize_quantity(vsite_dict['distance'])
+        vsite._in_plane_angle = deserialize_quantity(vsite_dict['in_plane_angle'])
+        vsite._out_of_plane_angle = deserialize_quantity(vsite_dict['out_of_plane_angle'])
+
         return vsite
 
 
@@ -1046,14 +1029,9 @@ class TrivalentLonePairVirtualSite(VirtualSite):
 
     def to_dict(self):
         vsite_dict = super().to_dict()
-        if self._distance is None:
-            vsite_dict['distance'] = None
-            vsite_dict['distance_units'] = None
-        else:
-            vsite_dict['distance'] = self._distance / unit.angstrom
-            vsite_dict['distance_units'] = 'angstrom'
-        vsite_dict['out_of_plane_angle'] = self._out_of_plane_angle
-        vsite_dict['in_plane_angle'] = self._in_plane_angle
+        vsite_dict['distance'] = serialize_quantity(self._distance)
+        vsite_dict['out_of_plane_angle'] = serialize_quantity(self._out_of_plane_angle)
+        vsite_dict['in_plane_angle'] = serialize_quantity(self._in_plane_angle)
         vsite_dict['vsite_type'] = "TrivalentLonePairVirtualSite"
         return vsite_dict
 
@@ -1064,11 +1042,14 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         # Make sure it's the right type of virtual site
         assert vsite_dict['vsite_type'] == "TrivalentLonePairVirtualSite"
         base_dict.pop('vsite_type')
-
         base_dict.pop('distance')
-        # TODO: Finish this
-        vsite = from_dict(**base_dict)
-        vsite._distance = vsite_dict['distance']
+        base_dict.pop('out_of_plane_angle')
+        base_dict.pop('in_plane_angle')
+        vsite = super().from_dict(**base_dict)
+        vsite._distance = deserialize_quantity(vsite_dict['distance'])
+        vsite._in_plane_angle= deserialize_quantity(vsite_dict['in_plane_angle'])
+        vsite._out_of_plane_angle = deserialize_quantity(vsite_dict['out_of_plane_angle'])
+
         return vsite
 
         
@@ -1478,13 +1459,13 @@ class FrozenMolecule(Serializable):
         molecule_dict['name'] = self._name
         ## From Jeff: If we go the properties-as-dict route, then _properties should, at
         ## the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
-        molecule_dict['atoms'] = tuple([ atom.to_dict() for atom in self._atoms ])
-        molecule_dict['virtual_sites'] = tuple([ vsite.to_dict() for vsite in self._virtual_sites ])
+        molecule_dict['atoms'] = [ atom.to_dict() for atom in self._atoms ]
+        molecule_dict['virtual_sites'] = [ vsite.to_dict() for vsite in self._virtual_sites ]
         #molecule_dict['bond_charge_virtual_sites'] = tuple([ vsite.to_dict() for vsite in self._virtual_sites if isinstance(vsite, BondChargeVirtualSite)])
         #molecule_dict['monovalent_lone_pair_virtual_sites'] = tuple([ vsite.to_dict() for vsite in self._virtual_sites if isinstance(vsite, MonovalentLonePairVirtualSite)])
         #molecule_dict['divalent_lone_pair_virtual_sites'] = tuple([ vsite.to_dict() for vsite in self._virtual_sites if isinstance(vsite, DivalentLonePairVirtualSite)])
         #molecule_dict['trivalent_lone_pair_virtual_sites'] = tuple([ vsite.to_dict() for vsite in self._virtual_sites if isinstance(vsite, TrivalentLonePairVirtualSite)])
-        molecule_dict['bonds'] = tuple([ bond.to_dict() for bond in self._bonds ])
+        molecule_dict['bonds'] = [ bond.to_dict() for bond in self._bonds ]
         # TODO: Charges
         # TODO: Properties
         # From Jeff: We could have the onerous requirement that all "properties" have to_dict() functions.
@@ -1572,39 +1553,55 @@ class FrozenMolecule(Serializable):
             vsite_dict_units = deepcopy(vsite_dict)
 
             # Attach units to epsilon term
-            if not (vsite_dict['epsilon'] is None):
-                epsilon_unitless = vsite_dict['epsilon']
-                epsilon_unit = getattr(unit, vsite_dict_units['epsilon_unit'])
-                vsite_dict_units['epsilon'] = unit.Quantity(epsilon_unitless, epsilon_unit)
-            del vsite_dict_units['epsilon_unit']
+            vsite_dict_units['epsilon'] = deserialize_quantity(vsite_dict['epsilon'])
+            vsite_dict_units['sigma'] = deserialize_quantity(vsite_dict['sigma'])
+            vsite_dict_units['charge_increments'] = deserialize_quantity(vsite_dict['charge_increments'])
+            #if not (vsite_dict['epsilon'] is None):
+            #    epsilon_unitless = vsite_dict['epsilon']
+            #    epsilon_unit = getattr(unit, vsite_dict_units['epsilon_unit'])
+            #    vsite_dict_units['epsilon'] = unit.Quantity(epsilon_unitless, epsilon_unit)
+            #del vsite_dict_units['epsilon_unit']
 
             # Attach units to sigma term (Remember! We don't store rmin_half, just sigma!)
-            if not (vsite_dict['sigma'] is None):
-                sigma_unitless = vsite_dict['sigma']
-                sigma_unit = getattr(unit, vsite_dict_units['sigma_unit'])
-                vsite_dict_units['sigma'] = unit.Quantity(sigma_unitless, sigma_unit)
-            del vsite_dict_units['sigma_unit']
+            #if not (vsite_dict['sigma'] is None):
+            #    sigma_unitless = vsite_dict['sigma']
+            #    sigma_unit = getattr(unit, vsite_dict_units['sigma_unit'])
+            #    vsite_dict_units['sigma'] = unit.Quantity(sigma_unitless, sigma_unit)
+            #del vsite_dict_units['sigma_unit']
 
             # Attach units to charge_increments
-            if not (vsite_dict['charge_increments'] is None):
-                charge_increments_unitless = vsite_dict['charge_increments']
-                charge_increments_unit = getattr(unit, vsite_dict_units['charge_increments_unit'])
-                vsite_dict_units['charge_increments'] = unit.Quantity(charge_increments_unitless,
-                                                                      charge_increments_unit)
-            del vsite_dict_units['charge_increments_unit']
+            #if not (vsite_dict['charge_increments'] is None):
+            #    charge_increments_unitless = vsite_dict['charge_increments']
+            #    charge_increments_unit = getattr(unit, vsite_dict_units['charge_increments_unit'])
+            #    vsite_dict_units['charge_increments'] = unit.Quantity(charge_increments_unitless,
+            #                                                          charge_increments_unit)
+            #del vsite_dict_units['charge_increments_unit']
 
             # Call the correct molecule._add_X_virtual_site function, based on the stated type
             if vsite_dict_units['vsite_type'] == "BondChargeVirtualSite":
                 del vsite_dict_units['vsite_type']
+                vsite_dict_units['distance'] = deserialize_quantity(vsite_dict['distance'])
                 self._add_bond_charge_virtual_site(**vsite_dict_units)
+
             elif vsite_dict_units['vsite_type'] == "MonovalentLonePairVirtualSite":
                 del vsite_dict_units['vsite_type']
+                vsite_dict_units['distance'] = deserialize_quantity(vsite_dict['distance'])
+                vsite_dict_units['in_plane_angle'] = deserialize_quantity(vsite_dict['in_plane_angle'])
+                vsite_dict_units['out_of_plane_angle'] = deserialize_quantity(vsite_dict['out_of_plane_angle'])
                 self._add_monovalent_lone_pair_virtual_site(**vsite_dict_units)
-            elif vsite_dict_units['vsite_type'] == "DivalentLonePairChargeVirtualSite":
+
+            elif vsite_dict_units['vsite_type'] == "DivalentLonePairVirtualSite":
                 del vsite_dict_units['vsite_type']
+                vsite_dict_units['distance'] = deserialize_quantity(vsite_dict['distance'])
+                vsite_dict_units['in_plane_angle'] = deserialize_quantity(vsite_dict['in_plane_angle'])
+                vsite_dict_units['out_of_plane_angle'] = deserialize_quantity(vsite_dict['out_of_plane_angle'])
                 self._add_divalent_lone_pair_virtual_site(**vsite_dict_units)
+
             elif vsite_dict_units['vsite_type'] == "TrivalentLonePairVirtualSite":
                 del vsite_dict_units['vsite_type']
+                vsite_dict_units['distance'] = deserialize_quantity(vsite_dict['distance'])
+                vsite_dict_units['in_plane_angle'] = deserialize_quantity(vsite_dict['in_plane_angle'])
+                vsite_dict_units['out_of_plane_angle'] = deserialize_quantity(vsite_dict['out_of_plane_angle'])
                 self._add_trivalent_lone_pair_virtual_site(**vsite_dict_units)
 
         #for vsite_dict in molecule_dict['bond_charge_virtual_sites']:

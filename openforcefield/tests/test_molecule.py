@@ -366,7 +366,8 @@ class TestMolecule(TestCase):
         sigma = sigma_unitless * unit.angstrom
         rmin_half = rmin_half_unitless * unit.angstrom
         epsilon = epsilon_unitless * (unit.kilojoule / unit.mole)
-        charge_increments = [i * unit.elementary_charge for i in charge_increments_unitless]
+        #charge_increments = [i * unit.elementary_charge for i in charge_increments_unitless]
+        charge_increments = charge_increments_unitless * unit.elementary_charge
 
         for molecule in self.molecules:
             atom1 = molecule.atoms[0]
@@ -451,7 +452,9 @@ class TestMolecule(TestCase):
             # test serialization
             molecule_dict = molecule.to_dict()
             molecule2 = Molecule.from_dict(molecule_dict)
-            assert molecule.to_dict() == molecule2.to_dict()
+
+            assert hash(molecule) == hash(molecule2)
+            #assert molecule.to_dict() == molecule2.to_dict()
 
     # TODO: Make a test for to_dict and from_dict for VirtualSites (even though they're currently just unloaded using
     #      (for example) Molecule._add_bond_virtual_site functions
@@ -510,6 +513,7 @@ class TestMolecule(TestCase):
                 vsite1_index = molecule.add_divalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
             molecule_dict = molecule.to_dict()
             molecule2 = Molecule.from_dict(molecule_dict)
+            #assert hash(molecule) == hash(molecule2)
             assert molecule.to_dict() == molecule2.to_dict()
 
     def test_add_trivalent_lone_pair_virtual_site(self):
