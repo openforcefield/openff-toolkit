@@ -39,8 +39,9 @@ def run_property_estimator():
 
     property_estimator = client.PropertyEstimator()
 
-    results = property_estimator.compute_properties(data_set.properties, force_field, 3)
+    results = property_estimator.compute_properties(data_set.properties, force_field, 1)
     client.PropertyEstimator.produce_calculation_report(data_set, results)
 
 
-run_property_estimator()
+if __name__ == "__main__":
+    run_property_estimator()

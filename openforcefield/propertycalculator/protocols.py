@@ -100,8 +100,8 @@ class Protocol:
     """
 
     class ProtocolPipe(object):
-        """A custom decorator used to pipe properties into or out of
-        a protocol.
+        """A custom decorator used to mark class attributes as either
+         a required input, or output, of a protocol.
 
         Parameters
         ----------
@@ -149,7 +149,7 @@ class Protocol:
 
         >>> @Protocol.InputPipe
         >>> def substance(self):
-        >>> pass
+        >>>     pass
         """
         def __init__(self, attribute, documentation=None):
             super().__init__(attribute, documentation)
@@ -164,7 +164,7 @@ class Protocol:
 
         >>> @Protocol.OutputPipe
         >>> def positions(self):
-        >>> pass
+        >>>     pass
         """
         def __init__(self, attribute, documentation=None):
             super().__init__(attribute, documentation)
@@ -314,13 +314,16 @@ class Protocol:
 
         return return_value
 
-    def compare_to(self, other):
+    def compare_to(self, other, id_maps):
         """ Compares this protocol with another.
 
         Parameters
         ----------
         other : Protocol
             The protocol to compare against.
+        id_maps : dict(str, str)
+            A dictionary that maps original protocol ids to the id of the protocol
+            they have been merged into (the key and value may be the same).
 
         Returns
         ----------
@@ -332,7 +335,30 @@ class Protocol:
 
         for protocol_input in self.input_references:
 
-            if protocol_input not in other.input_references:
+            self_protocol_id = protocol_input.protocol_id
+
+            if self_protocol_id in id_maps:
+                self_protocol_id = id_maps[self_protocol_id]
+
+            shares_input = False
+
+            for other_reference in other.input_references:
+
+                other_protocol_id = other_reference.protocol_id
+
+                if other_protocol_id in id_maps:
+                    other_protocol_id = id_maps[other_protocol_id]
+
+                if protocol_input.input_property != other_reference.input_property or \
+                   self_protocol_id != other_protocol_id or \
+                   protocol_input.property_name != other_reference.property_name:
+
+                    continue
+
+                shares_input = True
+                break
+
+            if shares_input is False:
                 return False
 
             self_value = getattr(self, protocol_input.input_property)
@@ -519,9 +545,9 @@ class BuildLiquidCoordinates(Protocol):
 
         return return_value
 
-    def compare_to(self, protocol):
+    def compare_to(self, protocol, id_maps):
 
-        return super(BuildLiquidCoordinates, self).compare_to(protocol) and \
+        return super(BuildLiquidCoordinates, self).compare_to(protocol, id_maps) and \
                self.max_molecules == protocol.max_molecules and \
                self.mass_density == protocol.mass_density
 
@@ -637,10 +663,10 @@ class RunEnergyMinimisation(Protocol):
 
         return True
 
-    def compare_to(self, protocol):
+    def compare_to(self, protocol, id_maps):
 
         # TODO: Properly implement comparison
-        return super(RunEnergyMinimisation, self).compare_to(protocol)
+        return super(RunEnergyMinimisation, self).compare_to(protocol, id_maps)
 
 
 class RunOpenMMSimulation(Protocol):
@@ -823,9 +849,9 @@ class RunOpenMMSimulation(Protocol):
 
         return return_value
 
-    def compare_to(self, protocol):
+    def compare_to(self, protocol, id_maps):
 
-        return super(RunOpenMMSimulation, self).compare_to(protocol) and \
+        return super(RunOpenMMSimulation, self).compare_to(protocol, id_maps) and \
                self.ensemble == protocol.ensemble
 
 

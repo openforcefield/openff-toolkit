@@ -54,8 +54,16 @@ class DirectCalculationTemplate:
         self.property_type = PropertyType.Undefined
         self.id = None
 
-        self.protocols = []
-        self.protocol_ids = set()
+        self.protocols = {}
+
+        # A list of protocols which have zero or only global inputs.
+        # These will be the first protocols to be executed.
+        self.starting_protocols = []
+
+        # A key-value pair dictionary of dependants, where
+        # each key represents a protocol and each value is a list
+        # of the protocols which take said protocol as an input.
+        self.dependants_graph = {}
 
     @classmethod
     def from_xml(cls, xml_node, existing_templates):
@@ -114,10 +122,7 @@ class DirectCalculationTemplate:
                     raise RuntimeError('The ' + return_value.id + ' template tries to inherit from '
                                                                   'a non-existent template.')
 
-                return_value.protocols.extend(copy.deepcopy(existing_templates[protocol_node.text].protocols))
-
-                for protocol in return_value.protocols:
-                    return_value.protocol_ids.add(protocol.id)
+                return_value.protocols.update(copy.deepcopy(existing_templates[protocol_node.text].protocols))
 
                 continue
 
@@ -134,23 +139,25 @@ class DirectCalculationTemplate:
                 raise RuntimeError(protocol_node.tag + ' is not a child of Protocol')
 
             protocol = protocol_class.from_xml(protocol_node)
-            # protocol.id = return_value.id + '|' + protocol.id
 
-            if protocol.id in return_value.protocol_ids:
+            if protocol.id in return_value.protocols:
 
                 raise Exception('The ' + return_value.id + ' calculation defines two protocols'
                                                            ' with the same id: ' + protocol.id)
 
-            return_value.protocol_ids.add(protocol.id)
-            return_value.protocols.append(protocol)
+            return_value.protocols[protocol.id] = protocol
 
+        return_value.build_dependency_graph()
         cls.validate_inputs(return_value)
+
         return return_value
 
     @staticmethod
     def validate_inputs(template):
 
-        for protocol in template.protocols:
+        for protocol_name in template.protocols:
+
+            protocol = template.protocols[protocol_name]
 
             for input_reference in protocol.input_references:
 
@@ -160,18 +167,92 @@ class DirectCalculationTemplate:
 
                 # Make sure the other protocol whose output we are interested
                 # in actually exists.
-                if input_reference.protocol_id not in template.protocol_ids:
+                if input_reference.protocol_id not in template.protocols:
 
                     raise Exception('The ' + protocol.id + ' protocol of the ' + template.id + ' template tries to ' +
                                     'take input from a non-existent protocol: ' + input_reference.protocol_id)
 
-                other_protocol = next(x for x in template.protocols if x.id == input_reference.protocol_id)
+                other_protocol = template.protocols[input_reference.protocol_id]
 
                 # Make sure the other protocol definitely has the requested output.
                 if input_reference.property_name not in other_protocol.provided_outputs:
 
                     raise Exception('The ' + other_protocol.id + ' protocol does not provide an ' +
                                     input_reference.property_name + ' output.')
+
+    def build_dependency_graph(self):
+
+        for protocol_name in self.protocols:
+            self.dependants_graph[protocol_name] = []
+
+        for dependant_protocol_name in self.protocols:
+
+            dependant_protocol = self.protocols[dependant_protocol_name]
+            number_of_inputs = 0
+
+            for input_reference in dependant_protocol.input_references:
+
+                if input_reference.protocol_id == 'global':
+                    # Global inputs are outside the scope of the
+                    # template dependency graph.
+                    continue
+
+                number_of_inputs += 1
+
+                if dependant_protocol.id in self.dependants_graph[input_reference.protocol_id]:
+                    continue
+
+                self.dependants_graph[input_reference.protocol_id].append(dependant_protocol.id)
+
+            if number_of_inputs == 0:
+                self.starting_protocols.append(dependant_protocol_name)
+
+        # Remove all implicit dependencies from the dependants graph.
+        self._apply_transitive_reduction()
+
+    def _apply_transitive_reduction(self):
+        """Attempts to remove any implicit dependencies from the
+        dependant graph.
+
+        For example, if C depends on B which depends on A (A->B->C), the A->C
+        dependency should not be stored as it is already covered by storing that
+        A->B and B->C."""
+        closed_list = []
+        closure = {}
+
+        for protocol_name in self.protocols:
+            closure[protocol_name] = []
+
+        for protocol_name in self.protocols:
+            self._visit_protocol(protocol_name, closed_list, closure)
+
+    def _visit_protocol(self, protocol_name, closed_list, closure):
+        """Visits each protocol in turn and tries to remove any
+        of its implicit dependencies."""
+
+        if protocol_name in closed_list:
+            # Don't visit protocols more than once.
+            return
+
+        closed_list.append(protocol_name)
+
+        # Build a list of this protocols indirect dependencies.
+        indirect_dependencies = []
+
+        for dependent in self.dependants_graph[protocol_name]:
+
+            self._visit_protocol(dependent, closed_list, closure)
+            indirect_dependencies.extend(closure[dependent])
+
+        closure[protocol_name].extend(indirect_dependencies)
+
+        for i in range(len(self.dependants_graph[protocol_name])-1, -1, -1):
+
+            dependent = self.dependants_graph[protocol_name][i]
+            closure[protocol_name].append(dependent)
+
+            if dependent in indirect_dependencies:
+                self.dependants_graph[protocol_name].pop(i)
 
 
 class DirectCalculation:
@@ -189,16 +270,21 @@ class DirectCalculation:
     def __init__(self, physical_property, force_field, template):
 
         self.physical_property = physical_property
-        self.template = copy.deepcopy(template)
-
-        self.leaf_node_ids = []
-
         self.uuid = str(uuid.uuid4())
+
+        self.property_type = template.property_type
 
         thermodynamic_state = physical_property.thermodynamic_state
         substance = physical_property.substance
 
-        for protocol in self.protocols:
+        id_map = {}
+
+        self.protocols = {}
+        self.leaf_node_ids = set()
+
+        for protocol_name in template.protocols:
+
+            protocol = copy.deepcopy(template.protocols[protocol_name])
 
             # Try to set global properties on each of the protocols
             for input_reference in protocol.input_references:
@@ -216,11 +302,27 @@ class DirectCalculation:
                     raise Exception('Invalid global property: ' + input_reference.property_name)
 
             protocol.set_uuid(self.uuid)
+            id_map[protocol_name] = protocol.id
 
-    @property
-    def protocols(self):
-        """list(Protocol): The list of protocols to follow to calculate a property."""
-        return self.template.protocols
+            self.protocols[protocol.id] = protocol
+
+        self.starting_protocols = []
+
+        # Copy the starting protocols, making sure to use the uuid appended names.
+        for starting_protocol in template.starting_protocols:
+            self.starting_protocols.append(id_map[starting_protocol])
+
+        self.dependants_graph = {}
+
+        # Copy the dependants graph, making sure to use the uuid appended names.
+        for dependant_name in template.dependants_graph:
+            self.dependants_graph[id_map[dependant_name]] = []
+
+            for input_name in template.dependants_graph[dependant_name]:
+                self.dependants_graph[id_map[dependant_name]].append(id_map[input_name])
+
+            if len(self.dependants_graph[id_map[dependant_name]]) == 0:
+                self.leaf_node_ids.add(id_map[dependant_name])
 
 
 class DirectCalculationGraph:
@@ -231,13 +333,6 @@ class DirectCalculationGraph:
         """A node in the calculation graph.
 
         Each node represents a protocol to be executed.
-
-        Parameters
-        ----------
-        protocol: Protocol
-            The protocol this node will execute.
-        parent: str, optional
-            The id of the parent of this node.
         """
         class Status(Enum):
             """Describes the state of a calculation node."""
@@ -246,12 +341,26 @@ class DirectCalculationGraph:
             Failed = 2
             Finished = 3
 
-        def __init__(self, protocol, parent_node):
+        def __init__(self, protocol, parent_node, root_directory=None):
+            """Constructs a new CalculationNode
 
+            Parameters
+            ----------
+            protocol: Protocol
+                The protocol this node will execute.
+            parent_node: CalculationNode
+                The parent of this node.
+            root_directory: str, optional
+                The root directory in which to store all outputs from
+                this graph.
+            """
             self.protocol = protocol
 
             self.directory = protocol.id if parent_node is None else \
                 path.join(parent_node.directory, protocol.id)
+
+            if root_directory is not None:
+                self.directory = path.join(root_directory, self.directory)
 
             self.status = self.Status.Queueing
 
@@ -262,58 +371,89 @@ class DirectCalculationGraph:
             """str: Returns the id of the protocol to execute."""
             return self.protocol.id
 
-    def __init__(self):
-
-        self._nodes_by_id = {}
-        self._node_id_map = {}
-
-        self._nodes = []
-
-    def _insert_node(self, protocol, parent_node_id=None):
-        """Insert a protocol node into the tree.
+    def __init__(self, root_directory=None):
+        """Constructs a new DirectCalculationGraph
 
         Parameters
         ----------
-        protocol : Protocol
-            The protocol to insert.
-        parent_node_id : str
-            The id of node in which to insert the new protocol.
+        root_directory: str, optional
+            The root directory in which to store all outputs from
+            this graph.
+        """
+        self._nodes_by_id = {}
+        self._node_id_map = {}
 
-        Returns
+        self._root_nodes = []
+        self._root_directory = root_directory
+
+        self._dependants_graph = {}
+
+        self._calculations_to_run = {}
+
+    @property
+    def calculations_to_run(self):
+        return self._calculations_to_run
+
+    def _insert_node(self, protocol_name, calculation, parent_node_name=None):
+        """Recursively inserts a protocol node into the tree.
+
+        Parameters
         ----------
-        str
-            The id of the node that was inserted. If an identical node already exists,
-            the id of that node is returned instead.
+        protocol_name : str
+            The name of the protocol to insert.
+        calculation : DirectCalculation
+            The calculation being inserted.
+        parent_node_name : str, optional
+            The name of the new parent of the node to be inserted. If None,
+            the protocol will be added as a new parent node.
         """
 
-        nodes = self._nodes if parent_node_id is None else \
-            self._nodes_by_id[parent_node_id].children
+        if protocol_name in self._dependants_graph:
 
-        for input_reference in protocol.input_references:
+            raise RuntimeError('A protocol with id ' + protocol_name + ' has already been inserted'
+                                                                       ' into the graph.')
 
-            if input_reference.protocol_id == 'global':
-                continue
+        nodes = self._root_nodes if parent_node_name is None else self._dependants_graph[parent_node_name]
 
-            input_reference.protocol_id = self._node_id_map[input_reference.protocol_id]
+        protocol_to_insert = calculation.protocols[protocol_name]
+        existing_node = None
 
+        # Start by checking to see if the starting node of the calculation graph is
+        # already present in the full graph.
+        # TODO: This logic is nowhere near robust enough yet.
         for node_id in nodes:
 
             node = self._nodes_by_id[node_id]
 
-            if node.protocol.compare_to(protocol) is False:
+            if not node.protocol.compare_to(protocol_to_insert, self._node_id_map):
                 continue
 
-            return node_id
+            existing_node = node
+            break
 
-        parent_node = None if parent_node_id is None else \
-            self._nodes_by_id[parent_node_id]
+        if existing_node is not None:
+            # Make a note that the existing node should be used in place
+            # of this calculations version.
+            self._node_id_map[protocol_name] = existing_node.protocol.id
 
-        new_node = self.CalculationNode(protocol, parent_node)
+        else:
 
-        self._nodes_by_id[new_node.id] = new_node
-        nodes.append(new_node.id)
+            parent_node = None if parent_node_name is None else self._nodes_by_id[parent_node_name]
+            root_directory = self._root_directory if parent_node_name is None else None
 
-        return new_node.id
+            # Add the protocol as a new node in the graph.
+            self._nodes_by_id[protocol_name] = self.CalculationNode(protocol_to_insert,
+                                                                    parent_node,
+                                                                    root_directory)
+
+            self._node_id_map[protocol_name] = protocol_name
+            self._dependants_graph[protocol_name] = []
+
+            nodes.append(protocol_name)
+
+        # Add all of the dependants to the existing node
+        for dependant_name in calculation.dependants_graph[protocol_name]:
+            self._insert_node(dependant_name, calculation, self._node_id_map[protocol_name])
 
     def add_calculation(self, calculation):
         """Insert a calculation into the calculation graph.
@@ -323,18 +463,17 @@ class DirectCalculationGraph:
         calculation : DirectCalculation
             The calculation to insert.
         """
-        parent_node_id = None
 
-        for protocol in calculation.protocols:
+        if calculation.uuid in self._calculations_to_run:
 
-            parent_node_id = self._insert_node(protocol, parent_node_id)
-            self._node_id_map[protocol.id] = parent_node_id
+            # Quick sanity check.
+            raise ValueError('A calculation with the same uuid (' +
+                             calculation.uuid + ') is trying to run twice.')
 
-            if protocol.id != parent_node_id:
-                protocol.set_uuid(parent_node_id.split('|')[0])
+        self._calculations_to_run[calculation.uuid] = calculation
 
-        if parent_node_id is not None:
-            calculation.leaf_node_ids.append(parent_node_id)
+        for starting_protocol_name in calculation.starting_protocols:
+            self._insert_node(starting_protocol_name, calculation)
 
     def execute(self, task_queue, node_id=None):
         """Execute the given node on a thread, then queue its children.
@@ -375,10 +514,79 @@ class DirectCalculationGraph:
 
             node_to_execute.status = DirectCalculationGraph.CalculationNode.Status.Finished
 
-        child_ids = self._nodes if node_id is None else self._nodes_by_id[node_id].children
+        child_ids = self._root_nodes if node_id is None else self._dependants_graph[node_id]
 
         for child_id in child_ids:
             task_queue.put((self, child_id))
+
+    def determine_calculation_order(self):
+        """Performs a topological sort to determine which order each protocol
+        must be executed in, in order to satisfy all dependencies.
+
+        Returns
+        ----------
+        list(str)
+            A list of node ids in the order that they should be executed in.
+        """
+
+        calculation_order = []
+
+        starting_node_ids = []
+        starting_node_ids.extend(self._root_nodes)
+
+        graph = copy.deepcopy(self._dependants_graph)
+
+        while len(starting_node_ids) > 0:
+
+            start_node_id = starting_node_ids.pop()
+            calculation_order.append(start_node_id)
+
+            for i in range(len(graph[start_node_id])-1, -1, -1):
+
+                current_node_id = graph[start_node_id].pop(i)
+                has_incoming_edges = False
+
+                for node_id in graph:
+
+                    if graph[node_id].index(current_node_id) < 0:
+                        continue
+
+                    has_incoming_edges = True
+                    break
+
+                if not has_incoming_edges:
+                    starting_node_ids.append(current_node_id)
+
+        remaining_dependant_count = 0
+
+        for node_id in graph:
+            remaining_dependant_count += len(graph[node_id])
+
+        if remaining_dependant_count > 0:
+
+            logging.warning('A cycle was found in the calculation graph, and so '
+                            'the graph will not be executed.')
+
+            return []
+
+        return calculation_order
+
+    def get_leaf_protocols(self, calculation):
+        """Returns the leaf protocols of given calculation.
+
+        Returns
+        ----------
+        list(Protocol)
+            The leaf protocols of a given calculation
+        """
+
+        leaf_protocols = []
+
+        for leaf_node_id in calculation.leaf_node_ids:
+
+            leaf_protocols.append(self._nodes_by_id[self._node_id_map[leaf_node_id]].protocol)
+
+        return leaf_protocols
 
     @staticmethod
     def worker_thread(task_queue):
@@ -557,7 +765,7 @@ class PropertyCalculationRunner:
         self.execute_calculation_graph(calculation_graph)
 
         # Finally, extract the calculated properties.
-        # self.extract_calculated_properties(calculation_graphs)
+        self.extract_calculated_properties(calculation_graph)
 
         # The results from these calculations would then be stored in some way so that
         # the data required for reweighting is retained.
@@ -626,7 +834,7 @@ class PropertyCalculationRunner:
         properties_by_mixture : PhysicalPropertyDataSet
             The properties to attempt to compute.
         """
-        calculation_graph = DirectCalculationGraph()
+        calculation_graph = DirectCalculationGraph('property-data')
 
         for mixture in properties_by_mixture:
 
@@ -652,10 +860,8 @@ class PropertyCalculationRunner:
 
         Parameters
         ----------
-        calculation_graphs : list(DirectCalculationGraph)
-            A list of calculation graphs to execute.
-        force_field : ForceField
-            The force field parameters to use in any simulations.
+        calculation_graph : DirectCalculationGraph
+            The calculation graph to execute.
         """
         task_queue = Queue()
 
@@ -672,37 +878,38 @@ class PropertyCalculationRunner:
 
         task_queue.join()
 
-    def extract_calculated_properties(self, calculation_graphs):
+    def extract_calculated_properties(self, calculation_graph):
         """Extract any properties calculated by a calculation graph.
 
         Parameters
         ----------
-        calculation_graphs : list(DirectCalculationGraph)
-            A list of executed calculation graphs.
+        calculation_graph : DirectCalculationGraph
+            An already executed calculation graph.
         """
-        for mixture in calculation_graphs:
 
-            calculation_graph = calculation_graphs[mixture]
+        for calculation_uuid in calculation_graph.calculations_to_run:
 
-            for leaf_protocol in calculation_graph.leaf_protocols:
+            calculation = calculation_graph.calculations_to_run[calculation_uuid]
+
+            for leaf_protocol in calculation_graph.get_leaf_protocols(calculation):
 
                 if not isinstance(leaf_protocol, protocols.AveragePropertyProtocol):
                     continue
 
-                property_type = PropertyType.Undefined
+                property_type = calculation.property_type
 
-                if isinstance(leaf_protocol, protocols.ExtractAverageDensity):
-                    property_type = PropertyType.Density
-                elif isinstance(leaf_protocol, protocols.ExtractAverageDielectric):
-                    property_type = PropertyType.DielectricConstant
-
-                if property_type is PropertyType.Undefined:
-                    continue
+                # if isinstance(leaf_protocol, protocols.ExtractAverageDensity):
+                #     property_type = PropertyType.Density
+                # elif isinstance(leaf_protocol, protocols.ExtractAverageDielectric):
+                #     property_type = PropertyType.DielectricConstant
+                #
+                # if property_type is PropertyType.Undefined:
+                #     continue
 
                 calculated_property = CalculatedPhysicalProperty()
 
-                calculated_property.substance = leaf_protocol.substance
-                calculated_property.thermodynamic_state = leaf_protocol.thermodynamic_state
+                calculated_property.substance = calculation.physical_property.substance
+                calculated_property.thermodynamic_state = calculation.physical_property.thermodynamic_state
 
                 calculated_property.type = property_type
                 calculated_property.phase = PropertyPhase.Liquid
@@ -712,4 +919,4 @@ class PropertyCalculationRunner:
                 calculated_property.value = leaf_protocol.value
                 calculated_property.uncertainty = leaf_protocol.uncertainty
 
-                self.calculated_properties[mixture].append(calculated_property)
+                self.calculated_properties[str(calculated_property.substance)].append(calculated_property)
