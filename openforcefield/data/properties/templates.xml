@@ -11,7 +11,7 @@
             <BuildLiquidCoordinates>
                 <id>build_coordinates</id>
                 <inputs>
-                    <input property="substance">global.substance</input>
+                    <input property="substance">global:substance</input>
                 </inputs>
                 <max_molecules>128</max_molecules>
                 <mass_density>1.0</mass_density>
@@ -20,9 +20,9 @@
             <BuildSmirnoffTopology>
                 <id>build_topology</id>
                 <inputs>
-                    <input property="force_field">global.force_field</input>
-                    <input property="topology">build_coordinates.topology</input>
-                    <input property="molecules">build_coordinates.molecules</input>
+                    <input property="force_field">global:force_field</input>
+                    <input property="topology">build_coordinates:topology</input>
+                    <input property="molecules">build_coordinates:molecules</input>
                 </inputs>
             </BuildSmirnoffTopology>
 
@@ -30,24 +30,24 @@
             <RunEnergyMinimisation>
                 <id>energy_minimisation</id>
                 <inputs>
-                    <input property="positions">build_coordinates.positions</input>
-                    <input property="topology">build_coordinates.topology</input>
-                    <input property="system">build_topology.system</input>
+                    <input property="positions">build_coordinates:positions</input>
+                    <input property="topology">build_coordinates:topology</input>
+                    <input property="system">build_topology:system</input>
                 </inputs>
             </RunEnergyMinimisation>
 
             <RunOpenMMSimulation>
                 <id>npt_equilibration</id>
                 <inputs>
-                    <input property="thermodynamic_state">global.thermodynamic_state</input>
-                    <input property="positions">energy_minimisation.final_positions</input>
-                    <input property="topology">build_coordinates.topology</input>
-                    <input property="system">build_topology.system</input>
+                    <input property="thermodynamic_state">global:thermodynamic_state</input>
+                    <input property="positions">energy_minimisation:final_positions</input>
+                    <input property="topology">build_coordinates:topology</input>
+                    <input property="system">build_topology:system</input>
                 </inputs>
-                <steps>1</steps>
+                <steps>1000</steps>
                 <thermostat_friction>1.0</thermostat_friction>
                 <timestep>0.001</timestep>
-                <output_frequency>2</output_frequency>
+                <output_frequency>100</output_frequency>
                 <ensemble>NPT</ensemble>
             </RunOpenMMSimulation>
 
@@ -55,15 +55,15 @@
             <RunOpenMMSimulation>
                 <id>npt_production</id>
                 <inputs>
-                    <input property="thermodynamic_state">global.thermodynamic_state</input>
-                    <input property="positions">npt_equilibration.final_positions</input>
-                    <input property="topology">build_coordinates.topology</input>
-                    <input property="system">build_topology.system</input>
+                    <input property="thermodynamic_state">global:thermodynamic_state</input>
+                    <input property="positions">npt_equilibration:final_positions</input>
+                    <input property="topology">build_coordinates:topology</input>
+                    <input property="system">build_topology:system</input>
                 </inputs>
-                <steps>2</steps>
+                <steps>1000</steps>
                 <thermostat_friction>1.0</thermostat_friction>
                 <timestep>0.001</timestep>
-                <output_frequency>1</output_frequency>
+                <output_frequency>100</output_frequency>
                 <ensemble>NPT</ensemble>
             </RunOpenMMSimulation>
 
@@ -83,14 +83,23 @@
             <ExtractAverageDensity>
                 <id>extract_density</id>
                 <inputs>
-                    <input property="positions">npt_production.final_positions</input>
-                    <input property="topology">build_coordinates.topology</input>
-                    <input property="system">build_topology.system</input>
-                    <input property="trajectory_path">npt_production.trajectory</input>
+                    <input property="positions">npt_production:final_positions</input>
+                    <input property="topology">build_coordinates:topology</input>
+                    <input property="system">build_topology:system</input>
+                    <input property="trajectory_path">npt_production:trajectory</input>
                 </inputs>
             </ExtractAverageDensity>
 
         </protocols>
+
+        <group type="self-consistent">
+            <condition>extract_density.uncertainty lessthan global:uncertainty</condition>
+
+            <protocol-ids>
+                <protocol-id>npt_production</protocol-id>
+                <protocol-id>extract_density</protocol-id>
+            </protocol-ids>
+        </group>
 
     </CalculationTemplate>
 
@@ -106,15 +115,25 @@
             <ExtractAverageDielectric>
                 <id>extract_dielectric</id>
                 <inputs>
-                    <input property="thermodynamic_state">global.thermodynamic_state</input>
-                    <input property="topology">build_coordinates.topology</input>
-                    <input property="system">build_topology.system</input>
-                    <input property="trajectory_path">npt_production.trajectory</input>
-                    <input property="positions">npt_production.final_positions</input>
+                    <input property="thermodynamic_state">global:thermodynamic_state</input>
+                    <input property="topology">build_coordinates:topology</input>
+                    <input property="system">build_topology:system</input>
+                    <input property="trajectory_path">npt_production:trajectory</input>
+                    <input property="positions">npt_production:final_positions</input>
+                    <input property="target_uncertainty">global:uncertainty</input>
                 </inputs>
             </ExtractAverageDielectric>
 
         </protocols>
+
+        <group type="self-consistent">
+            <condition>extract_density.uncertainty lessthan global:uncertainty</condition>
+
+            <protocol-ids>
+                <protocol-id>npt_production</protocol-id>
+                <protocol-id>extract_density</protocol-id>
+            </protocol-ids>
+        </group>
 
     </CalculationTemplate>
 

@@ -4,12 +4,12 @@ import shutil
 
 from os import path
 
-from openforcefield.datasets import ThermoMLDataSet
+from openforcefield.properties.datasets import ThermoMLDataSet
 
 from openforcefield.typing.engines import smirnoff
 from openforcefield.utils import get_data_filename
 
-from openforcefield.propertycalculator import client
+from openforcefield.properties.estimator import client
 
 
 def run_property_estimator():
@@ -29,17 +29,21 @@ def run_property_estimator():
     logger.setLevel(logging.INFO)
     logger.addHandler(screen_handler)
 
-    data_set = ThermoMLDataSet.from_file_list('../data/properties/single_density.xml')
-    # data_set = ThermoMLDataSet.from_file_list('../data/properties/single_dielectric.xml')
-    # data_set = ThermoMLDataSet.from_file_list('../data/properties/two_species.xml')
-    # data_set = ThermoMLDataSet.from_file_list('../data/properties/binary.xml')
-    # data_set = ThermoMLDataSet.from_file_list('../data/properties/fake_data.xml')
-    # data_set = ThermoMLDataSet.from_file_list('../data/properties/j.jct.2007.09.004.xml')
+    data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_density.xml'))
+
+    # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_density.xml'),
+    #                                           get_data_filename('properties/single_dielectric.xml'))
+
+    # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_dielectric.xml'))
+    # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/two_species.xml'))
+    # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/binary.xml'))
+    # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/fake_data.xml'))
+    # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/j.jct.2007.09.004.xml'))
     force_field = smirnoff.ForceField(get_data_filename('forcefield/smirnoff99Frosst.offxml'))
 
     property_estimator = client.PropertyEstimator()
 
-    results = property_estimator.compute_properties(data_set.properties, force_field, 1)
+    results = property_estimator.compute_properties(data_set.properties, force_field, 2)
     client.PropertyEstimator.produce_calculation_report(data_set, results)
 
 

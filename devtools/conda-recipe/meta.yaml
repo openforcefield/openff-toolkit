@@ -29,6 +29,7 @@ requirements:
     - packmol
     - pymbar
     - mdtraj
+    - dask
 
 test:
   requires:

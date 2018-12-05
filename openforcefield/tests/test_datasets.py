@@ -4,8 +4,7 @@ from os.path import isfile, join
 import logging
 
 from openforcefield.utils import get_data_filename
-from openforcefield.datasets import ThermoMLDataSet
-from openforcefield.properties import PropertyType
+from openforcefield.properties.datasets import ThermoMLDataSet
 
 # TODO: Add tests for specific ThermoML data sets that give 100% coverage.
 # These may need to be hand written.
@@ -66,7 +65,6 @@ def parse_all_jct_files():
 
     data_set = ThermoMLDataSet.from_file_list(*thermoml_files)
 
-    densities = list(filter(lambda x: x.type & PropertyType.Density, data_set.properties))
-    dielectrics = list(filter(lambda x: x.type & PropertyType.DielectricConstant, data_set.properties))
 
-# parse_all_jct_files()
+if __name__ == "__main__":
+    parse_all_jct_files()

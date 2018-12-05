@@ -36,6 +36,27 @@ from simtk.openmm.app import Topology
 import time
 from simtk import unit
 
+import logging
+import functools
+
+#=============================================================================================
+# UTILITY DECORATORS
+#=============================================================================================
+
+
+def deprecated(func):
+    """A useful decorator to mark functions as deprecanted.
+
+    TODO: append sphinx markup to functions docstring?
+    """
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+
+        logging.warning("A deprecated function has been called {}.".format(func.__name__))
+        return func(*args, **kwargs)
+
+    return new_func
+
 #=============================================================================================
 # UTILITY ROUTINES
 #=============================================================================================

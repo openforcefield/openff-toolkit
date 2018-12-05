@@ -10,7 +10,6 @@ Protocol API.
 Authors
 -------
 * Simon Boothroyd <simon.boothroyd@choderalab.org>
-
 """
 
 
@@ -24,6 +23,8 @@ import logging
 import mdtraj
 
 import arch.bootstrap
+
+import uuid
 
 import numpy as np
 
@@ -51,6 +52,14 @@ class ProtocolInputReference:
     """Stores a reference to a required input from another protocol.
 
     Each node represents a protocol to be executed.
+
+    .. warning::
+
+        This class is still heavily under depelopment and is subject to rapid changes.
+
+    .. todo::
+
+        Rename this class to something more obvious - ProtocolDependency?
 
     Parameters
     ----------
@@ -96,6 +105,10 @@ class Protocol:
 
     Protocols may be chained together, thus defining
     a larger property calculation from simple building blocks.
+
+    .. warning::
+
+        This class is still heavily under depelopment and is subject to rapid changes.
 
     """
 
@@ -205,30 +218,23 @@ class Protocol:
 
     def set_uuid(self, value):
 
-        old_id_split = self.id.split('|')
-
-        if len(old_id_split) == 1:
-
-            self.id = value + '|' + old_id_split[0]
-
-            for input_reference in self.input_references:
-
-                if input_reference.protocol_id == 'global':
-                    continue
-
-                input_reference.protocol_id = value + '|' + input_reference.protocol_id
-
-            return
-
-        old_uuid = old_id_split[0]
-        self.id = self.id.replace(old_uuid, value)
+        self.id = value + '|' + self.id
 
         for input_reference in self.input_references:
 
             if input_reference.protocol_id == 'global':
                 continue
 
-            input_reference.protocol_id = input_reference.protocol_id.replace(old_uuid, value)
+            input_reference.protocol_id = value + '|' + input_reference.protocol_id
+
+    def rename_input_id(self, old_value, new_value):
+
+        for input_reference in self.input_references:
+
+            if input_reference.protocol_id != old_value:
+                continue
+
+            input_reference.protocol_id = new_value
 
     def execute(self, directory):
         """ Execute the protocol.
@@ -285,24 +291,36 @@ class Protocol:
 
                 input_property = input_node.attrib['property']
 
-                text_split = input_node.text.split('.')
+                text_split = input_node.text.split(':')
 
                 if len(text_split) != 2:
-                    raise Exception('Protocol inputs must be of the form: node_id.property_name')
+                    raise Exception('Protocol inputs must be of the form node_id:property_name')
 
                 # Only process inputs which are actually required.
                 if input_property not in return_value.required_inputs:
                     continue
 
+                protocol_id = text_split[0]
+                property_name = text_split[1]
+
                 protocol_input = ProtocolInputReference(input_property,
-                                                        text_split[0],
-                                                        text_split[1])
+                                                        protocol_id,
+                                                        property_name)
 
                 # Don't add multiple of the same input.
                 if protocol_input in return_value.input_references:
                     continue
 
                 return_value.input_references.append(protocol_input)
+
+        # loops_node = xml_node.find('loops')
+        #
+        # if loops_node is not None:
+        #
+        #     for loop_node in loops_node.findall('loop'):
+        #
+        #         if 'property' not in loop_node.attrib:
+        #             raise Exception('Protocol inputs must define a property attribute.')
 
         # Make sure this protocol is being passed all the required inputs.
         for required_input in return_value.required_inputs:
@@ -314,16 +332,13 @@ class Protocol:
 
         return return_value
 
-    def compare_to(self, other, id_maps):
+    def compare_to(self, other):
         """ Compares this protocol with another.
 
         Parameters
         ----------
         other : Protocol
             The protocol to compare against.
-        id_maps : dict(str, str)
-            A dictionary that maps original protocol ids to the id of the protocol
-            they have been merged into (the key and value may be the same).
 
         Returns
         ----------
@@ -335,30 +350,7 @@ class Protocol:
 
         for protocol_input in self.input_references:
 
-            self_protocol_id = protocol_input.protocol_id
-
-            if self_protocol_id in id_maps:
-                self_protocol_id = id_maps[self_protocol_id]
-
-            shares_input = False
-
-            for other_reference in other.input_references:
-
-                other_protocol_id = other_reference.protocol_id
-
-                if other_protocol_id in id_maps:
-                    other_protocol_id = id_maps[other_protocol_id]
-
-                if protocol_input.input_property != other_reference.input_property or \
-                   self_protocol_id != other_protocol_id or \
-                   protocol_input.property_name != other_reference.property_name:
-
-                    continue
-
-                shares_input = True
-                break
-
-            if shares_input is False:
+            if protocol_input not in other.input_references:
                 return False
 
             self_value = getattr(self, protocol_input.input_property)
@@ -545,9 +537,9 @@ class BuildLiquidCoordinates(Protocol):
 
         return return_value
 
-    def compare_to(self, protocol, id_maps):
+    def compare_to(self, protocol):
 
-        return super(BuildLiquidCoordinates, self).compare_to(protocol, id_maps) and \
+        return super(BuildLiquidCoordinates, self).compare_to(protocol) and \
                self.max_molecules == protocol.max_molecules and \
                self.mass_density == protocol.mass_density
 
@@ -663,10 +655,10 @@ class RunEnergyMinimisation(Protocol):
 
         return True
 
-    def compare_to(self, protocol, id_maps):
+    def compare_to(self, protocol):
 
         # TODO: Properly implement comparison
-        return super(RunEnergyMinimisation, self).compare_to(protocol, id_maps)
+        return super(RunEnergyMinimisation, self).compare_to(protocol)
 
 
 class RunOpenMMSimulation(Protocol):
@@ -849,9 +841,9 @@ class RunOpenMMSimulation(Protocol):
 
         return return_value
 
-    def compare_to(self, protocol, id_maps):
+    def compare_to(self, protocol):
 
-        return super(RunOpenMMSimulation, self).compare_to(protocol, id_maps) and \
+        return super(RunOpenMMSimulation, self).compare_to(protocol) and \
                self.ensemble == protocol.ensemble
 
 
@@ -868,11 +860,11 @@ class AveragePropertyProtocol(Protocol):
 
     @Protocol.OutputPipe
     def value(self):
-        return self._value
+        pass
 
     @Protocol.OutputPipe
     def uncertainty(self):
-        return self._uncertainty
+        pass
 
     def execute(self, directory):
         return True
@@ -1077,3 +1069,42 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
         logging.info('Extracted dielectrics: ' + directory)
 
         return True
+
+
+class ProtocolGroup(Protocol):
+
+    def __init__(self, sub_protocols):
+
+        """Constructs a new ProtocolGroup
+
+        Parameters
+        ----------
+        sub_protocols : list(Protocol)
+            The protocols which will be part of this execution group.
+        """
+
+        super().__init__()
+
+        self.id = str(uuid.uuid4())
+
+        self._dependants_graph = {}
+        self._protocols_by_id = {}
+
+        self._run_order = []
+
+        self.inputs = []
+        self.outputs = []
+
+    def execute(self, *input_nodes):
+        """Execute the node's protocol.
+
+        Parameters
+        ----------
+        input_nodes : list(CalculationNode)
+            The input nodes which this node depends on for input.
+        """
+
+        input_nodes_by_id = {}
+
+        for input_node in input_nodes:
+            input_nodes_by_id[input_node.id] = input_node

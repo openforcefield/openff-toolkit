@@ -28,18 +28,18 @@ import math
 
 import uuid
 
-from enum import Enum
-from queue import Queue
-from threading import Thread
 from os import path
 from xml.etree import ElementTree
 
 from openforcefield.utils.exceptions import XmlNodeMissingException
-from openforcefield.propertycalculator import protocols
+
+from openforcefield.properties.estimator.components import protocols
 from openforcefield.properties import PropertyType, PropertyPhase, CalculationFidelity, \
                                       CalculatedPhysicalProperty
 
-from openforcefield.datasets.property_dataset import CalculatedPropertySet
+from openforcefield.properties.datasets.property_dataset import CalculatedPropertySet
+
+from dask.threaded import get as dask_get
 
 
 # =============================================================================================
@@ -277,10 +277,12 @@ class DirectCalculation:
         thermodynamic_state = physical_property.thermodynamic_state
         substance = physical_property.substance
 
-        id_map = {}
-
         self.protocols = {}
         self.leaf_node_ids = set()
+
+        # A helper to map the template protocol ids to
+        # the new, uuid appended ones.
+        id_map = {}
 
         for protocol_name in template.protocols:
 
@@ -334,12 +336,6 @@ class DirectCalculationGraph:
 
         Each node represents a protocol to be executed.
         """
-        class Status(Enum):
-            """Describes the state of a calculation node."""
-            Queueing = 0
-            Running = 1
-            Failed = 2
-            Finished = 3
 
         def __init__(self, protocol, parent_node, root_directory=None):
             """Constructs a new CalculationNode
@@ -362,7 +358,7 @@ class DirectCalculationGraph:
             if root_directory is not None:
                 self.directory = path.join(root_directory, self.directory)
 
-            self.status = self.Status.Queueing
+            # self.status = self.Status.Queueing
 
             self.children = []
 
@@ -370,6 +366,36 @@ class DirectCalculationGraph:
         def id(self):
             """str: Returns the id of the protocol to execute."""
             return self.protocol.id
+
+        def execute(self, *input_protocols):
+            """Execute the protocol's protocol.
+
+            Parameters
+            ----------
+            input_protocols : list(CalculationNode)
+                The input protocols which this node depends on for input.
+            """
+
+            input_protocols_by_id = {}
+
+            for input_protocol in input_protocols:
+                input_protocols_by_id[input_protocol.id] = input_protocol
+
+            if not path.isdir(self.directory):
+                os.makedirs(self.directory)
+
+            for input_reference in self.protocol.input_references:
+
+                if input_reference.protocol_id == 'global':
+                    continue
+
+                output_protocol = input_protocols_by_id[input_reference.protocol_id]
+
+                input_value = getattr(output_protocol, input_reference.property_name)
+                setattr(self.protocol, input_reference.input_property, input_value)
+
+            self.protocol.execute(self.directory)
+            return self.protocol
 
     def __init__(self, root_directory=None):
         """Constructs a new DirectCalculationGraph
@@ -381,7 +407,6 @@ class DirectCalculationGraph:
             this graph.
         """
         self._nodes_by_id = {}
-        self._node_id_map = {}
 
         self._root_nodes = []
         self._root_directory = root_directory
@@ -425,7 +450,7 @@ class DirectCalculationGraph:
 
             node = self._nodes_by_id[node_id]
 
-            if not node.protocol.compare_to(protocol_to_insert, self._node_id_map):
+            if not node.protocol.compare_to(protocol_to_insert):
                 continue
 
             existing_node = node
@@ -434,7 +459,11 @@ class DirectCalculationGraph:
         if existing_node is not None:
             # Make a note that the existing node should be used in place
             # of this calculations version.
-            self._node_id_map[protocol_name] = existing_node.protocol.id
+
+            calculation.protocols[protocol_name] = existing_node.protocol
+
+            for protocol_to_update in calculation.protocols:
+                calculation.protocols[protocol_to_update].rename_input_id(protocol_name, existing_node.id)
 
         else:
 
@@ -446,14 +475,14 @@ class DirectCalculationGraph:
                                                                     parent_node,
                                                                     root_directory)
 
-            self._node_id_map[protocol_name] = protocol_name
+            existing_node = self._nodes_by_id[protocol_name]
             self._dependants_graph[protocol_name] = []
 
             nodes.append(protocol_name)
 
         # Add all of the dependants to the existing node
         for dependant_name in calculation.dependants_graph[protocol_name]:
-            self._insert_node(dependant_name, calculation, self._node_id_map[protocol_name])
+            self._insert_node(dependant_name, calculation, existing_node.id)
 
     def add_calculation(self, calculation):
         """Insert a calculation into the calculation graph.
@@ -474,50 +503,6 @@ class DirectCalculationGraph:
 
         for starting_protocol_name in calculation.starting_protocols:
             self._insert_node(starting_protocol_name, calculation)
-
-    def execute(self, task_queue, node_id=None):
-        """Execute the given node on a thread, then queue its children.
-
-        Parameters
-        ----------
-        task_queue : Queue
-            The queue of nodes to execute.
-        node_id : str, optional
-            The id of the node to execute. If none is passed,
-            all root nodes are queued to be executed.
-        """
-        if node_id is not None:
-
-            node_to_execute = self._nodes_by_id[node_id]
-
-            if not path.isdir(node_to_execute.directory):
-                os.makedirs(node_to_execute.directory)
-
-            for input_reference in node_to_execute.protocol.input_references:
-
-                if input_reference.protocol_id == 'global':
-                    continue
-
-                output_node = self._nodes_by_id[self._node_id_map[input_reference.protocol_id]]
-
-                if output_node.status != DirectCalculationGraph.CalculationNode.Status.Finished:
-
-                    raise Exception('A node is trying to take input '
-                                    'from an unfinished node: ', output_node.id)
-
-                input_value = getattr(output_node.protocol, input_reference.property_name)
-                setattr(node_to_execute.protocol, input_reference.input_property, input_value)
-
-            if node_to_execute.protocol.execute(node_to_execute.directory) is False:
-                # This node failed to run, can't continue down the tree.
-                return
-
-            node_to_execute.status = DirectCalculationGraph.CalculationNode.Status.Finished
-
-        child_ids = self._root_nodes if node_id is None else self._dependants_graph[node_id]
-
-        for child_id in child_ids:
-            task_queue.put((self, child_id))
 
     def determine_calculation_order(self):
         """Performs a topological sort to determine which order each protocol
@@ -571,39 +556,71 @@ class DirectCalculationGraph:
 
         return calculation_order
 
-    def get_leaf_protocols(self, calculation):
-        """Returns the leaf protocols of given calculation.
+    def _build_self_consistent_cycles(self):
 
-        Returns
-        ----------
-        list(Protocol)
-            The leaf protocols of a given calculation
-        """
+        for node_id in self._nodes_by_id:
 
-        leaf_protocols = []
+            node = self._nodes_by_id[node_id]
 
-        for leaf_node_id in calculation.leaf_node_ids:
+            if not isinstance(node.protocol, protocols.RunOpenMMSimulation):
+                continue
 
-            leaf_protocols.append(self._nodes_by_id[self._node_id_map[leaf_node_id]].protocol)
+            contains_unexpected_dependant = False
+            contains_average_property = False
 
-        return leaf_protocols
+            for depependant_id in self._dependants_graph[node_id]:
 
-    @staticmethod
-    def worker_thread(task_queue):
-        """A method to execute a node from the thread queue.
+                dependant = self._nodes_by_id[depependant_id]
 
-        Parameters
-        ----------
-        task_queue : Queue
-            The queue of nodes to execute.
-        """
+                if isinstance(dependant.protocol, protocols.AveragePropertyProtocol):
+                    contains_average_property = True
+                    continue
 
-        while True:
+                contains_unexpected_dependant = True
+                break
 
-            parent_tree, node_id = task_queue.get()
-            parent_tree.execute(task_queue, node_id)
+            if not contains_average_property:
+                continue
 
-            task_queue.task_done()
+            if contains_unexpected_dependant:
+                logging.warning('Could not build a self consistent loop for protocol ' + node.id)
+
+    def execute(self, number_of_workers, threads_per_worker):
+        """Executes the protocol graph, employing a dask backend."""
+
+        dask_graph = {}
+        leaf_nodes = []
+
+        dependencies = {}
+
+        for node_id in self._nodes_by_id:
+
+            node = self._nodes_by_id[node_id]
+            dependencies[node_id] = []
+
+            if len(self._dependants_graph[node_id]) == 0:
+                leaf_nodes.append(node_id)
+
+            input_tuple = (node.execute, )
+
+            for input_reference in node.protocol.input_references:
+
+                if input_reference.protocol_id == 'global':
+                    continue
+
+                if input_reference.protocol_id not in dependencies[node_id]:
+                    dependencies[node_id].append(input_reference.protocol_id)
+
+                input_tuple = input_tuple + (input_reference.protocol_id, )
+
+            dask_graph[node_id] = input_tuple
+
+        # cluster = distributed.LocalCluster(number_of_workers, threads_per_worker, processes=False)
+        # client = dask.Client(cluster, processes=False)
+
+        print('Started')
+        value = dask_get(dask_graph, leaf_nodes, num_workers=number_of_workers)
+        print('Finished', value)
 
 
 # =============================================================================================
@@ -863,20 +880,22 @@ class PropertyCalculationRunner:
         calculation_graph : DirectCalculationGraph
             The calculation graph to execute.
         """
-        task_queue = Queue()
+        calculation_graph.execute(self._worker_threads, self._threads_per_simulation)
 
-        logging.info('Spawning ' + str(self._worker_threads) + ' worker threads.')
-
-        # Set up the pool of threads.
-        for i in range(self._worker_threads):
-
-            worker = Thread(target=DirectCalculationGraph.worker_thread, args=(task_queue,))
-            worker.setDaemon(True)
-            worker.start()
-
-        calculation_graph.execute(task_queue)
-
-        task_queue.join()
+        # task_queue = Queue()
+        #
+        # logging.info('Spawning ' + str(self._worker_threads) + ' worker threads.')
+        #
+        # # Set up the pool of threads.
+        # for i in range(self._worker_threads):
+        #
+        #     worker = Thread(target=DirectCalculationGraph.worker_thread, args=(task_queue,))
+        #     worker.setDaemon(True)
+        #     worker.start()
+        #
+        # calculation_graph.execute(task_queue)
+        #
+        # task_queue.join()
 
     def extract_calculated_properties(self, calculation_graph):
         """Extract any properties calculated by a calculation graph.
@@ -891,7 +910,9 @@ class PropertyCalculationRunner:
 
             calculation = calculation_graph.calculations_to_run[calculation_uuid]
 
-            for leaf_protocol in calculation_graph.get_leaf_protocols(calculation):
+            for leaf_protocol_id in calculation.leaf_node_ids:
+
+                leaf_protocol = calculation.protocols[leaf_protocol_id]
 
                 if not isinstance(leaf_protocol, protocols.AveragePropertyProtocol):
                     continue

@@ -38,9 +38,9 @@ from openeye import oeiupac
 
 from simtk import unit
 
-from openforcefield.properties import PropertyPhase, PropertyType, Source, MeasuredPhysicalProperty
-from openforcefield.substances import Mixture
-from openforcefield.thermodynamics import ThermodynamicState
+from openforcefield.properties.properties import PropertyPhase, PropertyType, Source, MeasuredPhysicalProperty
+from openforcefield.properties.substances import Mixture
+from openforcefield.properties.thermodynamics import ThermodynamicState
 
 from .property_dataset import PhysicalPropertyDataSet
 

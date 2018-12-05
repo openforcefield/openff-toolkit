@@ -20,7 +20,7 @@ Authors
 
 import logging
 
-from openforcefield.propertycalculator.runner import PropertyCalculationRunner
+from openforcefield.properties.estimator.runner import PropertyCalculationRunner
 
 
 # =============================================================================================
