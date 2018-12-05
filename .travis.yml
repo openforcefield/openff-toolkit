@@ -29,6 +29,8 @@ script:
   - conda build devtools/conda-recipe
   # Use oeommtools for improper test
   - conda install --yes -c openeye/label/Orion oeommtools -c omnia
+  - # Add temporary arch dependency
+  - conda install --yes -c bashtage arch
   # Install
   - conda install --yes --use-local openforcefield
   # Run tests
