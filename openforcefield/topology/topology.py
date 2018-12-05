@@ -420,6 +420,7 @@ class TopologyAtom(Serializable):
         self._atom = atom
         self._topology_molecule = topology_molecule
 
+
     @property
     def atom(self):
         """
@@ -431,6 +432,16 @@ class TopologyAtom(Serializable):
         """
         return self._atom
 
+    @property
+    def atomic_number(self):
+        """
+        Get the atomic number of this atom
+
+        Returns
+        -------
+        int
+        """
+        return self._atom.atomic_number
     @property
     def topology_molecule(self):
         """
@@ -462,9 +473,16 @@ class TopologyAtom(Serializable):
         -------
         iterator of openforcefield.topology.topology.TopologyBonds
         """
+
         for bond in self._atom.bonds:
             reference_mol_bond_index = bond.molecule_bond_index
             yield self._topology_molecule.bond(reference_mol_bond_index)
+
+
+
+    def __eq__(self, other):
+        return ((self._atom == other._atom) and
+                (self._topology_molecule == other._topology_molecule))
 
     #@property
     #def bonds(self):
@@ -538,9 +556,19 @@ class TopologyBond(Serializable):
         """
         return self._topology_molecule.molecule
 
+    @property
+    def bond_order(self):
+        """
+        Get the order of this TopologyBond.
+
+        Returns
+        -------
+        int : bond order
+        """
+        return self._bond.bond_order
 
     @property
-    def topology_atoms(self):
+    def atoms(self):
         """
         Get the TopologyAtoms connected to this TopologyBond.
 
@@ -575,6 +603,39 @@ class TopologyVirtualSite(Serializable):
         # TODO: Type checks
         self._virtual_site = virtual_site
         self._topology_molecule = topology_molecule
+
+
+    def atom(self, index):
+        """
+        Get the atom at a specific index in this TopologyVirtualSite
+
+        Parameters
+        ----------
+        index : int
+            The index of the atom in the reference VirtualSite to retrieve
+
+        Returns
+        -------
+        TopologyAtom
+
+        """
+        return TopologyAtom(self._virtual_site.atoms[index], self.topology_molecule)
+        #for atom in self._virtual_site.atoms:
+        #    reference_mol_atom_index = atom.molecule_atom_index
+        #    yield self._topology_molecule.atom(reference_mol_atom_index)
+
+    @property
+    def atoms(self):
+        """
+        Get the TopologyAtoms involved in this TopologyVirtualSite.
+
+        Returns
+        -------
+        iterator of openforcefield.topology.topology.TopologyAtom
+        """
+        for atom in self._virtual_site.atoms:
+            reference_mol_atom_index = atom.molecule_atom_index
+            yield self._topology_molecule.atom(reference_mol_atom_index)
 
     @property
     def virtual_site(self):
@@ -611,20 +672,19 @@ class TopologyVirtualSite(Serializable):
 
 
     @property
-    def topology_atoms(self):
+    def type(self):
         """
-        Get the TopologyAtoms involved in this TopologyVirtualSite.
+        Get the type of this virtual site
 
         Returns
         -------
-        iterator of openforcefield.topology.topology.TopologyAtom
+        str : The class name of this virtual site
         """
-        for atom in self._virtual_site.atoms:
-            reference_mol_atom_index = atom.molecule_atom_index
-            yield self._topology_molecule.atom(reference_mol_atom_index)
+        return self._virtual_site.type
 
-
-
+    def __eq__(self, other):
+        return ((self._virtual_site == other._virtual_site) and
+                (self._topology_molecule == other._topology_molecule))
 
 # =============================================================================================
 # TopologyMolecule
@@ -675,6 +735,17 @@ class TopologyMolecule:
         """
         return self._reference_molecule
 
+    @property
+    def n_atoms(self):
+        """
+        The number of atoms in this topology.
+
+        Returns
+        -------
+        int
+        """
+        return self._reference_molecule.n_atoms
+
     def atom(self, index):
         """
         Get the TopologyAtom with a given reference molecule index in this TopologyMolecule
@@ -688,7 +759,7 @@ class TopologyMolecule:
         -------
         an openforcefield.topology.topology.TopologyAtom
         """
-        return TopologyAtom(self.molecule.atoms[index], self)
+        return TopologyAtom(self._reference_molecule.atoms[index], self)
 
 
     @property
@@ -717,7 +788,7 @@ class TopologyMolecule:
         -------
         an openforcefield.topology.topology.TopologyBond
         """
-        return TopologyBond(self.molecule.bonds[index], self)
+        return TopologyBond(self.reference_molecule.bonds[index], self)
 
 
 
@@ -733,6 +804,53 @@ class TopologyMolecule:
         for bond in self._reference_molecule.bonds:
             yield TopologyBond(bond, self)
 
+    @property
+    def n_bonds(self):
+        """Get the number of bonds in this TopologyMolecule
+
+        Returns
+        -------
+        int : number of bonds
+        """
+        return self._reference_molecule.n_bonds
+
+    def particle(self, index):
+        """
+        Get the TopologyParticle with a given reference molecule index in this TopologyMolecule
+
+        Parameters
+        ----------
+        index : int
+            Index of the TopologyParticle within this TopologyMolecule to retrieve
+
+        Returns
+        -------
+        an openforcefield.topology.topology.TopologyParticle
+        """
+        return TopologyParticle(self.reference_molecule.particles[index], self)
+
+    @property
+    def particles(self):
+        """
+        Return an iterator of all the TopologyParticle in this TopologyMolecules
+
+        Returns
+        -------
+        an iterator of openforcefield.topology.topology.TopologyParticle
+        """
+        for particle in self._reference_molecule.particles:
+            yield TopologyParticle(vs, self)
+
+    @property
+    def n_particles(self):
+        """Get the number of particles in this TopologyMolecule
+
+        Returns
+        -------
+        int : The number of particles
+        """
+        return self._reference_molecule.n_particles
+
 
     def virtual_site(self, index):
         """
@@ -747,7 +865,8 @@ class TopologyMolecule:
         -------
         an openforcefield.topology.topology.TopologyVirtualSite
         """
-        return TopologyVirtualSite(self.molecule.virtual_sites[index], self)
+        return TopologyVirtualSite(self.reference_molecule.virtual_sites[index], self)
+
 
     @property
     def virtual_sites(self):
@@ -762,8 +881,18 @@ class TopologyMolecule:
             yield TopologyVirtualSite(vs, self)
 
 
+    @property
+    def n_virtual_sites(self):
+        """Get the number of virtual sites in this TopologyMolecule
 
-    # TODO: pick back up figuring out how we want TopologyMolecules to know their starting TopologyParticle indices
+        Returns
+        -------
+        int
+        """
+        return self._reference_molecule.n_virtual_sites
+
+
+# TODO: pick back up figuring out how we want TopologyMolecules to know their starting TopologyParticle indices
 
 
 # =============================================================================================
@@ -1069,14 +1198,14 @@ class Topology(Serializable):
         return count
 
     @property
-    def n_topology_molecules(self):
+    def n_molecules(self):
         """
         Returns the number of topology molecules in in this Topology.
         """
         return len(self._topology_molecules)
 
     @property
-    def n_topology_atoms(self):
+    def n_atoms(self):
         """
         Returns the number of topology atoms in in this Topology.
         """
@@ -1088,7 +1217,14 @@ class Topology(Serializable):
         return n_atoms
 
     @property
-    def n_topology_bonds(self):
+    def atoms(self):
+        """Get an iterator over the atoms in this Topology"""
+        for topology_molecule in self._topology_molecules:
+            for atom in topology_molecule.atoms:
+                yield atom
+
+    @property
+    def n_bonds(self):
         """
         Returns the number of topology bonds in in this Topology.
         """
@@ -1100,7 +1236,14 @@ class Topology(Serializable):
         return n_bonds
 
     @property
-    def n_topology_particles(self):
+    def bonds(self):
+        """Get an iterator over the bonds in this Topology"""
+        for topology_molecule in self._topology_molecules:
+            for bond in topology_molecule.bonds:
+                yield bond
+
+    @property
+    def n_particles(self):
         """
         Returns the number of topology particles in in this Topology.
         """
@@ -1112,7 +1255,14 @@ class Topology(Serializable):
         return n_particles
 
     @property
-    def n_topology_virtual_sites(self):
+    def particles(self):
+        """Get an iterator over the particles in this Topology"""
+        for topology_molecule in self._topology_molecules:
+            for particle in topology_molecule.particles:
+                yield particle
+
+    @property
+    def n_virtual_sites(self):
         """
         Returns the number of topology virtual_sites in in this Topology.
         """
@@ -1122,6 +1272,14 @@ class Topology(Serializable):
             n_instances_of_topology_molecule = len(self._reference_molecule_to_topology_molecules[reference_molecule])
             n_virtual_sites += n_virtual_sites_per_topology_molecule * n_instances_of_topology_molecule
         return n_virtual_sites
+
+
+    @property
+    def virtual_sites(self):
+        """Get an iterator over the virtual sites in this Topology"""
+        for topology_molecule in self._topology_molecules:
+            for virtual_site in topology_molecule.virtual_sites:
+                yield virtual_site
 
 
     def chemical_environment_matches(self, query, aromaticity_model='MDL'):
@@ -1625,8 +1783,7 @@ class Topology(Serializable):
         """
         pass
 
-
-    def get_topology_atom(self, atom_topology_index):
+    def atom(self, atom_topology_index):
         """
         Get the TopologyAtom at a given Topology atom index.
 
@@ -1640,7 +1797,7 @@ class Topology(Serializable):
         An openforcefield.topology.topology.TopologyAtom
         """
         assert type(atom_topology_index) is int
-        assert 0 < atom_topology_index < self.n_atoms
+        assert 0 <= atom_topology_index < self.n_atoms
         this_molecule_start_index = 0
         next_molecule_start_index = 0
         for topology_molecule in self._topology_molecules:
@@ -1659,6 +1816,59 @@ class Topology(Serializable):
         # topology_molecule = start_index_2_top_mol(search_index)
         # atom_molecule_index = atom_topology_index - search_index
         # return topology_molecule.atom(atom_molecule_index)
+
+
+    def virtual_site(self, vsite_topology_index):
+        """
+        Get the TopologyAtom at a given Topology atom index.
+
+        Parameters
+        ----------
+        vsite_topology_index : int
+             The index of the TopologyVirtualSite in this Topology
+
+        Returns
+        -------
+        An openforcefield.topology.topology.TopologyVirtualSite
+
+        """
+        assert type(vsite_topology_index) is int
+        assert 0 <= vsite_topology_index < self.n_virtual_sites
+        this_molecule_start_index = 0
+        next_molecule_start_index = 0
+        for topology_molecule in self._topology_molecules:
+            next_molecule_start_index += topology_molecule.n_virtual_sites
+            if next_molecule_start_index > vsite_topology_index:
+                vsite_molecule_index = vsite_topology_index - this_molecule_start_index
+                return topology_molecule.virtual_site(vsite_molecule_index)
+            this_molecule_start_index += topology_molecule.n_virtual_sites
+
+
+
+    def bond(self, bond_topology_index):
+        """
+        Get the TopologyBond at a given Topology bond index.
+
+        Parameters
+        ----------
+        bond_topology_index : int
+             The index of the TopologyBond in this Topology
+
+        Returns
+        -------
+        An openforcefield.topology.topology.TopologyBond
+        """
+        assert type(bond_topology_index) is int
+        assert 0 <= bond_topology_index < self.n_bonds
+        this_molecule_start_index = 0
+        next_molecule_start_index = 0
+        for topology_molecule in self._topology_molecules:
+            next_molecule_start_index += topology_molecule.n_bonds
+            if next_molecule_start_index > bond_topology_index:
+                bond_molecule_index = bond_topology_index - this_molecule_start_index
+                return topology_molecule.bond(bond_molecule_index)
+            this_molecule_start_index += topology_molecule.n_bonds
+
 
     def add_particle(self, particle):
         """Add a Particle to the Topology.

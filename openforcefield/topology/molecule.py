@@ -732,6 +732,11 @@ class VirtualSite(Particle):
         return self._name
     
 
+    @property
+    def type(self):
+        """The type of this VirtualSite (returns the class name as string)"""
+        return self.__class__.__name__
+
     def __repr__(self):
         # TODO: Also include particle_index, which molecule this atom belongs to?
         return "VirtualSite(name={}, type={}, atoms={})".format(self.name, self.type, self.atoms)
@@ -784,14 +789,17 @@ class BondChargeVirtualSite(VirtualSite):
     def to_dict(self):
         vsite_dict = super().to_dict()
         vsite_dict['distance'] = serialize_quantity(self._distance)
-        vsite_dict['vsite_type'] = 'BondChargeVirtualSite'
+
+        #type = self.type
+        vsite_dict['vsite_type'] = self.type
+        #vsite_dict['vsite_type'] = 'BondChargeVirtualSite'
         return vsite_dict
 
     @staticmethod
     def from_dict(vsite_dict):
         base_dict = deepcopy(vsite_dict)
         # Make sure it's the right type of virtual site
-        assert vsite_dict['vsite_type'] == "TrivalentLonePairVirtualSite"
+        assert vsite_dict['vsite_type'] == "BondChargeVirtualSite"
         base_dict.pop('vsite_type')
         base_dict.pop('distance')
         vsite = super().from_dict(**base_dict)
@@ -856,7 +864,9 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         vsite_dict['distance'] = serialize_quantity(self._distance)
         vsite_dict['out_of_plane_angle'] = serialize_quantity(self._out_of_plane_angle)
         vsite_dict['in_plane_angle'] = serialize_quantity(self._in_plane_angle)
-        vsite_dict['vsite_type'] = 'MonovalentLonePairVirtualSite'
+        #vsite_dict['vsite_type'] = self.type.fget()
+        vsite_dict['vsite_type'] = self.type
+        #vsite_dict['vsite_type'] = 'MonovalentLonePairVirtualSite'
         return vsite_dict
 
     @staticmethod
@@ -941,7 +951,7 @@ class DivalentLonePairVirtualSite(VirtualSite):
         vsite_dict['distance'] = serialize_quantity(self._distance)
         vsite_dict['out_of_plane_angle'] = serialize_quantity(self._out_of_plane_angle)
         vsite_dict['in_plane_angle'] = serialize_quantity(self._in_plane_angle)
-        vsite_dict['vsite_type'] = "DivalentLonePairVirtualSite"
+        vsite_dict['vsite_type'] = self.type
         return vsite_dict
 
     @staticmethod
@@ -1032,7 +1042,7 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         vsite_dict['distance'] = serialize_quantity(self._distance)
         vsite_dict['out_of_plane_angle'] = serialize_quantity(self._out_of_plane_angle)
         vsite_dict['in_plane_angle'] = serialize_quantity(self._in_plane_angle)
-        vsite_dict['vsite_type'] = "TrivalentLonePairVirtualSite"
+        vsite_dict['vsite_type'] = self.type
         return vsite_dict
 
     @staticmethod
@@ -1604,6 +1614,9 @@ class FrozenMolecule(Serializable):
                 vsite_dict_units['out_of_plane_angle'] = deserialize_quantity(vsite_dict['out_of_plane_angle'])
                 self._add_trivalent_lone_pair_virtual_site(**vsite_dict_units)
 
+            else:
+                raise Exception("Vsite type {} not recognized".format(vsite_dict['vsite_type']))
+
         #for vsite_dict in molecule_dict['bond_charge_virtual_sites']:
         #    self._add_bond_charge_virtual_site(**vsite_dict)
         #for vsite_dict in molecule_dict['monovalent_lone_pair_virtual_sites']:
@@ -1634,6 +1647,7 @@ class FrozenMolecule(Serializable):
         else:
             self._conformers = list()
             for ser_conf in molecule_dict['conformers']:
+                # TODO: Update to use deserialize_quantity
                 conformers_shape = ((self.n_atoms, 3))
                 conformer_unitless = deserialize_numpy(ser_conf, conformers_shape)
                 c_unit = getattr(unit, molecule_dict['conformers_unit'])
