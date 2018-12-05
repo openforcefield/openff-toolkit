@@ -1000,7 +1000,7 @@ class Topology(Serializable):
         self._constrained_atom_pairs = dict()
         self._box_vectors = None
         self._is_periodic = False
-        self._reference_molecule_dicts = set()
+        #self._reference_molecule_dicts = set()
         self._reference_molecule_to_topology_molecules = OrderedDict()
         self._topology_molecules = list()
 
@@ -1896,27 +1896,22 @@ class Topology(Serializable):
             The index of this molecule in the topology
         """
         #molecule.set_aromaticity_model(self._aromaticity_model)
-        #mol_dict = molecule.to_dict()
-        if not(molecule in self._reference_molecule_dicts):
-            # Make and store an immutable copy of the molecule
+        mol_smiles = molecule.to_smiles()
+        reference_molecule = None
+        for potential_ref_mol in self._reference_molecule_to_topology_molecules.keys():
+            if mol_smiles == potential_ref_mol.to_smiles():
+                # If the molecule is already in the Topology.reference_molecules, add another reference to it in
+                # Topology.molecules
+                reference_molecule = potential_ref_mol
+                break
+        if reference_molecule is None:
+            # If it's a new unique molecule, make and store an immutable copy of it
             reference_molecule = FrozenMolecule(molecule)
-            topology_molecule = TopologyMolecule(reference_molecule, self)
-            self._topology_molecules.append(topology_molecule)
-            self._reference_molecule_to_topology_molecules[reference_molecule] = [self._topology_molecules[-1]]
-            self._reference_molecule_dicts.add(molecule)
+            self._reference_molecule_to_topology_molecules[reference_molecule] = list()
 
-        else:
-            # If the molecule is already in the Topology.reference_molecules, add another reference to it in
-            # Topology.molecules
-            reference_molecule = None
-            for potential_ref_mol in self.reference_molecules:
-                if potential_ref_mol == molecule:
-                    reference_molecule = potential_ref_mol
-                    break
-            assert not(reference_molecule is None)
-            topology_molecule = TopologyMolecule(reference_molecule, self)
-            self._topology_molecules.append(topology_molecule)
-            self._reference_molecule_to_topology_molecules[reference_molecule].append(self._topology_molecules[-1])
+        topology_molecule = TopologyMolecule(reference_molecule, self)
+        self._topology_molecules.append(topology_molecule)
+        self._reference_molecule_to_topology_molecules[reference_molecule].append(self._topology_molecules[-1])
 
         index = len(self._topology_molecules)
         return index

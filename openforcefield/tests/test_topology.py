@@ -160,8 +160,7 @@ class TestTopology(TestCase):
         assert topology.n_bonds == 7
 
     def test_get_atom(self):
-            """
-            """
+            """Test Topology.atom function (atom lookup from index)"""
             topology = Topology()
             topology.add_molecule(self.ethane_from_smiles)
             with self.assertRaises(Exception) as context:
@@ -182,8 +181,7 @@ class TestTopology(TestCase):
                 topology_atom = topology.atom(8)
 
     def test_get_bond(self):
-            """
-            """
+            """Test Topology.bond function (bond lookup from index)"""
             topology = Topology()
             topology.add_molecule(self.ethane_from_smiles)
             topology.add_molecule(self.ethene_from_smiles)
@@ -222,7 +220,7 @@ class TestTopology(TestCase):
 
 
     def test_get_virtual_site(self):
-        """
+        """Test Topology.virtual_site function (get virtual site from index)
         """
         topology = Topology()
         topology.add_molecule(self.ethane_from_smiles_w_vsites)
