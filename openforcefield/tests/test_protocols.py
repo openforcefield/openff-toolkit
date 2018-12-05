@@ -29,8 +29,8 @@ def run_property_estimator():
     logger.setLevel(logging.INFO)
     logger.addHandler(screen_handler)
 
-    # data_set = ThermoMLDataSet.from_file_list('../data/properties/single_density.xml')
-    data_set = ThermoMLDataSet.from_file_list('../data/properties/single_dielectric.xml')
+    data_set = ThermoMLDataSet.from_file_list('../data/properties/single_density.xml')
+    # data_set = ThermoMLDataSet.from_file_list('../data/properties/single_dielectric.xml')
     # data_set = ThermoMLDataSet.from_file_list('../data/properties/two_species.xml')
     # data_set = ThermoMLDataSet.from_file_list('../data/properties/binary.xml')
     # data_set = ThermoMLDataSet.from_file_list('../data/properties/fake_data.xml')

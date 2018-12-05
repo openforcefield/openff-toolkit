@@ -3,6 +3,7 @@ from os.path import isfile, join
 
 import logging
 
+from openforcefield.utils import get_data_filename
 from openforcefield.datasets import ThermoMLDataSet
 from openforcefield.properties import PropertyType
 
@@ -36,9 +37,9 @@ def test_from_doi():
 
 def test_from_files():
 
-    data_set = ThermoMLDataSet.from_file_list('../data/properties/j.jct.2004.09.014.xml',
-                                              '../data/properties/j.jct.2004.09.022.xml',
-                                              '../data/properties/j.jct.2007.09.004.xml')
+    data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/j.jct.2004.09.014.xml'),
+                                              get_data_filename('properties/j.jct.2004.09.022.xml'),
+                                              get_data_filename('properties/j.jct.2007.09.004.xml'))
     assert data_set is not None
 
     assert len(data_set.properties) > 0

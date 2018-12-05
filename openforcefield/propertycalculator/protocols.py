@@ -896,7 +896,7 @@ class AveragePropertyProtocol(Protocol):
         """
 
         # Compute the indices of the uncorrelated timeseries
-        [equilibration_index, inefficiency] = timeseries.detectEquilibration(correlated_data)
+        [equilibration_index, inefficiency, effictive_samples] = timeseries.detectEquilibration(correlated_data)
         equilibrated_data = correlated_data[equilibration_index:]
 
         # Extract a set of uncorrelated data points.
