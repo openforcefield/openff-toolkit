@@ -44,10 +44,10 @@
                     <input property="topology">build_coordinates:topology</input>
                     <input property="system">build_topology:system</input>
                 </inputs>
-                <steps>1000</steps>
+                <steps>2</steps>
                 <thermostat_friction>1.0</thermostat_friction>
                 <timestep>0.001</timestep>
-                <output_frequency>100</output_frequency>
+                <output_frequency>1</output_frequency>
                 <ensemble>NPT</ensemble>
             </RunOpenMMSimulation>
 
@@ -60,10 +60,10 @@
                     <input property="topology">build_coordinates:topology</input>
                     <input property="system">build_topology:system</input>
                 </inputs>
-                <steps>1000</steps>
+                <steps>200</steps>
                 <thermostat_friction>1.0</thermostat_friction>
                 <timestep>0.001</timestep>
-                <output_frequency>100</output_frequency>
+                <output_frequency>20</output_frequency>
                 <ensemble>NPT</ensemble>
             </RunOpenMMSimulation>
 
@@ -92,14 +92,18 @@
 
         </protocols>
 
-        <group type="self-consistent">
-            <condition>extract_density.uncertainty lessthan global:uncertainty</condition>
+        <groups>
 
-            <protocol-ids>
-                <protocol-id>npt_production</protocol-id>
-                <protocol-id>extract_density</protocol-id>
-            </protocol-ids>
-        </group>
+            <ConditionalGroup>
+                <id>converge_uncertainty</id>
+                <condition>extract_density:uncertainty lessthan global:uncertainty</condition>
+                <protocol-ids>
+                    <protocol-id>npt_production</protocol-id>
+                    <protocol-id>extract_density</protocol-id>
+                </protocol-ids>
+            </ConditionalGroup>
+
+        </groups>
 
     </CalculationTemplate>
 
@@ -126,14 +130,18 @@
 
         </protocols>
 
-        <group type="self-consistent">
-            <condition>extract_density.uncertainty lessthan global:uncertainty</condition>
+        <groups>
 
-            <protocol-ids>
-                <protocol-id>npt_production</protocol-id>
-                <protocol-id>extract_density</protocol-id>
-            </protocol-ids>
-        </group>
+            <ConditionalGroup>
+                <id>converge_uncertainty</id>
+                <condition>extract_dielectric:uncertainty lessthan global:uncertainty</condition>
+                <protocol-ids>
+                    <protocol-id>npt_production</protocol-id>
+                    <protocol-id>extract_dielectric</protocol-id>
+                </protocol-ids>
+            </ConditionalGroup>
+
+        </groups>
 
     </CalculationTemplate>
 

@@ -31,9 +31,11 @@ import uuid
 from os import path
 from xml.etree import ElementTree
 
+from openforcefield.utils import graph
 from openforcefield.utils.exceptions import XmlNodeMissingException
 
-from openforcefield.properties.estimator.components import protocols
+from openforcefield.properties.estimator.components import protocols, groups
+
 from openforcefield.properties import PropertyType, PropertyPhase, CalculationFidelity, \
                                       CalculatedPhysicalProperty
 
@@ -55,6 +57,7 @@ class DirectCalculationTemplate:
         self.id = None
 
         self.protocols = {}
+        self.groups = {}
 
         # A list of protocols which have zero or only global inputs.
         # These will be the first protocols to be executed.
@@ -105,6 +108,41 @@ class DirectCalculationTemplate:
             raise Exception('A calculation with id ' + return_value.id +
                             ' has been defined more than once.')
 
+        # Load in the protocol definitions.
+        cls._parse_protocols_node(existing_templates, return_value, xml_node)
+        # Load in the group definitions.
+        cls._parse_groups_node(return_value, xml_node)
+
+        cls.validate_inputs(return_value)
+
+        return_value.apply_groups()
+        return_value.build_dependants_graph()
+
+        if not graph.is_acyclic(return_value.dependants_graph):
+
+            raise Exception('The {} contains a cycle. Only acyclic workflows '
+                            'are supported'.format(return_value.id))
+
+        return return_value
+
+    @classmethod
+    def _parse_protocols_node(cls, existing_templates, calculation_template, xml_node):
+        """
+
+        Parameters
+        ----------
+        existing_templates : list(DirectPropertyCalculationTemplate)
+            A list of already loaded calculation templates.
+        calculation_template: DirectCalculationTemplate
+            The calculation to add the parsed protocols to.
+        xml_node : xml.etree.Element
+            The element containing the xml to read from.
+
+        Returns
+        -------
+
+        """
+
         protocol_nodes = xml_node.find('protocols')
 
         if protocol_nodes is None:
@@ -119,10 +157,10 @@ class DirectCalculationTemplate:
 
                 if protocol_node.text not in existing_templates:
 
-                    raise RuntimeError('The ' + return_value.id + ' template tries to inherit from '
-                                                                  'a non-existent template.')
+                    raise RuntimeError('The {} template tries to inherit from a non-existent '
+                                       'template: {}'.format(calculation_template.id, protocol_node.text))
 
-                return_value.protocols.update(copy.deepcopy(existing_templates[protocol_node.text].protocols))
+                calculation_template.protocols.update(copy.deepcopy(existing_templates[protocol_node.text].protocols))
 
                 continue
 
@@ -131,29 +169,89 @@ class DirectCalculationTemplate:
 
             if protocol_class is None:
 
-                raise RuntimeError('The ' + return_value.id + ' calculation contains an undefined'
-                                                              ' protocol of type: ' + protocol_node.tag)
+                raise RuntimeError('The {} calculation contains an undefined protocol of '
+                                   'type: {}'.format(calculation_template.id , protocol_node.tag))
 
             # Make sure the found class is actually a protocol.
-            if isinstance(protocol_class, protocols.Protocol):
-                raise RuntimeError(protocol_node.tag + ' is not a child of Protocol')
+            if isinstance(protocol_class, protocols.BaseProtocol):
+
+                raise RuntimeError('{} is not a child of Protocol'.format(protocol_node.tag))
 
             protocol = protocol_class.from_xml(protocol_node)
 
-            if protocol.id in return_value.protocols:
+            if protocol.id in calculation_template.protocols:
 
-                raise Exception('The ' + return_value.id + ' calculation defines two protocols'
-                                                           ' with the same id: ' + protocol.id)
+                raise Exception('The {} calculation defines two protocols with the same '
+                                'id: {}'.format(calculation_template.id, protocol.id))
 
-            return_value.protocols[protocol.id] = protocol
+            calculation_template.protocols[protocol.id] = protocol
 
-        return_value.build_dependency_graph()
-        cls.validate_inputs(return_value)
+    @classmethod
+    def _parse_groups_node(cls, calculation_template, xml_node):
+        """Used to parse the xml <groups> node.
 
-        return return_value
+        Parameters
+        ----------
+        calculation_template: DirectCalculationTemplate
+            The template to add the parsed groups to.
+        xml_node
+            The xml nodes that contains the groups node to parse.
+        """
+        protocol_group_nodes = xml_node.find('groups')
+
+        # Load in all of the protocol groups.
+        for protocol_group_node in [] if protocol_group_nodes is None else protocol_group_nodes:
+
+            # Try to automatically find which class corresponds to the xml tag.
+            protocol_group_class = getattr(groups, protocol_group_node.tag)
+
+            if protocol_group_class is None:
+
+                raise RuntimeError('The {} calculation contains an undefined protocol '
+                                   'group of type: {}'.format(calculation_template.id, protocol_group_node.tag))
+
+            # Make sure the found class is actually a protocol_group.
+            if isinstance(protocol_group_class, groups.ProtocolGroup):
+
+                raise RuntimeError('{} is not a child of ProtocolGroup'.format(protocol_group_node.tag))
+
+            protocol_group = protocol_group_class.from_xml(protocol_group_node, calculation_template.protocols)
+
+            if protocol_group.id in calculation_template.groups:
+
+                raise Exception('The {} calculation defines two protocol groups with the '
+                                'same id: {}'.format(calculation_template.id, protocol_group.id))
+
+            if protocol_group.id in calculation_template.protocols:
+
+                raise Exception('The {} calculation defines a protocol group {} with the same id as an existing '
+                                'protocol.'.format(calculation_template.id, protocol_group.id))
+
+            # Make sure protocols haven't been added to more than one group.
+            for existing_group_id in calculation_template.groups:
+
+                existing_group = calculation_template.groups[existing_group_id]
+
+                for existing_group_protocol_id in existing_group:
+
+                    if existing_group_protocol_id not in protocol_group:
+                        continue
+
+                    raise Exception('The {} protocol has been added to multiple groups in the '
+                                    '{} calculation'.format(calculation_template.id, existing_group_protocol_id))
+
+            calculation_template.groups[protocol_group.id] = protocol_group
 
     @staticmethod
     def validate_inputs(template):
+        """Validates the flow of the data between protocols, ensuring
+        that inputs and outputs correctly match up.
+
+        Parameters
+        ----------
+        template: DirectCalculationTemplate
+            The template to validate.
+        """
 
         for protocol_name in template.protocols:
 
@@ -180,7 +278,11 @@ class DirectCalculationTemplate:
                     raise Exception('The ' + other_protocol.id + ' protocol does not provide an ' +
                                     input_reference.property_name + ' output.')
 
-    def build_dependency_graph(self):
+    def build_dependants_graph(self):
+        """Builds a dictionary of key value pairs where each key represents the id of a
+        protocol to be executed in this calculation, and each value a list ids of protocols
+        which must be ran after the protocol identified by the key.
+        """
 
         for protocol_name in self.protocols:
             self.dependants_graph[protocol_name] = []
@@ -188,7 +290,6 @@ class DirectCalculationTemplate:
         for dependant_protocol_name in self.protocols:
 
             dependant_protocol = self.protocols[dependant_protocol_name]
-            number_of_inputs = 0
 
             for input_reference in dependant_protocol.input_references:
 
@@ -197,62 +298,42 @@ class DirectCalculationTemplate:
                     # template dependency graph.
                     continue
 
-                number_of_inputs += 1
-
                 if dependant_protocol.id in self.dependants_graph[input_reference.protocol_id]:
                     continue
 
                 self.dependants_graph[input_reference.protocol_id].append(dependant_protocol.id)
 
-            if number_of_inputs == 0:
-                self.starting_protocols.append(dependant_protocol_name)
+        self.starting_protocols = graph.find_root_nodes(self.dependants_graph)
 
         # Remove all implicit dependencies from the dependants graph.
-        self._apply_transitive_reduction()
+        graph.apply_transitive_reduction(self.dependants_graph)
 
-    def _apply_transitive_reduction(self):
-        """Attempts to remove any implicit dependencies from the
-        dependant graph.
+    def apply_groups(self):
+        """Clusters protocols together into a set of provided groups"""
 
-        For example, if C depends on B which depends on A (A->B->C), the A->C
-        dependency should not be stored as it is already covered by storing that
-        A->B and B->C."""
-        closed_list = []
-        closure = {}
-
-        for protocol_name in self.protocols:
-            closure[protocol_name] = []
-
-        for protocol_name in self.protocols:
-            self._visit_protocol(protocol_name, closed_list, closure)
-
-    def _visit_protocol(self, protocol_name, closed_list, closure):
-        """Visits each protocol in turn and tries to remove any
-        of its implicit dependencies."""
-
-        if protocol_name in closed_list:
-            # Don't visit protocols more than once.
+        # Nothing to do here.
+        if len(self.groups) == 0:
             return
 
-        closed_list.append(protocol_name)
+        for group_id in self.groups:
 
-        # Build a list of this protocols indirect dependencies.
-        indirect_dependencies = []
+            group = self.groups[group_id]
 
-        for dependent in self.dependants_graph[protocol_name]:
+            # Remove all grouped protocols from the protocol list.
+            for grouped_protocol_id in group.protocols:
+                self.protocols.pop(grouped_protocol_id)
 
-            self._visit_protocol(dependent, closed_list, closure)
-            indirect_dependencies.extend(closure[dependent])
+            # Point the other protocols to the groups rather than
+            # the removed protocols
+            for grouped_protocol_id in group.protocols:
 
-        closure[protocol_name].extend(indirect_dependencies)
+                for protocol_id in self.protocols:
 
-        for i in range(len(self.dependants_graph[protocol_name])-1, -1, -1):
+                    protocol = self.protocols[protocol_id]
+                    protocol.rename_input_id(grouped_protocol_id, group.id)
 
-            dependent = self.dependants_graph[protocol_name][i]
-            closure[protocol_name].append(dependent)
-
-            if dependent in indirect_dependencies:
-                self.dependants_graph[protocol_name].pop(i)
+            # Add the group in their place.
+            self.protocols[group.id] = group
 
 
 class DirectCalculation:
@@ -295,13 +376,30 @@ class DirectCalculation:
                     continue
 
                 if input_reference.property_name == 'thermodynamic_state':
-                    protocol.thermodynamic_state = thermodynamic_state
+                    protocol.set_input_value(input_reference, thermodynamic_state)
                 elif input_reference.property_name == 'substance':
-                    protocol.substance = substance
+                    protocol.set_input_value(input_reference, substance)
+                elif input_reference.property_name == 'uncertainty':
+                    protocol.set_input_value(input_reference, physical_property.uncertainty)
                 elif input_reference.property_name == 'force_field':
-                    protocol.force_field = force_field
+                    protocol.set_input_value(input_reference, force_field)
                 else:
                     raise Exception('Invalid global property: ' + input_reference.property_name)
+
+            if isinstance(protocol, groups.ProtocolGroup):
+
+                for global_property in protocol.global_inputs:
+
+                    if global_property == 'thermodynamic_state':
+                        protocol.global_inputs[global_property] = thermodynamic_state
+                    elif global_property == 'substance':
+                        protocol.global_inputs[global_property] = substance
+                    elif global_property == 'uncertainty':
+                        protocol.global_inputs[global_property] = physical_property.uncertainty
+                    elif global_property == 'force_field':
+                        protocol.global_inputs[global_property] = force_field
+                    else:
+                        raise Exception('Invalid global property: ' + global_property)
 
             protocol.set_uuid(self.uuid)
             id_map[protocol_name] = protocol.id
@@ -391,8 +489,8 @@ class DirectCalculationGraph:
 
                 output_protocol = input_protocols_by_id[input_reference.protocol_id]
 
-                input_value = getattr(output_protocol, input_reference.property_name)
-                setattr(self.protocol, input_reference.input_property, input_value)
+                input_value = output_protocol.get_output_value(input_reference.property_name)
+                self.protocol.set_input_value(input_reference, input_value)
 
             self.protocol.execute(self.directory)
             return self.protocol
@@ -417,6 +515,7 @@ class DirectCalculationGraph:
 
     @property
     def calculations_to_run(self):
+        """list(CalculationNode): A list of the calculations to be executed."""
         return self._calculations_to_run
 
     def _insert_node(self, protocol_name, calculation, parent_node_name=None):
@@ -450,7 +549,7 @@ class DirectCalculationGraph:
 
             node = self._nodes_by_id[node_id]
 
-            if not node.protocol.compare_to(protocol_to_insert):
+            if not node.protocol.can_merge(protocol_to_insert):
                 continue
 
             existing_node = node
@@ -460,6 +559,7 @@ class DirectCalculationGraph:
             # Make a note that the existing node should be used in place
             # of this calculations version.
 
+            existing_node.protocol.merge(protocol_to_insert)
             calculation.protocols[protocol_name] = existing_node.protocol
 
             for protocol_to_update in calculation.protocols:
@@ -503,87 +603,6 @@ class DirectCalculationGraph:
 
         for starting_protocol_name in calculation.starting_protocols:
             self._insert_node(starting_protocol_name, calculation)
-
-    def determine_calculation_order(self):
-        """Performs a topological sort to determine which order each protocol
-        must be executed in, in order to satisfy all dependencies.
-
-        Returns
-        ----------
-        list(str)
-            A list of node ids in the order that they should be executed in.
-        """
-
-        calculation_order = []
-
-        starting_node_ids = []
-        starting_node_ids.extend(self._root_nodes)
-
-        graph = copy.deepcopy(self._dependants_graph)
-
-        while len(starting_node_ids) > 0:
-
-            start_node_id = starting_node_ids.pop()
-            calculation_order.append(start_node_id)
-
-            for i in range(len(graph[start_node_id])-1, -1, -1):
-
-                current_node_id = graph[start_node_id].pop(i)
-                has_incoming_edges = False
-
-                for node_id in graph:
-
-                    if graph[node_id].index(current_node_id) < 0:
-                        continue
-
-                    has_incoming_edges = True
-                    break
-
-                if not has_incoming_edges:
-                    starting_node_ids.append(current_node_id)
-
-        remaining_dependant_count = 0
-
-        for node_id in graph:
-            remaining_dependant_count += len(graph[node_id])
-
-        if remaining_dependant_count > 0:
-
-            logging.warning('A cycle was found in the calculation graph, and so '
-                            'the graph will not be executed.')
-
-            return []
-
-        return calculation_order
-
-    def _build_self_consistent_cycles(self):
-
-        for node_id in self._nodes_by_id:
-
-            node = self._nodes_by_id[node_id]
-
-            if not isinstance(node.protocol, protocols.RunOpenMMSimulation):
-                continue
-
-            contains_unexpected_dependant = False
-            contains_average_property = False
-
-            for depependant_id in self._dependants_graph[node_id]:
-
-                dependant = self._nodes_by_id[depependant_id]
-
-                if isinstance(dependant.protocol, protocols.AveragePropertyProtocol):
-                    contains_average_property = True
-                    continue
-
-                contains_unexpected_dependant = True
-                break
-
-            if not contains_average_property:
-                continue
-
-            if contains_unexpected_dependant:
-                logging.warning('Could not build a self consistent loop for protocol ' + node.id)
 
     def execute(self, number_of_workers, threads_per_worker):
         """Executes the protocol graph, employing a dask backend."""

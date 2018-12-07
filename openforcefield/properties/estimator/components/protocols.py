@@ -91,7 +91,7 @@ class ProtocolInputReference:
         return not (self == other)
 
 
-class Protocol:
+class BaseProtocol:
     """
     The base class for a protocol which would form one
     step of a property calculation.
@@ -108,7 +108,7 @@ class Protocol:
 
     .. warning::
 
-        This class is still heavily under depelopment and is subject to rapid changes.
+        This class is still heavily under development and is subject to rapid changes.
 
     """
 
@@ -160,7 +160,7 @@ class Protocol:
         ----------
         To mark a property as an input pipe:
 
-        >>> @Protocol.InputPipe
+        >>> @BaseProtocol.InputPipe
         >>> def substance(self):
         >>>     pass
         """
@@ -175,7 +175,7 @@ class Protocol:
         ----------
         To mark a property as an output pipe:
 
-        >>> @Protocol.OutputPipe
+        >>> @BaseProtocol.OutputPipe
         >>> def positions(self):
         >>>     pass
         """
@@ -187,11 +187,159 @@ class Protocol:
         # A unique identifier for this node.
         self.id = None
 
-        self.required_inputs = self._find_types_with_decorator(Protocol.InputPipe)
-        self.provided_outputs = self._find_types_with_decorator(Protocol.OutputPipe)
-
         # Defines where to pull the values from.
         self.input_references = []
+
+        # Find the required inputs and outputs.
+        self.required_inputs = self._find_types_with_decorator(BaseProtocol.InputPipe)
+        self.provided_outputs = self._find_types_with_decorator(BaseProtocol.OutputPipe)
+
+    def execute(self, directory):
+        """ Execute the protocol.
+
+        Protocols may be chained together by passing the output
+        of previous protocols as input to the current one.
+
+        Parameters
+        ----------
+        directory : str
+            The directory to store output data in.
+
+        Returns
+        ----------
+        bool
+            True if the command successfully executes.
+        """
+
+        # Return the results of this protocol, ready to pass down the line.
+        return True
+
+    def set_uuid(self, value):
+        """Store the uuid of the calculation this protocol belongs to
+
+        Parameters
+        ----------
+        value : str
+            The uuid of the parent calculation.
+        """
+        if self.id.find(value) >= 0:
+            return
+
+        self.id = value + '|' + self.id
+
+        for input_reference in self.input_references:
+
+            if input_reference.protocol_id == 'global':
+                continue
+
+            if input_reference.protocol_id.find(value) >= 0:
+                continue
+
+            input_reference.protocol_id = value + '|' + input_reference.protocol_id
+
+    def rename_input_id(self, old_value, new_value):
+        """Finds each input which came from a given protocol
+         and changes it to instead take input from a different one.
+
+        Parameters
+        ----------
+        old_value : str
+            The id of the old input protocol.
+        new_value : str
+            The id of the new input protocol.
+        """
+        for input_reference in self.input_references:
+
+            if input_reference.protocol_id != old_value:
+                continue
+
+            input_reference.protocol_id = new_value
+
+    def can_merge(self, other):
+        """Determines whether this protocol can be merged with another.
+
+        Parameters
+        ----------
+        other : BaseProtocol
+            The protocol to compare against.
+
+        Returns
+        ----------
+        bool
+            True if the two protocols are safe to merge.
+        """
+        if not isinstance(self, type(other)):
+            return False
+
+        for protocol_input in self.input_references:
+
+            if protocol_input not in other.input_references:
+                return False
+
+            self_value = self.get_input_value(protocol_input)
+            other_value = other.get_input_value(protocol_input)
+
+            if self_value != other_value:
+                return False
+
+        return True
+
+    def merge(self, other):
+        """Merges another BaseProtocol with this one. The id
+        of this protocol will remain unchanged.
+
+        It is assumed that can_merge has already returned that
+        these protocols are compatible to be merged together.
+
+        Parameters
+        ----------
+        other: BaseProtocol
+            The protocol to merge into this one.
+        """
+
+        pass
+
+    def set_input_value(self, input_reference, value):
+        """Set the value of one of the protocols inputs.
+
+        Parameters
+        ----------
+        input_reference: ProtocolInputReference
+            The input to set.
+        value
+            The value to set the input to.
+        """
+        setattr(self, input_reference.input_property, value)
+
+    def get_input_value(self, input_reference):
+        """Gets the value that was set on one of this protocols inputs.
+
+        Parameters
+        ----------
+        input_reference: ProtocolInputReference
+            The input to get.
+
+        Returns
+        ----------
+        object:
+            The value of the input
+        """
+        return getattr(self, input_reference.input_property)
+
+    def get_output_value(self, property_name):
+        """Returns the value of one of this protocols outputs.
+
+        Parameters
+        ----------
+        property_name: str
+            The name of the output property to return
+
+        Returns
+        ----------
+        object:
+            The value of the input
+        """
+        return getattr(self, property_name)
 
     def _find_types_with_decorator(self, decorator_type):
         """ A method to collect all attributes marked by a specified
@@ -216,58 +364,19 @@ class Protocol:
 
         return inputs
 
-    def set_uuid(self, value):
-
-        self.id = value + '|' + self.id
-
-        for input_reference in self.input_references:
-
-            if input_reference.protocol_id == 'global':
-                continue
-
-            input_reference.protocol_id = value + '|' + input_reference.protocol_id
-
-    def rename_input_id(self, old_value, new_value):
-
-        for input_reference in self.input_references:
-
-            if input_reference.protocol_id != old_value:
-                continue
-
-            input_reference.protocol_id = new_value
-
-    def execute(self, directory):
-        """ Execute the protocol.
-
-        Protocols may be chained together by passing the output
-        of previous protocols as input to the current one.
-
-        Parameters
-        ----------
-        directory : str
-            The directory to store output data in.
-
-        Returns
-        ----------
-        bool
-            True if the command successfully executes.
-        """
-
-        # Return the results of this protocol, ready to pass down the line.
-        return True
-
     @classmethod
-    def from_xml(cls, xml_node):
+    def from_xml(cls, xml_node, existing_protocols=None):
         """ Creates a protocol from an xml definition.
 
         Parameters
         ----------
         xml_node : xml.etree.Element
             The element containing the xml to create the protocol from.
-
+        existing_protocols : dict(str, BaseProtocol)
+            A list of already created protocols.
         Returns
         ----------
-        Protocol
+        BaseProtocol
             The protocol created from the xml node.
         """
         return_value = cls()
@@ -332,37 +441,8 @@ class Protocol:
 
         return return_value
 
-    def compare_to(self, other):
-        """ Compares this protocol with another.
 
-        Parameters
-        ----------
-        other : Protocol
-            The protocol to compare against.
-
-        Returns
-        ----------
-        bool
-            True if the protocols would essentialy perform the same task.
-        """
-        if not isinstance(self, type(other)):
-            return False
-
-        for protocol_input in self.input_references:
-
-            if protocol_input not in other.input_references:
-                return False
-
-            self_value = getattr(self, protocol_input.input_property)
-            other_value = getattr(other, protocol_input.input_property)
-
-            if self_value != other_value:
-                return False
-
-        return True
-
-
-class BuildLiquidCoordinates(Protocol):
+class BuildLiquidCoordinates(BaseProtocol):
     """Create 3D coordinates and bond information for a given Substance
 
     The coordinates are created using packmol.
@@ -393,19 +473,19 @@ class BuildLiquidCoordinates(Protocol):
         self.max_molecules = 100
         self.mass_density = 1.0 * unit.grams / unit.milliliters
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def substance(self):
         pass
 
-    @Protocol.OutputPipe
+    @BaseProtocol.OutputPipe
     def topology(self):
         pass
 
-    @Protocol.OutputPipe
+    @BaseProtocol.OutputPipe
     def positions(self):
         pass
 
-    @Protocol.OutputPipe
+    @BaseProtocol.OutputPipe
     def molecules(self):
         pass
 
@@ -537,14 +617,14 @@ class BuildLiquidCoordinates(Protocol):
 
         return return_value
 
-    def compare_to(self, protocol):
+    def can_merge(self, protocol):
 
-        return super(BuildLiquidCoordinates, self).compare_to(protocol) and \
+        return super(BuildLiquidCoordinates, self).can_merge(protocol) and \
                self.max_molecules == protocol.max_molecules and \
                self.mass_density == protocol.mass_density
 
 
-class BuildSmirnoffTopology(Protocol):
+class BuildSmirnoffTopology(BaseProtocol):
     """Parametrise a set of molecules with a given smirnoff force field.
     """
     def __init__(self):
@@ -558,19 +638,19 @@ class BuildSmirnoffTopology(Protocol):
         # outputs
         self._system = None
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def force_field(self, value):
         pass
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def molecules(self, value):
         pass
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def topology(self, value):
         pass
 
-    @Protocol.OutputPipe
+    @BaseProtocol.OutputPipe
     def system(self):
         pass
 
@@ -597,7 +677,7 @@ class BuildSmirnoffTopology(Protocol):
         return True
 
 
-class RunEnergyMinimisation(Protocol):
+class RunEnergyMinimisation(BaseProtocol):
     """Minimises the energy of a passed in system.
     """
 
@@ -615,19 +695,19 @@ class RunEnergyMinimisation(Protocol):
         # TODO: Add arguments for max iter + tolerance
         pass
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def topology(self, value):
         pass
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def positions(self, value):
         pass
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def system(self, value):
         pass
 
-    @Protocol.OutputPipe
+    @BaseProtocol.OutputPipe
     def final_positions(self):
         return self._final_positions
 
@@ -655,13 +735,13 @@ class RunEnergyMinimisation(Protocol):
 
         return True
 
-    def compare_to(self, protocol):
+    def can_merge(self, protocol):
 
         # TODO: Properly implement comparison
-        return super(RunEnergyMinimisation, self).compare_to(protocol)
+        return super(RunEnergyMinimisation, self).can_merge(protocol)
 
 
-class RunOpenMMSimulation(Protocol):
+class RunOpenMMSimulation(BaseProtocol):
     """Performs a molecular dynamics simulation in a given ensemble using OpenMM
 
     Attributes
@@ -695,6 +775,9 @@ class RunOpenMMSimulation(Protocol):
 
         self.ensemble = self.Ensemble.NPT
 
+        # keep a track of the simulation object in case we need to restart.
+        self._simulation_object = None
+
         # inputs
         self._thermodynamic_state = None
         self._topology = None
@@ -709,31 +792,31 @@ class RunOpenMMSimulation(Protocol):
         # TODO: Add arguments for max iter + tolerance
         pass
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def thermodynamic_state(self, value):
         pass
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def topology(self, value):
         pass
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def positions(self, value):
         pass
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def system(self, value):
         pass
 
-    @Protocol.OutputPipe
+    @BaseProtocol.OutputPipe
     def final_positions(self):
         pass
 
-    @Protocol.OutputPipe
+    @BaseProtocol.OutputPipe
     def trajectory(self):
         pass
 
-    @Protocol.OutputPipe
+    @BaseProtocol.OutputPipe
     def statistics(self):
         pass
 
@@ -751,6 +834,31 @@ class RunOpenMMSimulation(Protocol):
 
         logging.info('Performing a simulation in the ' + str(self.ensemble) + ' ensemble: ' + directory)
 
+        if self._simulation_object is None:
+            self._simulation_object = self._setup_new_simulation(directory, pressure, temperature)
+
+        try:
+            self._simulation_object.step(self.steps)
+        except Exception:
+            logging.warning('Failed to run in ' + directory)
+            return False
+
+        positions = self._simulation_object.context.getState(getPositions=True).getPositions()
+
+        self._final_positions = positions
+
+        logging.info('Simulation performed in the ' + str(self.ensemble) + ' ensemble: ' + directory)
+
+        configuration_path = path.join(directory, 'output.pdb')
+
+        with open(configuration_path, 'w+') as configuration_file:
+
+            app.PDBFile.writeFile(self._topology,
+                                  positions, configuration_file)
+
+        return True
+
+    def _setup_new_simulation(self, directory, pressure, temperature):
         # For now set some 'best guess' thermostat parameters.
         integrator = openmm.LangevinIntegrator(temperature,
                                                self.thermostat_friction,
@@ -773,10 +881,12 @@ class RunOpenMMSimulation(Protocol):
         trajectory_path = path.join(directory, 'trajectory.dcd')
         statistics_path = path.join(directory, 'statistics.dat')
 
+        self._trajectory = trajectory_path
+        self._statistics = statistics_path
+
         configuration_path = path.join(directory, 'input.pdb')
 
         with open(configuration_path, 'w+') as configuration_file:
-
             app.PDBFile.writeFile(self._topology,
                                   self._positions, configuration_file)
 
@@ -785,29 +895,7 @@ class RunOpenMMSimulation(Protocol):
         simulation.reporters.append(app.StateDataReporter(statistics_path, self.output_frequency, step=True,
                                                           potentialEnergy=True, temperature=True, volume=True))
 
-        try:
-            simulation.step(self.steps)
-        except Exception:
-            logging.warning('Failed to run in ' + directory)
-            return False
-
-        positions = simulation.context.getState(getPositions=True).getPositions()
-
-        self._final_positions = positions
-
-        self._trajectory = trajectory_path
-        self._statistics = statistics_path
-
-        logging.info('Simulation performed in the ' + str(self.ensemble) + ' ensemble: ' + directory)
-
-        configuration_path = path.join(directory, 'output.pdb')
-
-        with open(configuration_path, 'w+') as configuration_file:
-
-            app.PDBFile.writeFile(self._topology,
-                                  positions, configuration_file)
-
-        return True
+        return simulation
 
     @classmethod
     def from_xml(cls, xml_node):
@@ -841,13 +929,13 @@ class RunOpenMMSimulation(Protocol):
 
         return return_value
 
-    def compare_to(self, protocol):
+    def can_merge(self, protocol):
 
-        return super(RunOpenMMSimulation, self).compare_to(protocol) and \
+        return super(RunOpenMMSimulation, self).can_merge(protocol) and \
                self.ensemble == protocol.ensemble
 
 
-class AveragePropertyProtocol(Protocol):
+class AveragePropertyProtocol(BaseProtocol):
     """Calculates the average of a property and its uncertainty.
     """
 
@@ -858,11 +946,11 @@ class AveragePropertyProtocol(Protocol):
         self._value = None
         self._uncertainty = None
 
-    @Protocol.OutputPipe
+    @BaseProtocol.OutputPipe
     def value(self):
         pass
 
-    @Protocol.OutputPipe
+    @BaseProtocol.OutputPipe
     def uncertainty(self):
         pass
 
@@ -915,15 +1003,15 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
 
         self.trajectory = None
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def topology(self, value):
         pass
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def positions(self, value):
         pass
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def trajectory_path(self, value):
         pass
 
@@ -956,7 +1044,7 @@ class ExtractAverageDensity(AverageTrajectoryProperty):
 
         self._system = None
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def system(self, value):
         pass
 
@@ -997,11 +1085,11 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
         self._system = None
         self._thermodynamic_state = None
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def system(self, value):
         pass
 
-    @Protocol.InputPipe
+    @BaseProtocol.InputPipe
     def thermodynamic_state(self, value):
         pass
 
@@ -1069,42 +1157,3 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
         logging.info('Extracted dielectrics: ' + directory)
 
         return True
-
-
-class ProtocolGroup(Protocol):
-
-    def __init__(self, sub_protocols):
-
-        """Constructs a new ProtocolGroup
-
-        Parameters
-        ----------
-        sub_protocols : list(Protocol)
-            The protocols which will be part of this execution group.
-        """
-
-        super().__init__()
-
-        self.id = str(uuid.uuid4())
-
-        self._dependants_graph = {}
-        self._protocols_by_id = {}
-
-        self._run_order = []
-
-        self.inputs = []
-        self.outputs = []
-
-    def execute(self, *input_nodes):
-        """Execute the node's protocol.
-
-        Parameters
-        ----------
-        input_nodes : list(CalculationNode)
-            The input nodes which this node depends on for input.
-        """
-
-        input_nodes_by_id = {}
-
-        for input_node in input_nodes:
-            input_nodes_by_id[input_node.id] = input_node

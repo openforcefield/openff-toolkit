@@ -13,6 +13,7 @@ from openforcefield.properties.estimator import client
 
 
 def run_property_estimator():
+    """An integrated test of the property estimator"""
 
     # Remove any existing data.
     if path.isdir('property-data'):
@@ -34,7 +35,7 @@ def run_property_estimator():
     # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_density.xml'),
     #                                           get_data_filename('properties/single_dielectric.xml'))
 
-    # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_dielectric.xml'))
+    # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/density_dielectric.xml'))
     # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/two_species.xml'))
     # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/binary.xml'))
     # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/fake_data.xml'))
@@ -43,7 +44,7 @@ def run_property_estimator():
 
     property_estimator = client.PropertyEstimator()
 
-    results = property_estimator.compute_properties(data_set.properties, force_field, 2)
+    results = property_estimator.compute_properties(data_set.properties, force_field, 1)
     client.PropertyEstimator.produce_calculation_report(data_set, results)
 
 
