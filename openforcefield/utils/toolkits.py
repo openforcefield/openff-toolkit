@@ -628,10 +628,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 print(msg)
                 return
 
-        # TODO: Decide if this is where we want to add explicit hydrogens
-        result = oechem.OEAddExplicitHydrogens(oemol)
-        if result == False:
-            raise Exception("Addition of explicit hydrogens failed in from_openeye")
+
         
         # TODO: What other information should we preserve besides name?
         # TODO: How should we preserve the name?
@@ -878,10 +875,17 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         return smiles
 
     
-    def from_smiles(self, smiles):
+    def from_smiles(self, smiles, hydrogens_are_explicit=False):
+        # TODO: Docstring
+        # TODO: `strict` flag, for whether to demand explicit H
+
         from openeye import oechem
         oemol = oechem.OEGraphMol()
         oechem.OESmilesToMol(oemol, smiles)
+        if not(hydrogens_are_explicit):
+            result = oechem.OEAddExplicitHydrogens(oemol)
+            if result == False:
+                raise Exception("Addition of explicit hydrogens failed in from_openeye")
         molecule = self.from_openeye(oemol)
         return molecule
     
@@ -1382,6 +1386,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         return Chem.MolToSmiles(rdmol, isomericSmiles=True, allHsExplicit=True)
 
     def from_smiles(self, smiles):
+        # TODO: Docstring
+        # TODO: `strict` flag, for whether to demand explicit H
         from openforcefield.topology.molecule import Molecule
         # inherits base class docstring
         from rdkit import Chem

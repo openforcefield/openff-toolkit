@@ -1948,9 +1948,11 @@ class FrozenMolecule(Serializable):
         import networkx as nx
         G = nx.Graph()
         for atom in self.atoms:
-            G.add_node(atom.molecule_atom_index, element=atom.element)
+            G.add_node(atom.molecule_atom_index, atomic_number=atom.atomic_number)
+            #G.add_node(atom.molecule_atom_index, attr_dict={'atomic_number': atom.atomic_number})
         for bond in self.bonds:
-            G.add_edge(bond.atom1_index, bond.atom2_index)
+            G.add_edge(bond.atom1_index, bond.atom2_index, order=bond.bond_order)
+            #G.add_edge(bond.atom1_index, bond.atom2_index, attr_dict={'order':bond.bond_order})
 
         return G
 

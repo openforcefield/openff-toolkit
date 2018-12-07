@@ -1415,8 +1415,8 @@ class Topology(Serializable):
                     msg += 'Atom %8d %5s %5d %3s\n' % (atoms[index].index, atoms[index].name, atoms[index].residue.index, atoms[index].residue.name)
                 raise Exception(msg)
 
-    @staticmethod
-    def from_openmm(openmm_topology, unique_molecules=None):
+    @classmethod
+    def from_openmm(cls, openmm_topology, unique_molecules=None):
         """
         Construct an openforcefield Topology object from an OpenMM Topology object.
 
@@ -1437,7 +1437,64 @@ class Topology(Serializable):
         topology : openforcefield.topology.Topology
             An openforcefield Topology object
         """
-        raise NotImplementedError
+        import networkx as nx
+
+        # Check to see if the openMM system has defined bond orders, by looping over all Bonds in the Topology.
+        omm_has_bond_orders = True
+        for omm_bond in openmm_topology.bonds():
+            if omm_bond.order is None:
+                omm_has_bond_orders = False
+
+        # Convert all unique mols to graphs
+        topology = cls()
+        graph_to_unq_mol = {}
+        for unq_mol in unique_molecules:
+            unq_graph = unq_mol.to_networkx()
+            if unq_graph in graph_to_unq_mol.keys():
+                msg = "Error: Two unique molecules have indistinguishable graphs: {} and {}".format(unq_mol, graph_to_unq_mol[unq_graph])
+                raise Exception(msg) 
+            graph_to_unq_mol[unq_mol.to_networkx()] = unq_mol
+
+        # Convert all openMM mols to graphs
+        omm_topology_G = nx.Graph()
+        for atom in openmm_topology.atoms():
+            omm_topology_G.add_node(atom.index,
+                                    atomic_number=atom.element.atomic_number)
+        for bond in openmm_topology.bonds():
+            omm_topology_G.add_edge(bond.atom1.index,
+                                    bond.atom2.index,
+                                    #attr_dict={'order': bond.order},
+                                    order=bond.order
+                                    )
+
+
+        # Set functions for determining equality between nodes and edges
+        node_match_func = lambda x, y: x['atomic_number'] == y['atomic_number']
+        if omm_has_bond_orders:
+            edge_match_func = lambda x, y: x['order'] == y['order']
+        else:
+            edge_match_func = None
+
+        # For each connected subgraph (molecule) in the topology, find its match in unique_molecules
+        c=0
+        for omm_mol_G in nx.connected_component_subgraphs(omm_topology_G):
+            match_found = False
+            for unq_mol_G in graph_to_unq_mol.keys():
+                if nx.is_isomorphic(unq_mol_G,
+                                    omm_mol_G,
+                                    node_match=node_match_func,
+                                    edge_match=edge_match_func
+                                    ):
+                    topology.add_molecule(graph_to_unq_mol[unq_mol_G])
+                    match_found = True
+                    c += 1
+                    print("match found for molecule {}".format(c))
+                    break
+                #assert 0
+            if not(match_found):
+                raise Exception('No match found for molecule')
+        # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
+        return topology
 
     def to_openmm(self):
         """

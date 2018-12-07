@@ -271,8 +271,13 @@ class TestTopology(TestCase):
     # test_get_topology_molecule
 
 
-    #def test_from_openmm(self):
-    #    """Test creation of an openforcefield Topology object from an OpenMM Topology and component molecules"""
-    #    pdbfile = app.PDBFile(get_packmol_pdbfile('cyclohexane_ethanol_0.4_0.6.pdb'))
-    #    molecules = [ Molecule.from_file(get_monomer_mol2file(name)) for name in ('ethanol', 'cyclohexane') ]
-    #    topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+    def test_from_openmm(self):
+        """Test creation of an openforcefield Topology object from an OpenMM Topology and component molecules"""
+        from simtk.openmm import app
+        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
+        #toolkit_wrapper = RDKitToolkitWrapper()
+        molecules = [ Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
+                                                                               'molecules/cyclohexane.mol2') ]
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        assert topology.n_reference_molecules == 2
+        assert topology.n_molecules == 239
