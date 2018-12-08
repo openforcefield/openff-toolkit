@@ -25,6 +25,7 @@ setup(
         'openforcefield',
         'openforcefield/tests',
         'openforcefield/data',
+        'openforcefield/properties',
         'openforcefield/properties/datasets',
         'openforcefield/properties/estimator',
         'openforcefield/properties/estimator/components',

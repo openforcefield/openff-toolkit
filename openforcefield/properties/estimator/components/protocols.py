@@ -24,8 +24,6 @@ import mdtraj
 
 import arch.bootstrap
 
-import uuid
-
 import numpy as np
 
 from os import path
@@ -55,7 +53,7 @@ class ProtocolInputReference:
 
     .. warning::
 
-        This class is still heavily under depelopment and is subject to rapid changes.
+        This class is still heavily under development and is subject to rapid changes.
 
     .. todo::
 
@@ -63,28 +61,49 @@ class ProtocolInputReference:
 
     Parameters
     ----------
-    protocol_id: str
-        The identity of the other protocol.
-    property_name: str
-        The name of the property to inherit from the other protocol.
+    input_property_name: str
+        The name of the property which will take the an output value and use it as input.
+    output_protocol_id: str
+        The identity of the protocol whose output will be passed to input_property_name.
+    output_property_name: str
+        The name of the property which will output the required input.
+
+    Attributes
+    ----------
+    input_property_name: str
+        The name of the property which will take the an output value and use it as input.
+    output_protocol_id: str
+        The identity of the protocol whose output will be passed to input_property_name.
+    output_property_name: str
+        The name of the property which will output the required input.
+    grouped_protocol_id: str, optional
+        The name of the protocol which has been grouped to take output from. When set,
+        `output_protocol_id` should refer to the name of the `ProtocolGroup` which contains
+        the protocol identified by grouped_protocol_id.
     """
 
-    def __init__(self, input_property, protocol_id, property_name):
+    def __init__(self, input_property_name, output_protocol_id, output_property_name):
 
-        self.input_property = input_property
+        self.input_property_name = input_property_name
 
-        self.protocol_id = protocol_id
-        self.property_name = property_name
+        self.output_protocol_id = output_protocol_id
+        self.output_property_name = output_property_name
+
+        self.grouped_protocol_id = None
 
     def __hash__(self):
-        """returns the hash key of this ProtocolInputReference."""
-        return hash((self.input_property, self.protocol_id, self.property_name))
+        """Returns the hash key of this ProtocolInputReference."""
+        return hash((self.input_property_name,
+                     self.output_protocol_id,
+                     self.output_property_name,
+                     self.grouped_protocol_id))
 
     def __eq__(self, other):
         """Returns true if the two inputs are equal."""
-        return (self.input_property == other.input_property and
-                self.protocol_id == other.protocol_id and
-                self.property_name == other.property_name)
+        return (self.input_property_name == other.input_property_name and
+                self.output_protocol_id == other.output_protocol_id and
+                self.output_property_name == other.output_property_name and
+                self.grouped_protocol_id == other.grouped_protocol_id)
 
     def __ne__(self, other):
         """Returns true if the two inputs are not equal."""
@@ -110,6 +129,16 @@ class BaseProtocol:
 
         This class is still heavily under development and is subject to rapid changes.
 
+    Attributes
+    ----------
+    id : str, optional
+        The unique identity of the protocol
+    input_references : :obj:`list` of :obj:`ProtocolInputReference`
+        A list of the inputs which this protocol will receive.
+    self.required_inputs : :obj:`list` of :obj:`str`
+        A list of the inputs that must be passed to this protocol.
+    self.provided_outputs : :obj:`list` of :obj:`str`
+        A list of the outputs that this protocol produces.
     """
 
     class ProtocolPipe(object):
@@ -229,13 +258,16 @@ class BaseProtocol:
 
         for input_reference in self.input_references:
 
-            if input_reference.protocol_id == 'global':
+            if input_reference.output_protocol_id == 'global':
                 continue
 
-            if input_reference.protocol_id.find(value) >= 0:
-                continue
+            if input_reference.output_protocol_id.find(value) < 0:
+                input_reference.output_protocol_id = value + '|' + input_reference.output_protocol_id
 
-            input_reference.protocol_id = value + '|' + input_reference.protocol_id
+            if input_reference.grouped_protocol_id is not None and \
+               input_reference.grouped_protocol_id.find(value) < 0:
+
+                input_reference.grouped_protocol_id = value + '|' + input_reference.grouped_protocol_id
 
     def rename_input_id(self, old_value, new_value):
         """Finds each input which came from a given protocol
@@ -250,10 +282,11 @@ class BaseProtocol:
         """
         for input_reference in self.input_references:
 
-            if input_reference.protocol_id != old_value:
-                continue
+            if input_reference.output_protocol_id == old_value:
+                input_reference.output_protocol_id = new_value
 
-            input_reference.protocol_id = new_value
+            if input_reference.grouped_protocol_id == old_value:
+                input_reference.grouped_protocol_id = new_value
 
     def can_merge(self, other):
         """Determines whether this protocol can be merged with another.
@@ -271,13 +304,13 @@ class BaseProtocol:
         if not isinstance(self, type(other)):
             return False
 
-        for protocol_input in self.input_references:
+        for input_reference in self.input_references:
 
-            if protocol_input not in other.input_references:
+            if input_reference not in other.input_references:
                 return False
 
-            self_value = self.get_input_value(protocol_input)
-            other_value = other.get_input_value(protocol_input)
+            self_value = self.get_input_value(input_reference)
+            other_value = other.get_input_value(input_reference)
 
             if self_value != other_value:
                 return False
@@ -309,7 +342,7 @@ class BaseProtocol:
         value
             The value to set the input to.
         """
-        setattr(self, input_reference.input_property, value)
+        setattr(self, input_reference.input_property_name, value)
 
     def get_input_value(self, input_reference):
         """Gets the value that was set on one of this protocols inputs.
@@ -324,22 +357,22 @@ class BaseProtocol:
         object:
             The value of the input
         """
-        return getattr(self, input_reference.input_property)
+        return getattr(self, input_reference.input_property_name)
 
-    def get_output_value(self, property_name):
+    def get_output_value(self, input_reference):
         """Returns the value of one of this protocols outputs.
 
         Parameters
         ----------
-        property_name: str
-            The name of the output property to return
+        input_reference: ProtocolInputReference
+            An input reference which points to the output to return.
 
         Returns
         ----------
         object:
             The value of the input
         """
-        return getattr(self, property_name)
+        return getattr(self, input_reference.output_property_name)
 
     def _find_types_with_decorator(self, decorator_type):
         """ A method to collect all attributes marked by a specified

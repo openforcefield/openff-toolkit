@@ -75,6 +75,8 @@
 
         <property>Density</property>
         <id>DensityTemplate</id>
+        <output-value>extract_density:value</output-value>
+        <output-uncertainty>extract_density:uncertainty</output-uncertainty>
         <protocols>
 
             <import>BaseSimulationTemplate</import>
@@ -111,6 +113,8 @@
 
         <property>DielectricConstant</property>
         <id>DielectricTemplate</id>
+        <output-value>extract_dielectric:value</output-value>
+        <output-uncertainty>extract_dielectric:uncertainty</output-uncertainty>
         <protocols>
 
             <import>BaseSimulationTemplate</import>

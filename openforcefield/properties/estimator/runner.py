@@ -59,6 +59,12 @@ class DirectCalculationTemplate:
         self.protocols = {}
         self.groups = {}
 
+        self.final_value_protocol_id = None
+        self.final_value_property_name = None
+
+        self.final_uncertainty_protocol_id = None
+        self.final_uncertainty_property_name = None
+
         # A list of protocols which have zero or only global inputs.
         # These will be the first protocols to be executed.
         self.starting_protocols = []
@@ -107,6 +113,44 @@ class DirectCalculationTemplate:
 
             raise Exception('A calculation with id ' + return_value.id +
                             ' has been defined more than once.')
+
+        # Find the output value of this calculation.
+        output_value_node = xml_node.find('output-value')
+
+        if output_value_node is not None:
+
+            output_value_split = output_value_node.text.split(':')
+
+            if len(output_value_split) != 2:
+
+                raise Exception('The format of the output-value node '
+                                'should be protocol_id:property_name')
+
+            return_value.final_value_protocol_id = output_value_split[0]
+            return_value.final_value_property_name = output_value_split[1]
+
+            pass
+        
+        # Find the output uncertainty of this calculation.
+        output_uncertainty_node = xml_node.find('output-uncertainty')
+
+        if output_uncertainty_node is not None:
+
+            output_uncertainty_split = output_uncertainty_node.text.split(':')
+
+            if len(output_uncertainty_split) != 2:
+
+                raise Exception('The format of the output-uncertainty node '
+                                'should be protocol_id:property_name')
+
+            return_value.final_uncertainty_protocol_id = output_uncertainty_split[0]
+            return_value.final_uncertainty_property_name = output_uncertainty_split[1]
+
+            pass
+
+        # TODO: Validate final outputs.
+
+        return_value.id = id_node.text
 
         # Load in the protocol definitions.
         cls._parse_protocols_node(existing_templates, return_value, xml_node)
@@ -259,24 +303,24 @@ class DirectCalculationTemplate:
 
             for input_reference in protocol.input_references:
 
-                if input_reference.protocol_id == 'global':
+                if input_reference.output_protocol_id == 'global':
                     # We handle global inputs separately
                     continue
 
                 # Make sure the other protocol whose output we are interested
                 # in actually exists.
-                if input_reference.protocol_id not in template.protocols:
+                if input_reference.output_protocol_id not in template.protocols:
 
-                    raise Exception('The ' + protocol.id + ' protocol of the ' + template.id + ' template tries to ' +
-                                    'take input from a non-existent protocol: ' + input_reference.protocol_id)
+                    raise Exception('The {} protocol of the {} template tries to take input from a non-existent '
+                                    'protocol: {}'.format(protocol.id, template.id, input_reference.protocol_id))
 
-                other_protocol = template.protocols[input_reference.protocol_id]
+                other_protocol = template.protocols[input_reference.output_protocol_id]
 
                 # Make sure the other protocol definitely has the requested output.
-                if input_reference.property_name not in other_protocol.provided_outputs:
+                if input_reference.output_property_name not in other_protocol.provided_outputs:
 
-                    raise Exception('The ' + other_protocol.id + ' protocol does not provide an ' +
-                                    input_reference.property_name + ' output.')
+                    raise Exception('The {} protocol does not provide an {} output.'.format(
+                        other_protocol.id, input_reference.output_property_name))
 
     def build_dependants_graph(self):
         """Builds a dictionary of key value pairs where each key represents the id of a
@@ -293,15 +337,15 @@ class DirectCalculationTemplate:
 
             for input_reference in dependant_protocol.input_references:
 
-                if input_reference.protocol_id == 'global':
+                if input_reference.output_protocol_id == 'global':
                     # Global inputs are outside the scope of the
                     # template dependency graph.
                     continue
 
-                if dependant_protocol.id in self.dependants_graph[input_reference.protocol_id]:
+                if dependant_protocol.id in self.dependants_graph[input_reference.output_protocol_id]:
                     continue
 
-                self.dependants_graph[input_reference.protocol_id].append(dependant_protocol.id)
+                self.dependants_graph[input_reference.output_protocol_id].append(dependant_protocol.id)
 
         self.starting_protocols = graph.find_root_nodes(self.dependants_graph)
 
@@ -309,10 +353,10 @@ class DirectCalculationTemplate:
         graph.apply_transitive_reduction(self.dependants_graph)
 
     def apply_groups(self):
-        """Clusters protocols together into a set of provided groups"""
+        """Groups protocols together into a set of user defined groups."""
 
-        # Nothing to do here.
         if len(self.groups) == 0:
+            # Nothing to do here.
             return
 
         for group_id in self.groups:
@@ -332,6 +376,13 @@ class DirectCalculationTemplate:
                     protocol = self.protocols[protocol_id]
                     protocol.rename_input_id(grouped_protocol_id, group.id)
 
+                    for input_reference in protocol.input_references:
+
+                        if input_reference.output_protocol_id != group.id:
+                            continue
+
+                        input_reference.grouped_protocol_id = grouped_protocol_id
+
             # Add the group in their place.
             self.protocols[group.id] = group
 
@@ -345,7 +396,7 @@ class DirectCalculation:
         The protocol this node will execute.
     force_field: ForceField
         The force field to use for this calculation.
-    template: CalculationNode, optional
+    template: :obj:`DirectCalculationTemplate`, optional
         The parent of this node.
     """
     def __init__(self, physical_property, force_field, template):
@@ -357,6 +408,9 @@ class DirectCalculation:
 
         thermodynamic_state = physical_property.thermodynamic_state
         substance = physical_property.substance
+
+        self.final_value_reference = None
+        self.final_uncertainty_reference = None
 
         self.protocols = {}
         self.leaf_node_ids = set()
@@ -372,19 +426,19 @@ class DirectCalculation:
             # Try to set global properties on each of the protocols
             for input_reference in protocol.input_references:
 
-                if input_reference.protocol_id != 'global':
+                if input_reference.output_protocol_id != 'global':
                     continue
 
-                if input_reference.property_name == 'thermodynamic_state':
+                if input_reference.output_property_name == 'thermodynamic_state':
                     protocol.set_input_value(input_reference, thermodynamic_state)
-                elif input_reference.property_name == 'substance':
+                elif input_reference.output_property_name == 'substance':
                     protocol.set_input_value(input_reference, substance)
-                elif input_reference.property_name == 'uncertainty':
+                elif input_reference.output_property_name == 'uncertainty':
                     protocol.set_input_value(input_reference, physical_property.uncertainty)
-                elif input_reference.property_name == 'force_field':
+                elif input_reference.output_property_name == 'force_field':
                     protocol.set_input_value(input_reference, force_field)
                 else:
-                    raise Exception('Invalid global property: ' + input_reference.property_name)
+                    raise Exception('Invalid global property: ' + input_reference.output_property_name)
 
             if isinstance(protocol, groups.ProtocolGroup):
 
@@ -423,6 +477,14 @@ class DirectCalculation:
 
             if len(self.dependants_graph[id_map[dependant_name]]) == 0:
                 self.leaf_node_ids.add(id_map[dependant_name])
+
+        self.final_value_reference = protocols.ProtocolInputReference('',
+                                                                      template.final_value_protocol_id,
+                                                                      template.final_value_property_name)
+
+        self.final_uncertainty_reference = protocols.ProtocolInputReference('',
+                                                                            template.final_uncertainty_protocol_id,
+                                                                            template.final_uncertainty_property_name)
 
 
 class DirectCalculationGraph:
@@ -484,12 +546,12 @@ class DirectCalculationGraph:
 
             for input_reference in self.protocol.input_references:
 
-                if input_reference.protocol_id == 'global':
+                if input_reference.output_protocol_id == 'global':
                     continue
 
-                output_protocol = input_protocols_by_id[input_reference.protocol_id]
+                output_protocol = input_protocols_by_id[input_reference.output_protocol_id]
 
-                input_value = output_protocol.get_output_value(input_reference.property_name)
+                input_value = output_protocol.get_output_value(input_reference)
                 self.protocol.set_input_value(input_reference, input_value)
 
             self.protocol.execute(self.directory)
@@ -624,13 +686,13 @@ class DirectCalculationGraph:
 
             for input_reference in node.protocol.input_references:
 
-                if input_reference.protocol_id == 'global':
+                if input_reference.output_protocol_id == 'global':
                     continue
 
-                if input_reference.protocol_id not in dependencies[node_id]:
-                    dependencies[node_id].append(input_reference.protocol_id)
+                if input_reference.output_protocol_id not in dependencies[node_id]:
+                    dependencies[node_id].append(input_reference.output_protocol_id)
 
-                input_tuple = input_tuple + (input_reference.protocol_id, )
+                input_tuple = input_tuple + (input_reference.output_protocol_id, )
 
             dask_graph[node_id] = input_tuple
 

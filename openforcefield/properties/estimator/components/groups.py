@@ -84,14 +84,14 @@ class ProtocolGroup(BaseProtocol):
                 if input_reference in self.input_references:
                     continue
 
-                if input_reference.protocol_id not in self._protocols:
+                if input_reference.output_protocol_id not in self._protocols:
                     self.input_references.append(copy.deepcopy(input_reference))
 
-                if input_reference.protocol_id not in self._protocols or \
-                   protocol_id in self._dependants_graph[input_reference.protocol_id]:
+                if input_reference.output_protocol_id not in self._protocols or \
+                   protocol_id in self._dependants_graph[input_reference.output_protocol_id]:
                     continue
 
-                self._dependants_graph[input_reference.protocol_id].append(protocol_id)
+                self._dependants_graph[input_reference.output_protocol_id].append(protocol_id)
 
         # Do the usual to clean up the graph structure and figure out which order
         # the protocols should execute in.
@@ -223,11 +223,11 @@ class ProtocolGroup(BaseProtocol):
 
             for input_reference in protocol_to_execute.input_references:
 
-                if input_reference.protocol_id in self._protocols:
+                if input_reference.output_protocol_id in self._protocols:
 
-                    input_protocol = self._protocols[input_reference.protocol_id]
+                    input_protocol = self._protocols[input_reference.output_protocol_id]
 
-                    output_value = input_protocol.get_output_value(input_reference.property_name)
+                    output_value = input_protocol.get_output_value(input_reference)
                     protocol_to_execute.set_input_value(input_reference, output_value)
 
             if not protocol_to_execute.execute(working_directory):
@@ -370,8 +370,8 @@ class ProtocolGroup(BaseProtocol):
 
             protocol.set_input_value(input_reference, value)
 
-        if input_reference.protocol_id == 'global':
-            self.global_inputs[input_reference.input_property] = value
+        if input_reference.output_protocol_id == 'global':
+            self.global_inputs[input_reference.input_property_name] = value
 
     def get_input_value(self, input_reference):
         """Gets the value that was set on one of this protocols inputs.
@@ -398,20 +398,26 @@ class ProtocolGroup(BaseProtocol):
         raise Exception('The input that was set on a group ({}) was not found. '
                         'This should never happen. {}'.format(self.id, input_reference))
 
-    def get_output(self, property_name):
+    def get_output_value(self, input_reference):
         """Returns the value of one of this protocols outputs.
 
         Parameters
         ----------
-        property_name: str
-            The name of the output property to return
+        input_reference: ProtocolInputReference
+            An input reference which points to the output to return.
 
         Returns
         ----------
         object:
-            The value of the input
+            The value of the output
         """
-        raise NotImplementedError()
+
+        if input_reference.grouped_protocol_id is None:
+
+            raise ValueError('Protocols which take input from a group must '
+                             'have a grouped_protocol_id set on their input_references.')
+
+        return self._protocols[input_reference.grouped_protocol_id].get_output_value(input_reference)
 
     @classmethod
     def from_xml(cls, xml_node, existing_protocols=None):
@@ -576,7 +582,6 @@ class ConditionalGroup(ProtocolGroup):
 
         logging.info('Conditional while loop finished: {}'.format(self.id))
         return True
-
 
     def can_merge(self, other):
         """Determines whether this protocol group can be merged with another.

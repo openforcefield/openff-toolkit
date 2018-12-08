@@ -30,7 +30,8 @@ def run_property_estimator():
     logger.setLevel(logging.INFO)
     logger.addHandler(screen_handler)
 
-    data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_density.xml'))
+    # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_density.xml'))
+    data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_dielectric.xml'))
 
     # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_density.xml'),
     #                                           get_data_filename('properties/single_dielectric.xml'))
