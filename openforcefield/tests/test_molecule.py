@@ -603,11 +603,13 @@ class TestMolecule(TestCase):
             total_charge = sum([atom.formal_charge for atom in molecule.atoms])
             assert total_charge == molecule.total_charge
 
-    def test_chemical_environment_matches(self):
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def test_chemical_environment_matches_OE(self):
         """Test chemical environment matches"""
         # TODO: Move this to test_toolkits, test all available toolkits
         # Create chiral molecule
         from simtk.openmm.app import element
+        toolkit_wrapper = OpenEyeToolkitWrapper()
         molecule = Molecule()
         atom_C = molecule.add_atom(element.carbon.atomic_number, 0, False, stereochemistry='R', name='C')
         atom_H = molecule.add_atom(element.hydrogen.atomic_number, 0, False, name='H')
@@ -619,22 +621,65 @@ class TestMolecule(TestCase):
         molecule.add_bond(atom_C, atom_Br, 1, False)
         molecule.add_bond(atom_C, atom_F, 1, False)
         # Test known cases
-        matches = molecule.chemical_environment_matches('[#6:1]')
+        matches = molecule.chemical_environment_matches('[#6:1]', toolkit_registry=toolkit_wrapper)
         assert len(matches) == 1 # there should be a unique match, so one atom tuple is returned
         assert len(matches[0]) == 1 # it should have one tagged atom
         assert set(matches[0]) == set([atom_C])
-        matches = molecule.chemical_environment_matches('[#6:1]~[#1:2]')
+        matches = molecule.chemical_environment_matches('[#6:1]~[#1:2]', toolkit_registry=toolkit_wrapper)
         assert len(matches) == 1 # there should be a unique match, so one atom tuple is returned
         assert len(matches[0]) == 2 # it should have two tagged atoms
         assert set(matches[0]) == set([atom_C, atom_H])
-        matches = molecule.chemical_environment_matches('[Cl:1]-[C:2]-[H:3]')
+        matches = molecule.chemical_environment_matches('[Cl:1]-[C:2]-[H:3]', toolkit_registry=toolkit_wrapper)
         assert len(matches) == 1 # there should be a unique match, so one atom tuple is returned
         assert len(matches[0]) == 3 # it should have three tagged atoms
         assert set(matches[0]) == set([atom_Cl, atom_C, atom_H])
-        matches = molecule.chemical_environment_matches('[#6:1]~[*:2]')
+        matches = molecule.chemical_environment_matches('[#6:1]~[*:2]', toolkit_registry=toolkit_wrapper)
         assert len(matches) == 4 # there should be four matches
         for match in matches:
             assert len(match) == 2 # each match should have two tagged atoms
+
+    # TODO: Test forgive undef amide enol stereo
+    # TODO: test forgive undef phospho linker stereo
+    # TODO: test forgive undef C=NH stereo
+    # TODO: test forgive undef phospho stereo
+    # Potentially better OE stereo check: OEFlipper — Toolkits - - Python
+    # https: // docs.eyesopen.com / toolkits / python / omegatk / OEConfGenFunctions / OEFlipper.html
+
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def test_chemical_environment_matches_RDKit(self):
+        """Test chemical environment matches"""
+        # Create chiral molecule
+        from simtk.openmm.app import element
+        toolkit_wrapper = RDKitToolkitWrapper()
+        molecule = Molecule()
+        atom_C = molecule.add_atom(element.carbon.atomic_number, 0, False, stereochemistry='R', name='C')
+        atom_H = molecule.add_atom(element.hydrogen.atomic_number, 0, False, name='H')
+        atom_Cl = molecule.add_atom(element.chlorine.atomic_number, 0, False, name='Cl')
+        atom_Br = molecule.add_atom(element.bromine.atomic_number, 0, False, name='Br')
+        atom_F = molecule.add_atom(element.fluorine.atomic_number, 0, False, name='F')
+        molecule.add_bond(atom_C, atom_H, 1, False)
+        molecule.add_bond(atom_C, atom_Cl, 1, False)
+        molecule.add_bond(atom_C, atom_Br, 1, False)
+        molecule.add_bond(atom_C, atom_F, 1, False)
+        # Test known cases
+        matches = molecule.chemical_environment_matches('[#6:1]', toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 1 # there should be a unique match, so one atom tuple is returned
+        assert len(matches[0]) == 1 # it should have one tagged atom
+        assert set(matches[0]) == set([atom_C])
+        matches = molecule.chemical_environment_matches('[#6:1]~[#1:2]', toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 1 # there should be a unique match, so one atom tuple is returned
+        assert len(matches[0]) == 2 # it should have two tagged atoms
+        assert set(matches[0]) == set([atom_C, atom_H])
+        matches = molecule.chemical_environment_matches('[Cl:1]-[C:2]-[H:3]', toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 1 # there should be a unique match, so one atom tuple is returned
+        assert len(matches[0]) == 3 # it should have three tagged atoms
+        assert set(matches[0]) == set([atom_Cl, atom_C, atom_H])
+        matches = molecule.chemical_environment_matches('[#6:1]~[*:2]', toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 4 # there should be four matches
+        for match in matches:
+            assert len(match) == 2 # each match should have two tagged atoms
+
+
 
     def test_name(self):
         """Test name property"""

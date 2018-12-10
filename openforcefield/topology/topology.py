@@ -36,7 +36,7 @@ from simtk.openmm import app
 
 #from openforcefield.utils import get_data_filename
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
-from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL, ALLOWED_AROMATICITY_MODELS, DEFAULT_FRACTIONAL_BOND_ORDER_MODEL, ALLOWED_FRACTIONAL_BOND_ORDER_MODELS, DEFAULT_CHARGE_MODEL, ALLOWED_CHARGE_MODELS
+from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL, ALLOWED_AROMATICITY_MODELS, DEFAULT_FRACTIONAL_BOND_ORDER_MODEL, ALLOWED_FRACTIONAL_BOND_ORDER_MODELS, DEFAULT_CHARGE_MODEL, GLOBAL_TOOLKIT_REGISTRY, ALLOWED_CHARGE_MODELS
 from openforcefield.topology.molecule import Atom, Bond, VirtualSite, BondChargeVirtualSite, MonovalentLonePairVirtualSite, DivalentLonePairVirtualSite, TrivalentLonePairVirtualSite, Molecule, FrozenMolecule
 
 from openforcefield.utils.serialization import Serializable
@@ -774,6 +774,14 @@ class TopologyMolecule:
         for atom in self._reference_molecule.atoms:
             yield TopologyAtom(atom, self)
 
+    @property
+    def atom_start_topology_index(self):
+        "Get the topology index of the first atom in this TopologyMolecule"
+        atom_start_topology_index = 0
+        for topology_molecule in self._topology.topology_molecules:
+            if self == topology_molecule:
+                return atom_start_topology_index
+            atom_start_topology_index += topology_molecule.n_atoms
 
     def bond(self, index):
         """
@@ -814,6 +822,16 @@ class TopologyMolecule:
         """
         return self._reference_molecule.n_bonds
 
+    @property
+    def bond_start_topology_index(self):
+        "Get the topology index of the first bond in this TopologyMolecule"
+        bond_start_topology_index = 0
+        for topology_molecule in self._topology.topology_molecules:
+            if self == topology_molecule:
+                return bond_start_topology_index
+            bond_start_topology_index += topology_molecule.n_bonds
+
+
     def particle(self, index):
         """
         Get the TopologyParticle with a given reference molecule index in this TopologyMolecule
@@ -851,6 +869,14 @@ class TopologyMolecule:
         """
         return self._reference_molecule.n_particles
 
+    @property
+    def particle_start_topology_index(self):
+        "Get the topology index of the first particle in this TopologyMolecule"
+        particle_start_topology_index = 0
+        for topology_molecule in self._topology.topology_molecules:
+            if self == topology_molecule:
+                return particle_start_topology_index
+            particle_start_topology_index += topology_molecule.n_particles
 
     def virtual_site(self, index):
         """
@@ -890,6 +916,16 @@ class TopologyMolecule:
         int
         """
         return self._reference_molecule.n_virtual_sites
+
+    @property
+    def virtual_site_start_topology_index(self):
+        "Get the topology index of the first virtual site in this TopologyMolecule"
+        virtual_site_start_topology_index = 0
+        for topology_molecule in self._topology.topology_molecules:
+            if self == topology_molecule:
+                return virtual_site_start_topology_index
+            virtual_site_start_topology_index += topology_molecule.n_virtual_sites
+
 
 
 # TODO: pick back up figuring out how we want TopologyMolecules to know their starting TopologyParticle indices
@@ -1205,6 +1241,11 @@ class Topology(Serializable):
         return len(self._topology_molecules)
 
     @property
+    def topology_molecules(self):
+        """Returns an iterator over all the TopologyMolecules in this Topology"""
+        return self._topology_molecules
+
+    @property
     def n_atoms(self):
         """
         Returns the number of topology atoms in in this Topology.
@@ -1282,7 +1323,7 @@ class Topology(Serializable):
                 yield virtual_site
 
 
-    def chemical_environment_matches(self, query, aromaticity_model='MDL'):
+    def chemical_environment_matches(self, query, aromaticity_model='MDL', toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Retrieve all matches for a given chemical environment query.
 
         TODO:
@@ -1314,23 +1355,23 @@ class Topology(Serializable):
 
         # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
         matches = list()
-        for molecule in self._unique_molecules:
+        for ref_mol in self.reference_molecules:
             # Find all atomsets that match this definition in the reference molecule
             # This will automatically attempt to match chemically identical atoms in a canonical order within the Topology
-            refmol_matches = molecule.chemical_environment_matches(smarts)
+            refmol_matches = ref_mol.chemical_environment_matches(smarts, toolkit_registry=toolkit_registry)
 
             # Loop over matches
             for reference_match in refmol_matches:
-                mol_dict = molecule.to_dict
+                #mol_dict = molecule.to_dict
                 # Unroll corresponding atom indices over all instances of this molecule
-                for topology_molecule in self._unique_molecule_dict_to_unique_molecule[reference_molecule]:
+                for topology_molecule in self._reference_molecule_to_topology_molecules[ref_mol]:
                     # Create match.
-                    match = tuple([ reference_to_topology_atom_mapping[atom] for atom in reference_match ])
+                    match = tuple([topology_molecule.atom_start_topology_index+atom_index for atom_index in reference_match ])
                     matches.append(match)
 
         return matches
 
-    def chemical_environment_matches(self, query):
+    def chemical_environment_matches_unused(self, query):
         """Retrieve all matches for a given chemical environment query.
 
         .. todo ::
@@ -1476,7 +1517,6 @@ class Topology(Serializable):
             edge_match_func = None
 
         # For each connected subgraph (molecule) in the topology, find its match in unique_molecules
-        c=0
         for omm_mol_G in nx.connected_component_subgraphs(omm_topology_G):
             match_found = False
             for unq_mol_G in graph_to_unq_mol.keys():
@@ -1487,10 +1527,7 @@ class Topology(Serializable):
                                     ):
                     topology.add_molecule(graph_to_unq_mol[unq_mol_G])
                     match_found = True
-                    c += 1
-                    print("match found for molecule {}".format(c))
                     break
-                #assert 0
             if not(match_found):
                 raise Exception('No match found for molecule')
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?

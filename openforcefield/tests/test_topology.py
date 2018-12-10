@@ -253,13 +253,9 @@ class TestTopology(TestCase):
 
 
 
-
-    # test_create_from_file_without_partial_charges
-    # test_create_from_file_with_partial_charges
     # test_get_fractional_bond_order
     # test_two_of_same_molecule
     # test_two_different_molecules
-    # test_redundant_molecule
     # test_to_from_dict
     # test_get_atom
     # test_get_bond
@@ -281,3 +277,51 @@ class TestTopology(TestCase):
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         assert topology.n_reference_molecules == 2
         assert topology.n_molecules == 239
+
+    @pytest.mark.skip
+    def test_from_openmm_distinguish_using_stereochemistry(self):
+        """Test creation of an openforcefield Topology object from an OpenMM topology with stereoisomers"""
+        # From Jeff: I know this won't work. The graph representation created from OMM molecules during the matching
+        # process doesn't encode stereochemistry.
+        raise NotImplementedError
+
+    def test_chemical_environments_matches_OE(self):
+        """Test Topology.chemical_environment_matches"""
+        from simtk.openmm import app
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
+        # toolkit_wrapper = RDKitToolkitWrapper()
+        molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
+                                                                              'molecules/cyclohexane.mol2')]
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        # Test for substructure match
+        matches = topology.chemical_environment_matches("[C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 143
+        assert matches[0] == (1728, 1729, 1730)
+        # Test for whole-molecule match
+        matches = topology.chemical_environment_matches("[H][C:1]([H])([H])-[C:2]([H])([H])-[O:3][H]", toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 1716 # 143 * 12 (there are 12 possible hydrogen mappings)
+        assert matches[0] == (1728, 1729, 1730)
+        # Search for a substructure that isn't there
+        matches = topology.chemical_environment_matches("[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 0
+
+    def test_chemical_environments_matches_RDK(self):
+        """Test Topology.chemical_environment_matches"""
+        from simtk.openmm import app
+        toolkit_wrapper = RDKitToolkitWrapper()
+        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
+        # toolkit_wrapper = RDKitToolkitWrapper()
+        molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
+                                                                              'molecules/cyclohexane.mol2')]
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        # Count CCO matches
+        matches = topology.chemical_environment_matches("[C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 143
+        assert matches[0] == (1728, 1729, 1730)
+        matches = topology.chemical_environment_matches("[H][C:1]([H])([H])-[C:2]([H])([H])-[O:3][H]", toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 1716 # 143 * 12 (there are 12 possible hydrogen mappings)
+        assert matches[0] == (1728, 1729, 1730)
+        # Search for a substructure that isn't there
+        matches = topology.chemical_environment_matches("[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 0

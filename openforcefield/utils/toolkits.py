@@ -585,6 +585,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oechem.OEPerceiveChiral(oemol)
 
         # Check that all stereo is specified
+        # Potentially better OE stereo check: OEFlipper — Toolkits - - Python
+        # https: // docs.eyesopen.com / toolkits / python / omegatk / OEConfGenFunctions / OEFlipper.html
+
         unspec_chiral = False
         unspec_db = False
         problematic_atoms = list()
@@ -882,7 +885,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openeye import oechem
         oemol = oechem.OEGraphMol()
         oechem.OESmilesToMol(oemol, smiles)
-        if not(hydrogens_are_explicit):
+        if not (hydrogens_are_explicit):
             result = oechem.OEAddExplicitHydrogens(oemol)
             if result == False:
                 raise Exception("Addition of explicit hydrogens failed in from_openeye")
@@ -1399,12 +1402,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         unspec_stereo = False
         rdmol_copy = Chem.Mol(rdmol)
         enumsi_opt = EnumerateStereoisomers.StereoEnumerationOptions(maxIsomers=2, onlyUnassigned=True)
-        stereoisomers = [isomer for isomer in Chem.EnumerateStereoisomers.EnumerateStereoisomers(rdmol_copy, enumsi_opt)]
+        stereoisomers = [isomer for isomer in
+                         Chem.EnumerateStereoisomers.EnumerateStereoisomers(rdmol_copy, enumsi_opt)]
         if len(stereoisomers) != 1:
             unspec_stereo = True
 
         if unspec_stereo:
-            raise Exception("Unable to make OFFMol from SMILES: SMILES has unspecified stereochemistry: {}".format(smiles))
+            raise Exception(
+                "Unable to make OFFMol from SMILES: SMILES has unspecified stereochemistry: {}".format(smiles))
 
         # Add explicit hydrogens if they aren't there already
         rdmol = Chem.AddHs(rdmol)
@@ -1483,7 +1488,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         from openforcefield.topology.molecule import Molecule
 
-
         # Check for undefined stereochemistry
         from rdkit.Chem import EnumerateStereoisomers
         # TODO: Does this work for molecules with 3D geometry?
@@ -1491,7 +1495,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Use a copy of the input, in case EnumerateStereochemstry changes anything in-place
         rdmol_copy = Chem.Mol(rdmol)
         enumsi_opt = EnumerateStereoisomers.StereoEnumerationOptions(maxIsomers=2, onlyUnassigned=True)
-        stereoisomers = [isomer for isomer in Chem.EnumerateStereoisomers.EnumerateStereoisomers(rdmol_copy, enumsi_opt)]
+        stereoisomers = [isomer for isomer in
+                         Chem.EnumerateStereoisomers.EnumerateStereoisomers(rdmol_copy, enumsi_opt)]
         # TODO: This will catch undefined tetrahedral centers, but not bond stereochemistry. How can we check for that?
         if len(stereoisomers) != 1:
             unspec_stereo = True
@@ -1857,8 +1862,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol = Chem.Mol(rdmol)
         # Use designated aromaticity model
         if aromaticity_model == 'OEAroModel_MDL':
-            Chem.SanitizeMol(mol, Chem.SANITIZE_ALL^Chem.SANITIZE_SETAROMATICITY)
-            Chem.SetAromaticity(mol, Chem.AromaticityModel.AROMATICITY_MDL)
+            Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL^Chem.SANITIZE_SETAROMATICITY)
+            Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
         else:
             # Only the OEAroModel_MDL is supported for now
             raise ValueError('Unknown aromaticity model: {}'.aromaticity_models)
@@ -1869,12 +1874,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             raise SMIRKSParsingError('RDKit could not parse the SMIRKS string "{}"'.format(smirks))
 
         # Create atom mapping for query molecule
-        index_map = dict()
+        idx_map = dict()
         for atom in qmol.GetAtoms():
              smirks_index = atom.GetAtomMapNum()
              if smirks_index != 0:
-                ind_map[smirks_index - 1] = atom.GetIdx()
-        map_list = [ index_map[x] for x in sorted(index_map) ]
+                idx_map[smirks_index - 1] = atom.GetIdx()
+        map_list = [ idx_map[x] for x in sorted(idx_map) ]
 
         # Perform matching
         # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
@@ -1902,8 +1907,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        rdmol = self.to_rdmol(molecule, aromaticity_model=aromaticity_model)
-        return _find_smarts_matches(rdmol, smarts, aromaticity_model='OEAroModel_MDL')
+        rdmol = self.to_rdkit(molecule, aromaticity_model=aromaticity_model)
+        return self._find_smarts_matches(rdmol, smarts, aromaticity_model='OEAroModel_MDL')
 
 class AmberToolsToolkitWrapper(ToolkitWrapper):
     """
