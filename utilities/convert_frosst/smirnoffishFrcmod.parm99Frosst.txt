@@ -12,7 +12,8 @@ DATE
 # Date: Aug. 3, 2017
 # Date: Nov. 28, 2017
 # Date: Feb. 27, 2018
-Date: Nov. 7, 2018
+# Date: Nov. 7, 2018
+Date: Dec. 12, 2018
 
 # Author: please make sure all authors are on one line, only last line will be used
 AUTHOR
@@ -196,7 +197,7 @@ ANGL
 # fused het6-het5 bridgehead outer angle
 [*;r6:1]~;@[*;r5:2]~;@[*;r5;x2:3] 70.0  130.    parm99 generic fused het6-het5 bridgehead outer angle
 # het5 outer angle
-[*:1]~;!@[*;r5:2]~;@[*;r5:3]  70.0  125.    Frosst generic het5 substituent outer angle
+[*:1]~;!@[*;X3;r5:2]~;@[*;r5:3]  70.0  125.    Frosst generic het5 substituent outer angle
 # carboxylic acid, ester, carboxylate
 [#8X1:1]~[#6X3:2]~[#8:3]  80.0  126.00  parm99 generic
 # Csp
