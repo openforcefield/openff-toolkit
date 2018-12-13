@@ -205,3 +205,29 @@ def is_acyclic(graph):
 
     return len(graph) == 0 or len(topological_sort(graph)) != 0
 
+
+def append_uuid(base_id, uuid):
+    """Appends a uuid to a base id
+
+    Parameters
+    ----------
+    base_id : str
+        The id to append the uuid to.
+    uuid : str
+        The uuid to append.
+
+    Returns
+    -------
+    str
+        The uuid appended id of the form uuid|base_id
+    """
+    if base_id.find('|') >= 0:
+
+        base_id_split = base_id.split('|')
+
+        if len(base_id_split) != 2:
+            raise ValueError('A uuid appended protocol id should be of the form uuid|base_id')
+
+        base_id = base_id_split[1]
+
+    return '{}|{}'.format(uuid, base_id)

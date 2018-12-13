@@ -127,20 +127,22 @@ class ProtocolGroup(BaseProtocol):
         super(ProtocolGroup, self).set_uuid(value)
 
         for index in range(len(self._root_protocols)):
-            self._root_protocols[index] = value + '|' + self._root_protocols[index]
+            self._root_protocols[index] = graph.append_uuid(self._root_protocols[index], value)
 
         for index in range(len(self._execution_order)):
-            self._execution_order[index] = value + '|' + self._execution_order[index]
+            self._execution_order[index] = graph.append_uuid(self._execution_order[index], value)
 
         new_dependants_graph = {}
 
         for protocol_id in self._dependants_graph:
 
-            new_protocol_id = value + '|' + protocol_id
+            new_protocol_id = graph.append_uuid(protocol_id, value)
             new_dependants_graph[new_protocol_id] = []
 
             for dependant in self._dependants_graph[protocol_id]:
-                new_dependants_graph[new_protocol_id].append(value + '|' + dependant)
+
+                new_dependant_id = graph.append_uuid(dependant, value)
+                new_dependants_graph[new_protocol_id].append(new_dependant_id)
 
         self._dependants_graph = new_dependants_graph
 
@@ -155,35 +157,35 @@ class ProtocolGroup(BaseProtocol):
 
         self._protocols = new_protocols
 
-    def rename_input_id(self, old_value, new_value):
+    def replace_protocol(self, old_id, new_id):
         """Finds each input which came from a given protocol
-         and changes it to instead take input from a different one.
+         and redirects it to instead take input from a different one.
 
         Parameters
         ----------
-        old_value : str
+        old_id : str
             The id of the old input protocol.
-        new_value : str
+        new_id : str
             The id of the new input protocol.
         """
-        super(ProtocolGroup, self).rename_input_id(old_value, new_value)
+        super(ProtocolGroup, self).replace_protocol(old_id, new_id)
 
         for index in range(len(self._root_protocols)):
-            self._root_protocols[index] = self._root_protocols[index].replace(old_value, new_value)
+            self._root_protocols[index] = self._root_protocols[index].replace(old_id, new_id)
 
         for index in range(len(self._execution_order)):
-            self._execution_order[index] = self._execution_order[index].replace(old_value, new_value)
+            self._execution_order[index] = self._execution_order[index].replace(old_id, new_id)
 
         new_dependants_graph = {}
 
         for protocol_id in self._dependants_graph:
 
-            new_protocol_id = protocol_id.replace(old_value, new_value)
+            new_protocol_id = protocol_id.replace(old_id, new_id)
             new_dependants_graph[new_protocol_id] = []
 
             for dependant in self._dependants_graph[protocol_id]:
 
-                new_dependant_id = dependant.replace(old_value, new_value)
+                new_dependant_id = dependant.replace(old_id, new_id)
                 new_dependants_graph[new_protocol_id].append(new_dependant_id)
 
         self._dependants_graph = new_dependants_graph
@@ -193,11 +195,30 @@ class ProtocolGroup(BaseProtocol):
         for protocol_id in self._protocols:
 
             protocol = self._protocols[protocol_id]
-            protocol.rename_input_id(old_value, new_value)
+            protocol.replace_protocol(old_id, new_id)
 
-            new_protocols[protocol_id.replace(old_value, new_value)] = protocol
+            new_protocols[protocol_id.replace(old_id, new_id)] = protocol
 
         self._protocols = new_protocols
+
+    def set_global_properties(self, global_properties):
+        """Set the value of any inputs which takes values
+        from the 'global' (i.e property to calculate) scope
+
+        Parameters
+        ----------
+        global_properties: dict of str to object
+            The list of global properties to draw from.
+        """
+        for global_property in self.global_inputs:
+
+            if global_property not in global_properties:
+                raise Exception('Invalid global property: {}'.format(global_property))
+
+            self.global_inputs[global_property] = global_properties[global_property]
+
+        for protocol_id in self._protocols:
+            self._protocols[protocol_id].set_global_properties(global_properties)
 
     def execute(self, directory):
         """Executes the protocols within this groups
@@ -318,7 +339,7 @@ class ProtocolGroup(BaseProtocol):
             other_group.protocols[other_protocol_id] = existing_protocol
 
             for protocol_to_update in other_group.protocols:
-                other_group.protocols[protocol_to_update].rename_input_id(other_protocol_id, existing_protocol.id)
+                other_group.protocols[protocol_to_update].replace_protocol(other_protocol_id, existing_protocol.id)
 
         else:
 
@@ -475,11 +496,8 @@ class ConditionalGroup(ProtocolGroup):
             """Constructs a new ConditionalGroup"""
             self.condition_type = None
 
-            self.left_hand_protocol_id = None
-            self.left_hand_property_name = None
-
-            self.right_hand_protocol_id = None
-            self.right_hand_property_name = None
+            self.left_hand_reference = None
+            self.right_hand_reference = None
 
     @unique
     class ConditionType(Enum):
@@ -545,19 +563,19 @@ class ConditionalGroup(ProtocolGroup):
 
                 left_hand_value = None
 
-                if condition.left_hand_protocol_id == 'global':
-                    left_hand_value = self.global_inputs[condition.left_hand_property_name]
+                if condition.left_hand_reference.output_protocol_id == 'global':
+                    left_hand_value = self.global_inputs[condition.left_hand_reference.output_property_name]
                 else:
-                    left_hand_value = self._protocols[condition.left_hand_protocol_id].get_output_value(
-                        condition.left_hand_property_name)
+                    left_hand_value = self._protocols[condition.left_hand_reference.output_protocol_id].\
+                        get_output_value(condition.left_hand_reference)
 
                 right_hand_value = None
 
-                if condition.right_hand_protocol_id == 'global':
-                    right_hand_value = self.global_inputs[condition.right_hand_property_name]
+                if condition.right_hand_reference.output_protocol_id == 'global':
+                    right_hand_value = self.global_inputs[condition.right_hand_reference.output_property_name]
                 else:
-                    right_hand_value = self._protocols[condition.right_hand_protocol_id].get_output_value(
-                        condition.right_hand_property_name)
+                    right_hand_value = self._protocols[condition.right_hand_reference.output_protocol_id].\
+                        get_output_value(condition.right_hand_reference)
 
                 if condition.condition_type is self.ConditionType.LessThan:
                     conditions_met = conditions_met & (left_hand_value <= right_hand_value)
@@ -629,12 +647,10 @@ class ConditionalGroup(ProtocolGroup):
 
         for condition in self.conditions:
 
-            if condition.left_hand_protocol_id != 'global':
-                condition.left_hand_protocol_id = value + '|' + condition.left_hand_protocol_id
-            if condition.right_hand_protocol_id != 'global':
-                condition.right_hand_protocol_id = value + '|' + condition.right_hand_protocol_id
+            condition.left_hand_reference.set_uuid(value)
+            condition.right_hand_reference.set_uuid(value)
 
-    def rename_input_id(self, old_value, new_value):
+    def replace_protocol(self, old_id, new_id):
         """Finds each input which came from a given protocol
          and changes it to instead take input from a different one.
 
@@ -643,17 +659,17 @@ class ConditionalGroup(ProtocolGroup):
 
         Parameters
         ----------
-        old_value : str
+        old_id : str
             The id of the old input protocol.
-        new_value : str
+        new_id : str
             The id of the new input protocol.
         """
-        super(ConditionalGroup, self).rename_input_id(old_value, new_value)
+        super(ConditionalGroup, self).replace_protocol(old_id, new_id)
 
         for condition in self.conditions:
 
-            condition.left_hand_protocol_id.replace(old_value, new_value)
-            condition.right_hand_protocol_id.replace(old_value, new_value)
+            condition.left_hand_reference.replace_protocol(old_id, new_id)
+            condition.right_hand_reference.replace_protocol(old_id, new_id)
 
     @classmethod
     def from_xml(cls, xml_node, existing_protocols=None):
@@ -732,11 +748,13 @@ class ConditionalGroup(ProtocolGroup):
 
         condition = cls.Condition()
 
-        condition.left_hand_protocol_id = left_hand_protocol_id
-        condition.left_hand_property_name = left_hand_property_name
+        condition.left_hand_reference = ProtocolInputReference('', 
+                                                               left_hand_protocol_id,
+                                                               left_hand_property_name)
 
-        condition.right_hand_protocol_id = right_hand_protocol_id
-        condition.right_hand_property_name = right_hand_property_name
+        condition.right_hand_reference = ProtocolInputReference('',
+                                                                right_hand_protocol_id,
+                                                                right_hand_property_name)
 
         # Make sure we can understand the passed condition type.
         condition_string = condition_arguments[1]
@@ -748,14 +766,14 @@ class ConditionalGroup(ProtocolGroup):
 
         return_value.conditions.append(condition)
 
-        if condition.left_hand_protocol_id == 'global':
+        if condition.left_hand_reference.output_protocol_id == 'global':
 
-            if condition.left_hand_property_name not in return_value.global_inputs:
-                return_value.global_inputs[condition.left_hand_property_name] = None
+            if condition.left_hand_reference.output_property_name not in return_value.global_inputs:
+                return_value.global_inputs[condition.left_hand_reference.output_property_name] = None
 
-        if condition.right_hand_protocol_id == 'global':
+        if condition.right_hand_reference.output_protocol_id == 'global':
 
-            if condition.right_hand_property_name not in return_value.global_inputs:
-                return_value.global_inputs[condition.right_hand_property_name] = None
+            if condition.right_hand_reference.output_property_name not in return_value.global_inputs:
+                return_value.global_inputs[condition.right_hand_reference.output_property_name] = None
 
         return return_value

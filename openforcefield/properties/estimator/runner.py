@@ -35,13 +35,15 @@ from openforcefield.utils import graph
 from openforcefield.utils.exceptions import XmlNodeMissingException
 
 from openforcefield.properties.estimator.components import protocols, groups
+from openforcefield.properties.estimator.components.protocols import ProtocolInputReference
 
 from openforcefield.properties import PropertyType, PropertyPhase, CalculationFidelity, \
-                                      CalculatedPhysicalProperty
+                                      PhysicalProperty, CalculatedPhysicalProperty
 
 from openforcefield.properties.datasets.property_dataset import CalculatedPropertySet
 
-from dask.threaded import get as dask_get
+from dask.threaded import get as dask_threaded_get
+from dask import distributed
 
 
 # =============================================================================================
@@ -59,11 +61,8 @@ class DirectCalculationTemplate:
         self.protocols = {}
         self.groups = {}
 
-        self.final_value_protocol_id = None
-        self.final_value_property_name = None
-
-        self.final_uncertainty_protocol_id = None
-        self.final_uncertainty_property_name = None
+        self.final_value_reference = None
+        self.final_uncertainty_reference = None
 
         # A list of protocols which have zero or only global inputs.
         # These will be the first protocols to be executed.
@@ -111,44 +110,8 @@ class DirectCalculationTemplate:
         # Make sure the id is really unique.
         if return_value.id in existing_templates:
 
-            raise Exception('A calculation with id ' + return_value.id +
-                            ' has been defined more than once.')
-
-        # Find the output value of this calculation.
-        output_value_node = xml_node.find('output-value')
-
-        if output_value_node is not None:
-
-            output_value_split = output_value_node.text.split(':')
-
-            if len(output_value_split) != 2:
-
-                raise Exception('The format of the output-value node '
-                                'should be protocol_id:property_name')
-
-            return_value.final_value_protocol_id = output_value_split[0]
-            return_value.final_value_property_name = output_value_split[1]
-
-            pass
-        
-        # Find the output uncertainty of this calculation.
-        output_uncertainty_node = xml_node.find('output-uncertainty')
-
-        if output_uncertainty_node is not None:
-
-            output_uncertainty_split = output_uncertainty_node.text.split(':')
-
-            if len(output_uncertainty_split) != 2:
-
-                raise Exception('The format of the output-uncertainty node '
-                                'should be protocol_id:property_name')
-
-            return_value.final_uncertainty_protocol_id = output_uncertainty_split[0]
-            return_value.final_uncertainty_property_name = output_uncertainty_split[1]
-
-            pass
-
-        # TODO: Validate final outputs.
+            raise Exception('A calculation with id {} has been '
+                            'defined more than once.'.format(return_value.id))
 
         return_value.id = id_node.text
 
@@ -158,6 +121,62 @@ class DirectCalculationTemplate:
         cls._parse_groups_node(return_value, xml_node)
 
         cls.validate_inputs(return_value)
+
+        # Find the output value of this calculation.
+        output_value_node = xml_node.find('output-value')
+
+        if output_value_node is not None:
+
+            output_value_split = output_value_node.text.split(':')
+
+            if len(output_value_split) != 2:
+                raise Exception('The format of the output-value node '
+                                'should be protocol_id:property_name')
+
+            protocol_id = output_value_split[0]
+            property_name = output_value_split[1]
+
+            if protocol_id not in return_value.protocols:
+
+                raise Exception('The {} calculation does not contain '
+                                'a protocol with an id {}'.format(return_value.id, protocol_id))
+
+            if property_name not in return_value.protocols[protocol_id].provided_outputs:
+
+                raise Exception('The {} protocol does not output a '
+                                'property named {}'.format(protocol_id, property_name))
+
+            return_value.final_value_reference = ProtocolInputReference('',
+                                                                        protocol_id,
+                                                                        property_name)
+
+        # Find the output uncertainty of this calculation.
+        output_uncertainty_node = xml_node.find('output-uncertainty')
+
+        if output_uncertainty_node is not None:
+
+            output_uncertainty_split = output_uncertainty_node.text.split(':')
+
+            if len(output_uncertainty_split) != 2:
+                raise Exception('The format of the output-uncertainty node '
+                                'should be protocol_id:property_name')
+
+            protocol_id = output_uncertainty_split[0]
+            property_name = output_uncertainty_split[1]
+
+            if protocol_id not in return_value.protocols:
+
+                raise Exception('The {} calculation does not contain '
+                                'a protocol with an id {}'.format(return_value.id, protocol_id))
+
+            if property_name not in return_value.protocols[protocol_id].provided_outputs:
+
+                raise Exception('The {} protocol does not output a '
+                                'property named {}'.format(protocol_id, property_name))
+
+            return_value.final_uncertainty_reference = ProtocolInputReference('',
+                                                                              protocol_id,
+                                                                              property_name)
 
         return_value.apply_groups()
         return_value.build_dependants_graph()
@@ -214,7 +233,7 @@ class DirectCalculationTemplate:
             if protocol_class is None:
 
                 raise RuntimeError('The {} calculation contains an undefined protocol of '
-                                   'type: {}'.format(calculation_template.id , protocol_node.tag))
+                                   'type: {}'.format(calculation_template.id, protocol_node.tag))
 
             # Make sure the found class is actually a protocol.
             if isinstance(protocol_class, protocols.BaseProtocol):
@@ -374,7 +393,7 @@ class DirectCalculationTemplate:
                 for protocol_id in self.protocols:
 
                     protocol = self.protocols[protocol_id]
-                    protocol.rename_input_id(grouped_protocol_id, group.id)
+                    protocol.replace_protocol(grouped_protocol_id, group.id)
 
                     for input_reference in protocol.input_references:
 
@@ -383,37 +402,57 @@ class DirectCalculationTemplate:
 
                         input_reference.grouped_protocol_id = grouped_protocol_id
 
+                if self.final_value_reference.output_protocol_id == grouped_protocol_id:
+
+                    self.final_value_reference.output_protocol_id = group.id
+                    self.final_value_reference.grouped_protocol_id = grouped_protocol_id
+
+                if self.final_uncertainty_reference.output_protocol_id == grouped_protocol_id:
+
+                    self.final_uncertainty_reference.output_protocol_id = group.id
+                    self.final_uncertainty_reference.grouped_protocol_id = grouped_protocol_id
+
             # Add the group in their place.
             self.protocols[group.id] = group
 
 
 class DirectCalculation:
-    """Defines the property to calculate and template to follow.
-
-    Parameters
-    ----------
-    physical_property: Protocol
-        The protocol this node will execute.
-    force_field: ForceField
-        The force field to use for this calculation.
-    template: :obj:`DirectCalculationTemplate`, optional
-        The parent of this node.
+    """Defines the property to calculate and the calculation
+    workflow needed to calculate it.
     """
     def __init__(self, physical_property, force_field, template):
+        """
+        Constructs a new DirectCalculation object.
 
+        Parameters
+        ----------
+        physical_property: PhysicalProperty
+            The protocol this node will execute.
+        force_field: openforcefield.typing.engines.smirnoff.ForceField
+            The force field to use for this calculation.
+        template: DirectCalculationTemplate, optional
+            The template on which this calculation is based.
+        """
         self.physical_property = physical_property
         self.uuid = str(uuid.uuid4())
 
         self.property_type = template.property_type
 
-        thermodynamic_state = physical_property.thermodynamic_state
-        substance = physical_property.substance
+        self.protocols = {}
+
+        self.starting_protocols = []
+        self.dependants_graph = {}
 
         self.final_value_reference = None
         self.final_uncertainty_reference = None
 
-        self.protocols = {}
-        self.leaf_node_ids = set()
+        # Define a dictionary of accessible 'global' properties.
+        global_properties = {
+            "thermodynamic_state": physical_property.thermodynamic_state,
+            "substance": physical_property.substance,
+            "uncertainty": physical_property.uncertainty,
+            "force_field": force_field
+        }
 
         # A helper to map the template protocol ids to
         # the new, uuid appended ones.
@@ -424,67 +463,81 @@ class DirectCalculation:
             protocol = copy.deepcopy(template.protocols[protocol_name])
 
             # Try to set global properties on each of the protocols
-            for input_reference in protocol.input_references:
-
-                if input_reference.output_protocol_id != 'global':
-                    continue
-
-                if input_reference.output_property_name == 'thermodynamic_state':
-                    protocol.set_input_value(input_reference, thermodynamic_state)
-                elif input_reference.output_property_name == 'substance':
-                    protocol.set_input_value(input_reference, substance)
-                elif input_reference.output_property_name == 'uncertainty':
-                    protocol.set_input_value(input_reference, physical_property.uncertainty)
-                elif input_reference.output_property_name == 'force_field':
-                    protocol.set_input_value(input_reference, force_field)
-                else:
-                    raise Exception('Invalid global property: ' + input_reference.output_property_name)
-
-            if isinstance(protocol, groups.ProtocolGroup):
-
-                for global_property in protocol.global_inputs:
-
-                    if global_property == 'thermodynamic_state':
-                        protocol.global_inputs[global_property] = thermodynamic_state
-                    elif global_property == 'substance':
-                        protocol.global_inputs[global_property] = substance
-                    elif global_property == 'uncertainty':
-                        protocol.global_inputs[global_property] = physical_property.uncertainty
-                    elif global_property == 'force_field':
-                        protocol.global_inputs[global_property] = force_field
-                    else:
-                        raise Exception('Invalid global property: ' + global_property)
+            protocol.set_global_properties(global_properties)
 
             protocol.set_uuid(self.uuid)
             id_map[protocol_name] = protocol.id
 
             self.protocols[protocol.id] = protocol
 
-        self.starting_protocols = []
-
         # Copy the starting protocols, making sure to use the uuid appended names.
         for starting_protocol in template.starting_protocols:
             self.starting_protocols.append(id_map[starting_protocol])
 
-        self.dependants_graph = {}
-
         # Copy the dependants graph, making sure to use the uuid appended names.
         for dependant_name in template.dependants_graph:
+
             self.dependants_graph[id_map[dependant_name]] = []
 
             for input_name in template.dependants_graph[dependant_name]:
                 self.dependants_graph[id_map[dependant_name]].append(id_map[input_name])
 
-            if len(self.dependants_graph[id_map[dependant_name]]) == 0:
-                self.leaf_node_ids.add(id_map[dependant_name])
+        self.final_value_reference = copy.deepcopy(template.final_value_reference)
+        self.final_value_reference.set_uuid(self.uuid)
 
-        self.final_value_reference = protocols.ProtocolInputReference('',
-                                                                      template.final_value_protocol_id,
-                                                                      template.final_value_property_name)
+        self.final_uncertainty_reference = copy.deepcopy(template.final_uncertainty_reference)
+        self.final_uncertainty_reference.set_uuid(self.uuid)
 
-        self.final_uncertainty_reference = protocols.ProtocolInputReference('',
-                                                                            template.final_uncertainty_protocol_id,
-                                                                            template.final_uncertainty_property_name)
+    def replace_protocol(self, old_protocol, new_protocol):
+        """Replaces an existing protocol with a new one, while
+        updating all input and local references to point to the
+        new protocol.
+
+        The main use of this method is when merging multiple protocols
+        into one.
+
+        Parameters
+        ----------
+        old_protocol : protocols.BaseProtocol
+            The protocol to replace.
+        new_protocol : protocols.BaseProtocol
+            The new protocol to use.
+        """
+
+        if new_protocol.id in self.protocols:
+            raise ValueError('A protocol with the same id already exists in this calculation.')
+
+        for protocol_id in self.protocols:
+
+            protocol = self.protocols[protocol_id]
+            protocol.replace_protocol(old_protocol.id, new_protocol.id)
+
+        if old_protocol.id in self.protocols:
+
+            self.protocols.pop(old_protocol.id)
+            self.protocols[new_protocol] = new_protocol
+
+        for index, starting_id in enumerate(self.starting_protocols):
+
+            if starting_id == old_protocol.id:
+                starting_id = new_protocol.id
+
+            self.starting_protocols[index] = starting_id
+
+        for protocol_id in self.dependants_graph:
+
+            for index, dependant_id in enumerate(self.dependants_graph[protocol_id]):
+
+                if dependant_id == old_protocol.id:
+                    dependant_id = new_protocol.id
+
+                self.dependants_graph[protocol_id][index] = dependant_id
+
+        if old_protocol.id in self.dependants_graph:
+            self.dependants_graph[new_protocol.id] = self.dependants_graph.pop(old_protocol.id)
+
+        self.final_value_reference.replace_protocol(old_protocol.id, new_protocol.id)
+        self.final_uncertainty_reference.replace_protocol(old_protocol.id, new_protocol.id)
 
 
 class DirectCalculationGraph:
@@ -519,8 +572,6 @@ class DirectCalculationGraph:
                 self.directory = path.join(root_directory, self.directory)
 
             # self.status = self.Status.Queueing
-
-            self.children = []
 
         @property
         def id(self):
@@ -622,10 +673,7 @@ class DirectCalculationGraph:
             # of this calculations version.
 
             existing_node.protocol.merge(protocol_to_insert)
-            calculation.protocols[protocol_name] = existing_node.protocol
-
-            for protocol_to_update in calculation.protocols:
-                calculation.protocols[protocol_to_update].rename_input_id(protocol_name, existing_node.id)
+            calculation.replace_protocol(protocol_to_insert, existing_node.protocol)
 
         else:
 
@@ -643,7 +691,7 @@ class DirectCalculationGraph:
             nodes.append(protocol_name)
 
         # Add all of the dependants to the existing node
-        for dependant_name in calculation.dependants_graph[protocol_name]:
+        for dependant_name in calculation.dependants_graph[existing_node.id]:
             self._insert_node(dependant_name, calculation, existing_node.id)
 
     def add_calculation(self, calculation):
@@ -696,11 +744,15 @@ class DirectCalculationGraph:
 
             dask_graph[node_id] = input_tuple
 
-        # cluster = distributed.LocalCluster(number_of_workers, threads_per_worker, processes=False)
-        # client = dask.Client(cluster, processes=False)
-
         print('Started')
-        value = dask_get(dask_graph, leaf_nodes, num_workers=number_of_workers)
+
+        value = dask_threaded_get(dask_graph, leaf_nodes, num_workers=number_of_workers)
+
+        # cluster = distributed.LocalCluster(number_of_workers, threads_per_worker, processes=False)
+        # client = distributed.Client(cluster, processes=False)
+        #
+        # value = client.get(dask_graph, leaf_nodes)
+
         print('Finished', value)
 
 
@@ -729,17 +781,17 @@ class PropertyCalculationRunner:
 
         maximum_threads = multiprocessing.cpu_count()
 
-        if threads_per_simulation is None:
-            threads_per_simulation = math.floor(maximum_threads / worker_threads)
+        if self._threads_per_simulation is None:
+            self._threads_per_simulation = math.floor(maximum_threads / worker_threads)
 
-        if worker_threads * threads_per_simulation > maximum_threads:
+        if worker_threads * self._threads_per_simulation > maximum_threads:
 
             raise ValueError('The total number of requested threads (' +
-                             str(worker_threads * threads_per_simulation) +
+                             str(worker_threads * self._threads_per_simulation) +
                              ') must be less than the available ' + str(maximum_threads))
 
-        logging.info(str(threads_per_simulation) + ' threads will be used per'
-                                                   ' openMM simulation')
+        logging.info(str(self._threads_per_simulation) + ' threads will be used per'
+                                                         ' openMM simulation')
 
         os.environ["OPENMM_NUM_THREADS"] = str(threads_per_simulation)
 
@@ -991,34 +1043,25 @@ class PropertyCalculationRunner:
 
             calculation = calculation_graph.calculations_to_run[calculation_uuid]
 
-            for leaf_protocol_id in calculation.leaf_node_ids:
+            value_protocol = calculation.protocols[calculation.final_value_reference.output_protocol_id]
+            uncertainty_protocol = calculation.protocols[calculation.final_uncertainty_reference.output_protocol_id]
 
-                leaf_protocol = calculation.protocols[leaf_protocol_id]
+            value = value_protocol.get_output_value(calculation.final_value_reference)
+            uncertainty = uncertainty_protocol.get_output_value(calculation.final_uncertainty_reference)
 
-                if not isinstance(leaf_protocol, protocols.AveragePropertyProtocol):
-                    continue
+            property_type = calculation.property_type
 
-                property_type = calculation.property_type
+            calculated_property = CalculatedPhysicalProperty()
 
-                # if isinstance(leaf_protocol, protocols.ExtractAverageDensity):
-                #     property_type = PropertyType.Density
-                # elif isinstance(leaf_protocol, protocols.ExtractAverageDielectric):
-                #     property_type = PropertyType.DielectricConstant
-                #
-                # if property_type is PropertyType.Undefined:
-                #     continue
+            calculated_property.substance = calculation.physical_property.substance
+            calculated_property.thermodynamic_state = calculation.physical_property.thermodynamic_state
 
-                calculated_property = CalculatedPhysicalProperty()
+            calculated_property.type = property_type
+            calculated_property.phase = PropertyPhase.Liquid
 
-                calculated_property.substance = calculation.physical_property.substance
-                calculated_property.thermodynamic_state = calculation.physical_property.thermodynamic_state
+            calculated_property.fidelity = CalculationFidelity.DirectSimulation
 
-                calculated_property.type = property_type
-                calculated_property.phase = PropertyPhase.Liquid
+            calculated_property.value = value
+            calculated_property.uncertainty = uncertainty
 
-                calculated_property.fidelity = CalculationFidelity.DirectSimulation
-
-                calculated_property.value = leaf_protocol.value
-                calculated_property.uncertainty = leaf_protocol.uncertainty
-
-                self.calculated_properties[str(calculated_property.substance)].append(calculated_property)
+            self.calculated_properties[str(calculated_property.substance)].append(calculated_property)

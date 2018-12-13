@@ -1,2 +1,3 @@
-from .properties import MeasuredPhysicalProperty, CalculatedPhysicalProperty, PropertyType, PropertyPhase, CalculationFidelity
+from .properties import MeasuredPhysicalProperty, CalculatedPhysicalProperty, \
+    PhysicalProperty, PropertyType, PropertyPhase, CalculationFidelity
 

@@ -128,3 +128,20 @@ def test_is_acyclic():
     }
 
     assert not graph.is_acyclic(dummy_graph4)
+
+
+def test_append_uuid():
+    """Test appending a uuid to a protocol"""
+
+    dummy_uuid = '99ca09d3-3ddb-475e-b82c-22b0c12c0e25'
+    dummy_protocol_id = 'protocol_id'
+
+    appended_id = graph.append_uuid(dummy_protocol_id, dummy_uuid)
+
+    assert appended_id == '99ca09d3-3ddb-475e-b82c-22b0c12c0e25|protocol_id'
+
+    dummy_protocol_id_2 = 'd2209b46-cd33-4122-a88d-764862c71a6e|protocol_id'
+
+    appended_id_2 = graph.append_uuid(dummy_protocol_id_2, dummy_uuid)
+
+    assert appended_id_2 == '99ca09d3-3ddb-475e-b82c-22b0c12c0e25|protocol_id'

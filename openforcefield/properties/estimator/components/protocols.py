@@ -34,7 +34,7 @@ from pymbar import timeseries
 
 from openeye import oechem, oeomega
 
-from openforcefield.utils import packmol
+from openforcefield.utils import packmol, graph
 from openforcefield.utils.exceptions import XmlNodeMissingException
 from openforcefield.typing.engines import smirnoff
 
@@ -78,8 +78,8 @@ class ProtocolInputReference:
         The name of the property which will output the required input.
     grouped_protocol_id: str, optional
         The name of the protocol which has been grouped to take output from. When set,
-        `output_protocol_id` should refer to the name of the `ProtocolGroup` which contains
-        the protocol identified by grouped_protocol_id.
+        `output_protocol_id` should refer to the name of the ProtocolGroup which contains
+        the protocol identified by `grouped_protocol_id`.
     """
 
     def __init__(self, input_property_name, output_protocol_id, output_property_name):
@@ -108,6 +108,42 @@ class ProtocolInputReference:
     def __ne__(self, other):
         """Returns true if the two inputs are not equal."""
         return not (self == other)
+
+    def set_uuid(self, uuid):
+        """Appends a uuid to each of the protocol ids
+
+        Notes
+        ----------
+        Existing uuid's will be overwritten.
+
+        Parameters
+        ----------
+        uuid : str
+            The uuid to append.
+        """
+
+        if self.output_protocol_id is not None and self.output_protocol_id != 'global':
+            self.output_protocol_id = graph.append_uuid(self.output_protocol_id, uuid)
+        if self.grouped_protocol_id is not None and self.grouped_protocol_id != 'global':
+            self.grouped_protocol_id = graph.append_uuid(self.grouped_protocol_id, uuid)
+
+    def replace_protocol(self, old_id, new_id):
+        """Redirect the input to point at a new protocol.
+
+        The main use of this method is when merging multiple protocols
+        into one.
+
+        Parameters
+        ----------
+        old_id : str
+            The id of the protocol to replace.
+        new_id : str
+            The id of the new protocol to use.
+        """
+        if self.output_protocol_id is not None:
+            self.output_protocol_id = self.output_protocol_id.replace(old_id, new_id)
+        if self.grouped_protocol_id is not None:
+            self.grouped_protocol_id = self.grouped_protocol_id.replace(old_id, new_id)
 
 
 class BaseProtocol:
@@ -254,39 +290,46 @@ class BaseProtocol:
         if self.id.find(value) >= 0:
             return
 
-        self.id = value + '|' + self.id
+        self.id = graph.append_uuid(self.id, value)
 
         for input_reference in self.input_references:
+            input_reference.set_uuid(value)
 
-            if input_reference.output_protocol_id == 'global':
-                continue
-
-            if input_reference.output_protocol_id.find(value) < 0:
-                input_reference.output_protocol_id = value + '|' + input_reference.output_protocol_id
-
-            if input_reference.grouped_protocol_id is not None and \
-               input_reference.grouped_protocol_id.find(value) < 0:
-
-                input_reference.grouped_protocol_id = value + '|' + input_reference.grouped_protocol_id
-
-    def rename_input_id(self, old_value, new_value):
+    def replace_protocol(self, old_id, new_id):
         """Finds each input which came from a given protocol
-         and changes it to instead take input from a different one.
+         and redirects it to instead take input from a new one.
+
+        The main use of this method is when merging multiple protocols
+        into one.
 
         Parameters
         ----------
-        old_value : str
+        old_id : str
             The id of the old input protocol.
-        new_value : str
+        new_id : str
             The id of the new input protocol.
         """
         for input_reference in self.input_references:
+            input_reference.replace_protocol(old_id, new_id)
 
-            if input_reference.output_protocol_id == old_value:
-                input_reference.output_protocol_id = new_value
+    def set_global_properties(self, global_properties):
+        """Set the value of any inputs which takes values
+        from the 'global' (i.e property to calculate) scope
 
-            if input_reference.grouped_protocol_id == old_value:
-                input_reference.grouped_protocol_id = new_value
+        Parameters
+        ----------
+        global_properties: dict of str to object
+            The list of global properties to draw from.
+        """
+        for input_reference in self.input_references:
+
+            if input_reference.output_protocol_id != 'global':
+                continue
+
+            if input_reference.output_property_name not in global_properties:
+                raise Exception('Invalid global property: {}'.format(input_reference.output_property_name))
+
+            self.set_input_value(input_reference, global_properties[input_reference.output_property_name])
 
     def can_merge(self, other):
         """Determines whether this protocol can be merged with another.
@@ -387,10 +430,20 @@ class BaseProtocol:
         ----------
         The names of the attributes decorated with the specified decorator.
         """
-        inputs = [attribute_name for attribute_name in type(self).__dict__ if
-                  type(type(self).__dict__[attribute_name]) is decorator_type]
+        inputs = []
 
-        for base in type(self).__bases__:
+        def get_bases(current_base_type):
+
+            bases = [current_base_type]
+
+            for base_type in current_base_type.__bases__:
+                bases.extend(get_bases(base_type))
+
+            return bases
+
+        all_bases = get_bases(type(self))
+
+        for base in all_bases:
 
             inputs.extend([attribute_name for attribute_name in base.__dict__ if
                            type(base.__dict__[attribute_name]) is decorator_type])
@@ -1184,8 +1237,8 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
 
         dielectric = mdtraj.geometry.static_dielectric(self.trajectory, charge_list, temperature)
 
-        self._value = dielectric
-        self._uncertainty = dielectric_sigma
+        self._value = unit.Quantity(dielectric, None)
+        self._uncertainty = unit.Quantity(dielectric_sigma, None)
 
         logging.info('Extracted dielectrics: ' + directory)
 
