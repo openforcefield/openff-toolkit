@@ -42,6 +42,8 @@ import re
 import numpy
 import random
 
+from io import BytesIO
+
 import openeye.oechem
 import openeye.oeomega
 import openeye.oequacpac
@@ -692,30 +694,30 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
     def setParameter(self, params, smirks=None, paramID=None, force_type="Implied"):
         """Get info associated with a particular parameter as specified by SMIRKS or parameter ID, and optionally force term.
 
-    Parameters
-    ----------
-    params : dict
-        Dictionary of attributes (parameters and their descriptions) for XML,
-        i.e. as output by getParameter.
-    smirks (optional) : str
-        Default None. If specified, will set parameters on line containing this `smirks`.
-    paramID (optional) : str
-        Default None. If specified, will set parameters on line with this `id`
-    force_type (optional) : str
-        Default "Implied". Optionally, specify a particular force type such as
-        "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a
-        matching ID or SMIRKS.
+            Parameters
+            ----------
+            params : dict
+                Dictionary of attributes (parameters and their descriptions) for XML,
+                i.e. as output by getParameter.
+            smirks (optional) : str
+                Default None. If specified, will set parameters on line containing this `smirks`.
+            paramID (optional) : str
+                Default None. If specified, will set parameters on line with this `id`
+            force_type (optional) : str
+                Default "Implied". Optionally, specify a particular force type such as
+                "HarmonicBondForce" or "HarmonicAngleForce" etc. to search for a
+                matching ID or SMIRKS.
 
 
-    Returns
-    -------
-    status : bool
-        True/False as to whether that parameter was found and successfully set
+            Returns
+            -------
+            status : bool
+                True/False as to whether that parameter was found and successfully set
 
-Usage notes: SMIRKS or parameter ID must be specified.
+        Usage notes: SMIRKS or parameter ID must be specified.
 
-To do: Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
-"""
+        To do: Update behavior of "Implied" force_type so it raises an exception if the parameter is not uniquely identified by the provided info.
+        """
         # Check for valid input
         if smirks and paramID:
             raise ValueError("Error: Specify SMIRKS OR parameter ID but not both.")
@@ -1072,6 +1074,40 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
                 # Grab force terms of this type for this molecule and store
                 molecule_labels[idx][forcelabel] = force.labelForce( mol, verbose=verbose )
         return molecule_labels
+
+    def __getstate__(self):
+
+        return_dict = {}
+
+        for index, xml_tree in enumerate(self._XMLTrees):
+            return_dict[index] = etree.tostring(xml_tree, pretty_print=True)
+
+        return return_dict
+
+    # restore object state from data representation generated
+    # by __getstate__
+    def __setstate__(self, state_dictionary):
+
+        self._XMLTrees = list()
+
+        for index in state_dictionary:
+
+            parser = etree.XMLParser(remove_blank_text=True)
+            xml_as_io = BytesIO(state_dictionary[index])
+
+            # this handles either filenames or open file-like objects
+            tree = etree.parse(xml_as_io, parser)
+
+            self._XMLTrees.append(tree)
+
+        # Store whether this has been modified or not; if modified, it will
+        # trigger re-parsing/loading of XML on system creation
+        self._XMLModified = False
+
+        # Parse XML, get force definitions
+        self.parseXMLTrees()
+
+        # self.__dict__ = state_dictionary  # make dict our attribute dictionary
 
 #=============================================================================================
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being
