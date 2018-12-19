@@ -19,6 +19,7 @@ Authors
 # =============================================================================================
 
 import logging
+import re
 
 from openforcefield.properties.estimator.runner import PropertyCalculationRunner
 
@@ -38,7 +39,11 @@ def register_estimable_property():
     """
 
     def decorator(cls):
-        PropertyEstimator.registered_properties[type(cls)] = cls
+
+        if cls.__name__ in PropertyEstimator.registered_properties:
+            raise ValueError('The {} property is already registered.'.format(cls.__name__))
+
+        PropertyEstimator.registered_properties[cls.__name__] = cls
         return cls
 
     return decorator

@@ -8,14 +8,14 @@
         <protocols>
 
             <!--Setup-->
-            <BuildLiquidCoordinates>
+            <BuildCoordinatesPackmol>
                 <id>build_coordinates</id>
                 <inputs>
                     <input property="substance">global:substance</input>
                 </inputs>
                 <max_molecules>128</max_molecules>
                 <mass_density>1.0</mass_density>
-            </BuildLiquidCoordinates>
+            </BuildCoordinatesPackmol>
 
             <BuildSmirnoffTopology>
                 <id>build_topology</id>

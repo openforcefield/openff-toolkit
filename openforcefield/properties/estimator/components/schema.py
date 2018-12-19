@@ -18,9 +18,8 @@ from pydantic import BaseModel, validator
 
 from typing import List, Dict, Optional
 
-from openforcefield.properties.estimator.components.protocols import BaseProtocol, ProtocolInputReference, \
-    ProtocolSchema
-from openforcefield.properties.estimator.components.groups import ProtocolGroup
+from openforcefield.properties.estimator.components.protocols import ProtocolInputReference, ProtocolSchema
+from openforcefield.properties.estimator.components.groups import ProtocolGroupSchema
 
 
 # =============================================================================================
@@ -34,36 +33,10 @@ class CalculationSchema(BaseModel):
     id: str = None
 
     protocols: Dict[str, ProtocolSchema] = {}
-    # groups: Dict[str, ProtocolGroup] = {}
+    groups: Dict[str, ProtocolGroupSchema] = {}
 
     final_value_reference: Optional[ProtocolInputReference] = None
     final_uncertainty_reference: Optional[ProtocolInputReference] = None
-
-    @validator('protocols', pre=True, whole=True)
-    def validate_protocol_references(cls, v):
-        """Make sure that protocols only take input from
-        protocols which actually exist and provide the correct
-        output.
-        """
-        return v
-
-    # @validator('groups', whole=True)
-    # def validate_group_references(cls, v):
-    #     """Make sure that groups only reference valid protocols."""
-    #     return v
-
-    @validator('final_value_reference')
-    def validate_final_value_reference(cls, v):
-        """Make sure that the reference points to a
-        protocol that actually exists."""
-        return v
-
-    @validator('final_uncertainty_reference')
-    def validate_final_uncertainty_reference(cls, v):
-        """Make sure that the reference points to a
-        protocol that actually exists."""
-        return v
-
 
 # class CalculationSchema:
 #     """Defines the set of protocols required to calculate a certain property.

@@ -24,17 +24,20 @@ import logging
 from os import path
 from enum import Enum, unique
 
+from pydantic import BaseModel
+from typing import List
+
 from openforcefield.utils import graph
 from openforcefield.utils.exceptions import XmlNodeMissingException
 
-from .protocols import BaseProtocol, ProtocolInputReference
+from .protocols import BaseProtocol, ProtocolInputReference, ProtocolSchema
 
 
 # =============================================================================================
 # Registration Decorators
 # =============================================================================================
 
-available_groups = []
+available_groups = {}
 
 
 def register_calculation_group():
@@ -43,7 +46,12 @@ def register_calculation_group():
     """
 
     def decorator(cls):
-        available_groups.append(cls)
+        
+        if cls.__name__ in available_groups:
+            raise ValueError('The {} group is already registered.'.format(cls.__name__))
+
+        available_groups[cls.__name__] = cls
+        
         return cls
 
     return decorator
@@ -52,6 +60,13 @@ def register_calculation_group():
 # =============================================================================================
 # Groups
 # =============================================================================================
+
+class ProtocolGroupSchema(ProtocolSchema):
+    """A json serializable representation of a protocol
+    definition.
+    """
+    grouped_protocol_ids: List[str] = []
+
 
 @register_calculation_group()
 class ProtocolGroup(BaseProtocol):
@@ -83,6 +98,8 @@ class ProtocolGroup(BaseProtocol):
         self._execution_order = []
 
         self._protocols = {}
+
+        self._input_references = []
 
         # Groups can take additional global
         # inputs which the grouped protocols themselves
@@ -119,6 +136,26 @@ class ProtocolGroup(BaseProtocol):
 
         self._root_protocols = graph.find_root_nodes(self._dependants_graph)
         self._execution_order = graph.topological_sort(self._dependants_graph)
+
+    @property
+    def schema(self):
+        """ProtocolSchema: Returns a serializable schema for this object."""
+
+        base_schema = super(ProtocolGroup, self).schema
+        schema = ProtocolGroupSchema.parse_obj(base_schema.dict())
+
+        schema.input_references = self._input_references
+
+        for protocol_id in self._protocols:
+            schema.grouped_protocol_ids.append(protocol_id)
+
+        return schema
+
+    @schema.setter
+    def schema(self, schema_value):
+        """Sets this protocols properties (i.e id and parameters)
+        from a ProtocolSchema"""
+        raise NotImplementedError()
 
     @property
     def protocols(self):

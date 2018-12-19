@@ -36,7 +36,7 @@ from openeye import oechem, oeomega
 
 from openforcefield.utils import packmol, graph
 from openforcefield.utils.exceptions import XmlNodeMissingException
-from openforcefield.utils.serialization import quantity_to_json
+from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity
 
 from openforcefield.typing.engines import smirnoff
 
@@ -48,7 +48,7 @@ from simtk.openmm import app
 # Registration Decorators
 # =============================================================================================
 
-available_protocols = []
+available_protocols = {}
 
 
 def register_calculation_protocol():
@@ -57,7 +57,11 @@ def register_calculation_protocol():
     """
 
     def decorator(cls):
-        available_protocols.append(cls)
+
+        if cls.__name__ in available_protocols:
+            raise ValueError('The {} protocol is already registered.'.format(cls.__name__))
+
+        available_protocols[cls.__name__] = cls
         return cls
 
     return decorator
@@ -166,7 +170,9 @@ class ProtocolInputReference(BaseModel):
 
 
 class ProtocolSchema(BaseModel):
-
+    """A json serializable representation of a protocol
+    definition.
+    """
     id: str = None
     type: str = None
 
@@ -309,7 +315,7 @@ class BaseProtocol:
         schema = ProtocolSchema()
 
         schema.id = self.id
-        schema.type = str(type(self))
+        schema.type = type(self).__name__
 
         schema.input_references = self.input_references
 
@@ -318,11 +324,33 @@ class BaseProtocol:
             value = getattr(self, parameter)
 
             if isinstance(value, unit.Quantity):
-                value = quantity_to_json(value)
+                value = serialize_quantity(value)
 
             schema.parameters[parameter] = value
 
         return schema
+
+    @schema.setter
+    def schema(self, schema_value):
+        """Sets this protocols properties (i.e id and parameters)
+        from a ProtocolSchema"""
+        self.id = schema_value.id
+
+        if type(self).__name__ != schema_value.type:
+            # Make sure this object is the correct type.
+            raise ValueError('Cannot convert a {} protocol to a {}.'
+                             .format(str(type(self)), schema_value.type))
+
+        self.input_references = schema_value.input_references
+
+        for parameter in schema_value.parameters:
+
+            value = schema_value.parameters[parameter]
+
+            if isinstance(value, dict) and 'unit' in value and 'unitless_value' in value:
+                value = deserialize_quantity(value)
+
+            setattr(self, parameter, value)
 
     def execute(self, directory):
         """ Execute the protocol.
@@ -585,7 +613,7 @@ class BaseProtocol:
 
 
 @register_calculation_protocol()
-class BuildLiquidCoordinates(BaseProtocol):
+class BuildCoordinatesPackmol(BaseProtocol):
     """Create 3D coordinates and bond information for a given Substance
 
     The coordinates are created using packmol.
@@ -754,7 +782,7 @@ class BuildLiquidCoordinates(BaseProtocol):
     @classmethod
     def from_xml(cls, xml_node):
 
-        return_value = super(BuildLiquidCoordinates, cls).from_xml(xml_node)
+        return_value = super(BuildCoordinatesPackmol, cls).from_xml(xml_node)
 
         max_molecules_node = xml_node.find('max_molecules')
 
@@ -770,7 +798,7 @@ class BuildLiquidCoordinates(BaseProtocol):
 
     def can_merge(self, protocol):
 
-        return super(BuildLiquidCoordinates, self).can_merge(protocol) and \
+        return super(BuildCoordinatesPackmol, self).can_merge(protocol) and \
                self._max_molecules == protocol.max_molecules and \
                self._mass_density == protocol.mass_density
 

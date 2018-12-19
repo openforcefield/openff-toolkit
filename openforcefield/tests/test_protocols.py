@@ -12,6 +12,10 @@ from openforcefield.typing.engines import smirnoff
 from openforcefield.utils import get_data_filename
 
 from openforcefield.properties.estimator.components import protocols, groups
+
+from openforcefield.properties.estimator.components.protocols import available_protocols
+from openforcefield.properties.estimator.components.groups import available_groups
+
 from openforcefield.properties.estimator.components.protocols import ProtocolInputReference
 from openforcefield.properties.estimator import client, CalculationSchema
 
@@ -23,7 +27,7 @@ def test_calculation_schema():
     schema.property_type = str(type(Density))
     schema.id = 'DensitySchema'
 
-    build_coordinates = protocols.BuildLiquidCoordinates()
+    build_coordinates = protocols.BuildCoordinatesPackmol()
     build_coordinates.id = 'build_coordinates'
 
     build_coordinates.input_references = [
@@ -55,7 +59,24 @@ def test_calculation_schema():
 
     schema.protocols[assign_topology.id] = assign_topology.schema
 
-    print(schema.json())
+    converge_uncertainty = groups.ConditionalGroup({
+        build_coordinates.id: build_coordinates,
+        assign_topology.id: assign_topology
+    })
+
+    converge_uncertainty.id = 'converge_uncertainty'
+
+    schema.groups[converge_uncertainty.id] = converge_uncertainty.schema
+
+    json_object = schema.json()
+    print(json_object)
+
+    schema_from_json = CalculationSchema.parse_raw(json_object)
+
+    test_object = available_protocols[schema.protocols[build_coordinates.id].type]()
+    test_object.schema = schema_from_json.protocols[build_coordinates.id]
+
+    print(schema)
 
 
 def run_property_estimator():
@@ -96,5 +117,4 @@ def run_property_estimator():
 
 
 if __name__ == "__main__":
-    test_calculation_schema()
-    # run_property_estimator()
+    run_property_estimator()

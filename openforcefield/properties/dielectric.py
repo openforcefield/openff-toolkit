@@ -31,13 +31,15 @@ from openforcefield.properties.datasets import register_thermoml_property
 
 from openforcefield.properties.estimator import CalculationSchema, register_estimable_property
 from openforcefield.properties.estimator.components import protocols, groups
-from openforcefield.properties.estimator.components.protocols import AverageTrajectoryProperty, ProtocolInputReference
+from openforcefield.properties.estimator.components.protocols import AverageTrajectoryProperty, \
+    ProtocolInputReference, register_calculation_protocol
 
 
 # =============================================================================================
 # Custom Protocol Building Blocks
 # =============================================================================================
 
+@register_calculation_protocol()
 class ExtractAverageDielectric(AverageTrajectoryProperty):
     """Extracts the average dielectric constant from a simulation trajectory.
     """
@@ -135,7 +137,7 @@ class DielectricConstant(PhysicalProperty):
         schema = CalculationSchema(type(DielectricConstant))
 
         # Initial coordinate and topology setup.
-        build_coordinates = protocols.BuildLiquidCoordinates()
+        build_coordinates = protocols.BuildCoordinatesPackmol()
         build_coordinates.id = 'build_coordinates'
 
         build_coordinates.input_references = [
