@@ -24,6 +24,27 @@ from openforcefield.properties.estimator.runner import PropertyCalculationRunner
 
 
 # =============================================================================================
+# Registration Decorators
+# =============================================================================================
+
+def register_estimable_property():
+    """A decorator which registers a property as being estimable
+    by the property estimator.
+
+    Notes
+    -----
+    The property must implement a static get_calculation_template method
+    which returns the calculation schema to follow.
+    """
+
+    def decorator(cls):
+        PropertyEstimator.registered_properties[type(cls)] = cls
+        return cls
+
+    return decorator
+
+
+# =============================================================================================
 # Property Estimator
 # =============================================================================================
 
@@ -33,6 +54,8 @@ class PropertyEstimator(object):
     be calculated by the low-level property calculation backend,
     and for analysing the performance of the parameters.
     """
+
+    registered_properties = {}
 
     @staticmethod
     def compute_properties(data_set, parameter_set, worker_threads=1):

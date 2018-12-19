@@ -38,7 +38,7 @@ from openeye import oeiupac
 
 from simtk import unit
 
-from openforcefield.properties.properties import PropertyPhase, PropertyType, Source, MeasuredPhysicalProperty
+from openforcefield.properties.properties import PhysicalProperty, PropertyPhase, MeasurementSource
 from openforcefield.properties.substances import Mixture
 from openforcefield.properties.thermodynamics import ThermodynamicState
 
@@ -46,8 +46,23 @@ from .property_dataset import PhysicalPropertyDataSet
 
 
 # =============================================================================================
-# Temporary Helper Methods
+# Helper Methods
 # =============================================================================================
+
+def register_thermoml_property(thermoml_string):
+    """A decorator which registers information on how to parse a given
+    ThermoML property
+
+    For now this only takes input of a thermoML string, but in future
+    will give greater control over exactly how ThermoML XML gets parsed
+    to an actual property."""
+
+    def decorator(cls):
+        ThermoMLDataSet.registered_properties[thermoml_string] = cls
+        return cls
+
+    return decorator
+
 
 def unit_from_thermoml_string(full_string):
     """A non-ideal way to convert a string to a simtk.unit.Unit
@@ -163,7 +178,7 @@ class ThermoMLConstraintType(IntEnum):
 
 
 # =============================================================================================
-# ThermoMLConstraint
+# ThermoML Constraints
 # =============================================================================================
 
 class ThermoMLConstraint:
@@ -248,10 +263,6 @@ class ThermoMLConstraint:
         return return_value
 
 
-# =============================================================================================
-# ThermoMLVariableDefinition
-# =============================================================================================
-
 class ThermoMLVariableDefinition:
     """A wrapper around a ThermoML Variable node.
     """
@@ -307,7 +318,72 @@ class ThermoMLVariableDefinition:
 
 
 # =============================================================================================
-# ThermoMLCompound
+# ThermoML Uncertainties
+# =============================================================================================
+
+class ThermoMLPropertyUncertainty:
+    """A wrapper around a ThermoML PropUncertainty node.
+    """
+
+    # Reduce code redundancy by reusing this class for
+    # both property and combined uncertainties.
+    prefix = ''
+
+    def __init__(self):
+
+        self.index = -1
+        self.coverage_factor = None
+
+    @classmethod
+    def from_xml(cls, node, namespace):
+        """Creates a ThermoMLPropertyUncertainty from an xml node.
+
+        Parameters
+        ----------
+        node : Element
+            The xml node to convert.
+        namespace : str
+            The xml namespace.
+
+        Returns
+        ----------
+        ThermoMLCompound
+            The created property uncertainty.
+        """
+
+        coverage_factor_node = node.find('ThermoML:n' + cls.prefix + 'CoverageFactor', namespace)
+        confidence_node = node.find('ThermoML:n' + cls.prefix + 'UncertLevOfConfid', namespace)
+
+        coverage_factor = None
+
+        # TODO: Does a confidence interval definitely equate to a coverage of 2?
+        if coverage_factor_node is not None:
+            coverage_factor = float(coverage_factor_node.text)
+        elif confidence_node is not None and confidence_node.text == '95':
+            coverage_factor = 2
+        else:
+            return None
+
+        index_node = node.find('ThermoML:n' + cls.prefix + 'UncertAssessNum', namespace)
+        index = int(index_node.text)
+
+        return_value = cls()
+
+        return_value.coverage_factor = coverage_factor
+        return_value.index = index
+
+        return return_value
+
+
+class ThermoMLCombinedUncertainty(ThermoMLPropertyUncertainty):
+    """A wrapper around a ThermoML CombPropUncertainty node.
+    """
+
+    prefix = 'Comb'
+
+
+# =============================================================================================
+# ThermoML Compound
 # =============================================================================================
 
 class ThermoMLCompound:
@@ -413,17 +489,19 @@ class ThermoMLCompound:
 
 
 # =============================================================================================
-# ThermoMLProperty
+# ThermoML Properties
 # =============================================================================================
 
-class ThermoMLProperty(MeasuredPhysicalProperty):
+class ThermoMLProperty(PhysicalProperty):
     """A wrapper around a ThermoML Property node.
     """
-    def __init__(self):
+    def __init__(self, base_type):
 
         super().__init__()
 
         self.index = None
+
+        self.type = base_type
 
         self.solvents = []
 
@@ -431,32 +509,6 @@ class ThermoMLProperty(MeasuredPhysicalProperty):
         self.combined_uncertainty_definitions = {}
 
         self.default_unit = None
-
-    @staticmethod
-    def property_string_to_enum(string):
-        """Converts a ThermoML property string to an internal PropertyType
-
-        Parameters
-        ----------
-        string : str
-            The string to convert.
-
-        Returns
-        ----------
-        str, None
-            None if the string cannot be converted, otherwise the converted property type.
-        """
-        string_split = string.split(',')
-        return_value = PropertyType.Undefined
-
-        property_string = string_split[0] if len(string_split) > 0 else None
-
-        if property_string == 'Mass density':
-            return_value = PropertyType.Density
-        elif property_string == 'Relative permittivity at zero frequency':
-            return_value = PropertyType.DielectricConstant
-
-        return return_value
 
     @staticmethod
     def extract_uncertainty_definitions(node, namespace,
@@ -557,16 +609,16 @@ class ThermoMLProperty(MeasuredPhysicalProperty):
         if method_name_node is None or property_name_node is None:
             raise RuntimeError('A property does not have a name / method entry.')
 
-        property_type = ThermoMLProperty.property_string_to_enum(property_name_node.text)
+        if property_name_node.text not in ThermoMLDataSet.registered_properties:
 
-        if property_type == PropertyType.Undefined:
-
-            logging.warning('An unsupported property was found (' + property_name_node.text +
-                            ') and will be skipped.')
+            logging.warning('An unsupported property was found ({}) and '
+                            'will be skipped.'.format(property_name_node.text))
 
             return None
 
-        return_value = cls()
+        property_type = ThermoMLDataSet.registered_properties[property_name_node.text]
+
+        return_value = cls(property_type)
 
         return_value.index = property_index
         return_value.phase = phase
@@ -615,79 +667,6 @@ class ThermoMLProperty(MeasuredPhysicalProperty):
         self.value = value_quantity
         self.uncertainty = uncertainty_quantity
 
-
-# =============================================================================================
-# ThermoMLPropertyUncertainty
-# =============================================================================================
-
-class ThermoMLPropertyUncertainty:
-    """A wrapper around a ThermoML PropUncertainty node.
-    """
-
-    # Reduce code redundancy by reusing this class for
-    # both property and combined uncertainties.
-    prefix = ''
-
-    def __init__(self):
-
-        self.index = -1
-        self.coverage_factor = None
-
-    @classmethod
-    def from_xml(cls, node, namespace):
-        """Creates a ThermoMLPropertyUncertainty from an xml node.
-
-        Parameters
-        ----------
-        node : Element
-            The xml node to convert.
-        namespace : str
-            The xml namespace.
-
-        Returns
-        ----------
-        ThermoMLCompound
-            The created property uncertainty.
-        """
-
-        coverage_factor_node = node.find('ThermoML:n' + cls.prefix + 'CoverageFactor', namespace)
-        confidence_node = node.find('ThermoML:n' + cls.prefix + 'UncertLevOfConfid', namespace)
-
-        coverage_factor = None
-
-        # TODO: Does a confidence interval definitely equate to a coverage of 2?
-        if coverage_factor_node is not None:
-            coverage_factor = float(coverage_factor_node.text)
-        elif confidence_node is not None and confidence_node.text == '95':
-            coverage_factor = 2
-        else:
-            return None
-
-        index_node = node.find('ThermoML:n' + cls.prefix + 'UncertAssessNum', namespace)
-        index = int(index_node.text)
-
-        return_value = cls()
-
-        return_value.coverage_factor = coverage_factor
-        return_value.index = index
-
-        return return_value
-
-
-# =============================================================================================
-# ThermoMLCombinedUncertainty
-# =============================================================================================
-
-class ThermoMLCombinedUncertainty(ThermoMLPropertyUncertainty):
-    """A wrapper around a ThermoML CombPropUncertainty node.
-    """
-
-    prefix = 'Comb'
-
-
-# =============================================================================================
-# ThermoMLPureOrMixtureData
-# =============================================================================================
 
 class ThermoMLPureOrMixtureData:
     """A wrapper around a ThermoML PureOrMixtureData node.
@@ -1275,6 +1254,8 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
 
     """
 
+    registered_properties = {}
+
     def __init__(self):
 
         super().__init__()
@@ -1300,7 +1281,7 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
             # E.g https://trc.nist.gov/ThermoML/10.1016/j.jct.2016.12.009.xml
             doi_url = 'https://trc.nist.gov/ThermoML/' + doi + '.xml'
 
-            data_set = cls._from_url(doi_url, Source(doi=doi))
+            data_set = cls._from_url(doi_url, MeasurementSource(doi=doi))
 
             if data_set is None or len(data_set.properties) == 0:
                 continue
@@ -1360,7 +1341,7 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
             The loaded data set. 
         """
         if source is None:
-            source = Source(reference=url)
+            source = MeasurementSource(reference=url)
 
         return_value = None
 
@@ -1423,7 +1404,7 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
         ThermoMLDataSet
             The loaded data set. 
         """
-        source = Source(reference=path)
+        source = MeasurementSource(reference=path)
         return_value = None
 
         try:
@@ -1500,12 +1481,22 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
                 if substance_hash not in return_value._properties:
                     return_value._properties[substance_hash] = []
 
-                return_value._properties[substance_hash].append(measured_property)
+                if measured_property.type is None:
+                    raise ValueError('An unexepected property type managed to slip through the cracks.')
 
-        for substance_hash in return_value._properties:
-            # Set the source of the data.
-            for measured_property in return_value._properties[substance_hash]:
-                measured_property.source = source
+                final_property: PhysicalProperty = measured_property.type()
+
+                final_property.value = measured_property.value
+                final_property.uncertainty = measured_property.uncertainty
+
+                final_property.phase = measured_property.phase
+
+                final_property.thermodynamic_state = measured_property.thermodynamic_state
+                final_property.substance = measured_property.substance
+
+                final_property.source = source
+
+                return_value._properties[substance_hash].append(final_property)
 
         return_value._sources.append(source)
 

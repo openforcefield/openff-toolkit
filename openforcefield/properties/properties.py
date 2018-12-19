@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 
 # =============================================================================================
 # MODULE DOCSTRING
@@ -18,6 +18,20 @@ Authors
 # =============================================================================================
 
 from enum import Enum, IntFlag, unique
+from pydantic import BaseModel
+
+
+# =============================================================================================
+# Property Registry
+# =============================================================================================
+
+registered_properties = {}
+
+
+def register_property(cls):
+
+    registered_properties[cls.__name__] = cls
+    return cls
 
 
 # =============================================================================================
@@ -25,43 +39,14 @@ from enum import Enum, IntFlag, unique
 # =============================================================================================
 
 @unique
-class PropertyType(IntFlag):
-    """An enum describing the type of property that was collected.
-    """
-
-    Undefined          = 0x00
-    Density            = 0x01
-    DielectricConstant = 0x02
-
-    def __str__(self):
-        """
-        Returns
-        ---
-        str
-            A string representation of the PropertyType enum
-        """
-        phases = '|'.join([phase.name for phase in PropertyType if self & phase])
-        return phases
-
-    def __repr__(self):
-        """
-        Returns
-        ---
-        str
-            A string representation of the PropertyType enum
-        """
-        return str(self)
-
-
-@unique
 class PropertyPhase(IntFlag):
     """An enum describing the phase a property was collected in.
     """
 
     Undefined = 0x00
-    Solid     = 0x01
-    Liquid    = 0x02
-    Gas       = 0x04
+    Solid = 0x01
+    Liquid = 0x02
+    Gas = 0x04
 
     def __str__(self):
         """
@@ -85,57 +70,100 @@ class PropertyPhase(IntFlag):
 
 @unique
 class CalculationFidelity(Enum):
-    """An enum describing the fidelity at which a calculation was performed.
+    """An enum describing the fidelity at which a property was measured.
     """
-
-    SurrogateModel =   1
-    Reweighting =      2
+    SurrogateModel = 1
+    Reweighting = 2
     DirectSimulation = 3
 
 
 # =============================================================================================
-# Property Source
+# Property Sources
 # =============================================================================================
 
-class Source(object):
-    """Container class for DOI and reference for a given observable
+class Source(BaseModel):
+    """Container class for information about how a property was measured / calculated.
+    """
+    pass
+
+
+class MeasurementSource(Source):
+    """Contains any metadata about how a physical property was measured by experiment.
 
     This class contains either the DOI and/or the reference, but must contain at
     least one as the observable must have a source, even if it was measured in lab.
-
-    Parameters
-    ----------
-    doi : str or None, default None
-        The DOI for the source, preferred way to identify for source
-    reference : str
-        The long form description of the source if no DOI is available, or more
-        information is needed or wanted.
     """
+
+    doi: str = None
+    reference: str = None
+
     def __init__(self, doi=None, reference=None):
+        """Constructs a new MeasurementSource
+
+        Parameters
+        ----------
+        doi : str or None, default None
+            The DOI for the source, preferred way to identify for source
+        reference : str
+            The long form description of the source if no DOI is available, or more
+            information is needed or wanted.
+        """
 
         if doi is None and reference is None:
             raise ValueError("Either a doi and / or a reference must be set")
 
-        self.doi = doi
-        self.reference = reference
+        # TODO fix pydantic structures
+        # doi = source_doi
+        # reference = source_reference
+
+        super().__init__()
+
+
+class CalculationSource(Source):
+    """Contains any metadata about how a physical property was calculated.
+
+    This includes at which fidelity the property was calculated at (e.g Direct
+    simulation, reweighting, ...) in addition to the parameters which were
+    used as part of the calculations.
+
+    Parameters
+    ----------
+    fidelity : CalculationFidelity
+        The fidelity at which the property was calculated
+    provenance : str
+        A JSON string containing information about how the property was calculated.
+    """
+
+    fidelity: CalculationFidelity = CalculationFidelity.DirectSimulation
+    provenance: str = None
+
+    def __init__(self, fidelity=None, provenance=None):
+
+        # TODO fix pydantic structures
+        # self.fidelity = fidelity
+        # self.provenance = provenance
+
+        super().__init__()
 
 
 # =============================================================================================
-# Property Representations
+# Property Definitions
 # =============================================================================================
 
-class PhysicalProperty(object):
+class PhysicalProperty:
     """Represents the value of any physical property and it's uncertainty.
 
     It additionally stores the thermodynamic state at which the property
-    was collected, the phase it was collected in, and information about
-    the composition of the observed system.
+    was collected, the phase it was collected in, information about
+    the composition of the observed system, and metadata about how the
+    property was collected.
     """
+
     def __init__(self):
+        self.thermodynamic_state = None
 
-        self._thermodynamic_state = None
+        self.source = None
 
-        self.type = PropertyType.Undefined
         self.phase = PropertyPhase.Undefined
 
         self.substance = None
@@ -146,21 +174,12 @@ class PhysicalProperty(object):
     @property
     def temperature(self):
         """simtk.unit.Quantity or None: The temperature at which the property was collected."""
-        return None if self._thermodynamic_state is None else self._thermodynamic_state.temperature
+        return None if self.thermodynamic_state is None else self.thermodynamic_state.temperature
 
     @property
     def pressure(self):
         """simtk.unit.Quantity or None: The pressure at which the property was collected."""
-        return None if self._thermodynamic_state is None else self._thermodynamic_state.pressure
-
-    @property
-    def thermodynamic_state(self):
-        """ThermodynamicState or None: The thermodynamic state at which the property was collected."""
-        return self._thermodynamic_state
-
-    @thermodynamic_state.setter
-    def thermodynamic_state(self, thermodynamic_state):
-        self._thermodynamic_state = thermodynamic_state
+        return None if self.thermodynamic_state is None else self.thermodynamic_state.pressure
 
     def set_value(self, value, uncertainty):
         """Set the value and uncertainty of this property.
@@ -175,48 +194,14 @@ class PhysicalProperty(object):
         self.value = value
         self.uncertainty = uncertainty
 
+    @staticmethod
+    def get_calculation_template():
+        """Returns the set of steps needed to calculate
+        this property by direct simulation methods.
 
-class MeasuredPhysicalProperty(PhysicalProperty):
-    """A MeasuredPhysicalProperty is the implementation of property measured
-    experimentally.
-
-    It tracks the source from which the property was extracted (e.g ThermoML).
-    """
-
-    def __init__(self):
-
-        super().__init__()
-
-        self.method_name = None
-        self._source = None
-
-    @property
-    def doi(self):
-        """str or None: The doi of the article in which this property was published"""
-        return None if self._source is None else self._source.doi
-
-    @property
-    def reference(self):
-        """str or None: The reference to the location of where this property was published"""
-        return None if self._source is None else self._source.reference
-
-    @property
-    def source(self):
-        """Source or None: The source of this published property"""
-        return self._source
-
-    @source.setter
-    def source(self, source):
-        self._source = source
-
-
-class CalculatedPhysicalProperty(PhysicalProperty):
-    """
-    A CalculatedPhysicalProperty represents a property estimated by either
-    a surrogate model, reweighting existing data, or directly from a simulation.
-    """
-
-    def __init__(self):
-
-        super().__init__()
-        self.fidelity = CalculationFidelity.DirectSimulation
+        Returns
+        -------
+        openforcefield.properties.estimator.CalculationTemplate
+            The calculation template to follow.
+        """
+        raise NotImplementedError()

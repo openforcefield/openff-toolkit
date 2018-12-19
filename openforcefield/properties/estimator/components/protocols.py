@@ -22,12 +22,9 @@ import logging
 
 import mdtraj
 
-import arch.bootstrap
-
 import numpy as np
 
 from os import path
-
 from enum import Enum
 
 from pymbar import timeseries
@@ -40,6 +37,25 @@ from openforcefield.typing.engines import smirnoff
 
 from simtk import openmm, unit
 from simtk.openmm import app
+
+
+# =============================================================================================
+# Registration Decorators
+# =============================================================================================
+
+available_protocols = []
+
+
+def register_calculation_protocol():
+    """A decorator which registers a class as being a
+    protocol which may be used in calculation schemas.
+    """
+
+    def decorator(cls):
+        available_protocols.append(cls)
+        return cls
+
+    return decorator
 
 
 # =============================================================================================
@@ -147,8 +163,7 @@ class ProtocolInputReference:
 
 
 class BaseProtocol:
-    """
-    The base class for a protocol which would form one
+    """The base class for a protocol which would form one
     step of a property calculation.
 
     A protocol may for example:
@@ -169,15 +184,15 @@ class BaseProtocol:
     ----------
     id : str, optional
         The unique identity of the protocol
-    input_references : :obj:`list` of :obj:`ProtocolInputReference`
+    input_references : list of ProtocolInputReference
         A list of the inputs which this protocol will receive.
-    self.required_inputs : :obj:`list` of :obj:`str`
+    self.required_inputs : list of str
         A list of the inputs that must be passed to this protocol.
-    self.provided_outputs : :obj:`list` of :obj:`str`
+    self.provided_outputs : list of str
         A list of the outputs that this protocol produces.
     """
 
-    class ProtocolPipe(object):
+    class ProtocolArgumentDecorator(object):
         """A custom decorator used to mark class attributes as either
          a required input, or output, of a protocol.
 
@@ -217,7 +232,7 @@ class BaseProtocol:
 
             return setattr(instance, self.attribute, value)
 
-    class InputPipe(ProtocolPipe):
+    class InputPipe(ProtocolArgumentDecorator):
         """A custom decorator used to mark properties as a required input to
         the protocol.
 
@@ -232,7 +247,7 @@ class BaseProtocol:
         def __init__(self, attribute, documentation=None):
             super().__init__(attribute, documentation)
 
-    class OutputPipe(ProtocolPipe):
+    class OutputPipe(ProtocolArgumentDecorator):
         """A custom decorator used to mark properties as an output of the
         the protocol.
 
@@ -247,6 +262,21 @@ class BaseProtocol:
         def __init__(self, attribute, documentation=None):
             super().__init__(attribute, documentation)
 
+    class Parameter(ProtocolArgumentDecorator):
+        """A custom decorator used to mark arguments as a settable parameter of
+        the protocol.
+
+        Examples
+        ----------
+        To mark an attribute as a parameter:
+
+        >>> @BaseProtocol.Parameter
+        >>> def number_of_steps(self):
+        >>>     pass
+        """
+        def __init__(self, attribute, documentation=None):
+            super().__init__(attribute, documentation)
+
     def __init__(self):
 
         # A unique identifier for this node.
@@ -256,6 +286,8 @@ class BaseProtocol:
         self.input_references = []
 
         # Find the required inputs and outputs.
+        self.parameters = self._find_types_with_decorator(BaseProtocol.Parameter)
+
         self.required_inputs = self._find_types_with_decorator(BaseProtocol.InputPipe)
         self.provided_outputs = self._find_types_with_decorator(BaseProtocol.OutputPipe)
 
@@ -508,15 +540,6 @@ class BaseProtocol:
 
                 return_value.input_references.append(protocol_input)
 
-        # loops_node = xml_node.find('loops')
-        #
-        # if loops_node is not None:
-        #
-        #     for loop_node in loops_node.findall('loop'):
-        #
-        #         if 'property' not in loop_node.attrib:
-        #             raise Exception('Protocol inputs must define a property attribute.')
-
         # Make sure this protocol is being passed all the required inputs.
         for required_input in return_value.required_inputs:
 
@@ -528,6 +551,7 @@ class BaseProtocol:
         return return_value
 
 
+@register_calculation_protocol()
 class BuildLiquidCoordinates(BaseProtocol):
     """Create 3D coordinates and bond information for a given Substance
 
@@ -535,9 +559,9 @@ class BuildLiquidCoordinates(BaseProtocol):
 
     Attributes
     ----------
-    max_molecules : int, optional, default=True
+    _max_molecules : int, optional, default=True
         The maxmimum number of molecules in the system to be created.
-    mass_density : float, simtk.unit.Quantity, or None; optional, default=None
+    _mass_density : float, simtk.unit.Quantity, or None; optional, default=None
         If provided, will aid in the selecting an initial box size.
     """
 
@@ -556,8 +580,16 @@ class BuildLiquidCoordinates(BaseProtocol):
         self._molecules = None
 
         # TODO: Determine the maximum number of molecules automatically
-        self.max_molecules = 100
-        self.mass_density = 1.0 * unit.grams / unit.milliliters
+        self._max_molecules = 128
+        self._mass_density = 1.0 * unit.grams / unit.milliliters
+
+    @BaseProtocol.Parameter
+    def max_molecules(self):
+        pass
+
+    @BaseProtocol.Parameter
+    def mass_density(self):
+        pass
 
     @BaseProtocol.InputPipe
     def substance(self):
@@ -659,7 +691,7 @@ class BuildLiquidCoordinates(BaseProtocol):
         # Determine how many molecules of each type will be present in the system.
         mole_fractions = np.array([component.mole_fraction for component in self._substance.components])
 
-        n_copies = np.random.multinomial(self.max_molecules - self._substance.number_of_impurities,
+        n_copies = np.random.multinomial(self._max_molecules - self._substance.number_of_impurities,
                                          pvals=mole_fractions)
 
         # Each impurity must have exactly one molecule
@@ -669,7 +701,7 @@ class BuildLiquidCoordinates(BaseProtocol):
                 n_copies[index] = 1
 
         # Create packed box
-        topology, positions = packmol.pack_box(molecules, n_copies, mass_density=self.mass_density)
+        topology, positions = packmol.pack_box(molecules, n_copies, mass_density=self._mass_density)
 
         if topology is None or positions is None:
             return False
@@ -706,10 +738,11 @@ class BuildLiquidCoordinates(BaseProtocol):
     def can_merge(self, protocol):
 
         return super(BuildLiquidCoordinates, self).can_merge(protocol) and \
-               self.max_molecules == protocol.max_molecules and \
-               self.mass_density == protocol.mass_density
+               self._max_molecules == protocol.max_molecules and \
+               self._mass_density == protocol.mass_density
 
 
+@register_calculation_protocol()
 class BuildSmirnoffTopology(BaseProtocol):
     """Parametrise a set of molecules with a given smirnoff force field.
     """
@@ -763,6 +796,7 @@ class BuildSmirnoffTopology(BaseProtocol):
         return True
 
 
+@register_calculation_protocol()
 class RunEnergyMinimisation(BaseProtocol):
     """Minimises the energy of a passed in system.
     """
@@ -827,18 +861,19 @@ class RunEnergyMinimisation(BaseProtocol):
         return super(RunEnergyMinimisation, self).can_merge(protocol)
 
 
+@register_calculation_protocol()
 class RunOpenMMSimulation(BaseProtocol):
     """Performs a molecular dynamics simulation in a given ensemble using OpenMM
 
     Attributes
     ----------
-    steps : int
+    _steps : int
         The number of steps to run the simulation for
-    timestep : float
+    _timestep : float
         The timestep of the integrator.
-    output_frequency : int
+    _output_frequency : int
         The frequency with which to store simulation data.
-    ensemble : RunOpenMMSimulation.Ensemble
+    _ensemble : RunOpenMMSimulation.Ensemble
         The ensemble to run the simulation in.
     """
 
@@ -852,14 +887,14 @@ class RunOpenMMSimulation(BaseProtocol):
 
         super().__init__()
 
-        self.steps = 1000
+        self._steps = 1000
 
-        self.thermostat_friction = 1.0 / unit.picoseconds
-        self.timestep = 0.002 * unit.picoseconds
+        self._thermostat_friction = 1.0 / unit.picoseconds
+        self._timestep = 0.001 * unit.picoseconds
 
-        self.output_frequency = 1000
+        self._output_frequency = 1000
 
-        self.ensemble = self.Ensemble.NPT
+        self._ensemble = self.Ensemble.NPT
 
         # keep a track of the simulation object in case we need to restart.
         self._simulation_object = None
@@ -878,20 +913,40 @@ class RunOpenMMSimulation(BaseProtocol):
         # TODO: Add arguments for max iter + tolerance
         pass
 
-    @BaseProtocol.InputPipe
-    def thermodynamic_state(self, value):
+    @BaseProtocol.Parameter
+    def steps(self):
+        pass
+
+    @BaseProtocol.Parameter
+    def thermostat_friction(self):
+        pass
+
+    @BaseProtocol.Parameter
+    def timestep(self):
+        pass
+
+    @BaseProtocol.Parameter
+    def output_frequency(self):
+        pass
+
+    @BaseProtocol.Parameter
+    def ensemble(self):
         pass
 
     @BaseProtocol.InputPipe
-    def topology(self, value):
+    def thermodynamic_state(self):
         pass
 
     @BaseProtocol.InputPipe
-    def positions(self, value):
+    def topology(self):
         pass
 
     @BaseProtocol.InputPipe
-    def system(self, value):
+    def positions(self):
+        pass
+
+    @BaseProtocol.InputPipe
+    def system(self):
         pass
 
     @BaseProtocol.OutputPipe
@@ -914,17 +969,17 @@ class RunOpenMMSimulation(BaseProtocol):
         if temperature is None:
             logging.error('A temperature must be set to perform a simulation in any ensemble: ' + directory)
             return False
-        if self.ensemble is self.Ensemble.NPT and pressure is None:
+        if self._ensemble is self.Ensemble.NPT and pressure is None:
             logging.error('A pressure must be set to perform an NPT simulation: ' + directory)
             return False
 
-        logging.info('Performing a simulation in the ' + str(self.ensemble) + ' ensemble: ' + directory)
+        logging.info('Performing a simulation in the ' + str(self._ensemble) + ' ensemble: ' + directory)
 
         if self._simulation_object is None:
             self._simulation_object = self._setup_new_simulation(directory, pressure, temperature)
 
         try:
-            self._simulation_object.step(self.steps)
+            self._simulation_object.step(self._steps)
         except Exception:
             logging.warning('Failed to run in ' + directory)
             return False
@@ -933,7 +988,7 @@ class RunOpenMMSimulation(BaseProtocol):
 
         self._final_positions = positions
 
-        logging.info('Simulation performed in the ' + str(self.ensemble) + ' ensemble: ' + directory)
+        logging.info('Simulation performed in the ' + str(self._ensemble) + ' ensemble: ' + directory)
 
         configuration_path = path.join(directory, 'output.pdb')
 
@@ -947,12 +1002,12 @@ class RunOpenMMSimulation(BaseProtocol):
     def _setup_new_simulation(self, directory, pressure, temperature):
         # For now set some 'best guess' thermostat parameters.
         integrator = openmm.LangevinIntegrator(temperature,
-                                               self.thermostat_friction,
-                                               self.timestep)
+                                               self._thermostat_friction,
+                                               self._timestep)
 
         system = self._system
 
-        if self.ensemble is self.Ensemble.NPT:
+        if self._ensemble is self.Ensemble.NPT:
             barostat = openmm.MonteCarloBarostat(pressure, temperature)
 
             # inputs are READONLY! Never directly alter an input
@@ -976,12 +1031,23 @@ class RunOpenMMSimulation(BaseProtocol):
             app.PDBFile.writeFile(self._topology,
                                   self._positions, configuration_file)
 
-        simulation.reporters.append(app.DCDReporter(trajectory_path, self.output_frequency))
+        simulation.reporters.append(app.DCDReporter(trajectory_path, self._output_frequency))
 
-        simulation.reporters.append(app.StateDataReporter(statistics_path, self.output_frequency, step=True,
+        simulation.reporters.append(app.StateDataReporter(statistics_path, self._output_frequency, step=True,
                                                           potentialEnergy=True, temperature=True, volume=True))
 
         return simulation
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+
+        if self._simulation_object is not None:
+            del state['_simulation_object']
+
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
 
     @classmethod
     def from_xml(cls, xml_node):
@@ -1018,9 +1084,10 @@ class RunOpenMMSimulation(BaseProtocol):
     def can_merge(self, protocol):
 
         return super(RunOpenMMSimulation, self).can_merge(protocol) and \
-               self.ensemble == protocol.ensemble
+               self._ensemble == protocol.ensemble
 
 
+@register_calculation_protocol()
 class AveragePropertyProtocol(BaseProtocol):
     """Calculates the average of a property and its uncertainty.
     """
@@ -1075,6 +1142,7 @@ class AveragePropertyProtocol(BaseProtocol):
         return average, uncertainty
 
 
+@register_calculation_protocol()
 class AverageTrajectoryProperty(AveragePropertyProtocol):
     """Calculates the average of a property from a simulation trajectory.
     """
@@ -1116,130 +1184,5 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
             app.PDBFile.writeFile(self._topology, self._positions, output_file)
 
         self.trajectory = mdtraj.load_dcd(filename=self._trajectory_path, top=configuration_path)
-
-        return True
-
-
-class ExtractAverageDensity(AverageTrajectoryProperty):
-    """Extracts the average density from a simulation trajectory.
-    """
-
-    def __init__(self):
-
-        super().__init__()
-
-        self._system = None
-
-    @BaseProtocol.InputPipe
-    def system(self, value):
-        pass
-
-    def execute(self, directory):
-
-        logging.info('Extracting densities: ' + directory)
-
-        if super(ExtractAverageDensity, self).execute(directory) is None:
-            return False
-
-        mass_list = []
-
-        for atom_index in range(self._system.getNumParticles()):
-
-            mass = self._system.getParticleMass(atom_index)
-            mass /= (unit.gram / unit.mole)
-
-            mass_list.append(mass)
-
-        densities = mdtraj.density(self.trajectory, mass_list)
-
-        self._value, self._uncertainty = self.calculate_average_and_error(densities)
-
-        self._value *= unit.kilogram * unit.meter ** -3
-        self._uncertainty *= unit.kilogram * unit.meter ** -3
-
-        logging.info('Extracted densities: ' + directory)
-
-        return True
-
-
-class ExtractAverageDielectric(AverageTrajectoryProperty):
-    """Extracts the average dielectric constant from a simulation trajectory.
-    """
-    def __init__(self):
-        super().__init__()
-
-        self._system = None
-        self._thermodynamic_state = None
-
-    @BaseProtocol.InputPipe
-    def system(self, value):
-        pass
-
-    @BaseProtocol.InputPipe
-    def thermodynamic_state(self, value):
-        pass
-
-    def _find_block_size(self, charges, temperature, block_sizes_to_try=12, num_bootstrap=15):
-        """Taken from https://github.com/MobleyLab/SMIRNOFF_paper_code/tree/master/FreeSolv"""
-
-        block_size_grid = np.logspace(0, np.log10(len(self.trajectory)), block_sizes_to_try).astype('int')
-        # The float -> int conversion sometimes leads to duplicate values, so avoid this
-        block_size_grid = np.unique(block_size_grid)
-
-        epsilon_grid = np.array([self._bootstrap(charges,
-                                                 temperature,
-                                                 block_length,
-                                                 num_bootstrap) for block_length in block_size_grid])
-
-        return block_size_grid[epsilon_grid.argmax()]
-
-    def _bootstrap(self, charges, temperature, block_length, num_bootstrap):
-        """Taken from https://github.com/MobleyLab/SMIRNOFF_paper_code/tree/master/FreeSolv"""
-
-        bootstrap = arch.bootstrap.CircularBlockBootstrap(block_length, trajectory=self.trajectory)
-
-        def bootstrap_func(trajectory):
-            return mdtraj.geometry.static_dielectric(trajectory, charges, temperature)
-
-        results = bootstrap.apply(bootstrap_func, num_bootstrap)
-        epsilon_err = results.std()
-
-        return epsilon_err
-
-    def execute(self, directory):
-
-        logging.info('Extracting dielectrics: ' + directory)
-
-        if super(ExtractAverageDielectric, self).execute(directory) is None:
-            return False
-
-        charge_list = []
-
-        for force_index in range(self._system.getNumForces()):
-
-            force = self._system.getForce(force_index)
-
-            if not isinstance(force, openmm.NonbondedForce):
-                continue
-
-            for atom_index in range(force.getNumParticles()):
-
-                charge = force.getParticleParameters(atom_index)[0]
-                charge /= unit.elementary_charge
-
-                charge_list.append(charge)
-
-        temperature = self._thermodynamic_state.temperature / unit.kelvin
-
-        # TODO: Pull out only equilibrated data.
-        block_length = self._find_block_size(charge_list, temperature)
-        dielectric_sigma = self._bootstrap(charge_list, temperature, block_length, block_length)
-
-        dielectric = mdtraj.geometry.static_dielectric(self.trajectory, charge_list, temperature)
-
-        self._value = unit.Quantity(dielectric, None)
-        self._uncertainty = unit.Quantity(dielectric_sigma, None)
-
-        logging.info('Extracted dielectrics: ' + directory)
 
         return True

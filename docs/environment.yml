@@ -27,3 +27,4 @@ dependencies:
     - dask
     - pip:
       - arch
+      - pydantic

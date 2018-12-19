@@ -31,6 +31,8 @@ script:
   - conda install --yes -c openeye/label/Orion oeommtools -c omnia
   - # Add temporary arch dependency
   - conda install --yes -c bashtage arch
+  - # Add the pydantic dependency
+  - pip install pydantic
   # Install
   - conda install --yes --use-local openforcefield
   # Run tests

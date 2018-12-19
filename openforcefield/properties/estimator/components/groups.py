@@ -31,9 +31,29 @@ from .protocols import BaseProtocol, ProtocolInputReference
 
 
 # =============================================================================================
+# Registration Decorators
+# =============================================================================================
+
+available_groups = []
+
+
+def register_calculation_group():
+    """A decorator which registers a class as being a
+    protocol group which may be used in calculation schemas.
+    """
+
+    def decorator(cls):
+        available_groups.append(cls)
+        return cls
+
+    return decorator
+
+
+# =============================================================================================
 # Groups
 # =============================================================================================
 
+@register_calculation_group()
 class ProtocolGroup(BaseProtocol):
     """A collection of protocols to be executed in one batch.
 
@@ -485,6 +505,7 @@ class ProtocolGroup(BaseProtocol):
         return return_value
 
 
+@register_calculation_group()
 class ConditionalGroup(ProtocolGroup):
     """A collection of protocols which are to execute until
     a given condition is met.
