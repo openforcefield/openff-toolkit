@@ -25,7 +25,7 @@ from openforcefield.properties.properties import PhysicalProperty
 
 from openforcefield.properties.datasets import register_thermoml_property
 
-from openforcefield.properties.estimator import CalculationTemplate, register_estimable_property
+from openforcefield.properties.estimator import CalculationSchema, register_estimable_property
 from openforcefield.properties.estimator.components import protocols, groups
 from openforcefield.properties.estimator.components.protocols import AverageTrajectoryProperty, ProtocolInputReference
 
@@ -92,8 +92,8 @@ class Density(PhysicalProperty):
     """A class representation of a density property"""
 
     @staticmethod
-    def get_calculation_template():
-        template = CalculationTemplate(type(Density))
+    def get_calculation_schema():
+        schema = CalculationSchema(type(Density))
 
         # Initial coordinate and topology setup.
         build_coordinates = protocols.BuildLiquidCoordinates()
@@ -103,7 +103,7 @@ class Density(PhysicalProperty):
             ProtocolInputReference('substance', 'global', 'substance')
         ]
 
-        template.protocols[build_coordinates.id] = build_coordinates
+        schema.protocols[build_coordinates.id] = build_coordinates
 
         assign_topology = protocols.BuildSmirnoffTopology()
         assign_topology.id = 'build_topology'
@@ -116,7 +116,7 @@ class Density(PhysicalProperty):
             ProtocolInputReference('molecules', build_coordinates.id, 'molecules')
         ]
 
-        template.protocols[assign_topology.id] = assign_topology
+        schema.protocols[assign_topology.id] = assign_topology
 
         energy_minimisation = protocols.RunEnergyMinimisation()
         energy_minimisation.id = 'energy_minimisation'
@@ -129,7 +129,7 @@ class Density(PhysicalProperty):
             ProtocolInputReference('system', assign_topology.id, 'system')
         ]
 
-        template.protocols[energy_minimisation.id] = energy_minimisation
+        schema.protocols[energy_minimisation.id] = energy_minimisation
 
         npt_equilibration = protocols.RunOpenMMSimulation()
         npt_equilibration.id = 'npt_equilibration'
@@ -149,7 +149,7 @@ class Density(PhysicalProperty):
             ProtocolInputReference('system', assign_topology.id, 'system')
         ]
 
-        template.protocols[npt_equilibration.id] = npt_equilibration
+        schema.protocols[npt_equilibration.id] = npt_equilibration
 
         # Production
 
@@ -171,7 +171,7 @@ class Density(PhysicalProperty):
             ProtocolInputReference('system', assign_topology.id, 'system')
         ]
 
-        template.protocols[npt_production.id] = npt_production
+        schema.protocols[npt_production.id] = npt_production
 
         # Analysis
 
@@ -188,7 +188,7 @@ class Density(PhysicalProperty):
             ProtocolInputReference('system', assign_topology.id, 'system')
         ]
 
-        template.protocols[npt_production.id] = npt_production
+        schema.protocols[npt_production.id] = npt_production
 
         # Set up a conditional group to ensure convergence of uncertainty
 
@@ -209,12 +209,12 @@ class Density(PhysicalProperty):
 
         converge_uncertainty.conditions.append(condition)
 
-        template.groups[converge_uncertainty.id] = converge_uncertainty
+        schema.groups[converge_uncertainty.id] = converge_uncertainty
 
         # Define where the final values come from.
-        template.final_value_reference = ProtocolInputReference('', extract_density.id, 'value')
-        template.final_uncertainty_reference = ProtocolInputReference('', extract_density.id, 'uncertainty')
+        schema.final_value_reference = ProtocolInputReference('', extract_density.id, 'value')
+        schema.final_uncertainty_reference = ProtocolInputReference('', extract_density.id, 'uncertainty')
 
-        template.build()
+        schema.build()
 
-        return template
+        return schema

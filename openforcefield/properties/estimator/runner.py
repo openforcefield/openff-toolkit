@@ -31,7 +31,7 @@ import uuid
 from os import path
 from xml.etree import ElementTree
 
-from openforcefield.properties.estimator import CalculationTemplate
+from openforcefield.properties.estimator import CalculationSchema
 from openforcefield.properties.estimator.components import protocols
 
 from openforcefield.properties import PropertyPhase, CalculationFidelity, PhysicalProperty
@@ -61,7 +61,7 @@ class DirectCalculation:
             The protocol this node will execute.
         force_field: openforcefield.typing.engines.smirnoff.ForceField
             The force field to use for this calculation.
-        template: CalculationTemplate, optional
+        template: CalculationSchema, optional
             The template on which this calculation is based.
         """
         self.physical_property = physical_property
@@ -440,8 +440,8 @@ class PropertyCalculationRunner:
 
             for template_node in root_node:
 
-                calculator_template = CalculationTemplate.from_xml(template_node,
-                                                                   templates)
+                calculator_template = CalculationSchema.from_xml(template_node,
+                                                                 templates)
 
                 templates[calculator_template.id] = calculator_template
 

@@ -195,13 +195,13 @@ class PhysicalProperty:
         self.uncertainty = uncertainty
 
     @staticmethod
-    def get_calculation_template():
+    def get_calculation_schema():
         """Returns the set of steps needed to calculate
         this property by direct simulation methods.
 
         Returns
         -------
-        openforcefield.properties.estimator.CalculationTemplate
-            The calculation template to follow.
+        openforcefield.properties.estimator.CalculationSchema
+            The calculation schema to follow.
         """
         raise NotImplementedError()

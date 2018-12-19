@@ -29,7 +29,7 @@ from openforcefield.properties.properties import register_property, PhysicalProp
 
 from openforcefield.properties.datasets import register_thermoml_property
 
-from openforcefield.properties.estimator import CalculationTemplate, register_estimable_property
+from openforcefield.properties.estimator import CalculationSchema, register_estimable_property
 from openforcefield.properties.estimator.components import protocols, groups
 from openforcefield.properties.estimator.components.protocols import AverageTrajectoryProperty, ProtocolInputReference
 
@@ -131,8 +131,8 @@ class DielectricConstant(PhysicalProperty):
     """A class representation of a dielectric property"""
 
     @staticmethod
-    def get_calculation_template():
-        template = CalculationTemplate(type(DielectricConstant))
+    def get_calculation_schema():
+        schema = CalculationSchema(type(DielectricConstant))
 
         # Initial coordinate and topology setup.
         build_coordinates = protocols.BuildLiquidCoordinates()
@@ -142,7 +142,7 @@ class DielectricConstant(PhysicalProperty):
             ProtocolInputReference('substance', 'global', 'substance')
         ]
 
-        template.protocols[build_coordinates.id] = build_coordinates
+        schema.protocols[build_coordinates.id] = build_coordinates
 
         assign_topology = protocols.BuildSmirnoffTopology()
         assign_topology.id = 'build_topology'
@@ -155,7 +155,7 @@ class DielectricConstant(PhysicalProperty):
             ProtocolInputReference('molecules', build_coordinates.id, 'molecules')
         ]
 
-        template.protocols[assign_topology.id] = assign_topology
+        schema.protocols[assign_topology.id] = assign_topology
 
         energy_minimisation = protocols.RunEnergyMinimisation()
         energy_minimisation.id = 'energy_minimisation'
@@ -168,7 +168,7 @@ class DielectricConstant(PhysicalProperty):
             ProtocolInputReference('system', assign_topology.id, 'system')
         ]
 
-        template.protocols[energy_minimisation.id] = energy_minimisation
+        schema.protocols[energy_minimisation.id] = energy_minimisation
 
         npt_equilibration = protocols.RunOpenMMSimulation()
         npt_equilibration.id = 'npt_equilibration'
@@ -188,7 +188,7 @@ class DielectricConstant(PhysicalProperty):
             ProtocolInputReference('system', assign_topology.id, 'system')
         ]
 
-        template.protocols[npt_equilibration.id] = npt_equilibration
+        schema.protocols[npt_equilibration.id] = npt_equilibration
 
         # Production
 
@@ -210,7 +210,7 @@ class DielectricConstant(PhysicalProperty):
             ProtocolInputReference('system', assign_topology.id, 'system')
         ]
 
-        template.protocols[npt_production.id] = npt_production
+        schema.protocols[npt_production.id] = npt_production
 
         # Analysis
 
@@ -227,7 +227,7 @@ class DielectricConstant(PhysicalProperty):
             ProtocolInputReference('system', assign_topology.id, 'system')
         ]
 
-        template.protocols[npt_production.id] = npt_production
+        schema.protocols[npt_production.id] = npt_production
 
         # Set up a conditional group to ensure convergence of uncertainty
 
@@ -248,12 +248,12 @@ class DielectricConstant(PhysicalProperty):
 
         converge_uncertainty.conditions.append(condition)
 
-        template.groups[converge_uncertainty.id] = converge_uncertainty
+        schema.groups[converge_uncertainty.id] = converge_uncertainty
 
         # Define where the final values come from.
-        template.final_value_reference = ProtocolInputReference('', extract_dielectric.id, 'value')
-        template.final_uncertainty_reference = ProtocolInputReference('', extract_dielectric.id, 'uncertainty')
+        schema.final_value_reference = ProtocolInputReference('', extract_dielectric.id, 'value')
+        schema.final_uncertainty_reference = ProtocolInputReference('', extract_dielectric.id, 'uncertainty')
 
-        template.build()
+        schema.build()
 
-        return template
+        return schema

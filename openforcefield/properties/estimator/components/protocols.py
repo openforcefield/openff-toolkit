@@ -29,10 +29,15 @@ from enum import Enum
 
 from pymbar import timeseries
 
+from pydantic import BaseModel
+from typing import Dict, List, Any, Optional
+
 from openeye import oechem, oeomega
 
 from openforcefield.utils import packmol, graph
 from openforcefield.utils.exceptions import XmlNodeMissingException
+from openforcefield.utils.serialization import quantity_to_json
+
 from openforcefield.typing.engines import smirnoff
 
 from simtk import openmm, unit
@@ -62,7 +67,7 @@ def register_calculation_protocol():
 # Protocols
 # =============================================================================================
 
-class ProtocolInputReference:
+class ProtocolInputReference(BaseModel):
     """Stores a reference to a required input from another protocol.
 
     Each node represents a protocol to be executed.
@@ -98,14 +103,12 @@ class ProtocolInputReference:
         the protocol identified by `grouped_protocol_id`.
     """
 
-    def __init__(self, input_property_name, output_protocol_id, output_property_name):
+    input_property_name: str = None
 
-        self.input_property_name = input_property_name
+    output_protocol_id: str = None
+    output_property_name: str = None
 
-        self.output_protocol_id = output_protocol_id
-        self.output_property_name = output_property_name
-
-        self.grouped_protocol_id = None
+    grouped_protocol_id: Optional[str] = None
 
     def __hash__(self):
         """Returns the hash key of this ProtocolInputReference."""
@@ -160,6 +163,15 @@ class ProtocolInputReference:
             self.output_protocol_id = self.output_protocol_id.replace(old_id, new_id)
         if self.grouped_protocol_id is not None:
             self.grouped_protocol_id = self.grouped_protocol_id.replace(old_id, new_id)
+
+
+class ProtocolSchema(BaseModel):
+
+    id: str = None
+    type: str = None
+
+    input_references: List[ProtocolInputReference] = []
+    parameters: Dict[str, Any] = {}
 
 
 class BaseProtocol:
@@ -290,6 +302,27 @@ class BaseProtocol:
 
         self.required_inputs = self._find_types_with_decorator(BaseProtocol.InputPipe)
         self.provided_outputs = self._find_types_with_decorator(BaseProtocol.OutputPipe)
+
+    @property
+    def schema(self):
+        """ProtocolSchema: Returns a serializable schema for this object."""
+        schema = ProtocolSchema()
+
+        schema.id = self.id
+        schema.type = str(type(self))
+
+        schema.input_references = self.input_references
+
+        for parameter in self.parameters:
+
+            value = getattr(self, parameter)
+
+            if isinstance(value, unit.Quantity):
+                value = quantity_to_json(value)
+
+            schema.parameters[parameter] = value
+
+        return schema
 
     def execute(self, directory):
         """ Execute the protocol.
