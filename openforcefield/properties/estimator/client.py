@@ -19,9 +19,30 @@ Authors
 # =============================================================================================
 
 import logging
-import re
+import json
+import struct
 
-from openforcefield.properties.estimator.runner import PropertyCalculationRunner
+from simtk import unit
+
+from pydantic import BaseModel
+from typing import Dict, List
+
+from tornado import gen
+from tornado.ioloop import IOLoop
+from tornado.iostream import StreamClosedError
+from tornado.tcpclient import TCPClient
+
+from openforcefield.utils.serialization import serialize_quantity
+
+from openforcefield.properties import CalculationFidelity, PhysicalProperty
+from openforcefield.properties.estimator import CalculationSchema
+
+from openforcefield.typing.engines.smirnoff import ForceField
+
+int_struct = struct.Struct("<i")
+
+unpack_int = int_struct.unpack
+pack_int = int_struct.pack
 
 
 # =============================================================================================
@@ -53,6 +74,35 @@ def register_estimable_property():
 # Property Estimator
 # =============================================================================================
 
+class PropertyEstimatorOptions(BaseModel):
+    """Represents additional options that can be passed to the
+    property estimator backend."""
+
+    allowed_fidelity: CalculationFidelity = CalculationFidelity.SurrogateModel | \
+                                            CalculationFidelity.Reweighting | \
+                                            CalculationFidelity.DirectSimulation
+
+    calculation_schemas: Dict[str, CalculationSchema] = {}
+
+
+class PropertyEstimatorDataModel(BaseModel):
+
+    properties: Dict[str, List[PhysicalProperty]] = {}
+    options: PropertyEstimatorOptions = None
+
+    parameter_set: Dict[int, str] = None
+
+    class Config:
+
+        # A dirty hack to allow simtk.unit.Quantities...
+        # TODO: Should really investigate QCElemental as an alternative.
+        arbitrary_types_allowed = True
+
+        json_encoders = {
+            unit.Quantity: lambda v: serialize_quantity(v),
+        }
+
+
 class PropertyEstimator(object):
     """
     The object responsible for requesting a set of properties
@@ -62,8 +112,26 @@ class PropertyEstimator(object):
 
     registered_properties = {}
 
-    @staticmethod
-    def compute_properties(data_set, parameter_set, worker_threads=1):
+    def __init__(self, server_address='localhost', port=8000):
+        """Constructs a new PropertyEstimator object.
+
+        Parameters
+        ----------
+        server_address : str
+            The address of the calculation server.
+        """
+
+        self._server_address = server_address
+
+        if server_address is None:
+
+            raise ValueError('The address of the server which will run'
+                             'these calculations must be given.')
+
+        self._port = port
+        self._tcp_client = TCPClient()
+
+    def compute_properties(self, data_set, parameter_set, additional_options=None):
         """
         Submit the property and parameter set for calculation.
 
@@ -71,10 +139,16 @@ class PropertyEstimator(object):
         ----------
         data_set : PropertyDataSet
             The set of properties to attempt to compute.
-        parameter_set : ParameterSet
+        parameter_set : ForceField
             The OpenFF parameter set to use for the calculations.
-        worker_threads : int
-            The number of worker threads to calculate the properties on.
+        additional_options : PropertyEstimatorOptions, optional
+            A set of additional calculation options.
+
+        Returns
+        -------
+        list of str:
+            A list unique ids which can be used to retrieve the submitted calculations
+            when they have finished running.
         """
 
         if data_set is None or parameter_set is None:
@@ -82,18 +156,74 @@ class PropertyEstimator(object):
             raise ValueError('Both a data set and parameter set must be '
                              'present to compute physical properties.')
 
-        # In principle this method would simply push all properties and
-        # to the backend which will decide what to do with them.
+        if additional_options is None:
+            additional_options = PropertyEstimatorOptions()
 
-        # For now, just create the backend manually on the local device.
-        calculation_runner = PropertyCalculationRunner(worker_threads)
+        for substance_tag in data_set.properties:
 
-        # In practice such a complicated runner will need to report back
-        # detailed diagnostics of what ran and why, and what if anything
-        # went wrong.
-        calculated_properties = calculation_runner.run(data_set, parameter_set)
+            for physical_property in data_set.properties[substance_tag]:
 
-        return calculated_properties
+                type_name = type(physical_property).__name__
+
+                if type_name not in PropertyEstimator.registered_properties:
+
+                    raise ValueError('The property estimator does not support {} '
+                                     'properties.'.format(type_name))
+
+                if type_name in additional_options.calculation_schemas:
+                    continue
+
+                additional_options.calculation_schemas[type_name] = \
+                    PropertyEstimator.registered_properties[type_name]().get_default_calculation_schema()
+
+        submission_packet = PropertyEstimatorDataModel()
+
+        submission_packet.properties = data_set.properties
+        submission_packet.parameter_set = parameter_set.__getstate__()
+        submission_packet.options = additional_options
+
+        submission_json = submission_packet.json()
+
+        # For now just do a blocking submit to the server.
+        ticket_ids = IOLoop.current().run_sync(lambda: self._send_calculations_to_server(submission_json))
+
+        return ticket_ids
+
+    @gen.coroutine
+    def _send_calculations_to_server(self, submission_json):
+
+        ticket_ids = None
+
+        try:
+
+            logging.info("Attempting Connection to {}:{}".format(self._server_address, self._port))
+
+            stream = yield self._tcp_client.connect(self._server_address, self._port)
+
+            logging.info("Connected to {}:{}".format(self._server_address, self._port))
+
+            stream.set_nodelay(True)
+
+            encoded_json = submission_json.encode()
+            length = pack_int(len(encoded_json))
+            yield stream.write(length + encoded_json)
+
+            logging.info("Sent calculations to {}:{}".format(self._server_address, self._port))
+
+            header = yield stream.read_bytes(4)
+
+            # Convert from network order to int.
+            length = unpack_int(header)[0]
+
+            encoded_json = yield stream.read_bytes(length)
+            ticket_ids = json.loads(encoded_json.decode())
+
+            logging.info('Received job ids from server: {}'.format(ticket_ids))
+
+        except StreamClosedError as e:
+            logging.info("Error connecting to {}:{} : {}".format(self._server_address, self._port, e))
+
+        raise gen.Return(ticket_ids)
 
     @staticmethod
     def _store_properties_in_hierarchy(original_set):

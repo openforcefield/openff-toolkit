@@ -25,6 +25,7 @@ dependencies:
     - pymbar
     - mdtraj
     - dask
+    - tornado
     - pip:
       - arch
       - pydantic

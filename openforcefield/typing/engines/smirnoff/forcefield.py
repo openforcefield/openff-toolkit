@@ -1075,6 +1075,8 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
                 molecule_labels[idx][forcelabel] = force.labelForce( mol, verbose=verbose )
         return molecule_labels
 
+    # The following methods should be considered as temporary, and to be
+    # replaced entirely during Jeff's refactor.
     def __getstate__(self):
 
         return_dict = {}
@@ -1108,6 +1110,14 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         self.parseXMLTrees()
 
         # self.__dict__ = state_dictionary  # make dict our attribute dictionary
+
+    @classmethod
+    def get_validators(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v):
+        return v
 
 #=============================================================================================
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being

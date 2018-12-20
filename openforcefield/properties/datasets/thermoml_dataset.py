@@ -492,12 +492,20 @@ class ThermoMLCompound:
 # ThermoML Properties
 # =============================================================================================
 
-class ThermoMLProperty(PhysicalProperty):
+class ThermoMLProperty:
     """A wrapper around a ThermoML Property node.
     """
     def __init__(self, base_type):
 
-        super().__init__()
+        self.thermodynamic_state = None
+        self.phase = PropertyPhase.Undefined
+
+        self.substance = None
+
+        self.value = None
+        self.uncertainty = None
+
+        self.source = None
 
         self.index = None
 
@@ -509,6 +517,16 @@ class ThermoMLProperty(PhysicalProperty):
         self.combined_uncertainty_definitions = {}
 
         self.default_unit = None
+
+    @property
+    def temperature(self):
+        """simtk.unit.Quantity or None: The temperature at which the property was collected."""
+        return None if self.thermodynamic_state is None else self.thermodynamic_state.temperature
+
+    @property
+    def pressure(self):
+        """simtk.unit.Quantity or None: The pressure at which the property was collected."""
+        return None if self.thermodynamic_state is None else self.thermodynamic_state.pressure
 
     @staticmethod
     def extract_uncertainty_definitions(node, namespace,
@@ -1076,7 +1094,7 @@ class ThermoMLPureOrMixtureData:
             temperature = temperature_constraint.value
             pressure = pressure_constraint.value
 
-            thermodynamic_state = ThermodynamicState(temperature, pressure)
+            thermodynamic_state = ThermodynamicState(temperature=temperature, pressure=pressure)
 
             # Now extract the actual values of the measured properties, and their
             # uncertainties
@@ -1484,7 +1502,7 @@ class ThermoMLDataSet(PhysicalPropertyDataSet):
                 if measured_property.type is None:
                     raise ValueError('An unexepected property type managed to slip through the cracks.')
 
-                final_property: PhysicalProperty = measured_property.type()
+                final_property = measured_property.type()
 
                 final_property.value = measured_property.value
                 final_property.uncertainty = measured_property.uncertainty

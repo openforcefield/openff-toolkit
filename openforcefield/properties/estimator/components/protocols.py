@@ -35,7 +35,6 @@ from typing import Dict, List, Any, Optional
 from openeye import oechem, oeomega
 
 from openforcefield.utils import packmol, graph
-from openforcefield.utils.exceptions import XmlNodeMissingException
 from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity
 
 from openforcefield.typing.engines import smirnoff
@@ -84,15 +83,6 @@ class ProtocolInputReference(BaseModel):
 
         Rename this class to something more obvious - ProtocolDependency?
 
-    Parameters
-    ----------
-    input_property_name: str
-        The name of the property which will take the an output value and use it as input.
-    output_protocol_id: str
-        The identity of the protocol whose output will be passed to input_property_name.
-    output_property_name: str
-        The name of the property which will output the required input.
-
     Attributes
     ----------
     input_property_name: str
@@ -107,7 +97,7 @@ class ProtocolInputReference(BaseModel):
         the protocol identified by `grouped_protocol_id`.
     """
 
-    input_property_name: str = None
+    input_property_name: Optional[str] = None
 
     output_protocol_id: str = None
     output_property_name: str = None
@@ -543,74 +533,6 @@ class BaseProtocol:
 
         return inputs
 
-    @classmethod
-    def from_xml(cls, xml_node, existing_protocols=None):
-        """ Creates a protocol from an xml definition.
-
-        Parameters
-        ----------
-        xml_node : xml.etree.Element
-            The element containing the xml to create the protocol from.
-        existing_protocols : dict(str, BaseProtocol)
-            A list of already created protocols.
-        Returns
-        ----------
-        BaseProtocol
-            The protocol created from the xml node.
-        """
-        return_value = cls()
-
-        # Find the unique id of this protocol.
-        id_node = xml_node.find('id')
-
-        if id_node is None:
-            raise XmlNodeMissingException('id')
-
-        return_value.id = id_node.text
-
-        inputs_node = xml_node.find('inputs')
-
-        if inputs_node is not None:
-
-            for input_node in inputs_node.findall('input'):
-
-                if 'property' not in input_node.attrib:
-                    raise Exception('Protocol inputs must define a property attribute.')
-
-                input_property = input_node.attrib['property']
-
-                text_split = input_node.text.split(':')
-
-                if len(text_split) != 2:
-                    raise Exception('Protocol inputs must be of the form node_id:property_name')
-
-                # Only process inputs which are actually required.
-                if input_property not in return_value.required_inputs:
-                    continue
-
-                protocol_id = text_split[0]
-                property_name = text_split[1]
-
-                protocol_input = ProtocolInputReference(input_property,
-                                                        protocol_id,
-                                                        property_name)
-
-                # Don't add multiple of the same input.
-                if protocol_input in return_value.input_references:
-                    continue
-
-                return_value.input_references.append(protocol_input)
-
-        # Make sure this protocol is being passed all the required inputs.
-        for required_input in return_value.required_inputs:
-
-            if not hasattr(return_value, required_input):
-
-                raise Exception('A ' + type(return_value).__name__ + 'protocol must receive ' +
-                                required_input + ' as an input.')
-
-        return return_value
-
 
 @register_calculation_protocol()
 class BuildCoordinatesPackmol(BaseProtocol):
@@ -636,7 +558,7 @@ class BuildCoordinatesPackmol(BaseProtocol):
         self._substance = None
 
         # outputs
-        self._topology = None
+        self._coordinate_file = None
         self._positions = None
         self._molecules = None
 
@@ -657,11 +579,7 @@ class BuildCoordinatesPackmol(BaseProtocol):
         pass
 
     @BaseProtocol.OutputPipe
-    def topology(self):
-        pass
-
-    @BaseProtocol.OutputPipe
-    def positions(self):
+    def coordinate_file(self):
         pass
 
     @BaseProtocol.OutputPipe
@@ -769,32 +687,14 @@ class BuildCoordinatesPackmol(BaseProtocol):
 
         self._molecules = molecules
 
-        self._positions = positions
-        self._topology = topology
+        self._coordinate_file = path.join(directory, 'output.pdb')
 
-        with open(path.join(directory, 'output.pdb'), 'w+') as minimised_file:
+        with open(self._coordinate_file, 'w+') as minimised_file:
             app.PDBFile.writeFile(topology, positions, minimised_file)
 
         logging.info('Coordinates generated: ' + str(self._substance))
 
         return True
-
-    @classmethod
-    def from_xml(cls, xml_node):
-
-        return_value = super(BuildCoordinatesPackmol, cls).from_xml(xml_node)
-
-        max_molecules_node = xml_node.find('max_molecules')
-
-        if max_molecules_node is not None:
-            return_value.max_molecules = int(max_molecules_node.text)
-
-        mass_density_node = xml_node.find('mass_density')
-
-        if mass_density_node is not None:
-            return_value.mass_density = float(mass_density_node.text) * unit.grams / unit.milliliters
-
-        return return_value
 
     def can_merge(self, protocol):
 
@@ -813,7 +713,7 @@ class BuildSmirnoffTopology(BaseProtocol):
 
         # inputs
         self._force_field = None
-        self._topology = None
+        self._coordinate_file = None
         self._molecules = None
         # outputs
         self._system = None
@@ -827,7 +727,7 @@ class BuildSmirnoffTopology(BaseProtocol):
         pass
 
     @BaseProtocol.InputPipe
-    def topology(self, value):
+    def coordinate_file(self, value):
         pass
 
     @BaseProtocol.OutputPipe
@@ -838,7 +738,9 @@ class BuildSmirnoffTopology(BaseProtocol):
 
         logging.info('Generating topology: ' + directory)
 
-        system = self._force_field.createSystem(self._topology,
+        pdb_file = app.PDBFile(self._coordinate_file)
+
+        system = self._force_field.createSystem(pdb_file.topology,
                                                 self._molecules,
                                                 nonbondedMethod=smirnoff.PME,
                                                 chargeMethod='OECharges_AM1BCCSym')
@@ -867,21 +769,16 @@ class RunEnergyMinimisation(BaseProtocol):
         super().__init__()
 
         # inputs
-        self._topology = None
-        self._positions = None
+        self._input_coordinate_file = None
         self._system = None
         # outputs
-        self._final_positions = None
+        self._output_coordinate_file = None
 
         # TODO: Add arguments for max iter + tolerance
         pass
 
     @BaseProtocol.InputPipe
-    def topology(self, value):
-        pass
-
-    @BaseProtocol.InputPipe
-    def positions(self, value):
+    def input_coordinate_file(self, value):
         pass
 
     @BaseProtocol.InputPipe
@@ -889,7 +786,7 @@ class RunEnergyMinimisation(BaseProtocol):
         pass
 
     @BaseProtocol.OutputPipe
-    def final_positions(self):
+    def output_coordinate_file(self):
         return self._final_positions
 
     def execute(self, directory):
@@ -898,19 +795,21 @@ class RunEnergyMinimisation(BaseProtocol):
 
         integrator = openmm.VerletIntegrator(0.002 * unit.picoseconds)
 
-        simulation = app.Simulation(self._topology,
+        input_pdb_file = app.PDBFile(self._input_coordinate_file)
+
+        simulation = app.Simulation(input_pdb_file.topology,
                                     self._system, integrator)
 
-        simulation.context.setPositions(self._positions)
+        simulation.context.setPositions(input_pdb_file.positions)
 
         simulation.minimizeEnergy()
 
         positions = simulation.context.getState(getPositions=True).getPositions()
 
-        with open(path.join(directory, 'minimised.pdb'), 'w+') as minimised_file:
-            app.PDBFile.writeFile(simulation.topology, positions, minimised_file)
+        self._output_coordinate_file = path.join(directory, 'minimised.pdb')
 
-        self._final_positions = positions
+        with open(self._output_coordinate_file, 'w+') as minimised_file:
+            app.PDBFile.writeFile(simulation.topology, positions, minimised_file)
 
         logging.info('Energy minimised: ' + directory)
 
@@ -961,17 +860,15 @@ class RunOpenMMSimulation(BaseProtocol):
         self._simulation_object = None
 
         # inputs
+        self._input_coordinate_file = None
         self._thermodynamic_state = None
-        self._topology = None
-        self._positions = None
         self._system = None
 
         # outputs
-        self._final_positions = None
+        self._output_coordinate_file = None
         self._trajectory = None
         self._statistics = None
 
-        # TODO: Add arguments for max iter + tolerance
         pass
 
     @BaseProtocol.Parameter
@@ -999,11 +896,7 @@ class RunOpenMMSimulation(BaseProtocol):
         pass
 
     @BaseProtocol.InputPipe
-    def topology(self):
-        pass
-
-    @BaseProtocol.InputPipe
-    def positions(self):
+    def input_coordinate_file(self):
         pass
 
     @BaseProtocol.InputPipe
@@ -1011,7 +904,7 @@ class RunOpenMMSimulation(BaseProtocol):
         pass
 
     @BaseProtocol.OutputPipe
-    def final_positions(self):
+    def output_coordinate_file(self):
         pass
 
     @BaseProtocol.OutputPipe
@@ -1037,7 +930,7 @@ class RunOpenMMSimulation(BaseProtocol):
         logging.info('Performing a simulation in the ' + str(self._ensemble) + ' ensemble: ' + directory)
 
         if self._simulation_object is None:
-            self._simulation_object = self._setup_new_simulation(directory, pressure, temperature)
+            self._simulation_object = self._setup_new_simulation(directory, temperature, pressure)
 
         try:
             self._simulation_object.step(self._steps)
@@ -1047,20 +940,31 @@ class RunOpenMMSimulation(BaseProtocol):
 
         positions = self._simulation_object.context.getState(getPositions=True).getPositions()
 
-        self._final_positions = positions
+        input_pdb_file = app.PDBFile(self._input_coordinate_file)
+        self._output_coordinate_file = path.join(directory, 'output.pdb')
 
         logging.info('Simulation performed in the ' + str(self._ensemble) + ' ensemble: ' + directory)
 
-        configuration_path = path.join(directory, 'output.pdb')
+        with open(self._output_coordinate_file, 'w+') as configuration_file:
 
-        with open(configuration_path, 'w+') as configuration_file:
-
-            app.PDBFile.writeFile(self._topology,
+            app.PDBFile.writeFile(input_pdb_file.topology,
                                   positions, configuration_file)
 
         return True
 
-    def _setup_new_simulation(self, directory, pressure, temperature):
+    def _setup_new_simulation(self, directory, temperature, pressure):
+        """Creates a new OpenMM simulation object.
+
+        Parameters
+        ----------
+        directory: str
+            The directory in which the object will produce output files.
+        temperature: unit.Quantiy
+            The temperature at which to run the simulation
+        pressure: unit.Quantiy
+            The pressure at which to run the simulation
+        """
+
         # For now set some 'best guess' thermostat parameters.
         integrator = openmm.LangevinIntegrator(temperature,
                                                self._thermostat_friction,
@@ -1069,14 +973,17 @@ class RunOpenMMSimulation(BaseProtocol):
         system = self._system
 
         if self._ensemble is self.Ensemble.NPT:
+
             barostat = openmm.MonteCarloBarostat(pressure, temperature)
 
             # inputs are READONLY! Never directly alter an input
             system = copy.deepcopy(system)
             system.addForce(barostat)
 
-        simulation = app.Simulation(self._topology, system, integrator)
-        simulation.context.setPositions(self._positions)
+        input_pdb_file = app.PDBFile(self._input_coordinate_file)
+
+        simulation = app.Simulation(input_pdb_file.topology, system, integrator)
+        simulation.context.setPositions(input_pdb_file.positions)
 
         simulation.context.setVelocitiesToTemperature(temperature)
 
@@ -1089,8 +996,9 @@ class RunOpenMMSimulation(BaseProtocol):
         configuration_path = path.join(directory, 'input.pdb')
 
         with open(configuration_path, 'w+') as configuration_file:
-            app.PDBFile.writeFile(self._topology,
-                                  self._positions, configuration_file)
+
+            app.PDBFile.writeFile(input_pdb_file.topology,
+                                  input_pdb_file.positions, configuration_file)
 
         simulation.reporters.append(app.DCDReporter(trajectory_path, self._output_frequency))
 
@@ -1110,37 +1018,14 @@ class RunOpenMMSimulation(BaseProtocol):
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-    @classmethod
-    def from_xml(cls, xml_node):
+    def merge(self, other):
 
-        return_value = super(RunOpenMMSimulation, cls).from_xml(xml_node)
+        super(RunOpenMMSimulation, self).merge(other)
 
-        steps_node = xml_node.find('steps')
+        self._steps = max(self._steps, other.steps)
+        self._timestep = min(self._timestep, other.timestep)
 
-        if steps_node is not None:
-            return_value.steps = int(steps_node.text)
-
-        thermostat_friction_node = xml_node.find('thermostat_friction')
-
-        if thermostat_friction_node is not None:
-            return_value.thermostat_friction = float(thermostat_friction_node.text) / unit.picoseconds
-
-        timestep_node = xml_node.find('timestep')
-
-        if timestep_node is not None:
-            return_value.timestep = float(timestep_node.text) * unit.picoseconds
-
-        output_frequency_node = xml_node.find('output_frequency')
-
-        if output_frequency_node is not None:
-            return_value.output_frequency = int(output_frequency_node.text)
-
-        ensemble_node = xml_node.find('ensemble')
-
-        if ensemble_node is not None and ensemble_node.text in cls.Ensemble:
-                return_value.ensemble = cls.Ensemble[ensemble_node.text]
-
-        return return_value
+        self._output_frequency = max(self._output_frequency, other.output_frequency)
 
     def can_merge(self, protocol):
 
@@ -1212,22 +1097,17 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
 
         super().__init__()
 
-        self._topology = None
-        self._positions = None
+        self._input_coordinate_file = None
         self._trajectory_path = None
 
         self.trajectory = None
 
     @BaseProtocol.InputPipe
-    def topology(self, value):
+    def input_coordinate_file(self):
         pass
 
     @BaseProtocol.InputPipe
-    def positions(self, value):
-        pass
-
-    @BaseProtocol.InputPipe
-    def trajectory_path(self, value):
+    def trajectory_path(self):
         pass
 
     def execute(self, directory):
@@ -1239,11 +1119,6 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
 
             return False
 
-        configuration_path = path.join(directory, 'configuration.pdb')
-
-        with open(configuration_path, 'w+') as output_file:
-            app.PDBFile.writeFile(self._topology, self._positions, output_file)
-
-        self.trajectory = mdtraj.load_dcd(filename=self._trajectory_path, top=configuration_path)
+        self.trajectory = mdtraj.load_dcd(filename=self._trajectory_path, top=self._input_coordinate_file)
 
         return True

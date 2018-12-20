@@ -19,8 +19,6 @@ import mdtraj
 
 from simtk import unit
 
-from openforcefield.utils import doc_inherit
-
 from openforcefield.properties.properties import PhysicalProperty
 
 from openforcefield.properties.datasets import register_thermoml_property
@@ -94,31 +92,43 @@ class Density(PhysicalProperty):
     """A class representation of a density property"""
 
     @staticmethod
-    def get_calculation_schema():
-        schema = CalculationSchema(type(Density))
+    def get_default_calculation_schema():
+
+        schema = CalculationSchema(property_type=Density.__name__)
+        schema.id = '{}{}'.format(Density.__name__, 'Schema')
 
         # Initial coordinate and topology setup.
         build_coordinates = protocols.BuildCoordinatesPackmol()
         build_coordinates.id = 'build_coordinates'
 
         build_coordinates.input_references = [
-            ProtocolInputReference('substance', 'global', 'substance')
+            # Globals
+            ProtocolInputReference(input_property_name='substance',
+                                   output_protocol_id='global',
+                                   output_property_name='substance')
         ]
 
-        schema.protocols[build_coordinates.id] = build_coordinates
+        schema.protocols[build_coordinates.id] = build_coordinates.schema
 
         assign_topology = protocols.BuildSmirnoffTopology()
         assign_topology.id = 'build_topology'
 
         assign_topology.input_references = [
             # Globals
-            ProtocolInputReference('force_field', 'global', 'force_field'),
+            ProtocolInputReference(input_property_name='force_field',
+                                   output_protocol_id='global',
+                                   output_property_name='force_field'),
             # Locals
-            ProtocolInputReference('topology', build_coordinates.id, 'topology'),
-            ProtocolInputReference('molecules', build_coordinates.id, 'molecules')
+            ProtocolInputReference(input_property_name='coordinate_file',
+                                   output_protocol_id=build_coordinates.id,
+                                   output_property_name='coordinate_file'),
+
+            ProtocolInputReference(input_property_name='molecules',
+                                   output_protocol_id=build_coordinates.id,
+                                   output_property_name='molecules')
         ]
 
-        schema.protocols[assign_topology.id] = assign_topology
+        schema.protocols[assign_topology.id] = assign_topology.schema
 
         energy_minimisation = protocols.RunEnergyMinimisation()
         energy_minimisation.id = 'energy_minimisation'
@@ -126,12 +136,16 @@ class Density(PhysicalProperty):
         # Equilibration
         energy_minimisation.input_references = [
             # Locals
-            ProtocolInputReference('positions', build_coordinates.id, 'positions'),
-            ProtocolInputReference('topology', build_coordinates.id, 'topology'),
-            ProtocolInputReference('system', assign_topology.id, 'system')
+            ProtocolInputReference(input_property_name='input_coordinate_file',
+                                   output_protocol_id=build_coordinates.id,
+                                   output_property_name='coordinate_file'),
+
+            ProtocolInputReference(input_property_name='system',
+                                   output_protocol_id=assign_topology.id,
+                                   output_property_name='system')
         ]
 
-        schema.protocols[energy_minimisation.id] = energy_minimisation
+        schema.protocols[energy_minimisation.id] = energy_minimisation.schema
 
         npt_equilibration = protocols.RunOpenMMSimulation()
         npt_equilibration.id = 'npt_equilibration'
@@ -144,14 +158,20 @@ class Density(PhysicalProperty):
 
         npt_equilibration.input_references = [
             # Globals
-            ProtocolInputReference('thermodynamic_state', 'global', 'thermodynamic_state'),
+            ProtocolInputReference(input_property_name='thermodynamic_state',
+                                   output_protocol_id='global',
+                                   output_property_name='thermodynamic_state'),
             # Locals
-            ProtocolInputReference('positions', energy_minimisation.id, 'final_positions'),
-            ProtocolInputReference('topology', build_coordinates.id, 'topology'),
-            ProtocolInputReference('system', assign_topology.id, 'system')
+            ProtocolInputReference(input_property_name='input_coordinate_file',
+                                   output_protocol_id=energy_minimisation.id,
+                                   output_property_name='output_coordinate_file'),
+
+            ProtocolInputReference(input_property_name='system',
+                                   output_protocol_id=assign_topology.id,
+                                   output_property_name='system')
         ]
 
-        schema.protocols[npt_equilibration.id] = npt_equilibration
+        schema.protocols[npt_equilibration.id] = npt_equilibration.schema
 
         # Production
 
@@ -166,14 +186,20 @@ class Density(PhysicalProperty):
 
         npt_production.input_references = [
             # Globals
-            ProtocolInputReference('thermodynamic_state', 'global', 'thermodynamic_state'),
+            ProtocolInputReference(input_property_name='thermodynamic_state',
+                                   output_protocol_id='global',
+                                   output_property_name='thermodynamic_state'),
             # Locals
-            ProtocolInputReference('positions', npt_equilibration.id, 'final_positions'),
-            ProtocolInputReference('topology', build_coordinates.id, 'topology'),
-            ProtocolInputReference('system', assign_topology.id, 'system')
+            ProtocolInputReference(input_property_name='input_coordinate_file',
+                                   output_protocol_id=npt_equilibration.id,
+                                   output_property_name='output_coordinate_file'),
+
+            ProtocolInputReference(input_property_name='system',
+                                   output_protocol_id=assign_topology.id,
+                                   output_property_name='system')
         ]
 
-        schema.protocols[npt_production.id] = npt_production
+        schema.protocols[npt_production.id] = npt_production.schema
 
         # Analysis
 
@@ -182,41 +208,52 @@ class Density(PhysicalProperty):
 
         extract_density.input_references = [
             # Globals
-            ProtocolInputReference('thermodynamic_state', 'global', 'thermodynamic_state'),
+            ProtocolInputReference(input_property_name='thermodynamic_state',
+                                   output_protocol_id='global',
+                                   output_property_name='thermodynamic_state'),
             # Locals
-            ProtocolInputReference('positions', npt_production.id, 'final_positions'),
-            ProtocolInputReference('trajectory_path', npt_production.id, 'trajectory'),
-            ProtocolInputReference('topology', build_coordinates.id, 'topology'),
-            ProtocolInputReference('system', assign_topology.id, 'system')
+            ProtocolInputReference(input_property_name='input_coordinate_file',
+                                   output_protocol_id=npt_production.id,
+                                   output_property_name='output_coordinate_file'),
+
+            ProtocolInputReference(input_property_name='trajectory_path',
+                                   output_protocol_id=npt_production.id,
+                                   output_property_name='trajectory'),
+
+            ProtocolInputReference(input_property_name='system',
+                                   output_protocol_id=assign_topology.id,
+                                   output_property_name='system')
         ]
 
-        schema.protocols[npt_production.id] = npt_production
+        schema.protocols[extract_density.id] = extract_density.schema
 
         # Set up a conditional group to ensure convergence of uncertainty
-
-        converge_uncertainty = groups.ConditionalGroup({
-            npt_production.id: npt_production,
-            extract_density.id: extract_density
-        })
-
+        converge_uncertainty = groups.ConditionalGroup([
+            npt_production.id,
+            extract_density.id
+        ])
         converge_uncertainty.id = 'converge_uncertainty'
 
-        # TODO: Replace with a general global:convergence_criteria
-        condition = groups.ConditionalGroup.Condition()
+        converge_uncertainty.input_references = [
+            # Locals
+            ProtocolInputReference(input_property_name='left_hand_value',
+                                   output_protocol_id='extract_density',
+                                   output_property_name='uncertainty'),
+            # Globals
+            ProtocolInputReference(input_property_name='right_hand_value',
+                                   output_protocol_id='global',
+                                   output_property_name='uncertainty'),
+        ]
 
-        condition.left_hand_reference = ProtocolInputReference('', extract_density.id, 'uncertainty')
-        condition.right_hand_reference = ProtocolInputReference('', 'global', 'uncertainty')
-
-        condition.condition_type = groups.ConditionalGroup.ConditionType.LessThan
-
-        converge_uncertainty.conditions.append(condition)
-
-        schema.groups[converge_uncertainty.id] = converge_uncertainty
+        schema.groups[converge_uncertainty.id] = converge_uncertainty.schema
 
         # Define where the final values come from.
-        schema.final_value_reference = ProtocolInputReference('', extract_density.id, 'value')
-        schema.final_uncertainty_reference = ProtocolInputReference('', extract_density.id, 'uncertainty')
+        schema.final_value_reference = ProtocolInputReference(input_property_name=None,
+                                                              output_protocol_id=extract_density.id,
+                                                              output_property_name='value')
 
-        schema.build()
+        schema.final_uncertainty_reference = ProtocolInputReference(input_property_name=None,
+                                                                    output_protocol_id=extract_density.id,
+                                                                    output_property_name='uncertainty')
 
         return schema

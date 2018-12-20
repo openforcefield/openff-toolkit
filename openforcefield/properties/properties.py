@@ -18,7 +18,17 @@ Authors
 # =============================================================================================
 
 from enum import Enum, IntFlag, unique
-from pydantic import BaseModel
+
+from pydantic import BaseModel, validator
+from pydantic.validators import dict_validator
+from typing import Optional
+
+from simtk import unit
+
+from openforcefield.utils.serialization import deserialize_quantity, serialize_quantity
+
+from openforcefield.properties.thermodynamics import ThermodynamicState
+from openforcefield.properties.substances import Substance
 
 
 # =============================================================================================
@@ -69,7 +79,7 @@ class PropertyPhase(IntFlag):
 
 
 @unique
-class CalculationFidelity(Enum):
+class CalculationFidelity(IntFlag):
     """An enum describing the fidelity at which a property was measured.
     """
     SurrogateModel = 1
@@ -84,7 +94,26 @@ class CalculationFidelity(Enum):
 class Source(BaseModel):
     """Container class for information about how a property was measured / calculated.
     """
-    pass
+
+    @classmethod
+    def get_validators(cls):
+        # yield dict_validator
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, value):
+        # A dirty hack to ensure proper inheritance..
+
+        if isinstance(value, cls):
+            return value
+        else:
+
+            if 'doi' in value:
+                return MeasurementSource(**value)
+            elif 'fidelity' in value:
+                return CalculationSource(**value)
+
+            cls(**dict_validator(value))
 
 
 class MeasurementSource(Source):
@@ -92,31 +121,30 @@ class MeasurementSource(Source):
 
     This class contains either the DOI and/or the reference, but must contain at
     least one as the observable must have a source, even if it was measured in lab.
+
+    Attributes
+    ----------
+    doi : str or None, default None
+        The DOI for the source, preferred way to identify for source
+    reference : str
+        The long form description of the source if no DOI is available, or more
+        information is needed or wanted.
     """
 
-    doi: str = None
-    reference: str = None
+    doi: Optional[str] = None
+    reference: Optional[str] = None
 
-    def __init__(self, doi=None, reference=None):
-        """Constructs a new MeasurementSource
+    @classmethod
+    def get_validators(cls):
+        # yield dict_validator
+        yield cls.validate
 
-        Parameters
-        ----------
-        doi : str or None, default None
-            The DOI for the source, preferred way to identify for source
-        reference : str
-            The long form description of the source if no DOI is available, or more
-            information is needed or wanted.
-        """
-
-        if doi is None and reference is None:
-            raise ValueError("Either a doi and / or a reference must be set")
-
-        # TODO fix pydantic structures
-        # doi = source_doi
-        # reference = source_reference
-
-        super().__init__()
+    @classmethod
+    def validate(cls, value):
+        if isinstance(value, cls):
+            return value
+        else:
+            return cls(**dict_validator(value))
 
 
 class CalculationSource(Source):
@@ -126,7 +154,7 @@ class CalculationSource(Source):
     simulation, reweighting, ...) in addition to the parameters which were
     used as part of the calculations.
 
-    Parameters
+    Attributes
     ----------
     fidelity : CalculationFidelity
         The fidelity at which the property was calculated
@@ -137,20 +165,12 @@ class CalculationSource(Source):
     fidelity: CalculationFidelity = CalculationFidelity.DirectSimulation
     provenance: str = None
 
-    def __init__(self, fidelity=None, provenance=None):
-
-        # TODO fix pydantic structures
-        # self.fidelity = fidelity
-        # self.provenance = provenance
-
-        super().__init__()
-
 
 # =============================================================================================
 # Property Definitions
 # =============================================================================================
 
-class PhysicalProperty:
+class PhysicalProperty(BaseModel):
     """Represents the value of any physical property and it's uncertainty.
 
     It additionally stores the thermodynamic state at which the property
@@ -159,17 +179,33 @@ class PhysicalProperty:
     property was collected.
     """
 
-    def __init__(self):
-        self.thermodynamic_state = None
+    thermodynamic_state: ThermodynamicState = None
+    phase: PropertyPhase = PropertyPhase.Undefined
 
-        self.source = None
+    substance: Substance = None
 
-        self.phase = PropertyPhase.Undefined
+    value: unit.Quantity = None
+    uncertainty: unit.Quantity = None
 
-        self.substance = None
+    source: Source = None
 
-        self.value = None
-        self.uncertainty = None
+    @validator('value', 'uncertainty', pre=True, whole=True)
+    def validate_quantity(cls, v):
+
+        if isinstance(v, dict):
+            v = deserialize_quantity(v)
+
+        return v
+
+    class Config:
+
+        # A dirty hack to allow simtk.unit.Quantities...
+        # TODO: Should really invesitigate QCElemental as an alternative.
+        arbitrary_types_allowed = True
+
+        json_encoders = {
+            unit.Quantity: lambda v: serialize_quantity(v),
+        }
 
     @property
     def temperature(self):
@@ -195,7 +231,7 @@ class PhysicalProperty:
         self.uncertainty = uncertainty
 
     @staticmethod
-    def get_calculation_schema():
+    def get_default_calculation_schema():
         """Returns the set of steps needed to calculate
         this property by direct simulation methods.
 

@@ -3,11 +3,16 @@ from os.path import isfile, join
 
 import logging
 
+from pydantic import ValidationError
+
 from openforcefield.utils import get_data_filename
+
+from openforcefield.properties import PhysicalProperty
 from openforcefield.properties.datasets import ThermoMLDataSet
 
 # TODO: Add tests for specific ThermoML data sets that give 100% coverage.
 # These may need to be hand written.
+
 
 def test_from_url():
 
@@ -20,12 +25,39 @@ def test_from_url():
     assert data_set is None
 
 
+def test_serialization():
+
+    data_set = ThermoMLDataSet.from_doi_list('10.1016/j.jct.2016.10.001')
+    assert data_set is not None
+
+    assert len(data_set.properties) > 0
+
+    for mixture_tag in data_set.properties:
+
+        for physical_property in data_set.properties[mixture_tag]:
+            physical_property_json = physical_property.json()
+            print(physical_property_json)
+
+            physical_property_recreated = PhysicalProperty.parse_raw(physical_property_json)
+            print(physical_property_recreated)
+
+
 def test_from_doi():
 
     data_set = ThermoMLDataSet.from_doi_list('10.1016/j.jct.2016.10.001')
     assert data_set is not None
 
     assert len(data_set.properties) > 0
+
+    for mixture_tag in data_set.properties:
+
+        for physical_property in data_set.properties[mixture_tag]:
+
+            physical_property_json = physical_property.json()
+            print(physical_property_json)
+
+            physical_property_recreated = PhysicalProperty.parse_raw(physical_property_json)
+            print(physical_property_recreated)
 
     data_set = ThermoMLDataSet.from_doi_list('10.1016/j.jct.2016.12.009')
     assert data_set is None
@@ -67,4 +99,4 @@ def parse_all_jct_files():
 
 
 if __name__ == "__main__":
-    parse_all_jct_files()
+    test_from_doi()

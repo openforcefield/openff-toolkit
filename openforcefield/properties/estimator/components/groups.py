@@ -24,11 +24,9 @@ import logging
 from os import path
 from enum import Enum, unique
 
-from pydantic import BaseModel
 from typing import List
 
 from openforcefield.utils import graph
-from openforcefield.utils.exceptions import XmlNodeMissingException
 
 from .protocols import BaseProtocol, ProtocolInputReference, ProtocolSchema
 
@@ -82,13 +80,13 @@ class ProtocolGroup(BaseProtocol):
     has converged).
     """
 
-    def __init__(self, protocols):
+    def __init__(self, protocol_ids):
         """Constructs a new ProtocolGroup
 
         Parameters
         ----------
-        protocols : dict(str, Protocol)
-            The protocols to include in this group.
+        protocol_ids : list(str)
+            The protocols which will be included in this group.
         """
         super().__init__()
 
@@ -97,38 +95,38 @@ class ProtocolGroup(BaseProtocol):
         self._root_protocols = []
         self._execution_order = []
 
+        self._protocol_ids = protocol_ids
         self._protocols = {}
 
-        self._input_references = []
-
-        # Groups can take additional global
-        # inputs which the grouped protocols themselves
-        # may not require.
-        self.global_inputs = {}
-
-        for protocol_id in protocols:
-            self._protocols[protocol_id] = protocols[protocol_id]
-            self._dependants_graph[protocol_id] = []
-
-        # Pull each of an individual protocols inputs up so that they
-        # become a required input of the group.
-        for protocol_id in self._protocols:
-
-            protocol = self._protocols[protocol_id]
-
-            for input_reference in protocol.input_references:
-
-                if input_reference in self.input_references:
-                    continue
-
-                if input_reference.output_protocol_id not in self._protocols:
-                    self.input_references.append(copy.deepcopy(input_reference))
-
-                if input_reference.output_protocol_id not in self._protocols or \
-                   protocol_id in self._dependants_graph[input_reference.output_protocol_id]:
-                    continue
-
-                self._dependants_graph[input_reference.output_protocol_id].append(protocol_id)
+        #
+        # # Groups can take additional global
+        # # inputs which the grouped protocols themselves
+        # # may not require.
+        # self.global_inputs = {}
+        #
+        # for protocol_id in protocols:
+        #     self._protocols[protocol_id] = protocols[protocol_id]
+        #     self._dependants_graph[protocol_id] = []
+        #
+        # # Pull each of an individual protocols inputs up so that they
+        # # become a required input of the group.
+        # for protocol_id in self._protocols:
+        #
+        #     protocol = self._protocols[protocol_id]
+        #
+        #     for input_reference in protocol.input_references:
+        #
+        #         if input_reference in self.input_references:
+        #             continue
+        #
+        #         if input_reference.output_protocol_id not in self._protocols:
+        #             self.input_references.append(copy.deepcopy(input_reference))
+        #
+        #         if input_reference.output_protocol_id not in self._protocols or \
+        #            protocol_id in self._dependants_graph[input_reference.output_protocol_id]:
+        #             continue
+        #
+        #         self._dependants_graph[input_reference.output_protocol_id].append(protocol_id)
 
         # Do the usual to clean up the graph structure and figure out which order
         # the protocols should execute in.
@@ -139,14 +137,12 @@ class ProtocolGroup(BaseProtocol):
 
     @property
     def schema(self):
-        """ProtocolSchema: Returns a serializable schema for this object."""
+        """ProtocolSchema: A serializable schema for this object."""
 
         base_schema = super(ProtocolGroup, self).schema
         schema = ProtocolGroupSchema.parse_obj(base_schema.dict())
 
-        schema.input_references = self._input_references
-
-        for protocol_id in self._protocols:
+        for protocol_id in self._protocol_ids:
             schema.grouped_protocol_ids.append(protocol_id)
 
         return schema
@@ -497,50 +493,6 @@ class ProtocolGroup(BaseProtocol):
 
         return self._protocols[input_reference.grouped_protocol_id].get_output_value(input_reference)
 
-    @classmethod
-    def from_xml(cls, xml_node, existing_protocols=None):
-        """Creates a new ProtocolGroup object from an xml node
-
-        Parameters
-        ----------
-        xml_node: Element
-            The xml element which contains the ProtocolGroup definition.
-        existing_protocols: dict(str, BaseProtocol)
-            A dictionary of already loaded in protocols.
-        Returns
-        -------
-            The created ProtocolGroup
-        """
-
-        id_node = xml_node.find('id')
-
-        if id_node is None:
-            raise XmlNodeMissingException('id')
-
-        protocol_ids_node = xml_node.find('protocol-ids')
-
-        if protocol_ids_node is None:
-            raise XmlNodeMissingException('protocol-ids')
-
-        protocols_to_group = {}
-
-        for protocol_id_node in protocol_ids_node.findall('protocol-id'):
-
-            if protocol_id_node.text not in existing_protocols:
-
-                raise Exception('The protocol group {} tries to include a non-existant'
-                                'protocol {}'.format(id_node.text, protocol_id_node.text))
-
-            if protocol_id_node.text in protocols_to_group:
-                continue
-
-            protocols_to_group[protocol_id_node.text] = existing_protocols[protocol_id_node.text]
-
-        return_value = cls(protocols_to_group)
-        return_value.id = id_node.text
-
-        return return_value
-
 
 @register_calculation_group()
 class ConditionalGroup(ProtocolGroup):
@@ -590,8 +542,48 @@ class ConditionalGroup(ProtocolGroup):
         super().__init__(protocols)
         self.conditions = []
 
-        self.max_iterations = 10
-        self._current_iteration = 0
+        self._max_iterations = 10
+        self._stackable = True
+
+        self._condition_type = ConditionalGroup.ConditionType.LessThan
+
+        self._left_hand_value = None
+        self._right_hand_value = None
+
+        self._stacked_left_hand_values = []
+        self._stacked_right_hand_values = []
+
+    @BaseProtocol.Parameter
+    def max_iterations(self):
+        pass
+
+    @BaseProtocol.Parameter
+    def stackable(self):
+        pass
+
+    @BaseProtocol.Parameter
+    def condition_type(self):
+        pass
+
+    @BaseProtocol.InputPipe
+    def left_hand_value(self):
+        pass
+
+    @BaseProtocol.InputPipe
+    def right_hand_value(self):
+        pass
+
+    def _evaluate_condition(self, left_hand_value, right_hand_value):
+
+        if left_hand_value is None or right_hand_value is None:
+            return False
+
+        if self.condition_type is self.ConditionType.LessThan:
+            return left_hand_value <= right_hand_value
+        elif self.condition_type is self.ConditionType.GreaterThan:
+            return left_hand_value >= right_hand_value
+
+        raise NotImplementedError()
 
     def execute(self, directory):
         """Executes the protocols within this groups
@@ -611,50 +603,34 @@ class ConditionalGroup(ProtocolGroup):
 
         should_continue = True
 
+        current_iteration = 0
+
         while should_continue:
+
+            conditions_met = self._evaluate_condition(self._left_hand_value,
+                                                      self._right_hand_value)
+
+            for left_value, right_value in zip(self._stacked_left_hand_values,
+                                               self._stacked_right_hand_values):
+
+                conditions_met = conditions_met & self._evaluate_condition(left_value,
+                                                                           right_value)
+
+            if conditions_met:
+
+                should_continue = False
+                break
 
             super(ConditionalGroup, self).execute(directory)
 
-            conditions_met = True
+            current_iteration += 1
 
-            for condition in self.conditions:
+            if self._current_iteration >= self._max_iterations:
 
-                left_hand_value = None
+                logging.info('Conditional while loop failed to converge: {}'.format(self.id))
+                return False
 
-                if condition.left_hand_reference.output_protocol_id == 'global':
-                    left_hand_value = self.global_inputs[condition.left_hand_reference.output_property_name]
-                else:
-                    left_hand_value = self._protocols[condition.left_hand_reference.output_protocol_id].\
-                        get_output_value(condition.left_hand_reference)
-
-                right_hand_value = None
-
-                if condition.right_hand_reference.output_protocol_id == 'global':
-                    right_hand_value = self.global_inputs[condition.right_hand_reference.output_property_name]
-                else:
-                    right_hand_value = self._protocols[condition.right_hand_reference.output_protocol_id].\
-                        get_output_value(condition.right_hand_reference)
-
-                if condition.condition_type is self.ConditionType.LessThan:
-                    conditions_met = conditions_met & (left_hand_value <= right_hand_value)
-                elif condition.condition_type is self.ConditionType.GreaterThan:
-                    conditions_met = conditions_met & (left_hand_value >= right_hand_value)
-
-                self._current_iteration += 1
-
-                if self._current_iteration >= self.max_iterations:
-                    logging.info('Conditional while loop failed to converge: {}'.format(self.id))
-                    return False
-
-                if not conditions_met:
-                    logging.info('Conditional criteria not yet met: {} {} {}'.format(left_hand_value,
-                                                                                     condition.condition_type,
-                                                                                     right_hand_value))
-                    break
-
-            if conditions_met:
-                should_continue = False
-                break
+            logging.info('Conditional criteria not yet met')
 
         logging.info('Conditional while loop finished: {}'.format(self.id))
         return True
@@ -672,10 +648,10 @@ class ConditionalGroup(ProtocolGroup):
         bool
             True if the two protocols are safe to merge.
         """
-        if not super(ConditionalGroup, self).can_merge(other):
+        if not self._stackable and not super(ConditionalGroup, self).can_merge(other):
             return False
 
-        # TODO: Need to think how to best handle this...
+        # TODO: Implement stackable group logic.
         return True
 
     def merge(self, other):
@@ -690,6 +666,7 @@ class ConditionalGroup(ProtocolGroup):
         other: ConditionalGroup
             The protocol to merge into this one.
         """
+        #TODO: Implement this for stackables.
         super(ConditionalGroup, self).merge(other)
         self.conditions.extend(other.conditions)
 
@@ -728,110 +705,3 @@ class ConditionalGroup(ProtocolGroup):
 
             condition.left_hand_reference.replace_protocol(old_id, new_id)
             condition.right_hand_reference.replace_protocol(old_id, new_id)
-
-    @classmethod
-    def from_xml(cls, xml_node, existing_protocols=None):
-        """Creates a new ConditionalGroup object from an xml node
-
-        Parameters
-        ----------
-        xml_node: Element
-            The xml element which contains the ProtocolGroup definition.
-        existing_protocols: dict(str, BaseProtocol)
-            A dictionary of already loaded in protocols.
-        Returns
-        -------
-            The created ConditionalGroup
-        """
-
-        return_value = super(ConditionalGroup, cls).from_xml(xml_node, existing_protocols)
-
-        condition_node = xml_node.find('condition')
-
-        if condition_node is None:
-            raise XmlNodeMissingException('condition')
-
-        condition_arguments = condition_node.text.split(' ')
-
-        if len(condition_arguments) != 3:
-
-            raise ValueError('A ConditionalGroup requires a condtion node with three arguments of '
-                             'the form <condition>"argument1" "condition" "argument2"</condition>')
-
-        left_hand_argument_split = condition_arguments[0].split(':')
-        right_hand_argument_split = condition_arguments[2].split(':')
-
-        if len(left_hand_argument_split) != 2:
-            
-            raise ValueError('The left hand argument of a condition must have the form'
-                             ' protocol_id:property_name')
-
-        if len(right_hand_argument_split) != 2:
-            
-            raise ValueError('The right hand argument of a condition must have the form'
-                             ' protocol_id:property_name')
-
-        left_hand_protocol_id = left_hand_argument_split[0]
-        left_hand_property_name = left_hand_argument_split[1]
-
-        right_hand_protocol_id = right_hand_argument_split[0]
-        right_hand_property_name = right_hand_argument_split[1]
-
-        # First validate to make sure the protocols being referenced actually
-        # exist as part of this group.
-        if left_hand_protocol_id not in return_value._protocols and \
-           left_hand_protocol_id != 'global':
-            
-            raise ValueError('The left hand protocol {} is not part of the protocol group {}'.format(
-                left_hand_protocol_id, return_value.id))
-
-        if right_hand_protocol_id not in return_value._protocols and \
-           right_hand_protocol_id != 'global':
-            
-            raise ValueError('The right hand protocol {} is not part of the protocol group {}'.format(
-                right_hand_protocol_id, return_value.id))
-
-        # Make sure the protocols actually have the required properties.
-        if left_hand_protocol_id != 'global' and not hasattr(return_value._protocols[left_hand_protocol_id],
-                                                             left_hand_property_name):
-            
-            raise ValueError('The protocol {} does not have a property {}'.format(
-                left_hand_protocol_id, left_hand_property_name))
-
-        if right_hand_protocol_id != 'global' and not hasattr(return_value._protocols[right_hand_protocol_id],
-                                                              right_hand_property_name):
-
-            raise ValueError('The protocol {} does not have a property {}'.format(
-                right_hand_protocol_id, right_hand_property_name))
-
-        condition = cls.Condition()
-
-        condition.left_hand_reference = ProtocolInputReference('', 
-                                                               left_hand_protocol_id,
-                                                               left_hand_property_name)
-
-        condition.right_hand_reference = ProtocolInputReference('',
-                                                                right_hand_protocol_id,
-                                                                right_hand_property_name)
-
-        # Make sure we can understand the passed condition type.
-        condition_string = condition_arguments[1]
-
-        if not cls.ConditionType.has_value(condition_string):
-            raise ValueError('{} is not a recognised condition.'.format(condition_string))
-
-        condition.condition_type = cls.ConditionType(condition_string)
-
-        return_value.conditions.append(condition)
-
-        if condition.left_hand_reference.output_protocol_id == 'global':
-
-            if condition.left_hand_reference.output_property_name not in return_value.global_inputs:
-                return_value.global_inputs[condition.left_hand_reference.output_property_name] = None
-
-        if condition.right_hand_reference.output_protocol_id == 'global':
-
-            if condition.right_hand_reference.output_property_name not in return_value.global_inputs:
-                return_value.global_inputs[condition.right_hand_reference.output_property_name] = None
-
-        return return_value

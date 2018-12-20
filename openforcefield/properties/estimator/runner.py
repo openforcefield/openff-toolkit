@@ -25,13 +25,19 @@ import copy
 import logging
 import multiprocessing
 import math
-
 import uuid
+import json
+import struct
 
 from os import path
-from xml.etree import ElementTree
+
+from tornado import gen
+from tornado.ioloop import IOLoop
+from tornado.iostream import IOStream, StreamClosedError
+from tornado.tcpserver import TCPServer
 
 from openforcefield.properties.estimator import CalculationSchema
+from openforcefield.properties.estimator.client import PropertyEstimatorDataModel
 from openforcefield.properties.estimator.components import protocols
 
 from openforcefield.properties import PropertyPhase, CalculationFidelity, PhysicalProperty
@@ -41,6 +47,12 @@ from openforcefield.properties.datasets.property_dataset import CalculatedProper
 
 from dask.threaded import get as dask_threaded_get
 from dask import distributed
+
+# Needed for server-client communication.
+int_struct = struct.Struct("<i")
+
+unpack_int = int_struct.unpack
+pack_int = int_struct.pack
 
 
 # =============================================================================================
@@ -389,7 +401,7 @@ class DirectCalculationGraph:
 # Property Estimator
 # =============================================================================================
 
-class PropertyCalculationRunner:
+class PropertyCalculationRunner(TCPServer):
     """The class responsible for deciding at which fidelity a property
     is calculated, as well as launching the calculations themselves.
 
@@ -401,57 +413,87 @@ class PropertyCalculationRunner:
         The number of threads to use per multi-threaded simulation.
     """
 
-    def __init__(self, worker_threads=1, threads_per_simulation=None):
+    def __init__(self, worker_threads=1, threads_per_simulation=None, address='', port=8000):
 
         self.calculated_properties = {}
 
         self._worker_threads = worker_threads
         self._threads_per_simulation = threads_per_simulation
 
+        self._calculate_number_of_simulation_threads()
+
+        self._tcp_server = TCPServer()
+        self._port = port
+
+        super().__init__()
+        self.listen(self._port, address)
+
+        logging.info('Server listening at {}:{}'.format(address, port))
+
+    def _calculate_number_of_simulation_threads(self):
+
         maximum_threads = multiprocessing.cpu_count()
 
         if self._threads_per_simulation is None:
-            self._threads_per_simulation = math.floor(maximum_threads / worker_threads)
+            self._threads_per_simulation = math.floor(maximum_threads / self._worker_threads)
 
-        if worker_threads * self._threads_per_simulation > maximum_threads:
+        total_threads = self._worker_threads * self._threads_per_simulation
 
-            raise ValueError('The total number of requested threads (' +
-                             str(worker_threads * self._threads_per_simulation) +
-                             ') must be less than the available ' + str(maximum_threads))
+        if total_threads > maximum_threads:
+
+            raise ValueError('The total number of requested threads ({}) must be less '
+                             'than the available {}.'.format(total_threads, maximum_threads))
 
         logging.info(str(self._threads_per_simulation) + ' threads will be used per'
                                                          ' openMM simulation')
 
-        os.environ["OPENMM_NUM_THREADS"] = str(threads_per_simulation)
+        os.environ["OPENMM_NUM_THREADS"] = str(self._threads_per_simulation)
 
-        self.calculator_templates = {}
+    @gen.coroutine
+    def handle_stream(self, stream, address):
+        """A routine to handle incoming connections from
+        a tornado TCP client.
 
-        self.load_calculator_templates()
+        Notes
+        -----
+        Based on the code from:
 
-    def load_calculator_templates(self):
-        """Loads the property calculation templates from the default xml file.
+            URL: https://stackoverflow.com/a/40257248
+            Author: A. Jesse Jiryu Davis
+            Date 20/12/2018
         """
-        templates = {}
 
-        with open('../data/properties/templates.xml') as templates_file:
+        logging.info("Connection from {}".format(address))
 
-            xml = templates_file.read()
-            root_node = ElementTree.fromstring(xml)
+        try:
+            while True:
 
-            for template_node in root_node:
+                # Read 4 bytes.
+                header = yield stream.read_bytes(4)
 
-                calculator_template = CalculationSchema.from_xml(template_node,
-                                                                 templates)
+                # Convert from network order to int.
+                length = unpack_int(header)[0]
 
-                templates[calculator_template.id] = calculator_template
+                encoded_json = yield stream.read_bytes(length)
+                json_model = encoded_json.decode()
 
-        for template_id in templates:
+                logging.info('Received job request from {}'.format(address))
 
-            # TODO: Get actual templates...
-            template = templates[template_id]
-            self.calculator_templates[template.property_type] = template
+                data_model = PropertyEstimatorDataModel.parse_raw(json_model)
 
-    def run(self, measured_properties, parameter_set):
+                ids = self.launch_calculations(data_model)
+
+                encoded_job_ids = json.dumps(ids).encode()
+                length = pack_int(len(encoded_job_ids))
+
+                yield stream.write(length + encoded_job_ids)
+
+                logging.info('Jobs ids sent: {}'.format(ids))
+
+        except StreamClosedError:
+            logging.error("%s disconnected", address)
+
+    def launch_calculations(self, data_model):
         """Schedules the calculation of the given properties using the passed parameters.
 
         Parameters
@@ -461,6 +503,8 @@ class PropertyCalculationRunner:
         parameter_set : PhysicalPropertyDataSet
             The force field parameters used to perform the calculations.
         """
+
+        return ['1', '2', 'Testing...']
 
         # Make a copy of the properties array so we
         # can easily safely changes to it.
