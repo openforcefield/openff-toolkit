@@ -265,7 +265,7 @@ class TestTopology(TestCase):
     # test_get_topology_bond
     # test_get_topology_virtual_site
     # test_get_topology_molecule
-
+    # TODO: Test serialization
 
     def test_from_openmm(self):
         """Test creation of an openforcefield Topology object from an OpenMM Topology and component molecules"""
@@ -325,3 +325,4 @@ class TestTopology(TestCase):
         # Search for a substructure that isn't there
         matches = topology.chemical_environment_matches("[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 0
+

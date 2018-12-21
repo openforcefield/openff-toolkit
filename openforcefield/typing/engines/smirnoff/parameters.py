@@ -27,7 +27,8 @@ import sys
 import math
 import copy
 import time
-import logger
+from enum import Enum
+import logging
 import itertools
 
 from collections import OrderedDict
@@ -60,6 +61,37 @@ logger = logging.getLogger(__name__)
 # terms are applied to which atoms in specified oemols.
 # The static method should be added to the parsers map.
 #=============================================================================================
+
+
+
+
+class IncompatibleUnitError(Exception):
+    """
+    Exception for when a parameter is in the wrong units for a ParameterHandler's unit system
+    """
+    def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
+
+class IncompatibleParameterError(Exception):
+    """
+    Exception for when a parameter is in the wrong units for a ParameterHandler's unit system
+    """
+    def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
+
+
+
+class NonbondedMethod(Enum):
+    """
+    An enumeration of the nonbonded methods
+    """
+    NoCutoff = openmm.NonbondedForce.NoCutoff
+    CutoffPeriodic = openmm.NonbondedForce.CutoffPeriodic
+    CutoffNonPeriodic = openmm.NonbondedForce.CutoffNonPeriodic
+    Ewald = openmm.NonbondedForce.Ewald
+    PME = openmm.NonbondedForce.PME
 
 class ParameterList(list):
     """Parameter list that also supports accessing items by SMARTS string.
@@ -110,7 +142,7 @@ class ParameterType(object):
 
     # TODO: Can we provide some shared tools for returning settable/gettable attributes, and checking unit-bearing attributes?
 
-    def __init__(self, smirks=None, id=None, pid=None):
+    def __init__(self, smirks=None, **kwargs):
         """
         Create a ParameterType
 
@@ -122,16 +154,16 @@ class ParameterType(object):
         """
         if smirks is None:
             raise ValueError("'smirks' must be specified")
-        self.smirks = smirks
+        self._smirks = smirks
 
-        if id is not None:
-            self.id = id
-        if pid is not None:
-            self.pid = pid
+        # Handle all unknown kwargs as cosmetic so we can write them back out
+        for key, val in kwargs.items():
+            attr_name = '_' + key
+            setattr(self, attr_name, val)
 
     @property
     def smirks(self):
-        return self.__smirks
+        return self._smirks
 
     @smirks.setter
     def set_smirks(self, smirks):
@@ -139,8 +171,8 @@ class ParameterType(object):
         # raising an exception if it is invalid or doesn't tag a valid set of atoms
         # TODO: Add check to make sure we can't make tree non-hierarchical
         #       This would require parameter type knows which ParameterList it belongs to
-        ChemicalEnvironment.validate(smirks, ensure_valence_type=self.__valence_type)
-        self.__smirks = smirks
+        ChemicalEnvironment.validate(smirks, ensure_valence_type=self._VALENCE_TYPE)
+        self._smirks = smirks
 
     # TODO: Can we automatically check unit compatibilities for other parameters we create?
     # For example, if we have a parameter with units energy/distance**2, can we check to make
@@ -172,12 +204,24 @@ class ParameterHandler(object):
     _KWARGS = [] # list of keyword arguments accepted by the force Handler on initialization
     _SMIRNOFF_VERSION_INTRODUCED = 0.0 # the earliest version of SMIRNOFF spec that supports this ParameterHandler
     _SMIRNOFF_VERSION_DEPRECATED = None # if deprecated, the first SMIRNOFF version number it is no longer used
-    _REQUIRE_UNITS = None # list of parameters that require units to be defined
+    _REQUIRE_UNITS = dict() # dict of parameters that require units to be defined
 
     # TODO: Do we need to store the parent forcefield object?
-    def __init__(self, forcefield):
+    def __init__(self, forcefield, **kwargs):
+        """
+
+        Parameters
+        ----------
+        forcefield : openforcefield.typing.engines.smirnoff.ForceField
+
+        """
         self._forcefield = forcefield # the ForceField object that this ParameterHandler is registered with
-        self.parameters = ParameterList() # list of ParameterType objects # TODO: Change to method accessor so we can access as list or dict
+        self._parameters = ParameterList() # list of ParameterType objects # TODO: Change to method accessor so we can access as list or dict
+        # Handle all the unknown kwargs as cosmetic so we can write them back out
+        # TODO: Should we do validation of these somehow (eg. with length_unit? It's already checked when constructing ParameterTypes)?
+        for key, val in kwargs.items():
+            attr_name = '_' + key
+            setattr(self, attr_name, val)
 
     # TODO: Do we need to return these, or can we handle this internally
     @property
@@ -187,18 +231,86 @@ class ParameterHandler(object):
         # TODO: Should we use introspection to inspect the function signature instead?
         return set(self._KWARGS)
 
-    def check_compatibility(self):
-        """Check to make sure the global parameters for this parameter type are compatible with how this class has currently been configured.
+    #@classmethod
+    def check_parameter_compatibility(self, parameter_kwargs):
+        """
+        Check to make sure that the fields requiring defined units are compatible with the required units for the
+        Parameters handled by this ParameterHandler
 
+        Parameters
+        ----------
+        parameter_kwargs: dict
+            The dict that will be used to construct the ParameterType
+
+        Raises
+        ------
         Raises a ValueError if the parameters are incompatible.
+        """
+        for arg in parameter_kwargs:
+            if arg in self._REQUIRE_UNITS:
+                #raise Exception(self)
+                reqd_unit = self._REQUIRE_UNITS[arg]
+            #if arg in cls._REQUIRE_UNITS:
+            #    raise Exception(cls)
+            #    reqd_unit = cls._REQUIRE_UNITS[arg]
+                val = parameter_kwargs[arg]
+                if not(reqd_unit.is_compatible(val.unit)):
+                    raise IncompatibleUnitError("Input unit {} is not compatible with ParameterHandler unit {}".format(val.unit, reqd_unit))
+
+    def check_handler_compatibility(self, handler_kwargs):
+        """
+        Checks if a set of kwargs used to create a ParameterHandler are compatible with this ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
+
+        Parameters
+        ----------
+        handler_kwargs : dict
+            The kwargs that would be used to construct
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
         pass
 
     # TODO: Can we ensure SMIRKS and other parameters remain valid after manipulation?
-    def add_parameter(self):
+    def add_parameter(self, parameter_kwargs):
         """Add a parameter to the forcefield, ensuring all parameters are valid.
+
+        Parameters
+        ----------
+        parameter : dict
+            The kwargs to pass to the ParameterHandler.INFOTYPE (a ParameterType) constructor
         """
-        pass
+
+        #if not(isinstance(parameter, ParameterType)):
+        #    raise TypeError("Inappropriate object type passed to ParameterHandler.add_parameter(): {}".format(parameter))
+        # TODO: Do we need to check for incompatibility with existing parameters?
+
+        # Perform unit compatibility checks
+        self.check_parameter_compatibility(parameter_kwargs)
+        # Check for correct SMIRKS valence
+        ChemicalEnvironment.validate(parameter_kwargs['smirks'],  ensure_valence_type=self._VALENCE_TYPE)
+
+        new_parameter = self._INFOTYPE(**parameter_kwargs)
+        self._parameters.append(new_parameter)
+
+    def get_parameter(self, parameter_attrs):
+        """
+        Return the parameters in this ParameterHandler that match the parameter_attrs argument
+
+        Parameters
+        ----------
+        parameter_attrs : dict of {attr: value}
+            The attrs mapped to desired values (for example {"smirks": "[*:1]~[#16:2]=,:[#6:3]~[*:4]", "id": "t105"} )
+
+
+        Returns
+        -------
+        list of ParameterType-derived objects
+            A list of matching ParameterType-derived objects
+        """
+        # TODO: This is a necessary API point for Lee-Ping's ForceBalance
 
     def get_matches(self, entity):
         """Retrieve all force terms for a chemical entity, which could be a Molecule, group of Molecules, or Topology.
@@ -216,8 +328,8 @@ class ParameterHandler(object):
         """
         logger.info(self.__class__.__name__) # TODO: Overhaul logging
         matches = ValenceDict()
-        for force_type in self._types:
-            matches_for_this_type = { atoms : force_type for atoms in topology.chemical_environment_matches(force_type.smirks) }
+        for force_type in self._parameters:
+            matches_for_this_type = { atoms : force_type for atoms in entity.chemical_environment_matches(force_type.smirks) }
             matches.update(matches_for_this_type)
             logger.info('{:64} : {:8} matches'.format(force_type.smirks, len(matches_for_this_type)))
 
@@ -262,7 +374,7 @@ class ConstraintHandler(ParameterHandler):
     class ConstraintType(ParameterType):
         """A SMIRNOFF constraint type"""
         def __init__(self, node, parent):
-            super(ConstraintType, self).__init__(node, parent) # Base class handles ``smirks`` and ``id`` fields
+            super(ConstraintType, self).__init__(**kwargs) # Base class handles ``smirks`` and ``id`` fields
             if 'distance' in node.attrib:
                 self.distance = _extract_quantity_from_xml_element(node, parent, 'distance') # Constraint with specified distance will be added by ConstraintHandler
             else:
@@ -272,10 +384,11 @@ class ConstraintHandler(ParameterHandler):
     _VALENCE_TYPE = 'Bond' # ChemicalEnvironment valence type expected for SMARTS # TODO: Do we support more exotic types as well?
     _INFOTYPE = ConstraintType
     _OPENMMTYPE = None # don't create a corresponding OpenMM Force class
-    _REQUIRED_UNITS = ['distance']
+    _REQUIRE_UNITS = {'distance': unit.angstrom}
 
-    def __init__(self, forcefield):
-        super(ConstraintHandler, self).__init__(forcefield)
+    def __init__(self, forcefield, **kwargs):
+        #super(ConstraintHandler, self).__init__(forcefield)
+        super().__init__(forcefield, **kwargs)
 
     def createForce(self, system, topology, **kwargs):
         constraints = self.getMatches(topology)
@@ -295,12 +408,17 @@ class BondHandler(ParameterHandler):
 
     class BondType(ParameterType):
         """A SMIRNOFF Bond parameter type"""
-        def __init__(self, node, parent):
-            super(ConstraintType, self).__init__(node, parent) # Base class handles ``smirks`` and ``id`` fields
+        #def __init__(self, node, parent):
+        #    super(ConstraintType, self).__init__(node, parent) # Base class handles ``smirks`` and ``id`` fields
+
+        #def __init__(self, node, parent):
+        def __init__(self, k, length, fractional_bondorder_method=None, fractional_bondorder=None, **kwargs):
+            #super(ConstraintType, self).__init__(node, parent)  # Base class handles ``smirks`` and ``id`` fields
+            super().__init__(**kwargs)  # Base class handles ``smirks`` and ``id`` fields
 
             # Determine if we are using fractional bond orders for this bond
             # First, check if this force uses fractional bond orders
-            if 'fractional_bondorder_method' in parent.attrib:
+            if not(fractional_bondorder_method is None):
                 # If it does, see if this parameter line provides fractional bond order parameters
                 if 'length_bondorder1' in node.attrib and 'k_bondorder1' in node.attrib:
                     # Store what interpolation scheme we're using
@@ -318,17 +436,22 @@ class BondHandler(ParameterHandler):
 
             # If no fractional bond orders, just get normal length and k
             if self.fractional_bondorder is None:
-                self.length = _extract_quantity_from_xml_element(node, parent, 'length')
-                self.k = _extract_quantity_from_xml_element(node, parent, 'k')
+                self.length = length
+                self.k = k
+                #self.length = _extract_quantity_from_xml_element(node, parent, 'length')
+                #self.k = _extract_quantity_from_xml_element(node, parent, 'k')
 
-    _TAGNAME = 'BondForce' # SMIRNOFF tag name to process
+    _TAGNAME = 'Bonds' # SMIRNOFF tag name to process
     _VALENCE_TYPE = 'Bond' # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = BondType # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicBondForce # OpenMM force class to create
     _DEPENDENCIES = [ConstraintHandler] # ConstraintHandler must be executed first
+    _REQUIRE_UNITS = {'length':unit.angstrom,
+                      'k': unit.kilocalorie_per_mole / unit.angstrom**2}
 
-    def __init__(self, forcefield):
-        super(HarmonicBondHandler, self).__init__(forcefield)
+    def __init__(self, forcefield, **kwargs):
+        #super(HarmonicBondHandler, self).__init__(forcefield)
+        super().__init__(forcefield, **kwargs)
 
     def createForce(self, system, topology, **kwargs):
         # Create or retrieve existing OpenMM Force object
@@ -385,22 +508,26 @@ class AngleHandler(ParameterHandler):
 
     class AngleType(ParameterType):
         """A SMIRNOFF angle type."""
-        def __init__(self, node, parent):
-            super(AngleType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
-            self.angle = _extract_quantity_from_xml_element(node, parent, 'angle')
-            self.k = _extract_quantity_from_xml_element(node, parent, 'k')
-            if 'fractional_bondorder' in parent.attrib:
-                self.fractional_bondorder = parent.attrib['fractional_bondorder']
+        def __init__(self, angle, k, fractional_bondorder=None, **kwargs):
+            #super(AngleType, self).__init__(node, parent)  # base class handles ``smirks`` and ``id`` fields
+            super().__init__(**kwargs)  # base class handles ``smirks`` and ``id`` fields
+            self.angle = angle
+            self.k = k
+            if not(fractional_bondorder) is None:
+                self.fractional_bondorder = fractional_bondorder
             else:
                 self.fractional_bondorder = None
 
-    _TAGNAME = 'AngleForce' # SMIRNOFF tag name to process
+    _TAGNAME = 'Angles' # SMIRNOFF tag name to process
     _VALENCE_TYPE = 'Angle' # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = AngleType # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicAngleForce # OpenMM force class to create
+    _REQUIRE_UNITS = {'angle':unit.degree,
+                      'k': unit.kilocalorie_per_mole / unit.degree**2}
 
-    def __init__(self, forcefield):
-        super(AngleHandler, self).__init__(forcefield)
+    def __init__(self, forcefield, **kwargs):
+        #super(AngleHandler, self).__init__(forcefield)
+        super().__init__(forcefield, **kwargs)
 
     def createForce(self, system, topology, **kwargs):
         force = super(AngleHandler, self).createForce(system, topology, **kwargs)
@@ -436,38 +563,26 @@ class ProperTorsionHandler(ParameterHandler):
 
     class ProperTorsionType(ParameterType):
         """A SMIRNOFF torsion type for proper torsions."""
-        def __init__(self, node, parent):
-            super(ProperTorsionType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
+        def __init__(self, fractional_bondorder_method=None, fractional_bondorder=None, **kwargs):
+
             self.periodicity = list()
             self.phase = list()
             self.k = list()
-
-            # Check that the SMIRKS pattern matches the type it's supposed to
-            try:
-                chemenv = ChemicalEnvironment(self.smirks)
-                thistype = chemenv.getType()
-                if thistype != 'ProperTorsion':
-                    raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Proper'))
-            except SMIRKSParsingError:
-                print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
-
-
-            # TODO: Fractional bond orders should be processed on the per-force basis instead of per-bond basis
-            if 'fractional_bondorder_method' in parent.attrib:
-                self.fractional_bondorder = parent.attrib['fractional_bondorder']
-            else:
-                self.fractional_bondorder = None
-
             # Store parameters.
             index = 1
-            while 'phase%d'%index in node.attrib:
-                self.periodicity.append( int(_extract_quantity_from_xml_element(node, parent, 'periodicity%d' % index)) )
-                self.phase.append( _extract_quantity_from_xml_element(node, parent, 'phase%d' % index, unit_name='phase_unit') )
-                self.k.append( _extract_quantity_from_xml_element(node, parent, 'k%d' % index, unit_name='k_unit') )
+            while 'phase%d'%index in kwargs:
+                self.periodicity.append( kwargs['periodicity%d' % index])
+                self.phase.append( kwargs['phase%d' % index])
+                self.k.append( kwargs['k%d' % index])
+                del kwargs['periodicity%d' % index]
+                del kwargs['phase%d' % index]
+                del kwargs['k%d' % index]
+
                 # Optionally handle 'idivf', which divides the periodicity by the specified value
-                if ('idivf%d' % index) in node.attrib:
-                    idivf = _extract_quantity_from_xml_element(node, parent, 'idivf%d' % index)
+                if ('idivf%d' % index) in kwargs:
+                    idivf = kwargs['idivf%d' % index]
                     self.k[-1] /= float(idivf)
+                    del kwargs['idivf%d' % index]
                 index += 1
 
             # Check for errors, i.e. 'phase' instead of 'phase1'
@@ -475,13 +590,33 @@ class ProperTorsionHandler(ParameterHandler):
             if len(self.phase)==0:
                raise Exception("Error: Torsion with id %s has no parseable phase entries." % self.pid)
 
-    _TAGNAME = 'ProperTorsionForce' # SMIRNOFF tag name to process
+
+            super().__init__(**kwargs)  # base class handles ``smirks`` and ``id`` fields
+
+
+
+            # TODO: Fractional bond orders should be processed on the per-force basis instead of per-bond basis
+            if not(fractional_bondorder_method is None):
+                self.fractional_bondorder = fractional_bondorder
+            else:
+                self.fractional_bondorder = None
+
+
+
+    _TAGNAME = 'ProperTorsions' # SMIRNOFF tag name to process
     _VALENCE_TYPE = 'ProperTorsion' # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = ProperTorsionType # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce # OpenMM force class to create
+    _REQUIRE_UNITS = {'k1':unit.kilocalorie_per_mole,
+                      'phase1':unit.degree}
 
-    def __init__(self, forcefield):
-        super(ProperTorsionHandler, self).__init__(forcefield)
+    def __init__(self, forcefield, potential=None, **kwargs):
+        #super(ProperTorsionHandler, self).__init__(forcefield)
+        super().__init__(forcefield, **kwargs)
+        if not(potential is None):
+            self._potential = potential
+        else:
+            self._potential = self._DEFAULTS['potential']
 
     def createForce(self, system, topology, **kwargs):
         force = super(ProperTorsionHandler, self).createForce(system, topology, **kwargs)
@@ -507,53 +642,58 @@ class ImproperTorsionHandler(ParameterHandler):
 
     class ImproperTorsionType(ParameterType):
         """A SMIRNOFF torsion type for improper torsions."""
-        def __init__(self, node, parent):
-            super(ImproperTorsionType, self).__init__(node, parent) # base class handles ``smirks`` and ``id`` fields
+        def __init__(self, fractional_bondorder_method=None, fractional_bondorder=None, **kwargs):
+
             self.periodicity = list()
             self.phase = list()
             self.k = list()
-
-            # Check that the SMIRKS pattern matches the type it's supposed to
-            try:
-                chemenv = ChemicalEnvironment(self.smirks)
-                thistype = chemenv.getType()
-                if thistype != 'ImproperTorsion':
-                    raise Exception("Error: SMIRKS pattern %s (parameter %s) does not specify a %s torsion, but it is supposed to." % (self.smirks, self.pid, 'Improper'))
-            except SMIRKSParsingError:
-                print("Warning: Could not confirm whether smirks pattern %s is a valid %s torsion." % (self.smirks, self.torsiontype))
-
-            if 'fractional_bondorder' in parent.attrib:
-                self.fractional_bondorder = parent.attrib['fractional_bondorder']
-            else:
-                self.fractional_bondorder = None
-
             # Store parameters.
             index = 1
-            while 'phase%d'%index in node.attrib:
-                self.periodicity.append( int(_extract_quantity_from_xml_element(node, parent, 'periodicity%d' % index)) )
-                self.phase.append( _extract_quantity_from_xml_element(node, parent, 'phase%d' % index, unit_name='phase_unit') )
-                self.k.append( _extract_quantity_from_xml_element(node, parent, 'k%d' % index, unit_name='k_unit') )
-                # Optionally handle 'idivf', which divides the periodicity by the specified value
-                if ('idivf%d' % index) in node.attrib:
-                    idivf = _extract_quantity_from_xml_element(node, parent, 'idivf%d' % index)
-                    self.k[-1] /= float(idivf)
-                index += 1
+            while 'phase%d'%index in kwargs:
+                self.periodicity.append(kwargs['periodicity%d' % index])
+                self.phase.append(kwargs['phase%d' % index])
+                self.k.append(kwargs['k%d' % index])
+                del kwargs['periodicity%d' % index]
+                del kwargs['phase%d' % index]
+                del kwargs['k%d' % index]
                 # SMIRNOFF applies trefoil (three-fold, because of right-hand rule) impropers unlike AMBER
                 # If it's an improper, divide by the factor of three internally
-                if node.tag=='Improper':
-                    self.k[-1] /= 3.
+                self.k[-1] /= 3.
+
+                # Optionally handle 'idivf', which divides the periodicity by the specified value
+                if ('idivf%d' % index) in kwargs:
+                    idivf = kwargs['idivf%d' % index]
+                    self.k[-1] /= float(idivf)
+                    del kwargs['idivf%d' % index]
+                index += 1
+
             # Check for errors, i.e. 'phase' instead of 'phase1'
-            # TODO: What can we do if there is no ``id``?
+            # TODO: Can we raise a more useful error if there is no ``id``?
             if len(self.phase)==0:
                raise Exception("Error: Torsion with id %s has no parseable phase entries." % self.pid)
 
-    _TAGNAME = 'ImproperTorsionForce' # SMIRNOFF tag name to process
+            super().__init__(**kwargs)  # base class handles ``smirks`` and ``id`` fields
+
+            # TODO: Fractional bond orders should be processed on the per-force basis instead of per-bond basis
+            if not(fractional_bondorder_method is None):
+                self.fractional_bondorder = fractional_bondorder
+            else:
+                self.fractional_bondorder = None
+
+
+    _TAGNAME = 'ImproperTorsions' # SMIRNOFF tag name to process
     _VALENCE_TYPE = 'ImproperTorsion' # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = ImproperTorsionType # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce # OpenMM force class to create
+    _DEFAULTS = {'potential':'charmm'}
 
-    def __init__(self, forcefield):
-        super(ImproperTorsionHandler, self).__init__(forcefield)
+    def __init__(self, forcefield, potential=None, **kwargs):
+        #super(ImproperTorsionHandler, self).__init__(forcefield)
+        super().__init__(forcefield, **kwargs)
+        if not(potential is None):
+            self._potential = potential
+        else:
+            self._potential = self._DEFAULTS['potential']
 
     def createForce(self, system, topology, **kwargs):
         force = super(ImproperTorsionHandler, self).createForce(system, topology, **kwargs)
@@ -581,27 +721,12 @@ class ImproperTorsionHandler(ParameterHandler):
 class vdWHandler(ParameterHandler):
     """Handle SMIRNOFF ``<vdW>`` tags"""
 
-    _TAGNAME = 'vdW' # SMIRNOFF tag name to process
-    _VALENCE_TYPE = 'Atom' # ChemicalEnvironment valence type expected for SMARTS
-    _INFOTYPE = None # info type to store
-    _OPENMMTYPE = openmm.NonbondedForce # OpenMM force class to create
-
-    # TODO: Is this necessary
-    SCALETOL = 1e-5
-
-    # DEFAULTS
-    _DEFAULTS = {
-        'potential' : 'Lennard-Jones-12-6',
-        'scale12' : 0.0,
-        'scale13' : 0.0,
-        'scale14' : 0.5,
-        'scale15' : 1.0,
-    }
 
     class vdWType(ParameterType):
         """A SMIRNOFF vdWForce type."""
-        def __init__(self, smirks=None, sigma=None, rmin_half=None, epsilon=None, id=None, parent_id=None):
-            super(vdWType, self).__init__(smirks=smirks, id=id, parent_id=parent_id)
+        def __init__(self, sigma=None, rmin_half=None, epsilon=None, **kwargs):
+            #super(vdWType, self).__init__(smirks=smirks, id=id, parent_id=parent_id)
+            super().__init__(**kwargs)
 
             if (sigma is None) and (rmin_half is None):
                 raise ValueError("sigma or rmin_half must be specified.")
@@ -609,14 +734,12 @@ class vdWHandler(ParameterHandler):
                 raise ValueError("BOTH sigma and rmin_half cannot be specified simultaneously.")
             if (rmin_half is not None):
                 sigma = 2.*rmin_half/(2.**(1./6.))
-            ensure_compatible_units(sigma, unit.angstroms, 'sigma') # TODO: Will this automatically be ensured by type checking?
+
             self.sigma = sigma
 
             if epsilon is None:
                 raise ValueError("epsilon must be specified")
-            ensure_compatible_units(epsilon, unit.kilocalories_per_mole, 'epsilon')
             self.epsilon = epsilon
-            # TODO: Check unit compatibility
 
         @property
         def attrib(self):
@@ -625,12 +748,83 @@ class vdWHandler(ParameterHandler):
             names = ['smirks', 'sigma', 'epsilon', 'id', 'parent_id']
             return { name : getattr(self, name) for name in names if hasattr(self, name) }
 
-    _TAGNAME = 'vdWForce' # SMIRNOFF tag name to process
-    _INFOTYPE = vdWType # info type to store
-    _OPENMMTYPE = openmm.NonbondedForce # OpenMM force class to create
 
-    def __init__(self, forcefield):
-        super(NonbondedParameterHandler, self).__init__(forcefield)
+    _TAGNAME = 'vdW' # SMIRNOFF tag name to process
+    _VALENCE_TYPE = 'Atom' # ChemicalEnvironment valence type expected for SMARTS
+    _OPENMMTYPE = openmm.NonbondedForce # OpenMM force class to create
+    _INFOTYPE = vdWType # info type to store
+    _REQUIRE_UNITS = {'epsilon': unit.kilocalorie_per_mole,
+                      'sigma': unit.angstrom,
+                      'rmin_half': unit.angstrom}
+    # TODO: Is this necessary
+    _SCALETOL = 1e-5
+
+    # DEFAULTS
+    _DEFAULTS = {'potential' : 'Lennard-Jones-12-6',
+                 'combining_rules' : 'Loentz-Berthelot',
+                 'scale12' : 0.0,
+                 'scale13' : 0.0,
+                 'scale14' : 0.5,
+                 'scale15' : 1.0,
+                 'switch' : '8.0*angstroms',
+                 'cutoff' : 9.0*unit.angstroms,
+                 'long_range_dispersion' : 'isotropic'
+                 }
+
+
+    def __init__(self, forcefield, scale12=None, scale13=None, scale14=None, scale15=None,
+                 potential=None, switch=None, cutoff=None, long_range_dispersion=None,
+                 combining_rules=None, **kwargs):
+        #super(NonbondedParameterHandler, self).__init__(forcefield)
+        super().__init__(forcefield, **kwargs)
+
+        # TODO: Find a better way to set defaults
+        # TODO: Validate these values against the supported output types (openMM force kwargs?)
+        if scale12 is None:
+            self._scale12 = self._DEFAULTS['scale12']
+        else:
+            self._scale12 = scale12
+
+        if scale13 is None:
+            self._scale13 = self._DEFAULTS['scale13']
+        else:
+            self._scale13 = scale12
+
+        if scale14 is None:
+            self._scale14 = self._DEFAULTS['scale14']
+        else:
+            self._scale14 = scale12
+
+        if scale15 is None:
+            self._scale15 = self._DEFAULTS['scale15']
+        else:
+            self._scale15 = scale12
+
+        if potential is None:
+            self._potential = self._DEFAULTS['potential']
+        else:
+            self._potential = potential
+
+        if switch is None:
+            self._switch = self._DEFAULTS['switch']
+        else:
+            self._switch = switch
+
+        if cutoff is None:
+            self._cutoff = self._DEFAULTS['cutoff']
+        else:
+            self._cutoff = cutoff
+
+        if long_range_dispersion is None:
+            self._long_range_dispersion = self._DEFAULTS['long_range_dispersion']
+        else:
+            self._long_range_dispersion = long_range_dispersion
+
+        if combining_rules is None:
+            self._combining_rules = self._DEFAULTS['combining_rules']
+        else:
+            self._combining_rules = combining_rules
+
 
 
     # TODO: Handle the case where multiple <NonbondedForce> tags are found
@@ -640,18 +834,66 @@ class vdWHandler(ParameterHandler):
     #    for atom in element.findall('Atom'):
     #        Handler.registerAtom(atom, element)
 
-    # TODO: nonbondedMethod and nonbondedCutoff should now be specified by StericsForce attributes
-    def createForce(self, system, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=0.9, **args):
-        force = super(NonbondedParameterHandler, self).createForce(system, topology)
+    def check_handler_compatibility(self, handler_kwargs, assume_missing_is_default=True):
+        """
+        Checks if a set of kwargs used to create a ParameterHandler are compatible with this ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
+        will be assumed to expect the ParameterHandler class default.
 
-        methodMap = {NoCutoff:openmm.NonbondedForce.NoCutoff,
-                     CutoffNonPeriodic:openmm.NonbondedForce.CutoffNonPeriodic,
-                     CutoffPeriodic:openmm.NonbondedForce.CutoffPeriodic,
-                     Ewald:openmm.NonbondedForce.Ewald,
-                     PME:openmm.NonbondedForce.PME}
-        if nonbondedMethod not in methodMap:
-            raise ValueError('Illegal nonbonded method for NonbondedForce; method given was %s' % nonbondedMethod)
-        force = openmm.NonbondedForce()
+        Parameters
+        ----------
+        handler_kwargs : dict
+            The kwargs that would be used to construct
+        assume_missing_is_default : bool
+            If True, will assume that parameters not specified in parameter_kwargs would have been set to the default.
+            Therefore, an exception is raised if the ParameterHandler is incompatible with the default value for a
+            unspecified field.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        compare_attr_to_kwargs = {self._scale12: 'scale12',
+                                  self._scale13: 'scale13',
+                                  self._scale14: 'scale14',
+                                  self._scale15: 'scale15'}
+        for attr, kwarg_key in compare_attr_to_kwargs.items():
+            kwarg_val = handler_kwargs.get(kwarg_key, self._DEFAULTS[kwarg_key])
+            if abs(kwarg_val - attr) > self._SCALETOL:
+                raise IncompatibleParameterError("Difference between '{}' values is beyond allowed tolerance {}. "
+                                                 "(handler value: {}, incompatible valie: {}". format(kwarg_key,
+                                                                                                      self._SCALETOL,
+                                                                                                      attr, kwarg_val))
+
+        # TODO: Test for other possible incompatibilities here -- Probably just check for string equality for now,
+        # detailed check will require some openMM/MD epxertise)
+                                #self._potential: 'potential',
+                                #self._combining_rules: 'combining_rules',
+                                #self._switch: 'switch',
+                                #self._cutoff: 'cutoff',
+                                #self._long_range_dispersion:'long_range_dispersion'
+                                #}
+
+
+    # TODO: nonbondedMethod and nonbondedCutoff should now be specified by StericsForce attributes
+    def createForce(self, system, topology, nonbondedMethod=NonbondedMethod.NoCutoff, nonbondedCutoff=0.9, **args):
+        force = super(NonbondedParameterHandler, self).createForce(system, topology)
+        if not(isinstance(nonbondedMethod, NonbondedMethod)):
+            try:
+                nonbondedMethod_temp = NonbondedMethod[nonbondedMethod]
+                nonbondedMethod = nonbondedMethod_temp
+            except:
+                raise ValueError('Illegal nonbonded method for NonbondedForce; method given was {}'.format(nonbondedMethod))
+
+        #methodMap = {NoCutoff : openmm.NonbondedForce.NoCutoff,
+        #             CutoffPeriodic : openmm.NonbondedForce.CutoffPeriodic,
+        #             CutoffNonPeriodic : openmm.NonbondedForce.CutoffNonPeriodic,
+        #             Ewald : openmm.NonbondedForce.Ewald,
+        #             PME : openmm.NonbondedForce.PME}
+
+
+        #if nonbondedMethod not in methodMap:
+        #     = openmm.NonbondedForce()
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)
         if 'ewaldErrorTolerance' in args:

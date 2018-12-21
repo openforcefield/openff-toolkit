@@ -435,12 +435,12 @@ class ChemicalEnvironment(object):
         This method will raise a :class:`SMIRKSParsingError` if the provided SMIRKS string is not valid.
 
         """
-        chemenv = ChemicalEnvironment(smarts)
+        chemenv = ChemicalEnvironment(smirks)
 
         if ensure_valence_type:
             valence_type = chemenv.getType()
             if valence_type != ensure_valence_type:
-                raise SMIRKSParsingError("Tagged atoms in SMARTS string '%s' specifies valence type '%s', expected '%s'." % (smarts, valence_type, ensure_valence_type))
+                raise SMIRKSParsingError("Tagged atoms in SMARTS string '%s' specifies valence type '%s', expected '%s'." % (smirks, valence_type, ensure_valence_type))
 
     def __init__(self, smirks = None, label = None, replacements = None, toolkit='openeye'):
         """Initialize a chemical environment abstract base class.

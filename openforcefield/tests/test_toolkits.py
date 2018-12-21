@@ -35,10 +35,8 @@ class TestToolkitWrapper(TestCase):
     """Test the ToolkitWrapper abstract base class"""
     pass
 
-
 class TestOpenEyeToolkitWrapper(TestCase):
     """Test the OpenEyeToolkitWrapper"""
-
 
     # TODO: Make separate smiles_add_H and smiles_explicit_H tests
 
@@ -46,7 +44,6 @@ class TestOpenEyeToolkitWrapper(TestCase):
     def test_smiles(self):
         """Test OpenEyeToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-
 
         # This differs from RDKit's SMILES due to different canonicalization schemes
 

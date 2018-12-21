@@ -1189,6 +1189,7 @@ class Bond(Serializable):
         atom1.add_bond(self)
         atom2.add_bond(self)
         # TODO: Check bondtype and fractional_bond_order are valid?
+        # TODO: Dative bonds
         #self._type = bondtype
         self._fractional_bond_order = fractional_bond_order
         self._bond_order = bond_order

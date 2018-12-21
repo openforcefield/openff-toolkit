@@ -47,6 +47,9 @@ from openforcefield.utils import get_data_filename, all_subclasses
 from openforcefield.topology import Topology, ValenceDict, ImproperDict
 from openforcefield.topology import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
+from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
+from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler, XMLParameterIOHandler, ParseError
+
 
 #=============================================================================================
 # CONFIGURE LOGGER
@@ -60,6 +63,17 @@ logger = logging.getLogger(__name__)
 
 # TODO: Instead of having a global version number, alow each Force to have a separate version number
 MAX_SUPPORTED_VERSION = '1.0' # maximum version of the SMIRNOFF spec supported by this SMIRNOFF forcefield
+
+
+
+class ParameterHandlerRegistrationError(Exception):
+    """
+    Exception for errors in ParameterHandler registration errors
+    """
+    def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
+
 
 #=============================================================================================
 # FORCEFIELD
@@ -159,7 +173,7 @@ class ForceField(object):
 
     """
 
-    def __init__(self, *sources, parameter_object_handlers=None, parameter_io_handlers=None, disable_version_check=False):
+    def __init__(self, *sources, parameter_handler_classes=None, parameter_io_handler_classes=None, disable_version_check=False):
         """Create a new :class:`ForceField` object from one or more SMIRNOFF parameter definition files.
 
         Parameters
@@ -172,10 +186,10 @@ class ForceField(object):
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
             with files appearing later in the sequence resulting in parameters that have higher precedence.
             Support for multiple files is primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
-        parameter_object_handlers : iterable of ParameterHandler classes, optional, default=None
+        parameter_handler_classes : iterable of ParameterHandler classes, optional, default=None
             If not None, the specified set of ParameterHandler classes will be instantiated to create the parameter object model
             By default, all imported subclasses of ParameterHandler are automatically registered
-        parameter_io_handlers : iterable of ParameterIOHandler classes
+        parameter_io_handler_classes : iterable of ParameterIOHandler classes
             If not None, the specified set of ParameterIOHandler classes will be used to parse/generate serialized parameter sets
             By default, all imported subclasses of ParameterIOHandler are automatically registered
         disable_version_check : bool, optional, default=False
@@ -213,14 +227,14 @@ class ForceField(object):
         # TODO: We need to change this to just find all ParameterHandler objects in this file;
         # otherwise, we can't define two different ParameterHandler subclasses to compare for a new type of energy term
         # since both will try to register themselves for the same XML tag and an Exception will be raised.
-        if parameter_handlers is None:
+        if parameter_handler_classes is None:
             parameter_handlers = all_subclasses(ParameterHandler)
-        self._register_parameter_handlers(parameter_handlers)
+        self._register_parameter_handler_classes(parameter_handlers)
 
-        # Register all ParameterHandler objects that will process serialized parameter representations
-        if parameter_io_handlers is None:
-            parameter_io_handlers = all_subclasses(ParameterIOHandler)
-        self._register_parameter_io_handlers(parameter_io_handlers)
+        # Register all ParameterIOHandler objects that will process serialized parameter representations
+        if parameter_io_handler_classes is None:
+            parameter_io_handler_classes = all_subclasses(ParameterIOHandler)
+        self._register_parameter_io_handler_classes(parameter_io_handler_classes)
 
         # Parse all sources containing SMIRNOFF parameter definitions
         self.parse(sources)
@@ -228,11 +242,13 @@ class ForceField(object):
     def _initialize(self):
         """Initialize all object fields.
         """
-        self.disable_version_check = False # if True, will disable checking compatibility version
-        self.aromaticity_model = DEFAULT_AROMATICITY_MODEL # aromaticity model
-        self.parameter_handlers = OrderedDict() # ParameterHandler classes to be instantiated for each parameter type
-        self.file_handlers = OrderedDict() # ParameterIO classes to be used for each file type
-        self.parameters = ParameterList() # ParameterHandler objects instantiated for each parameter type
+        self._disable_version_check = False # if True, will disable checking compatibility version
+        self._aromaticity_model = DEFAULT_AROMATICITY_MODEL # aromaticity model
+        self._parameter_handler_classes = OrderedDict() # Parameter handler classes that _can_ be initialized if needed
+        self._parameter_handlers = OrderedDict() # ParameterHandler classes to be instantiated for each parameter type
+        self._parameter_io_handler_classes = OrderedDict() # ParameterIOHandler classes that _can_ be initialiazed if needed
+        self._parameter_io_handlers = OrderedDict() # ParameterIO classes to be used for each file type
+        self._parameters = ParameterList() # ParameterHandler objects instantiated for each parameter type
 
     # TODO: Fold this into initializer for ForceField or ParameterSet
 
@@ -253,41 +269,90 @@ class ForceField(object):
         else:
             self._raise_parsing_exception(root, "'version' attribute must be specified in SMIRNOFF tag")
 
-    def _register_parameter_handlers(parameter_handlers):
+    def _register_parameter_handler_classes(self, parameter_handler_classes):
         """Register all ParameterHandlers, ensuring they specify unique tags to process
 
         Parameters
         ----------
-        parameter_handlers : iterable of ParameterHandler subclasses
-            All specified
+        parameter_handler_classes : iterable of ParameterHandler subclasses
+
 
         """
-        parsers = dict()
-        for parameter_handler in parameter_handlers:
-            tagname = subclass._TAGNAME
+        #parsers = dict()
+        for parameter_handler_class in parameter_handler_classes:
+            #tagname = subclass._TAGNAME
+            tagname = parameter_handler_class._TAGNAME
             if tagname is not None:
-                if tagname in parsers.keys():
-                    raise Exception("ParameterHandler {} provides a parser for tag '{}', but ParameterHandler {} has already been registered to handle that tag.".format(subclass, tagname, self.parsers[tagname]))
-                parsers[tagname] = subclass
-        return parsers
+                if tagname in self._parameter_handler_classes.keys():
+                    raise Exception("ParameterHandler {} provides a parser for tag '{}', but ParameterHandler {} has "
+                                    "already been registered to handle that tag.".format(parameter_handler_class,
+                                                                                         tagname,
+                                                                                         self._parameter_handler_classes[tagname]))
+                #parsers[tagname] = parameter_handler
+                self._parameter_handler_classes[tagname] = parameter_handler_class
+        #return parsers
 
-    def _register_parameter_io_handlers(parameter_io_handlers):
+    def _register_parameter_io_handler_classes(self, parameter_io_handler_classes):
         """Register all ParameterIOHandlers, ensuring they specify unique suffixes
 
         Parameters
         ----------
-        parameter_io_handlers : iterable of ParameterIOHandler subclasses
+        parameter_io_handler_classes : iterable of ParameterIOHandler subclasses
             All specified ParameterIOHandler classes will be registered as ways to translate to/from the object model to serialized parameter sets
 
         """
-        parsers = dict()
-        for parameter_handler in parameter_handlers:
-            tagname = subclass._TAGNAME
-            if tagname is not None:
-                if tagname in parsers.keys():
-                    raise Exception("ParameterHandler {} provides a parser for tag '{}', but ParameterHandler {} has already been registered to handle that tag.".format(subclass, tagname, self.parsers[tagname]))
-                parsers[tagname] = subclass
-        return parsers
+        #parsers = dict()
+        for parameter_io_handler_class in parameter_io_handler_classes:
+            serialization_format = parameter_io_handler_class._FORMAT
+            if serialization_format is not None:
+                if serialization_format in self._parameter_io_handler_classes.keys():
+                    raise Exception("ParameterIOHandler {} provides a IO parser for format '{}', but ParameterIOHandler {} has "
+                                    "already been registered to handle that tag.".format(parameter_io_handler,
+                                                                                         serialization_format,
+                                                                                         self._parameter_io_handler_classes[serialization_format]))
+                self._parameter_io_handler_classes[serialization_format] = parameter_io_handler_class
+        #return parsers
+
+    def register_parameter_handler(self, parameter_handler_class, parameter_handler_kwargs):
+        """
+
+        Parameters
+        ----------
+        parameter_handler_class : A subclass of ParameterHandler
+
+        """
+        tagname = parameter_handler_class._TAGNAME
+        if tagname in self._parameter_handlers.keys():
+            raise ParameterHandlerRegistrationError("Tried to register parameter handler '{}' for tag '{}', but "
+                                                    "tag is already registered to {}".format(parameter_handler_class,
+                                                                                             tagname,
+                                                                                             self._parameter_handlers[
+                                                                                                 tagname]))
+        new_handler = parameter_handler_class(self, **parameter_handler_kwargs)
+
+        self._parameter_handlers[new_handler._TAGNAME] = new_handler
+        return new_handler
+
+    def register_parameter_io_handler(self, parameter_io_handler_class):
+        """
+
+        Parameters
+        ----------
+        parameter_io_handler_class : A subclass of ParameterIOHandler
+
+        """
+        io_format = parameter_io_handler_class._FORMAT
+        if io_format in self._parameter_io_handlers.keys():
+            raise ParameterHandlerRegistrationError("Tried to register parameter IO handler '{}' for tag '{}', but "
+                                                    "tag is already registered to {}".format(parameter_io_handler_class,
+                                                                                             io_format,
+                                                                                             self._parameter_io_handlers[
+                                                                                                 io_format]))
+        new_io_handler = parameter_io_handler_class(self)
+
+        self._parameter_io_handlers[io_format] = new_io_handler
+        return new_io_handler
+
 
     # TODO: Do we want to make this optional?
 
@@ -371,24 +436,61 @@ class ForceField(object):
             Dict to be passed to the handler for construction or checking compatibility.
 
         """
-        if tagname in forcefield.forces:
+        handler = None
+        if tagname in self._parameter_handlers.keys():
             # If handler already exists, make sure it is compatible
-            handler = forcefield.forces[parameter_name]
-            handler.check_compatibility(**kwargs)
-        else:
-            # Create a new handler
-            try:
-                handler = getattr(forcefield.parameter_handlers, parameter_name)(**handler_kwargs)
-            except AttributeError:
-                msg = "Cannot find a registered parameter handler for tag '{}'\n".format(parameter_name)
-                msg += "Registered parameter handlers: {}\n".format(self.parameter_handlers.keys())
-                raise KeyError(msg)
+            handler = self._parameter_handlers[tagname]
+            handler.check_handler_compatibility(handler_kwargs)
+        elif tagname in self._parameter_handler_classes.keys():
+            new_ph_class = self._parameter_handler_classes[tagname]
+            handler = self.register_parameter_handler(new_ph_class, handler_kwargs)
+
+        #handler = self._parameter_handlers.get(tagname, None)
+        #for handler_tagname in self._parameter_handlers.keys():
+        #    if handler_tagname== tagname:
+        #        return self._parameter_handlers[handler_tagname]
+        ## Don't create a new handler here -- They've already all been instatiated with the ForceField
+        # else:
+        #     # Create a new handler
+        #     try:
+        #         handler = getattr(self.parameter_handlers, parameter_name)(**handler_kwargs)
+        #     except AttributeError:
+        if handler is None:
+            msg = "Cannot find a registered parameter handler for tag '{}'\n".format(tagname)
+            msg += "Registered parameter handlers: {}\n".format(self._parameter_handlers.keys())
+            raise KeyError(msg)
 
         return handler
 
+    def get_io_handler(self, io_format):
+        """Retrieve the parameter handlers associated with the provided tagname.
+
+        If the parameter handler has not yet been instantiated, it will be created.
+        If a parameter handler object already exists, it will be checked for compatibility
+        and an Exception raised if it is incompatible with the provided kwargs.
+
+        Parameters
+        ----------
+        io_format : str
+            The name of the io format to be handled.
+
+        """
+        io_handler = None
+        if io_format in self._parameter_io_handlers.keys():
+            io_handler = self._parameter_io_handlers[io_format]
+        elif io_format in self._parameter_io_handler_classes.keys():
+            new_ph_class = self._parameter_io_handler_classes[io_format]
+            io_handler = self.register_parameter_io_handler(new_ph_class)
+        if io_handler is None:
+            msg = "Cannot find a registered parameter IO handler for format '{}'\n".format(io_format)
+            msg += "Registered parameter IO handlers: {}\n".format(self._parameter_io_handlers.keys())
+            raise KeyError(msg)
+
+        return io_handler
+
     # TODO: Delegate this to the XML handler
 
-    def parse(self, sources):
+    def parse(self, sources, input_format=None):
         """Parse a SMIRNOFF force field definition.
 
         Parameters
@@ -401,7 +503,8 @@ class ForceField(object):
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
             with files appearing later in the sequence resulting in parameters that have higher precedence.
             Support for multiple files is primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
-
+        input_format : string, optional. Default = None
+            The format of the input file(s). If not specified, all parsers will be tried.
         .. notes ::
 
            * New SMIRNOFF sections are handled independently, as if they were specified in the same file.
@@ -411,23 +514,50 @@ class ForceField(object):
         """
         # Ensure that we are working with an iterable
         try:
-            some_object_iterator = iter(files)
+            sources = iter(sources)
         except TypeError as te:
             # Make iterable object
-            files = [files]
+            sources = [sources]
 
         # Process all SMIRNOFF definition files or objects
         # QUESTION: Allow users to specify forcefield URLs so they can pull forcefield definitions from the web too?
-        trees = list()
-        for source in sources:
-            # TODO: Load content from source
+        #trees = list()
+        if input_format is None:
+            # If we don't know, try all known formats
+            io_formats_to_try = self._parameter_io_handler_classes.keys()
+        else:
+            io_formats_to_try = [input_format]
 
+
+        for source in sources:
+            # TODO: Add support for other sources (other serialized formats, URLs, etc)
             # Parse content depending on type
-            try:
-                self.parse_xml(source_string)
-            except ParseError:
+            parse_successful = False
+
+            for parameter_io_format in io_formats_to_try:
+                parameter_io_handler = self.get_io_handler(parameter_io_format)
+                if type(source) == bytes:
+                    parameter_io_handler.parse_string(source)
+                    parse_successful = True
+                elif type(source) == str:
+                    #try: #TODO: What if it's the text of a XML file?
+                    #    byte_source = str.encode(source)
+                    #    parameter_io_handler.parse_string(byte_source)
+                    #    parse_successful = True
+                    #except:
+                    parameter_io_handler.parse_file(source)
+                    parse_successful = True
+                else:
+                    parameter_io_handler.parse_file(source)
+                    parse_successful = True
+                    # TODO: The try/except stuff here is dangerous. The io handler modifies the forcefield as it reads
+                    # the file. If it crashes midway through, the forcefield will be partially modified.
+                #except ParseError:
+                #    pass
+            if not(parse_successful):
+                valid_formats = [iohandler.format for iohandler in self._parameter_io_handlers]
                 msg = "Source {} does not appear to be in a known SMIRNOFF encoding.\n".format(source)
-                msg += "Valid encodings are: ['XML']"
+                msg += "Valid formats are: {}".format(valid_formats)
                 raise Exception(msg)
 
     # TODO : Move to initializer
