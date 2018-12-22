@@ -17,12 +17,42 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import sys
+
+from pydantic.validators import dict_validator
 from simtk import unit
+
+from pydantic import BaseModel, validator
 
 
 # =============================================================================================
 # Module Constants
 # =============================================================================================
+
+class TypedBaseModel(BaseModel):
+
+    module_metadata: str = ''
+    type_metadata: str = ''
+
+    @classmethod
+    def get_validators(cls):
+        # yield dict_validator
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, value):
+        if isinstance(value, cls):
+            return value
+        else:
+            class_type = getattr(sys.modules[value['module_metadata']], value['type_metadata'])
+            return class_type(**dict_validator(value))
+
+    def __init__(self, **data):
+        super().__init__(**data)
+
+        self.module_metadata = type(self).__module__
+        self.type_metadata = type(self).__name__
+
 
 def serialize_quantity(quantity):
     """

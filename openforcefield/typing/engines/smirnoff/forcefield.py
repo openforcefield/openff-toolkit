@@ -531,7 +531,9 @@ class ForceField(object):
 
         """
         self._forces = []
-        self.loadFile(files)
+
+        if len(*files) > 0:
+            self.loadFile(files)
 
     def loadFile(self, files):
         """Load a SMIRNOFF XML file and add the definitions from it to this ForceField.
@@ -782,26 +784,26 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
     def addParameter(self, params, smirks, force_type, tag):
         """Add specified SMIRKS/parameter in the section under the specified force type.
 
-    Parameters
-    ----------
-    params : dict
-        Dictionary of attributes (parameters and their descriptions) for XML,
-        i.e. as output by getParameter.
-    smirks : str
-        SMIRKS pattern to associate with this parameter
-    force_type : str
-        Specify a particular force type such as "HarmonicBondForce" or "HarmonicAngleForce" in which to add this parameter
-    tag : str
-        Tag to use identifying this parameter, i.e. 'Bond' for a HarmonicBondForce, etc.
+            Parameters
+            ----------
+            params : dict
+                Dictionary of attributes (parameters and their descriptions) for XML,
+                i.e. as output by getParameter.
+            smirks : str
+                SMIRKS pattern to associate with this parameter
+            force_type : str
+                Specify a particular force type such as "HarmonicBondForce" or "HarmonicAngleForce" in which to add this parameter
+            tag : str
+                Tag to use identifying this parameter, i.e. 'Bond' for a HarmonicBondForce, etc.
 
 
-    Returns
-    -------
-    status : Bool
-        Successful? True or False.
+            Returns
+            -------
+            status : Bool
+                Successful? True or False.
 
 
-"""
+        """
 
         trees=self._XMLTrees
         # Loop over XML files we read
@@ -1095,7 +1097,13 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         for index in state_dictionary:
 
             parser = etree.XMLParser(remove_blank_text=True)
-            xml_as_io = BytesIO(state_dictionary[index])
+
+            bytes_string = state_dictionary[index]
+
+            if isinstance(bytes_string, str):
+                bytes_string = bytes_string.encode('utf-8')
+
+            xml_as_io = BytesIO(bytes_string)
 
             # this handles either filenames or open file-like objects
             tree = etree.parse(xml_as_io, parser)

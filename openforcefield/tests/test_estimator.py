@@ -67,10 +67,11 @@ def run_property_estimator():
     # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/j.jct.2007.09.004.xml'))
     force_field = smirnoff.ForceField(get_data_filename('forcefield/smirnoff99Frosst.offxml'))
 
-    property_server = runner.PropertyCalculationRunner(address='localhost')
+    # backend = DaskThreadedBackend(1)
+    # property_server = runner.PropertyCalculationRunner(backend)
 
-    property_estimator = client.PropertyEstimator()
-    ticket_ids = property_estimator.compute_properties(data_set, force_field)
+    # property_estimator = client.PropertyEstimator()
+    # ticket_ids = property_estimator.compute_properties(data_set, force_field)
 
     # results = property_estimator.compute_properties(data_set, force_field)
     # client.PropertyEstimator.produce_calculation_report(data_set, results)

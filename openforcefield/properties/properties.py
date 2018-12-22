@@ -25,7 +25,7 @@ from typing import Optional
 
 from simtk import unit
 
-from openforcefield.utils.serialization import deserialize_quantity, serialize_quantity
+from openforcefield.utils.serialization import deserialize_quantity, serialize_quantity, TypedBaseModel
 
 from openforcefield.properties.thermodynamics import ThermodynamicState
 from openforcefield.properties.substances import Substance
@@ -134,18 +134,6 @@ class MeasurementSource(Source):
     doi: Optional[str] = None
     reference: Optional[str] = None
 
-    @classmethod
-    def get_validators(cls):
-        # yield dict_validator
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, value):
-        if isinstance(value, cls):
-            return value
-        else:
-            return cls(**dict_validator(value))
-
 
 class CalculationSource(Source):
     """Contains any metadata about how a physical property was calculated.
@@ -170,7 +158,7 @@ class CalculationSource(Source):
 # Property Definitions
 # =============================================================================================
 
-class PhysicalProperty(BaseModel):
+class PhysicalProperty(TypedBaseModel):
     """Represents the value of any physical property and it's uncertainty.
 
     It additionally stores the thermodynamic state at which the property

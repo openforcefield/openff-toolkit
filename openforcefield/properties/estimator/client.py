@@ -32,6 +32,8 @@ from tornado.ioloop import IOLoop
 from tornado.iostream import StreamClosedError
 from tornado.tcpclient import TCPClient
 
+from openforcefield.properties.estimator.layers import SurrogateLayer, ReweightingLayer, SimulationLayer
+
 from openforcefield.utils.serialization import serialize_quantity
 
 from openforcefield.properties import CalculationFidelity, PhysicalProperty
@@ -76,18 +78,32 @@ def register_estimable_property():
 
 class PropertyEstimatorOptions(BaseModel):
     """Represents additional options that can be passed to the
-    property estimator backend."""
+    property estimator backend.
 
-    allowed_fidelity: CalculationFidelity = CalculationFidelity.SurrogateModel | \
-                                            CalculationFidelity.Reweighting | \
-                                            CalculationFidelity.DirectSimulation
+    Attributes
+    ----------
+    allowed_calculation_layers: list of str:
+        List of allowed calculation layers, order in list is order
+        will attempt to calculate property in.
+    calculation_schemas: Dict[str, CalculationSchema]
+
+    relative_uncertainty: float
+
+    """
+    allowed_calculation_layers: List[str] = [
+        SurrogateLayer.__name__,
+        ReweightingLayer.__name__,
+        SimulationLayer.__name__
+    ]
 
     calculation_schemas: Dict[str, CalculationSchema] = {}
+
+    relative_uncertainty: float = 0.1
 
 
 class PropertyEstimatorDataModel(BaseModel):
 
-    properties: Dict[str, List[PhysicalProperty]] = {}
+    properties: List[PhysicalProperty] = []
     options: PropertyEstimatorOptions = None
 
     parameter_set: Dict[int, str] = None
@@ -159,9 +175,13 @@ class PropertyEstimator(object):
         if additional_options is None:
             additional_options = PropertyEstimatorOptions()
 
+        properties_list = []
+
         for substance_tag in data_set.properties:
 
             for physical_property in data_set.properties[substance_tag]:
+
+                properties_list.append(physical_property)
 
                 type_name = type(physical_property).__name__
 
@@ -173,57 +193,88 @@ class PropertyEstimator(object):
                 if type_name in additional_options.calculation_schemas:
                     continue
 
+                property_type = PropertyEstimator.registered_properties[type_name]()
+
                 additional_options.calculation_schemas[type_name] = \
-                    PropertyEstimator.registered_properties[type_name]().get_default_calculation_schema()
+                    property_type.get_default_calculation_schema()
 
-        submission_packet = PropertyEstimatorDataModel()
-
-        submission_packet.properties = data_set.properties
-        submission_packet.parameter_set = parameter_set.__getstate__()
-        submission_packet.options = additional_options
-
-        submission_json = submission_packet.json()
+        submission = PropertyEstimatorDataModel(properties = properties_list,
+                                                parameter_set = parameter_set.__getstate__(),
+                                                options = additional_options)
 
         # For now just do a blocking submit to the server.
-        ticket_ids = IOLoop.current().run_sync(lambda: self._send_calculations_to_server(submission_json))
+        ticket_ids = IOLoop.current().run_sync(lambda: self._send_calculations_to_server(submission))
 
         return ticket_ids
 
-    @gen.coroutine
-    def _send_calculations_to_server(self, submission_json):
+    async def _send_calculations_to_server(self, submission):
+        """Attempts to connect to the calculation server, and
+        submit the requested calculations.
 
-        ticket_ids = None
+        Notes
+        -----
+
+        This method is based on the StackOverflow response from
+        A. Jesse Jiryu Davis: https://stackoverflow.com/a/40257248
+
+        Parameters
+        ----------
+        submission: PropertyEstimatorDataModel
+            The jobs to submit.
+
+        Returns
+        -------
+        str, optional:
+           The id which the server has assigned the submitted calculations.
+           This can be used to query the server for when the calculation
+           has completed.
+
+           Returns None if the calculation could not be submitted.
+        """
+        ticket_id = None
 
         try:
 
+            # Attempt to establish a connection to the server.
             logging.info("Attempting Connection to {}:{}".format(self._server_address, self._port))
-
-            stream = yield self._tcp_client.connect(self._server_address, self._port)
-
+            stream = await self._tcp_client.connect(self._server_address, self._port)
             logging.info("Connected to {}:{}".format(self._server_address, self._port))
 
             stream.set_nodelay(True)
 
-            encoded_json = submission_json.encode()
+            # Encode the submission json into an encoded
+            # packet ready to submit to the server. The
+            # Length of the packet is encoded in the first
+            # four bytes.
+            encoded_json = submission.json().encode()
             length = pack_int(len(encoded_json))
-            yield stream.write(length + encoded_json)
+            await stream.write(length + encoded_json)
 
-            logging.info("Sent calculations to {}:{}".format(self._server_address, self._port))
+            logging.info("Sent calculations to {}:{}. Waiting for a response from"
+                         " the server...".format(self._server_address, self._port))
 
-            header = yield stream.read_bytes(4)
-
-            # Convert from network order to int.
+            # Wait for confirmation that the server has submitted
+            # the jobs. The first four bytes of the response should
+            # be the length of the message being sent.
+            header = await stream.read_bytes(4)
             length = unpack_int(header)[0]
 
-            encoded_json = yield stream.read_bytes(length)
-            ticket_ids = json.loads(encoded_json.decode())
+            # Decode the response from the server. If everything
+            # went well, this should be a list of ids of the submitted
+            # calculations.
+            encoded_json = await stream.read_bytes(length)
+            ticket_id = json.loads(encoded_json.decode())
 
-            logging.info('Received job ids from server: {}'.format(ticket_ids))
+            logging.info('Received job id from server: {}'.format(ticket_id))
 
         except StreamClosedError as e:
-            logging.info("Error connecting to {}:{} : {}".format(self._server_address, self._port, e))
 
-        raise gen.Return(ticket_ids)
+            # Handle no connections to the server gracefully.
+            logging.info("Error connecting to {}:{} : {}. Please ensure the server is running and"
+                         "that the server address / port is correct.".format(self._server_address, self._port, e))
+
+        # Return the ids of the submitted jobs.
+        return ticket_id
 
     @staticmethod
     def _store_properties_in_hierarchy(original_set):
