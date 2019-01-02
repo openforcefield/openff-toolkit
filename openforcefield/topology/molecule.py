@@ -298,6 +298,21 @@ class Atom(Particle):
         return self._formal_charge
 
     @property
+    def partial_charge(self):
+        """
+        The partial charge of the atom, if any.
+
+        Returns
+        -------
+        float or None
+        """
+        if self._molecule._partial_charges is None:
+            return None
+        else:
+            index = self.molecule_atom_index
+            return self._molecule._partial_charges[index]
+
+    @property
     def is_aromatic(self):
         """
         The atom's is_aromatic flag 
@@ -430,19 +445,28 @@ class Atom(Particle):
         return self._virtual_sites
         #for vsite in self._vsites:
         #    yield vsite
-            
+
     @property
     def molecule_atom_index(self):
         """
         The index of this Atom within the the list of atoms in ``Molecules``.
-        Note that this can be different from ``particle_index``.
+        Note that this can be different from ``molecule_particle_index``.
 
         """
         if self._molecule is None:
             raise ValueError('This Atom does not belong to a Molecule object')
         return self._molecule.atoms.index(self)
 
+    @property
+    def molecule_particle_index(self):
+        """
+        The index of this Atom within the the list of particles in the parent ``Molecule``.
+        Note that this can be different from ``molecule_atom_index``.
 
+        """
+        if self._molecule is None:
+            raise ValueError('This Atom does not belong to a Molecule object')
+        return self._molecule.particles.index(self)
 
     ## From Jeff: Not sure if we actually need this
     @property
@@ -670,7 +694,16 @@ class VirtualSite(Particle):
         return self._molecule.virtual_sites.index(self)
 
 
+    @property
+    def molecule_particle_index(self):
+        """
+        The index of this VirtualSite within the the list of particles in the parent ``Molecule``.
+        Note that this can be different from ``molecule_virtual_site_index``.
 
+        """
+        if self._molecule is None:
+            raise ValueError('This VirtualSite does not belong to a Molecule object')
+        return self._molecule.particles.index(self)
         
     #@property
     #def topology_virtual_site_index(self):
@@ -1518,8 +1551,9 @@ class FrozenMolecule(Serializable):
         -------
         string
         """
-        return hash(str(self.to_dict()))
+        #return hash(str(self.to_dict()))
         #return hash(tuple(self.to_dict().items()))
+        return hash(self.to_smiles())
 
     @classmethod
     def from_dict(cls, molecule_dict):

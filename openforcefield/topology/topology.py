@@ -464,6 +464,32 @@ class TopologyAtom(Serializable):
         """
         return self._topology_molecule.molecule
 
+
+    @property
+    def topology_atom_index(self):
+        """
+        Get the index of this atom in its parent Topology.
+
+        Returns
+        -------
+        int
+            The index of this atom in its parent topology.
+        """
+        return self._topology_molecule.atom_start_topology_index + self._atom.molecule_atom_index
+
+    @property
+    def topology_particle_index(self):
+        """
+        Get the index of this particle in its parent Topology.
+
+        Returns
+        -------
+        int
+            The index of this atom in its parent topology.
+        """
+        return self._topology_molecule.particle_start_topology_index + self._atom.molecule_particle_index
+
+
     @property
     def topology_bonds(self):
         """
@@ -544,6 +570,18 @@ class TopologyBond(Serializable):
         openforcefield.topology.topology.TopologyMolecule
         """
         return self._topology_molecule
+
+    @property
+    def topology_bond_index(self):
+        """
+        Get the index of this bond in its parent Topology.
+
+        Returns
+        -------
+        int
+            The index of this bond in its parent topology.
+        """
+        return self._topology_molecule.bond_start_topology_index + self._bond.molecule_bond_index
 
     @property
     def molecule(self):
@@ -658,6 +696,31 @@ class TopologyVirtualSite(Serializable):
         openforcefield.topology.topology.TopologyMolecule
         """
         return self._topology_molecule
+
+    @property
+    def topology_virtual_site_index(self):
+        """
+        Get the index of this virtual site in its parent Topology.
+
+        Returns
+        -------
+        int
+            The index of this virtual site in its parent topology.
+        """
+        return self._topology_molecule.virtual_site_start_topology_index + self._virtual_site.molecule_virtual_site_index
+
+    @property
+    def topology_particle_index(self):
+        """
+        Get the index of this particle in its parent Topology.
+
+        Returns
+        -------
+        int
+            The index of this particle in its parent topology.
+        """
+        return self._topology_molecule.particle_start_topology_index + self._virtual_site.molecule_particle_index
+
 
     @property
     def molecule(self):
@@ -857,7 +920,10 @@ class TopologyMolecule:
         an iterator of openforcefield.topology.topology.TopologyParticle
         """
         for particle in self._reference_molecule.particles:
-            yield TopologyParticle(vs, self)
+            if isinstance(particle, Atom):
+                yield TopologyAtom(particle, self)
+            elif isinstance(particle, VirtualSite):
+                yield TopologyVirtualSite(particle, self)
 
     @property
     def n_particles(self):
@@ -1088,12 +1154,18 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        atom1, atom2 : openforcefield.topology.Atom
-            The atoms to check to ensure they are bonded
+        atom1, atom2 : openforcefield.topology.Atom or int
+            The atoms or atom topology indices to check to ensure they are bonded
 
 
         """
-        assert atom1.is_bonded_to(atom2), 'Atoms {} and {} are not bonded in topology'.format(atom1, atom2)
+        if (type(atom1) is int) and (type(atom2) is int):
+            atom1 = self.atom(atom1)
+            atom2 = self.atom(atom2)
+
+        #else:
+        if not(self.is_bonded(atom1, atom2)):
+            raise Exception('Atoms {} and {} are not bonded in topology'.format(atom1, atom2))
 
 
     @property
@@ -1341,7 +1413,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        matches : list of Atom tuples
+        matches : list of TopologyAtom tuples
             A list of all matching Atom tuples
 
         """
@@ -1365,8 +1437,13 @@ class Topology(Serializable):
                 #mol_dict = molecule.to_dict
                 # Unroll corresponding atom indices over all instances of this molecule
                 for topology_molecule in self._reference_molecule_to_topology_molecules[ref_mol]:
-                    # Create match.
-                    match = tuple([topology_molecule.atom_start_topology_index+atom_index for atom_index in reference_match ])
+                    match = list()
+                    # Create match TopologyAtoms.
+                    for reference_molecule_atom_index in reference_match:
+                        atom_topology_index = topology_molecule.atom_start_topology_index+reference_molecule_atom_index
+                        match.append(self.atom(atom_topology_index))
+                    match = tuple(match)
+                    #match = tuple([topology_molecule.atom_start_topology_index+ref_mol_atom_index for ref_mol_atom_index in reference_match])
                     matches.append(match)
 
         return matches
@@ -1862,11 +1939,11 @@ class Topology(Serializable):
         return oe_mol
 
     def is_bonded(self, i, j):
-        """Returns True of two atoms are bonded
+        """Returns True if the two atoms are bonded
 
         Parameters
         ----------
-        i, j : int or Atom
+        i, j : int or TopologyAtom
             Atoms or atom indices to check
 
         Returns
@@ -1875,7 +1952,25 @@ class Topology(Serializable):
             True if atoms are bonded, False otherwise.
 
         """
-        pass
+        if (type(i) is int) and (type(j) is int):
+            atomi = self.atom(i)
+            atomj = self.atom(j)
+        elif (type(i) is TopologyAtom) and (type(j) is TopologyAtom):
+            atomi = i
+            atomj = j
+        else:
+            raise Exception("Invalid input passed to is_bonded(). Expected ints or TopologyAtoms, "
+                            "got {} and {}".format(i, j))
+
+        for top_bond in atomi.topology_bonds:
+            for top_atom in top_bond.atoms:
+                if top_atom == atomi:
+                    continue
+                if top_atom == atomj:
+                    return True
+        # If atomj wasn't found in any of atomi's bonds, then they aren't bonded.
+        return False
+
 
     def atom(self, atom_topology_index):
         """

@@ -265,6 +265,7 @@ class TestTopology(TestCase):
     # test_get_topology_bond
     # test_get_topology_virtual_site
     # test_get_topology_molecule
+    # test_is_bonded
     # TODO: Test serialization
 
     def test_from_openmm(self):
