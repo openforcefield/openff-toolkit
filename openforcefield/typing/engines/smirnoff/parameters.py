@@ -56,7 +56,7 @@ logger = logging.getLogger(__name__)
 #
 # The following classes are Handlers that know how to create Force subclasses and add them to a System that is being
 # created.  Each Handler class must define three methods: 1) a static method that takes an etree Element and a ForceField,
-# and returns the corresponding Handler object; 2) a createForce() method that constructs the Force object and adds it
+# and returns the corresponding Handler object; 2) a create_force() method that constructs the Force object and adds it
 # to the System; and 3) a labelForce() method that provides access to which
 # terms are applied to which atoms in specified oemols.
 # The static method should be added to the parsers map.
@@ -75,7 +75,7 @@ class IncompatibleUnitError(Exception):
 
 class IncompatibleParameterError(Exception):
     """
-    Exception for when a parameter is in the wrong units for a ParameterHandler's unit system
+    Exception for when a set of parameters is scientifically incompatible with another
     """
     def __init__(self, msg):
         super().__init__(self, msg)
@@ -87,11 +87,11 @@ class NonbondedMethod(Enum):
     """
     An enumeration of the nonbonded methods
     """
-    NoCutoff = openmm.NonbondedForce.NoCutoff
-    CutoffPeriodic = openmm.NonbondedForce.CutoffPeriodic
-    CutoffNonPeriodic = openmm.NonbondedForce.CutoffNonPeriodic
-    Ewald = openmm.NonbondedForce.Ewald
-    PME = openmm.NonbondedForce.PME
+    NoCutoff = 0
+    CutoffPeriodic = 1
+    CutoffNonPeriodic = 2
+    Ewald = 3
+    PME = 4
 
 class ParameterList(list):
     """Parameter list that also supports accessing items by SMARTS string.
@@ -329,7 +329,12 @@ class ParameterHandler(object):
         logger.info(self.__class__.__name__) # TODO: Overhaul logging
         matches = ValenceDict()
         for force_type in self._parameters:
-            matches_for_this_type = { atoms : force_type for atoms in entity.chemical_environment_matches(force_type.smirks) }
+            matches_for_this_type = {}
+            #atom_top_indexes = [()]
+            for atoms in entity.chemical_environment_matches(force_type.smirks):
+                atom_top_indexes = tuple([atom.topology_particle_index for atom in atoms])
+                matches_for_this_type[atom_top_indexes] = force_type
+            #matches_for_this_type = { atoms : force_type for atoms in entity.chemical_environment_matches(force_type.smirks }
             matches.update(matches_for_this_type)
             logger.info('{:64} : {:8} matches'.format(force_type.smirks, len(matches_for_this_type)))
 
@@ -390,8 +395,8 @@ class ConstraintHandler(ParameterHandler):
         #super(ConstraintHandler, self).__init__(forcefield)
         super().__init__(forcefield, **kwargs)
 
-    def createForce(self, system, topology, **kwargs):
-        constraints = self.getMatches(topology)
+    def create_force(self, system, topology, **kwargs):
+        constraints = self.get_matches(topology)
         for (atoms, constraint) in constraints.items():
             # Update constrained atom pairs in topology
             topology.add_constraint(*atoms, constraint.distance)
@@ -453,16 +458,23 @@ class BondHandler(ParameterHandler):
         #super(HarmonicBondHandler, self).__init__(forcefield)
         super().__init__(forcefield, **kwargs)
 
-    def createForce(self, system, topology, **kwargs):
+    def create_force(self, system, topology, **kwargs):
         # Create or retrieve existing OpenMM Force object
-        force = super(BondHandler, self).createForce(system, topology, **kwargs)
+        #force = super(BondHandler, self).create_force(system, topology, **kwargs)
+        existing = [system.getForce(i) for i in range(system.getNumForces())]
+        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        if len(existing) == 0:
+            force = self._OPENMMTYPE()
+            system.addForce(force)
+        else:
+            force = existing[0]
 
         # Add all bonds to the system.
-        bonds = self.getMatches(topology)
+        bonds = self.get_matches(topology)
         skipped_constrained_bonds = 0 # keep track of how many bonds were constrained (and hence skipped)
         for (atoms, bond) in bonds.items():
             # Get corresponding particle indices in Topology
-            particle_indices = tuple([ atom.particle_index for atom in atoms ])
+            #particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
             # Ensure atoms are actually bonded correct pattern in Topology
             topology.assert_bonded(atoms[0], atoms[1])
@@ -481,24 +493,27 @@ class BondHandler(ParameterHandler):
                     raise Exception("Partial bondorder treatment {} is not implemented.".format(bond.fractional_bondorder))
 
             # Handle constraints.
-            if topology.atom_pair_is_constrained(*atoms):
+            # TODO: I don't understand why there are two if statements checking the same thing here.
+            if topology.is_constrained(*atoms):
                 # Atom pair is constrained; we don't need to add a bond term.
                 skipped_constrained_bonds += 1
                 # Check if we need to add the constraint here to the equilibrium bond length.
-                if topology.atom_pair_is_constrained(*atoms) is True:
+                if topology.is_constrained(*atoms) is True:
                     # Mark that we have now assigned a specific constraint distance to this constraint.
                     topology.add_constraint(*atoms, length)
                     # Add the constraint to the System.
-                    system.addConstraint(*particle_indices, length)
+                system.addConstraint(*atoms, length)
+                #system.addConstraint(*particle_indices, length)
                 continue
 
             # Add harmonic bond to HarmonicBondForce
-            force.addBond(*particle_indices, length, k)
+            force.addBond(*atoms, length, k)
+            #force.addBond(*particle_indices, length, k)
 
         logger.info('{} bonds added ({} skipped due to constraints)'.format(len(bonds) - skipped_constrained_bonds, skipped_constrained_bonds))
 
         # Check that no topological bonds are missing force parameters
-        _check_for_missing_valence_terms('BondForce', topology, bonds.keys(), topology.bonds)
+        #_check_for_missing_valence_terms('BondForce', topology, bonds.keys(), topology.bonds)
 
 #=============================================================================================
 
@@ -529,15 +544,22 @@ class AngleHandler(ParameterHandler):
         #super(AngleHandler, self).__init__(forcefield)
         super().__init__(forcefield, **kwargs)
 
-    def createForce(self, system, topology, **kwargs):
-        force = super(AngleHandler, self).createForce(system, topology, **kwargs)
+    def create_force(self, system, topology, **kwargs):
+        #force = super(AngleHandler, self).create_force(system, topology, **kwargs)
+        existing = [system.getForce(i) for i in range(system.getNumForces())]
+        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        if len(existing) == 0:
+            force = self._OPENMMTYPE()
+            system.addForce(force)
+        else:
+            force = existing[0]
 
         # Add all angles to the system.
-        angles = self.getMatches(topology)
+        angles = self.get_matches(topology)
         skipped_constrained_angles = 0 # keep track of how many angles were constrained (and hence skipped)
         for (atoms, angle) in angles.items():
             # Get corresponding particle indices in Topology
-            particle_indices = tuple([ atom.particle_index for atom in atoms ])
+            #particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
             # Ensure atoms are actually bonded correct pattern in Topology
             for (i,j) in [ (0,1), (1,2) ]:
@@ -548,12 +570,12 @@ class AngleHandler(ParameterHandler):
                 skipped_constrained_angles += 1
                 continue
 
-            force.addAngle(*particle_indices, angle.angle, angle.k)
+            force.addAngle(*atoms, angle.angle, angle.k)
 
         logger.info('{} angles added ({} skipped due to constraints)'.format(len(angles) - skipped_constrained_angles, skipped_constrained_angles))
 
         # Check that no topological angles are missing force parameters
-        _check_for_missing_valence_terms('AngleForce', topology, angles.keys(), topology.angles())
+        #_check_for_missing_valence_terms('AngleForce', topology, angles.keys(), topology.angles())
 
 #=============================================================================================
 
@@ -571,7 +593,7 @@ class ProperTorsionHandler(ParameterHandler):
             # Store parameters.
             index = 1
             while 'phase%d'%index in kwargs:
-                self.periodicity.append( kwargs['periodicity%d' % index])
+                self.periodicity.append( int(kwargs['periodicity%d' % index]))
                 self.phase.append( kwargs['phase%d' % index])
                 self.k.append( kwargs['k%d' % index])
                 del kwargs['periodicity%d' % index]
@@ -618,15 +640,21 @@ class ProperTorsionHandler(ParameterHandler):
         else:
             self._potential = self._DEFAULTS['potential']
 
-    def createForce(self, system, topology, **kwargs):
-        force = super(ProperTorsionHandler, self).createForce(system, topology, **kwargs)
-
+    def create_force(self, system, topology, **kwargs):
+        #force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
+        existing = [system.getForce(i) for i in range(system.getNumForces())]
+        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        if len(existing) == 0:
+            force = self._OPENMMTYPE()
+            system.addForce(force)
+        else:
+            force = existing[0]
         # Add all proper torsions to the system.
-        torsions = self.getMatches(topology)
-        for (atoms, torsion) in torsions.items():
+        torsions = self.get_matches(topology)
+        for (atom_indices, torsion) in torsions.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             for (i,j) in [ (0,1), (1,2), (2,3) ]:
-                topology.assert_bonded(atoms[i], atoms[j])
+                topology.assert_bonded(atom_indices[i], atom_indices[j])
 
             for (periodicity, phase, k) in zip(torsion.periodicity, torsion.phase, torsion.k):
                 force.addTorsion(atom_indices[0], atom_indices[1], atom_indices[2], atom_indices[3], periodicity, phase, k)
@@ -634,7 +662,7 @@ class ProperTorsionHandler(ParameterHandler):
         logger.info('{} torsions added'.format(len(torsions)))
 
         # Check that no topological torsions are missing force parameters
-        _check_for_missing_valence_terms('ProperTorsionForce', topology, torsions.keys(), topology.torsions())
+        #_check_for_missing_valence_terms('ProperTorsionForce', topology, torsions.keys(), topology.torsions())
 
 
 class ImproperTorsionHandler(ParameterHandler):
@@ -695,16 +723,24 @@ class ImproperTorsionHandler(ParameterHandler):
         else:
             self._potential = self._DEFAULTS['potential']
 
-    def createForce(self, system, topology, **kwargs):
-        force = super(ImproperTorsionHandler, self).createForce(system, topology, **kwargs)
+    def create_force(self, system, topology, **kwargs):
+        #force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
+        #force = super().create_force(system, topology, **kwargs)
+        existing = [system.getForce(i) for i in range(system.getNumForces())]
+        existing = [f for f in existing if type(f) == openmm.PeriodicTorsionForce]
+        if len(existing) == 0:
+            force = openmm.PeriodicTorsionForce()
+            system.addForce(force)
+        else:
+            force = existing[0]
 
         # Add all improper torsions to the system
-        torsions = self.getMatches(topology)
+        impropers = self.get_matches(topology)
         for (atom_indices, improper) in impropers.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             # For impropers, central atom is atom 1
             for (i,j) in [ (0,1), (1,2), (1,3) ]:
-                topology.assert_bonded(atoms[i], atoms[j])
+                topology.assert_bonded(topology.atom(i), topology.atom(j))
 
             # Impropers are applied in three paths around the trefoil having the same handedness
             for (periodicity, phase, k) in zip(improper.periodicity, improper.phase, improper.k):
@@ -713,10 +749,10 @@ class ImproperTorsionHandler(ParameterHandler):
                 for p in [ (others[i], others[j], others[k]) for (i,j,k) in [(0,1,2), (1,2,0), (2,0,1)] ]:
                     force.addTorsion(atom_indices[1], p[0], p[1], p[2], periodicity, phase, k)
 
-        logger.info('{} impropers added, each applied in a six-fold trefoil' % (len(impropers)))
+        logger.info('{} impropers added, each applied in a six-fold trefoil' .format(len(impropers)))
 
         # Check that no topological torsions are missing force parameters
-        _check_for_missing_valence_terms('ImproperTorsionForce', topology, torsions.keys(), topology.impropers())
+        #_check_for_missing_valence_terms('ImproperTorsionForce', topology, torsions.keys(), topology.impropers())
 
 class vdWHandler(ParameterHandler):
     """Handle SMIRNOFF ``<vdW>`` tags"""
@@ -766,20 +802,50 @@ class vdWHandler(ParameterHandler):
                  'scale13' : 0.0,
                  'scale14' : 0.5,
                  'scale15' : 1.0,
-                 'switch' : '8.0*angstroms',
+                 'switch' : 8.0*unit.angstroms,
                  'cutoff' : 9.0*unit.angstroms,
                  'long_range_dispersion' : 'isotropic'
                  }
 
+    _NONBOND_METHOD_MAP = {NonbondedMethod.NoCutoff: openmm.NonbondedForce.NoCutoff,
+                           NonbondedMethod.CutoffPeriodic: openmm.NonbondedForce.CutoffPeriodic,
+                           NonbondedMethod.CutoffNonPeriodic: openmm.NonbondedForce.CutoffNonPeriodic,
+                           NonbondedMethod.Ewald: openmm.NonbondedForce.Ewald,
+                           NonbondedMethod.PME: openmm.NonbondedForce.PME}
 
     def __init__(self, forcefield, scale12=None, scale13=None, scale14=None, scale15=None,
                  potential=None, switch=None, cutoff=None, long_range_dispersion=None,
-                 combining_rules=None, **kwargs):
+                 combining_rules=None, nonbonded_method=None, **kwargs):
         #super(NonbondedParameterHandler, self).__init__(forcefield)
         super().__init__(forcefield, **kwargs)
 
         # TODO: Find a better way to set defaults
         # TODO: Validate these values against the supported output types (openMM force kwargs?)
+        # TODO: Add conditional logic to assign NonbondedMethod and check compatibility
+
+
+
+        if nonbonded_method is None:
+            self._nonbonded_method = NonbondedMethod.NoCutoff
+        else:
+            # If it's a string that's the name of a nonbonded method
+            if type(nonbonded_method) is str:
+                self._nonbonded_method = NonbondedMethod[nonbonded_method]
+                #self._nonbonded_method = nonbondedMethodMap[nonbonded_method]
+
+            # If it's an enum'ed value of NonbondedMethod
+            elif nonbonded_method in NonbondedMethod:
+                #self._nonbonded_method = nonbondedMethodMap[nonbonded_method]
+                self._nonbonded_method = nonbonded_method
+            # If it's an openMM nonbonded method, reverse it back to a package-independent enum
+            elif nonbonded_method in self._NONBOND_METHOD_MAP.values():
+                for key, val in self._NONBOND_METHOD_MAP.items():
+                    if nonbonded_method == val:
+                        self._nonbonded_method = key
+                        break
+                #self._nonbonded_method = nonbonded_method
+
+
         if scale12 is None:
             self._scale12 = self._DEFAULTS['scale12']
         else:
@@ -827,12 +893,6 @@ class vdWHandler(ParameterHandler):
 
 
 
-    # TODO: Handle the case where multiple <NonbondedForce> tags are found
-    # if abs(Handler.coulomb14scale - float(element.attrib['coulomb14scale'])) > NonbondedHandler.SCALETOL or \
-    #                 abs(Handler.lj14scale - float(element.attrib['lj14scale'])) > NonbondedHandler.SCALETOL:
-    #            raise ValueError('Found multiple NonbondedForce tags with different 1-4 scales')
-    #    for atom in element.findall('Atom'):
-    #        Handler.registerAtom(atom, element)
 
     def check_handler_compatibility(self, handler_kwargs, assume_missing_is_default=True):
         """
@@ -843,7 +903,7 @@ class vdWHandler(ParameterHandler):
         Parameters
         ----------
         handler_kwargs : dict
-            The kwargs that would be used to construct
+            The kwargs that would be used to construct a ParameterHandler
         assume_missing_is_default : bool
             If True, will assume that parameters not specified in parameter_kwargs would have been set to the default.
             Therefore, an exception is raised if the ParameterHandler is incompatible with the default value for a
@@ -876,34 +936,36 @@ class vdWHandler(ParameterHandler):
 
 
     # TODO: nonbondedMethod and nonbondedCutoff should now be specified by StericsForce attributes
-    def createForce(self, system, topology, nonbondedMethod=NonbondedMethod.NoCutoff, nonbondedCutoff=0.9, **args):
-        force = super(NonbondedParameterHandler, self).createForce(system, topology)
-        if not(isinstance(nonbondedMethod, NonbondedMethod)):
-            try:
-                nonbondedMethod_temp = NonbondedMethod[nonbondedMethod]
-                nonbondedMethod = nonbondedMethod_temp
-            except:
-                raise ValueError('Illegal nonbonded method for NonbondedForce; method given was {}'.format(nonbondedMethod))
+    def create_force(self, system, topology, **kwargs):
+        #force = super().assign_parameters(system, topology)
+        #nonbondedMethod = self._nonbonded_method
+        #if not(isinstance(nonbondedMethod, NonbondedMethod)):
+        #
+        #    try:
+        #        # Try looking up the value in the Enum by string
+        #        nonbondedMethod_temp = NonbondedMethod[nonbondedMethod]
+        #        nonbondedMethod = nonbondedMethod_temp
+        #    except KeyError:
+        #        # Try seeing if they already passed in a recognized openMM NonBondedForce
+        #        for val in NonbondedMethod.values
+        #
+        #        raise ValueError('Illegal nonbonded method for NonbondedForce; method given was {}'.format(nonbondedMethod))
 
-        #methodMap = {NoCutoff : openmm.NonbondedForce.NoCutoff,
-        #             CutoffPeriodic : openmm.NonbondedForce.CutoffPeriodic,
-        #             CutoffNonPeriodic : openmm.NonbondedForce.CutoffNonPeriodic,
-        #             Ewald : openmm.NonbondedForce.Ewald,
-        #             PME : openmm.NonbondedForce.PME}
 
 
         #if nonbondedMethod not in methodMap:
-        #     = openmm.NonbondedForce()
-        force.setNonbondedMethod(methodMap[nonbondedMethod])
-        force.setCutoffDistance(nonbondedCutoff)
-        if 'ewaldErrorTolerance' in args:
-            force.setEwaldErrorTolerance(args['ewaldErrorTolerance'])
-        if 'useDispersionCorrection' in args:
-            force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
+        force = openmm.NonbondedForce()
+        nonbonded_method = self._NONBOND_METHOD_MAP[self._nonbonded_method]
+        force.setNonbondedMethod(nonbonded_method)
+        force.setCutoffDistance(self._cutoff.in_units_of(unit.nanometer))
+        if 'ewaldErrorTolerance' in kwargs:
+            force.setEwaldErrorTolerance(kwargs['ewaldErrorTolerance'])
+        if 'useDispersionCorrection' in kwargs:
+            force.setUseDispersionCorrection(bool(kwargs['useDispersionCorrection']))
         system.addForce(force)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
-        atoms = self.getMatches(topology)
+        atoms = self.get_matches(topology)
 
         # Create all particles.
         for particle in topology.particles:
@@ -911,32 +973,49 @@ class vdWHandler(ParameterHandler):
 
         # Set the particle Lennard-Jones terms.
         for (atoms, ljtype) in atoms.items():
-            force.setParticleParameters(atoms[0].particle_index, 0.0, ljtype.sigma, ljtype.epsilon)
+            force.setParticleParameters(atoms[0], 0.0, ljtype.sigma, ljtype.epsilon)
 
         # Check that no atoms are missing force parameters
         # QUESTION: Don't we want to allow atoms without force parameters? Or perhaps just *particles* without force parameters, but not atoms?
-        _check_for_missing_valence_terms('NonbondedForce Lennard-Jones parameters', topology, atoms.keys(), topology.atoms)
+        # TODO: Enable this check
+        #_check_for_missing_valence_terms('NonbondedForce Lennard-Jones parameters', topology, atoms.keys(), topology.atoms)
 
         # Set the partial charges
         # TODO: We need to make sure we have already assigned partial charges to the Topology reference molecules
+        # For now, just always calculate charges. Even if the ref mol has charges, we don't know where they came from.
+        # TODO: How will this check against molecules with library charges?
+        for ref_mol in topology.reference_molecules:
+            ref_mol.generate_conformers()
+            ref_mol.compute_partial_charges()
+
         for atom in topology.atoms:
             # Retrieve nonbonded parameters for reference atom (charge not set yet)
-            _, sigma, epsilon = force.getParticleParameters(atom.particle_index)
+            _, sigma, epsilon = force.getParticleParameters(atom.topology_particle_index)
             # Set the nonbonded force with the partial charge
-            force.setParticleParameters(atom.particle_index, atom.charge, sigma, epsilon)
+            force.setParticleParameters(atom.topology_particle_index, atom.atom.partial_charge, sigma, epsilon)
+            #force.setParticleParameters(atom.topology_particle_index, atom.atom.formal_charge, sigma, epsilon)
 
     # TODO: Can we express separate constraints for postprocessing and normal processing?
-    def postprocessSystem(self, system, topology, **args):
+    def postprocessSystem(self, system, topology, **kwargs):
         # Create exceptions based on bonds.
         # TODO: This postprocessing must occur after the ChargeIncrementModelHandler
         # QUESTION: Will we want to do this for *all* cases, or would we ever want flexibility here?
-        bond_particle_indices = [ (atom1.particle_index, atom2.particle_index) for (atom1, atom2) in topology.bonds ]
+        bond_particle_indices = []
+        for bond in topology.bonds:
+            topology_atoms = [atom for atom in bond.atoms]
+            bond_particle_indices.append(topology_atoms[0].topology_particle_index,
+                                         topology_atoms[1].topology_particle_index)
+        #bond_particle_indices = [ (bond.atoms[0].topology_particle_index, atom2.topology_particle_index) for (atom1, atom2) in topology.bonds ]
         for force in system.getForces():
             # TODO: Should we just store which `Force` object we are adding to and use that instead,
             # to prevent interference with other kinds of forces in the future?
             # TODO: Can we generalize this to allow for `CustomNonbondedForce` implementations too?
             if isinstance(force, openmm.NonbondedForce):
-                nonbonded.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self.lj14scale)
+                #nonbonded.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self.lj14scale)
+
+                # TODO: Don't mess with electrostatic scaling here. Have a separate electrostatics handler.
+                force.createExceptionsFromBonds(bond_particle_indices, 0.83333, self._scale14)
+                #force.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self._scale14)
 
 class ChargeIncrementModelHandler(ParameterHandler):
     """Handle SMIRNOFF ``<ChargeIncrementModel>`` tags"""
@@ -967,7 +1046,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
     #if element.attrib['method'] != existing[0]._initialChargeMethod:
     #raise Exception("Existing BondChargeCorrectionHandler uses initial charging method '%s' while new BondChargeCorrectionHandler requests '%s'" % (existing[0]._initialChargeMethod, element.attrib['method']))
 
-    def createForce(self, system, topology, **args):
+    def create_force(self, system, topology, **args):
         # No forces are created by this Handler.
         pass
 
@@ -1070,7 +1149,7 @@ class GBSAParameterHandler(ParameterHandler):
             raise ValueError('Found multiple GBSAForce tags with different SA model specifications')
         # TODO: Check other attributes (parameters of GB and SA models) automatically?
 
-    def createForce(self, system, topology, **args):
+    def create_force(self, system, topology, **args):
         # TODO: Rework this
         from openforcefield.typing.engines.smirnoff import gbsaforces
         force_class = getattr(gbsaforces, self.gb_model)

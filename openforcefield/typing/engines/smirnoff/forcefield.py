@@ -588,14 +588,21 @@ class ForceField(object):
         # Create a DAG expressing dependencies
         import networkx as nx
         G = nx.DiGraph()
-        for parameter_handler in self.parsers.items():
-            G.add_node(parameter_handler._TAGNAME)
+        for tagname, parameter_handler in self._parameter_handlers.items():
+            G.add_node(tagname)
             if parameter_handler._DEPENDENCIES is not None:
                 for dependency in parameter_handler._DEPENDENCIES:
                     G.add_edge(dependency._TAGNAME, parameter_handler._TAGNAME)
         # TODO: Check to make sure DAG isn't cyclic
         # Resolve order
-        ordered_parameter_handlers = [ self.parsers[tagname] for tagname in nx.topological_sort(G) ]
+        ordered_parameter_handlers = list()
+        for tagname in nx.topological_sort(G):
+            if tagname in self._parameter_handlers:
+                ordered_parameter_handlers.append(self._parameter_handlers[tagname])
+            else:
+                # TODO: Is it safe to pass "{}" as the handler_kwargs? If the handler doesn't exist, do we want to assume default values?
+                ordered_parameter_handlers.append(self.get_handler(tagname, {}))
+        #ordered_parameter_handlers = [ self.get_handler(tagname, {}) for tagname in nx.topological_sort(G) ]
         return ordered_parameter_handlers
 
     # TODO: Should we add convenience methods to parameterize a Topology and export directly to AMBER, gromacs, CHARMM, etc.?
@@ -630,7 +637,7 @@ class ForceField(object):
         topology = copy.deepcopy(topology)
 
         # Set the topology aromaticity model to that used by the current forcefield
-        topology.set_aromaticity_model(self._aromaticity_model)
+        #topology.set_aromaticity_model(self._aromaticity_model)
 
         # Create an empty OpenMM System
         system = openmm.System()
@@ -641,7 +648,7 @@ class ForceField(object):
 
         # Add particles (both atoms and virtual sites) with appropriate masses
         for atom in topology.particles:
-            system.addParticle(atom.particle.mass)
+            system.addParticle(atom.atom.mass)
 
         # Determine the order in which to process ParameterHandler objects in order to satisfy dependencies
         parameter_handlers = self._resolve_parameter_handler_order()
@@ -650,7 +657,7 @@ class ForceField(object):
         # TODO: Delete this and kwargs from arguments above?
         known_kwargs = set()
         for parameter_handler in parameter_handlers:
-            known_args.update(parameter_handler.known_kwargs)
+            known_kwargs.update(parameter_handler.known_kwargs)
         unknown_kwargs = set(kwargs.keys()).difference(known_kwargs)
         if len(unknown_kwargs) > 0:
             msg = "The following keyword arguments to create_openmm_system() are not used by any registered force Handler: {}\n".format(unknown_kwargs)

@@ -931,7 +931,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             molecule._conformers = list()
         
         for conformer in molecule2._conformers:
-            molecule.add_conformer(conformer)
+            molecule._add_conformer(conformer)
         
     def compute_partial_charges(self, molecule, charge_model="am1bcc"):
         """

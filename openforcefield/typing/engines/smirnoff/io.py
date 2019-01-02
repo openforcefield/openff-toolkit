@@ -320,10 +320,11 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         # Parse XML file
         root = etree.XML(data)
+        #root = etree.fromstring(data)
         self.from_lxml(root)
 
 
-    def serialize_to_file(self, filename, root):
+    def to_file(self, filename, root):
         """Write the current forcefield parameter set to a file, autodetecting the type from the extension.
 
         Parameters
@@ -344,7 +345,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
             raise NotImplementedError(msg)
 
 
-    def serialize_to_string(self):
+    def to_string(self):
         """
 
         Returns
@@ -361,15 +362,15 @@ class XMLParameterIOHandler(ParameterIOHandler):
     #    return ForceField(xml)
 
     def to_lxml(self):
-        """Render the forcefield parameter set to an lxml.etree
+        """Render the forcefield this ParameterIOHandler is registered to to an lxml.etree
 
         Returns
         -------
         root : lxml.etree
             Root node
         """
-        root = etree.Element('SMIRNOFF', self.attrib)
-        for tagname, parameter_handler in self.parameter_handers.items():
+        root = etree.Element('SMIRNOFF', {'version':self._forcefield.version})
+        for tagname, parameter_handler in self._forcefield._parameter_handlers.items():
             parameter_subtree = etree.SubElement(root, tagname, parameter_handler.attribs)
             for parameter in parameter_handler.parameters:
                 etree.SubElement(parameter_subtree, parameter.tagname, parameter.attribs)
@@ -379,13 +380,13 @@ class XMLParameterIOHandler(ParameterIOHandler):
     def from_lxml(self, root):
         if not(root.tag == 'SMIRNOFF'):
             raise Exception("Root tag of tree is not 'SMIRNOFF'")
+
         cosmetic_tags = ['Date','Author']
         #root = smirnoff_root[0]
         #raise Exception(root)
         try:
             exception_node = root  # node used for exception reporting
-            # Create new ForceField with provided attributes (Actually don't -- If the parameterIOHandler exists, it belongs to a forcefield).
-            # forcefield = ForceField(**root.attrib)
+
 
             # Process handlers
             #for section in root.iter(tag=etree.Element):
@@ -401,9 +402,13 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
                 # Split out attributes that refer to units
                 handler_kwargs, attached_units = _extract_attached_units(section.attrib)
+                # TODO: Attach units to handler_kwargs
+                # Make a copy of handler_kwargs that we can modify
+                handler_kwargs_dict = dict(handler_kwargs)
+                handler_kwargs_dict = _attach_units(handler_kwargs_dict, attached_units)
 
                 # Retrieve or create parameter handler
-                handler = self._forcefield.get_handler(parameter_name, handler_kwargs)
+                handler = self._forcefield.get_handler(parameter_name, handler_kwargs_dict)
 
                 # Populate handler with parameter definitions
                 for parameter in section:
