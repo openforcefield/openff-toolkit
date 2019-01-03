@@ -307,7 +307,7 @@ class ForceField(object):
             if serialization_format is not None:
                 if serialization_format in self._parameter_io_handler_classes.keys():
                     raise Exception("ParameterIOHandler {} provides a IO parser for format '{}', but ParameterIOHandler {} has "
-                                    "already been registered to handle that tag.".format(parameter_io_handler,
+                                    "already been registered to handle that tag.".format(parameter_io_handler_class,
                                                                                          serialization_format,
                                                                                          self._parameter_io_handler_classes[serialization_format]))
                 self._parameter_io_handler_classes[serialization_format] = parameter_io_handler_class

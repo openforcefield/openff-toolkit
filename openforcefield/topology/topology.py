@@ -45,6 +45,14 @@ from openforcefield.utils.serialization import Serializable
 # GLOBAL PARAMETERS
 #=============================================================================================
 
+class DuplicateUniqueMoleculeError(Exception):
+    """
+    Exception for when the user provides indistinguishable unique molecules when trying to identify atoms from a PDB
+    """
+    def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
+
 #=============================================================================================
 # PRIVATE SUBROUTINES
 #=============================================================================================
@@ -475,7 +483,9 @@ class TopologyAtom(Serializable):
         int
             The index of this atom in its parent topology.
         """
-        return self._topology_molecule.atom_start_topology_index + self._atom.molecule_atom_index
+        mapped_molecule_atom_index = self._topology_molecule._ref_to_top_index[self._atom.molecule_atom_index]
+        return self._topology_molecule.atom_start_topology_index + mapped_molecule_atom_index
+        #return self._topology_molecule.atom_start_topology_index + self._atom.molecule_atom_index
 
     @property
     def topology_particle_index(self):
@@ -487,7 +497,9 @@ class TopologyAtom(Serializable):
         int
             The index of this atom in its parent topology.
         """
-        return self._topology_molecule.particle_start_topology_index + self._atom.molecule_particle_index
+        # This assumes that particles in a molecule are ordered with all the Atoms first and VirtualSites last.
+        mapped_molecule_particle_index = self._topology_molecule._ref_to_top_index[self._atom.molecule_atom_index]
+        return self._topology_molecule.particle_start_topology_index + mapped_molecule_particle_index
 
 
     @property
@@ -509,6 +521,11 @@ class TopologyAtom(Serializable):
     def __eq__(self, other):
         return ((self._atom == other._atom) and
                 (self._topology_molecule == other._topology_molecule))
+
+    def __repr__(self):
+        return "TopologyAtom {} with reference atom {} and parent TopologyMolecule {}".format(self.topology_atom_index,
+                                                                                              self._atom,
+                                                                                              self._topology_molecule)
 
     #@property
     #def bonds(self):
@@ -614,9 +631,8 @@ class TopologyBond(Serializable):
         -------
         iterator of openforcefield.topology.topology.TopologyAtom
         """
-        for atom in self._bond.atoms:
-            reference_mol_atom_index = atom.molecule_atom_index
-            yield self._topology_molecule.atom(reference_mol_atom_index)
+        for ref_atom in self._bond.atoms:
+            yield TopologyAtom(ref_atom, self._topology_molecule)
 
 
 #=============================================================================================
@@ -758,7 +774,7 @@ class TopologyMolecule:
     TopologyMolecules are built to be an efficient way to store large numbers of copies of the same molecule for
     parameterization and system preparation.
     """
-    def __init__(self, reference_molecule, topology):
+    def __init__(self, reference_molecule, topology, local_topology_to_reference_index=None):
         """
         Create a new TopologyMolecule.
 
@@ -769,12 +785,16 @@ class TopologyMolecule:
             and atomic symbols.
         topology : an openforcefield.topology.topology.Topology
             The topology that this TopologyMolecule belongs to
-        starting_atom_topology_index : int
-            The Topology atom index of the first TopologyAtom in this TopologyMolecule
+        local_topology_to_reference_index : dict, optional, default=None
+            Dictionary of {TopologyMolecule_atom_index : Molecule_atom_index} for the TopologyMolecule that will be built
         """
         # TODO: Type checks
         self._reference_molecule = reference_molecule
         self._topology = topology
+        if local_topology_to_reference_index is None:
+            local_topology_to_reference_index = dict([(i,i) for i in range(reference_molecule.n_atoms)])
+        self._top_to_ref_index = local_topology_to_reference_index
+        self._ref_to_top_index = dict((k,j) for j,k in local_topology_to_reference_index.items())
 
     @property
     def topology(self):
@@ -783,7 +803,7 @@ class TopologyMolecule:
 
         Returns
         -------
-        an openforcefiel.topology.topology.Topology
+        an openforcefield.topology.topology.Topology
         """
         return self._topology
 
@@ -794,7 +814,7 @@ class TopologyMolecule:
 
         Returns
         -------
-        an openforcefiel.topology.molecule.Molecule
+        an openforcefield.topology.molecule.Molecule
         """
         return self._reference_molecule
 
@@ -822,7 +842,8 @@ class TopologyMolecule:
         -------
         an openforcefield.topology.topology.TopologyAtom
         """
-        return TopologyAtom(self._reference_molecule.atoms[index], self)
+        ref_mol_atom_index = self._top_to_ref_index[index]
+        return TopologyAtom(self._reference_molecule.atoms[ref_mol_atom_index], self)
 
 
     @property
@@ -834,8 +855,12 @@ class TopologyMolecule:
         -------
         an iterator of openforcefield.topology.topology.TopologyAtoms
         """
-        for atom in self._reference_molecule.atoms:
-            yield TopologyAtom(atom, self)
+        iterate_order = list(self._top_to_ref_index.items())
+        # Sort by topology index
+        iterate_order.sort(key = lambda x: x[0])
+        for top_index, ref_index in iterate_order:
+            #self._reference_molecule.atoms:
+            yield TopologyAtom(self._reference_molecule.atoms[ref_index], self)
 
     @property
     def atom_start_topology_index(self):
@@ -913,17 +938,29 @@ class TopologyMolecule:
     @property
     def particles(self):
         """
-        Return an iterator of all the TopologyParticle in this TopologyMolecules
+        Return an iterator of all the TopologyParticles in this TopologyMolecules
 
         Returns
         -------
         an iterator of openforcefield.topology.topology.TopologyParticle
         """
-        for particle in self._reference_molecule.particles:
-            if isinstance(particle, Atom):
-                yield TopologyAtom(particle, self)
-            elif isinstance(particle, VirtualSite):
-                yield TopologyVirtualSite(particle, self)
+        # Note: This assumes that particles are all Atoms (in topology map order), and then virtualsites
+        yield_order = list(self._top_to_ref_index.items())
+        # Sort by topology atom index
+        yield_order.sort(key=lambda x: x[0])
+        for top_atom_index, ref_mol_atom_index in yield_order:
+            ref_atom = self._reference_molecule.atoms[ref_mol_atom_index]
+            yield TopologyAtom(ref_atom, self)
+
+        # TODO: Add ordering scheme here
+        for vsite in self.reference_molecule.virtual_sites:
+            yield TopologyVirtualSite(vsite, self)
+
+        #for particle in self._reference_molecule.particles:
+        #    if isinstance(particle, Atom):
+        #        yield TopologyAtom(particle, self)
+        #    elif isinstance(particle, VirtualSite):
+        #        yield TopologyVirtualSite(particle, self)
 
     @property
     def n_particles(self):
@@ -1440,8 +1477,12 @@ class Topology(Serializable):
                     match = list()
                     # Create match TopologyAtoms.
                     for reference_molecule_atom_index in reference_match:
-                        atom_topology_index = topology_molecule.atom_start_topology_index+reference_molecule_atom_index
-                        match.append(self.atom(atom_topology_index))
+                        reference_atom = topology_molecule._reference_molecule.atoms[reference_molecule_atom_index]
+                        topology_atom = TopologyAtom(reference_atom, topology_molecule)
+                        match.append(topology_atom)
+                        #topology_molecule_atom_index = topology_molecule._ref_to_top_index[reference_molecule_atom_index]
+                        #atom_topology_index = topology_molecule.atom_start_topology_index+topology_molecule_atom_index
+                        #match.append(self.atom(atom_topology_index))
                     match = tuple(match)
                     #match = tuple([topology_molecule.atom_start_topology_index+ref_mol_atom_index for ref_mol_atom_index in reference_match])
                     matches.append(match)
@@ -1556,6 +1597,7 @@ class Topology(Serializable):
             An openforcefield Topology object
         """
         import networkx as nx
+        from networkx.algorithms.isomorphism import GraphMatcher
 
         # Check to see if the openMM system has defined bond orders, by looping over all Bonds in the Topology.
         omm_has_bond_orders = True
@@ -1563,15 +1605,28 @@ class Topology(Serializable):
             if omm_bond.order is None:
                 omm_has_bond_orders = False
 
+        # Set functions for determining equality between nodes and edges
+        node_match_func = lambda x, y: x['atomic_number'] == y['atomic_number']
+        if omm_has_bond_orders:
+            edge_match_func = lambda x, y: x['order'] == y['order']
+        else:
+            edge_match_func = None
+
+
         # Convert all unique mols to graphs
         topology = cls()
         graph_to_unq_mol = {}
         for unq_mol in unique_molecules:
-            unq_graph = unq_mol.to_networkx()
-            if unq_graph in graph_to_unq_mol.keys():
-                msg = "Error: Two unique molecules have indistinguishable graphs: {} and {}".format(unq_mol, graph_to_unq_mol[unq_graph])
-                raise Exception(msg) 
-            graph_to_unq_mol[unq_mol.to_networkx()] = unq_mol
+            unq_mol_graph = unq_mol.to_networkx()
+            for existing_graph in graph_to_unq_mol.keys():
+                if nx.is_isomorphic(existing_graph,
+                                    unq_mol_graph,
+                                    node_match=node_match_func,
+                                    edge_match=edge_match_func):
+                    msg = "Error: Two unique molecules have indistinguishable " \
+                          "graphs: {} and {}".format(unq_mol, graph_to_unq_mol[existing_graph])
+                    raise DuplicateUniqueMoleculeError(msg)
+            graph_to_unq_mol[unq_mol_graph] = unq_mol
 
         # Convert all openMM mols to graphs
         omm_topology_G = nx.Graph()
@@ -1581,32 +1636,44 @@ class Topology(Serializable):
         for bond in openmm_topology.bonds():
             omm_topology_G.add_edge(bond.atom1.index,
                                     bond.atom2.index,
-                                    #attr_dict={'order': bond.order},
                                     order=bond.order
                                     )
 
 
-        # Set functions for determining equality between nodes and edges
-        node_match_func = lambda x, y: x['atomic_number'] == y['atomic_number']
-        if omm_has_bond_orders:
-            edge_match_func = lambda x, y: x['order'] == y['order']
-        else:
-            edge_match_func = None
 
         # For each connected subgraph (molecule) in the topology, find its match in unique_molecules
+        topology_molecules_to_add = list()
         for omm_mol_G in nx.connected_component_subgraphs(omm_topology_G):
             match_found = False
             for unq_mol_G in graph_to_unq_mol.keys():
                 if nx.is_isomorphic(unq_mol_G,
                                     omm_mol_G,
                                     node_match=node_match_func,
-                                    edge_match=edge_match_func
-                                    ):
-                    topology.add_molecule(graph_to_unq_mol[unq_mol_G])
+                                    edge_match=edge_match_func):
+                    # Take the first valid atom indexing map
+                    GM = GraphMatcher(omm_mol_G,
+                                      unq_mol_G,
+                                      node_match=node_match_func,
+                                      edge_match=edge_match_func)
+                    for mapping in GM.isomorphisms_iter():
+                        topology_atom_map = mapping
+                        break
+                    first_topology_atom_index = min(topology_atom_map.keys())
+                    topology_molecules_to_add.append((first_topology_atom_index,
+                                                      unq_mol_G,
+                                                      topology_atom_map.items()))
                     match_found = True
                     break
             if not(match_found):
                 raise Exception('No match found for molecule')
+
+        # The connected_component_subgraph function above may have scrambled the molecule order, so sort molecules
+        # by their first atom's topology index
+        topology_molecules_to_add.sort(key=lambda x: x[0])
+        for first_index, unq_mol_G, top_to_ref_index in topology_molecules_to_add:
+            local_top_to_ref_index = dict([(top_index-first_index, ref_index) for top_index, ref_index in top_to_ref_index])
+            topology.add_molecule(graph_to_unq_mol[unq_mol_G], local_topology_to_reference_index=local_top_to_ref_index)
+
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
 
@@ -1993,6 +2060,7 @@ class Topology(Serializable):
             next_molecule_start_index += topology_molecule.n_atoms
             if next_molecule_start_index > atom_topology_index:
                 atom_molecule_index = atom_topology_index - this_molecule_start_index
+                # NOTE: the index here should still be in the topology index order, NOT the reference molecule's
                 return topology_molecule.atom(atom_molecule_index)
             this_molecule_start_index += topology_molecule.n_atoms
 
@@ -2071,13 +2139,15 @@ class Topology(Serializable):
         """
         pass
 
-    def add_molecule(self, molecule):
+    def add_molecule(self, molecule, local_topology_to_reference_index=None):
         """Add a Molecule to the Topology.
 
         Parameters
         ----------
         molecule : Molecule
             The Molecule to be added.
+        local_topology_to_reference_index: dict, optional, default = None
+            Dictionary of {TopologyMolecule_atom_index : Molecule_atom_index} for the TopologyMolecule that will be built
 
         Returns
         -------
@@ -2085,6 +2155,8 @@ class Topology(Serializable):
             The index of this molecule in the topology
         """
         #molecule.set_aromaticity_model(self._aromaticity_model)
+
+
         mol_smiles = molecule.to_smiles()
         reference_molecule = None
         for potential_ref_mol in self._reference_molecule_to_topology_molecules.keys():
@@ -2098,11 +2170,11 @@ class Topology(Serializable):
             reference_molecule = FrozenMolecule(molecule)
             self._reference_molecule_to_topology_molecules[reference_molecule] = list()
 
-        topology_molecule = TopologyMolecule(reference_molecule, self)
+        topology_molecule = TopologyMolecule(reference_molecule, self, local_topology_to_reference_index)
         self._topology_molecules.append(topology_molecule)
         self._reference_molecule_to_topology_molecules[reference_molecule].append(self._topology_molecules[-1])
 
-        index = len(self._topology_molecules)
+        index = len(self._topology_molecules) - 1
         return index
 
 

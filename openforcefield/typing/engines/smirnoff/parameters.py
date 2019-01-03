@@ -848,23 +848,31 @@ class vdWHandler(ParameterHandler):
 
         if scale12 is None:
             self._scale12 = self._DEFAULTS['scale12']
+        elif type(scale12) is str:
+            self._scale12 = float(scale12)
         else:
             self._scale12 = scale12
 
         if scale13 is None:
             self._scale13 = self._DEFAULTS['scale13']
+        elif type(scale13) is str:
+            self._scale13 = float(scale13)
         else:
-            self._scale13 = scale12
+            self._scale13 = scale13
 
         if scale14 is None:
             self._scale14 = self._DEFAULTS['scale14']
+        elif type(scale14) is str:
+            self._scale14 = float(scale14)
         else:
-            self._scale14 = scale12
+            self._scale14 = scale14
 
         if scale15 is None:
             self._scale15 = self._DEFAULTS['scale15']
+        elif type(scale15) is str:
+            self._scale15 = float(scale15)
         else:
-            self._scale15 = scale12
+            self._scale15 = scale15
 
         if potential is None:
             self._potential = self._DEFAULTS['potential']
@@ -996,16 +1004,15 @@ class vdWHandler(ParameterHandler):
             #force.setParticleParameters(atom.topology_particle_index, atom.atom.formal_charge, sigma, epsilon)
 
     # TODO: Can we express separate constraints for postprocessing and normal processing?
-    def postprocessSystem(self, system, topology, **kwargs):
+    def postprocess_system(self, system, topology, **kwargs):
         # Create exceptions based on bonds.
         # TODO: This postprocessing must occur after the ChargeIncrementModelHandler
         # QUESTION: Will we want to do this for *all* cases, or would we ever want flexibility here?
         bond_particle_indices = []
         for bond in topology.bonds:
             topology_atoms = [atom for atom in bond.atoms]
-            bond_particle_indices.append(topology_atoms[0].topology_particle_index,
-                                         topology_atoms[1].topology_particle_index)
-        #bond_particle_indices = [ (bond.atoms[0].topology_particle_index, atom2.topology_particle_index) for (atom1, atom2) in topology.bonds ]
+            bond_particle_indices.append((topology_atoms[0].topology_particle_index,
+                                          topology_atoms[1].topology_particle_index))
         for force in system.getForces():
             # TODO: Should we just store which `Force` object we are adding to and use that instead,
             # to prevent interference with other kinds of forces in the future?
@@ -1051,7 +1058,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
         pass
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
-    def postprocessSystem(self, system, topology, **kwargs):
+    def postprocess_system(self, system, topology, **kwargs):
         bonds = self.get_matches(topology)
 
         # Apply bond charge increments to all appropriate force groups
