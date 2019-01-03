@@ -121,6 +121,22 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 '''
 
+
+def round_charge(xml):
+    """Round charge fields in a serialized OpenMM system to 2 decimal places"""
+    # Example Particle line: 				<Particle eps=".4577296" q="-.09709000587463379" sig=".1908"/>
+    xmlsp = xml.split(' q="')
+    for index, chunk in enumerate(xmlsp):
+        # Skip file before first q=
+        if index == 0:
+            continue
+        chunksp = chunk.split('" sig')
+        chunksp[0] = str('%.2d' % (float(chunksp[0])))
+        chunk = '" sig'.join(chunksp)
+        xmlsp[index] = chunk
+    return ' q="'.join(xmlsp)
+
+
 #=============================================================================================
 # TESTS
 #=============================================================================================
@@ -148,24 +164,81 @@ class TestForceField(TestCase):
         assert len(forcefield._parameter_handlers['ImproperTorsions']._parameters) == 2
         assert len(forcefield._parameter_handlers['vdW']._parameters) == 2
 
+    # TODO: Support writing out offxml
+    @pytest.mark.skip
     def test_xml_string_roundtrip(self):
         forcefield = ForceField(simple_xml_ff)
         data = forcefield._parameter_io_handlers['XML'].to_string()
         raise Exception(data)
 
-    def test_parameterize_system(self):
+    def test_parameterize_ethanol(self):
         from simtk.openmm import app
         from openforcefield.topology import Topology
         filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
         forcefield = ForceField(filename)
-        #pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
-        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/test_c_e.pdb'))
+        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/1_ethanol.pdb'))
         #toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = [ Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
-                                                                               'molecules/cyclohexane.mol2') ]
+        molecules = [ Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',) ]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         omm_system = forcefield.create_openmm_system(topology)
+
+    def test_parameterize_1_cyclohexane_1_ethanol(self):
+        from simtk.openmm import app
+        from openforcefield.topology import Topology
+        filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
+        forcefield = ForceField(filename)
+        # pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
+        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/1_cyclohexane_1_ethanol.pdb'))
+        # toolkit_wrapper = RDKitToolkitWrapper()
+        molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
+                                                                              'molecules/cyclohexane.mol2')]
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
+        omm_system = forcefield.create_openmm_system(topology)
+
+    # This test takes too long with the initial implementation of the toolkit
+    @pytest.mark.skip
+    def test_parameterize_large_system(self):
+        from simtk.openmm import app
+        from openforcefield.topology import Topology
+        filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
+        forcefield = ForceField(filename)
+        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
+        molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
+                                                                              'molecules/cyclohexane.mol2')]
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
+        omm_system = forcefield.create_openmm_system(topology)
+
+    def test_parameterize_different_reference_ordering(self):
+        """
+        Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
+        The results of both should be identical.
+        """
+        from simtk.openmm import app
+        from openforcefield.topology import Topology
+        from simtk.openmm import XmlSerializer
+        filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
+        forcefield = ForceField(filename)
+        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/1_ethanol.pdb'))
+        # Load the unique molecules with one atom ordering
+        molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.mol2'))]
+        topology1 = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules1)
+        omm_system1 = forcefield.create_openmm_system(topology1)
+        # Load the unique molecules with a different atom ordering
+        molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.mol2'))]
+        topology2 = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules2)
+        omm_system2 = forcefield.create_openmm_system(topology2)
+
+        serialized_1 = XmlSerializer.serialize(omm_system1)
+        serialized_2 = XmlSerializer.serialize(omm_system2)
+
+        serialized_1 = round_charge(serialized_1)
+        serialized_2 = round_charge(serialized_2)
+
+        assert serialized_1 == serialized_2
+
 
 # from_filename
 # from xml_string
