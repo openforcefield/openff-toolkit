@@ -1691,6 +1691,9 @@ class FrozenMolecule(Serializable):
 
         self._properties = molecule_dict['properties']
 
+    def __repr__(self):
+        """Return the SMILES of this molecule"""
+        return "Molecule with name '{}' and SMILES '{}'".format(self.name, self.to_smiles())
 
     def __getstate__(self):
         return self.to_dict()
