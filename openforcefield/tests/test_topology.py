@@ -25,7 +25,7 @@ import numpy as np
 from simtk import unit
 from openforcefield.utils import BASIC_CHEMINFORMATICS_TOOLKITS, RDKIT_AVAILABLE, OPENEYE_AVAILABLE, AMBERTOOLS_AVAILABLE, RDKitToolkitWrapper, OpenEyeToolkitWrapper, AmberToolsToolkitWrapper
 from openforcefield.tests.utils import get_data_filename
-from openforcefield.topology import Topology, TopologyAtom, TopologyBond, TopologyMolecule, TopologyVirtualSite
+from openforcefield.topology import Topology, TopologyAtom, TopologyBond, TopologyMolecule, TopologyVirtualSite, DuplicateUniqueMoleculeError
 from openforcefield.topology import Molecule
 
 #=============================================================================================
@@ -250,16 +250,24 @@ class TestTopology(TestCase):
         # There are four virtual sites -- Two BondCharges with 2 atoms, and two MonovalentLonePairs with 3 atoms
         assert n_equal_atoms == 10
 
-
-
+    def test_is_bonded(self):
+        """Test Topology.virtual_site function (get virtual site from index)
+        """
+        topology = Topology()
+        topology.add_molecule(self.propane_from_smiles_w_vsites)
+        #raise Exception([str(topology.atom(i).atom) for i in range(6)])
+        topology.assert_bonded(0, 1)
+        topology.assert_bonded(1, 0)
+        topology.assert_bonded(1, 2)
+        # C-H bond
+        topology.assert_bonded(0,4)
+        with self.assertRaises(Exception) as context:
+            topology.assert_bonded(0, 2)
 
     # test_get_fractional_bond_order
     # test_two_of_same_molecule
     # test_two_different_molecules
     # test_to_from_dict
-    # test_get_atom
-    # test_get_bond
-    # test_get_virtual_site
     # test_get_molecule
     # test_get_topology_atom
     # test_get_topology_bond
@@ -274,15 +282,26 @@ class TestTopology(TestCase):
         pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
         #toolkit_wrapper = RDKitToolkitWrapper()
         molecules = [ Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
-                                                                               'molecules/cyclohexane.mol2') ]
+                                                                               'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         assert topology.n_reference_molecules == 2
         assert topology.n_molecules == 239
 
+    def test_from_openmm_duplicate_unique_mol(self):
+        """Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols"""
+        from simtk.openmm import app
+        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
+        #toolkit_wrapper = RDKitToolkitWrapper()
+        molecules = [ Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
+                                                                               'molecules/ethanol_reordered.mol2',
+                                                                               'molecules/cyclohexane.mol2')]
+        with self.assertRaises(DuplicateUniqueMoleculeError) as context:
+            topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
     @pytest.mark.skip
     def test_from_openmm_distinguish_using_stereochemistry(self):
         """Test creation of an openforcefield Topology object from an OpenMM topology with stereoisomers"""
-        # From Jeff: I know this won't work. The graph representation created from OMM molecules during the matching
+        # From Jeff: The graph representation created from OMM molecules during the matching
         # process doesn't encode stereochemistry.
         raise NotImplementedError
 
@@ -298,11 +317,11 @@ class TestTopology(TestCase):
         # Test for substructure match
         matches = topology.chemical_environment_matches("[C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 143
-        assert matches[0] == (1728, 1729, 1730)
+        assert tuple(i.topology_atom_index for i in matches[0]) == (1728, 1729, 1730)
         # Test for whole-molecule match
         matches = topology.chemical_environment_matches("[H][C:1]([H])([H])-[C:2]([H])([H])-[O:3][H]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 1716 # 143 * 12 (there are 12 possible hydrogen mappings)
-        assert matches[0] == (1728, 1729, 1730)
+        assert tuple(i.topology_atom_index for i in matches[0]) == (1728, 1729, 1730)
         # Search for a substructure that isn't there
         matches = topology.chemical_environment_matches("[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 0
@@ -319,10 +338,10 @@ class TestTopology(TestCase):
         # Count CCO matches
         matches = topology.chemical_environment_matches("[C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 143
-        assert matches[0] == (1728, 1729, 1730)
+        assert tuple(i.topology_atom_index for i in matches[0]) == (1728, 1729, 1730)
         matches = topology.chemical_environment_matches("[H][C:1]([H])([H])-[C:2]([H])([H])-[O:3][H]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 1716 # 143 * 12 (there are 12 possible hydrogen mappings)
-        assert matches[0] == (1728, 1729, 1730)
+        assert tuple(i.topology_atom_index for i in matches[0]) == (1728, 1729, 1730)
         # Search for a substructure that isn't there
         matches = topology.chemical_environment_matches("[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 0
