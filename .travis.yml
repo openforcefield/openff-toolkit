@@ -8,31 +8,34 @@ matrix:
     # Test osx with RDKit
     - os: osx
       language: generic
-      env: PYTHON_VER=3.5 RDKIT=true
+      env: PYTHON_VER=3.6 RDKIT=true
     - os: osx
       language: generic
-      env: PYTHON_VER=3.6 RDKIT=true
+      env: PYTHON_VER=3.7 RDKIT=true
 
     # Test RDKit compatibility
     - os: linux
-      python: 3.5
-      env: PYTHON_VER=3.5 RDKIT=true
-    - os: linux
       python: 3.6
       env: PYTHON_VER=3.6 RDKIT=true
+    - os: linux
+      python: 3.7
+      env: PYTHON_VER=3.7 RDKIT=true
 
     # Test OpenEye compatibility
     - os: linux
-      python: 3.5
-      env: PYTHON_VER=3.5 OPENEYE=true
-    - os: linux
       python: 3.6
       env: PYTHON_VER=3.6 OPENEYE=true
+    - os: linux
+      python: 3.7
+      env: PYTHON_VER=3.7 OPENEYE=true
 
     # Test case where both OpenEye and RDKit are installed
     - os: linux
       python: 3.6
       env: PYTHON_VER=3.5 OPENEYE=true RDKIT=true
+    - os: linux
+      python: 3.7
+      env: PYTHON_VER=3.7 OPENEYE=true RDKIT=true
 
 before_install:
     # Additional info about the build

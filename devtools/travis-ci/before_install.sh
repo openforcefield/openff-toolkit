@@ -28,6 +28,7 @@ export PATH=$MINICONDA_HOME/bin:$PATH
     {% if cookiecutter.dependency_source == "Prefer conda-forge over the default anaconda channel with pip fallback" %}
 conda config --add channels conda-forge
     {% endif %}
+conda config --add channels omnia
 conda config --set always_yes yes
 conda install conda conda-build jinja2 anaconda-client
 conda update --quiet --all
