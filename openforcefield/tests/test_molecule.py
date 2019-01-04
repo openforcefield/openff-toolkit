@@ -115,7 +115,7 @@ class TestMolecule(TestCase):
         atom = Atom(6, 0, False, stereochemistry='R', name='CT')
 
     def test_atom_properties(self):
-        """Test Atom.element"""
+        """Test that atom properties are correctly populated and gettable"""
         from simtk.openmm.app import element
         formal_charge = 0
         is_aromatic = False

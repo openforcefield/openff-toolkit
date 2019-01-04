@@ -1,7 +1,7 @@
 # Temporarily change directory to $HOME to install software
 pushd .
 cd $HOME
-{ % if (cookiecutter.dependency_source == 'Prefer conda-forge over the default anaconda channel with pip fallback' or cookiecutter.dependency_source == 'Prefer default anaconda channel with pip fallback') %}
+{% if (cookiecutter.dependency_source == 'Prefer conda-forge over the default anaconda channel with pip fallback' or cookiecutter.dependency_source == 'Prefer default anaconda channel with pip fallback') %}
 # Install Miniconda
 if [ "$TRAVIS_OS_NAME" == "osx" ]; then
     # Make OSX md5 mimic md5sum from linux, alias does not work
