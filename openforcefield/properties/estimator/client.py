@@ -27,7 +27,6 @@ from simtk import unit
 from pydantic import BaseModel
 from typing import Dict, List
 
-from tornado import gen
 from tornado.ioloop import IOLoop
 from tornado.iostream import StreamClosedError
 from tornado.tcpclient import TCPClient
@@ -36,7 +35,7 @@ from openforcefield.properties.estimator.layers import SurrogateLayer, Reweighti
 
 from openforcefield.utils.serialization import serialize_quantity
 
-from openforcefield.properties import CalculationFidelity, PhysicalProperty
+from openforcefield.properties import PhysicalProperty
 from openforcefield.properties.estimator import CalculationSchema
 
 from openforcefield.typing.engines.smirnoff import ForceField
@@ -98,7 +97,7 @@ class PropertyEstimatorOptions(BaseModel):
 
     calculation_schemas: Dict[str, CalculationSchema] = {}
 
-    relative_uncertainty: float = 0.1
+    relative_uncertainty: float = 1.0
 
 
 class PropertyEstimatorDataModel(BaseModel):
@@ -120,10 +119,65 @@ class PropertyEstimatorDataModel(BaseModel):
 
 
 class PropertyEstimator(object):
-    """
-    The object responsible for requesting a set of properties
-    be calculated by the low-level property calculation backend,
-    and for analysing the performance of the parameters.
+    """The main object responsible for requesting a set of properties
+    be calculated by the low-level property calculation backend.
+
+    The property estimator acts as a client object, which is able to connect
+    and submit calculations to a remote (or even a local) property estimator server.
+
+    Examples
+    --------
+
+    Setting up the server instance:
+
+    >>> # Create the backend which will be responsible for distributing the calculations
+    >>> from openforcefield.properties.estimator.backends import DaskLocalClusterBackend
+    >>> backend = DaskLocalClusterBackend(1, 1)
+    >>>
+    >>> # Create the server to which all calculations will be submitted
+    >>> from openforcefield.properties.estimator.runner import PropertyCalculationRunner
+    >>> property_server = PropertyCalculationRunner(backend)
+    >>>
+    >>> # Instruct the server to listen for incoming submissions
+    >>> property_server.run_until_complete()
+
+    If the server and client initialisation occur in the same function call (e.g. the same
+    main function), then `property_server.run_until_complete()` must be called after
+    all computations have been submitted.
+
+    Setting up the client instance:
+
+    >>> # Load in the data set of properties which will be used for comparisons
+    >>> from openforcefield.properties.datasets import ThermoMLDataSet
+    >>> data_set = ThermoMLDataSet.from_doi_list('10.1016/j.jct.2016.10.001')
+    >>> # Filter the dataset to only include densities measured between 130-260 K
+    >>> from openforcefield.properties import Density
+    >>>
+    >>> data_set.filter_by_properties(types=[Density.__name__])
+    >>> data_set.filter_by_temperature(min_temperature=130*unit.kelvin, max_temperature=260*unit.kelvin)
+    >>>
+    >>> # Load initial parameters
+    >>> from openforcefield.typing.engines.smirnoff import ForceField
+    >>> parameters = ForceField('smirnoff99Frosst.offxml')
+    >>>
+    >>> # Create a property estimator
+    >>> from openforcefield.properties.estimator import PropertyEstimator
+    >>> property_estimator = PropertyEstimator()
+
+    Submit the calculations using the default submission options:
+
+    >>> options = PropertyEstimatorOptions()
+    >>> ticket_ids = property_estimator.submit_computations(data_set, parameters, options)
+
+    The layers which will be used to calculate the properties can be controlled
+    using the submission options:
+
+    >>> options = PropertyEstimatorOptions(allowed_calculation_layers = [ReweightingLayer.__name__,
+    >>>                                                                  SimulationLayer.__name__])
+
+    As can the uncertainty tolerance:
+
+    >>> options = PropertyEstimatorOptions(relative_uncertainty = 0.1)
     """
 
     registered_properties = {}
@@ -147,7 +201,7 @@ class PropertyEstimator(object):
         self._port = port
         self._tcp_client = TCPClient()
 
-    def compute_properties(self, data_set, parameter_set, additional_options=None):
+    def submit_computations(self, data_set, parameter_set, additional_options=None):
         """
         Submit the property and parameter set for calculation.
 

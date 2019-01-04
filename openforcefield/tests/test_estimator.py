@@ -74,9 +74,9 @@ def run_property_estimator():
     property_server = runner.PropertyCalculationRunner(backend)
 
     property_estimator = client.PropertyEstimator()
-    ticket_ids = property_estimator.compute_properties(data_set, force_field)
+    ticket_ids = property_estimator.submit_computations(data_set, force_field)
 
-    property_server.start_listening_loop()
+    property_server.run_until_complete()
 
     # results = property_estimator.compute_properties(data_set, force_field)
     # client.PropertyEstimator.produce_calculation_report(data_set, results)

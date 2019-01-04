@@ -15,6 +15,9 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import pickle
+
+from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.properties.estimator.layers.base import register_calculation_layer, PropertyCalculationLayer
 
 
@@ -30,19 +33,23 @@ class SurrogateLayer(PropertyCalculationLayer):
 
     @staticmethod
     def perform_calculation(backend, data_model, existing_data, callback, synchronous=False):
-        """Attempt to calculate properties by surrogate modelling.
-        """
+
+        parameter_set = ForceField([])
+
+        with open(data_model.parameter_set_path, 'rb') as file:
+            parameter_set.__setstate__(pickle.load(file))
+
         surrogate_futures = []
 
         for physical_property in data_model.queued_properties:
 
             surrogate_future = backend.submit_task(SurrogateLayer.perform_surrogate_extrapolation,
                                                    physical_property,
-                                                   data_model.parameter_set)
+                                                   parameter_set)
 
             surrogate_futures.append(surrogate_future)
 
-        PropertyCalculationLayer._await_results(backend, data_model, callback, surrogate_futures)
+        PropertyCalculationLayer._await_results(backend, data_model, callback, surrogate_futures, synchronous)
 
     @staticmethod
     def perform_surrogate_extrapolation(physical_property, parameter_set):

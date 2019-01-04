@@ -9,11 +9,8 @@ Authors
 -------
 * Simon Boothroyd <simon.boothroyd@choderalab.org>
 
-.. todo::
-
-    * Make all protocol execute methods static.
-    * Create a pydantic data model to pass input / outputs between protocols.
-    * Gather up the final results of the calculation.
+.. todo:: * Make all protocol execute methods static.
+          * Create a pydantic data model to pass input / outputs between protocols.
 """
 
 
@@ -30,13 +27,11 @@ from os import path
 
 from openforcefield.utils import graph
 
-from openforcefield.properties import PhysicalProperty
+from openforcefield.properties import PhysicalProperty, CalculationSource
+from openforcefield.properties.estimator import CalculationSchema
 from openforcefield.properties.estimator.components import protocols
+from openforcefield.properties.estimator.components.protocols import ProtocolInputReference
 from openforcefield.properties.estimator.layers.base import register_calculation_layer, PropertyCalculationLayer
-
-from openforcefield.typing.engines.smirnoff import ForceField
-
-from .base import return_args
 
 
 # =============================================================================================
@@ -47,7 +42,8 @@ class DirectCalculation:
     """Defines the property to calculate and the calculation
     workflow needed to calculate it.
     """
-    def __init__(self, physical_property, force_field, schema):
+
+    def __init__(self, physical_property, force_field_path, schema):
         """
         Constructs a new DirectCalculation object.
 
@@ -55,12 +51,16 @@ class DirectCalculation:
         ----------
         physical_property: PhysicalProperty
             The protocol this node will execute.
-        force_field: openforcefield.typing.engines.smirnoff.ForceField
+        force_field_path: str
             The force field to use for this calculation.
         schema: CalculationSchema
             The schema to use to calculate this property.
         """
         self.physical_property = physical_property
+
+        self.physical_property.source = CalculationSource(fidelity=SimulationLayer.__name__,
+                                                          provenance=schema.json())
+
         self.uuid = str(uuid.uuid4())
 
         self.protocols = {}
@@ -71,12 +71,14 @@ class DirectCalculation:
         self.final_value_reference = None
         self.final_uncertainty_reference = None
 
+        schema = CalculationSchema.parse_raw(schema.json())
+
         # Define a dictionary of accessible 'global' properties.
         global_properties = {
             "thermodynamic_state": physical_property.thermodynamic_state,
             "substance": physical_property.substance,
             "uncertainty": physical_property.uncertainty,
-            "force_field": force_field
+            "force_field_path": force_field_path
         }
 
         # A helper to map the template protocol ids to
@@ -265,8 +267,6 @@ class DirectCalculationGraph:
             if root_directory is not None:
                 self.directory = path.join(root_directory, self.directory)
 
-            # self.status = self.Status.Queueing
-
         @property
         def id(self):
             """str: Returns the id of the protocol to execute."""
@@ -407,6 +407,8 @@ class DirectCalculationGraph:
         for starting_protocol_name in calculation.starting_protocols:
             self._insert_node(starting_protocol_name, calculation)
 
+        return
+
     def submit(self, backend):
         """Executes the protocol graph, employing a dask backend.
 
@@ -459,11 +461,26 @@ class DirectCalculationGraph:
             value_node_id = calculation.final_value_reference.output_protocol_id
             uncertainty_node_id = calculation.final_uncertainty_reference.output_protocol_id
 
-            value_futures.append(backend.submit_task(return_args,
+            value_futures.append(backend.submit_task(DirectCalculationGraph._gather_results,
                                                      submitted_futures[value_node_id],
-                                                     submitted_futures[uncertainty_node_id]))
+                                                     calculation.final_value_reference.output_property_name,
+                                                     submitted_futures[uncertainty_node_id],
+                                                     calculation.final_uncertainty_reference.output_property_name,
+                                                     calculation.physical_property))
 
         return value_futures
+
+    @staticmethod
+    def _gather_results(value_result, value_property_name, uncertainty_result,
+                        uncertainty_property_name, property_to_return):
+
+        property_to_return.value = value_result.get_output_value(
+            ProtocolInputReference(output_property_name=value_property_name))
+
+        property_to_return.uncertainty = uncertainty_result.get_output_value(
+            ProtocolInputReference(output_property_name=uncertainty_property_name))
+
+        return True, property_to_return
 
 
 # =============================================================================================
@@ -474,15 +491,15 @@ class DirectCalculationGraph:
 class SimulationLayer(PropertyCalculationLayer):
 
     @staticmethod
-    def _build_calculation_graph(properties, force_field, schemas):
+    def _build_calculation_graph(properties, force_field_path, schemas):
         """ Construct a graph of the protocols needed to calculate a set of properties.
 
         Parameters
         ----------
         properties : list of PhysicalProperty
             The properties to attempt to compute.
-        force_field : ForceField
-            The force field parameters to use in the calculation.
+        force_field_path : str
+            The path to the force field parameters to use in the calculation.
         schemas : dict of str and CalculationSchema
             A list of the schemas to use when performing the calculations.
         """
@@ -502,7 +519,7 @@ class SimulationLayer(PropertyCalculationLayer):
             schema = schemas[property_type]
 
             calculation = DirectCalculation(property_to_calculate,
-                                            force_field,
+                                            force_field_path,
                                             schema)
 
             calculation_graph.add_calculation(calculation)
@@ -512,58 +529,10 @@ class SimulationLayer(PropertyCalculationLayer):
     @staticmethod
     def perform_calculation(backend, data_model, existing_data, callback, synchronous=False):
 
-        parameter_set = ForceField([])
-        parameter_set.__setstate__(data_model.parameter_set)
-
         calculation_graph = SimulationLayer._build_calculation_graph(data_model.queued_properties,
-                                                                     parameter_set,
+                                                                     data_model.parameter_set_path,
                                                                      data_model.options.calculation_schemas)
 
         simulation_futures = calculation_graph.submit(backend)
 
         PropertyCalculationLayer._await_results(backend, data_model, callback, simulation_futures, synchronous)
-
-    @staticmethod
-    def finalise_results(physical_property):
-        """A placeholder method that would be used to attempt
-        to reweight previous calculations to yield the desired
-        property.
-        """
-
-        # For now the return tuple indicates that the reweighting
-        # was not sufficiently accurate to estimate the property (False)
-        # and simply returns the property back to be passed to the next layer.
-
-        # """Extract any properties calculated by a calculation graph.
-        #
-        # Parameters
-        # ----------
-        # calculation_graph : DirectCalculationGraph
-        #     An already executed calculation graph.
-        # """
-        #
-        # for calculation_uuid in calculation_graph.calculations_to_run:
-        #
-        #     calculation = calculation_graph.calculations_to_run[calculation_uuid]
-        #
-        #     value_protocol = calculation.protocols[calculation.final_value_reference.output_protocol_id]
-        #     uncertainty_protocol = calculation.protocols[calculation.final_uncertainty_reference.output_protocol_id]
-        #
-        #     value = value_protocol.get_output_value(calculation.final_value_reference)
-        #     uncertainty = uncertainty_protocol.get_output_value(calculation.final_uncertainty_reference)
-        #
-        #     calculated_property = PhysicalProperty()
-        #
-        #     calculated_property.substance = calculation.physical_property.substance
-        #     calculated_property.thermodynamic_state = calculation.physical_property.thermodynamic_state
-        #
-        #     calculated_property.phase = PropertyPhase.Liquid
-        #
-        #     calculated_property.source = CalculationSource(CalculationFidelity.DirectSimulation)
-        #
-        #     calculated_property.value = value
-        #     calculated_property.uncertainty = uncertainty
-        #
-        #     self.calculated_properties[str(calculated_property.substance)].append(calculated_property)
-
-        return False, physical_property

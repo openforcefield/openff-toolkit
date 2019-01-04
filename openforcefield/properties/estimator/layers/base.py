@@ -15,6 +15,8 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import logging
+
 
 # =============================================================================================
 # Registration Decorators
@@ -54,7 +56,21 @@ class PropertyCalculationLayer:
     @staticmethod
     def _await_results(backend, data_model, callback, submitted_futures, synchronous=False):
         """A method to handle passing the results of this layer back to
-        the main thread."""
+        the main thread.
+
+        Parameters
+        ----------
+        backend: openforcefield.properties.estimator.backends.base.PropertyEstimatorBackend
+            The backend to the submit the calculations to.
+        data_model: openforcefield.properties.estimator.runner.PropertyRunnerDataModel
+            The data model encoding the awaited calculation.
+        callback: function
+            The function to call when the backend returns the results (or an error).
+        submitted_futures: list(dask.distributed.Future)
+            A list of the futures returned by the backed when submitting the calculation.
+        synchronous: bool
+            If true, this function will block until the calculation has completed.
+        """
 
         callback_future = backend.submit_task(return_args, data_model, *submitted_futures)
 
@@ -68,7 +84,14 @@ class PropertyCalculationLayer:
                 if not succeeded:
                     continue
 
-                returned_data_model.queued_properties.remove(returned_property)
+                matches = [x for x in returned_data_model.queued_properties if x.id == returned_property.id]
+
+                if len(matches) != 1:
+                    logging.info('An id conflict occured... unexpected results may ensue.')
+
+                for match in matches:
+                    returned_data_model.queued_properties.remove(match)
+
                 returned_data_model.calculated_properties.append(returned_property)
 
             callback(returned_data_model)
@@ -80,4 +103,20 @@ class PropertyCalculationLayer:
 
     @staticmethod
     def perform_calculation(backend, data_model, existing_data, callback, synchronous=False):
+        """Submit the proposed calculation to the backend of choice.
+
+        Parameters
+        ----------
+        backend: openforcefield.properties.estimator.backends.base.PropertyEstimatorBackend
+            The backend to the submit the calculations to.
+        data_model: openforcefield.properties.estimator.runner.PropertyRunnerDataModel
+            The data model encoding the proposed calculation.
+        existing_data: dict of str and Any
+            Data which has already been calculated by a previous layer.
+        callback: function
+            The function to call when the backend returns the results (or an error).
+        synchronous: bool
+            If true, this function will block until the calculation has completed.
+            This is mainly intended for debugging purposes.
+        """
         raise NotImplementedError()

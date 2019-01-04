@@ -19,7 +19,7 @@ Authors
 
 import copy
 import logging
-import traceback
+import pickle
 
 import mdtraj
 
@@ -35,6 +35,7 @@ from typing import Dict, List, Any, Optional
 
 from openeye import oechem, oeomega
 
+from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils import packmol, graph
 from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity
 
@@ -713,14 +714,14 @@ class BuildSmirnoffTopology(BaseProtocol):
         super().__init__()
 
         # inputs
-        self._force_field = None
+        self._force_field_path = None
         self._coordinate_file = None
         self._molecules = None
         # outputs
         self._system = None
 
     @BaseProtocol.InputPipe
-    def force_field(self, value):
+    def force_field_path(self, value):
         pass
 
     @BaseProtocol.InputPipe
@@ -741,10 +742,15 @@ class BuildSmirnoffTopology(BaseProtocol):
 
         pdb_file = app.PDBFile(self._coordinate_file)
 
-        system = self._force_field.createSystem(pdb_file.topology,
-                                                self._molecules,
-                                                nonbondedMethod=smirnoff.PME,
-                                                chargeMethod='OECharges_AM1BCCSym')
+        parameter_set = ForceField([])
+
+        with open(self._force_field_path, 'rb') as file:
+            parameter_set.__setstate__(pickle.load(file))
+
+        system = parameter_set.createSystem(pdb_file.topology,
+                                            self._molecules,
+                                            nonbondedMethod=smirnoff.PME,
+                                            chargeMethod='OECharges_AM1BCCSym')
 
         if system is None:
 

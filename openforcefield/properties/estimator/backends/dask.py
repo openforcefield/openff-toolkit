@@ -44,5 +44,10 @@ class DaskLocalClusterBackend(PropertyEstimatorBackend):
         self._client = distributed.Client(self._cluster,
                                           processes=False)
 
+    def stop(self):
+
+        self._client.close()
+        self._cluster.close()
+
     def submit_task(self, function, *args):
         return self._client.submit(function, *args)

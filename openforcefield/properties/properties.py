@@ -17,6 +17,8 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import uuid
+
 from enum import Enum, IntFlag, unique
 
 from pydantic import BaseModel, validator
@@ -78,15 +80,6 @@ class PropertyPhase(IntFlag):
         return str(self)
 
 
-@unique
-class CalculationFidelity(IntFlag):
-    """An enum describing the fidelity at which a property was measured.
-    """
-    SurrogateModel = 1
-    Reweighting = 2
-    DirectSimulation = 3
-
-
 # =============================================================================================
 # Property Sources
 # =============================================================================================
@@ -144,13 +137,13 @@ class CalculationSource(Source):
 
     Attributes
     ----------
-    fidelity : CalculationFidelity
+    fidelity : str
         The fidelity at which the property was calculated
     provenance : str
         A JSON string containing information about how the property was calculated.
     """
 
-    fidelity: CalculationFidelity = CalculationFidelity.DirectSimulation
+    fidelity: str = None
     provenance: str = None
 
 
@@ -176,6 +169,13 @@ class PhysicalProperty(TypedBaseModel):
     uncertainty: unit.Quantity = None
 
     source: Source = None
+
+    id: str = ''
+
+    def __init__(self, **data):
+        super().__init__(**data)
+
+        self.id = str(uuid.uuid4())
 
     @validator('value', 'uncertainty', pre=True, whole=True)
     def validate_quantity(cls, v):

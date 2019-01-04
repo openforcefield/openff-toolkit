@@ -156,9 +156,9 @@ class DielectricConstant(PhysicalProperty):
 
         assign_topology.input_references = [
             # Globals
-            ProtocolInputReference(input_property_name='force_field',
+            ProtocolInputReference(input_property_name='force_field_path',
                                    output_protocol_id='global',
-                                   output_property_name='force_field'),
+                                   output_property_name='force_field_path'),
             # Locals
             ProtocolInputReference(input_property_name='coordinate_file',
                                    output_protocol_id=build_coordinates.id,

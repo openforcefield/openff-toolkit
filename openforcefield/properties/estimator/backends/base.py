@@ -72,6 +72,10 @@ class PropertyEstimatorBackend:
         """TODO: Missing docstrings."""
         pass
 
+    def stop(self):
+        """TODO: Missing docstrings."""
+        pass
+
     def submit_task(self, function, *args, **kwargs):
         """Submit a task to the compute resources
         managed by this backend.
