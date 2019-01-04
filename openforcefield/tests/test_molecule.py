@@ -255,39 +255,49 @@ class TestMolecule(TestCase):
         #                  'ZINC17312986', 'ZINC06424847', 'ZINC04963126', ]
         known_failures = ['DrugBank_5418', 'DrugBank_3930', 'DrugBank_1634', 'DrugBank_1962', 'DrugBank_5043',
                           'DrugBank_2519']
+        toolkit_wrapper = OpenEyeToolkitWrapper()
         for index, molecule in enumerate(self.molecules):
             if molecule.name in known_failures:
                 continue
             oemol = molecule.to_openeye()
             molecule_copy = Molecule(oemol)
-            assert molecule == molecule_copy
+            mol_smi = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+            mol_copy_smi = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
+            assert mol_smi == mol_copy_smi
 
 
     @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_create_rdkit(self):
         """Test creation of a molecule from an RDKit rdmol"""
+        #toolkit_wrapper = OpenEyeToolkitWrapper()
+        toolkit_wrapper = RDKitToolkitWrapper()
         # Using ZINC test set
         #known_failures = ['ZINC17060065', 'ZINC16448882', 'ZINC15772239','ZINC11539132',
         #                  'ZINC05975187', 'ZINC17111082', 'ZINC00265517']
         # Using DrugBank test set
         known_failures = ['DrugBank_349', 'DrugBank_1420', 'DrugBank_1671', 'DrugBank_4346']
-        failures = []
-        fail_smileses = []
+        #failures = []
+        #fail_smileses = []
         for molecule in self.molecules:
             if molecule.name in known_failures:
                 continue
             rdmol = molecule.to_rdkit()
             molecule_copy = Molecule(rdmol)
-            if not(molecule == molecule_copy):
-                failures.append(molecule.name)
-                fail_smileses.append((molecule.to_smiles(), molecule_copy.to_smiles()))
-            #assert molecule == molecule_copy
-
-        print(failures)
-        for name, (smi1, smi2) in zip(failures, fail_smileses):
-            print(name)
-            print(smi1)
-            print(smi2)
+            # if not(molecule.to_dict() == molecule_copy.to_dict()):
+            mol_smi = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+            mol_copy_smi = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
+            # TODO: If I use OE to generate the SMILESes, 91/365 molecules don't match. What is going on?
+            #if not (mol_smi == mol_copy_smi):
+            #    failures.append(molecule.name)
+            #    fail_smileses.append((molecule.to_smiles(toolkit_registry=toolkit_wrapper),
+            #                          molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)))
+            assert mol_smi == mol_copy_smi
+        #print(len(self.molecules))
+        #print(len(failures))
+        #for name, (smi1, smi2) in zip(failures, fail_smileses):
+        #    print(name)
+        #    print(smi1)
+        #    print(smi2)
 
 
     #These should be toolkit tests
