@@ -88,7 +88,6 @@ class TestMolecule(TestCase):
     def setUp(self):
         # TODO: Serialize the offmols instead so that we can run this test without toolkits
         import copy
-        #self.molecules = pickle.load('zinc-subset-offmols.pkl')
 
         self.molecules = copy.deepcopy(TestMolecule.test_molecules)
 
@@ -254,7 +253,6 @@ class TestMolecule(TestCase):
         """Test creation of a molecule from an OpenEye oemol"""
         #known_failures = ['ZINC05964684', 'ZINC05885163', 'ZINC05543156', 'ZINC17211981',
         #                  'ZINC17312986', 'ZINC06424847', 'ZINC04963126', ]
-                          #'DrugBank_2800',
         known_failures = ['DrugBank_5418', 'DrugBank_3930', 'DrugBank_1634', 'DrugBank_1962', 'DrugBank_5043',
                           'DrugBank_2519']
         for index, molecule in enumerate(self.molecules):
@@ -319,11 +317,11 @@ class TestMolecule(TestCase):
             molecule_copy = Molecule(serialized_molecule)
             assert molecule == molecule_copy
 
-    # TODO: Takes too long right now -- performance improvements might help
-    @pytest.mark.skip
     def test_equality(self):
         """Test equality operator"""
-        nmolecules = len(self.molecules)
+        #nmolecules = len(self.molecules)
+        # TODO: Performance improvements should let us un-restrict this test
+        nmolecules = 20
         for i in range(nmolecules):
             for j in range(i, nmolecules):
                 assert (self.molecules[i] == self.molecules[j]) == (i == j)
