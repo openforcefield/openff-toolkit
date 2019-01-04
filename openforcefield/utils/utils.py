@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 """
 Utility subroutines
 
@@ -15,6 +14,7 @@ from simtk import unit
 # UTILITY SUBROUTINES
 #=============================================================================================
 
+
 def inherit_docstrings(cls):
     """Inherit docstrings from parent class"""
     from inspect import getmembers, isfunction
@@ -25,9 +25,13 @@ def inherit_docstrings(cls):
                 func.__doc__ = getattr(parent, name).__doc__
     return cls
 
+
 def all_subclasses(cls):
     """Recursively retrieve all subclasses of the specified class"""
-    return cls.__subclasses__() + [ g for s in cls.__subclasses__() for g in all_subclasses(s) ]
+    return cls.__subclasses__() + [
+        g for s in cls.__subclasses__() for g in all_subclasses(s)
+    ]
+
 
 @contextlib.contextmanager
 def temporary_cd(dir_path):
@@ -53,6 +57,7 @@ def temporary_cd(dir_path):
     finally:
         os.chdir(prev_dir)
 
+
 @contextlib.contextmanager
 def temporary_directory():
     """Context for safe creation of temporary directories."""
@@ -64,6 +69,7 @@ def temporary_directory():
     finally:
         import shutil
         shutil.rmtree(tmp_dir)
+
 
 def get_data_filename(relative_path):
     """Get the full path to one of the reference files in testsystems.
@@ -78,10 +84,13 @@ def get_data_filename(relative_path):
 
     from pkg_resources import resource_filename
     import os
-    fn = resource_filename('openforcefield', os.path.join('data', relative_path))
+    fn = resource_filename('openforcefield', os.path.join(
+        'data', relative_path))
 
     if not os.path.exists(fn):
-        raise ValueError("Sorry! %s does not exist. If you just added it, you'll have to re-install" % fn)
+        raise ValueError(
+            "Sorry! %s does not exist. If you just added it, you'll have to re-install"
+            % fn)
 
     return fn
 
@@ -112,7 +121,6 @@ def serialize_quantity(quantity):
     # If it's not None, make sure it's a simtk.unit.Quantity
     assert (hasattr(quantity, 'unit'))
 
-
     quantity_unit = list()
     for base_unit in quantity.unit.iter_all_base_units():
         quantity_unit.append((base_unit[0].name, base_unit[1]))
@@ -140,14 +148,14 @@ def deserialize_quantity(serialized):
         return None
     quantity_unit = None
     for unit_name, power in serialized['unit']:
-        unit_name = unit_name.replace(' ','_') # Convert eg. 'elementary charge' to 'elementary_charge'
+        unit_name = unit_name.replace(
+            ' ', '_')  # Convert eg. 'elementary charge' to 'elementary_charge'
         if quantity_unit is None:
-            quantity_unit = (getattr(unit, unit_name) ** power)
+            quantity_unit = (getattr(unit, unit_name)**power)
         else:
-            quantity_unit *= (getattr(unit, unit_name) ** power)
+            quantity_unit *= (getattr(unit, unit_name)**power)
     quantity = unit.Quantity(serialized['unitless_value'], quantity_unit)
     return quantity
-
 
 
 def serialize_numpy(np_array):
@@ -179,9 +187,10 @@ def serialize_numpy(np_array):
     #serialized = json.dumps(memfile.read().decode('latin-1'))
     #dt = np.dtype('float')
     bigendian_array = np_array.newbyteorder('>')
-    serialized =bigendian_array.tobytes()
+    serialized = bigendian_array.tobytes()
     shape = np_array.shape
     return serialized, shape
+
 
 def deserialize_numpy(serialized_np, shape):
     """
@@ -210,7 +219,7 @@ def deserialize_numpy(serialized_np, shape):
     #return np_array
     import numpy as np
     dt = np.dtype('float')
-    dt.newbyteorder('>') # set to big-endian
+    dt.newbyteorder('>')  # set to big-endian
     np_array = np.frombuffer(serialized_np, dtype=dt)
     np_array = np_array.reshape(shape)
     return np_array

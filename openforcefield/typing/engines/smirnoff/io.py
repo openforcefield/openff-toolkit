@@ -3,7 +3,6 @@
 #=============================================================================================
 # MODULE DOCSTRING
 #=============================================================================================
-
 """
 XML I/O parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 
@@ -26,7 +25,6 @@ import lxml.etree as etree
 from simtk import openmm, unit
 from openforcefield.utils.utils import get_data_filename
 
-
 #=============================================================================================
 # CONFIGURE LOGGER
 #=============================================================================================
@@ -36,8 +34,6 @@ logger = logging.getLogger(__name__)
 #=============================================================================================
 #
 #=============================================================================================
-
-
 
 
 #@staticmethod
@@ -69,12 +65,14 @@ def _extract_attached_units(attrib):
             try:
                 parameter_units = eval(parameter_units_string, unit.__dict__)
             except Exception as e:
-                e.msg = "Could not parse units {}\n".format(parameter_units_string) + e.msg
+                e.msg = "Could not parse units {}\n".format(
+                    parameter_units_string) + e.msg
                 raise e
             attached_units[parameter_name] = parameter_units
             #del attrib[parameter_name]
 
     return attrib, attached_units
+
 
 #@staticmethod
 def _attach_units(attrib, attached_units):
@@ -98,7 +96,8 @@ def _attach_units(attrib, attached_units):
         if parameter_name in attrib.keys():
             parameter_attrib_string = attrib[parameter_name]
             try:
-                attrib[parameter_name] = float(parameter_attrib_string) * units_to_attach
+                attrib[parameter_name] = float(
+                    parameter_attrib_string) * units_to_attach
             except ValueError as e:
                 e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
                     parameter_name, parameter_attrib_string, units_to_attach)
@@ -106,19 +105,21 @@ def _attach_units(attrib, attached_units):
 
         # Now check for matches like "phase1", "phase2"
         c = 1
-        while (parameter_name+str(c)) in attrib.keys():
+        while (parameter_name + str(c)) in attrib.keys():
             indexed_parameter_name = parameter_name + str(c)
             parameter_attrib_string = attrib[indexed_parameter_name]
             try:
-                attrib[indexed_parameter_name] = float(parameter_attrib_string) * units_to_attach
+                attrib[indexed_parameter_name] = float(
+                    parameter_attrib_string) * units_to_attach
             except ValueError as e:
                 e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
-                    indexed_parameter_name, parameter_attrib_string, units_to_attach)
+                    indexed_parameter_name, parameter_attrib_string,
+                    units_to_attach)
                 raise e
             c += 1
         #if parameter_name in attached_units:
-            #units_to_attach = attached_units[parameter_name]
-            # TODO: Do we have to worry about None or null values for parameters with attached units?
+        #units_to_attach = attached_units[parameter_name]
+        # TODO: Do we have to worry about None or null values for parameters with attached units?
         #try:
         #    attrib[parameter_name_attrib] = float(parameter_value_string) * units_to_attach
         #except Exception as e:
@@ -133,6 +134,7 @@ class ParseError(Exception):
     """
     Exception for when a file is not parseable by a ParameterIOHandler
     """
+
     def __init__(self, msg):
         super(ParseError, self).__init__(self, msg)
         self.msg = msg
@@ -141,6 +143,7 @@ class ParseError(Exception):
 #=============================================================================================
 # Base ParameterIOHandler
 #=============================================================================================
+
 
 class ParameterIOHandler(object):
     """
@@ -211,6 +214,7 @@ class ParameterIOHandler(object):
         str
         """
         pass
+
     #def parameter_handler_tags_are_compatible(self, tags):
     #    """
     #
@@ -224,13 +228,12 @@ class ParameterIOHandler(object):
     #    """
 
 
-
-
 #=============================================================================================
 # XML I/O
 #=============================================================================================
 
 # TODO: Instead of subclassing ForceField, what if we had an abstract base class for parameter IO?
+
 
 class XMLParameterIOHandler(ParameterIOHandler):
     # TODO: Come up with a better keyword for format
@@ -280,7 +283,8 @@ class XMLParameterIOHandler(ParameterIOHandler):
         """
 
         # TODO: Search the right sequence of paths
-        parser = etree.XMLParser(remove_blank_text=True) # For pretty print on write
+        parser = etree.XMLParser(
+            remove_blank_text=True)  # For pretty print on write
         try:
             # this handles either filenames or open file-like objects
             tree = etree.parse(source, parser)
@@ -295,7 +299,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
             # Fail with an error message about which file could not be read.
             # TODO: Also handle case where fallback to 'data' directory encounters problems,
             # but this is much less worrisome because we control those files.
-            msg  = str(e) + '\n'
+            msg = str(e) + '\n'
             if hasattr(source, 'name'):
                 filename = source.name
             else:
@@ -303,7 +307,6 @@ class XMLParameterIOHandler(ParameterIOHandler):
             msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
             raise Exception(msg)
         self.from_lxml(tree.getroot())
-
 
     def parse_string(self, data):
         """Parse a SMIRNOFF force field definition in XML format.
@@ -322,7 +325,6 @@ class XMLParameterIOHandler(ParameterIOHandler):
         #root = etree.fromstring(data)
         self.from_lxml(root)
 
-
     def to_file(self, filename, root):
         """Write the current forcefield parameter set to a file, autodetecting the type from the extension.
 
@@ -338,11 +340,12 @@ class XMLParameterIOHandler(ParameterIOHandler):
         if (format == 'offxml') or (extension == '.offxml'):
             root.write(filename, xml_declaration=True, pretty_print=True)
         else:
-            msg = "Cannot export forcefield parameters to file '{}'\n".format(filename)
-            msg += 'Export to extension {} not implemented yet.\n'.format(extension)
+            msg = "Cannot export forcefield parameters to file '{}'\n".format(
+                filename)
+            msg += 'Export to extension {} not implemented yet.\n'.format(
+                extension)
             msg += "Supported choices are: ['.offxml']"
             raise NotImplementedError(msg)
-
 
     def to_string(self):
         """
@@ -352,7 +355,6 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         """
         return self.to_xml()
-
 
     #@staticmethod
     #def from_xml(xml):
@@ -368,30 +370,32 @@ class XMLParameterIOHandler(ParameterIOHandler):
         root : lxml.etree
             Root node
         """
-        root = etree.Element('SMIRNOFF', {'version':self._forcefield.version})
-        for tagname, parameter_handler in self._forcefield._parameter_handlers.items():
-            parameter_subtree = etree.SubElement(root, tagname, parameter_handler.attribs)
+        root = etree.Element('SMIRNOFF', {'version': self._forcefield.version})
+        for tagname, parameter_handler in self._forcefield._parameter_handlers.items(
+        ):
+            parameter_subtree = etree.SubElement(root, tagname,
+                                                 parameter_handler.attribs)
             for parameter in parameter_handler.parameters:
-                etree.SubElement(parameter_subtree, parameter.tagname, parameter.attribs)
+                etree.SubElement(parameter_subtree, parameter.tagname,
+                                 parameter.attribs)
 
         return root
 
     def from_lxml(self, root):
-        if not(root.tag == 'SMIRNOFF'):
+        if not (root.tag == 'SMIRNOFF'):
             raise Exception("Root tag of tree is not 'SMIRNOFF'")
 
-        cosmetic_tags = ['Date','Author']
+        cosmetic_tags = ['Date', 'Author']
         #root = smirnoff_root[0]
         #raise Exception(root)
         try:
             exception_node = root  # node used for exception reporting
 
-
             # Process handlers
             #for section in root.iter(tag=etree.Element):
             for section in root:
                 # Skip comment lines
-                if not(isinstance(section.tag, str)):
+                if not (isinstance(section.tag, str)):
                     continue
                 if section.tag in cosmetic_tags:
                     continue
@@ -400,14 +404,17 @@ class XMLParameterIOHandler(ParameterIOHandler):
                 parameter_name = section.tag
 
                 # Split out attributes that refer to units
-                handler_kwargs, attached_units = _extract_attached_units(section.attrib)
+                handler_kwargs, attached_units = _extract_attached_units(
+                    section.attrib)
                 # TODO: Attach units to handler_kwargs
                 # Make a copy of handler_kwargs that we can modify
                 handler_kwargs_dict = dict(handler_kwargs)
-                handler_kwargs_dict = _attach_units(handler_kwargs_dict, attached_units)
+                handler_kwargs_dict = _attach_units(handler_kwargs_dict,
+                                                    attached_units)
 
                 # Retrieve or create parameter handler
-                handler = self._forcefield.get_handler(parameter_name, handler_kwargs_dict)
+                handler = self._forcefield.get_handler(parameter_name,
+                                                       handler_kwargs_dict)
 
                 # Populate handler with parameter definitions
                 for parameter in section:
@@ -417,7 +424,8 @@ class XMLParameterIOHandler(ParameterIOHandler):
                     parameter_attrib_dict = dict(parameter.attrib)
 
                     # Append units to parameters as needed
-                    parameter_kwargs = _attach_units(parameter_attrib_dict, attached_units)
+                    parameter_kwargs = _attach_units(parameter_attrib_dict,
+                                                     attached_units)
                     # Add parameter definition
                     handler.add_parameter(parameter_kwargs)
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 """
 Serialization mix-in
 
@@ -9,6 +8,7 @@ Serialization mix-in
    Instead, should we not include these by default, and instead raise a helpful exception with installation instructions if one of the serialization schemes is called but the requisite library is not installed?
 
 """
+
 #=============================================================================================
 # GLOBAL IMPORTS
 #=============================================================================================
@@ -16,6 +16,7 @@ Serialization mix-in
 #=============================================================================================
 # SERIALIZATION MIX-IN
 #=============================================================================================
+
 
 class Serializable(object):
     """Mix-in to add serialization and deserialization support via JSON, YAML, BSON, TOML, MessagePack, and XML.
@@ -100,13 +101,12 @@ class Serializable(object):
 
     """
 
-
     def to_dict(self):
         raise NotImplementedError
 
     def from_dict(self):
         raise NotImplementedError
-    
+
     def to_json(self):
         """
         Return a JSON serialized representation.
@@ -238,9 +238,11 @@ class Serializable(object):
         for item_key, item_value in mapping:
             node_key = dump.represent_data(item_key)
             node_value = dump.represent_data(item_value)
-            if not (isinstance(node_key, yaml.ScalarNode) and not node_key.style):
+            if not (isinstance(node_key, yaml.ScalarNode)
+                    and not node_key.style):
                 best_style = False
-            if not (isinstance(node_value, yaml.ScalarNode) and not node_value.style):
+            if not (isinstance(node_value, yaml.ScalarNode)
+                    and not node_value.style):
                 best_style = False
             value.append((node_key, node_value))
         if flow_style is None:
@@ -354,7 +356,7 @@ class Serializable(object):
         root_name = self.__class__.__name__
         if indent is not None:
             pretty = True
-            indent = ' '*indent
+            indent = ' ' * indent
         else:
             pretty = False
         return xmltodict.unparse(d, pretty=pretty, indent=indent)

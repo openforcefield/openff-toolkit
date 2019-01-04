@@ -3,7 +3,6 @@
 #=============================================================================================
 # MODULE DOCSTRING
 #=============================================================================================
-
 """
 Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 
@@ -20,23 +19,20 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
 #=============================================================================================
 # GLOBAL IMPORTS
 #=============================================================================================
-\
+
 import copy
 import logging
-
 
 from collections import OrderedDict
 
 import packaging
 
-
 from simtk import openmm, unit
 
-from openforcefield.utils import  all_subclasses
+from openforcefield.utils import all_subclasses
 from openforcefield.topology import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
-
 
 #=============================================================================================
 # CONFIGURE LOGGER
@@ -49,14 +45,14 @@ logger = logging.getLogger(__name__)
 #=============================================================================================
 
 # TODO: Instead of having a global version number, alow each Force to have a separate version number
-MAX_SUPPORTED_VERSION = '1.0' # maximum version of the SMIRNOFF spec supported by this SMIRNOFF forcefield
-
+MAX_SUPPORTED_VERSION = '1.0'  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF forcefield
 
 
 class ParameterHandlerRegistrationError(Exception):
     """
     Exception for errors in ParameterHandler registration errors
     """
+
     def __init__(self, msg):
         super().__init__(self, msg)
         self.msg = msg
@@ -69,6 +65,7 @@ class ParameterHandlerRegistrationError(Exception):
 # QUESTION: How should we document private object fields?
 
 # TODO: How do we serialize/deserialize `ForceField`'s object model? Can we rely on pickle?
+
 
 class ForceField(object):
     """A factory that assigns SMIRNOFF parameters to a molecular system
@@ -162,7 +159,11 @@ class ForceField(object):
 
     """
 
-    def __init__(self, *sources, parameter_handler_classes=None, parameter_io_handler_classes=None, disable_version_check=False):
+    def __init__(self,
+                 *sources,
+                 parameter_handler_classes=None,
+                 parameter_io_handler_classes=None,
+                 disable_version_check=False):
         """Create a new :class:`ForceField` object from one or more SMIRNOFF parameter definition files.
 
         Parameters
@@ -224,7 +225,8 @@ class ForceField(object):
         # Register all ParameterIOHandler objects that will process serialized parameter representations
         if parameter_io_handler_classes is None:
             parameter_io_handler_classes = all_subclasses(ParameterIOHandler)
-        self._register_parameter_io_handler_classes(parameter_io_handler_classes)
+        self._register_parameter_io_handler_classes(
+            parameter_io_handler_classes)
 
         # Parse all sources containing SMIRNOFF parameter definitions
         self.parse(sources)
@@ -233,13 +235,18 @@ class ForceField(object):
         """
         Initialize all object fields.
         """
-        self._disable_version_check = False # if True, will disable checking compatibility version
-        self._aromaticity_model = DEFAULT_AROMATICITY_MODEL # aromaticity model
-        self._parameter_handler_classes = OrderedDict() # Parameter handler classes that _can_ be initialized if needed
-        self._parameter_handlers = OrderedDict() # ParameterHandler classes to be instantiated for each parameter type
-        self._parameter_io_handler_classes = OrderedDict() # ParameterIOHandler classes that _can_ be initialiazed if needed
-        self._parameter_io_handlers = OrderedDict() # ParameterIO classes to be used for each file type
-        self._parameters = ParameterList() # ParameterHandler objects instantiated for each parameter type
+        self._disable_version_check = False  # if True, will disable checking compatibility version
+        self._aromaticity_model = DEFAULT_AROMATICITY_MODEL  # aromaticity model
+        self._parameter_handler_classes = OrderedDict(
+        )  # Parameter handler classes that _can_ be initialized if needed
+        self._parameter_handlers = OrderedDict(
+        )  # ParameterHandler classes to be instantiated for each parameter type
+        self._parameter_io_handler_classes = OrderedDict(
+        )  # ParameterIOHandler classes that _can_ be initialiazed if needed
+        self._parameter_io_handlers = OrderedDict(
+        )  # ParameterIO classes to be used for each file type
+        self._parameters = ParameterList(
+        )  # ParameterHandler objects instantiated for each parameter type
 
     # TODO : This is unused and shouldn't be here -- Move to parameteriohandler
     def _parse_version(self, root):
@@ -255,10 +262,16 @@ class ForceField(object):
         if 'version' in root.attrib:
             version = root.attrib['version']
             # Use PEP-440 compliant version number comparison, if requested
-            if (not self.disable_version_check) and (packaging.version.parse(version) > packaging.version.parse(MAX_SUPPORTED_VERION)):
-                self._raise_parsing_exception(root, 'SMIRNOFF offxml file was written with version %s, but this version of ForceField only supports up to version %s' % (self.version, MAX_SUPPORTED_VERSION))
+            if (not self.disable_version_check) and (
+                    packaging.version.parse(version) >
+                    packaging.version.parse(MAX_SUPPORTED_VERION)):
+                self._raise_parsing_exception(
+                    root,
+                    'SMIRNOFF offxml file was written with version %s, but this version of ForceField only supports up to version %s'
+                    % (self.version, MAX_SUPPORTED_VERSION))
         else:
-            self._raise_parsing_exception(root, "'version' attribute must be specified in SMIRNOFF tag")
+            self._raise_parsing_exception(
+                root, "'version' attribute must be specified in SMIRNOFF tag")
 
     def _register_parameter_handler_classes(self, parameter_handler_classes):
         """
@@ -277,15 +290,18 @@ class ForceField(object):
             tagname = parameter_handler_class._TAGNAME
             if tagname is not None:
                 if tagname in self._parameter_handler_classes.keys():
-                    raise Exception("ParameterHandler {} provides a parser for tag '{}', but ParameterHandler {} has "
-                                    "already been registered to handle that tag.".format(parameter_handler_class,
-                                                                                         tagname,
-                                                                                         self._parameter_handler_classes[tagname]))
+                    raise Exception(
+                        "ParameterHandler {} provides a parser for tag '{}', but ParameterHandler {} has "
+                        "already been registered to handle that tag.".format(
+                            parameter_handler_class, tagname,
+                            self._parameter_handler_classes[tagname]))
                 #parsers[tagname] = parameter_handler
-                self._parameter_handler_classes[tagname] = parameter_handler_class
+                self._parameter_handler_classes[
+                    tagname] = parameter_handler_class
         #return parsers
 
-    def _register_parameter_io_handler_classes(self, parameter_io_handler_classes):
+    def _register_parameter_io_handler_classes(self,
+                                               parameter_io_handler_classes):
         """
         Register multiple ParameterIOHandler classes, ensuring they specify unique suffixes
 
@@ -306,15 +322,20 @@ class ForceField(object):
         for parameter_io_handler_class in parameter_io_handler_classes:
             serialization_format = parameter_io_handler_class._FORMAT
             if serialization_format is not None:
-                if serialization_format in self._parameter_io_handler_classes.keys():
-                    raise Exception("ParameterIOHandler {} provides a IO parser for format '{}', but ParameterIOHandler {} has "
-                                    "already been registered to handle that tag.".format(parameter_io_handler_class,
-                                                                                         serialization_format,
-                                                                                         self._parameter_io_handler_classes[serialization_format]))
-                self._parameter_io_handler_classes[serialization_format] = parameter_io_handler_class
+                if serialization_format in self._parameter_io_handler_classes.keys(
+                ):
+                    raise Exception(
+                        "ParameterIOHandler {} provides a IO parser for format '{}', but ParameterIOHandler {} has "
+                        "already been registered to handle that tag.".format(
+                            parameter_io_handler_class, serialization_format,
+                            self._parameter_io_handler_classes[
+                                serialization_format]))
+                self._parameter_io_handler_classes[
+                    serialization_format] = parameter_io_handler_class
         #return parsers
 
-    def register_parameter_handler(self, parameter_handler_class, parameter_handler_kwargs):
+    def register_parameter_handler(self, parameter_handler_class,
+                                   parameter_handler_kwargs):
         """
         Register a new ParameterHandler from a specified class, instantiating the ParameterHandler object and making it
         available for lookup in the ForceField.
@@ -333,11 +354,11 @@ class ForceField(object):
         """
         tagname = parameter_handler_class._TAGNAME
         if tagname in self._parameter_handlers.keys():
-            raise ParameterHandlerRegistrationError("Tried to register parameter handler '{}' for tag '{}', but "
-                                                    "tag is already registered to {}".format(parameter_handler_class,
-                                                                                             tagname,
-                                                                                             self._parameter_handlers[
-                                                                                                 tagname]))
+            raise ParameterHandlerRegistrationError(
+                "Tried to register parameter handler '{}' for tag '{}', but "
+                "tag is already registered to {}".format(
+                    parameter_handler_class, tagname,
+                    self._parameter_handlers[tagname]))
         new_handler = parameter_handler_class(self, **parameter_handler_kwargs)
 
         self._parameter_handlers[new_handler._TAGNAME] = new_handler
@@ -357,21 +378,21 @@ class ForceField(object):
         """
         io_format = parameter_io_handler_class._FORMAT
         if io_format in self._parameter_io_handlers.keys():
-            raise ParameterHandlerRegistrationError("Tried to register parameter IO handler '{}' for tag '{}', but "
-                                                    "tag is already registered to {}".format(parameter_io_handler_class,
-                                                                                             io_format,
-                                                                                             self._parameter_io_handlers[
-                                                                                                 io_format]))
+            raise ParameterHandlerRegistrationError(
+                "Tried to register parameter IO handler '{}' for tag '{}', but "
+                "tag is already registered to {}".format(
+                    parameter_io_handler_class, io_format,
+                    self._parameter_io_handlers[io_format]))
         new_io_handler = parameter_io_handler_class(self)
 
         self._parameter_io_handlers[io_format] = new_io_handler
         return new_io_handler
 
-
     # TODO: Do we want to make this optional?
 
     @staticmethod
-    def _check_for_missing_valence_terms(name, topology, assigned_terms, topological_terms):
+    def _check_for_missing_valence_terms(name, topology, assigned_terms,
+                                         topological_terms):
         """
         Check to ensure there are no missing valence terms in the given topology, identifying potential gaps in parameter coverage.
 
@@ -390,8 +411,8 @@ class ForceField(object):
 
         """
         # Convert assigned terms and topological terms to lists
-        assigned_terms = [ item for item in assigned_terms ]
-        topological_terms = [ item for item in topological_terms ]
+        assigned_terms = [item for item in assigned_terms]
+        topological_terms = [item for item in topological_terms]
 
         def ordered_tuple(atoms):
             atoms = list(atoms)
@@ -399,12 +420,19 @@ class ForceField(object):
                 return tuple(atoms)
             else:
                 return tuple(reversed(atoms))
+
         try:
-            topology_set = set([ ordered_tuple( atom.index for atom in atomset ) for atomset in topological_terms ])
-            assigned_set = set([ ordered_tuple( index for index in atomset ) for atomset in assigned_terms ])
+            topology_set = set([
+                ordered_tuple(atom.index for atom in atomset)
+                for atomset in topological_terms
+            ])
+            assigned_set = set([
+                ordered_tuple(index for index in atomset)
+                for atomset in assigned_terms
+            ])
         except TypeError as te:
-            topology_set = set([ atom.index for atom in topological_terms ])
-            assigned_set = set([ atomset[0] for atomset in assigned_terms ])
+            topology_set = set([atom.index for atom in topological_terms])
+            assigned_set = set([atomset[0] for atomset in assigned_terms])
 
         def render_atoms(atomsets):
             msg = ""
@@ -413,10 +441,12 @@ class ForceField(object):
                 try:
                     for atom_index in atomset:
                         atom = atoms[atom_index]
-                        msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
+                        msg += ' %5s %3s %3s' % (atom.residue.index,
+                                                 atom.residue.name, atom.name)
                 except TypeError as te:
                     atom = atoms[atomset]
-                    msg += ' %5s %3s %3s' % (atom.residue.index, atom.residue.name, atom.name)
+                    msg += ' %5s %3s %3s' % (atom.residue.index,
+                                             atom.residue.name, atom.name)
 
                 msg += '\n'
             return msg
@@ -424,7 +454,7 @@ class ForceField(object):
         if set(assigned_set) != set(topology_set):
             # Form informative error message
             msg = '%s: Mismatch between valence terms added and topological terms expected.\n' % name
-            atoms = [ atom for atom in topology.topology_atoms ]
+            atoms = [atom for atom in topology.topology_atoms]
             if len(assigned_set.difference(topology_set)) > 0:
                 msg += 'Valence terms created that are not present in Topology:\n'
                 msg += render_atoms(assigned_set.difference(topology_set))
@@ -435,7 +465,8 @@ class ForceField(object):
             msg += str(topology_set) + '\n'
             msg += 'assigned_set:\n'
             msg += str(assigned_set) + '\n'
-            raise Exception(msg) # TODO: Should we raise a more specific exception here?
+            raise Exception(
+                msg)  # TODO: Should we raise a more specific exception here?
 
     def get_handler(self, tagname, handler_kwargs):
         """Retrieve the parameter handlers associated with the provided tagname.
@@ -466,11 +497,14 @@ class ForceField(object):
             handler.check_handler_compatibility(handler_kwargs)
         elif tagname in self._parameter_handler_classes.keys():
             new_ph_class = self._parameter_handler_classes[tagname]
-            handler = self.register_parameter_handler(new_ph_class, handler_kwargs)
+            handler = self.register_parameter_handler(new_ph_class,
+                                                      handler_kwargs)
 
         if handler is None:
-            msg = "Cannot find a registered parameter handler for tag '{}'\n".format(tagname)
-            msg += "Registered parameter handlers: {}\n".format(self._parameter_handlers.keys())
+            msg = "Cannot find a registered parameter handler for tag '{}'\n".format(
+                tagname)
+            msg += "Registered parameter handlers: {}\n".format(
+                self._parameter_handlers.keys())
             raise KeyError(msg)
 
         return handler
@@ -502,8 +536,10 @@ class ForceField(object):
             new_ph_class = self._parameter_io_handler_classes[io_format]
             io_handler = self.register_parameter_io_handler(new_ph_class)
         if io_handler is None:
-            msg = "Cannot find a registered parameter IO handler for format '{}'\n".format(io_format)
-            msg += "Registered parameter IO handlers: {}\n".format(self._parameter_io_handlers.keys())
+            msg = "Cannot find a registered parameter IO handler for format '{}'\n".format(
+                io_format)
+            msg += "Registered parameter IO handlers: {}\n".format(
+                self._parameter_io_handlers.keys())
             raise KeyError(msg)
 
         return io_handler
@@ -548,7 +584,6 @@ class ForceField(object):
         else:
             io_formats_to_try = [input_format]
 
-
         for source in sources:
             # TODO: Add support for other sources (other serialized formats, URLs, etc)
             # Parse content depending on type
@@ -574,9 +609,13 @@ class ForceField(object):
                     # the file. If it crashes midway through, the forcefield will be partially modified.
                 #except ParseError:
                 #    pass
-            if not(parse_successful):
-                valid_formats = [iohandler.format for iohandler in self._parameter_io_handlers]
-                msg = "Source {} does not appear to be in a known SMIRNOFF encoding.\n".format(source)
+            if not (parse_successful):
+                valid_formats = [
+                    iohandler.format
+                    for iohandler in self._parameter_io_handlers
+                ]
+                msg = "Source {} does not appear to be in a known SMIRNOFF encoding.\n".format(
+                    source)
                 msg += "Valid formats are: {}".format(valid_formats)
                 raise Exception(msg)
 
@@ -591,15 +630,25 @@ class ForceField(object):
 
         """
         if not 'aromaticity_model' in root.attrib:
-            self._raise_parsing_exception(root, "'aromaticity_model' attribute must be specified in top-level tag")
+            self._raise_parsing_exception(
+                root,
+                "'aromaticity_model' attribute must be specified in top-level tag"
+            )
 
         aromaticity_model = root.attrib['aromaticity_model']
 
         if aromaticity_model not in topology.ALLOWED_AROMATICITY_MODELS:
-            self._raise_parsing_exception(root, "'aromaticity_model' (%s) must be one of the supported models: " % (aromaticity_model, topology.ALLOWED_AROMATICITY_MODELS))
+            self._raise_parsing_exception(
+                root,
+                "'aromaticity_model' (%s) must be one of the supported models: "
+                % (aromaticity_model, topology.ALLOWED_AROMATICITY_MODELS))
 
-        if (self._aromaticity_model is not None) and (self._aromaticity_model != aromaticity_model):
-            self._raise_parsing_exception(root, "'aromaticity_model' (%s) does not match earlier read 'aromaticity_model' (%s)" % (aromaticity_model, self._aromaticity_model))
+        if (self._aromaticity_model is not None) and (self._aromaticity_model
+                                                      != aromaticity_model):
+            self._raise_parsing_exception(
+                root,
+                "'aromaticity_model' (%s) does not match earlier read 'aromaticity_model' (%s)"
+                % (aromaticity_model, self._aromaticity_model))
 
     def _resolve_parameter_handler_order(self):
         """Resolve the order in which ParameterHandler objects should execute to satisfy constraints.
@@ -623,10 +672,12 @@ class ForceField(object):
         ordered_parameter_handlers = list()
         for tagname in nx.topological_sort(G):
             if tagname in self._parameter_handlers:
-                ordered_parameter_handlers.append(self._parameter_handlers[tagname])
+                ordered_parameter_handlers.append(
+                    self._parameter_handlers[tagname])
             else:
                 # TODO: Is it safe to pass "{}" as the handler_kwargs? If the handler doesn't exist, do we want to assume default values?
-                ordered_parameter_handlers.append(self.get_handler(tagname, {}))
+                ordered_parameter_handlers.append(
+                    self.get_handler(tagname, {}))
         #ordered_parameter_handlers = [ self.get_handler(tagname, {}) for tagname in nx.topological_sort(G) ]
         return ordered_parameter_handlers
 
@@ -639,7 +690,10 @@ class ForceField(object):
     # TODO: How do we know if the system is periodic or not?
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
 
-    def create_openmm_system(self, topology, default_box_vectors=None, **kwargs):
+    def create_openmm_system(self,
+                             topology,
+                             default_box_vectors=None,
+                             **kwargs):
         """Create an OpenMM System representing the interactions for the specified Topology with the current force field
 
         Parameters
@@ -686,7 +740,8 @@ class ForceField(object):
             known_kwargs.update(parameter_handler.known_kwargs)
         unknown_kwargs = set(kwargs.keys()).difference(known_kwargs)
         if len(unknown_kwargs) > 0:
-            msg = "The following keyword arguments to create_openmm_system() are not used by any registered force Handler: {}\n".format(unknown_kwargs)
+            msg = "The following keyword arguments to create_openmm_system() are not used by any registered force Handler: {}\n".format(
+                unknown_kwargs)
             msg += "Known keyword arguments: {}".format(known_kwargs)
             raise ValueError(msg)
 
@@ -702,7 +757,11 @@ class ForceField(object):
 
         return system
 
-    def create_parmed_structure(self, topology, positions, default_box_vectors=None, **kwargs):
+    def create_parmed_structure(self,
+                                topology,
+                                positions,
+                                default_box_vectors=None,
+                                **kwargs):
         """Create a ParmEd Structure object representing the interactions for the specified Topology with the current force field
 
         This method creates a `ParmEd <http://github.com/parmed/parmed>`_ ``Structure`` object containing a topology, positions, and parameters.
@@ -731,10 +790,12 @@ class ForceField(object):
         # TODO: Automagically handle expansion of virtual sites? Or is Topology supposed to do that?
 
         # Create OpenMM System
-        system = self.create_openmm_system(topology, default_box_vectors=default_box_vectors, **kwargs)
+        system = self.create_openmm_system(
+            topology, default_box_vectors=default_box_vectors, **kwargs)
 
         # Create a ParmEd Structure object
-        structure = parmed.openmm.topsystem.load_topology( topology.to_openmm(), system, positions)
+        structure = parmed.openmm.topsystem.load_topology(
+            topology.to_openmm(), system, positions)
 
         return structure
 

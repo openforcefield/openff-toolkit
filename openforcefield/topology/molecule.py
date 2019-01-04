@@ -3,7 +3,6 @@
 #=============================================================================================
 # MODULE DOCSTRING
 #=============================================================================================
-
 """
 Molecular chemical entity representation and routines to interface with cheminformatics toolkits
 
@@ -70,11 +69,10 @@ from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKit
 # PRIVATE SUBROUTINES
 #=============================================================================================
 
-
-
 #=============================================================================================
 # Particle
 #=============================================================================================
+
 
 class Particle(Serializable):
     """
@@ -98,8 +96,6 @@ class Particle(Serializable):
         """
         return self._molecule
 
-
-    
     @molecule.setter
     def molecule(self, molecule):
         """
@@ -119,7 +115,6 @@ class Particle(Serializable):
         """
         return self._molecule.particles.index(self)
 
-    
     @property
     def topology(self):
         """
@@ -132,8 +127,6 @@ class Particle(Serializable):
         """
         return self._topology
 
-
-    
     @topology.setter
     def topology(self, topology):
         """
@@ -146,14 +139,13 @@ class Particle(Serializable):
         assert self._topology == None
         self._topology = topology
 
-
     @property
     def topology_particle_index(self):
         """
         Returns the index of this particle in its parent topology
         """
         return self._topology.particles.index(self)
-        
+
     @property
     def name(self):
         """
@@ -161,9 +153,11 @@ class Particle(Serializable):
         """
         return self._name
 
+
 #=============================================================================================
 # Atom
 #=============================================================================================
+
 
 class Atom(Particle):
     """
@@ -185,9 +179,15 @@ class Atom(Particle):
     .. todo :: Allow atoms to have associated properties.
 
     """
+
     ## From Jeff: This version of the API will push forward with immutable atoms and molecules
-    def __init__(self, atomic_number, formal_charge, is_aromatic,
-                 name=None, molecule=None, stereochemistry=None):
+    def __init__(self,
+                 atomic_number,
+                 formal_charge,
+                 is_aromatic,
+                 name=None,
+                 molecule=None,
+                 stereochemistry=None):
         """
         Create an immutable Atom object.
 
@@ -235,7 +235,6 @@ class Atom(Particle):
         self._bonds = list()
         self._virtual_sites = list()
 
-
     def add_bond(self, bond):
         """Adds a bond that this atom is involved in
         .. todo :: Is this how we want to keep records?
@@ -249,7 +248,6 @@ class Atom(Particle):
 
         self._bonds.append(bond)
         #self._stereochemistry = None
-        
 
     def add_virtual_site(self, vsite):
         """Adds a bond that this atom is involved in
@@ -263,7 +261,6 @@ class Atom(Particle):
         """
 
         self._virtual_sites.append(vsite)
-        
 
     def to_dict(self):
         """Return a dict representation of the atom."""
@@ -279,15 +276,12 @@ class Atom(Particle):
         #atom_dict['molecule_atom_index'] = self._molecule_atom_index
         return atom_dict
 
-
-            
     @classmethod
     def from_dict(cls, atom_dict):
         """Create an Atom from a dict representation."""
         ## TODO: classmethod or static method? Classmethod is needed for Bond, so it have
         ## its _molecule set and then look up the Atom on each side of it by ID
         return cls.__init__(*atom_dict)
-
 
     @property
     def formal_charge(self):
@@ -337,7 +331,7 @@ class Atom(Particle):
         #if (value != 'CW') and (value != 'CCW') and not(value is None):
         #    raise Exception("Atom stereochemistry setter expected 'CW', 'CCW', or None. Received {} (type {})".format(value, type(value)))
         self._stereochemistry = value
-    
+
     @property
     def element(self):
         """
@@ -365,7 +359,6 @@ class Atom(Particle):
         """
         return self.element.mass
 
-
     @property
     def name(self):
         """
@@ -382,8 +375,10 @@ class Atom(Particle):
         other : string
             The new name for this atom
         """
-        if not(type(other) is str):
-            raise Exception("In setting atom name. Expected str, received {} (type {})".format(other, type(other)))
+        if not (type(other) is str):
+            raise Exception(
+                "In setting atom name. Expected str, received {} (type {})".
+                format(other, type(other)))
         self._name = other
 
     # TODO: How are we keeping track of bonds, angles, etc?
@@ -397,22 +392,20 @@ class Atom(Particle):
         return self._bonds
         #for bond in self._bonds:
         #    yield bond
-            
+
     @property
     #def bonded_to(self):
     def bonded_atoms(self):
-
         """
         The list of ``Atom`` objects this atom is involved in bonds with
 
         """
         for bond in self._bonds:
             for atom in bond.atoms:
-                if not(atom == self):
+                if not (atom == self):
                     # TODO: This seems dangerous. Ask John for a better way
                     yield atom
 
-    
     def is_bonded_to(self, atom2):
         """
         Determine whether this atom is bound to another atom
@@ -483,15 +476,19 @@ class Atom(Particle):
 
     def __repr__(self):
         # TODO: Also include particle_index and which molecule this atom belongs to?
-        return "Atom(name={}, atomic number={})".format(self._name, self._atomic_number)
+        return "Atom(name={}, atomic number={})".format(
+            self._name, self._atomic_number)
 
     def __str__(self):
         # TODO: Also include particle_index and which molecule this atom belongs to?
-        return "<Atom name='{}' atomic number='{}'>".format(self._name, self._atomic_number)
+        return "<Atom name='{}' atomic number='{}'>".format(
+            self._name, self._atomic_number)
+
 
 #=============================================================================================
 # VirtualSite
 #=============================================================================================
+
 
 class VirtualSite(Particle):
     """
@@ -508,7 +505,13 @@ class VirtualSite(Particle):
 
     """
 
-    def __init__(self, atoms, charge_increments=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    def __init__(self,
+                 atoms,
+                 charge_increments=None,
+                 epsilon=None,
+                 sigma=None,
+                 rmin_half=None,
+                 name=None):
         """
         Base class for VirtualSites
 
@@ -541,32 +544,38 @@ class VirtualSite(Particle):
 
         """
 
-        
         # Ensure we have as many charge_increments as we do atoms
-        if not(charge_increments == None):
-            if not( len(charge_increments) == len(atoms) ):
-                raise Exception("VirtualSite definition must have same number of charge_increments ({}) and atoms({})".format(len(charge_increments), len(atoms)))
-            
+        if not (charge_increments == None):
+            if not (len(charge_increments) == len(atoms)):
+                raise Exception(
+                    "VirtualSite definition must have same number of charge_increments ({}) and atoms({})"
+                    .format(len(charge_increments), len(atoms)))
+
         # VdW parameters can either be epsilon+rmin_half or epsilon+sigma, but not both
-        if not(epsilon == None):
+        if not (epsilon == None):
             if ((rmin_half != None) and (sigma != None)):
-                raise Exception("VirtualSite constructor given epsilon (value : {}), rmin_half (value : {}), and sigma (value : {}). If epsilon is nonzero, it should receive either rmin_half OR sigma".format(epsilon, rmin_half, sigma))
+                raise Exception(
+                    "VirtualSite constructor given epsilon (value : {}), rmin_half (value : {}), and sigma (value : {}). If epsilon is nonzero, it should receive either rmin_half OR sigma"
+                    .format(epsilon, rmin_half, sigma))
             if ((rmin_half == None) and (sigma == None)):
-                raise Exception("VirtualSite constructor given epsilon (value : {}) but not given rmin_half (value : {}) or sigma (value : {})".format(epsilon, rmin_half, sigma))
+                raise Exception(
+                    "VirtualSite constructor given epsilon (value : {}) but not given rmin_half (value : {}) or sigma (value : {})"
+                    .format(epsilon, rmin_half, sigma))
             if (sigma == None):
                 # TODO: Save the 6th root of 2 if this starts being slow.
-                sigma = (2.*rmin_half) / (2. ** (1./6))
-            
+                sigma = (2. * rmin_half) / (2.**(1. / 6))
+
         elif epsilon == None:
             if ((rmin_half != None) or (sigma != None)):
-                raise Exception("VirtualSite constructor given rmin_half (value : {}) or sigma (value : {}), but not epsilon (value : {})".format(rmin_half, sigma, epsilon))
-            
-            
+                raise Exception(
+                    "VirtualSite constructor given rmin_half (value : {}) or sigma (value : {}), but not epsilon (value : {})"
+                    .format(rmin_half, sigma, epsilon))
+
         # Perform type-checking
         for atom in atoms:
             assert isinstance(atom, Atom)
-        for atom_index in range(len(atoms)-1):
-            assert atoms[atom_index].molecule is atoms[atom_index+1].molecule
+        for atom_index in range(len(atoms) - 1):
+            assert atoms[atom_index].molecule is atoms[atom_index + 1].molecule
         assert isinstance(atoms[1].molecule, FrozenMolecule)
 
         if sigma == None:
@@ -582,29 +591,27 @@ class VirtualSite(Particle):
             assert hasattr(epsilon, 'unit')
             assert (unit.kilojoule_per_mole).is_compatible(epsilon.unit)
             self._epsilon = epsilon.in_units_of(unit.kilojoule_per_mole)
-            
+
         if charge_increments == None:
             self._charge_increments = None
         else:
-            #self._charge_increments = []
-            #for charge in charge_increments:
             assert hasattr(charge_increments, 'unit')
-            assert unit.elementary_charges.is_compatible(charge_increments.unit)
-            self._charge_increments = charge_increments.in_units_of(unit.elementary_charges)
-                
-        self._atoms = list() 
+            assert unit.elementary_charges.is_compatible(
+                charge_increments.unit)
+            self._charge_increments = charge_increments.in_units_of(
+                unit.elementary_charges)
+
+        self._atoms = list()
         for atom in atoms:
             atom.add_virtual_site(self)
             self._atoms.append(atom)
         self._molecule = atoms[0].molecule
-        
+
         self._name = name
-        
-        
+
         # Subclassing makes _type unnecessary
         #self._type = None
         # TODO: Validate site types against allowed values
-        
 
         #self._weights = np.array(weights) # make a copy and convert to array internally
 
@@ -613,39 +620,19 @@ class VirtualSite(Particle):
         # Each subclass should have its own to_dict
         vsite_dict = OrderedDict()
         vsite_dict['name'] = self._name
-        vsite_dict['atoms'] = tuple([i.molecule_atom_index for i in self.atoms])
-        vsite_dict['charge_increments'] = serialize_quantity(self._charge_increments)
-        #if self._charge_increments is None:
-        #    vsite_dict['charge_increments'] = None
-        #    vsite_dict['charge_increments_unit'] = None
-        #else:
-        #    #vsite_dict['charge_increments'] = self._charge_increments / unit.elementary_charge
-        #    charge_increments_unitless = list()
-        #    for ci in self._charge_increments:
-        #        charge_increments_unitless.append(ci/unit.elementary_charge)
-        #    vsite_dict['charge_increments'] = charge_increments_unitless
-        #    vsite_dict['charge_increments_unit'] = 'elementary_charge'
+        vsite_dict['atoms'] = tuple(
+            [i.molecule_atom_index for i in self.atoms])
+        vsite_dict['charge_increments'] = serialize_quantity(
+            self._charge_increments)
+
 
         vsite_dict['epsilon'] = serialize_quantity(self._epsilon)
-        #if self._epsilon is None:
-        #    vsite_dict['epsilon'] = None
-        #    vsite_dict['epsilon_unit'] = None
-        #else:
-        #    vsite_dict['epsilon'] = self._epsilon / unit.kilojoule_per_mole
-        #    vsite_dict['epsilon_unit'] = 'kilojoule_per_mole'
 
 
         vsite_dict['sigma'] = serialize_quantity(self._sigma)
-        #if self._sigma is None:
-        #    vsite_dict['sigma'] = None
-        #    vsite_dict['sigma_unit'] = None
-        #else:
-        #    vsite_dict['sigma'] = self._sigma / unit.angstrom
-        #    vsite_dict['sigma_unit'] = 'angstrom'
-        #vsite_dict['rmin_half'] = self._rmin_half
+
         return vsite_dict
-        
-        #return self.__dict__
+
 
     @staticmethod
     def from_dict(vsite_dict):
@@ -656,29 +643,13 @@ class VirtualSite(Particle):
         vsite_dict_units = deepcopy(vsite_dict)
 
         # Attach units to epsilon term
-        vsite_dict_units['epsilon'] = deserialize_quantity(vsite_dict['epsilon'])
+        vsite_dict_units['epsilon'] = deserialize_quantity(
+            vsite_dict['epsilon'])
         vsite_dict_units['sigma'] = deserialize_quantity(vsite_dict['sigma'])
-        vsite_dict_units['charge_increments'] = deserialize_quantity(vsite_dict['charge_increments'])
-        #if not (vsite_dict['epsilon'] is None):
-        #    epsilon_unitless = vsite_dict['epsilon']
-        #    epsilon_unit = getattr(unit, vsite_dict_units['epsilon_unit'])
-        #    vsite_dict_units['epsilon'] = unit.Quantity(epsilon_unitless, epsilon_unit)
-        #del vsite_dict_units['epsilon_unit']
+        vsite_dict_units['charge_increments'] = deserialize_quantity(
+            vsite_dict['charge_increments'])
 
-        # Attach units to sigma term (Remember! We don't store rmin_half, just sigma!)
-        #if not (vsite_dict['sigma'] is None):
-        #    sigma_unitless = vsite_dict['sigma']
-        #    sigma_unit = getattr(unit, vsite_dict_units['sigma_unit'])
-        #    vsite_dict_units['sigma'] = unit.Quantity(sigma_unitless, sigma_unit)
-        #del vsite_dict_units['sigma_unit']
-
-        #if not (vsite_dict['charge_increments'] is None):
-        #    charge_increments_unitless = vsite_dict['charge_increments']
-        #    charge_increments_unit = getattr(unit, vsite_dict_units['charge_increment_unit'])
-        #    vsite_dict_units['charge_increments'] = unit.Quantity(charge_increments_unitless, charge_increments_unit)
-        #del vsite_dict_units['charge_increments_unit']
         return VirtualSite(**vsite_dict_units)
-
 
     @property
     def molecule_virtual_site_index(self):
@@ -692,7 +663,6 @@ class VirtualSite(Particle):
         #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
         return self._molecule.virtual_sites.index(self)
 
-
     @property
     def molecule_particle_index(self):
         """
@@ -701,9 +671,10 @@ class VirtualSite(Particle):
 
         """
         if self._molecule is None:
-            raise ValueError('This VirtualSite does not belong to a Molecule object')
+            raise ValueError(
+                'This VirtualSite does not belong to a Molecule object')
         return self._molecule.particles.index(self)
-        
+
     #@property
     #def topology_virtual_site_index(self):
     #    """
@@ -716,7 +687,7 @@ class VirtualSite(Particle):
     #    # TODO: This will be slow; can we cache this and update it only when needed?
     #    #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
     #    return self._topology.virtual_sites.index(self)
-     
+
     @property
     def atoms(self):
         """
@@ -739,30 +710,29 @@ class VirtualSite(Particle):
         The VdW epsilon term of this VirtualSite
         """
         return self._epsilon
-    
+
     @property
     def sigma(self):
         """
         The VdW sigma term of this VirtualSite
         """
         return self._sigma
-    
+
     @property
     def rmin_half(self):
         """
         The VdW rmin_half term of this VirtualSite
         """
-        rmin = 2.**(1./6) * self._sigma
-        rmin_half = rmin/2
+        rmin = 2.**(1. / 6) * self._sigma
+        rmin_half = rmin / 2
         return rmin_half
-    
+
     @property
     def name(self):
         """
         The name of this VirtualSite
         """
         return self._name
-    
 
     @property
     def type(self):
@@ -771,22 +741,30 @@ class VirtualSite(Particle):
 
     def __repr__(self):
         # TODO: Also include particle_index, which molecule this atom belongs to?
-        return "VirtualSite(name={}, type={}, atoms={})".format(self.name, self.type, self.atoms)
+        return "VirtualSite(name={}, type={}, atoms={})".format(
+            self.name, self.type, self.atoms)
 
     def __str__(self):
         # TODO: Also include particle_index, which molecule this atom belongs to?
-        return "<VirtualSite name={} type={} atoms={}>".format(self.name, self.type, self.atoms)
+        return "<VirtualSite name={} type={} atoms={}>".format(
+            self.name, self.type, self.atoms)
 
 
-
-    
 class BondChargeVirtualSite(VirtualSite):
     """
     A particle representing a "Bond Charge"-type virtual site, in which the location of the charge is specified by the positions of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
 
     """
 
-    def __init__(self, atoms, distance, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None): 
+    def __init__(self,
+                 atoms,
+                 distance,
+                 charge_increments=None,
+                 weights=None,
+                 epsilon=None,
+                 sigma=None,
+                 rmin_half=None,
+                 name=None):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
 
@@ -815,9 +793,15 @@ class BondChargeVirtualSite(VirtualSite):
         assert hasattr(distance, 'unit')
         assert unit.angstrom.is_compatible(distance.unit)
 
-        super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        super().__init__(
+            atoms,
+            charge_increments=charge_increments,
+            epsilon=epsilon,
+            sigma=sigma,
+            rmin_half=rmin_half,
+            name=name)
         self._distance = distance.in_units_of(unit.angstrom)
-        
+
     def to_dict(self):
         vsite_dict = super().to_dict()
         vsite_dict['distance'] = serialize_quantity(self._distance)
@@ -838,19 +822,28 @@ class BondChargeVirtualSite(VirtualSite):
         vsite._distance = deserialize_quantity(vsite_dict['distance'])
         return vsite
 
-        
     @property
     def distance(self):
         """The distance parameter of the virtual site"""
         return self._distance
-    
-    
+
+
 class MonovalentLonePairVirtualSite(VirtualSite):
     """
     A particle representing a "Monovalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is originally intended for situations like a carbonyl, and allows placement of a virtual site S at a specified distance d, in_plane_angle, and out_of_plane_angle relative to a central atom and two connected atoms. 
     """
 
-    def __init__(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    def __init__(self,
+                 atoms,
+                 distance,
+                 out_of_plane_angle,
+                 in_plane_angle,
+                 charge_increments=None,
+                 weights=None,
+                 epsilon=None,
+                 sigma=None,
+                 rmin_half=None,
+                 name=None):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
 
@@ -885,16 +878,22 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         assert unit.degree.is_compatible(out_of_plane_angle.unit)
 
         assert len(atoms) == 3
-        super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        super().__init__(
+            atoms,
+            charge_increments=charge_increments,
+            epsilon=epsilon,
+            sigma=sigma,
+            rmin_half=rmin_half,
+            name=name)
         self._distance = distance.in_units_of(unit.angstrom)
         self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
         self._in_plane_angle = in_plane_angle.in_units_of(unit.degree)
-        
-        
+
     def to_dict(self):
         vsite_dict = super().to_dict()
         vsite_dict['distance'] = serialize_quantity(self._distance)
-        vsite_dict['out_of_plane_angle'] = serialize_quantity(self._out_of_plane_angle)
+        vsite_dict['out_of_plane_angle'] = serialize_quantity(
+            self._out_of_plane_angle)
         vsite_dict['in_plane_angle'] = serialize_quantity(self._in_plane_angle)
         #vsite_dict['vsite_type'] = self.type.fget()
         vsite_dict['vsite_type'] = self.type
@@ -913,15 +912,17 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         base_dict.pop('in_plane_angle')
         vsite = super().from_dict(**base_dict)
         vsite._distance = deserialize_quantity(vsite_dict['distance'])
-        vsite._in_plane_angle= deserialize_quantity(vsite_dict['in_plane_angle'])
-        vsite._out_of_plane_angle = deserialize_quantity(vsite_dict['out_of_plane_angle'])
+        vsite._in_plane_angle = deserialize_quantity(
+            vsite_dict['in_plane_angle'])
+        vsite._out_of_plane_angle = deserialize_quantity(
+            vsite_dict['out_of_plane_angle'])
         return vsite
-    
+
     @property
     def distance(self):
         """The distance parameter of the virtual site"""
         return self._distance
-    
+
     @property
     def in_plane_angle(self):
         """The in_plane_angle parameter of the virtual site"""
@@ -933,13 +934,22 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         return self._out_of_plane_angle
 
 
-    
 class DivalentLonePairVirtualSite(VirtualSite):
     """
     A particle representing a "Divalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is suitable for cases like four-point and five-point water models as well as pyrimidine; a charge site S lies a specified distance d from the central atom among three atoms along the bisector of the angle between the atoms (if out_of_plane_angle is zero) or out of the plane by the specified angle (if out_of_plane_angle is nonzero) with its projection along the bisector. For positive values of the distance d the virtual site lies outside the 2-1-3 angle and for negative values it lies inside. 
     """
 
-    def __init__(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    def __init__(self,
+                 atoms,
+                 distance,
+                 out_of_plane_angle,
+                 in_plane_angle,
+                 charge_increments=None,
+                 weights=None,
+                 epsilon=None,
+                 sigma=None,
+                 rmin_half=None,
+                 name=None):
         """
         Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms. 
 
@@ -972,16 +982,22 @@ class DivalentLonePairVirtualSite(VirtualSite):
         assert hasattr(out_of_plane_angle, 'unit')
         assert unit.degree.is_compatible(out_of_plane_angle.unit)
         assert len(atoms) == 3
-        super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        super().__init__(
+            atoms,
+            charge_increments=charge_increments,
+            epsilon=epsilon,
+            sigma=sigma,
+            rmin_half=rmin_half,
+            name=name)
         self._distance = distance.in_units_of(unit.angstrom)
         self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
         self._in_plane_angle = in_plane_angle.in_units_of(unit.degree)
 
-        
     def to_dict(self):
         vsite_dict = super().to_dict()
         vsite_dict['distance'] = serialize_quantity(self._distance)
-        vsite_dict['out_of_plane_angle'] = serialize_quantity(self._out_of_plane_angle)
+        vsite_dict['out_of_plane_angle'] = serialize_quantity(
+            self._out_of_plane_angle)
         vsite_dict['in_plane_angle'] = serialize_quantity(self._in_plane_angle)
         vsite_dict['vsite_type'] = self.type
         return vsite_dict
@@ -1011,17 +1027,18 @@ class DivalentLonePairVirtualSite(VirtualSite):
         base_dict.pop('in_plane_angle')
         vsite = super().from_dict(**base_dict)
         vsite._distance = deserialize_quantity(vsite_dict['distance'])
-        vsite._in_plane_angle = deserialize_quantity(vsite_dict['in_plane_angle'])
-        vsite._out_of_plane_angle = deserialize_quantity(vsite_dict['out_of_plane_angle'])
+        vsite._in_plane_angle = deserialize_quantity(
+            vsite_dict['in_plane_angle'])
+        vsite._out_of_plane_angle = deserialize_quantity(
+            vsite_dict['out_of_plane_angle'])
 
         return vsite
-
 
     @property
     def distance(self):
         """The distance parameter of the virtual site"""
         return self._distance
-    
+
     @property
     def in_plane_angle(self):
         """The in_plane_angle parameter of the virtual site"""
@@ -1033,15 +1050,22 @@ class DivalentLonePairVirtualSite(VirtualSite):
         return self._out_of_plane_angle
 
 
-
-
-        
 class TrivalentLonePairVirtualSite(VirtualSite):
     """
     A particle representing a "Trivalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of four atoms. This is suitable for planar or tetrahedral nitrogen lone pairs; a charge site S lies above the central atom (e.g. nitrogen a distance d along the vector perpendicular to the plane of the three connected atoms (2,3,4). With positive values of d the site lies above the nitrogen and with negative values it lies below the nitrogen.
     """
 
-    def __init__(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
+    def __init__(self,
+                 atoms,
+                 distance,
+                 out_of_plane_angle,
+                 in_plane_angle,
+                 charge_increments=None,
+                 weights=None,
+                 epsilon=None,
+                 sigma=None,
+                 rmin_half=None,
+                 name=None):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms. 
 
@@ -1073,10 +1097,14 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         assert unit.degree.is_compatible(in_plane_angle.unit)
         assert hasattr(out_of_plane_angle, 'unit')
         assert unit.degree.is_compatible(out_of_plane_angle.unit)
-        
-        
-        
-        super().__init__(atoms, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+
+        super().__init__(
+            atoms,
+            charge_increments=charge_increments,
+            epsilon=epsilon,
+            sigma=sigma,
+            rmin_half=rmin_half,
+            name=name)
         self._distance = distance.in_units_of(unit.angstrom)
         self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
         self._in_plane_angle = in_plane_angle.in_units_of(unit.degree)
@@ -1084,7 +1112,8 @@ class TrivalentLonePairVirtualSite(VirtualSite):
     def to_dict(self):
         vsite_dict = super().to_dict()
         vsite_dict['distance'] = serialize_quantity(self._distance)
-        vsite_dict['out_of_plane_angle'] = serialize_quantity(self._out_of_plane_angle)
+        vsite_dict['out_of_plane_angle'] = serialize_quantity(
+            self._out_of_plane_angle)
         vsite_dict['in_plane_angle'] = serialize_quantity(self._in_plane_angle)
         vsite_dict['vsite_type'] = self.type
         return vsite_dict
@@ -1115,17 +1144,18 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         base_dict.pop('in_plane_angle')
         vsite = super().from_dict(**base_dict)
         vsite._distance = deserialize_quantity(vsite_dict['distance'])
-        vsite._in_plane_angle= deserialize_quantity(vsite_dict['in_plane_angle'])
-        vsite._out_of_plane_angle = deserialize_quantity(vsite_dict['out_of_plane_angle'])
+        vsite._in_plane_angle = deserialize_quantity(
+            vsite_dict['in_plane_angle'])
+        vsite._out_of_plane_angle = deserialize_quantity(
+            vsite_dict['out_of_plane_angle'])
 
         return vsite
 
-        
     @property
     def distance(self):
         """The distance parameter of the virtual site"""
         return self._distance
-    
+
     @property
     def in_plane_angle(self):
         """The in_plane_angle parameter of the virtual site"""
@@ -1142,60 +1172,58 @@ class TrivalentLonePairVirtualSite(VirtualSite):
 # =============================================================================================
 
 #class BondStereochemistry(Serializable):
-    #"""
-    #Bond stereochemistry representation
-    #"""
-    #def __init__(self, stereo_type, neighbor1, neighbor2):
-    #    """
-    #
-    #    Parameters
-    #    ----------
-    #    stereo_type
-    #    neighbor1
-    #    neighbor2
-    #    """
-    #    assert isinstance(neighbor1, Atom)
-    #    assert isinstance(neighbor2, Atom)
-    #    # Use stereo_type @setter to check stereo type is a permitted value
-    #    self.stereo_type = stereo_type
-    #    self._neighbor1 = neighbor1
-    #    self._neighbor2 = neighbor2
+#"""
+#Bond stereochemistry representation
+#"""
+#def __init__(self, stereo_type, neighbor1, neighbor2):
+#    """
+#
+#    Parameters
+#    ----------
+#    stereo_type
+#    neighbor1
+#    neighbor2
+#    """
+#    assert isinstance(neighbor1, Atom)
+#    assert isinstance(neighbor2, Atom)
+#    # Use stereo_type @setter to check stereo type is a permitted value
+#    self.stereo_type = stereo_type
+#    self._neighbor1 = neighbor1
+#    self._neighbor2 = neighbor2
 
-    #def to_dict(self):
-    #    bs_dict = OrderedDict()
-    #    bs_dict['stereo_type'] = self._stereo_type
-    #    bs_dict['neighbor1_index'] = self._neighbor1.molecule_atom_index
-    #    bs_dict['neighbor2_index'] = self._neighbor2.molecule_atom_index
-    #    return bs_dict
+#def to_dict(self):
+#    bs_dict = OrderedDict()
+#    bs_dict['stereo_type'] = self._stereo_type
+#    bs_dict['neighbor1_index'] = self._neighbor1.molecule_atom_index
+#    bs_dict['neighbor2_index'] = self._neighbor2.molecule_atom_index
+#    return bs_dict
 
-    #classmethod
-    #def from_dict(cls, molecule, bs_dict):
-    #    neighbor1 = molecule.atoms[bs_dict['neighbor1_index']]
-    #    neighbor2 = molecule.atoms[bs_dict['neighbor2_index']]
-    #    return cls.__init__(bs_dict['stereo_type'], neighbor1, neighbor2)
+#classmethod
+#def from_dict(cls, molecule, bs_dict):
+#    neighbor1 = molecule.atoms[bs_dict['neighbor1_index']]
+#    neighbor2 = molecule.atoms[bs_dict['neighbor2_index']]
+#    return cls.__init__(bs_dict['stereo_type'], neighbor1, neighbor2)
 
-    #@property
-    #def stereo_type(self):
-    #    return self._stereo_type
+#@property
+#def stereo_type(self):
+#    return self._stereo_type
 
-    #@stereo_type.setter
-    #def stereo_type(self, value):
-    #    assert (value == 'CIS') or (value == 'TRANS') or (value is None)
-    #    self._stereo_type = value
+#@stereo_type.setter
+#def stereo_type(self, value):
+#    assert (value == 'CIS') or (value == 'TRANS') or (value is None)
+#    self._stereo_type = value
 
-    #@property
-    #def neighbor1(self):
-    #    return self._neighbor1
+#@property
+#def neighbor1(self):
+#    return self._neighbor1
 
-    #@property
-    #def neighbor2(self):
-    #    return self._neighbor2
+#@property
+#def neighbor2(self):
+#    return self._neighbor2
 
-    #@property
-    #def neighbors(self):
-    #    return (self._neighbor1, self._neighbor2)
-
-
+#@property
+#def neighbors(self):
+#    return (self._neighbor1, self._neighbor2)
 
 # =============================================================================================
 # Bond
@@ -1225,7 +1253,14 @@ class Bond(Serializable):
         Fractional bond order, or None.
 
     """
-    def __init__(self, atom1, atom2, bond_order, is_aromatic, fractional_bond_order=None, stereochemistry=None):
+
+    def __init__(self,
+                 atom1,
+                 atom2,
+                 bond_order,
+                 is_aromatic,
+                 fractional_bond_order=None,
+                 stereochemistry=None):
         """
         Create a new chemical bond.
         """
@@ -1234,10 +1269,10 @@ class Bond(Serializable):
         assert atom1.molecule is atom2.molecule
         assert isinstance(atom1.molecule, FrozenMolecule)
         self._molecule = atom1.molecule
-        
+
         self._atom1 = atom1
         self._atom2 = atom2
-        
+
         atom1.add_bond(self)
         atom2.add_bond(self)
         # TODO: Check bondtype and fractional_bond_order are valid?
@@ -1248,8 +1283,6 @@ class Bond(Serializable):
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
 
-
-        
     def to_dict(self):
         """Return a dict representation of the bond."""
         bond_dict = OrderedDict()
@@ -1268,8 +1301,7 @@ class Bond(Serializable):
         d['molecule'] = molecule
         d['atom1'] = molecule.atoms[d['atom1']]
         d['atom2'] = molecule.atoms[d['atom2']]
-        return cls(*d)        
-
+        return cls(*d)
 
     @property
     def atom1(self):
@@ -1295,25 +1327,22 @@ class Bond(Serializable):
     def bond_order(self):
         return self._bond_order
 
-
     @bond_order.setter
     def bond_order(self, value):
         self._bond_order = value
-
 
     @property
     def fractional_bond_order(self):
         return self._fractional_bond_order
 
-
     @fractional_bond_order.setter
     def fractional_bond_order(self, value):
         self._fractional_bond_order = value
 
-
     @property
     def stereochemistry(self):
         return self._stereochemistry
+
     @property
     def is_aromatic(self):
         return self._is_aromatic
@@ -1340,12 +1369,14 @@ class Bond(Serializable):
             raise ValueError('This Atom does not belong to a Molecule object')
         return self._molecule.bonds.index(self)
 
+
 #=============================================================================================
 # Molecule
 #=============================================================================================
 
 # TODO: How do we automatically trigger invalidation of cached properties if an ``Atom``, ``Bond``, or ``VirtualSite`` is modified,
 #       rather than added/deleted via the API? The simplest resolution is simply to make them immutable.
+
 
 class FrozenMolecule(Serializable):
     """
@@ -1377,7 +1408,11 @@ class FrozenMolecule(Serializable):
     >>> molecule = FrozenMolecule.from_smiles('Cc1ccccc1')
 
     """
-    def __init__(self, other=None, file_format=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+
+    def __init__(self,
+                 other=None,
+                 file_format=None,
+                 toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Create a new FrozenMolecule object
 
@@ -1448,26 +1483,31 @@ class FrozenMolecule(Serializable):
             toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
             toolkit_registry.add_toolkit(toolkit)
         else:
-            raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
+            raise ValueError(
+                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
+            )
 
         if other is None:
             self._initialize()
         else:
             loaded = False
-            if isinstance(other, openforcefield.topology.FrozenMolecule) and not(loaded):
+            if isinstance(
+                    other,
+                    openforcefield.topology.FrozenMolecule) and not (loaded):
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, openforcefield.topology.Molecule) and not(loaded):
+            if isinstance(other,
+                          openforcefield.topology.Molecule) and not (loaded):
                 # TODO: This will need to be updated once FrozenMolecules and Molecules are significantly different
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, OrderedDict) and not(loaded):
+            if isinstance(other, OrderedDict) and not (loaded):
                 self.__setstate__(other)
                 loaded = True
             # Check through the toolkit registry to find a compatible wrapper for loading
-            if not(loaded):
+            if not (loaded):
                 for toolkit_wrapper in toolkit_registry.registered_toolkits:
-                    if not(hasattr(toolkit_wrapper,'from_object')):
+                    if not (hasattr(toolkit_wrapper, 'from_object')):
                         continue
                     load_attempt = toolkit_wrapper.from_object(other)
                     # TODO: Come up with a better check for load failure
@@ -1477,18 +1517,24 @@ class FrozenMolecule(Serializable):
                     loaded = True
             # TODO: Make this compatible with file-like objects (I couldn't figure out how to make an oemolistream
             # from a fileIO object)
-            if (isinstance(other, str) or hasattr(other, 'read')) and not(loaded):
-                mol = Molecule.from_file(other, file_format=file_format, toolkit_registry=toolkit_registry) # returns a list only if multiple molecules are found
+            if (isinstance(other, str)
+                    or hasattr(other, 'read')) and not (loaded):
+                mol = Molecule.from_file(
+                    other,
+                    file_format=file_format,
+                    toolkit_registry=toolkit_registry
+                )  # returns a list only if multiple molecules are found
                 if type(mol) == list:
-                    raise ValueError('Specified file or file-like object must contain exactly one molecule')
-                
+                    raise ValueError(
+                        'Specified file or file-like object must contain exactly one molecule'
+                    )
+
                 self._copy_initializer(mol)
                 loaded = True
-            if not(loaded):
-                msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(other)
+            if not (loaded):
+                msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(
+                    other)
                 raise Exception(msg)
-            
-            
 
     ####################################################################################################
     # Safe serialization
@@ -1513,9 +1559,11 @@ class FrozenMolecule(Serializable):
         molecule_dict['name'] = self._name
         ## From Jeff: If we go the properties-as-dict route, then _properties should, at
         ## the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
-        molecule_dict['atoms'] = [ atom.to_dict() for atom in self._atoms ]
-        molecule_dict['virtual_sites'] = [ vsite.to_dict() for vsite in self._virtual_sites ]
-        molecule_dict['bonds'] = [ bond.to_dict() for bond in self._bonds ]
+        molecule_dict['atoms'] = [atom.to_dict() for atom in self._atoms]
+        molecule_dict['virtual_sites'] = [
+            vsite.to_dict() for vsite in self._virtual_sites
+        ]
+        molecule_dict['bonds'] = [bond.to_dict() for bond in self._bonds]
         # TODO: Charges
         # TODO: Properties
         # From Jeff: We could have the onerous requirement that all "properties" have to_dict() functions.
@@ -1532,7 +1580,8 @@ class FrozenMolecule(Serializable):
             molecule_dict['conformers'] = None
         else:
             molecule_dict['conformers'] = []
-            molecule_dict['conformers_unit'] = 'angstrom' # Have this defined as a class variable?
+            molecule_dict[
+                'conformers_unit'] = 'angstrom'  # Have this defined as a class variable?
             for conf in self._conformers:
                 conf_unitless = (conf / unit.angstrom)
                 conf_serialized, conf_shape = serialize_numpy((conf_unitless))
@@ -1543,7 +1592,8 @@ class FrozenMolecule(Serializable):
 
         else:
             charges_unitless = self._partial_charges / unit.elementary_charge
-            charges_serialized, charges_shape = serialize_numpy(charges_unitless)
+            charges_serialized, charges_shape = serialize_numpy(
+                charges_unitless)
             molecule_dict['partial_charges'] = charges_serialized
             molecule_dict['partial_charges_unit'] = 'elementary_charge'
 
@@ -1579,7 +1629,7 @@ class FrozenMolecule(Serializable):
         mol = cls()
         mol.initialize_from_dict(molecule_dict)
         return mol
-        
+
     def initialize_from_dict(self, molecule_dict):
         """
         Initialize this Molecule from a dictionary representation
@@ -1601,40 +1651,56 @@ class FrozenMolecule(Serializable):
             vsite_dict_units = deepcopy(vsite_dict)
 
             # Attach units to epsilon term
-            vsite_dict_units['epsilon'] = deserialize_quantity(vsite_dict['epsilon'])
-            vsite_dict_units['sigma'] = deserialize_quantity(vsite_dict['sigma'])
-            vsite_dict_units['charge_increments'] = deserialize_quantity(vsite_dict['charge_increments'])
+            vsite_dict_units['epsilon'] = deserialize_quantity(
+                vsite_dict['epsilon'])
+            vsite_dict_units['sigma'] = deserialize_quantity(
+                vsite_dict['sigma'])
+            vsite_dict_units['charge_increments'] = deserialize_quantity(
+                vsite_dict['charge_increments'])
 
             # Call the correct molecule._add_X_virtual_site function, based on the stated type
             if vsite_dict_units['vsite_type'] == "BondChargeVirtualSite":
                 del vsite_dict_units['vsite_type']
-                vsite_dict_units['distance'] = deserialize_quantity(vsite_dict['distance'])
+                vsite_dict_units['distance'] = deserialize_quantity(
+                    vsite_dict['distance'])
                 self._add_bond_charge_virtual_site(**vsite_dict_units)
 
-            elif vsite_dict_units['vsite_type'] == "MonovalentLonePairVirtualSite":
+            elif vsite_dict_units[
+                    'vsite_type'] == "MonovalentLonePairVirtualSite":
                 del vsite_dict_units['vsite_type']
-                vsite_dict_units['distance'] = deserialize_quantity(vsite_dict['distance'])
-                vsite_dict_units['in_plane_angle'] = deserialize_quantity(vsite_dict['in_plane_angle'])
-                vsite_dict_units['out_of_plane_angle'] = deserialize_quantity(vsite_dict['out_of_plane_angle'])
+                vsite_dict_units['distance'] = deserialize_quantity(
+                    vsite_dict['distance'])
+                vsite_dict_units['in_plane_angle'] = deserialize_quantity(
+                    vsite_dict['in_plane_angle'])
+                vsite_dict_units['out_of_plane_angle'] = deserialize_quantity(
+                    vsite_dict['out_of_plane_angle'])
                 self._add_monovalent_lone_pair_virtual_site(**vsite_dict_units)
 
-            elif vsite_dict_units['vsite_type'] == "DivalentLonePairVirtualSite":
+            elif vsite_dict_units[
+                    'vsite_type'] == "DivalentLonePairVirtualSite":
                 del vsite_dict_units['vsite_type']
-                vsite_dict_units['distance'] = deserialize_quantity(vsite_dict['distance'])
-                vsite_dict_units['in_plane_angle'] = deserialize_quantity(vsite_dict['in_plane_angle'])
-                vsite_dict_units['out_of_plane_angle'] = deserialize_quantity(vsite_dict['out_of_plane_angle'])
+                vsite_dict_units['distance'] = deserialize_quantity(
+                    vsite_dict['distance'])
+                vsite_dict_units['in_plane_angle'] = deserialize_quantity(
+                    vsite_dict['in_plane_angle'])
+                vsite_dict_units['out_of_plane_angle'] = deserialize_quantity(
+                    vsite_dict['out_of_plane_angle'])
                 self._add_divalent_lone_pair_virtual_site(**vsite_dict_units)
 
-            elif vsite_dict_units['vsite_type'] == "TrivalentLonePairVirtualSite":
+            elif vsite_dict_units[
+                    'vsite_type'] == "TrivalentLonePairVirtualSite":
                 del vsite_dict_units['vsite_type']
-                vsite_dict_units['distance'] = deserialize_quantity(vsite_dict['distance'])
-                vsite_dict_units['in_plane_angle'] = deserialize_quantity(vsite_dict['in_plane_angle'])
-                vsite_dict_units['out_of_plane_angle'] = deserialize_quantity(vsite_dict['out_of_plane_angle'])
+                vsite_dict_units['distance'] = deserialize_quantity(
+                    vsite_dict['distance'])
+                vsite_dict_units['in_plane_angle'] = deserialize_quantity(
+                    vsite_dict['in_plane_angle'])
+                vsite_dict_units['out_of_plane_angle'] = deserialize_quantity(
+                    vsite_dict['out_of_plane_angle'])
                 self._add_trivalent_lone_pair_virtual_site(**vsite_dict_units)
 
             else:
-                raise Exception("Vsite type {} not recognized".format(vsite_dict['vsite_type']))
-
+                raise Exception("Vsite type {} not recognized".format(
+                    vsite_dict['vsite_type']))
 
         for bond_dict in molecule_dict['bonds']:
             bond_dict['atom1'] = int(bond_dict['atom1'])
@@ -1645,12 +1711,11 @@ class FrozenMolecule(Serializable):
             self._partial_charges = None
         else:
             charges_shape = (self.n_atoms, )
-            partial_charges_unitless = deserialize_numpy(molecule_dict['partial_charges'], charges_shape)
+            partial_charges_unitless = deserialize_numpy(
+                molecule_dict['partial_charges'], charges_shape)
             pc_unit = getattr(unit, molecule_dict['partial_charges_unit'])
             partial_charges = unit.Quantity(partial_charges_unitless, pc_unit)
             self._partial_charges = partial_charges
-
-
 
         if molecule_dict['conformers'] == None:
             self._conformers = None
@@ -1659,7 +1724,8 @@ class FrozenMolecule(Serializable):
             for ser_conf in molecule_dict['conformers']:
                 # TODO: Update to use deserialize_quantity
                 conformers_shape = ((self.n_atoms, 3))
-                conformer_unitless = deserialize_numpy(ser_conf, conformers_shape)
+                conformer_unitless = deserialize_numpy(ser_conf,
+                                                       conformers_shape)
                 c_unit = getattr(unit, molecule_dict['conformers_unit'])
                 conformer = unit.Quantity(conformer_unitless, c_unit)
                 self._conformers.append(conformer)
@@ -1668,7 +1734,8 @@ class FrozenMolecule(Serializable):
 
     def __repr__(self):
         """Return the SMILES of this molecule"""
-        return "Molecule with name '{}' and SMILES '{}'".format(self.name, self.to_smiles())
+        return "Molecule with name '{}' and SMILES '{}'".format(
+            self.name, self.to_smiles())
 
     def __getstate__(self):
         return self.to_dict()
@@ -1683,12 +1750,11 @@ class FrozenMolecule(Serializable):
         self._name = ''
         self._atoms = list()
         self._virtual_sites = list()
-        self._bonds = list() # List of bonds between Atom objects
-        self._properties = {} # Attached properties to be preserved
+        self._bonds = list()  # List of bonds between Atom objects
+        self._properties = {}  # Attached properties to be preserved
         #self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
         self._partial_charges = None
-        self._conformers = None # Optional conformers
-
+        self._conformers = None  # Optional conformers
 
     def _copy_initializer(self, other):
         """
@@ -1746,7 +1812,9 @@ class FrozenMolecule(Serializable):
             toolkit = toolkit_registry
             return toolkit.to_smiles(self)
         else:
-            raise Exception('Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
+            raise Exception(
+                'Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
+                .format(type(toolkit_registry)))
 
     @staticmethod
     def from_smiles(smiles, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
@@ -1777,7 +1845,9 @@ class FrozenMolecule(Serializable):
             toolkit = toolkit_registry
             return toolkit.from_smiles(smiles)
         else:
-            raise Exception('Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
+            raise Exception(
+                'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
+                .format(type(toolkit_registry)))
 
     def is_isomorphic(self, other, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
@@ -1794,7 +1864,7 @@ class FrozenMolecule(Serializable):
         -------
         molecules_are_isomorphic : bool
         """
-        if not(isinstance(other, FrozenMolecule)):
+        if not (isinstance(other, FrozenMolecule)):
             other_fm = FrozenMolecule(other)
         else:
             other_fm = other
@@ -1802,8 +1872,9 @@ class FrozenMolecule(Serializable):
         other_smiles = other_fm.to_smiles(toolkit_registry=toolkit_registry)
         return self_smiles == other_smiles
 
-
-    def generate_conformers(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY, clear_existing=True):
+    def generate_conformers(self,
+                            toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+                            clear_existing=True):
         """
         Generate conformers for this molecule using an underlying toolkit
 
@@ -1827,14 +1898,19 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('generate_conformers', self, clear_existing)
+            return toolkit_registry.call('generate_conformers', self,
+                                         clear_existing)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             return toolkit.generate_conformers(self, clear_existing)
         else:
-            raise InvalidToolkitError('Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
+            raise InvalidToolkitError(
+                'Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
+                .format(type(toolkit_registry)))
 
-    def compute_partial_charges(self, charge_model=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def compute_partial_charges(self,
+                                charge_model=None,
+                                toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Calculate partial atomic charges for this molecule using an underlying toolkit
 
@@ -1857,16 +1933,20 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('compute_partial_charges', self, charge_model=charge_model)
+            return toolkit_registry.call(
+                'compute_partial_charges', self, charge_model=charge_model)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.compute_partial_charges(self, charge_model=charge_model)
+            return toolkit.compute_partial_charges(
+                self, charge_model=charge_model)
         else:
             raise InvalidToolkitError(
-                'Invalid toolkit_registry passed to compute_partial_charges. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(
-                    type(toolkit_registry)))
+                'Invalid toolkit_registry passed to compute_partial_charges. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
+                .format(type(toolkit_registry)))
 
-    def compute_wiberg_bond_orders(self, charge_model=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def compute_wiberg_bond_orders(self,
+                                   charge_model=None,
+                                   toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Calculate wiberg bond orders for this molecule using an underlying toolkit
 
@@ -1890,13 +1970,16 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('compute_wiberg_bond_orders', self, charge_model=charge_model)
+            return toolkit_registry.call(
+                'compute_wiberg_bond_orders', self, charge_model=charge_model)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.compute_wiberg_bond_orders(self, charge_model=charge_model)
+            return toolkit.compute_wiberg_bond_orders(
+                self, charge_model=charge_model)
         else:
             raise Exception(
-                'Invalid toolkit_registry passed to compute_wiberg_bond_orders. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'.format(type(toolkit_registry)))
+                'Invalid toolkit_registry passed to compute_wiberg_bond_orders. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
+                .format(type(toolkit_registry)))
 
     def _invalidate_cached_properties(self):
         """
@@ -1942,15 +2025,21 @@ class FrozenMolecule(Serializable):
         import networkx as nx
         G = nx.Graph()
         for atom in self.atoms:
-            G.add_node(atom.molecule_atom_index, atomic_number=atom.atomic_number)
+            G.add_node(
+                atom.molecule_atom_index, atomic_number=atom.atomic_number)
             #G.add_node(atom.molecule_atom_index, attr_dict={'atomic_number': atom.atomic_number})
         for bond in self.bonds:
-            G.add_edge(bond.atom1_index, bond.atom2_index, order=bond.bond_order)
+            G.add_edge(
+                bond.atom1_index, bond.atom2_index, order=bond.bond_order)
             #G.add_edge(bond.atom1_index, bond.atom2_index, attr_dict={'order':bond.bond_order})
 
         return G
 
-    def _add_atom(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None,
+    def _add_atom(self,
+                  atomic_number,
+                  formal_charge,
+                  is_aromatic,
+                  stereochemistry=None,
                   name=None):
         """
         Add an atom
@@ -1993,13 +2082,17 @@ class FrozenMolecule(Serializable):
 
         """
         # Create an atom
-        atom = Atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry, name=name, molecule=self)
+        atom = Atom(
+            atomic_number,
+            formal_charge,
+            is_aromatic,
+            stereochemistry=stereochemistry,
+            name=name,
+            molecule=self)
         self._atoms.append(atom)
         #self._particles.append(atom)
         self._invalidate_cached_properties()
         return self._atoms.index(atom)
-
-    
 
     def _add_bond_charge_virtual_site(self, atoms, distance, **kwargs):
         """
@@ -2034,21 +2127,25 @@ class FrozenMolecule(Serializable):
         index : int
             The index of the newly-added virtual site in the molecule
         """
-       # Check if function was passed list of atoms or atom indices
+        # Check if function was passed list of atoms or atom indices
         if all([isinstance(atom, int) for atom in atoms]):
             atom_list = [self.atoms[atom_index] for atom_index in atoms]
         elif all([isinstance(atom, Atom) for atom in atoms]):
             atom_list = atoms
         else:
-            raise Exception('Invalid inputs to molecule._add_bond_charge_virtual_site.'
-                            ' Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
+            raise Exception(
+                'Invalid inputs to molecule._add_bond_charge_virtual_site.'
+                ' Expected ints or Atoms. Received types {} '.format(
+                    [type(i) for i in atoms]))
         # TODO: Check to make sure bond does not already exist
         vsite = BondChargeVirtualSite(atom_list, distance, **kwargs)
         self._virtual_sites.append(vsite)
         self._invalidate_cached_properties()
-        return self._virtual_sites.index(vsite) 
+        return self._virtual_sites.index(vsite)
 
-    def _add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
+    def _add_monovalent_lone_pair_virtual_site(self, atoms, distance,
+                                               out_of_plane_angle,
+                                               in_plane_angle, **kwargs):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of
         three atoms.
@@ -2079,21 +2176,25 @@ class FrozenMolecule(Serializable):
         index : int
             The index of the newly-added virtual site in the molecule
         """
-       # Check if function was passed list of atoms or atom indices
+        # Check if function was passed list of atoms or atom indices
         if all([isinstance(atom, int) for atom in atoms]):
             atom_list = [self.atoms[atom_index] for atom_index in atoms]
         elif all([isinstance(atom, Atom) for atom in atoms]):
             atom_list = atoms
         else:
-            raise Exception('Invalid inputs to molecule._add_monovalent_lone_pair_virtual_site. Expected ints or Atoms.'
-                            ' Received types {} '.format([type(i) for i in atoms]))
+            raise Exception(
+                'Invalid inputs to molecule._add_monovalent_lone_pair_virtual_site. Expected ints or Atoms.'
+                ' Received types {} '.format([type(i) for i in atoms]))
         # TODO: Check to make sure bond does not already exist
-        vsite = MonovalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, **kwargs)
+        vsite = MonovalentLonePairVirtualSite(
+            atom_list, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         self._virtual_sites.append(vsite)
         self._invalidate_cached_properties()
         return self._virtual_sites.index(vsite)
-    
-    def _add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
+
+    def _add_divalent_lone_pair_virtual_site(self, atoms, distance,
+                                             out_of_plane_angle,
+                                             in_plane_angle, **kwargs):
         """
         Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position
         of three atoms.
@@ -2130,16 +2231,19 @@ class FrozenMolecule(Serializable):
         elif all([isinstance(atom, Atom) for atom in atoms]):
             atom_list = atoms
         else:
-            raise Exception('Invalid inputs to molecule._add_divalent_lone_pair_virtual_site. Expected ints or Atoms. '
-                            'Received types {} '.format([type(i) for i in atoms]))
+            raise Exception(
+                'Invalid inputs to molecule._add_divalent_lone_pair_virtual_site. Expected ints or Atoms. '
+                'Received types {} '.format([type(i) for i in atoms]))
         # TODO: Check to make sure bond does not already exist
-        vsite = DivalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, **kwargs)
+        vsite = DivalentLonePairVirtualSite(
+            atom_list, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         self._virtual_sites.append(vsite)
         self._invalidate_cached_properties()
         return self._virtual_sites.index(vsite)
 
-        
-    def _add_trivalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
+    def _add_trivalent_lone_pair_virtual_site(self, atoms, distance,
+                                              out_of_plane_angle,
+                                              in_plane_angle, **kwargs):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position
          of four atoms.
@@ -2171,18 +2275,22 @@ class FrozenMolecule(Serializable):
         elif all([isinstance(atom, Atom) for atom in atoms]):
             atom_list = atoms
         else:
-            raise Exception('Invalid inputs to molecule._add_trivalent_lone_pair_virtual_site. Expected ints or Atoms. Received types {} '.format([type(i) for i in atoms]))
-        vsite = TrivalentLonePairVirtualSite(atom_list, distance, out_of_plane_angle, in_plane_angle, **kwargs)
+            raise Exception(
+                'Invalid inputs to molecule._add_trivalent_lone_pair_virtual_site. Expected ints or Atoms. Received types {} '
+                .format([type(i) for i in atoms]))
+        vsite = TrivalentLonePairVirtualSite(
+            atom_list, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         self._virtual_sites.append(vsite)
         self._invalidate_cached_properties()
         return self._virtual_sites.index(vsite)
 
- 
-    
-    
-
-
-    def _add_bond(self, atom1, atom2, bond_order, is_aromatic, stereochemistry=None, fractional_bond_order=None):
+    def _add_bond(self,
+                  atom1,
+                  atom2,
+                  bond_order,
+                  is_aromatic,
+                  stereochemistry=None,
+                  fractional_bond_order=None):
         """
         Add a bond between two specified atom indices
 
@@ -2215,18 +2323,25 @@ class FrozenMolecule(Serializable):
             atom1_atom = atom1
             atom2_atom = atom2
         else:
-            raise Exception('Invalid inputs to molecule._add_bond. Expected ints or Atoms. '
-                            'Received {} (type {}) and {} (type {}) '.format(atom1, type(atom1), atom2, type(atom2)))
+            raise Exception(
+                'Invalid inputs to molecule._add_bond. Expected ints or Atoms. '
+                'Received {} (type {}) and {} (type {}) '.format(
+                    atom1, type(atom1), atom2, type(atom2)))
         # TODO: Check to make sure bond does not already exist
         if atom1_atom.is_bonded_to(atom2_atom):
-            raise Exception('Bond already exists between {} and {}'.format(atom1_atom, atom2_atom))
-        bond = Bond(atom1_atom, atom2_atom, bond_order, is_aromatic,
-                    stereochemistry=stereochemistry, fractional_bond_order=fractional_bond_order)
+            raise Exception('Bond already exists between {} and {}'.format(
+                atom1_atom, atom2_atom))
+        bond = Bond(
+            atom1_atom,
+            atom2_atom,
+            bond_order,
+            is_aromatic,
+            stereochemistry=stereochemistry,
+            fractional_bond_order=fractional_bond_order)
         self._bonds.append(bond)
         self._invalidate_cached_properties()
         # TODO: This is a bad way to get bond index
         return self._bonds.index(bond)
-
 
     def _add_conformer(self, coordinates):
         """
@@ -2246,23 +2361,27 @@ class FrozenMolecule(Serializable):
 
 
         """
-        new_conf = unit.Quantity(np.zeros((self.n_atoms, 3), np.float), unit.angstrom)
-        if not(new_conf.shape == coordinates.shape):
-            raise Exception("molecule.add_conformer given input of the wrong shape: "
-                            "Given {}, expected {}".format(coordinates.shape, new_conf.shape))
+        new_conf = unit.Quantity(
+            np.zeros((self.n_atoms, 3), np.float), unit.angstrom)
+        if not (new_conf.shape == coordinates.shape):
+            raise Exception(
+                "molecule.add_conformer given input of the wrong shape: "
+                "Given {}, expected {}".format(coordinates.shape,
+                                               new_conf.shape))
 
         try:
             new_conf[:] = coordinates
         except AttributeError as e:
             print(e)
-            raise Exception('Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are '
-                            'of type simtk.units.Quantity')
+            raise Exception(
+                'Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are '
+                'of type simtk.units.Quantity')
 
         if self._conformers == None:
             self._conformers = []
         self._conformers.append(new_conf)
         return len(self._conformers)
-            
+
     def set_partial_charges(self, charges):
         """
         Set the atomic partial charges for this molecule
@@ -2275,13 +2394,10 @@ class FrozenMolecule(Serializable):
         """
         assert hasattr(charges, 'unit')
         assert unit.elementary_charge.is_compatible(charges.unit)
-        assert charges.shape == (self.n_atoms,)
+        assert charges.shape == (self.n_atoms, )
 
         charges_ec = charges.in_units_of(unit.elementary_charge)
         self._partial_charges = charges_ec
-
-
-
 
     @property
     def n_particles(self):
@@ -2342,15 +2458,12 @@ class FrozenMolecule(Serializable):
             return 0
         return len(self._conformers)
 
-
-
     @property
     def virtual_sites(self):
         """
         Iterate over all VirtualSite objects.
         """
         return self._virtual_sites
-
 
     @property
     def bonds(self):
@@ -2408,7 +2521,6 @@ class FrozenMolecule(Serializable):
         """
         return sum([atom.formal_charge for atom in self.atoms])
 
-
     @property
     def name(self):
         """
@@ -2435,12 +2547,9 @@ class FrozenMolecule(Serializable):
         """
         return self._properties
 
-
-
-
-
-    
-    def chemical_environment_matches(self, query, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def chemical_environment_matches(self,
+                                     query,
+                                     toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Retrieve all matches for a given chemical environment query.
 
         .. todo ::
@@ -2477,17 +2586,21 @@ class FrozenMolecule(Serializable):
         elif type(query) == str:
             smirks = query
         else:
-            raise ValueError("'query' must be either a string or a ChemicalEnvironment")
+            raise ValueError(
+                "'query' must be either a string or a ChemicalEnvironment")
 
         # Use specified cheminformatics toolkit to determine matches with specified aromaticity model
         # TODO: Simplify this by requiring a toolkit registry for the molecule?
         # TODO: Do we have to pass along an aromaticity model?
         if isinstance(toolkit_registry, ToolkitRegistry):
-            matches = toolkit_registry.call('find_smarts_matches', self, smirks)
+            matches = toolkit_registry.call('find_smarts_matches', self,
+                                            smirks)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             matches = toolkit_registry.find_smarts_matches(self, smirks)
         else:
-            raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
+            raise ValueError(
+                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
+            )
 
         return matches
 
@@ -2527,7 +2640,8 @@ class FrozenMolecule(Serializable):
         oechem.OETriposAtomNames(oemol)
         result = oechem.OEAddExplicitHydrogens(oemol)
         if result == False:
-            raise Exception("Addition of explicit hydrogens failed in from_iupac")
+            raise Exception(
+                "Addition of explicit hydrogens failed in from_iupac")
         return cls.from_openeye(oemol)
 
     # TODO: Move OE-dependent parts of this to toolkits.py
@@ -2604,7 +2718,10 @@ class FrozenMolecule(Serializable):
         return Topology.from_molecules(self)
 
     @staticmethod
-    def from_file(filename, file_format=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY, exception_if_undefined_stereo=True):
+    def from_file(filename,
+                  file_format=None,
+                  toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+                  exception_if_undefined_stereo=True):
         """
         Create one or more molecules from a file
 
@@ -2642,10 +2759,12 @@ class FrozenMolecule(Serializable):
         >>> molecule = Molecule.from_file(mol2_filename)
 
         """
-        
+
         if file_format == None:
-            if not(isinstance(filename, str)):
-                raise Exception("If providing a file-like object for reading molecules, the format must be specified")
+            if not (isinstance(filename, str)):
+                raise Exception(
+                    "If providing a file-like object for reading molecules, the format must be specified"
+                )
             # Assume that files ending in ".gz" should use their second-to-last suffix for compatibility check
             # TODO: Will all cheminformatics packages be OK with gzipped files?
             if filename[-3:] == '.gz':
@@ -2653,8 +2772,7 @@ class FrozenMolecule(Serializable):
             else:
                 file_format = filename.split('.')[-1]
         file_format = file_format.upper()
-            
-        
+
         # Determine which toolkit to use (highest priority that's compatible with input type)
         if isinstance(toolkit_registry, ToolkitRegistry):
             toolkit = None
@@ -2663,41 +2781,53 @@ class FrozenMolecule(Serializable):
                 if file_format in query_toolkit.toolkit_file_read_formats:
                     toolkit = query_toolkit
                     break
-                supported_read_formats[query_toolkit.toolkit_name] = query_toolkit.toolkit_file_read_formats
+                supported_read_formats[
+                    query_toolkit.
+                    toolkit_name] = query_toolkit.toolkit_file_read_formats
             if toolkit == None:
-                raise Exception("No toolkits in registry can read file {} (format {}). Supported formats in the "
-                                "provided ToolkitRegistry are {}".format(filename, file_format, supported_read_formats))
-            
+                raise Exception(
+                    "No toolkits in registry can read file {} (format {}). Supported formats in the "
+                    "provided ToolkitRegistry are {}".format(
+                        filename, file_format, supported_read_formats))
+
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            if not(file_format in toolkit.toolkit_file_read_formats):
-                raise Exception("Toolkit {} can not read file {} (format {}). Supported formats for this toolkit "
-                                "are {}".format(toolkit.toolkit_name,
-                                                filename,
-                                                file_format,
-                                                toolkit.toolkit_file_read_formats))
+            if not (file_format in toolkit.toolkit_file_read_formats):
+                raise Exception(
+                    "Toolkit {} can not read file {} (format {}). Supported formats for this toolkit "
+                    "are {}".format(toolkit.toolkit_name, filename,
+                                    file_format,
+                                    toolkit.toolkit_file_read_formats))
         else:
-            raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
+            raise ValueError(
+                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
+            )
 
-        
         mols = list()
 
         if isinstance(filename, str):
-            mols = toolkit.from_file(filename, file_format=file_format,
-                                     exception_if_undefined_stereo=exception_if_undefined_stereo)
+            mols = toolkit.from_file(
+                filename,
+                file_format=file_format,
+                exception_if_undefined_stereo=exception_if_undefined_stereo)
         elif hasattr(filename, 'read'):
             file_obj = filename
-            mols = toolkit.from_file_obj(file_obj, file_format=file_format,
-                                         exception_if_undefined_stereo=exception_if_undefined_stereo)
-
+            mols = toolkit.from_file_obj(
+                file_obj,
+                file_format=file_format,
+                exception_if_undefined_stereo=exception_if_undefined_stereo)
 
         if len(mols) == 0:
-            raise Exception('Unable to read molecule from file: {}'.format(filename))
+            raise Exception(
+                'Unable to read molecule from file: {}'.format(filename))
         elif len(mols) == 1:
             return mols[0]
         return mols
 
-    def to_file(self, outfile, outfile_format, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def to_file(self,
+                outfile,
+                outfile_format,
+                toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Write the current molecule to a file or file-like object
 
         Parameters
@@ -2734,32 +2864,36 @@ class FrozenMolecule(Serializable):
             toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
             toolkit_registry.add_toolkit(toolkit)
         else:
-            raise ValueError("'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper")
+            raise ValueError(
+                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
+            )
 
         outfile_format = outfile_format.upper()
-        
+
         # Take the first toolkit that can write the desired output format
         toolkit = None
         for query_toolkit in toolkit_registry.registered_toolkits:
             if outfile_format in query_toolkit.toolkit_file_write_formats:
                 toolkit = query_toolkit
                 break
-        
+
         # Raise an exception if no toolkit was found to provide the requested outfile_format
         if toolkit == None:
             supported_formats = {}
             for toolkit in toolkit_registry.registered_toolkits:
-                supported_formats[toolkit.toolkit_name] = toolkit.toolkit_file_write_formats
-            raise ValueError('The requested file format ({}) is not available from any of the installed toolkits '
-                             '(supported formats: {})'.format(outfile_format, supported_formats))
-        
+                supported_formats[
+                    toolkit.toolkit_name] = toolkit.toolkit_file_write_formats
+            raise ValueError(
+                'The requested file format ({}) is not available from any of the installed toolkits '
+                '(supported formats: {})'.format(outfile_format,
+                                                 supported_formats))
+
         # Write file
         if type(outfile) == str:
             # Open file for writing
             toolkit.to_file(self, outfile, outfile_format)
         else:
             toolkit.to_file_obj(self, outfile, outfile_format)
-
 
     @staticmethod
     @RDKitToolkitWrapper.requires_toolkit()
@@ -2791,7 +2925,8 @@ class FrozenMolecule(Serializable):
 
         """
         toolkit = RDKitToolkitWrapper()
-        return toolkit.from_rdkit(rdmol, exception_if_undefined_stereo=exception_if_undefined_stereo)
+        return toolkit.from_rdkit(
+            rdmol, exception_if_undefined_stereo=exception_if_undefined_stereo)
 
     @RDKitToolkitWrapper.requires_toolkit()
     def to_rdkit(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
@@ -2851,7 +2986,8 @@ class FrozenMolecule(Serializable):
 
         """
         toolkit = OpenEyeToolkitWrapper()
-        return toolkit.from_openeye(oemol, exception_if_undefined_stereo=exception_if_undefined_stereo)
+        return toolkit.from_openeye(
+            oemol, exception_if_undefined_stereo=exception_if_undefined_stereo)
 
     @OpenEyeToolkitWrapper.requires_toolkit()
     def to_openeye(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
@@ -2889,7 +3025,9 @@ class FrozenMolecule(Serializable):
 
     # TODO: We have to distinguish between retrieving user-specified partial charges and providing a generalized
     # semiempirical/pop analysis/BCC scheme according to the new SMIRNOFF spec
-    def get_partial_charges(self, method='AM1-BCC', toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def get_partial_charges(self,
+                            method='AM1-BCC',
+                            toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Retrieve partial atomic charges.
 
@@ -2935,7 +3073,9 @@ class FrozenMolecule(Serializable):
         #charges = toolkit_registry.call('compute_partial_charges', toolkit_registry, method=method)
         #return charges
 
-    def get_fractional_bond_orders(self, method='Wiberg', toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def get_fractional_bond_orders(self,
+                                   method='Wiberg',
+                                   toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Get fractional bond orders.
 
         .. warning :: This API experimental and subject to change.
@@ -2964,7 +3104,8 @@ class FrozenMolecule(Serializable):
 
         """
         # TODO: Use memoization to speed up subsequent calls; use decorator?
-        fractional_bond_orders = toolkit_registry.call('compute_fractional_bond_orders', method=method)
+        fractional_bond_orders = toolkit_registry.call(
+            'compute_fractional_bond_orders', method=method)
         return fractional_bond_orders
 
     # TODO: Compute terms for each unique molecule, then use mapping to molecules to enumerate all terms
@@ -2986,9 +3127,9 @@ class FrozenMolecule(Serializable):
                         if atom1 == atom3:
                             continue
                         if atom1.molecule_atom_index < atom3.molecule_atom_index:
-                            self._angles.add( (atom1, atom2, atom3) )
+                            self._angles.add((atom1, atom2, atom3))
                         else:
-                            self._angles.add( (atom3, atom2, atom1) )
+                            self._angles.add((atom3, atom2, atom1))
 
         return iter(self._angles)
 
@@ -3028,12 +3169,12 @@ class FrozenMolecule(Serializable):
                             # Exclude i-j-k-i
                             if atom1 == atom4:
                                 continue
-                            
+
                             if atom1.molecule_atom_index < atom4.molecule_atom_index:
-                                torsion = (atom1, atom2, atom3, atom4) 
+                                torsion = (atom1, atom2, atom3, atom4)
                             else:
                                 torsion = (atom4, atom3, atom2, atom1)
-                                
+
                             improper = False
                             if atom1.is_bonded_to(atom3):
                                 improper = True
@@ -3041,12 +3182,12 @@ class FrozenMolecule(Serializable):
                                 improper = True
                             elif atom2.is_bonded_to(atom4):
                                 improper = True
-                                
+
                             if improper:
                                 self._impropers.add(torsion)
                             else:
                                 self._propers.add(torsion)
-            self._torsions = self._propers | self._impropers  
+            self._torsions = self._propers | self._impropers
         #return iter(self._torsions)
 
     def _construct_bonded_atoms_list(self):
@@ -3118,6 +3259,7 @@ class Molecule(FrozenMolecule):
     >>> molecule = Molecule.from_smiles('Cc1ccccc1')
 
     """
+
     def __init__(self, *args, **kwargs):
         """
         Create a new Molecule object
@@ -3176,9 +3318,11 @@ class Molecule(FrozenMolecule):
         #super(self, Molecule).__init__(*args, **kwargs)
         super(Molecule, self).__init__(*args, **kwargs)
 
-
-
-    def add_atom(self, atomic_number, formal_charge, is_aromatic, stereochemistry=None,
+    def add_atom(self,
+                 atomic_number,
+                 formal_charge,
+                 is_aromatic,
+                 stereochemistry=None,
                  name=None):
         """
         Add an atom
@@ -3220,14 +3364,23 @@ class Molecule(FrozenMolecule):
         >>> molecule.add_bond(C, H4, False, 1)
 
         """
-        atom_index = self._add_atom(atomic_number, formal_charge, is_aromatic, stereochemistry=stereochemistry, name=name)
+        atom_index = self._add_atom(
+            atomic_number,
+            formal_charge,
+            is_aromatic,
+            stereochemistry=stereochemistry,
+            name=name)
         return atom_index
-    
 
-
-    def add_bond_charge_virtual_site(self, atoms, distance, charge_increments=None,
-                                     weights=None, epsilon=None, sigma=None,
-                                     rmin_half=None, name=''):
+    def add_bond_charge_virtual_site(self,
+                                     atoms,
+                                     distance,
+                                     charge_increments=None,
+                                     weights=None,
+                                     epsilon=None,
+                                     sigma=None,
+                                     rmin_half=None,
+                                     name=''):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
         Parameters
@@ -3254,12 +3407,22 @@ class Molecule(FrozenMolecule):
         index : int
             The index of the newly-added virtual site in the molecule
         """
-        
-        vsite_index = self._add_bond_charge_virtual_site(atoms, distance, weights=weights, charge_increments=charge_increments, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+
+        vsite_index = self._add_bond_charge_virtual_site(
+            atoms,
+            distance,
+            weights=weights,
+            charge_increments=charge_increments,
+            epsilon=epsilon,
+            sigma=sigma,
+            rmin_half=rmin_half,
+            name=name)
         return vsite_index
 
     #def add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
-    def add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
+    def add_monovalent_lone_pair_virtual_site(self, atoms, distance,
+                                              out_of_plane_angle,
+                                              in_plane_angle, **kwargs):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
 
@@ -3289,14 +3452,16 @@ class Molecule(FrozenMolecule):
         index : int
             The index of the newly-added virtual site in the molecule
         """
-        
+
         #vsite_index = self._add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
-        vsite_index = self._add_monovalent_lone_pair_virtual_site(atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs) 
+        vsite_index = self._add_monovalent_lone_pair_virtual_site(
+            atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         return vsite_index
 
-    
     #def add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
-    def add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
+    def add_divalent_lone_pair_virtual_site(self, atoms, distance,
+                                            out_of_plane_angle, in_plane_angle,
+                                            **kwargs):
         """
         Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms. 
 
@@ -3327,10 +3492,13 @@ class Molecule(FrozenMolecule):
             The index of the newly-added virtual site in the molecule
         """
         #vsite_index = self._add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
-        vsite_index = self._add_divalent_lone_pair_virtual_site(atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs)
+        vsite_index = self._add_divalent_lone_pair_virtual_site(
+            atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         return vsite_index
-        
-    def add_trivalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs):
+
+    def add_trivalent_lone_pair_virtual_site(self, atoms, distance,
+                                             out_of_plane_angle,
+                                             in_plane_angle, **kwargs):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms. 
 
@@ -3360,13 +3528,17 @@ class Molecule(FrozenMolecule):
         index : int
             The index of the newly-added virtual site in the molecule
         """
-        vsite_index = self._add_trivalent_lone_pair_virtual_site(atoms, distance, out_of_plane_angle,
-                                                                 in_plane_angle, **kwargs)
+        vsite_index = self._add_trivalent_lone_pair_virtual_site(
+            atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs)
         return vsite_index
-        
-    
-    def add_bond(self, atom1, atom2, bond_order, is_aromatic,
-                 stereochemistry=None, fractional_bond_order=None):
+
+    def add_bond(self,
+                 atom1,
+                 atom2,
+                 bond_order,
+                 is_aromatic,
+                 stereochemistry=None,
+                 fractional_bond_order=None):
         """
         Add a bond between two specified atom indices
 
@@ -3392,8 +3564,13 @@ class Molecule(FrozenMolecule):
         index: int
             Index of the bond in this molecule
         """
-        bond_index = self._add_bond(atom1, atom2, bond_order, is_aromatic,
-                                    stereochemistry=stereochemistry, fractional_bond_order=fractional_bond_order)
+        bond_index = self._add_bond(
+            atom1,
+            atom2,
+            bond_order,
+            is_aromatic,
+            stereochemistry=stereochemistry,
+            fractional_bond_order=fractional_bond_order)
         return bond_index
 
     def add_conformer(self, coordinates):
