@@ -422,7 +422,7 @@ class ChemicalEnvironment(object):
             return min(orderList)
 
     @staticmethod
-    def validate(smirks, ensure_valence_type=None):
+    def validate(smirks, ensure_valence_type=None, toolkit='openeye'):
         """Validate the provided SMIRKS string is valid, and if requested, tags atoms appropriate to the specified valence type.
 
         Parameters
@@ -435,7 +435,7 @@ class ChemicalEnvironment(object):
         This method will raise a :class:`SMIRKSParsingError` if the provided SMIRKS string is not valid.
 
         """
-        chemenv = ChemicalEnvironment(smirks)
+        chemenv = ChemicalEnvironment(smirks, toolkit=toolkit)
 
         if ensure_valence_type:
             valence_type = chemenv.getType()

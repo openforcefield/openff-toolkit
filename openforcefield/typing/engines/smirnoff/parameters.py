@@ -292,7 +292,7 @@ class ParameterHandler(object):
         parameter : dict
             The kwargs to pass to the ParameterHandler.INFOTYPE (a ParameterType) constructor
         """
-
+        import openforcefield.utils.toolkits
         #if not(isinstance(parameter, ParameterType)):
         #    raise TypeError("Inappropriate object type passed to ParameterHandler.add_parameter(): {}".format(parameter))
         # TODO: Do we need to check for incompatibility with existing parameters?
@@ -300,8 +300,13 @@ class ParameterHandler(object):
         # Perform unit compatibility checks
         self.check_parameter_compatibility(parameter_kwargs)
         # Check for correct SMIRKS valence
+        # TODO: Make better switch for toolkit registry
+        if openforcefield.utils.toolkits.OPENEYE_AVAILABLE:
+            toolkit = 'openeye'
+        elif openforcefield.utils.toolkits.RDKIT_AVAILABLE:
+            toolkit = 'rdkit'
         ChemicalEnvironment.validate(
-            parameter_kwargs['smirks'], ensure_valence_type=self._VALENCE_TYPE)
+            parameter_kwargs['smirks'], ensure_valence_type=self._VALENCE_TYPE, toolkit=toolkit)
 
         new_parameter = self._INFOTYPE(**parameter_kwargs)
         self._parameters.append(new_parameter)
