@@ -327,8 +327,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         if cls._is_available is None:
-            cls._is_available = cls.toolkit_is_available(
-                oetools=('oechem', 'oequacpac'))
+            cls._is_available = cls.toolkit_is_available()
+                #oetools=('oechem', 'oequacpac')
         return cls._is_available
 
     def from_object(self, object):
@@ -1615,7 +1615,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             molecule._conformers = list()
 
         for conformer in molecule2._conformers:
-            molecule.add_conformer(conformer)
+            molecule._add_conformer(conformer)
 
     def from_rdkit(self, rdmol, exception_if_undefined_stereo=True):
         """
@@ -2177,6 +2177,10 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         """
         import os
         from simtk import unit
+
+        if charge_model is None:
+            charge_model = 'bcc'
+
         # Check that the requested charge method is supported
         # Needs to be fixed: 'cm1', 'cm2',
         SUPPORTED_ANTECHAMBER_CHARGE_MODELS = ['gas', 'mul', 'bcc']
@@ -2199,8 +2203,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 "molecule.generate_conformers() before calling molecule.compute_partial_charges"
             )
 
-        if charge_model is None:
-            charge_model = 'bcc'
 
         # Compute charges
         from openforcefield.utils import temporary_directory, temporary_cd
@@ -2288,7 +2290,8 @@ class ToolkitRegistry(object):
 
     def __init__(self,
                  register_imported_toolkit_wrappers=False,
-                 toolkit_precedence=None):
+                 toolkit_precedence=None,
+                 exception_if_unavailable=True):
         """
         Create an empty toolkit registry.
 
@@ -2302,6 +2305,9 @@ class ToolkitRegistry(object):
         toolkit_precedence : list, optional, default=None
             List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If
             None, defaults to [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper].
+        exception_if_unavailable : bool, optional, default=True
+            If True, an exception will be raised if the toolkit is unavailable
+
         """
 
         self._toolkits = list()
@@ -2324,7 +2330,7 @@ class ToolkitRegistry(object):
                 toolkit_precedence.append(toolkit)
 
         for toolkit in toolkit_precedence:
-            self.register_toolkit(toolkit)
+            self.register_toolkit(toolkit, exception_if_unavailable=exception_if_unavailable)
 
     @property
     def registered_toolkits(self):
@@ -2345,7 +2351,7 @@ class ToolkitRegistry(object):
                          toolkit_wrapper_class,
                          exception_if_unavailable=True):
         """
-        Register the provided toolkit wrapper.
+        Register the provided toolkit wrapper class, instantiating an object of it.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -2365,10 +2371,13 @@ class ToolkitRegistry(object):
         # TODO: Instantiate class if class, or just add if already instantiated.
         try:
             toolkit_wrapper = toolkit_wrapper_class()
+            if not(toolkit_wrapper.is_available()):
+                raise ToolkitUnavailableException()
             self._toolkits.append(toolkit_wrapper)
         except ToolkitUnavailableException as e:
             if exception_if_unavailable:
                 raise e
+            print("Unable to load toolkit {}.".format(toolkit_wrapper))
 
     def add_toolkit(self, toolkit_wrapper):
         """
@@ -2503,7 +2512,8 @@ class ToolkitRegistry(object):
 # Create global toolkit registry, where all available toolkits are registered
 
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
-    register_imported_toolkit_wrappers=True)
+    register_imported_toolkit_wrappers=True,
+    exception_if_unavailable=False)
 
 #=============================================================================================
 # SET GLOBAL TOOLKIT-AVAIABLE VARIABLES

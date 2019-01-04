@@ -585,7 +585,12 @@ class TopologyMolecule:
 
     @property
     def atom_start_topology_index(self):
-        "Get the topology index of the first atom in this TopologyMolecule"
+        """
+        Get the topology index of the first atom in this TopologyMolecule
+
+        .. warning :: This API is experimental and subject to change.
+
+        """
         atom_start_topology_index = 0
         for topology_molecule in self._topology.topology_molecules:
             if self == topology_molecule:
@@ -631,7 +636,11 @@ class TopologyMolecule:
 
     @property
     def bond_start_topology_index(self):
-        "Get the topology index of the first bond in this TopologyMolecule"
+        """Get the topology index of the first bond in this TopologyMolecule
+
+        .. warning :: This API is experimental and subject to change.
+
+        """
         bond_start_topology_index = 0
         for topology_molecule in self._topology.topology_molecules:
             if self == topology_molecule:
@@ -692,7 +701,10 @@ class TopologyMolecule:
 
     @property
     def particle_start_topology_index(self):
-        "Get the topology index of the first particle in this TopologyMolecule"
+        """Get the topology index of the first particle in this TopologyMolecule.
+
+        .. warning :: This API is experimental and subject to change.
+        """
         particle_start_topology_index = 0
         for topology_molecule in self._topology.topology_molecules:
             if self == topology_molecule:
@@ -739,7 +751,10 @@ class TopologyMolecule:
 
     @property
     def virtual_site_start_topology_index(self):
-        "Get the topology index of the first virtual site in this TopologyMolecule"
+        """Get the topology index of the first virtual site in this TopologyMolecule
+
+        .. warning :: This API is experimental and subject to change.
+        """
         virtual_site_start_topology_index = 0
         for topology_molecule in self._topology.topology_molecules:
             if self == topology_molecule:
@@ -1218,7 +1233,8 @@ class Topology(Serializable):
                                      query,
                                      aromaticity_model='MDL',
                                      toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
-        """Retrieve all matches for a given chemical environment query.
+        """
+        Retrieve all matches for a given chemical environment query.
 
         TODO:
         * Do we want to generalize this to other kinds of queries too, like mdtraj DSL, pymol selections, atom index slices, etc?
