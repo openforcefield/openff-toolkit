@@ -235,7 +235,7 @@ class TestMolecule(TestCase):
         molecule = Molecule()
 
     def test_molecule_name(self):
-        """Test creation of an empty Molecule"""
+        """Test Molecule name property"""
         molecule1 = Molecule()
         molecule1.name = None
 
@@ -517,7 +517,6 @@ class TestMolecule(TestCase):
                 vsite1_index = molecule.add_divalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
             molecule_dict = molecule.to_dict()
             molecule2 = Molecule.from_dict(molecule_dict)
-            #assert hash(molecule) == hash(molecule2)
             assert molecule.to_dict() == molecule2.to_dict()
 
     def test_add_trivalent_lone_pair_virtual_site(self):
@@ -688,7 +687,6 @@ class TestMolecule(TestCase):
     def test_name(self):
         """Test name property"""
         name = 'benzene'
-        #molecule = Molecule(name=name)
         molecule = Molecule()
         molecule.name = name
         assert molecule.name == name
@@ -766,6 +764,7 @@ class TestMolecule(TestCase):
             assert_molecule_is_equal(molecule, molecule2, "Molecule.to_openeye()/from_openeye() round trip failed")
             molecule3 = Molecule(oemol)
             assert_molecule_is_equal(molecule, molecule3, "Molecule(oemol) constructor failed")
+
 
     def test_compute_partial_charges(self):
         """Test computation/retrieval of partial charges"""

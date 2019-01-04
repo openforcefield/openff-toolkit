@@ -121,11 +121,12 @@ def serialize_quantity(quantity):
     # If it's not None, make sure it's a simtk.unit.Quantity
     assert (hasattr(quantity, 'unit'))
 
-    quantity_unit = list()
-    for base_unit in quantity.unit.iter_all_base_units():
-        quantity_unit.append((base_unit[0].name, base_unit[1]))
-
-    unitless_value = quantity / quantity.unit
+    quantity_unit = []
+    unit_dict = {}
+    for unit_component in quantity.unit.iter_base_or_scaled_units():
+        quantity_unit.append((unit_component[0].name, unit_component[1]))
+        unit_dict[unit_component[0]] = unit_component[1]
+    unitless_value = quantity.value_in_unit(unit.Unit(unit_dict))
     serialized['unitless_value'] = unitless_value
     serialized['unit'] = quantity_unit
     return serialized
@@ -177,15 +178,7 @@ def serialize_numpy(np_array):
     shape : tuple of ints
         The shape of the serialized array
     """
-    # This version ties us to numpy -- Making a more general solution
-    #import io
-    #import numpy
-    #import json
-    #memfile = io.BytesIO()
-    #numpy.save(memfile, np_array)
-    #memfile.seek(0)
-    #serialized = json.dumps(memfile.read().decode('latin-1'))
-    #dt = np.dtype('float')
+
     bigendian_array = np_array.newbyteorder('>')
     serialized = bigendian_array.tobytes()
     shape = np_array.shape
@@ -209,14 +202,7 @@ def deserialize_numpy(serialized_np, shape):
     np_array : numpy.ndarray
         The deserialized numpy array
     """
-    #import io
-    #import numpy
-    #import json
-    #memfile = io.BytesIO()
-    #memfile.write(json.loads(serialized_np).encode('latin-1'))
-    #memfile.seek(0)
-    #np_array = numpy.load(memfile)
-    #return np_array
+
     import numpy as np
     dt = np.dtype('float')
     dt.newbyteorder('>')  # set to big-endian
