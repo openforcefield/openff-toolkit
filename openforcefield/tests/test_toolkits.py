@@ -229,6 +229,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
         assert molecule._conformers[0].shape == (15,3)
 
     @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skip
     def test_get_multiconformer_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing multiple sets of coordinates from a sdf file"""
         raise NotImplementedError

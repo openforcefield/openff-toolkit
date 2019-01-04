@@ -976,7 +976,7 @@ class vdWHandler(ParameterHandler):
         atoms = self.get_matches(topology)
 
         # Create all particles.
-        for particle in topology.particles:
+        for particle in topology.topology_particles:
             force.addParticle(0.0, 1.0, 0.0)
 
         # Set the particle Lennard-Jones terms.
@@ -996,7 +996,7 @@ class vdWHandler(ParameterHandler):
             ref_mol.generate_conformers()
             ref_mol.compute_partial_charges()
 
-        for atom in topology.atoms:
+        for atom in topology.topology_atoms:
             # Retrieve nonbonded parameters for reference atom (charge not set yet)
             _, sigma, epsilon = force.getParticleParameters(atom.topology_particle_index)
             # Set the nonbonded force with the partial charge
@@ -1009,7 +1009,7 @@ class vdWHandler(ParameterHandler):
         # TODO: This postprocessing must occur after the ChargeIncrementModelHandler
         # QUESTION: Will we want to do this for *all* cases, or would we ever want flexibility here?
         bond_particle_indices = []
-        for bond in topology.bonds:
+        for bond in topology.topology_bonds:
             topology_atoms = [atom for atom in bond.atoms]
             bond_particle_indices.append((topology_atoms[0].topology_particle_index,
                                           topology_atoms[1].topology_particle_index))
@@ -1170,7 +1170,7 @@ class GBSAParameterHandler(ParameterHandler):
         atoms = self.getMatches(topology)
         nparams = 1 + len(expected_parameters) # charge + GBSA parameters
         params = [ 0.0 for i in range(nparams) ]
-        for particle in topology.particles():
+        for particle in topology.topology_particles():
             force.addParticle(params)
         # Set the GBSA parameters (keeping charges at zero for now)
         for (atoms, gbsa_type) in atoms.items():

@@ -28,6 +28,7 @@ import importlib
 from functools import wraps
 from openforcefield.utils.utils import inherit_docstrings
 from openforcefield.utils import all_subclasses
+from openforcefield.typing.chemistry.environment import SMIRKSParsingError
 from distutils.spawn import find_executable
 from simtk import unit
 import numpy as np
@@ -66,21 +67,16 @@ class ToolkitUnavailableException(Exception):
     # TODO: Allow toolkit to be specified and used in formatting/printing exception.
     pass
 
-
-
+class InvalidToolkitError(Exception):
+    """A non-toolkit object was received when a toolkit object was expected"""
+    def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
 #=============================================================================================
 # TOOLKIT UTILITY DECORATORS
 #=============================================================================================
 
 
-
-# TODO : Wrap toolkits in a much more modular way to make it easier to query their capabilities
-## From Jeff: Maybe we just put these in the toolkit definitions themselves
-#SUPPORTED_FILE_FORMATS = dict()
-#SUPPORTED_FILE_FORMATS['OpenEye Toolkit'] = ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC',
-#                                     'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', 'XYC']
-#SUPPORTED_FILE_FORMATS['The RDKit'] = ['SDF', 'PDB', 'SMI', 'TDT'] # Don't put MOL2 in here -- RDKit can only handle corina format and fails on SYBYL
-#SUPPORTED_FILE_FORMATS['AmberTools'] = ['MOL2']
 
 #=============================================================================================
 # UTILITY FUNCTIONS
@@ -120,16 +116,7 @@ class ToolkitWrapper(object):
             return wrapped_function
         return decorator
 
-    
-    #def requires_toolkit(func):
-    #    @wraps(func)
-    #    def wrapper_decorator(*args, **kwargs):
-    #        if not toolkit_is_available():
-    #            msg = 'This function requires the {} toolkit'.format(_toolkit_name)
-    #            raise LicenseError(msg)
-    #        value = func(*args, **kwargs)
-    #        return value
-    #    return wrapped_function
+
     
     @property
     @classmethod
@@ -194,7 +181,7 @@ class ToolkitWrapper(object):
         return NotImplementedError
 
 
-    def from_file(self, filename, file_format):
+    def from_file(self, filename, file_format, exception_if_undefined_stereo=True):
         """
         Return an openforcefield.topology.Molecule from a file using this toolkit.
         
@@ -205,7 +192,9 @@ class ToolkitWrapper(object):
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        
+        exception_if_undefined_stereo : bool, default=True
+            If true, raises an exception if any molecules contain undefined stereochemistry. If false, the function
+            skips loading the molecule.
         Returns
         -------
         molecules : Molecule or list of Molecules
@@ -214,9 +203,10 @@ class ToolkitWrapper(object):
         """
         return NotImplementedError
      
-    def from_file_obj(self, file_obj, file_format):
+    def from_file_obj(self, file_obj, file_format, exception_if_undefined_stereo=True):
         """
-        Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using this toolkit.
+        Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using this
+         toolkit.
         
         Parameters
         ----------
@@ -225,7 +215,10 @@ class ToolkitWrapper(object):
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        
+        exception_if_undefined_stereo : bool, default=True
+            If true, raises an exception if any molecules contain undefined stereochemistry. If false, the function
+            skips loading the molecule.
+
         Returns
         -------
         molecules : Molecule or list of Molecules
@@ -240,7 +233,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     OpenEye toolkit wrapper
     """
     _toolkit_name = 'OpenEye Toolkit'
-    _toolkit_installation_instructions = 'The OpenEye toolkit requires a (free for academics) license, and can be found at: https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html'
+    _toolkit_installation_instructions = 'The OpenEye toolkit requires a (free for academics) license, and can be ' \
+                                         'found at: ' \
+                                         'https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html'
     _toolkit_file_read_formats =  ['CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM',
                                    'MDL', 'MF', 'MMOD', 'MOL2', 'MOL2H', 'MOPAC',
                                    'OEB', 'PDB', 'RDF', 'SDF', 'SKC', 'SLN', 'SMI', 'USM', 'XYC']
@@ -326,6 +321,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         If given an OEMol (or OEMol-derived object), this function will load it into an openforcefield.topology.molecule
         Otherwise, it will return False.
+
         Parameters
         ----------
         object : A molecule-like object
@@ -348,6 +344,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     def from_file(self, filename, file_format, exception_if_undefined_stereo=True):
         """
         Return an openforcefield.topology.Molecule from a file using this toolkit.
+
+        .. warning :: This API is experimental and subject to change.
         
         Parameters
         ----------
@@ -381,8 +379,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
      
     def from_file_obj(self, file_obj, file_format, exception_if_undefined_stereo=True):
         """
-        Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using this toolkit.
-        
+        Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using
+        this toolkit.
+
+        .. warning :: This API is experimental and subject to change.
+
         Parameters
         ----------
         file_obj : file-like object
@@ -430,16 +431,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         outfile_format
             The format for writing the molecule data
 
-        Returns
-        -------
-
         """
         from openeye import oechem
         from openforcefield.utils import temporary_directory, temporary_cd
 
         oemol = self.to_openeye(molecule)
 
-        # TODO: This is horribly implemented. Is there any way to attach a file-like object to an oemolstream?
+        # TODO: This is inefficiently implemented. Is there any way to attach a file-like object to an oemolstream?
         with temporary_directory() as tmpdir:
             with temporary_cd(tmpdir):
                 outfile = 'temp_molecule.' + outfile_format
@@ -464,9 +462,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The filename to write to
         outfile_format
             The format for writing the molecule data
-
-        Returns
-        ------
 
         """
         from openeye import oechem
@@ -556,6 +551,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         Create a Molecule from an OpenEye molecule.
 
+        .. warning :: This API is experimental and subject to change.
+
         Parameters
         ----------
         oemol : openeye.oechem.OEMol
@@ -580,7 +577,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
         from openforcefield.topology.molecule import Molecule
-        # from openforcefield.utils.toolkits.OpenEyeToolkitWrapper import _openeye_cip_atom_stereochemistry, openeye_cip_bond_stereochemistry
+
+        # TODO: Is there any risk to perceiving aromaticity here instead of later?
+        oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
 
         oechem.OEPerceiveChiral(oemol)
 
@@ -615,10 +614,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             def describe_oeatom(oeatom):
                 description = "Atom {} with bonds:".format(oeatom_to_str(oeatom))
                 for oebond in oeatom.GetBonds():
-                    description += "\nbond {} to atom {}".format(oebond_to_str(oebond), oeatom_to_str(oebond.GetNbr(oeatom)))
+                    description += "\nbond {} to atom {}".format(oebond_to_str(oebond),
+                                                                 oeatom_to_str(oebond.GetNbr(oeatom)))
                 return description
 
-            msg = "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry. oemol.GetTitle(): {}\n".format(oemol.GetTitle())
+            msg = "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry. " \
+                  "oemol.GetTitle(): {}\n".format(oemol.GetTitle())
             if len(problematic_atoms) != 0:
                 msg += "Problematic atoms are:\n"
                 for problematic_atom in problematic_atoms:
@@ -661,7 +662,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                                            stereochemistry=stereochemistry, name=name)
             map_atoms[oe_idx] = atom_index # store for mapping oeatom to molecule atom indices below
 
-        #c=0
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
             atom2_index = map_atoms[oebond.GetEndIdx()]
@@ -672,9 +672,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 fractional_bond_order = oebond.GetData('fractional_bond_order')
             else:
                 fractional_bond_order = None
-            #stereochemistry = self._openeye_cip_bond_stereochemistry(oemol, oebond)
-            #print('AAA', c, fractional_bond_order)
-            #c+=1
+
             molecule.add_bond(atom1_index, atom2_index, bond_order, is_aromatic=is_aromatic,
                               stereochemistry=stereochemistry, fractional_bond_order=fractional_bond_order)
 
@@ -709,8 +707,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return molecule
 
-    # TODO: We could make this a staticmethod. It seems to have formerly belonged to
-    # the Molecule class
     @staticmethod
     def to_openeye(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
@@ -719,6 +715,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         .. todo ::
 
            * Should the aromaticity model be specified in some other way?
+
+       .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -803,7 +801,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oeatom1_neighbor = [n for n in oeatom1.GetAtoms() if not n==oeatom2][0]
             oeatom2_neighbor = [n for n in oeatom2.GetAtoms() if not n==oeatom1][0]
             #oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Cis)
-            oebond.SetStereo([oeatom1_neighbor, oeatom2_neighbor], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Cis)
+            oebond.SetStereo([oeatom1_neighbor, oeatom2_neighbor],
+                             oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Cis)
 
             # Flip stereochemistry if incorrect
             oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
@@ -811,7 +810,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if oebond_stereochemistry != bond.stereochemistry:
                 # Flip the stereochemistry
                 #oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Trans)
-                oebond.SetStereo([oeatom1_neighbor, oeatom2_neighbor], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Trans)
+                oebond.SetStereo([oeatom1_neighbor, oeatom2_neighbor], oechem.OEBondStereo_CisTrans,
+                                 oechem.OEBondStereo_Trans)
                 # Verify it matches now as a sanity check
                 oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
                 if oebond_stereochemistry != bond.stereochemistry:
@@ -849,10 +849,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 oe_atom.SetPartialCharge(oe_indexed_charges[oe_idx])
 
         # TODO: Retain properties, if present
-
-
-
-
         # Clean Up phase
         # The only feature of a molecule that wasn't perceived above seemed to be ring connectivity, better to run it
         # here then for someone to inquire about ring sizes and get 0 when it shouldn't be
@@ -864,7 +860,19 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     @staticmethod
     def to_smiles(molecule):
-        # inherits base class docstring
+        """
+        Uses the OpenEye toolkit to convert a Molecule into a SMILES string.
+
+        Parameters
+        ----------
+        molecule : An openforcefield.topology.Molecule
+            The molecule to convert into a SMILES.
+
+        Returns
+        -------
+        smiles : str
+            The SMILES of the input molecule.
+        """
         from openeye import oechem
         oemol = OpenEyeToolkitWrapper.to_openeye(molecule)
         smiles = oechem.OECreateSmiString(oemol,
@@ -874,13 +882,27 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                                           oechem.OESMILESFlag_BondStereo |
                                           oechem.OESMILESFlag_AtomStereo
                                           )
-        #smiles = oechem.OEMolToSmiles(oemol)
         return smiles
 
     
     def from_smiles(self, smiles, hydrogens_are_explicit=False):
-        # TODO: Docstring
-        # TODO: `strict` flag, for whether to demand explicit H
+        """
+        Create a Molecule from a SMILES string using the OpenEye toolkit.
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        smiles : str
+            The SMILES string to turn into a molecule
+        hydrogens_are_explicit : bool, default = False
+            If False, OE will perform hydrogen addition using OEAddExplicitHydrogens
+
+        Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+            An openforcefield-style molecule.
+        """
 
         from openeye import oechem
         oemol = oechem.OEGraphMol()
@@ -889,6 +911,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             result = oechem.OEAddExplicitHydrogens(oemol)
             if result == False:
                 raise Exception("Addition of explicit hydrogens failed in from_openeye")
+        # TODO: Add exception_if_undefined_stereo to this function, and pass to from_openeye?
         molecule = self.from_openeye(oemol)
         return molecule
     
@@ -896,10 +919,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         Generate molecule conformers using OpenEye Omega. 
 
+        .. warning :: This API is experimental and subject to change.
+
         .. todo ::
         
            * which parameters should we expose? (or can we implement a general system with **kwargs?)
-           * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that they'll get reindexed when we convert the input into an OEmol?
+           * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that
+           they'll get reindexed when we convert the input into an OEmol?
         
         Parameters
         ---------
@@ -907,7 +933,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The molecule to generate conformers for
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
-        
         
         """
         from openeye import oeomega
@@ -937,19 +962,21 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         Compute partial charges with OpenEye quacpac
 
-        .. warning :: This API experimental and subject to change.
+        .. warning :: This API is experimental and subject to change.
 
         .. todo ::
 
            * Should the default be ELF?
            * Can we expose more charge models?
 
+
         Parameters
         ----------
         molecule : Molecule
             Molecule for which partial charges are to be computed
         charge_model : str, optional, default=None
-            The charge model to use. One of ['noop', 'mmff', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'amber', 'amberff94', 'am1bccelf10']
+            The charge model to use. One of ['noop', 'mmff', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'amber',
+            'amberff94', 'am1bccelf10']
             If None, 'am1bcc' will be used.
 
         Returns
@@ -969,7 +996,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         ## This seems like a big decision. Implemented a simple solution here. Not to be considered final.
         ## Some discussion at https://github.com/openforcefield/openforcefield/pull/86#issuecomment-350111236
-        ## The following code is taken from the just-openeye version of the openforcefield repo https://github.com/openforcefield/openforcefield/blob/65f6b45954bde02c6cec1059661635c53a7f4e35/openforcefield/typing/engines/smirnoff/forcefield.py#L850
 
         if charge_model is None:
             charge_model = "am1bcc"
@@ -1012,8 +1038,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
 
     def compute_wiberg_bond_orders(self, molecule, charge_model=None):
-        """Update and store list of bond orders this molecule. Can be used for initialization of bondorders list, or for updating bond orders in the list.
-        Parameters:
+        """
+        Update and store list of bond orders this molecule. Can be used for initialization of bondorders list, or
+        for updating bond orders in the list.
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
         ----------
         molecule : openforcefield.topology.molecule Molecule
             The molecule to assign wiberg bond orders to
@@ -1048,7 +1079,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             raise ValueError('charge_model {} unknown'.format(charge_model))
 
         #for conf in oemol.GetConfs():
-        #TODO: How to handle confs here?
+        #TODO: How to handle multiple confs here?
         status = am1.CalcAM1(am1results, oemol)
 
         if status is False:
@@ -1145,6 +1176,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
+        .. warning :: This API is experimental and subject to change.
+
         Parameters
         ----------
         molecule : openforcefield.topology.Molecule
@@ -1157,7 +1190,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        #oemol = self.to_oemol(molecule, aromaticity_model=aromaticity_model)
         oemol = molecule.to_openeye()
         return self._find_smarts_matches(oemol, smarts)
 
@@ -1166,7 +1198,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     RDKit toolkit wrapper
     """
     _toolkit_name = 'The RDKit'
-    _toolkit_installation_instructions = 'A conda-installable version of the free and open source RDKit cheminformatics toolkit can be found at: https://anaconda.org/rdkit/rdkit'
+    _toolkit_installation_instructions = 'A conda-installable version of the free and open source RDKit cheminformatics ' \
+                                         'toolkit can be found at: https://anaconda.org/rdkit/rdkit'
     _toolkit_file_read_formats = ['SDF', 'MOL', 'SMI'] #TODO: Add TDT support
     _toolkit_file_write_formats =['SDF', 'MOL', 'SMI', 'PDB'] 
 
@@ -1207,10 +1240,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
         If given an rdchem.Mol (or rdchem.Mol-derived object), this function will load it into an
         openforcefield.topology.molecule. Otherwise, it will return False.
+
         Parameters
         ----------
-        object : A molecule-like object
-            An object to by type-checked.
+        object : A rdchem.Mol-derived object
+            An object to be type-checked and converted into a Molecule, if possible.
+
         Returns
         -------
         Molecule or False
@@ -1228,8 +1263,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
     def from_file(self, filename, file_format, exception_if_undefined_stereo=True):
         """
-        Return an openforcefield.topology.Molecule from a file using this toolkit.
-        
+        Create an openforcefield.topology.Molecule from a file using this toolkit.
+
+        .. warning :: This API is experimental and subject to change.
+
+
         Parameters
         ----------
         filename : str
@@ -1240,9 +1278,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         exception_if_undefined_stereo : bool, default=True
             If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
             loading the molecule.
+
         Returns
         -------
-        molecules : list of Molecules
+        molecules : iterable of Molecules
             a list of Molecule objects is returned.
 
         """
@@ -1265,7 +1304,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 
 
         elif (file_format == 'PDB'):
-            raise Exception("RDKit can not safely read PDBs on their own. Information about bond order and aromaticity is likely to be lost.")
+            raise Exception("RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
+                            "is likely to be lost.")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
             # https://github.com/openforcefield/openforcefield/issues/121
             rdmol = Chem.MolFromPDBFile(filename, removeHs=False)
@@ -1276,8 +1316,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         return mols
     def from_file_obj(self, file_obj, file_format, exception_if_undefined_stereo=True):
         """
-        Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using this toolkit.
-        
+        Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using
+        this toolkit.
+
+        .. warning :: This API is experimental and subject to change.
+
         Parameters
         ----------
         file_obj : file-like object
@@ -1314,7 +1357,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 mols.append(mol)
                 
         elif file_format == 'PDB':
-            raise Exception("RDKit can not safely read PDBs on their own. Information about bond order and aromaticity is likely to be lost.")
+            raise Exception("RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
+                            "is likely to be lost.")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
              # https://github.com/openforcefield/openforcefield/issues/121
             rdmol = Chem.MolFromPDBBlock(file_data)
@@ -1373,7 +1417,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         outfile_format = outfile_format.upper()
         with open(outfile, 'w') as file_obj:
             rdmol = self.to_rdkit(molecule)
-            rdkit_writers = {'SDF': Chem.SDWriter, 'PDB': Chem.PDBWriter, 'SMI': Chem.SmilesWriter, 'TDT': Chem.TDTWriter}
+            rdkit_writers = {'SDF': Chem.SDWriter, 'PDB': Chem.PDBWriter, 'SMI': Chem.SmilesWriter,
+                             'TDT': Chem.TDTWriter}
             writer = rdkit_writers[outfile_format](file_obj)
             writer.write(rdmol)
             writer.close()
@@ -1382,14 +1427,41 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     
     @classmethod
     def to_smiles(cls, molecule):
-        # inherits base class docstring
+        """
+        Uses the RDKit toolkit to convert a Molecule into a SMILES string.
+
+        Parameters
+        ----------
+        molecule : An openforcefield.topology.Molecule
+            The molecule to convert into a SMILES.
+
+        Returns
+        -------
+        smiles : str
+            The SMILES of the input molecule.
+        """
         from rdkit import Chem
         rdmol = cls.to_rdkit(molecule)
-        #rdmol = Chem.RemoveHs(rdmol)
         return Chem.MolToSmiles(rdmol, isomericSmiles=True, allHsExplicit=True)
 
-    def from_smiles(self, smiles):
-        # TODO: Docstring
+    def from_smiles(self, smiles, hydrogens_are_explicit=False):
+        """
+        Create a Molecule from a SMILES string using the RDKit toolkit.
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        smiles : str
+            The SMILES string to turn into a molecule
+        hydrogens_are_explicit : bool, default = False
+            If False, RDKit will perform hydrogen addition using Chem.AddHs
+
+        Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+            An openforcefield-style molecule.
+        """
         # TODO: `strict` flag, for whether to demand explicit H
         from openforcefield.topology.molecule import Molecule
         # inherits base class docstring
@@ -1412,8 +1484,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 "Unable to make OFFMol from SMILES: SMILES has unspecified stereochemistry: {}".format(smiles))
 
         # Add explicit hydrogens if they aren't there already
-        rdmol = Chem.AddHs(rdmol)
+        if not(hydrogens_are_explicit):
+            rdmol = Chem.AddHs(rdmol)
 
+        # TODO: Add exception_if_undefined_stereo to this function, and pass to from_rdkit?
         molecule = Molecule.from_rdkit(rdmol)
         
         return molecule
@@ -1422,6 +1496,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     def generate_conformers(self, molecule, clear_existing=True):
         """
         Generate molecule conformers using RDKit. 
+
+        .. warning :: This API is experimental and subject to change.
 
         .. todo ::
         
@@ -1464,12 +1540,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         Requires the RDKit to be installed.
 
+        .. warning :: This API is experimental and subject to change.
+
         Parameters
         ----------
         rdmol : rkit.RDMol
             An RDKit molecule
         exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
+            If true, raises an exception if rdmol contains undefined stereochemistry. If false, the function skips
             loading the molecule.
 
         Returns
@@ -1558,7 +1636,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             if tag == Chem.CHI_TETRAHEDRAL_CW:
                 stereochemistry = 'S'
             
-            atom_index = mol.add_atom(atomic_number, formal_charge, is_aromatic, name=name, stereochemistry=stereochemistry)
+            atom_index = mol.add_atom(atomic_number, formal_charge, is_aromatic, name=name,
+                                      stereochemistry=stereochemistry)
             map_atoms[rd_idx] = atom_index
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
@@ -1605,7 +1684,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             fractional_bond_order = None
             if rdb.HasProp("fractional_bond_order"):
                 fractional_bond_order = rdb.GetDoubleProp('fractional_bond_order')
-                #raise Exception("{}".format(fractional_bond_order))
             offb.fractional_bond_order = fractional_bond_order
 
 
@@ -1645,6 +1723,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Create an RDKit molecule
 
         Requires the RDKit to be installed.
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -1715,8 +1795,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             map_atoms[index] = rd_index
 
         for bond in molecule.bonds:
-            #rdatom1 = map_atoms[molecule.atoms.index(bond.atom1)]
-            #rdatom2 = map_atoms[molecule.atoms.index(bond.atom2)]
             rdatom1 = map_atoms[bond.atom1.molecule_atom_index]
             rdatom2 = map_atoms[bond.atom2.molecule_atom_index]
             rdmol.AddBond(rdatom1, rdatom2)
@@ -1730,29 +1808,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             else:
                 rdbond.SetBondType(_bondtypes[bond.bond_order])
                 rdbond.SetIsAromatic(False)
-
-
-
-
-        '''
-        # Assign bond stereochemistry
-        # Based on https://gist.github.com/bannanc/810ccc4636b930a4522636baab1965a6
-        for bond in molecule.bonds:
-            if not(bond.stereochemistry):
-                continue
-            # Get openforcefield atoms that define cis/trans
-            off_a1 = bond.atom1
-            off_a2 = bond.atom2
-            off_n1 = off_a1.bonded_atoms[0]
-            off_n2 = off_a2.bonded_atoms[0]
-
-            # Get rdatoms that define cis/trans
-            rd_a1 = map_atoms[off_a1.molecule_atom_index]
-            rd_a2 = map_atoms[off_a2.molecule_atom_index]
-            rd_n1 = map_atoms[off_n1.molecule_atom_index]
-            rd_n2 = map_atoms[off_n2.molecule_atom_index]
-
-        '''
 
         Chem.SanitizeMol(rdmol)
 
@@ -1777,17 +1832,15 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 # Flip the stereochemistry if it is incorrect
                 # TODO: Clean up _CIPCode atom and bond properties
                 Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
-                #raise Exception('bond2.GetStereo() is {} It is type {}. My attempt is {}'.format(bond2.GetStereo(), type(bond2.GetStereo()), Chem.rdchem.BondStereo.STEREOZ == bond2.GetStereo()))
-                #raise Exception('OFF bond stereo is {}. rdmol props are {}. rdbond props are {}'.format(bond.stereochemistry, [i for i in rdmol.GetPropNames()], [dir(bondj) for bondj in rdmol.GetBonds()]))
                 if bond.stereochemistry == 'E':
                     desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOE
                 elif bond.stereochemistry == 'Z':
                     desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOZ
                 else:
-                    raise Exception("Unknown bond stereochemistry encountered in to_rdkit : {}".format(bond.stereochemistry))
+                    raise Exception("Unknown bond stereochemistry encountered in "
+                                    "to_rdkit : {}".format(bond.stereochemistry))
 
                 if bond2.GetStereo() != desired_rdk_stereo_code:
-                #if rdmol.GetProp('_CIPCode') != bond.stereochemistry:
                     # Flip it
                     bond3.SetBondDir(Chem.BondDir.ENDUPRIGHT)
                     # Validate we have the right stereochemistry as a sanity check
@@ -1895,6 +1948,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
+        .. warning :: This API is experimental and subject to change.
+
         Parameters
         ----------
         molecule : openforcefield.topology.Molecule
@@ -1916,7 +1971,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
     """
     _toolkit_name = 'AmberTools'
-    _toolkit_installation_instructions = 'The AmberTools toolkit (free and open source) can be found at https://anaconda.org/omnia/ambertools'
+    _toolkit_installation_instructions = 'The AmberTools toolkit (free and open source) can be found at ' \
+                                         'https://anaconda.org/omnia/ambertools'
     _toolkit_file_read_formats = [] 
     _toolkit_file_write_formats = []
 
@@ -1997,7 +2053,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         # Needs to be fixed: 'cm1', 'cm2',
         SUPPORTED_ANTECHAMBER_CHARGE_MODELS = ['gas', 'mul',  'bcc']
         if charge_model not in SUPPORTED_ANTECHAMBER_CHARGE_MODELS:
-            raise ValueError('Requested charge method {} not among supported charge methods {}'.format(charge_model, SUPPORTED_ANTECHAMBER_CHARGE_MODELS))
+            raise ValueError('Requested charge method {} not among supported charge '
+                             'methods {}'.format(charge_model, SUPPORTED_ANTECHAMBER_CHARGE_MODELS))
 
         # Find the path to antechamber
         # TODO: How should we implement find_executable?
@@ -2026,16 +2083,19 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
                 # TODO: Add something cleaner than os.system
-                os.system("antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf yes -c {} -nc {}".format(charge_model, net_charge))
+                os.system("antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf "
+                          "yes -c {} -nc {}".format(charge_model, net_charge))
                 #os.system('cat charged.mol2')
 
                 # Write out just charges
-                os.system("antechamber -i charged.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc -cf charges.txt -pf yes")
+                os.system("antechamber -i charged.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc "
+                          "-cf charges.txt -pf yes")
                 #os.system('cat charges.txt')
                 # Check to ensure charges were actually produced
                 if not os.path.exists('charges.txt'):
                     # TODO: copy files into local directory to aid debugging?
-                    raise Exception("Antechamber/sqm partial charge calculation failed on molecule {} (SMILES {})".format(molecule.name, molecule.to_smiles()))
+                    raise Exception("Antechamber/sqm partial charge calculation failed on "
+                                    "molecule {} (SMILES {})".format(molecule.name, molecule.to_smiles()))
                 # Read the charges
                 with open('charges.txt', 'r') as infile:
                     contents = infile.read()
@@ -2080,9 +2140,10 @@ class ToolkitRegistry(object):
     >>> toolkits = all_subclasses(ToolkitWrapper)
     >>> [ toolkit_registry.register(toolkit) for toolkit in toolkits if toolkit.is_available() ]
 
-    Retrieve the global singleton toolkit registry, which is created when this module is imported from all available toolkits:
+    Retrieve the global singleton toolkit registry, which is created when this module is imported from all available
+    toolkits:
 
-    >>> from openforcefield.utils.toolkits import DEFAULT_TOOLKIT_REGISTRY as toolkit_registry
+    >>> from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
     >>> print(toolkit_registry.registered_toolkits())
 
     """
@@ -2090,14 +2151,16 @@ class ToolkitRegistry(object):
         """
         Create an empty toolkit registry.
 
-        .. warning :: This API experimental and subject to change.
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
         register_imported_toolkit_wrappers : bool, optional, default=False
-            If True, will attempt to register all imported ToolkitWrapper subclasses that can be found, in no particular order.
+            If True, will attempt to register all imported ToolkitWrapper subclasses that can be found, in no particular
+             order.
         toolkit_precedence : list, optional, default=None
-            List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If None, defaults to [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper].
+            List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If
+            None, defaults to [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper].
         """
 
         self._toolkits = list()
@@ -2124,10 +2187,13 @@ class ToolkitRegistry(object):
         """
         List registered toolkits.
 
-        .. warning :: This API experimental and subject to change.
+        .. warning :: This API is experimental and subject to change.
 
         .. todo :: Should this return a generator? Deep copies? Classes? Toolkit names?
 
+        Returns
+        -------
+        toolkits : iterable of toolkit objects
         """
         return list(self._toolkits)
 
@@ -2135,7 +2201,7 @@ class ToolkitRegistry(object):
         """
         Register the provided toolkit wrapper.
 
-        .. warning :: This API experimental and subject to change.
+        .. warning :: This API is experimental and subject to change.
 
         .. todo ::
 
@@ -2160,11 +2226,14 @@ class ToolkitRegistry(object):
 
     def add_toolkit(self, toolkit_wrapper):
         """
+        Append a ToolkitWrapper onto the list of toolkits in this ToolkitRegistry
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        toolkit_wrapper : The ToolkitWrapper object to add to the list of registered toolkits
-
+        toolkit_wrapper : openforcefield.utils.ToolkitWrapper
+            The ToolkitWrapper object to add to the list of registered toolkits
 
         """
         if not isinstance(toolkit_wrapper, ToolkitWrapper):
@@ -2180,7 +2249,7 @@ class ToolkitRegistry(object):
         """
         Resolve the requested method name by checking all registered toolkits in order of precedence for one that provides the requested method.
 
-        .. warning :: This API experimental and subject to change.
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -2228,7 +2297,7 @@ class ToolkitRegistry(object):
         """
         Execute the requested method by attempting to use all registered toolkits in order of precedence.
 
-        .. warning :: This API experimental and subject to change.
+        .. warning :: This API is experimental and subject to change.
 
         ``*args`` and ``**kwargs`` are passed to the desired method, and return values of the method are returned
 
@@ -2284,11 +2353,8 @@ class ToolkitRegistry(object):
 
 # Create global toolkit registry, where all available toolkits are registered
 
-## From jeff: The commented-out functionality has been moved into the ToolkitRegistry constructor
 
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(register_imported_toolkit_wrappers=True)
-#for toolkit in all_subclasses(ToolkitWrapper):
-#    GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit, exception_if_unavailable=False)
 
 #=============================================================================================
 # SET GLOBAL TOOLKIT-AVAIABLE VARIABLES 

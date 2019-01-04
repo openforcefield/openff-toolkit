@@ -20,35 +20,22 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
 #=============================================================================================
 # GLOBAL IMPORTS
 #=============================================================================================
-
-import os
-import re
-import sys
-import math
+\
 import copy
-import time
-import string
-import random
 import logging
-import itertools
-import collections
+
 
 from collections import OrderedDict
 
-import numpy as np
 import packaging
 
-import lxml.etree as etree
 
 from simtk import openmm, unit
-from simtk.openmm.app import element as elem
 
-from openforcefield.utils import get_data_filename, all_subclasses
-from openforcefield.topology import Topology, ValenceDict, ImproperDict
+from openforcefield.utils import  all_subclasses
 from openforcefield.topology import DEFAULT_AROMATICITY_MODEL
-from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
-from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler, XMLParameterIOHandler, ParseError
+from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
 
 
 #=============================================================================================
@@ -83,29 +70,31 @@ class ParameterHandlerRegistrationError(Exception):
 
 # TODO: How do we serialize/deserialize `ForceField`'s object model? Can we rely on pickle?
 
-# TODO: Rename `ParameterHandler` to `ForceGenerator`
-
-# TODO: How should we incorporate IO plugins?
-
 class ForceField(object):
     """A factory that assigns SMIRNOFF parameters to a molecular system
 
-    :class:`ForceField` is a factory that constructs an OpenMM :class:`simtk.openmm.System` object from a :class:`openforcefield.topology.Topology` object defining a (bio)molecular system containing one or more molecules.
+    :class:`ForceField` is a factory that constructs an OpenMM :class:`simtk.openmm.System` object from a
+    :class:`openforcefield.topology.Topology` object defining a (bio)molecular system containing one or more molecules.
 
     When a :class:`ForceField` object is created from one or more specified SMIRNOFF serialized representations,
-    all :class:`ParameterHandler` subclasses currently imported are identified and registered to handle different sections of the SMIRNOFF force field definition file(s).
+    all :class:`ParameterHandler` subclasses currently imported are identified and registered to handle different
+    sections of the SMIRNOFF force field definition file(s).
 
-    All :class:`ParameterIOHandler` subclasses currently imported are identified and registered to handle different serialization formats (such as XML).
+    All :class:`ParameterIOHandler` subclasses currently imported are identified and registered to handle different
+    serialization formats (such as XML).
 
-    The force field definition is processed by these handlers to populate the ``ForceField`` object model data structures that can easily be manipulated via the API:
+    The force field definition is processed by these handlers to populate the ``ForceField`` object model data
+    structures that can easily be manipulated via the API:
 
-    Processing a :class:`Topology` object defining a chemical system will then call all :class`ParameterHandler` objects in an order
-    guaranteed to satisfy the declared processing order constraints of each :class`ParameterHandler`.
+    Processing a :class:`Topology` object defining a chemical system will then call all :class`ParameterHandler`
+    objects in an order guaranteed to satisfy the declared processing order constraints of each
+    :class`ParameterHandler`.
 
     Attributes
     ----------
     parameters : dict of str : list of ParameterType
-        ``parameters[tagname]`` is the instantiated :class:`ParameterHandler` class that handles parameters associated with the force ``tagname``.
+        ``parameters[tagname]`` is the instantiated :class:`ParameterHandler` class that handles parameters associated
+        with the force ``tagname``.
         This is the primary means of retrieving and modifying parameters, such as
         ``parameters['vdW'][0].sigma *= 1.1``
     parameter_object_handlers : dict of str : ParameterHandler class
@@ -205,7 +194,7 @@ class ForceField(object):
 
         Load multiple SMIRNOFF parameter sets:
 
-        >>> forcefield = ForceField(['smirnoff99Frosst.offxml', 'tip3p.xml'])
+        >>> forcefield = ForceField(['smirnoff99Frosst.offxml', 'tip3p.offxml'])
 
         Load a parameter set from a URL:
 
@@ -221,7 +210,8 @@ class ForceField(object):
         self._initialize()
 
         # Store initialization options
-        self.disable_version_check = disable_version_check # if True, we won't check which SMIRNOFF version number we're parsing
+        self.disable_version_check = disable_version_check
+        # if True, we won't check which SMIRNOFF version number we're parsing
 
         # Register all ParameterHandler objects that will process SMIRNOFF force definitions
         # TODO: We need to change this to just find all ParameterHandler objects in this file;
@@ -240,7 +230,8 @@ class ForceField(object):
         self.parse(sources)
 
     def _initialize(self):
-        """Initialize all object fields.
+        """
+        Initialize all object fields.
         """
         self._disable_version_check = False # if True, will disable checking compatibility version
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL # aromaticity model
@@ -250,10 +241,10 @@ class ForceField(object):
         self._parameter_io_handlers = OrderedDict() # ParameterIO classes to be used for each file type
         self._parameters = ParameterList() # ParameterHandler objects instantiated for each parameter type
 
-    # TODO: Fold this into initializer for ForceField or ParameterSet
-
+    # TODO : This is unused and shouldn't be here -- Move to parameteriohandler
     def _parse_version(self, root):
-        """Parse the forcefield version number and make sure it is supported.
+        """
+        Parse the forcefield version number and make sure it is supported.
 
         Parameters
         ----------
@@ -270,13 +261,15 @@ class ForceField(object):
             self._raise_parsing_exception(root, "'version' attribute must be specified in SMIRNOFF tag")
 
     def _register_parameter_handler_classes(self, parameter_handler_classes):
-        """Register all ParameterHandlers, ensuring they specify unique tags to process
+        """
+        Register multiple ParameterHandler classes, ensuring they specify unique tags to process
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
         parameter_handler_classes : iterable of ParameterHandler subclasses
-
-
+            List of ParameterHandler classes to register for this ForceField.
         """
         #parsers = dict()
         for parameter_handler_class in parameter_handler_classes:
@@ -293,12 +286,20 @@ class ForceField(object):
         #return parsers
 
     def _register_parameter_io_handler_classes(self, parameter_io_handler_classes):
-        """Register all ParameterIOHandlers, ensuring they specify unique suffixes
+        """
+        Register multiple ParameterIOHandler classes, ensuring they specify unique suffixes
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
         parameter_io_handler_classes : iterable of ParameterIOHandler subclasses
-            All specified ParameterIOHandler classes will be registered as ways to translate to/from the object model to serialized parameter sets
+            All specified ParameterIOHandler classes will be registered as ways to translate to/from the object model
+            to serialized parameter sets.
+
+        Raises
+        ------
+        Exception if two ParameterIOHandlers are attempted to be registered for the same file format.
 
         """
         #parsers = dict()
@@ -315,11 +316,20 @@ class ForceField(object):
 
     def register_parameter_handler(self, parameter_handler_class, parameter_handler_kwargs):
         """
+        Register a new ParameterHandler from a specified class, instantiating the ParameterHandler object and making it
+        available for lookup in the ForceField.
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        parameter_handler_class : A subclass of ParameterHandler
+        parameter_handler_class : A ParameterHandler-derived object
+            The ParameterHandler to register
 
+        Returns
+        -------
+        new_handler : an openforcefield.engines.typing.smirnoff.ParameterHandler-derived object.
+            The newly-created ParameterHandler
         """
         tagname = parameter_handler_class._TAGNAME
         if tagname in self._parameter_handlers.keys():
@@ -335,6 +345,10 @@ class ForceField(object):
 
     def register_parameter_io_handler(self, parameter_io_handler_class):
         """
+        Register a new ParameterIOHandler from a specified class, instantiating the ParameterIOHandler object and making
+        it available for lookup in the ForceField.
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -360,6 +374,8 @@ class ForceField(object):
     def _check_for_missing_valence_terms(name, topology, assigned_terms, topological_terms):
         """
         Check to ensure there are no missing valence terms in the given topology, identifying potential gaps in parameter coverage.
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -408,7 +424,7 @@ class ForceField(object):
         if set(assigned_set) != set(topology_set):
             # Form informative error message
             msg = '%s: Mismatch between valence terms added and topological terms expected.\n' % name
-            atoms = [ atom for atom in topology.atoms ]
+            atoms = [ atom for atom in topology.topology_atoms ]
             if len(assigned_set.difference(topology_set)) > 0:
                 msg += 'Valence terms created that are not present in Topology:\n'
                 msg += render_atoms(assigned_set.difference(topology_set))
@@ -435,6 +451,13 @@ class ForceField(object):
         handler_kwargs : dict
             Dict to be passed to the handler for construction or checking compatibility.
 
+        Returns
+        -------
+        handler : An openforcefield.engines.typing.smirnoff.ParameterHandler
+
+        Raises
+        ------
+        KeyError if there is no ParameterHandler for the given tagname
         """
         handler = None
         if tagname in self._parameter_handlers.keys():
@@ -445,16 +468,6 @@ class ForceField(object):
             new_ph_class = self._parameter_handler_classes[tagname]
             handler = self.register_parameter_handler(new_ph_class, handler_kwargs)
 
-        #handler = self._parameter_handlers.get(tagname, None)
-        #for handler_tagname in self._parameter_handlers.keys():
-        #    if handler_tagname== tagname:
-        #        return self._parameter_handlers[handler_tagname]
-        ## Don't create a new handler here -- They've already all been instatiated with the ForceField
-        # else:
-        #     # Create a new handler
-        #     try:
-        #         handler = getattr(self.parameter_handlers, parameter_name)(**handler_kwargs)
-        #     except AttributeError:
         if handler is None:
             msg = "Cannot find a registered parameter handler for tag '{}'\n".format(tagname)
             msg += "Registered parameter handlers: {}\n".format(self._parameter_handlers.keys())
@@ -474,6 +487,13 @@ class ForceField(object):
         io_format : str
             The name of the io format to be handled.
 
+        Returns
+        -------
+        io_handler : An openforcefield.engines.typing.smirnoff.ParameterIOHandler
+
+        Raises
+        ------
+        KeyError if there is no ParameterIOHandler for the given tagname
         """
         io_handler = None
         if io_format in self._parameter_io_handlers.keys():
@@ -560,7 +580,7 @@ class ForceField(object):
                 msg += "Valid formats are: {}".format(valid_formats)
                 raise Exception(msg)
 
-    # TODO : Move to initializer
+    # TODO : Move to ParameterIOHandler
     def _parse_aromaticity_model(self, root):
         """Parse the aromaticity model, make sure it is supported, and make sure it does not contradict previously-specified aromaticity models.
 
@@ -583,6 +603,11 @@ class ForceField(object):
 
     def _resolve_parameter_handler_order(self):
         """Resolve the order in which ParameterHandler objects should execute to satisfy constraints.
+
+        Returns
+        -------
+        Iterable of ParameterHandlers
+            The ParameterHandlers in this ForceField, in the order that they should be called to satisfy constraints.
         """
         ordered_parameter_handlers = list()
         # Create a DAG expressing dependencies
@@ -613,6 +638,7 @@ class ForceField(object):
 
     # TODO: How do we know if the system is periodic or not?
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
+
     def create_openmm_system(self, topology, default_box_vectors=None, **kwargs):
         """Create an OpenMM System representing the interactions for the specified Topology with the current force field
 
@@ -647,7 +673,7 @@ class ForceField(object):
             system.setDefaultPeriodicBoxVectors(default_box_vectors)
 
         # Add particles (both atoms and virtual sites) with appropriate masses
-        for atom in topology.particles:
+        for atom in topology.topology_particles:
             system.addParticle(atom.atom.mass)
 
         # Determine the order in which to process ParameterHandler objects in order to satisfy dependencies
@@ -700,13 +726,15 @@ class ForceField(object):
             The newly created ``parmed.Structure`` object
 
         """
+        raise NotImplementedError
+        import parmed
         # TODO: Automagically handle expansion of virtual sites? Or is Topology supposed to do that?
 
         # Create OpenMM System
         system = self.create_openmm_system(topology, default_box_vectors=default_box_vectors, **kwargs)
 
         # Create a ParmEd Structure object
-        structure = parmed.openmm.topsystem.load_topology(topology.to_openmm(), system, positions)
+        structure = parmed.openmm.topsystem.load_topology( topology.to_openmm(), system, positions)
 
         return structure
 

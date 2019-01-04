@@ -24,7 +24,6 @@ from collections import OrderedDict
 import lxml.etree as etree
 
 from simtk import openmm, unit
-#from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils.utils import get_data_filename
 
 

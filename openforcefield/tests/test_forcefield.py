@@ -171,12 +171,13 @@ class TestForceField(TestCase):
         data = forcefield._parameter_io_handlers['XML'].to_string()
         raise Exception(data)
 
+    #TODO : Use pytest.parameterize to run tests with OpenEyeToolkitWrapper and RDKitToolkitWrapper
     def test_parameterize_ethanol(self):
         from simtk.openmm import app
         from openforcefield.topology import Topology
         filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
         forcefield = ForceField(filename)
-        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/1_ethanol.pdb'))
+        pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         #toolkit_wrapper = RDKitToolkitWrapper()
         molecules = [ Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',) ]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
@@ -188,8 +189,7 @@ class TestForceField(TestCase):
         from openforcefield.topology import Topology
         filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
         forcefield = ForceField(filename)
-        # pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
-        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/1_cyclohexane_1_ethanol.pdb'))
+        pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
         # toolkit_wrapper = RDKitToolkitWrapper()
         molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
                                                                               'molecules/cyclohexane.mol2')]
@@ -204,7 +204,7 @@ class TestForceField(TestCase):
         from openforcefield.topology import Topology
         filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
         forcefield = ForceField(filename)
-        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
+        pdbfile = app.PDBFile(get_data_filename('systems/test_systems/cyclohexane_ethanol_0.4_0.6.pdb'))
         molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
                                                                               'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
@@ -221,7 +221,7 @@ class TestForceField(TestCase):
         from simtk.openmm import XmlSerializer
         filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
         forcefield = ForceField(filename)
-        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/1_ethanol.pdb'))
+        pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         # Load the unique molecules with one atom ordering
         molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.mol2'))]
         topology1 = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules1)
@@ -239,6 +239,18 @@ class TestForceField(TestCase):
 
         assert serialized_1 == serialized_2
 
+    @pytest.mark.skip
+    def test_parameterize_ethanol_to_parmed(self):
+        from simtk.openmm import app
+        from openforcefield.topology import Topology
+        filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
+        forcefield = ForceField(filename)
+        pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
+        #toolkit_wrapper = RDKitToolkitWrapper()
+        molecules = [ Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',) ]
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
+        parmed_system = forcefield.create_parmed_structure(topology, positions=pdbfile.getPositions())
 
 # from_filename
 # from xml_string

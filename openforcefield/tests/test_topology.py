@@ -93,11 +93,11 @@ class TestTopology(TestCase):
         """Test creation of empty topology"""
         topology = Topology()
         assert topology.n_reference_molecules == 0
-        assert topology.n_molecules == 0
-        assert topology.n_atoms == 0
-        assert topology.n_bonds == 0
-        assert topology.n_particles == 0
-        assert topology.n_virtual_sites == 0
+        assert topology.n_topology_molecules == 0
+        assert topology.n_topology_atoms == 0
+        assert topology.n_topology_bonds == 0
+        assert topology.n_topology_particles == 0
+        assert topology.n_topology_virtual_sites == 0
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
         assert topology.is_periodic == False
@@ -122,11 +122,11 @@ class TestTopology(TestCase):
         topology = Topology.from_molecules(self.ethane_from_smiles)
 
         assert topology.n_reference_molecules == 1
-        assert topology.n_molecules == 1
-        assert topology.n_atoms == 8
-        assert topology.n_bonds == 7
-        assert topology.n_particles == 8
-        assert topology.n_virtual_sites == 0
+        assert topology.n_topology_molecules == 1
+        assert topology.n_topology_atoms == 8
+        assert topology.n_topology_bonds == 7
+        assert topology.n_topology_particles == 8
+        assert topology.n_topology_virtual_sites == 0
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
         assert topology.is_periodic == False
@@ -134,11 +134,11 @@ class TestTopology(TestCase):
         topology.add_molecule(self.ethane_from_smiles)
 
         assert topology.n_reference_molecules == 1
-        assert topology.n_molecules == 2
-        assert topology.n_atoms == 16
-        assert topology.n_bonds == 14
-        assert topology.n_particles == 16
-        assert topology.n_virtual_sites == 0
+        assert topology.n_topology_molecules == 2
+        assert topology.n_topology_atoms == 16
+        assert topology.n_topology_bonds == 14
+        assert topology.n_topology_particles == 16
+        assert topology.n_topology_virtual_sites == 0
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
         assert topology.is_periodic == False
@@ -146,18 +146,18 @@ class TestTopology(TestCase):
     def test_from_smiles_unique_mols(self):
         """Test the addition of two different molecules to a topology"""
         topology = Topology.from_molecules([self.ethane_from_smiles, self.propane_from_smiles])
-        assert topology.n_molecules == 2
+        assert topology.n_topology_molecules == 2
         assert topology.n_reference_molecules == 2
 
 
     def test_n_topology_atoms(self):
         """Test n_atoms function"""
         topology = Topology()
-        assert topology.n_atoms == 0
-        assert topology.n_bonds == 0
+        assert topology.n_topology_atoms == 0
+        assert topology.n_topology_bonds == 0
         topology.add_molecule(self.ethane_from_smiles)
-        assert topology.n_atoms == 8
-        assert topology.n_bonds == 7
+        assert topology.n_topology_atoms == 8
+        assert topology.n_topology_bonds == 7
 
     def test_get_atom(self):
             """Test Topology.atom function (atom lookup from index)"""
@@ -224,9 +224,9 @@ class TestTopology(TestCase):
         """
         topology = Topology()
         topology.add_molecule(self.ethane_from_smiles_w_vsites)
-        assert topology.n_virtual_sites == 2
+        assert topology.n_topology_virtual_sites == 2
         topology.add_molecule(self.propane_from_smiles_w_vsites)
-        assert topology.n_virtual_sites == 4
+        assert topology.n_topology_virtual_sites == 4
         with self.assertRaises(Exception) as context:
             topology_vsite = topology.virtual_site(-1)
         with self.assertRaises(Exception) as context:
@@ -241,8 +241,8 @@ class TestTopology(TestCase):
         assert topology_vsite4.type == "MonovalentLonePairVirtualSite"
 
         n_equal_atoms = 0
-        for topology_atom in topology.atoms:
-            for vsite in topology.virtual_sites:
+        for topology_atom in topology.topology_atoms:
+            for vsite in topology.topology_virtual_sites:
                 for vsite_atom in vsite.atoms:
                     if topology_atom == vsite_atom:
                         n_equal_atoms += 1
@@ -285,7 +285,7 @@ class TestTopology(TestCase):
                                                                                'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         assert topology.n_reference_molecules == 2
-        assert topology.n_molecules == 239
+        assert topology.n_topology_molecules == 239
 
     def test_from_openmm_duplicate_unique_mol(self):
         """Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols"""
