@@ -319,11 +319,10 @@ class TestMolecule(TestCase):
 
     def test_equality(self):
         """Test equality operator"""
-        #nmolecules = len(self.molecules)
+        nmolecules = len(self.molecules)
         # TODO: Performance improvements should let us un-restrict this test
-        nmolecules = 20
         for i in range(nmolecules):
-            for j in range(i, nmolecules):
+            for j in range(i, min(i+3, nmolecules)):
                 assert (self.molecules[i] == self.molecules[j]) == (i == j)
 
 
