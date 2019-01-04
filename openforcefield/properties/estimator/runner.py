@@ -93,8 +93,6 @@ class PropertyCalculationRunner(TCPServer):
             requests.
         """
         self._backend = backend
-
-        self._tcp_server = TCPServer()
         self._port = port
 
         self._queued_calculations = {}
@@ -105,6 +103,8 @@ class PropertyCalculationRunner(TCPServer):
         # self.listen(self._port)
         self.bind(self._port)
         self.start(1)
+
+        backend.start()
 
     async def handle_stream(self, stream, address):
         """A routine to handle incoming requests from

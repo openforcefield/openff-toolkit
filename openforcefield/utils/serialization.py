@@ -84,12 +84,13 @@ def serialize_quantity(quantity):
     # If it's not None, make sure it's a simtk.unit.Quantity
     assert (hasattr(quantity, 'unit'))
 
-
     quantity_unit = list()
     for base_unit in quantity.unit.iter_all_base_units():
         quantity_unit.append((base_unit[0].name, base_unit[1]))
 
-    unitless_value = quantity / quantity.unit
+    conversion_factor = quantity.unit.get_conversion_factor_to_base_units()
+
+    unitless_value = (quantity / quantity.unit) * conversion_factor
     serialized['unitless_value'] = unitless_value
     serialized['unit'] = quantity_unit
     return serialized

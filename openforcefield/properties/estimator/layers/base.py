@@ -52,7 +52,7 @@ class PropertyCalculationLayer:
     """
 
     @staticmethod
-    def _await_results(backend, data_model, callback, submitted_futures):
+    def _await_results(backend, data_model, callback, submitted_futures, synchronous=False):
         """A method to handle passing the results of this layer back to
         the main thread."""
 
@@ -73,8 +73,11 @@ class PropertyCalculationLayer:
 
             callback(returned_data_model)
 
-        callback_future.add_done_callback(callback_wrapper)
+        if synchronous:
+            callback_wrapper(callback_future)
+        else:
+            callback_future.add_done_callback(callback_wrapper)
 
     @staticmethod
-    def perform_calculation(backend, data_model, existing_data, callback):
+    def perform_calculation(backend, data_model, existing_data, callback, synchronous=False):
         raise NotImplementedError()

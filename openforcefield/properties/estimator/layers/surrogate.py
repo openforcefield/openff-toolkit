@@ -29,7 +29,7 @@ class SurrogateLayer(PropertyCalculationLayer):
     """
 
     @staticmethod
-    def perform_calculation(backend, data_model, existing_data, callback):
+    def perform_calculation(backend, data_model, existing_data, callback, synchronous=False):
         """Attempt to calculate properties by surrogate modelling.
         """
         surrogate_futures = []

@@ -510,7 +510,7 @@ class SimulationLayer(PropertyCalculationLayer):
         return calculation_graph
 
     @staticmethod
-    def perform_calculation(backend, data_model, existing_data, callback):
+    def perform_calculation(backend, data_model, existing_data, callback, synchronous=False):
 
         parameter_set = ForceField([])
         parameter_set.__setstate__(data_model.parameter_set)
@@ -521,7 +521,7 @@ class SimulationLayer(PropertyCalculationLayer):
 
         simulation_futures = calculation_graph.submit(backend)
 
-        PropertyCalculationLayer._await_results(backend, data_model, callback, simulation_futures)
+        PropertyCalculationLayer._await_results(backend, data_model, callback, simulation_futures, synchronous)
 
     @staticmethod
     def finalise_results(physical_property):

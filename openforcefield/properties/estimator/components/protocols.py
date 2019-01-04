@@ -19,6 +19,7 @@ Authors
 
 import copy
 import logging
+import traceback
 
 import mdtraj
 

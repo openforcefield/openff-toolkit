@@ -68,6 +68,10 @@ class PropertyEstimatorBackend:
 
         os.environ["OPENMM_NUM_THREADS"] = str(self._threads_per_worker)
 
+    def start(self):
+        """TODO: Missing docstrings."""
+        pass
+
     def submit_task(self, function, *args, **kwargs):
         """Submit a task to the compute resources
         managed by this backend.
