@@ -765,7 +765,7 @@ class TestMolecule(TestCase):
             molecule3 = Molecule(oemol)
             assert_molecule_is_equal(molecule, molecule3, "Molecule(oemol) constructor failed")
 
-
+    @pytest.mark.skip(reason="Takes too long")
     def test_compute_partial_charges(self):
         """Test computation/retrieval of partial charges"""
         # TODO: Test only one molecule for speed?
