@@ -21,7 +21,6 @@ requirements:
     - networkx
     - lxml
     - icu 58*  # This is a lxml dependency but sometimes conda installs version 56
-    - openmoltools >=0.7.3 # Can we get rid of this?
     - parmed
     - matplotlib
     - pandas
