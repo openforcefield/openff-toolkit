@@ -26,7 +26,8 @@ requirements:
     - pandas
     - packaging
     # Should we require this? It's useful for tests and examples, but not strictly required
-    - openmmtools 
+    - openmmtools
+    - ambertools
     # Serialization: Should these be optional?
     - pyyaml
     - toml
