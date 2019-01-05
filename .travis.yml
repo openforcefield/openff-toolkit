@@ -66,6 +66,7 @@ install:
 
   # Install pip only modules
   - pip install codecov
+  - pip install coverage==4.4
 
   # Build and install package
   - conda build --python=$PYTHON_VER devtools/conda-recipe
