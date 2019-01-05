@@ -68,6 +68,7 @@ install:
 
   # Install RDKit
   - if [[ "$RDKIT" == true ]]; then conda install --yes -c rdkit rdkit; fi
+  - if [[ "$RDKIT" == true ]]; then conda install --yes -c omnia ambertools; fi
 
   # Install pip only modules
   - pip install codecov
