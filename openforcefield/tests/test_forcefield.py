@@ -179,7 +179,8 @@ class TestForceField(TestCase):
         forcefield = ForceField(filename)
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         #toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = [ Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',) ]
+        molecules = []
+        molecules.append(Molecule.from_smiles('CCO'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         omm_system = forcefield.create_openmm_system(topology)
@@ -191,8 +192,11 @@ class TestForceField(TestCase):
         forcefield = ForceField(filename)
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
         # toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
-                                                                              'molecules/cyclohexane.mol2')]
+        molecules = []
+        molecules.append(Molecule.from_smiles('CCO'))
+        molecules.append(Molecule.from_smiles('C1CCCCC1'))
+        #molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
+        #                                                                      'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         omm_system = forcefield.create_openmm_system(topology)
@@ -211,6 +215,7 @@ class TestForceField(TestCase):
 
         omm_system = forcefield.create_openmm_system(topology)
 
+    @pytest.mark.skipif( not(OpenEyeToolkitWrapper.toolkit_is_available()), reason='Test requires OE toolkit')
     def test_parameterize_different_reference_ordering(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.

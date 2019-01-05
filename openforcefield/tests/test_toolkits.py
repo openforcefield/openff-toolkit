@@ -89,7 +89,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert expected_output_smiles == smiles2
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_smiles_charged(self):
         """Test OpenEyeToolkitWrapper functions for reading/writing charged SMILES"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -689,7 +689,7 @@ class TestAmberToolsToolkitWrapper(TestCase):
                         reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_compute_partial_charges_net_charge(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule with a net +1 charge"""
-        toolkit_registry = ToolkitRegistry([AmberToolsToolkitWrapper, RDKitToolkitWrapper])
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
         molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_registry)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)

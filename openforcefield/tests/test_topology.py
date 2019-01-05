@@ -42,6 +42,7 @@ def test_cheminformatics_toolkit_is_installed():
         msg += str(BASIC_CHEMINFORMATICS_TOOLKITS)
         raise Exception(msg)
 
+
 class TestTopology(TestCase):
     from openforcefield.topology import Topology
 
@@ -53,9 +54,10 @@ class TestTopology(TestCase):
 
         filename = get_data_filename('molecules/toluene.sdf')
         self.toluene_from_sdf = Molecule.from_file(filename)
-        filename = get_data_filename('molecules/toluene_charged.mol2')
-        # TODO: This will require openeye to load
-        self.toluene_from_charged_mol2 = Molecule.from_file(filename)
+        if OpenEyeToolkitWrapper.toolkit_is_available():
+            filename = get_data_filename('molecules/toluene_charged.mol2')
+            # TODO: This will require openeye to load
+            self.toluene_from_charged_mol2 = Molecule.from_file(filename)
         self.charged_methylamine_from_smiles = Molecule.from_smiles('[H]C([H])([H])[N+]([H])([H])[H]')
 
         molecule = Molecule.from_smiles('CC')
@@ -276,17 +278,23 @@ class TestTopology(TestCase):
     # test_is_bonded
     # TODO: Test serialization
 
+
     def test_from_openmm(self):
         """Test creation of an openforcefield Topology object from an OpenMM Topology and component molecules"""
         from simtk.openmm import app
         pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
         #toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = [ Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
-                                                                               'molecules/cyclohexane.mol2')]
+        #molecules = [ Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
+        #                                                                       'molecules/cyclohexane.mol2')]
+        molecules = []
+        molecules.append(Molecule.from_smiles('CCO'))
+        molecules.append(Molecule.from_smiles('C1CCCCC1'))
+
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         assert topology.n_reference_molecules == 2
         assert topology.n_topology_molecules == 239
 
+    @pytest.mark.skipif( not(OpenEyeToolkitWrapper.toolkit_is_available()), reason='Test requires OE toolkit')
     def test_from_openmm_duplicate_unique_mol(self):
         """Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols"""
         from simtk.openmm import app
@@ -305,6 +313,7 @@ class TestTopology(TestCase):
         # process doesn't encode stereochemistry.
         raise NotImplementedError
 
+    @pytest.mark.skipif( not(OpenEyeToolkitWrapper.toolkit_is_available()), reason='Test requires OE toolkit')
     def test_chemical_environments_matches_OE(self):
         """Test Topology.chemical_environment_matches"""
         from simtk.openmm import app
@@ -326,14 +335,18 @@ class TestTopology(TestCase):
         matches = topology.chemical_environment_matches("[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 0
 
+    @pytest.mark.skipif( not(RDKitToolkitWrapper.toolkit_is_available()), reason='Test requires RDKit')
     def test_chemical_environments_matches_RDK(self):
         """Test Topology.chemical_environment_matches"""
         from simtk.openmm import app
         toolkit_wrapper = RDKitToolkitWrapper()
         pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
         # toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
-                                                                              'molecules/cyclohexane.mol2')]
+        #molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
+        #                                                                      'molecules/cyclohexane.mol2')]
+        molecules = []
+        molecules.append(Molecule.from_smiles('CCO'))
+        molecules.append(Molecule.from_smiles('C1CCCCC1'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         # Count CCO matches
         matches = topology.chemical_environment_matches("[C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
