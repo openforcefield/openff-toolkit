@@ -70,6 +70,10 @@ def test_cheminformatics_toolkit_is_installed():
 
         raise Exception(msg)
 
+# TODO: Right now, the test database is read from mol2, requiring the OE toolkit. Find a different test set that RDKit
+# can read, or make a database of serialized OFFMols
+
+@pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason="OpenEye Toolkit is not available")
 class TestMolecule(TestCase):
     @classmethod
     def setUpClass(cls):

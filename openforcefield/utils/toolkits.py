@@ -123,12 +123,12 @@ class ToolkitWrapper(object):
         return decorator
 
     @property
-    @classmethod
+    #@classmethod
     def toolkit_name(self):
         """
         The name of the toolkit wrapped by this class.
         """
-        return self._toolkit_name
+        return self.__class__._toolkit_name
 
     @property
     @classmethod
