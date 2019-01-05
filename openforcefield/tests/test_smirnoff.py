@@ -17,6 +17,7 @@ Tests for the SMIRNOFF ForceField class
 
 # TODO: Split this file into many test files, potentially distributing tests within each subpackage next to the classes they test
 
+
 import os
 import tempfile
 import unittest
@@ -31,8 +32,9 @@ import parmed
 
 from openforcefield.typing.engines.smirnoff import *
 
-from openforcefield.utils import get_testdata_filename, generateTopologyFromOEMol, read_molecules
-from openforcefield.utils import check_energy_is_finite, get_energy
+# TODO: Fix these imports
+from openforcefield.utils import get_data_filename#, generateTopologyFromOEMol, read_molecules
+#from openforcefield.utils import check_energy_is_finite, get_energy
 from openforcefield.tests.utils import get_amber_system, get_packmol_pdbfile, get_monomer_mol2file, compare_system_energies
 
 from .utils import *
