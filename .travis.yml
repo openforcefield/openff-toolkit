@@ -40,6 +40,10 @@ matrix:
       python: 3.7
       env: PYTHON_VER=3.7 OPENEYE=true RDKIT=true
 
+env:
+  global:
+    - OE_LICENSE="$HOME/oe_license.txt"
+
 before_install:
     # Additional info about the build
   - uname -a
