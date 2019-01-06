@@ -107,18 +107,21 @@ class Serializable(object):
     def from_dict(self):
         raise NotImplementedError
 
-    def to_json(self):
+    def to_json(self, indent=None):
         """
         Return a JSON serialized representation.
 
         Specification: https://www.json.org/
 
+        Parameters
+        ----------
+        indent : int, optional, default=None
+            If not None, will pretty-print with specified number of spaces for indentation
+
         Returns
         -------
         serialized : str
             A JSON serialized representation of the object
-        indent : int, optional, default=None
-            If not None, will pretty-print with specified number of spaces for indentation
 
         """
         import json
