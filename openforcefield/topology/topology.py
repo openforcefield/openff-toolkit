@@ -272,9 +272,9 @@ class TopologyBond(Serializable):
         Parameters
         ----------
         bond : An openforcefield.topology.molecule.Bond
-            The reference atom
+            The reference bond.
         topology_molecule : An openforcefield.topology.TopologyMolecule
-            The TopologyMolecule that this TopologyAtom belongs to
+            The TopologyMolecule that this TopologyBond belongs to.
         """
         # TODO: Type checks
         self._bond = bond
@@ -365,9 +365,9 @@ class TopologyVirtualSite(Serializable):
         Parameters
         ----------
         virtual_site : An openforcefield.topology.molecule.VirtualSite
-            The reference atom
+            The reference virtual site
         topology_molecule : An openforcefield.topology.TopologyMolecule
-            The TopologyMolecule that this TopologyAtom belongs to
+            The TopologyMolecule that this TopologyVirtualSite belongs to
         """
         # TODO: Type checks
         self._virtual_site = virtual_site
@@ -932,6 +932,7 @@ class Topology(Serializable):
 
         #else:
         if not (self.is_bonded(atom1, atom2)):
+            # TODO: Raise more specific exception.
             raise Exception(
                 'Atoms {} and {} are not bonded in topology'.format(
                     atom1, atom2))
@@ -1306,7 +1307,7 @@ class Topology(Serializable):
         openmm_topology : simtk.openmm.app.Topology
             An OpenMM Topology object
         unique_molecules : iterable of objects that can be used to construct unique Molecule objects
-            All unique molecules mult be provided, in any order, though multiple copies of each molecule are allowed.
+            All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
             The atomic elements and bond connectivity will be used to match the reference molecules
             to molecule graphs appearing in the OpenMM ``Topology``. If bond orders are present in the
             OpenMM ``Topology``, these will be used in matching as well.
