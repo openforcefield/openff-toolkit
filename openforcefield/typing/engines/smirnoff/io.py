@@ -395,7 +395,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
             #for section in root.iter(tag=etree.Element):
             for section in root:
                 # Skip comment lines
-                if not (isinstance(section.tag, str)):
+                if not isinstance(section.tag, str):
                     continue
                 if section.tag in cosmetic_tags:
                     continue
@@ -418,6 +418,9 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
                 # Populate handler with parameter definitions
                 for parameter in section:
+                    # Skip comment lines
+                    if not isinstance(parameter.tag, str):
+                        continue
                     exception_node = parameter  # node used for exception reporting
 
                     # parameter.attrib doesn't support assignment of Quantity type, so make a copy as dict
