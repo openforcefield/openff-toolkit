@@ -355,13 +355,16 @@ class Serializable(object):
 
         """
         import xmltodict
-        d = self.to_dict()
+        # An XML document requires one and only one root node.
         root_name = self.__class__.__name__
+        d = {root_name: self.to_dict()}
+        # Configure indentation level.
         if indent is not None:
             pretty = True
             indent = ' ' * indent
         else:
             pretty = False
+        # Convert data from dictionary to XML format.
         return xmltodict.unparse(d, pretty=pretty, indent=indent)
 
     @classmethod
@@ -385,7 +388,7 @@ class Serializable(object):
         import xmltodict
         d = xmltodict.parse(serialized)
         root_name = cls.__name__
-        return cls.from_dict(d)
+        return cls.from_dict(d[root_name])
 
     def to_pickle(self):
         """
