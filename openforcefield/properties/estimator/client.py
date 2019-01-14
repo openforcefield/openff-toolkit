@@ -252,9 +252,9 @@ class PropertyEstimator(object):
                 additional_options.calculation_schemas[type_name] = \
                     property_type.get_default_calculation_schema()
 
-        submission = PropertyEstimatorDataModel(properties = properties_list,
-                                                parameter_set = parameter_set.__getstate__(),
-                                                options = additional_options)
+        submission = PropertyEstimatorDataModel(properties=properties_list,
+                                                parameter_set=parameter_set.__getstate__(),
+                                                options=additional_options)
 
         # For now just do a blocking submit to the server.
         ticket_ids = IOLoop.current().run_sync(lambda: self._send_calculations_to_server(submission))

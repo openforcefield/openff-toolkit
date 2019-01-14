@@ -87,7 +87,7 @@ class PropertyCalculationLayer:
                 matches = [x for x in returned_data_model.queued_properties if x.id == returned_property.id]
 
                 if len(matches) != 1:
-                    logging.info('An id conflict occured... unexpected results may ensue.')
+                    logging.info('An id conflict occurred... unexpected results may ensue.')
 
                 for match in matches:
                     returned_data_model.queued_properties.remove(match)
@@ -102,7 +102,7 @@ class PropertyCalculationLayer:
             callback_future.add_done_callback(callback_wrapper)
 
     @staticmethod
-    def perform_calculation(backend, data_model, existing_data, callback, synchronous=False):
+    def schedule_calculation(backend, data_model, existing_data, callback, synchronous=False):
         """Submit the proposed calculation to the backend of choice.
 
         Parameters

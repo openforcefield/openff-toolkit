@@ -32,7 +32,7 @@ class SurrogateLayer(PropertyCalculationLayer):
     """
 
     @staticmethod
-    def perform_calculation(backend, data_model, existing_data, callback, synchronous=False):
+    def schedule_calculation(backend, data_model, existing_data, callback, synchronous=False):
 
         parameter_set = ForceField([])
 

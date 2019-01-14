@@ -56,6 +56,9 @@ pack_int = int_struct.pack
 # =============================================================================================
 
 class PropertyRunnerDataModel(BaseModel):
+    """Represents a data packet to be calculated by the runner, along with
+    the options which should be used when running the calculations.
+    """
 
     id: str
 
@@ -289,10 +292,11 @@ class PropertyCalculationRunner(TCPServer):
             # TODO Graceful error handling.
             return
 
-        logging.info('Launching calculation {} at {} fidelity'.format(data_model.id, current_layer_type))
+        logging.info('Launching calculation {} using the {} layer'.format(data_model.id,
+                                                                          current_layer_type))
 
         current_layer = available_layers[current_layer_type]
-        current_layer.perform_calculation(self._backend, data_model, {}, self.schedule_calculation)
+        current_layer.schedule_calculation(self._backend, data_model, {}, self.schedule_calculation)
 
     def run_until_killed(self):
         """Starts the main (blocking) server IOLoop which will run until

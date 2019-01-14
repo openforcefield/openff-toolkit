@@ -18,7 +18,6 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-import os
 import copy
 import logging
 import uuid
@@ -240,68 +239,6 @@ class DirectCalculationGraph:
     """A hierarchical structure for storing all protocols that need to be executed.
     """
 
-    class CalculationNode:
-        """A node in the calculation graph.
-
-        Each node represents a protocol to be executed.
-        """
-
-        def __init__(self, protocol, parent_node, root_directory=None):
-            """Constructs a new CalculationNode
-
-            Parameters
-            ----------
-            protocol: Protocol
-                The protocol this node will execute.
-            parent_node: CalculationNode
-                The parent of this node.
-            root_directory: str, optional
-                The root directory in which to store all outputs from
-                this graph.
-            """
-            self.protocol = protocol
-
-            self.directory = protocol.id if parent_node is None else \
-                path.join(parent_node.directory, protocol.id)
-
-            if root_directory is not None:
-                self.directory = path.join(root_directory, self.directory)
-
-        @property
-        def id(self):
-            """str: Returns the id of the protocol to execute."""
-            return self.protocol.id
-
-        def execute(self, *input_protocols):
-            """Execute the protocol's protocol.
-
-            Parameters
-            ----------
-            input_protocols : list(CalculationNode)
-                The input protocols which this node depends on for input.
-            """
-
-            input_protocols_by_id = {}
-
-            for input_protocol in input_protocols:
-                input_protocols_by_id[input_protocol.id] = input_protocol
-
-            if not path.isdir(self.directory):
-                os.makedirs(self.directory)
-
-            for input_reference in self.protocol.input_references:
-
-                if input_reference.output_protocol_id == 'global':
-                    continue
-
-                output_protocol = input_protocols_by_id[input_reference.output_protocol_id]
-
-                input_value = output_protocol.get_output_value(input_reference)
-                self.protocol.set_input_value(input_reference, input_value)
-
-            self.protocol.execute(self.directory)
-            return self.protocol
-
     def __init__(self, root_directory=None):
         """Constructs a new DirectCalculationGraph
 
@@ -355,7 +292,7 @@ class DirectCalculationGraph:
 
             node = self._nodes_by_id[node_id]
 
-            if not node.protocol.can_merge(protocol_to_insert):
+            if not node.can_merge(protocol_to_insert):
                 continue
 
             existing_node = node
@@ -365,18 +302,24 @@ class DirectCalculationGraph:
             # Make a note that the existing node should be used in place
             # of this calculations version.
 
-            existing_node.protocol.merge(protocol_to_insert)
-            calculation.replace_protocol(protocol_to_insert, existing_node.protocol)
+            existing_node.merge(protocol_to_insert)
+            calculation.replace_protocol(protocol_to_insert, existing_node)
 
         else:
 
             parent_node = None if parent_node_name is None else self._nodes_by_id[parent_node_name]
             root_directory = self._root_directory if parent_node_name is None else None
 
+            protocol_to_insert.directory = protocol_to_insert.id if parent_node is None \
+                else path.join(parent_node.directory, protocol_to_insert.id)
+
+            if root_directory is not None:
+
+                protocol_to_insert.directory = path.join(root_directory,
+                                                         protocol_to_insert.directory)
+
             # Add the protocol as a new node in the graph.
-            self._nodes_by_id[protocol_name] = self.CalculationNode(protocol_to_insert,
-                                                                    parent_node,
-                                                                    root_directory)
+            self._nodes_by_id[protocol_name] = protocol_to_insert
 
             existing_node = self._nodes_by_id[protocol_name]
             self._dependants_graph[protocol_name] = []
@@ -399,8 +342,8 @@ class DirectCalculationGraph:
         if calculation.uuid in self._calculations_to_run:
 
             # Quick sanity check.
-            raise ValueError('A calculation with the same uuid (' +
-                             calculation.uuid + ') is trying to run twice.')
+            raise ValueError('A calculation with the same uuid ({}) is '
+                             'trying to run twice.'.format(calculation.uuid))
 
         self._calculations_to_run[calculation.uuid] = calculation
 
@@ -435,7 +378,7 @@ class DirectCalculationGraph:
 
             dependencies[node_id] = []
 
-            for input_reference in node.protocol.input_references:
+            for input_reference in node.input_references:
 
                 if input_reference.output_protocol_id == 'global':
                     continue
@@ -452,7 +395,9 @@ class DirectCalculationGraph:
             for dependency in dependencies[node_id]:
                 dependency_futures.append(submitted_futures[dependency])
 
-            submitted_futures[node_id] = backend.submit_task(node.execute, *dependency_futures)
+            submitted_futures[node_id] = backend.submit_task(node.__type__.execute,
+                                                             node.directory,
+                                                             *dependency_futures)
 
         for calculation_id in self._calculations_to_run:
 
@@ -527,7 +472,7 @@ class SimulationLayer(PropertyCalculationLayer):
         return calculation_graph
 
     @staticmethod
-    def perform_calculation(backend, data_model, existing_data, callback, synchronous=False):
+    def schedule_calculation(backend, data_model, existing_data, callback, synchronous=False):
 
         calculation_graph = SimulationLayer._build_calculation_graph(data_model.queued_properties,
                                                                      data_model.parameter_set_path,

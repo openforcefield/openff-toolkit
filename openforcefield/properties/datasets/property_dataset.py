@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # =============================================================================================
 # MODULE DOCSTRING
 # =============================================================================================
@@ -9,10 +7,9 @@ Data sets API.
 
 Authors
 -------
-* John D. Chodera <john.chodera@choderalab.org>
-* Levi N. Naden <levi.naden@choderalab.org>
+* John D. Chodera (Original implementation) <john.chodera@choderalab.org>
+* Levi N. Naden (Original implementation) <levi.naden@choderalab.org>
 * Simon Boothroyd <simon.boothroyd@choderalab.org>
-
 """
 
 # =============================================================================================
@@ -86,15 +83,29 @@ class PhysicalPropertyDataSet(object):
             self._properties[substance_hash] = list(filter(
                 filter_function, self._properties[substance_hash]))
 
-    def filter_by_properties(self, property_types):
+    def filter_by_properties(self, types):
         """Filter the data set based on the type of property (e.g Density).
 
         Parameters
         ----------
-        property_types : PropertyType
-            The type of property which should be retained.
+        types : list of PropertyType
+            The types of property which should be retained.
+
+        Examples
+        --------
+        Filter the dataset to only contain densities and static dielectric constants
+
+        >>> # Load in the data set of properties which will be used for comparisons
+        >>> from openforcefield.properties.datasets import ThermoMLDataSet
+        >>> data_set = ThermoMLDataSet.from_doi_list('10.1016/j.jct.2016.10.001')
+        >>>
+        >>> # Filter the dataset to only include densities measured between 130-260 K
+        >>> from openforcefield.properties import Density, DielectricConstant
+        >>> data_set.filter_by_properties(types=[Density.__name__, DielectricConstant.__name__])
         """
-        def filter_function(x): return x.type & property_types
+        def filter_function(x):
+            return x.type in types
+
         self.filter_by_function(filter_function)
 
     def filter_by_phases(self, phases):
@@ -104,8 +115,21 @@ class PhysicalPropertyDataSet(object):
         ----------
         phases : PropertyPhase
             The phase of property which should be retained.
+
+        Examples
+        --------
+        Filter the dataset to only include liquid properties.
+
+        >>> # Load in the data set of properties which will be used for comparisons
+        >>> from openforcefield.properties.datasets import ThermoMLDataSet
+        >>> data_set = ThermoMLDataSet.from_doi_list('10.1016/j.jct.2016.10.001')
+        >>>
+        >>> from openforcefield.properties import PropertyPhase
+        >>> data_set.filter_by_temperature(PropertyPhase.Liquid)
         """
-        def filter_function(x): return x.phase & phases
+        def filter_function(x):
+            return x.phase & phases
+
         self.filter_by_function(filter_function)
 
     def filter_by_temperature(self, min_temperature, max_temperature):
@@ -117,42 +141,19 @@ class PhysicalPropertyDataSet(object):
             The minimum temperature.
         max_temperature : float
             The maximum temperature.
+
+        Examples
+        --------
+        Filter the dataset to only include properties measured between 130-260 K.
+
+        >>> # Load in the data set of properties which will be used for comparisons
+        >>> from openforcefield.properties.datasets import ThermoMLDataSet
+        >>> data_set = ThermoMLDataSet.from_doi_list('10.1016/j.jct.2016.10.001')
+        >>>
+        >>> from simtk import unit
+        >>> data_set.filter_by_temperature(min_temperature=130*unit.kelvin, max_temperature=260*unit.kelvin)
         """
         def filter_function(x):
             return min_temperature <= x.thermodynamic_state.temperature <= max_temperature
 
         self.filter_by_function(filter_function)
-
-
-class CalculatedPropertySet(object):
-    """
-    A collection of calculated physical properties, calculated using
-    a specific parameter_set.
-
-    Parameters
-    ----------
-    properties : dict(str, list(CalculatedPhysicalProperty))
-        The list of calculated properties.
-    parameter_set : openforcefield.typing.engines.smirnoff.ForceField
-        The parameters used to calculate the properties.
-    """
-
-    def __init__(self, properties, parameter_set):
-
-        self._properties = properties
-        self._parameter_set = parameter_set
-
-    @property
-    def properties(self):
-        """
-        dict(str, list(PhysicalProperty)): The calculated property list which
-        takes a substance as the key.
-        """
-        return self._properties
-
-    @property
-    def parameter_set(self):
-        """
-        ForceField: The parameters used to calculate the property.
-        """
-        return self._parameter_set

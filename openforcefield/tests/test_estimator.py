@@ -108,7 +108,7 @@ def run_property_estimator():
 #         pass
 #
 #     simulation_layer = SimulationLayer()
-#     simulation_layer.perform_calculation(backend, data_model, {}, dummy_callback, True)
+#     simulation_layer.schedule_calculation(backend, data_model, {}, dummy_callback, True)
 #
 #     backend._client.get_worker_logs()
 

@@ -84,29 +84,14 @@ class PropertyPhase(IntFlag):
 # Property Sources
 # =============================================================================================
 
-class Source(BaseModel):
+class Source(TypedBaseModel):
     """Container class for information about how a property was measured / calculated.
+
+    Todo
+    ----
+        Swap this out with a more general provenance class.
     """
-
-    @classmethod
-    def get_validators(cls):
-        # yield dict_validator
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, value):
-        # A dirty hack to ensure proper inheritance..
-
-        if isinstance(value, cls):
-            return value
-        else:
-
-            if 'doi' in value:
-                return MeasurementSource(**value)
-            elif 'fidelity' in value:
-                return CalculationSource(**value)
-
-            cls(**dict_validator(value))
+    pass
 
 
 class MeasurementSource(Source):

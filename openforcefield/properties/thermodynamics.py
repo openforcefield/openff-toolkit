@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # =============================================================================================
 # MODULE DOCSTRING
 # =============================================================================================
@@ -119,8 +117,8 @@ class ThermodynamicState(BaseModel):
 
     def __eq__(self, other):
 
-        return (self.temperature == other.temperature and
-                self.pressure == other.pressure)
+        return (abs(self.temperature - other.temperature) < 0.001 and
+                abs(self.pressure - other.pressure) < 0.001)
 
     def __ne__(self, other):
         return not (self == other)

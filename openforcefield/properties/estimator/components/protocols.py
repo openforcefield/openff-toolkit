@@ -13,6 +13,10 @@ Authors
 """
 
 
+# Idea:
+# Protocol created from a schema. 'Execute' (whatever that might be renamed to) pass
+# a json serialized output (containing only outputs) from each output in addition to globals.
+
 # =============================================================================================
 # GLOBAL IMPORTS
 # =============================================================================================
@@ -30,7 +34,7 @@ from enum import Enum
 
 from pymbar import timeseries
 
-from pydantic import BaseModel
+from pydantic import BaseModel, NoneStr
 from typing import Dict, List, Any, Optional
 
 from openeye import oechem, oeomega
@@ -104,7 +108,7 @@ class ProtocolInputReference(BaseModel):
     output_protocol_id: str = None
     output_property_name: str = None
 
-    grouped_protocol_id: Optional[str] = None
+    grouped_protocol_id: NoneStr = None
 
     def __hash__(self):
         """Returns the hash key of this ProtocolInputReference."""
@@ -162,8 +166,8 @@ class ProtocolInputReference(BaseModel):
 
 
 class ProtocolSchema(BaseModel):
-    """A json serializable representation of a protocol
-    definition.
+    """A json serializable representation which stores the
+    user definable parameters of a protocol.
     """
     id: str = None
     type: str = None
@@ -189,6 +193,10 @@ class BaseProtocol:
     .. warning::
 
         This class is still heavily under development and is subject to rapid changes.
+
+    .. todo:: * Make the execute method completely static.
+              * Should take in a directory, params + inputs, futures
+              * Should return dict of outputs
 
     Attributes
     ----------
@@ -301,6 +309,9 @@ class BaseProtocol:
         self.required_inputs = self._find_types_with_decorator(BaseProtocol.InputPipe)
         self.provided_outputs = self._find_types_with_decorator(BaseProtocol.OutputPipe)
 
+        # The directory in which to execute the protocol.
+        self.directory = None
+
     @property
     def schema(self):
         """ProtocolSchema: Returns a serializable schema for this object."""
@@ -344,7 +355,8 @@ class BaseProtocol:
 
             setattr(self, parameter, value)
 
-    def execute(self, directory):
+    @staticmethod
+    def execute(directory, constant_inputs, *dependency_outputs):
         """ Execute the protocol.
 
         Protocols may be chained together by passing the output
@@ -354,14 +366,41 @@ class BaseProtocol:
         ----------
         directory : str
             The directory to store output data in.
+        constant_inputs: Dict[str, Any]
+            A dictionary of any constant inputs, such as parameters
+            set by the user or values taken from the global scope.
+        dependency_outputs: Tuple of Dict[str, Any]
+            A tuple of the outputs of any protocols on which this
+            one depends. The outputs are of the form of a dictionary
+            of (property name, value) pairs.
 
         Returns
         ----------
-        bool
-            True if the command successfully executes.
+        Dict[str, Any]
+            The output of the execution.
         """
 
-        # Return the results of this protocol, ready to pass down the line.
+        # input_protocols_by_id = {}
+        #
+        # for input_protocol in input_protocols:
+        #     input_protocols_by_id[input_protocol.id] = input_protocol
+        #
+        # if not path.isdir(self.directory):
+        #     os.makedirs(self.directory)
+        #
+        # for input_reference in self.protocol.input_references:
+        #
+        #     if input_reference.output_protocol_id == 'global':
+        #         continue
+        #
+        #     output_protocol = input_protocols_by_id[input_reference.output_protocol_id]
+        #
+        #     input_value = output_protocol.get_output_value(input_reference)
+        #     self.protocol.set_input_value(input_reference, input_value)
+        #
+        # self.protocol.execute(self.directory)
+        # return self.protocol
+
         return True
 
     def set_uuid(self, value):
@@ -647,7 +686,8 @@ class BuildCoordinatesPackmol(BaseProtocol):
 
         return molecule
 
-    def execute(self, directory):
+    @staticmethod
+    def execute(directory, *dependency_futures):
 
         logging.info('Generating coordinates: ' + directory)
 
@@ -736,7 +776,8 @@ class BuildSmirnoffTopology(BaseProtocol):
     def system(self):
         pass
 
-    def execute(self, directory):
+    @staticmethod
+    def execute(directory, *dependency_futures):
 
         logging.info('Generating topology: ' + directory)
 
@@ -796,7 +837,8 @@ class RunEnergyMinimisation(BaseProtocol):
     def output_coordinate_file(self):
         return self._final_positions
 
-    def execute(self, directory):
+    @staticmethod
+    def execute(directory, *dependency_futures):
 
         logging.info('Minimising energy: ' + directory)
 
@@ -922,7 +964,8 @@ class RunOpenMMSimulation(BaseProtocol):
     def statistics(self):
         pass
 
-    def execute(self, directory):
+    @staticmethod
+    def execute(directory, *dependency_futures):
 
         temperature = self._thermodynamic_state.temperature
         pressure = self._thermodynamic_state.pressure
@@ -1060,7 +1103,8 @@ class AveragePropertyProtocol(BaseProtocol):
     def uncertainty(self):
         pass
 
-    def execute(self, directory):
+    @staticmethod
+    def execute(directory, *dependency_futures):
         return True
 
     @staticmethod
@@ -1117,7 +1161,8 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
     def trajectory_path(self):
         pass
 
-    def execute(self, directory):
+    @staticmethod
+    def execute(directory, *dependency_futures):
 
         if self._trajectory_path is None:
 
