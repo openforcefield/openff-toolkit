@@ -3,6 +3,12 @@ language: python
 # Run jobs on container-based infrastructure, can be overridden per job
 dist: xenial
 
+# Run builds for both master and topology (and PRs to each)
+branches:
+  only:
+  - master
+  - topology
+
 matrix:
   include:
     # Test osx with RDKit
