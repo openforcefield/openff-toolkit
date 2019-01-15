@@ -1849,7 +1849,7 @@ class FrozenMolecule(Serializable):
                 'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
-    def is_isomorphic(self, other, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def is_isomorphic(self, other):
         """
         Determines whether the molecules are isomorphic by comparing their SMILESes
 
@@ -1857,9 +1857,7 @@ class FrozenMolecule(Serializable):
         ----------
         other : an openforcefield.topology.molecule.FrozenMolecule
             The molecule to test for isomorphism
-        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for molecule-to-smiles conversion
-
+        
         Returns
         -------
         molecules_are_isomorphic : bool
