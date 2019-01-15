@@ -1,7 +1,6 @@
 import logging
 import sys
 import shutil
-import pickle
 
 from os import path
 

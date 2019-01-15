@@ -26,7 +26,7 @@ from openforcefield.properties.datasets import register_thermoml_property
 from openforcefield.properties.estimator import CalculationSchema, register_estimable_property
 from openforcefield.properties.estimator.components import protocols, groups
 from openforcefield.properties.estimator.components.protocols import AverageTrajectoryProperty, \
-    ProtocolInputReference, register_calculation_protocol
+    ProtocolInputReference, register_calculation_protocol, PropertyCalculatorException
 
 
 # =============================================================================================
@@ -58,8 +58,10 @@ class ExtractAverageDensity(AverageTrajectoryProperty):
 
         logging.info('Extracting densities: ' + directory)
 
-        if super(ExtractAverageDensity, self).execute(directory) is None:
-            return False
+        base_exception = super(ExtractAverageDensity, self).execute(directory)
+
+        if isinstance(base_exception, PropertyCalculatorException):
+            return base_exception
 
         mass_list = []
 
@@ -79,7 +81,7 @@ class ExtractAverageDensity(AverageTrajectoryProperty):
 
         logging.info('Extracted densities: ' + directory)
 
-        return True
+        return self._get_output_dictionary()
 
 
 # =============================================================================================

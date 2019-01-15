@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # =============================================================================================
 # MODULE DOCSTRING
 # =============================================================================================
@@ -289,7 +287,7 @@ class PropertyCalculationRunner(TCPServer):
         current_layer_type = data_model.options.allowed_calculation_layers.pop(0)
 
         if current_layer_type not in available_layers:
-            # TODO Graceful error handling.
+            # TODO: Implement graceful error handling.
             return
 
         logging.info('Launching calculation {} using the {} layer'.format(data_model.id,

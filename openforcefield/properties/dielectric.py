@@ -25,7 +25,7 @@ from simtk import openmm, unit
 
 from openforcefield.utils import doc_inherit
 
-from openforcefield.properties.properties import register_property, PhysicalProperty
+from openforcefield.properties.properties import PhysicalProperty
 
 from openforcefield.properties.datasets import register_thermoml_property
 
@@ -88,8 +88,10 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
 
         logging.info('Extracting dielectrics: ' + directory)
 
-        if super(ExtractAverageDielectric, self).execute(directory) is None:
-            return False
+        base_exception = super(ExtractAverageDielectric, self).execute(directory)
+
+        if isinstance(base_exception, ExtractAverageDielectric):
+            return base_exception
 
         charge_list = []
 
@@ -120,7 +122,7 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
 
         logging.info('Extracted dielectrics: ' + directory)
 
-        return True
+        return self._get_output_dictionary()
 
 
 # =============================================================================================

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # =============================================================================================
 # MODULE DOCSTRING
 # =============================================================================================
@@ -12,10 +10,6 @@ Authors
 * Simon Boothroyd <simon.boothroyd@choderalab.org>
 """
 
-
-# Idea:
-# Protocol created from a schema. 'Execute' (whatever that might be renamed to) pass
-# a json serialized output (containing only outputs) from each output in addition to globals.
 
 # =============================================================================================
 # GLOBAL IMPORTS
@@ -194,10 +188,6 @@ class BaseProtocol:
 
         This class is still heavily under development and is subject to rapid changes.
 
-    .. todo:: * Make the execute method completely static.
-              * Should take in a directory, params + inputs, futures
-              * Should return dict of outputs
-
     Attributes
     ----------
     id : str, optional
@@ -355,8 +345,7 @@ class BaseProtocol:
 
             setattr(self, parameter, value)
 
-    @staticmethod
-    def execute(directory, constant_inputs, *dependency_outputs):
+    def execute(self, directory):
         """ Execute the protocol.
 
         Protocols may be chained together by passing the output
@@ -364,15 +353,8 @@ class BaseProtocol:
 
         Parameters
         ----------
-        directory : str
+        directory: str
             The directory to store output data in.
-        constant_inputs: Dict[str, Any]
-            A dictionary of any constant inputs, such as parameters
-            set by the user or values taken from the global scope.
-        dependency_outputs: Tuple of Dict[str, Any]
-            A tuple of the outputs of any protocols on which this
-            one depends. The outputs are of the form of a dictionary
-            of (property name, value) pairs.
 
         Returns
         ----------
@@ -380,28 +362,24 @@ class BaseProtocol:
             The output of the execution.
         """
 
-        # input_protocols_by_id = {}
-        #
-        # for input_protocol in input_protocols:
-        #     input_protocols_by_id[input_protocol.id] = input_protocol
-        #
-        # if not path.isdir(self.directory):
-        #     os.makedirs(self.directory)
-        #
-        # for input_reference in self.protocol.input_references:
-        #
-        #     if input_reference.output_protocol_id == 'global':
-        #         continue
-        #
-        #     output_protocol = input_protocols_by_id[input_reference.output_protocol_id]
-        #
-        #     input_value = output_protocol.get_output_value(input_reference)
-        #     self.protocol.set_input_value(input_reference, input_value)
-        #
-        # self.protocol.execute(self.directory)
-        # return self.protocol
+        return self._get_output_dictionary()
 
-        return True
+    def _get_output_dictionary(self):
+        """Builds a dictionary of the output property names and their values.
+
+        Returns
+        -------
+        Dict[str, Any]
+            A dictionary whose keys are the output property names, and the
+            values their associated values.
+        """
+
+        return_dictionary = {}
+
+        for output_key in self.provided_outputs:
+            return_dictionary[output_key] = getattr(self, output_key)
+
+        return return_dictionary
 
     def set_uuid(self, value):
         """Store the uuid of the calculation this protocol belongs to
@@ -575,6 +553,16 @@ class BaseProtocol:
         return inputs
 
 
+class PropertyCalculatorException(BaseModel):
+    """A json serializable object wrapper containing information about
+    a failed property calculation.
+
+    TODO: Flesh out more fully.
+    """
+    directory: str
+    message: str
+
+
 @register_calculation_protocol()
 class BuildCoordinatesPackmol(BaseProtocol):
     """Create 3D coordinates and bond information for a given Substance
@@ -584,7 +572,7 @@ class BuildCoordinatesPackmol(BaseProtocol):
     Attributes
     ----------
     _max_molecules : int, optional, default=True
-        The maxmimum number of molecules in the system to be created.
+        The maximum number of molecules in the system to be created.
     _mass_density : float, simtk.unit.Quantity, or None; optional, default=None
         If provided, will aid in the selecting an initial box size.
     """
@@ -603,7 +591,6 @@ class BuildCoordinatesPackmol(BaseProtocol):
         self._positions = None
         self._molecules = None
 
-        # TODO: Determine the maximum number of molecules automatically
         self._max_molecules = 128
         self._mass_density = 1.0 * unit.grams / unit.milliliters
 
@@ -632,16 +619,15 @@ class BuildCoordinatesPackmol(BaseProtocol):
         Create molecule from a smiles pattern.
 
         Todo
-        ----------
-
+        ----
         * Replace with the toolkit function when finished.
 
-         Parameters
+        Parameters
         ----------
         smiles : str
             Smiles pattern
 
-         Returns
+        Returns
         -------
         molecule : OEMol
             OEMol with 3D coordinates, but no charges
@@ -686,17 +672,14 @@ class BuildCoordinatesPackmol(BaseProtocol):
 
         return molecule
 
-    @staticmethod
-    def execute(directory, *dependency_futures):
+    def execute(self, directory):
 
         logging.info('Generating coordinates: ' + directory)
 
         if self._substance is None:
 
-            logging.warning('The BuildLiquidCoordinatesProtocol requires a '
-                            'non-optional Substance as input.')
-
-            return False
+            return PropertyCalculatorException(directory=directory,
+                                               message='The substance input is non-optional')
 
         molecules = []
 
@@ -705,7 +688,9 @@ class BuildCoordinatesPackmol(BaseProtocol):
             molecule = self._create_molecule(component.smiles)
 
             if molecule is None:
-                return False
+
+                return PropertyCalculatorException(directory=directory,
+                                                   message='{} could not be converted to a Molecule'.format(component))
 
             molecules.append(molecule)
 
@@ -725,7 +710,9 @@ class BuildCoordinatesPackmol(BaseProtocol):
         topology, positions = packmol.pack_box(molecules, n_copies, mass_density=self._mass_density)
 
         if topology is None or positions is None:
-            return False
+
+            return PropertyCalculatorException(directory=directory,
+                                               message='Packmol failed to complete.')
 
         self._molecules = molecules
 
@@ -736,7 +723,7 @@ class BuildCoordinatesPackmol(BaseProtocol):
 
         logging.info('Coordinates generated: ' + str(self._substance))
 
-        return True
+        return self._get_output_dictionary()
 
     def can_merge(self, protocol):
 
@@ -776,8 +763,7 @@ class BuildSmirnoffTopology(BaseProtocol):
     def system(self):
         pass
 
-    @staticmethod
-    def execute(directory, *dependency_futures):
+    def execute(self, directory):
 
         logging.info('Generating topology: ' + directory)
 
@@ -795,16 +781,15 @@ class BuildSmirnoffTopology(BaseProtocol):
 
         if system is None:
 
-            logging.warning('Failed to create a system from the'
-                            'provided topology and molecules')
-
-            return False
+            return PropertyCalculatorException(directory=directory,
+                                               message='Failed to create a system from the'
+                                                       'provided topology and molecules')
 
         self._system = system
 
         logging.info('Topology generated: ' + directory)
 
-        return True
+        return self._get_output_dictionary()
 
 
 @register_calculation_protocol()
@@ -837,8 +822,7 @@ class RunEnergyMinimisation(BaseProtocol):
     def output_coordinate_file(self):
         return self._final_positions
 
-    @staticmethod
-    def execute(directory, *dependency_futures):
+    def execute(self, directory):
 
         logging.info('Minimising energy: ' + directory)
 
@@ -862,12 +846,10 @@ class RunEnergyMinimisation(BaseProtocol):
 
         logging.info('Energy minimised: ' + directory)
 
-        return True
+        return self._get_output_dictionary()
 
     def can_merge(self, protocol):
-
-        # TODO: Properly implement comparison
-        return super(RunEnergyMinimisation, self).can_merge(protocol)
+        return self._get_output_dictionary()
 
 
 @register_calculation_protocol()
@@ -964,18 +946,21 @@ class RunOpenMMSimulation(BaseProtocol):
     def statistics(self):
         pass
 
-    @staticmethod
-    def execute(directory, *dependency_futures):
+    def execute(self, directory):
 
         temperature = self._thermodynamic_state.temperature
         pressure = self._thermodynamic_state.pressure
 
         if temperature is None:
-            logging.error('A temperature must be set to perform a simulation in any ensemble: ' + directory)
-            return False
+
+            return PropertyCalculatorException(directory=directory,
+                                               message='A temperature must be set to perform '
+                                                       'a simulation in any ensemble')
+
         if self._ensemble is self.Ensemble.NPT and pressure is None:
-            logging.error('A pressure must be set to perform an NPT simulation: ' + directory)
-            return False
+
+            return PropertyCalculatorException(directory=directory,
+                                               message='A pressure must be set to perform an NPT simulation')
 
         logging.info('Performing a simulation in the ' + str(self._ensemble) + ' ensemble: ' + directory)
 
@@ -984,9 +969,10 @@ class RunOpenMMSimulation(BaseProtocol):
 
         try:
             self._simulation_object.step(self._steps)
-        except Exception:
-            logging.warning('Failed to run in ' + directory)
-            return False
+        except Exception as e:
+
+            return PropertyCalculatorException(directory=directory,
+                                               message='Simulation failed: {}'.format(e))
 
         positions = self._simulation_object.context.getState(getPositions=True).getPositions()
 
@@ -1000,7 +986,7 @@ class RunOpenMMSimulation(BaseProtocol):
             app.PDBFile.writeFile(input_pdb_file.topology,
                                   positions, configuration_file)
 
-        return True
+        return self._get_output_dictionary()
 
     def _setup_new_simulation(self, directory, temperature, pressure):
         """Creates a new OpenMM simulation object.
@@ -1103,9 +1089,8 @@ class AveragePropertyProtocol(BaseProtocol):
     def uncertainty(self):
         pass
 
-    @staticmethod
-    def execute(directory, *dependency_futures):
-        return True
+    def execute(self, directory):
+        return self._get_output_dictionary()
 
     @staticmethod
     def calculate_average_and_error(correlated_data):
@@ -1161,16 +1146,14 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
     def trajectory_path(self):
         pass
 
-    @staticmethod
-    def execute(directory, *dependency_futures):
+    def execute(self, directory):
 
         if self._trajectory_path is None:
 
-            logging.warning('The AverageTrajectoryProperty protocol '
-                            'requires a previously calculated trajectory')
-
-            return False
+            return PropertyCalculatorException(directory=directory,
+                                               message='The AverageTrajectoryProperty protocol '
+                                                       'requires a previously calculated trajectory')
 
         self.trajectory = mdtraj.load_dcd(filename=self._trajectory_path, top=self._input_coordinate_file)
 
-        return True
+        return self._get_output_dictionary()

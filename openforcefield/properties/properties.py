@@ -19,10 +19,9 @@ Authors
 
 import uuid
 
-from enum import Enum, IntFlag, unique
+from enum import IntFlag, unique
 
-from pydantic import BaseModel, validator
-from pydantic.validators import dict_validator
+from pydantic import validator
 from typing import Optional
 
 from simtk import unit
@@ -31,19 +30,6 @@ from openforcefield.utils.serialization import deserialize_quantity, serialize_q
 
 from openforcefield.properties.thermodynamics import ThermodynamicState
 from openforcefield.properties.substances import Substance
-
-
-# =============================================================================================
-# Property Registry
-# =============================================================================================
-
-registered_properties = {}
-
-
-def register_property(cls):
-
-    registered_properties[cls.__name__] = cls
-    return cls
 
 
 # =============================================================================================

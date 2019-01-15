@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # =============================================================================================
 # MODULE DOCSTRING
 # =============================================================================================
@@ -23,6 +21,8 @@ def apply_transitive_reduction(graph):
     dependency should not be stored as it is already covered by storing that
     A->B and B->C.
 
+    Notes
+    -----
     The graph must be directed and acyclic.
 
     Parameters
@@ -85,8 +85,10 @@ def _visit_protocol(graph, current_key, closed_list, closure):
 
 
 def find_root_nodes(graph):
-    """Returns the nodes in a graph that have inputs.
+    """Returns the nodes in a graph that do not have inputs.
 
+    Notes
+    -----
     The graph must be directed and acyclic.
 
     Parameters
@@ -96,25 +98,13 @@ def find_root_nodes(graph):
         string in the value list represents a node which depends on the node defined by the key.
 
     Returns
-    ----------
+    -------
     list(str)
         The root nodes of the graph.
     """
 
-    dependencies = {}
+    dependencies = dependants_to_dependencies(graph)
     root_nodes = []
-
-    for node_key in graph:
-
-        if node_key not in dependencies:
-            dependencies[node_key] = []
-
-        for dependent in graph[node_key]:
-
-            if dependent not in dependencies:
-                dependencies[dependent] = []
-
-            dependencies[dependent].append(node_key)
 
     for node_key in dependencies:
 
@@ -131,6 +121,8 @@ def topological_sort(graph):
     The resulting array contains a list of nodes ordered in such a way
     that 'dependant' nodes always come after their dependencies.
 
+    Notes
+    -----
     The graph must be directed and acyclic.
 
     Parameters
@@ -140,7 +132,7 @@ def topological_sort(graph):
         string in the value list represents a node which depends on the node defined by the key.
         
     Returns
-    ----------
+    -------
     list(str)
         An ordered list of node keys. The will be empty if a cycle is found.
     """
@@ -188,6 +180,44 @@ def topological_sort(graph):
     return sorted_order
 
 
+def dependants_to_dependencies(graph):
+    """Inverts a dependant's graph to yield a dependency graph.
+
+    Notes
+    -----
+    The graph must be directed and acyclic.
+
+    Parameters
+    ----------
+    graph: dict(str, list(str))
+        The graph to invert. Each key in the dictionary represents a node in the graph, and each
+        string in the value list represents a node which depends on the node defined by the key.
+
+    Returns
+    -------
+    dict(str, list(str))
+        The inverted graph. Each key in the dictionary represents a node in the graph, and each
+        string in the value list represents a node which the node defined by the key depends on.
+    """
+
+    dependencies = {}
+
+    for node in graph:
+
+        if node not in dependencies:
+            dependencies[node] = []
+
+        for dependant in graph[node]:
+
+            if dependant not in dependencies:
+                dependencies[dependant] = []
+
+            if node not in dependencies[dependant]:
+                dependencies[dependant].append(node)
+
+    return dependencies
+
+
 def is_acyclic(graph):
     """Determines if a directed graph is acyclic.
 
@@ -198,7 +228,7 @@ def is_acyclic(graph):
         string in the value list represents a node which depends on the node defined by the key.
 
     Returns
-    ----------
+    -------
     bool
         True if the graph is acyclic
     """
@@ -231,3 +261,30 @@ def append_uuid(base_id, uuid):
         base_id = base_id_split[1]
 
     return '{}|{}'.format(uuid, base_id)
+
+
+def retrieve_uuid(uuid_appended_id):
+    """Retrieves the uuid of a uuid appended id
+
+    Parameters
+    ----------
+    uuid_appended_id : str
+        A uuid appended id of the form uuid|base_id.
+
+    Returns
+    -------
+    str
+        The uuid portion of the appended id.
+    """
+
+    if uuid_appended_id.find('|') < 0:
+        return None
+
+    id_split = uuid_appended_id.split('|')
+
+    if len(id_split) != 2:
+        raise ValueError('A uuid appended protocol id should be of the form uuid|base_id')
+
+    return_uuid = id_split[0]
+
+    return return_uuid

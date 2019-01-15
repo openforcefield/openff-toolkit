@@ -17,6 +17,7 @@ Authors
 
 import logging
 
+from pydantic import BaseModel
 
 # =============================================================================================
 # Registration Decorators
@@ -79,12 +80,12 @@ class PropertyCalculationLayer:
             results = list(future_object.result())
             returned_data_model = results.pop(0)
 
-            for succeeded, returned_property in results:
+            for succeeded, returned_output in results:
 
                 if not succeeded:
                     continue
 
-                matches = [x for x in returned_data_model.queued_properties if x.id == returned_property.id]
+                matches = [x for x in returned_data_model.queued_properties if x.id == returned_output.id]
 
                 if len(matches) != 1:
                     logging.info('An id conflict occurred... unexpected results may ensue.')
@@ -92,7 +93,7 @@ class PropertyCalculationLayer:
                 for match in matches:
                     returned_data_model.queued_properties.remove(match)
 
-                returned_data_model.calculated_properties.append(returned_property)
+                returned_data_model.calculated_properties.append(returned_output)
 
             callback(returned_data_model)
 

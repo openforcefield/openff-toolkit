@@ -22,6 +22,7 @@ import copy
 import logging
 import uuid
 
+import os
 from os import path
 
 from openforcefield.utils import graph
@@ -29,7 +30,6 @@ from openforcefield.utils import graph
 from openforcefield.properties import PhysicalProperty, CalculationSource
 from openforcefield.properties.estimator import CalculationSchema
 from openforcefield.properties.estimator.components import protocols
-from openforcefield.properties.estimator.components.protocols import ProtocolInputReference
 from openforcefield.properties.estimator.layers.base import register_calculation_layer, PropertyCalculationLayer
 
 
@@ -73,7 +73,7 @@ class DirectCalculation:
         schema = CalculationSchema.parse_raw(schema.json())
 
         # Define a dictionary of accessible 'global' properties.
-        global_properties = {
+        self.global_properties = {
             "thermodynamic_state": physical_property.thermodynamic_state,
             "substance": physical_property.substance,
             "uncertainty": physical_property.uncertainty,
@@ -92,7 +92,7 @@ class DirectCalculation:
             protocol.schema = protocol_schema
 
             # Try to set global properties on each of the protocols
-            protocol.set_global_properties(global_properties)
+            protocol.set_global_properties(self.global_properties)
 
             protocol.set_uuid(self.uuid)
             id_map[protocol_name] = protocol.id
@@ -134,9 +134,6 @@ class DirectCalculation:
                 self.dependants_graph[input_reference.output_protocol_id].append(dependant_protocol.id)
 
         self.starting_protocols = graph.find_root_nodes(self.dependants_graph)
-
-        # Remove all implicit dependencies from the dependants graph.
-        graph.apply_transitive_reduction(self.dependants_graph)
 
     def _apply_groups(self, schema):
         """Groups protocols together into a set of user defined groups."""
@@ -257,11 +254,6 @@ class DirectCalculationGraph:
 
         self._calculations_to_run = {}
 
-    @property
-    def calculations_to_run(self):
-        """list(CalculationNode): A list of the calculations to be executed."""
-        return self._calculations_to_run
-
     def _insert_node(self, protocol_name, calculation, parent_node_name=None):
         """Recursively inserts a protocol node into the tree.
 
@@ -276,7 +268,7 @@ class DirectCalculationGraph:
             the protocol will be added as a new parent node.
         """
 
-        if protocol_name in self._dependants_graph:
+        if protocol_name in self._nodes_by_id:
 
             raise RuntimeError('A protocol with id ' + protocol_name + ' has already been inserted'
                                                                        ' into the graph.')
@@ -324,10 +316,24 @@ class DirectCalculationGraph:
             existing_node = self._nodes_by_id[protocol_name]
             self._dependants_graph[protocol_name] = []
 
-            nodes.append(protocol_name)
+            if parent_node_name is None:
+                self._root_nodes.append(protocol_name)
+            else:
+
+                for node_id in calculation.dependants_graph:
+
+                    if (protocol_name not in calculation.dependants_graph[node_id] or
+                       node_id in self._dependants_graph[protocol_name]):
+
+                        continue
+
+                    self._dependants_graph[node_id].append(protocol_name)
+
+        reduced_graph = copy.deepcopy(calculation.dependants_graph)
+        graph.apply_transitive_reduction(reduced_graph)
 
         # Add all of the dependants to the existing node
-        for dependant_name in calculation.dependants_graph[existing_node.id]:
+        for dependant_name in reduced_graph[existing_node.id]:
             self._insert_node(dependant_name, calculation, existing_node.id)
 
     def add_calculation(self, calculation):
@@ -353,7 +359,7 @@ class DirectCalculationGraph:
         return
 
     def submit(self, backend):
-        """Executes the protocol graph, employing a dask backend.
+        """Submits the protocol graph to the backend of choice.
 
         Parameters
         ----------
@@ -365,38 +371,39 @@ class DirectCalculationGraph:
         list of Future:
             The futures of the submitted protocols.
         """
-
         submitted_futures = {}
         value_futures = []
 
+        # Determine the ideal order in which to submit the
+        # protocols.
         submission_order = graph.topological_sort(self._dependants_graph)
-        dependencies = {}
-
-        for node_id in self._nodes_by_id:
-
-            node = self._nodes_by_id[node_id]
-
-            dependencies[node_id] = []
-
-            for input_reference in node.input_references:
-
-                if input_reference.output_protocol_id == 'global':
-                    continue
-
-                if input_reference.output_protocol_id not in dependencies[node_id]:
-                    dependencies[node_id].append(input_reference.output_protocol_id)
+        # Build a dependency graph from the dependants graph so that
+        # futures can be passed in the correct place.
+        dependencies = graph.dependants_to_dependencies(self._dependants_graph)
 
         for node_id in submission_order:
 
             node = self._nodes_by_id[node_id]
-
             dependency_futures = []
 
             for dependency in dependencies[node_id]:
                 dependency_futures.append(submitted_futures[dependency])
 
-            submitted_futures[node_id] = backend.submit_task(node.__type__.execute,
+            # Pull out any 'global' properties.
+            global_properties = {}
+
+            for input_reference in node.input_references:
+
+                if input_reference.output_protocol_id != 'global':
+                    continue
+
+                global_properties[input_reference.output_property_name] = node.get_input_value(input_reference)
+
+            submitted_futures[node_id] = backend.submit_task(DirectCalculationGraph._execute_protocol,
                                                              node.directory,
+                                                             node.id,
+                                                             node.schema,
+                                                             global_properties,
                                                              *dependency_futures)
 
         for calculation_id in self._calculations_to_run:
@@ -406,24 +413,127 @@ class DirectCalculationGraph:
             value_node_id = calculation.final_value_reference.output_protocol_id
             uncertainty_node_id = calculation.final_uncertainty_reference.output_protocol_id
 
+            # Gather the values and uncertainties of each property being calculated.
             value_futures.append(backend.submit_task(DirectCalculationGraph._gather_results,
                                                      submitted_futures[value_node_id],
-                                                     calculation.final_value_reference.output_property_name,
+                                                     calculation.final_value_reference,
                                                      submitted_futures[uncertainty_node_id],
-                                                     calculation.final_uncertainty_reference.output_property_name,
+                                                     calculation.final_uncertainty_reference,
                                                      calculation.physical_property))
 
         return value_futures
 
     @staticmethod
-    def _gather_results(value_result, value_property_name, uncertainty_result,
-                        uncertainty_property_name, property_to_return):
+    def _execute_protocol(directory, protocol_id, protocol_schema, global_properties, *parent_outputs):
+        """Executes a protocol defined by the input schema, and with
+        inputs sets via the global scope and from previously executed protocols.
 
-        property_to_return.value = value_result.get_output_value(
-            ProtocolInputReference(output_property_name=value_property_name))
 
-        property_to_return.uncertainty = uncertainty_result.get_output_value(
-            ProtocolInputReference(output_property_name=uncertainty_property_name))
+        """
+
+        # Store the results of the relevant previous protocols in a handy dictionary.
+        # If one of the results is a failure, propagate it up the chain!
+        parent_outputs_by_id = {}
+
+        for parent_id, parent_output in parent_outputs:
+
+            parent_outputs_by_id[parent_id] = parent_output
+
+            if isinstance(parent_output, protocols.PropertyCalculatorException):
+                return protocol_id, parent_output
+
+        # Recreate the protocol on the backend to bypass the need for static methods
+        # and awkward args and kwargs syntax.
+        protocol = protocols.available_protocols[protocol_schema.type]()
+        protocol.schema = protocol_schema
+
+        # Try to set global properties on each of the protocols
+        protocol.set_global_properties(global_properties)
+        protocol.set_uuid(graph.retrieve_uuid(protocol_id))
+
+        if not path.isdir(directory):
+            os.makedirs(directory)
+
+        for input_reference in protocol.input_references:
+
+            if input_reference.output_protocol_id == 'global':
+                continue
+
+            input_value = parent_outputs_by_id[input_reference.output_protocol_id][
+                                               input_reference.output_property_name]
+
+            protocol.set_input_value(input_reference, input_value)
+
+        try:
+            output_dictionary = protocol.execute(directory)
+        except Exception as e:
+            # Except the unexpected...
+            return protocol_id, protocols.PropertyCalculatorException(directory=directory,
+                                                                      message='An unhandled exception '
+                                                                              'occurred: {}'.format(e))
+
+        return protocol_id, output_dictionary
+
+    @staticmethod
+    def _gather_results(value_result, value_reference, uncertainty_result,
+                        uncertainty_reference, property_to_return):
+        """Gather the value and uncertainty calculated from the submission graph
+        and store them in the property to return.
+
+
+        Todo
+        ----
+        * Docstrings
+
+        Parameters
+        ----------
+        value_result: dict of string and Any
+            ...
+        value_property_name: str
+            ...
+        uncertainty_result: dict of string and Any
+            ...
+        uncertainty_property_name
+            ...
+        property_to_return: PhysicalProperty
+            ...
+
+        Returns
+        -------
+        (boolean, PhysicalProperty)
+            ...
+        """
+
+        succeeded = True
+        failure_object = None
+
+        # Make sure none of the protocols failed and we actually have a value
+        # and uncertainty.
+        if isinstance(value_result[1], protocols.PropertyCalculatorException):
+            # TODO: property_to_return.error_code = value_result
+
+            failure_object = value_result[1]
+            succeeded = False
+
+        if isinstance(uncertainty_result[1], protocols.PropertyCalculatorException):
+            # TODO: property_to_return.error_code = uncertainty_result
+
+            failure_object = uncertainty_result[1]
+            succeeded = False
+
+        if succeeded:
+
+            # TODO: Fill in provenance
+            property_to_return.source = CalculationSource(fidelity=SimulationLayer.__name__,
+                                                          provenance='')
+
+            property_to_return.value = value_result[1][value_reference.output_property_name]
+            property_to_return.uncertainty = uncertainty_result[1][uncertainty_reference.output_property_name]
+
+        else:
+
+            property_to_return.source = CalculationSource(fidelity=SimulationLayer.__name__,
+                                                          provenance=failure_object.json())
 
         return True, property_to_return
 

@@ -130,6 +130,24 @@ def test_is_acyclic():
     assert not graph.is_acyclic(dummy_graph4)
 
 
+def test_dependants_to_dependencies():
+    """Test inverting a dependants graph."""
+
+    dummy_graph1 = {
+        "A": ["B"],
+        "B": ["C"],
+        "C": [],
+    }
+
+    dependencies = graph.dependants_to_dependencies(dummy_graph1)
+
+    assert (len(dependencies["A"]) == 0 and
+            len(dependencies["B"]) == 1 and
+            dependencies["B"][0] == "A" and
+            len(dependencies["C"]) == 1 and
+            dependencies["C"][0] == "B")
+
+
 def test_append_uuid():
     """Test appending a uuid to a protocol"""
 
