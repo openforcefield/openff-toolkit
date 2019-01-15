@@ -28,7 +28,4 @@ API documentation
 .. toctree::
   :maxdepth: 1
 
-  topology
-  typing
-  utils
   propertyestimator
