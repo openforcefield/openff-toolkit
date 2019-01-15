@@ -872,6 +872,7 @@ class Topology(Serializable):
         self._box_vectors = None
         self._is_periodic = False
         #self._reference_molecule_dicts = set()
+        # TODO: Look into weakref and what it does. Having multiple topologies might cause a memory leak.
         self._reference_molecule_to_topology_molecules = OrderedDict()
         self._topology_molecules = list()
 

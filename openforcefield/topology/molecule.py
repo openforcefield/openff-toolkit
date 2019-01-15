@@ -1782,7 +1782,7 @@ class FrozenMolecule(Serializable):
            No effort is made to ensure that the atoms are in the same order or that any annotated properties are preserved.
 
         """
-        return self.to_smiles() == other.to_smiles()
+        return self.is_isomorphic(other)
 
     def to_smiles(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
@@ -1864,13 +1864,29 @@ class FrozenMolecule(Serializable):
         -------
         molecules_are_isomorphic : bool
         """
-        if not (isinstance(other, FrozenMolecule)):
-            other_fm = FrozenMolecule(other)
-        else:
-            other_fm = other
-        self_smiles = self.to_smiles(toolkit_registry=toolkit_registry)
-        other_smiles = other_fm.to_smiles(toolkit_registry=toolkit_registry)
-        return self_smiles == other_smiles
+        import networkx as nx
+        node_match_func = lambda x, y: ((x['atomic_number'] == y['atomic_number']) and
+                                        (x['is_aromatic'] == y['is_aromatic']) and
+                                        (x['stereochemistry'] == y['stereochemistry']) and
+                                        (x['formal_charge'] == y['formal_charge'])
+                                        )
+        edge_match_func = lambda x, y: ((x['bond_order'] == y['bond_order']) and
+                                        (x['is_aromatic'] == y['is_aromatic']) and
+                                        (x['stereochemistry'] == y['stereochemistry'])
+                                        )
+
+        return nx.is_isomorphic(self.to_networkx(),
+                                other.to_networkx(),
+                                node_match=node_match_func,
+                                edge_match=edge_match_func
+                                )
+        #if not (isinstance(other, FrozenMolecule)):
+        #    other_fm = FrozenMolecule(other)
+        #else:
+        #    other_fm = other
+        #self_smiles = self.to_smiles(toolkit_registry=toolkit_registry)
+        #other_smiles = other_fm.to_smiles(toolkit_registry=toolkit_registry)
+        #return self_smiles == other_smiles
 
     def generate_conformers(self,
                             toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
@@ -1994,7 +2010,7 @@ class FrozenMolecule(Serializable):
         # TODO: Clear fractional bond orders
 
     def to_networkx(self):
-        """Generate a NetworkX undirected graph from the Topology.
+        """Generate a NetworkX undirected graph from the Molecule.
 
         Nodes are Atoms labeled with particle indices and atomic elements (via the ``element`` node atrribute).
         Edges denote chemical bonds between Atoms.
@@ -2012,7 +2028,8 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         graph : networkx.Graph
-            The resulting graph, with nodes labeled with atom indices and elements
+            The resulting graph, with nodes (atoms) labeled with atom indices, elements, stereochemistry and aromaticity
+            flags and bonds with two atom indices, bond order, stereochemistry, and aromaticity flags
 
         Examples
         --------
@@ -2026,11 +2043,13 @@ class FrozenMolecule(Serializable):
         G = nx.Graph()
         for atom in self.atoms:
             G.add_node(
-                atom.molecule_atom_index, atomic_number=atom.atomic_number)
+                atom.molecule_atom_index, atomic_number=atom.atomic_number, is_aromatic=atom.is_aromatic,
+                stereochemistry=atom.stereochemistry, formal_charge=atom.formal_charge)
             #G.add_node(atom.molecule_atom_index, attr_dict={'atomic_number': atom.atomic_number})
         for bond in self.bonds:
             G.add_edge(
-                bond.atom1_index, bond.atom2_index, order=bond.bond_order)
+                bond.atom1_index, bond.atom2_index, bond_order=bond.bond_order, is_aromatic=bond.is_aromatic,
+                stereochemistry = bond.stereochemistry)
             #G.add_edge(bond.atom1_index, bond.atom2_index, attr_dict={'order':bond.bond_order})
 
         return G
