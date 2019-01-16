@@ -44,12 +44,6 @@ import random
 
 from io import BytesIO
 
-import openeye.oechem
-import openeye.oeomega
-import openeye.oequacpac
-
-from openeye import oechem, oequacpac
-
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
 from simtk import openmm, unit
@@ -83,6 +77,7 @@ def getSMIRKSMatches_OEMol(oemol, smirks, aromaticity_model = None):
         matches[index] is an N-tuple of atom numbers from the oemol
         Matches are returned in no guaranteed order.
     """
+    from openeye import oechem
 
     # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
     mol = oechem.OEMol(oemol)
@@ -846,6 +841,11 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         As per Christopher Bayly and http://docs.eyesopen.com/toolkits/cookbook/python/modeling/am1-bcc.html, OEAssignPartialCharges needs multiple conformations to ensure well-behaved charges. This implements that recipe for conformer generation.
         This conformer generation may or may not be necessary if the calculation is only to obtain bond orders; this will have to be investigated separately so it is retained for now.
         """
+        import openeye.oechem
+        import openeye.oeomega
+        import openeye.oequacpac
+
+        from openeye import oechem, oequacpac
         # TODO: Cache charged molecules here to save time in future calls to createSystem
 
         # Expand conformers
@@ -932,6 +932,12 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         system
             the newly created System
         """
+        import openeye.oechem
+        import openeye.oeomega
+        import openeye.oequacpac
+
+        from openeye import oechem, oequacpac
+
         # XML modified? If so, re-parse by generators
         if self._XMLModified:
             if verbose: print("Re-parsing XML because it was modified.")
@@ -1147,6 +1153,8 @@ def _validateSMIRKS(smirks, node=None):
        Node of etree with 'sourceline' attribute.
 
     """
+    from openeye import oechem
+
     qmol = oechem.OEQMol()
     if not oechem.OEParseSmarts(qmol, smirks):
         if (node is not None) and ('sourceline' in node.attrib):
@@ -2145,6 +2153,8 @@ class BondChargeCorrectionGenerator(object):
                 self.increment *= unit.elementary_charge
 
     def __init__(self, forcefield, initialChargeMethod):
+        from openeye import oequacpac
+
         self.ff = forcefield
         self._bondChargeCorrections = list()
         self._initialChargeMethod = initialChargeMethod

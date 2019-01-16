@@ -32,11 +32,6 @@ import numpy as np
 from openmoltools import system_checker
 import copy
 
-import openeye.oechem
-import openeye.oeomega
-import openeye.oequacpac
-from openeye import oechem
-
 from simtk import openmm, unit
 import parmed
 
@@ -294,6 +289,7 @@ def get_molecule_parameterIDs( oemols, ffxml):
         in which that parameter occurs. No frequency information is stored.
 
     """
+    from openeye import oechem
 
     # Create storage
     parameters_by_molecule = {}
