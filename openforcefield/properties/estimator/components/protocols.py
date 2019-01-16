@@ -31,8 +31,6 @@ from pymbar import timeseries
 from pydantic import BaseModel, NoneStr
 from typing import Dict, List, Any, Optional
 
-from openeye import oechem, oeomega
-
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils import packmol, graph
 from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity
@@ -71,16 +69,159 @@ def register_calculation_protocol():
 # =============================================================================================
 
 class ProtocolPath:
+    """
+    TODO: Document.
+    """
 
     path_separator = '/'
     property_separator = '.'
 
-    def __init__(self):
+    @property
+    def property_name(self):
 
-        self.full_path = '{}'.format(ProtocolPath.property_separator)
+        property_name, protocol_ids = ProtocolPath.to_components(self._full_path)
+        return property_name
+
+    @property
+    def start_protocol(self):
+
+        property_name, protocol_ids = ProtocolPath.to_components(self._full_path)
+        return None if len(protocol_ids) == 0 else protocol_ids[0]
+
+    @property
+    def full_path(self):
+        return self._full_path
+
+    def __init__(self, property_name, *protocol_ids):
+
+        self._full_path = ''
+        self._from_components(property_name, *protocol_ids)
+
+    def _from_components(self, property_name, *protocol_ids):
+
+        assert property_name is not None and isinstance(property_name, str)
+
+        assert property_name.find(ProtocolPath.property_separator) < 0 and \
+               property_name.find(ProtocolPath.path_separator) < 0
+
+        for protocol_id in protocol_ids:
+
+            assert protocol_id is not None and isinstance(protocol_id, str)
+
+            assert protocol_id.find(ProtocolPath.property_separator) < 0 and \
+                   protocol_id.find(ProtocolPath.path_separator) < 0
+
+        protocol_path = ProtocolPath.path_separator.join(protocol_ids)
+
+        if len(protocol_ids) == 0:
+            protocol_path = ''
+
+        self._full_path = '{}{}{}'.format(protocol_path,
+                                          ProtocolPath.property_separator,
+                                          property_name)
+
+    @classmethod
+    def from_string(cls, existing_path_string: str):
+
+        existing_path_string = existing_path_string.lstrip().rstrip()
+        property_name_index = existing_path_string.find(ProtocolPath.property_separator)
+
+        if property_name_index < 0:
+
+            raise ValueError('A protocol path must contain a {} followed by the '
+                             'property name this path represents'.format(ProtocolPath.property_separator))
+
+        if existing_path_string.find(ProtocolPath.property_separator, property_name_index + 1) >= 0:
+
+            raise ValueError('A protocol path must contain at most one '
+                             'property separator ({})'.format(ProtocolPath.property_separator))
+
+        if property_name_index == 0:
+            raise ValueError('The protocol path does not contain a protocol id.')
+
+        property_name, protocol_ids = ProtocolPath.to_components(existing_path_string)
+
+        for protocol_id in protocol_ids:
+
+            if protocol_id is not None and len(protocol_id) > 0:
+                continue
+
+            raise ValueError('An invalid protocol id (either None or empty) was found.')
+
+        return ProtocolPath(property_name, *protocol_ids)
+
+    @staticmethod
+    def to_components(path_string):
+        """
+
+        Parameters
+        ----------
+        path_string: str
+
+        Returns
+        -------
+
+        """
+        property_name_index = path_string.find(ProtocolPath.property_separator)
+        property_name = path_string[property_name_index:]
+
+        protocol_id_path = path_string[:property_name_index]
+        protocol_ids = protocol_id_path.split(ProtocolPath.path_separator)
+
+        return property_name, protocol_ids
+
+    def pop_next_in_path(self):
+        """
+
+        Returns
+        -------
+
+        """
+        property_name, protocol_ids = ProtocolPath.to_components(self._full_path)
+
+        if len(protocol_ids) == 0:
+            return None
+
+        next_in_path = protocol_ids.pop(0)
+        self._from_components(property_name, protocol_ids)
+
+        return next_in_path
+
+    def replace_protocol(self, old_id, new_id):
+        """Redirect the input to point at a new protocol.
+
+        The main use of this method is when merging multiple protocols
+        into one.
+
+        Parameters
+        ----------
+        old_id : str
+            The id of the protocol to replace.
+        new_id : str
+            The id of the new protocol to use.
+        """
+        self._full_path = self._full_path.replace(old_id, new_id)
+
+    def __hash__(self):
+        """Returns the hash key of this ProtocolPath."""
+        return hash(self._full_path)
+
+    def __eq__(self, other):
+        """Returns true if the two inputs are equal."""
+        return self._full_path == other.full_path
+
+    def __ne__(self, other):
+        """Returns true if the two inputs are not equal."""
+        return not (self == other)
+
+    def __getstate__(self):
+        return {'full_path': self._full_path}
+
+    def __setstate__(self, state):
+        self._full_path = state['full_path']
 
 
-class ProtocolInputReference(BaseModel):
+class ProtocolDependency(BaseModel):
     """Stores a reference to a required input from another protocol.
 
     Each node represents a protocol to be executed.
@@ -88,10 +229,6 @@ class ProtocolInputReference(BaseModel):
     .. warning::
 
         This class is still heavily under development and is subject to rapid changes.
-
-    .. todo::
-
-        Rename this class to something more obvious - ProtocolDependency?
 
     Attributes
     ----------
@@ -107,48 +244,21 @@ class ProtocolInputReference(BaseModel):
         the protocol identified by `grouped_protocol_id`.
     """
 
-    input_property_name: Optional[str] = None
-
-    output_protocol_id: str = None
-    output_property_name: str = None
-
-    grouped_protocol_id: NoneStr = None
+    source: ProtocolPath = None
+    target_property: ProtocolPath = None
 
     def __hash__(self):
         """Returns the hash key of this ProtocolInputReference."""
-        return hash((self.input_property_name,
-                     self.output_protocol_id,
-                     self.output_property_name,
-                     self.grouped_protocol_id))
+        return hash((self.source, self.target))
 
     def __eq__(self, other):
         """Returns true if the two inputs are equal."""
-        return (self.input_property_name == other.input_property_name and
-                self.output_protocol_id == other.output_protocol_id and
-                self.output_property_name == other.output_property_name and
-                self.grouped_protocol_id == other.grouped_protocol_id)
+        return (self.source == other.source and
+                self.target == other.target)
 
     def __ne__(self, other):
         """Returns true if the two inputs are not equal."""
         return not (self == other)
-
-    def set_uuid(self, uuid):
-        """Appends a uuid to each of the protocol ids
-
-        Notes
-        ----------
-        Existing uuid's will be overwritten.
-
-        Parameters
-        ----------
-        uuid : str
-            The uuid to append.
-        """
-
-        if self.output_protocol_id is not None and self.output_protocol_id != 'global':
-            self.output_protocol_id = graph.append_uuid(self.output_protocol_id, uuid)
-        if self.grouped_protocol_id is not None and self.grouped_protocol_id != 'global':
-            self.grouped_protocol_id = graph.append_uuid(self.grouped_protocol_id, uuid)
 
     def replace_protocol(self, old_id, new_id):
         """Redirect the input to point at a new protocol.
@@ -163,10 +273,11 @@ class ProtocolInputReference(BaseModel):
         new_id : str
             The id of the new protocol to use.
         """
-        if self.output_protocol_id is not None:
-            self.output_protocol_id = self.output_protocol_id.replace(old_id, new_id)
-        if self.grouped_protocol_id is not None:
-            self.grouped_protocol_id = self.grouped_protocol_id.replace(old_id, new_id)
+
+        if self.source is not None:
+            self.source.replace_protocol(old_id, new_id)
+        if self.target is not None:
+            self.target.replace_protocol(old_id, new_id)
 
 
 class ProtocolSchema(BaseModel):
@@ -176,7 +287,7 @@ class ProtocolSchema(BaseModel):
     id: str = None
     type: str = None
 
-    input_references: List[ProtocolInputReference] = []
+    input_dependencies: List[ProtocolDependency] = []
     parameters: Dict[str, Any] = {}
 
 
@@ -202,8 +313,9 @@ class BaseProtocol:
     ----------
     id : str, optional
         The unique identity of the protocol
-    input_references : list of ProtocolInputReference
-        A list of the inputs which this protocol will receive.
+    input_dependencies : list of ProtocolDependency
+        A list of this protocols dependencies. Another protocol is
+         considered a dependency if this protocol takes a value from the other.
     self.required_inputs : list of str
         A list of the inputs that must be passed to this protocol.
     self.provided_outputs : list of str
@@ -301,7 +413,7 @@ class BaseProtocol:
         self.id = None
 
         # Defines where to pull the values from.
-        self._input_references = []
+        self.input_dependencies = []
 
         # Find the required inputs and outputs.
         self.parameters = self._find_types_with_decorator(BaseProtocol.Parameter)
@@ -313,14 +425,6 @@ class BaseProtocol:
         self.directory = None
 
     @property
-    def input_references(self):
-        return self._input_references
-
-    @input_references.setter
-    def input_references(self, value):
-        self._input_references = value
-
-    @property
     def schema(self):
         """ProtocolSchema: Returns a serializable schema for this object."""
         schema = ProtocolSchema()
@@ -328,7 +432,7 @@ class BaseProtocol:
         schema.id = self.id
         schema.type = type(self).__name__
 
-        schema.input_references = self.input_references
+        schema.input_dependencies = self.input_dependencies
 
         for parameter in self.parameters:
 
@@ -352,7 +456,7 @@ class BaseProtocol:
             raise ValueError('Cannot convert a {} protocol to a {}.'
                              .format(str(type(self)), schema_value.type))
 
-        self.input_references = schema_value.input_references
+        self.input_dependencies = schema_value.input_dependencies
 
         for parameter in schema_value.parameters:
 
@@ -412,8 +516,8 @@ class BaseProtocol:
 
         self.id = graph.append_uuid(self.id, value)
 
-        for input_reference in self.input_references:
-            input_reference.set_uuid(value)
+        for input_dependence in self.input_dependencies:
+            input_dependence.set_uuid(value)
 
     def replace_protocol(self, old_id, new_id):
         """Finds each input which came from a given protocol
@@ -429,8 +533,8 @@ class BaseProtocol:
         new_id : str
             The id of the new input protocol.
         """
-        for input_reference in self.input_references:
-            input_reference.replace_protocol(old_id, new_id)
+        for input_dependence in self.input_dependencies:
+            input_dependence.replace_protocol(old_id, new_id)
 
     def set_global_properties(self, global_properties):
         """Set the value of any inputs which takes values
@@ -441,7 +545,7 @@ class BaseProtocol:
         global_properties: dict of str to object
             The list of global properties to draw from.
         """
-        for input_reference in self.input_references:
+        for input_dependence in self.input_dependencies:
 
             if input_reference.output_protocol_id != 'global':
                 continue
@@ -650,6 +754,8 @@ class BuildCoordinatesPackmol(BaseProtocol):
         molecule : OEMol
             OEMol with 3D coordinates, but no charges
          """
+
+        from openeye import oechem, oeomega
 
         # Check cache
         if smiles in self._cached_molecules:
