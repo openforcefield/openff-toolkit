@@ -145,6 +145,7 @@ def topological_sort(graph):
 
     # Make a copy of the graph as this is a destructive process.
     graph_copy = copy.deepcopy(graph)
+    apply_transitive_reduction(graph_copy)
 
     while len(open_list) > 0:
 

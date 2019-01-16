@@ -24,7 +24,7 @@ import logging
 from os import path
 from enum import Enum, unique
 
-from typing import List
+from typing import List, Dict
 
 from openforcefield.utils import graph
 
@@ -63,7 +63,7 @@ class ProtocolGroupSchema(ProtocolSchema):
     """A json serializable representation of a protocol
     definition.
     """
-    grouped_protocol_ids: List[str] = []
+    grouped_protocol_schemas: List[ProtocolSchema] = []
 
 
 @register_calculation_group()
@@ -128,10 +128,7 @@ class ProtocolGroup(BaseProtocol):
         #
         #         self._dependants_graph[input_reference.output_protocol_id].append(protocol_id)
 
-        # Do the usual to clean up the graph structure and figure out which order
-        # the protocols should execute in.
-        graph.apply_transitive_reduction(self._dependants_graph)
-
+        # Figure out the order in which grouped protocols should be executed.
         self._root_protocols = graph.find_root_nodes(self._dependants_graph)
         self._execution_order = graph.topological_sort(self._dependants_graph)
 
@@ -140,10 +137,11 @@ class ProtocolGroup(BaseProtocol):
         """ProtocolSchema: A serializable schema for this object."""
 
         base_schema = super(ProtocolGroup, self).schema
+        # Convert the base schema to a group one.
         schema = ProtocolGroupSchema.parse_obj(base_schema.dict())
 
-        for protocol_id in self._protocol_ids:
-            schema.grouped_protocol_ids.append(protocol_id)
+        for protocol_id in self.protocols:
+            schema.grouped_protocol_schemas.append(self.protocols[protocol_id].schema)
 
         return schema
 
@@ -444,8 +442,7 @@ class ProtocolGroup(BaseProtocol):
 
             protocol.set_input_value(input_reference, value)
 
-        if input_reference.output_protocol_id == 'global':
-            self.global_inputs[input_reference.input_property_name] = value
+        super(ProtocolGroup, self).set_input_value(input_reference, value)
 
     def get_input_value(self, input_reference):
         """Gets the value that was set on one of this protocols inputs.

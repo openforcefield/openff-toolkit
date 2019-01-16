@@ -70,6 +70,16 @@ def register_calculation_protocol():
 # Protocols
 # =============================================================================================
 
+class ProtocolPath:
+
+    path_separator = '/'
+    property_separator = '.'
+
+    def __init__(self):
+
+        self.full_path = '{}'.format(ProtocolPath.property_separator)
+
+
 class ProtocolInputReference(BaseModel):
     """Stores a reference to a required input from another protocol.
 
@@ -291,7 +301,7 @@ class BaseProtocol:
         self.id = None
 
         # Defines where to pull the values from.
-        self.input_references = []
+        self._input_references = []
 
         # Find the required inputs and outputs.
         self.parameters = self._find_types_with_decorator(BaseProtocol.Parameter)
@@ -301,6 +311,14 @@ class BaseProtocol:
 
         # The directory in which to execute the protocol.
         self.directory = None
+
+    @property
+    def input_references(self):
+        return self._input_references
+
+    @input_references.setter
+    def input_references(self, value):
+        self._input_references = value
 
     @property
     def schema(self):

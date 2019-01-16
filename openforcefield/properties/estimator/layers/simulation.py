@@ -401,7 +401,6 @@ class DirectCalculationGraph:
 
             submitted_futures[node_id] = backend.submit_task(DirectCalculationGraph._execute_protocol,
                                                              node.directory,
-                                                             node.id,
                                                              node.schema,
                                                              global_properties,
                                                              *dependency_futures)
@@ -424,7 +423,7 @@ class DirectCalculationGraph:
         return value_futures
 
     @staticmethod
-    def _execute_protocol(directory, protocol_id, protocol_schema, global_properties, *parent_outputs):
+    def _execute_protocol(directory, protocol_schema, global_properties, *parent_outputs):
         """Executes a protocol defined by the input schema, and with
         inputs sets via the global scope and from previously executed protocols.
 
@@ -440,7 +439,7 @@ class DirectCalculationGraph:
             parent_outputs_by_id[parent_id] = parent_output
 
             if isinstance(parent_output, protocols.PropertyCalculatorException):
-                return protocol_id, parent_output
+                return protocol_schema.id, parent_output
 
         # Recreate the protocol on the backend to bypass the need for static methods
         # and awkward args and kwargs syntax.
@@ -449,7 +448,7 @@ class DirectCalculationGraph:
 
         # Try to set global properties on each of the protocols
         protocol.set_global_properties(global_properties)
-        protocol.set_uuid(graph.retrieve_uuid(protocol_id))
+        protocol.set_uuid(graph.retrieve_uuid(protocol.id))
 
         if not path.isdir(directory):
             os.makedirs(directory)
@@ -468,11 +467,11 @@ class DirectCalculationGraph:
             output_dictionary = protocol.execute(directory)
         except Exception as e:
             # Except the unexpected...
-            return protocol_id, protocols.PropertyCalculatorException(directory=directory,
+            return protocol.id, protocols.PropertyCalculatorException(directory=directory,
                                                                       message='An unhandled exception '
                                                                               'occurred: {}'.format(e))
 
-        return protocol_id, output_dictionary
+        return protocol.id, output_dictionary
 
     @staticmethod
     def _gather_results(value_result, value_reference, uncertainty_result,
