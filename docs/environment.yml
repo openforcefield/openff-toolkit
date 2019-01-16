@@ -3,6 +3,7 @@ channels:
     - omnia
     - conda-forge
     - rdkit
+    - openeye
 dependencies:
     - python ==3.6
     - numpy
@@ -26,6 +27,7 @@ dependencies:
     - mdtraj
     - dask
     - tornado
+    - openeye-toolkits # Just here because OE toolkit has infected everything and failing its imports may be preventing RTD builds.
     - pip:
       - arch
       - pydantic
