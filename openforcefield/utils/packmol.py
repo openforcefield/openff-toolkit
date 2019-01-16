@@ -33,8 +33,6 @@ import logging
 
 from distutils.spawn import find_executable
 
-from openeye import oechem
-
 from simtk import unit
 from simtk import openmm
 
@@ -103,6 +101,8 @@ def pack_box(molecules,
         Single frame trajectory with mixture box.
 
     """
+    from openeye import oechem
+
     if len(molecules) != len(n_copies):
 
         logging.error("Length of 'molecules' and 'n_copies' must be identical")
@@ -254,6 +254,8 @@ def approximate_volume(molecules,
     require extra time for energy minimization and equilibration.
 
     """
+    from openeye import oechem
+
     volume = 0.0 * unit.angstrom**3
 
     for (molecule, number) in zip(molecules, n_copies):
@@ -300,6 +302,8 @@ def approximate_volume_by_density(molecules,
     used in the Mobley lab for perhaps ~100 different systems without substantial problems.
 
     """
+    from openeye import oechem
+
     # Load molecules to get molecular weights
     volume = 0.0 * unit.angstrom**3
 

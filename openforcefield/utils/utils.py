@@ -21,14 +21,6 @@ import numpy
 import random
 import parmed
 
-import openeye.oechem
-import openeye.oeomega
-import openeye.oequacpac
-
-from openeye.oechem import *
-from openeye.oeomega import *
-from openeye.oequacpac import *
-
 from simtk.openmm import app
 from simtk.openmm.app import element as elem
 from simtk.openmm.app import Topology
@@ -190,6 +182,10 @@ def generateTopologyFromOEMol(molecule):
         The Topology object generated from `molecule`.
 
     """
+
+    from openeye import oechem
+    from openeye.oechem import OEMol
+
     # Avoid manipulating the molecule
     mol = OEMol(molecule)
 
@@ -256,12 +252,21 @@ def normalize_molecules(molecules):
 
     """
 
+    import openeye.oechem
+    import openeye.oeomega
+    import openeye.oequacpac
+
+    from openeye.oechem import OEFormalPartialCharges, OEHasPartialCharges
+    from openeye.oequacpac import OEAssignPartialCharges, OECharges_AM1BCC
+    from openeye.oeiupac import OECreateIUPACName
+
     # Add explicit hydrogens.
     for molecule in molecules:
         openeye.oechem.OEAddExplicitHydrogens(molecule)
 
     # Build a conformation for all molecules with Omega.
     print("Building conformations for all molecules...")
+    start_time = time.time()
     import openeye.oeomega
     omega = openeye.oeomega.OEOmega()
     omega.SetMaxConfs(1)
@@ -275,6 +280,7 @@ def normalize_molecules(molecules):
 
     # Regularize all molecules through writing as mol2.
     print("Regularizing all molecules...")
+    mcmcDbName = '' # TODO: Fix line.
     ligand_mol2_dirname  = os.path.dirname(mcmcDbName) + '/mol2'
     if( not os.path.exists( ligand_mol2_dirname ) ):
         os.makedirs(ligand_mol2_dirname)
@@ -299,6 +305,7 @@ def normalize_molecules(molecules):
             OEFormalPartialCharges(molecule)
         else:
             # Assign AM1-BCC charges for multiatom molecules.
+
             OEAssignPartialCharges(molecule, OECharges_AM1BCC, False) # use explicit hydrogens
         # Check to make sure we ended up with partial charges.
         if OEHasPartialCharges(molecule) == False:
@@ -331,6 +338,9 @@ def read_molecules(filename, verbose=True):
 
     """
 
+    from openeye import oechem
+    from openeye.oechem import OECreateOEGraphMol, oemolistream, OEReadMolecule, OEGetSDData, OEMol
+
     if not os.path.exists(filename):
         built_in = get_data_filename('molecules/%s' % filename)
         if not os.path.exists(built_in):
@@ -342,11 +352,11 @@ def read_molecules(filename, verbose=True):
     molecules = list()
     input_molstream = oemolistream(filename)
 
-    from openeye import oechem
     flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
     input_molstream.SetFlavor(oechem.OEFormat_MOL2, flavor)
 
     molecule = OECreateOEGraphMol()
+
     while OEReadMolecule(input_molstream, molecule):
         # If molecule has no title, try getting SD 'name' tag
         if molecule.GetTitle() == '':
@@ -373,6 +383,8 @@ def setPositionsInOEMol(molecule, positions):
     positions : Nx3 array
         Unit-bearing via simtk.unit Nx3 array of coordinates
     """
+    from openeye.oechem import OEFloatArray
+
     if molecule.NumAtoms() != len(positions): raise ValueError("Number of atoms in molecule does not match length of position array.")
     pos_unitless = positions/unit.angstroms
 
@@ -380,6 +392,7 @@ def setPositionsInOEMol(molecule, positions):
     for idx in range(len(pos_unitless)):
         for j in range(3):
             coordlist.append( pos_unitless[idx][j])
+
     molecule.SetCoords(OEFloatArray(coordlist))
 
 def extractPositionsFromOEMol(molecule):

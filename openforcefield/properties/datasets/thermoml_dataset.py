@@ -33,9 +33,6 @@ from urllib.request import urlopen
 
 from xml.etree import ElementTree
 
-from openeye import oechem
-from openeye import oeiupac
-
 from simtk import unit
 
 from openforcefield.properties.properties import PhysicalProperty, PropertyPhase, MeasurementSource
@@ -413,6 +410,9 @@ class ThermoMLCompound:
         str, None
             None if the identifier cannot be converted, otherwise the converted SMILES pattern.
         """
+        from openeye import oechem
+        from openeye import oeiupac
+
         if identifier is None:
             return None
 

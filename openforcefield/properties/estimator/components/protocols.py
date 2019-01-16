@@ -571,13 +571,13 @@ class BaseProtocol:
         if not isinstance(self, type(other)):
             return False
 
-        for input_reference in self.input_references:
+        for input_dependence in self.input_dependencies:
 
-            if input_reference not in other.input_references:
+            if input_dependence not in other.input_dependencies:
                 return False
 
-            self_value = self.get_input_value(input_reference)
-            other_value = other.get_input_value(input_reference)
+            self_value = self.get_input_value(input_dependence)
+            other_value = other.get_input_value(input_dependence)
 
             if self_value != other_value:
                 return False
