@@ -3,7 +3,6 @@ channels:
     - omnia
     - conda-forge
     - rdkit
-    - openeye
 dependencies:
     - python ==3.6
     - numpy
