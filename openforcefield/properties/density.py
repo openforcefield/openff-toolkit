@@ -26,7 +26,7 @@ from openforcefield.properties.datasets import register_thermoml_property
 from openforcefield.properties.estimator import CalculationSchema, register_estimable_property
 from openforcefield.properties.estimator.components import protocols, groups
 from openforcefield.properties.estimator.components.protocols import AverageTrajectoryProperty, \
-    ProtocolDependency, register_calculation_protocol, ProtocolPath, PropertyCalculatorException
+    register_calculation_protocol, ProtocolPath, PropertyCalculatorException
 
 
 # =============================================================================================
@@ -103,43 +103,26 @@ class Density(PhysicalProperty):
         build_coordinates = protocols.BuildCoordinatesPackmol()
         build_coordinates.id = 'build_coordinates'
 
-        build_coordinates.input_dependencies = [
-            # Globals
-            ProtocolDependency(source=ProtocolPath('substance', 'global'),
-                               target=ProtocolPath('substance'))
-        ]
+        build_coordinates.substance = ProtocolPath('substance', 'global')
 
         schema.protocols[build_coordinates.id] = build_coordinates.schema
 
         assign_topology = protocols.BuildSmirnoffTopology()
         assign_topology.id = 'build_topology'
 
-        assign_topology.input_dependencies = [
-            # Globals
-            ProtocolDependency(source=ProtocolPath('force_field_path', 'global'),
-                               target=ProtocolPath('force_field_path')),
-            # Locals
-            ProtocolDependency(source=ProtocolPath('coordinate_file', build_coordinates.id),
-                               target=ProtocolPath('coordinate_file')),
+        assign_topology.force_field_path = ProtocolPath('force_field_path', 'global')
 
-            ProtocolDependency(source=ProtocolPath('molecules', build_coordinates.id),
-                               target=ProtocolPath('molecules'))
-        ]
+        assign_topology.coordinate_file = ProtocolPath('coordinate_file', build_coordinates.id)
+        assign_topology.molecules = ProtocolPath('molecules', build_coordinates.id)
 
         schema.protocols[assign_topology.id] = assign_topology.schema
 
+        # Equilibration
         energy_minimisation = protocols.RunEnergyMinimisation()
         energy_minimisation.id = 'energy_minimisation'
 
-        # Equilibration
-        energy_minimisation.input_dependencies = [
-            # Locals
-            ProtocolDependency(source=ProtocolPath('coordinate_file', build_coordinates.id),
-                               target=ProtocolPath('input_coordinate_file')),
-
-            ProtocolDependency(source=ProtocolPath('system', assign_topology.id),
-                               target=ProtocolPath('system'))
-        ]
+        energy_minimisation.input_coordinate_file = ProtocolPath('coordinate_file', build_coordinates.id)
+        energy_minimisation.system = ProtocolPath('system', assign_topology.id)
 
         schema.protocols[energy_minimisation.id] = energy_minimisation.schema
 
@@ -148,21 +131,13 @@ class Density(PhysicalProperty):
 
         npt_equilibration.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
 
-        # Debug settings.
-        npt_equilibration.steps = 2
-        npt_equilibration.output_frequency = 1
+        npt_equilibration.steps = 2  # Debug settings.
+        npt_equilibration.output_frequency = 1  # Debug settings.
 
-        npt_equilibration.input_dependencies = [
-            # Globals
-            ProtocolDependency(source=ProtocolPath('thermodynamic_state', 'global'),
-                               target=ProtocolPath('thermodynamic_state')),
-            # Locals
-            ProtocolDependency(source=ProtocolPath('output_coordinate_file', energy_minimisation.id),
-                               target=ProtocolPath('input_coordinate_file')),
+        npt_equilibration.force_field_path = ProtocolPath('thermodynamic_state', 'global')
 
-            ProtocolDependency(source=ProtocolPath('system', assign_topology.id),
-                               target=ProtocolPath('system'))
-        ]
+        npt_equilibration.input_coordinate_file = ProtocolPath('output_coordinate_file', energy_minimisation.id)
+        npt_equilibration.system = ProtocolPath('system', assign_topology.id)
 
         schema.protocols[npt_equilibration.id] = npt_equilibration.schema
 
@@ -173,21 +148,13 @@ class Density(PhysicalProperty):
 
         npt_production.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
 
-        # Debug settings.
-        npt_production.steps = 200
-        npt_production.output_frequency = 20
+        npt_production.steps = 200  # Debug settings.
+        npt_production.output_frequency = 20  # Debug settings.
 
-        npt_production.input_dependencies = [
-            # Globals
-            ProtocolDependency(source=ProtocolPath('thermodynamic_state', 'global'),
-                               target=ProtocolPath('thermodynamic_state')),
-            # Locals
-            ProtocolDependency(source=ProtocolPath('output_coordinate_file', npt_equilibration.id),
-                               target=ProtocolPath('input_coordinate_file')),
+        npt_production.force_field_path = ProtocolPath('thermodynamic_state', 'global')
 
-            ProtocolDependency(source=ProtocolPath('system', assign_topology.id),
-                               target=ProtocolPath('system'))
-        ]
+        npt_production.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_equilibration.id)
+        npt_production.system = ProtocolPath('system', assign_topology.id)
 
         schema.protocols[npt_production.id] = npt_production.schema
 
@@ -196,20 +163,11 @@ class Density(PhysicalProperty):
         extract_density = ExtractAverageDensity()
         extract_density.id = 'extract_density'
 
-        extract_density.input_references = [
-            # Globals
-            ProtocolDependency(source=ProtocolPath('thermodynamic_state', 'global'),
-                               target=ProtocolPath('thermodynamic_state')),
-            # Locals
-            ProtocolDependency(source=ProtocolPath('output_coordinate_file', npt_production.id),
-                               target=ProtocolPath('input_coordinate_file')),
+        extract_density.force_field_path = ProtocolPath('thermodynamic_state', 'global')
 
-            ProtocolDependency(source=ProtocolPath('trajectory', npt_production.id),
-                               target=ProtocolPath('trajectory_path')),
-
-            ProtocolDependency(source=ProtocolPath('system', assign_topology.id),
-                               target=ProtocolPath('system'))
-        ]
+        extract_density.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_production.id)
+        extract_density.trajectory_path = ProtocolPath('trajectory', npt_production.id)
+        extract_density.system = ProtocolPath('system', assign_topology.id)
 
         schema.protocols[extract_density.id] = extract_density.schema
 
@@ -220,16 +178,16 @@ class Density(PhysicalProperty):
         ])
         converge_uncertainty.id = 'converge_uncertainty'
 
-        converge_uncertainty.input_references = [
-            # Locals
-            # ProtocolInputReference(input_property_name='left_hand_value',
-            #                        output_protocol_id='extract_density',
-            #                        output_property_name='uncertainty'),
-            # # Globals
-            # ProtocolInputReference(input_property_name='right_hand_value',
-            #                        output_protocol_id='global',
-            #                        output_property_name='uncertainty'),
-        ]
+        # converge_uncertainty.input_references = [
+        #     # Locals
+        #     # ProtocolInputReference(input_property_name='left_hand_value',
+        #     #                        output_protocol_id='extract_density',
+        #     #                        output_property_name='uncertainty'),
+        #     # # Globals
+        #     # ProtocolInputReference(input_property_name='right_hand_value',
+        #     #                        output_protocol_id='global',
+        #     #                        output_property_name='uncertainty'),
+        # ]
 
         schema.groups[converge_uncertainty.id] = converge_uncertainty.schema
 

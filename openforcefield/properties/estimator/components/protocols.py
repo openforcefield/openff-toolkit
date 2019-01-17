@@ -18,6 +18,7 @@ Authors
 import copy
 import logging
 import pickle
+import json
 
 import mdtraj
 
@@ -32,7 +33,7 @@ from pydantic import BaseModel, NoneStr
 from typing import Dict, List, Any, Optional
 
 from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.utils import packmol, graph
+from openforcefield.utils import packmol, graph, utils
 from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity
 
 from openforcefield.typing.engines import smirnoff
@@ -67,6 +68,16 @@ def register_calculation_protocol():
 # =============================================================================================
 # Protocols
 # =============================================================================================
+
+class PropertyCalculatorException(BaseModel):
+    """A json serializable object wrapper containing information about
+    a failed property calculation.
+
+    TODO: Flesh out more fully.
+    """
+    directory: str
+    message: str
+
 
 class ProtocolPath:
     """
@@ -140,9 +151,6 @@ class ProtocolPath:
             raise ValueError('A protocol path must contain at most one '
                              'property separator ({})'.format(ProtocolPath.property_separator))
 
-        if property_name_index == 0:
-            raise ValueError('The protocol path does not contain a protocol id.')
-
         property_name, protocol_ids = ProtocolPath.to_components(existing_path_string)
 
         for protocol_id in protocol_ids:
@@ -167,10 +175,13 @@ class ProtocolPath:
 
         """
         property_name_index = path_string.find(ProtocolPath.property_separator)
-        property_name = path_string[property_name_index:]
+        property_name = path_string[property_name_index + 1:]
 
         protocol_id_path = path_string[:property_name_index]
         protocol_ids = protocol_id_path.split(ProtocolPath.path_separator)
+
+        if len(protocol_id_path) == 0:
+            protocol_ids = []
 
         return property_name, protocol_ids
 
@@ -191,6 +202,32 @@ class ProtocolPath:
 
         return next_in_path
 
+    def append_uuid(self, uuid):
+        """Appends a uuid to each of the protocol id's in the path
+
+        Parameters
+        ----------
+        uuid: str
+            The uuid to append.
+        """
+
+        if self.is_global:
+            # Don't append uuids to global paths.
+            return
+
+        property_name, protocol_ids = ProtocolPath.to_components(self._full_path)
+        appended_ids = []
+
+        for protocol_id in protocol_ids:
+
+            if protocol_id is None:
+                continue
+
+            appended_id = graph.append_uuid(protocol_id, uuid)
+            appended_ids.append(appended_id)
+
+        self._from_components(property_name, *appended_ids)
+
     def replace_protocol(self, old_id, new_id):
         """Redirect the input to point at a new protocol.
 
@@ -205,6 +242,14 @@ class ProtocolPath:
             The id of the new protocol to use.
         """
         self._full_path = self._full_path.replace(old_id, new_id)
+
+    @classmethod
+    def get_validators(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v):
+        return v
 
     def __hash__(self):
         """Returns the hash key of this ProtocolPath."""
@@ -225,74 +270,24 @@ class ProtocolPath:
         self._full_path = state['full_path']
 
 
-class ProtocolDependency(BaseModel):
-    """Stores a reference to a required input from another protocol.
-
-    Each node represents a protocol to be executed.
-
-    .. warning::
-
-        This class is still heavily under development and is subject to rapid changes.
-
-    Attributes
-    ----------
-    input_property_name: str
-        The name of the property which will take the an output value and use it as input.
-    output_protocol_id: str
-        The identity of the protocol whose output will be passed to input_property_name.
-    output_property_name: str
-        The name of the property which will output the required input.
-    grouped_protocol_id: str, optional
-        The name of the protocol which has been grouped to take output from. When set,
-        `output_protocol_id` should refer to the name of the ProtocolGroup which contains
-        the protocol identified by `grouped_protocol_id`.
-    """
-
-    source: ProtocolPath = None
-    target_property: ProtocolPath = None
-
-    def __hash__(self):
-        """Returns the hash key of this ProtocolInputReference."""
-        return hash((self.source, self.target))
-
-    def __eq__(self, other):
-        """Returns true if the two inputs are equal."""
-        return (self.source == other.source and
-                self.target == other.target)
-
-    def __ne__(self, other):
-        """Returns true if the two inputs are not equal."""
-        return not (self == other)
-
-    def replace_protocol(self, old_id, new_id):
-        """Redirect the input to point at a new protocol.
-
-        The main use of this method is when merging multiple protocols
-        into one.
-
-        Parameters
-        ----------
-        old_id : str
-            The id of the protocol to replace.
-        new_id : str
-            The id of the new protocol to use.
-        """
-
-        if self.source is not None:
-            self.source.replace_protocol(old_id, new_id)
-        if self.target is not None:
-            self.target.replace_protocol(old_id, new_id)
-
-
 class ProtocolSchema(BaseModel):
     """A json serializable representation which stores the
     user definable parameters of a protocol.
+
+    TODO: Merge inputs and parameters.
     """
     id: str = None
     type: str = None
 
-    input_dependencies: List[ProtocolDependency] = []
+    inputs: Dict[str, ProtocolPath] = {}
     parameters: Dict[str, Any] = {}
+
+    class Config:
+        arbitrary_types_allowed = True
+
+        json_encoders = {
+            ProtocolPath: lambda v: v.full_path
+        }
 
 
 class BaseProtocol:
@@ -317,9 +312,6 @@ class BaseProtocol:
     ----------
     id : str, optional
         The unique identity of the protocol
-    input_dependencies : list of ProtocolDependency
-        A list of this protocols dependencies. Another protocol is
-         considered a dependency if this protocol takes a value from the other.
     self.required_inputs : list of str
         A list of the inputs that must be passed to this protocol.
     self.provided_outputs : list of str
@@ -411,23 +403,6 @@ class BaseProtocol:
         def __init__(self, attribute, documentation=None):
             super().__init__(attribute, documentation)
 
-    def __init__(self):
-
-        # A unique identifier for this node.
-        self.id = None
-
-        # Defines where to pull the values from.
-        self.input_dependencies = []
-
-        # Find the required inputs and outputs.
-        self.parameters = self._find_types_with_decorator(BaseProtocol.Parameter)
-
-        self.required_inputs = self._find_types_with_decorator(BaseProtocol.InputPipe)
-        self.provided_outputs = self._find_types_with_decorator(BaseProtocol.OutputPipe)
-
-        # The directory in which to execute the protocol.
-        self.directory = None
-
     @property
     def schema(self):
         """ProtocolSchema: Returns a serializable schema for this object."""
@@ -436,7 +411,10 @@ class BaseProtocol:
         schema.id = self.id
         schema.type = type(self).__name__
 
-        schema.input_dependencies = self.input_dependencies
+        for input_name in self.required_inputs:
+
+            input_path = ProtocolPath(input_name)
+            schema.inputs[input_path.full_path] = self.get_value(input_path)
 
         for parameter in self.parameters:
 
@@ -460,7 +438,10 @@ class BaseProtocol:
             raise ValueError('Cannot convert a {} protocol to a {}.'
                              .format(str(type(self)), schema_value.type))
 
-        self.input_dependencies = schema_value.input_dependencies
+        for input_full_path in schema_value.inputs:
+
+            input_path = ProtocolPath.from_string(input_full_path)
+            self.set_value(input_path, schema_value.inputs[input_full_path])
 
         for parameter in schema_value.parameters:
 
@@ -470,6 +451,36 @@ class BaseProtocol:
                 value = deserialize_quantity(value)
 
             setattr(self, parameter, value)
+
+    @property
+    def dependencies(self):
+
+        return_dependencies = []
+
+        for input_name in self.required_inputs:
+
+            input_value = getattr(self, input_name)
+
+            if not isinstance(input_value, ProtocolPath):
+                continue
+
+            return_dependencies.append(input_value)
+
+        return return_dependencies
+
+    def __init__(self):
+
+        # A unique identifier for this node.
+        self.id = None
+
+        # Find the required inputs and outputs.
+        self.parameters = utils.find_types_with_decorator(type(self), BaseProtocol.Parameter)
+
+        self.required_inputs = utils.find_types_with_decorator(type(self), BaseProtocol.InputPipe)
+        self.provided_outputs = utils.find_types_with_decorator(type(self), BaseProtocol.OutputPipe)
+
+        # The directory in which to execute the protocol.
+        self.directory = None
 
     def execute(self, directory):
         """ Execute the protocol.
@@ -520,15 +531,23 @@ class BaseProtocol:
 
         self.id = graph.append_uuid(self.id, value)
 
-        for input_dependence in self.input_dependencies:
-            input_dependence.set_uuid(value)
+        for input_name in self.required_inputs:
+
+            input_value = getattr(self, input_name)
+
+            if not isinstance(input_value, ProtocolPath):
+                continue
+
+            input_value.append_uuid(value)
 
     def replace_protocol(self, old_id, new_id):
         """Finds each input which came from a given protocol
          and redirects it to instead take input from a new one.
 
-        The main use of this method is when merging multiple protocols
-        into one.
+        Notes
+        -----
+        This method is mainly intended to be used only when merging
+        multiple protocols into one.
 
         Parameters
         ----------
@@ -537,27 +556,15 @@ class BaseProtocol:
         new_id : str
             The id of the new input protocol.
         """
-        for input_dependence in self.input_dependencies:
-            input_dependence.replace_protocol(old_id, new_id)
 
-    def set_global_properties(self, global_properties):
-        """Set the value of any inputs which takes values
-        from the 'global' (i.e property to calculate) scope
+        for input_name in self.required_inputs:
 
-        Parameters
-        ----------
-        global_properties: dict of str to object
-            The list of global properties to draw from.
-        """
-        for input_dependence in self.input_dependencies:
+            input_value = getattr(self, input_name)
 
-            if not input_dependence.source.is_global:
+            if not isinstance(input_value, ProtocolPath):
                 continue
 
-            if input_dependence.source.property_name not in global_properties:
-                raise Exception('Invalid global property: {}'.format(input_dependence.source.property_name))
-
-            self.set_input_value(input_dependence, global_properties[input_dependence.source.property_name])
+            input_value.replace_protocol(old_id, new_id)
 
     def can_merge(self, other):
         """Determines whether this protocol can be merged with another.
@@ -575,13 +582,15 @@ class BaseProtocol:
         if not isinstance(self, type(other)):
             return False
 
-        for input_dependence in self.input_dependencies:
+        for input_name in self.required_inputs:
 
-            if input_dependence not in other.input_dependencies:
+            # if input_references not in other.input_references:
+            #     return False
+            if not hasattr(other, input_name):
                 return False
 
-            self_value = self.get_input_value(input_dependence)
-            other_value = other.get_input_value(input_dependence)
+            self_value = getattr(self, input_name)
+            other_value = getattr(other, input_name)
 
             if self_value != other_value:
                 return False
@@ -603,105 +612,57 @@ class BaseProtocol:
 
         pass
 
-    def set_input_value(self, input_dependence, value):
-        """Set the value of one of the protocols inputs.
+    def get_value(self, reference_path):
+        """Returns the value of one of this protocols parameters / inputs.
 
         Parameters
         ----------
-        input_dependence: ProtocolDependency
-            The input to set.
-        value
-            The value to set the input to.
-        """
-        if (input_dependence.target.start_protocol is not None and
-            input_dependence.target.start_protocol != self.id):
-
-            raise ValueError('The input dependence does not target this protocol.')
-
-        setattr(self, input_dependence.target.property_name, value)
-
-    def get_input_value(self, input_dependence):
-        """Gets the value that was set on one of this protocols inputs.
-
-        Parameters
-        ----------
-        input_dependence: ProtocolDependency
-            The input to get.
+        reference_path: ProtocolPath
+            The path pointing to the value to return.
 
         Returns
         ----------
         object:
             The value of the input
         """
-        if (input_dependence.target.start_protocol is not None and
-            input_dependence.target.start_protocol != self.id):
 
-            raise ValueError('The input dependence does not target this protocol.')
+        if (reference_path.start_protocol is not None and
+            reference_path.start_protocol != self.id):
 
-        getattr(self, input_dependence.target.property_name)
+            raise ValueError('The reference path does not target this protocol.')
 
-    def get_output_value(self, input_dependence):
-        """Returns the value of one of this protocols outputs.
+        if not hasattr(self, reference_path.property_name):
 
-        Parameters
-        ----------
-        input_dependence: ProtocolDependency
-            An input reference which points to the output to return.
+            raise ValueError('This protocol does not have contain a {} '
+                             'property.'.format(reference_path.property_name))
 
-        Returns
-        ----------
-        object:
-            The value of the input
-        """
-        if (input_dependence.source.start_protocol is not None and
-            input_dependence.source.start_protocol != self.id):
+        return getattr(self, reference_path.property_name)
 
-            raise ValueError('The input dependence does not source this protocol.')
-
-        getattr(self, input_dependence.target.property_name)
-
-    def _find_types_with_decorator(self, decorator_type):
-        """ A method to collect all attributes marked by a specified
-        decorator type (e.g. InputProperty).
+    def set_value(self, reference_path, value):
+        """Sets the value of one of this protocols parameters / inputs.
 
         Parameters
         ----------
-        decorator_type
-            The type of decorator to search for.
-
-        Returns
-        ----------
-        The names of the attributes decorated with the specified decorator.
+        reference_path: ProtocolPath
+            The path pointing to the value to return.
+        value: Any
+            The value to set.
         """
-        inputs = []
 
-        def get_bases(current_base_type):
+        if (reference_path.start_protocol is not None and
+            reference_path.start_protocol != self.id):
 
-            bases = [current_base_type]
+            raise ValueError('The reference path does not target this protocol.')
 
-            for base_type in current_base_type.__bases__:
-                bases.extend(get_bases(base_type))
+        if not hasattr(self, reference_path.property_name):
 
-            return bases
+            raise ValueError('This protocol does not have contain a {} '
+                             'property.'.format(reference_path.property_name))
 
-        all_bases = get_bases(type(self))
+        if reference_path.property_name in self.provided_outputs:
+            raise ValueError('Output values cannot be set by this method.')
 
-        for base in all_bases:
-
-            inputs.extend([attribute_name for attribute_name in base.__dict__ if
-                           type(base.__dict__[attribute_name]) is decorator_type])
-
-        return inputs
-
-
-class PropertyCalculatorException(BaseModel):
-    """A json serializable object wrapper containing information about
-    a failed property calculation.
-
-    TODO: Flesh out more fully.
-    """
-    directory: str
-    message: str
+        setattr(self, reference_path.property_name, value)
 
 
 @register_calculation_protocol()

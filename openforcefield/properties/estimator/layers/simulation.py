@@ -103,10 +103,10 @@ class DirectCalculation:
         self._apply_groups(schema)
 
         self.final_value_reference = copy.deepcopy(schema.final_value_reference)
-        self.final_value_reference.set_uuid(self.uuid)
+        self.final_value_reference.append_uuid(self.uuid)
 
         self.final_uncertainty_reference = copy.deepcopy(schema.final_uncertainty_reference)
-        self.final_uncertainty_reference.set_uuid(self.uuid)
+        self.final_uncertainty_reference.append_uuid(self.uuid)
 
     def _build_dependants_graph(self):
         """Builds a dictionary of key value pairs where each key represents the id of a
@@ -121,17 +121,19 @@ class DirectCalculation:
 
             dependant_protocol = self.protocols[dependant_protocol_name]
 
-            for input_reference in dependant_protocol.input_references:
+            for dependency in dependant_protocol.dependencies:
 
-                if input_reference.output_protocol_id == 'global':
+                if dependency.is_global:
                     # Global inputs are outside the scope of the
                     # schema dependency graph.
                     continue
 
-                if dependant_protocol.id in self.dependants_graph[input_reference.output_protocol_id]:
+                # Only add a dependency on the protocol at the head of the path,
+                # dependencies on the rest of protocols in the path is then implied.
+                if dependant_protocol.id in self.dependants_graph[dependency.start_protocol]:
                     continue
 
-                self.dependants_graph[input_reference.output_protocol_id].append(dependant_protocol.id)
+                self.dependants_graph[dependency.start_protocol].append(dependant_protocol.id)
 
         self.starting_protocols = graph.find_root_nodes(self.dependants_graph)
 
@@ -392,12 +394,13 @@ class DirectCalculationGraph:
             # Pull out any 'global' properties.
             global_properties = {}
 
-            for input_reference in node.input_references:
+            # I think this is now redundant?
+            for dependency in node.dependencies:
 
-                if input_reference.output_protocol_id != 'global':
+                if not dependency.is_global:
                     continue
 
-                global_properties[input_reference.output_property_name] = node.get_input_value(input_reference)
+                global_properties[dependency.property_name] = node.get_value(dependency)
 
             submitted_futures[node_id] = backend.submit_task(DirectCalculationGraph._execute_protocol,
                                                              node.directory,
@@ -453,15 +456,16 @@ class DirectCalculationGraph:
         if not path.isdir(directory):
             os.makedirs(directory)
 
-        for input_reference in protocol.input_references:
+        # TODO: Fix for groups.
+        for dependency in protocol.dependencies:
 
-            if input_reference.output_protocol_id == 'global':
+            if dependency.is_global:
                 continue
 
-            input_value = parent_outputs_by_id[input_reference.output_protocol_id][
-                                               input_reference.output_property_name]
+            input_value = parent_outputs_by_id[dependency.start_protocol][
+                                               dependency.property_name]
 
-            protocol.set_input_value(input_reference, input_value)
+            protocol.set_value(dependency, input_value)
 
         try:
             output_dictionary = protocol.execute(directory)
@@ -488,11 +492,11 @@ class DirectCalculationGraph:
         ----------
         value_result: dict of string and Any
             ...
-        value_property_name: str
+        value_reference: ProtocolPath
             ...
         uncertainty_result: dict of string and Any
             ...
-        uncertainty_property_name
+        uncertainty_reference: ProtocolPath
             ...
         property_to_return: PhysicalProperty
             ...
@@ -509,13 +513,11 @@ class DirectCalculationGraph:
         # Make sure none of the protocols failed and we actually have a value
         # and uncertainty.
         if isinstance(value_result[1], protocols.PropertyCalculatorException):
-            # TODO: property_to_return.error_code = value_result
 
             failure_object = value_result[1]
             succeeded = False
 
         if isinstance(uncertainty_result[1], protocols.PropertyCalculatorException):
-            # TODO: property_to_return.error_code = uncertainty_result
 
             failure_object = uncertainty_result[1]
             succeeded = False
@@ -526,8 +528,8 @@ class DirectCalculationGraph:
             property_to_return.source = CalculationSource(fidelity=SimulationLayer.__name__,
                                                           provenance='')
 
-            property_to_return.value = value_result[1][value_reference.output_property_name]
-            property_to_return.uncertainty = uncertainty_result[1][uncertainty_reference.output_property_name]
+            property_to_return.value = value_result[1][value_reference.property_name]
+            property_to_return.uncertainty = uncertainty_result[1][uncertainty_reference.property_name]
 
         else:
 

@@ -470,3 +470,39 @@ def read_typelist(filename):
     ifs.close()
 
     return typelist
+
+
+def find_types_with_decorator(class_type, decorator_type):
+    """ A method to collect all attributes marked by a specified
+    decorator type (e.g. InputProperty).
+
+    Parameters
+    ----------
+    class_type
+        The class to pull attributes from.
+    decorator_type
+        The type of decorator to search for.
+
+    Returns
+    ----------
+    The names of the attributes decorated with the specified decorator.
+    """
+    inputs = []
+
+    def get_bases(current_base_type):
+
+        bases = [current_base_type]
+
+        for base_type in current_base_type.__bases__:
+            bases.extend(get_bases(base_type))
+
+        return bases
+
+    all_bases = get_bases(class_type)
+
+    for base in all_bases:
+
+        inputs.extend([attribute_name for attribute_name in base.__dict__ if
+                       type(base.__dict__[attribute_name]) is decorator_type])
+
+    return inputs

@@ -14,6 +14,8 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import json
+
 from pydantic import BaseModel
 
 from typing import Dict, Optional
@@ -39,6 +41,13 @@ class CalculationSchema(BaseModel):
     final_value_source: Optional[ProtocolPath] = None
     final_uncertainty_source: Optional[ProtocolPath] = None
 
+    class Config:
+        arbitrary_types_allowed = True
+
+        json_encoders = {
+            ProtocolPath: lambda v: v.full_path
+        }
+
     def validate_interfaces(self):
         """Validates the flow of the data between protocols, ensuring
         that inputs and outputs correctly match up.
@@ -46,27 +55,34 @@ class CalculationSchema(BaseModel):
 
         for protocol_name in self.protocols:
 
-            protocol = self.protocols[protocol_name]
+            protocol_schema = self.protocols[protocol_name]
 
-            for input_dependence in protocol.input_dependencies:
+            protocol_object = available_protocols[protocol_schema.type]()
+            protocol_object.schema = protocol_schema
 
-                if input_dependence.source.is_global:
-                    # We handle global inputs separately
+            for input_name in protocol_object.required_inputs:
+
+                input_value = getattr(protocol_object, input_name)
+
+                if not isinstance(input_value, ProtocolPath):
+                    # Don't look at constant values.
+                    continue
+
+                if input_value.is_global:
+                    # We handle global input validation separately
                     continue
 
                 # Make sure the other protocol whose output we are interested
                 # in actually exists.
-                if input_reference.output_protocol_id not in self.protocols:
+                if input_value.start_protocol not in self.protocols:
 
                     raise Exception('The {} protocol of the {} schema tries to take input from a non-existent '
-                                    'protocol: {}'.format(protocol.id, self.id, input_reference.protocol_id))
+                                    'protocol: {}'.format(protocol_object.id, self.id, input_value.start_protocol))
 
-                other_protocol = self.protocols[input_reference.output_protocol_id]
+                other_protocol_schema = self.protocols[input_value.start_protocol]
 
-                other_protocol_object = available_protocols[other_protocol.type]()
+                other_protocol_object = available_protocols[other_protocol_schema.type]()
+                other_protocol_object.schema = other_protocol_schema
 
-                # Make sure the other protocol definitely has the requested output.
-                if input_reference.output_property_name not in other_protocol_object.provided_outputs:
-
-                    raise Exception('The {} protocol does not provide an {} output.'.format(
-                        other_protocol.id, input_reference.output_property_name))
+                # Will throw the correct exception if missing.
+                other_protocol_object.get_value(input_value)

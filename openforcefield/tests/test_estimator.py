@@ -1,6 +1,7 @@
 import logging
 import sys
 import shutil
+import pickle
 
 from os import path
 
@@ -80,37 +81,40 @@ def run_property_estimator():
     # results = property_estimator.compute_properties(data_set, force_field)
     # client.PropertyEstimator.produce_calculation_report(data_set, results)
 
-# def test_simulation_backend():
-#
-#     if path.isdir('property-data'):
-#         shutil.rmtree('property-data')
-#
-#     # Set up time-based logging to help debug threading issues.
-#     formatter = logging.Formatter(fmt='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
-#                                   datefmt='%H:%M:%S')
-#
-#     screen_handler = logging.StreamHandler(stream=sys.stdout)
-#     screen_handler.setFormatter(formatter)
-#
-#     logger = logging.getLogger()
-#     logger.setLevel(logging.INFO)
-#     logger.addHandler(screen_handler)
-#
-#     dummy_pickle = b''
-#     data_model = pickle.loads(dummy_pickle)
-#
-#     backend = DaskLocalClusterBackend(1, 1)
-#     backend.start()
-#
-#     def dummy_callback(*args, **kwargs):
-#         print(args, kwargs)
-#         pass
-#
-#     simulation_layer = SimulationLayer()
-#     simulation_layer.schedule_calculation(backend, data_model, {}, dummy_callback, True)
-#
-#     backend._client.get_worker_logs()
+
+def run_simulation_backend():
+
+    if path.isdir('property-data'):
+        shutil.rmtree('property-data')
+
+    # Set up time-based logging to help debug threading issues.
+    formatter = logging.Formatter(fmt='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+                                  datefmt='%H:%M:%S')
+
+    screen_handler = logging.StreamHandler(stream=sys.stdout)
+    screen_handler.setFormatter(formatter)
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.addHandler(screen_handler)
+
+    dummy_pickle = b''
+    data_model = pickle.loads(dummy_pickle)
+
+    backend = DaskLocalClusterBackend(1, 1)
+    backend.start()
+
+    def dummy_callback(*args, **kwargs):
+        print(args, kwargs)
+        pass
+
+    simulation_layer = SimulationLayer()
+    simulation_layer.schedule_calculation(backend, data_model, {}, dummy_callback, True)
+
+    backend._client.get_worker_logs()
+
 
 if __name__ == "__main__":
-    # test_simulation_backend()
+    # test_calculation_schema()
+    # run_simulation_backend()
     run_property_estimator()

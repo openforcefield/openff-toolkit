@@ -159,7 +159,7 @@ class PhysicalProperty(TypedBaseModel):
     class Config:
 
         # A dirty hack to allow simtk.unit.Quantities...
-        # TODO: Should really invesitigate QCElemental as an alternative.
+        # TODO: Should really investigate QCElemental as an alternative.
         arbitrary_types_allowed = True
 
         json_encoders = {

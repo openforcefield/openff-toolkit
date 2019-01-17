@@ -28,7 +28,7 @@ from typing import List, Dict
 
 from openforcefield.utils import graph
 
-from .protocols import BaseProtocol, ProtocolInputReference, ProtocolSchema
+from .protocols import BaseProtocol, ProtocolSchema
 
 
 # =============================================================================================
