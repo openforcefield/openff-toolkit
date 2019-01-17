@@ -32,7 +32,7 @@ from openforcefield.properties.datasets import register_thermoml_property
 from openforcefield.properties.estimator import CalculationSchema, register_estimable_property
 from openforcefield.properties.estimator.components import protocols, groups
 from openforcefield.properties.estimator.components.protocols import AverageTrajectoryProperty, \
-    ProtocolInputReference, register_calculation_protocol
+    ProtocolDependency, register_calculation_protocol, ProtocolPath
 
 
 # =============================================================================================
@@ -144,11 +144,10 @@ class DielectricConstant(PhysicalProperty):
         build_coordinates = protocols.BuildCoordinatesPackmol()
         build_coordinates.id = 'build_coordinates'
 
-        build_coordinates.input_references = [
+        build_coordinates.input_dependencies = [
             # Globals
-            ProtocolInputReference(input_property_name='substance',
-                                   output_protocol_id='global',
-                                   output_property_name='substance')
+            ProtocolDependency(source=ProtocolPath('substance', 'global'),
+                               target=ProtocolPath('substance'))
         ]
 
         schema.protocols[build_coordinates.id] = build_coordinates.schema
@@ -156,19 +155,16 @@ class DielectricConstant(PhysicalProperty):
         assign_topology = protocols.BuildSmirnoffTopology()
         assign_topology.id = 'build_topology'
 
-        assign_topology.input_references = [
+        assign_topology.input_dependencies = [
             # Globals
-            ProtocolInputReference(input_property_name='force_field_path',
-                                   output_protocol_id='global',
-                                   output_property_name='force_field_path'),
+            ProtocolDependency(source=ProtocolPath('force_field_path', 'global'),
+                               target=ProtocolPath('force_field_path')),
             # Locals
-            ProtocolInputReference(input_property_name='coordinate_file',
-                                   output_protocol_id=build_coordinates.id,
-                                   output_property_name='coordinate_file'),
+            ProtocolDependency(source=ProtocolPath('coordinate_file', build_coordinates.id),
+                               target=ProtocolPath('coordinate_file')),
 
-            ProtocolInputReference(input_property_name='molecules',
-                                   output_protocol_id=build_coordinates.id,
-                                   output_property_name='molecules')
+            ProtocolDependency(source=ProtocolPath('molecules', build_coordinates.id),
+                               target=ProtocolPath('molecules'))
         ]
 
         schema.protocols[assign_topology.id] = assign_topology.schema
@@ -177,15 +173,13 @@ class DielectricConstant(PhysicalProperty):
         energy_minimisation.id = 'energy_minimisation'
 
         # Equilibration
-        energy_minimisation.input_references = [
+        energy_minimisation.input_dependencies = [
             # Locals
-            ProtocolInputReference(input_property_name='input_coordinate_file',
-                                   output_protocol_id=build_coordinates.id,
-                                   output_property_name='coordinate_file'),
+            ProtocolDependency(source=ProtocolPath('coordinate_file', build_coordinates.id),
+                               target=ProtocolPath('input_coordinate_file')),
 
-            ProtocolInputReference(input_property_name='system',
-                                   output_protocol_id=assign_topology.id,
-                                   output_property_name='system')
+            ProtocolDependency(source=ProtocolPath('system', assign_topology.id),
+                               target=ProtocolPath('system'))
         ]
 
         schema.protocols[energy_minimisation.id] = energy_minimisation.schema
@@ -199,19 +193,16 @@ class DielectricConstant(PhysicalProperty):
         npt_equilibration.steps = 2
         npt_equilibration.output_frequency = 1
 
-        npt_equilibration.input_references = [
+        npt_equilibration.input_dependencies = [
             # Globals
-            ProtocolInputReference(input_property_name='thermodynamic_state',
-                                   output_protocol_id='global',
-                                   output_property_name='thermodynamic_state'),
+            ProtocolDependency(source=ProtocolPath('thermodynamic_state', 'global'),
+                               target=ProtocolPath('thermodynamic_state')),
             # Locals
-            ProtocolInputReference(input_property_name='input_coordinate_file',
-                                   output_protocol_id=energy_minimisation.id,
-                                   output_property_name='output_coordinate_file'),
+            ProtocolDependency(source=ProtocolPath('output_coordinate_file', energy_minimisation.id),
+                               target=ProtocolPath('input_coordinate_file')),
 
-            ProtocolInputReference(input_property_name='system',
-                                   output_protocol_id=assign_topology.id,
-                                   output_property_name='system')
+            ProtocolDependency(source=ProtocolPath('system', assign_topology.id),
+                               target=ProtocolPath('system'))
         ]
 
         schema.protocols[npt_equilibration.id] = npt_equilibration.schema
@@ -227,19 +218,16 @@ class DielectricConstant(PhysicalProperty):
         npt_production.steps = 200
         npt_production.output_frequency = 20
 
-        npt_production.input_references = [
+        npt_production.input_dependencies = [
             # Globals
-            ProtocolInputReference(input_property_name='thermodynamic_state',
-                                   output_protocol_id='global',
-                                   output_property_name='thermodynamic_state'),
+            ProtocolDependency(source=ProtocolPath('thermodynamic_state', 'global'),
+                               target=ProtocolPath('thermodynamic_state')),
             # Locals
-            ProtocolInputReference(input_property_name='input_coordinate_file',
-                                   output_protocol_id=npt_equilibration.id,
-                                   output_property_name='output_coordinate_file'),
+            ProtocolDependency(source=ProtocolPath('output_coordinate_file', npt_equilibration.id),
+                               target=ProtocolPath('input_coordinate_file')),
 
-            ProtocolInputReference(input_property_name='system',
-                                   output_protocol_id=assign_topology.id,
-                                   output_property_name='system')
+            ProtocolDependency(source=ProtocolPath('system', assign_topology.id),
+                               target=ProtocolPath('system'))
         ]
 
         schema.protocols[npt_production.id] = npt_production.schema
@@ -248,23 +236,19 @@ class DielectricConstant(PhysicalProperty):
         extract_dielectric = ExtractAverageDielectric()
         extract_dielectric.id = 'extract_dielectric'
 
-        extract_dielectric.input_references = [
+        extract_dielectric.input_dependencies = [
             # Globals
-            ProtocolInputReference(input_property_name='thermodynamic_state',
-                                   output_protocol_id='global',
-                                   output_property_name='thermodynamic_state'),
+            ProtocolDependency(source=ProtocolPath('thermodynamic_state', 'global'),
+                               target=ProtocolPath('thermodynamic_state')),
             # Locals
-            ProtocolInputReference(input_property_name='input_coordinate_file',
-                                   output_protocol_id=npt_production.id,
-                                   output_property_name='output_coordinate_file'),
+            ProtocolDependency(source=ProtocolPath('output_coordinate_file', npt_production.id),
+                               target=ProtocolPath('input_coordinate_file')),
 
-            ProtocolInputReference(input_property_name='trajectory_path',
-                                   output_protocol_id=npt_production.id,
-                                   output_property_name='trajectory'),
+            ProtocolDependency(source=ProtocolPath('trajectory', npt_production.id),
+                               target=ProtocolPath('trajectory_path')),
 
-            ProtocolInputReference(input_property_name='system',
-                                   output_protocol_id=assign_topology.id,
-                                   output_property_name='system')
+            ProtocolDependency(source=ProtocolPath('system', assign_topology.id),
+                               target=ProtocolPath('system'))
         ]
 
         schema.protocols[extract_dielectric.id] = extract_dielectric.schema
@@ -276,26 +260,21 @@ class DielectricConstant(PhysicalProperty):
         ])
         converge_uncertainty.id = 'converge_uncertainty'
 
-        converge_uncertainty.input_references = [
-            # Locals
-            ProtocolInputReference(input_property_name='left_hand_value',
-                                   output_protocol_id='extract_dielectric',
-                                   output_property_name='uncertainty'),
-            # Globals
-            ProtocolInputReference(input_property_name='right_hand_value',
-                                   output_protocol_id='global',
-                                   output_property_name='uncertainty'),
+        converge_uncertainty.input_dependencies = [
+            # # Locals
+            # ProtocolInputReference(input_property_name='left_hand_value',
+            #                        output_protocol_id='extract_dielectric',
+            #                        output_property_name='uncertainty'),
+            # # Globals
+            # ProtocolInputReference(input_property_name='right_hand_value',
+            #                        output_protocol_id='global',
+            #                        output_property_name='uncertainty'),
         ]
 
         schema.groups[converge_uncertainty.id] = converge_uncertainty.schema
 
         # Define where the final values come from.
-        schema.final_value_reference = ProtocolInputReference(input_property_name=None,
-                                                              output_protocol_id=extract_dielectric.id,
-                                                              output_property_name='value')
-
-        schema.final_uncertainty_reference = ProtocolInputReference(input_property_name=None,
-                                                                    output_protocol_id=extract_dielectric.id,
-                                                                    output_property_name='uncertainty')
+        schema.final_value_source = ProtocolPath('value', extract_dielectric.id)
+        schema.final_uncertainty_source = ProtocolPath('uncertainty', extract_dielectric.id)
 
         return schema

@@ -92,6 +92,10 @@ class ProtocolPath:
     def full_path(self):
         return self._full_path
 
+    @property
+    def is_global(self):
+        return self.start_protocol == 'global'
+
     def __init__(self, property_name, *protocol_ids):
 
         self._full_path = ''
@@ -547,13 +551,13 @@ class BaseProtocol:
         """
         for input_dependence in self.input_dependencies:
 
-            if input_reference.output_protocol_id != 'global':
+            if not input_dependence.source.is_global:
                 continue
 
-            if input_reference.output_property_name not in global_properties:
-                raise Exception('Invalid global property: {}'.format(input_reference.output_property_name))
+            if input_dependence.source.property_name not in global_properties:
+                raise Exception('Invalid global property: {}'.format(input_dependence.source.property_name))
 
-            self.set_input_value(input_reference, global_properties[input_reference.output_property_name])
+            self.set_input_value(input_dependence, global_properties[input_dependence.source.property_name])
 
     def can_merge(self, other):
         """Determines whether this protocol can be merged with another.
@@ -599,24 +603,29 @@ class BaseProtocol:
 
         pass
 
-    def set_input_value(self, input_reference, value):
+    def set_input_value(self, input_dependence, value):
         """Set the value of one of the protocols inputs.
 
         Parameters
         ----------
-        input_reference: ProtocolInputReference
+        input_dependence: ProtocolDependency
             The input to set.
         value
             The value to set the input to.
         """
-        setattr(self, input_reference.input_property_name, value)
+        if (input_dependence.target.start_protocol is not None and
+            input_dependence.target.start_protocol != self.id):
 
-    def get_input_value(self, input_reference):
+            raise ValueError('The input dependence does not target this protocol.')
+
+        setattr(self, input_dependence.target.property_name, value)
+
+    def get_input_value(self, input_dependence):
         """Gets the value that was set on one of this protocols inputs.
 
         Parameters
         ----------
-        input_reference: ProtocolInputReference
+        input_dependence: ProtocolDependency
             The input to get.
 
         Returns
@@ -624,14 +633,19 @@ class BaseProtocol:
         object:
             The value of the input
         """
-        return getattr(self, input_reference.input_property_name)
+        if (input_dependence.target.start_protocol is not None and
+            input_dependence.target.start_protocol != self.id):
 
-    def get_output_value(self, input_reference):
+            raise ValueError('The input dependence does not target this protocol.')
+
+        getattr(self, input_dependence.target.property_name)
+
+    def get_output_value(self, input_dependence):
         """Returns the value of one of this protocols outputs.
 
         Parameters
         ----------
-        input_reference: ProtocolInputReference
+        input_dependence: ProtocolDependency
             An input reference which points to the output to return.
 
         Returns
@@ -639,7 +653,12 @@ class BaseProtocol:
         object:
             The value of the input
         """
-        return getattr(self, input_reference.output_property_name)
+        if (input_dependence.source.start_protocol is not None and
+            input_dependence.source.start_protocol != self.id):
+
+            raise ValueError('The input dependence does not source this protocol.')
+
+        getattr(self, input_dependence.target.property_name)
 
     def _find_types_with_decorator(self, decorator_type):
         """ A method to collect all attributes marked by a specified
