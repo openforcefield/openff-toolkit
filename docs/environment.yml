@@ -12,7 +12,6 @@ dependencies:
     - numpydoc
     - networkx
     - lxml
-    - icu 58*  # This is a lxml dependency but sometimes conda installs version 56
     - openmoltools >=0.7.3
     - matplotlib
     - pandas
@@ -21,9 +20,3 @@ dependencies:
     - m2r >=0.2.1
     - rdkit
     - testpath =0.3.1
-    - packmol
-    - pymbar
-    - mdtraj
-    - dask
-    - tornado
-
