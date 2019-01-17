@@ -173,7 +173,7 @@ class DielectricConstant(PhysicalProperty):
         npt_equilibration.steps = 2  # Debug settings.
         npt_equilibration.output_frequency = 1  # Debug settings.
 
-        npt_equilibration.force_field_path = ProtocolPath('thermodynamic_state', 'global')
+        npt_equilibration.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
         npt_equilibration.input_coordinate_file = ProtocolPath('output_coordinate_file', energy_minimisation.id)
         npt_equilibration.system = ProtocolPath('system', assign_topology.id)
@@ -190,7 +190,7 @@ class DielectricConstant(PhysicalProperty):
         npt_production.steps = 200  # Debug settings.
         npt_production.output_frequency = 20  # Debug settings.
 
-        npt_production.force_field_path = ProtocolPath('thermodynamic_state', 'global')
+        npt_production.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
         npt_production.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_equilibration.id)
         npt_production.system = ProtocolPath('system', assign_topology.id)
@@ -201,7 +201,7 @@ class DielectricConstant(PhysicalProperty):
         extract_dielectric = ExtractAverageDielectric()
         extract_dielectric.id = 'extract_dielectric'
 
-        extract_dielectric.force_field_path = ProtocolPath('thermodynamic_state', 'global')
+        extract_dielectric.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
         extract_dielectric.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_production.id)
         extract_dielectric.trajectory_path = ProtocolPath('trajectory', npt_production.id)

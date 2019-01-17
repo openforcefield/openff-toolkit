@@ -31,6 +31,7 @@ from tornado.ioloop import IOLoop
 from tornado.iostream import StreamClosedError
 from tornado.tcpclient import TCPClient
 
+from openforcefield.properties.estimator.components.protocols import ProtocolPath
 from openforcefield.properties.estimator.layers import SurrogateLayer, ReweightingLayer, SimulationLayer
 
 from openforcefield.utils.serialization import serialize_quantity
@@ -115,6 +116,7 @@ class PropertyEstimatorDataModel(BaseModel):
 
         json_encoders = {
             unit.Quantity: lambda v: serialize_quantity(v),
+            ProtocolPath: lambda v: v.full_path
         }
 
 

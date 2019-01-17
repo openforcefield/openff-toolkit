@@ -134,7 +134,7 @@ class Density(PhysicalProperty):
         npt_equilibration.steps = 2  # Debug settings.
         npt_equilibration.output_frequency = 1  # Debug settings.
 
-        npt_equilibration.force_field_path = ProtocolPath('thermodynamic_state', 'global')
+        npt_equilibration.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
         npt_equilibration.input_coordinate_file = ProtocolPath('output_coordinate_file', energy_minimisation.id)
         npt_equilibration.system = ProtocolPath('system', assign_topology.id)
@@ -151,7 +151,7 @@ class Density(PhysicalProperty):
         npt_production.steps = 200  # Debug settings.
         npt_production.output_frequency = 20  # Debug settings.
 
-        npt_production.force_field_path = ProtocolPath('thermodynamic_state', 'global')
+        npt_production.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
         npt_production.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_equilibration.id)
         npt_production.system = ProtocolPath('system', assign_topology.id)
@@ -163,7 +163,7 @@ class Density(PhysicalProperty):
         extract_density = ExtractAverageDensity()
         extract_density.id = 'extract_density'
 
-        extract_density.force_field_path = ProtocolPath('thermodynamic_state', 'global')
+        extract_density.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
         extract_density.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_production.id)
         extract_density.trajectory_path = ProtocolPath('trajectory', npt_production.id)

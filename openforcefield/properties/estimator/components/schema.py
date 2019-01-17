@@ -60,13 +60,14 @@ class CalculationSchema(BaseModel):
             protocol_object = available_protocols[protocol_schema.type]()
             protocol_object.schema = protocol_schema
 
-            for input_name in protocol_object.required_inputs:
+            for input_path in protocol_object.required_inputs:
 
-                input_value = getattr(protocol_object, input_name)
+                input_value = protocol_object.get_value(input_path)
 
-                if not isinstance(input_value, ProtocolPath):
-                    # Don't look at constant values.
-                    continue
+                if input_value is None:
+
+                    raise Exception('The {} required input of protocol {} in the {} schema was '
+                                    'not set.'.format(input_path, protocol_name, self.id))
 
                 if input_value.is_global:
                     # We handle global input validation separately

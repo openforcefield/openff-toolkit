@@ -67,8 +67,8 @@ class DirectCalculation:
         self.starting_protocols = []
         self.dependants_graph = {}
 
-        self.final_value_reference = None
-        self.final_uncertainty_reference = None
+        self.final_value_source = None
+        self.final_uncertainty_source = None
 
         schema = CalculationSchema.parse_raw(schema.json())
 
@@ -80,10 +80,6 @@ class DirectCalculation:
             "force_field_path": force_field_path
         }
 
-        # A helper to map the template protocol ids to
-        # the new, uuid appended ones.
-        id_map = {}
-
         for protocol_name in schema.protocols:
 
             protocol_schema = schema.protocols[protocol_name]
@@ -92,21 +88,27 @@ class DirectCalculation:
             protocol.schema = protocol_schema
 
             # Try to set global properties on each of the protocols
-            protocol.set_global_properties(self.global_properties)
+            for input_path in protocol.required_inputs:
+
+                input_value = protocol.get_value(input_path)
+
+                if not input_value.is_global:
+                    continue
+
+                protocol.set_value(input_path, self.global_properties[input_value.property_name])
 
             protocol.set_uuid(self.uuid)
-            id_map[protocol_name] = protocol.id
 
             self.protocols[protocol.id] = protocol
 
         self._build_dependants_graph()
         self._apply_groups(schema)
 
-        self.final_value_reference = copy.deepcopy(schema.final_value_reference)
-        self.final_value_reference.append_uuid(self.uuid)
+        self.final_value_source = copy.deepcopy(schema.final_value_source)
+        self.final_value_source.append_uuid(self.uuid)
 
-        self.final_uncertainty_reference = copy.deepcopy(schema.final_uncertainty_reference)
-        self.final_uncertainty_reference.append_uuid(self.uuid)
+        self.final_uncertainty_source = copy.deepcopy(schema.final_uncertainty_source)
+        self.final_uncertainty_source.append_uuid(self.uuid)
 
     def _build_dependants_graph(self):
         """Builds a dictionary of key value pairs where each key represents the id of a
@@ -230,8 +232,8 @@ class DirectCalculation:
         if old_protocol.id in self.dependants_graph:
             self.dependants_graph[new_protocol.id] = self.dependants_graph.pop(old_protocol.id)
 
-        self.final_value_reference.replace_protocol(old_protocol.id, new_protocol.id)
-        self.final_uncertainty_reference.replace_protocol(old_protocol.id, new_protocol.id)
+        self.final_value_source.replace_protocol(old_protocol.id, new_protocol.id)
+        self.final_uncertainty_source.replace_protocol(old_protocol.id, new_protocol.id)
 
 
 class DirectCalculationGraph:
@@ -394,7 +396,6 @@ class DirectCalculationGraph:
             # Pull out any 'global' properties.
             global_properties = {}
 
-            # I think this is now redundant?
             for dependency in node.dependencies:
 
                 if not dependency.is_global:
@@ -402,31 +403,35 @@ class DirectCalculationGraph:
 
                 global_properties[dependency.property_name] = node.get_value(dependency)
 
+            # Do a quick sanity check to make sure they've all been set already.
+            if len(global_properties) > 0:
+                raise ValueError('The global_properties array should be empty by this point.')
+
             submitted_futures[node_id] = backend.submit_task(DirectCalculationGraph._execute_protocol,
                                                              node.directory,
                                                              node.schema,
-                                                             global_properties,
                                                              *dependency_futures)
 
         for calculation_id in self._calculations_to_run:
 
             calculation = self._calculations_to_run[calculation_id]
 
-            value_node_id = calculation.final_value_reference.output_protocol_id
-            uncertainty_node_id = calculation.final_uncertainty_reference.output_protocol_id
+            # TODO : Fix for groups.
+            value_node_id = calculation.final_value_source.start_protocol
+            uncertainty_node_id = calculation.final_uncertainty_source.start_protocol
 
             # Gather the values and uncertainties of each property being calculated.
             value_futures.append(backend.submit_task(DirectCalculationGraph._gather_results,
                                                      submitted_futures[value_node_id],
-                                                     calculation.final_value_reference,
+                                                     calculation.final_value_source,
                                                      submitted_futures[uncertainty_node_id],
-                                                     calculation.final_uncertainty_reference,
+                                                     calculation.final_uncertainty_source,
                                                      calculation.physical_property))
 
         return value_futures
 
     @staticmethod
-    def _execute_protocol(directory, protocol_schema, global_properties, *parent_outputs):
+    def _execute_protocol(directory, protocol_schema, *parent_outputs):
         """Executes a protocol defined by the input schema, and with
         inputs sets via the global scope and from previously executed protocols.
 
@@ -435,37 +440,42 @@ class DirectCalculationGraph:
 
         # Store the results of the relevant previous protocols in a handy dictionary.
         # If one of the results is a failure, propagate it up the chain!
-        parent_outputs_by_id = {}
+        parent_outputs_by_path = {}
 
         for parent_id, parent_output in parent_outputs:
 
-            parent_outputs_by_id[parent_id] = parent_output
-
             if isinstance(parent_output, protocols.PropertyCalculatorException):
                 return protocol_schema.id, parent_output
+
+            for output_path, output_value in parent_output.items():
+
+                property_name, protocol_ids = protocols.ProtocolPath.to_components(output_path)
+
+                if len(protocol_ids) == 0 or (len(protocol_ids) > 0 and protocol_ids[0] != parent_id):
+                    protocol_ids.insert(0, parent_id)
+
+                final_path = protocols.ProtocolPath(property_name, *protocol_ids)
+                parent_outputs_by_path[final_path] = output_value
 
         # Recreate the protocol on the backend to bypass the need for static methods
         # and awkward args and kwargs syntax.
         protocol = protocols.available_protocols[protocol_schema.type]()
         protocol.schema = protocol_schema
 
-        # Try to set global properties on each of the protocols
-        protocol.set_global_properties(global_properties)
         protocol.set_uuid(graph.retrieve_uuid(protocol.id))
 
         if not path.isdir(directory):
             os.makedirs(directory)
 
-        # TODO: Fix for groups.
-        for dependency in protocol.dependencies:
+        for input_path in protocol.required_inputs:
 
-            if dependency.is_global:
+            target_path = protocol.get_value(input_path)
+
+            if not isinstance(target_path, protocols.ProtocolPath):
                 continue
 
-            input_value = parent_outputs_by_id[dependency.start_protocol][
-                                               dependency.property_name]
-
-            protocol.set_value(dependency, input_value)
+            input_value = parent_outputs_by_path[target_path]
+            protocol.set_value(input_path, input_value)
 
         try:
             output_dictionary = protocol.execute(directory)
@@ -528,8 +538,32 @@ class DirectCalculationGraph:
             property_to_return.source = CalculationSource(fidelity=SimulationLayer.__name__,
                                                           provenance='')
 
-            property_to_return.value = value_result[1][value_reference.property_name]
-            property_to_return.uncertainty = uncertainty_result[1][uncertainty_reference.property_name]
+            value_results = {}
+
+            for output_path, output_value in value_result[1].items():
+
+                property_name, protocol_ids = protocols.ProtocolPath.to_components(output_path)
+
+                if len(protocol_ids) == 0 or (len(protocol_ids) > 0 and protocol_ids[0] != value_result[0]):
+                    protocol_ids.insert(0, value_result[0])
+
+                final_path = protocols.ProtocolPath(property_name, *protocol_ids)
+                value_results[final_path] = output_value
+
+            uncertainty_results = {}
+
+            for output_path, output_value in uncertainty_result[1].items():
+
+                property_name, protocol_ids = protocols.ProtocolPath.to_components(output_path)
+
+                if len(protocol_ids) == 0 or (len(protocol_ids) > 0 and protocol_ids[0] != uncertainty_result[0]):
+                    protocol_ids.insert(0, uncertainty_result[0])
+
+                final_path = protocols.ProtocolPath(property_name, *protocol_ids)
+                uncertainty_results[final_path] = output_value
+
+            property_to_return.value = value_results[value_reference]
+            property_to_return.uncertainty = uncertainty_results[uncertainty_reference]
 
         else:
 

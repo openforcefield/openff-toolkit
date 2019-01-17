@@ -249,7 +249,17 @@ class ProtocolPath:
 
     @classmethod
     def validate(cls, v):
+
+        if isinstance(v, str):
+            return ProtocolPath.from_string(v)
+
         return v
+
+    def __str__(self):
+        return self._full_path
+
+    def __repr__(self):
+        return '<ProtocolPath full_path={}>'.format(self._full_path)
 
     def __hash__(self):
         """Returns the hash key of this ProtocolPath."""
@@ -312,9 +322,9 @@ class BaseProtocol:
     ----------
     id : str, optional
         The unique identity of the protocol
-    self.required_inputs : list of str
+    self.required_inputs : list of ProtocolPath
         A list of the inputs that must be passed to this protocol.
-    self.provided_outputs : list of str
+    self.provided_outputs : list of ProtocolPath
         A list of the outputs that this protocol produces.
     """
 
@@ -411,9 +421,7 @@ class BaseProtocol:
         schema.id = self.id
         schema.type = type(self).__name__
 
-        for input_name in self.required_inputs:
-
-            input_path = ProtocolPath(input_name)
+        for input_path in self.required_inputs:
             schema.inputs[input_path.full_path] = self.get_value(input_path)
 
         for parameter in self.parameters:
@@ -457,9 +465,9 @@ class BaseProtocol:
 
         return_dependencies = []
 
-        for input_name in self.required_inputs:
+        for input_path in self.required_inputs:
 
-            input_value = getattr(self, input_name)
+            input_value = self.get_value(input_path)
 
             if not isinstance(input_value, ProtocolPath):
                 continue
@@ -476,8 +484,17 @@ class BaseProtocol:
         # Find the required inputs and outputs.
         self.parameters = utils.find_types_with_decorator(type(self), BaseProtocol.Parameter)
 
-        self.required_inputs = utils.find_types_with_decorator(type(self), BaseProtocol.InputPipe)
-        self.provided_outputs = utils.find_types_with_decorator(type(self), BaseProtocol.OutputPipe)
+        self.provided_outputs = []
+        self.required_inputs = []
+
+        output_attributes = utils.find_types_with_decorator(type(self), BaseProtocol.OutputPipe)
+        input_attributes = utils.find_types_with_decorator(type(self), BaseProtocol.InputPipe)
+
+        for output_attribute in output_attributes:
+            self.provided_outputs.append(ProtocolPath(output_attribute))
+
+        for input_attribute in input_attributes:
+            self.required_inputs.append(ProtocolPath(input_attribute))
 
         # The directory in which to execute the protocol.
         self.directory = None
@@ -513,8 +530,8 @@ class BaseProtocol:
 
         return_dictionary = {}
 
-        for output_key in self.provided_outputs:
-            return_dictionary[output_key] = getattr(self, output_key)
+        for output_path in self.provided_outputs:
+            return_dictionary[output_path.full_path] = self.get_value(output_path)
 
         return return_dictionary
 
@@ -531,9 +548,9 @@ class BaseProtocol:
 
         self.id = graph.append_uuid(self.id, value)
 
-        for input_name in self.required_inputs:
+        for input_path in self.required_inputs:
 
-            input_value = getattr(self, input_name)
+            input_value = self.get_value(input_path)
 
             if not isinstance(input_value, ProtocolPath):
                 continue
@@ -557,9 +574,9 @@ class BaseProtocol:
             The id of the new input protocol.
         """
 
-        for input_name in self.required_inputs:
+        for input_path in self.required_inputs:
 
-            input_value = getattr(self, input_name)
+            input_value = self.get_value(input_path)
 
             if not isinstance(input_value, ProtocolPath):
                 continue
@@ -582,15 +599,15 @@ class BaseProtocol:
         if not isinstance(self, type(other)):
             return False
 
-        for input_name in self.required_inputs:
+        for input_path in self.required_inputs:
 
             # if input_references not in other.input_references:
             #     return False
-            if not hasattr(other, input_name):
+            if input_path not in other.required_inputs:
                 return False
 
-            self_value = getattr(self, input_name)
-            other_value = getattr(other, input_name)
+            self_value = self.get_value(input_path)
+            other_value = other.get_value(input_path)
 
             if self_value != other_value:
                 return False
@@ -659,7 +676,7 @@ class BaseProtocol:
             raise ValueError('This protocol does not have contain a {} '
                              'property.'.format(reference_path.property_name))
 
-        if reference_path.property_name in self.provided_outputs:
+        if reference_path in self.provided_outputs:
             raise ValueError('Output values cannot be set by this method.')
 
         setattr(self, reference_path.property_name, value)

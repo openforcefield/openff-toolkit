@@ -41,6 +41,7 @@ from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.properties import PhysicalProperty
 from openforcefield.properties.estimator.client import PropertyEstimatorDataModel, PropertyEstimatorOptions
 from openforcefield.properties.estimator.layers import available_layers
+from openforcefield.properties.estimator.components.protocols import ProtocolPath
 
 # Needed for server-client communication.
 int_struct = struct.Struct("<i")
@@ -77,6 +78,7 @@ class PropertyRunnerDataModel(BaseModel):
 
         json_encoders = {
             unit.Quantity: lambda v: serialize_quantity(v),
+            ProtocolPath: lambda v: v.full_path
         }
 
 
