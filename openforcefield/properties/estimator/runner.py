@@ -23,12 +23,12 @@ import struct
 import os
 import hashlib
 
+from simtk import unit
+
 from os import path
 
 from pydantic import BaseModel
 from typing import Dict, List, Any
-
-from simtk import unit
 
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.iostream import IOStream, StreamClosedError
@@ -41,7 +41,7 @@ from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.properties import PhysicalProperty
 from openforcefield.properties.estimator.client import PropertyEstimatorDataModel, PropertyEstimatorOptions
 from openforcefield.properties.estimator.layers import available_layers
-from openforcefield.properties.estimator.components.protocols import ProtocolPath
+from openforcefield.properties.estimator.components.protocols import ProtocolPath, PropertyCalculatorException
 
 # Needed for server-client communication.
 int_struct = struct.Struct("<i")
@@ -289,7 +289,25 @@ class PropertyCalculationRunner(TCPServer):
         current_layer_type = data_model.options.allowed_calculation_layers.pop(0)
 
         if current_layer_type not in available_layers:
-            # TODO: Implement graceful error handling.
+
+            # Kill all remaining properties if we reach an unsupported calculation layer.
+            error_object = PropertyCalculatorException(directory='',
+                                                       message='The {} calculation layer is not supported by '
+                                                               'the server.'.format(current_layer_type))
+
+            for queued_calculation in data_model.queued_properties:
+
+                from openforcefield.properties import CalculationSource
+
+                queued_calculation.source = CalculationSource(fidelity=current_layer_type,
+                                                              provenance=error_object.json())
+
+                data_model.calculated_properties.append(queued_calculation)
+
+            data_model.options.allowed_calculation_layers.append(current_layer_type)
+            data_model.queued_properties = []
+
+            self.schedule_calculation(data_model)
             return
 
         logging.info('Launching calculation {} using the {} layer'.format(data_model.id,
@@ -342,8 +360,6 @@ class PropertyCalculationRunner(TCPServer):
     def _is_force_field_in_cache(self, force_field):
         """Checks whether the force field has been used
         as part of a previous calculation.
-
-        TODO: Load in the hashed file
 
         Parameters
         ----------

@@ -18,29 +18,27 @@ Authors
 import copy
 import logging
 import pickle
-import json
-
-import mdtraj
 
 import numpy as np
+
+import mdtraj
 
 from os import path
 from enum import Enum
 
 from pymbar import timeseries
 
-from pydantic import BaseModel, NoneStr
-from typing import Dict, List, Any, Optional
+from pydantic import BaseModel
+from typing import Dict, Any
 
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils import packmol, graph, utils
-from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity
+from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity, TypedBaseModel
 
 from openforcefield.typing.engines import smirnoff
 
 from simtk import openmm, unit
 from simtk.openmm import app
-
 
 # =============================================================================================
 # Registration Decorators
@@ -84,23 +82,30 @@ class ProtocolPath:
     TODO: Document.
     """
 
-    path_separator = '/'
-    property_separator = '.'
+    path_separator = '/'  # The character which separates protocol ids.
+    property_separator = '.'  # The character which separates the property name from the path.
 
     @property
     def property_name(self):
-
+        """str: The property name pointed to by the path."""
         property_name, protocol_ids = ProtocolPath.to_components(self._full_path)
         return property_name
 
     @property
     def start_protocol(self):
-
+        """str: The leading protocol id of the path."""
         property_name, protocol_ids = ProtocolPath.to_components(self._full_path)
         return None if len(protocol_ids) == 0 else protocol_ids[0]
 
     @property
+    def last_protocol(self):
+        """str: The leading protocol id of the path."""
+        property_name, protocol_ids = ProtocolPath.to_components(self._full_path)
+        return None if len(protocol_ids) == 0 else protocol_ids[len(protocol_ids) - 1]
+
+    @property
     def full_path(self):
+        """str: The full path referenced by this object."""
         return self._full_path
 
     @property
@@ -108,11 +113,29 @@ class ProtocolPath:
         return self.start_protocol == 'global'
 
     def __init__(self, property_name, *protocol_ids):
+        """Constructs a new ProtocolPath object.
+
+        Parameters
+        ----------
+        property_name: str
+            The property name referenced by the path.
+        protocol_ids: tuple of str
+            An args list of protocol ids in the order in which they will appear in the path.
+        """
 
         self._full_path = ''
         self._from_components(property_name, *protocol_ids)
 
     def _from_components(self, property_name, *protocol_ids):
+        """Sets this components path from individual components.
+
+        Parameters
+        ----------
+        property_name: str
+            The property name referenced by the path.
+        protocol_ids: list of str
+            A list of protocol ids in the order in which they will appear in the path.
+        """
 
         assert property_name is not None and isinstance(property_name, str)
 
@@ -164,15 +187,18 @@ class ProtocolPath:
 
     @staticmethod
     def to_components(path_string):
-        """
+        """Splits a protocol path string into the property
+        name, and the individual protocol ids.
 
         Parameters
         ----------
         path_string: str
+            The protocol path to split.
 
         Returns
         -------
-
+        str, list of str
+            A tuple of the property name, and a list of the protocol ids in the path.
         """
         property_name_index = path_string.find(ProtocolPath.property_separator)
         property_name = path_string[property_name_index + 1:]
@@ -185,12 +211,28 @@ class ProtocolPath:
 
         return property_name, protocol_ids
 
-    def pop_next_in_path(self):
+    def prepend_protocol_id(self, id_to_prepend):
+        """Prepend a new protocol id onto the front of the path.
+
+        Parameters
+        ----------
+        id_to_prepend: str
+            The protocol id to prepend to the path
         """
+        property_name, protocol_ids = ProtocolPath.to_components(self._full_path)
+
+        if len(protocol_ids) == 0 or (len(protocol_ids) > 0 and protocol_ids[0] != id_to_prepend):
+            protocol_ids.insert(0, id_to_prepend)
+
+        self._from_components(property_name, *protocol_ids)
+
+    def pop_next_in_path(self):
+        """Pops and then returns the leading protocol id from the path.
 
         Returns
         -------
-
+        str:
+            The previously leading protocol id.
         """
         property_name, protocol_ids = ProtocolPath.to_components(self._full_path)
 
@@ -198,7 +240,7 @@ class ProtocolPath:
             return None
 
         next_in_path = protocol_ids.pop(0)
-        self._from_components(property_name, protocol_ids)
+        self._from_components(property_name, *protocol_ids)
 
         return next_in_path
 
@@ -280,7 +322,7 @@ class ProtocolPath:
         self._full_path = state['full_path']
 
 
-class ProtocolSchema(BaseModel):
+class ProtocolSchema(TypedBaseModel):
     """A json serializable representation which stores the
     user definable parameters of a protocol.
 
@@ -414,51 +456,17 @@ class BaseProtocol:
             super().__init__(attribute, documentation)
 
     @property
+    def id(self):
+        return self._id
+
+    @property
     def schema(self):
         """ProtocolSchema: Returns a serializable schema for this object."""
-        schema = ProtocolSchema()
-
-        schema.id = self.id
-        schema.type = type(self).__name__
-
-        for input_path in self.required_inputs:
-            schema.inputs[input_path.full_path] = self.get_value(input_path)
-
-        for parameter in self.parameters:
-
-            value = getattr(self, parameter)
-
-            if isinstance(value, unit.Quantity):
-                value = serialize_quantity(value)
-
-            schema.parameters[parameter] = value
-
-        return schema
+        return self._get_schema()
 
     @schema.setter
     def schema(self, schema_value):
-        """Sets this protocols properties (i.e id and parameters)
-        from a ProtocolSchema"""
-        self.id = schema_value.id
-
-        if type(self).__name__ != schema_value.type:
-            # Make sure this object is the correct type.
-            raise ValueError('Cannot convert a {} protocol to a {}.'
-                             .format(str(type(self)), schema_value.type))
-
-        for input_full_path in schema_value.inputs:
-
-            input_path = ProtocolPath.from_string(input_full_path)
-            self.set_value(input_path, schema_value.inputs[input_full_path])
-
-        for parameter in schema_value.parameters:
-
-            value = schema_value.parameters[parameter]
-
-            if isinstance(value, dict) and 'unit' in value and 'unitless_value' in value:
-                value = deserialize_quantity(value)
-
-            setattr(self, parameter, value)
+        self._set_schema(schema_value)
 
     @property
     def dependencies(self):
@@ -472,14 +480,22 @@ class BaseProtocol:
             if not isinstance(input_value, ProtocolPath):
                 continue
 
-            return_dependencies.append(input_value)
+            if input_value not in return_dependencies:
+                return_dependencies.append(input_value)
 
         return return_dependencies
 
-    def __init__(self):
+    @Parameter
+    def allow_merging(self):
+        pass
+
+    def __init__(self, protocol_id):
 
         # A unique identifier for this node.
-        self.id = None
+        self._id = protocol_id
+
+        # Defines whether a protocol is allowed to try and merge with other identical ones.
+        self._allow_merging = True
 
         # Find the required inputs and outputs.
         self.parameters = utils.find_types_with_decorator(type(self), BaseProtocol.Parameter)
@@ -518,6 +534,54 @@ class BaseProtocol:
 
         return self._get_output_dictionary()
 
+    def _get_schema(self):
+
+        schema = ProtocolSchema()
+
+        schema.id = self.id
+        schema.type = type(self).__name__
+
+        for input_path in self.required_inputs:
+
+            if input_path.start_protocol is None or (input_path.start_protocol == self.id and
+                                                     input_path.start_protocol == input_path.last_protocol):
+                schema.inputs[input_path.full_path] = self.get_value(input_path)
+
+        for parameter in self.parameters:
+
+            value = getattr(self, parameter)
+
+            if isinstance(value, unit.Quantity):
+                value = serialize_quantity(value)
+
+            schema.parameters[parameter] = value
+
+        return schema
+
+    def _set_schema(self, schema_value):
+        """Sets this protocols properties (i.e id and parameters)
+        from a ProtocolSchema
+        """
+        self._id = schema_value.id
+
+        if type(self).__name__ != schema_value.type:
+            # Make sure this object is the correct type.
+            raise ValueError('Cannot convert a {} protocol to a {}.'
+                             .format(str(type(self)), schema_value.type))
+
+        for input_full_path in schema_value.inputs:
+            input_path = ProtocolPath.from_string(input_full_path)
+            self.set_value(input_path, schema_value.inputs[input_full_path])
+
+        for parameter in schema_value.parameters:
+
+            value = schema_value.parameters[parameter]
+
+            if isinstance(value, dict) and 'unit' in value and 'unitless_value' in value:
+                value = deserialize_quantity(value)
+
+            setattr(self, parameter, value)
+
     def _get_output_dictionary(self):
         """Builds a dictionary of the output property names and their values.
 
@@ -546,16 +610,18 @@ class BaseProtocol:
         if self.id.find(value) >= 0:
             return
 
-        self.id = graph.append_uuid(self.id, value)
+        self._id = graph.append_uuid(self.id, value)
 
         for input_path in self.required_inputs:
 
+            input_path.append_uuid(value)
             input_value = self.get_value(input_path)
 
-            if not isinstance(input_value, ProtocolPath):
-                continue
+            if isinstance(input_value, ProtocolPath):
+                input_value.append_uuid(value)
 
-            input_value.append_uuid(value)
+        for output_path in self.provided_outputs:
+            output_path.append_uuid(value)
 
     def replace_protocol(self, old_id, new_id):
         """Finds each input which came from a given protocol
@@ -576,12 +642,14 @@ class BaseProtocol:
 
         for input_path in self.required_inputs:
 
+            input_path.replace_protocol(old_id, new_id)
             input_value = self.get_value(input_path)
 
-            if not isinstance(input_value, ProtocolPath):
-                continue
+            if isinstance(input_value, ProtocolPath):
+                input_value.replace_protocol(old_id, new_id)
 
-            input_value.replace_protocol(old_id, new_id)
+        for output_path in self.provided_outputs:
+            output_path.replace_protocol(old_id, new_id)
 
     def can_merge(self, other):
         """Determines whether this protocol can be merged with another.
@@ -596,6 +664,9 @@ class BaseProtocol:
         bool
             True if the two protocols are safe to merge.
         """
+        if not self.allow_merging:
+            return False
+
         if not isinstance(self, type(other)):
             return False
 
@@ -698,9 +769,9 @@ class BuildCoordinatesPackmol(BaseProtocol):
 
     _cached_molecules = {}
 
-    def __init__(self):
+    def __init__(self, protocol_id):
 
-        super().__init__()
+        super().__init__(protocol_id)
 
         # inputs
         self._substance = None
@@ -857,9 +928,9 @@ class BuildCoordinatesPackmol(BaseProtocol):
 class BuildSmirnoffTopology(BaseProtocol):
     """Parametrise a set of molecules with a given smirnoff force field.
     """
-    def __init__(self):
+    def __init__(self, protocol_id):
 
-        super().__init__()
+        super().__init__(protocol_id)
 
         # inputs
         self._force_field_path = None
@@ -918,9 +989,9 @@ class RunEnergyMinimisation(BaseProtocol):
     """Minimises the energy of a passed in system.
     """
 
-    def __init__(self):
+    def __init__(self, protocol_id):
 
-        super().__init__()
+        super().__init__(protocol_id)
 
         # inputs
         self._input_coordinate_file = None
@@ -995,9 +1066,9 @@ class RunOpenMMSimulation(BaseProtocol):
         NVT = 0
         NPT = 1
 
-    def __init__(self):
+    def __init__(self, protocol_id):
 
-        super().__init__()
+        super().__init__(protocol_id)
 
         self._steps = 1000
 
@@ -1195,9 +1266,9 @@ class AveragePropertyProtocol(BaseProtocol):
     """Calculates the average of a property and its uncertainty.
     """
 
-    def __init__(self):
+    def __init__(self, protocol_id):
 
-        super().__init__()
+        super().__init__(protocol_id)
 
         self._value = None
         self._uncertainty = None
@@ -1250,9 +1321,9 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
     """Calculates the average of a property from a simulation trajectory.
     """
 
-    def __init__(self):
+    def __init__(self, protocol_id):
 
-        super().__init__()
+        super().__init__(protocol_id)
 
         self._input_coordinate_file = None
         self._trajectory_path = None

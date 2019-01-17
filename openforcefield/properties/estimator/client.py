@@ -99,6 +99,18 @@ class PropertyEstimatorOptions(BaseModel):
     calculation_schemas: Dict[str, CalculationSchema] = {}
 
     relative_uncertainty: float = 1.0
+    allow_protocol_merging: bool = True
+
+    class Config:
+
+        # A dirty hack to allow simtk.unit.Quantities...
+        # TODO: Should really investigate QCElemental as an alternative.
+        arbitrary_types_allowed = True
+
+        json_encoders = {
+            unit.Quantity: lambda v: serialize_quantity(v),
+            ProtocolPath: lambda v: v.full_path
+        }
 
 
 class PropertyEstimatorDataModel(BaseModel):
@@ -253,6 +265,15 @@ class PropertyEstimator(object):
 
                 additional_options.calculation_schemas[type_name] = \
                     property_type.get_default_calculation_schema()
+
+        for property_schema_name in additional_options.calculation_schemas:
+
+            for protocol_schema_name in additional_options.calculation_schemas[property_schema_name].protocols:
+
+                protocol_schema = additional_options.calculation_schemas[
+                    property_schema_name].protocols[protocol_schema_name]
+
+                protocol_schema.parameters['allow_merging'] = additional_options.allow_protocol_merging
 
         submission = PropertyEstimatorDataModel(properties=properties_list,
                                                 parameter_set=parameter_set.__getstate__(),

@@ -36,7 +36,6 @@ class CalculationSchema(BaseModel):
     id: str = None
 
     protocols: Dict[str, ProtocolSchema] = {}
-    groups: Dict[str, ProtocolGroupSchema] = {}
 
     final_value_source: Optional[ProtocolPath] = None
     final_uncertainty_source: Optional[ProtocolPath] = None
@@ -53,12 +52,23 @@ class CalculationSchema(BaseModel):
         that inputs and outputs correctly match up.
         """
 
+        if self.final_value_source.start_protocol not in self.protocols:
+            raise ValueError('The value source {} does not exist.'.format(self.final_value_source))
+
+        if self.final_uncertainty_source.start_protocol not in self.protocols:
+            raise ValueError('The uncertainty source {} does not exist.'.format(self.final_uncertainty_source))
+
         for protocol_name in self.protocols:
 
             protocol_schema = self.protocols[protocol_name]
 
-            protocol_object = available_protocols[protocol_schema.type]()
+            protocol_object = available_protocols[protocol_schema.type](protocol_schema.id)
             protocol_object.schema = protocol_schema
+
+            if protocol_name == self.final_value_source.start_protocol:
+                protocol_object.get_value(self.final_value_source)
+            if protocol_name == self.final_uncertainty_source.start_protocol:
+                protocol_object.get_value(self.final_uncertainty_source)
 
             for input_path in protocol_object.required_inputs:
 
@@ -82,7 +92,7 @@ class CalculationSchema(BaseModel):
 
                 other_protocol_schema = self.protocols[input_value.start_protocol]
 
-                other_protocol_object = available_protocols[other_protocol_schema.type]()
+                other_protocol_object = available_protocols[other_protocol_schema.type](other_protocol_schema.id)
                 other_protocol_object.schema = other_protocol_schema
 
                 # Will throw the correct exception if missing.

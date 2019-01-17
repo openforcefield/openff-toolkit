@@ -15,7 +15,6 @@ Authors
 # =============================================================================================
 
 from openforcefield.properties.estimator.backends.base import PropertyEstimatorBackend
-
 from dask import distributed
 
 

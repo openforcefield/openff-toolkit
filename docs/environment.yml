@@ -24,8 +24,8 @@ dependencies:
     - packmol
     - pymbar
     - mdtraj
-    - dask
     - tornado
     - pip:
       - arch
       - pydantic
+      - dask[distributed]

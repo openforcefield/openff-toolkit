@@ -24,12 +24,12 @@ from enum import IntFlag, unique
 from pydantic import validator
 from typing import Optional
 
-from simtk import unit
-
 from openforcefield.utils.serialization import deserialize_quantity, serialize_quantity, TypedBaseModel
 
 from openforcefield.properties.thermodynamics import ThermodynamicState
 from openforcefield.properties.substances import Substance
+
+from simtk import unit
 
 
 # =============================================================================================

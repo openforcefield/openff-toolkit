@@ -41,8 +41,8 @@ from openforcefield.properties.estimator.components.protocols import AverageTraj
 class ExtractAverageDielectric(AverageTrajectoryProperty):
     """Extracts the average dielectric constant from a simulation trajectory.
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, protocol_id):
+        super().__init__(protocol_id)
 
         self._system = None
         self._thermodynamic_state = None
@@ -134,20 +134,18 @@ class DielectricConstant(PhysicalProperty):
 
     @staticmethod
     def get_default_calculation_schema():
-        
+
         schema = CalculationSchema(property_type=DielectricConstant.__name__)
         schema.id = '{}{}'.format(DielectricConstant.__name__, 'Schema')
 
         # Initial coordinate and topology setup.
-        build_coordinates = protocols.BuildCoordinatesPackmol()
-        build_coordinates.id = 'build_coordinates'
+        build_coordinates = protocols.BuildCoordinatesPackmol('build_coordinates')
 
         build_coordinates.substance = ProtocolPath('substance', 'global')
 
         schema.protocols[build_coordinates.id] = build_coordinates.schema
 
-        assign_topology = protocols.BuildSmirnoffTopology()
-        assign_topology.id = 'build_topology'
+        assign_topology = protocols.BuildSmirnoffTopology('build_topology')
 
         assign_topology.force_field_path = ProtocolPath('force_field_path', 'global')
 
@@ -157,16 +155,14 @@ class DielectricConstant(PhysicalProperty):
         schema.protocols[assign_topology.id] = assign_topology.schema
 
         # Equilibration
-        energy_minimisation = protocols.RunEnergyMinimisation()
-        energy_minimisation.id = 'energy_minimisation'
+        energy_minimisation = protocols.RunEnergyMinimisation('energy_minimisation')
 
         energy_minimisation.input_coordinate_file = ProtocolPath('coordinate_file', build_coordinates.id)
         energy_minimisation.system = ProtocolPath('system', assign_topology.id)
 
         schema.protocols[energy_minimisation.id] = energy_minimisation.schema
 
-        npt_equilibration = protocols.RunOpenMMSimulation()
-        npt_equilibration.id = 'npt_equilibration'
+        npt_equilibration = protocols.RunOpenMMSimulation('npt_equilibration')
 
         npt_equilibration.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
 
@@ -182,8 +178,7 @@ class DielectricConstant(PhysicalProperty):
 
         # Production
 
-        npt_production = protocols.RunOpenMMSimulation()
-        npt_production.id = 'npt_production'
+        npt_production = protocols.RunOpenMMSimulation('npt_production')
 
         npt_production.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
 
@@ -195,11 +190,8 @@ class DielectricConstant(PhysicalProperty):
         npt_production.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_equilibration.id)
         npt_production.system = ProtocolPath('system', assign_topology.id)
 
-        schema.protocols[npt_production.id] = npt_production.schema
-
         # Analysis
-        extract_dielectric = ExtractAverageDielectric()
-        extract_dielectric.id = 'extract_dielectric'
+        extract_dielectric = ExtractAverageDielectric('extract_dielectric')
 
         extract_dielectric.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
@@ -207,30 +199,23 @@ class DielectricConstant(PhysicalProperty):
         extract_dielectric.trajectory_path = ProtocolPath('trajectory', npt_production.id)
         extract_dielectric.system = ProtocolPath('system', assign_topology.id)
 
-        schema.protocols[extract_dielectric.id] = extract_dielectric.schema
-
         # Set up a conditional group to ensure convergence of uncertainty
-        converge_uncertainty = groups.ConditionalGroup([
-            npt_production.id,
-            extract_dielectric.id
-        ])
-        converge_uncertainty.id = 'converge_uncertainty'
+        converge_uncertainty = groups.ConditionalGroup('converge_uncertainty')
+        converge_uncertainty.add_protocols(npt_production, extract_dielectric)
 
-        # converge_uncertainty.input_references = [
-        #     # # Locals
-        #     # ProtocolInputReference(input_property_name='left_hand_value',
-        #     #                        output_protocol_id='extract_dielectric',
-        #     #                        output_property_name='uncertainty'),
-        #     # # Globals
-        #     # ProtocolInputReference(input_property_name='right_hand_value',
-        #     #                        output_protocol_id='global',
-        #     #                        output_property_name='uncertainty'),
-        # ]
+        converge_uncertainty.left_hand_value = ProtocolPath('uncertainty', converge_uncertainty.id,
+                                                                           extract_dielectric.id)
 
-        schema.groups[converge_uncertainty.id] = converge_uncertainty.schema
+        converge_uncertainty.right_hand_value = ProtocolPath('target_uncertainty', 'global')
+
+        converge_uncertainty.condition_type = groups.ConditionalGroup.ConditionType.LessThan
+
+        converge_uncertainty.max_iterations = 1
+
+        schema.protocols[converge_uncertainty.id] = converge_uncertainty.schema
 
         # Define where the final values come from.
-        schema.final_value_source = ProtocolPath('value', extract_dielectric.id)
-        schema.final_uncertainty_source = ProtocolPath('uncertainty', extract_dielectric.id)
+        schema.final_value_source = ProtocolPath('value', converge_uncertainty.id, extract_dielectric.id)
+        schema.final_uncertainty_source = ProtocolPath('uncertainty', converge_uncertainty.id, extract_dielectric.id)
 
         return schema

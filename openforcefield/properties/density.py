@@ -44,10 +44,9 @@ class ExtractAverageDensity(AverageTrajectoryProperty):
 
     """
 
-    def __init__(self):
+    def __init__(self, protocol_id):
 
-        super().__init__()
-
+        super().__init__(protocol_id)
         self._system = None
 
     @protocols.BaseProtocol.InputPipe
@@ -100,15 +99,13 @@ class Density(PhysicalProperty):
         schema.id = '{}{}'.format(Density.__name__, 'Schema')
 
         # Initial coordinate and topology setup.
-        build_coordinates = protocols.BuildCoordinatesPackmol()
-        build_coordinates.id = 'build_coordinates'
+        build_coordinates = protocols.BuildCoordinatesPackmol('build_coordinates')
 
         build_coordinates.substance = ProtocolPath('substance', 'global')
 
         schema.protocols[build_coordinates.id] = build_coordinates.schema
 
-        assign_topology = protocols.BuildSmirnoffTopology()
-        assign_topology.id = 'build_topology'
+        assign_topology = protocols.BuildSmirnoffTopology('build_topology')
 
         assign_topology.force_field_path = ProtocolPath('force_field_path', 'global')
 
@@ -118,16 +115,14 @@ class Density(PhysicalProperty):
         schema.protocols[assign_topology.id] = assign_topology.schema
 
         # Equilibration
-        energy_minimisation = protocols.RunEnergyMinimisation()
-        energy_minimisation.id = 'energy_minimisation'
+        energy_minimisation = protocols.RunEnergyMinimisation('energy_minimisation')
 
         energy_minimisation.input_coordinate_file = ProtocolPath('coordinate_file', build_coordinates.id)
         energy_minimisation.system = ProtocolPath('system', assign_topology.id)
 
         schema.protocols[energy_minimisation.id] = energy_minimisation.schema
 
-        npt_equilibration = protocols.RunOpenMMSimulation()
-        npt_equilibration.id = 'npt_equilibration'
+        npt_equilibration = protocols.RunOpenMMSimulation('npt_equilibration')
 
         npt_equilibration.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
 
@@ -143,8 +138,7 @@ class Density(PhysicalProperty):
 
         # Production
 
-        npt_production = protocols.RunOpenMMSimulation()
-        npt_production.id = 'npt_production'
+        npt_production = protocols.RunOpenMMSimulation('npt_production')
 
         npt_production.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
 
@@ -156,12 +150,11 @@ class Density(PhysicalProperty):
         npt_production.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_equilibration.id)
         npt_production.system = ProtocolPath('system', assign_topology.id)
 
-        schema.protocols[npt_production.id] = npt_production.schema
+        # schema.protocols[npt_production.id] = npt_production.schema
 
         # Analysis
 
-        extract_density = ExtractAverageDensity()
-        extract_density.id = 'extract_density'
+        extract_density = ExtractAverageDensity('extract_density')
 
         extract_density.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
@@ -169,30 +162,25 @@ class Density(PhysicalProperty):
         extract_density.trajectory_path = ProtocolPath('trajectory', npt_production.id)
         extract_density.system = ProtocolPath('system', assign_topology.id)
 
-        schema.protocols[extract_density.id] = extract_density.schema
+        # schema.protocols[extract_density.id] = extract_density.schema
 
         # Set up a conditional group to ensure convergence of uncertainty
-        converge_uncertainty = groups.ConditionalGroup([
-            npt_production.id,
-            extract_density.id
-        ])
-        converge_uncertainty.id = 'converge_uncertainty'
+        converge_uncertainty = groups.ConditionalGroup('converge_uncertainty')
+        converge_uncertainty.add_protocols(npt_production, extract_density)
 
-        # converge_uncertainty.input_references = [
-        #     # Locals
-        #     # ProtocolInputReference(input_property_name='left_hand_value',
-        #     #                        output_protocol_id='extract_density',
-        #     #                        output_property_name='uncertainty'),
-        #     # # Globals
-        #     # ProtocolInputReference(input_property_name='right_hand_value',
-        #     #                        output_protocol_id='global',
-        #     #                        output_property_name='uncertainty'),
-        # ]
+        converge_uncertainty.left_hand_value = ProtocolPath('uncertainty', converge_uncertainty.id,
+                                                                           extract_density.id)
 
-        schema.groups[converge_uncertainty.id] = converge_uncertainty.schema
+        converge_uncertainty.right_hand_value = ProtocolPath('target_uncertainty', 'global')
+
+        converge_uncertainty.condition_type = groups.ConditionalGroup.ConditionType.LessThan
+
+        converge_uncertainty.max_iterations = 1
+
+        schema.protocols[converge_uncertainty.id] = converge_uncertainty.schema
 
         # Define where the final values come from.
-        schema.final_value_source = ProtocolPath('value', extract_density.id)
-        schema.final_uncertainty_source = ProtocolPath('uncertainty', extract_density.id)
+        schema.final_value_source = ProtocolPath('value', converge_uncertainty.id, extract_density.id)
+        schema.final_uncertainty_source = ProtocolPath('uncertainty', converge_uncertainty.id, extract_density.id)
 
         return schema

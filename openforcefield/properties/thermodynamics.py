@@ -16,8 +16,6 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-import json
-
 from simtk import unit
 from typing import Optional
 from pydantic import BaseModel, validator

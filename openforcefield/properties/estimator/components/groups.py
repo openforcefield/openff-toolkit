@@ -24,35 +24,12 @@ import logging
 from os import path
 from enum import Enum, unique
 
-from typing import List, Dict
+from typing import List
 
 from openforcefield.utils import graph
 
-from .protocols import BaseProtocol, ProtocolSchema
-
-
-# =============================================================================================
-# Registration Decorators
-# =============================================================================================
-
-available_groups = {}
-
-
-def register_calculation_group():
-    """A decorator which registers a class as being a
-    protocol group which may be used in calculation schemas.
-    """
-
-    def decorator(cls):
-        
-        if cls.__name__ in available_groups:
-            raise ValueError('The {} group is already registered.'.format(cls.__name__))
-
-        available_groups[cls.__name__] = cls
-        
-        return cls
-
-    return decorator
+from .protocols import BaseProtocol, ProtocolSchema, ProtocolPath, available_protocols, register_calculation_protocol, \
+    PropertyCalculatorException
 
 
 # =============================================================================================
@@ -66,7 +43,7 @@ class ProtocolGroupSchema(ProtocolSchema):
     grouped_protocol_schemas: List[ProtocolSchema] = []
 
 
-@register_calculation_group()
+@register_calculation_protocol()
 class ProtocolGroup(BaseProtocol):
     """A collection of protocols to be executed in one batch.
 
@@ -80,92 +57,101 @@ class ProtocolGroup(BaseProtocol):
     has converged).
     """
 
-    def __init__(self, protocol_ids):
-        """Constructs a new ProtocolGroup
+    def _get_schema(self):
+        """ProtocolSchema: A serializable schema for this object."""
 
-        Parameters
-        ----------
-        protocol_ids : list(str)
-            The protocols which will be included in this group.
+        base_schema = super(ProtocolGroup, self)._get_schema()
+        # Convert the base schema to a group one.
+        schema = ProtocolGroupSchema.parse_obj(base_schema.dict())
+
+        for protocol_id in self._protocols:
+            schema.grouped_protocol_schemas.append(self._protocols[protocol_id].schema)
+
+        return schema
+
+    def _set_schema(self, schema_value):
+        """Sets this protocols properties (i.e id and parameters)
+        from a ProtocolSchema"""
+        super(ProtocolGroup, self)._set_schema(schema_value)
+
+        protocols_to_create = []
+
+        for protocol_schema in schema_value.grouped_protocol_schemas:
+
+            if protocol_schema.id in self._protocols:
+
+                self._protocols[protocol_schema.id].schema = protocol_schema
+                continue
+
+            # Recreate the protocol from scratch.
+            protocol = available_protocols[protocol_schema.type](protocol_schema.id)
+            protocol.schema = protocol_schema
+
+            protocols_to_create.append(protocol)
+
+        if len(protocols_to_create) > 0:
+            self.add_protocols(*protocols_to_create)
+
+    def __init__(self, protocol_id):
+        """Constructs a new ProtocolGroup.
         """
-        super().__init__()
+        super().__init__(protocol_id)
 
         self._dependants_graph = {}
 
         self._root_protocols = []
         self._execution_order = []
 
-        self._protocol_ids = protocol_ids
         self._protocols = {}
 
-        #
-        # # Groups can take additional global
-        # # inputs which the grouped protocols themselves
-        # # may not require.
-        # self.global_inputs = {}
-        #
-        # for protocol_id in protocols:
-        #     self._protocols[protocol_id] = protocols[protocol_id]
-        #     self._dependants_graph[protocol_id] = []
-        #
-        # # Pull each of an individual protocols inputs up so that they
-        # # become a required input of the group.
-        # for protocol_id in self._protocols:
-        #
-        #     protocol = self._protocols[protocol_id]
-        #
-        #     for input_reference in protocol.input_references:
-        #
-        #         if input_reference in self.input_references:
-        #             continue
-        #
-        #         if input_reference.output_protocol_id not in self._protocols:
-        #             self.input_references.append(copy.deepcopy(input_reference))
-        #
-        #         if input_reference.output_protocol_id not in self._protocols or \
-        #            protocol_id in self._dependants_graph[input_reference.output_protocol_id]:
-        #             continue
-        #
-        #         self._dependants_graph[input_reference.output_protocol_id].append(protocol_id)
+    def add_protocols(self, *protocols):
+
+        for protocol in protocols:
+
+            if protocol.id in self._protocols:
+
+                raise ValueError('The {} group already contains a protocol '
+                                 'with id {}.'.format(self.id, protocol.id))
+
+            self._protocols[protocol.id] = protocol
+            self._dependants_graph[protocol.id] = []
+
+        # Pull each of an individual protocols inputs up so that they
+        # become a required input of the group.
+        for protocol_id in self._protocols:
+
+            protocol = self._protocols[protocol_id]
+
+            for input_path in protocol.required_inputs:
+
+                grouped_path = ProtocolPath.from_string(input_path.full_path)
+
+                if grouped_path.start_protocol != protocol.id:
+                    grouped_path.prepend_protocol_id(protocol.id)
+
+                grouped_path.prepend_protocol_id(self.id)
+
+                if grouped_path in self.required_inputs:
+                    continue
+
+                input_value = protocol.get_value(input_path)
+
+                if not isinstance(input_value, ProtocolPath):
+                    continue
+
+                if input_value.start_protocol not in self._protocols:
+
+                    self.required_inputs.append(grouped_path)
+                    continue
+
+                if protocol_id in self._dependants_graph[input_value.start_protocol]:
+                    continue
+
+                self._dependants_graph[input_value.start_protocol].append(protocol_id)
 
         # Figure out the order in which grouped protocols should be executed.
         self._root_protocols = graph.find_root_nodes(self._dependants_graph)
         self._execution_order = graph.topological_sort(self._dependants_graph)
-
-    @property
-    def schema(self):
-        """ProtocolSchema: A serializable schema for this object."""
-
-        base_schema = super(ProtocolGroup, self).schema
-        # Convert the base schema to a group one.
-        schema = ProtocolGroupSchema.parse_obj(base_schema.dict())
-
-        for protocol_id in self.protocols:
-            schema.grouped_protocol_schemas.append(self.protocols[protocol_id].schema)
-
-        return schema
-
-    @schema.setter
-    def schema(self, schema_value):
-        """Sets this protocols properties (i.e id and parameters)
-        from a ProtocolSchema"""
-        raise NotImplementedError()
-
-    @property
-    def protocols(self):
-        """dict(str, Protocol): A dictionary of the protocols to execute."""
-        return self._protocols
-
-    @property
-    def root_protocols(self):
-        """list(str): The ids of the root protocols of the dependants graph."""
-        return self._root_protocols
-
-    @property
-    def dependants_graph(self):
-        """dict(str, str): Each key in the dictionary represents a grouped protocol, and each
-        string in the value list represents a protocol which depends on the protocol defined by the key."""
-        return self._dependants_graph
 
     def set_uuid(self, value):
         """Store the uuid of the calculation this protocol belongs to
@@ -175,8 +161,6 @@ class ProtocolGroup(BaseProtocol):
         value : str
             The uuid of the parent calculation.
         """
-        super(ProtocolGroup, self).set_uuid(value)
-
         for index in range(len(self._root_protocols)):
             self._root_protocols[index] = graph.append_uuid(self._root_protocols[index], value)
 
@@ -207,6 +191,7 @@ class ProtocolGroup(BaseProtocol):
             new_protocols[protocol.id] = protocol
 
         self._protocols = new_protocols
+        super(ProtocolGroup, self).set_uuid(value)
 
     def replace_protocol(self, old_id, new_id):
         """Finds each input which came from a given protocol
@@ -252,25 +237,6 @@ class ProtocolGroup(BaseProtocol):
 
         self._protocols = new_protocols
 
-    def set_global_properties(self, global_properties):
-        """Set the value of any inputs which takes values
-        from the 'global' (i.e property to calculate) scope
-
-        Parameters
-        ----------
-        global_properties: dict of str to object
-            The list of global properties to draw from.
-        """
-        for global_property in self.global_inputs:
-
-            if global_property not in global_properties:
-                raise Exception('Invalid global property: {}'.format(global_property))
-
-            self.global_inputs[global_property] = global_properties[global_property]
-
-        for protocol_id in self._protocols:
-            self._protocols[protocol_id].set_global_properties(global_properties)
-
     def execute(self, directory):
         """Executes the protocols within this groups
 
@@ -285,6 +251,8 @@ class ProtocolGroup(BaseProtocol):
             True if all the protocols execute correctly.
         """
 
+        output_dictionary = {}
+
         for protocol_id_to_execute in self._execution_order:
 
             protocol_to_execute = self._protocols[protocol_id_to_execute]
@@ -293,19 +261,42 @@ class ProtocolGroup(BaseProtocol):
             if not path.isdir(working_directory):
                 os.makedirs(working_directory)
 
-            for input_reference in protocol_to_execute.input_references:
+            for input_path in protocol_to_execute.required_inputs:
 
-                if input_reference.output_protocol_id in self._protocols:
+                target_path = protocol_to_execute.get_value(input_path)
 
-                    input_protocol = self._protocols[input_reference.output_protocol_id]
+                if not isinstance(target_path, ProtocolPath):
+                    continue
 
-                    output_value = input_protocol.get_output_value(input_reference)
-                    protocol_to_execute.set_input_value(input_reference, output_value)
+                if target_path.start_protocol not in self._protocols:
+                    continue
 
-            if not protocol_to_execute.execute(working_directory):
-                return False
+                input_value = self._protocols[target_path.start_protocol].get_value(target_path)
 
-        return True
+                protocol_to_execute.set_value(input_path, input_value)
+
+            return_value = protocol_to_execute.execute(working_directory)
+
+            if isinstance(return_value, PropertyCalculatorException):
+                return return_value
+
+            for output_path in return_value:
+
+                output_path_prepended = ProtocolPath.from_string(output_path)
+
+                if (output_path_prepended.start_protocol != self.id and
+                    output_path_prepended.start_protocol != protocol_id_to_execute):
+
+                    output_path_prepended.prepend_protocol_id(protocol_id_to_execute)
+
+                if output_path_prepended.start_protocol != self.id:
+                    output_path_prepended.prepend_protocol_id(self.id)
+
+                    output_path_prepended.prepend_protocol_id(self.id)
+
+                output_dictionary[output_path_prepended.full_path] = return_value[output_path]
+
+        return output_dictionary
 
     def can_merge(self, other):
         """Determines whether this protocol group can be merged with another.
@@ -324,28 +315,30 @@ class ProtocolGroup(BaseProtocol):
         if not super(ProtocolGroup, self).can_merge(other):
             return False
 
-        # Ensure that the two groups at the very least share a root that can be merged.
-        # TODO: Is this perhaps too strict....
-        for self_root_id in self._root_protocols:
+        return False
 
-            self_protocol = self._protocols[self_root_id]
-
-            can_merge_with_root = False
-
-            for other_root_id in other.root_protocols:
-
-                other_protocol = other.protocols[other_root_id]
-
-                if not self_protocol.can_merge(other_protocol):
-                    continue
-
-                can_merge_with_root = True
-                break
-
-            if not can_merge_with_root:
-                return False
-
-        return True
+        # # Ensure that the two groups at the very least share a root that can be merged.
+        # # TODO: Is this perhaps too strict....
+        # for self_root_id in self._root_protocols:
+        #
+        #     self_protocol = self._protocols[self_root_id]
+        #
+        #     can_merge_with_root = False
+        #
+        #     for other_root_id in other.root_protocols:
+        #
+        #         other_protocol = other.protocols[other_root_id]
+        #
+        #         if not self_protocol.can_merge(other_protocol):
+        #             continue
+        #
+        #         can_merge_with_root = True
+        #         break
+        #
+        #     if not can_merge_with_root:
+        #         return False
+        #
+        # return True
 
     def _try_merge_protocol(self, other_protocol_id, other_group, parent_id=None):
         """Recursively inserts a protocol node into the group.
@@ -361,49 +354,51 @@ class ProtocolGroup(BaseProtocol):
             the protocol will be added as a new parent node.
         """
 
-        if other_protocol_id in self._dependants_graph:
-            
-            raise RuntimeError('A protocol with id {} has already been merged '
-                               'into the group.'.format(other_protocol_id))
+        # if other_protocol_id in self._dependants_graph:
+        #
+        #     raise RuntimeError('A protocol with id {} has already been merged '
+        #                        'into the group.'.format(other_protocol_id))
+        #
+        # protocols = self._root_protocols if parent_id is None else self._dependants_graph[parent_id]
+        #
+        # protocol_to_merge = other_group.protocols[other_protocol_id]
+        # existing_protocol = None
+        #
+        # # Start by checking to see if the starting node of the calculation graph is
+        # # already present in the full graph.
+        # for protocol_id in protocols:
+        #
+        #     protocol = self._protocols[protocol_id]
+        #
+        #     if not protocol.can_merge(protocol_to_merge):
+        #         continue
+        #
+        #     existing_protocol = protocol
+        #     break
+        #
+        # if existing_protocol is not None:
+        #     # Make a note that the existing node should be used in place
+        #     # of this calculations version.
+        #
+        #     other_group.protocols[other_protocol_id] = existing_protocol
+        #
+        #     for protocol_to_update in other_group.protocols:
+        #         other_group.protocols[protocol_to_update].replace_protocol(other_protocol_id, existing_protocol.id)
+        #
+        # else:
+        #
+        #     # Add the protocol as a new node in the graph.
+        #     self._protocols[other_protocol_id] = protocol_to_merge
+        #     existing_protocol = self._protocols[other_protocol_id]
+        #
+        #     self._dependants_graph[other_protocol_id] = []
+        #     protocols.append(other_protocol_id)
+        #
+        # # Add all of the dependants to the existing node
+        # for dependant_name in other_group.dependants_graph[other_protocol_id]:
+        #     self._try_merge_protocol(dependant_name, other_group, existing_protocol.id)
 
-        protocols = self._root_protocols if parent_id is None else self._dependants_graph[parent_id]
-
-        protocol_to_merge = other_group.protocols[other_protocol_id]
-        existing_protocol = None
-
-        # Start by checking to see if the starting node of the calculation graph is
-        # already present in the full graph.
-        for protocol_id in protocols:
-
-            protocol = self._protocols[protocol_id]
-
-            if not protocol.can_merge(protocol_to_merge):
-                continue
-
-            existing_protocol = protocol
-            break
-
-        if existing_protocol is not None:
-            # Make a note that the existing node should be used in place
-            # of this calculations version.
-
-            other_group.protocols[other_protocol_id] = existing_protocol
-
-            for protocol_to_update in other_group.protocols:
-                other_group.protocols[protocol_to_update].replace_protocol(other_protocol_id, existing_protocol.id)
-
-        else:
-
-            # Add the protocol as a new node in the graph.
-            self._protocols[other_protocol_id] = protocol_to_merge
-            existing_protocol = self._protocols[other_protocol_id]
-
-            self._dependants_graph[other_protocol_id] = []
-            protocols.append(other_protocol_id)
-
-        # Add all of the dependants to the existing node
-        for dependant_name in other_group.dependants_graph[other_protocol_id]:
-            self._try_merge_protocol(dependant_name, other_group, existing_protocol.id)
+        pass
 
     def merge(self, other):
         """Merges another ProtocolGroup with this one. The id
@@ -418,94 +413,87 @@ class ProtocolGroup(BaseProtocol):
             The protocol to merge into this one.
         """
 
-        for root_id in other.root_protocols:
-            self._try_merge_protocol(root_id, other)
+        # for root_id in other.root_protocols:
+        #     self._try_merge_protocol(root_id, other)
+        #
+        # self._execution_order = graph.topological_sort(self._dependants_graph)
 
-        self._execution_order = graph.topological_sort(self._dependants_graph)
+        pass
 
-    def set_input_value(self, input_reference, value):
-        """Set the value of one of the protocols inputs.
-
-        Parameters
-        ----------
-        input_reference: ProtocolInputReference
-            The input to set.
-        value
-            The value to set the input to.
-        """
-        for protocol_id in self._protocols:
-
-            protocol = self._protocols[protocol_id]
-
-            if input_reference not in protocol.input_references:
-                continue
-
-            protocol.set_input_value(input_reference, value)
-
-        super(ProtocolGroup, self).set_input_value(input_reference, value)
-
-    def get_input_value(self, input_reference):
-        """Gets the value that was set on one of this protocols inputs.
+    def get_value(self, reference_path):
+        """Returns the value of one of this protocols parameters / inputs.
 
         Parameters
         ----------
-        input_reference: ProtocolInputReference
-            The input to get.
+        reference_path: ProtocolPath
+            The path pointing to the value to return.
+
         Returns
         ----------
         object:
             The value of the input
         """
 
-        for protocol_id in self._protocols:
+        reference_property, reference_ids = ProtocolPath.to_components(reference_path.full_path)
 
-            protocol = self._protocols[protocol_id]
+        if reference_path.start_protocol is None or (reference_path.start_protocol == self.id and
+                                                     len(reference_ids) == 1):
 
-            if input_reference not in protocol.input_references:
-                continue
+            return super(ProtocolGroup, self).get_value(reference_path)
 
-            return protocol.get_input_value(input_reference)
+        # Make a copy of the path so we can alter it safely.
+        reference_path_clone = copy.deepcopy(reference_path)
 
-        raise Exception('The input that was set on a group ({}) was not found. '
-                        'This should never happen. {}'.format(self.id, input_reference))
+        if reference_path.start_protocol == self.id:
+            reference_path_clone.pop_next_in_path()
 
-    def get_output_value(self, input_reference):
-        """Returns the value of one of this protocols outputs.
+        target_protocol_id = reference_path_clone.pop_next_in_path()
+
+        if target_protocol_id not in self._protocols:
+
+            raise ValueError('The reference path does not target this protocol'
+                             'or any of its children.')
+
+        return self._protocols[target_protocol_id].get_value(reference_path_clone)
+
+    def set_value(self, reference_path, value):
+        """Sets the value of one of this protocols parameters / inputs.
 
         Parameters
         ----------
-        input_reference: ProtocolInputReference
-            An input reference which points to the output to return.
-
-        Returns
-        ----------
-        object:
-            The value of the output
+        reference_path: ProtocolPath
+            The path pointing to the value to return.
+        value: Any
+            The value to set.
         """
 
-        if input_reference.grouped_protocol_id is None:
+        reference_property, reference_ids = ProtocolPath.to_components(reference_path.full_path)
 
-            raise ValueError('Protocols which take input from a group must '
-                             'have a grouped_protocol_id set on their input_references.')
+        if reference_path.start_protocol is None or (reference_path.start_protocol == self.id and
+                                                     len(reference_ids) == 1):
 
-        return self._protocols[input_reference.grouped_protocol_id].get_output_value(input_reference)
+            return super(ProtocolGroup, self).set_value(reference_path, value)
+
+        # Make a copy of the path so we can alter it safely.
+        reference_path_clone = copy.deepcopy(reference_path)
+
+        if reference_path.start_protocol == self.id:
+            reference_path_clone.pop_next_in_path()
+
+        target_protocol_id = reference_path_clone.pop_next_in_path()
+
+        if target_protocol_id not in self._protocols:
+            raise ValueError('The reference path does not target this protocol'
+                             'or any of its children.')
+
+        return self._protocols[target_protocol_id].set_value(reference_path_clone, value)
 
 
-@register_calculation_group()
+@register_calculation_protocol()
 class ConditionalGroup(ProtocolGroup):
     """A collection of protocols which are to execute until
     a given condition is met.
     """
-    class Condition:
-        """Represents a condition placed on a ConditionalGroup"""
-
-        def __init__(self):
-            """Constructs a new ConditionalGroup"""
-            self.condition_type = None
-
-            self.left_hand_reference = None
-            self.right_hand_reference = None
-
     @unique
     class ConditionType(Enum):
         """The acceptable condtions to place on the group"""
@@ -528,7 +516,7 @@ class ConditionalGroup(ProtocolGroup):
             """
             return any(value == item.value for item in cls)
 
-    def __init__(self, protocols):
+    def __init__(self, protocol_id):
         """Constructs a new ConditionalGroup
 
         Parameters
@@ -536,26 +524,17 @@ class ConditionalGroup(ProtocolGroup):
         protocols : dict(str, Protocol)
             The protocols to include in this group.
         """
-        super().__init__(protocols)
-        self.conditions = []
+        super().__init__(protocol_id)
 
         self._max_iterations = 10
-        self._stackable = True
 
         self._condition_type = ConditionalGroup.ConditionType.LessThan
 
         self._left_hand_value = None
         self._right_hand_value = None
 
-        self._stacked_left_hand_values = []
-        self._stacked_right_hand_values = []
-
     @BaseProtocol.Parameter
     def max_iterations(self):
-        pass
-
-    @BaseProtocol.Parameter
-    def stackable(self):
         pass
 
     @BaseProtocol.Parameter
@@ -575,10 +554,10 @@ class ConditionalGroup(ProtocolGroup):
         if left_hand_value is None or right_hand_value is None:
             return False
 
-        if self.condition_type is self.ConditionType.LessThan:
-            return left_hand_value <= right_hand_value
-        elif self.condition_type is self.ConditionType.GreaterThan:
-            return left_hand_value >= right_hand_value
+        if self.condition_type == self.ConditionType.LessThan.value:
+            return left_hand_value < right_hand_value
+        elif self.condition_type == self.ConditionType.GreaterThan.value:
+            return left_hand_value > right_hand_value
 
         raise NotImplementedError()
 
@@ -604,33 +583,41 @@ class ConditionalGroup(ProtocolGroup):
 
         while should_continue:
 
-            conditions_met = self._evaluate_condition(self._left_hand_value,
-                                                      self._right_hand_value)
-
-            for left_value, right_value in zip(self._stacked_left_hand_values,
-                                               self._stacked_right_hand_values):
-
-                conditions_met = conditions_met & self._evaluate_condition(left_value,
-                                                                           right_value)
-
-            if conditions_met:
-
-                should_continue = False
-                break
-
-            super(ConditionalGroup, self).execute(directory)
-
             current_iteration += 1
+            return_value = super(ConditionalGroup, self).execute(directory)
+
+            if isinstance(return_value, PropertyCalculatorException):
+                # Exit on exceptions.
+                return return_value
+
+            evaluated_left_hand_value = None
+            
+            if not isinstance(self._left_hand_value, ProtocolPath):
+                evaluated_left_hand_value = self._left_hand_value
+            else:
+                evaluated_left_hand_value = self.get_value(self._left_hand_value)
+
+            evaluated_right_hand_value = None
+
+            if not isinstance(self._right_hand_value, ProtocolPath):
+                evaluated_right_hand_value = self._right_hand_value
+            else:
+                evaluated_right_hand_value = self.get_value(self._right_hand_value)
+
+            # Check to see if we have reached our goal.
+            if self._evaluate_condition(evaluated_left_hand_value, evaluated_right_hand_value):
+
+                logging.info('Conditional while loop finished after {} iterations: {}'.format(current_iteration,
+                                                                                              self.id))
+                return return_value
 
             if self._current_iteration >= self._max_iterations:
 
-                logging.info('Conditional while loop failed to converge: {}'.format(self.id))
-                return False
+                return PropertyCalculatorException(directory=directory,
+                                                   message='Conditional while loop failed to '
+                                                           'converge: {}'.format(self.id))
 
-            logging.info('Conditional criteria not yet met')
-
-        logging.info('Conditional while loop finished: {}'.format(self.id))
-        return True
+            logging.info('Conditional criteria not yet met after {} iterations'.format(current_iteration))
 
     def can_merge(self, other):
         """Determines whether this protocol group can be merged with another.
@@ -645,11 +632,8 @@ class ConditionalGroup(ProtocolGroup):
         bool
             True if the two protocols are safe to merge.
         """
-        if not self._stackable and not super(ConditionalGroup, self).can_merge(other):
-            return False
 
-        # TODO: Implement stackable group logic.
-        return True
+        return False
 
     def merge(self, other):
         """Merges another ProtocolGroup with this one. The id
@@ -663,42 +647,4 @@ class ConditionalGroup(ProtocolGroup):
         other: ConditionalGroup
             The protocol to merge into this one.
         """
-        #TODO: Implement this for stackables.
         super(ConditionalGroup, self).merge(other)
-        self.conditions.extend(other.conditions)
-
-    def set_uuid(self, value):
-        """Store the uuid of the calculation this protocol belongs to
-
-        Parameters
-        ----------
-        value : str
-            The uuid of the parent calculation.
-        """
-        super(ConditionalGroup, self).set_uuid(value)
-
-        for condition in self.conditions:
-
-            condition.left_hand_reference.set_uuid(value)
-            condition.right_hand_reference.set_uuid(value)
-
-    def replace_protocol(self, old_id, new_id):
-        """Finds each input which came from a given protocol
-         and changes it to instead take input from a different one.
-
-        .. todo:
-            Implement for conditional groups.
-
-        Parameters
-        ----------
-        old_id : str
-            The id of the old input protocol.
-        new_id : str
-            The id of the new input protocol.
-        """
-        super(ConditionalGroup, self).replace_protocol(old_id, new_id)
-
-        for condition in self.conditions:
-
-            condition.left_hand_reference.replace_protocol(old_id, new_id)
-            condition.right_hand_reference.replace_protocol(old_id, new_id)

@@ -42,7 +42,7 @@ class DirectCalculation:
     workflow needed to calculate it.
     """
 
-    def __init__(self, physical_property, force_field_path, schema):
+    def __init__(self, physical_property, force_field_path, schema, options):
         """
         Constructs a new DirectCalculation object.
 
@@ -54,6 +54,8 @@ class DirectCalculation:
             The force field to use for this calculation.
         schema: CalculationSchema
             The schema to use to calculate this property.
+        options: PropertyEstimatorOptions
+            The options to run the calculation with.
         """
         self.physical_property = physical_property
 
@@ -76,7 +78,7 @@ class DirectCalculation:
         self.global_properties = {
             "thermodynamic_state": physical_property.thermodynamic_state,
             "substance": physical_property.substance,
-            "uncertainty": physical_property.uncertainty,
+            "target_uncertainty": physical_property.uncertainty * options.relative_uncertainty,
             "force_field_path": force_field_path
         }
 
@@ -84,13 +86,16 @@ class DirectCalculation:
 
             protocol_schema = schema.protocols[protocol_name]
 
-            protocol = protocols.available_protocols[protocol_schema.type]()
+            protocol = protocols.available_protocols[protocol_schema.type](protocol_schema.id)
             protocol.schema = protocol_schema
 
             # Try to set global properties on each of the protocols
             for input_path in protocol.required_inputs:
 
                 input_value = protocol.get_value(input_path)
+
+                if not isinstance(input_value, protocols.ProtocolPath):
+                    continue
 
                 if not input_value.is_global:
                     continue
@@ -102,7 +107,6 @@ class DirectCalculation:
             self.protocols[protocol.id] = protocol
 
         self._build_dependants_graph()
-        self._apply_groups(schema)
 
         self.final_value_source = copy.deepcopy(schema.final_value_source)
         self.final_value_source.append_uuid(self.uuid)
@@ -130,6 +134,10 @@ class DirectCalculation:
                     # schema dependency graph.
                     continue
 
+                if dependency.start_protocol == dependant_protocol_name and dependency.start_protocol:
+                    # Don't add self to the dependency list.
+                    continue
+
                 # Only add a dependency on the protocol at the head of the path,
                 # dependencies on the rest of protocols in the path is then implied.
                 if dependant_protocol.id in self.dependants_graph[dependency.start_protocol]:
@@ -138,51 +146,6 @@ class DirectCalculation:
                 self.dependants_graph[dependency.start_protocol].append(dependant_protocol.id)
 
         self.starting_protocols = graph.find_root_nodes(self.dependants_graph)
-
-    def _apply_groups(self, schema):
-        """Groups protocols together into a set of user defined groups."""
-
-        if len(schema.groups) == 0:
-            # Nothing to do here.
-            return
-
-        # TODO: Implement groups.
-        return
-        #
-        # for group_id in self.groups:
-        #
-        #     group = self.groups[group_id]
-        #
-        #     # Remove all grouped protocols from the protocol list.
-        #     for grouped_protocol_id in group.protocols:
-        #         self.protocols.pop(grouped_protocol_id)
-        #
-        #     # Point the other protocols to the groups rather than
-        #     # the removed protocols
-        #     for grouped_protocol_id in group.protocols:
-        #
-        #         for protocol_id in self.protocols:
-        #
-        #             protocol = self.protocols[protocol_id]
-        #             protocol.replace_protocol(grouped_protocol_id, group.id)
-        #
-        #             for input_reference in protocol.input_references:
-        #
-        #                 if input_reference.output_protocol_id != group.id:
-        #                     continue
-        #
-        #                 input_reference.grouped_protocol_id = grouped_protocol_id
-        #
-        #         if self.final_value_reference.output_protocol_id == grouped_protocol_id:
-        #             self.final_value_reference.output_protocol_id = group.id
-        #             self.final_value_reference.grouped_protocol_id = grouped_protocol_id
-        #
-        #         if self.final_uncertainty_reference.output_protocol_id == grouped_protocol_id:
-        #             self.final_uncertainty_reference.output_protocol_id = group.id
-        #             self.final_uncertainty_reference.grouped_protocol_id = grouped_protocol_id
-        #
-        #     # Add the group in their place.
-        #     self.protocols[group.id] = group
 
     def replace_protocol(self, old_protocol, new_protocol):
         """Replaces an existing protocol with a new one, while
@@ -416,7 +379,6 @@ class DirectCalculationGraph:
 
             calculation = self._calculations_to_run[calculation_id]
 
-            # TODO : Fix for groups.
             value_node_id = calculation.final_value_source.start_protocol
             uncertainty_node_id = calculation.final_uncertainty_source.start_protocol
 
@@ -459,7 +421,7 @@ class DirectCalculationGraph:
 
         # Recreate the protocol on the backend to bypass the need for static methods
         # and awkward args and kwargs syntax.
-        protocol = protocols.available_protocols[protocol_schema.type]()
+        protocol = protocols.available_protocols[protocol_schema.type](protocol_schema.id)
         protocol.schema = protocol_schema
 
         protocol.set_uuid(graph.retrieve_uuid(protocol.id))
@@ -472,6 +434,9 @@ class DirectCalculationGraph:
             target_path = protocol.get_value(input_path)
 
             if not isinstance(target_path, protocols.ProtocolPath):
+                continue
+
+            if target_path.start_protocol == input_path.start_protocol or target_path.start_protocol == protocol.id:
                 continue
 
             input_value = parent_outputs_by_path[target_path]
@@ -581,7 +546,7 @@ class DirectCalculationGraph:
 class SimulationLayer(PropertyCalculationLayer):
 
     @staticmethod
-    def _build_calculation_graph(properties, force_field_path, schemas):
+    def _build_calculation_graph(properties, force_field_path, options):
         """ Construct a graph of the protocols needed to calculate a set of properties.
 
         Parameters
@@ -592,6 +557,8 @@ class SimulationLayer(PropertyCalculationLayer):
             The path to the force field parameters to use in the calculation.
         schemas : dict of str and CalculationSchema
             A list of the schemas to use when performing the calculations.
+        options: PropertyEstimatorOptions
+            The options to run the calculations with.
         """
         calculation_graph = DirectCalculationGraph('property-data')
 
@@ -599,18 +566,19 @@ class SimulationLayer(PropertyCalculationLayer):
 
             property_type = type(property_to_calculate).__name__
 
-            if property_type not in schemas:
+            if property_type not in options.calculation_schemas:
 
                 logging.warning('The property calculator does not support {} '
                                 'calculations.'.format(property_type))
 
                 continue
 
-            schema = schemas[property_type]
+            schema = options.calculation_schemas[property_type]
 
             calculation = DirectCalculation(property_to_calculate,
                                             force_field_path,
-                                            schema)
+                                            schema,
+                                            options)
 
             calculation_graph.add_calculation(calculation)
 
@@ -621,7 +589,7 @@ class SimulationLayer(PropertyCalculationLayer):
 
         calculation_graph = SimulationLayer._build_calculation_graph(data_model.queued_properties,
                                                                      data_model.parameter_set_path,
-                                                                     data_model.options.calculation_schemas)
+                                                                     data_model.options)
 
         simulation_futures = calculation_graph.submit(backend)
 
