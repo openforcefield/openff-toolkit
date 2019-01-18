@@ -43,6 +43,8 @@ from openforcefield.properties.estimator.client import PropertyEstimatorDataMode
 from openforcefield.properties.estimator.layers import available_layers
 from openforcefield.properties.estimator.components.protocols import ProtocolPath, PropertyCalculatorException
 
+from .message_types import PropertyEstimatorMessageTypes
+
 # Needed for server-client communication.
 int_struct = struct.Struct("<i")
 
@@ -90,6 +92,12 @@ class PropertyCalculationRunner(TCPServer):
     It acts as a server, which receives submitted jobs from clients
     launched via the property estimator.
 
+    Notes
+    -----
+
+    Methods to handle the TCP messages are based on the StackOverflow response from
+    A. Jesse Jiryu Davis: https://stackoverflow.com/a/40257248
+
     Examples
     --------
     Setting up a general server instance using a dask LocalCluster backend:
@@ -105,6 +113,14 @@ class PropertyCalculationRunner(TCPServer):
     >>> # Instruct the server to listen for incoming submissions
     >>> property_server.run_until_complete()
     """
+
+    @property
+    def queued_calculations(self):
+        return self._queued_calculations
+
+    @property
+    def finished_calculations(self):
+        return self._finished_calculations
 
     def __init__(self, backend, port=8000):
         """Constructs a new PropertyCalculationRunner object.
@@ -145,6 +161,113 @@ class PropertyCalculationRunner(TCPServer):
 
         backend.start()
 
+    async def handle_job_submission(self, stream, address, message_length):
+        """An asynchronous routine for handling the receiving and processing
+        of job submissions from a client.
+
+        Parameters
+        ----------
+        stream: IOStream
+            An IO stream used to pass messages between the
+            server and client.
+        address: str
+            The address from which the request came.
+        message_length: int
+            The length of the message being recieved.
+        """
+
+        logging.info('Received job request from {}'.format(address))
+
+        # Read the incoming request from the server. The first four bytes
+        # of the response should be the length of the message being sent.
+
+        # Decode the client submission json.
+        encoded_json = await stream.read_bytes(message_length)
+        json_model = encoded_json.decode()
+
+        # TODO: Add exeception handling so the server can gracefully reject bad json.
+        client_data_model = PropertyEstimatorDataModel.parse_raw(json_model)
+
+        runner_data_model = self._prepare_data_model(client_data_model)
+        should_launch = True
+
+        # Make sure this job is not already in the queue.
+        calculation_id = None
+        cached_data_id = runner_data_model.id
+
+        for existing_id in self._queued_calculations:
+
+            runner_data_model.id = existing_id
+
+            if runner_data_model.json() == self._queued_calculations[existing_id].json():
+                calculation_id = existing_id
+                should_launch = False
+
+                break
+
+        runner_data_model.id = cached_data_id
+
+        if calculation_id is None:
+            # Instruct the server to setup and queue the calculations.
+            calculation_id = cached_data_id
+            self._queued_calculations[calculation_id] = runner_data_model
+
+        # Pass the ids of the submitted calculations back to the
+        # client.
+        encoded_job_ids = json.dumps(calculation_id).encode()
+        length = pack_int(len(encoded_job_ids))
+
+        await stream.write(length + encoded_job_ids)
+
+        logging.info('Jobs ids sent to the client ({}): {}'.format(address, calculation_id))
+
+        if should_launch:
+            self.schedule_calculation(runner_data_model)
+
+    async def handle_job_query(self, stream, address, message_length):
+        """An asynchronous routine for handling the receiving and processing
+        of job queries from a client
+
+        Parameters
+        ----------
+        stream: IOStream
+            An IO stream used to pass messages between the
+            server and client.
+        address: str
+            The address from which the request came.
+        message_length: int
+            The length of the message being recieved.
+        """
+
+        logging.info('Received job query from {}'.format(address))
+
+        encoded_ticket_id = await stream.read_bytes(message_length)
+        ticket_id = encoded_ticket_id.decode()
+
+        logging.info('Looking up ticket id {}'.format(ticket_id))
+
+        response = None
+
+        if (ticket_id not in self._queued_calculations and
+            ticket_id not in self._finished_calculations):
+
+            response = PropertyCalculatorException(directory='',
+                                                   message='The {} ticket id was not found '
+                                                           'on the server.'.format(ticket_id)).json()
+
+        elif ticket_id in self._finished_calculations:
+            response = self._finished_calculations[ticket_id].json()
+
+        else:
+            response = ''
+
+        encoded_response = response.encode()
+        length = pack_int(len(encoded_response))
+
+        await stream.write(length + encoded_response)
+
+        logging.info('Job results sent to the client {}: {}'.format(address, response))
+
     async def handle_stream(self, stream, address):
         """A routine to handle incoming requests from
         a property estimator TCP client.
@@ -168,56 +291,36 @@ class PropertyCalculationRunner(TCPServer):
         try:
             while True:
 
-                # Read the incoming request from the server. The first four bytes
-                # of the response should be the length of the message being sent.
-                header = await stream.read_bytes(4)
-                length = unpack_int(header)[0]
+                # Receive a hello message with the message type.
 
-                # Decode the client submission json.
-                encoded_json = await stream.read_bytes(length)
-                json_model = encoded_json.decode()
+                packed_message_type = await stream.read_bytes(4)
+                message_type_int = unpack_int(packed_message_type)[0]
 
-                # TODO: Add exeception handling so the server can gracefully reject bad json.
-                client_data_model = PropertyEstimatorDataModel.parse_raw(json_model)
+                packed_message_length = await stream.read_bytes(4)
+                message_length = unpack_int(packed_message_length)[0]
 
-                logging.info('Received job request from {}'.format(address))
+                logging.info('Introductory packet recieved: {} {}'.format(message_type_int, message_length))
 
-                runner_data_model = self._prepare_data_model(client_data_model)
-                should_launch = True
+                message_type = None
 
-                # Make sure this job is not already in the queue.
-                calculation_id = None
-                cached_data_id = runner_data_model.id
+                try:
+                    message_type = PropertyEstimatorMessageTypes(message_type_int)
+                    logging.info('Message type: {}'.format(message_type))
 
-                for existing_id in self._queued_calculations:
+                except Exception as e:
 
-                    runner_data_model.id = existing_id
+                    logging.info('Bad message type recieved: {}'.format(e))
 
-                    if runner_data_model.json() == self._queued_calculations[existing_id].json():
+                    # Discard the unrecognised message.
+                    if message_length > 0:
+                        await stream.read_bytes(message_length)
 
-                        calculation_id = existing_id
-                        should_launch = False
+                    continue
 
-                        break
-
-                runner_data_model.id = cached_data_id
-
-                if calculation_id is None:
-                    # Instruct the server to setup and queue the calculations.
-                    calculation_id = cached_data_id
-                    self._queued_calculations[calculation_id] = runner_data_model
-
-                # Pass the ids of the submitted calculations back to the
-                # client.
-                encoded_job_ids = json.dumps(calculation_id).encode()
-                length = pack_int(len(encoded_job_ids))
-
-                await stream.write(length + encoded_job_ids)
-
-                logging.info('Jobs ids sent to the client ({}): {}'.format(address, calculation_id))
-
-                if should_launch:
-                    self.schedule_calculation(runner_data_model)
+                if message_type is PropertyEstimatorMessageTypes.Submission:
+                    await self.handle_job_submission(stream, address, message_length)
+                elif message_type is PropertyEstimatorMessageTypes.Query:
+                    await self.handle_job_query(stream, address, message_length)
 
         except StreamClosedError as e:
 

@@ -78,8 +78,7 @@ def run_property_estimator():
 
     property_server.run_until_complete()
 
-    # results = property_estimator.compute_properties(data_set, force_field)
-    # client.PropertyEstimator.produce_calculation_report(data_set, results)
+    logging.info('Results: {}'.format(property_server.finished_calculations))
 
 
 def run_simulation_backend():

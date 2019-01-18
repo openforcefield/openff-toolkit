@@ -22,12 +22,14 @@ import logging
 import json
 import struct
 
+from time import sleep
+
 from simtk import unit
 
 from pydantic import BaseModel
 from typing import Dict, List
 
-from tornado.ioloop import IOLoop
+from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.iostream import StreamClosedError
 from tornado.tcpclient import TCPClient
 
@@ -40,6 +42,8 @@ from openforcefield.properties import PhysicalProperty
 from openforcefield.properties.estimator import CalculationSchema
 
 from openforcefield.typing.engines.smirnoff import ForceField
+
+from .message_types import PropertyEstimatorMessageTypes
 
 int_struct = struct.Struct("<i")
 
@@ -192,6 +196,10 @@ class PropertyEstimator(object):
     As can the uncertainty tolerance:
 
     >>> options = PropertyEstimatorOptions(relative_uncertainty = 0.1)
+
+    Once a job has been submitted to the server, it's status can be tracked by calling
+
+    >>> property_estimator.query_computation_state(ticket_ids)
     """
 
     registered_properties = {}
@@ -284,6 +292,61 @@ class PropertyEstimator(object):
 
         return ticket_ids
 
+    def query_computation_state(self, ticket_id):
+        """
+        Submit the property and parameter set for calculation.
+
+        Parameters
+        ----------
+        ticket_id: str
+            The id of the calculation to query.
+
+        Returns
+        -------
+        str, optional:
+           The status of the submitted job.
+           Returns None if the calculation has not yet completed.
+        """
+
+        # For now just do a blocking submit to the server.
+        return IOLoop.current().run_sync(lambda: self._send_query_server(ticket_id))
+
+    def wait_for_result(self, ticket_id, interval=10):
+        """
+        Synchronously wait for the result of a calculation
+
+        Parameters
+        ----------
+        ticket_id: str
+            The id of the calculation to wait for.
+        interval: int
+            The time interval (seconds) between checking if the calculation has finished.
+
+        Returns
+        -------
+        PropertyRunnerDataModel, PropertyCalculatorException, optional:
+           The result of the submitted job. Returns None if the calculation has
+           not yet completed.
+        """
+        assert interval >= 1
+
+        response = None
+        should_run = True
+
+        while should_run:
+
+            sleep(interval)
+
+            response = IOLoop.current().run_sync(lambda: self._send_query_server(ticket_id))
+
+            if response is None:
+                continue
+
+            logging.info('The server has returned a response.')
+            should_run = False
+
+        return response
+
     async def _send_calculations_to_server(self, submission):
         """Attempts to connect to the calculation server, and
         submit the requested calculations.
@@ -323,9 +386,12 @@ class PropertyEstimator(object):
             # packet ready to submit to the server. The
             # Length of the packet is encoded in the first
             # four bytes.
+            message_type = pack_int(PropertyEstimatorMessageTypes.Submission)
+
             encoded_json = submission.json().encode()
             length = pack_int(len(encoded_json))
-            await stream.write(length + encoded_json)
+
+            await stream.write(message_type + length + encoded_json)
 
             logging.info("Sent calculations to {}:{}. Waiting for a response from"
                          " the server...".format(self._server_address, self._port))
@@ -343,6 +409,7 @@ class PropertyEstimator(object):
             ticket_id = json.loads(encoded_json.decode())
 
             logging.info('Received job id from server: {}'.format(ticket_id))
+            self._tcp_client.close()
 
         except StreamClosedError as e:
 
@@ -352,6 +419,71 @@ class PropertyEstimator(object):
 
         # Return the ids of the submitted jobs.
         return ticket_id
+
+    async def _send_query_server(self, ticket_id):
+        """Attempts to connect to the calculation server, and
+        submit the requested calculations.
+
+        Notes
+        -----
+
+        This method is based on the StackOverflow response from
+        A. Jesse Jiryu Davis: https://stackoverflow.com/a/40257248
+
+        Parameters
+        ----------
+        ticket_id: str
+            The id of the job to query.
+
+        Returns
+        -------
+        str, optional:
+           The status of the submitted job.
+           Returns None if the calculation has not yet completed.
+        """
+        server_response = None
+
+        try:
+
+            # Attempt to establish a connection to the server.
+            logging.info("Attempting Connection to {}:{}".format(self._server_address, self._port))
+            stream = await self._tcp_client.connect(self._server_address, self._port)
+            logging.info("Connected to {}:{}".format(self._server_address, self._port))
+
+            stream.set_nodelay(True)
+
+            # Encode the ticket id into the message.
+            message_type = pack_int(PropertyEstimatorMessageTypes.Query)
+
+            encoded_ticket_id = ticket_id.encode()
+            length = pack_int(len(encoded_ticket_id))
+
+            await stream.write(message_type + length + encoded_ticket_id)
+
+            logging.info("Querying the server {}:{}...".format(self._server_address, self._port))
+
+            # Wait for the server response.
+            header = await stream.read_bytes(4)
+            length = unpack_int(header)[0]
+
+            # Decode the response from the server. If everything
+            # went well, this should be the finished calculation.
+            if length > 0:
+
+                encoded_json = await stream.read_bytes(length)
+                server_response = json.loads(encoded_json.decode())
+
+            logging.info('Received response from server of length {}: {}'.format(length, server_response))
+            self._tcp_client.close()
+
+        except StreamClosedError as e:
+
+            # Handle no connections to the server gracefully.
+            logging.info("Error connecting to {}:{} : {}. Please ensure the server is running and"
+                         "that the server address / port is correct.".format(self._server_address, self._port, e))
+
+        # Return the ids of the submitted jobs.
+        return server_response
 
     @staticmethod
     def _store_properties_in_hierarchy(original_set):
