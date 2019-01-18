@@ -416,6 +416,7 @@ def extractPositionsFromOEMol(molecule):
         positions[index,:] = unit.Quantity(coords[index], unit.angstroms)
     return positions
 
+
 def read_typelist(filename):
     """
     Read a parameter type or decorator list from a file.
@@ -506,3 +507,16 @@ def find_types_with_decorator(class_type, decorator_type):
                        type(base.__dict__[attribute_name]) is decorator_type])
 
     return inputs
+
+
+def setup_timestamp_logging():
+    """Set up timestamp-based logging."""
+    formatter = logging.Formatter(fmt='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+                                  datefmt='%H:%M:%S')
+
+    screen_handler = logging.StreamHandler(stream=sys.stdout)
+    screen_handler.setFormatter(formatter)
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.addHandler(screen_handler)
