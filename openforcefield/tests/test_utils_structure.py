@@ -48,7 +48,7 @@ def test_merge_system():
     # Create System from AMBER
     # TODO: Add create_system_from_amber convenience function
     from openforcefield.typing.engines.smirnoff import create_system_from_amber
-    prmtop_filename, inpcrd_filename = get_amber_system('cyclohexane_ethanol_0.4_0.6')
+    prmtop_filename, inpcrd_filename = get_amber_filepaths('cyclohexane_ethanol_0.4_0.6')
     topology0, system0, positions0 = create_system_from_amber(prmtop_filename, inpcrd_filename)
 
     # TODO:

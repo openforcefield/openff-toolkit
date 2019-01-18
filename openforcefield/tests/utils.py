@@ -30,26 +30,28 @@ from openforcefield.utils import get_data_filename
 # Shortcut functions to get file paths to test data.
 #=============================================================================================
 
-
-def get_amber_system(prefix='cyclohexane_ethanol_0.4_0.6'):
-    """Get AMBER prmtop and inpcrd test data filenames
+def get_amber_filepath(prefix):
+    """Get AMBER prmtop and inpcrd test data filepaths.
 
     Parameters
     ----------
-    prefix : str, optional, default='cyclohexane_ethanol_0.4_0.6'
-        The prefix of .prmtop and .inpcrd files to retrieve from testdata/systems/amber
+    prefix : str
+        The file name without extension of .prmtop and .inpcrd
+        files to retrieve from testdata/systems/amber.
 
     Returns
     -------
-    prmtop_filename : str
-        Absolute path to the AMBER prmtop filename in testdata/systems/amber
-    inpcrd_filename : str
-        Absolute path to the AMBER inpcrd filename in testdata/systems/amber
+    prmtop_filepath : str
+        Absolute path to the AMBER prmtop filepath in testdata/systems/amber
+    inpcrd_filepath : str
+        Absolute path to the AMBER inpcrd filepath in testdata/systems/amber
+
     """
     prefix = os.path.join('systems', 'amber', prefix)
-    prmtop_filename = get_data_filename(prefix+'.prmtop')
-    inpcrd_filename = get_data_filename(prefix+'.inpcrd')
-    return prmtop_filename, inpcrd_filename
+    prmtop_filepath = get_data_filename(prefix+'.prmtop')
+    inpcrd_filepath = get_data_filename(prefix+'.inpcrd')
+    return prmtop_filepath, inpcrd_filepath
+
 
 def get_packmol_pdbfile(prefix='cyclohexane_ethanol_0.4_0.6'):
     """Get PDB filename for a packmol-generated box
@@ -67,6 +69,7 @@ def get_packmol_pdbfile(prefix='cyclohexane_ethanol_0.4_0.6'):
     prefix = os.path.join('systems', 'packmol_boxes', prefix)
     pdb_filename = get_data_filename(prefix+'.pdb')
     return pdb_filename
+
 
 def get_monomer_mol2file(prefix='ethanol'):
     """Get absolute filepath for a mol2 file denoting a small molecule monomer in testdata
