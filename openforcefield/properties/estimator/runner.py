@@ -117,7 +117,7 @@ class PropertyCalculationRunner(TCPServer):
     >>> property_server = PropertyCalculationRunner(backend)
     >>>
     >>> # Instruct the server to listen for incoming submissions
-    >>> property_server.run_until_complete()
+    >>> property_server.run_until_killed()
     """
 
     @property

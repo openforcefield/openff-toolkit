@@ -161,7 +161,7 @@ class PropertyEstimator(object):
     >>> property_server = PropertyCalculationRunner(backend)
     >>>
     >>> # Instruct the server to listen for incoming submissions
-    >>> property_server.run_until_complete()
+    >>> property_server.run_until_killed()
 
     If the server and client initialisation occur in the same function call (e.g. the same
     main function), then `property_server.run_until_complete()` must be called after

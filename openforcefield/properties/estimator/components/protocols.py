@@ -1295,7 +1295,7 @@ class AveragePropertyProtocol(BaseProtocol):
             The data to average over.
 
         Returns
-        ----------
+        -------
         float
             The average value
         float
