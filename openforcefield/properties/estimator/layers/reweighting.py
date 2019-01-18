@@ -17,8 +17,8 @@ Authors
 
 import pickle
 
-from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.properties.estimator.layers.base import register_calculation_layer, PropertyCalculationLayer
+from openforcefield.typing.engines.smirnoff import ForceField
 
 
 # =============================================================================================
@@ -27,8 +27,10 @@ from openforcefield.properties.estimator.layers.base import register_calculation
 
 @register_calculation_layer()
 class ReweightingLayer(PropertyCalculationLayer):
-    """Attempts to calculate properties by reweighting existing
-    simulation data.
+    """A calculation layer which aims to calculate physical properties by
+    reweighting the results of previous calculations.
+
+    .. warning :: This class has not yet been implemented.
     """
 
     @staticmethod
@@ -56,6 +58,8 @@ class ReweightingLayer(PropertyCalculationLayer):
         """A placeholder method that would be used to attempt
         to reweight previous calculations to yield the desired
         property.
+
+        .. warning :: This method has not yet been implemented.
         """
 
         # For now the return tuple indicates that the reweighting

@@ -14,10 +14,11 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-import math
 import logging
 import multiprocessing
 import os
+
+import math
 
 
 # =============================================================================================
@@ -25,6 +26,16 @@ import os
 # =============================================================================================
 
 class PropertyEstimatorBackend:
+    """An abstract base representation of a property estimator backend.
+
+    A backend will be responsible for coordinating and running calculations
+    on the available hardware.
+
+    Notes
+    -----
+    All estimator backend classes must inherit from this class, and must implement the
+    `start`, `stop`, and `submit_task` method.
+    """
 
     def __init__(self, number_of_workers=1, threads_per_worker=None):
         """Constructs a new PropertyEstimatorBackend object.
@@ -69,11 +80,11 @@ class PropertyEstimatorBackend:
         os.environ["OPENMM_NUM_THREADS"] = str(self._threads_per_worker)
 
     def start(self):
-        """TODO: Missing docstrings."""
+        """Start the calculation backend."""
         pass
 
     def stop(self):
-        """TODO: Missing docstrings."""
+        """Stop the calculation backend."""
         pass
 
     def submit_task(self, function, *args, **kwargs):
@@ -84,5 +95,11 @@ class PropertyEstimatorBackend:
         ----------
         function: function
             The function to run.
+
+        Returns
+        -------
+        Future
+            Returns a future object which will eventually point to the results
+            of the submitted task.
         """
         pass

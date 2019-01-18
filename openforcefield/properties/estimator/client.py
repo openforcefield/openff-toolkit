@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # =============================================================================================
 # MODULE DOCSTRING
 # =============================================================================================
@@ -18,31 +16,24 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-import logging
 import json
+import logging
 import struct
-
-from time import sleep
-
-from simtk import unit
-
-from pydantic import BaseModel
 from typing import Dict, List
 
-from tornado.ioloop import IOLoop, PeriodicCallback
+from pydantic import BaseModel
+from simtk import unit
+from time import sleep
+from tornado.ioloop import IOLoop
 from tornado.iostream import StreamClosedError
 from tornado.tcpclient import TCPClient
 
-from openforcefield.properties.estimator.components.protocols import ProtocolPath
-from openforcefield.properties.estimator.layers import SurrogateLayer, ReweightingLayer, SimulationLayer
-
-from openforcefield.utils.serialization import serialize_quantity
-
 from openforcefield.properties import PhysicalProperty
 from openforcefield.properties.estimator import CalculationSchema
-
+from openforcefield.properties.estimator.components.protocols import ProtocolPath
+from openforcefield.properties.estimator.layers import SurrogateLayer, ReweightingLayer, SimulationLayer
 from openforcefield.typing.engines.smirnoff import ForceField
-
+from openforcefield.utils.serialization import serialize_quantity
 from .message_types import PropertyEstimatorMessageTypes
 
 int_struct = struct.Struct("<i")
@@ -86,13 +77,17 @@ class PropertyEstimatorOptions(BaseModel):
 
     Attributes
     ----------
-    allowed_calculation_layers: list of str:
-        List of allowed calculation layers, order in list is order
-        will attempt to calculate property in.
+    allowed_calculation_layers: list of str
+        A list of allowed calculation layers. The order of the layers in the list is the order
+        that the calculator will attempt to execute the layers in.
     calculation_schemas: Dict[str, CalculationSchema]
-
-    relative_uncertainty: float
-
+        A dictionary of the CalculationSchema which will be used to calculate any properties.
+        The dictionary key represents the type of property the schema will calculate. The
+        dictionary will be automatically populated with defaults if no entries are added.
+    relative_uncertainty: float, default = 1.0
+        Control the desired uncertainty of any calculated properties, relative to measured ones.
+    allow_protocol_merging: bool, default = True
+        If true, allows individual, identical steps in a property calculation to be merged.
     """
     allowed_calculation_layers: List[str] = [
         SurrogateLayer.__name__,
@@ -107,8 +102,6 @@ class PropertyEstimatorOptions(BaseModel):
 
     class Config:
 
-        # A dirty hack to allow simtk.unit.Quantities...
-        # TODO: Should really investigate QCElemental as an alternative.
         arbitrary_types_allowed = True
 
         json_encoders = {
@@ -118,7 +111,20 @@ class PropertyEstimatorOptions(BaseModel):
 
 
 class PropertyEstimatorDataModel(BaseModel):
+    """Represents a set of properties to be calculated by the estimator,
+    the parameters which will be used to calculate them, and options about
+    how the properties will be calculated.
 
+    Attributes
+    ----------
+    properties: list of PhysicalProperty
+        The list of physical properties to calculate.
+    options: PropertyEstimatorOptions
+        The options used to calculate the properties.
+    parameter_set: dict of str and int
+        The force field parameters used during the calculations. These should be
+        obtained by calling .__getstate__() on a `ForceField` object.
+    """
     properties: List[PhysicalProperty] = []
     options: PropertyEstimatorOptions = None
 
@@ -126,8 +132,6 @@ class PropertyEstimatorDataModel(BaseModel):
 
     class Config:
 
-        # A dirty hack to allow simtk.unit.Quantities...
-        # TODO: Should really investigate QCElemental as an alternative.
         arbitrary_types_allowed = True
 
         json_encoders = {
@@ -209,8 +213,10 @@ class PropertyEstimator(object):
 
         Parameters
         ----------
-        server_address : str
+        server_address: str
             The address of the calculation server.
+        port: int
+            The port that the server is listening on.
         """
 
         self._server_address = server_address

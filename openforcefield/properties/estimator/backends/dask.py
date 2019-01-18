@@ -16,8 +16,9 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-from openforcefield.properties.estimator.backends.base import PropertyEstimatorBackend
 from dask import distributed
+
+from openforcefield.properties.estimator.backends.base import PropertyEstimatorBackend
 
 
 # =============================================================================================
@@ -25,6 +26,9 @@ from dask import distributed
 # =============================================================================================
 
 class DaskLocalClusterBackend(PropertyEstimatorBackend):
+    """A property estimator backend which uses a dask `LocalCluster` to
+    run calculations.
+    """
 
     def __init__(self, number_of_workers=1, threads_per_worker=None):
         """Constructs a new DaskLocalClusterBackend"""

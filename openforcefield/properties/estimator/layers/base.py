@@ -17,7 +17,6 @@ Authors
 
 import logging
 
-from pydantic import BaseModel
 
 # =============================================================================================
 # Registration Decorators
@@ -51,7 +50,12 @@ def return_args(*args):
 # =============================================================================================
 
 class PropertyCalculationLayer:
-    """Represents a layer in the property calculation stack.
+    """An abstract representation of a calculation layer in the property calculation stack.
+
+    Notes
+    -----
+    Calculation layers must inherit from this class, and must override the
+    `schedule_calculation` method.
     """
 
     @staticmethod

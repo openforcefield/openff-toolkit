@@ -15,34 +15,28 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-import logging
-import uuid
+import hashlib
 import json
+import logging
+import os
 import pickle
 import struct
-import os
-import hashlib
-
-from simtk import unit
-
+import uuid
 from os import path
-
-from pydantic import BaseModel
 from typing import Dict, List, Any
 
+from pydantic import BaseModel
+from simtk import unit
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.iostream import IOStream, StreamClosedError
 from tornado.tcpserver import TCPServer
 
-from openforcefield.utils.serialization import serialize_quantity
-
-from openforcefield.typing.engines.smirnoff import ForceField
-
 from openforcefield.properties import PhysicalProperty
 from openforcefield.properties.estimator.client import PropertyEstimatorDataModel, PropertyEstimatorOptions
-from openforcefield.properties.estimator.layers import available_layers
 from openforcefield.properties.estimator.components.protocols import ProtocolPath, PropertyCalculatorException
-
+from openforcefield.properties.estimator.layers import available_layers
+from openforcefield.typing.engines.smirnoff import ForceField
+from openforcefield.utils.serialization import serialize_quantity
 from .message_types import PropertyEstimatorMessageTypes
 
 # Needed for server-client communication.
@@ -59,6 +53,19 @@ pack_int = int_struct.pack
 class PropertyRunnerDataModel(BaseModel):
     """Represents a data packet to be calculated by the runner, along with
     the options which should be used when running the calculations.
+
+    Attributes
+    ----------
+    id: str
+        A unique id assigned to this calculation packet.
+    queued_properties: list of PhysicalProperty
+        A list of physical properties waiting to be calculated.
+    calculated_properties: list of PhysicalProperty
+        A list of physical properties which have been calculated.
+    options: PropertyEstimatorOptions
+        The options used to calculate the properties.
+    parameter_set_path: str
+        A server side path to the force field parameters used to calculate the properties.
     """
 
     id: str
@@ -94,7 +101,6 @@ class PropertyCalculationRunner(TCPServer):
 
     Notes
     -----
-
     Methods to handle the TCP messages are based on the StackOverflow response from
     A. Jesse Jiryu Davis: https://stackoverflow.com/a/40257248
 

@@ -20,17 +20,15 @@ Authors
 
 import copy
 import logging
-import uuid
-
 import os
+import uuid
 from os import path
-
-from openforcefield.utils import graph
 
 from openforcefield.properties import PhysicalProperty, CalculationSource
 from openforcefield.properties.estimator import CalculationSchema
 from openforcefield.properties.estimator.components import protocols
 from openforcefield.properties.estimator.layers.base import register_calculation_layer, PropertyCalculationLayer
+from openforcefield.utils import graph
 
 
 # =============================================================================================
@@ -544,6 +542,11 @@ class DirectCalculationGraph:
 
 @register_calculation_layer()
 class SimulationLayer(PropertyCalculationLayer):
+    """A calculation layer which aims to calculate physical properties
+    directly from molecular simulations..
+
+    .. warning :: This class is experimental and should not be used in a production environment.
+    """
 
     @staticmethod
     def _build_calculation_graph(properties, force_field_path, options):

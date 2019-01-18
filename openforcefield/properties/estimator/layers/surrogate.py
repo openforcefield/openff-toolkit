@@ -17,8 +17,8 @@ Authors
 
 import pickle
 
-from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.properties.estimator.layers.base import register_calculation_layer, PropertyCalculationLayer
+from openforcefield.typing.engines.smirnoff import ForceField
 
 
 # =============================================================================================
@@ -27,8 +27,10 @@ from openforcefield.properties.estimator.layers.base import register_calculation
 
 @register_calculation_layer()
 class SurrogateLayer(PropertyCalculationLayer):
-    """Attempts to calculate properties from a precomputed
-    surrogate model.
+    """A calculation layer which aims to calculate physical properties from
+    a surrogate model, such as a Gaussian mixture model.
+
+    .. warning :: This class has not yet been implemented.
     """
 
     @staticmethod
@@ -55,6 +57,8 @@ class SurrogateLayer(PropertyCalculationLayer):
     def perform_surrogate_extrapolation(physical_property, parameter_set):
         """A placeholder method that would be used to spawn the surrogate
         model backend.
+
+        .. warning :: This method has not yet been implemented.
         """
 
         # For now the return tuple indicates that the surrogate modelling
