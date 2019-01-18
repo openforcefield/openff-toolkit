@@ -39,7 +39,7 @@ pytestmark = pytest.mark.skip
 
 from openforcefield.utils import get_data_filename#, generateTopologyFromOEMol, read_molecules
 #from openforcefield.utils import check_energy_is_finite, get_energy
-from openforcefield.tests.utils import get_amber_system, get_packmol_pdbfile, get_monomer_mol2file, compare_system_energies
+from openforcefield.tests.utils import get_packmol_pdbfile, get_monomer_mol2file, compare_system_energies
 
 from .utils import *
 
