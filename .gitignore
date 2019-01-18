@@ -65,7 +65,14 @@ target/
 # Ipython notebook checkpoints
 *.ipynb_checkpoints/
 
+# PyCharm
+.idea
+
 # ignore large files created during examples
 examples/testing/test_system_conversion/out.*
 examples/testing/test_system_conversion/out2.*
 examples/testing/test_system_conversion/system.*
+
+examples/property_estimator/cached_force_fields
+examples/property_estimator/dask-worker-space
+examples/property_estimator/property-data

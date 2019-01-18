@@ -35,7 +35,7 @@ class TypedBaseModel(BaseModel):
     type_metadata: str = ''
 
     @classmethod
-    def get_validators(cls):
+    def __get_validators__(cls):
         # yield dict_validator
         yield cls.validate
 

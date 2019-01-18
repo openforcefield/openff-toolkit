@@ -1126,7 +1126,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
         # self.__dict__ = state_dictionary  # make dict our attribute dictionary
 
     @classmethod
-    def get_validators(cls):
+    def __get_validators__(cls):
         yield cls.validate
 
     @classmethod

@@ -37,7 +37,7 @@ class Component(BaseModel):
     smiles: str = None
 
     @classmethod
-    def get_validators(cls):
+    def __get_validators__(cls):
         # yield dict_validator
         yield cls.validate
 
@@ -76,7 +76,7 @@ class Substance(BaseModel):
         raise NotImplementedError('A Substance is a purely abstract base class.')
 
     @classmethod
-    def get_validators(cls):
+    def __get_validators__(cls):
         # yield dict_validator
         yield cls.validate
 

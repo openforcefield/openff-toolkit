@@ -29,7 +29,6 @@ import simtk.openmm as mm
 from simtk.openmm.app import element as elem
 from simtk.openmm.app import Topology
 import numpy as np
-from openmoltools import system_checker
 import copy
 
 from simtk import openmm, unit
@@ -196,7 +195,8 @@ def compare_system_energies( topology0, topology1, system0, system1, positions0,
 
 
     # Do energy comparison, print info if desired
-    syscheck = system_checker.SystemChecker( simulation0, simulation1 )
+    raise NotImplementedError()
+    # syscheck = system_checker.SystemChecker( simulation0, simulation1 )
     if not skip_assert:
         # Only check force terms if we want to make sure energies are identical
         syscheck.check_force_parameters(skipImpropers = skip_improper)
