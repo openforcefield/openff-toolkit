@@ -865,28 +865,28 @@ def compare_system_parameters(system1, system2):
 # Utility functions to compare SMIRNOFF and AMBER force fields.
 #=============================================================================================
 
-def compare_molecule_energies(prmtop_filepath, inpcrd_filepath, forcefield, molecule):
+def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecule):
     """
-    Compare energies for OpenMM Systems/topologies created from an AMBER prmtop
-    and crd versus from a SMIRNOFF forcefield file and OEMol which should
-    parameterize the same system with same parameters.
+    Compare energies and parameters for OpenMM Systems/topologies created
+    from an AMBER prmtop and crd versus from a SMIRNOFF forcefield file which
+    should parameterize the same system with same parameters.
 
     Parameters
     ----------
-    prmtop_filepath : str (filename)
+    prmtop_filepath : str
         Path to the topology/parameter file in AMBER prmtop format
-    inpcrd_filepath : str (filename)
+    inpcrd_filepath : str
         Path to the coordinates file in AMBER inpcrd or rst7 format
     forcefield : ForceField
-        SMIRNOFF forcefield
+        Force field instance used to create the system to compare.
     molecule : topology.molecule.Molecule
         The molecule object to test.
 
     Returns
     -------
-    amber_energies : Dict[str, Quantity]
+    amber_energies : Dict[str, simtk.unit.Quantity]
         The potential energy of the AMBER system for each force type.
-    forcefield_energies : simtk.unit.Quantity or Dict[str, Quantity]
+    forcefield_energies : Dict[str, simtk.unit.Quantity]
         The potential energy of the ForceField system for each force type.
 
     Raises
@@ -897,6 +897,10 @@ def compare_molecule_energies(prmtop_filepath, inpcrd_filepath, forcefield, mole
         different force groups. The potential energies of the AMBER and
         ForceField systems can be accessed in the Exception through the
         attributes potential_energy1 and potential_energy2 respectively.
+    FailedParameterComparisonError
+        If there are differences in the parameters of the two systems.
+        The exceptions exposes an attribute ``different_parameters``
+        with the different parameters.
 
     """
     from openforcefield.topology import Topology
@@ -911,6 +915,8 @@ def compare_molecule_energies(prmtop_filepath, inpcrd_filepath, forcefield, mole
     openff_topology = Topology.from_openmm(openmm_topology, unique_molecules=[molecule])
     ff_system = forcefield.create_openmm_system(openff_topology)
 
-    # Test energies.
-    compare_system_energies(amber_system, ff_system, positions, box_vectors)
+    # Test energies and parameters.
+    amber_energies, forcefield_energies = compare_system_energies(
+        amber_system, ff_system, positions, box_vectors)
     compare_system_parameters(amber_system, ff_system)
+    return amber_energies, forcefield_energies

@@ -35,5 +35,5 @@ for mol_filepath in mol_filepaths:
     inpcrd_filepath = os.path.join(datapath, molname+'.crd')
 
     # Compare energies
-    from openforcefield.tests.utils import compare_molecule_energies
-    results = compare_molecule_energies(prmtop_filepath, inpcrd_filepath, forcefield, molecule)
+    from openforcefield.tests.utils import compare_amber_smirnoff
+    results = compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecule)
