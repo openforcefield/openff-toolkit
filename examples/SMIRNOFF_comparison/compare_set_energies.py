@@ -21,7 +21,7 @@ mol_filepaths = [fnm for fnm in mol_filepaths if not 'c1302' in fnm]  # Skip wat
 
 # Load forcefield
 from openforcefield.typing.engines.smirnoff import ForceField
-forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
+forcefield = ForceField('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml')
 
 from openforcefield.topology import Molecule
 for mol_filepath in mol_filepaths:

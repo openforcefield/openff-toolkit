@@ -399,7 +399,7 @@ def compare_system_energies(system1, system2, positions, box_vectors=None,
         )
         # Pretty-print the dictionaries.
         table = '\n\npotential energy system1:\n' + pprint.pformat(potential_energy1)
-        table += '\n\npotential energy system2:\n{}' + pprint.pformat(potential_energy2)
+        table += '\n\npotential energy system2:\n' + pprint.pformat(potential_energy2)
         raise type(e)(str(e) + table, e.potential_energy1, e.potential_energy2)
 
     return potential_energy1, potential_energy2
@@ -499,7 +499,7 @@ class _TorsionParametersComparer:
 
     def __str__(self):
         # Reorder the parameters by periodicity to print in deterministic order.
-        parameters = sorted(self.parameters, key=lambda x: x['periodicity'])
+        parameters = sorted(self.parameters, key=lambda x: x.parameters['periodicity'])
         # Quantities in a dictionary are normally printed in the
         # format "Quantity(value, unit=unit)" so we make it prettier.
         return '[' + ', '.join(str(pars) for pars in parameters) + ']'
@@ -569,7 +569,7 @@ def _compare_parameters(parameters_force1, parameters_force2, interaction_type):
         diff_msg += ('\n\nThe following {}s have different parameters '
                      'in the two forces:'.format(interaction_type))
         for key, (param1, param2) in different_parameters.items():
-            diff_msg += '\n{}: {} != {}'.format(key, param1, param2)
+            diff_msg += '\n{} {}: {} != {}'.format(interaction_type, key, param1, param2)
 
     if diff_msg != '':
         diff_msg = ('A difference between {} was detected. '
@@ -672,8 +672,11 @@ def _get_nonbonded_force_parameters(force, _):
 
         # Reorder the atom indices to have a canonical key.
         exception_key = tuple(sorted([atom1, atom2]))
+        # Ignore sigma parameter if epsilon is 0.0.
         exception_parameters[exception_key] = _ParametersComparer(
-            chargeprod=chargeprod, epsilon=epsilon, sigma=sigma)
+            charge=chargeprod, epsilon=epsilon)
+        if (epsilon / epsilon.unit) != 0.0:
+            exception_parameters[exception_key].parameters['sigma'] = sigma
 
     return {'particle': particle_parameters, 'particle exception': exception_parameters}
 
@@ -916,7 +919,8 @@ def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecul
     ff_system = forcefield.create_openmm_system(openff_topology)
 
     # Test energies and parameters.
+    compare_system_parameters(amber_system, ff_system)
     amber_energies, forcefield_energies = compare_system_energies(
         amber_system, ff_system, positions, box_vectors)
-    compare_system_parameters(amber_system, ff_system)
+
     return amber_energies, forcefield_energies
