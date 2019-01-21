@@ -28,3 +28,5 @@ forcefield = ForceField('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml')
 # Compare energies
 from openforcefield.tests.utils import compare_amber_smirnoff
 results = compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecule)
+
+print(results)

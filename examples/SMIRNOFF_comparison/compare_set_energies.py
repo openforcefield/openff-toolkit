@@ -16,8 +16,10 @@ if not os.path.isdir(datapath):
     os.system('tar -xf AlkEthOH_inputfiles.tar.gz')
 
 #Obtain list of molecules
-mol_filepaths = glob.glob(datapath+'/*.mol2')
+mol_filepaths = glob.glob(datapath+'/*sybyl.mol2')
 mol_filepaths = [fnm for fnm in mol_filepaths if not 'c1302' in fnm]  # Skip water.
+
+print('Found {} files to test'.format(len(mol_filepaths)))
 
 # Load forcefield
 from openforcefield.typing.engines.smirnoff import ForceField
@@ -28,7 +30,7 @@ for mol_filepath in mol_filepaths:
     # Load molecule.
     molecule = Molecule.from_file(mol_filepath)
 
-    molname = os.path.basename( mol_filepath).replace('.mol2','')
+    molname = os.path.basename( mol_filepath).replace('_sybyl.mol2','')
     print("Comparing {} ({}/{})...".format(molname, mol_filepaths.index(mol_filepath), len(mol_filepaths)))
 
     prmtop_filepath = os.path.join(datapath, molname+'.top')
@@ -36,4 +38,12 @@ for mol_filepath in mol_filepaths:
 
     # Compare energies
     from openforcefield.tests.utils import compare_amber_smirnoff
-    results = compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecule)
+    from openforcefield.tests.utils import FailedParameterComparisonError, FailedEnergyComparisonError
+    try:
+        results = compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecule)
+    except FailedParameterComparisonError as e:
+        print(e)
+    except FailedEnergyComparisonError as e:
+        print(e)
+        
+        
