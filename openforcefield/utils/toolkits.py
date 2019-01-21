@@ -1567,7 +1567,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit.Chem import EnumerateStereoisomers
 
         rdmol = Chem.MolFromSmiles(smiles, sanitize=False)
+        rdmol.UpdatePropertyCache(strict=False)
         Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
+        Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+
 
         # Adding H's can hide undefined bond stereochemistry, so we have to test for undefined stereo here
         unspec_stereo = False
@@ -1717,6 +1720,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         #Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^ Chem.SANITIZE_ADJUSTHS)
         #Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
 
+        # The rdmol will already have CW and CCW tags (if it didn't throw an exception above), but here we make
+        # it generate CIP (R/S + E/Z) tags
+        Chem.AssignStereochemistry(rdmol)
+
 
         # If RDMol has a title save it
         if rdmol.HasProp("_Name"):
@@ -1762,8 +1769,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 if stereo_code == 'R':
                     stereochemistry = 'R'
                 #if tag == Chem.CHI_TETRAHEDRAL_CW:
-                if stereo_code == 'S':
+                elif stereo_code == 'S':
                     stereochemistry = 'S'
+                else:
+                    raise UndefinedStereochemistryError("In from_rdkit: Expected atom stereochemistry of R or S. "
+                                                        "Got {} instead.".format(stereo_code))
 
             atom_index = mol.add_atom(
                 atomic_number,
