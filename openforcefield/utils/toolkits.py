@@ -71,11 +71,16 @@ class ToolkitUnavailableException(Exception):
 
 class InvalidToolkitError(Exception):
     """A non-toolkit object was received when a toolkit object was expected"""
-
     def __init__(self, msg):
         super().__init__(self, msg)
         self.msg = msg
 
+
+class UndefinedStereochemistryError(Exception):
+    """A molecule was attempted to be loaded with undefined stereochemistry"""
+    def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
 
 #=============================================================================================
 # TOOLKIT UTILITY DECORATORS
@@ -651,7 +656,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if len(problematic_bonds) != 0:
                 msg += "Problematic bonds are: {}\n".format(problematic_bonds)
             if exception_if_undefined_stereo:
-                raise Exception(msg)
+                raise UndefinedStereochemistryError(msg)
             else:
                 print(msg)
                 return
@@ -1360,11 +1365,23 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         mols = list()
         if (file_format == 'MOL') or (file_format == 'SDF'):
-            for rdmol in Chem.SupplierFromFilename(filename, removeHs=False):
+            for rdmol in Chem.SupplierFromFilename(filename, removeHs=False, sanitize=False, strictParsing=True):
+                if rdmol is None:
+                    continue
+
+                # Sanitize the molecules (fails on nitro groups)
+                try:
+                    Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^ Chem.SANITIZE_ADJUSTHS)
+                    Chem.AssignStereochemistryFrom3D(rdmol)
+                except ValueError as e:
+                    print(rdmol.GetProp('_Name'), e)
+                    continue
+                Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
                 mol = Molecule.from_rdkit(
                     rdmol,
                     exception_if_undefined_stereo=exception_if_undefined_stereo
                 )
+
                 mols.append(mol)
         elif (file_format == 'SMI'):
             # TODO: We have to do some special stuff when we import SMILES (currently
@@ -1544,13 +1561,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         molecule : openforcefield.topology.Molecule
             An openforcefield-style molecule.
         """
-        # TODO: `strict` flag, for whether to demand explicit H
         from openforcefield.topology.molecule import Molecule
         # inherits base class docstring
         from rdkit import Chem
         from rdkit.Chem import EnumerateStereoisomers
 
-        rdmol = Chem.MolFromSmiles(smiles)
+        rdmol = Chem.MolFromSmiles(smiles, sanitize=False)
+        Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
 
         # Adding H's can hide undefined bond stereochemistry, so we have to test for undefined stereo here
         unspec_stereo = False
@@ -1573,6 +1590,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Add explicit hydrogens if they aren't there already
         if not (hydrogens_are_explicit):
             rdmol = Chem.AddHs(rdmol)
+
 
         # TODO: Add exception_if_undefined_stereo to this function, and pass to from_rdkit?
         molecule = Molecule.from_rdkit(rdmol)
@@ -1657,24 +1675,37 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol_copy = Chem.Mol(rdmol)
         enumsi_opt = EnumerateStereoisomers.StereoEnumerationOptions(
             maxIsomers=2, onlyUnassigned=True)
-        stereoisomers = [
-            isomer
-            for isomer in Chem.EnumerateStereoisomers.EnumerateStereoisomers(
-                rdmol_copy, enumsi_opt)
-        ]
+        try:
+            stereoisomers = [
+                isomer
+                for isomer in Chem.EnumerateStereoisomers.EnumerateStereoisomers(
+                    rdmol_copy, enumsi_opt)
+            ]
+        except RuntimeError as e:
+            msg = "Unable to check stereochemistry for {}. Original error:\n".format(rdmol.GetProp('_Name'))
+            msg += str(e)
+            if exception_if_undefined_stereo:
+                raise UndefinedStereochemistryError(msg)
+            else:
+                stereoisomers = []
+                print(msg)
+
         # TODO: This will catch undefined tetrahedral centers, but not bond stereochemistry. How can we check for that?
         if len(stereoisomers) != 1:
             unspec_stereo = True
 
         if unspec_stereo:
+            msg = "RDMol has unspecified stereochemistry\n"
+            msg += "RDMol name: " + rdmol.GetProp("_Name")
             if exception_if_undefined_stereo:
-                raise Exception(
-                    "Unable to make OFFMol from RDMol: RDMol has unspecified stereochemistry."
+                raise UndefinedStereochemistryError(
+                    "Unable to make OFFMol from RDMol: " + msg
                 )
             else:
                 print(
-                    "Unable to make OFFMol from RDMol: RDMol has unspecified stereochemistry."
+                    "WARNING: " + msg
                 )
+                # TODO: Can we find a way to print more about the error here?
         # Create a new openforcefield Molecule
         mol = Molecule()
 
@@ -1682,11 +1713,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # http://zinc.docking.org/substance/16448882
         # This has a pentavalent nitrogen, which I think is really resonance-stabilized.
         # I think we should allow this as input, since a fractional bond order calculation will probably sort it out.
-        #Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL^Chem.SANITIZE_SETAROMATICITY)
+
+        #Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^ Chem.SANITIZE_ADJUSTHS)
         #Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+
+
         # If RDMol has a title save it
         if rdmol.HasProp("_Name"):
-            #raise Exception('{}'.format(rdmol.GetProp('name')))
+            #raise Exception('{}'.format(rdmol.GetProp('name')))
             mol.name = rdmol.GetProp("_Name")
         else:
             mol.name = ""
@@ -1699,7 +1733,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # We store bond orders as integers regardless of aromaticity.
         # In order to properly extract these, we need to have the "Kekulized" version of the rdkit mol
         kekul_mol = Chem.Mol(rdmol)
-        Chem.Kekulize(kekul_mol, True)
+        Chem.Kekulize(kekul_mol, clearAromaticFlags=False)#True)
 
         # setting chirality in openeye requires using neighbor atoms
         # therefore we can't do it until after the atoms and bonds are all added
@@ -1721,11 +1755,15 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
             # If chiral, store the chirality to be set later
             stereochemistry = None
-            tag = rda.GetChiralTag()
-            if tag == Chem.CHI_TETRAHEDRAL_CCW:
-                stereochemistry = 'R'
-            if tag == Chem.CHI_TETRAHEDRAL_CW:
-                stereochemistry = 'S'
+            #tag = rda.GetChiralTag()
+            if rda.HasProp('_CIPCode'):
+                stereo_code = rda.GetProp('_CIPCode')
+                #if tag == Chem.CHI_TETRAHEDRAL_CCW:
+                if stereo_code == 'R':
+                    stereochemistry = 'R'
+                #if tag == Chem.CHI_TETRAHEDRAL_CW:
+                if stereo_code == 'S':
+                    stereochemistry = 'S'
 
             atom_index = mol.add_atom(
                 atomic_number,
@@ -1795,8 +1833,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 positions = unit.Quantity(
                     np.zeros((n_atoms, 3)), unit.angstrom)
                 for rd_idx, off_idx in map_atoms.items():
-                    atom_coords = conf.GetPositions(
-                    )[rd_idx, :] * unit.angstrom
+                    atom_coords = conf.GetPositions()[rd_idx, :] * unit.angstrom
                     positions[off_idx, :] = atom_coords
                 mol.add_conformer(positions)
 
@@ -1891,6 +1928,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             rdatom.SetIsAromatic(atom.is_aromatic)
             rdatom.SetProp('_Name', atom.name)
 
+            ## Stereo handling code moved to after bonds are added
             if atom.stereochemistry == 'S':
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
             elif atom.stereochemistry == 'R':
@@ -1916,7 +1954,36 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 rdbond.SetBondType(_bondtypes[bond.bond_order])
                 rdbond.SetIsAromatic(False)
 
-        Chem.SanitizeMol(rdmol)
+        Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
+
+
+        #Assign atom stereochemsitry
+        for index, atom in enumerate(molecule.atoms):
+            rdatom = rdmol.GetAtomWithIdx(map_atoms[index])
+            if atom.stereochemistry:
+                if atom.stereochemistry == "R":
+                    desired_rdk_stereo_code = "R" # Yes, it's just a string
+                if atom.stereochemistry == "S":
+                    desired_rdk_stereo_code = "S"
+                # Let's randomly assign this atom's stereo to CW
+                rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
+                # We need to do force and cleanIt to recalculate CIP stereo
+                Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
+                # If our random initial assignment worked, then we're set
+                if rdatom.GetProp("_CIPCode") == desired_rdk_stereo_code:
+                    continue
+                # Otherwise, set it to CCW
+                rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CCW)
+                # We need to do force and cleanIt to recalculate CIP stereo
+                Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
+                # Hopefully this worked, otherwise something's wrong
+                if rdatom.GetProp("_CIPCode") == desired_rdk_stereo_code:
+                    continue
+                else:
+                    raise Exception("Unknown atom stereochemistry encountered in "
+                                    "to_rdkit. Desired stereochemistry: {}. Set stereochemistry {}".format(atom.stereochemistry,
+                                                                                                           rdatom.GetProp("_CIPCode")))
+
 
         # Assign bond stereochemistry
         for bond in molecule.bonds:
