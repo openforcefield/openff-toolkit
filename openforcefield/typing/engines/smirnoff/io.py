@@ -450,6 +450,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
             The SMIRNOFF parameter set rendered as XML.
         """
         return etree.tostring(self.to_lxml())
+        # Test that this works
 
     # TODO: Do we need this? Should we use built-in dict-based serialization?
     def __getstate__(self):
