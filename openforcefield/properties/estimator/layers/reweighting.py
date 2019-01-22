@@ -34,24 +34,28 @@ class ReweightingLayer(PropertyCalculationLayer):
     """
 
     @staticmethod
-    def schedule_calculation(backend, data_model, existing_data, callback, synchronous=False):
+    def schedule_calculation(calculation_backend, storage_backend, layer_directory,
+                             data_model, callback, synchronous=False):
 
-        parameter_set = ForceField([])
-
-        with open(data_model.parameter_set_path, 'rb') as file:
-            parameter_set.__setstate__(pickle.load(file))
+        parameter_set = storage_backend.retrieve_force_field(data_model.parameter_set_id)
 
         reweighting_futures = []
 
         for physical_property in data_model.queued_properties:
 
-            reweighting_future = backend.submit_task(ReweightingLayer.perform_reweighting,
-                                                     physical_property,
-                                                     parameter_set)
+            reweighting_future = calculation_backend.submit_task(ReweightingLayer.perform_reweighting,
+                                                                 physical_property,
+                                                                 parameter_set)
 
             reweighting_futures.append(reweighting_future)
 
-        PropertyCalculationLayer._await_results(backend, data_model, callback, reweighting_futures, synchronous)
+        PropertyCalculationLayer._await_results(calculation_backend,
+                                                storage_backend,
+                                                layer_directory,
+                                                data_model,
+                                                callback,
+                                                reweighting_futures,
+                                                synchronous)
 
     @staticmethod
     def perform_reweighting(physical_property, parameter_set):

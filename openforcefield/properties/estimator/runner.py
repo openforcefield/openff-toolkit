@@ -15,11 +15,9 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-import hashlib
 import json
 import logging
 import os
-import pickle
 import struct
 import uuid
 from os import path
@@ -64,8 +62,8 @@ class PropertyRunnerDataModel(BaseModel):
         A list of physical properties which have been calculated.
     options: PropertyEstimatorOptions
         The options used to calculate the properties.
-    parameter_set_path: str
-        A server side path to the force field parameters used to calculate the properties.
+    parameter_set_id: str
+        The unique server side id of the force field parameters used to calculate the properties.
     """
 
     id: str
@@ -75,14 +73,12 @@ class PropertyRunnerDataModel(BaseModel):
 
     options: PropertyEstimatorOptions = None
 
-    parameter_set_path: str = None
+    parameter_set_id: str = None
 
     stored_data: Dict[str, Any] = {}
 
     class Config:
 
-        # A dirty hack to allow simtk.unit.Quantities...
-        # TODO: Should really investigate QCElemental as an alternative.
         arbitrary_types_allowed = True
 
         json_encoders = {
@@ -110,11 +106,16 @@ class PropertyCalculationRunner(TCPServer):
 
     >>> # Create the backend which will be responsible for distributing the calculations
     >>> from openforcefield.properties.estimator.backends import DaskLocalClusterBackend
-    >>> backend = DaskLocalClusterBackend(1, 1)
+    >>> calculation_backend = DaskLocalClusterBackend(1, 1)
+    >>>
+    >>> # Calculate the backend which will be responsible for storing and retrieving
+    >>> # the data from previous calculations
+    >>> from openforcefield.properties.estimator.storage import LocalFileStorage
+    >>> storage_backend = LocalFileStorage()
     >>>
     >>> # Create the server to which all calculations will be submitted
     >>> from openforcefield.properties.estimator.runner import PropertyCalculationRunner
-    >>> property_server = PropertyCalculationRunner(backend)
+    >>> property_server = PropertyCalculationRunner(calculation_backend, storage_backend)
     >>>
     >>> # Instruct the server to listen for incoming submissions
     >>> property_server.run_until_killed()
@@ -128,34 +129,34 @@ class PropertyCalculationRunner(TCPServer):
     def finished_calculations(self):
         return self._finished_calculations
 
-    def __init__(self, backend, port=8000):
+    def __init__(self, calculation_backend, storage_backend,
+                 port=8000, working_directory='working-data'):
         """Constructs a new PropertyCalculationRunner object.
 
         Parameters
         ----------
-        backend: PropertyEstimatorBackend
+        calculation_backend: PropertyEstimatorBackend
             The backend to use for executing calculations.
+        storage_backend: PropertyEstimatorStorage
+            The backend to use for storing information from any calculations.
         port: int
             The port one which to listen for incoming client
             requests.
+        working_directory: str
+            The local directory in which to store all local, temporary calculation data.
         """
-        self._backend = backend
+        self._calculation_backend = calculation_backend
+        self._storage_backend = storage_backend
+
+        self.working_directory = working_directory
+
+        if not path.isdir(self.working_directory):
+            os.makedirs(self.working_directory)
+
         self._port = port
 
         self._queued_calculations = {}
         self._finished_calculations = {}
-
-        # Keep a track of the parameters used for each of the
-        # calculations and assign each set a server unique id.
-        self._force_field_hashes = {}
-
-        self._force_field_directory = 'cached_force_fields'
-        self._force_field_hash_name = 'hash_keys'
-
-        if not path.isdir(self._force_field_directory):
-            os.makedirs(self._force_field_directory)
-        else:
-            self._import_cached_force_fields()
 
         self._periodic_loops = []
 
@@ -165,7 +166,7 @@ class PropertyCalculationRunner(TCPServer):
         self.bind(self._port)
         self.start(1)
 
-        backend.start()
+        calculation_backend.start()
 
     async def handle_job_submission(self, stream, address, message_length):
         """An asynchronous routine for handling the receiving and processing
@@ -350,14 +351,12 @@ class PropertyCalculationRunner(TCPServer):
         parameter_set = ForceField([])
         parameter_set.__setstate__(client_data_model.parameter_set)
 
-        parameter_set_id = self._is_force_field_in_cache(parameter_set)
+        parameter_set_id = self._storage_backend.has_force_field(parameter_set)
 
         if parameter_set_id is None:
 
             parameter_set_id = str(uuid.uuid4())
-            self._cache_force_field(parameter_set_id, parameter_set)
-
-        parameter_set_path = path.join(self._force_field_directory, parameter_set_id)
+            self._storage_backend.store_force_field(parameter_set_id, parameter_set)
 
         calculation_id = str(uuid.uuid4())
 
@@ -369,7 +368,7 @@ class PropertyCalculationRunner(TCPServer):
         runner_data = PropertyRunnerDataModel(id=calculation_id,
                                               queued_properties=client_data_model.properties,
                                               options=client_data_model.options,
-                                              parameter_set_path=parameter_set_path)
+                                              parameter_set_id=parameter_set_id)
 
         return runner_data
 
@@ -422,8 +421,18 @@ class PropertyCalculationRunner(TCPServer):
         logging.info('Launching calculation {} using the {} layer'.format(data_model.id,
                                                                           current_layer_type))
 
+        layer_directory = path.join(self.working_directory, current_layer_type)
+
+        if not path.isdir(layer_directory):
+            os.makedirs(layer_directory)
+
         current_layer = available_layers[current_layer_type]
-        current_layer.schedule_calculation(self._backend, data_model, {}, self.schedule_calculation)
+
+        current_layer.schedule_calculation(self._calculation_backend,
+                                           self._storage_backend,
+                                           layer_directory,
+                                           data_model,
+                                           self.schedule_calculation)
 
     def run_until_killed(self):
         """Starts the main (blocking) server IOLoop which will run until
@@ -459,96 +468,9 @@ class PropertyCalculationRunner(TCPServer):
         """Stops the property calculation server and it's
         provided backend.
         """
-        self._backend.stop()
+        self._calculation_backend.stop()
 
         for periodic_loop in self._periodic_loops:
             periodic_loop.stop()
 
         IOLoop.current().stop()
-
-    def _is_force_field_in_cache(self, force_field):
-        """Checks whether the force field has been used
-        as part of a previous calculation.
-
-        Parameters
-        ----------
-        force_field: ForceField
-            The force field to check for.
-
-        Returns
-        -------
-        str, None
-            None if the force field has not been cached, otherwise
-            the unique id of the cached force field.
-        """
-
-        force_field_pickle = pickle.dumps(force_field.__getstate__())
-        hash_string = hashlib.sha256(force_field_pickle).hexdigest()
-
-        for unique_id in self._force_field_hashes:
-
-            existing_hash = self._force_field_hashes[unique_id].replace('\n', '')
-
-            if hash_string != existing_hash:
-                continue
-
-            existing_path = path.join(self._force_field_directory, unique_id)
-
-            if not path.isfile(existing_path):
-                # For some reason the force field got deleted..
-                continue
-
-            return unique_id
-
-        return None
-
-    def _cache_force_field(self, unique_id, force_field):
-        """Store the force field in the cached force field
-        directory.
-
-        TODO: In future will most likely need to also serialize the
-              SMIRNOFF engine version for correct comparision
-
-        Parameters
-        ----------
-        unique_id: str
-            The unique id assigned to the force field.
-        force_field: ForceField
-            The force field to cache.
-        """
-
-        force_field_pickle = pickle.dumps(force_field.__getstate__())
-        hash_string = hashlib.sha256(force_field_pickle).hexdigest()
-
-        with open(path.join(self._force_field_directory, unique_id), 'wb') as file:
-            pickle.dump(force_field.__getstate__(), file)
-
-        hash_file_path = path.join(self._force_field_directory,
-                                   self._force_field_hash_name)
-
-        with open(hash_file_path, 'a+') as file:
-            file.write('{} {}\n'.format(unique_id, hash_string))
-
-        self._force_field_hashes[unique_id] = hash_string
-
-    def _import_cached_force_fields(self):
-        """Loads all of the the force fields which are cached in the
-        force field directory.
-        """
-
-        hash_file_path = path.join(self._force_field_directory,
-                                   self._force_field_hash_name)
-
-        if not path.isfile(hash_file_path):
-            return
-
-        with open(hash_file_path, 'r') as file:
-
-            hash_lines = file.readlines()
-
-            for hash_line in hash_lines:
-
-                unique_id = hash_line.split(' ')[0]
-                hash_key = hash_line.split(' ')[1]
-
-                self._force_field_hashes[unique_id] = hash_key

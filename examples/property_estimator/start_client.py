@@ -15,10 +15,6 @@ def submit_calculation_to_server():
 
     setup_timestamp_logging()
 
-    # Remove any existing data.
-    if path.isdir('property-data'):
-        shutil.rmtree('property-data')
-
     data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_density.xml'))
     force_field = smirnoff.ForceField(get_data_filename('forcefield/smirnoff99Frosst.offxml'))
 

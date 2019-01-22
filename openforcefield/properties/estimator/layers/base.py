@@ -59,14 +59,19 @@ class PropertyCalculationLayer:
     """
 
     @staticmethod
-    def _await_results(backend, data_model, callback, submitted_futures, synchronous=False):
+    def _await_results(calculation_backend, storage_backend, layer_directory, data_model,
+                       callback, submitted_futures, synchronous=False):
         """A method to handle passing the results of this layer back to
         the main thread.
 
         Parameters
         ----------
-        backend: openforcefield.properties.estimator.backends.base.PropertyEstimatorBackend
+        calculation_backend: openforcefield.properties.estimator.backends.PropertyEstimatorBackend
             The backend to the submit the calculations to.
+        storage_backend: openforcefield.properties.estimator.storage.PropertyEstimatorStorage
+            The backend used to store / retrieve data from previous calculations.
+        layer_directory: str
+            The local directory in which to store all local, temporary calculation data from this layer.
         data_model: openforcefield.properties.estimator.runner.PropertyRunnerDataModel
             The data model encoding the awaited calculation.
         callback: function
@@ -77,7 +82,7 @@ class PropertyCalculationLayer:
             If true, this function will block until the calculation has completed.
         """
 
-        callback_future = backend.submit_task(return_args, data_model, *submitted_futures)
+        callback_future = calculation_backend.submit_task(return_args, data_model, *submitted_futures)
 
         def callback_wrapper(future_object):
 
@@ -107,17 +112,20 @@ class PropertyCalculationLayer:
             callback_future.add_done_callback(callback_wrapper)
 
     @staticmethod
-    def schedule_calculation(backend, data_model, existing_data, callback, synchronous=False):
+    def schedule_calculation(calculation_backend, storage_backend, layer_directory,
+                             data_model, callback, synchronous=False):
         """Submit the proposed calculation to the backend of choice.
 
         Parameters
         ----------
-        backend: openforcefield.properties.estimator.backends.base.PropertyEstimatorBackend
+        calculation_backend: openforcefield.properties.estimator.backends.PropertyEstimatorBackend
             The backend to the submit the calculations to.
+        storage_backend: openforcefield.properties.estimator.storage.PropertyEstimatorStorage
+            The backend used to store / retrieve data from previous calculations.
+        layer_directory: str
+            The local directory in which to store all local, temporary calculation data from this layer.
         data_model: openforcefield.properties.estimator.runner.PropertyRunnerDataModel
             The data model encoding the proposed calculation.
-        existing_data: dict of str and Any
-            Data which has already been calculated by a previous layer.
         callback: function
             The function to call when the backend returns the results (or an error).
         synchronous: bool

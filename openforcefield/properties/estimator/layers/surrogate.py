@@ -34,24 +34,28 @@ class SurrogateLayer(PropertyCalculationLayer):
     """
 
     @staticmethod
-    def schedule_calculation(backend, data_model, existing_data, callback, synchronous=False):
+    def schedule_calculation(calculation_backend, storage_backend, layer_directory,
+                             data_model, callback, synchronous=False):
 
-        parameter_set = ForceField([])
-
-        with open(data_model.parameter_set_path, 'rb') as file:
-            parameter_set.__setstate__(pickle.load(file))
+        parameter_set = storage_backend.retrieve_force_field(data_model.parameter_set_id)
 
         surrogate_futures = []
 
         for physical_property in data_model.queued_properties:
 
-            surrogate_future = backend.submit_task(SurrogateLayer.perform_surrogate_extrapolation,
-                                                   physical_property,
-                                                   parameter_set)
+            surrogate_future = calculation_backend.submit_task(SurrogateLayer.perform_surrogate_extrapolation,
+                                                               physical_property,
+                                                               parameter_set)
 
             surrogate_futures.append(surrogate_future)
 
-        PropertyCalculationLayer._await_results(backend, data_model, callback, surrogate_futures, synchronous)
+        PropertyCalculationLayer._await_results(calculation_backend,
+                                                storage_backend,
+                                                layer_directory,
+                                                data_model,
+                                                callback,
+                                                surrogate_futures,
+                                                synchronous)
 
     @staticmethod
     def perform_surrogate_extrapolation(physical_property, parameter_set):

@@ -154,11 +154,16 @@ class PropertyEstimator(object):
 
     >>> # Create the backend which will be responsible for distributing the calculations
     >>> from openforcefield.properties.estimator.backends import DaskLocalClusterBackend
-    >>> backend = DaskLocalClusterBackend(1, 1)
+    >>> calculation_backend = DaskLocalClusterBackend(1, 1)
+    >>>
+    >>> # Calculate the backend which will be responsible for storing and retrieving
+    >>> # the data from previous calculations
+    >>> from openforcefield.properties.estimator.storage import LocalFileStorage
+    >>> storage_backend = LocalFileStorage()
     >>>
     >>> # Create the server to which all calculations will be submitted
     >>> from openforcefield.properties.estimator.runner import PropertyCalculationRunner
-    >>> property_server = PropertyCalculationRunner(backend)
+    >>> property_server = PropertyCalculationRunner(calculation_backend, storage_backend)
     >>>
     >>> # Instruct the server to listen for incoming submissions
     >>> property_server.run_until_killed()

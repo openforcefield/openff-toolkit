@@ -960,10 +960,10 @@ class BuildSmirnoffTopology(BaseProtocol):
 
         pdb_file = app.PDBFile(self._coordinate_file)
 
-        parameter_set = ForceField([])
+        parameter_set = None
 
         with open(self._force_field_path, 'rb') as file:
-            parameter_set.__setstate__(pickle.load(file))
+            parameter_set = pickle.load(file)
 
         system = parameter_set.createSystem(pdb_file.topology,
                                             self._molecules,
@@ -1357,6 +1357,12 @@ class AveragePropertyProtocol(BaseProtocol):
 
         average_value = self._bootstrap_function(data_to_bootstrap)
         uncertainty = average_values.std() * len(average_values) ** -0.5
+
+        if isinstance(average_value, np.float32) or isinstance(average_value, np.float64):
+            average_value = average_value.item()
+
+        if isinstance(uncertainty, np.float32) or isinstance(uncertainty, np.float64):
+            uncertainty = uncertainty.item()
 
         return average_value, uncertainty
 

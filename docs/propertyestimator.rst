@@ -52,3 +52,14 @@ Calculation Backends
 
     PropertyEstimatorBackend
     DaskLocalClusterBackend
+
+Storage Backends
+----------------
+
+.. currentmodule:: openforcefield.properties.estimator.storage
+.. autosummary::
+    :nosignatures:
+    :toctree: api/generated/
+
+    PropertyEstimatorStorage
+    LocalFileStorage

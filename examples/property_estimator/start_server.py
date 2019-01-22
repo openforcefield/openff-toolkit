@@ -5,6 +5,7 @@ from os import path
 
 from openforcefield.properties.estimator import runner
 from openforcefield.properties.estimator.backends.dask import DaskLocalClusterBackend
+from openforcefield.properties.estimator.storage import LocalFileStorage
 from openforcefield.utils import setup_timestamp_logging
 
 
@@ -13,13 +14,19 @@ def start_property_estimator_server():
 
     setup_timestamp_logging()
 
+    working_directory = 'working-directory'
+
     # Remove any existing data.
-    if path.isdir('property-data'):
-        shutil.rmtree('property-data')
+    if path.isdir(working_directory):
+        shutil.rmtree(working_directory)
 
-    backend = DaskLocalClusterBackend(1, 1)
+    calculation_backend = DaskLocalClusterBackend(1, 1)
+    storage_backend = LocalFileStorage(root_key='stored_data')
 
-    property_server = runner.PropertyCalculationRunner(backend)
+    property_server = runner.PropertyCalculationRunner(calculation_backend,
+                                                       storage_backend,
+                                                       working_directory=working_directory)
+
     property_server.run_until_killed()
 
 

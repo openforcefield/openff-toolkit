@@ -15,9 +15,8 @@ Authors
 # =============================================================================================
 
 import math
-import numpy as np
 
-from pymbar import timeseries
+import numpy as np
 from pymbar.utils import ParameterError
 
 
@@ -160,24 +159,27 @@ def detect_equilibration(time_series, minimum_samples=3):
 
     effect_samples_array = np.ones([number_of_timesteps - 1], np.float32)
 
-    for t in range(0, number_of_timesteps - 1):
+    current_timestep = 0
+
+    for current_timestep in range(0, number_of_timesteps - 1):
 
         try:
-            statistical_inefficiency_array[t] = calculate_statistical_inefficiency(time_series[t:number_of_timesteps],
-                                                                                   minimum_samples)
+            statistical_inefficiency_array[current_timestep] = calculate_statistical_inefficiency(
+                time_series[current_timestep:number_of_timesteps], minimum_samples)
         except ParameterError:  # Fix for issue https://github.com/choderalab/pymbar/issues/122
-            statistical_inefficiency_array[t] = (number_of_timesteps - t + 1)
+            statistical_inefficiency_array[current_timestep] = (number_of_timesteps - current_timestep + 1)
 
-        effect_samples_array[t] = (number_of_timesteps - t + 1) / statistical_inefficiency_array[t]
+        effect_samples_array[current_timestep] = (number_of_timesteps - current_timestep + 1) / \
+                                                 statistical_inefficiency_array[current_timestep]
 
     maximum_effective_samples = effect_samples_array.max()
     equilibration_time = effect_samples_array.argmax()
-    statistical_inefficiency = statistical_inefficiency_array[t]
+    statistical_inefficiency = statistical_inefficiency_array[current_timestep]
 
     return equilibration_time, statistical_inefficiency, maximum_effective_samples
 
 
-def uncorrelate_time_series(time_series):
+def decorrelate_time_series(time_series):
     """Extracts an uncorrelated sub-time series from a possibly correlated one.
 
     Parameters

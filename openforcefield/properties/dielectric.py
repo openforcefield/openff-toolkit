@@ -137,7 +137,7 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
         volumes = self.trajectory.unitcell_volumes
 
         dipole_moments, self._equilibration_index, self._statistical_inefficiency = \
-            statistics.uncorrelate_time_series(dipole_moments)
+            statistics.decorrelate_time_series(dipole_moments)
 
         dipole_moments_and_volume = np.zeros([dipole_moments.shape[0], 4])
 
@@ -273,6 +273,7 @@ class DielectricConstant(PhysicalProperty):
         # Define where the final values come from.
         schema.final_value_source = ProtocolPath('value', converge_uncertainty.id, extract_dielectric.id)
         schema.final_uncertainty_source = ProtocolPath('uncertainty', converge_uncertainty.id, extract_dielectric.id)
+
         schema.final_trajectory_source = ProtocolPath('output_trajectory_path', extract_uncorrelated_trajectory.id)
 
         return schema

@@ -74,7 +74,7 @@ class ExtractAverageDensity(AverageTrajectoryProperty):
         densities = mdtraj.density(self.trajectory, mass_list)
 
         densities, self._equilibration_index, self._statistical_inefficiency = \
-            statistics.uncorrelate_time_series(densities)
+            statistics.decorrelate_time_series(densities)
 
         self._value, self._uncertainty = self._perform_bootstrapping(densities)
 
@@ -152,8 +152,6 @@ class Density(PhysicalProperty):
         npt_production.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_equilibration.id)
         npt_production.system = ProtocolPath('system', assign_topology.id)
 
-        # schema.protocols[npt_production.id] = npt_production.schema
-
         # Analysis
         extract_density = ExtractAverageDensity('extract_density')
 
@@ -162,8 +160,6 @@ class Density(PhysicalProperty):
         extract_density.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_production.id)
         extract_density.trajectory_path = ProtocolPath('trajectory', npt_production.id)
         extract_density.system = ProtocolPath('system', assign_topology.id)
-
-        # schema.protocols[extract_density.id] = extract_density.schema
 
         # Set up a conditional group to ensure convergence of uncertainty
         converge_uncertainty = groups.ConditionalGroup('converge_uncertainty')
@@ -205,6 +201,7 @@ class Density(PhysicalProperty):
         # Define where the final values come from.
         schema.final_value_source = ProtocolPath('value', converge_uncertainty.id, extract_density.id)
         schema.final_uncertainty_source = ProtocolPath('uncertainty', converge_uncertainty.id, extract_density.id)
+
         schema.final_trajectory_source = ProtocolPath('output_trajectory_path', extract_uncorrelated_trajectory.id)
 
         return schema

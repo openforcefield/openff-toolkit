@@ -8,9 +8,6 @@ Direct simulation layer.
 Authors
 -------
 * Simon Boothroyd <simon.boothroyd@choderalab.org>
-
-.. todo:: * Make all protocol execute methods static.
-          * Create a pydantic data model to pass input / outputs between protocols.
 """
 
 
@@ -36,8 +33,8 @@ from openforcefield.utils import graph
 # =============================================================================================
 
 class DirectCalculation:
-    """Defines the property to calculate and the calculation
-    workflow needed to calculate it.
+    """Encapsulates and prepares the workflow needed to calculate a physical
+    property by direct simulation methods.
     """
 
     def __init__(self, physical_property, force_field_path, schema, options):
@@ -80,6 +77,16 @@ class DirectCalculation:
             "target_uncertainty": physical_property.uncertainty * options.relative_uncertainty,
             "force_field_path": force_field_path
         }
+
+        # TODO: Nasty hack to turn a unitless quantity back into a unitless quantity after
+        #       scalar multiplication.
+        from simtk import unit
+
+        if (isinstance(physical_property.uncertainty, unit.Quantity) and not
+            isinstance(self.global_properties['target_uncertainty'], unit.Quantity)):
+
+            self.global_properties['target_uncertainty'] = unit.Quantity(self.global_properties['target_uncertainty'],
+                                                                         physical_property.uncertainty.unit)
 
         for protocol_name in schema.protocols:
 
@@ -203,7 +210,8 @@ class DirectCalculation:
 
 
 class DirectCalculationGraph:
-    """A hierarchical structure for storing all protocols that need to be executed.
+    """A hierarchical structure for storing and submitting the workflows
+    which will calculate a set of physical properties..
     """
 
     def __init__(self, root_directory=None):
@@ -403,10 +411,21 @@ class DirectCalculationGraph:
 
     @staticmethod
     def _execute_protocol(directory, protocol_schema, *parent_outputs):
-        """Executes a protocol defined by the input schema, and with
+        """Executes a protocol defined by ``protocol_schema``, and with
         inputs sets via the global scope and from previously executed protocols.
 
+        Parameters
+        ----------
+        protocol_schema: protocols.ProtocolSchema
+            The schema defining the protocol to execute.
+        parent_outputs: tuple of Any
+            The results of previous protocol executions.
 
+        Returns
+        -------
+        str, dict of str and Any
+            Returns a tuple of the id of the executed protocol, and a dictionary
+            which contains the outputs of the executed protocol.
         """
 
         # Store the results of the relevant previous protocols in a handy dictionary.
@@ -445,7 +464,9 @@ class DirectCalculationGraph:
             if not isinstance(target_path, protocols.ProtocolPath):
                 continue
 
-            if target_path.start_protocol == input_path.start_protocol or target_path.start_protocol == protocol.id:
+            if (target_path.start_protocol == input_path.start_protocol or
+                target_path.start_protocol == protocol.id):
+
                 continue
 
             input_value = parent_outputs_by_path[target_path]
@@ -462,37 +483,30 @@ class DirectCalculationGraph:
         return protocol.id, output_dictionary
 
     @staticmethod
-    def _gather_results(value_result, value_reference, uncertainty_result, uncertainty_reference, 
-                        trajectory_result, trajectory_reference, property_to_return):
+    def _gather_results(value_result, value_reference, uncertainty_result,
+                        uncertainty_reference, property_to_return):
         """Gather the value and uncertainty calculated from the submission graph
         and store them in the property to return.
-
-
-        Todo
-        ----
-        * Docstrings
 
         Parameters
         ----------
         value_result: dict of string and Any
-            ...
+            The result dictionary of the protocol which calculated the value of the property.
         value_reference: ProtocolPath
-            ...
+            A reference to which property in the output dictionary is the actual value.
         uncertainty_result: dict of string and Any
-            ...
+            The result dictionary of the protocol which calculated the uncertainty in the value.
         uncertainty_reference: ProtocolPath
-            ...
-        trajectory_result: dict of string and Any
-            ...
-        trajectory_reference: ProtocolPath
-            ...
+            A reference to which property in the output dictionary is the actual uncertainty.
         property_to_return: PhysicalProperty
-            ...
+            The property to which the value and uncertainty belong.
 
         Returns
         -------
-        (boolean, PhysicalProperty)
-            ...
+        True, PhysicalProperty
+            Returns a tuple of a True boolean (to indicate that this property
+            was calculated by this layer) and the calculated property. If any
+            errors occurred, these will be stored in the properties provenance.
         """
 
         succeeded = True
@@ -508,11 +522,6 @@ class DirectCalculationGraph:
         if isinstance(uncertainty_result[1], protocols.PropertyCalculatorException):
 
             failure_object = uncertainty_result[1]
-            succeeded = False
-            
-        if isinstance(trajectory_result[1], protocols.PropertyCalculatorException):
-
-            failure_object = trajectory_result[1]
             succeeded = False
 
         if succeeded:
@@ -545,21 +554,8 @@ class DirectCalculationGraph:
                 final_path = protocols.ProtocolPath(property_name, *protocol_ids)
                 uncertainty_results[final_path] = output_value
 
-            trajectory_results = {}
-
-            for output_path, output_value in trajectory_result[1].items():
-
-                property_name, protocol_ids = protocols.ProtocolPath.to_components(output_path)
-
-                if len(protocol_ids) == 0 or (len(protocol_ids) > 0 and protocol_ids[0] != trajectory_result[0]):
-                    protocol_ids.insert(0, trajectory_result[0])
-
-                final_path = protocols.ProtocolPath(property_name, *protocol_ids)
-                trajectory_results[final_path] = output_value
-
             property_to_return.value = value_results[value_reference]
             property_to_return.uncertainty = uncertainty_results[uncertainty_reference]
-            property_to_return.trajectory_path = trajectory_results[trajectory_reference]
 
         else:
 
@@ -610,27 +606,28 @@ class DirectCalculationGraph:
 @register_calculation_layer()
 class SimulationLayer(PropertyCalculationLayer):
     """A calculation layer which aims to calculate physical properties
-    directly from molecular simulations..
+    directly from molecular simulation.
 
     .. warning :: This class is experimental and should not be used in a production environment.
     """
 
     @staticmethod
-    def _build_calculation_graph(properties, force_field_path, options):
+    def _build_calculation_graph(working_directory, properties, force_field_path, options):
         """ Construct a graph of the protocols needed to calculate a set of properties.
 
         Parameters
         ----------
+        working_directory: str
+            The local directory in which to store all local,
+            temporary calculation data from this graph.
         properties : list of PhysicalProperty
             The properties to attempt to compute.
         force_field_path : str
             The path to the force field parameters to use in the calculation.
-        schemas : dict of str and CalculationSchema
-            A list of the schemas to use when performing the calculations.
         options: PropertyEstimatorOptions
             The options to run the calculations with.
         """
-        calculation_graph = DirectCalculationGraph('property-data')
+        calculation_graph = DirectCalculationGraph(working_directory)
 
         for property_to_calculate in properties:
 
@@ -655,12 +652,17 @@ class SimulationLayer(PropertyCalculationLayer):
         return calculation_graph
 
     @staticmethod
-    def schedule_calculation(backend, data_model, existing_data, callback, synchronous=False):
+    def schedule_calculation(calculation_backend, storage_backend, layer_directory,
+                             data_model, callback, synchronous=False):
 
-        calculation_graph = SimulationLayer._build_calculation_graph(data_model.queued_properties,
-                                                                     data_model.parameter_set_path,
+        force_field_path = storage_backend.get_force_field_path(data_model.parameter_set_id)
+
+        calculation_graph = SimulationLayer._build_calculation_graph(layer_directory,
+                                                                     data_model.queued_properties,
+                                                                     force_field_path,
                                                                      data_model.options)
 
-        simulation_futures = calculation_graph.submit(backend)
+        simulation_futures = calculation_graph.submit(calculation_backend)
 
-        PropertyCalculationLayer._await_results(backend, data_model, callback, simulation_futures, synchronous)
+        PropertyCalculationLayer._await_results(calculation_backend, storage_backend, layer_directory,
+                                                data_model, callback, simulation_futures, synchronous)
