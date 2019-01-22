@@ -22,30 +22,26 @@ Based on SolvationToolkit (https://github.com/MobleyLab/SolvationToolkit)
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import copy
+import logging
 import os
-
+import random
+import string
 import subprocess
 import tempfile
-import copy
-import string
-import random
-import logging
+import shutil
 
 from distutils.spawn import find_executable
 
-from simtk import unit
 from simtk import openmm
-
+from simtk import unit
 from simtk.openmm import app
-
-from openforcefield import utils
-
 
 # =============================================================================================
 # Module Constants
 # =============================================================================================
 
-PACKMOL_PATH = find_executable("packmol")
+PACKMOL_PATH = find_executable("packmol") or shutil.which("packmol")
 
 _HEADER_TEMPLATE = """
 # Mixture

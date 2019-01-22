@@ -18,6 +18,7 @@ Authors
 import copy
 import logging
 import pickle
+import math
 
 import numpy as np
 
@@ -26,13 +27,11 @@ import mdtraj
 from os import path
 from enum import Enum
 
-from pymbar import timeseries
-
 from pydantic import BaseModel
 from typing import Dict, Any
 
 from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.utils import packmol, graph, utils
+from openforcefield.utils import packmol, graph, utils, statistics
 from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity, TypedBaseModel
 
 from openforcefield.typing.engines import smirnoff
@@ -1263,15 +1262,15 @@ class RunOpenMMSimulation(BaseProtocol):
 
 @register_calculation_protocol()
 class AveragePropertyProtocol(BaseProtocol):
-    """Calculates the average of a property and its uncertainty.
+    """Calculates the average of a property and its uncertainty via bootstrapping.
     """
+    @BaseProtocol.Parameter
+    def bootstrap_iterations(self):
+        pass
 
-    def __init__(self, protocol_id):
-
-        super().__init__(protocol_id)
-
-        self._value = None
-        self._uncertainty = None
+    @BaseProtocol.Parameter
+    def bootstrap_sample_size(self):
+        pass
 
     @BaseProtocol.OutputPipe
     def value(self):
@@ -1281,39 +1280,88 @@ class AveragePropertyProtocol(BaseProtocol):
     def uncertainty(self):
         pass
 
-    def execute(self, directory):
-        return self._get_output_dictionary()
+    @BaseProtocol.OutputPipe
+    def equilibration_index(self):
+        pass
 
-    @staticmethod
-    def calculate_average_and_error(correlated_data):
-        """Calculates the average of a property and its uncertainty from
-        a list of possibly correlated data.
+    @BaseProtocol.OutputPipe
+    def statistical_inefficiency(self):
+        pass
+
+    def __init__(self, protocol_id):
+
+        super().__init__(protocol_id)
+
+        self._bootstrap_iterations = 100
+        self._bootstrap_sample_size = 1.0
+
+        self._value = None
+        self._uncertainty = None
+
+        self._equilibration_index = None
+        self._statistical_inefficiency = None
+
+    def _bootstrap_function(self, sample_data):
+        """The function to perform on the data set being sampled by
+        bootstrapping.
 
         Parameters
         ----------
-        correlated_data : list(float)
-            The data to average over.
+        sample_data: np.ndarray, shape=(num_frames, num_dimensions), dtype=float
+            A sample of the full data set.
 
         Returns
         -------
         float
-            The average value
+            The result of evaluating the data.
+        """
+        return sample_data.mean()
+
+    def _perform_bootstrapping(self, data_set):
+        """Performs bootstrapping on a data set to calculate the
+        average value, and the standard error in the average,
+        bootstrapping.
+
+        Parameters
+        ----------
+        data_set: np.ndarray, shape=(num_frames, num_dimensions), dtype=float
+            The data set to perform bootstrapping on.
+
+        Returns
+        -------
+        float
+            The average of the data.
         float
             The uncertainty in the average.
         """
 
-        # Compute the indices of the uncorrelated timeseries
-        [equilibration_index, inefficiency, effictive_samples] = timeseries.detectEquilibration(correlated_data)
-        equilibrated_data = correlated_data[equilibration_index:]
+        if data_set is None:
+            raise ValueError('There is no data to bootstrap in protocol {}'.format(self.id))
 
-        # Extract a set of uncorrelated data points.
-        indices = timeseries.subsampleCorrelatedData(equilibrated_data, g=inefficiency)
-        uncorrelated_data = equilibrated_data[indices]
+        # Make a copy of the data so we don't accidentally destroy anything.
+        data_to_bootstrap = np.array(data_set)
 
-        average = uncorrelated_data.mean()
-        uncertainty = uncorrelated_data.std() * len(uncorrelated_data) ** -0.5
+        data_size = len(data_to_bootstrap)
 
-        return average, uncertainty
+        # Choose the sample size as a percentage of the full data set.
+        sample_size = min(math.floor(data_size * self._bootstrap_sample_size), data_size)
+
+        average_values = np.zeros(self._bootstrap_iterations)
+
+        for bootstrap_iteration in range(self._bootstrap_iterations):
+
+            sample_indices = np.random.choice(data_size, sample_size)
+            sample_data = data_to_bootstrap[sample_indices]
+
+            average_values[bootstrap_iteration] = self._bootstrap_function(sample_data)
+
+        average_value = self._bootstrap_function(data_to_bootstrap)
+        uncertainty = average_values.std() * len(average_values) ** -0.5
+
+        return average_value, uncertainty
+
+    def execute(self, directory):
+        return self._get_output_dictionary()
 
 
 @register_calculation_protocol()
@@ -1347,5 +1395,73 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
                                                        'requires a previously calculated trajectory')
 
         self.trajectory = mdtraj.load_dcd(filename=self._trajectory_path, top=self._input_coordinate_file)
+
+        return self._get_output_dictionary()
+
+
+@register_calculation_protocol()
+class ExtractUncorrelatedData(BaseProtocol):
+    """Calculates the average of a property from a simulation trajectory.
+    """
+
+    @BaseProtocol.InputPipe
+    def equilibration_index(self):
+        pass
+
+    @BaseProtocol.InputPipe
+    def statistical_inefficiency(self):
+        pass
+
+    def __init__(self, protocol_id):
+        super().__init__(protocol_id)
+
+        self._equilibration_index = None
+        self._statistical_inefficiency = None
+
+    def execute(self, directory):
+        raise NotImplementedError
+
+
+@register_calculation_protocol()
+class ExtractUncorrelatedTrajectoryData(ExtractUncorrelatedData):
+    """Calculates the average of a property from a simulation trajectory.
+    """
+
+    def __init__(self, protocol_id):
+
+        super().__init__(protocol_id)
+
+        self._input_coordinate_file = None
+        self._input_trajectory_path = None
+
+        self._output_trajectory_path = None
+
+    @BaseProtocol.InputPipe
+    def input_coordinate_file(self):
+        pass
+
+    @BaseProtocol.InputPipe
+    def input_trajectory_path(self):
+        pass
+
+    @BaseProtocol.OutputPipe
+    def output_trajectory_path(self):
+        pass
+
+    def execute(self, directory):
+
+        if self._input_trajectory_path is None:
+
+            return PropertyCalculatorException(directory=directory,
+                                               message='The ExtractUncorrelatedTrajectoryData protocol '
+                                                       'requires a previously calculated trajectory')
+
+        trajectory = mdtraj.load_dcd(filename=self._input_trajectory_path, top=self._input_coordinate_file)
+
+        uncorrelated_indices = statistics.get_uncorrelated_indices(trajectory.n_frames, self._statistical_inefficiency)
+        uncorrelated_trajectory = trajectory[uncorrelated_indices]
+
+        self._output_trajectory_path = path.join(directory, 'uncorrelated_trajectory.dcd')
+        uncorrelated_trajectory.save_dcd(self._output_trajectory_path)
 
         return self._get_output_dictionary()

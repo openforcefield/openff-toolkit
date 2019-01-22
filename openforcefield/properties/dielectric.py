@@ -15,22 +15,18 @@ Authors
 # =============================================================================================
 
 import logging
+
 import mdtraj
-
-import arch.bootstrap
-
 import numpy as np
-
 from simtk import openmm, unit
 
-from openforcefield.properties.properties import PhysicalProperty
-
 from openforcefield.properties.datasets import register_thermoml_property
-
 from openforcefield.properties.estimator import CalculationSchema, register_estimable_property
 from openforcefield.properties.estimator.components import protocols, groups
 from openforcefield.properties.estimator.components.protocols import AverageTrajectoryProperty, \
     register_calculation_protocol, ProtocolPath
+from openforcefield.properties.properties import PhysicalProperty
+from openforcefield.utils import statistics
 
 
 # =============================================================================================
@@ -55,32 +51,62 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
     def thermodynamic_state(self, value):
         pass
 
-    def _find_block_size(self, charges, temperature, block_sizes_to_try=12, num_bootstrap=15):
-        """Taken from https://github.com/MobleyLab/SMIRNOFF_paper_code/tree/master/FreeSolv"""
+    def _bootstrap_function(self, sample_data):
+        """Calculates the static dielectric constant from an
+        array of dipoles and volumes.
 
-        block_size_grid = np.logspace(0, np.log10(len(self.trajectory)), block_sizes_to_try).astype('int')
-        # The float -> int conversion sometimes leads to duplicate values, so avoid this
-        block_size_grid = np.unique(block_size_grid)
+        Notes
+        -----
+        The static dielectric constant is taken from for Equation 7 of [1]
 
-        epsilon_grid = np.array([self._bootstrap(charges,
-                                                 temperature,
-                                                 block_length,
-                                                 num_bootstrap) for block_length in block_size_grid])
+        References
+        ----------
+        [1] A. Glattli, X. Daura and W. F. van Gunsteren. Derivation of an improved simple point charge
+            model for liquid water: SPC/A and SPC/L. J. Chem. Phys. 116(22):9811-9828, 2002
 
-        return block_size_grid[epsilon_grid.argmax()]
+        Parameters
+        ----------
+        sample_data: np.ndarray, shape=(num_frames, 4), dtype=float
+            The dataset to bootstap. The data stored by trajectory frame is
+            four dimensional (Mx, My, Mz, V) where M is dipole moment and
+            V is volume.
 
-    def _bootstrap(self, charges, temperature, block_length, num_bootstrap):
-        """Taken from https://github.com/MobleyLab/SMIRNOFF_paper_code/tree/master/FreeSolv"""
+        Returns
+        -------
+        float
+            The unitless static dielectric constant
+        """
 
-        bootstrap = arch.bootstrap.CircularBlockBootstrap(block_length, trajectory=self.trajectory)
+        temperature = self._thermodynamic_state.temperature
 
-        def bootstrap_func(trajectory):
-            return mdtraj.geometry.static_dielectric(trajectory, charges, temperature)
+        dipoles = np.zeros([sample_data.shape[0], 3])
+        volumes = np.zeros([sample_data.shape[0], 1])
 
-        results = bootstrap.apply(bootstrap_func, num_bootstrap)
-        epsilon_err = results.std()
+        for index in range(sample_data.shape[0]):
 
-        return epsilon_err
+            dipoles[index][0] = sample_data[index][0]
+            dipoles[index][1] = sample_data[index][1]
+            dipoles[index][2] = sample_data[index][2]
+
+            volumes[index] = sample_data[index][3]
+
+        dipole_mu = dipoles.mean(0)
+        shifted_dipoles = dipoles - dipole_mu
+
+        dipole_variance = (shifted_dipoles * shifted_dipoles).sum(-1).mean(0) * \
+                          (unit.elementary_charge * unit.nanometers) ** 2
+
+        volume = volumes.mean() * unit.nanometer**3
+
+        e0 = 8.854187817E-12 * unit.farad / unit.meter  # Taken from QCElemental
+
+        dielectric_constant = 1.0 + dipole_variance / (3 *
+                                                       unit.BOLTZMANN_CONSTANT_kB *
+                                                       temperature *
+                                                       volume *
+                                                       e0)
+
+        return dielectric_constant
 
     def execute(self, directory):
 
@@ -107,16 +133,25 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
 
                 charge_list.append(charge)
 
-        temperature = self._thermodynamic_state.temperature / unit.kelvin
+        dipole_moments = mdtraj.geometry.dipole_moments(self.trajectory, charge_list)
+        volumes = self.trajectory.unitcell_volumes
 
-        # TODO: Pull out only equilibrated data.
-        block_length = self._find_block_size(charge_list, temperature)
-        dielectric_sigma = self._bootstrap(charge_list, temperature, block_length, block_length)
+        dipole_moments, self._equilibration_index, self._statistical_inefficiency = \
+            statistics.uncorrelate_time_series(dipole_moments)
 
-        dielectric = mdtraj.geometry.static_dielectric(self.trajectory, charge_list, temperature)
+        dipole_moments_and_volume = np.zeros([dipole_moments.shape[0], 4])
 
-        self._value = unit.Quantity(dielectric, None)
-        self._uncertainty = unit.Quantity(dielectric_sigma, None)
+        for index in range(dipole_moments.shape[0]):
+
+            dipole = dipole_moments[index]
+            volume = volumes[index]
+
+            dipole_moments_and_volume[index] = np.array([dipole[0], dipole[1], dipole[2], volume])
+
+        self._value, self._uncertainty = self._perform_bootstrapping(dipole_moments_and_volume)
+
+        self._value = unit.Quantity(self._value, None)
+        self._uncertainty = unit.Quantity(self._uncertainty, None)
 
         logging.info('Extracted dielectrics: ' + directory)
 
@@ -177,7 +212,6 @@ class DielectricConstant(PhysicalProperty):
         schema.protocols[npt_equilibration.id] = npt_equilibration.schema
 
         # Production
-
         npt_production = protocols.RunOpenMMSimulation('npt_production')
 
         npt_production.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
@@ -203,8 +237,9 @@ class DielectricConstant(PhysicalProperty):
         converge_uncertainty = groups.ConditionalGroup('converge_uncertainty')
         converge_uncertainty.add_protocols(npt_production, extract_dielectric)
 
-        converge_uncertainty.left_hand_value = ProtocolPath('uncertainty', converge_uncertainty.id,
-                                                                           extract_dielectric.id)
+        converge_uncertainty.left_hand_value = ProtocolPath('uncertainty',
+                                                            converge_uncertainty.id,
+                                                            extract_dielectric.id)
 
         converge_uncertainty.right_hand_value = ProtocolPath('target_uncertainty', 'global')
 
@@ -214,8 +249,30 @@ class DielectricConstant(PhysicalProperty):
 
         schema.protocols[converge_uncertainty.id] = converge_uncertainty.schema
 
+        # Finally, extract uncorrelated data
+        extract_uncorrelated_trajectory = protocols.ExtractUncorrelatedTrajectoryData('extract_traj')
+
+        extract_uncorrelated_trajectory.statistical_inefficiency = ProtocolPath('statistical_inefficiency',
+                                                                                converge_uncertainty.id,
+                                                                                extract_dielectric.id)
+
+        extract_uncorrelated_trajectory.equilibration_index = ProtocolPath('equilibration_index',
+                                                                           converge_uncertainty.id,
+                                                                           extract_dielectric.id)
+
+        extract_uncorrelated_trajectory.input_coordinate_file = ProtocolPath('output_coordinate_file',
+                                                                             converge_uncertainty.id,
+                                                                             npt_production.id)
+
+        extract_uncorrelated_trajectory.input_trajectory_path = ProtocolPath('trajectory',
+                                                                             converge_uncertainty.id,
+                                                                             npt_production.id)
+
+        schema.protocols[extract_uncorrelated_trajectory.id] = extract_uncorrelated_trajectory.schema
+
         # Define where the final values come from.
         schema.final_value_source = ProtocolPath('value', converge_uncertainty.id, extract_dielectric.id)
         schema.final_uncertainty_source = ProtocolPath('uncertainty', converge_uncertainty.id, extract_dielectric.id)
+        schema.final_trajectory_source = ProtocolPath('output_trajectory_path', extract_uncorrelated_trajectory.id)
 
         return schema

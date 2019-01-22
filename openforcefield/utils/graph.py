@@ -9,9 +9,16 @@ Authors
 -------
 * Simon Boothroyd <simon.boothroyd@choderalab.org>
 """
+# =============================================================================================
+# GLOBAL IMPORTS
+# =============================================================================================
 
 import copy
 
+
+# =============================================================================================
+# Utilities
+# =============================================================================================
 
 def apply_transitive_reduction(graph):
     """Attempts to remove any implicit dependencies from the
@@ -75,7 +82,7 @@ def _visit_protocol(graph, current_key, closed_list, closure):
 
     closure[current_key].extend(indirect_dependencies)
 
-    for i in range(len(graph[current_key] ) -1, -1, -1):
+    for i in range(len(graph[current_key]) - 1, -1, -1):
 
         dependent = graph[current_key][i]
         closure[current_key].append(dependent)

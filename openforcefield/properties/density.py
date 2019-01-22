@@ -15,18 +15,17 @@ Authors
 # =============================================================================================
 
 import logging
-import mdtraj
 
+import mdtraj
 from simtk import unit
 
-from openforcefield.properties.properties import PhysicalProperty
-
 from openforcefield.properties.datasets import register_thermoml_property
-
 from openforcefield.properties.estimator import CalculationSchema, register_estimable_property
 from openforcefield.properties.estimator.components import protocols, groups
 from openforcefield.properties.estimator.components.protocols import AverageTrajectoryProperty, \
     register_calculation_protocol, ProtocolPath, PropertyCalculatorException
+from openforcefield.properties.properties import PhysicalProperty
+from openforcefield.utils import statistics
 
 
 # =============================================================================================
@@ -47,6 +46,7 @@ class ExtractAverageDensity(AverageTrajectoryProperty):
     def __init__(self, protocol_id):
 
         super().__init__(protocol_id)
+
         self._system = None
 
     @protocols.BaseProtocol.InputPipe
@@ -73,7 +73,10 @@ class ExtractAverageDensity(AverageTrajectoryProperty):
 
         densities = mdtraj.density(self.trajectory, mass_list)
 
-        self._value, self._uncertainty = self.calculate_average_and_error(densities)
+        densities, self._equilibration_index, self._statistical_inefficiency = \
+            statistics.uncorrelate_time_series(densities)
+
+        self._value, self._uncertainty = self._perform_bootstrapping(densities)
 
         self._value *= unit.kilogram * unit.meter ** -3
         self._uncertainty *= unit.kilogram * unit.meter ** -3
@@ -137,7 +140,6 @@ class Density(PhysicalProperty):
         schema.protocols[npt_equilibration.id] = npt_equilibration.schema
 
         # Production
-
         npt_production = protocols.RunOpenMMSimulation('npt_production')
 
         npt_production.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
@@ -153,7 +155,6 @@ class Density(PhysicalProperty):
         # schema.protocols[npt_production.id] = npt_production.schema
 
         # Analysis
-
         extract_density = ExtractAverageDensity('extract_density')
 
         extract_density.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
@@ -168,8 +169,9 @@ class Density(PhysicalProperty):
         converge_uncertainty = groups.ConditionalGroup('converge_uncertainty')
         converge_uncertainty.add_protocols(npt_production, extract_density)
 
-        converge_uncertainty.left_hand_value = ProtocolPath('uncertainty', converge_uncertainty.id,
-                                                                           extract_density.id)
+        converge_uncertainty.left_hand_value = ProtocolPath('uncertainty',
+                                                            converge_uncertainty.id,
+                                                            extract_density.id)
 
         converge_uncertainty.right_hand_value = ProtocolPath('target_uncertainty', 'global')
 
@@ -179,8 +181,30 @@ class Density(PhysicalProperty):
 
         schema.protocols[converge_uncertainty.id] = converge_uncertainty.schema
 
+        # Finally, extract uncorrelated data
+        extract_uncorrelated_trajectory = protocols.ExtractUncorrelatedTrajectoryData('extract_traj')
+
+        extract_uncorrelated_trajectory.statistical_inefficiency = ProtocolPath('statistical_inefficiency',
+                                                                                converge_uncertainty.id,
+                                                                                extract_density.id)
+
+        extract_uncorrelated_trajectory.equilibration_index = ProtocolPath('equilibration_index',
+                                                                           converge_uncertainty.id,
+                                                                           extract_density.id)
+
+        extract_uncorrelated_trajectory.input_coordinate_file = ProtocolPath('output_coordinate_file',
+                                                                             converge_uncertainty.id,
+                                                                             npt_production.id)
+
+        extract_uncorrelated_trajectory.input_trajectory_path = ProtocolPath('trajectory',
+                                                                             converge_uncertainty.id,
+                                                                             npt_production.id)
+
+        schema.protocols[extract_uncorrelated_trajectory.id] = extract_uncorrelated_trajectory.schema
+
         # Define where the final values come from.
         schema.final_value_source = ProtocolPath('value', converge_uncertainty.id, extract_density.id)
         schema.final_uncertainty_source = ProtocolPath('uncertainty', converge_uncertainty.id, extract_density.id)
+        schema.final_trajectory_source = ProtocolPath('output_trajectory_path', extract_uncorrelated_trajectory.id)
 
         return schema
