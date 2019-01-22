@@ -24,8 +24,8 @@ def run_property_estimator():
     if path.isdir(working_directory):
         shutil.rmtree(working_directory)
 
-    # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_density.xml'))
-    data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_dielectric.xml'))
+    data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_density.xml'))
+    # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_dielectric.xml'))
 
     # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_density.xml'),
     #                                           get_data_filename('properties/single_dielectric.xml'))
@@ -50,7 +50,10 @@ def run_property_estimator():
 
     property_server.run_until_complete()
 
-    logging.info('Results: {}'.format(property_server.finished_calculations))
+    for property_id in property_server.finished_calculations:
+
+        logging.info('Calculation {}:'.format(property_id))
+        logging.info('{}'.format(property_server.finished_calculations[property_id].json()))
 
 
 if __name__ == "__main__":

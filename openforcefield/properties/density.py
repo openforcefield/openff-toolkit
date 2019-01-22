@@ -129,8 +129,8 @@ class Density(PhysicalProperty):
 
         npt_equilibration.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
 
-        npt_equilibration.steps = 2  # Debug settings.
-        npt_equilibration.output_frequency = 1  # Debug settings.
+        npt_equilibration.steps = 100000  # Debug settings.
+        npt_equilibration.output_frequency = 5000  # Debug settings.
 
         npt_equilibration.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
@@ -144,8 +144,8 @@ class Density(PhysicalProperty):
 
         npt_production.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
 
-        npt_production.steps = 200  # Debug settings.
-        npt_production.output_frequency = 20  # Debug settings.
+        npt_production.steps = 1000000  # Debug settings.
+        npt_production.output_frequency = 50000  # Debug settings.
 
         npt_production.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 

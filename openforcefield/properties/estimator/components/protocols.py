@@ -1148,7 +1148,7 @@ class RunOpenMMSimulation(BaseProtocol):
                                                message='A temperature must be set to perform '
                                                        'a simulation in any ensemble')
 
-        if self._ensemble is self.Ensemble.NPT and pressure is None:
+        if self.Ensemble(self._ensemble) == self.Ensemble.NPT and pressure is None:
 
             return PropertyCalculatorException(directory=directory,
                                                message='A pressure must be set to perform an NPT simulation')
@@ -1199,7 +1199,7 @@ class RunOpenMMSimulation(BaseProtocol):
 
         system = self._system
 
-        if self._ensemble is self.Ensemble.NPT:
+        if self.Ensemble(self._ensemble) == self.Ensemble.NPT:
 
             barostat = openmm.MonteCarloBarostat(pressure, temperature)
 

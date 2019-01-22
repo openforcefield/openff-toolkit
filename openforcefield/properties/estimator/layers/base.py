@@ -89,9 +89,9 @@ class PropertyCalculationLayer:
             results = list(future_object.result())
             returned_data_model = results.pop(0)
 
-            for succeeded, returned_output in results:
+            for calculated_by_layer, returned_output in results:
 
-                if not succeeded:
+                if not calculated_by_layer:
                     continue
 
                 matches = [x for x in returned_data_model.queued_properties if x.id == returned_output.id]

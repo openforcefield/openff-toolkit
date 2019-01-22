@@ -31,6 +31,7 @@ setup(
         'openforcefield/properties/estimator/backends',
         'openforcefield/properties/estimator/components',
         'openforcefield/properties/estimator/layers',
+        'openforcefield/properties/estimator/storage',
         'openforcefield/typing',
         'openforcefield/typing/chemistry',
         'openforcefield/typing/engines',
