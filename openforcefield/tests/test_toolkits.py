@@ -595,7 +595,7 @@ class TestRDKitToolkitWrapper(TestCase):
         assert_almost_equal(molecule.conformers[0][5][1] / unit.angstrom, 2.0104, decimal=4)
 
 
-    # Find a multiconformer SDF files
+    # Find a multiconformer SDF file
     @pytest.mark.skip
     #@pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_get_multiconformer_sdf_coordinates(self):

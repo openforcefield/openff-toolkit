@@ -1817,7 +1817,7 @@ class FrozenMolecule(Serializable):
                 .format(type(toolkit_registry)))
 
     @staticmethod
-    def from_smiles(smiles, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def from_smiles(smiles, hydrogens_are_explicit=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Construct a Molecule from a SMILES representation
 
@@ -1825,7 +1825,8 @@ class FrozenMolecule(Serializable):
         ----------
         smiles : str
             The SMILES representation of the molecule.
-
+        hydrogens_are_explicit : bool, default = False
+            If False, the cheminformatics toolkit will perform hydrogen addition
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
@@ -1843,7 +1844,7 @@ class FrozenMolecule(Serializable):
             return toolkit_registry.call('from_smiles', smiles)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.from_smiles(smiles)
+            return toolkit.from_smiles(smiles, hydrogens_are_explicit=hydrogens_are_explicit)
         else:
             raise Exception(
                 'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
