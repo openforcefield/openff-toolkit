@@ -39,7 +39,7 @@ pytestmark = pytest.mark.skip
 
 from openforcefield.utils import get_data_filename#, generateTopologyFromOEMol, read_molecules
 #from openforcefield.utils import check_energy_is_finite, get_energy
-from openforcefield.tests.utils import get_amber_system, get_packmol_pdbfile, get_monomer_mol2file, compare_system_energies
+from openforcefield.tests.utils import get_packmol_pdbfile, get_monomer_mol2file, compare_system_energies
 
 from .utils import *
 
@@ -725,7 +725,7 @@ class TestForceFieldEnergies(unittest.TestCase):
         # Load AMBER files and compare
         inpcrd = get_data_filename('molecules/benzene.crd')
         prmtop = get_data_filename('molecules/benzene.top')
-        g0, g1, e0, e1 = compare_molecule_energies(prmtop, inpcrd, ff, mol, skip_assert=True)
+        g0, g1, e0, e1 = compare_amber_smirnoff(prmtop, inpcrd, ff, mol, skip_assert=True)
 
         # Check that torsional energies the same to 1 in 10^6
         rel_error = np.abs((g0['torsion']-g1['torsion'])/ g0['torsion'])
