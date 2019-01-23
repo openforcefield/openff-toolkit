@@ -53,7 +53,7 @@ from simtk.openmm import app
 # TODO: Move these to setup?
 # These paths should only be found in the test data directories, so we need to use get_data_filename()
 AlkEthOH_offxml_filename = get_data_filename('forcefield/Frosst_AlkEthOH.offxml')
-AlkEthOH_molecules_filename = get_data_filename('molecules/AlkEthOH-tripos.mol2.gz')
+AlkEthOH_molecules_filename = get_data_filename('molecules/AlkEthOH_test_filt1_tripos.mol2')
 MiniDrugBank_molecules_filename = get_data_filename('molecules/MiniDrugBank_tripos.mol2')
 #chargeincrement_offxml_filename = get_data_filename('chargeincrement-test.offxml')
 # TODO: Swtich all paths to use os.path.join
@@ -579,14 +579,15 @@ class TestApplyForceField(unittest.TestCase):
         system = forcefield.create_system(topology)
         check_energy_is_finite(system, positions)
 
-    def check_parameter_assignment(self, offxml_filename=smirnoff99Frosst_offxml_filename, molecules_filename=AlkEthOH_molecules_filename):
+    def check_parameter_assignment(self, offxml_filename=smirnoff99Frosst_offxml_filename,
+                                   molecules_filename=AlkEthOH_molecules_filename):
         """Test parameter assignment using specified forcefield on all molecules from specified source.
 
         Parameters
         ----------
         offxml_filename : str, optional, default='smirnoff99Frosst.offxml'
             Filename from which SMIRNOFF .offxml XML file is to be loaded.
-        molecules_filename : str, optional, default='molecules/AlkEthOH-tripos.mol2.gz
+        molecules_filename : str, optional, default='molecules/AlkEthOH_test_filt1_tripos.mol2
             Filename from which molecule identities and positions are to be loaded.
         """
         forcefield = ForceField(offxml_filename)
@@ -629,7 +630,7 @@ class TestApplyForceField(unittest.TestCase):
     def test_create_system_molecules_parmatfrosst_gbsa(self):
         """Test creation of a System object from small molecules to test parm@frosst forcefield with GBSA support.
         """
-        molecules_filename = get_data_filename('molecules/AlkEthOH-tripos.mol2.gz')
+        molecules_filename = get_data_filename('molecules/AlkEthOH_test_filt1_tripos.mol2')
         check_parameter_assignment(offxml_filename='Frosst_AlkEthOH_GBSA.offxml', molecules_filename=molecules_filename)
 
     def test_mixed_solvent_boxes(self):
@@ -737,7 +738,7 @@ class TestForceFieldLabeling(unittest.TestCase):
     """
     def test_label_molecules(self):
         """Test labeling/getting stats on labeling molecules"""
-        molecules = read_molecules(get_data_filename('molecules/AlkEthOH-tripos.mol2.gz'), verbose=verbose)
+        molecules = read_molecules(get_data_filename('molecules/AlkEthOH_test_filt1_tripos.mol2'), verbose=verbose)
         ffxml = get_data_filename('forcefield/Frosst_AlkEthOH.offxml')
         get_molecule_parameterIDs(molecules, ffxml)
 
