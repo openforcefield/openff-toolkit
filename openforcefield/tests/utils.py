@@ -127,7 +127,6 @@ def get_alkethoh_filepath(alkethoh_name, get_amber=False):
 
     # Build absolute paths.
     molecules_dir_path = get_data_filename('molecules')
-    molecules_dir_path = '/Users/andrea/Development/openforcefield/openforcefield/data/molecules'
     molecule_file_paths = [os.path.join(molecules_dir_path, p) for p in molecule_relative_file_paths]
 
     # Check if we need to extract some of the files from the tar archive.
