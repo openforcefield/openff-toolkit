@@ -1,7 +1,6 @@
 # Molecule Files
 
-This is a list of the molecule files provided here
-including a brieg description when possible
+This is a list of the molecule files provided here including a brief description when possible
 
 * `AlkEthOH_tripos.tar.gz`: `*.crd`, `*.top`, and `*.mol2` (with Tripos SYBYL atom types) for all the molecules in
 the AlkEthOH dataset. All molecules were taken from
