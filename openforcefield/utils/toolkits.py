@@ -48,10 +48,10 @@ DEFAULT_CHARGE_MODEL = 'AM1-BCC'  # TODO: Should this be `AM1-BCC`, or should we
 ALLOWED_CHARGE_MODELS = ['AM1-BCC'
                          ]  # TODO: Which models do we want to support?
 
+
 #=============================================================================================
 # Exceptions
 #=============================================================================================
-
 
 class LicenseError(Exception):
     """This function requires a license that cannot be found."""
@@ -82,6 +82,12 @@ class UndefinedStereochemistryError(Exception):
         super().__init__(self, msg)
         self.msg = msg
 
+
+class GAFFAtomTypeWarning(RuntimeWarning):
+    """A warning raised if a loaded mol2 file possibly uses GAFF atom types."""
+    pass
+
+
 #=============================================================================================
 # TOOLKIT UTILITY DECORATORS
 #=============================================================================================
@@ -93,7 +99,6 @@ class UndefinedStereochemistryError(Exception):
 #=============================================================================================
 # CHEMINFORMATICS TOOLKIT WRAPPERS
 #=============================================================================================
-
 
 class ToolkitWrapper(object):
     """
@@ -383,9 +388,20 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         molecules : list of Molecules
             a list of Molecule objects is returned.
 
+        Raises
+        ------
+        GAFFAtomTypeWarning
+            If the loaded mol2 file possibly uses GAFF atom types, which
+            are not supported.
+
         """
         from openforcefield.topology import Molecule
         from openeye import oechem
+
+        # With mol2 files, we raise a warning if we detect OS or HO types
+        # that OpenEye interprets as Osmium and Holmium.
+        is_mol2 = file_format.lower() == 'mol2'
+
         mols = list()
         oemol = oechem.OEMol()
         ifs = oechem.oemolistream(filename)
@@ -397,6 +413,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 oemol,
                 exception_if_undefined_stereo=exception_if_undefined_stereo)
             mols.append(mol)
+
+            # Check if this file may be using GAFF atom types.
+            if is_mol2:
+                self._check_mol2_gaff_atom_type(mol, filename)
+
         return mols
 
     def from_file_obj(self,
@@ -497,6 +518,43 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ofs.SetFormat(openeye_format)
         oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
+
+    @staticmethod
+    def _check_mol2_gaff_atom_type(molecule, file_path):
+        """Attempts to detect the presence of GAFF atom types in a molecule loaded from a mol2 file.
+
+        For now, this raises a ``GAFFAtomTypeWarning`` if the molecule
+        include Osmium and Holmium atoms, which have GAFF types OS and
+        HO respectively.
+
+        Parameters
+        ----------
+        molecule : openforcefield.topology.molecule.Molecule
+            The loaded molecule.
+        file_path : str
+            The path to the mol2 file. This is used exclusively to make
+            the error message more meaningful.
+
+        """
+        # atomic_number: (GAFF_type, element_name)
+        warning_atomic_numbers = {
+            76: ('OS', 'Osmium'),
+            67: ('HO', 'Holmium')
+        }
+
+        for atom in molecule.atoms:
+            try:
+                atom_type, element_name = warning_atomic_numbers[atom.atomic_number]
+            except KeyError:
+                pass
+            else:
+                import warnings
+                warn_msg = ('OpenEye interpreted the type "{atom_type}" in {file_path}:{mol_name}'
+                            ' as {element_name}. Does your mol2 file uses Tripos SYBYL atom types?'
+                            ' Other atom types such as GAFF are not supported.').format(
+                    atom_type=atom_type, mol_name=molecule.name,
+                    file_path=file_path, element_name=element_name)
+                warnings.warn(warn_msg, GAFFAtomTypeWarning)
 
     @staticmethod
     def _openeye_cip_atom_stereochemistry(oemol, oeatom):
