@@ -6,6 +6,7 @@ This example demonstrates how to compare parm@frosst energies of molecules from 
 * [compare_set_energies.py](https://github.com/openforcefield/openforcefield/blob/master/examples/SMIRNOFF_comparison/compare_set_energies.py): compare energies across a set of molecules
 
 The key idea here is to use the utility `compare_molecule_energies` to compare the molecule parameterized by `ForceField` with a corresponding system constructed via an AMBER `prmtop/inpcrd` pair:
+
 ```python
 # Load molecule
 from openmmtools.topology import Molecule
@@ -17,5 +18,5 @@ forcefield = ForceField(offxml_filename)
 
 # Compare energies
 from openforcefield.tests.utils import compare_molecule_energies
-results = compare_molecule_energies(prmtop_filename, inpcrd_filename, forcefield, molecule)
+results = compare_amber_smirnoff(prmtop_filename, inpcrd_filename, forcefield, molecule)
 ```
