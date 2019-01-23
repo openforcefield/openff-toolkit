@@ -13,8 +13,6 @@ Tests for cheminformatics toolkit wrappers
 # GLOBAL IMPORTS
 #=============================================================================================
 
-from unittest import TestCase
-
 from simtk import unit
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -25,11 +23,12 @@ from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWr
 from openforcefield.utils import get_data_filename
 from openforcefield.topology.molecule import Molecule
 
+
 #=============================================================================================
 # TESTS
 #=============================================================================================
 
-class TestOpenEyeToolkitWrapper(TestCase):
+class TestOpenEyeToolkitWrapper:
     """Test the OpenEyeToolkitWrapper"""
 
     # TODO: Make separate smiles_add_H and smiles_explicit_H tests
@@ -63,7 +62,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
                                                 ("spec_db_smiles", spec_db_smiles, False),
                                                 ]:
             if raises_exception:
-                with self.assertRaises(Exception) as context:
+                with pytest.raises(Exception) as context:
                     molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
             else:
                 molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
@@ -296,11 +295,11 @@ class TestOpenEyeToolkitWrapper(TestCase):
         smiles = '[H]C([H])([H])C([H])([H])[H]'
         molecule = toolkit_wrapper.from_smiles(smiles)
         # Ensure that an exception is raised if no conformers are provided
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper)
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
         # Ensure that an exception is raised if an invalid charge model is passed in
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             charge_model = 'notARealChargeModel'
             molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
 
@@ -326,7 +325,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
 
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             charge_model = 'notARealChargeModel'
             molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
 
@@ -398,8 +397,8 @@ class TestOpenEyeToolkitWrapper(TestCase):
         # TODO: Add test and molecule functionality for isotopes
 
 
-        
-class TestRDKitToolkitWrapper(TestCase):
+
+class TestRDKitToolkitWrapper:
     """Test the RDKitToolkitWrapper"""
     
     @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
@@ -430,7 +429,7 @@ class TestRDKitToolkitWrapper(TestCase):
                                                 ("spec_db_smiles", spec_db_smiles, False),
                                                 ]:
             if raises_exception:
-                with self.assertRaises(Exception) as context:
+                with pytest.raises(Exception) as context:
                     molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
             else:
                 molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
@@ -645,7 +644,7 @@ class TestRDKitToolkitWrapper(TestCase):
 
 
         
-class TestAmberToolsToolkitWrapper(TestCase):
+class TestAmberToolsToolkitWrapper:
     """Test the AmberToolsToolkitWrapper"""
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available() or not AmberToolsToolkitWrapper.toolkit_is_available(),
@@ -658,7 +657,7 @@ class TestAmberToolsToolkitWrapper(TestCase):
         molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_registry)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
 
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             charge_model = 'notARealChargeModel'
             molecule.compute_partial_charges(toolkit_registry=toolkit_registry, charge_model=charge_model)
 
@@ -680,7 +679,7 @@ class TestAmberToolsToolkitWrapper(TestCase):
         molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_registry)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
 
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             charge_model = 'notARealChargeModel'
             molecule.compute_partial_charges(toolkit_registry=toolkit_registry, charge_model=charge_model)
 
@@ -694,7 +693,7 @@ class TestAmberToolsToolkitWrapper(TestCase):
 
 
 
-class TestToolkitRegistry(TestCase):
+class TestToolkitRegistry:
     """Test the ToolkitRegistry"""
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
