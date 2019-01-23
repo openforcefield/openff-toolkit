@@ -13,9 +13,7 @@ has the following structure:
     - `AlkEthOH_test_filt1`: A smaller test set composed of the first 42 molecules in `AlkEthOH_rings_filt1/`.
     - `convert_to_sybyl.py`: A script used to convert the original data from GAFF to Tripos SYBYL atom types.
 * `AlkEthOH_test_filt1_*.mol2`: A test set of 42 alkanes, ethers, and alcohols from the AlkEthOH set. This is file
-contains all the molecules in `AlkEthOH_tripos.tar.gz/AlkEthOH_test_filt1`
-    - `AlkEthOH_test_filt1_tripos.mol2`: Test set with Tripos SYBYL atom types.
-    - `AlkEthOH_test_filt1_ff.mol2`: Test set with GAFF atom types.
+contains all the molecules in `AlkEthOH_tripos.tar.gz/AlkEthOH_test_filt1`.
 * `*.crd`, `*.mol2`, and `*.top` for benzene
 * `zinc-subset-*.mol2.gz`: set of 7505 molecules
 * `PhEthOH_pFrosstTyped.oeb`: 5082 molecules with phenyl groups in addition to alkanes, ethers, and alcohols
