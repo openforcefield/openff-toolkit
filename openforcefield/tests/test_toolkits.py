@@ -19,7 +19,8 @@ from numpy.testing import assert_almost_equal
 
 import pytest
 from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWrapper,
-                                           AmberToolsToolkitWrapper, ToolkitRegistry)
+                                           AmberToolsToolkitWrapper, ToolkitRegistry,
+                                           GAFFAtomTypeWarning)
 from openforcefield.utils import get_data_filename
 from openforcefield.topology.molecule import Molecule
 
@@ -274,6 +275,14 @@ class TestOpenEyeToolkitWrapper:
             pc1_ul = pc1 / unit.elementary_charge
             pc2_ul = pc2 / unit.elementary_charge
             assert_almost_equal(pc1_ul, pc2_ul, decimal=4)
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    def test_get_mol2_gaff_atom_types(self):
+        """Test that a warning is raised OpenEyeToolkitWrapper when it detects GAFF atom types in a mol2 file."""
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        mol2_file_path = get_data_filename('molecules/AlkEthOH_test_filt1_ff.mol2')
+        with pytest.warns(GAFFAtomTypeWarning, match='SYBYL'):
+            Molecule.from_file(mol2_file_path, toolkit_registry=toolkit_wrapper)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_generate_conformers(self):
