@@ -4,18 +4,22 @@ import os
 # Cross-check energies of molecules from AlkEthOH set using SMIRNOFF xml file
 # versus energies from AMBER .prmtop and .crd files (parm@frosst params)
 
-datapath = './AlkEthOH_inputfiles/AlkEthOH_rings_filt1'
+datapath = './AlkEthOH_tripos/AlkEthOH_rings_filt1'
 #molname = 'AlkEthOH_r0' #That fails, but it's complicated. Try cyclobutane
 molname = 'AlkEthOH_r51'
-mol_filepath = os.path.join(datapath, molname + '.mol2')
+mol_filepath = os.path.join(datapath, molname + '_tripos.mol2')
 prmtop_filepath = os.path.join(datapath, molname + '.top')
 inpcrd_filepath = os.path.join(datapath, molname + '.crd')
 
 # Check if we have this data file; if not we have to extract the archive.
-if not os.path.isfile(mol_filepath):
+if not os.path.isdir(datapath):
     print("Extracting archived molecule files.")
-    tarfile = 'AlkEthOH_inputfiles.tar.gz'
-    os.system('tar -xf AlkEthOH_inputfiles.tar.gz')
+    # Extract the AlkEthOH dataset shipped with the toolkit in data/molecules/ in the working directory.
+    from openforcefield.tests.utils import get_data_filename
+    tarfile_path = os.path.join(get_data_filename('molecules'), 'AlkEthOH_tripos.tar.gz')
+    import tarfile
+    with tarfile.open(tarfile_path, 'r:gz') as tar:
+        tar.extractall()
 
 # Load molecule
 from openforcefield.topology import Molecule
