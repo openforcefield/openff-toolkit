@@ -213,7 +213,7 @@ class TestOpenEyeToolkitWrapper:
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
-        toolkit_wrapper = RDKitToolkitWrapper()
+        toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_filename('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
@@ -259,7 +259,7 @@ class TestOpenEyeToolkitWrapper:
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_charges(self):
-        """Test OpenEyeToolkitWrapper for importing a single set of molecule coordinates"""
+        """Test OpenEyeToolkitWrapper for importing a mol2 file specifying partial charges"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_filename('molecules/toluene_charged.mol2')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
@@ -274,7 +274,6 @@ class TestOpenEyeToolkitWrapper:
             pc1_ul = pc1 / unit.elementary_charge
             pc2_ul = pc2 / unit.elementary_charge
             assert_almost_equal(pc1_ul, pc2_ul, decimal=4)
-
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_generate_conformers(self):
@@ -370,7 +369,7 @@ class TestOpenEyeToolkitWrapper:
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(),
     reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders_double_bond(self):
-        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with net charge +1"""
+        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with a double bond"""
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
         smiles = 'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
@@ -591,8 +590,7 @@ class TestRDKitToolkitWrapper:
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
-    
-        
+
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip
     @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
@@ -604,7 +602,6 @@ class TestRDKitToolkitWrapper:
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
 
-
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip
     @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
@@ -615,8 +612,6 @@ class TestRDKitToolkitWrapper:
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
-
-
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_generate_conformers(self):
@@ -703,7 +698,7 @@ class TestToolkitRegistry:
         toolkit_precedence = [OpenEyeToolkitWrapper]
         registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence, register_imported_toolkit_wrappers=False)
         #registry.register_toolkit(OpenEyeToolkitWrapper)
-        assert set([ type(c) for c in registry.registered_toolkits]) == set([OpenEyeToolkitWrapper])
+        assert set([type(c) for c in registry.registered_toolkits]) == set([OpenEyeToolkitWrapper])
 
         # Test ToolkitRegistry.resolve()
         assert registry.resolve('to_smiles') == registry.registered_toolkits[0].to_smiles
