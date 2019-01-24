@@ -17,27 +17,21 @@ Authors
 
 import copy
 import logging
-import pickle
 import math
-
-import numpy as np
-
-import mdtraj
-
-from os import path
+import pickle
 from enum import Enum
-
-from pydantic import BaseModel
+from os import path
 from typing import Dict, Any
 
-from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.utils import packmol, graph, utils, statistics
-from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity, TypedBaseModel
-
-from openforcefield.typing.engines import smirnoff
-
+import mdtraj
+import numpy as np
+from pydantic import BaseModel
 from simtk import openmm, unit
 from simtk.openmm import app
+
+from openforcefield.typing.engines import smirnoff
+from openforcefield.utils import packmol, graph, utils, statistics
+from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity, TypedBaseModel
 
 # =============================================================================================
 # Registration Decorators
@@ -754,19 +748,40 @@ class BaseProtocol:
 
 @register_calculation_protocol()
 class BuildCoordinatesPackmol(BaseProtocol):
-    """Create 3D coordinates and bond information for a given Substance
+    """Creates a set of 3D coordinates a system defined by a
+    ``openforcefield.properties.Substance``.
 
+    Notes
+    -----
     The coordinates are created using packmol.
-
-    Attributes
-    ----------
-    _max_molecules : int, optional, default=True
-        The maximum number of molecules in the system to be created.
-    _mass_density : float, simtk.unit.Quantity, or None; optional, default=None
-        If provided, will aid in the selecting an initial box size.
     """
 
     _cached_molecules = {}
+
+    @BaseProtocol.Parameter
+    def max_molecules(self):
+        """int: The maximum number of molecules to be added to the system."""
+        pass
+
+    @BaseProtocol.Parameter
+    def mass_density(self):
+        """unit.Quantity: The target density of the created system."""
+        pass
+
+    @BaseProtocol.InputPipe
+    def substance(self):
+        """Substance: The composition of the system to build."""
+        pass
+
+    @BaseProtocol.OutputPipe
+    def coordinate_file(self):
+        """str: A path to the created PDB coordinate file."""
+        pass
+
+    @BaseProtocol.OutputPipe
+    def molecules(self):
+        """list of OEMol: A list of the molecule types in the built system."""
+        pass
 
     def __init__(self, protocol_id):
 
@@ -783,29 +798,9 @@ class BuildCoordinatesPackmol(BaseProtocol):
         self._max_molecules = 128
         self._mass_density = 1.0 * unit.grams / unit.milliliters
 
-    @BaseProtocol.Parameter
-    def max_molecules(self):
-        pass
-
-    @BaseProtocol.Parameter
-    def mass_density(self):
-        pass
-
-    @BaseProtocol.InputPipe
-    def substance(self):
-        pass
-
-    @BaseProtocol.OutputPipe
-    def coordinate_file(self):
-        pass
-
-    @BaseProtocol.OutputPipe
-    def molecules(self):
-        pass
-
     def _create_molecule(self, smiles):
         """
-        Create molecule from a smiles pattern.
+        Create an ``OEMol`` molecule from a smiles pattern.
 
         Todo
         ----
@@ -1065,34 +1060,6 @@ class RunOpenMMSimulation(BaseProtocol):
         NVT = 0
         NPT = 1
 
-    def __init__(self, protocol_id):
-
-        super().__init__(protocol_id)
-
-        self._steps = 1000
-
-        self._thermostat_friction = 1.0 / unit.picoseconds
-        self._timestep = 0.001 * unit.picoseconds
-
-        self._output_frequency = 1000
-
-        self._ensemble = self.Ensemble.NPT
-
-        # keep a track of the simulation object in case we need to restart.
-        self._simulation_object = None
-
-        # inputs
-        self._input_coordinate_file = None
-        self._thermodynamic_state = None
-        self._system = None
-
-        # outputs
-        self._output_coordinate_file = None
-        self._trajectory = None
-        self._statistics = None
-
-        pass
-
     @BaseProtocol.Parameter
     def steps(self):
         pass
@@ -1135,6 +1102,34 @@ class RunOpenMMSimulation(BaseProtocol):
 
     @BaseProtocol.OutputPipe
     def statistics(self):
+        pass
+
+    def __init__(self, protocol_id):
+
+        super().__init__(protocol_id)
+
+        self._steps = 1000
+
+        self._thermostat_friction = 1.0 / unit.picoseconds
+        self._timestep = 0.001 * unit.picoseconds
+
+        self._output_frequency = 1000
+
+        self._ensemble = self.Ensemble.NPT
+
+        # keep a track of the simulation object in case we need to restart.
+        self._simulation_object = None
+
+        # inputs
+        self._input_coordinate_file = None
+        self._thermodynamic_state = None
+        self._system = None
+
+        # outputs
+        self._output_coordinate_file = None
+        self._trajectory = None
+        self._statistics = None
+
         pass
 
     def execute(self, directory):

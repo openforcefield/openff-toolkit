@@ -17,14 +17,14 @@ Authors
 # =============================================================================================
 
 import hashlib
-import os
 import pickle
-from os import path
+import uuid
 
 
 # =============================================================================================
 # Base Backend Definition
 # =============================================================================================
+
 
 class PropertyEstimatorStorage:
     """An abstract base representation of how the property estimator will interact
@@ -36,41 +36,29 @@ class PropertyEstimatorStorage:
     `store_object`, `retrieve_object` and `has_object` methods
     """
 
-    def __init__(self, root_key='property_estimator'):
+    def __init__(self):
         """Constructs a new PropertyEstimatorStorage object.
-
-        Parameters
-        ----------
-        root_key: str
-            The root key of the storage system. For a file based storage system for
-            example, this will be the root folder in which all files are stored
         """
 
-        self._root_key = root_key
-
         self._stored_object_keys = set()
-        self._stored_object_keys_file = 'object_keys'
+        self._stored_object_keys_file = 'internal_object_keys'
 
-        self._force_field_hashes = {}
+        # Store a map between the unique id of a force field,
+        # and its hash value for easy comparision of force fields.
+        self._force_field_id_map = {}
+        self._force_field_id_map_file = 'internal_force_field_map'
 
-        self._force_field_root = path.join(self._root_key, 'cached_force_fields')
-        self._force_field_hash_file = 'hash_keys'
-
-        if not path.isdir(self._force_field_root):
-            os.makedirs(self._force_field_root)
+        self._simulation_data_by_substance = {}
+        self._simulation_data_by_substance_file = 'internal_simulation_data_map'
 
         self._load_stored_object_keys()
         self._load_force_field_hashes()
+        self._load_simulation_data_map()
 
     def _load_stored_object_keys(self):
-        """Load the unique path to each object stored in the storage system.
+        """Load the unique key to each object stored in the storage system.
         """
-        key_path = path.join(self._root_key, self._stored_object_keys_file)
-
-        if not self.has_object(key_path):
-            return
-
-        stored_object_keys = self.retrieve_object(key_path)
+        stored_object_keys = self.retrieve_object(self._stored_object_keys_file)
 
         if stored_object_keys is None:
             stored_object_keys = {}
@@ -78,21 +66,20 @@ class PropertyEstimatorStorage:
         for unique_key in stored_object_keys:
 
             if not self.has_object(unique_key):
-                # The force field file does not exist, so skip the entry.
+                # The stored entry key does not exist in the system, so skip the entry.
                 continue
 
             if unique_key not in self._stored_object_keys:
                 self._stored_object_keys.add(unique_key)
 
-        # Re-write a fresh copy of the file so that only force fields that
-        # exist are actually referenced.
+        # Store a fresh copy of the key dictionary so that only entries
+        # that exist in the system actually referenced.
         self._save_stored_object_keys()
 
     def _save_stored_object_keys(self):
-        """Save the unique path of each of the objects stored in the storage system.
+        """Save the unique key of each of the objects stored in the storage system.
         """
-        key_path = path.join(self._root_key, self._stored_object_keys_file)
-        self.store_object(key_path, self._stored_object_keys)
+        self.store_object(self._stored_object_keys_file, self._stored_object_keys)
 
     def store_object(self, storage_key, object_to_store):
         """Store an object in the estimators storage system.
@@ -100,15 +87,16 @@ class PropertyEstimatorStorage:
         Parameters
         ----------
         storage_key: str
-            A unique key that describes where (/ how) in the storage system an
-            object gets stored. This may be a file path for example.
+            A unique key that describes where the object will be stored in
+             the storage system.
         object_to_store: Any
             The object to store. The object must be pickle serializable.
         """
-        if storage_key not in self._stored_object_keys:
-            self._stored_object_keys.add(storage_key)
+        if storage_key in self._stored_object_keys:
+            return
 
-            self._save_stored_object_keys()
+        self._stored_object_keys.add(storage_key)
+        self._save_stored_object_keys()
 
     def retrieve_object(self, storage_key):
         """Retrieves a stored object for the estimators storage system.
@@ -116,13 +104,13 @@ class PropertyEstimatorStorage:
         Parameters
         ----------
         storage_key: str
-            A unique key that describes where (/ how) in the storage system an
-            object gets stored. This may be a file path for example.
+            A unique key that describes where the stored object can be found
+            within the storage system.
 
         Returns
         -------
-        Any, None
-            The stored object if present, otherwise None.
+        Any, optional
+            The stored object if the object key is found, otherwise None.
         """
         raise NotImplementedError()
 
@@ -133,8 +121,8 @@ class PropertyEstimatorStorage:
         Parameters
         ----------
         storage_key: str
-            A unique key that describes where (/ how) in the storage system an
-            object gets stored. This may be a file path for example.
+            A unique key that describes where the stored object can be found
+            within the storage system.
 
         Returns
         -------
@@ -146,38 +134,29 @@ class PropertyEstimatorStorage:
         """Load the unique id and hash keys of each of the force fields which
          have been stored in the force field directory (``self._force_field_root``).
         """
-        hash_file_path = path.join(self._force_field_root,
-                                   self._force_field_hash_file)
+        force_field_id_map = self.retrieve_object(self._force_field_id_map_file)
 
-        if not self.has_object(hash_file_path):
-            return
+        if force_field_id_map is None:
+            force_field_id_map = {}
 
-        force_field_hashes = self.retrieve_object(hash_file_path)
+        for unique_id in force_field_id_map:
 
-        if force_field_hashes is None:
-            force_field_hashes = {}
+            force_field_key = 'force_field_{}'.format(unique_id)
 
-        for unique_id in force_field_hashes:
-
-            force_field_path = path.join(self._force_field_root, unique_id)
-
-            if not self.has_object(force_field_path):
+            if not self.has_object(force_field_key):
                 # The force field file does not exist, so skip the entry.
                 continue
 
-            self._force_field_hashes[unique_id] = force_field_hashes[unique_id]
+            self._force_field_id_map[unique_id] = force_field_id_map[unique_id]
 
-        # Re-write a fresh copy of the file so that only force fields that
+        # Store a fresh copy of the hashes so that only force fields that
         # exist are actually referenced.
         self._save_force_field_hashes()
 
     def _save_force_field_hashes(self):
         """Save the unique id and force field hash key dictionary.
         """
-        hash_file_path = path.join(self._force_field_root,
-                                   self._force_field_hash_file)
-
-        self.store_object(hash_file_path, self._force_field_hashes)
+        self.store_object(self._force_field_id_map_file, self._force_field_id_map)
 
     @staticmethod
     def _force_field_to_hash(force_field):
@@ -215,16 +194,16 @@ class PropertyEstimatorStorage:
 
         hash_string = self._force_field_to_hash(force_field)
 
-        for unique_id in self._force_field_hashes:
+        for unique_id in self._force_field_id_map:
 
-            existing_hash = self._force_field_hashes[unique_id]
+            existing_hash = self._force_field_id_map[unique_id]
 
             if hash_string != existing_hash:
                 continue
 
-            existing_path = self.get_force_field_path(unique_id)
+            force_field_key = 'force_field_{}'.format(unique_id)
 
-            if not self.has_object(existing_path):
+            if not self.has_object(force_field_key):
                 # For some reason the force field got deleted..
                 continue
 
@@ -245,9 +224,8 @@ class PropertyEstimatorStorage:
         ForceField, optional
             The force field if present in the storage system with the given key, otherwise None.
         """
-
-        force_field_path = self.get_force_field_path(unique_id)
-        return self.retrieve_object(force_field_path)
+        force_field_key = 'force_field_{}'.format(unique_id)
+        return self.retrieve_object(force_field_key)
 
     def store_force_field(self, unique_id, force_field):
         """Store the force field in the cached force field
@@ -266,24 +244,127 @@ class PropertyEstimatorStorage:
         """
 
         hash_string = self._force_field_to_hash(force_field)
-        force_field_path = self.get_force_field_path(unique_id)
+        force_field_key = 'force_field_{}'.format(unique_id)
 
-        self.store_object(force_field_path, force_field)
-        self._force_field_hashes[unique_id] = hash_string
+        self.store_object(force_field_key, force_field)
 
-        self._save_force_field_hashes()
+        if unique_id not in self._force_field_id_map or hash_string != self._force_field_id_map[unique_id]:
 
-    def get_force_field_path(self, unique_id):
-        """Returns the storage path to the force field with the provided id.
+            self._force_field_id_map[unique_id] = hash_string
+            self._save_force_field_hashes()
+
+    def _load_simulation_data_map(self):
+        """Load the dictionary which tracks which stored simulation data
+        was calculated for a specific substance.
+        """
+        _simulation_data_by_substance = self.retrieve_object(self._simulation_data_by_substance_file)
+
+        if _simulation_data_by_substance is None:
+            _simulation_data_by_substance = {}
+
+        for substance_id in _simulation_data_by_substance:
+
+            self._simulation_data_by_substance[substance_id] = []
+
+            for simulation_data_key in _simulation_data_by_substance[substance_id]:
+
+                if not self.has_object(simulation_data_key):
+                    # The force field file does not exist, so skip the entry.
+                    continue
+
+                self._simulation_data_by_substance[substance_id].append(simulation_data_key)
+
+        # Store a fresh copy of the hashes so that only force fields that
+        # exist are actually referenced.
+        self._save_simulation_data_map()
+
+    def _save_simulation_data_map(self):
+        """Save the unique id and simulation data key by substance dictionary.
+        """
+        self.store_object(self._simulation_data_by_substance_file, self._simulation_data_by_substance)
+
+    def retrieve_simulation_data(self, substance_id):
+        """Retrieves any data that has been stored
+        for a given substance.
 
         Parameters
         ----------
-        unique_id: str
-            The unique id of the force field whose path should be retrieved
+        substance_id: str
+            The id of the substance to check for.
 
         Returns
         -------
-        str
-            The path to the force field.
+        list of StoredSimulationData, optional
+            A list of the stored data if present in the storage system, otherwise None.
         """
-        return path.join(self._force_field_root, unique_id)
+
+        if substance_id not in self._simulation_data_by_substance:
+            return None
+
+        returned_data = []
+
+        for simulation_data_key in self._simulation_data_by_substance[substance_id]:
+            returned_data.append(self.retrieve_object(simulation_data_key))
+
+        return returned_data
+
+    def store_simulation_data(self, substance_id, simulation_data):
+        """Store the simulation data.
+
+        Notes
+        -----
+        If the storage system already contains equivalent information (i.e data stored
+        for the same substance, thermodynamic state and parameter set) then the
+        data with the longest autocorrelation time will be retained.
+
+        Parameters
+        ----------
+        substance_id: str
+            The id of the substance to which the data belongs.
+        simulation_data: StoredSimulationData
+            The simulation data to store.
+        """
+
+        simulation_data_key = None
+        data_to_store = None
+
+        if substance_id in self._simulation_data_by_substance:
+
+            for stored_data_key in self._simulation_data_by_substance[substance_id]:
+
+                stored_data = self.retrieve_object(stored_data_key)
+
+                if stored_data is None:
+                    continue
+
+                if simulation_data.thermodynamic_state != stored_data.thermodynamic_state:
+                    continue
+
+                if simulation_data.parameter_set_id != stored_data.parameter_set_id:
+                    continue
+
+                if stored_data.autocorrelation_time < simulation_data.autocorrelation_time:
+                    continue
+
+                if (simulation_data.autocorrelation_time == stored_data.autocorrelation_time and
+                    stored_data.effective_samples < simulation_data.effective_samples):
+                    continue
+
+                data_to_store = stored_data
+                simulation_data_key = stored_data_key
+
+        if simulation_data_key is None:
+
+            simulation_data_key = "{}_{}".format(substance_id, uuid.uuid4())
+            data_to_store = simulation_data
+
+        self.store_object(simulation_data_key, data_to_store)
+
+        if (substance_id not in self._simulation_data_by_substance or
+                simulation_data_key not in self._simulation_data_by_substance[substance_id]):
+
+            if substance_id not in self._simulation_data_by_substance:
+                self._simulation_data_by_substance[substance_id] = []
+
+            self._simulation_data_by_substance[substance_id].append(simulation_data_key)
+            self._save_simulation_data_map()

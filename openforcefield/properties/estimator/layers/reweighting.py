@@ -43,9 +43,12 @@ class ReweightingLayer(PropertyCalculationLayer):
 
         for physical_property in data_model.queued_properties:
 
+            existing_data = storage_backend.retrieve_simulation_data(str(physical_property.substance))
+
             reweighting_future = calculation_backend.submit_task(ReweightingLayer.perform_reweighting,
                                                                  physical_property,
-                                                                 parameter_set)
+                                                                 parameter_set,
+                                                                 existing_data)
 
             reweighting_futures.append(reweighting_future)
 
@@ -58,15 +61,24 @@ class ReweightingLayer(PropertyCalculationLayer):
                                                 synchronous)
 
     @staticmethod
-    def perform_reweighting(physical_property, parameter_set):
+    def perform_reweighting(physical_property, parameter_set, existing_data):
         """A placeholder method that would be used to attempt
         to reweight previous calculations to yield the desired
         property.
 
         .. warning :: This method has not yet been implemented.
+
+        Parameters
+        ----------
+        physical_property: PhysicalProperty
+            The physical property to attempt to estimate by reweighting.
+        parameter_set: ForceField
+            The force field parameters to use when estimating the property.
+        existing_data: list of StoredSimulationData
+            Data which has been stored from previous calculations on systems
+            of the same composition as the desired property.
         """
 
-        # For now the return tuple indicates that the reweighting
-        # was not sufficiently accurate to estimate the property (False)
-        # and simply returns the property back to be passed to the next layer.
-        return False, physical_property
+        # A return value indicates that the reweighting layer did not
+        # have access to enough information to accurately estimate the property.
+        return None

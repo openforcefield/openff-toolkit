@@ -18,14 +18,21 @@ Authors
 import copy
 import logging
 import os
+import pickle
+import traceback
 import uuid
 from os import path
 
+import mdtraj
+from simtk.openmm import app
+
 from openforcefield.properties import PhysicalProperty, CalculationSource
 from openforcefield.properties.estimator import CalculationSchema
-from openforcefield.properties.estimator.components import protocols
 from openforcefield.properties.estimator.layers.base import register_calculation_layer, PropertyCalculationLayer
+from openforcefield.properties.estimator.storage import StoredSimulationData
+from openforcefield.properties.estimator.workflow import protocols
 from openforcefield.utils import graph
+from .base import CalculationLayerResult
 
 
 # =============================================================================================
@@ -67,6 +74,7 @@ class DirectCalculation:
         self.final_value_source = None
         self.final_uncertainty_source = None
         self.final_trajectory_source = None
+        self.final_coordinate_source = None
 
         schema = CalculationSchema.parse_raw(schema.json())
 
@@ -119,9 +127,12 @@ class DirectCalculation:
 
         self.final_uncertainty_source = copy.deepcopy(schema.final_uncertainty_source)
         self.final_uncertainty_source.append_uuid(self.uuid)
-        
+
         self.final_trajectory_source = copy.deepcopy(schema.final_trajectory_source)
         self.final_trajectory_source.append_uuid(self.uuid)
+
+        self.final_coordinate_source = copy.deepcopy(schema.final_coordinate_source)
+        self.final_coordinate_source.append_uuid(self.uuid)
 
     def _build_dependants_graph(self):
         """Builds a dictionary of key value pairs where each key represents the id of a
@@ -207,6 +218,7 @@ class DirectCalculation:
         self.final_value_source.replace_protocol(old_protocol.id, new_protocol.id)
         self.final_uncertainty_source.replace_protocol(old_protocol.id, new_protocol.id)
         self.final_trajectory_source.replace_protocol(old_protocol.id, new_protocol.id)
+        self.final_coordinate_source.replace_protocol(old_protocol.id, new_protocol.id)
 
 
 class DirectCalculationGraph:
@@ -393,19 +405,23 @@ class DirectCalculationGraph:
             value_node_id = calculation.final_value_source.start_protocol
             uncertainty_node_id = calculation.final_uncertainty_source.start_protocol
             trajectory_node_id = calculation.final_trajectory_source.start_protocol
+            coordinate_node_id = calculation.final_coordinate_source.start_protocol
 
-            # Store the stripped trajectories of each property being calculated.
-            backend.submit_task(DirectCalculationGraph._store_results,
-                                submitted_futures[trajectory_node_id],
-                                calculation.final_trajectory_source)
+            final_futures = [
+                submitted_futures[value_node_id],
+                submitted_futures[uncertainty_node_id],
+                submitted_futures[trajectory_node_id],
+                submitted_futures[coordinate_node_id]
+            ]
 
             # Gather the values and uncertainties of each property being calculated.
             value_futures.append(backend.submit_task(DirectCalculationGraph._gather_results,
-                                                     submitted_futures[value_node_id],
+                                                     calculation.physical_property,
                                                      calculation.final_value_source,
-                                                     submitted_futures[uncertainty_node_id],
                                                      calculation.final_uncertainty_source,
-                                                     calculation.physical_property))
+                                                     calculation.final_coordinate_source,
+                                                     calculation.final_trajectory_source,
+                                                     *final_futures))
 
         return value_futures
 
@@ -476,15 +492,17 @@ class DirectCalculationGraph:
             output_dictionary = protocol.execute(directory)
         except Exception as e:
             # Except the unexpected...
+            formatted_exception = traceback.format_exception(None, e, e.__traceback__)
+
             return protocol.id, protocols.PropertyCalculatorException(directory=directory,
-                                                                      message='An unhandled exception '
-                                                                              'occurred: {}'.format(e))
+                                                                      message='An unhandled exception occurred: '
+                                                                              '{}'.format(formatted_exception))
 
         return protocol.id, output_dictionary
 
     @staticmethod
-    def _gather_results(value_result, value_reference, uncertainty_result,
-                        uncertainty_reference, property_to_return):
+    def _gather_results(property_to_return, value_reference, uncertainty_reference,
+                        coordinate_reference, trajectory_reference, *protocol_results):
         """Gather the value and uncertainty calculated from the submission graph
         and store them in the property to return.
 
@@ -503,100 +521,60 @@ class DirectCalculationGraph:
 
         Returns
         -------
-        True, PhysicalProperty
-            Returns a tuple of a True boolean (to indicate that this property
-            was calculated by this layer) and the calculated property. If any
-            errors occurred, these will be stored in the properties provenance.
+        CalculationLayerResult
+            The result of attempting to estimate this property by direct simulation.
         """
 
-        succeeded = True
-        failure_object = None
+        return_object = CalculationLayerResult()
+        return_object.property_id = property_to_return.id
 
-        # Make sure none of the protocols failed and we actually have a value
-        # and uncertainty.
-        if isinstance(value_result[1], protocols.PropertyCalculatorException):
+        results_by_id = {}
 
-            failure_object = value_result[1]
-            succeeded = False
+        for protocol_id, protocol_results in protocol_results:
 
-        if isinstance(uncertainty_result[1], protocols.PropertyCalculatorException):
+            # Make sure none of the protocols failed and we actually have a value
+            # and uncertainty.
+            if isinstance(protocol_results, protocols.PropertyCalculatorException):
 
-            failure_object = uncertainty_result[1]
-            succeeded = False
+                return_object.calculation_error = protocol_results
+                return return_object
 
-        if succeeded:
-
-            # TODO: Fill in provenance
-            property_to_return.source = CalculationSource(fidelity=SimulationLayer.__name__,
-                                                          provenance='')
-
-            value_results = {}
-
-            for output_path, output_value in value_result[1].items():
+            for output_path, output_value in protocol_results.items():
 
                 property_name, protocol_ids = protocols.ProtocolPath.to_components(output_path)
 
-                if len(protocol_ids) == 0 or (len(protocol_ids) > 0 and protocol_ids[0] != value_result[0]):
-                    protocol_ids.insert(0, value_result[0])
+                if len(protocol_ids) == 0 or (len(protocol_ids) > 0 and protocol_ids[0] != protocol_id):
+                    protocol_ids.insert(0, protocol_id)
 
                 final_path = protocols.ProtocolPath(property_name, *protocol_ids)
-                value_results[final_path] = output_value
+                results_by_id[final_path] = output_value
 
-            uncertainty_results = {}
+        # TODO: Fill in provenance
+        property_to_return.source = CalculationSource(fidelity=SimulationLayer.__name__,
+                                                      provenance='')
 
-            for output_path, output_value in uncertainty_result[1].items():
+        property_to_return.value = results_by_id[value_reference]
+        property_to_return.uncertainty = results_by_id[uncertainty_reference]
 
-                property_name, protocol_ids = protocols.ProtocolPath.to_components(output_path)
+        return_object.calculated_property = property_to_return
 
-                if len(protocol_ids) == 0 or (len(protocol_ids) > 0 and protocol_ids[0] != uncertainty_result[0]):
-                    protocol_ids.insert(0, uncertainty_result[0])
+        data_to_store = StoredSimulationData()
 
-                final_path = protocols.ProtocolPath(property_name, *protocol_ids)
-                uncertainty_results[final_path] = output_value
+        data_to_store.substance = property_to_return.substance
+        data_to_store.thermodynamic_state = property_to_return.thermodynamic_state
 
-            property_to_return.value = value_results[value_reference]
-            property_to_return.uncertainty = uncertainty_results[uncertainty_reference]
+        data_to_store.provenance = property_to_return.source
 
-        else:
+        data_to_store.source_calculation_id = property_to_return.id
 
-            property_to_return.source = CalculationSource(fidelity=SimulationLayer.__name__,
-                                                          provenance=failure_object.json())
+        coordinate_path = results_by_id[coordinate_reference]
+        trajectory_path = results_by_id[trajectory_reference]
 
-        return True, property_to_return
+        data_to_store.trajectory_data = mdtraj.load_dcd(trajectory_path, top=coordinate_path)
 
-    @staticmethod
-    def _store_results(trajectory_result, trajectory_reference):
-        """Store the trajectories generated by each calculation.
+        return_object.data_to_store = data_to_store
 
-        Todo
-        ----
-        Implement
-
-        Parameters
-        ----------
-        trajectory_result: dict of string and Any
-            ...
-        trajectory_reference: ProtocolPath
-            ...
-        """
-
-        if isinstance(trajectory_result[1], protocols.PropertyCalculatorException):
-            logging.info('Could not store the trajectory {}'.format(trajectory_result[1].json()))
-            return
-
-        trajectory_results = {}
-
-        for output_path, output_value in trajectory_result[1].items():
-
-            property_name, protocol_ids = protocols.ProtocolPath.to_components(output_path)
-
-            if len(protocol_ids) == 0 or (len(protocol_ids) > 0 and protocol_ids[0] != trajectory_result[0]):
-                protocol_ids.insert(0, trajectory_result[0])
-
-            final_path = protocols.ProtocolPath(property_name, *protocol_ids)
-            trajectory_results[final_path] = output_value
-
-        trajectory_path = trajectory_results[trajectory_reference]
+        return return_object
 
 
 # =============================================================================================
@@ -655,7 +633,12 @@ class SimulationLayer(PropertyCalculationLayer):
     def schedule_calculation(calculation_backend, storage_backend, layer_directory,
                              data_model, callback, synchronous=False):
 
-        force_field_path = storage_backend.get_force_field_path(data_model.parameter_set_id)
+        # Store a temporary copy of the force field for protocols to easily access.
+        force_field = storage_backend.retrieve_force_field(data_model.parameter_set_id)
+        force_field_path = path.join(layer_directory, 'force_field_{}'.format(data_model.parameter_set_id))
+
+        with open(force_field_path, 'wb') as file:
+            pickle.dump(force_field, file)
 
         calculation_graph = SimulationLayer._build_calculation_graph(layer_directory,
                                                                      data_model.queued_properties,

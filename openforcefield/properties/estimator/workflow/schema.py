@@ -20,9 +20,9 @@ from pydantic import BaseModel
 
 from typing import Dict, Optional
 
-from openforcefield.properties.estimator.components.protocols import ProtocolSchema, \
+from openforcefield.properties.estimator.workflow.protocols import ProtocolSchema, \
     available_protocols, ProtocolPath
-from openforcefield.properties.estimator.components.groups import ProtocolGroupSchema
+from openforcefield.properties.estimator.workflow.groups import ProtocolGroupSchema
 
 
 # =============================================================================================
@@ -40,6 +40,7 @@ class CalculationSchema(BaseModel):
     final_value_source: Optional[ProtocolPath] = None
     final_uncertainty_source: Optional[ProtocolPath] = None
 
+    final_coordinate_source: Optional[ProtocolPath] = None
     final_trajectory_source: Optional[ProtocolPath] = None
 
     class Config:
@@ -60,6 +61,9 @@ class CalculationSchema(BaseModel):
         if self.final_uncertainty_source.start_protocol not in self.protocols:
             raise ValueError('The uncertainty source {} does not exist.'.format(self.final_uncertainty_source))
 
+        if self.final_coordinate_source.start_protocol not in self.protocols:
+            raise ValueError('The coordinate source {} does not exist.'.format(self.final_coordinate_source))
+
         if self.final_trajectory_source.start_protocol not in self.protocols:
             raise ValueError('The trajectory source {} does not exist.'.format(self.final_trajectory_source))
 
@@ -76,6 +80,8 @@ class CalculationSchema(BaseModel):
                 protocol_object.get_value(self.final_uncertainty_source)
             if protocol_name == self.final_trajectory_source.start_protocol:
                 protocol_object.get_value(self.final_trajectory_source)
+            if protocol_name == self.final_coordinate_source.start_protocol:
+                protocol_object.get_value(self.final_coordinate_source)
 
             for input_path in protocol_object.required_inputs:
 

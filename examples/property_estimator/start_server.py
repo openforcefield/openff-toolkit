@@ -14,14 +14,14 @@ def start_property_estimator_server():
 
     setup_timestamp_logging()
 
-    working_directory = 'working-directory'
+    working_directory = 'working_directory'
 
     # Remove any existing data.
     if path.isdir(working_directory):
         shutil.rmtree(working_directory)
 
     calculation_backend = DaskLocalClusterBackend(1, 1)
-    storage_backend = LocalFileStorage(root_key='stored_data')
+    storage_backend = LocalFileStorage()
 
     property_server = runner.PropertyCalculationRunner(calculation_backend,
                                                        storage_backend,

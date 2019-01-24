@@ -29,7 +29,7 @@ setup(
         'openforcefield/properties/datasets',
         'openforcefield/properties/estimator',
         'openforcefield/properties/estimator/backends',
-        'openforcefield/properties/estimator/components',
+        'openforcefield/properties/estimator/workflow',
         'openforcefield/properties/estimator/layers',
         'openforcefield/properties/estimator/storage',
         'openforcefield/typing',

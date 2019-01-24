@@ -30,7 +30,7 @@ from tornado.tcpclient import TCPClient
 
 from openforcefield.properties import PhysicalProperty
 from openforcefield.properties.estimator import CalculationSchema
-from openforcefield.properties.estimator.components.protocols import ProtocolPath
+from openforcefield.properties.estimator.workflow.protocols import ProtocolPath
 from openforcefield.properties.estimator.layers import SurrogateLayer, ReweightingLayer, SimulationLayer
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils.serialization import serialize_quantity

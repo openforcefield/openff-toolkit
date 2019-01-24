@@ -611,7 +611,7 @@ class ConditionalGroup(ProtocolGroup):
                                                                                               self.id))
                 return return_value
 
-            if self._current_iteration >= self._max_iterations:
+            if current_iteration >= self._max_iterations:
 
                 return PropertyCalculatorException(directory=directory,
                                                    message='Conditional while loop failed to '

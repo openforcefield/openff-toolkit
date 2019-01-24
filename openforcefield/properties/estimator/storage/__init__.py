@@ -1,2 +1,4 @@
 from .base import PropertyEstimatorStorage
-from .file import LocalFileStorage
+from .localfile import LocalFileStorage
+
+from .dataclasses import StoredSimulationData

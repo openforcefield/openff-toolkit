@@ -31,7 +31,7 @@ from tornado.tcpserver import TCPServer
 
 from openforcefield.properties import PhysicalProperty
 from openforcefield.properties.estimator.client import PropertyEstimatorDataModel, PropertyEstimatorOptions
-from openforcefield.properties.estimator.components.protocols import ProtocolPath, PropertyCalculatorException
+from openforcefield.properties.estimator.workflow.protocols import ProtocolPath, PropertyCalculatorException
 from openforcefield.properties.estimator.layers import available_layers
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils.serialization import serialize_quantity
@@ -207,6 +207,7 @@ class PropertyCalculationRunner(TCPServer):
             runner_data_model.id = existing_id
 
             if runner_data_model.json() == self._queued_calculations[existing_id].json():
+
                 calculation_id = existing_id
                 should_launch = False
 

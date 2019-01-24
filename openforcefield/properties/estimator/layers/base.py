@@ -17,6 +17,9 @@ Authors
 
 import logging
 
+from openforcefield.properties import PhysicalProperty
+from openforcefield.properties.estimator.storage import StoredSimulationData
+from openforcefield.properties.estimator.workflow.protocols import PropertyCalculatorException
 
 # =============================================================================================
 # Registration Decorators
@@ -49,6 +52,21 @@ def return_args(*args):
 # Base Layer
 # =============================================================================================
 
+class CalculationLayerResult:
+    """The output returned from attempting to calculate a property on
+     a PropertyCalculationLayer."""
+
+    def __init__(self):
+        """Constructs a new CalculationLayerResult object.
+        """
+        self.property_id: str = None
+
+        self.calculated_property: PhysicalProperty = None
+        self.calculation_error: PropertyCalculatorException = None
+
+        self.data_to_store: StoredSimulationData = None
+
+
 class PropertyCalculationLayer:
     """An abstract representation of a calculation layer in the property calculation stack.
 
@@ -61,7 +79,7 @@ class PropertyCalculationLayer:
     @staticmethod
     def _await_results(calculation_backend, storage_backend, layer_directory, data_model,
                        callback, submitted_futures, synchronous=False):
-        """A method to handle passing the results of this layer back to
+        """A helper method to handle passing the results of this layer back to
         the main thread.
 
         Parameters
@@ -89,12 +107,31 @@ class PropertyCalculationLayer:
             results = list(future_object.result())
             returned_data_model = results.pop(0)
 
-            for calculated_by_layer, returned_output in results:
+            for returned_output in results:
 
-                if not calculated_by_layer:
+                if returned_output is None:
+                    # Indicates the layer could not calculate this
+                    # particular property.
                     continue
 
-                matches = [x for x in returned_data_model.queued_properties if x.id == returned_output.id]
+                return_object = None
+
+                if returned_output.calculation_error is not None:
+                    return_object = returned_output.calculation_error
+                else:
+                    return_object = returned_output.calculated_property
+
+                # Make sure to store any important calculation data.
+                if returned_output.data_to_store is not None and returned_output.calculated_property is not None:
+
+                    if returned_output.data_to_store.parameter_set_id is None:
+                        returned_output.data_to_store.parameter_set_id = data_model.parameter_set_id
+
+                    substance_id = str(returned_output.calculated_property.substance)
+
+                    storage_backend.store_simulation_data(substance_id, returned_output.data_to_store)
+
+                matches = [x for x in returned_data_model.queued_properties if x.id == returned_output.property_id]
 
                 if len(matches) != 1:
                     logging.info('An id conflict occurred... unexpected results may ensue.')
@@ -102,7 +139,7 @@ class PropertyCalculationLayer:
                 for match in matches:
                     returned_data_model.queued_properties.remove(match)
 
-                returned_data_model.calculated_properties.append(returned_output)
+                returned_data_model.calculated_properties.append(return_object)
 
             callback(returned_data_model)
 

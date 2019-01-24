@@ -55,7 +55,7 @@ def calculate_statistical_inefficiency(time_series, minimum_samples=3):
     """
 
     number_of_timesteps = time_series.shape[0]
-    time_series_dimension = time_series.shape[1]
+    time_series_dimension = 1 if len(time_series.shape) == 1 else time_series.shape[1]
 
     time_series_mean = time_series.mean(0)
 
@@ -64,7 +64,11 @@ def calculate_statistical_inefficiency(time_series, minimum_samples=3):
     sigma_squared_array = np.zeros(number_of_timesteps)
 
     for i in range(number_of_timesteps):
-        sigma_squared_array[i] = shifted_data[i].dot(shifted_data[i])
+
+        if time_series_dimension > 1:
+            sigma_squared_array[i] = shifted_data[i].dot(shifted_data[i])
+        else:
+            sigma_squared_array[i] = shifted_data[i] * shifted_data[i]
 
     sigma_squared = sigma_squared_array.mean()
 
@@ -79,7 +83,11 @@ def calculate_statistical_inefficiency(time_series, minimum_samples=3):
         autocorrelation_array = np.zeros([number_of_timesteps - current_timestep, time_series_dimension])
 
         for i in range(number_of_timesteps - current_timestep):
-            autocorrelation_array[i] = shifted_data[i].dot(shifted_data[i + current_timestep])
+
+            if time_series_dimension > 1:
+                autocorrelation_array[i] = shifted_data[i].dot(shifted_data[i + current_timestep])
+            else:
+                autocorrelation_array[i] = shifted_data[i] * shifted_data[i + current_timestep]
 
         autocorrelation_function = autocorrelation_array.mean() / sigma_squared
 

@@ -21,8 +21,8 @@ from simtk import unit
 
 from openforcefield.properties.datasets import register_thermoml_property
 from openforcefield.properties.estimator import CalculationSchema, register_estimable_property
-from openforcefield.properties.estimator.components import protocols, groups
-from openforcefield.properties.estimator.components.protocols import AverageTrajectoryProperty, \
+from openforcefield.properties.estimator.workflow import protocols, groups
+from openforcefield.properties.estimator.workflow.protocols import AverageTrajectoryProperty, \
     register_calculation_protocol, ProtocolPath, PropertyCalculatorException
 from openforcefield.properties.properties import PhysicalProperty
 from openforcefield.utils import statistics
@@ -129,8 +129,8 @@ class Density(PhysicalProperty):
 
         npt_equilibration.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
 
-        npt_equilibration.steps = 100000  # Debug settings.
-        npt_equilibration.output_frequency = 5000  # Debug settings.
+        npt_equilibration.steps = 2  # Debug settings.
+        npt_equilibration.output_frequency = 1  # Debug settings.
 
         npt_equilibration.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
@@ -144,8 +144,8 @@ class Density(PhysicalProperty):
 
         npt_production.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
 
-        npt_production.steps = 1000000  # Debug settings.
-        npt_production.output_frequency = 50000  # Debug settings.
+        npt_production.steps = 2  # Debug settings.
+        npt_production.output_frequency = 1  # Debug settings.
 
         npt_production.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
@@ -201,6 +201,9 @@ class Density(PhysicalProperty):
         # Define where the final values come from.
         schema.final_value_source = ProtocolPath('value', converge_uncertainty.id, extract_density.id)
         schema.final_uncertainty_source = ProtocolPath('uncertainty', converge_uncertainty.id, extract_density.id)
+
+        schema.final_coordinate_source = ProtocolPath('output_coordinate_file', converge_uncertainty.id,
+                                                                                npt_production.id)
 
         schema.final_trajectory_source = ProtocolPath('output_trajectory_path', extract_uncorrelated_trajectory.id)
 

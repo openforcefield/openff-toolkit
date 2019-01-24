@@ -65,7 +65,6 @@ class SurrogateLayer(PropertyCalculationLayer):
         .. warning :: This method has not yet been implemented.
         """
 
-        # For now the return tuple indicates that the surrogate modelling
-        # was not sufficiently accurate to estimate the property (False)
-        # and simply returns the property back to be passed to the next layer.
-        return False, physical_property
+        # A return value indicates that the surrogate layer did not
+        # have access to enough information to accurately estimate the property.
+        return None
