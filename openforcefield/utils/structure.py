@@ -43,9 +43,7 @@ def generateSMIRNOFFStructure(oemol):
     """
     from openforcefield.typing.engines.smirnoff import ForceField
 
-    ff = get_testdata_filename('forcefield/smirnoff99Frosst.offxml')
-    with open(ff) as ffxml:
-        mol_ff = ForceField(ffxml)
+    mol_ff = ForceField('smirnoff99Frosst.offxml')
 
     # TODO: Charges should be handled by ForceField now, so charging isn't necessary
     if not checkCharges(oemol):
