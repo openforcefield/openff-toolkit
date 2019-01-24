@@ -16,7 +16,7 @@ from openforcefield.utils import get_data_filename, extractPositionsFromOEMol, g
 
 # Define what molecule to work on, and a few simulation parameters
 mol_filename = 'AlkEthOH_r51.mol2'
-offxml_filename = get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml') # SMIRNOFF forcefield
+offxml_filename = 'Frosst_AlkEthOH_parmAtFrosst.offxml'  # SMIRNOFF forcefield
 time_step = 2*unit.femtoseconds # simulation timestep
 temperature = 300*unit.kelvin # simulation temperature
 friction = 1/unit.picosecond # collision rate
