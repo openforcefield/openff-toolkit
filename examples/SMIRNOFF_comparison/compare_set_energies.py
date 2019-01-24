@@ -28,7 +28,7 @@ print('Found {} files to test'.format(len(mol_filepaths)))
 
 # Load forcefield
 from openforcefield.typing.engines.smirnoff import ForceField
-forcefield = ForceField('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml')
+forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
 
 from openforcefield.topology import Molecule
 for mol_filepath in mol_filepaths:

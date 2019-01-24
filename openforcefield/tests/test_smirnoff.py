@@ -52,7 +52,7 @@ from simtk.openmm import app
 
 # TODO: Move these to setup?
 # These paths should only be found in the test data directories, so we need to use get_data_filename()
-AlkEthOH_offxml_filename = get_data_filename('forcefield/Frosst_AlkEthOH.offxml')
+AlkEthOH_offxml_filename = 'Frosst_AlkEthOH.offxml'
 AlkEthOH_molecules_filename = get_data_filename('molecules/AlkEthOH_test_filt1_tripos.mol2')
 MiniDrugBank_molecules_filename = get_data_filename('molecules/MiniDrugBank_tripos.mol2')
 #chargeincrement_offxml_filename = get_data_filename('chargeincrement-test.offxml')
@@ -503,8 +503,7 @@ class TestXMLForceField(unittest.TestCase):
     def test_create_gbsa():
         """Test reading of ffxml files with GBSA support.
         """
-        gbsa_offxml_filename = get_data_filename('Frosst_AlkEthOH_GBSA.offxml')
-        forcefield = ForceField(gbsa_offxml_filename)
+        forcefield = ForceField('Frosst_AlkEthOH_GBSA.offxml')
 
     #
     # Tests for ForceField writing to XML files
@@ -666,7 +665,7 @@ class TestForceFieldEnergies(unittest.TestCase):
         molecule_names = [ 'r118', 'r12', 'c1161', 'r0', 'c100', 'c38', 'c1266' ]
 
         # Load special parm@frosst with parm99/parm@frosst bugs re-added for testing
-        forcefield = ForceField( get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml') )
+        forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
 
         # Loop over molecules, load OEMols and prep for comparison/do comparison
         for molecule_name in molecule_names:
@@ -721,7 +720,7 @@ class TestForceFieldEnergies(unittest.TestCase):
         topology = molecule.to_topology()
 
         # Load forcefield
-        ff = ForceField(get_data_filename('forcefield/benzene_minimal.offxml'))
+        ff = ForceField('benzene_minimal.offxml')
 
         # Load AMBER files and compare
         inpcrd = get_data_filename('molecules/benzene.crd')
@@ -747,7 +746,7 @@ class TestForceFieldLabeling(unittest.TestCase):
         """
         from openforcefield.topology.testsystems import SMILESTopology
         topology = SMILESTopology('CCC')
-        forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
+        forcefield = ForceField('Frosst_AlkEthOH.offxml')
         labels = forcefield.label_molecules(topology)[0]
 
         # Check that force terms aren't empty
@@ -764,8 +763,6 @@ class TestExceptionHandling(unittest.TestCase):
         from openforcefield.topology.testsystems import SMILESTopology
         topology = SMILESTopology('CCC')
 
-        offxml_filename = get_data_filename('forcefield/Frosst_AlkEthOH.offxml')
-
         # Test vdW error checking by wiping out required parameter
         parameter_edits = [
             ('vdW', '[#136:1]'),
@@ -774,7 +771,7 @@ class TestExceptionHandling(unittest.TestCase):
             ('ProperTorsions', '[#136:1]~[*:2]~[*:3]~[*:4]'),
             ]
         for (tag, smirks) in parameter_edits:
-            forcefield = ForceField(offxml_filename)
+            forcefield = ForceField('Frosst_AlkEthOH.offxml')
             forcefield.forces[tag].parameters[0].smirks = smirks
             with self.assertRaises(Exception):
                 system = forcefield.create_system(topology)
@@ -808,7 +805,7 @@ def test_improper_pyramidal(verbose = False):
     oechem.OETriposAtomTypes(mol)
     oechem.OETriposAtomNames(mol)
     # Set up minimization
-    ff = ForceField(get_data_filename('forcefield/ammonia_minimal.offxml'))
+    ff = ForceField('ammonia_minimal.offxml')
     topology, positions = oemol_to_openmmTop(mol)
     system = ff.createSystem(topology, [mol], verbose=verbose)
     positions = extractPositionsFromOEMol(mol)
@@ -864,8 +861,7 @@ def test_change_parameters(verbose=False):
     oechem.OETriposAtomNames(mol)
 
     # Load forcefield file
-    ffxml = get_data_filename('forcefield/Frosst_AlkEthOH.offxml')
-    ff = ForceField(ffxml)
+    ff = ForceField('Frosst_AlkEthOH.offxml')
 
     topology = generateTopologyFromOEMol(mol)
     # Create initial system
