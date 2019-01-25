@@ -814,18 +814,17 @@ class ImproperTorsionHandler(ParameterHandler):
             # Ensure atoms are actually bonded correct pattern in Topology
             # For impropers, central atom is atom 1
             for (i, j) in [(0, 1), (1, 2), (1, 3)]:
-                topology.assert_bonded(topology.atom(i), topology.atom(j))
+                topology.assert_bonded(topology.atom(atom_indices[i]), topology.atom(atom_indices[j]))
 
             # Impropers are applied in three paths around the trefoil having the same handedness
-            for (periodicity, phase, k) in zip(improper.periodicity,
+            for (improper_periodicity, improper_phase, improper_k) in zip(improper.periodicity,
                                                improper.phase, improper.k):
                 # Permute non-central atoms
                 others = [atom_indices[0], atom_indices[2], atom_indices[3]]
-                for p in [(others[i], others[j], others[k])
-                          for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]]:
+                for p in [(others[i], others[j], others[k]) for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]]:
+                    print(improper_periodicity, improper_phase, improper_k)
                     force.addTorsion(atom_indices[1], p[0], p[1], p[2],
-                                     periodicity, phase, k)
-
+                                     improper_periodicity, improper_phase, improper_k)
         logger.info(
             '{} impropers added, each applied in a six-fold trefoil'.format(
                 len(impropers)))
@@ -1133,6 +1132,7 @@ class vdWHandler(ParameterHandler):
                 #force.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self._scale14)
 
 
+
 class ChargeIncrementModelHandler(ParameterHandler):
     """Handle SMIRNOFF ``<ChargeIncrementModel>`` tags"""
 
@@ -1152,6 +1152,12 @@ class ChargeIncrementModelHandler(ParameterHandler):
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
     _INFOTYPE = ChargeIncrementType  # info type to store
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create or utilize
+
+    _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
+    _VALENCE_TYPE = 'Atom'  # ChemicalEnvironment valence type expected for SMARTS
+    _INFOTYPE = ChargeIncrementType  # info type to store
+    _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
+    _DEFAULTS = {'potential': 'charmm'}
 
     def __init__(self,
                  forcefield,
