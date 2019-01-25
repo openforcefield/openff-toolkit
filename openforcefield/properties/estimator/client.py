@@ -287,6 +287,8 @@ class PropertyEstimator(object):
 
         for property_schema_name in options.calculation_schemas:
 
+            options.calculation_schemas[property_schema_name].validate_interfaces()
+
             for protocol_schema_name in options.calculation_schemas[property_schema_name].protocols:
 
                 protocol_schema = options.calculation_schemas[
