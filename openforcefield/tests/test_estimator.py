@@ -1,5 +1,6 @@
 from openforcefield.properties import Density, DielectricConstant
 from openforcefield.properties.estimator import CalculationSchema
+from openforcefield.properties.estimator.workflow.protocols import BuildCoordinatesPackmol
 
 
 def test_calculation_schema():
@@ -21,6 +22,13 @@ def test_calculation_schema():
 
     dielectric_schema_from_json = CalculationSchema.parse_raw(dielectric_json)
     print(dielectric_schema_from_json)
+
+
+def test_protocol_decorators():
+
+    value = getattr(BuildCoordinatesPackmol, 'substance')
+
+    assert value is None
 
 
 def test_simulation_layer():

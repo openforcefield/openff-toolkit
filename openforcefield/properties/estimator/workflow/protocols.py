@@ -29,6 +29,7 @@ from pydantic import BaseModel
 from simtk import openmm, unit
 from simtk.openmm import app
 
+from openforcefield.properties.substances import Substance
 from openforcefield.typing.engines import smirnoff
 from openforcefield.utils import packmol, graph, utils, statistics
 from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity, TypedBaseModel
@@ -394,17 +395,23 @@ class BaseProtocol:
 
         def __get__(self, instance, owner=None):
 
+            if instance is None:
+                return self
+
             if not hasattr(instance, self.attribute):
-                raise RuntimeError('Missing ' + self.attribute + 'attribute.')
+                raise ValueError('Missing ' + self.attribute + 'attribute.')
 
             return getattr(instance, self.attribute)
 
         def __set__(self, instance, value):
 
-            if not hasattr(instance, self.attribute):
-                raise RuntimeError('Missing ' + self.attribute + 'attribute.')
+            if instance is None:
+                raise ValueError('Unexpected ProtocolArgumentDecorator set use case.')
 
-            return setattr(instance, self.attribute, value)
+            if not hasattr(instance, self.attribute):
+                raise ValueError('Missing ' + self.attribute + 'attribute.')
+
+            setattr(instance, self.attribute, value)
 
     class InputPipe(ProtocolArgumentDecorator):
         """A custom decorator used to mark properties as a required input to
@@ -453,11 +460,12 @@ class BaseProtocol:
 
     @property
     def id(self):
+        """str: The unique id of this protocol."""
         return self._id
 
     @property
     def schema(self):
-        """ProtocolSchema: Returns a serializable schema for this object."""
+        """ProtocolSchema: A serializable schema for this object."""
         return self._get_schema()
 
     @schema.setter
@@ -483,6 +491,7 @@ class BaseProtocol:
 
     @Parameter
     def allow_merging(self):
+        """bool: If true, this protocol is allowed to merge with other identical protocols."""
         pass
 
     def __init__(self, protocol_id):
@@ -652,7 +661,7 @@ class BaseProtocol:
 
         Parameters
         ----------
-        other : BaseProtocol
+        other : :obj:`BaseProtocol`
             The protocol to compare against.
 
         Returns
@@ -751,8 +760,7 @@ class BaseProtocol:
 
 @register_calculation_protocol()
 class BuildCoordinatesPackmol(BaseProtocol):
-    """Creates a set of 3D coordinates a system defined by a
-    ``openforcefield.properties.Substance``.
+    """Creates a set of 3D coordinates with a specified composition.
 
     Notes
     -----
