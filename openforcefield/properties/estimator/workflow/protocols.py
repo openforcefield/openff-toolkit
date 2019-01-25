@@ -71,8 +71,7 @@ class PropertyCalculatorException(BaseModel):
 
 
 class ProtocolPath:
-    """
-    TODO: Document.
+    """Represents a pointer to the output of another protocol.
     """
 
     path_separator = '/'  # The character which separates protocol ids.
@@ -126,7 +125,7 @@ class ProtocolPath:
         ----------
         property_name: str
             The property name referenced by the path.
-        protocol_ids: list of str
+        protocol_ids: tuple of str
             A list of protocol ids in the order in which they will appear in the path.
         """
 

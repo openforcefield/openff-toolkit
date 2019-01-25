@@ -1,4 +1,4 @@
-.. _properties ::
+.. _propertyworkflows ::
 
 Property API
 ==================================

@@ -29,4 +29,4 @@ API documentation
   :maxdepth: 1
 
   propertyestimator
-  properties
+  propertyworkflows
