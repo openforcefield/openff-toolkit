@@ -337,30 +337,34 @@ class ProtocolSchema(TypedBaseModel):
 
 class BaseProtocol:
     """The base class for a protocol which would form one
-    step of a property calculation.
+    step of a larger property calculation workflow.
 
     A protocol may for example:
 
-        - create the coordinates of a mixed simulation box
-        - set up a bound ligand-protein system
-        - build the simulation topology
-         - perform an energy minimisation
+        * create the coordinates of a mixed simulation box
+        * set up a bound ligand-protein system
+        * build the simulation topology
+        * perform an energy minimisation
 
-    Protocols may be chained together, thus defining
-    a larger property calculation from simple building blocks.
+    An individual protocol may require a set of inputs, which may either be
+    set as constants
 
-    .. warning::
+    >>> npt_equilibration = RunOpenMMSimulation('npt_equilibration')
+    >>> npt_equilibration.ensemble = RunOpenMMSimulation.Ensemble.NPT
 
-        This class is still heavily under development and is subject to rapid changes.
+    or from the output of another protocol, pointed to by a ProtocolPath
 
-    Attributes
-    ----------
-    id : str, optional
-        The unique identity of the protocol
-    self.required_inputs : list of ProtocolPath
-        A list of the inputs that must be passed to this protocol.
-    self.provided_outputs : list of ProtocolPath
-        A list of the outputs that this protocol produces.
+    >>> npt_production = RunOpenMMSimulation('npt_production')
+    >>> # Use the coordinate file output by the npt_equilibration protocol
+    >>> # as the input to the npt_production protocol
+    >>> npt_production.input_coordinate_file = ProtocolPath('output_coordinate_file',
+    >>>                                                     npt_equilibration.id)
+
+    In this way protocols may be chained together, thus defining a larger property
+    calculation workflow from simple, reusable building blocks.
+
+    .. warning:: This class is still heavily under development and is subject to
+                 rapid changes.
     """
 
     class ProtocolArgumentDecorator(object):
@@ -922,16 +926,6 @@ class BuildCoordinatesPackmol(BaseProtocol):
 class BuildSmirnoffTopology(BaseProtocol):
     """Parametrise a set of molecules with a given smirnoff force field.
     """
-    def __init__(self, protocol_id):
-
-        super().__init__(protocol_id)
-
-        # inputs
-        self._force_field_path = None
-        self._coordinate_file = None
-        self._molecules = None
-        # outputs
-        self._system = None
 
     @BaseProtocol.InputPipe
     def force_field_path(self, value):
@@ -948,6 +942,17 @@ class BuildSmirnoffTopology(BaseProtocol):
     @BaseProtocol.OutputPipe
     def system(self):
         pass
+
+    def __init__(self, protocol_id):
+
+        super().__init__(protocol_id)
+
+        # inputs
+        self._force_field_path = None
+        self._coordinate_file = None
+        self._molecules = None
+        # outputs
+        self._system = None
 
     def execute(self, directory):
 
@@ -983,6 +988,18 @@ class RunEnergyMinimisation(BaseProtocol):
     """Minimises the energy of a passed in system.
     """
 
+    @BaseProtocol.InputPipe
+    def input_coordinate_file(self, value):
+        pass
+
+    @BaseProtocol.InputPipe
+    def system(self, value):
+        pass
+
+    @BaseProtocol.OutputPipe
+    def output_coordinate_file(self):
+        return self._final_positions
+
     def __init__(self, protocol_id):
 
         super().__init__(protocol_id)
@@ -995,18 +1012,6 @@ class RunEnergyMinimisation(BaseProtocol):
 
         # TODO: Add arguments for max iter + tolerance
         pass
-
-    @BaseProtocol.InputPipe
-    def input_coordinate_file(self, value):
-        pass
-
-    @BaseProtocol.InputPipe
-    def system(self, value):
-        pass
-
-    @BaseProtocol.OutputPipe
-    def output_coordinate_file(self):
-        return self._final_positions
 
     def execute(self, directory):
 
@@ -1229,17 +1234,6 @@ class RunOpenMMSimulation(BaseProtocol):
 
         return simulation
 
-    def __getstate__(self):
-        state = self.__dict__.copy()
-
-        if self._simulation_object is not None:
-            del state['_simulation_object']
-
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-
     def merge(self, other):
 
         super(RunOpenMMSimulation, self).merge(other)
@@ -1257,8 +1251,10 @@ class RunOpenMMSimulation(BaseProtocol):
 
 @register_calculation_protocol()
 class AveragePropertyProtocol(BaseProtocol):
-    """Calculates the average of a property and its uncertainty via bootstrapping.
+    """An abstract base class for protocols which will calculate the
+    average of a property and its uncertainty via bootstrapping.
     """
+
     @BaseProtocol.Parameter
     def bootstrap_iterations(self):
         pass
@@ -1367,8 +1363,17 @@ class AveragePropertyProtocol(BaseProtocol):
 
 @register_calculation_protocol()
 class AverageTrajectoryProperty(AveragePropertyProtocol):
-    """Calculates the average of a property from a simulation trajectory.
+    """An abstract base class for protocols which will calculate the
+    average of a property from a simulation trajectory.
     """
+
+    @BaseProtocol.InputPipe
+    def input_coordinate_file(self):
+        pass
+
+    @BaseProtocol.InputPipe
+    def trajectory_path(self):
+        pass
 
     def __init__(self, protocol_id):
 
@@ -1378,14 +1383,6 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
         self._trajectory_path = None
 
         self.trajectory = None
-
-    @BaseProtocol.InputPipe
-    def input_coordinate_file(self):
-        pass
-
-    @BaseProtocol.InputPipe
-    def trajectory_path(self):
-        pass
 
     def execute(self, directory):
 
@@ -1402,7 +1399,8 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
 
 @register_calculation_protocol()
 class ExtractUncorrelatedData(BaseProtocol):
-    """Calculates the average of a property from a simulation trajectory.
+    """An abstract base class for protocols which will subsample
+    a data set, yielding only equilibrated, uncorrelated data.
     """
 
     @BaseProtocol.InputPipe
@@ -1425,17 +1423,9 @@ class ExtractUncorrelatedData(BaseProtocol):
 
 @register_calculation_protocol()
 class ExtractUncorrelatedTrajectoryData(ExtractUncorrelatedData):
-    """Calculates the average of a property from a simulation trajectory.
+    """A protocol which will subsample frames from a trajectory, yielding only uncorrelated 
+    frames as determined from a provided statistical inefficiency and equilibration time.
     """
-
-    def __init__(self, protocol_id):
-
-        super().__init__(protocol_id)
-
-        self._input_coordinate_file = None
-        self._input_trajectory_path = None
-
-        self._output_trajectory_path = None
 
     @BaseProtocol.InputPipe
     def input_coordinate_file(self):
@@ -1448,6 +1438,15 @@ class ExtractUncorrelatedTrajectoryData(ExtractUncorrelatedData):
     @BaseProtocol.OutputPipe
     def output_trajectory_path(self):
         pass
+
+    def __init__(self, protocol_id):
+
+        super().__init__(protocol_id)
+
+        self._input_coordinate_file = None
+        self._input_trajectory_path = None
+
+        self._output_trajectory_path = None
 
     def execute(self, directory):
 
