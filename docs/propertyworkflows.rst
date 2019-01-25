@@ -31,7 +31,7 @@ Workflow Components
 
 Schema
 
-.. currentmodule:: openforcefield.properties.workflow
+.. currentmodule:: openforcefield.properties.estimator.workflow
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
@@ -40,7 +40,7 @@ Schema
 
 Protocol API
 
-.. currentmodule:: openforcefield.properties.workflow.protocols
+.. currentmodule:: openforcefield.properties.estimator.workflow.protocols
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
@@ -51,7 +51,7 @@ Protocol API
 
 Built in Protocols
 
-.. currentmodule:: openforcefield.properties.workflow.protocols
+.. currentmodule:: openforcefield.properties.estimator.workflow.protocols
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
@@ -67,7 +67,7 @@ Built in Protocols
 
 Protocol Groups
 
-.. currentmodule:: openforcefield.properties.workflow.groups
+.. currentmodule:: openforcefield.properties.estimator.workflow.groups
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
