@@ -26,6 +26,7 @@ from os import path
 import mdtraj
 from simtk.openmm import app
 
+import openforcefield.properties.estimator.utils
 from openforcefield.properties import PhysicalProperty, CalculationSource
 from openforcefield.properties.estimator import CalculationSchema
 from openforcefield.properties.estimator.layers.base import register_calculation_layer, PropertyCalculationLayer
@@ -450,7 +451,7 @@ class DirectCalculationGraph:
 
         for parent_id, parent_output in parent_outputs:
 
-            if isinstance(parent_output, protocols.PropertyCalculatorException):
+            if isinstance(parent_output, openforcefield.properties.estimator.utils.PropertyEstimatorException):
                 return protocol_schema.id, parent_output
 
             for output_path, output_value in parent_output.items():
@@ -494,8 +495,8 @@ class DirectCalculationGraph:
             # Except the unexpected...
             formatted_exception = traceback.format_exception(None, e, e.__traceback__)
 
-            return protocol.id, protocols.PropertyCalculatorException(directory=directory,
-                                                                      message='An unhandled exception occurred: '
+            return protocol.id, openforcefield.properties.estimator.utils.PropertyEstimatorException(directory=directory,
+                                                                                                     message='An unhandled exception occurred: '
                                                                               '{}'.format(formatted_exception))
 
         return protocol.id, output_dictionary
@@ -534,7 +535,7 @@ class DirectCalculationGraph:
 
             # Make sure none of the protocols failed and we actually have a value
             # and uncertainty.
-            if isinstance(protocol_results, protocols.PropertyCalculatorException):
+            if isinstance(protocol_results, openforcefield.properties.estimator.utils.PropertyEstimatorException):
 
                 return_object.calculation_error = protocol_results
                 return return_object

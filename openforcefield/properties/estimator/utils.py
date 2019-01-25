@@ -22,9 +22,21 @@ from enum import IntEnum
 # =============================================================================================
 # PropertyEstimatorMessageTypes
 # =============================================================================================
+from pydantic import BaseModel
+
 
 class PropertyEstimatorMessageTypes(IntEnum):
 
     Undefined = 0
     Submission = 1
     Query = 2
+
+
+class PropertyEstimatorException(BaseModel):
+    """A json serializable object wrapper containing information about
+    a failed property calculation.
+
+    .. todo:: Flesh out more fully.
+    """
+    directory: str
+    message: str

@@ -31,11 +31,12 @@ from tornado.tcpserver import TCPServer
 
 from openforcefield.properties import PhysicalProperty
 from openforcefield.properties.estimator.client import PropertyEstimatorDataModel, PropertyEstimatorOptions
-from openforcefield.properties.estimator.workflow.protocols import ProtocolPath, PropertyCalculatorException
+from openforcefield.properties.estimator.workflow.protocols import ProtocolPath
+from openforcefield.properties.estimator.utils import PropertyEstimatorException
 from openforcefield.properties.estimator.layers import available_layers
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils.serialization import serialize_quantity
-from .message_types import PropertyEstimatorMessageTypes
+from .utils import PropertyEstimatorMessageTypes
 
 # Needed for server-client communication.
 int_struct = struct.Struct("<i")
@@ -259,8 +260,8 @@ class PropertyCalculationRunner(TCPServer):
         if (ticket_id not in self._queued_calculations and
             ticket_id not in self._finished_calculations):
 
-            response = PropertyCalculatorException(directory='',
-                                                   message='The {} ticket id was not found '
+            response = PropertyEstimatorException(directory='',
+                                                  message='The {} ticket id was not found '
                                                            'on the server.'.format(ticket_id)).json()
 
         elif ticket_id in self._finished_calculations:
@@ -400,8 +401,8 @@ class PropertyCalculationRunner(TCPServer):
         if current_layer_type not in available_layers:
 
             # Kill all remaining properties if we reach an unsupported calculation layer.
-            error_object = PropertyCalculatorException(directory='',
-                                                       message='The {} calculation layer is not supported by '
+            error_object = PropertyEstimatorException(directory='',
+                                                      message='The {} calculation layer is not supported by '
                                                                'the server.'.format(current_layer_type))
 
             for queued_calculation in data_model.queued_properties:

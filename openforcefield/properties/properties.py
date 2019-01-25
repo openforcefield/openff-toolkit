@@ -71,9 +71,7 @@ class PropertyPhase(IntFlag):
 class Source(TypedBaseModel):
     """Container class for information about how a property was measured / calculated.
 
-    Todo
-    ----
-        Swap this out with a more general provenance class.
+    .. todo:: Swap this out with a more general provenance class.
     """
     pass
 

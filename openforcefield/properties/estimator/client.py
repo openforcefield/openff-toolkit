@@ -34,7 +34,7 @@ from openforcefield.properties.estimator.workflow.protocols import ProtocolPath
 from openforcefield.properties.estimator.layers import SurrogateLayer, ReweightingLayer, SimulationLayer
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils.serialization import serialize_quantity
-from .message_types import PropertyEstimatorMessageTypes
+from .utils import PropertyEstimatorMessageTypes
 
 int_struct = struct.Struct("<i")
 
@@ -234,7 +234,7 @@ class PropertyEstimator(object):
         self._port = port
         self._tcp_client = TCPClient()
 
-    def submit_computations(self, data_set, parameter_set, additional_options=None):
+    def submit_computations(self, data_set, parameter_set, options=None):
         """
         Submit the property and parameter set for calculation.
 
@@ -244,7 +244,7 @@ class PropertyEstimator(object):
             The set of properties to attempt to compute.
         parameter_set : ForceField
             The OpenFF parameter set to use for the calculations.
-        additional_options : PropertyEstimatorOptions, optional
+        options : PropertyEstimatorOptions, optional
             A set of additional calculation options.
 
         Returns
@@ -259,8 +259,8 @@ class PropertyEstimator(object):
             raise ValueError('Both a data set and parameter set must be '
                              'present to compute physical properties.')
 
-        if additional_options is None:
-            additional_options = PropertyEstimatorOptions()
+        if options is None:
+            options = PropertyEstimatorOptions()
 
         properties_list = []
 
@@ -277,26 +277,26 @@ class PropertyEstimator(object):
                     raise ValueError('The property estimator does not support {} '
                                      'properties.'.format(type_name))
 
-                if type_name in additional_options.calculation_schemas:
+                if type_name in options.calculation_schemas:
                     continue
 
                 property_type = PropertyEstimator.registered_properties[type_name]()
 
-                additional_options.calculation_schemas[type_name] = \
+                options.calculation_schemas[type_name] = \
                     property_type.get_default_calculation_schema()
 
-        for property_schema_name in additional_options.calculation_schemas:
+        for property_schema_name in options.calculation_schemas:
 
-            for protocol_schema_name in additional_options.calculation_schemas[property_schema_name].protocols:
+            for protocol_schema_name in options.calculation_schemas[property_schema_name].protocols:
 
-                protocol_schema = additional_options.calculation_schemas[
+                protocol_schema = options.calculation_schemas[
                     property_schema_name].protocols[protocol_schema_name]
 
-                protocol_schema.parameters['allow_merging'] = additional_options.allow_protocol_merging
+                protocol_schema.parameters['allow_merging'] = options.allow_protocol_merging
 
         submission = PropertyEstimatorDataModel(properties=properties_list,
                                                 parameter_set=parameter_set.__getstate__(),
-                                                options=additional_options)
+                                                options=options)
 
         # For now just do a blocking submit to the server.
         ticket_ids = IOLoop.current().run_sync(lambda: self._send_calculations_to_server(submission))

@@ -58,9 +58,7 @@ def serialize_quantity(quantity):
     """
     Serialized a simtk.unit.Quantity into a dict of {'unitless_value': X, 'unit': Y}
 
-    Todo
-    ----
-    Currently duplicates Jeff Wagners implementation.
+    .. todo:: Currently duplicates Jeff Wagners implementation.
 
     Parameters
     ----------
@@ -100,9 +98,7 @@ def deserialize_quantity(serialized):
     """
     Deserializes a simtk.unit.Quantity.
 
-    Todo
-    ----
-    Currently duplicates Jeff Wagners implementation.
+    .. todo:: Currently duplicates Jeff Wagners implementation.
 
     Parameters
     ----------

@@ -479,9 +479,9 @@ def find_types_with_decorator(class_type, decorator_type):
 
     Parameters
     ----------
-    class_type
+    class_type: class
         The class to pull attributes from.
-    decorator_type
+    decorator_type: str
         The type of decorator to search for.
 
     Returns
@@ -504,9 +504,71 @@ def find_types_with_decorator(class_type, decorator_type):
     for base in all_bases:
 
         inputs.extend([attribute_name for attribute_name in base.__dict__ if
-                       type(base.__dict__[attribute_name]) is decorator_type])
+                       type(base.__dict__[attribute_name]).__name__ == decorator_type])
 
     return inputs
+
+
+_cached_molecules = {}
+
+
+def create_molecule_from_smiles(smiles):
+    """
+    Create an ``OEMol`` molecule from a smiles pattern.
+
+    .. todo:: Replace with the toolkit function when finished.
+
+    Parameters
+    ----------
+    smiles : str
+        Smiles pattern
+
+    Returns
+    -------
+    molecule : OEMol
+        OEMol with 3D coordinates, but no charges
+     """
+
+    from openeye import oechem, oeomega
+
+    # Check cache
+    if smiles in _cached_molecules:
+        return copy.deepcopy(_cached_molecules[smiles])
+
+    # Create molecule from smiles.
+    molecule = oechem.OEMol()
+    parse_smiles_options = oechem.OEParseSmilesOptions(quiet=True)
+
+    if not oechem.OEParseSmiles(molecule, smiles, parse_smiles_options):
+
+        logging.warning('Could not parse SMILES: ' + smiles)
+        return False
+
+    # Normalize molecule
+    oechem.OEAssignAromaticFlags(molecule, oechem.OEAroModelOpenEye)
+    oechem.OEAddExplicitHydrogens(molecule)
+    oechem.OETriposAtomNames(molecule)
+
+    # Create configuration
+    omega = oeomega.OEOmega()
+
+    omega.SetMaxConfs(1)
+    omega.SetIncludeInput(False)
+    omega.SetCanonOrder(False)
+    omega.SetSampleHydrogens(True)
+    omega.SetStrictStereo(True)
+    omega.SetStrictAtomTypes(False)
+
+    status = omega(molecule)
+
+    if not status:
+
+        logging.warning('Could not generate a conformer for ' + smiles)
+        return False
+
+    _cached_molecules[smiles] = molecule
+
+    return molecule
 
 
 def setup_timestamp_logging():

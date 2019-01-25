@@ -22,7 +22,6 @@ from typing import Dict, Optional
 
 from openforcefield.properties.estimator.workflow.protocols import ProtocolSchema, \
     available_protocols, ProtocolPath
-from openforcefield.properties.estimator.workflow.groups import ProtocolGroupSchema
 
 
 # =============================================================================================
@@ -92,6 +91,9 @@ class CalculationSchema(BaseModel):
                     raise Exception('The {} required input of protocol {} in the {} schema was '
                                     'not set.'.format(input_path, protocol_name, self.id))
 
+                if not isinstance(input_value, ProtocolPath):
+                    continue
+
                 if input_value.is_global:
                     # We handle global input validation separately
                     continue
@@ -110,3 +112,12 @@ class CalculationSchema(BaseModel):
 
                 # Will throw the correct exception if missing.
                 other_protocol_object.get_value(input_value)
+
+                expected_input_type = protocol_object.get_attribute_type(input_path)
+                expected_output_type = other_protocol_object.get_attribute_type(input_value)
+
+                if expected_input_type != expected_output_type:
+
+                    raise Exception('The output type ({}) of {} does not match the requested '
+                                    'input type ({}) of {}'.format(expected_output_type, input_value,
+                                                                   expected_input_type, input_path))

@@ -19,7 +19,7 @@ import logging
 
 from openforcefield.properties import PhysicalProperty
 from openforcefield.properties.estimator.storage import StoredSimulationData
-from openforcefield.properties.estimator.workflow.protocols import PropertyCalculatorException
+from openforcefield.properties.estimator.utils import PropertyEstimatorException
 
 # =============================================================================================
 # Registration Decorators
@@ -62,7 +62,7 @@ class CalculationLayerResult:
         self.property_id: str = None
 
         self.calculated_property: PhysicalProperty = None
-        self.calculation_error: PropertyCalculatorException = None
+        self.calculation_error: PropertyEstimatorException = None
 
         self.data_to_store: StoredSimulationData = None
 

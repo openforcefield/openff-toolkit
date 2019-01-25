@@ -19,13 +19,15 @@ import logging
 import mdtraj
 import numpy as np
 from simtk import openmm, unit
+from simtk.openmm import System
 
 from openforcefield.properties.datasets import register_thermoml_property
 from openforcefield.properties.estimator import CalculationSchema, register_estimable_property
-from openforcefield.properties.estimator.workflow import protocols, groups
+from openforcefield.properties.estimator.workflow import protocols, groups, protocol_input
 from openforcefield.properties.estimator.workflow.protocols import AverageTrajectoryProperty, \
     register_calculation_protocol, ProtocolPath
 from openforcefield.properties.properties import PhysicalProperty
+from openforcefield.properties.thermodynamics import ThermodynamicState
 from openforcefield.utils import statistics
 
 
@@ -43,12 +45,14 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
         self._system = None
         self._thermodynamic_state = None
 
-    @protocols.BaseProtocol.InputPipe
+    @protocol_input(System)
     def system(self, value):
+        """The system object which defines the forces present in the system."""
         pass
 
-    @protocols.BaseProtocol.InputPipe
+    @protocol_input(ThermodynamicState)
     def thermodynamic_state(self, value):
+        """The thermodynamic state at which the trajectory was generated."""
         pass
 
     def _bootstrap_function(self, sample_data):
@@ -184,15 +188,15 @@ class DielectricConstant(PhysicalProperty):
 
         assign_topology.force_field_path = ProtocolPath('force_field_path', 'global')
 
-        assign_topology.coordinate_file = ProtocolPath('coordinate_file', build_coordinates.id)
-        assign_topology.molecules = ProtocolPath('molecules', build_coordinates.id)
+        assign_topology.coordinate_file_path = ProtocolPath('coordinate_file_path', build_coordinates.id)
+        assign_topology.substance = ProtocolPath('substance', 'global')
 
         schema.protocols[assign_topology.id] = assign_topology.schema
 
         # Equilibration
         energy_minimisation = protocols.RunEnergyMinimisation('energy_minimisation')
 
-        energy_minimisation.input_coordinate_file = ProtocolPath('coordinate_file', build_coordinates.id)
+        energy_minimisation.input_coordinate_file = ProtocolPath('coordinate_file_path', build_coordinates.id)
         energy_minimisation.system = ProtocolPath('system', assign_topology.id)
 
         schema.protocols[energy_minimisation.id] = energy_minimisation.schema
@@ -230,7 +234,7 @@ class DielectricConstant(PhysicalProperty):
         extract_dielectric.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
         extract_dielectric.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_production.id)
-        extract_dielectric.trajectory_path = ProtocolPath('trajectory', npt_production.id)
+        extract_dielectric.trajectory_path = ProtocolPath('trajectory_file_path', npt_production.id)
         extract_dielectric.system = ProtocolPath('system', assign_topology.id)
 
         # Set up a conditional group to ensure convergence of uncertainty
@@ -264,7 +268,7 @@ class DielectricConstant(PhysicalProperty):
                                                                              converge_uncertainty.id,
                                                                              npt_production.id)
 
-        extract_uncorrelated_trajectory.input_trajectory_path = ProtocolPath('trajectory',
+        extract_uncorrelated_trajectory.input_trajectory_path = ProtocolPath('trajectory_file_path',
                                                                              converge_uncertainty.id,
                                                                              npt_production.id)
 

@@ -18,12 +18,14 @@ import logging
 
 import mdtraj
 from simtk import unit
+from simtk.openmm import System
 
 from openforcefield.properties.datasets import register_thermoml_property
 from openforcefield.properties.estimator import CalculationSchema, register_estimable_property
-from openforcefield.properties.estimator.workflow import protocols, groups
+from openforcefield.properties.estimator.utils import PropertyEstimatorException
+from openforcefield.properties.estimator.workflow import protocols, groups, protocol_input
 from openforcefield.properties.estimator.workflow.protocols import AverageTrajectoryProperty, \
-    register_calculation_protocol, ProtocolPath, PropertyCalculatorException
+    register_calculation_protocol, ProtocolPath
 from openforcefield.properties.properties import PhysicalProperty
 from openforcefield.utils import statistics
 
@@ -36,11 +38,8 @@ from openforcefield.utils import statistics
 class ExtractAverageDensity(AverageTrajectoryProperty):
     """Extracts the average density from a simulation trajectory.
 
-    Todo
-    ----
-    Refactor this into a general 'ExtractAverageStatistic' class which
-        can live in the protocols namespace.
-
+    .. todo:: Refactor this into a general 'ExtractAverageStatistic' class which
+              can live in the protocols namespace.
     """
 
     def __init__(self, protocol_id):
@@ -49,8 +48,9 @@ class ExtractAverageDensity(AverageTrajectoryProperty):
 
         self._system = None
 
-    @protocols.BaseProtocol.InputPipe
+    @protocol_input(System)
     def system(self, value):
+        """The system object which defines the forces present in the system."""
         pass
 
     def execute(self, directory):
@@ -59,7 +59,7 @@ class ExtractAverageDensity(AverageTrajectoryProperty):
 
         base_exception = super(ExtractAverageDensity, self).execute(directory)
 
-        if isinstance(base_exception, PropertyCalculatorException):
+        if isinstance(base_exception, PropertyEstimatorException):
             return base_exception
 
         mass_list = []
@@ -112,15 +112,15 @@ class Density(PhysicalProperty):
 
         assign_topology.force_field_path = ProtocolPath('force_field_path', 'global')
 
-        assign_topology.coordinate_file = ProtocolPath('coordinate_file', build_coordinates.id)
-        assign_topology.molecules = ProtocolPath('molecules', build_coordinates.id)
+        assign_topology.coordinate_file_path = ProtocolPath('coordinate_file_path', build_coordinates.id)
+        assign_topology.substance = ProtocolPath('substance', 'global')
 
         schema.protocols[assign_topology.id] = assign_topology.schema
 
         # Equilibration
         energy_minimisation = protocols.RunEnergyMinimisation('energy_minimisation')
 
-        energy_minimisation.input_coordinate_file = ProtocolPath('coordinate_file', build_coordinates.id)
+        energy_minimisation.input_coordinate_file = ProtocolPath('coordinate_file_path', build_coordinates.id)
         energy_minimisation.system = ProtocolPath('system', assign_topology.id)
 
         schema.protocols[energy_minimisation.id] = energy_minimisation.schema
@@ -158,7 +158,7 @@ class Density(PhysicalProperty):
         extract_density.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
         extract_density.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_production.id)
-        extract_density.trajectory_path = ProtocolPath('trajectory', npt_production.id)
+        extract_density.trajectory_path = ProtocolPath('trajectory_file_path', npt_production.id)
         extract_density.system = ProtocolPath('system', assign_topology.id)
 
         # Set up a conditional group to ensure convergence of uncertainty
@@ -192,7 +192,7 @@ class Density(PhysicalProperty):
                                                                              converge_uncertainty.id,
                                                                              npt_production.id)
 
-        extract_uncorrelated_trajectory.input_trajectory_path = ProtocolPath('trajectory',
+        extract_uncorrelated_trajectory.input_trajectory_path = ProtocolPath('trajectory_file_path',
                                                                              converge_uncertainty.id,
                                                                              npt_production.id)
 

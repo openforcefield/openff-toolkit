@@ -21,17 +21,20 @@ import math
 import pickle
 from enum import Enum
 from os import path
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 import mdtraj
 import numpy as np
 from pydantic import BaseModel
 from simtk import openmm, unit
-from simtk.openmm import app
+from simtk.openmm import app, System
 
+from openforcefield.properties.estimator.utils import PropertyEstimatorException
+from openforcefield.properties.estimator.workflow.decorators import protocol_input, protocol_output, MergeBehaviour
 from openforcefield.properties.substances import Substance
+from openforcefield.properties.thermodynamics import ThermodynamicState
 from openforcefield.typing.engines import smirnoff
-from openforcefield.utils import packmol, graph, utils, statistics
+from openforcefield.utils import packmol, graph, utils, statistics, create_molecule_from_smiles
 from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity, TypedBaseModel
 
 # =============================================================================================
@@ -60,16 +63,6 @@ def register_calculation_protocol():
 # =============================================================================================
 # Protocols
 # =============================================================================================
-
-class PropertyCalculatorException(BaseModel):
-    """A json serializable object wrapper containing information about
-    a failed property calculation.
-
-    TODO: Flesh out more fully.
-    """
-    directory: str
-    message: str
-
 
 class ProtocolPath:
     """Represents a pointer to the output of another protocol.
@@ -315,19 +308,17 @@ class ProtocolPath:
         self._full_path = state['full_path']
 
 
-class ProtocolSchema(TypedBaseModel):
+class ProtocolSchema(BaseModel):
     """A json serializable representation which stores the
     user definable parameters of a protocol.
-
-    TODO: Merge inputs and parameters.
     """
     id: str = None
     type: str = None
 
-    inputs: Dict[str, ProtocolPath] = {}
-    parameters: Dict[str, Any] = {}
+    inputs: Dict[str, Any] = {}
 
     class Config:
+
         arbitrary_types_allowed = True
 
         json_encoders = {
@@ -367,97 +358,6 @@ class BaseProtocol:
                  rapid changes.
     """
 
-    class ProtocolArgumentDecorator(object):
-        """A custom decorator used to mark class attributes as either
-         a required input, or output, of a protocol.
-
-        Parameters
-        ----------
-        class_attribute: function
-            The attribute to mark as a pipe.
-        documentation: str, optional
-            Documentation for this pipe.
-        private_attribute: str, optional
-            The name of the underlying private attribute. The default is
-            '_attribute'
-        """
-
-        def __init__(self, class_attribute, documentation=None, private_attribute=None):
-            if class_attribute.__doc__:
-                documentation = class_attribute.__doc__
-
-            self.__doc__ = documentation  # Set the documentation of the instance.
-
-            if private_attribute is None:
-                self.attribute = '_' + class_attribute.__name__  # Add leading underscore to the attribute name
-            else:
-                self.attribute = private_attribute
-
-        def __get__(self, instance, owner=None):
-
-            if instance is None:
-                return self
-
-            if not hasattr(instance, self.attribute):
-                raise ValueError('Missing ' + self.attribute + 'attribute.')
-
-            return getattr(instance, self.attribute)
-
-        def __set__(self, instance, value):
-
-            if instance is None:
-                raise ValueError('Unexpected ProtocolArgumentDecorator set use case.')
-
-            if not hasattr(instance, self.attribute):
-                raise ValueError('Missing ' + self.attribute + 'attribute.')
-
-            setattr(instance, self.attribute, value)
-
-    class InputPipe(ProtocolArgumentDecorator):
-        """A custom decorator used to mark properties as a required input to
-        the protocol.
-
-        Examples
-        ----------
-        To mark a property as an input pipe:
-
-        >>> @BaseProtocol.InputPipe
-        >>> def substance(self):
-        >>>     pass
-        """
-        def __init__(self, attribute, documentation=None):
-            super().__init__(attribute, documentation)
-
-    class OutputPipe(ProtocolArgumentDecorator):
-        """A custom decorator used to mark properties as an output of the
-        the protocol.
-
-        Examples
-        ----------
-        To mark a property as an output pipe:
-
-        >>> @BaseProtocol.OutputPipe
-        >>> def positions(self):
-        >>>     pass
-        """
-        def __init__(self, attribute, documentation=None):
-            super().__init__(attribute, documentation)
-
-    class Parameter(ProtocolArgumentDecorator):
-        """A custom decorator used to mark arguments as a settable parameter of
-        the protocol.
-
-        Examples
-        ----------
-        To mark an attribute as a parameter:
-
-        >>> @BaseProtocol.Parameter
-        >>> def number_of_steps(self):
-        >>>     pass
-        """
-        def __init__(self, attribute, documentation=None):
-            super().__init__(attribute, documentation)
-
     @property
     def id(self):
         """str: The unique id of this protocol."""
@@ -474,6 +374,9 @@ class BaseProtocol:
 
     @property
     def dependencies(self):
+        """list of ProtocolPath: A list of pointers to the protocols which this
+        protocol takes input from.
+        """
 
         return_dependencies = []
 
@@ -489,7 +392,7 @@ class BaseProtocol:
 
         return return_dependencies
 
-    @Parameter
+    @protocol_input(value_type=bool)
     def allow_merging(self):
         """bool: If true, this protocol is allowed to merge with other identical protocols."""
         pass
@@ -503,13 +406,11 @@ class BaseProtocol:
         self._allow_merging = True
 
         # Find the required inputs and outputs.
-        self.parameters = utils.find_types_with_decorator(type(self), BaseProtocol.Parameter)
-
         self.provided_outputs = []
         self.required_inputs = []
 
-        output_attributes = utils.find_types_with_decorator(type(self), BaseProtocol.OutputPipe)
-        input_attributes = utils.find_types_with_decorator(type(self), BaseProtocol.InputPipe)
+        output_attributes = utils.find_types_with_decorator(type(self), 'ProtocolOutputObject')
+        input_attributes = utils.find_types_with_decorator(type(self), 'ProtocolInputObject')
 
         for output_attribute in output_attributes:
             self.provided_outputs.append(ProtocolPath(output_attribute))
@@ -540,6 +441,14 @@ class BaseProtocol:
         return self._get_output_dictionary()
 
     def _get_schema(self):
+        """Returns this protocols properties (i.e id and parameters)
+        as a ProtocolSchema
+
+        Returns
+        -------
+        ProtocolSchema
+            The schema representation.
+        """
 
         schema = ProtocolSchema()
 
@@ -548,24 +457,28 @@ class BaseProtocol:
 
         for input_path in self.required_inputs:
 
-            if input_path.start_protocol is None or (input_path.start_protocol == self.id and
-                                                     input_path.start_protocol == input_path.last_protocol):
-                schema.inputs[input_path.full_path] = self.get_value(input_path)
+            if not (input_path.start_protocol is None or (input_path.start_protocol == self.id and
+                                                          input_path.start_protocol == input_path.last_protocol)):
 
-        for parameter in self.parameters:
+                continue
 
-            value = getattr(self, parameter)
+            value = self.get_value(input_path)
 
             if isinstance(value, unit.Quantity):
                 value = serialize_quantity(value)
 
-            schema.parameters[parameter] = value
+            schema.inputs[input_path.full_path] = value
 
         return schema
 
     def _set_schema(self, schema_value):
         """Sets this protocols properties (i.e id and parameters)
         from a ProtocolSchema
+
+        Parameters
+        ----------
+        schema_value: ProtocolSchema
+            The schema which will describe this protocol.
         """
         self._id = schema_value.id
 
@@ -575,17 +488,14 @@ class BaseProtocol:
                              .format(str(type(self)), schema_value.type))
 
         for input_full_path in schema_value.inputs:
-            input_path = ProtocolPath.from_string(input_full_path)
-            self.set_value(input_path, schema_value.inputs[input_full_path])
 
-        for parameter in schema_value.parameters:
-
-            value = schema_value.parameters[parameter]
+            value = schema_value.inputs[input_full_path]
 
             if isinstance(value, dict) and 'unit' in value and 'unitless_value' in value:
                 value = deserialize_quantity(value)
 
-            setattr(self, parameter, value)
+            input_path = ProtocolPath.from_string(input_full_path)
+            self.set_value(input_path, value)
 
     def _get_output_dictionary(self):
         """Builds a dictionary of the output property names and their values.
@@ -677,8 +587,14 @@ class BaseProtocol:
 
         for input_path in self.required_inputs:
 
-            # if input_references not in other.input_references:
-            #     return False
+            if input_path.start_protocol is not None and input_path.start_protocol != self.id:
+                continue
+
+            merge_behaviour = getattr(type(self), input_path.property_name).merge_behaviour
+
+            if merge_behaviour != MergeBehaviour.ExactlyEqual:
+                continue
+
             if input_path not in other.required_inputs:
                 return False
 
@@ -703,7 +619,43 @@ class BaseProtocol:
             The protocol to merge into this one.
         """
 
-        pass
+        for input_path in self.required_inputs:
+
+            if input_path.start_protocol is not None and input_path.start_protocol != self.id:
+                continue
+
+            merge_behaviour = getattr(type(self), input_path.property_name).merge_behaviour
+
+            if merge_behaviour == MergeBehaviour.ExactlyEqual:
+                continue
+
+            value = None
+
+            if merge_behaviour == MergeBehaviour.SmallestValue:
+                value = min(self.get_value(input_path), other.get_value(input_path))
+            elif merge_behaviour == MergeBehaviour.GreatestValue:
+                value = max(self.get_value(input_path), other.get_value(input_path))
+
+            self.set_value(input_path, value)
+
+    def get_attribute_type(self, reference_path):
+        """Returns the type of one of the protocol input/output attributes.
+
+        Parameters
+        ----------
+        reference_path: ProtocolPath
+            The path pointing to the value whose type to return.
+
+        Returns
+        ----------
+        type:
+            The type of the attribute.
+        """
+
+        if reference_path.start_protocol is not None and reference_path.start_protocol != self.id:
+            raise ValueError('The reference path {} does not point to this protocol'.format(reference_path))
+
+        return getattr(type(self), reference_path.property_name).value_type
 
     def get_value(self, reference_path):
         """Returns the value of one of this protocols parameters / inputs.
@@ -767,31 +719,24 @@ class BuildCoordinatesPackmol(BaseProtocol):
     The coordinates are created using packmol.
     """
 
-    _cached_molecules = {}
-
-    @BaseProtocol.Parameter
+    @protocol_input(int)
     def max_molecules(self):
-        """int: The maximum number of molecules to be added to the system."""
+        """The maximum number of molecules to be added to the system."""
         pass
 
-    @BaseProtocol.Parameter
+    @protocol_input(unit.Quantity)
     def mass_density(self):
-        """unit.Quantity: The target density of the created system."""
+        """The target density of the created system."""
         pass
 
-    @BaseProtocol.InputPipe
+    @protocol_input(Substance)
     def substance(self):
-        """Substance: The composition of the system to build."""
+        """The composition of the system to build."""
         pass
 
-    @BaseProtocol.OutputPipe
-    def coordinate_file(self):
-        """str: A path to the created PDB coordinate file."""
-        pass
-
-    @BaseProtocol.OutputPipe
-    def molecules(self):
-        """list of OEMol: A list of the molecule types in the built system."""
+    @protocol_output(str)
+    def coordinate_file_path(self):
+        """The file path to the created PDB coordinate file."""
         pass
 
     def __init__(self, protocol_id):
@@ -802,72 +747,11 @@ class BuildCoordinatesPackmol(BaseProtocol):
         self._substance = None
 
         # outputs
-        self._coordinate_file = None
+        self._coordinate_file_path = None
         self._positions = None
-        self._molecules = None
 
         self._max_molecules = 128
         self._mass_density = 1.0 * unit.grams / unit.milliliters
-
-    def _create_molecule(self, smiles):
-        """
-        Create an ``OEMol`` molecule from a smiles pattern.
-
-        Todo
-        ----
-        * Replace with the toolkit function when finished.
-
-        Parameters
-        ----------
-        smiles : str
-            Smiles pattern
-
-        Returns
-        -------
-        molecule : OEMol
-            OEMol with 3D coordinates, but no charges
-         """
-
-        from openeye import oechem, oeomega
-
-        # Check cache
-        if smiles in self._cached_molecules:
-            return copy.deepcopy(self._cached_molecules[smiles])
-
-        # Create molecule from smiles.
-        molecule = oechem.OEMol()
-        parse_smiles_options = oechem.OEParseSmilesOptions(quiet=True)
-
-        if not oechem.OEParseSmiles(molecule, smiles, parse_smiles_options):
-
-            logging.warning('Could not parse SMILES: ' + smiles)
-            return False
-
-        # Normalize molecule
-        oechem.OEAssignAromaticFlags(molecule, oechem.OEAroModelOpenEye)
-        oechem.OEAddExplicitHydrogens(molecule)
-        oechem.OETriposAtomNames(molecule)
-
-        # Create configuration
-        omega = oeomega.OEOmega()
-
-        omega.SetMaxConfs(1)
-        omega.SetIncludeInput(False)
-        omega.SetCanonOrder(False)
-        omega.SetSampleHydrogens(True)
-        omega.SetStrictStereo(True)
-        omega.SetStrictAtomTypes(False)
-
-        status = omega(molecule)
-
-        if not status:
-
-            logging.warning('Could not generate a conformer for ' + smiles)
-            return False
-
-        self._cached_molecules[smiles] = molecule
-
-        return molecule
 
     def execute(self, directory):
 
@@ -875,19 +759,19 @@ class BuildCoordinatesPackmol(BaseProtocol):
 
         if self._substance is None:
 
-            return PropertyCalculatorException(directory=directory,
-                                               message='The substance input is non-optional')
+            return PropertyEstimatorException(directory=directory,
+                                              message='The substance input is non-optional')
 
         molecules = []
 
         for component in self._substance.components:
 
-            molecule = self._create_molecule(component.smiles)
+            molecule = create_molecule_from_smiles(component.smiles)
 
             if molecule is None:
 
-                return PropertyCalculatorException(directory=directory,
-                                                   message='{} could not be converted to a Molecule'.format(component))
+                return PropertyEstimatorException(directory=directory,
+                                                  message='{} could not be converted to a Molecule'.format(component))
 
             molecules.append(molecule)
 
@@ -908,25 +792,17 @@ class BuildCoordinatesPackmol(BaseProtocol):
 
         if topology is None or positions is None:
 
-            return PropertyCalculatorException(directory=directory,
-                                               message='Packmol failed to complete.')
+            return PropertyEstimatorException(directory=directory,
+                                              message='Packmol failed to complete.')
 
-        self._molecules = molecules
+        self._coordinate_file_path = path.join(directory, 'output.pdb')
 
-        self._coordinate_file = path.join(directory, 'output.pdb')
-
-        with open(self._coordinate_file, 'w+') as minimised_file:
+        with open(self._coordinate_file_path, 'w+') as minimised_file:
             app.PDBFile.writeFile(topology, positions, minimised_file)
 
         logging.info('Coordinates generated: ' + str(self._substance))
 
         return self._get_output_dictionary()
-
-    def can_merge(self, protocol):
-
-        return super(BuildCoordinatesPackmol, self).can_merge(protocol) and \
-               self._max_molecules == protocol.max_molecules and \
-               self._mass_density == protocol.mass_density
 
 
 @register_calculation_protocol()
@@ -934,20 +810,25 @@ class BuildSmirnoffTopology(BaseProtocol):
     """Parametrise a set of molecules with a given smirnoff force field.
     """
 
-    @BaseProtocol.InputPipe
+    @protocol_input(str)
     def force_field_path(self, value):
+        """The file path to the force field parameters to assign to the system."""
         pass
 
-    @BaseProtocol.InputPipe
-    def molecules(self, value):
+    @protocol_input(str)
+    def coordinate_file_path(self, value):
+        """The file path to the coordinate file which defines the system to which the
+        force field parameters will be assigned."""
         pass
 
-    @BaseProtocol.InputPipe
-    def coordinate_file(self, value):
+    @protocol_input(Substance)
+    def substance(self):
+        """The composition of the system."""
         pass
 
-    @BaseProtocol.OutputPipe
+    @protocol_output(System)
     def system(self):
+        """The assigned system."""
         pass
 
     def __init__(self, protocol_id):
@@ -956,8 +837,9 @@ class BuildSmirnoffTopology(BaseProtocol):
 
         # inputs
         self._force_field_path = None
-        self._coordinate_file = None
-        self._molecules = None
+        self._coordinate_file_path = None
+        self._substance = None
+
         # outputs
         self._system = None
 
@@ -965,12 +847,24 @@ class BuildSmirnoffTopology(BaseProtocol):
 
         logging.info('Generating topology: ' + directory)
 
-        pdb_file = app.PDBFile(self._coordinate_file)
+        pdb_file = app.PDBFile(self._coordinate_file_path)
 
         parameter_set = None
 
         with open(self._force_field_path, 'rb') as file:
             parameter_set = pickle.load(file)
+
+        molecules = []
+
+        for component in self._substance.components:
+
+            molecule = create_molecule_from_smiles(component.smiles)
+
+            if molecule is None:
+                return PropertyEstimatorException(directory=directory,
+                                                  message='{} could not be converted to a Molecule'.format(component))
+
+            molecules.append(molecule)
 
         system = parameter_set.createSystem(pdb_file.topology,
                                             self._molecules,
@@ -979,8 +873,8 @@ class BuildSmirnoffTopology(BaseProtocol):
 
         if system is None:
 
-            return PropertyCalculatorException(directory=directory,
-                                               message='Failed to create a system from the'
+            return PropertyEstimatorException(directory=directory,
+                                              message='Failed to create a system from the'
                                                        'provided topology and molecules')
 
         self._system = system
@@ -992,20 +886,25 @@ class BuildSmirnoffTopology(BaseProtocol):
 
 @register_calculation_protocol()
 class RunEnergyMinimisation(BaseProtocol):
-    """Minimises the energy of a passed in system.
+    """A protocol to minimise the potential energy of a system.
+
+    .. todo:: Add arguments for max iterations + tolerance
     """
 
-    @BaseProtocol.InputPipe
+    @protocol_input(str)
     def input_coordinate_file(self, value):
+        """The coordinates to minimise."""
         pass
 
-    @BaseProtocol.InputPipe
+    @protocol_input(System)
     def system(self, value):
+        """The system object which defines the forces present in the system."""
         pass
 
-    @BaseProtocol.OutputPipe
+    @protocol_output(str)
     def output_coordinate_file(self):
-        return self._final_positions
+        """The file path to the minimised coordinates."""
+        pass
 
     def __init__(self, protocol_id):
 
@@ -1014,11 +913,9 @@ class RunEnergyMinimisation(BaseProtocol):
         # inputs
         self._input_coordinate_file = None
         self._system = None
+
         # outputs
         self._output_coordinate_file = None
-
-        # TODO: Add arguments for max iter + tolerance
-        pass
 
     def execute(self, directory):
 
@@ -1046,74 +943,72 @@ class RunEnergyMinimisation(BaseProtocol):
 
         return self._get_output_dictionary()
 
-    def can_merge(self, protocol):
-        return self._get_output_dictionary()
-
 
 @register_calculation_protocol()
 class RunOpenMMSimulation(BaseProtocol):
-    """Performs a molecular dynamics simulation in a given ensemble using OpenMM
-
-    Attributes
-    ----------
-    _steps : int
-        The number of steps to run the simulation for
-    _timestep : float
-        The timestep of the integrator.
-    _output_frequency : int
-        The frequency with which to store simulation data.
-    _ensemble : RunOpenMMSimulation.Ensemble
-        The ensemble to run the simulation in.
+    """Performs a molecular dynamics simulation in a given ensemble using
+    an OpenMM backend.
     """
 
     class Ensemble(Enum):
-        """An enum describing the available ensembles.
+        """An enum describing the available thermodynamic ensembles.
         """
-        NVT = 0
-        NPT = 1
+        NVT = "NVT"
+        NPT = "NPT"
 
-    @BaseProtocol.Parameter
+    @protocol_input(int, merge_behavior=MergeBehaviour.GreatestValue)
     def steps(self):
+        """The number of timesteps to evolve the system by."""
         pass
 
-    @BaseProtocol.Parameter
-    def thermostat_friction(self):
+    @protocol_input(unit.Quantity)
+    def thermostat_friction(self, merge_behavior=MergeBehaviour.SmallestValue):
+        """The thermostat friction coefficient."""
         pass
 
-    @BaseProtocol.Parameter
-    def timestep(self):
+    @protocol_input(unit.Quantity)
+    def timestep(self, merge_behavior=MergeBehaviour.SmallestValue):
+        """The timestep to evolve the system by at each step."""
         pass
 
-    @BaseProtocol.Parameter
-    def output_frequency(self):
+    @protocol_input(int)
+    def output_frequency(self, merge_behavior=MergeBehaviour.SmallestValue):
+        """The frequency with which to write to the output statistics and trajectory files."""
         pass
 
-    @BaseProtocol.Parameter
+    @protocol_input(Ensemble)
     def ensemble(self):
+        """The thermodynamic ensemble to simulate in."""
         pass
 
-    @BaseProtocol.InputPipe
+    @protocol_input(ThermodynamicState)
     def thermodynamic_state(self):
+        """The thermodynamic conditions to simulate under"""
         pass
 
-    @BaseProtocol.InputPipe
+    @protocol_input(str)
     def input_coordinate_file(self):
+        """The file path to the starting coordinates."""
         pass
 
-    @BaseProtocol.InputPipe
+    @protocol_input(System)
     def system(self):
+        """The system object which defines the forces present in the system."""
         pass
 
-    @BaseProtocol.OutputPipe
+    @protocol_output(str)
     def output_coordinate_file(self):
+        """The file path to the coordinates of the final system configuration."""
         pass
 
-    @BaseProtocol.OutputPipe
-    def trajectory(self):
+    @protocol_output(str)
+    def trajectory_file_path(self):
+        """The file path to the trajectory sampled during the simulation."""
         pass
 
-    @BaseProtocol.OutputPipe
-    def statistics(self):
+    @protocol_output(str)
+    def statistics_file_path(self):
+        """The file path to the statistics sampled during the simulation."""
         pass
 
     def __init__(self, protocol_id):
@@ -1139,8 +1034,8 @@ class RunOpenMMSimulation(BaseProtocol):
 
         # outputs
         self._output_coordinate_file = None
-        self._trajectory = None
-        self._statistics = None
+        self._trajectory_file_path = None
+        self._statistics_file_path = None
 
         pass
 
@@ -1151,14 +1046,14 @@ class RunOpenMMSimulation(BaseProtocol):
 
         if temperature is None:
 
-            return PropertyCalculatorException(directory=directory,
-                                               message='A temperature must be set to perform '
+            return PropertyEstimatorException(directory=directory,
+                                              message='A temperature must be set to perform '
                                                        'a simulation in any ensemble')
 
         if self.Ensemble(self._ensemble) == self.Ensemble.NPT and pressure is None:
 
-            return PropertyCalculatorException(directory=directory,
-                                               message='A pressure must be set to perform an NPT simulation')
+            return PropertyEstimatorException(directory=directory,
+                                              message='A pressure must be set to perform an NPT simulation')
 
         logging.info('Performing a simulation in the ' + str(self._ensemble) + ' ensemble: ' + directory)
 
@@ -1169,8 +1064,8 @@ class RunOpenMMSimulation(BaseProtocol):
             self._simulation_object.step(self._steps)
         except Exception as e:
 
-            return PropertyCalculatorException(directory=directory,
-                                               message='Simulation failed: {}'.format(e))
+            return PropertyEstimatorException(directory=directory,
+                                              message='Simulation failed: {}'.format(e))
 
         positions = self._simulation_object.context.getState(getPositions=True).getPositions()
 
@@ -1224,8 +1119,8 @@ class RunOpenMMSimulation(BaseProtocol):
         trajectory_path = path.join(directory, 'trajectory.dcd')
         statistics_path = path.join(directory, 'statistics.dat')
 
-        self._trajectory = trajectory_path
-        self._statistics = statistics_path
+        self._trajectory_file_path = trajectory_path
+        self._statistics_file_path = statistics_path
 
         configuration_path = path.join(directory, 'input.pdb')
 
@@ -1241,20 +1136,6 @@ class RunOpenMMSimulation(BaseProtocol):
 
         return simulation
 
-    def merge(self, other):
-
-        super(RunOpenMMSimulation, self).merge(other)
-
-        self._steps = max(self._steps, other.steps)
-        self._timestep = min(self._timestep, other.timestep)
-
-        self._output_frequency = max(self._output_frequency, other.output_frequency)
-
-    def can_merge(self, protocol):
-
-        return super(RunOpenMMSimulation, self).can_merge(protocol) and \
-               self._ensemble == protocol.ensemble
-
 
 @register_calculation_protocol()
 class AveragePropertyProtocol(BaseProtocol):
@@ -1262,28 +1143,34 @@ class AveragePropertyProtocol(BaseProtocol):
     average of a property and its uncertainty via bootstrapping.
     """
 
-    @BaseProtocol.Parameter
+    @protocol_input(int, merge_behavior=MergeBehaviour.GreatestValue)
     def bootstrap_iterations(self):
+        """The number of bootstrap iterations to perform."""
         pass
 
-    @BaseProtocol.Parameter
+    @protocol_input(float, merge_behavior=MergeBehaviour.GreatestValue)
     def bootstrap_sample_size(self):
+        """The relative sample size to use for bootstrapping."""
         pass
 
-    @BaseProtocol.OutputPipe
+    @protocol_output(unit.Quantity)
     def value(self):
+        """The averaged value."""
         pass
 
-    @BaseProtocol.OutputPipe
+    @protocol_output(unit.Quantity)
     def uncertainty(self):
+        """The uncertainty in the average, as calculated by bootstrapping."""
         pass
 
-    @BaseProtocol.OutputPipe
+    @protocol_output(int)
     def equilibration_index(self):
+        """The index in the data set after which the data is stationary."""
         pass
 
-    @BaseProtocol.OutputPipe
+    @protocol_output(float)
     def statistical_inefficiency(self):
+        """The statistical inefficiency in the data set."""
         pass
 
     def __init__(self, protocol_id):
@@ -1374,12 +1261,14 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
     average of a property from a simulation trajectory.
     """
 
-    @BaseProtocol.InputPipe
+    @protocol_input(str)
     def input_coordinate_file(self):
+        """The file path to the starting coordinates of a trajectory."""
         pass
 
-    @BaseProtocol.InputPipe
+    @protocol_input(str)
     def trajectory_path(self):
+        """The file path to the trajectory to average over."""
         pass
 
     def __init__(self, protocol_id):
@@ -1395,8 +1284,8 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
 
         if self._trajectory_path is None:
 
-            return PropertyCalculatorException(directory=directory,
-                                               message='The AverageTrajectoryProperty protocol '
+            return PropertyEstimatorException(directory=directory,
+                                              message='The AverageTrajectoryProperty protocol '
                                                        'requires a previously calculated trajectory')
 
         self.trajectory = mdtraj.load_dcd(filename=self._trajectory_path, top=self._input_coordinate_file)
@@ -1410,12 +1299,14 @@ class ExtractUncorrelatedData(BaseProtocol):
     a data set, yielding only equilibrated, uncorrelated data.
     """
 
-    @BaseProtocol.InputPipe
+    @protocol_input(int)
     def equilibration_index(self):
+        """The index in the data set after which the data is stationary."""
         pass
 
-    @BaseProtocol.InputPipe
+    @protocol_input(float)
     def statistical_inefficiency(self):
+        """The statistical inefficiency in the data set."""
         pass
 
     def __init__(self, protocol_id):
@@ -1434,16 +1325,19 @@ class ExtractUncorrelatedTrajectoryData(ExtractUncorrelatedData):
     frames as determined from a provided statistical inefficiency and equilibration time.
     """
 
-    @BaseProtocol.InputPipe
+    @protocol_input(str)
     def input_coordinate_file(self):
+        """The file path to the starting coordinates of a trajectory."""
         pass
 
-    @BaseProtocol.InputPipe
+    @protocol_input(str)
     def input_trajectory_path(self):
+        """The file path to the trajectory to subsample."""
         pass
 
-    @BaseProtocol.OutputPipe
+    @protocol_output(str)
     def output_trajectory_path(self):
+        """The file path to the subsampled trajectory."""
         pass
 
     def __init__(self, protocol_id):
@@ -1459,8 +1353,8 @@ class ExtractUncorrelatedTrajectoryData(ExtractUncorrelatedData):
 
         if self._input_trajectory_path is None:
 
-            return PropertyCalculatorException(directory=directory,
-                                               message='The ExtractUncorrelatedTrajectoryData protocol '
+            return PropertyEstimatorException(directory=directory,
+                                              message='The ExtractUncorrelatedTrajectoryData protocol '
                                                        'requires a previously calculated trajectory')
 
         trajectory = mdtraj.load_dcd(filename=self._input_trajectory_path, top=self._input_coordinate_file)

@@ -18,18 +18,19 @@ Authors
 # =============================================================================================
 
 import copy
-import os
 import logging
-
-from os import path
+import os
 from enum import Enum, unique
-
+from os import path
 from typing import List
 
-from openforcefield.utils import graph
+from simtk import unit
 
-from .protocols import BaseProtocol, ProtocolSchema, ProtocolPath, available_protocols, register_calculation_protocol, \
-    PropertyCalculatorException
+from openforcefield.properties.estimator.utils import PropertyEstimatorException
+from openforcefield.properties.estimator.workflow import protocol_input
+from openforcefield.properties.estimator.workflow.decorators import MergeBehaviour
+from openforcefield.utils import graph
+from .protocols import BaseProtocol, ProtocolSchema, ProtocolPath, available_protocols, register_calculation_protocol
 
 
 # =============================================================================================
@@ -277,7 +278,7 @@ class ProtocolGroup(BaseProtocol):
 
             return_value = protocol_to_execute.execute(working_directory)
 
-            if isinstance(return_value, PropertyCalculatorException):
+            if isinstance(return_value, PropertyEstimatorException):
                 return return_value
 
             for output_path in return_value:
@@ -420,6 +421,41 @@ class ProtocolGroup(BaseProtocol):
 
         pass
 
+    def get_attribute_type(self, reference_path):
+        """Returns the type of one of the protocol input/output attributes.
+
+        Parameters
+        ----------
+        reference_path: ProtocolPath
+            The path pointing to the value whose type to return.
+
+        Returns
+        ----------
+        type:
+            The type of the attribute.
+        """
+
+        reference_property, reference_ids = ProtocolPath.to_components(reference_path.full_path)
+
+        if reference_path.start_protocol is None or (reference_path.start_protocol == self.id and
+                                                     len(reference_ids) == 1):
+
+            return super(ProtocolGroup, self).get_attribute_type(reference_path)
+
+        # Make a copy of the path so we can alter it safely.
+        reference_path_clone = copy.deepcopy(reference_path)
+
+        if reference_path.start_protocol == self.id:
+            reference_path_clone.pop_next_in_path()
+
+        target_protocol_id = reference_path_clone.pop_next_in_path()
+
+        if target_protocol_id not in self._protocols:
+            raise ValueError('The reference path does not target this protocol'
+                             'or any of its children.')
+
+        return self._protocols[target_protocol_id].get_attribute_type(reference_path_clone)
+
     def get_value(self, reference_path):
         """Returns the value of one of this protocols parameters / inputs.
 
@@ -518,11 +554,6 @@ class ConditionalGroup(ProtocolGroup):
 
     def __init__(self, protocol_id):
         """Constructs a new ConditionalGroup
-
-        Parameters
-        ----------
-        protocols : dict(str, Protocol)
-            The protocols to include in this group.
         """
         super().__init__(protocol_id)
 
@@ -533,19 +564,21 @@ class ConditionalGroup(ProtocolGroup):
         self._left_hand_value = None
         self._right_hand_value = None
 
-    @BaseProtocol.Parameter
+    @protocol_input(int, merge_behavior=MergeBehaviour.GreatestValue)
     def max_iterations(self):
+        """The maximum number of iterations to run for to try and satisfy the
+         groups conditions."""
         pass
 
-    @BaseProtocol.Parameter
+    @protocol_input(ConditionType)
     def condition_type(self):
         pass
 
-    @BaseProtocol.InputPipe
+    @protocol_input(unit.Quantity)
     def left_hand_value(self):
         pass
 
-    @BaseProtocol.InputPipe
+    @protocol_input(unit.Quantity)
     def right_hand_value(self):
         pass
 
@@ -586,7 +619,7 @@ class ConditionalGroup(ProtocolGroup):
             current_iteration += 1
             return_value = super(ConditionalGroup, self).execute(directory)
 
-            if isinstance(return_value, PropertyCalculatorException):
+            if isinstance(return_value, PropertyEstimatorException):
                 # Exit on exceptions.
                 return return_value
 
@@ -613,8 +646,8 @@ class ConditionalGroup(ProtocolGroup):
 
             if current_iteration >= self._max_iterations:
 
-                return PropertyCalculatorException(directory=directory,
-                                                   message='Conditional while loop failed to '
+                return PropertyEstimatorException(directory=directory,
+                                                  message='Conditional while loop failed to '
                                                            'converge: {}'.format(self.id))
 
             logging.info('Conditional criteria not yet met after {} iterations'.format(current_iteration))

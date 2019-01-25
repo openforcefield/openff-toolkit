@@ -24,9 +24,10 @@ from typing import List
 # Component
 # =============================================================================================
 
-# TODO: Delete this?
 class Component(BaseModel):
     """Represents a chemical component.
+
+    .. todo:: Refactor this out?
 
      Attributes
      ----------
