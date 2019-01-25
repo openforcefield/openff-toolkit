@@ -3193,18 +3193,17 @@ class FrozenMolecule(Serializable):
                             else:
                                 torsion = (atom4, atom3, atom2, atom1)
 
-                            improper = False
-                            if atom1.is_bonded_to(atom3):
-                                improper = True
-                            elif atom1.is_bonded_to(atom4):
-                                improper = True
-                            elif atom2.is_bonded_to(atom4):
-                                improper = True
+                            self._propers.add(torsion)
 
-                            if improper:
-                                self._impropers.add(torsion)
-                            else:
-                                self._propers.add(torsion)
+                        for atom3i in self._bondedAtoms[atom2]:
+                            if atom3i == atom3:
+                                continue
+                            if atom3i == atom1:
+                                continue
+
+                            improper = (atom1, atom2, atom3, atom3i)
+                            self._impropers.add(improper)
+
             self._torsions = self._propers | self._impropers
         #return iter(self._torsions)
 
