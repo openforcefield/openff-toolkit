@@ -19,6 +19,7 @@ import functools
 import itertools
 import os
 import pprint
+import textwrap
 
 import numpy as np
 from simtk import unit, openmm
@@ -503,13 +504,48 @@ class _ParametersComparer:
     def __init__(self, **parameters):
         self.parameters = parameters
 
-    def __eq__(self, other):
+    def pretty_format_diff(self, other, new_line=True, indent=True):
+        """Return a pretty-formatted string describing the differences between parameters.
+
+        Parameters
+        ----------
+        other : _ParametersComparer
+        new_line : bool, optional
+            Separate different parameters with new lines.
+        indent : bool, optional
+            Indent the formatting.
+
+        Returns
+        -------
+        diff_str : str
+
+        """
+        diff = self._get_diff(other)
+        diff_list = []
+        for par_name in sorted(diff.keys()):
+            par1, par2 = diff[par_name]
+            diff_list.append('{par_name}: {par1} != {par2}'.format(
+                par_name=par_name, par1=par1, par2=par2))
+        separator = '\n' if new_line else ''
+        diff_str = separator.join(diff_list)
+        if indent:
+            diff_str = textwrap.indent(diff_str, prefix='    ')
+        return diff_str
+
+    def _get_diff(self, other):
+        """Build a 'diff' including only the parameters that are different.
+        """
+        assert set(self.parameters.keys()) == set(other.parameters.keys())
+        diff = {}
         for par_name, par1_value in self.parameters.items():
             par2_value = other.parameters[par_name]
             # Determine whether this parameter is close or not.
             if not quantities_allclose(par1_value, par2_value):
-                return False
-        return True
+                diff[par_name] = (par1_value, par2_value)
+        return diff
+
+    def __eq__(self, other):
+        return len(self._get_diff(other)) == 0
 
     def __str__(self):
         # Reorder the parameters to print in deterministic order.
@@ -550,19 +586,60 @@ class _TorsionParametersComparer:
         # *args is a tuple. Convert it to a list to make it appendable.
         self.parameters = list(parameters)
 
+    def pretty_format_diff(self, other, new_line=True, indent=True):
+        """Return a pretty-formatted string describing the differences between parameters.
+
+        Parameters
+        ----------
+        other : _TorsionParametersComparer
+        new_line : bool, optional
+            Separate different parameters with new lines.
+        indent : bool, optional
+            Indent the formatting.
+
+        Returns
+        -------
+        diff_str : str
+
+        """
+        diff_str = 'Parameters in first system:\n'
+        diff_str += self._pretty_format_parameters(self.parameters, new_line=new_line)
+        diff_str = '\nParameters in second system:\n'
+        diff_str += self._pretty_format_parameters(other.parameters, new_line=new_line)
+        if indent:
+            diff_str = textwrap.indent(diff_str, '    ')
+        return diff_str
+
+    def _pretty_format_parameters(self, parameters, new_line=True, indent=True):
+        # Reorder the parameters by periodicity and then phase to print in deterministic order.
+        sort_key = lambda x: (x.parameters['periodicity'], x.parameters['phase'])
+        parameters = sorted(parameters, key=sort_key)
+        # Quantities in a dictionary are normally printed in the
+        # format "Quantity(value, unit=unit)" so we make it prettier.
+        separator = '\n' if new_line else ', '
+        prefix = '['
+        if indent and new_line:
+            separator += '    '
+        elif indent:
+            prefix += '    '
+        return prefix + separator.join(str(pars) for pars in parameters) + ']'
+
     def __eq__(self, other):
-        # Find at least 1 set of parameters in the list that are equal.
+        # Look for self.parameters that don't match any other.parameters.
         for parameters1 in self.parameters:
+            # Find at least 1 set of parameters in the list that are equal.
             if all(parameters1 != parameters2 for parameters2 in other.parameters):
+                return False
+
+        # Look for other.parameters that don't match any other self.parameters.
+        for parameters2 in other.parameters:
+            # Find at least 1 set of parameters in the list that are equal.
+            if all(parameters1 != parameters2 for parameters1 in self.parameters):
                 return False
         return True
 
     def __str__(self):
-        # Reorder the parameters by periodicity to print in deterministic order.
-        parameters = sorted(self.parameters, key=lambda x: x.parameters['periodicity'])
-        # Quantities in a dictionary are normally printed in the
-        # format "Quantity(value, unit=unit)" so we make it prettier.
-        return '[' + ', '.join(str(pars) for pars in parameters) + ']'
+        return self._pretty_format_parameters(self.parameters, new_line=False, indent=False)
 
 
 class FailedParameterComparisonError(AssertionError):
@@ -581,7 +658,8 @@ class FailedParameterComparisonError(AssertionError):
         self.different_parameters = different_parameters
 
 
-def _compare_parameters(parameters_force1, parameters_force2, interaction_type):
+def _compare_parameters(parameters_force1, parameters_force2, interaction_type,
+                        force_name='', systems_labels=None):
     """Compare the parameters of 2 forces and raises an exception if they are different.
 
     Parameters
@@ -598,6 +676,13 @@ def _compare_parameters(parameters_force1, parameters_force2, interaction_type):
         "particle exception", "proper torsion"). This is only used to
         improve the error message where differences between the two
         forces are detected.
+    force_name : str, optional
+        The name of the force to optionally include in the eventual
+        error message.
+    systems_labels : Tuple[str], optional
+        A pair of strings with a meaningful name for the system. If
+        specified, this will be included in the error message to
+        improve its readability.
 
     Raises
     ------
@@ -608,6 +693,14 @@ def _compare_parameters(parameters_force1, parameters_force2, interaction_type):
 
     """
     diff_msg = ''
+
+    # Handle force and systems labels default arguments.
+    if force_name != '':
+        force_name += ' '  # Add space after.
+    if systems_labels is not None:
+        systems_labels = ' for {} and {} respectively'.format(*systems_labels)
+    else:
+        systems_labels = ''
 
     # First check the parameters that are unique to only one of the forces.
     unique_keys1 = set(parameters_force1) - set(parameters_force2)
@@ -626,10 +719,15 @@ def _compare_parameters(parameters_force1, parameters_force2, interaction_type):
 
     # Print error.
     if len(different_parameters) > 0:
-        diff_msg += ('\n\nThe following {}s have different parameters '
-                     'in the two forces:'.format(interaction_type))
-        for key, (param1, param2) in different_parameters.items():
-            diff_msg += '\n{} {}: {} != {}'.format(interaction_type, key, param1, param2)
+        diff_msg += ('\n\nThe following {interaction}s have different parameters '
+                     'in the two {force_name}forces{systems_labels}:'.format(
+            interaction=interaction_type, force_name=force_name,
+            systems_labels=systems_labels)
+        )
+        for key in sorted(different_parameters.keys()):
+            param1, param2 = different_parameters[key]
+            parameters_diff = param1.pretty_format_diff(param2)
+            diff_msg += '\n{} {}:\n{}'.format(interaction_type, key, parameters_diff)
 
     if diff_msg != '':
         diff_msg = ('A difference between {} was detected. '
@@ -879,7 +977,7 @@ def _get_improper_torsion_canonical_order(bond_set, i0, i1, i2, i3):
     return central_ind, other_ind[0], other_ind[1], other_ind[2]
 
 
-def compare_system_parameters(system1, system2):
+def compare_system_parameters(system1, system2, systems_labels=None):
     """Check that two OpenMM systems have the same parameters.
 
     Parameters
@@ -888,6 +986,10 @@ def compare_system_parameters(system1, system2):
         The first system to compare.
     system2 : simtk.openmm.System
         The second system to compare.
+    systems_labels : Tuple[str], optional
+        A pair of strings with a meaningful name for the system. If
+        specified, this will be included in the error message to
+        improve its readability.
 
     Raises
     ------
@@ -921,7 +1023,9 @@ def compare_system_parameters(system1, system2):
         for parameter_type, parameters1 in parameters_force1.items():
             parameters2 = parameters_force2[parameter_type]
             _compare_parameters(parameters1, parameters2,
-                                interaction_type=parameter_type)
+                                interaction_type=parameter_type,
+                                force_name=force_name,
+                                systems_labels=systems_labels)
 
 
 #=============================================================================================
@@ -932,7 +1036,7 @@ def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecul
     """
     Compare energies and parameters for OpenMM Systems/topologies created
     from an AMBER prmtop and crd versus from a SMIRNOFF forcefield file which
-    should parameterize the same system with same parameters.
+    should parametrize the same system with same parameters.
 
     Parameters
     ----------
@@ -979,7 +1083,7 @@ def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecul
     ff_system = forcefield.create_openmm_system(openff_topology)
 
     # Test energies and parameters.
-    compare_system_parameters(amber_system, ff_system)
+    compare_system_parameters(amber_system, ff_system, systems_labels=('AMBER', 'SMIRNOFF'))
     amber_energies, forcefield_energies = compare_system_energies(
         amber_system, ff_system, positions, box_vectors)
 
