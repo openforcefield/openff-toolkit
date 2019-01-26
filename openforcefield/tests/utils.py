@@ -366,7 +366,8 @@ def compare_context_energies(context1, context2, *args, **kwargs):
 
 
 def compare_system_energies(system1, system2, positions, box_vectors=None,
-                            by_force_type=True, modify_system=False):
+                            by_force_type=True, ignore_charges=False,
+                            modify_system=False):
     """Compare energies of two Systems given the same positions.
 
     Parameters
@@ -384,11 +385,15 @@ def compare_system_energies(system1, system2, positions, box_vectors=None,
         If True, the contribution to the energy of each force type
         is compared instead of just the overall potential energy.
         Default is True.
+    ignore_charges : bool, optional
+        If True, particle and exception charges are ignored during
+        the comparison. Default is False.
     modify_system : bool, optional
-        If ``by_force_type`` is True, the function will change the
-        force groups of two ``Systems`` to compute the separate
-        contributions. Set this to False to work on a copy and avoid
-        modifying the original objects. Default is False.
+        If either ``by_force_type`` or ``ignore_charges`` are True,
+        the function will change the force groups of two ``Systems``
+        to compute the separate contributions. Set this to False to
+        work on a copy and avoid modifying the original objects.
+        Default is False.
 
     Returns
     -------
@@ -411,11 +416,13 @@ def compare_system_energies(system1, system2, positions, box_vectors=None,
         potential_energy1 and potential_energy2 respectively.
 
     """
-    if by_force_type:
-        if not modify_system:
-            system1 = copy.deepcopy(system1)
-            system2 = copy.deepcopy(system2)
+    # Make a copy of the systems if requested.
+    if not modify_system and (by_force_type or ignore_charges):
+        system1 = copy.deepcopy(system1)
+        system2 = copy.deepcopy(system2)
 
+    # Group force types into OpenMM force groups.
+    if by_force_type:
         # First check that the two systems have the same force types.
         force_names1 = {f.__class__.__name__ for f in system1.getForces()}
         force_names2 = {f.__class__.__name__ for f in system2.getForces()}
@@ -430,6 +437,30 @@ def compare_system_energies(system1, system2, positions, box_vectors=None,
         for system in [system1, system2]:
             for force in system.getForces():
                 force.setForceGroup(force_to_group[force.__class__.__name__])
+
+    # If we need to ignore the charges, turn off particle and exceptions charges.
+    if ignore_charges:
+        for system in [system1, system2]:
+            # Find the NonbondedForce.
+            nonbonded_force = None
+            for force in system.getForces():
+                if isinstance(force, openmm.NonbondedForce):
+                    nonbonded_force = force
+
+            # We checked before that the two systems have the same force
+            # types so we can break the loop if there are no NonbondedForces.
+            if nonbonded_force is None:
+                break
+
+            # Set particle charges to 0.0.
+            for particle_idx in range(nonbonded_force.getNumParticles()):
+                charge, sigma, epsilon = nonbonded_force.getParticleParameters(particle_idx)
+                nonbonded_force.setParticleParameters(particle_idx, 0.0, sigma, epsilon)
+
+            # Set particle exceptions charge products to 0.0.
+            for exception_idx in range(nonbonded_force.getNumExceptions()):
+                atom1, atom2, chargeprod, sigma, epsilon = nonbonded_force.getExceptionParameters(exception_idx)
+                nonbonded_force.setExceptionParameters(exception_idx, atom1, atom2, 0.0, sigma, epsilon)
 
     # Create Contexts and compare the energies.
     integrator = openmm.VerletIntegrator(1.0*unit.femtoseconds)
@@ -503,6 +534,13 @@ class _ParametersComparer:
 
     def __init__(self, **parameters):
         self.parameters = parameters
+
+    def remove_parameters(self, parameter_names):
+        for parameter_name in parameter_names:
+            try:
+                del self.parameters[parameter_name]
+            except KeyError:
+                pass
 
     def pretty_format_diff(self, other, new_line=True, indent=True):
         """Return a pretty-formatted string describing the differences between parameters.
@@ -736,7 +774,7 @@ def _compare_parameters(parameters_force1, parameters_force2, interaction_type,
 
 
 @functools.singledispatch
-def _get_force_parameters(force, system):
+def _get_force_parameters(force, system, ignored_parameters):
     """This function builds a _ParameterComparer representation of the
     force parameters that can be used for comparison to other forces
     with _compare_parameters.
@@ -756,6 +794,8 @@ def _get_force_parameters(force, system):
         The OpenMM Force object.
     system : simtk.openmm.System
         The System to which this force belongs to.
+    ignored_parameters : Iterable[str]
+        The parameters to ignore in the comparison.
 
     Returns
     -------
@@ -770,9 +810,8 @@ def _get_force_parameters(force, system):
     raise NotImplementedError('Comparison between {}s is not currently '
                               'supported.'.format(type(force)))
 
-
 @_get_force_parameters.register(openmm.HarmonicBondForce)
-def _get_bond_force_parameters(force, _):
+def _get_bond_force_parameters(force, _, ignored_parameters):
     """Implementation of _get_force_parameters for HarmonicBondForces."""
     # Build the dictionary of the parameters of a single force.
     force_parameters = {}
@@ -786,12 +825,13 @@ def _get_bond_force_parameters(force, _):
         # Reorder the bond to have a canonical key.
         bond_key = tuple(sorted([atom1, atom2]))
         force_parameters[bond_key] = _ParametersComparer(r0=r0, k=k)
+        force_parameters[bond_key].remove_parameters(ignored_parameters)
 
     return {'bond': force_parameters}
 
 
 @_get_force_parameters.register(openmm.HarmonicAngleForce)
-def _get_angle_force_parameters(force, _):
+def _get_angle_force_parameters(force, _, ignored_parameters):
     """Implementation of _get_force_parameters for HarmonicAngleForces."""
     # Build the dictionary of the parameters of a single force.
     force_parameters = {}
@@ -805,12 +845,13 @@ def _get_angle_force_parameters(force, _):
         # Reorder the bond to have a canonical key.
         angle_key = min(atom1, atom3), atom2, max(atom1, atom3)
         force_parameters[angle_key] = _ParametersComparer(theta0=theta0, k=k)
+        force_parameters[angle_key].remove_parameters(ignored_parameters)
 
     return {'angle': force_parameters}
 
 
 @_get_force_parameters.register(openmm.NonbondedForce)
-def _get_nonbonded_force_parameters(force, _):
+def _get_nonbonded_force_parameters(force, _, ignored_parameters):
     """Implementation of _get_force_parameters for NonbondedForces."""
     # Build the dictionary of the particle parameters of the force.
     particle_parameters = {}
@@ -822,6 +863,7 @@ def _get_nonbonded_force_parameters(force, _):
             charge=charge, epsilon=epsilon)
         if (epsilon / epsilon.unit) != 0.0:
             particle_parameters[particle_idx].parameters['sigma'] = sigma
+        particle_parameters[particle_idx].remove_parameters(ignored_parameters)
 
     # Build the dictionary representation of the particle exceptions.
     exception_parameters = {}
@@ -835,12 +877,13 @@ def _get_nonbonded_force_parameters(force, _):
             charge=chargeprod, epsilon=epsilon)
         if (epsilon / epsilon.unit) != 0.0:
             exception_parameters[exception_key].parameters['sigma'] = sigma
+        exception_parameters[exception_key].remove_parameters(ignored_parameters)
 
     return {'particle': particle_parameters, 'particle exception': exception_parameters}
 
 
 @_get_force_parameters.register(openmm.PeriodicTorsionForce)
-def _get_torsion_force_parameters(force, system):
+def _get_torsion_force_parameters(force, system, ignored_parameters):
     """Implementation of _get_force_parameters for NonbondedForces."""
     # Find all bonds. We'll use this to distinguish
     # between proper and improper torsions.
@@ -873,6 +916,7 @@ def _get_torsion_force_parameters(force, system):
 
         # Update the dictionary representation.
         parameters = _ParametersComparer(periodicity=periodicity, phase=phase, k=k)
+        parameters.remove_parameters(ignored_parameters)
         # Each set of 4 atoms can have multiple torsion terms.
         try:
             force_parameters[torsion_key].parameters.append(parameters)
@@ -977,7 +1021,8 @@ def _get_improper_torsion_canonical_order(bond_set, i0, i1, i2, i3):
     return central_ind, other_ind[0], other_ind[1], other_ind[2]
 
 
-def compare_system_parameters(system1, system2, systems_labels=None):
+def compare_system_parameters(system1, system2, systems_labels=None,
+                              ignore_charges=False):
     """Check that two OpenMM systems have the same parameters.
 
     Parameters
@@ -990,6 +1035,9 @@ def compare_system_parameters(system1, system2, systems_labels=None):
         A pair of strings with a meaningful name for the system. If
         specified, this will be included in the error message to
         improve its readability.
+    ignore_charges : bool, optional
+        If True, particle and exception charges are ignored during
+        the comparison. Default is False.
 
     Raises
     ------
@@ -999,6 +1047,11 @@ def compare_system_parameters(system1, system2, systems_labels=None):
         with the different parameters.
 
     """
+    # Determine parameters to ignore.
+    ignored_parameters_by_force = {}
+    if ignore_charges:
+        ignored_parameters_by_force['NonbondedForce'] = ['charge', 'chargeprod']
+
     # We need to perform some checks on the type and number of forces in the Systems.
     force_names1 = collections.Counter(f.__class__.__name__ for f in system1.getForces())
     force_names2 = collections.Counter(f.__class__.__name__ for f in system2.getForces())
@@ -1018,8 +1071,17 @@ def compare_system_parameters(system1, system2, systems_labels=None):
 
     # Compare all pairs of forces
     for force_name, (force1, force2) in force_pairs.items():
-        parameters_force1 = _get_force_parameters(force1, system1)
-        parameters_force2 = _get_force_parameters(force2, system2)
+        # Select the parameters to ignore.
+        try:
+            ignored_parameters = ignored_parameters_by_force[force_name]
+        except KeyError:
+            ignored_parameters = ()
+
+        # Get a dictionary representation of the parameters.
+        parameters_force1 = _get_force_parameters(force1, system1, ignored_parameters)
+        parameters_force2 = _get_force_parameters(force2, system2, ignored_parameters)
+
+        # Compare the forces and raise an error if a difference is detected.
         for parameter_type, parameters1 in parameters_force1.items():
             parameters2 = parameters_force2[parameter_type]
             _compare_parameters(parameters1, parameters2,
@@ -1032,7 +1094,8 @@ def compare_system_parameters(system1, system2, systems_labels=None):
 # Utility functions to compare SMIRNOFF and AMBER force fields.
 #=============================================================================================
 
-def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecule):
+def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecule,
+                           **kwargs):
     """
     Compare energies and parameters for OpenMM Systems/topologies created
     from an AMBER prmtop and crd versus from a SMIRNOFF forcefield file which
@@ -1048,13 +1111,16 @@ def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecul
         Force field instance used to create the system to compare.
     molecule : topology.molecule.Molecule
         The molecule object to test.
+    ignore_charges : bool, optional
+        If True, particle and exception charges are ignored during
+        the comparison. Default is False.
 
     Returns
     -------
-    amber_energies : Dict[str, simtk.unit.Quantity]
-        The potential energy of the AMBER system for each force type.
-    forcefield_energies : Dict[str, simtk.unit.Quantity]
-        The potential energy of the ForceField system for each force type.
+    energies : Dict[str, Dict[str, simtk.unit.Quantity]]
+        A dictionary with two keys: 'AMBER' and 'SMIRNOFF', each pointing
+        to another dictionary mapping forces to their total contribution
+        to the potential energy.
 
     Raises
     ------
@@ -1083,8 +1149,10 @@ def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecul
     ff_system = forcefield.create_openmm_system(openff_topology)
 
     # Test energies and parameters.
-    compare_system_parameters(amber_system, ff_system, systems_labels=('AMBER', 'SMIRNOFF'))
+    compare_system_parameters(amber_system, ff_system,
+                              systems_labels=('AMBER', 'SMIRNOFF'),
+                              **kwargs)
     amber_energies, forcefield_energies = compare_system_energies(
-        amber_system, ff_system, positions, box_vectors)
+        amber_system, ff_system, positions, box_vectors, **kwargs)
 
-    return amber_energies, forcefield_energies
+    return {'AMBER': amber_energies, 'SMIRNOFF': forcefield_energies}

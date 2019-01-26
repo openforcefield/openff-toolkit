@@ -31,12 +31,12 @@ from openforcefield.typing.engines.smirnoff import ForceField
 forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
 
 from openforcefield.topology import Molecule
-for mol_filepath in mol_filepaths:
+for mol_idx, mol_filepath in enumerate(mol_filepaths):
     # Load molecule.
     molecule = Molecule.from_file(mol_filepath)
 
     molname = os.path.basename(mol_filepath).replace('_tripos.mol2','')
-    print("Comparing {} ({}/{})...".format(molname, mol_filepaths.index(mol_filepath), len(mol_filepaths)))
+    print("Comparing {} ({}/{})...".format(molname, mol_idx+1, len(mol_filepaths)))
 
     prmtop_filepath = os.path.join(datapath, molname+'.top')
     inpcrd_filepath = os.path.join(datapath, molname+'.crd')
@@ -45,7 +45,11 @@ for mol_filepath in mol_filepaths:
     from openforcefield.tests.utils import compare_amber_smirnoff
     from openforcefield.tests.utils import FailedParameterComparisonError, FailedEnergyComparisonError
     try:
-        results = compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecule)
+        # We ignore the charges as they are not included in the force field.
+        # TODO: Reactivate this check when we'll be able to load charges from the file.
+        energies = compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath,
+                                          forcefield, molecule,
+                                          ignore_charges=True)
     except FailedParameterComparisonError as e:
         print(e)
     except FailedEnergyComparisonError as e:
