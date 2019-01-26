@@ -748,7 +748,7 @@ class ImproperTorsionHandler(ParameterHandler):
             # Store parameters.
             index = 1
             while 'phase%d' % index in kwargs:
-                self.periodicity.append(kwargs['periodicity%d' % index])
+                self.periodicity.append(int(kwargs['periodicity%d' % index]))
                 self.phase.append(kwargs['phase%d' % index])
                 self.k.append(kwargs['k%d' % index])
                 del kwargs['periodicity%d' % index]
@@ -795,6 +795,39 @@ class ImproperTorsionHandler(ParameterHandler):
         else:
             self._potential = self._DEFAULTS['potential']
 
+
+
+    def get_matches(self, entity):
+        """Retrieve all force terms for a chemical entity, which could be a Molecule, group of Molecules, or Topology.
+
+        Parameters
+        ----------
+        entity : openforcefield.topology.ChemicalEntity
+            Chemical entity for which constraints are to be enumerated
+
+        Returns
+        ---------
+        matches : ValenceDict
+            matches[atoms] is the ParameterType object corresponding to the tuple of Atom objects ``Atoms``
+
+        """
+        logger.info(self.__class__.__name__)  # TODO: Overhaul logging
+        matches = ImproperDict()
+        for force_type in self._parameters:
+            matches_for_this_type = {}
+            #atom_top_indexes = [()]
+            for atoms in entity.chemical_environment_matches(
+                    force_type.smirks):
+                atom_top_indexes = tuple(
+                    [atom.topology_particle_index for atom in atoms])
+                matches_for_this_type[atom_top_indexes] = force_type
+            #matches_for_this_type = { atoms : force_type for atoms in entity.chemical_environment_matches(force_type.smirks }
+            matches.update(matches_for_this_type)
+            logger.info('{:64} : {:8} matches'.format(
+                force_type.smirks, len(matches_for_this_type)))
+
+        logger.info('{} matches identified'.format(len(matches)))
+        return matches
     def create_force(self, system, topology, **kwargs):
         #force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
         #force = super().create_force(system, topology, **kwargs)
@@ -814,15 +847,17 @@ class ImproperTorsionHandler(ParameterHandler):
             # Ensure atoms are actually bonded correct pattern in Topology
             # For impropers, central atom is atom 1
             for (i, j) in [(0, 1), (1, 2), (1, 3)]:
-                topology.assert_bonded(topology.atom(atom_indices[i]), topology.atom(atom_indices[j]))
+                topology.assert_bonded(atom_indices[i], atom_indices[j])
+                #topology.assert_bonded(topology.atom(atom_indices[i]), topology.atom(atom_indices[j]))
 
             # Impropers are applied in three paths around the trefoil having the same handedness
             for (improper_periodicity, improper_phase, improper_k) in zip(improper.periodicity,
                                                improper.phase, improper.k):
                 # Permute non-central atoms
                 others = [atom_indices[0], atom_indices[2], atom_indices[3]]
+                # ((0, 1, 2), (1, 2, 0), and (2, 0, 1)) are the three paths around the trefoil
                 for p in [(others[i], others[j], others[k]) for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]]:
-                    print(improper_periodicity, improper_phase, improper_k)
+                    # The torsion force gets added three times, since the original k was divided by three
                     force.addTorsion(atom_indices[1], p[0], p[1], p[2],
                                      improper_periodicity, improper_phase, improper_k)
         logger.info(

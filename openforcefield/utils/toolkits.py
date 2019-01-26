@@ -1241,7 +1241,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             ]
             # Convert to tuple
             matches.append(tuple(atom_indices))
-
         return matches
 
     def find_smarts_matches(self,
@@ -2137,8 +2136,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         map_list = [idx_map[x] for x in sorted(idx_map)]
 
         # Perform matching
-        # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
-        #       and speed matching for larger molecules.
         matches = list()
         for match in rdmol.GetSubstructMatches(qmol, uniquify=False):
             mas = [match[x] for x in map_list]
