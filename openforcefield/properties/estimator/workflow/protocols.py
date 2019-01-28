@@ -19,23 +19,22 @@ import copy
 import logging
 import math
 import pickle
-from enum import Enum
 from os import path
-from typing import Dict, Any, List
+from typing import Dict
 
 import mdtraj
 import numpy as np
-from pydantic import BaseModel
 from simtk import openmm, unit
 from simtk.openmm import app, System
 
 from openforcefield.properties.estimator.utils import PropertyEstimatorException
 from openforcefield.properties.estimator.workflow.decorators import protocol_input, protocol_output, MergeBehaviour
 from openforcefield.properties.substances import Substance
-from openforcefield.properties.thermodynamics import ThermodynamicState
+from openforcefield.properties.thermodynamics import ThermodynamicState, Ensemble
 from openforcefield.typing.engines import smirnoff
 from openforcefield.utils import packmol, graph, utils, statistics, create_molecule_from_smiles
-from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity, TypedBaseModel
+from openforcefield.utils.serialization import serialize_quantity, deserialize_quantity, TypedBaseModel, \
+    PolymorphicDataType
 
 # =============================================================================================
 # Registration Decorators
@@ -280,6 +279,12 @@ class ProtocolPath:
 
         if isinstance(v, str):
             return ProtocolPath.from_string(v)
+        elif isinstance(v, dict):
+
+            path_object = ProtocolPath('', *[])
+            path_object.__setstate__(v)
+
+            v = path_object
 
         return v
 
@@ -308,21 +313,22 @@ class ProtocolPath:
         self._full_path = state['full_path']
 
 
-class ProtocolSchema(BaseModel):
+class ProtocolSchema(TypedBaseModel):
     """A json serializable representation which stores the
     user definable parameters of a protocol.
     """
     id: str = None
     type: str = None
 
-    inputs: Dict[str, Any] = {}
+    inputs: Dict[str, PolymorphicDataType] = {}
 
     class Config:
 
         arbitrary_types_allowed = True
 
         json_encoders = {
-            ProtocolPath: lambda v: v.full_path
+            ProtocolPath: lambda value: value.full_path,
+            PolymorphicDataType: lambda value: PolymorphicDataType.serialize(value)
         }
 
 
@@ -467,8 +473,9 @@ class BaseProtocol:
             if isinstance(value, unit.Quantity):
                 value = serialize_quantity(value)
 
-            schema.inputs[input_path.full_path] = value
+            schema.inputs[input_path.full_path] = PolymorphicDataType(value)
 
+        json=schema.json()
         return schema
 
     def _set_schema(self, schema_value):
@@ -489,7 +496,7 @@ class BaseProtocol:
 
         for input_full_path in schema_value.inputs:
 
-            value = schema_value.inputs[input_full_path]
+            value = schema_value.inputs[input_full_path].value
 
             if isinstance(value, dict) and 'unit' in value and 'unitless_value' in value:
                 value = deserialize_quantity(value)
@@ -867,7 +874,7 @@ class BuildSmirnoffTopology(BaseProtocol):
             molecules.append(molecule)
 
         system = parameter_set.createSystem(pdb_file.topology,
-                                            self._molecules,
+                                            molecules,
                                             nonbondedMethod=smirnoff.PME,
                                             chargeMethod='OECharges_AM1BCCSym')
 
@@ -950,12 +957,6 @@ class RunOpenMMSimulation(BaseProtocol):
     an OpenMM backend.
     """
 
-    class Ensemble(Enum):
-        """An enum describing the available thermodynamic ensembles.
-        """
-        NVT = "NVT"
-        NPT = "NPT"
-
     @protocol_input(int, merge_behavior=MergeBehaviour.GreatestValue)
     def steps(self):
         """The number of timesteps to evolve the system by."""
@@ -1022,7 +1023,7 @@ class RunOpenMMSimulation(BaseProtocol):
 
         self._output_frequency = 1000
 
-        self._ensemble = self.Ensemble.NPT
+        self._ensemble = Ensemble.NPT
 
         # keep a track of the simulation object in case we need to restart.
         self._simulation_object = None
@@ -1050,7 +1051,7 @@ class RunOpenMMSimulation(BaseProtocol):
                                               message='A temperature must be set to perform '
                                                        'a simulation in any ensemble')
 
-        if self.Ensemble(self._ensemble) == self.Ensemble.NPT and pressure is None:
+        if Ensemble(self._ensemble) == Ensemble.NPT and pressure is None:
 
             return PropertyEstimatorException(directory=directory,
                                               message='A pressure must be set to perform an NPT simulation')
@@ -1101,7 +1102,7 @@ class RunOpenMMSimulation(BaseProtocol):
 
         system = self._system
 
-        if self.Ensemble(self._ensemble) == self.Ensemble.NPT:
+        if Ensemble(self._ensemble) == Ensemble.NPT:
 
             barostat = openmm.MonteCarloBarostat(pressure, temperature)
 

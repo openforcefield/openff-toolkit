@@ -27,7 +27,7 @@ from openforcefield.properties.estimator.workflow import protocols, groups, prot
 from openforcefield.properties.estimator.workflow.protocols import AverageTrajectoryProperty, \
     register_calculation_protocol, ProtocolPath
 from openforcefield.properties.properties import PhysicalProperty
-from openforcefield.properties.thermodynamics import ThermodynamicState
+from openforcefield.properties.thermodynamics import ThermodynamicState, Ensemble
 from openforcefield.utils import statistics
 
 
@@ -203,7 +203,7 @@ class DielectricConstant(PhysicalProperty):
 
         npt_equilibration = protocols.RunOpenMMSimulation('npt_equilibration')
 
-        npt_equilibration.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
+        npt_equilibration.ensemble = Ensemble.NPT
 
         npt_equilibration.steps = 2  # Debug settings.
         npt_equilibration.output_frequency = 1  # Debug settings.
@@ -218,7 +218,7 @@ class DielectricConstant(PhysicalProperty):
         # Production
         npt_production = protocols.RunOpenMMSimulation('npt_production')
 
-        npt_production.ensemble = protocols.RunOpenMMSimulation.Ensemble.NPT
+        npt_production.ensemble = Ensemble.NPT
 
         npt_production.steps = 200  # Debug settings.
         npt_production.output_frequency = 20  # Debug settings.

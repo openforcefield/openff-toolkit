@@ -82,8 +82,11 @@ class BaseProtocolInputObject:
 
         if not isinstance(value, self.value_type) and not isinstance(value, ProtocolPath) and value is not None:
 
-            raise ValueError('The {} attribute can only accept values '
-                             'of type {}'.format(self.attribute, self.value_type))
+            # Handle the special case where the decimal has been lost on float types...
+            if not (self.value_type is float and isinstance(value, int)):
+
+                raise ValueError('The {} attribute can only accept values '
+                                 'of type {}'.format(self.attribute, self.value_type))
 
         setattr(instance, self.attribute, value)
 

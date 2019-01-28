@@ -19,21 +19,21 @@ Authors
 import json
 import logging
 import struct
+from time import sleep
 from typing import Dict, List
 
 from pydantic import BaseModel
 from simtk import unit
-from time import sleep
 from tornado.ioloop import IOLoop
 from tornado.iostream import StreamClosedError
 from tornado.tcpclient import TCPClient
 
 from openforcefield.properties import PhysicalProperty
 from openforcefield.properties.estimator import CalculationSchema
-from openforcefield.properties.estimator.workflow.protocols import ProtocolPath
 from openforcefield.properties.estimator.layers import SurrogateLayer, ReweightingLayer, SimulationLayer
+from openforcefield.properties.estimator.workflow.protocols import ProtocolPath
 from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.utils.serialization import serialize_quantity
+from openforcefield.utils.serialization import serialize_quantity, PolymorphicDataType
 from .utils import PropertyEstimatorMessageTypes
 
 int_struct = struct.Struct("<i")
@@ -106,7 +106,8 @@ class PropertyEstimatorOptions(BaseModel):
 
         json_encoders = {
             unit.Quantity: lambda v: serialize_quantity(v),
-            ProtocolPath: lambda v: v.full_path
+            ProtocolPath: lambda v: v.full_path,
+            PolymorphicDataType: lambda value: PolymorphicDataType.serialize(value)
         }
 
 
@@ -136,7 +137,8 @@ class PropertyEstimatorDataModel(BaseModel):
 
         json_encoders = {
             unit.Quantity: lambda v: serialize_quantity(v),
-            ProtocolPath: lambda v: v.full_path
+            ProtocolPath: lambda v: v.full_path,
+            PolymorphicDataType: lambda value: PolymorphicDataType.serialize(value)
         }
 
 
@@ -294,7 +296,7 @@ class PropertyEstimator(object):
                 protocol_schema = options.calculation_schemas[
                     property_schema_name].protocols[protocol_schema_name]
 
-                protocol_schema.inputs['.allow_merging'] = options.allow_protocol_merging
+                protocol_schema.inputs['.allow_merging'] = PolymorphicDataType(options.allow_protocol_merging)
 
         submission = PropertyEstimatorDataModel(properties=properties_list,
                                                 parameter_set=parameter_set.__getstate__(),

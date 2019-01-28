@@ -3,6 +3,7 @@ Units tests for openforcefield.utils.serialization
 """
 
 import logging
+from enum import Enum, IntEnum
 from typing import Dict
 
 from pydantic import BaseModel
@@ -36,6 +37,26 @@ class Bar(BaseModel):
     field2: int = 2
 
 
+class Baz(Enum):
+
+    Option1 = "Option1"
+    Option2 = "Option2"
+
+
+class Qux(IntEnum):
+
+    Option1 = 1
+    Option2 = 2
+
+
+class NestedParent:
+
+    class NestedChild(Enum):
+
+        Option1 = "Option1"
+        Option2 = "Option2"
+
+
 class PydanticTestClass(BaseModel):
 
     inputs: Dict[str, PolymorphicDataType] = None
@@ -55,13 +76,18 @@ def test_polymorphic_dictionary():
     test_dictionary = {
         "test_str": PolymorphicDataType(value='test1'),
         "test_int": PolymorphicDataType(value=1),
+        "test_bool": PolymorphicDataType(value=True),
         "test_Foo": PolymorphicDataType(value=Foo()),
-        "test_Bar": PolymorphicDataType(value=Bar())
+        "test_Bar": PolymorphicDataType(value=Bar()),
+        "test_Baz": PolymorphicDataType(value=Baz.Option1),
+        "test_Qux": PolymorphicDataType(value=Qux.Option1),
+        "test_Nested": PolymorphicDataType(value=NestedParent.NestedChild.Option1)
     }
 
     pydantic_object = PydanticTestClass(inputs=test_dictionary)
     pydantic_json = pydantic_object.json()
 
     pydantic_recreated = PydanticTestClass.parse_raw(pydantic_json)
+    pydantic_recreated_json = pydantic_recreated.json()
 
-    logging.info(pydantic_json)
+    assert pydantic_json == pydantic_recreated_json

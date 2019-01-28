@@ -35,7 +35,7 @@ from openforcefield.properties.estimator.workflow.protocols import ProtocolPath
 from openforcefield.properties.estimator.utils import PropertyEstimatorException
 from openforcefield.properties.estimator.layers import available_layers
 from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.utils.serialization import serialize_quantity
+from openforcefield.utils.serialization import serialize_quantity, PolymorphicDataType
 from .utils import PropertyEstimatorMessageTypes
 
 # Needed for server-client communication.
@@ -84,7 +84,8 @@ class PropertyRunnerDataModel(BaseModel):
 
         json_encoders = {
             unit.Quantity: lambda v: serialize_quantity(v),
-            ProtocolPath: lambda v: v.full_path
+            ProtocolPath: lambda v: v.full_path,
+            PolymorphicDataType: lambda value: PolymorphicDataType.serialize(value)
         }
 
 

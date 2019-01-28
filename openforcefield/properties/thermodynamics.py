@@ -16,9 +16,11 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-from simtk import unit
+from enum import Enum
 from typing import Optional
+
 from pydantic import BaseModel, validator
+from simtk import unit
 
 from openforcefield.utils.serialization import deserialize_quantity, serialize_quantity
 
@@ -26,6 +28,13 @@ from openforcefield.utils.serialization import deserialize_quantity, serialize_q
 # =============================================================================================
 # THERMODYNAMIC STATE
 # =============================================================================================
+
+class Ensemble(Enum):
+    """An enum describing the available thermodynamic ensembles.
+    """
+    NVT = "NVT"
+    NPT = "NPT"
+
 
 class ThermodynamicState(BaseModel):
     """
@@ -115,8 +124,8 @@ class ThermodynamicState(BaseModel):
 
     def __eq__(self, other):
 
-        return (abs(self.temperature - other.temperature) < 0.001 and
-                abs(self.pressure - other.pressure) < 0.001)
+        return (abs(self.temperature - other.temperature) < 0.0001 * unit.kelvin and
+                abs(self.pressure - other.pressure) < 0.0001 * unit.atmosphere)
 
     def __ne__(self, other):
         return not (self == other)

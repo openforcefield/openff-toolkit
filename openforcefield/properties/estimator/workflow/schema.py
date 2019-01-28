@@ -14,19 +14,17 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-import json
+from typing import Dict, Optional
 
 from pydantic import BaseModel
 
-from typing import Dict, Optional
-
 from openforcefield.properties.estimator.workflow.protocols import ProtocolSchema, \
     available_protocols, ProtocolPath
-
-
 # =============================================================================================
 # Property Calculation Schema
 # =============================================================================================
+from openforcefield.utils.serialization import PolymorphicDataType
+
 
 class CalculationSchema(BaseModel):
     """Defines the set of protocols required to calculate a certain property.
@@ -46,7 +44,8 @@ class CalculationSchema(BaseModel):
         arbitrary_types_allowed = True
 
         json_encoders = {
-            ProtocolPath: lambda v: v.full_path
+            ProtocolPath: lambda value: value.full_path,
+            PolymorphicDataType: lambda value: PolymorphicDataType.serialize(value)
         }
 
     def validate_interfaces(self):

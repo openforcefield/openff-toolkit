@@ -587,9 +587,9 @@ class ConditionalGroup(ProtocolGroup):
         if left_hand_value is None or right_hand_value is None:
             return False
 
-        if self.condition_type == self.ConditionType.LessThan.value:
+        if self.condition_type == self.ConditionType.LessThan:
             return left_hand_value < right_hand_value
-        elif self.condition_type == self.ConditionType.GreaterThan.value:
+        elif self.condition_type == self.ConditionType.GreaterThan:
             return left_hand_value > right_hand_value
 
         raise NotImplementedError()

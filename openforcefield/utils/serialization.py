@@ -20,6 +20,7 @@ Authors
 import importlib
 import json
 import sys
+from enum import Enum
 
 from pydantic import BaseModel, ValidationError
 from pydantic.validators import dict_validator
@@ -111,10 +112,17 @@ class PolymorphicDataType:
             raise ValidationError('{} is not a valid PolymorphicDataType'.format(json_dictionary))
 
         module_name = type_string[0:last_period_index]
+        module = importlib.import_module(module_name)
+
         class_name = type_string[last_period_index + 1:]
 
-        module = importlib.import_module(module_name)
-        class_object = getattr(module, class_name)
+        class_name_split = class_name.split('->')
+        class_object = module
+
+        while len(class_name_split) > 0:
+
+            class_name_current = class_name_split.pop(0)
+            class_object = getattr(class_object, class_name_current)
 
         value_json = json_dictionary['value']
 
@@ -124,22 +132,25 @@ class PolymorphicDataType:
 
             parsed_object = class_object.parse_raw(value_json)
 
-        elif hasattr(class_object, 'validate'):
+        elif issubclass(class_object, Enum):
 
-            parsed_object = class_object.validate(value_json)
+            parsed_object = class_object(value_json)
 
         else:
 
             parsed_object = json.loads(value_json)
 
-            if isinstance(parsed_object, dict) and not issubclass(class_object, dict):
+            if hasattr(class_object, 'validate'):
+                parsed_object = class_object.validate(parsed_object)
+
+            elif not isinstance(parsed_object, class_object):
 
                 created_object = class_object()
                 created_object.__setstate__(parsed_object)
 
                 parsed_object = created_object
 
-        return parsed_object
+        return PolymorphicDataType(parsed_object)
 
     @staticmethod
     def serialize(value_to_serialize):
@@ -163,15 +174,22 @@ class PolymorphicDataType:
 
             value_json = value_to_serialize.value.json()
 
+        elif isinstance(value_to_serialize.value, Enum):
+
+            value_json = value_to_serialize.value.value
+
         else:
             try:
                 value_json = json.dumps(value_to_serialize.value)
             except TypeError as e:
                 value_json = json.dumps(value_to_serialize.value.__getstate__())
 
+        qualified_name = value_to_serialize.type.__qualname__
+        qualified_name = qualified_name.replace('.', '->')
+
         return_value = {
             '@type': '{}.{}'.format(value_to_serialize.type.__module__,
-                                    value_to_serialize.type.__name__),
+                                    qualified_name),
 
             'value': value_json
         }
