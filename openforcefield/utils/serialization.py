@@ -17,12 +17,13 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import importlib
+import json
 import sys
 
+from pydantic import BaseModel, ValidationError
 from pydantic.validators import dict_validator
 from simtk import unit
-
-from pydantic import BaseModel, validator
 
 
 # =============================================================================================
@@ -52,6 +53,130 @@ class TypedBaseModel(BaseModel):
 
         self.module_metadata = type(self).__module__
         self.type_metadata = type(self).__name__
+
+
+class PolymorphicDataType:
+    """A helper object wrap values which have a type unknown
+    ahead of time.
+    """
+
+    def __init__(self, value):
+        """Creates a new PolymorphicDataType object.
+
+        Parameters
+        ----------
+        value: Any
+            The value to wrap.
+        """
+
+        self.value = value
+        self.type = type(value)
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, value):
+        """A pydantic helper method for deserializing the object.
+        """
+        if isinstance(value, PolymorphicDataType):
+            return value
+
+        return PolymorphicDataType.deserialize(value)
+
+    @staticmethod
+    def deserialize(json_dictionary):
+        """A method to deserialize the polymorphic value from its
+        JSON dictionary representation.
+
+        Parameters
+        ----------
+        json_dictionary: Dict[str, Any]
+            The JSON dictionary to deserialize.
+
+        Returns
+        -------
+        Any
+            The deserialized object.
+        """
+
+        if '@type' not in json_dictionary or 'value' not in json_dictionary:
+            raise ValidationError('{} is not a valid PolymorphicDataType'.format(json_dictionary))
+
+        type_string = json_dictionary['@type']
+        last_period_index = type_string.rfind('.')
+
+        if last_period_index < 0:
+            raise ValidationError('{} is not a valid PolymorphicDataType'.format(json_dictionary))
+
+        module_name = type_string[0:last_period_index]
+        class_name = type_string[last_period_index + 1:]
+
+        module = importlib.import_module(module_name)
+        class_object = getattr(module, class_name)
+
+        value_json = json_dictionary['value']
+
+        parsed_object = None
+
+        if issubclass(class_object, BaseModel):
+
+            parsed_object = class_object.parse_raw(value_json)
+
+        elif hasattr(class_object, 'validate'):
+
+            parsed_object = class_object.validate(value_json)
+
+        else:
+
+            parsed_object = json.loads(value_json)
+
+            if isinstance(parsed_object, dict) and not issubclass(class_object, dict):
+
+                created_object = class_object()
+                created_object.__setstate__(parsed_object)
+
+                parsed_object = created_object
+
+        return parsed_object
+
+    @staticmethod
+    def serialize(value_to_serialize):
+        """A method to serialize a polymorphic value, along with its
+        type in the form of a JSON dictionary.
+
+        Parameters
+        ----------
+        value_to_serialize: PolymorphicDataType
+            The value to serialize.
+
+        Returns
+        -------
+        str
+            The JSON serialized value.
+        """
+
+        value_json = ''
+
+        if isinstance(value_to_serialize.value, BaseModel):
+
+            value_json = value_to_serialize.value.json()
+
+        else:
+            try:
+                value_json = json.dumps(value_to_serialize.value)
+            except TypeError as e:
+                value_json = json.dumps(value_to_serialize.value.__getstate__())
+
+        return_value = {
+            '@type': '{}.{}'.format(value_to_serialize.type.__module__,
+                                    value_to_serialize.type.__name__),
+
+            'value': value_json
+        }
+
+        return return_value
 
 
 def serialize_quantity(quantity):
