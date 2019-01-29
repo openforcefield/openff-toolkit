@@ -275,3 +275,4 @@ class TestForceField(TestCase):
 # invalid aromaticity_model
 # invalid_file_version
 # library_charges
+# charges_from_molecule

@@ -206,8 +206,7 @@ class ParameterHandler(object):
     _OPENMMTYPE = None  # OpenMM Force class (or None if no equivalent)
     _DEPENDENCIES = None  # list of ParameterHandler classes that must precede this, or None
     _DEFAULTS = {}  # dict of attributes and their default values at tag-level
-    _KWARGS = [
-    ]  # list of keyword arguments accepted by the force Handler on initialization
+    _KWARGS = []  # list of keyword arguments accepted by the force Handler on initialization
     _SMIRNOFF_VERSION_INTRODUCED = 0.0  # the earliest version of SMIRNOFF spec that supports this ParameterHandler
     _SMIRNOFF_VERSION_DEPRECATED = None  # if deprecated, the first SMIRNOFF version number it is no longer used
     _REQUIRE_UNITS = dict(
@@ -904,8 +903,8 @@ class vdWHandler(ParameterHandler):
             }
 
     _TAGNAME = 'vdW'  # SMIRNOFF tag name to process
-    _VALENCE_TYPE = 'Atom'  # ChemicalEnvironment valence type expected for SMARTS
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create
+    _VALENCE_TYPE = 'Atom'  # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = vdWType  # info type to store
     _REQUIRE_UNITS = {
         'epsilon': unit.kilocalorie_per_mole,
@@ -915,7 +914,7 @@ class vdWHandler(ParameterHandler):
     # TODO: Is this necessary
     _SCALETOL = 1e-5
 
-    # DEFAULTS
+    _KWARGS = ['ewaldErrorTolerance', 'useDispersionCorrection']
     _DEFAULTS = {
         'potential': 'Lennard-Jones-12-6',
         'combining_rules': 'Loentz-Berthelot',
@@ -941,6 +940,8 @@ class vdWHandler(ParameterHandler):
         openmm.NonbondedForce.PME
     }
 
+    # Note: We don't define the default values in the constructor arguments because we need
+    # to be able to check against them in check_compatibility(). For example, if someone
     def __init__(self,
                  forcefield,
                  scale12=None,
@@ -954,24 +955,22 @@ class vdWHandler(ParameterHandler):
                  combining_rules=None,
                  nonbonded_method=None,
                  **kwargs):
-        #super(NonbondedParameterHandler, self).__init__(forcefield)
         super().__init__(forcefield, **kwargs)
 
         # TODO: Find a better way to set defaults
         # TODO: Validate these values against the supported output types (openMM force kwargs?)
         # TODO: Add conditional logic to assign NonbondedMethod and check compatibility
 
+        # Set the nonbonded method
         if nonbonded_method is None:
             self._nonbonded_method = NonbondedMethod.NoCutoff
         else:
             # If it's a string that's the name of a nonbonded method
             if type(nonbonded_method) is str:
                 self._nonbonded_method = NonbondedMethod[nonbonded_method]
-                #self._nonbonded_method = nonbondedMethodMap[nonbonded_method]
 
             # If it's an enum'ed value of NonbondedMethod
             elif nonbonded_method in NonbondedMethod:
-                #self._nonbonded_method = nonbondedMethodMap[nonbonded_method]
                 self._nonbonded_method = nonbonded_method
             # If it's an openMM nonbonded method, reverse it back to a package-independent enum
             elif nonbonded_method in self._NONBOND_METHOD_MAP.values():
@@ -979,7 +978,6 @@ class vdWHandler(ParameterHandler):
                     if nonbonded_method == val:
                         self._nonbonded_method = key
                         break
-                #self._nonbonded_method = nonbonded_method
 
         if scale12 is None:
             self._scale12 = self._DEFAULTS['scale12']
@@ -1039,23 +1037,23 @@ class vdWHandler(ParameterHandler):
                                     handler_kwargs,
                                     assume_missing_is_default=True):
         """
-        Checks if a set of kwargs used to create a ParameterHandler are compatible with this ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
-        will be assumed to expect the ParameterHandler class default.
+               Checks if a set of kwargs used to create a ParameterHandler are compatible with this ParameterHandler. This is
+               called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
+               will be assumed to expect the ParameterHandler class default.
 
-        Parameters
-        ----------
-        handler_kwargs : dict
-            The kwargs that would be used to construct a ParameterHandler
-        assume_missing_is_default : bool
-            If True, will assume that parameters not specified in parameter_kwargs would have been set to the default.
-            Therefore, an exception is raised if the ParameterHandler is incompatible with the default value for a
-            unspecified field.
+               Parameters
+               ----------
+               handler_kwargs : dict
+                   The kwargs that would be used to construct a ParameterHandler
+               assume_missing_is_default : bool
+                   If True, will assume that parameters not specified in handler_kwargs would have been set to the default.
+                   Therefore, an exception is raised if the ParameterHandler is incompatible with the default value for a
+                   unspecified field.
 
-        Raises
-        ------
-        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
-        """
+               Raises
+               ------
+               IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+               """
         compare_attr_to_kwargs = {
             self._scale12: 'scale12',
             self._scale13: 'scale13',
@@ -1072,7 +1070,7 @@ class vdWHandler(ParameterHandler):
                         kwarg_key, self._SCALETOL, attr, kwarg_val))
 
         # TODO: Test for other possible incompatibilities here -- Probably just check for string equality for now,
-        # detailed check will require some openMM/MD epxertise)
+        # detailed check will require some openMM/MD expertise)
         #self._potential: 'potential',
         #self._combining_rules: 'combining_rules',
         #self._switch: 'switch',
@@ -1082,21 +1080,7 @@ class vdWHandler(ParameterHandler):
 
     # TODO: nonbondedMethod and nonbondedCutoff should now be specified by StericsForce attributes
     def create_force(self, system, topology, **kwargs):
-        #force = super().assign_parameters(system, topology)
-        #nonbondedMethod = self._nonbonded_method
-        #if not(isinstance(nonbondedMethod, NonbondedMethod)):
-        #
-        #    try:
-        #        # Try looking up the value in the Enum by string
-        #        nonbondedMethod_temp = NonbondedMethod[nonbondedMethod]
-        #        nonbondedMethod = nonbondedMethod_temp
-        #    except KeyError:
-        #        # Try seeing if they already passed in a recognized openMM NonBondedForce
-        #        for val in NonbondedMethod.values
-        #
-        #        raise ValueError('Illegal nonbonded method for NonbondedForce; method given was {}'.format(nonbondedMethod))
 
-        #if nonbondedMethod not in methodMap:
         force = openmm.NonbondedForce()
         nonbonded_method = self._NONBOND_METHOD_MAP[self._nonbonded_method]
         force.setNonbondedMethod(nonbonded_method)
@@ -1129,18 +1113,9 @@ class vdWHandler(ParameterHandler):
         # TODO: We need to make sure we have already assigned partial charges to the Topology reference molecules
         # For now, just always calculate charges. Even if the ref mol has charges, we don't know where they came from.
         # TODO: How will this check against molecules with library charges?
-        for ref_mol in topology.reference_molecules:
-            ref_mol.generate_conformers()
-            ref_mol.compute_partial_charges()
 
-        for atom in topology.topology_atoms:
-            # Retrieve nonbonded parameters for reference atom (charge not set yet)
-            _, sigma, epsilon = force.getParticleParameters(
-                atom.topology_particle_index)
-            # Set the nonbonded force with the partial charge
-            force.setParticleParameters(atom.topology_particle_index,
-                                        atom.atom.partial_charge, sigma,
-                                        epsilon)
+
+
             #force.setParticleParameters(atom.topology_particle_index, atom.atom.formal_charge, sigma, epsilon)
 
     # TODO: Can we express separate constraints for postprocessing and normal processing?
@@ -1185,8 +1160,18 @@ class ChargeIncrementModelHandler(ParameterHandler):
                 self.increment *= unit.elementary_charge
 
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
-    _INFOTYPE = ChargeIncrementType  # info type to store
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create or utilize
+    _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS
+    _INFOTYPE = ChargeIncrementType  # info type to store
+    _REQUIRE_UNITS = {
+        'increment': unit.elementary_charge
+    }
+    _KWARGS = ['charge_from_molecule']
+    _DEFAULTS = {'number_of_conformers': 10,
+                 'quantum_chemical_method': 'AM1',
+                 'partial_charge_method': 'CM2'}
+    _ALLOWED_VALUES = {'quantum_chemical_method': ['AM1'],
+                       'partial_charge_method': ['CM2']}
 
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
     _VALENCE_TYPE = 'Atom'  # ChemicalEnvironment valence type expected for SMARTS
@@ -1196,33 +1181,144 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
     def __init__(self,
                  forcefield,
-                 number_of_conformers=10,
-                 quantum_chemical_method="AM1",
-                 partial_charge_method="CM2"):
-        super(ChargeIncrementModelHandler, self).__init__(forcefield)
+                 number_of_conformers=None,
+                 quantum_chemical_method=None,
+                 partial_charge_method=None):
+        super().__init__(forcefield, **kwargs)
 
-    def check_compatibility(self,
-                            number_of_conformers=10,
-                            quantum_chemical_method="AM1",
-                            partial_charge_method="CM2"):
-        if (self.number_of_conformers != number_of_conformers) or (
-                self.quantum_chemical_method != quantum_chemical_method) or (
-                    self.partial_charge_method != partial_charge_method):
-            msg = "ChargeIncrementModel: Two incompatible sections specified:\n"
-            msg += "First section:   number_of_conformers={}, quantum_chemical_method={}, partial_charge_method={}\n".format(
-                self.number_of_conformers, self.quantum_chemical_method,
-                self.partial_charge_method)
-            msg += "Section section: number_of_conformers={}, quantum_chemical_method={}, partial_charge_method={}\n".format(
-                number_of_conformers, quantum_chemical_method,
-                partial_charge_method)
-            raise IncompatibleTagException(msg)
+        if number_of_conformers is None:
+            self._number_of_conformers = self._DEFAULTS['number_of_conformers']
+        elif type(number_of_conformers) is str:
+            self._number_of_conformers = int(number_of_conformers)
+        else:
+            self._number_of_conformers = number_of_conformers
 
-    #if element.attrib['method'] != existing[0]._initialChargeMethod:
-    #raise Exception("Existing BondChargeCorrectionHandler uses initial charging method '%s' while new BondChargeCorrectionHandler requests '%s'" % (existing[0]._initialChargeMethod, element.attrib['method']))
+        if quantum_chemical_method is None:
+            self._quantum_chemical_method = self._DEFAULTS['quantum_chemical_method']
+        elif number_of_conformers in self._ALLOWED_VALUES['quantum_chemical_method']:
+            self._number_of_conformers = number_of_conformers
 
-    def create_force(self, system, topology, **args):
-        # No forces are created by this Handler.
-        pass
+        if partial_charge_method is None:
+            self._partial_charge_method = self._DEFAULTS['partial_charge_method']
+        elif partial_charge_method in self._ALLOWED_VALUES['partial_charge_method']:
+            self._partial_charge_method = partial_charge_method
+
+
+
+    def check_handler_compatibility(self, handler_kwargs, assume_missing_is_default=True):
+        """
+        Checks if a set of kwargs used to create a ParameterHandler are compatible with this ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
+        will be assumed to expect the ParameterHandler class default.
+
+        Parameters
+        ----------
+        handler_kwargs : dict
+            The kwargs that would be used to construct a ParameterHandler
+        assume_missing_is_default : bool
+            If True, will assume that parameters not specified in handler_kwargs would have been set to the default.
+            Therefore, an exception is raised if the ParameterHandler is incompatible with the default value for a
+            unspecified field.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        compare_kwarg_to_attr = {
+            'number_of_conformers': self._number_of_conformers,
+            'quantum_chemical_method': self._quantum_chemical_method,
+            'partial_charge_method': self._partial_charge_method,
+        }
+
+        for kwarg_key, attr in compare_kwarg_to_attr.items():
+            # Skip this comparison if the kwarg isn't in handler_kwargs and we're not comparing against defaults
+            if not(assume_missing_is_default) and not(kwarg_key in handler_kwargs.keys()):
+                continue
+
+            kwarg_val = handler_kwargs.get(kwarg_key, self._DEFAULTS[kwarg_key])
+            if kwarg_val != attr:
+                raise IncompatibleParameterError(
+                    "Incompatible '{}' values found during handler compatibility check."
+                    "(existing handler value: {}, new existing value: {}".format(kwarg_key, attr, kwarg_val))
+
+
+
+
+    def create_force(self, system, topology, **kwargs):
+
+
+        from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
+
+        existing = [system.getForce(i) for i in range(system.getNumForces())]
+        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        if len(existing) == 0:
+            force = self._OPENMMTYPE()
+            system.addForce(force)
+        else:
+            force = existing[0]
+
+
+        for ref_mol in topology.reference_molecules:
+            # First, check whether any of the reference molecules in the topolology are in the charge_from_mol list
+            match = False
+
+            if 'charge_from_mol' in kwargs:
+                import networkx as nx
+                from networkx.algorithms.isomorphism import GraphMatcher
+                node_match_func = lambda x, y: ((x['atomic_number'] == y['atomic_number']) and
+                                                (x['stereochemistry'] == y['stereochemistry']) and
+                                                (x['is_aromatic'] == y['is_aromatic'])
+                                                )
+                edge_match_func = lambda x, y: ((x['order'] == y['order']) and
+                                                (x['stereochemistry'] == y['stereochemistry']) and
+                                                (x['is_aromatic'] == y['is_aromatic'])
+                                                )
+                for charge_mol in kwargs['charge_from_mol']:
+                    if ref_mol.is_isomorphic(charge_mol):
+                        match = True
+                        # Take the first valid atom indexing map
+                        ref_mol_G = ref_mol.to_networkx()
+                        charge_mol_G = charge_mol.to_networkX()
+                        GM = GraphMatcher(
+                            charge_mol_G,
+                            ref_mol_G,
+                            node_match=node_match_func,
+                            edge_match=edge_match_func)
+                        for mapping in GM.isomorphisms_iter():
+                            topology_atom_map = mapping
+                            break
+                        # Make a temporary copy of ref_mol to assign charges from charge_mol
+                        temp_mol = FrozenMolecule(ref_mol)
+                        # Set the partial charges
+                        charge_mol_charges = charge_mol.get_partial_charges()
+                        temp_mol_charges = charge_mol_charges.copy()
+                        for charge_idx, ref_idx in mapping:
+                            temp_mol_charges[ref_idx] = charge_mol_charges[charge_idx]
+                        temp_mol.set_partial_charges(temp_mol_charges)
+
+            # If the molecule wasn't assigned parameters from a manuanlly-input charge_mol, calculate them here
+            if match == False:
+                temp_mol = FrozenMolecule(ref_mol)
+                temp_mol.generate_conformers()
+                temp_mol.compute_partial_charges()
+
+            # Assign charges to relevant atoms
+            for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
+                for topology_particle in topology_molecule.particles:
+                    topology_particle_index = topology_particle.topology_particle_index
+                    if type(topology_particle) is TopologyAtom:
+                        ref_mol_particle_index = topology_particle.atom.molecule_particle_index
+                    if type(topology_particle) is TopologyVirtualSite:
+                        ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
+                    particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
+
+                    # Retrieve nonbonded parameters for reference atom (charge not set yet)
+                    _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
+                    # Set the nonbonded force with the partial charge
+                    force.setParticleParameters(topology_particle_index,
+                                                particle_charge, sigma,
+                                                epsilon)
+
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
     def postprocess_system(self, system, topology, **kwargs):
