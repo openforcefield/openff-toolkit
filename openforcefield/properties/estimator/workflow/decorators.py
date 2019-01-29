@@ -35,7 +35,6 @@ class MergeBehaviour(Enum):
     ExactlyEqual = 0,
     SmallestValue = 1,
     GreatestValue = 2,
-    Ignore = 3  # Only for use in group conditions for now.
 
 
 class BaseProtocolInputObject:

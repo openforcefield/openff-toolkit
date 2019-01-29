@@ -210,7 +210,7 @@ class DirectCalculation:
         if old_protocol.id in self.protocols:
 
             self.protocols.pop(old_protocol.id)
-            self.protocols[new_protocol] = new_protocol
+            self.protocols[new_protocol.id] = new_protocol
 
         for index, starting_id in enumerate(self.starting_protocols):
 
@@ -300,8 +300,14 @@ class DirectCalculationGraph:
             # Make a note that the existing node should be used in place
             # of this calculations version.
 
-            existing_node.merge(protocol_to_insert)
+            merged_ids = existing_node.merge(protocol_to_insert)
             calculation.replace_protocol(protocol_to_insert, existing_node)
+
+            for protocol_id in calculation.protocols:
+
+                for old_id, new_id in merged_ids.items():
+
+                    calculation.protocols[protocol_id].replace_protocol(old_id, new_id)
 
         else:
 

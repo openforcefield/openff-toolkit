@@ -565,6 +565,11 @@ class BaseProtocol:
         for input_path in self.required_inputs:
 
             input_path.replace_protocol(old_id, new_id)
+
+            if input_path.start_protocol is not None or (input_path.start_protocol != input_path.last_protocol and
+                                                         input_path.start_protocol != self.id):
+                continue
+
             input_value = self.get_value(input_path)
 
             if isinstance(input_value, ProtocolPath):
@@ -597,9 +602,23 @@ class BaseProtocol:
             if input_path.start_protocol is not None and input_path.start_protocol != self.id:
                 continue
 
-            merge_behaviour = getattr(type(self), input_path.property_name).merge_behaviour
+            # Do not consider paths that point to child (e.g grouped) protocols.
+            # These should be handled by the container classes themselves.
+            if not (input_path.start_protocol is None or (
+                    input_path.start_protocol == input_path.last_protocol and
+                    input_path.start_protocol == self.id)):
 
-            if merge_behaviour != MergeBehaviour.ExactlyEqual:
+                continue
+
+            # If no merge behaviour flag is present (for example in the case of
+            # ConditionalGroup conditions), simply assume this is handled explicitly
+            # elsewhere.
+            if not hasattr(getattr(type(self), input_path.property_name), 'merge_behavior'):
+                continue
+
+            merge_behavior = getattr(type(self), input_path.property_name).merge_behavior
+
+            if merge_behavior != MergeBehaviour.ExactlyEqual:
                 continue
 
             if input_path not in other.required_inputs:
@@ -624,26 +643,44 @@ class BaseProtocol:
         ----------
         other: BaseProtocol
             The protocol to merge into this one.
+
+        Returns
+        -------
+        Dict[str, str]
+            A map between any original protocol ids and their new merged values.
         """
 
         for input_path in self.required_inputs:
 
-            if input_path.start_protocol is not None and input_path.start_protocol != self.id:
+            # Do not consider paths that point to child (e.g grouped) protocols.
+            # These should be handled by the container classes themselves.
+            if not (input_path.start_protocol is None or (
+                    input_path.start_protocol == input_path.last_protocol and
+                    input_path.start_protocol == self.id)):
+
                 continue
 
-            merge_behaviour = getattr(type(self), input_path.property_name).merge_behaviour
+            # If no merge behaviour flag is present (for example in the case of
+            # ConditionalGroup conditions), simply assume this is handled explicitly
+            # elsewhere.
+            if not hasattr(getattr(type(self), input_path.property_name), 'merge_behavior'):
+                continue
 
-            if merge_behaviour == MergeBehaviour.ExactlyEqual:
+            merge_behavior = getattr(type(self), input_path.property_name).merge_behavior
+
+            if merge_behavior == MergeBehaviour.ExactlyEqual:
                 continue
 
             value = None
 
-            if merge_behaviour == MergeBehaviour.SmallestValue:
+            if merge_behavior == MergeBehaviour.SmallestValue:
                 value = min(self.get_value(input_path), other.get_value(input_path))
-            elif merge_behaviour == MergeBehaviour.GreatestValue:
+            elif merge_behavior == MergeBehaviour.GreatestValue:
                 value = max(self.get_value(input_path), other.get_value(input_path))
 
             self.set_value(input_path, value)
+
+        return {}
 
     def get_attribute_type(self, reference_path):
         """Returns the type of one of the protocol input/output attributes.
@@ -962,18 +999,18 @@ class RunOpenMMSimulation(BaseProtocol):
         """The number of timesteps to evolve the system by."""
         pass
 
-    @protocol_input(unit.Quantity)
-    def thermostat_friction(self, merge_behavior=MergeBehaviour.SmallestValue):
+    @protocol_input(unit.Quantity, merge_behavior=MergeBehaviour.SmallestValue)
+    def thermostat_friction(self):
         """The thermostat friction coefficient."""
         pass
 
-    @protocol_input(unit.Quantity)
-    def timestep(self, merge_behavior=MergeBehaviour.SmallestValue):
+    @protocol_input(unit.Quantity, merge_behavior=MergeBehaviour.SmallestValue)
+    def timestep(self):
         """The timestep to evolve the system by at each step."""
         pass
 
-    @protocol_input(int)
-    def output_frequency(self, merge_behavior=MergeBehaviour.SmallestValue):
+    @protocol_input(int, merge_behavior=MergeBehaviour.SmallestValue)
+    def output_frequency(self):
         """The frequency with which to write to the output statistics and trajectory files."""
         pass
 
