@@ -15,6 +15,8 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import numpy as np
+
 from enum import Enum
 
 
@@ -83,7 +85,8 @@ class BaseProtocolInputObject:
         if not isinstance(value, self.value_type) and not isinstance(value, ProtocolPath) and value is not None:
 
             # Handle the special case where the decimal has been lost on float types...
-            if not (self.value_type is float and isinstance(value, int)):
+            if (not (self.value_type is float and isinstance(value, int)) and
+                not np.issubdtype(type(value), self.value_type)):
 
                 raise ValueError('The {} attribute can only accept values '
                                  'of type {}'.format(self.attribute, self.value_type))

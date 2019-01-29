@@ -193,29 +193,37 @@ class DirectCalculation:
 
         Parameters
         ----------
-        old_protocol : protocols.BaseProtocol
-            The protocol to replace.
-        new_protocol : protocols.BaseProtocol
-            The new protocol to use.
+        old_protocol : protocols.BaseProtocol or str
+            The protocol (or its id) to replace.
+        new_protocol : protocols.BaseProtocol or str
+            The new protocol (or its id) to use.
         """
 
-        if new_protocol.id in self.protocols:
+        old_protocol_id = old_protocol
+        new_protocol_id = new_protocol
+        
+        if isinstance(old_protocol, protocols.BaseProtocol):
+            old_protocol_id = old_protocol.id
+        if isinstance(new_protocol, protocols.BaseProtocol):
+            new_protocol_id = new_protocol.id
+
+        if new_protocol_id in self.protocols:
             raise ValueError('A protocol with the same id already exists in this calculation.')
 
         for protocol_id in self.protocols:
 
             protocol = self.protocols[protocol_id]
-            protocol.replace_protocol(old_protocol.id, new_protocol.id)
+            protocol.replace_protocol(old_protocol_id, new_protocol_id)
 
-        if old_protocol.id in self.protocols:
+        if old_protocol_id in self.protocols and isinstance(new_protocol, protocols.BaseProtocol):
 
-            self.protocols.pop(old_protocol.id)
-            self.protocols[new_protocol.id] = new_protocol
+            self.protocols.pop(old_protocol_id)
+            self.protocols[new_protocol_id] = new_protocol
 
         for index, starting_id in enumerate(self.starting_protocols):
 
-            if starting_id == old_protocol.id:
-                starting_id = new_protocol.id
+            if starting_id == old_protocol_id:
+                starting_id = new_protocol_id
 
             self.starting_protocols[index] = starting_id
 
@@ -223,18 +231,18 @@ class DirectCalculation:
 
             for index, dependant_id in enumerate(self.dependants_graph[protocol_id]):
 
-                if dependant_id == old_protocol.id:
-                    dependant_id = new_protocol.id
+                if dependant_id == old_protocol_id:
+                    dependant_id = new_protocol_id
 
                 self.dependants_graph[protocol_id][index] = dependant_id
 
-        if old_protocol.id in self.dependants_graph:
-            self.dependants_graph[new_protocol.id] = self.dependants_graph.pop(old_protocol.id)
+        if old_protocol_id in self.dependants_graph:
+            self.dependants_graph[new_protocol_id] = self.dependants_graph.pop(old_protocol_id)
 
-        self.final_value_source.replace_protocol(old_protocol.id, new_protocol.id)
-        self.final_uncertainty_source.replace_protocol(old_protocol.id, new_protocol.id)
-        self.final_trajectory_source.replace_protocol(old_protocol.id, new_protocol.id)
-        self.final_coordinate_source.replace_protocol(old_protocol.id, new_protocol.id)
+        self.final_value_source.replace_protocol(old_protocol_id, new_protocol_id)
+        self.final_uncertainty_source.replace_protocol(old_protocol_id, new_protocol_id)
+        self.final_trajectory_source.replace_protocol(old_protocol_id, new_protocol_id)
+        self.final_coordinate_source.replace_protocol(old_protocol_id, new_protocol_id)
 
 
 class DirectCalculationGraph:
@@ -303,11 +311,8 @@ class DirectCalculationGraph:
             merged_ids = existing_node.merge(protocol_to_insert)
             calculation.replace_protocol(protocol_to_insert, existing_node)
 
-            for protocol_id in calculation.protocols:
-
-                for old_id, new_id in merged_ids.items():
-
-                    calculation.protocols[protocol_id].replace_protocol(old_id, new_id)
+            for old_id, new_id in merged_ids.items():
+                calculation.replace_protocol(old_id, new_id)
 
         else:
 
@@ -489,8 +494,6 @@ class DirectCalculationGraph:
         # and awkward args and kwargs syntax.
         protocol = protocols.available_protocols[protocol_schema.type](protocol_schema.id)
         protocol.schema = protocol_schema
-
-        protocol.set_uuid(graph.retrieve_uuid(protocol.id))
 
         if not path.isdir(directory):
             os.makedirs(directory)
