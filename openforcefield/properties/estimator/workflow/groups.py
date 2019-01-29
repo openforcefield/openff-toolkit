@@ -24,12 +24,11 @@ from enum import Enum, unique
 from os import path
 from typing import List
 
-from simtk import unit
-
 from openforcefield.properties.estimator.utils import PropertyEstimatorException
 from openforcefield.properties.estimator.workflow import protocol_input
 from openforcefield.properties.estimator.workflow.decorators import MergeBehaviour
 from openforcefield.utils import graph
+from openforcefield.utils.serialization import PolymorphicDataType
 from .protocols import BaseProtocol, ProtocolSchema, ProtocolPath, available_protocols, register_calculation_protocol
 
 
@@ -552,17 +551,28 @@ class ConditionalGroup(ProtocolGroup):
             """
             return any(value == item.value for item in cls)
 
-    def __init__(self, protocol_id):
-        """Constructs a new ConditionalGroup
-        """
-        super().__init__(protocol_id)
+    class Condition:
 
-        self._max_iterations = 10
+        def __init__(self):
 
-        self._condition_type = ConditionalGroup.ConditionType.LessThan
+            self.condition_type = ConditionalGroup.ConditionType.LessThan
 
-        self._left_hand_value = None
-        self._right_hand_value = None
+            self.left_hand_value = None
+            self.right_hand_value = None
+
+        def __getstate__(self):
+
+            return {
+                'condition_type': self.condition_type,
+                'left_hand_value': self.left_hand_value,
+                'right_hand_value': self.right_hand_value
+            }
+
+        def __setstate__(self, state):
+
+            self.condition_type = state['condition_type']
+            self.left_hand_value = state['left_hand_value']
+            self.right_hand_value = state['right_hand_value']
 
     @protocol_input(int, merge_behavior=MergeBehaviour.GreatestValue)
     def max_iterations(self):
@@ -570,17 +580,14 @@ class ConditionalGroup(ProtocolGroup):
          groups conditions."""
         pass
 
-    @protocol_input(ConditionType)
-    def condition_type(self):
-        pass
+    def __init__(self, protocol_id):
+        """Constructs a new ConditionalGroup
+        """
+        super().__init__(protocol_id)
 
-    @protocol_input(unit.Quantity)
-    def left_hand_value(self):
-        pass
+        self._max_iterations = 10
 
-    @protocol_input(unit.Quantity)
-    def right_hand_value(self):
-        pass
+        self._conditions = []
 
     def _evaluate_condition(self, left_hand_value, right_hand_value):
 
@@ -681,3 +688,135 @@ class ConditionalGroup(ProtocolGroup):
             The protocol to merge into this one.
         """
         super(ConditionalGroup, self).merge(other)
+
+    def add_condition(self, condition):
+
+        if condition in self._conditions:
+            return
+
+        self._conditions.append(condition)
+
+        self.required_inputs.append(ProtocolPath('condition_left_{}'.format(len(self._conditions) - 1)))
+        self.required_inputs.append(ProtocolPath('condition_right_{}'.format(len(self._conditions) - 1)))
+
+    def _set_schema(self, schema_value):
+
+        conditions_to_add = []
+
+        for input_full_path in schema_value.inputs:
+
+            if input_full_path.find('condition_') < 0:
+                continue
+
+            input_path = ProtocolPath.from_string(input_full_path)
+
+            reference_property, reference_ids = ProtocolPath.to_components(input_path.full_path)
+
+            if not (input_path.start_protocol is None or (input_path.start_protocol == self.id and
+                                                          len(reference_ids) == 1)):
+                continue
+
+            condition_side = reference_property.split('_')[1]
+            condition_index = int(reference_property.split('_')[2])
+
+            if condition_index >= len(conditions_to_add):
+                conditions_to_add.append(ConditionalGroup.Condition())
+
+            if condition_side == 'left':
+                conditions_to_add[condition_index].left_hand_value = schema_value.inputs[input_full_path]
+            if condition_side == 'right':
+                conditions_to_add[condition_index].right_hand_value = schema_value.inputs[input_full_path]
+
+        for condition in conditions_to_add:
+            self.add_condition(condition)
+
+        super(ConditionalGroup, self)._set_schema(schema_value)
+
+    def get_attribute_type(self, reference_path):
+        """Returns the type of one of the protocol input/output attributes.
+
+        Parameters
+        ----------
+        reference_path: ProtocolPath
+            The path pointing to the value whose type to return.
+
+        Returns
+        ----------
+        type:
+            The type of the attribute.
+        """
+
+        reference_property, reference_ids = ProtocolPath.to_components(reference_path.full_path)
+
+        if reference_path.start_protocol is None or (reference_path.start_protocol == self.id and
+                                                     len(reference_ids) == 1):
+
+            if reference_property.find('condition_') >= 0:
+                return None
+
+        return super(ConditionalGroup, self).get_attribute_type(reference_path)
+
+    def get_value(self, reference_path):
+        """Returns the value of one of this protocols parameters / inputs.
+
+        Parameters
+        ----------
+        reference_path: ProtocolPath
+            The path pointing to the value to return.
+
+        Returns
+        ----------
+        object:
+            The value of the input
+        """
+
+        reference_property, reference_ids = ProtocolPath.to_components(reference_path.full_path)
+
+        if reference_path.start_protocol is None or (reference_path.start_protocol == self.id and
+                                                     len(reference_ids) == 1):
+
+            if reference_property.find('condition_') >= 0:
+
+                condition_side = reference_property.split('_')[1]
+                condition_index = int(reference_property.split('_')[2])
+
+                condition = self._conditions[condition_index]
+
+                if condition_side == 'left':
+                    return condition.left_hand_value
+
+                return condition.right_hand_value
+
+        return super(ConditionalGroup, self).get_value(reference_path)
+
+    def set_value(self, reference_path, value):
+        """Sets the value of one of this protocols parameters / inputs.
+
+        Parameters
+        ----------
+        reference_path: ProtocolPath
+            The path pointing to the value to return.
+        value: Any
+            The value to set.
+        """
+
+        reference_property, reference_ids = ProtocolPath.to_components(reference_path.full_path)
+
+        if reference_path.start_protocol is None or (reference_path.start_protocol == self.id and
+                                                     len(reference_ids) == 1):
+
+            if reference_property.find('condition_') >= 0:
+
+                condition_side = reference_property.split('_')[1]
+                condition_index = int(reference_property.split('_')[2])
+
+                condition = self._conditions[condition_index]
+
+                if condition_side == 'left':
+                    condition.left_hand_value = value
+                else:
+                    condition.right_hand_value = value
+
+                return
+
+        super(ConditionalGroup, self).set_value(reference_path, value)

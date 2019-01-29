@@ -475,7 +475,6 @@ class BaseProtocol:
 
             schema.inputs[input_path.full_path] = PolymorphicDataType(value)
 
-        json=schema.json()
         return schema
 
     def _set_schema(self, schema_value):

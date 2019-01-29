@@ -166,13 +166,17 @@ class Density(PhysicalProperty):
         converge_uncertainty = groups.ConditionalGroup('converge_uncertainty')
         converge_uncertainty.add_protocols(npt_production, extract_density)
 
-        converge_uncertainty.left_hand_value = ProtocolPath('uncertainty',
-                                                            converge_uncertainty.id,
-                                                            extract_density.id)
+        condition = groups.ConditionalGroup.Condition()
 
-        converge_uncertainty.right_hand_value = ProtocolPath('target_uncertainty', 'global')
+        condition.left_hand_value = ProtocolPath('uncertainty',
+                                                 converge_uncertainty.id,
+                                                 extract_density.id)
 
-        converge_uncertainty.condition_type = groups.ConditionalGroup.ConditionType.LessThan
+        condition.right_hand_value = ProtocolPath('target_uncertainty', 'global')
+
+        condition.condition_type = groups.ConditionalGroup.ConditionType.LessThan
+
+        converge_uncertainty.add_condition(condition)
 
         converge_uncertainty.max_iterations = 1
 

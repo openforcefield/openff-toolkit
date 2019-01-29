@@ -115,7 +115,7 @@ class CalculationSchema(BaseModel):
                 expected_input_type = protocol_object.get_attribute_type(input_path)
                 expected_output_type = other_protocol_object.get_attribute_type(input_value)
 
-                if expected_input_type != expected_output_type:
+                if expected_input_type != expected_output_type and expected_input_type is not None:
 
                     raise Exception('The output type ({}) of {} does not match the requested '
                                     'input type ({}) of {}'.format(expected_output_type, input_value,
