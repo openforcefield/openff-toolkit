@@ -327,6 +327,7 @@ class ProtocolSchema(TypedBaseModel):
         arbitrary_types_allowed = True
 
         json_encoders = {
+            unit.Quantity: lambda value: serialize_quantity(value),
             ProtocolPath: lambda value: value.full_path,
             PolymorphicDataType: lambda value: PolymorphicDataType.serialize(value)
         }
@@ -1351,6 +1352,8 @@ class ExtractUncorrelatedTrajectoryData(ExtractUncorrelatedData):
 
     def execute(self, directory):
 
+        logging.info('Subsampling trajectory: {}'.format(self.id))
+
         if self._input_trajectory_path is None:
 
             return PropertyEstimatorException(directory=directory,
@@ -1364,5 +1367,7 @@ class ExtractUncorrelatedTrajectoryData(ExtractUncorrelatedData):
 
         self._output_trajectory_path = path.join(directory, 'uncorrelated_trajectory.dcd')
         uncorrelated_trajectory.save_dcd(self._output_trajectory_path)
+
+        logging.info('Trajectory subsampled: {}'.format(self.id))
 
         return self._get_output_dictionary()

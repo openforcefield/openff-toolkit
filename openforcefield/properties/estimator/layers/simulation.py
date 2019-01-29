@@ -31,7 +31,7 @@ from openforcefield.properties import PhysicalProperty, CalculationSource
 from openforcefield.properties.estimator import CalculationSchema
 from openforcefield.properties.estimator.layers.base import register_calculation_layer, PropertyCalculationLayer
 from openforcefield.properties.estimator.storage import StoredSimulationData
-from openforcefield.properties.estimator.workflow import protocols
+from openforcefield.properties.estimator.workflow import protocols, groups
 from openforcefield.utils import graph
 from .base import CalculationLayerResult
 
@@ -117,6 +117,21 @@ class DirectCalculation:
 
                 protocol.set_value(input_path, self.global_properties[input_value.property_name])
 
+            if isinstance(protocol, groups.ConditionalGroup):
+
+                for condition in protocol.conditions:
+
+                    left_value = condition.left_hand_value
+
+                    if isinstance(left_value, protocols.ProtocolPath) and left_value.is_global:
+                        condition.left_hand_value = self.global_properties[left_value.property_name]
+
+                    right_value = condition.right_hand_value
+        
+                    if isinstance(right_value, protocols.ProtocolPath) and right_value.is_global:
+                        condition.right_hand_value = self.global_properties[right_value.property_name]
+
+            protocol.schema.json()
             protocol.set_uuid(self.uuid)
 
             self.protocols[protocol.id] = protocol
@@ -488,6 +503,26 @@ class DirectCalculationGraph:
 
             input_value = parent_outputs_by_path[target_path]
             protocol.set_value(input_path, input_value)
+
+        if isinstance(protocol, groups.ConditionalGroup):
+
+            for condition in protocol.conditions:
+
+                left_value = condition.left_hand_value
+
+                if (isinstance(left_value, protocols.ProtocolPath) and 
+                    left_value.start_protocol is not None and
+                    left_value.start_protocol != protocol.id):
+                    
+                    condition.left_hand_value = parent_outputs_by_path[left_value]
+
+                right_value = condition.right_hand_value
+
+                if (isinstance(right_value, protocols.ProtocolPath) and
+                        right_value.start_protocol is not None and
+                        right_value.start_protocol != protocol.id):
+
+                    condition.right_hand_value = parent_outputs_by_path[right_value]
 
         try:
             output_dictionary = protocol.execute(directory)

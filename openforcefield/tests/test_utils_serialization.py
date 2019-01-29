@@ -81,7 +81,8 @@ def test_polymorphic_dictionary():
         "test_Bar": PolymorphicDataType(value=Bar()),
         "test_Baz": PolymorphicDataType(value=Baz.Option1),
         "test_Qux": PolymorphicDataType(value=Qux.Option1),
-        "test_Nested": PolymorphicDataType(value=NestedParent.NestedChild.Option1)
+        "test_Nested": PolymorphicDataType(value=NestedParent.NestedChild.Option1),
+        "test_List": PolymorphicDataType(value=[Foo(), Foo(), Foo(), Foo()])
     }
 
     pydantic_object = PydanticTestClass(inputs=test_dictionary)

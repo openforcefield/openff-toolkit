@@ -22,6 +22,8 @@ import json
 import sys
 from enum import Enum
 
+from json import JSONEncoder, JSONDecoder, JSONDecodeError
+
 from pydantic import BaseModel, ValidationError
 from pydantic.validators import dict_validator
 from simtk import unit
@@ -54,6 +56,76 @@ class TypedBaseModel(BaseModel):
 
         self.module_metadata = type(self).__module__
         self.type_metadata = type(self).__name__
+
+
+class PolymorphicEncoder(JSONEncoder):
+
+    def default(self, obj):
+
+        serializable_object = {}
+
+        value_to_serialize = obj
+        type_to_serialize = type(obj)
+
+        from simtk import unit
+
+        if isinstance(obj, PolymorphicDataType):
+
+            value_to_serialize = obj.value
+            type_to_serialize = obj.type
+
+        if isinstance(value_to_serialize, BaseModel):
+
+            serializable_object = value_to_serialize.dict()
+
+        elif isinstance(value_to_serialize, Enum):
+
+            serializable_object = value_to_serialize.value
+
+        elif isinstance(value_to_serialize, unit.Quantity):
+
+            serializable_object = serialize_quantity(value_to_serialize)
+
+        else:
+
+            try:
+
+                json.dumps(value_to_serialize)  # Check if the value is natively serializable.
+                serializable_object = value_to_serialize
+
+            except TypeError as e:
+
+                if isinstance(value_to_serialize, list):
+
+                    serializable_object = []
+                    list_object_type = None
+
+                    for value_in_list in value_to_serialize:
+
+                        if isinstance(value_in_list, PolymorphicDataType):
+                            raise ValueError("Nested lists of PolymorphicDataType's are not serializable.")
+
+                        if list_object_type is not None and type(value_in_list) != list_object_type:
+                            raise ValueError("Nested lists of PolymorphicDataType's are not serializable.")
+
+                        serializable_object.append(self.default(value_in_list))
+                        list_object_type = type(value_in_list)
+
+                else:
+
+                    serializable_object = value_to_serialize.__getstate__()
+
+        qualified_name = type_to_serialize.__qualname__
+        qualified_name = qualified_name.replace('.', '->')
+
+        return_value = {
+            '@type': '{}.{}'.format(type_to_serialize.__module__,
+                                    qualified_name),
+
+            'value': serializable_object
+        }
+
+        return return_value
 
 
 class PolymorphicDataType:
@@ -124,21 +196,34 @@ class PolymorphicDataType:
             class_name_current = class_name_split.pop(0)
             class_object = getattr(class_object, class_name_current)
 
-        value_json = json_dictionary['value']
+        value_object = json_dictionary['value']
 
         parsed_object = None
 
+        from simtk import unit
+
         if issubclass(class_object, BaseModel):
 
-            parsed_object = class_object.parse_raw(value_json)
+            parsed_object = class_object.parse_obj(value_object)
 
         elif issubclass(class_object, Enum):
 
-            parsed_object = class_object(value_json)
+            parsed_object = class_object(value_object)
+
+        elif issubclass(class_object, unit.Quantity):
+
+            parsed_object = deserialize_quantity(value_object)
+
+        elif issubclass(class_object, list):
+
+            parsed_object = []
+
+            for list_item in value_object:
+                parsed_object.append(PolymorphicDataType.deserialize(list_item).value)
 
         else:
 
-            parsed_object = json.loads(value_json)
+            parsed_object = value_object
 
             if hasattr(class_object, 'validate'):
                 parsed_object = class_object.validate(parsed_object)
@@ -168,32 +253,35 @@ class PolymorphicDataType:
             The JSON serialized value.
         """
 
-        value_json = ''
+        # value_json = ''
+        #
+        # if isinstance(value_to_serialize.value, BaseModel):
+        #
+        #     value_json = value_to_serialize.value.json()
+        #
+        # elif isinstance(value_to_serialize.value, Enum):
+        #
+        #     value_json = value_to_serialize.value.value
+        #
+        # else:
+        #     try:
+        #         value_json = json.dumps(value_to_serialize.value)
+        #     except TypeError as e:
+        #         value_json = json.dumps(value_to_serialize.value.__getstate__())
+        #
+        # qualified_name = value_to_serialize.type.__qualname__
+        # qualified_name = qualified_name.replace('.', '->')
+        #
+        # return_value = {
+        #     '@type': '{}.{}'.format(value_to_serialize.type.__module__,
+        #                             qualified_name),
+        #
+        #     'value': value_json
+        # }
 
-        if isinstance(value_to_serialize.value, BaseModel):
+        encoder = PolymorphicEncoder()
 
-            value_json = value_to_serialize.value.json()
-
-        elif isinstance(value_to_serialize.value, Enum):
-
-            value_json = value_to_serialize.value.value
-
-        else:
-            try:
-                value_json = json.dumps(value_to_serialize.value)
-            except TypeError as e:
-                value_json = json.dumps(value_to_serialize.value.__getstate__())
-
-        qualified_name = value_to_serialize.type.__qualname__
-        qualified_name = qualified_name.replace('.', '->')
-
-        return_value = {
-            '@type': '{}.{}'.format(value_to_serialize.type.__module__,
-                                    qualified_name),
-
-            'value': value_json
-        }
-
+        return_value = encoder.default(value_to_serialize)
         return return_value
 
 
