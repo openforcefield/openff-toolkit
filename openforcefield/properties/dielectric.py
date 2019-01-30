@@ -112,11 +112,11 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
 
         return dielectric_constant
 
-    def execute(self, directory):
+    def execute(self, directory, available_resources):
 
-        logging.info('Extracting dielectrics: ' + directory)
+        logging.info('Extracting dielectrics: ' + self.id)
 
-        base_exception = super(ExtractAverageDielectric, self).execute(directory)
+        base_exception = super(ExtractAverageDielectric, self).execute(directory, available_resources)
 
         if isinstance(base_exception, ExtractAverageDielectric):
             return base_exception
@@ -157,7 +157,7 @@ class ExtractAverageDielectric(AverageTrajectoryProperty):
         self._value = unit.Quantity(self._value, None)
         self._uncertainty = unit.Quantity(self._uncertainty, None)
 
-        logging.info('Extracted dielectrics: ' + directory)
+        logging.info('Extracted dielectrics: ' + self.id)
 
         return self._get_output_dictionary()
 
@@ -220,8 +220,8 @@ class DielectricConstant(PhysicalProperty):
 
         npt_production.ensemble = Ensemble.NPT
 
-        npt_production.steps = 200  # Debug settings.
-        npt_production.output_frequency = 20  # Debug settings.
+        npt_production.steps = 20  # Debug settings.
+        npt_production.output_frequency = 2  # Debug settings.
 
         npt_production.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 

@@ -76,3 +76,5 @@ examples/testing/test_system_conversion/system.*
 examples/property_estimator/dask-worker-space
 examples/property_estimator/working_directory
 examples/property_estimator/stored_data
+
+docs/api

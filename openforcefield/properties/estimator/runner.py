@@ -21,7 +21,7 @@ import os
 import struct
 import uuid
 from os import path
-from typing import Dict, List, Any
+from typing import List
 
 from pydantic import BaseModel
 from simtk import unit
@@ -31,9 +31,9 @@ from tornado.tcpserver import TCPServer
 
 from openforcefield.properties import PhysicalProperty
 from openforcefield.properties.estimator.client import PropertyEstimatorDataModel, PropertyEstimatorOptions
-from openforcefield.properties.estimator.workflow.protocols import ProtocolPath
-from openforcefield.properties.estimator.utils import PropertyEstimatorException
 from openforcefield.properties.estimator.layers import available_layers
+from openforcefield.properties.estimator.utils import PropertyEstimatorException
+from openforcefield.properties.estimator.workflow.protocols import ProtocolPath
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils.serialization import serialize_quantity, PolymorphicDataType
 from .utils import PropertyEstimatorMessageTypes
@@ -76,8 +76,6 @@ class PropertyRunnerDataModel(BaseModel):
 
     parameter_set_id: str = None
 
-    stored_data: Dict[str, Any] = {}
-
     class Config:
 
         arbitrary_types_allowed = True
@@ -107,8 +105,8 @@ class PropertyCalculationRunner(TCPServer):
     Setting up a general server instance using a dask LocalCluster backend:
 
     >>> # Create the backend which will be responsible for distributing the calculations
-    >>> from openforcefield.properties.estimator.backends import DaskLocalClusterBackend
-    >>> calculation_backend = DaskLocalClusterBackend(1, 1)
+    >>> from openforcefield.properties.estimator.backends import DaskLocalClusterBackend, BackendResources
+    >>> calculation_backend = DaskLocalClusterBackend(1, 1, BackendResources(1, 0))
     >>>
     >>> # Calculate the backend which will be responsible for storing and retrieving
     >>> # the data from previous calculations

@@ -7,6 +7,7 @@ from os import path
 from openforcefield.properties.datasets import ThermoMLDataSet
 from openforcefield.properties.estimator import client
 from openforcefield.properties.estimator import runner
+from openforcefield.properties.estimator.backends import BackendResources
 from openforcefield.properties.estimator.backends.dask import DaskLocalClusterBackend
 from openforcefield.properties.estimator.storage import LocalFileStorage
 from openforcefield.typing.engines import smirnoff
@@ -38,7 +39,7 @@ def run_property_estimator():
 
     force_field = smirnoff.ForceField(get_data_filename('forcefield/smirnoff99Frosst.offxml'))
 
-    calculation_backend = DaskLocalClusterBackend(1, 1)
+    calculation_backend = DaskLocalClusterBackend(1, 1, BackendResources(2, 0))
     storage_backend = LocalFileStorage()
 
     property_server = runner.PropertyCalculationRunner(calculation_backend,

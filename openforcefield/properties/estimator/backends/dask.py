@@ -16,9 +16,11 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import multiprocessing
+
 from dask import distributed
 
-from openforcefield.properties.estimator.backends.base import PropertyEstimatorBackend
+from openforcefield.properties.estimator.backends.base import PropertyEstimatorBackend, BackendResources
 
 
 # =============================================================================================
@@ -30,12 +32,20 @@ class DaskLocalClusterBackend(PropertyEstimatorBackend):
     run calculations.
     """
 
-    def __init__(self, number_of_workers=1, threads_per_worker=None):
+    def __init__(self, number_of_workers=1, threads_per_worker=None, resources_per_task=BackendResources()):
         """Constructs a new DaskLocalClusterBackend"""
-        super().__init__(number_of_workers, threads_per_worker)
 
-        self._number_of_workers = number_of_workers
-        self._threads_per_worker = threads_per_worker
+        super().__init__(number_of_workers, threads_per_worker, resources_per_task)
+
+        maximum_threads = multiprocessing.cpu_count()
+        requested_threads = number_of_workers * threads_per_worker * resources_per_task.number_of_threads
+
+        if requested_threads > maximum_threads:
+
+            raise ValueError('The total number of requested threads ({})is greater than is available on the'
+                             'machine ({})'.format(requested_threads, maximum_threads))
+
+        # TODO: Check GPUs
 
         self._cluster = None
         self._client = None
@@ -44,7 +54,8 @@ class DaskLocalClusterBackend(PropertyEstimatorBackend):
 
         self._cluster = distributed.LocalCluster(self._number_of_workers,
                                                  self._threads_per_worker,
-                                                 processes=False)
+                                                 processes=False,
+                                                 resources=self._resources_per_task.dict())
 
         self._client = distributed.Client(self._cluster,
                                           processes=False)
@@ -55,4 +66,6 @@ class DaskLocalClusterBackend(PropertyEstimatorBackend):
         self._cluster.close()
 
     def submit_task(self, function, *args):
-        return self._client.submit(function, *args)
+
+        return self._client.submit(function, *args, resources=self._resources_per_task.dict(),
+                                   available_resources=self._resources_per_task)

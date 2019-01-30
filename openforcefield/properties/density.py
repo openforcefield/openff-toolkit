@@ -54,11 +54,11 @@ class ExtractAverageDensity(AverageTrajectoryProperty):
         """The system object which defines the forces present in the system."""
         pass
 
-    def execute(self, directory):
+    def execute(self, directory, available_resources):
 
-        logging.info('Extracting densities: ' + directory)
+        logging.info('Extracting densities: ' + self.id)
 
-        base_exception = super(ExtractAverageDensity, self).execute(directory)
+        base_exception = super(ExtractAverageDensity, self).execute(directory, available_resources)
 
         if isinstance(base_exception, PropertyEstimatorException):
             return base_exception
@@ -82,7 +82,7 @@ class ExtractAverageDensity(AverageTrajectoryProperty):
         self._value *= unit.kilogram * unit.meter ** -3
         self._uncertainty *= unit.kilogram * unit.meter ** -3
 
-        logging.info('Extracted densities: ' + directory)
+        logging.info('Extracted densities: ' + self.id)
 
         return self._get_output_dictionary()
 
@@ -145,8 +145,8 @@ class Density(PhysicalProperty):
 
         npt_production.ensemble = Ensemble.NPT
 
-        npt_production.steps = 2  # Debug settings.
-        npt_production.output_frequency = 1  # Debug settings.
+        npt_production.steps = 20  # Debug settings.
+        npt_production.output_frequency = 2  # Debug settings.
 
         npt_production.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 

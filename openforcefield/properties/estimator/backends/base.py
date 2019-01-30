@@ -14,16 +14,63 @@ Authors
 # GLOBAL IMPORTS
 # =============================================================================================
 
-import logging
-import multiprocessing
-import os
-
-import math
-
 
 # =============================================================================================
 # Base Backend Definition
 # =============================================================================================
+
+class BackendResources:
+    """An object which stores how many of each type of computational resource
+    (threads or gpu's) is available to a calculation task."""
+
+    @property
+    def number_of_threads(self):
+        return self._number_of_threads
+
+    @property
+    def number_of_gpus(self):
+        return self._number_of_gpus
+
+    def __init__(self, number_of_threads=1, number_of_gpus=0):
+        """Constructs a new BackendResources object.
+
+        Parameters
+        ----------
+        number_of_threads: int
+            The number of the threads available.
+        number_of_gpus
+            The number of the gpu's available.
+        """
+
+        self._number_of_threads = number_of_threads
+        self._number_of_gpus = number_of_gpus
+        
+        assert self._number_of_threads >= 0
+        assert self._number_of_gpus >= 0
+
+        assert self._number_of_threads > 0 or self._number_of_gpus > 0
+
+    def dict(self):
+        return self.__getstate__()
+
+    def __getstate__(self):
+        return {
+            'number_of_threads': self.number_of_threads,
+            'number_of_gpus': self.number_of_gpus
+        }
+
+    def __setstate__(self, state):
+
+        self._number_of_threads = state['number_of_threads']
+        self._number_of_gpus = state['number_of_gpus']
+
+    def __eq__(self, other):
+        return self.number_of_threads == other.number_of_threads and \
+               self.number_of_gpus == other.number_of_gpus
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class PropertyEstimatorBackend:
     """An abstract base representation of a property estimator backend.
@@ -37,7 +84,7 @@ class PropertyEstimatorBackend:
     `start`, `stop`, and `submit_task` method.
     """
 
-    def __init__(self, number_of_workers=1, threads_per_worker=None):
+    def __init__(self, number_of_workers=1, threads_per_worker=None, resources_per_task=BackendResources()):
         """Constructs a new PropertyEstimatorBackend object.
 
         Parameters
@@ -46,38 +93,15 @@ class PropertyEstimatorBackend:
             The number of works to run the calculations on. One worker
             can perform a single task (e.g run a simulation) at once.
         threads_per_worker : int, optional
-            The number of threads available to each worker. This enables
-            multi-threaded tasks (e.g run a simulation on more than one core).
-
-            If None, the workers will split any unused threads between
-            themselves.
+            The number of threads per each launched worker.
+        resources_per_task: BackendResources
+            The number of resources available to each calculation task.
         """
 
         self._number_of_workers = number_of_workers
         self._threads_per_worker = threads_per_worker
 
-        self._calculate_number_of_simulation_threads()
-
-    def _calculate_number_of_simulation_threads(self):
-        """Determines how many threads will be used per simulation
-        if no value is given by the user. The default option is
-        to use as many threads as are available.
-        """
-        maximum_threads = multiprocessing.cpu_count()
-
-        if self._threads_per_worker is None:
-            self._threads_per_worker = math.floor(maximum_threads / self._number_of_workers)
-
-        total_threads = self._number_of_workers * self._threads_per_worker
-
-        if total_threads > maximum_threads:
-
-            raise ValueError('The total number of requested threads ({}) must be less '
-                             'than the available {}.'.format(total_threads, maximum_threads))
-
-        logging.info(str(self._threads_per_worker) + ' threads will be used per worker')
-
-        os.environ["OPENMM_NUM_THREADS"] = str(self._threads_per_worker)
+        self._resources_per_task = resources_per_task
 
     def start(self):
         """Start the calculation backend."""

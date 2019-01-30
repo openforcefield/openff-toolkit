@@ -50,6 +50,7 @@ Calculation Backends
     :nosignatures:
     :toctree: api/generated/
 
+    BackendResources
     PropertyEstimatorBackend
     DaskLocalClusterBackend
 

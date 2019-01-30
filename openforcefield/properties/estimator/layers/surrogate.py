@@ -58,7 +58,7 @@ class SurrogateLayer(PropertyCalculationLayer):
                                                 synchronous)
 
     @staticmethod
-    def perform_surrogate_extrapolation(physical_property, parameter_set):
+    def perform_surrogate_extrapolation(physical_property, parameter_set, **kwargs):
         """A placeholder method that would be used to spawn the surrogate
         model backend.
 

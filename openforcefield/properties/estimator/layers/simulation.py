@@ -453,7 +453,7 @@ class DirectCalculationGraph:
         return value_futures
 
     @staticmethod
-    def _execute_protocol(directory, protocol_schema, *parent_outputs):
+    def _execute_protocol(directory, protocol_schema, *parent_outputs, available_resources, **kwargs):
         """Executes a protocol defined by ``protocol_schema``, and with
         inputs sets via the global scope and from previously executed protocols.
 
@@ -534,7 +534,7 @@ class DirectCalculationGraph:
                     condition.right_hand_value = parent_outputs_by_path[right_value]
 
         try:
-            output_dictionary = protocol.execute(directory)
+            output_dictionary = protocol.execute(directory, available_resources)
         except Exception as e:
             # Except the unexpected...
             formatted_exception = traceback.format_exception(None, e, e.__traceback__)
@@ -547,7 +547,7 @@ class DirectCalculationGraph:
 
     @staticmethod
     def _gather_results(property_to_return, value_reference, uncertainty_reference,
-                        coordinate_reference, trajectory_reference, *protocol_results):
+                        coordinate_reference, trajectory_reference, *protocol_results, **kwargs):
         """Gather the value and uncertainty calculated from the submission graph
         and store them in the property to return.
 

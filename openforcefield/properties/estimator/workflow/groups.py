@@ -261,14 +261,15 @@ class ProtocolGroup(BaseProtocol):
 
         self._protocols = new_protocols
 
-    def execute(self, directory):
+    def execute(self, directory, available_resources):
         """Executes the protocols within this groups
 
         Parameters
         ----------
         directory : str
             The root directory in which to run the protocols
-
+        available_resources: BackendResources
+            The resources available to execute on.
         Returns
         -------
         bool
@@ -299,7 +300,7 @@ class ProtocolGroup(BaseProtocol):
 
                 protocol_to_execute.set_value(input_path, input_value)
 
-            return_value = protocol_to_execute.execute(working_directory)
+            return_value = protocol_to_execute.execute(working_directory, available_resources)
 
             if isinstance(return_value, PropertyEstimatorException):
                 return return_value
@@ -673,13 +674,15 @@ class ConditionalGroup(ProtocolGroup):
 
         raise NotImplementedError()
 
-    def execute(self, directory):
+    def execute(self, directory, available_resources):
         """Executes the protocols within this groups
 
         Parameters
         ----------
         directory : str
             The root directory in which to run the protocols
+        available_resources: BackendResources
+            The resources available to execute on.
 
         Returns
         -------
@@ -696,7 +699,7 @@ class ConditionalGroup(ProtocolGroup):
         while should_continue:
 
             current_iteration += 1
-            return_value = super(ConditionalGroup, self).execute(directory)
+            return_value = super(ConditionalGroup, self).execute(directory, available_resources)
 
             if isinstance(return_value, PropertyEstimatorException):
                 # Exit on exceptions.

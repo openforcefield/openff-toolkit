@@ -155,8 +155,8 @@ class PropertyEstimator(object):
     Setting up the server instance:
 
     >>> # Create the backend which will be responsible for distributing the calculations
-    >>> from openforcefield.properties.estimator.backends import DaskLocalClusterBackend
-    >>> calculation_backend = DaskLocalClusterBackend(1, 1)
+    >>> from openforcefield.properties.estimator.backends import DaskLocalClusterBackend, BackendResources
+    >>> calculation_backend = DaskLocalClusterBackend(1, 1, BackendResources(1, 0))
     >>>
     >>> # Calculate the backend which will be responsible for storing and retrieving
     >>> # the data from previous calculations
@@ -424,6 +424,7 @@ class PropertyEstimator(object):
             ticket_id = json.loads(encoded_json.decode())
 
             logging.info('Received job id from server: {}'.format(ticket_id))
+            stream.close()
             self._tcp_client.close()
 
         except StreamClosedError as e:
@@ -489,6 +490,8 @@ class PropertyEstimator(object):
                 server_response = json.loads(encoded_json.decode())
 
             logging.info('Received response from server of length {}: {}'.format(length, server_response))
+
+            stream.close()
             self._tcp_client.close()
 
         except StreamClosedError as e:

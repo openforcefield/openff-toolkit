@@ -44,7 +44,7 @@ def register_calculation_layer():
     return decorator
 
 
-def return_args(*args):
+def return_args(*args, **kwargs):
     return args
 
 

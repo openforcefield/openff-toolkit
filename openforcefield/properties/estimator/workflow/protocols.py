@@ -25,7 +25,7 @@ from typing import Dict
 import mdtraj
 import numpy as np
 from simtk import openmm, unit
-from simtk.openmm import app, System
+from simtk.openmm import app, System, Platform
 
 from openforcefield.properties.estimator.utils import PropertyEstimatorException
 from openforcefield.properties.estimator.workflow.decorators import protocol_input, protocol_output, MergeBehaviour
@@ -428,7 +428,7 @@ class BaseProtocol:
         # The directory in which to execute the protocol.
         self.directory = None
 
-    def execute(self, directory):
+    def execute(self, directory, available_resources):
         """ Execute the protocol.
 
         Protocols may be chained together by passing the output
@@ -438,6 +438,8 @@ class BaseProtocol:
         ----------
         directory: str
             The directory to store output data in.
+        available_resources: BackendResources
+            The resources available to execute on.
 
         Returns
         ----------
@@ -797,9 +799,9 @@ class BuildCoordinatesPackmol(BaseProtocol):
         self._max_molecules = 128
         self._mass_density = 1.0 * unit.grams / unit.milliliters
 
-    def execute(self, directory):
+    def execute(self, directory, available_resources):
 
-        logging.info('Generating coordinates: ' + directory)
+        logging.info('Generating coordinates: ' + self.id)
 
         if self._substance is None:
 
@@ -887,9 +889,9 @@ class BuildSmirnoffTopology(BaseProtocol):
         # outputs
         self._system = None
 
-    def execute(self, directory):
+    def execute(self, directory, available_resources):
 
-        logging.info('Generating topology: ' + directory)
+        logging.info('Generating topology: ' + self.id)
 
         pdb_file = app.PDBFile(self._coordinate_file_path)
 
@@ -923,7 +925,7 @@ class BuildSmirnoffTopology(BaseProtocol):
 
         self._system = system
 
-        logging.info('Topology generated: ' + directory)
+        logging.info('Topology generated: ' + self.id)
 
         return self._get_output_dictionary()
 
@@ -961,16 +963,33 @@ class RunEnergyMinimisation(BaseProtocol):
         # outputs
         self._output_coordinate_file = None
 
-    def execute(self, directory):
+    def execute(self, directory, available_resources):
 
-        logging.info('Minimising energy: ' + directory)
+        logging.info('Minimising energy: ' + self.id)
 
         integrator = openmm.VerletIntegrator(0.002 * unit.picoseconds)
 
         input_pdb_file = app.PDBFile(self._input_coordinate_file)
 
-        simulation = app.Simulation(input_pdb_file.topology,
-                                    self._system, integrator)
+        simulation = None
+
+        if available_resources.number_of_gpus > 0:
+
+            gpu_platform = Platform.getPlatformByName('CUDA')
+            properties = {'DeviceIndex': ','.join(range(available_resources.number_of_gpus))}
+
+            simulation = app.Simulation(input_pdb_file.topology, self._system, integrator, gpu_platform, properties)
+
+            logging.info('Setting up a simulation with {} gpu\'s'.format(available_resources.number_of_gpus))
+
+        else:
+
+            cpu_platform = Platform.getPlatformByName('CPU')
+            properties = {'Threads': str(available_resources.number_of_threads)}
+
+            simulation = app.Simulation(input_pdb_file.topology, self._system, integrator, cpu_platform, properties)
+
+            logging.info('Setting up a simulation with {} threads'.format(available_resources.number_of_threads))
 
         simulation.context.setPositions(input_pdb_file.positions)
 
@@ -983,7 +1002,7 @@ class RunEnergyMinimisation(BaseProtocol):
         with open(self._output_coordinate_file, 'w+') as minimised_file:
             app.PDBFile.writeFile(simulation.topology, positions, minimised_file)
 
-        logging.info('Energy minimised: ' + directory)
+        logging.info('Energy minimised: ' + self.id)
 
         return self._get_output_dictionary()
 
@@ -1077,7 +1096,7 @@ class RunOpenMMSimulation(BaseProtocol):
 
         pass
 
-    def execute(self, directory):
+    def execute(self, directory, available_resources):
 
         temperature = self._thermodynamic_state.temperature
         pressure = self._thermodynamic_state.pressure
@@ -1093,10 +1112,10 @@ class RunOpenMMSimulation(BaseProtocol):
             return PropertyEstimatorException(directory=directory,
                                               message='A pressure must be set to perform an NPT simulation')
 
-        logging.info('Performing a simulation in the ' + str(self._ensemble) + ' ensemble: ' + directory)
+        logging.info('Performing a simulation in the ' + str(self._ensemble) + ' ensemble: ' + self.id)
 
         if self._simulation_object is None:
-            self._simulation_object = self._setup_new_simulation(directory, temperature, pressure)
+            self._simulation_object = self._setup_new_simulation(directory, temperature, pressure, available_resources)
 
         try:
             self._simulation_object.step(self._steps)
@@ -1110,7 +1129,7 @@ class RunOpenMMSimulation(BaseProtocol):
         input_pdb_file = app.PDBFile(self._input_coordinate_file)
         self._output_coordinate_file = path.join(directory, 'output.pdb')
 
-        logging.info('Simulation performed in the ' + str(self._ensemble) + ' ensemble: ' + directory)
+        logging.info('Simulation performed in the ' + str(self._ensemble) + ' ensemble: ' + self.id)
 
         with open(self._output_coordinate_file, 'w+') as configuration_file:
 
@@ -1119,7 +1138,7 @@ class RunOpenMMSimulation(BaseProtocol):
 
         return self._get_output_dictionary()
 
-    def _setup_new_simulation(self, directory, temperature, pressure):
+    def _setup_new_simulation(self, directory, temperature, pressure, available_resources):
         """Creates a new OpenMM simulation object.
 
         Parameters
@@ -1130,6 +1149,8 @@ class RunOpenMMSimulation(BaseProtocol):
             The temperature at which to run the simulation
         pressure: unit.Quantiy
             The pressure at which to run the simulation
+        available_resources: BackendResources
+            The resources available to run on.
         """
 
         # For now set some 'best guess' thermostat parameters.
@@ -1149,9 +1170,35 @@ class RunOpenMMSimulation(BaseProtocol):
 
         input_pdb_file = app.PDBFile(self._input_coordinate_file)
 
-        simulation = app.Simulation(input_pdb_file.topology, system, integrator)
-        simulation.context.setPositions(input_pdb_file.positions)
+        simulation = None
 
+        if available_resources.number_of_gpus > 0:
+
+            gpu_platform = Platform.getPlatformByName('CUDA')
+            properties = {'DeviceIndex': ','.join(range(available_resources.number_of_gpus))}
+
+            simulation = app.Simulation(input_pdb_file.topology, system, integrator, gpu_platform, properties)
+
+            logging.info('Setting up a simulation with {} gpu\'s'.format(available_resources.number_of_gpus))
+
+        else:
+
+            cpu_platform = Platform.getPlatformByName('CPU')
+            properties = {'Threads': str(available_resources.number_of_threads)}
+
+            simulation = app.Simulation(input_pdb_file.topology, system, integrator, cpu_platform, properties)
+
+            logging.info('Setting up a simulation with {} threads'.format(available_resources.number_of_threads))
+
+        # simulation = app.Simulation(input_pdb_file.topology, system, integrator)
+
+        box_vectors = input_pdb_file.topology.getPeriodicBoxVectors()
+
+        if box_vectors is None:
+            box_vectors = system.getDefaultPeriodicBoxVectors()
+
+        simulation.context.setPeriodicBoxVectors(*box_vectors)
+        simulation.context.setPositions(input_pdb_file.positions)
         simulation.context.setVelocitiesToTemperature(temperature)
 
         trajectory_path = path.join(directory, 'trajectory.dcd')
@@ -1289,7 +1336,7 @@ class AveragePropertyProtocol(BaseProtocol):
 
         return average_value, uncertainty
 
-    def execute(self, directory):
+    def execute(self, directory, available_resources):
         return self._get_output_dictionary()
 
 
@@ -1318,7 +1365,7 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
 
         self.trajectory = None
 
-    def execute(self, directory):
+    def execute(self, directory, available_resources):
 
         if self._trajectory_path is None:
 
@@ -1353,7 +1400,7 @@ class ExtractUncorrelatedData(BaseProtocol):
         self._equilibration_index = None
         self._statistical_inefficiency = None
 
-    def execute(self, directory):
+    def execute(self, directory, available_resources):
         raise NotImplementedError
 
 
@@ -1387,7 +1434,7 @@ class ExtractUncorrelatedTrajectoryData(ExtractUncorrelatedData):
 
         self._output_trajectory_path = None
 
-    def execute(self, directory):
+    def execute(self, directory, available_resources):
 
         logging.info('Subsampling trajectory: {}'.format(self.id))
 

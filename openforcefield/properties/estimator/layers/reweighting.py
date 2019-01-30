@@ -61,7 +61,7 @@ class ReweightingLayer(PropertyCalculationLayer):
                                                 synchronous)
 
     @staticmethod
-    def perform_reweighting(physical_property, parameter_set, existing_data):
+    def perform_reweighting(physical_property, parameter_set, existing_data, **kwargs):
         """A placeholder method that would be used to attempt
         to reweight previous calculations to yield the desired
         property.
