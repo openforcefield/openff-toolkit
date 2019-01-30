@@ -25,13 +25,13 @@ def run_property_estimator():
     if path.isdir(working_directory):
         shutil.rmtree(working_directory)
 
-    # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_density.xml'))
+    data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_density.xml'))
     # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_dielectric.xml'))
 
     # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/single_density.xml'),
     #                                           get_data_filename('properties/single_dielectric.xml'))
 
-    data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/density_dielectric.xml'))
+    # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/density_dielectric.xml'))
     # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/two_species.xml'))
     # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/binary.xml'))
     # data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/fake_data.xml'))

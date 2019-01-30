@@ -27,6 +27,7 @@ from openforcefield.properties.estimator.workflow import protocols, groups, prot
 from openforcefield.properties.estimator.workflow.protocols import AverageTrajectoryProperty, \
     register_calculation_protocol, ProtocolPath
 from openforcefield.properties.properties import PhysicalProperty
+from openforcefield.properties.statistics import Statistics, AvailableQuantities
 from openforcefield.properties.thermodynamics import Ensemble
 from openforcefield.utils import statistics
 
@@ -130,8 +131,8 @@ class Density(PhysicalProperty):
 
         npt_equilibration.ensemble = Ensemble.NPT
 
-        npt_equilibration.steps = 2  # Debug settings.
-        npt_equilibration.output_frequency = 1  # Debug settings.
+        npt_equilibration.steps = 2000  # Debug settings.
+        npt_equilibration.output_frequency = 200  # Debug settings.
 
         npt_equilibration.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
@@ -145,8 +146,8 @@ class Density(PhysicalProperty):
 
         npt_production.ensemble = Ensemble.NPT
 
-        npt_production.steps = 20  # Debug settings.
-        npt_production.output_frequency = 2  # Debug settings.
+        npt_production.steps = 20000  # Debug settings.
+        npt_production.output_frequency = 200  # Debug settings.
 
         npt_production.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
 
@@ -154,13 +155,16 @@ class Density(PhysicalProperty):
         npt_production.system = ProtocolPath('system', assign_topology.id)
 
         # Analysis
-        extract_density = ExtractAverageDensity('extract_density')
+        # extract_density = ExtractAverageDensity('extract_density')
+        #
+        # extract_density.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_production.id)
+        # extract_density.trajectory_path = ProtocolPath('trajectory_file_path', npt_production.id)
+        # extract_density.system = ProtocolPath('system', assign_topology.id)
 
-        extract_density.thermodynamic_state = ProtocolPath('thermodynamic_state', 'global')
+        extract_density = protocols.ExtractAverageStatistic('extract_density')
 
-        extract_density.input_coordinate_file = ProtocolPath('output_coordinate_file', npt_production.id)
-        extract_density.trajectory_path = ProtocolPath('trajectory_file_path', npt_production.id)
-        extract_density.system = ProtocolPath('system', assign_topology.id)
+        extract_density.statistics_type = AvailableQuantities.Density
+        extract_density.statistics_path = ProtocolPath('statistics_file_path', npt_production.id)
 
         # Set up a conditional group to ensure convergence of uncertainty
         converge_uncertainty = groups.ConditionalGroup('converge_uncertainty')
@@ -178,7 +182,7 @@ class Density(PhysicalProperty):
 
         converge_uncertainty.add_condition(condition)
 
-        converge_uncertainty.max_iterations = 1
+        converge_uncertainty.max_iterations = 10
 
         schema.protocols[converge_uncertainty.id] = converge_uncertainty.schema
 

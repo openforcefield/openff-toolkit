@@ -29,6 +29,7 @@ from simtk.openmm import app, System, Platform
 
 from openforcefield.properties.estimator.utils import PropertyEstimatorException
 from openforcefield.properties.estimator.workflow.decorators import protocol_input, protocol_output, MergeBehaviour
+from openforcefield.properties.statistics import Statistics, AvailableQuantities
 from openforcefield.properties.substances import Substance
 from openforcefield.properties.thermodynamics import ThermodynamicState, Ensemble
 from openforcefield.typing.engines import smirnoff
@@ -1091,8 +1092,11 @@ class RunOpenMMSimulation(BaseProtocol):
 
         # outputs
         self._output_coordinate_file = None
+
         self._trajectory_file_path = None
         self._statistics_file_path = None
+
+        self._temporary_statistics_path = None
 
         pass
 
@@ -1123,6 +1127,12 @@ class RunOpenMMSimulation(BaseProtocol):
 
             return PropertyEstimatorException(directory=directory,
                                               message='Simulation failed: {}'.format(e))
+
+        # Save the newly generated statistics data as a pandas csv file.
+        pressure = None if self._ensemble == Ensemble.NVT else self._thermodynamic_state.pressure
+
+        working_statistics = Statistics.from_openmm_csv(self._temporary_statistics_path, pressure)
+        working_statistics.save_as_pandas_csv(self._statistics_file_path)
 
         positions = self._simulation_object.context.getState(getPositions=True).getPositions()
 
@@ -1202,7 +1212,9 @@ class RunOpenMMSimulation(BaseProtocol):
         simulation.context.setVelocitiesToTemperature(temperature)
 
         trajectory_path = path.join(directory, 'trajectory.dcd')
-        statistics_path = path.join(directory, 'statistics.dat')
+        statistics_path = path.join(directory, 'statistics.csv')
+
+        self._temporary_statistics_path = path.join(directory, 'temp_statistics.csv')
 
         self._trajectory_file_path = trajectory_path
         self._statistics_file_path = statistics_path
@@ -1216,8 +1228,10 @@ class RunOpenMMSimulation(BaseProtocol):
 
         simulation.reporters.append(app.DCDReporter(trajectory_path, self._output_frequency))
 
-        simulation.reporters.append(app.StateDataReporter(statistics_path, self._output_frequency, step=True,
-                                                          potentialEnergy=True, temperature=True, volume=True))
+        simulation.reporters.append(app.StateDataReporter(self._temporary_statistics_path, self._output_frequency,
+                                                          step=True, potentialEnergy=True, kineticEnergy=True,
+                                                          totalEnergy=True, temperature=True, volume=True,
+                                                          density=True))
 
         return simulation
 
@@ -1374,6 +1388,69 @@ class AverageTrajectoryProperty(AveragePropertyProtocol):
                                                        'requires a previously calculated trajectory')
 
         self.trajectory = mdtraj.load_dcd(filename=self._trajectory_path, top=self._input_coordinate_file)
+
+        return self._get_output_dictionary()
+
+
+@register_calculation_protocol()
+class ExtractAverageStatistic(AveragePropertyProtocol):
+    """Extracts the average value from a statistics file which was generated
+    during a simulation.
+    """
+
+    @protocol_input(str)
+    def statistics_path(self):
+        """The file path to the trajectory to average over."""
+        pass
+
+    @protocol_input(AvailableQuantities)
+    def statistics_type(self):
+        """The file path to the trajectory to average over."""
+        pass
+
+    def __init__(self, protocol_id):
+
+        super().__init__(protocol_id)
+
+        self._statistics_path = None
+        self._statistics_type = AvailableQuantities.PotentialEnergy
+
+        self._statistics = None
+
+    def execute(self, directory, available_resources):
+
+        logging.info('Extracting {}: {}'.format(self._statistics_type, self.id))
+
+        if self._statistics_path is None:
+
+            return PropertyEstimatorException(directory=directory,
+                                              message='The ExtractAverageStatistic protocol '
+                                                       'requires a previously calculated statistics file')
+
+        self._statistics = Statistics.from_pandas_csv(self.statistics_path)
+
+        values = self._statistics.get_statistics(self._statistics_type)
+
+        if values is None or len(values) == 0:
+
+            return PropertyEstimatorException(directory=directory,
+                                              message='The {} statistics file contains no '
+                                                      'data.'.format(self._statistics_path))
+
+        statistics_unit = values[0].unit
+        values /= statistics_unit
+
+        values = np.array(values)
+
+        values, self._equilibration_index, self._statistical_inefficiency = \
+            statistics.decorrelate_time_series(values)
+
+        self._value, self._uncertainty = self._perform_bootstrapping(values)
+
+        self._value = unit.Quantity(self._value, statistics_unit)
+        self._uncertainty = unit.Quantity(self._uncertainty, statistics_unit)
+
+        logging.info('Extracted {}: {}'.format(self._statistics_type, self.id))
 
         return self._get_output_dictionary()
 

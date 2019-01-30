@@ -142,7 +142,7 @@ class PropertyCalculationLayer:
                 if isinstance(return_object, PhysicalProperty):
                     returned_data_model.calculated_properties[return_object.id] = return_object
                 else:
-                    returned_data_model.unsuccessful_properties[return_object.id] = return_object
+                    returned_data_model.unsuccessful_properties[returned_output.property_id] = return_object
 
             callback(returned_data_model)
 

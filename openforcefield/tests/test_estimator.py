@@ -6,9 +6,20 @@ from openforcefield.properties import Density, DielectricConstant, PropertyPhase
 from openforcefield.properties.estimator import CalculationSchema
 from openforcefield.properties.estimator.client import PropertyEstimatorOptions
 from openforcefield.properties.estimator.layers.simulation import DirectCalculation, DirectCalculationGraph
+from openforcefield.properties.statistics import Statistics
 from openforcefield.properties.substances import Mixture
 from openforcefield.properties.thermodynamics import ThermodynamicState
 from openforcefield.utils import get_data_filename, graph
+
+
+def test_statistics_object():
+
+    statistics_object = Statistics.from_openmm_csv(get_data_filename('properties/stats_openmm.csv'), 1*unit.atmosphere)
+    print(statistics_object)
+
+    statistics_object.save_as_pandas_csv('stats_pandas.csv')
+
+    statistics_object = Statistics.from_pandas_csv('stats_pandas.csv')
 
 
 def test_calculation_schema():
