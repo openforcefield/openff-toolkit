@@ -17,14 +17,16 @@ Authors
 from typing import Dict, Optional
 
 from pydantic import BaseModel
+from simtk import unit
 
 from openforcefield.properties.estimator.workflow.protocols import ProtocolSchema, \
     available_protocols, ProtocolPath
+from openforcefield.utils.serialization import PolymorphicDataType, serialize_quantity
+
+
 # =============================================================================================
 # Property Calculation Schema
 # =============================================================================================
-from openforcefield.utils.serialization import PolymorphicDataType
-
 
 class CalculationSchema(BaseModel):
     """Defines the set of protocols required to calculate a certain property.
@@ -44,6 +46,7 @@ class CalculationSchema(BaseModel):
         arbitrary_types_allowed = True
 
         json_encoders = {
+            unit.Quantity: lambda value: serialize_quantity(value),
             ProtocolPath: lambda value: value.full_path,
             PolymorphicDataType: lambda value: PolymorphicDataType.serialize(value)
         }

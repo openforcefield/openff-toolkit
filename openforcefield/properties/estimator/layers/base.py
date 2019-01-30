@@ -139,7 +139,10 @@ class PropertyCalculationLayer:
                 for match in matches:
                     returned_data_model.queued_properties.remove(match)
 
-                returned_data_model.calculated_properties.append(return_object)
+                if isinstance(return_object, PhysicalProperty):
+                    returned_data_model.calculated_properties[return_object.id] = return_object
+                else:
+                    returned_data_model.unsuccessful_properties[return_object.id] = return_object
 
             callback(returned_data_model)
 

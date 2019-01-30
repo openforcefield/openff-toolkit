@@ -20,9 +20,10 @@ import uuid
 from enum import IntFlag, unique
 
 from pydantic import validator
-from typing import Optional
+from typing import Optional, Dict
 
-from openforcefield.utils.serialization import deserialize_quantity, serialize_quantity, TypedBaseModel
+from openforcefield.utils.serialization import deserialize_quantity, serialize_quantity, TypedBaseModel, \
+    PolymorphicDataType
 
 from openforcefield.properties.thermodynamics import ThermodynamicState
 from openforcefield.properties.substances import Substance
@@ -73,7 +74,14 @@ class Source(TypedBaseModel):
 
     .. todo:: Swap this out with a more general provenance class.
     """
-    pass
+
+    class Config:
+        arbitrary_types_allowed = True
+
+        json_encoders = {
+            unit.Quantity: lambda value: serialize_quantity(value),
+            PolymorphicDataType: lambda value: PolymorphicDataType.serialize(value)
+        }
 
 
 class MeasurementSource(Source):
@@ -111,7 +119,7 @@ class CalculationSource(Source):
     """
 
     fidelity: str = None
-    provenance: str = None
+    provenance: Dict[str, PolymorphicDataType] = None
 
 
 # =============================================================================================

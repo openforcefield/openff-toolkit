@@ -34,7 +34,7 @@ from openforcefield.properties.estimator.layers import SurrogateLayer, Reweighti
 from openforcefield.properties.estimator.workflow.protocols import ProtocolPath
 from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.utils.serialization import serialize_quantity, PolymorphicDataType
-from .utils import PropertyEstimatorMessageTypes
+from .utils import PropertyEstimatorMessageTypes, PropertyEstimatorException
 
 int_struct = struct.Struct("<i")
 
@@ -111,7 +111,7 @@ class PropertyEstimatorOptions(BaseModel):
         }
 
 
-class PropertyEstimatorDataModel(BaseModel):
+class PropertyEstimatorSubmission(BaseModel):
     """Represents a set of properties to be calculated by the estimator,
     the parameters which will be used to calculate them, and options about
     how the properties will be calculated.
@@ -133,6 +133,38 @@ class PropertyEstimatorDataModel(BaseModel):
 
     class Config:
 
+        arbitrary_types_allowed = True
+
+        json_encoders = {
+            unit.Quantity: lambda v: serialize_quantity(v),
+            ProtocolPath: lambda v: v.full_path,
+            PolymorphicDataType: lambda value: PolymorphicDataType.serialize(value)
+        }
+
+
+class PropertyEstimatorResult(BaseModel):
+    """Represents a set of properties to be calculated by the estimator,
+    the parameters which will be used to calculate them, and options about
+    how the properties will be calculated.
+
+    Attributes
+    ----------
+    properties: list of PhysicalProperty
+        The list of physical properties to calculate.
+    options: PropertyEstimatorOptions
+        The options used to calculate the properties.
+    parameter_set: dict of str and int
+        The force field parameters used during the calculations. These should be
+        obtained by calling .__getstate__() on a `ForceField` object.
+    """
+    id: str
+
+    calculated_properties: Dict[str, PhysicalProperty] = {}
+    unsuccessful_properties: Dict[str, PropertyEstimatorException] = {}
+
+    parameter_set_id: str = None
+
+    class Config:
         arbitrary_types_allowed = True
 
         json_encoders = {
@@ -298,9 +330,9 @@ class PropertyEstimator(object):
 
                 protocol_schema.inputs['.allow_merging'] = PolymorphicDataType(options.allow_protocol_merging)
 
-        submission = PropertyEstimatorDataModel(properties=properties_list,
-                                                parameter_set=parameter_set.__getstate__(),
-                                                options=options)
+        submission = PropertyEstimatorSubmission(properties=properties_list,
+                                                 parameter_set=parameter_set.__getstate__(),
+                                                 options=options)
 
         # For now just do a blocking submit to the server.
         ticket_ids = IOLoop.current().run_sync(lambda: self._send_calculations_to_server(submission))
@@ -318,13 +350,15 @@ class PropertyEstimator(object):
 
         Returns
         -------
-        str, optional:
-           The status of the submitted job.
-           Returns None if the calculation has not yet completed.
+        PropertyEstimatorResult or PropertyCalculatorException, optional:
+           The result of the submitted job. Returns None if the calculation has
+           not yet completed.
         """
 
         # For now just do a blocking submit to the server.
-        return IOLoop.current().run_sync(lambda: self._send_query_server(ticket_id))
+        result = IOLoop.current().run_sync(lambda: self._send_query_server(ticket_id))
+
+        return result
 
     def wait_for_result(self, ticket_id, interval=10):
         """
@@ -339,7 +373,7 @@ class PropertyEstimator(object):
 
         Returns
         -------
-        PropertyRunnerDataModel, PropertyCalculatorException, optional:
+        PropertyEstimatorResult or PropertyCalculatorException, optional:
            The result of the submitted job. Returns None if the calculation has
            not yet completed.
         """
@@ -374,7 +408,7 @@ class PropertyEstimator(object):
 
         Parameters
         ----------
-        submission: PropertyEstimatorDataModel
+        submission: PropertyEstimatorSubmission
             The jobs to submit.
 
         Returns
@@ -487,9 +521,9 @@ class PropertyEstimator(object):
             if length > 0:
 
                 encoded_json = await stream.read_bytes(length)
-                server_response = json.loads(encoded_json.decode())
+                server_response = encoded_json.decode()
 
-            logging.info('Received response from server of length {}: {}'.format(length, server_response))
+            logging.info('Received response from server of length {}'.format(length))
 
             stream.close()
             self._tcp_client.close()
@@ -500,78 +534,12 @@ class PropertyEstimator(object):
             logging.info("Error connecting to {}:{} : {}. Please ensure the server is running and"
                          "that the server address / port is correct.".format(self._server_address, self._port, e))
 
+        if server_response is not None:
+
+            try:
+                server_response = PropertyEstimatorResult.parse_raw(server_response)
+            except:
+                server_response = PropertyEstimatorException.parse_raw(server_response)
+
         # Return the ids of the submitted jobs.
         return server_response
-
-    @staticmethod
-    def _store_properties_in_hierarchy(original_set):
-        """Refactor a property list into a hierarchy of substance->state->type.
-
-        Parameters
-        ----------
-        original_set : dict(str, list(PhysicalProperty))
-            The set of properties to refactor.
-        """
-        property_hierarchy = {}
-
-        for substance_tag in original_set:
-
-            for calculated_property in original_set[substance_tag]:
-
-                if substance_tag not in property_hierarchy:
-                    property_hierarchy[substance_tag] = {}
-
-                state_tag = hash(calculated_property.thermodynamic_state)
-
-                if state_tag not in property_hierarchy[substance_tag]:
-                    property_hierarchy[substance_tag][state_tag] = {}
-
-                if calculated_property.type not in property_hierarchy[substance_tag][state_tag]:
-                    property_hierarchy[substance_tag][state_tag][calculated_property.type] = {}
-
-                property_hierarchy[substance_tag][state_tag][calculated_property.type] = calculated_property
-
-        return property_hierarchy
-
-    @staticmethod
-    def produce_calculation_report(measured_data_set, calculated_data_set):
-        """
-        Produce a report detailing how well a measured and calculated data
-        set match.
-
-        Parameters
-        ----------
-        measured_data_set : PhysicalPropertyDataSet
-            The set of measured properties to compare against.
-        calculated_data_set : CalculatedPropertySet
-            The set of calculated properties to analyse.
-        """
-        measured_properties = PropertyEstimator._store_properties_in_hierarchy(
-            measured_data_set.properties)
-
-        calculated_properties = PropertyEstimator._store_properties_in_hierarchy(
-            calculated_data_set.properties)
-
-        for substance in calculated_properties:
-
-            for state in calculated_properties[substance]:
-
-                if len(calculated_properties[substance][state]) <= 0:
-                    continue
-
-                state_string = next(iter(calculated_properties[substance][state].values())).thermodynamic_state
-
-                logging.info('PROPERTIES FOR ' + substance + ' AT ' + str(state_string))
-
-                for property_type in calculated_properties[substance][state]:
-
-                    measured_property = measured_properties[substance][state][property_type]
-                    calculated_property = calculated_properties[substance][state][property_type]
-
-                    logging.info('Property: ' + str(property_type) +
-                                 ' Measured: ' + str(measured_property.value) +
-                                 '(' + str(measured_property.uncertainty) + ')' +
-                                 ' Calculated: ' + str(calculated_property.value) +
-                                 '(' + str(calculated_property.uncertainty) + ')')
-
-        return

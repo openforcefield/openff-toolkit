@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
 import logging
-import shutil
-from os import path
 
 from openforcefield.properties.datasets import ThermoMLDataSet
 from openforcefield.properties.estimator import client

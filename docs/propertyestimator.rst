@@ -15,7 +15,8 @@ Client Side API
 
     PropertyEstimator
     PropertyEstimatorOptions
-    PropertyEstimatorDataModel
+    PropertyEstimatorSubmission
+    PropertyEstimatorResult
 
 Server Side API
 ---------------

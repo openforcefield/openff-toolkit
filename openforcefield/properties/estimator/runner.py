@@ -21,7 +21,7 @@ import os
 import struct
 import uuid
 from os import path
-from typing import List
+from typing import List, Dict
 
 from pydantic import BaseModel
 from simtk import unit
@@ -30,7 +30,8 @@ from tornado.iostream import IOStream, StreamClosedError
 from tornado.tcpserver import TCPServer
 
 from openforcefield.properties import PhysicalProperty
-from openforcefield.properties.estimator.client import PropertyEstimatorDataModel, PropertyEstimatorOptions
+from openforcefield.properties.estimator.client import PropertyEstimatorSubmission, PropertyEstimatorOptions, \
+    PropertyEstimatorResult
 from openforcefield.properties.estimator.layers import available_layers
 from openforcefield.properties.estimator.utils import PropertyEstimatorException
 from openforcefield.properties.estimator.workflow.protocols import ProtocolPath
@@ -57,10 +58,10 @@ class PropertyRunnerDataModel(BaseModel):
     ----------
     id: str
         A unique id assigned to this calculation packet.
-    queued_properties: list of PhysicalProperty
+    queued_properties: List[PhysicalProperty]
         A list of physical properties waiting to be calculated.
-    calculated_properties: list of PhysicalProperty
-        A list of physical properties which have been calculated.
+    calculated_properties: Dict[str, PhysicalProperty]
+        A dictionary of physical properties which have (or attempted to have) been calculated.
     options: PropertyEstimatorOptions
         The options used to calculate the properties.
     parameter_set_id: str
@@ -70,7 +71,9 @@ class PropertyRunnerDataModel(BaseModel):
     id: str
 
     queued_properties: List[PhysicalProperty] = []
-    calculated_properties: List[PhysicalProperty] = []
+
+    calculated_properties: Dict[str, PhysicalProperty] = {}
+    unsuccessful_properties: Dict[str, PropertyEstimatorException] = {}
 
     options: PropertyEstimatorOptions = None
 
@@ -193,7 +196,7 @@ class PropertyCalculationRunner(TCPServer):
         json_model = encoded_json.decode()
 
         # TODO: Add exeception handling so the server can gracefully reject bad json.
-        client_data_model = PropertyEstimatorDataModel.parse_raw(json_model)
+        client_data_model = PropertyEstimatorSubmission.parse_raw(json_model)
 
         runner_data_model = self._prepare_data_model(client_data_model)
         should_launch = True
@@ -341,7 +344,7 @@ class PropertyCalculationRunner(TCPServer):
 
         Parameters
         ----------
-        client_data_model: openforcefield.properties.estimator.PropertyEstimatorDataModel
+        client_data_model: openforcefield.properties.estimator.PropertyEstimatorSubmission
             The client data model.
 
         Returns
@@ -373,6 +376,17 @@ class PropertyCalculationRunner(TCPServer):
 
         return runner_data
 
+    def _prepare_output_model(self, server_data_model):
+
+        output_model = PropertyEstimatorResult(id=server_data_model.id)
+
+        output_model.calculated_properties = server_data_model.calculated_properties
+        output_model.unsuccessful_properties = server_data_model.unsuccessful_properties
+
+        output_model.parameter_set_id = server_data_model.parameter_set_id
+
+        return output_model
+
     def schedule_calculation(self, data_model):
         """Schedules the calculation of the given properties using the passed parameters.
 
@@ -390,7 +404,7 @@ class PropertyCalculationRunner(TCPServer):
            len(data_model.queued_properties) == 0:
 
             self._queued_calculations.pop(data_model.id)
-            self._finished_calculations[data_model.id] = data_model
+            self._finished_calculations[data_model.id] = self._prepare_output_model(data_model)
 
             logging.info('Finished calculation {}'.format(data_model.id))
             return
@@ -405,13 +419,7 @@ class PropertyCalculationRunner(TCPServer):
                                                                'the server.'.format(current_layer_type))
 
             for queued_calculation in data_model.queued_properties:
-
-                from openforcefield.properties import CalculationSource
-
-                queued_calculation.source = CalculationSource(fidelity=current_layer_type,
-                                                              provenance=error_object.json())
-
-                data_model.calculated_properties.append(queued_calculation)
+                data_model.unsuccessful_properties[queued_calculation.id] = error_object
 
             data_model.options.allowed_calculation_layers.append(current_layer_type)
             data_model.queued_properties = []

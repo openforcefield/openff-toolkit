@@ -16,6 +16,7 @@ Authors
 # =============================================================================================
 
 import copy
+import json
 import logging
 import os
 import pickle
@@ -24,15 +25,16 @@ import uuid
 from os import path
 
 import mdtraj
-from simtk.openmm import app
 
 import openforcefield.properties.estimator.utils
 from openforcefield.properties import PhysicalProperty, CalculationSource
 from openforcefield.properties.estimator import CalculationSchema
 from openforcefield.properties.estimator.layers.base import register_calculation_layer, PropertyCalculationLayer
 from openforcefield.properties.estimator.storage import StoredSimulationData
+from openforcefield.properties.estimator.utils import PropertyEstimatorException
 from openforcefield.properties.estimator.workflow import protocols, groups
 from openforcefield.utils import graph
+from openforcefield.utils.serialization import PolymorphicDataType
 from .base import CalculationLayerResult
 
 
@@ -62,9 +64,6 @@ class DirectCalculation:
         """
         self.physical_property = physical_property
 
-        self.physical_property.source = CalculationSource(fidelity=SimulationLayer.__name__,
-                                                          provenance=schema.json())
-
         self.uuid = str(uuid.uuid4())
 
         self.protocols = {}
@@ -77,7 +76,7 @@ class DirectCalculation:
         self.final_trajectory_source = None
         self.final_coordinate_source = None
 
-        schema = CalculationSchema.parse_raw(schema.json())
+        self.schema = CalculationSchema.parse_raw(schema.json())
 
         # Define a dictionary of accessible 'global' properties.
         self.global_properties = {
@@ -97,9 +96,9 @@ class DirectCalculation:
             self.global_properties['target_uncertainty'] = unit.Quantity(self.global_properties['target_uncertainty'],
                                                                          physical_property.uncertainty.unit)
 
-        for protocol_name in schema.protocols:
+        for protocol_name in self.schema.protocols:
 
-            protocol_schema = schema.protocols[protocol_name]
+            protocol_schema = self.schema.protocols[protocol_name]
 
             protocol = protocols.available_protocols[protocol_schema.type](protocol_schema.id)
             protocol.schema = protocol_schema
@@ -131,23 +130,22 @@ class DirectCalculation:
                     if isinstance(right_value, protocols.ProtocolPath) and right_value.is_global:
                         condition.right_hand_value = self.global_properties[right_value.property_name]
 
-            protocol.schema.json()
             protocol.set_uuid(self.uuid)
-
             self.protocols[protocol.id] = protocol
 
         self._build_dependants_graph()
+        self.update_schema()
 
-        self.final_value_source = copy.deepcopy(schema.final_value_source)
+        self.final_value_source = copy.deepcopy(self.schema.final_value_source)
         self.final_value_source.append_uuid(self.uuid)
 
-        self.final_uncertainty_source = copy.deepcopy(schema.final_uncertainty_source)
+        self.final_uncertainty_source = copy.deepcopy(self.schema.final_uncertainty_source)
         self.final_uncertainty_source.append_uuid(self.uuid)
 
-        self.final_trajectory_source = copy.deepcopy(schema.final_trajectory_source)
+        self.final_trajectory_source = copy.deepcopy(self.schema.final_trajectory_source)
         self.final_trajectory_source.append_uuid(self.uuid)
 
-        self.final_coordinate_source = copy.deepcopy(schema.final_coordinate_source)
+        self.final_coordinate_source = copy.deepcopy(self.schema.final_coordinate_source)
         self.final_coordinate_source.append_uuid(self.uuid)
 
     def _build_dependants_graph(self):
@@ -243,6 +241,13 @@ class DirectCalculation:
         self.final_uncertainty_source.replace_protocol(old_protocol_id, new_protocol_id)
         self.final_trajectory_source.replace_protocol(old_protocol_id, new_protocol_id)
         self.final_coordinate_source.replace_protocol(old_protocol_id, new_protocol_id)
+
+    def update_schema(self):
+
+        for protocol_id in self.protocols:
+
+            protocol = self.protocols[protocol_id]
+            self.schema.protocols[protocol_id] = protocol.schema
 
 
 class DirectCalculationGraph:
@@ -373,7 +378,7 @@ class DirectCalculationGraph:
         for starting_protocol_name in calculation.starting_protocols:
             self._insert_node(starting_protocol_name, calculation)
 
-        return
+        self._calculations_to_run[calculation.uuid].update_schema()
 
     def submit(self, backend):
         """Submits the protocol graph to the backend of choice.
@@ -428,6 +433,20 @@ class DirectCalculationGraph:
         for calculation_id in self._calculations_to_run:
 
             calculation = self._calculations_to_run[calculation_id]
+            calculation.update_schema()
+
+            # TODO: Fill in any extra required provenance.
+            provenance = {}
+
+            for protocol_id in calculation.protocols:
+
+                protocol = calculation.protocols[protocol_id]
+                provenance[protocol_id] = PolymorphicDataType(protocol.schema)
+
+            source = CalculationSource(fidelity=SimulationLayer.__name__,
+                                       provenance=provenance)
+
+            calculation.physical_property.source = source
 
             value_node_id = calculation.final_value_source.start_protocol
             uncertainty_node_id = calculation.final_uncertainty_source.start_protocol
@@ -539,9 +558,9 @@ class DirectCalculationGraph:
             # Except the unexpected...
             formatted_exception = traceback.format_exception(None, e, e.__traceback__)
 
-            return protocol.id, openforcefield.properties.estimator.utils.PropertyEstimatorException(directory=directory,
-                                                                                                     message='An unhandled exception occurred: '
-                                                                              '{}'.format(formatted_exception))
+            return protocol.id, PropertyEstimatorException(directory=directory,
+                                                           message='An unhandled exception occurred: '
+                                                                   '{}'.format(formatted_exception))
 
         return protocol.id, output_dictionary
 
@@ -593,10 +612,6 @@ class DirectCalculationGraph:
 
                 final_path = protocols.ProtocolPath(property_name, *protocol_ids)
                 results_by_id[final_path] = output_value
-
-        # TODO: Fill in provenance
-        property_to_return.source = CalculationSource(fidelity=SimulationLayer.__name__,
-                                                      provenance='')
 
         property_to_return.value = results_by_id[value_reference]
         property_to_return.uncertainty = results_by_id[uncertainty_reference]
