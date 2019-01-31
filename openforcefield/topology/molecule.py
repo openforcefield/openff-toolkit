@@ -1889,6 +1889,7 @@ class FrozenMolecule(Serializable):
 
     def generate_conformers(self,
                             toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+                            num_conformers=10,
                             clear_existing=True):
         """
         Generate conformers for this molecule using an underlying toolkit
@@ -1897,6 +1898,8 @@ class FrozenMolecule(Serializable):
         ----------
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+        num_conformers : int, default=1
+            The maximum number of conformers to produce
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
 
@@ -1913,19 +1916,17 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('generate_conformers', self,
-                                         clear_existing)
+            return toolkit_registry.call('generate_conformers', self, num_conformers=num_conformers,
+                                         clear_existing=clear_existing)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.generate_conformers(self, clear_existing)
+            return toolkit.generate_conformers(self, num_conformers=num_conformers, clear_existing=clear_existing)
         else:
             raise InvalidToolkitError(
                 'Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
-    def compute_partial_charges(self,
-                                charge_model=None,
-                                toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def compute_partial_charges_am1bcc(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Calculate partial atomic charges for this molecule using an underlying toolkit
 
@@ -1948,15 +1949,68 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call(
-                'compute_partial_charges', self, charge_model=charge_model)
+            charges = toolkit_registry.call(
+                      'compute_partial_charges_am1bcc',
+                      self
+            )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.compute_partial_charges(
-                self, charge_model=charge_model)
+            charges = toolkit.compute_partial_charges_am1bcc(
+                self
+            )
         else:
             raise InvalidToolkitError(
-                'Invalid toolkit_registry passed to compute_partial_charges. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
+                'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
+                .format(type(toolkit_registry)))
+        self.partial_charges = charges
+
+
+    def compute_partial_charges(self,
+                                #quantum_chemical_method='AM1-BCC',
+                                #partial_charge_method='None',
+                                toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Calculate partial atomic charges for this molecule using an underlying toolkit
+
+        Parameters
+        ----------
+        quantum_chemical_method : string, default='AM1-BCC'
+            The quantum chemical method to use for partial charge calculation.
+        partial_charge_method : string, default='None'
+            The partial charge calculation method to use for partial charge calculation.
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+
+        Examples
+        --------
+
+        >>> molecule = Molecule.from_smiles('CCCCCC')
+        >>> molecule.generate_conformers()
+        >>> molecule.compute_partial_charges()
+
+        Raises
+        ------
+        InvalidToolkitError
+            If an invalid object is passed as the toolkit_registry parameter
+
+        """
+        raise NotImplementedError
+        # TODO: Implement this in a way that's compliant with SMIRNOFF's <ChargeIncrementModel> tag when the spec gets finalized
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            charges = toolkit_registry.call(
+                      'compute_partial_charges_am1bcc',
+                      self,
+            )
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            charges = toolkit.compute_partial_charges_am1bcc(
+                self,
+                #quantum_chemical_method=quantum_chemical_method,
+                #partial_charge_method=partial_charge_method
+            )
+        else:
+            raise InvalidToolkitError(
+                'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
     def compute_wiberg_bond_orders(self,
@@ -2400,14 +2454,27 @@ class FrozenMolecule(Serializable):
         self._conformers.append(new_conf)
         return len(self._conformers)
 
-    def set_partial_charges(self, charges):
+    @property
+    def partial_charges(self):
+        """
+        Returns the partial charges (if present) on the molecule
+
+        Returns
+        -------
+        partial_charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
+            The partial charges on this Molecule's atoms.
+        """
+        return self._partial_charges
+
+    @partial_charges.setter
+    def partial_charges(self, charges):
         """
         Set the atomic partial charges for this molecule
 
         Parameters
         ----------
         charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
-            The partial charges to assign to the molecule.
+            The partial charges to assign to the molecule. Must be in units compatible with simtk.unit.elementary_charge
 
         """
         assert hasattr(charges, 'unit')
@@ -3041,55 +3108,6 @@ class FrozenMolecule(Serializable):
         toolkit = OpenEyeToolkitWrapper()
         return toolkit.to_openeye(self, aromaticity_model=aromaticity_model)
 
-    # TODO: We have to distinguish between retrieving user-specified partial charges and providing a generalized
-    # semiempirical/pop analysis/BCC scheme according to the new SMIRNOFF spec
-    def get_partial_charges(self,
-                            method='AM1-BCC',
-                            toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
-        """
-        Retrieve partial atomic charges.
-
-        .. warning :: This API experimental and subject to change.
-
-        .. todo::
-            * Generalize to allow specification of both QM method and population analysis method
-            * Should we return the charges or store the charges as atom properties?
-            * Refine API for this method to better correspond to new SMIRNOFF 1.0 spec
-            * Is it OK that the ``Molecule`` object does not store geometry, but will create it using ``openeye.omega`` or ``rdkit``?
-            * Should this method assign charges to the ``Atom``s in the molecule, a separate ``charges`` molecule property,
-              or just return the charge array? Is it OK that the Topology is modified?
-            * How do we add enough flexibility to specify the toolkit and optional parameters, such as:
-              ``oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, 'OECharges_AM1BCCSym'), False, False)``
-            * What will we do about virtual sites, since this only assigns partial atomic charges?
-
-        Parameters
-        ----------
-        method : str, optional, default='AM1-BCC'
-            The name of the charge method to use.
-            Options are:
-            * `AM1-BCC` : symmetrized AM1 charges with BCC (no ELF)
-        toolkit_registry : openforcefield.utils.toolkits ToolkitRegistry, optional, default=GLOBAL_TOOLKIT_REGISTRY
-            The toolkit registry to use for molecule operations
-
-        Returns
-        -------
-        charges : numpy.array of shape (natoms) of type float
-            The partial charges
-
-        Examples
-        --------
-
-        Get AM1-BCC charges for imatinib
-
-        >>> molecule = Molecule.from_iupac('imatininb')
-        >>> charges = molecule.get_partial_charges(method='AM1-BCC')
-
-        """
-        # TODO: Use memoization to speed up subsequent calls; use decorator?
-        # TODO: Disabled. Is this redundant with FrozenMolecule.compute_partial_charges?
-        return NotImplementedError
-        #charges = toolkit_registry.call('compute_partial_charges', toolkit_registry, method=method)
-        #return charges
 
     def get_fractional_bond_orders(self,
                                    method='Wiberg',

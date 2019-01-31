@@ -119,7 +119,7 @@ class TestOpenEyeToolkitWrapper(TestCase):
                                                   -.1, 0., .1, .2,
                                                   .3, .4, .5, .6,
                                                   .7, .8]), unit.elementary_charge)
-        molecule.set_partial_charges(partial_charges)
+        molecule.partial_charges = partial_charges
         coords = unit.Quantity(np.array([['0.0', '1.0', '2.0'], ['3.0', '4.0', '5.0'], ['6.0', '7.0', '8.0'],
                                          ['9.0', '10.0', '11.0'], ['12.0', '13.0', '14.0'],
                                          ['15.0', '16.0', '17.0'],
@@ -319,11 +319,19 @@ class TestOpenEyeToolkitWrapper(TestCase):
         # TODO: 'mmff' and 'mmff94' often assign charges of 0, presumably if the molecule is unrecognized.
         # charge_model = ['mmff', 'mmff94']
         for charge_model in ['noop', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']:
-            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
-            charge_sum = 0 * unit.elementary_charge
-            for pc in molecule._partial_charges:
-                charge_sum += pc
-            assert charge_sum < 0.001 * unit.elementary_charge
+            with pytest.raises(NotImplementedError) as contest:
+                molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper)  # , charge_model=charge_model)
+                charge_sum = 0 * unit.elementary_charge
+                for pc in molecule._partial_charges:
+                    charge_sum += pc
+                assert charge_sum < 0.001 * unit.elementary_charge
+
+        # For now, just test AM1-BCC while the SMIRNOFF spec for other charge models gets worked out
+        molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_wrapper)  # , charge_model=charge_model)
+        charge_sum = 0 * unit.elementary_charge
+        for pc in molecule._partial_charges:
+            charge_sum += pc
+        assert charge_sum < 0.001 * unit.elementary_charge
 
     @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_compute_partial_charges_net_charge(self):
@@ -334,9 +342,10 @@ class TestOpenEyeToolkitWrapper(TestCase):
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
 
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(NotImplementedError) as context:
+        #with pytest.raises(Exception) as context:
             charge_model = 'notARealChargeModel'
-            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper)#, charge_model=charge_model)
 
         # TODO: Test all supported charge models
         # TODO: "amber" and "amberff94" only work for a subset of residue types, so we'll need to find testing data for
@@ -345,11 +354,18 @@ class TestOpenEyeToolkitWrapper(TestCase):
         # The 'noop' charge model doesn't add up to the formal charge, so we shouldn't test it
         # charge_model = ['noop']
         for charge_model in ['mmff', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']:
-            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
-            charge_sum = 0 * unit.elementary_charge
-            for pc in molecule._partial_charges:
-                charge_sum += pc
-            assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
+            with pytest.raises(NotImplementedError) as context:
+                molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper) #, charge_model=charge_model)
+                charge_sum = 0 * unit.elementary_charge
+                for pc in molecule._partial_charges:
+                    charge_sum += pc
+                assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
+        # For now, I'm just testing AM1-BCC (will test more when the SMIRNOFF spec for other charges is finalized)
+        molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_wrapper)
+        charge_sum = 0 * unit.elementary_charge
+        for pc in molecule._partial_charges:
+            charge_sum += pc
+        assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
 
     @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders(self):
@@ -490,7 +506,7 @@ class TestRDKitToolkitWrapper(TestCase):
                                                   -.1,  0.,  .1,  .2,
                                                    .3,  .4,  .5,  .6,
                                                    .7,  .8]), unit.elementary_charge)
-        molecule.set_partial_charges(partial_charges)
+        molecule.partial_charges = partial_charges
         coords = unit.Quantity(np.array([['0.0', '1.0', '2.0'],    ['3.0', '4.0', '5.0'],    ['6.0', '7.0', '8.0'],
                                          ['9.0', '10.0', '11.0'] , ['12.0', '13.0', '14.0'], ['15.0', '16.0', '17.0'],
                                          ['18.0', '19.0', '20.0'], ['21.0', '22.0', '23.0'], ['24.0', '25.0', '26.0'],
@@ -672,17 +688,27 @@ class TestAmberToolsToolkitWrapper(TestCase):
         molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_registry)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
 
-        with self.assertRaises(Exception) as context:
+        #with pytest.raises(Exception) as context:
+        with pytest.raises(NotImplementedError) as context:
             charge_model = 'notARealChargeModel'
-            molecule.compute_partial_charges(toolkit_registry=toolkit_registry, charge_model=charge_model)
+            molecule.compute_partial_charges(toolkit_registry=toolkit_registry)#, charge_model=charge_model)
 
         # ['cm1', 'cm2']
         for charge_model in ['gas', 'mul', 'bcc']:
-            molecule.compute_partial_charges(toolkit_registry=toolkit_registry, charge_model=charge_model)
-            charge_sum = 0 * unit.elementary_charge
-            for pc in molecule._partial_charges:
-                charge_sum += pc
-            assert charge_sum < 0.01 * unit.elementary_charge
+            with pytest.raises(NotImplementedError) as context:
+                molecule.compute_partial_charges(toolkit_registry=toolkit_registry)#, charge_model=charge_model)
+                charge_sum = 0 * unit.elementary_charge
+                for pc in molecule._partial_charges:
+                    charge_sum += pc
+                assert charge_sum < 0.01 * unit.elementary_charge
+
+        # For now, just test AM1-BCC while the SMIRNOFF spec for other charge models gets worked out
+        molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)  # , charge_model=charge_model)
+        charge_sum = 0 * unit.elementary_charge
+        for pc in molecule._partial_charges:
+            charge_sum += pc
+        assert charge_sum < 0.002 * unit.elementary_charge
+
 
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available() or not AmberToolsToolkitWrapper.toolkit_is_available(),
@@ -694,18 +720,26 @@ class TestAmberToolsToolkitWrapper(TestCase):
         molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_registry)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
 
-        with self.assertRaises(Exception) as context:
+        #with pytest.raises(Exception) as context:
+        with pytest.raises(NotImplementedError) as context:
             charge_model = 'notARealChargeModel'
-            molecule.compute_partial_charges(toolkit_registry=toolkit_registry, charge_model=charge_model)
+            molecule.compute_partial_charges(toolkit_registry=toolkit_registry)#, charge_model=charge_model)
 
         # TODO: Figure out why ['cm1', 'cm2'] fail
         for charge_model in  ['gas', 'mul', 'bcc']:
-            molecule.compute_partial_charges(toolkit_registry=toolkit_registry, charge_model=charge_model)
-            charge_sum = 0 * unit.elementary_charge
-            for pc in molecule._partial_charges:
-                charge_sum += pc
-            assert 0.99 * unit.elementary_charge < charge_sum < 1.01 * unit.elementary_charge
+            with pytest.raises(NotImplementedError) as context:
+                molecule.compute_partial_charges(toolkit_registry=toolkit_registry)#, charge_model=charge_model)
+                charge_sum = 0 * unit.elementary_charge
+                for pc in molecule._partial_charges:
+                    charge_sum += pc
+                assert 0.99 * unit.elementary_charge < charge_sum < 1.01 * unit.elementary_charge
 
+        # For now, I'm just testing AM1-BCC (will test more when the SMIRNOFF spec for other charges is finalized)
+        molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+        charge_sum = 0 * unit.elementary_charge
+        for pc in molecule._partial_charges:
+            charge_sum += pc
+        assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
 
 
 class TestToolkitRegistry(TestCase):
