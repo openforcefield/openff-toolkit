@@ -75,7 +75,7 @@ def test_from_files():
 
     assert len(data_set.properties) > 0
 
-    data_set = ThermoMLDataSet.from_file_list('../data/properties/j.jct.2004.09.014.xmld')
+    data_set = ThermoMLDataSet.from_file_list(get_data_filename('properties/j.jct.2004.09.014.xmld'))
     assert data_set is None
 
 
@@ -83,7 +83,8 @@ def parse_all_jct_files():
 
     logging.basicConfig(filename='data_sets.log', filemode='w', level=logging.INFO)
 
-    data_path = '../data/properties/JCT'
+    data_path = get_data_filename('properties/JCT')
+
     thermoml_files = []
 
     for file_path in listdir(data_path):
@@ -97,6 +98,27 @@ def parse_all_jct_files():
 
     data_set = ThermoMLDataSet.from_file_list(*thermoml_files)
 
+    from openforcefield.properties import Density, DielectricConstant, Enthalpy, EnthalpyOfMixing
+
+    properties_by_type = {Density.__name__: [], DielectricConstant.__name__: [], Enthalpy.__name__: [],
+                          EnthalpyOfMixing.__name__: []}
+
+    for substance_key in data_set.properties:
+
+        for data_property in data_set.properties[substance_key]:
+
+            if type(data_property).__name__ not in properties_by_type:
+                continue
+
+            properties_by_type[type(data_property).__name__].append(data_property.source.reference)
+
+    for type_key in properties_by_type:
+
+        with open('{}.dat'.format(type_key), 'w') as file:
+
+            for doi in properties_by_type[type_key]:
+                file.write('{}\n'.format(doi))
+
 
 if __name__ == "__main__":
-    test_from_doi()
+    parse_all_jct_files()

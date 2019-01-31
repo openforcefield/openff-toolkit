@@ -89,7 +89,9 @@ def unit_from_thermoml_string(full_string):
     elif unit_string == 'mol/kg':
         return unit.mole / unit.kilogram
     elif unit_string == 'mol/dm3':
-        return unit.mole / unit.decimeter**3
+        return unit.mole / unit.decimeter ** 3
+    elif unit_string == 'kJ/mol':
+        return unit.kilojoule_per_mole
     elif len(unit_string) == 0:
         return None
     else:

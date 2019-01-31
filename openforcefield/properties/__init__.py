@@ -2,3 +2,4 @@ from .properties import PropertyPhase, PhysicalProperty, MeasurementSource, Calc
 
 from .density import Density
 from .dielectric import DielectricConstant
+from .enthalpy import Enthalpy, EnthalpyOfMixing
