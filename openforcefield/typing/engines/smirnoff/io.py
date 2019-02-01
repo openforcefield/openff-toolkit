@@ -264,6 +264,59 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         return msg
 
+
+    def _parse_version(self, root):
+        """
+        Parse the forcefield version number and make sure it is supported.
+
+        Parameters
+        ----------
+        root : etree.Element
+            The document root
+
+        """
+        if 'version' in root.attrib:
+            version = root.attrib['version']
+        else:
+            raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
+
+        # The check_smirnoff_version_compatibility function requires a string, whereas version will by default be an int
+        self._forcefield._check_smirnoff_version_compatibility(str(version))
+
+
+    def _parse_aromaticity_model(self, root):
+        """
+        Parse the aromaticity model, make sure it is supported, and make sure it does
+        not conflict with previously-specified aromaticity models.
+
+        Parameters
+        ----------
+        root : etree.Element
+            The document root
+
+        """
+        if 'aromaticity_model' in root.attrib:
+            aromaticity_model = root.attrib['aromaticity_model']
+        else:
+            raise ParseError("'aromaticity_model' attribute must be specified in top-level tag")
+
+
+        self._forcefield._register_aromaticity_model(aromaticity_model)
+
+        #if aromaticity_model not in topology.ALLOWED_AROMATICITY_MODELS:
+        #    self._raise_parsing_exception(
+        #        root,
+        #        "'aromaticity_model' (%s) must be one of the supported models: "
+        #        % (aromaticity_model, topology.ALLOWED_AROMATICITY_MODELS))
+        #
+        #if (self._aromaticity_model is not None) and (self._aromaticity_model
+        #                                              != aromaticity_model):
+        #    self._raise_parsing_exception(
+        #        root,
+        #        "'aromaticity_model' (%s) does not match earlier read 'aromaticity_model' (%s)"
+        #        % (aromaticity_model, self._aromaticity_model))
+
+
     # TODO: Fix this
     def parse_file(self, source):
         """Parse a SMIRNOFF force field definition in XML format, read from a file.
@@ -337,7 +390,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         """
         (basename, extension) = os.path.splitext(filename)
-        if (format == 'offxml') or (extension == '.offxml'):
+        if extension == '.offxml':
             root.write(filename, xml_declaration=True, pretty_print=True)
         else:
             msg = "Cannot export forcefield parameters to file '{}'\n".format(
@@ -370,7 +423,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
         root : lxml.etree
             Root node
         """
-        root = etree.Element('SMIRNOFF', {'version': self._forcefield.version})
+        root = etree.Element('SMIRNOFF', {'version': str(self._forcefield._MAX_SUPPORTED_SMIRNOFF_VERSION)})
         for tagname, parameter_handler in self._forcefield._parameter_handlers.items(
         ):
             parameter_subtree = etree.SubElement(root, tagname,
@@ -382,15 +435,16 @@ class XMLParameterIOHandler(ParameterIOHandler):
         return root
 
     def from_lxml(self, root):
-        if not (root.tag == 'SMIRNOFF'):
-            raise Exception("Root tag of tree is not 'SMIRNOFF'")
+
 
         cosmetic_tags = ['Date', 'Author']
-        #root = smirnoff_root[0]
-        #raise Exception(root)
+
         try:
             exception_node = root  # node used for exception reporting
-
+            if not (root.tag == 'SMIRNOFF'):
+                raise ParseError("Root tag of tree is not 'SMIRNOFF'")
+            self._parse_version(root)
+            self._parse_aromaticity_model(root)
             # Process handlers
             #for section in root.iter(tag=etree.Element):
             for section in root:

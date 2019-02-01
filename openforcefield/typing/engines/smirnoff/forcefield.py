@@ -25,7 +25,6 @@ import logging
 
 from collections import OrderedDict
 
-import packaging
 
 from simtk import openmm, unit
 
@@ -51,6 +50,24 @@ MAX_SUPPORTED_VERSION = '1.0'  # maximum version of the SMIRNOFF spec supported 
 class ParameterHandlerRegistrationError(Exception):
     """
     Exception for errors in ParameterHandler registration errors
+    """
+
+    def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
+
+class SMIRNOFFVersionError(Exception):
+    """
+    Exception thrown when an incompatible SMIRNOFF version data structure in attempted to be read.
+    """
+
+    def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
+
+class SMIRNOFFAromaticityError(Exception):
+    """
+    Exception thrown when an incompatible SMIRNOFF aromaticity model is checked for compatibility.
     """
 
     def __init__(self, msg):
@@ -235,6 +252,7 @@ class ForceField(object):
         """
         Initialize all object fields.
         """
+        self._MAX_SUPPORTED_SMIRNOFF_VERSION = 1.0
         self._disable_version_check = False  # if True, will disable checking compatibility version
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL  # aromaticity model
         self._parameter_handler_classes = OrderedDict(
@@ -247,31 +265,55 @@ class ForceField(object):
         )  # ParameterIO classes to be used for each file type
         self._parameters = ParameterList(
         )  # ParameterHandler objects instantiated for each parameter type
+        self._used_aromaticity_models = set(
+        )  # Keep track of the aromaticity model(s) this ForceField uses
 
-    # TODO : This is unused and shouldn't be here -- Move to parameteriohandler
-    def _parse_version(self, root):
+
+    def _check_smirnoff_version_compatibility(self, version):
         """
-        Parse the forcefield version number and make sure it is supported.
+        Raise a parsing exception if the given file version is incompatible with this ForceField class.
 
         Parameters
         ----------
-        root : etree.Element
-            The document root
+        version : str
+            The SMIRNOFF version being read.
+
+        Raises
+        ------
+        SMIRNOFFVersionError if an incompatible version is passed in.
 
         """
-        if 'version' in root.attrib:
-            version = root.attrib['version']
-            # Use PEP-440 compliant version number comparison, if requested
-            if (not self.disable_version_check) and (
-                    packaging.version.parse(version) >
-                    packaging.version.parse(MAX_SUPPORTED_VERION)):
-                self._raise_parsing_exception(
-                    root,
-                    'SMIRNOFF offxml file was written with version %s, but this version of ForceField only supports up to version %s'
-                    % (self.version, MAX_SUPPORTED_VERSION))
-        else:
-            self._raise_parsing_exception(
-                root, "'version' attribute must be specified in SMIRNOFF tag")
+        import packaging.version
+        # Use PEP-440 compliant version number comparison, if requested
+        if (not self.disable_version_check) and (
+                packaging.version.parse(str(version)) >
+                packaging.version.parse(str(self._MAX_SUPPORTED_SMIRNOFF_VERSION))):
+            raise SMIRNOFFVersionError(
+                'SMIRNOFF offxml file was written with version {}, but this version of ForceField only supports '
+                'up to version {}'.format(version, self._MAX_SUPPORTED_SMIRNOFF_VERSION))
+
+
+    def _register_aromaticity_model(self, aromaticity_model):
+        """
+        Register that this forcefield is using an aromaticity model. Will check for
+        compatibility with other aromaticity model(s) already in use.
+
+        Parameters
+        ----------
+        aromaticity_model : str
+            The aromaticity model to register.
+
+        Raises
+        ------
+        SMIRNOFFAromaticityError if an incompatible aromaticity model is passed in.
+
+        """
+        # Implement better logic here if we ever support another aromaticity model
+        if aromaticity_model != 'OEAroModel_MDL':
+            raise SMIRNOFFAromaticityError("Read aromaticity model {}. Currently only "
+                                           "OEAroModel_MDL is supported.".format(aromaticity_model))
+        self._used_aromaticity_models.add(aromaticity_model)
+
 
     def _register_parameter_handler_classes(self, parameter_handler_classes):
         """
@@ -595,13 +637,13 @@ class ForceField(object):
                     parameter_io_handler.parse_string(source)
                     parse_successful = True
                 elif type(source) == str:
-                    #try: #TODO: What if it's the text of a XML file?
-                    #    byte_source = str.encode(source)
-                    #    parameter_io_handler.parse_string(byte_source)
-                    #    parse_successful = True
-                    #except:
-                    parameter_io_handler.parse_file(source)
-                    parse_successful = True
+                    if '.offxml' in source:
+                        parameter_io_handler.parse_file(source)
+                        parse_successful = True
+                    else:
+                        byte_source = str.encode(source)
+                        parameter_io_handler.parse_string(byte_source)
+                        parse_successful = True
                 else:
                     parameter_io_handler.parse_file(source)
                     parse_successful = True
@@ -618,37 +660,6 @@ class ForceField(object):
                     source)
                 msg += "Valid formats are: {}".format(valid_formats)
                 raise Exception(msg)
-
-    # TODO : Move to ParameterIOHandler
-    def _parse_aromaticity_model(self, root):
-        """Parse the aromaticity model, make sure it is supported, and make sure it does not contradict previously-specified aromaticity models.
-
-        Parameters
-        ----------
-        root : etree.Element
-            The document root
-
-        """
-        if not 'aromaticity_model' in root.attrib:
-            self._raise_parsing_exception(
-                root,
-                "'aromaticity_model' attribute must be specified in top-level tag"
-            )
-
-        aromaticity_model = root.attrib['aromaticity_model']
-
-        if aromaticity_model not in topology.ALLOWED_AROMATICITY_MODELS:
-            self._raise_parsing_exception(
-                root,
-                "'aromaticity_model' (%s) must be one of the supported models: "
-                % (aromaticity_model, topology.ALLOWED_AROMATICITY_MODELS))
-
-        if (self._aromaticity_model is not None) and (self._aromaticity_model
-                                                      != aromaticity_model):
-            self._raise_parsing_exception(
-                root,
-                "'aromaticity_model' (%s) does not match earlier read 'aromaticity_model' (%s)"
-                % (aromaticity_model, self._aromaticity_model))
 
     def _resolve_parameter_handler_order(self):
         """Resolve the order in which ParameterHandler objects should execute to satisfy constraints.
