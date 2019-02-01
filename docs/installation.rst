@@ -67,7 +67,7 @@ You can install the latest stable release build of ``openforcefield`` via the ``
 
 This version is recommended for all users not actively developing new forcefield parameterization algorithms.
 
-.. note:: The conda package manager will automatically dependencies from binary packages automatically, including difficult-to-install packages such as OpenMM, numpy, and scipy. This is really the easiest way to get started.
+.. note:: The conda package manager will install dependencies from binary packages automatically, including difficult-to-install packages such as OpenMM, numpy, and scipy. This is really the easiest way to get started.
 
 |
 
