@@ -12,36 +12,27 @@ Tests for the SMIRNOFF ForceField class
 # GLOBAL IMPORTS
 #=============================================================================================
 
-# TODO: Eliminate OpenEye dependencies from forcefield tests
-
 # TODO: Split this file into many test files, potentially distributing tests within each subpackage next to the classes they test
 
-import os
-import tempfile
-import unittest
 from functools import partial
 from io import StringIO
+import tempfile
 from tempfile import TemporaryDirectory
 
-import numpy as np
 from numpy.testing import assert_equal
-
 import parmed
+from simtk import unit, openmm
+from simtk.openmm import app
 
+# from openforcefield.utils import get_data_filename  #, generateTopologyFromOEMol, read_molecules
+# from openforcefield.utils import check_energy_is_finite, get_energy
+# from openforcefield.tests.utils import get_packmol_pdbfile, get_monomer_mol2file, compare_system_energies
+from openforcefield.tests.utils import *
 from openforcefield.typing.engines.smirnoff import *
 
 # TODO: Fix these imports and unskip these tests
 import pytest
-pytestmark = pytest.mark.skip
-
-from openforcefield.utils import get_data_filename  #, generateTopologyFromOEMol, read_molecules
-#from openforcefield.utils import check_energy_is_finite, get_energy
-from openforcefield.tests.utils import get_packmol_pdbfile, get_monomer_mol2file, compare_system_energies
-
-from .utils import *
-
-from simtk import unit, openmm
-from simtk.openmm import app
+# pytestmark = pytest.mark.skip
 
 #=============================================================================================
 # CONSTANTS
@@ -252,73 +243,7 @@ ffxml_MDL_contents = u"""\
 # Test various components
 #
 
-
-class TestParameterList(unittest.TestCase):
-    """Test capabilities of ParameterList for accessing and manipulating SMIRNOFF parameter definitions.
-    """
-
-    def test_create(self):
-        """Test creation of a parameter list.
-        """
-        p1 = ParameterType(smirks='[*:1]')
-        p2 = ParameterType(smirks='[#1:1]')
-        parameters = ParameterList([p1, p2])
-
-    def test_getitem(self):
-        """Test ParameterList __getitem__ overloading.
-        """
-        p1 = ParameterType(smirks='[*:1]')
-        p2 = ParameterType(smirks='[#1:1]')
-        parameters = ParameterList([p1, p2])
-        assert parameters[0] == p1
-        assert parameters[1] == p2
-        assert parameters[p1.smirks] == p1
-        assert parameters[p2.smirks] == p2
-
-    def test_setitem(self):
-        """Test ParameterList __setitem__ overloading.
-        """
-        p1 = ParameterType(smirks='[*:1]')
-        p2 = ParameterType(smirks='[#1:1]')
-        p3 = ParameterType(smirks='[#7:1]')
-        parameters = ParameterList([p1, p2, p3])
-        parameters[0].smirks = '[*X4:1]'
-        assert p1.smirks == '[*X4:1]'
-        parameters['[*X4:1]'].smirks = '[*:1]'
-        assert p1.smirks == '[*:1]'
-
-    def test_contains(self):
-        """Test ParameterList __contains__ overloading.
-        """
-        p1 = ParameterType(smirks='[*:1]')
-        p2 = ParameterType(smirks='[#1:1]')
-        p3 = ParameterType(smirks='[#7:1]')
-        parameters = ParameterList([p1, p2])
-        assert p1 in parameters
-        assert p2 in parameters
-        assert p3 not in parameters
-        assert p1.smirks in parameters
-        assert p2.smirks in parameters
-        assert p3.smirks not in parameters
-
-    def test_del(self):
-        """Test ParameterList __del__ overloading.
-        """
-        p1 = ParameterType(smirks='[*:1]')
-        p2 = ParameterType(smirks='[#1:1]')
-        p3 = ParameterType(smirks='[#7:1]')
-        parameters = ParameterList([p1, p2, p3])
-        del parameters[2]
-        assert len(parameters) == 2
-        assert p1 in parameters
-        assert p2 in parameters
-        assert p3 not in parameters
-        del parameters['[#1:1]']
-        assert p1 in parameters
-        assert p2 not in parameters
-
-
-class TestForceField(unittest.TestCase):
+class TestForceField:
     """Test capabilities of ForceField and its Python API.
     """
 
@@ -474,7 +399,7 @@ class TestForceField(unittest.TestCase):
         assert "#6X4:1]-[#1:2]~[#7]" in forcefield.forces['Bonds'].parameters
 
 
-class TestXMLForceField(unittest.TestCase):
+class TestXMLForceField:
     """Test capabilities of the XML reader/writer for ForceField.
     """
 
@@ -608,7 +533,7 @@ class TestXMLForceField(unittest.TestCase):
                                  "Deserialized serialized ForceField does not match original ForceField")
 
 
-class TestApplyForceField(unittest.TestCase):
+class TestApplyForceField:
     """Test the use of ForceField to parameterize Topology objects.
     """
 
@@ -728,7 +653,7 @@ class TestApplyForceField(unittest.TestCase):
             yield f
 
 
-class TestForceFieldEnergies(unittest.TestCase):
+class TestForceFieldEnergies:
     """Compare SMIRNOFF energies with AMBER.
     """
 
@@ -821,7 +746,7 @@ class TestForceFieldEnergies(unittest.TestCase):
                 % rel_error)
 
 
-class TestForceFieldLabeling(unittest.TestCase):
+class TestForceFieldLabeling:
     """Tests for labeling parameter types in molecules
     """
 
@@ -845,7 +770,7 @@ class TestForceFieldLabeling(unittest.TestCase):
                 raise Exception("No force term assigned for {}.".format(forcename))
 
 
-class TestExceptionHandling(unittest.TestCase):
+class TestExceptionHandling:
     """Tests for exception handling for incomplete parameterization
     """
 
@@ -984,7 +909,7 @@ def test_change_parameters(verbose=False):
         raise Exception("Error: Parameter modification did not change energy.")
 
 
-class TestForceFieldExport(unittest.TestCase):
+class TestForceFieldExport:
     """Test the ability to export ForceField-parameterized systems to other major simulation packages.
     """
 
@@ -1058,7 +983,7 @@ class TestForceFieldExport(unittest.TestCase):
                 openmm_topology, openmm_topology, gromacs_system, system, positions, verbose=False)
 
 
-class TestSolventSupport(unittest.TestCase):
+class TestSolventSupport:
     """Test support for rigid solvents like TIP3P.
     """
 
