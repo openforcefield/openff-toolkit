@@ -45,17 +45,10 @@ class TestParameterList:
         assert parameters[p1.smirks] == p1
         assert parameters[p2.smirks] == p2
 
-    def test_setitem(self):
-        """Test ParameterList __setitem__ overloading.
-        """
-        p1 = ParameterType(smirks='[*:1]')
-        p2 = ParameterType(smirks='[#1:1]')
-        p3 = ParameterType(smirks='[#7:1]')
-        parameters = ParameterList([p1, p2, p3])
-        parameters[0].smirks = '[*X4:1]'
+        # Note that this call access __getitem__, not __setitem__.
+        parameters['[*:1]'].smirks = '[*X4:1]'
+        assert parameters[0].smirks == '[*X4:1]'
         assert p1.smirks == '[*X4:1]'
-        parameters['[*X4:1]'].smirks = '[*:1]'
-        assert p1.smirks == '[*:1]'
 
     def test_contains(self):
         """Test ParameterList __contains__ overloading.
@@ -78,11 +71,15 @@ class TestParameterList:
         p2 = ParameterType(smirks='[#1:1]')
         p3 = ParameterType(smirks='[#7:1]')
         parameters = ParameterList([p1, p2, p3])
+
+        # Test that original list deletion behavior is preserved.
         del parameters[2]
         assert len(parameters) == 2
         assert p1 in parameters
         assert p2 in parameters
         assert p3 not in parameters
+
+        # Test that we can delete elements by their smirks.
         del parameters['[#1:1]']
         assert p1 in parameters
         assert p2 not in parameters
