@@ -8,7 +8,7 @@ import os
 # datapath = './AlkEthOH_tripos/AlkEthOH_rings_filt1'
 datapath = './AlkEthOH_tripos/AlkEthOH_test_filt1'
 
-molname = 'AlkEthOH_r51'
+molname = 'AlkEthOH_r22'
 
 mol_filepath = os.path.join(datapath, molname + '_tripos.mol2')
 prmtop_filepath = os.path.join(datapath, molname + '.top')
