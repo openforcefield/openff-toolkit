@@ -36,11 +36,19 @@ def pytest_addoption(parser):
 
 
 def pytest_collection_modifyitems(config, items):
-    # If --runslow is given, we don't have to mark items for skipping.
-    if config.getoption("--runslow"):
-        return
-    # Mark for skipping all items marked as slow.
-    skip_slow = pytest.mark.skip(reason="need to set --runslow to run this test")
-    for item in items:
-        if "slow" in item.keywords:
-            item.add_marker(skip_slow)
+    if not config.getoption("runslow"):
+        # Mark for skipping all items marked as slow.
+        skip_slow = pytest.mark.skip(reason="need to set --runslow to run this test")
+        for item in items:
+            if "slow" in item.keywords:
+                item.add_marker(skip_slow)
+    else:
+        # If --runslow is given, we don't have to mark items for skipping,
+        # but we need to extract the whole AlkEthOH set (see
+        # test_forcefield::test_alkethoh_parameters_assignment).
+        import os
+        import tarfile
+        from openforcefield.utils import get_data_filename
+        tarfile_path = os.path.join(get_data_filename('molecules'), 'AlkEthOH_tripos.tar.gz')
+        with tarfile.open(tarfile_path, 'r:gz') as tar:
+            tar.extractall(path=os.path.dirname(tarfile_path))

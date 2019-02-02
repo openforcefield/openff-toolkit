@@ -32,7 +32,7 @@ from openforcefield.typing.engines.smirnoff import *
 
 # TODO: Fix these imports and unskip these tests
 import pytest
-# pytestmark = pytest.mark.skip
+pytestmark = pytest.mark.skip('tests in test_smirnoff are outdated and should be integrated with test_forcefield.py')
 
 #=============================================================================================
 # CONSTANTS
@@ -376,12 +376,12 @@ class TestForceField:
     def test_create(self):
         """Test creating a ForceFied via the Python API.
         """
-        forcefield = create_forcefield_via_api()
+        forcefield = self.create_forcefield_via_api()
 
     def test_modify(self):
         """Test modifying a ForceField via the Python API.
         """
-        forcefield = create_forcefield_via_api()
+        forcefield = self.create_forcefield_via_api()
         # Modify some parameters
         forcefield.forces['Bonds'].parameters[0].k *= 1.1
         forcefield.forces['Bonds'].parameters[1].length += 0.01 * unit.nanometers
@@ -390,7 +390,7 @@ class TestForceField:
         assert "#6X4:1]-[#1:2]~[#7]" in forcefield.forces['Bonds'].parameters
 
     def test_delete_parameters(self):
-        forcefield = create_forcefield_via_api()
+        forcefield = self.create_forcefield_via_api()
         # Delete some parameters
         forcefield.forces['Bonds'].parameters[0].k *= 1.1
         forcefield.forces['Bonds'].parameters[1].length += 0.01 * unit.nanometers
