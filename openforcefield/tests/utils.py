@@ -1095,7 +1095,7 @@ def compare_system_parameters(system1, system2, systems_labels=None,
 #=============================================================================================
 
 def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecule,
-                           **kwargs):
+                           check_parameters=True, check_energies=True, **kwargs):
     """
     Compare energies and parameters for OpenMM Systems/topologies created
     from an AMBER prmtop and crd versus from a SMIRNOFF forcefield file which
@@ -1111,16 +1111,24 @@ def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecul
         Force field instance used to create the system to compare.
     molecule : topology.molecule.Molecule
         The molecule object to test.
+    check_parameters : bool, optional
+        If False, parameters are not compared. Energies are still comapred
+        if ``check_energies`` is ``True`` (default is ``True``).
+    check_parameters : bool, optional
+        If False, energies are not compared and they are not returned.
+        Parameters are not compared if ``check_energies`` is ``True``
+        (default is ``True``).
     ignore_charges : bool, optional
         If True, particle and exception charges are ignored during
         the comparison. Default is False.
 
     Returns
     -------
-    energies : Dict[str, Dict[str, simtk.unit.Quantity]]
-        A dictionary with two keys: 'AMBER' and 'SMIRNOFF', each pointing
-        to another dictionary mapping forces to their total contribution
-        to the potential energy.
+    energies : Dict[str, Dict[str, simtk.unit.Quantity]] or None
+        If ``check_energies`` is ``False``, nothing is returned. Otherwise,
+        this is a dictionary with two keys: 'AMBER' and 'SMIRNOFF', each
+        pointing to another dictionary mapping forces to their total
+        contribution to the potential energy.
 
     Raises
     ------
@@ -1149,10 +1157,14 @@ def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecul
     ff_system = forcefield.create_openmm_system(openff_topology)
 
     # Test energies and parameters.
-    compare_system_parameters(amber_system, ff_system,
-                              systems_labels=('AMBER', 'SMIRNOFF'),
-                              **kwargs)
-    amber_energies, forcefield_energies = compare_system_energies(
-        amber_system, ff_system, positions, box_vectors, **kwargs)
+    if check_parameters:
+        compare_system_parameters(amber_system, ff_system,
+                                  systems_labels=('AMBER', 'SMIRNOFF'),
+                                  **kwargs)
 
-    return {'AMBER': amber_energies, 'SMIRNOFF': forcefield_energies}
+    if check_energies:
+        amber_energies, forcefield_energies = compare_system_energies(
+            amber_system, ff_system, positions, box_vectors, **kwargs)
+
+        return {'AMBER': amber_energies, 'SMIRNOFF': forcefield_energies}
+    return None
