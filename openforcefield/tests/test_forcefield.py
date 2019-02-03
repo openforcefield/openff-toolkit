@@ -265,8 +265,7 @@ def generate_alkethoh_parameters_assignment_cases():
         'c38',
         'c100',
         'c1161',
-        'c1266',
-        # 'c1302',  # This is the only test case in the whole AlkEthOH set currently failing.
+        'c1266'
     ]
 
     def extract_id(file_path):
@@ -284,7 +283,9 @@ def generate_alkethoh_parameters_assignment_cases():
                            if 'crd' in m.name and 'test_filt1' not in m.name}
 
     # Remove fast test cases from slow ones to avoid duplicate tests.
-    for fast_test_case in fast_test_cases:
+    # Remove also water (c1302), which was reparametrized in AlkEthOH
+    # to be TIP3P (not covered by Frosst_AlkEthOH_parmAtFrosst.
+    for fast_test_case in fast_test_cases + ['c1302']:
         slow_test_cases.remove(fast_test_case)
 
     # Mark all slow cases as slow.
