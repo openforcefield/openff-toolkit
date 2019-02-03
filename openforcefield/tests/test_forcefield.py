@@ -333,50 +333,6 @@ def test_alkethoh_parameters_assignment(alkethoh_id):
                            check_energies=False, ignore_charges=True)
 
 
-@pytest.mark.parametrize('freesolv_molecule_id', [
-    # '1034539',
-    '1019269',
-    # '1017962',
-    # '2487143',
-])
-def test_freesolv_parameters_assignment(freesolv_molecule_id):
-    """Regression test on parameters assignment based on the FreeSolv set used in the 0.1 paper.
-
-    """
-    from openforcefield.typing.engines.smirnoff.parameters import NonbondedMethod
-    from openforcefield.tests.utils import compare_system_parameters
-
-    # Determine the paths to files.
-    freesolv_mol2_filepath = os.path.join('freesolv', 'mobley_' + freesolv_molecule_id + '.mol2')
-    # freesolv_pdb_filepath = os.path.join('freesolv', 'mobley_' + freesolv_molecule_id + '_vacuum.pdb')
-    freesolv_xml_filepath = os.path.join('freesolv', 'mobley_' + freesolv_molecule_id + '_vacuum.xml')
-
-    # Load molecules.
-    molecule = Molecule.from_file(freesolv_mol2_filepath)
-    print(molecule.impropers)
-
-    # Create OpenFF System with the current toolkit.
-    ff = ForceField('smirnoff99Frosst.offxml')
-    ff_system = ff.create_openmm_system(molecule.to_topology())
-
-    # Load OpenMM System created with the 0.1 version of the toolkit.
-    from simtk import openmm
-    with open(freesolv_xml_filepath, 'r') as f:
-        xml_system = openmm.XmlSerializer.deserialize(f.read())
-
-    # Compare parameters.
-    # TODO: Reactivate charge comparison once we'll be able to read them from file.
-    compare_system_parameters(ff_system, xml_system,
-                              systems_labels=('current OpenFF', 'SMIRNOFF 0.1'),
-                              ignore_charges=True)
-
-    # Water is required only for explicit solvent systems.
-    # tip3p_mol2_filepath = get_data_filename(os.path.join('systems', 'monomers', 'tip3p_water.mol2'))
-    # ff = ForceField('smirnoff99Frosst.offxml', 'tip3p.offxml')
-    # system_solvated = ff.createSystem(pdb_file_solvated.topology, molecules=[molecule_oe_mol, water_oe_mol],
-    #                                   nonbondedMethod=smirnoff.PME, nonbondedCutoff=1.1*unit.nanometer,
-    #                                   ewaldErrorTolerance=1e-4)  #, constraints=smirnoff.HBonds)
-
 # from_filename
 # from xml_string
 # from_xml_bytes
