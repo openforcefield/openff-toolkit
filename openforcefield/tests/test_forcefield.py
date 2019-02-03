@@ -278,7 +278,7 @@ def generate_alkethoh_parameters_assignment_cases():
     import tarfile
     alkethoh_tar_file_path = get_data_filename(os.path.join('molecules', 'AlkEthOH_tripos.tar.gz'))
     with tarfile.open(alkethoh_tar_file_path, 'r:gz') as tar:
-        # Collect all the files discarding the tuplicates in the test_filt1 folder.
+        # Collect all the files discarding the duplicates in the test_filt1 folder.
         slow_test_cases = {extract_id(m.name) for m in tar.getmembers()
                            if 'crd' in m.name and 'test_filt1' not in m.name}
 
@@ -296,18 +296,19 @@ def generate_alkethoh_parameters_assignment_cases():
 
 @pytest.mark.parametrize('alkethoh_id', generate_alkethoh_parameters_assignment_cases())
 def test_alkethoh_parameters_assignment(alkethoh_id):
-    """Test that ForceField assign parameters correctly by comparing the
-    System parameters of a AlkEthOH molecule parameterized with AMBER and
-    Frosst_AlkEthOH_parmAtFrosst.offxml.
+    """Test that ForceField assign parameters correctly in the AlkEthOH set.
+
+    The test compares the System parameters of a AlkEthOH molecule
+    parameterized with AMBER and Frosst_AlkEthOH_parmAtFrosst.offxml.
 
     The AMBER files were prepared following the pipeline described here:
         https://github.com/openforcefield/open-forcefield-data/tree/master/Model-Systems/AlkEthOH_distrib/
-
     They were built for the SMIRNOFF parametrization to yield exact same
     parameters.
 
     The AlkEthOH set, however, does not have impropers, which should be
-    tested separately.
+    tested separately. Currently, test_freesolv_parameters_assignment
+    does the job.
 
     """
     from openforcefield.tests.utils import get_alkethoh_filepath, compare_amber_smirnoff

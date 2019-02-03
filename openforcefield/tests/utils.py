@@ -736,7 +736,7 @@ def _compare_parameters(parameters_force1, parameters_force2, interaction_type,
     if force_name != '':
         force_name += ' '  # Add space after.
     if systems_labels is not None:
-        systems_labels = ' for {} and {} respectively'.format(*systems_labels)
+        systems_labels = ' for the {} and {} systems respectively'.format(*systems_labels)
     else:
         systems_labels = ''
 
@@ -1059,14 +1059,22 @@ def compare_system_parameters(system1, system2, systems_labels=None,
     assert set(force_names1.values()) == {1}, err_msg
     assert set(force_names2.values()) == {1}, err_msg
 
+    # Remove the center-of-mass motion remover force from comparison.
+    for force_names in [force_names1, force_names2]:
+        if 'CMMotionRemover' in force_names:
+            del force_names['CMMotionRemover']
+
     # Check that the two systems have the same forces.
-    err_msg = 'The two Systems have different forces: system1 {}, system2 {}'
+    err_msg = 'The two Systems have different forces to compare: system1 {}, system2 {}'
     assert set(force_names1) == set(force_names2), err_msg.format(force_names1, force_names2)
 
     # Find all the pair of forces to compare.
     force_pairs = {force_name: [] for force_name in force_names1}
     for system in [system1, system2]:
         for force in system.getForces():
+            # Skip CMMotionRemover.
+            if force.__class__.__name__ == 'CMMotionRemover':
+                continue
             force_pairs[force.__class__.__name__].append(force)
 
     # Compare all pairs of forces
