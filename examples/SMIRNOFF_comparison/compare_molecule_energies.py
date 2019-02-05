@@ -4,9 +4,12 @@ import os
 # Cross-check energies of molecules from AlkEthOH set using SMIRNOFF xml file
 # versus energies from AMBER .prmtop and .crd files (parm@frosst params)
 
-datapath = './AlkEthOH_tripos/AlkEthOH_rings_filt1'
-#molname = 'AlkEthOH_r0' #That fails, but it's complicated. Try cyclobutane
-molname = 'AlkEthOH_r51'
+#datapath = './AlkEthOH_tripos/AlkEthOH_chain_filt1'
+# datapath = './AlkEthOH_tripos/AlkEthOH_rings_filt1'
+datapath = './AlkEthOH_tripos/AlkEthOH_test_filt1'
+
+molname = 'AlkEthOH_r22'
+
 mol_filepath = os.path.join(datapath, molname + '_tripos.mol2')
 prmtop_filepath = os.path.join(datapath, molname + '.top')
 inpcrd_filepath = os.path.join(datapath, molname + '.crd')
@@ -31,6 +34,12 @@ forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
 
 # Compare energies
 from openforcefield.tests.utils import compare_amber_smirnoff
-results = compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecule)
+# We ignore the charges as they are not included in the force field.
+# TODO: Reactivate this check when we'll be able to load charges from the file.
+energies = compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath,
+                                  forcefield, molecule,
+                                  ignore_charges=True)
 
-print(results)
+# Pretty-print the result.
+from pprint import pprint
+pprint(energies)
