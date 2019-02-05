@@ -1928,19 +1928,19 @@ class FrozenMolecule(Serializable):
 
     def compute_partial_charges_am1bcc(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
-        Calculate partial atomic charges for this molecule using an underlying toolkit
+        Calculate partial atomic charges for this molecule using AM1-BCC run by an underlying toolkit
 
         Parameters
         ----------
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation
 
         Examples
         --------
 
         >>> molecule = Molecule.from_smiles('CCCCCC')
         >>> molecule.generate_conformers()
-        >>> molecule.compute_partial_charges()
+        >>> molecule.compute_partial_charges_am1bcc()
 
         Raises
         ------
@@ -1966,10 +1966,11 @@ class FrozenMolecule(Serializable):
 
 
     def compute_partial_charges(self,
-                                #quantum_chemical_method='AM1-BCC',
-                                #partial_charge_method='None',
+                                quantum_chemical_method='AM1',
+                                partial_charge_method='Mulliken',
                                 toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
+        **Warning! Not Implemented!**
         Calculate partial atomic charges for this molecule using an underlying toolkit
 
         Parameters
@@ -2005,8 +2006,8 @@ class FrozenMolecule(Serializable):
             toolkit = toolkit_registry
             charges = toolkit.compute_partial_charges_am1bcc(
                 self,
-                #quantum_chemical_method=quantum_chemical_method,
-                #partial_charge_method=partial_charge_method
+                quantum_chemical_method=quantum_chemical_method,
+                partial_charge_method=partial_charge_method
             )
         else:
             raise InvalidToolkitError(
