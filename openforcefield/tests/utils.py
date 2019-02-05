@@ -89,6 +89,66 @@ def get_monomer_mol2file(prefix='ethanol'):
     return mol2_filename
 
 
+def get_alkethoh_filepath(alkethoh_name, get_amber=False):
+    """Retrieve the mol2, top and crd files of a molecule in the AlkEthOH set.
+
+    Parameters
+    ----------
+    alkethoh_name : str
+        The name of the AlkEthOH molecule (e.g. "AlkEthOH_r0", "AlkEthOH_c1266").
+    get_amber : bool, optional
+        If True, the paths to the top and crd files are returned.
+
+    Returns
+    -------
+    molecule_file_paths : str or List[str]
+        All the requested paths. If ``get_amber`` is False, only a single string
+        pointing to the path of the mol2 file is returned, otherwise this is a
+        list ``[mol2_path, top_path, crd_path]``.
+
+    """
+    import tarfile
+
+    # Determine if this is a ring or a chain molecule and the subfolder name.
+    is_ring = alkethoh_name[9] == 'r'
+    alkethoh_subdir_name = 'rings' if is_ring else 'chain'
+    alkethoh_subdir_name = 'AlkEthOH_' + alkethoh_subdir_name + '_filt1'
+
+    # Determine which paths have to be returned. Paths are
+    # relative to the `data/molecules/` folder. We'll re-use
+    # these relative paths to extract files from the tar.gz.
+    molecule_file_relative_base_path = os.path.join('AlkEthOH_tripos', alkethoh_subdir_name, alkethoh_name)
+    # We always return the mol2 file.
+    molecule_relative_file_paths = [molecule_file_relative_base_path + '_tripos.mol2']
+    # Check if we need to return also Amber files.
+    if get_amber:
+        molecule_relative_file_paths.append(molecule_file_relative_base_path + '.top')
+        molecule_relative_file_paths.append(molecule_file_relative_base_path + '.crd')
+
+    # Build absolute paths.
+    molecules_dir_path = get_data_filename('molecules')
+    molecule_file_paths = [os.path.join(molecules_dir_path, p) for p in molecule_relative_file_paths]
+
+    # Check if we need to extract some of the files from the tar archive.
+    files_to_extract = set()
+    for file_idx, molecule_file_path in enumerate(molecule_file_paths):
+        if not os.path.isfile(molecule_file_path):
+            files_to_extract.add(molecule_relative_file_paths[file_idx])
+
+    # Extract the files.
+    if len(files_to_extract) > 0:
+        alkethoh_tar_file_path = os.path.join(molecules_dir_path, 'AlkEthOH_tripos.tar.gz')
+        with tarfile.open(alkethoh_tar_file_path, 'r:gz') as tar:
+            # Find the files to extract.
+            members = [m for m in tar.getmembers() if m.name in files_to_extract]
+            tar.extractall(path=molecules_dir_path, members=members)
+
+    # Decide whether to return a single path or a list of paths.
+    if len(molecule_file_paths) == 1:
+        return molecule_file_paths[0]
+    return molecule_file_paths
+
+
 #=============================================================================================
 # Shortcut functions to create System objects from system files.
 #=============================================================================================

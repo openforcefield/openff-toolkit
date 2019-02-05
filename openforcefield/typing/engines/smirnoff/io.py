@@ -58,7 +58,7 @@ def _extract_attached_units(attrib):
     # TODO: Should this scheme also convert "1" to int(1) and "8.0" to float(8.0)?
 
     attached_units = OrderedDict()
-    for key in list(attrib.keys()):
+    for key in attrib.keys():
         if key.endswith('_unit'):
             parameter_name = key[:-5]
             parameter_units_string = attrib[key]
@@ -92,15 +92,17 @@ def _attach_units(attrib, attached_units):
        Updated XML node attributes with simtk.unit.Unit units attached to values for which units were specified for their keys
 
     """
-    for (parameter_name, units_to_attach) in attached_units.items():
+    for parameter_name, units_to_attach in attached_units.items():
         if parameter_name in attrib.keys():
             parameter_attrib_string = attrib[parameter_name]
             try:
                 attrib[parameter_name] = float(
                     parameter_attrib_string) * units_to_attach
             except ValueError as e:
-                e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
-                    parameter_name, parameter_attrib_string, units_to_attach)
+                e.msg = (
+                    "Expected numeric value for parameter '{}',"
+                    "instead found '{}' when trying to attach units '{}'\n"
+                ).format(parameter_name, parameter_attrib_string, units_to_attach)
                 raise e
 
         # Now check for matches like "phase1", "phase2"
@@ -342,8 +344,8 @@ class XMLParameterIOHandler(ParameterIOHandler):
             # this handles either filenames or open file-like objects
             tree = etree.parse(source, parser)
         except IOError:
-            # Check if the file exists in an installed directory
-            temp_file = get_data_filename(source)
+            # Check if the file exists in the data/forcefield directory
+            temp_file = get_data_filename(os.path.join('forcefield', source))
             tree = etree.parse(temp_file, parser)
         #except Exception: # If it's a string
         #    string_data = source.read()
