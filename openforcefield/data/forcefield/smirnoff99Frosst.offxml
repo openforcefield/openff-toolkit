@@ -341,5 +341,7 @@
     <Atom smirks="[#35X0-1:1]" epsilon="0.0586554" id="n34" rmin_half="2.608"/>
     <Atom smirks="[#53X0-1:1]" epsilon="0.0536816" id="n35" rmin_half="2.860"/>
   </vdW>
+  <ToolkitAM1BCC/>
+
   <!-- Note that the AM1-BCC charge model is not yet encoded as a ChargeIncrementModel -->
 </SMIRNOFF>

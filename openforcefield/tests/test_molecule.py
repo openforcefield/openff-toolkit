@@ -601,11 +601,12 @@ class TestMolecule(TestCase):
             for improper in molecule.impropers:
                 assert improper[0].is_bonded_to(improper[1])
                 assert improper[1].is_bonded_to(improper[2])
-                assert improper[2].is_bonded_to(improper[3])
-                
-                assert ((improper[0].is_bonded_to(improper[2])) or
-                        (improper[0].is_bonded_to(improper[3])) or
-                        (improper[1].is_bonded_to(improper[3])))
+                assert improper[1].is_bonded_to(improper[3])
+
+                # I think it's OK if two substituents of the central atom are bound to each other
+                #assert not((improper[0].is_bonded_to(improper[2])) or
+                #           (improper[0].is_bonded_to(improper[3])) or
+                #           (improper[2].is_bonded_to(improper[3])))
                 
 
 
