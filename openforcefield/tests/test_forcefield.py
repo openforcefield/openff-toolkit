@@ -465,7 +465,7 @@ class TestForceField():
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ValueError, match=".* not used by any registered force Handler: {'invalid_kwarg'}.*") as e:
             omm_system = forcefield.create_openmm_system(topology, invalid_kwarg='aaa', toolkit_registry=toolkit_registry)
 
 # from_xml_bytes
