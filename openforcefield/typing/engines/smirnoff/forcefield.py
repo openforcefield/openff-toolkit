@@ -75,6 +75,107 @@ class SMIRNOFFAromaticityError(Exception):
         self.msg = msg
 
 
+class ParseError(Exception):
+    """
+    Exception for when a SMIRNOFF data structure is not parseable by a ForceField
+    """
+
+    def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
+
+
+
+def _extract_attached_units(raw_smirnoff_dict):
+    """
+    Create a mapping of (potentially unit-bearing) quantities from a dictionary, where some keys are paired like
+    {'length': 8, 'length_unit':'angstrom'}.
+
+    Parameters
+    ----------
+    raw_smirnoff_dict : dict
+       Dictionary where some keys are paired like {'X': 1.0, 'X_unit': angstrom}.
+
+    Returns
+    -------
+    unitless_smirnoff_dict : dict
+       raw_smirnoff_dict, but with keys ending in ``_unit`` removed.
+    attached_units : dict str : simtk.unit.Unit
+       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
+       parameter ``parameter_name``. For example ``attached_units['X'] = simtk.unit.angstrom.
+
+    """
+
+    # TODO: Should this scheme also convert "1" to int(1) and "8.0" to float(8.0)?
+
+    attached_units = OrderedDict()
+    unitless_smirnoff_dict = raw_smirnoff_dict.copy()
+    #print(raw_smirnoff_dict)
+    for key in raw_smirnoff_dict.keys():
+        if key.endswith('_unit'):
+            parameter_name = key[:-5]
+            parameter_units_string = raw_smirnoff_dict[key]
+            try:
+                parameter_units = eval(parameter_units_string, unit.__dict__)
+            except Exception as e:
+                e.msg = "Could not parse units {}\n".format(
+                    parameter_units_string) + e.msg
+                raise e
+            attached_units[parameter_name] = parameter_units
+            #del unitless_smirnoff_dict[key]
+
+    return unitless_smirnoff_dict, attached_units
+
+
+#@staticmethod
+def _attach_units(unitless_smirnoff_dict, attached_units):
+    """Attach units to attributes for which units are specified.
+
+    Parameters
+    ----------
+    unitless_smirnoff_dict : dict
+       Dictionary, where some items are to have units applied.
+    attached_units : dict str : simtk.unit.Unit
+       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
+       parameter ``parameter_name``
+
+    Returns
+    -------
+    unitbearing_smirnoff_dict : dict
+       Updated smirnoff dict with simtk.unit.Unit units attached to values for which units were specified for their keys
+
+    """
+    temp_dict = unitless_smirnoff_dict.copy()
+    for parameter_name, units_to_attach in attached_units.items():
+        if parameter_name in temp_dict.keys():
+            parameter_attrib_string = temp_dict[parameter_name]
+            try:
+                temp_dict[parameter_name] = float(
+                          parameter_attrib_string) * units_to_attach
+            except ValueError as e:
+                e.msg = (
+                    "Expected numeric value for parameter '{}',"
+                    "instead found '{}' when trying to attach units '{}'\n"
+                ).format(parameter_name, parameter_attrib_string, units_to_attach)
+                raise e
+
+        # Now check for matches like "phase1", "phase2"
+        c = 1
+        while (parameter_name + str(c)) in temp_dict.keys():
+            indexed_parameter_name = parameter_name + str(c)
+            parameter_attrib_string = temp_dict[indexed_parameter_name]
+            try:
+                temp_dict[indexed_parameter_name] = float(
+                          parameter_attrib_string) * units_to_attach
+            except ValueError as e:
+                e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
+                    indexed_parameter_name, parameter_attrib_string,
+                    units_to_attach)
+                raise e
+            c += 1
+
+    return temp_dict
+
 #=============================================================================================
 # FORCEFIELD
 #=============================================================================================
@@ -246,7 +347,7 @@ class ForceField(object):
             parameter_io_handler_classes)
 
         # Parse all sources containing SMIRNOFF parameter definitions
-        self.parse(sources)
+        self.parse_sources(sources)
 
     def _initialize(self):
         """
@@ -425,7 +526,7 @@ class ForceField(object):
                 "tag is already registered to {}".format(
                     parameter_io_handler_class, io_format,
                     self._parameter_io_handlers[io_format]))
-        new_io_handler = parameter_io_handler_class(self)
+        new_io_handler = parameter_io_handler_class()
 
         self._parameter_io_handlers[io_format] = new_io_handler
         return new_io_handler
@@ -586,9 +687,8 @@ class ForceField(object):
 
         return io_handler
 
-    # TODO: Delegate this to the XML handler
 
-    def parse(self, sources, input_format=None):
+    def parse_sources(self, sources, input_format=None):
         """Parse a SMIRNOFF force field definition.
 
         Parameters
@@ -601,8 +701,7 @@ class ForceField(object):
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
             with files appearing later in the sequence resulting in parameters that have higher precedence.
             Support for multiple files is primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
-        input_format : string, optional. Default = None
-            The format of the input file(s). If not specified, all parsers will be tried.
+
         .. notes ::
 
            * New SMIRNOFF sections are handled independently, as if they were specified in the same file.
@@ -617,49 +716,155 @@ class ForceField(object):
             # Make iterable object
             sources = [sources]
 
+        # TODO: If a non-first source fails here, the forcefield might be partially modified
+        for source in sources:
+            smirnoff_data = self.parse_smirnoff_from_source(source)
+            self.load_smirnoff_data(smirnoff_data)
+
+
+    def load_smirnoff_data(self, smirnoff_data):
+        """
+        Add parameters from a SMIRNOFF-format data structure to this ForceField.
+
+        Parameters
+        ----------
+        smirnoff_data : OrderedDict
+            A representation of a SMIRNOFF-format data structure. Begins at top-level 'SMIRNOFF' key.
+
+        """
+
+        # Ensure that SMIRNOFF is a top-level key of the dict
+        if not('SMIRNOFF' in smirnoff_data.keys()):
+            raise ParseError("'SMIRNOFF' must be a top-level key in the SMIRNOFF object model'")
+
+        l1_dict = smirnoff_data['SMIRNOFF']
+        # Check that the aromaticity model required by this parameter set is compatible with
+        # others loaded by this ForceField
+        if 'aromaticity_model' in l1_dict.keys():
+            aromaticity_model = l1_dict['aromaticity_model']
+        else:
+            raise ParseError("'aromaticity_model' attribute must be specified in SMIRNOFF tag")
+        self._register_aromaticity_model(aromaticity_model)
+
+        #if aromaticity_model not in topology.ALLOWED_AROMATICITY_MODELS:
+        #    self._raise_parsing_exception(
+        #        root,
+        #        "'aromaticity_model' (%s) must be one of the supported models: "
+        #        % (aromaticity_model, topology.ALLOWED_AROMATICITY_MODELS))
+        #
+        #if (self._aromaticity_model is not None) and (self._aromaticity_model
+        #                                              != aromaticity_model):
+        #    self._raise_parsing_exception(
+        #        root,
+        #        "'aromaticity_model' (%s) does not match earlier read 'aromaticity_model' (%s)"
+        #        % (aromaticity_model, self._aromaticity_model))
+
+
+
+        # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation
+        if 'version' in l1_dict.keys():
+            version = l1_dict['version']
+        else:
+            raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
+        self._check_smirnoff_version_compatibility(str(version))
+
+
+        # Go through the subsections, delegating each to the proper ParameterHandler
+
+        # Define keys which are expected from the spec, but have no bearing on system energy
+        l1_spec_keys = ['Author','Date', 'version', 'aromaticity_model']
+
+        for parameter_name in l1_dict.keys():
+            # Skip (for now) cosmetic l1 items
+            if parameter_name in l1_spec_keys:
+                continue
+            # Handle cases where a parameter name has no info (eg. ToolkitAM1BCC)
+            if l1_dict[parameter_name] is None:
+                handler = self.get_handler(parameter_name, {})
+                continue
+
+            # Otherwise, we expect this l1_key to correspond to a ParameterHandler
+            section_dict = l1_dict[parameter_name]
+            # In the OFFXML format, attributes and sub-elements are distinguished by whether they're a list
+            raw_handler_kwargs = dict([(key, item) for key, item in section_dict.items() if not type(item) is list])
+            unitless_handler_kwargs, attached_units = _extract_attached_units(raw_handler_kwargs)
+            handler_kwargs = _attach_units(unitless_handler_kwargs, attached_units)
+
+            # Retrieve or create parameter handler
+            handler = self.get_handler(parameter_name,
+                                       handler_kwargs)
+
+            # This will get parameter lists in the form {'Bonds': [list of bonds]}.
+            parameter_lists = dict([(key, item) for key, item in section_dict.items() if type(item) is list])
+            for parameter_tag, parameter_list in parameter_lists.items():
+                for parameter_dict in parameter_list:
+                    # Append units to parameters as needed
+                    parameter_kwargs = _attach_units(parameter_dict,
+                                                     attached_units)
+                    # Add parameter definition
+                    handler.add_parameter(parameter_kwargs)
+
+
+    def parse_smirnoff_from_source(self, source):
+        """
+        Reads a SMIRNOFF data structure from a source, which can be one of many types.
+
+        Parameters
+        ----------
+        source : str or bytes
+            sources : string or file-like object or open file handle or URL (or iterable of these)
+            A list of files defining the SMIRNOFF force field to be loaded
+            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
+            Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
+            (for built in force fields), or an open file-like object with a ``read()`` method from which the forcefield XML data can be loaded.
+
+        Returns
+        -------
+        smirnoff_data : OrderedDict
+            A representation of a SMIRNOFF-format data structure. Begins at top-level 'SMIRNOFF' key.
+
+        """
+
         # Process all SMIRNOFF definition files or objects
         # QUESTION: Allow users to specify forcefield URLs so they can pull forcefield definitions from the web too?
-        #trees = list()
-        if input_format is None:
-            # If we don't know, try all known formats
-            io_formats_to_try = self._parameter_io_handler_classes.keys()
-        else:
-            io_formats_to_try = [input_format]
+        io_formats_to_try = self._parameter_io_handler_classes.keys()
 
-        for source in sources:
-            # TODO: Add support for other sources (other serialized formats, URLs, etc)
-            # Parse content depending on type
-            parse_successful = False
+        # Parse content depending on type
+        for parameter_io_format in io_formats_to_try:
+            parameter_io_handler = self.get_io_handler(parameter_io_format)
+            # If it looks like raw SMIRNOFF data as bytes
+            if type(source) == bytes:
+                smirnoff_data = parameter_io_handler.parse_string(source)
+                return smirnoff_data
+            elif type(source) == str:
+                # Maybe it's an OFFXML file name
+                try:
+                    smirnoff_data = parameter_io_handler.parse_file(source)
+                    return smirnoff_data
+                except ParseError:
+                    pass
+                # Otherwise, it might be a string containing a whole FF description
+            try:
+                byte_source = str.encode(source)
+                smirnoff_data = parameter_io_handler.parse_string(byte_source)
+                return smirnoff_data
+            except ParseError:
+                pass
+            # Otherwise assume it's a filename of some sort
+            else:
+                smirnoff_data = parameter_io_handler.parse_file(source)
+                return smirnoff_data
 
-            for parameter_io_format in io_formats_to_try:
-                parameter_io_handler = self.get_io_handler(parameter_io_format)
-                if type(source) == bytes:
-                    parameter_io_handler.parse_string(source)
-                    parse_successful = True
-                elif type(source) == str:
-                    if '.offxml' in source:
-                        parameter_io_handler.parse_file(source)
-                        parse_successful = True
-                    else:
-                        byte_source = str.encode(source)
-                        parameter_io_handler.parse_string(byte_source)
-                        parse_successful = True
-                else:
-                    parameter_io_handler.parse_file(source)
-                    parse_successful = True
-                    # TODO: The try/except stuff here is dangerous. The io handler modifies the forcefield as it reads
-                    # the file. If it crashes midway through, the forcefield will be partially modified.
-                #except ParseError:
-                #    pass
-            if not (parse_successful):
-                valid_formats = [
-                    iohandler.format
-                    for iohandler in self._parameter_io_handlers
-                ]
-                msg = "Source {} does not appear to be in a known SMIRNOFF encoding.\n".format(
-                    source)
-                msg += "Valid formats are: {}".format(valid_formats)
-                raise Exception(msg)
+        # If we haven't returned by now, the parsing was unsuccessful
+        valid_formats = [
+            input_format
+            for input_format in self._parameter_io_handlers.keys()
+        ]
+        msg = "Source {} does not appear to be in a known SMIRNOFF encoding.\n".format(
+            source)
+        msg += "Valid formats are: {}".format(valid_formats)
+        raise IOError(msg)
+
 
     def _resolve_parameter_handler_order(self):
         """Resolve the order in which ParameterHandler objects should execute to satisfy constraints.

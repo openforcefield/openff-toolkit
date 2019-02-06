@@ -253,14 +253,13 @@ class ParameterHandler(object):
         ------
         Raises a ValueError if the parameters are incompatible.
         """
-        for arg in parameter_kwargs:
-            if arg in self._REQUIRE_UNITS:
-                #raise Exception(self)
-                reqd_unit = self._REQUIRE_UNITS[arg]
+        for key in parameter_kwargs:
+            if key in self._REQUIRE_UNITS:
+                reqd_unit = self._REQUIRE_UNITS[key]
                 #if arg in cls._REQUIRE_UNITS:
                 #    raise Exception(cls)
                 #    reqd_unit = cls._REQUIRE_UNITS[arg]
-                val = parameter_kwargs[arg]
+                val = parameter_kwargs[key]
                 if not (reqd_unit.is_compatible(val.unit)):
                     raise IncompatibleUnitError(
                         "Input unit {} is not compatible with ParameterHandler unit {}"

@@ -417,7 +417,6 @@ class TestForceField(TestCase):
         with pytest.raises(ValueError) as e:
             omm_system = forcefield.create_openmm_system(topology, invalid_kwarg='aaa')
 
-=======
 
 #=============================================================================================
 # TEST PARAMETER ASSIGNMENT

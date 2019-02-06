@@ -20,7 +20,7 @@ import os
 import logging
 from collections import OrderedDict
 
-import lxml.etree as etree
+import xmltodict
 
 from simtk import openmm, unit
 from openforcefield.utils.utils import get_data_filename
@@ -132,15 +132,6 @@ def _attach_units(attrib, attached_units):
     return attrib
 
 
-class ParseError(Exception):
-    """
-    Exception for when a file is not parseable by a ParameterIOHandler
-    """
-
-    def __init__(self, msg):
-        super(ParseError, self).__init__(self, msg)
-        self.msg = msg
-
 
 #=============================================================================================
 # Base ParameterIOHandler
@@ -153,18 +144,13 @@ class ParameterIOHandler(object):
     """
     _FORMAT = None
 
-    def __init__(self, forcefield):
+    def __init__(self):
         """
         Create a new ParameterIOHandler.
 
-        Parameters
-        ----------
-        forcefield : openforcefield.typing.engines.smirnoff.ForceField
-            The ForceField that this ParameterIOHandler belongs to. The ParameterIOHandler will read serialized
-            ForceField representations, create ParameterType-derived objects, and add the ParameterType-derived objects
-            into the ForceField's matching ParameterHandler.
         """
-        self._forcefield = forcefield
+        pass
+        #self._forcefield = forcefield
 
     def parse_file(self, filename):
         """
@@ -234,89 +220,12 @@ class ParameterIOHandler(object):
 # XML I/O
 #=============================================================================================
 
-# TODO: Instead of subclassing ForceField, what if we had an abstract base class for parameter IO?
 
 
 class XMLParameterIOHandler(ParameterIOHandler):
     # TODO: Come up with a better keyword for format
     _FORMAT = 'XML'
 
-    #def __init__(self, *args, **kwargs):
-    #    super().__init__(*args, **kwargs)
-
-    @staticmethod
-    def _get_sourceline(node, filename=None):
-        """Prepend the source line number to aid debugging if the XML parsing library supports itself.
-
-        Parameters
-        ----------
-        node : lxml.etree.Node like, optional, default=None
-            XML DOM node object, which may optionally have a ``sourceline`` field
-        filename :
-
-        """
-        if filename:
-            msg = "Error encountered parsing '{}'".format(filename)
-        else:
-            msg = "Error encountered parsing XML"
-        if hasattr(node, 'sourceline'):
-            msg += "line {}:\n{}\n".format(node.sourceline, str(node))
-        else:
-            msg += "line:\n{}\n".format(str(node))
-
-        return msg
-
-
-    def _parse_version(self, root):
-        """
-        Parse the forcefield version number and make sure it is supported.
-
-        Parameters
-        ----------
-        root : etree.Element
-            The document root
-
-        """
-        if 'version' in root.attrib:
-            version = root.attrib['version']
-        else:
-            raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
-
-        # The check_smirnoff_version_compatibility function requires a string, whereas version will by default be an int
-        self._forcefield._check_smirnoff_version_compatibility(str(version))
-
-
-    def _parse_aromaticity_model(self, root):
-        """
-        Parse the aromaticity model, make sure it is supported, and make sure it does
-        not conflict with previously-specified aromaticity models.
-
-        Parameters
-        ----------
-        root : etree.Element
-            The document root
-
-        """
-        if 'aromaticity_model' in root.attrib:
-            aromaticity_model = root.attrib['aromaticity_model']
-        else:
-            raise ParseError("'aromaticity_model' attribute must be specified in top-level tag")
-
-
-        self._forcefield._register_aromaticity_model(aromaticity_model)
-
-        #if aromaticity_model not in topology.ALLOWED_AROMATICITY_MODELS:
-        #    self._raise_parsing_exception(
-        #        root,
-        #        "'aromaticity_model' (%s) must be one of the supported models: "
-        #        % (aromaticity_model, topology.ALLOWED_AROMATICITY_MODELS))
-        #
-        #if (self._aromaticity_model is not None) and (self._aromaticity_model
-        #                                              != aromaticity_model):
-        #    self._raise_parsing_exception(
-        #        root,
-        #        "'aromaticity_model' (%s) does not match earlier read 'aromaticity_model' (%s)"
-        #        % (aromaticity_model, self._aromaticity_model))
 
 
     # TODO: Fix this
@@ -336,20 +245,23 @@ class XMLParameterIOHandler(ParameterIOHandler):
            * If a SMIRNOFF section that has already been read appears again, its definitions are appended to the end of the previously-read
              definitions if the sections are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
         """
+        from pyexpat import ExpatError
+        from openforcefield.typing.engines.smirnoff.forcefield import ParseError
 
-        # TODO: Search the right sequence of paths
-        parser = etree.XMLParser(
-            remove_blank_text=True)  # For pretty print on write
         try:
-            # this handles either filenames or open file-like objects
-            tree = etree.parse(source, parser)
-        except IOError:
+            # this handles open file-like objects and strings
+            smirnoff_dict = xmltodict.parse(source, attr_prefix='')
+            return smirnoff_dict
+        except ExpatError:
+            pass
+
+        try:
+            # This handles filenames
             # Check if the file exists in the data/forcefield directory
             temp_file = get_data_filename(os.path.join('forcefield', source))
-            tree = etree.parse(temp_file, parser)
-        #except Exception: # If it's a string
-        #    string_data = source.read()
-        #    tree = self.parse_string(source)
+            data = open(temp_file).read()
+            smirnoff_data = xmltodict.parse(data, attr_prefix='')
+            return smirnoff_data
         except Exception as e:
             # Fail with an error message about which file could not be read.
             # TODO: Also handle case where fallback to 'data' directory encounters problems,
@@ -360,8 +272,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
             else:
                 filename = str(source)
             msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
-            raise Exception(msg)
-        self.from_lxml(tree.getroot())
+            raise ParseError(msg)
 
     def parse_string(self, data):
         """Parse a SMIRNOFF force field definition in XML format.
@@ -374,11 +285,14 @@ class XMLParameterIOHandler(ParameterIOHandler):
             A SMIRNOFF force field definition in `the SMIRNOFF XML format <https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md>`_.
 
         """
+        from pyexpat import ExpatError
+        from openforcefield.typing.engines.smirnoff.forcefield import ParseError
 
         # Parse XML file
-        root = etree.XML(data)
-        #root = etree.fromstring(data)
-        self.from_lxml(root)
+        try:
+            smirnoff_data = xmltodict.parse(data, attr_prefix='')
+        except ExpatError as e:
+            raise ParseError(e)
 
     def to_file(self, filename, root):
         """Write the current forcefield parameter set to a file, autodetecting the type from the extension.
@@ -417,85 +331,85 @@ class XMLParameterIOHandler(ParameterIOHandler):
     #    """
     #    return ForceField(xml)
 
-    def to_lxml(self):
-        """Render the forcefield this ParameterIOHandler is registered to to an lxml.etree
+    # def to_lxml(self):
+    #     """Render the forcefield this ParameterIOHandler is registered to to an lxml.etree
+    #
+    #     Returns
+    #     -------
+    #     root : lxml.etree
+    #         Root node
+    #     """
+    #     root = etree.Element('SMIRNOFF', {'version': str(self._forcefield._MAX_SUPPORTED_SMIRNOFF_VERSION)})
+    #     for tagname, parameter_handler in self._forcefield._parameter_handlers.items(
+    #     ):
+    #         parameter_subtree = etree.SubElement(root, tagname,
+    #                                              parameter_handler.attribs)
+    #         for parameter in parameter_handler.parameters:
+    #             etree.SubElement(parameter_subtree, parameter.tagname,
+    #                              parameter.attribs)
+    #
+    #     return root
 
-        Returns
-        -------
-        root : lxml.etree
-            Root node
-        """
-        root = etree.Element('SMIRNOFF', {'version': str(self._forcefield._MAX_SUPPORTED_SMIRNOFF_VERSION)})
-        for tagname, parameter_handler in self._forcefield._parameter_handlers.items(
-        ):
-            parameter_subtree = etree.SubElement(root, tagname,
-                                                 parameter_handler.attribs)
-            for parameter in parameter_handler.parameters:
-                etree.SubElement(parameter_subtree, parameter.tagname,
-                                 parameter.attribs)
-
-        return root
-
-    def from_lxml(self, root):
-
-
-        cosmetic_tags = ['Date', 'Author']
-
-        try:
-            exception_node = root  # node used for exception reporting
-            if not (root.tag == 'SMIRNOFF'):
-                raise ParseError("Root tag of tree is not 'SMIRNOFF'")
-            self._parse_version(root)
-            self._parse_aromaticity_model(root)
-            # Process handlers
-            #for section in root.iter(tag=etree.Element):
-            for section in root:
-                # Skip comment lines
-                if not isinstance(section.tag, str):
-                    continue
-                if section.tag in cosmetic_tags:
-                    continue
-                exception_node = section  # node used for exception reporting
-                # Extract parameter name from XML tag
-                parameter_name = section.tag
-
-                # Split out attributes that refer to units
-                handler_kwargs, attached_units = _extract_attached_units(
-                    section.attrib)
-                # TODO: Attach units to handler_kwargs
-                # Make a copy of handler_kwargs that we can modify
-                handler_kwargs_dict = dict(handler_kwargs)
-                handler_kwargs_dict = _attach_units(handler_kwargs_dict,
-                                                    attached_units)
-
-                # Retrieve or create parameter handler
-                handler = self._forcefield.get_handler(parameter_name,
-                                                       handler_kwargs_dict)
-
-                # Populate handler with parameter definitions
-                for parameter in section:
-                    # Skip comment lines
-                    if not isinstance(parameter.tag, str):
-                        continue
-                    exception_node = parameter  # node used for exception reporting
-
-                    # parameter.attrib doesn't support assignment of Quantity type, so make a copy as dict
-                    parameter_attrib_dict = dict(parameter.attrib)
-
-                    # Append units to parameters as needed
-                    parameter_kwargs = _attach_units(parameter_attrib_dict,
-                                                     attached_units)
-                    # Add parameter definition
-                    handler.add_parameter(parameter_kwargs)
-
-        except Exception as e:
-            # Prepend the line and line text of XML file to aid debugging
-            # TODO: Can we include the filename as well?
-            print(self._get_sourceline(exception_node))
-            #if not e.args:
-            #    e.args = ('',)
-            #e.args = e.args[0] + + e.args[1:]
-            raise e
+    # def from_lxml(self, root):
+    #
+    #
+    #     cosmetic_tags = ['Date', 'Author']
+    #
+    #     try:
+    #         exception_node = root  # node used for exception reporting
+    #         if not (root.tag == 'SMIRNOFF'):
+    #             raise ParseError("Root tag of tree is not 'SMIRNOFF'")
+    #         self._parse_version(root)
+    #         self._parse_aromaticity_model(root)
+    #         # Process handlers
+    #         #for section in root.iter(tag=etree.Element):
+    #         for section in root:
+    #             # Skip comment lines
+    #             if not isinstance(section.tag, str):
+    #                 continue
+    #             if section.tag in cosmetic_tags:
+    #                 continue
+    #             exception_node = section  # node used for exception reporting
+    #             # Extract parameter name from XML tag
+    #             parameter_name = section.tag
+    #
+    #             # Split out attributes that refer to units
+    #             handler_kwargs, attached_units = _extract_attached_units(
+    #                 section.attrib)
+    #             # TODO: Attach units to handler_kwargs
+    #             # Make a copy of handler_kwargs that we can modify
+    #             handler_kwargs_dict = dict(handler_kwargs)
+    #             handler_kwargs_dict = _attach_units(handler_kwargs_dict,
+    #                                                 attached_units)
+    #
+    #             # Retrieve or create parameter handler
+    #             handler = self._forcefield.get_handler(parameter_name,
+    #                                                    handler_kwargs_dict)
+    #
+    #             # Populate handler with parameter definitions
+    #             for parameter in section:
+    #                 # Skip comment lines
+    #                 if not isinstance(parameter.tag, str):
+    #                     continue
+    #                 exception_node = parameter  # node used for exception reporting
+    #
+    #                 # parameter.attrib doesn't support assignment of Quantity type, so make a copy as dict
+    #                 parameter_attrib_dict = dict(parameter.attrib)
+    #
+    #                 # Append units to parameters as needed
+    #                 parameter_kwargs = _attach_units(parameter_attrib_dict,
+    #                                                  attached_units)
+    #                 # Add parameter definition
+    #                 handler.add_parameter(parameter_kwargs)
+    #
+    #     except Exception as e:
+    #         # Prepend the line and line text of XML file to aid debugging
+    #         # TODO: Can we include the filename as well?
+    #         print(self._get_sourceline(exception_node))
+    #         #if not e.args:
+    #         #    e.args = ('',)
+    #         #e.args = e.args[0] + + e.args[1:]
+    #         raise e
 
     def to_xml(self):
         """Render the forcefield parameter set to XML.
