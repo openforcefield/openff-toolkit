@@ -14,8 +14,8 @@ Tests for forcefield class
 # GLOBAL IMPORTS
 #=============================================================================================
 
-from functools import partial
-from openforcefield import utils
+import os
+
 from simtk import unit
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -467,6 +467,89 @@ class TestForceField():
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         with pytest.raises(ValueError, match=".* not used by any registered force Handler: {'invalid_kwarg'}.*") as e:
             omm_system = forcefield.create_openmm_system(topology, invalid_kwarg='aaa', toolkit_registry=toolkit_registry)
+
+
+#=============================================================================================
+# TEST PARAMETER ASSIGNMENT
+#=============================================================================================
+
+def generate_alkethoh_parameters_assignment_cases():
+    """Create dinamically all test cases that should be ."""
+    # These AlkEthOH molecules are always run by test_alkethoh_parameters_assignment.
+    fast_test_cases = [
+        'r0',
+        'r12',
+        'r118',
+        'c38',
+        'c100',
+        'c1161',
+        'c1266'
+    ]
+
+    def extract_id(file_path):
+        """Extract the AlkEthOH molecule ID from the file path."""
+        # An example of file path is AlkEthOH_tripos/AlkEthOH_chain_filt1/AlkEthOH_c555.crd
+        return os.path.splitext(os.path.basename(file_path))[0][9:]
+
+    # Get all the molecules ids from the tarfiles. The tarball is extracted
+    # in conftest.py if slow tests are activated.
+    import tarfile
+    alkethoh_tar_file_path = get_data_filename(os.path.join('molecules', 'AlkEthOH_tripos.tar.gz'))
+    with tarfile.open(alkethoh_tar_file_path, 'r:gz') as tar:
+        # Collect all the files discarding the duplicates in the test_filt1 folder.
+        slow_test_cases = {extract_id(m.name) for m in tar.getmembers()
+                           if 'crd' in m.name and 'test_filt1' not in m.name}
+
+    # Remove fast test cases from slow ones to avoid duplicate tests.
+    # Remove also water (c1302), which was reparameterized in AlkEthOH
+    # to be TIP3P (not covered by Frosst_AlkEthOH_parmAtFrosst.
+    for fast_test_case in fast_test_cases + ['c1302']:
+        slow_test_cases.remove(fast_test_case)
+
+    # Mark all slow cases as slow.
+    slow_test_cases = [pytest.param(case, marks=pytest.mark.slow)
+                       for case in sorted(slow_test_cases)]
+
+    # Isolate the AlkEthOH ID.
+    return fast_test_cases + slow_test_cases
+
+
+@pytest.mark.parametrize('alkethoh_id', generate_alkethoh_parameters_assignment_cases())
+def test_alkethoh_parameters_assignment(alkethoh_id):
+    """Test that ForceField assign parameters correctly in the AlkEthOH set.
+
+    The test compares the System parameters of a AlkEthOH molecule
+    parameterized with AMBER and Frosst_AlkEthOH_parmAtFrosst.offxml.
+
+    The AMBER files were prepared following the pipeline described here:
+        https://github.com/openforcefield/open-forcefield-data/tree/master/Model-Systems/AlkEthOH_distrib/
+    They were built for the SMIRNOFF parametrization to yield exact same
+    parameters.
+
+    The AlkEthOH set, however, does not have impropers, which should be
+    tested separately. Currently, test_freesolv_parameters_assignment
+    does the job.
+
+    """
+    from openforcefield.tests.utils import get_alkethoh_filepath, compare_amber_smirnoff
+
+    # Obtain the path to the input files.
+    alkethoh_name = 'AlkEthOH_' + alkethoh_id
+    mol2_filepath, top_filepath, crd_filepath = get_alkethoh_filepath(alkethoh_name, get_amber=True)
+
+    # Load molecule.
+    molecule = Molecule.from_file(mol2_filepath)
+
+    # Load forcefield
+    forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
+
+    # Compare parameters. Skip the energy checks as the parameter check should be
+    # sufficient. We test both energies and parameters in the slow test.
+    # We ignore the charges for now as they are not included in the force field.
+    # TODO: Reactivate the charge check when we'll be able to load charges from files.
+    compare_amber_smirnoff(top_filepath, crd_filepath, forcefield, molecule,
+                           check_energies=False, ignore_charges=True)
+
 
 # from_xml_bytes
 # from_url
