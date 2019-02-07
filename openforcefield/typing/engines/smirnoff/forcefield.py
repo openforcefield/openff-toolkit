@@ -735,7 +735,7 @@ class ForceField(object):
 
         # Ensure that SMIRNOFF is a top-level key of the dict
         if not('SMIRNOFF' in smirnoff_data.keys()):
-            raise ParseError("'SMIRNOFF' must be a top-level key in the SMIRNOFF object model'")
+            raise ParseError("'SMIRNOFF' must be a top-level key in the SMIRNOFF object model")
 
         l1_dict = smirnoff_data['SMIRNOFF']
         # Check that the aromaticity model required by this parameter set is compatible with
@@ -832,28 +832,18 @@ class ForceField(object):
         # Parse content depending on type
         for parameter_io_format in io_formats_to_try:
             parameter_io_handler = self.get_io_handler(parameter_io_format)
-            # If it looks like raw SMIRNOFF data as bytes
-            if type(source) == bytes:
+            # Try parsing as a forcefield string
+            try:
                 smirnoff_data = parameter_io_handler.parse_string(source)
                 return smirnoff_data
-            elif type(source) == str:
-                # Maybe it's an OFFXML file name
-                try:
-                    smirnoff_data = parameter_io_handler.parse_file(source)
-                    return smirnoff_data
-                except ParseError:
-                    pass
-                # Otherwise, it might be a string containing a whole FF description
-            try:
-                byte_source = str.encode(source)
-                smirnoff_data = parameter_io_handler.parse_string(byte_source)
-                return smirnoff_data
-            except ParseError:
+            except ParseError as e:
                 pass
-            # Otherwise assume it's a filename of some sort
-            else:
+            # Otherwise, try parsing as a forcefield file or file-like object
+            try:
                 smirnoff_data = parameter_io_handler.parse_file(source)
                 return smirnoff_data
+            except ParseError as e:
+                pass
 
         # If we haven't returned by now, the parsing was unsuccessful
         valid_formats = [

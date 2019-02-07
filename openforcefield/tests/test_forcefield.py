@@ -14,7 +14,6 @@ Tests for forcefield class
 # GLOBAL IMPORTS
 #=============================================================================================
 
-from unittest import TestCase
 import os
 from simtk import unit
 import numpy as np
@@ -151,7 +150,7 @@ if OpenEyeToolkitWrapper.toolkit_is_available():
 if RDKitToolkitWrapper.toolkit_is_available() and AmberToolsToolkitWrapper.toolkit_is_available():
     toolkit_registries.append(ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]))
 
-class TestForceField(TestCase):
+class TestForceField():
     """Test the ForceField class"""
 
     def test_create_forcefield_from_file(self):

@@ -248,15 +248,27 @@ class XMLParameterIOHandler(ParameterIOHandler):
         from pyexpat import ExpatError
         from openforcefield.typing.engines.smirnoff.forcefield import ParseError
 
+        # this handles open file-like objects (and strings)
         try:
-            # this handles open file-like objects and strings
             smirnoff_dict = xmltodict.parse(source, attr_prefix='')
+            print(smirnoff_dict)
             return smirnoff_dict
         except ExpatError:
             pass
 
+        # This handles complete/local filenames
         try:
-            # This handles filenames
+            # Check if the file exists in the data/forcefield directory
+            data = open(source).read()
+            smirnoff_data = xmltodict.parse(data, attr_prefix='')
+            return smirnoff_data
+        except ExpatError:
+            pass
+        except FileNotFoundError:
+            pass
+
+        # This handles nonlocal filenames
+        try:
             # Check if the file exists in the data/forcefield directory
             temp_file = get_data_filename(os.path.join('forcefield', source))
             data = open(temp_file).read()
@@ -291,6 +303,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
         # Parse XML file
         try:
             smirnoff_data = xmltodict.parse(data, attr_prefix='')
+            return smirnoff_data
         except ExpatError as e:
             raise ParseError(e)
 
