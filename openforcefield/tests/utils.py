@@ -1107,7 +1107,7 @@ def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecul
     """
     Compare energies and parameters for OpenMM Systems/topologies created
     from an AMBER prmtop and crd versus from a SMIRNOFF forcefield file which
-    should parametrize the same system with same parameters.
+    should parameterize the same system with same parameters.
 
     Parameters
     ----------

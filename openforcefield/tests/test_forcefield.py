@@ -501,7 +501,7 @@ def generate_alkethoh_parameters_assignment_cases():
                            if 'crd' in m.name and 'test_filt1' not in m.name}
 
     # Remove fast test cases from slow ones to avoid duplicate tests.
-    # Remove also water (c1302), which was reparametrized in AlkEthOH
+    # Remove also water (c1302), which was reparameterized in AlkEthOH
     # to be TIP3P (not covered by Frosst_AlkEthOH_parmAtFrosst.
     for fast_test_case in fast_test_cases + ['c1302']:
         slow_test_cases.remove(fast_test_case)
