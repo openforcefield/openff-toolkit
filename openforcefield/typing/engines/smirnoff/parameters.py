@@ -399,17 +399,12 @@ class ConstraintHandler(ParameterHandler):
     class ConstraintType(ParameterType):
         """A SMIRNOFF constraint type"""
 
-        def __init__(self, node, parent):
-            super(ConstraintType, self).__init__(
-                **kwargs)  # Base class handles ``smirks`` and ``id`` fields
-            if 'distance' in node.attrib:
-                self.distance = _extract_quantity_from_xml_element(
-                    node, parent, 'distance'
-                )  # Constraint with specified distance will be added by ConstraintHandler
-            else:
-                self.distance = True  # Constraint to equilibrium bond length will be added by HarmonicBondHandler
+        def __init__(self, distance=True, **kwargs):
+            # Base class handles ``smirks`` and ``id`` fields
+            super().__init__(**kwargs)
+            self.distance = distance
 
-    _TAGNAME = 'Constraint'
+    _TAGNAME = 'Constraints'
     _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS # TODO: Do we support more exotic types as well?
     _INFOTYPE = ConstraintType
     _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
@@ -860,7 +855,7 @@ class ImproperTorsionHandler(ParameterHandler):
                     force.addTorsion(atom_indices[1], p[0], p[1], p[2],
                                      improper_periodicity, improper_phase, improper_k)
         logger.info(
-            '{} impropers added, each applied in a six-fold trefoil'.format(
+            '{} impropers added, each applied in a three-fold trefoil'.format(
                 len(impropers)))
 
         # Check that no topological torsions are missing force parameters
