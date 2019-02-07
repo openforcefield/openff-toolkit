@@ -642,7 +642,7 @@ class _TorsionParametersComparer:
         """
         diff_str = 'Parameters in first system:\n'
         diff_str += self._pretty_format_parameters(self.parameters, new_line=new_line)
-        diff_str = '\nParameters in second system:\n'
+        diff_str += '\nParameters in second system:\n'
         diff_str += self._pretty_format_parameters(other.parameters, new_line=new_line)
         if indent:
             diff_str = textwrap.indent(diff_str, '    ')
@@ -732,6 +732,23 @@ def _compare_parameters(parameters_force1, parameters_force2, interaction_type,
     """
     diff_msg = ''
 
+    # First check the parameters that are unique to only one of the forces.
+    unique_keys1 = set(parameters_force1) - set(parameters_force2)
+    unique_keys2 = set(parameters_force2) - set(parameters_force1)
+    err_msg = '\n\n{} force has the following unique ' + interaction_type + 's: {}\n'
+    if len(unique_keys1) != 0:
+        force_label = systems_labels[0] if systems_labels is not None else 'First'
+        diff_msg += err_msg.format(force_label, sorted(unique_keys1))
+    if len(unique_keys2) != 0:
+        force_label = systems_labels[1] if systems_labels is not None else 'Second'
+        diff_msg += err_msg.format(force_label, sorted(unique_keys2))
+
+    # Create a diff for entries that have same keys but different parameters.
+    different_parameters = {}
+    for key in set(parameters_force1).intersection(set(parameters_force2)):
+        if parameters_force1[key] != parameters_force2[key]:
+            different_parameters[key] = (parameters_force1[key], parameters_force2[key])
+
     # Handle force and systems labels default arguments.
     if force_name != '':
         force_name += ' '  # Add space after.
@@ -739,21 +756,6 @@ def _compare_parameters(parameters_force1, parameters_force2, interaction_type,
         systems_labels = ' for the {} and {} systems respectively'.format(*systems_labels)
     else:
         systems_labels = ''
-
-    # First check the parameters that are unique to only one of the forces.
-    unique_keys1 = set(parameters_force1) - set(parameters_force2)
-    unique_keys2 = set(parameters_force2) - set(parameters_force1)
-    err_msg = '\n\nForce{} has the following unique ' + interaction_type + 's: {}\n'
-    if len(unique_keys1) != 0:
-        diff_msg += err_msg.format(1, sorted(unique_keys1))
-    if len(unique_keys2) != 0:
-        diff_msg += err_msg.format(2, sorted(unique_keys2))
-
-    # Create a diff for entries that have same keys but different parameters.
-    different_parameters = {}
-    for key in set(parameters_force1).intersection(set(parameters_force2)):
-        if parameters_force1[key] != parameters_force2[key]:
-            different_parameters[key] = (parameters_force1[key], parameters_force2[key])
 
     # Print error.
     if len(different_parameters) > 0:
@@ -882,9 +884,54 @@ def _get_nonbonded_force_parameters(force, _, ignored_parameters):
     return {'particle': particle_parameters, 'particle exception': exception_parameters}
 
 
+def _merge_impropers_folds(improper_parameters):
+    """Merge impropers with same periodicities and phases into a single folds.
+
+    See _get_torsion_force_parameters.
+
+    """
+    for improper_key, improper_comparer in improper_parameters.items():
+        # Group parameters by periodicity and phase and sum force constants.
+        for comparer2_idx in reversed(range(1, len(improper_comparer.parameters))):
+            parameter_comparer2 = improper_comparer.parameters[comparer2_idx]
+            parameters2 = parameter_comparer2.parameters
+
+            # parameter_comparer1 comes before parameter_comparer2 in the list.
+            for parameter_comparer1 in improper_comparer.parameters[:comparer2_idx]:
+                parameters1 = parameter_comparer1.parameters
+
+                # If phase and periodicity match, sum the force constants
+                # and remove one _ParametersComparer object from the list.
+                if (parameters1['phase'] == parameters2['phase'] and
+                    parameters1['periodicity'] == parameters2['periodicity']):
+                    # Update the force constant of the first parameter.
+                    parameters1['k'] += parameters2['k']
+                    # Remove the second parameter from the list.
+                    del improper_comparer.parameters[comparer2_idx]
+                    break
+
+
 @_get_force_parameters.register(openmm.PeriodicTorsionForce)
 def _get_torsion_force_parameters(force, system, ignored_parameters):
-    """Implementation of _get_force_parameters for NonbondedForces."""
+    """Implementation of _get_force_parameters for NonbondedForces.
+
+    If the special attribute 'n_improper_folds' is in ignored_parameters,
+    then impropers with same periodicity and phases are merged into a
+    single set of parameters having the sum of the force constants as k.
+    This allows to compare parameters before and after the 0.1 version of
+    the toolkit, in which the six-fold implementation was changed into
+    the current three-fold.
+
+    """
+    if 'n_improper_folds' not in ignored_parameters:
+        ignore_n_folds = False
+    else:
+        ignore_n_folds = True
+        # Create a copy of ignored_parameters without n_improper_folds
+        # that must be removed later from the _ParametersComparer object.
+        ignored_parameters = copy.deepcopy(ignored_parameters)
+        ignored_parameters.remove('n_improper_folds')
+
     # Find all bonds. We'll use this to distinguish
     # between proper and improper torsions.
     bond_set = _find_all_bonds(system)
@@ -922,6 +969,13 @@ def _get_torsion_force_parameters(force, system, ignored_parameters):
             force_parameters[torsion_key].parameters.append(parameters)
         except KeyError:
             force_parameters[torsion_key] = _TorsionParametersComparer(parameters)
+
+    # Sum the force constants of all the improper torsion folds. This
+    # is fundamental to compare parameters with versions of the toolkit
+    # previous to 0.1, where the trefoil improper was six-fold rather
+    # than three-fold as in the current version.
+    if ignore_n_folds:
+        _merge_impropers_folds(improper_parameters)
 
     return {'proper torsion': proper_parameters, 'improper torsion': improper_parameters}
 
@@ -1022,7 +1076,7 @@ def _get_improper_torsion_canonical_order(bond_set, i0, i1, i2, i3):
 
 
 def compare_system_parameters(system1, system2, systems_labels=None,
-                              ignore_charges=False):
+                              ignore_charges=False, ignore_improper_folds=False):
     """Check that two OpenMM systems have the same parameters.
 
     Parameters
@@ -1038,6 +1092,10 @@ def compare_system_parameters(system1, system2, systems_labels=None,
     ignore_charges : bool, optional
         If True, particle and exception charges are ignored during
         the comparison. Default is False.
+    ignore_improper_folds : bool, optional
+        If True, all the folds of the same impropers are merged into
+        a single one for the purpose of parameter comparison. Default
+        is False.
 
     Raises
     ------
@@ -1051,6 +1109,8 @@ def compare_system_parameters(system1, system2, systems_labels=None,
     ignored_parameters_by_force = {}
     if ignore_charges:
         ignored_parameters_by_force['NonbondedForce'] = ['charge', 'chargeprod']
+    if ignore_improper_folds:
+        ignored_parameters_by_force['PeriodicTorsionForce'] = ['n_improper_folds']
 
     # We need to perform some checks on the type and number of forces in the Systems.
     force_names1 = collections.Counter(f.__class__.__name__ for f in system1.getForces())
