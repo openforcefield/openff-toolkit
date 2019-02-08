@@ -159,6 +159,135 @@ def deserialize_quantity(serialized):
     return quantity
 
 
+def extract_serialized_units_from_dict(input_dict):
+    """
+    Create a mapping of (potentially unit-bearing) quantities from a dictionary, where some keys exist in pairs like
+    {'length': 8, 'length_unit':'angstrom'}.
+
+    Parameters
+    ----------
+    input_dict : dict
+       Dictionary where some keys are paired like {'X': 1.0, 'X_unit': angstrom}.
+
+    Returns
+    -------
+    unitless_dict : dict
+       input_dict, but with keys ending in ``_unit`` removed.
+    attached_units : dict str : simtk.unit.Unit
+       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
+       parameter ``parameter_name``. For example ``attached_units['X'] = simtk.unit.angstrom.
+
+    """
+
+    # TODO: Should this scheme also convert "1" to int(1) and "8.0" to float(8.0)?
+    from collections import OrderedDict
+    attached_units = OrderedDict()
+    unitless_dict = input_dict.copy()
+    keys_to_delete = []
+    for key in input_dict.keys():
+        if key.endswith('_unit'):
+            parameter_name = key[:-5]
+            parameter_units_string = input_dict[key]
+            try:
+                parameter_units = eval(parameter_units_string, unit.__dict__)
+            except Exception as e:
+                e.msg = "Could not parse units {}\n".format(
+                    parameter_units_string) + e.msg
+                raise e
+            attached_units[parameter_name] = parameter_units
+            # Remember this key and delete it later (we break the dict if we delete a key in the loop)
+            keys_to_delete.append(key)
+    # Clean out the '*_unit' keys that we processed
+    for key in keys_to_delete:
+        del unitless_dict[key]
+
+    return unitless_dict, attached_units
+
+
+def attach_units(unitless_dict, attached_units):
+    """
+    Attach units to dict entries for which units are specified.
+
+    Parameters
+    ----------
+    unitless_dict : dict
+       Dictionary, where some items are to have units applied.
+    attached_units : dict str : simtk.unit.Unit
+       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
+       parameter ``parameter_name``
+
+    Returns
+    -------
+    unit_bearing_dict : dict
+       Updated dict with simtk.unit.Unit units attached to values for which units were specified for their keys
+
+    """
+    temp_dict = unitless_dict.copy()
+    for parameter_name, units_to_attach in attached_units.items():
+        if parameter_name in temp_dict.keys():
+            parameter_attrib_string = temp_dict[parameter_name]
+            try:
+                temp_dict[parameter_name] = float(
+                          parameter_attrib_string) * units_to_attach
+            except ValueError as e:
+                e.msg = (
+                    "Expected numeric value for parameter '{}',"
+                    "instead found '{}' when trying to attach units '{}'\n"
+                ).format(parameter_name, parameter_attrib_string, units_to_attach)
+                raise e
+
+        # Now check for matches like "phase1", "phase2"
+        c = 1
+        while (parameter_name + str(c)) in temp_dict.keys():
+            indexed_parameter_name = parameter_name + str(c)
+            parameter_attrib_string = temp_dict[indexed_parameter_name]
+            try:
+                temp_dict[indexed_parameter_name] = float(
+                          parameter_attrib_string) * units_to_attach
+            except ValueError as e:
+                e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
+                    indexed_parameter_name, parameter_attrib_string,
+                    units_to_attach)
+                raise e
+            c += 1
+    return temp_dict
+
+
+
+def separate_unit_bearing_quantities(unit_bearing_dict):
+    """
+    Given a dict which may contain some simtk.unit.Quantity objects, return the same dict with the Quantities
+    replaced with unitless values, and a new dict containing entries with the suffix "_unit" added, containing string
+    representations of the units.
+
+    Parameters
+    ----------
+    unit_bearing_dict : dict
+        A dictionary potentially containing simtk.unit.Quantity objects as values.
+
+    Returns
+    -------
+    unitless_dict : dict
+        The input smirnoff_dict object, with all simtk.unit.Quantity values converted to unitless values.
+    unit_dict : dict
+        A dictionary in which keys are keys of simtk.unit.Quantity values in unit_bearing_dict, but suffixed with "_unit".
+        Values are string representations of the units.
+    """
+    from simtk import unit
+    unit_dict = {}
+    unitless_dict = unit_bearing_dict.copy()
+    for key, value in unit_bearing_dict.items():
+        if isinstance(value, unit.Quantity):
+            unitless_val, unit = serialize_quantity(value)
+            unit_key = key + '_unit'
+            unit_dict[unit_key] = unit
+            unitless_dict[key] = unitless_val
+
+    return unitless_dict, unit_dict
+
+
+
+
 def serialize_numpy(np_array):
     """
     Serializes a numpy array into a JSON-compatible string. Leverages the numpy.save function,

@@ -36,100 +36,100 @@ logger = logging.getLogger(__name__)
 #=============================================================================================
 
 
-#@staticmethod
-def _extract_attached_units(attrib):
-    """Form a (potentially unit-bearing) quantity from the specified attribute name.
-
-    Parameters
-    ----------
-    attrib : dict
-       Dictionary of XML node attributes.
-
-    Returns
-    -------
-    attrib : dict
-       XML node attributes with keys ending in ``_unit`` removed.
-    attached_units : dict str : simtk.unit.Unit
-       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
-       parameter ``parameter_name``
-
-    """
-    # TODO: Should this scheme also convert unit-bearing quantities such as '8*angstroms' to 8*unit.angstroms?
-    # TODO: Should this scheme also convert "1" to int(1) and "8.0" to float(8.0)?
-
-    attached_units = OrderedDict()
-    for key in attrib.keys():
-        if key.endswith('_unit'):
-            parameter_name = key[:-5]
-            parameter_units_string = attrib[key]
-            try:
-                parameter_units = eval(parameter_units_string, unit.__dict__)
-            except Exception as e:
-                e.msg = "Could not parse units {}\n".format(
-                    parameter_units_string) + e.msg
-                raise e
-            attached_units[parameter_name] = parameter_units
-            #del attrib[parameter_name]
-
-    return attrib, attached_units
-
-
-#@staticmethod
-def _attach_units(attrib, attached_units):
-    """Attach units to attributes for which units are specified.
-
-    Parameters
-    ----------
-    attrib : dict
-       Dictionary of XML node attributes.
-    attached_units : dict str : simtk.unit.Unit
-       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
-       parameter ``parameter_name``
-
-    Returns
-    -------
-    attrib : dict
-       Updated XML node attributes with simtk.unit.Unit units attached to values for which units were specified for their keys
-
-    """
-    for parameter_name, units_to_attach in attached_units.items():
-        if parameter_name in attrib.keys():
-            parameter_attrib_string = attrib[parameter_name]
-            try:
-                attrib[parameter_name] = float(
-                    parameter_attrib_string) * units_to_attach
-            except ValueError as e:
-                e.msg = (
-                    "Expected numeric value for parameter '{}',"
-                    "instead found '{}' when trying to attach units '{}'\n"
-                ).format(parameter_name, parameter_attrib_string, units_to_attach)
-                raise e
-
-        # Now check for matches like "phase1", "phase2"
-        c = 1
-        while (parameter_name + str(c)) in attrib.keys():
-            indexed_parameter_name = parameter_name + str(c)
-            parameter_attrib_string = attrib[indexed_parameter_name]
-            try:
-                attrib[indexed_parameter_name] = float(
-                    parameter_attrib_string) * units_to_attach
-            except ValueError as e:
-                e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
-                    indexed_parameter_name, parameter_attrib_string,
-                    units_to_attach)
-                raise e
-            c += 1
-        #if parameter_name in attached_units:
-        #units_to_attach = attached_units[parameter_name]
-        # TODO: Do we have to worry about None or null values for parameters with attached units?
-        #try:
-        #    attrib[parameter_name_attrib] = float(parameter_value_string) * units_to_attach
-        #except Exception as e:
-        #    e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
-        #        parameter_name, parameter_value_string, units_to_attach)
-        #    raise e
-
-    return attrib
+# #@staticmethod
+# def _extract_attached_units(attrib):
+#     """Form a (potentially unit-bearing) quantity from the specified attribute name.
+#
+#     Parameters
+#     ----------
+#     attrib : dict
+#        Dictionary of XML node attributes.
+#
+#     Returns
+#     -------
+#     attrib : dict
+#        XML node attributes with keys ending in ``_unit`` removed.
+#     attached_units : dict str : simtk.unit.Unit
+#        ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
+#        parameter ``parameter_name``
+#
+#     """
+#     # TODO: Should this scheme also convert unit-bearing quantities such as '8*angstroms' to 8*unit.angstroms?
+#     # TODO: Should this scheme also convert "1" to int(1) and "8.0" to float(8.0)?
+#
+#     attached_units = OrderedDict()
+#     for key in attrib.keys():
+#         if key.endswith('_unit'):
+#             parameter_name = key[:-5]
+#             parameter_units_string = attrib[key]
+#             try:
+#                 parameter_units = eval(parameter_units_string, unit.__dict__)
+#             except Exception as e:
+#                 e.msg = "Could not parse units {}\n".format(
+#                     parameter_units_string) + e.msg
+#                 raise e
+#             attached_units[parameter_name] = parameter_units
+#             #del attrib[parameter_name]
+#
+#     return attrib, attached_units
+#
+#
+# #@staticmethod
+# def _attach_units(attrib, attached_units):
+#     """Attach units to attributes for which units are specified.
+#
+#     Parameters
+#     ----------
+#     attrib : dict
+#        Dictionary of XML node attributes.
+#     attached_units : dict str : simtk.unit.Unit
+#        ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
+#        parameter ``parameter_name``
+#
+#     Returns
+#     -------
+#     attrib : dict
+#        Updated XML node attributes with simtk.unit.Unit units attached to values for which units were specified for their keys
+#
+#     """
+#     for parameter_name, units_to_attach in attached_units.items():
+#         if parameter_name in attrib.keys():
+#             parameter_attrib_string = attrib[parameter_name]
+#             try:
+#                 attrib[parameter_name] = float(
+#                     parameter_attrib_string) * units_to_attach
+#             except ValueError as e:
+#                 e.msg = (
+#                     "Expected numeric value for parameter '{}',"
+#                     "instead found '{}' when trying to attach units '{}'\n"
+#                 ).format(parameter_name, parameter_attrib_string, units_to_attach)
+#                 raise e
+#
+#         # Now check for matches like "phase1", "phase2"
+#         c = 1
+#         while (parameter_name + str(c)) in attrib.keys():
+#             indexed_parameter_name = parameter_name + str(c)
+#             parameter_attrib_string = attrib[indexed_parameter_name]
+#             try:
+#                 attrib[indexed_parameter_name] = float(
+#                     parameter_attrib_string) * units_to_attach
+#             except ValueError as e:
+#                 e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
+#                     indexed_parameter_name, parameter_attrib_string,
+#                     units_to_attach)
+#                 raise e
+#             c += 1
+#         #if parameter_name in attached_units:
+#         #units_to_attach = attached_units[parameter_name]
+#         # TODO: Do we have to worry about None or null values for parameters with attached units?
+#         #try:
+#         #    attrib[parameter_name_attrib] = float(parameter_value_string) * units_to_attach
+#         #except Exception as e:
+#         #    e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
+#         #        parameter_name, parameter_value_string, units_to_attach)
+#         #    raise e
+#
+#     return attrib
 
 
 

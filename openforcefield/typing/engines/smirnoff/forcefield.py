@@ -28,7 +28,7 @@ from collections import OrderedDict
 
 from simtk import openmm, unit
 
-from openforcefield.utils import all_subclasses
+from openforcefield.utils import all_subclasses, attach_units, extract_serialized_units_from_dict, separate_unit_bearing_quantities
 from openforcefield.topology import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
@@ -86,95 +86,6 @@ class ParseError(Exception):
 
 
 
-def _extract_attached_units(raw_smirnoff_dict):
-    """
-    Create a mapping of (potentially unit-bearing) quantities from a dictionary, where some keys are paired like
-    {'length': 8, 'length_unit':'angstrom'}.
-
-    Parameters
-    ----------
-    raw_smirnoff_dict : dict
-       Dictionary where some keys are paired like {'X': 1.0, 'X_unit': angstrom}.
-
-    Returns
-    -------
-    unitless_smirnoff_dict : dict
-       raw_smirnoff_dict, but with keys ending in ``_unit`` removed.
-    attached_units : dict str : simtk.unit.Unit
-       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
-       parameter ``parameter_name``. For example ``attached_units['X'] = simtk.unit.angstrom.
-
-    """
-
-    # TODO: Should this scheme also convert "1" to int(1) and "8.0" to float(8.0)?
-
-    attached_units = OrderedDict()
-    unitless_smirnoff_dict = raw_smirnoff_dict.copy()
-    #print(raw_smirnoff_dict)
-    for key in raw_smirnoff_dict.keys():
-        if key.endswith('_unit'):
-            parameter_name = key[:-5]
-            parameter_units_string = raw_smirnoff_dict[key]
-            try:
-                parameter_units = eval(parameter_units_string, unit.__dict__)
-            except Exception as e:
-                e.msg = "Could not parse units {}\n".format(
-                    parameter_units_string) + e.msg
-                raise e
-            attached_units[parameter_name] = parameter_units
-            #del unitless_smirnoff_dict[key]
-
-    return unitless_smirnoff_dict, attached_units
-
-
-#@staticmethod
-def _attach_units(unitless_smirnoff_dict, attached_units):
-    """Attach units to attributes for which units are specified.
-
-    Parameters
-    ----------
-    unitless_smirnoff_dict : dict
-       Dictionary, where some items are to have units applied.
-    attached_units : dict str : simtk.unit.Unit
-       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
-       parameter ``parameter_name``
-
-    Returns
-    -------
-    unitbearing_smirnoff_dict : dict
-       Updated smirnoff dict with simtk.unit.Unit units attached to values for which units were specified for their keys
-
-    """
-    temp_dict = unitless_smirnoff_dict.copy()
-    for parameter_name, units_to_attach in attached_units.items():
-        if parameter_name in temp_dict.keys():
-            parameter_attrib_string = temp_dict[parameter_name]
-            try:
-                temp_dict[parameter_name] = float(
-                          parameter_attrib_string) * units_to_attach
-            except ValueError as e:
-                e.msg = (
-                    "Expected numeric value for parameter '{}',"
-                    "instead found '{}' when trying to attach units '{}'\n"
-                ).format(parameter_name, parameter_attrib_string, units_to_attach)
-                raise e
-
-        # Now check for matches like "phase1", "phase2"
-        c = 1
-        while (parameter_name + str(c)) in temp_dict.keys():
-            indexed_parameter_name = parameter_name + str(c)
-            parameter_attrib_string = temp_dict[indexed_parameter_name]
-            try:
-                temp_dict[indexed_parameter_name] = float(
-                          parameter_attrib_string) * units_to_attach
-            except ValueError as e:
-                e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
-                    indexed_parameter_name, parameter_attrib_string,
-                    units_to_attach)
-                raise e
-            c += 1
-
-    return temp_dict
 
 #=============================================================================================
 # FORCEFIELD
@@ -722,6 +633,35 @@ class ForceField(object):
             self.load_smirnoff_data(smirnoff_data)
 
 
+
+    def to_smirnoff_data(self):
+        """
+        Convert this ForceField and all related ParameterHandlers to an OrderedDict representing a SMIRNOFF
+        data object.
+
+        Returns
+        -------
+        smirnoff_dict : OrderedDict
+            A nested OrderedDict representing this ForceField as a SMIRNOFF data object.
+        """
+        smirnoff_dict = OrderedDict()
+
+        # Assume we will write out SMIRNOFF data in compliance with the max supported spec version
+        smirnoff_dict['version'] = self._MAX_SUPPORTED_SMIRNOFF_VERSION
+
+        # Write out all used aromaticity models
+        # TODO: Resolve if it's possible to have many aromaticity models
+        smirnoff_dict['aromaticity_model'] = list(self._used_aromaticity_models)
+
+        for handler_format, parameter_handler in self._parameter_handlers.items():
+            handler_tag = parameter_handler._TAGNAME
+            smirnoff_dict[handler_tag] = parameter_handler.__dict__()
+
+        return smirnoff_dict
+
+
+
+
     def load_smirnoff_data(self, smirnoff_data):
         """
         Add parameters from a SMIRNOFF-format data structure to this ForceField.
@@ -787,8 +727,8 @@ class ForceField(object):
             section_dict = l1_dict[parameter_name]
             # In the OFFXML format, attributes and sub-elements are distinguished by whether they're a list
             raw_handler_kwargs = dict([(key, item) for key, item in section_dict.items() if not type(item) is list])
-            unitless_handler_kwargs, attached_units = _extract_attached_units(raw_handler_kwargs)
-            handler_kwargs = _attach_units(unitless_handler_kwargs, attached_units)
+            unitless_handler_kwargs, attached_units = extract_serialized_units_from_dict(raw_handler_kwargs)
+            handler_kwargs = attach_units(unitless_handler_kwargs, attached_units)
 
             # Retrieve or create parameter handler
             handler = self.get_handler(parameter_name,
@@ -799,7 +739,7 @@ class ForceField(object):
             for parameter_tag, parameter_list in parameter_lists.items():
                 for parameter_dict in parameter_list:
                     # Append units to parameters as needed
-                    parameter_kwargs = _attach_units(parameter_dict,
+                    parameter_kwargs = attach_units(parameter_dict,
                                                      attached_units)
                     # Add parameter definition
                     handler.add_parameter(parameter_kwargs)
