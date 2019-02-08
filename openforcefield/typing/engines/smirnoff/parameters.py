@@ -1168,22 +1168,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        compare_kwarg_to_attr = {
-            'number_of_conformers': self._number_of_conformers,
-            'quantum_chemical_method': self._quantum_chemical_method,
-            'partial_charge_method': self._partial_charge_method,
-        }
-
-        for kwarg_key, attr in compare_kwarg_to_attr.items():
-            # Skip this comparison if the kwarg isn't in handler_kwargs and we're not comparing against defaults
-            if not(assume_missing_is_default) and not(kwarg_key in handler_kwargs.keys()):
-                continue
-
-            kwarg_val = handler_kwargs.get(kwarg_key, self._DEFAULTS[kwarg_key])
-            if kwarg_val != attr:
-                raise IncompatibleParameterError(
-                    "Incompatible '{}' values found during handler compatibility check."
-                    "(existing handler value: {}, new existing value: {}".format(kwarg_key, attr, kwarg_val))
+        pass
 
     def assign_charge_from_molecules(self, molecule, charge_mols):
         """
