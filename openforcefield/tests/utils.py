@@ -1009,6 +1009,12 @@ def _find_all_bonds(system):
         bond_set.add((atom1, atom2))
         bond_set.add((atom2, atom1))
 
+    # Find all the constrained bonds, which do not have a HarmonicBondForce term.
+    for constraint_idx in range(system.getNumConstraints()):
+        atom1, atom2, distance = system.getConstraintParameters(constraint_idx)
+        bond_set.add((atom1, atom2))
+        bond_set.add((atom2, atom1))
+
     return bond_set
 
 
