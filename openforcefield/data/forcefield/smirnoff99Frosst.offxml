@@ -312,7 +312,7 @@
     <Atom smirks="[#1:1]-[#6X3](~[#7,#8,#9,#16,#17,#35])~[#7,#8,#9,#16,#17,#35]" epsilon="0.0150" id="n9" rmin_half="1.3590"/>
     <Atom smirks="[#1:1]-[#6X2]" epsilon="0.0150" id="n10" rmin_half="1.4590"/>
     <Atom smirks="[#1:1]-[#7]" epsilon="0.0157" id="n11" rmin_half="0.6000"/>
-    <Atom smirks="[#1:1]-[#8]" epsilon="0.3000" id="n12" rmin_half="5.27e-05"/>
+    <Atom smirks="[#1:1]-[#8]" epsilon="5.27e-05" id="n12" rmin_half="0.3000"/>
     <Atom smirks="[#1:1]-[#16]" epsilon="0.0157" id="n13" rmin_half="0.6000"/>
     <Atom smirks="[#6:1]" epsilon="0.0860" id="n14" rmin_half="1.9080"/>
     <Atom smirks="[#6X2:1]" epsilon="0.2100" id="n15" rmin_half="1.9080"/>
