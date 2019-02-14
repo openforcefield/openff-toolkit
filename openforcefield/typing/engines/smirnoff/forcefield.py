@@ -289,7 +289,7 @@ class ForceField(object):
             #tagname = subclass._TAGNAME
             tagname = parameter_handler_class._TAGNAME
             if tagname is not None:
-                if tagname in self._parameter_handler_classes.keys():
+                if tagname in self._parameter_handler_classes:
                     raise Exception(
                         "ParameterHandler {} provides a parser for tag '{}', but ParameterHandler {} has "
                         "already been registered to handle that tag.".format(
@@ -491,11 +491,11 @@ class ForceField(object):
         KeyError if there is no ParameterHandler for the given tagname
         """
         handler = None
-        if tagname in self._parameter_handlers.keys():
+        if tagname in self._parameter_handlers:
             # If handler already exists, make sure it is compatible
             handler = self._parameter_handlers[tagname]
             handler.check_handler_compatibility(handler_kwargs)
-        elif tagname in self._parameter_handler_classes.keys():
+        elif tagname in self._parameter_handler_classes:
             new_ph_class = self._parameter_handler_classes[tagname]
             handler = self.register_parameter_handler(new_ph_class,
                                                       handler_kwargs)
