@@ -95,19 +95,23 @@ def get_data_filename(relative_path):
     return fn
 
 
-def serialize_quantity(quantity):
+def serialize_quantity(quantity, output_unit=None):
     """
-    Serialized a simtk.unit.Quantity into a dict of {'unitless_value': X, 'unit': Y}
+    Serialized a simtk.unit.Quantity into a dict of {'unitless_value': X, 'unit': Y}.
+    For example "5 angstroms" becomes {'unitless_value': 5, 'unit': (simtk.unit.angstrom, 1)}
 
     Parameters
     ----------
     quantity : A simtk.unit.Quantity-wrapped value or iterator over values
-        The object to serialize
+        The Quantity to serialize
+    output_unit : A simtk.unit.Unit, optional. Default = None
+        An optional unit to convert the unit to before output. If None, the function retains
+        the original unit attached to `quantity`.
 
     Returns
     -------
-    serialzied : dict
-        The serialized object
+    serialzied : dict with keys 'unitless_value' and 'unit'
+        The serialized Quantity.
     """
 
     serialized = dict()
@@ -121,14 +125,25 @@ def serialize_quantity(quantity):
     # If it's not None, make sure it's a simtk.unit.Quantity
     assert (hasattr(quantity, 'unit'))
 
-    quantity_unit = []
-    unit_dict = {}
-    for unit_component in quantity.unit.iter_base_or_scaled_units():
-        quantity_unit.append((unit_component[0].name, unit_component[1]))
-        unit_dict[unit_component[0]] = unit_component[1]
-    unitless_value = quantity.value_in_unit(unit.Unit(unit_dict))
+    # Describe the unit as a list of tuples, of the form [(base_unit, exponent)...]
+    output_unit_tuples = []
+
+    if output_unit is None:
+        output_unit = quantity.unit
+    else:
+        assert output_unit.is_compatible(quantity.unit)
+
+    #unit_dict = {}
+    # Decompose output_unit into a tuples of (base_dimension_unit, exponent)
+    for unit_component in output_unit.iter_base_or_scaled_units():
+        output_unit_tuples.append((unit_component[0].name, int(unit_component[1])))
+        #unit_dict[unit_component[0]] = unit_component[1]
+    #unitless_value = quantity.value_in_unit(unit.Unit(unit_dict))
+    unitless_value = quantity.value_in_unit(output_unit)
+
+    # Package the results in a dict for return
     serialized['unitless_value'] = unitless_value
-    serialized['unit'] = quantity_unit
+    serialized['unit'] = output_unit_tuples
     return serialized
 
 
@@ -212,7 +227,7 @@ def attach_units(unitless_dict, attached_units):
     ----------
     unitless_dict : dict
        Dictionary, where some items are to have units applied.
-    attached_units : dict str : simtk.unit.Unit
+    attached_units : dict [str : simtk.unit.Unit]
        ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
        parameter ``parameter_name``
 

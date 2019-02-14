@@ -1955,9 +1955,7 @@ class FrozenMolecule(Serializable):
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            charges = toolkit.compute_partial_charges_am1bcc(
-                self
-            )
+            charges = toolkit.compute_partial_charges_am1bcc(self)
         else:
             raise InvalidToolkitError(
                 'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'

@@ -15,7 +15,7 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 #=============================================================================================
 
 
-from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType
+from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType, BondHandler
 
 
 #=============================================================================================
@@ -65,7 +65,8 @@ class TestParameterList:
         assert p3.smirks not in parameters
 
     def test_del(self):
-        """Test ParameterList __del__ overloading.
+        """
+        Test ParameterList __del__ overloading.
         """
         p1 = ParameterType(smirks='[*:1]')
         p2 = ParameterType(smirks='[#1:1]')
@@ -81,5 +82,58 @@ class TestParameterList:
 
         # Test that we can delete elements by their smirks.
         del parameters['[#1:1]']
+        assert len(parameters) == 1
         assert p1 in parameters
         assert p2 not in parameters
+
+    def test_base_parametertype_to_dict(self):
+        """
+        Test ParameterType to_dict.
+        """
+        p1 = ParameterType(smirks='[*:1]')
+        param_dict, attached_units = p1.to_dict()
+        assert param_dict['smirks'] == '[*:1]'
+        assert len(param_dict.keys()) == 1
+
+    def test_bondtype_to_dict(self):
+        """
+        Test BondType to_dict.
+        """
+        from simtk import unit
+
+        p1 = BondHandler.BondType(smirks='[*:1]',
+                                  length=1.02*unit.angstrom,
+                                  k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+                                  )
+        param_dict, attached_units = p1.to_dict()
+        assert param_dict == {'smirks': '[*:1]',
+                              'length': 1.02,
+                              'k': 5,}
+        assert attached_units == {'length_unit': [('angstrom', 1)],
+                                  'k_unit': [('angstrom', -2), ('mole', -1), ('kilocalorie', 1)]
+                                  }
+
+
+    def test_bondtype_to_dict_custom_output_units(self):
+        """
+        Test BondType to_dict with custom output units.
+        """
+        from simtk import unit
+        p1 = BondHandler.BondType(smirks='[*:1]',
+                                  length=1.02*unit.angstrom,
+                                  k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+                                  )
+        param_dict, attached_units = p1.to_dict(output_units={'length': unit.nanometer})
+        print(param_dict)
+        print(attached_units)
+
+    def test_bondtype_to_dict_invalid_output_units(self):
+        """
+        Test ParameterType to_dict with invalid output units.
+        """
+        from simtk import unit
+        p1 = BondHandler.BondType(smirks='[*:1]',
+                                  length=1.02*unit.angstrom,
+                                  k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+                                  )
+

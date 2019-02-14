@@ -655,7 +655,7 @@ class ForceField(object):
 
         for handler_format, parameter_handler in self._parameter_handlers.items():
             handler_tag = parameter_handler._TAGNAME
-            smirnoff_dict[handler_tag] = parameter_handler.__dict__()
+            smirnoff_dict[handler_tag] = parameter_handler.to_smirnoff_data()
 
         return smirnoff_dict
 
