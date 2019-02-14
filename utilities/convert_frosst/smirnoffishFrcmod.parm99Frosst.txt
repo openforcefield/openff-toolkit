@@ -13,7 +13,8 @@ DATE
 # Date: Nov. 28, 2017
 # Date: Feb. 27, 2018
 # Date: Nov. 7, 2018
-Date: Dec. 12, 2018
+# Date: Dec. 12, 2018
+Date: Feb. 14, 2019
 
 # Author: please make sure all authors are on one line, only last line will be used
 AUTHOR
@@ -32,7 +33,7 @@ NONBON
 [#1:1]-[#6X3](~[#7,#8,#9,#16,#17,#35])~[#7,#8,#9,#16,#17,#35]  1.3590  0.0150  parm99 H5 Spellmeyer, two electrowithdr. neighbor
 [#1:1]-[#6X2]    1.4590  0.0150  parm99 HZ H bonded to sp C (Howard et al JCC 16)
 [#1:1]-[#7]      0.6000  0.0157  parm99 H
-[#1:1]-[#8]      5.27e-05  0.3000  SMIRNOFF HO Mobley et al. 2018
+[#1:1]-[#8]      0.3000  5.27e-05  SMIRNOFF HO Mobley et al. 2018
 [#1:1]-[#16]     0.6000  0.0157  parm99 HS
 # carbon
 [#6:1]           1.9080  0.0860  parm99 generic Spellmeyer
