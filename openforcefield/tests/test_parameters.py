@@ -17,6 +17,7 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType, BondHandler
 
+import pytest
 
 #=============================================================================================
 # PARAMETER LIST
@@ -124,8 +125,9 @@ class TestParameterList:
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
                                   )
         param_dict, attached_units = p1.to_dict(output_units={'length': unit.nanometer})
-        print(param_dict)
-        print(attached_units)
+        assert attached_units['length_unit'] == [('nanometer', 1)]
+        assert abs(param_dict['length'] - 0.102) < 1e-10
+
 
     def test_bondtype_to_dict_invalid_output_units(self):
         """
@@ -136,4 +138,8 @@ class TestParameterList:
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
                                   )
+        with pytest.raises(ValueError,
+                           match='Requested output unit calorie is not compatible with quantity unit angstrom .'
+                           ) as context:
+            param_dict, attached_units = p1.to_dict(output_units={'length': unit.calorie})
 

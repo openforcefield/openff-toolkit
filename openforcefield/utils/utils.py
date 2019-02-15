@@ -131,7 +131,9 @@ def serialize_quantity(quantity, output_unit=None):
     if output_unit is None:
         output_unit = quantity.unit
     else:
-        assert output_unit.is_compatible(quantity.unit)
+        if not(output_unit.is_compatible(quantity.unit)):
+            raise ValueError("Requested output unit {} is not compatible with "
+                             "quantity unit {} .".format(output_unit, quantity.unit))
 
     #unit_dict = {}
     # Decompose output_unit into a tuples of (base_dimension_unit, exponent)

@@ -255,6 +255,10 @@ class ParameterType(object):
         """
         from simtk import unit
 
+
+        if output_units is None:
+            output_units = {}
+
         output_units_tuples = {}
 
         # Make a list of all attribs that should be included in the returned dict
@@ -269,9 +273,9 @@ class ParameterType(object):
             attrib_value = self.__getattribute__(attrib_name)
             if isinstance(attrib_value, unit.Quantity):
                 # If the user specified a preferred output unit for this attrib
-                if attrib_name in output_units_tuples.keys():
+                if attrib_name in output_units:
                     # convert attrib_val to the desired unit
-                    output_unit = output_units_tuples[attrib_name]
+                    output_unit = output_units[attrib_name]
                     # ser_result is a dict of {'unitless_value': val, 'unit': simtk.unit.Unit}
                     ser_result = serialize_quantity(attrib_value, output_unit=output_unit)
 
