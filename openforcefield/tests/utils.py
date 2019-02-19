@@ -90,6 +90,67 @@ def get_monomer_mol2file(prefix='ethanol'):
     return mol2_filename
 
 
+def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=None):
+    if (file_subpaths is None) == (filter_func is None):
+        raise ValueError('Only one between file_subpaths and filter_func must be specified.')
+
+    # Find the path of the tarfile with respect to the data/molecules/ folder.
+    molecules_dir_path = get_data_filename('molecules')
+    tar_file_path = os.path.join(molecules_dir_path, tar_file_name)
+    tar_root_dir_name = tar_file_name.split('.')[0]
+
+    # Return value: Paths to the extracted molecules.
+    extracted_file_paths = None
+
+    # Handle subpaths search.
+    if file_subpaths is not None:
+        # We can already check the paths of the extracted files
+        # and skipping opening the tarball if not necessary.
+        extracted_file_paths = [os.path.join(molecules_dir_path, tar_root_dir_name, file_subpath)
+                                for file_subpath in file_subpaths]
+
+        # Remove files that we have already extracted.
+        # Also, we augument the subpath with its root directory.
+        file_subpaths_set = {os.path.join(tar_root_dir_name, subpath)
+                             for subpath, fullpath in zip(file_subpaths, extracted_file_paths)
+                             if not os.path.isfile(fullpath)}
+
+        # If everything was already extracted, we don't need to open the tarball.
+        if len(file_subpaths_set) == 0:
+            return extracted_file_paths
+
+        # Otherwise, create a filter matching only the subpaths.
+        filter_func = lambda x: x in file_subpaths_set
+
+    # If no filter was specified, just create one matching everything.
+    if filter_func is None:
+        filter_func = lambda x: True
+
+    # Determine opening mode.
+    if '.gz' in tar_file_name:
+        mode = 'r:gz'
+    else:
+        mode = 'r'
+
+    # Extract required files.
+    import tarfile
+    with tarfile.open(tar_file_path, mode) as tar_file:
+        # Gather the paths to extract. Remove the
+        members = [m for m in tar_file.getmembers() if filter_func(m.name)]
+
+        # Built the paths to the extracted molecules we didn't already.
+        if extracted_file_paths is None:
+            extracted_file_paths = [os.path.join(molecules_dir_path, m.name)
+                                    for m in members]
+
+        # Extract only the members that we haven't already extracted.
+        members = [member for member, fullpath in zip(members, extracted_file_paths)
+                   if not os.path.isfile(fullpath)]
+        tar_file.extractall(path=molecules_dir_path, members=members)
+
+    return extracted_file_paths
+
+
 def get_alkethoh_filepath(alkethoh_name, get_amber=False):
     """Retrieve the mol2, top and crd files of a molecule in the AlkEthOH set.
 
@@ -108,46 +169,32 @@ def get_alkethoh_filepath(alkethoh_name, get_amber=False):
         list ``[mol2_path, top_path, crd_path]``.
 
     """
-    import tarfile
-
     # Determine if this is a ring or a chain molecule and the subfolder name.
     is_ring = alkethoh_name[9] == 'r'
     alkethoh_subdir_name = 'rings' if is_ring else 'chain'
     alkethoh_subdir_name = 'AlkEthOH_' + alkethoh_subdir_name + '_filt1'
 
-    # Determine which paths have to be returned. Paths are
-    # relative to the `data/molecules/` folder. We'll re-use
-    # these relative paths to extract files from the tar.gz.
-    molecule_file_relative_base_path = os.path.join('AlkEthOH_tripos', alkethoh_subdir_name, alkethoh_name)
+    # Determine which paths have to be returned.
+    file_base_subpath = os.path.join(alkethoh_subdir_name, alkethoh_name)
     # We always return the mol2 file.
-    molecule_relative_file_paths = [molecule_file_relative_base_path + '_tripos.mol2']
+    file_subpaths = [file_base_subpath + '_tripos.mol2']
     # Check if we need to return also Amber files.
     if get_amber:
-        molecule_relative_file_paths.append(molecule_file_relative_base_path + '.top')
-        molecule_relative_file_paths.append(molecule_file_relative_base_path + '.crd')
+        file_subpaths.append(file_base_subpath + '.top')
+        file_subpaths.append(file_base_subpath + '.crd')
 
-    # Build absolute paths.
-    molecules_dir_path = get_data_filename('molecules')
-    molecule_file_paths = [os.path.join(molecules_dir_path, p) for p in molecule_relative_file_paths]
+    return extract_compressed_molecules('AlkEthOH_tripos.tar.gz', file_subpaths=file_subpaths)
 
-    # Check if we need to extract some of the files from the tar archive.
-    files_to_extract = set()
-    for file_idx, molecule_file_path in enumerate(molecule_file_paths):
-        if not os.path.isfile(molecule_file_path):
-            files_to_extract.add(molecule_relative_file_paths[file_idx])
 
-    # Extract the files.
-    if len(files_to_extract) > 0:
-        alkethoh_tar_file_path = os.path.join(molecules_dir_path, 'AlkEthOH_tripos.tar.gz')
-        with tarfile.open(alkethoh_tar_file_path, 'r:gz') as tar:
-            # Find the files to extract.
-            members = [m for m in tar.getmembers() if m.name in files_to_extract]
-            tar.extractall(path=molecules_dir_path, members=members)
+def get_freesolv_filepath(freesolv_id, ff_version):
+    file_base_name = 'mobley_' + freesolv_id
+    mol2_file_subpath = os.path.join('mol2files_sybyl', file_base_name + '.mol2')
+    xml_dir = 'xml_' + ff_version.replace('.', '_')
+    xml_file_subpath = os.path.join(xml_dir, file_base_name + '_vacuum.xml')
 
-    # Decide whether to return a single path or a list of paths.
-    if len(molecule_file_paths) == 1:
-        return molecule_file_paths[0]
-    return molecule_file_paths
+    # Extract the files if needed.
+    file_subpaths = [mol2_file_subpath, xml_file_subpath]
+    return extract_compressed_molecules('FreeSolv.tar.gz', file_subpaths=file_subpaths)
 
 
 #=============================================================================================
