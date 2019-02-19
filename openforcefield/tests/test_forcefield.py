@@ -474,7 +474,7 @@ class TestForceField():
 #=============================================================================================
 
 def generate_alkethoh_parameters_assignment_cases():
-    """Create dinamically all test cases that should be ."""
+    """Create dynamically all test cases that should be ran for the AlkEthOH set."""
     # These AlkEthOH molecules are always run by test_alkethoh_parameters_assignment.
     fast_test_cases = [
         'r0',
@@ -549,6 +549,86 @@ def test_alkethoh_parameters_assignment(alkethoh_id):
     # TODO: Reactivate the charge check when we'll be able to load charges from files.
     compare_amber_smirnoff(top_filepath, crd_filepath, forcefield, molecule,
                            check_energies=False, ignore_charges=True)
+
+
+def generate_freesolv_parameters_assignment_cases():
+    """Create dynamically all test cases that should be ran for the FreeSolv set."""
+    import tarfile
+
+    # For these tests, UndefinedStereochemistryError is ignored.
+    # The chirality was manually checked (see issue #175).
+    ignore_undefined_stereo = {
+        '2501588',
+        '3266352',
+        '7829570'
+    }
+
+    # These molecules are always tested by test_freesolv_parameters_assignment().
+    # Each test case is (freesolv_id, force_field_version, exception_if_undefined_stereo).
+    fast_test_cases = [
+        ('1019269', '0_0_4_fixed', True),
+        ('63712', '0_0_2', True),  # The XML was regenerated after fixing the issue described in #179.
+        ('1723043', '0_0_2', True),
+        ('2501588', '0_0_2', False),  # Test impropers and undefined stereochemistry.
+        ('3323117', '0_0_2', True),  # The XML was regenerated after fixing the issue described in #179.
+    ]
+
+    def extract_id(file_path):
+        """Extract the FreeSolv ID and force field version from the file subpath."""
+        # An example of file path is FreeSolv/xml_0_0_4_fixed/mobley_7913234_vacuum.xml
+        freesolv_id = os.path.basename(file_path).split('_')[1]
+        force_field_version = os.path.basename(os.path.dirname(file_path))[4:]
+        exception_if_undefined_stereo = freesolv_id not in ignore_undefined_stereo
+        return (freesolv_id, force_field_version, exception_if_undefined_stereo)
+
+    # Get all the tarball XML files available. The tarball is extracted
+    # in conftest.py if slow tests are activated.
+    freesolv_tar_file_path = get_data_filename(os.path.join('molecules', 'FreeSolv.tar.gz'))
+    with tarfile.open(freesolv_tar_file_path, 'r:gz') as tar:
+        slow_test_cases = {extract_id(m.name) for m in tar.getmembers() if '.xml' in m.name}
+
+    # Remove fast test cases from slow ones to avoid duplicate tests.
+    for fast_test_case in fast_test_cases:
+        slow_test_cases.remove(fast_test_case)
+
+    # Mark all slow cases as slow.
+    slow_test_cases = [pytest.param(*case, marks=pytest.mark.slow)
+                       for case in sorted(slow_test_cases)]
+
+    return fast_test_cases + slow_test_cases
+
+
+@pytest.mark.parametrize(('freesolv_id', 'forcefield_version', 'exception_if_undefined_stereo'),
+                         generate_freesolv_parameters_assignment_cases())
+def test_freesolv_parameters_assignment(freesolv_id, forcefield_version, exception_if_undefined_stereo):
+    """Regression test on parameters assignment based on the FreeSolv set used in the 0.1 paper.
+
+    This, contrarily to the similar AlkEthOH test, checks also constraints
+    and improper torsions.
+
+    """
+    from openforcefield.tests.utils import get_freesolv_filepath, compare_system_parameters
+    mol2_file_path, xml_file_path = get_freesolv_filepath(freesolv_id, forcefield_version)
+
+    # Load molecules.
+    molecule = Molecule.from_file(mol2_file_path, exception_if_undefined_stereo=exception_if_undefined_stereo)
+
+    # Create OpenFF System with the current toolkit.
+    forcefield_file_path = 'old/smirnoff99Frosst_' + forcefield_version + '.offxml'
+    ff = ForceField(forcefield_file_path, 'old/hbonds.offxml')
+    ff_system = ff.create_openmm_system(molecule.to_topology())
+
+    # Load OpenMM System created with the 0.1 version of the toolkit.
+    from simtk import openmm
+    with open(xml_file_path, 'r') as f:
+        xml_system = openmm.XmlSerializer.deserialize(f.read())
+
+    # Compare parameters. We ignore the improper folds as in 0.0.3 we
+    # used a six-fold implementation while we now use a three-fold way.
+    # TODO: Reactivate charge comparison once we'll be able to read them from file.
+    compare_system_parameters(ff_system, xml_system,
+                              systems_labels=('current OpenFF', 'SMIRNOFF 0.0.4'),
+                              ignore_charges=True, ignore_improper_folds=True)
 
 
 # from_xml_bytes
