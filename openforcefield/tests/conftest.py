@@ -30,7 +30,7 @@ def untar_full_alkethoh_and_freesolv_set():
 
     See
         test_forcefield.py::test_alkethoh_parameters_assignment
-        test_forcefield.py::test_alkethoh_parameters_assignment
+        test_forcefield.py::test_freesolv_parameters_assignment
     """
     import os
     import tarfile

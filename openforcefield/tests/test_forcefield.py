@@ -474,7 +474,7 @@ class TestForceField():
 #=============================================================================================
 
 def generate_alkethoh_parameters_assignment_cases():
-    """Create dinamically all test cases that should be ran for the AlkEthOH set."""
+    """Create dynamically all test cases that should be ran for the AlkEthOH set."""
     # These AlkEthOH molecules are always run by test_alkethoh_parameters_assignment.
     fast_test_cases = [
         'r0',
@@ -552,7 +552,7 @@ def test_alkethoh_parameters_assignment(alkethoh_id):
 
 
 def generate_freesolv_parameters_assignment_cases():
-    """Create dinamically all test cases that should be ran for the FreeSolv set."""
+    """Create dynamically all test cases that should be ran for the FreeSolv set."""
     import tarfile
 
     # For these tests, UndefinedStereochemistryError is ignored.
