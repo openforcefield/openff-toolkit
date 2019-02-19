@@ -62,6 +62,15 @@ logger = logging.getLogger(__name__)
 #=============================================================================================
 
 
+class SMIRNOFFSpecError(Exception):
+    """
+    Exception for when a non-spec keyword is read and cosmetic attributes are not allowed.
+    """
+
+    def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
+
 class IncompatibleUnitError(Exception):
     """
     Exception for when a parameter is in the wrong units for a ParameterHandler's unit system
@@ -192,7 +201,7 @@ class ParameterType(object):
 
     # TODO: Can we provide some shared tools for returning settable/gettable attributes, and checking unit-bearing attributes?
 
-    def __init__(self, smirks=None, **kwargs):
+    def __init__(self, smirks=None, permit_cosmetic_attributes=False, **kwargs):
         """
         Create a ParameterType
 
@@ -200,6 +209,8 @@ class ParameterType(object):
         ----------
         smirks : str
             The SMIRKS match for the provided parameter type.
+        permit_cosmetic_attributes : bool optional. Default = False
+            Whether to store non-spec kwargs as "cosmetic attributes", which can be accessed and written out.
 
         """
         if smirks is None:
@@ -208,8 +219,20 @@ class ParameterType(object):
 
         # Handle all unknown kwargs as cosmetic so we can write them back out
         for key, val in kwargs.items():
-            attr_name = '_' + key
-            setattr(self, attr_name, val)
+            #attr_name = '_' + key
+            if key in self._SMIRNOFF_ATTRIBUTES:
+                setattr(self, key, val)
+                print('A', key, self._SMIRNOFF_ATTRIBUTES, self._COSMETIC_ATTRIBUTES)
+            elif permit_cosmetic_attributes:
+                print('B', key)
+                self._COSMETIC_ATTRIBUTES.append(key)
+                setattr(self, key, val)
+            else:
+                raise SMIRNOFFSpecError("Incompatible kwarg {} passed to {} constructor. If this is "
+                                        "a desired cosmetic attribute, consider setting "
+                                        "'permit_cosmetic_attributes=True'".format({key: val}, self.__class__))
+
+
 
     @property
     def smirks(self):
@@ -261,8 +284,9 @@ class ParameterType(object):
 
         output_units_tuples = {}
 
-        # Make a list of all attribs that should be included in the returned dict
-        attribs_to_return = self._SMIRNOFF_ATTRIBUTES
+        # Make a list of all attribs that should be included in the
+        # returned dict (call list() to make a copy)
+        attribs_to_return = list(self._SMIRNOFF_ATTRIBUTES)
         if return_cosmetic_attributes:
             attribs_to_return += self._COSMETIC_ATTRIBUTES
 

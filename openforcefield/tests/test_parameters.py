@@ -15,7 +15,7 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 #=============================================================================================
 
 
-from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType, BondHandler
+from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType, BondHandler, SMIRNOFFSpecError
 
 import pytest
 
@@ -143,3 +143,46 @@ class TestParameterList:
                            ) as context:
             param_dict, attached_units = p1.to_dict(output_units={'length': unit.calorie})
 
+    def test_read_write_cosmetic_parameter_attribute(self):
+        """
+        Test ParameterTypes' ability to store and write out cosmetic attributes passed to __init__()
+        """
+        from simtk import unit
+
+        p1 = BondHandler.BondType(smirks='[*:1]',
+                                  length=1.02*unit.angstrom,
+                                  k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                                  pilot='alice',
+                                  permit_cosmetic_attributes=True
+                                  )
+        param_dict, attached_units = p1.to_dict(return_cosmetic_attributes=True)
+        assert ('pilot', 'alice') in param_dict.items()
+
+    def test_read_but_dont_write_cosmetic_parameter_attribute(self):
+        """
+        Test ParameterTypes' ability to ignore cosmetic attributes passed to __init__() if instructed
+        """
+        from simtk import unit
+
+        p1 = BondHandler.BondType(smirks='[*:1]',
+                                  length=1.02*unit.angstrom,
+                                  k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                                  pilot='alice',
+                                  permit_cosmetic_attributes=True
+                                  )
+        param_dict, attached_units = p1.to_dict(return_cosmetic_attributes=False)
+        assert ('pilot', 'alice') not in param_dict
+
+    def test_error_cosmetic_parameter_attribute(self):
+        """
+        Test that ParameterTypes raise an error on receiving unexpected attributes passed to __init__()
+        """
+        from simtk import unit
+
+        with pytest.raises(SMIRNOFFSpecError, match="Incompatible kwarg {'pilot': 'alice'}") as context:
+            p1 = BondHandler.BondType(smirks='[*:1]',
+                                      length=1.02*unit.angstrom,
+                                      k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                                      pilot='alice',
+                                      permit_cosmetic_attributes=False
+                                      )
