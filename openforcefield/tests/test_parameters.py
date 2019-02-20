@@ -87,6 +87,8 @@ class TestParameterList:
         assert p1 in parameters
         assert p2 not in parameters
 
+class TestParameterType:
+
     def test_base_parametertype_to_dict(self):
         """
         Test ParameterType to_dict.

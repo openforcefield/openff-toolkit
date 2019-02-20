@@ -196,6 +196,7 @@ class ParameterType(object):
     # This list will be used for validating input and detecting cosmetic attributes.
     _SMIRNOFF_ATTRIBUTES = ['smirks'] # Attributes expected per the SMIRNOFF spec.
     _COSMETIC_ATTRIBUTES = []
+    _OPTIONAL_SPEC_ATTRIBUTES = ['id', 'parent_id']
 
     # TODO: Allow preferred units for each parameter type to be specified and remembered as well for when we are writing out
 
@@ -222,9 +223,10 @@ class ParameterType(object):
             #attr_name = '_' + key
             if key in self._SMIRNOFF_ATTRIBUTES:
                 setattr(self, key, val)
-                print('A', key, self._SMIRNOFF_ATTRIBUTES, self._COSMETIC_ATTRIBUTES)
+            if key in self._OPTIONAL_SPEC_ATTRIBUTES:
+                setattr(self, key, val)
+                self._SMIRNOFF_ATTRIBUTES.append(key)
             elif permit_cosmetic_attributes:
-                print('B', key)
                 self._COSMETIC_ATTRIBUTES.append(key)
                 setattr(self, key, val)
             else:
@@ -358,7 +360,7 @@ class ParameterHandler(object):
         forcefield : openforcefield.typing.engines.smirnoff.ForceField
 
         """
-        self._forcefield = forcefield  # the ForceField object that this ParameterHandler is registered with
+        #self._forcefield = forcefield  # the ForceField object that this ParameterHandler is registered with
         self._parameters = ParameterList(
         )  # list of ParameterType objects # TODO: Change to method accessor so we can access as list or dict
         # Handle all the unknown kwargs as cosmetic so we can write them back out
@@ -730,6 +732,8 @@ class AngleHandler(ParameterHandler):
     class AngleType(ParameterType):
         """A SMIRNOFF angle type."""
 
+        _SMIRNOFF_ATTRIBUTES = ['smirks', 'angle', 'k']  # Attributes expected per the SMIRNOFF spec.
+
         def __init__(self, angle, k, fractional_bondorder=None, **kwargs):
             #super(AngleType, self).__init__(node, parent)  # base class handles ``smirks`` and ``id`` fields
             super().__init__(
@@ -801,6 +805,7 @@ class ProperTorsionHandler(ParameterHandler):
 
     class ProperTorsionType(ParameterType):
         """A SMIRNOFF torsion type for proper torsions."""
+        _SMIRNOFF_ATTRIBUTES = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
 
         def __init__(self,
                      fractional_bondorder_method=None,
@@ -890,6 +895,7 @@ class ImproperTorsionHandler(ParameterHandler):
 
     class ImproperTorsionType(ParameterType):
         """A SMIRNOFF torsion type for improper torsions."""
+        _SMIRNOFF_ATTRIBUTES = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
 
         def __init__(self,
                      fractional_bondorder_method=None,
@@ -1028,6 +1034,8 @@ class vdWHandler(ParameterHandler):
     class vdWType(ParameterType):
         """A SMIRNOFF vdWForce type."""
 
+        _SMIRNOFF_ATTRIBUTES = ['smirks', 'rmin_half', 'epsilon'] # Attributes expected per the SMIRNOFF spec.
+
         def __init__(self, sigma=None, rmin_half=None, epsilon=None, **kwargs):
             #super(vdWType, self).__init__(smirks=smirks, id=id, parent_id=parent_id)
             super().__init__(**kwargs)
@@ -1051,7 +1059,7 @@ class vdWHandler(ParameterHandler):
         def attrib(self):
             """Return all storable attributes as a dict.
             """
-            names = ['smirks', 'sigma', 'epsilon', 'id', 'parent_id']
+            names = ['smirks', 'sigma', 'epsilon']
             return {
                 name: getattr(self, name)
                 for name in names if hasattr(self, name)
