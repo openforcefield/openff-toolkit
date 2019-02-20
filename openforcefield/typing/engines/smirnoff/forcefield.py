@@ -26,6 +26,7 @@ http://stackoverflow.com/questions/6949395/is-there-a-way-to-get-a-line-number-f
 # GLOBAL IMPORTS
 #=============================================================================================
 
+import collections
 import sys
 import string
 
@@ -1052,6 +1053,8 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
             molecule. Each element is a list of the form [ ( [ atom1, ...,
             atomN], parameter_id, SMIRKS), ... ]
 
+        .. note:: this guarantees the ordering of the original xml file.
+
         """
 
         # XML modified? If so, re-parse by generators
@@ -1064,7 +1067,7 @@ To do: Update behavior of "Implied" force_type so it raises an exception if the 
 
         # Loop over molecules and label
         for idx,mol in enumerate(oemols):
-            molecule_labels.append({})
+            molecule_labels.append(collections.OrderedDict())
             for force in self._forces:
                 # Initialize dictionary storage for this force type
                 forcelabel = force.__class__.__name__
