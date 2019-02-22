@@ -16,14 +16,16 @@ XML I/O parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 # GLOBAL IMPORTS
 #=============================================================================================
 
-import os
-import logging
 from collections import OrderedDict
+import logging
+import os
+import sys
 
 import lxml.etree as etree
 
 from simtk import openmm, unit
 from openforcefield.utils.utils import get_data_filename
+
 
 #=============================================================================================
 # CONFIGURE LOGGER
@@ -31,14 +33,46 @@ from openforcefield.utils.utils import get_data_filename
 
 logger = logging.getLogger(__name__)
 
+
 #=============================================================================================
-#
+# QUANTITY PARSING UTILITIES
 #=============================================================================================
 
+def _ast_unit_eval(node):
+    """
+    Performs a safe algebraic syntax tree evaluation of a unit.
 
-#@staticmethod
+    This will likely be replaced by the native implementation in Pint
+    if/when we'll switch over to Pint units.
+    """
+    import ast
+    import operator as op
+
+    operators = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
+        ast.Div: op.truediv, ast.Pow: op.pow, ast.BitXor: op.xor,
+        ast.USub: op.neg}
+
+    if isinstance(node, ast.Num):  # <number>
+        return node.n
+    elif isinstance(node, ast.BinOp):  # <left> <operator> <right>
+        return operators[type(node.op)](_ast_unit_eval(node.left), _ast_unit_eval(node.right))
+    elif isinstance(node, ast.UnaryOp):  # <operator>( <operand> ) e.g., -1
+        return operators[type(node.op)](_ast_unit_eval(node.operand))
+    elif isinstance(node, ast.Name):
+        # Check if this is a simtk unit.
+        u = getattr(unit, node.id)
+        if not isinstance(u, unit.Unit):
+            raise ValueError('No unit named {} found in simtk.unit.'.format(node.id))
+        return u
+    else:
+        raise TypeError(node)
+
+
 def _extract_attached_units(attrib):
     """Form a (potentially unit-bearing) quantity from the specified attribute name.
+
+    The current implementation will likely be replaced by the native
+    implementation in Pint if/when we'll switch over to Pint units.
 
     Parameters
     ----------
@@ -47,34 +81,42 @@ def _extract_attached_units(attrib):
 
     Returns
     -------
-    attrib : dict
-       XML node attributes with keys ending in ``_unit`` removed.
     attached_units : dict str : simtk.unit.Unit
-       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
-       parameter ``parameter_name``
+       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination
+       that should be attached to corresponding parameter ``parameter_name``.
 
     """
     # TODO: Should this scheme also convert unit-bearing quantities such as '8*angstroms' to 8*unit.angstroms?
     # TODO: Should this scheme also convert "1" to int(1) and "8.0" to float(8.0)?
+
+    import ast
 
     attached_units = OrderedDict()
     for key in attrib.keys():
         if key.endswith('_unit'):
             parameter_name = key[:-5]
             parameter_units_string = attrib[key]
+
+            # Parse string expression and obtain units.
             try:
-                parameter_units = eval(parameter_units_string, unit.__dict__)
+                ast_root_node = ast.parse(parameter_units_string, mode='eval').body
+                parameter_units = _ast_unit_eval(ast_root_node)
             except Exception as e:
-                e.msg = "Could not parse units {}\n".format(
-                    parameter_units_string) + e.msg
-                raise e
+                # Re-raise parsing exception preserving the stack.
+                err_msg = 'Could not parse units {}\n'.format(parameter_units_string) + str(e)
+                raise type(e)(err_msg).with_traceback(sys.exc_info()[2])
+
+            # Check that "attr_unit" was not associated to a Quantity that
+            # could fail silently when multiplied with the value in "attr".
+            if isinstance(parameter_units, unit.Quantity):
+                err_msg = ('{key} was associated to a quantity rather than only units: '
+                           '{expr}'.format(key=key, expr=parameter_units_string))
+                raise ValueError(err_msg)
             attached_units[parameter_name] = parameter_units
-            #del attrib[parameter_name]
 
-    return attrib, attached_units
+    return attached_units
 
 
-#@staticmethod
 def _attach_units(attrib, attached_units):
     """Attach units to attributes for which units are specified.
 
@@ -406,11 +448,10 @@ class XMLParameterIOHandler(ParameterIOHandler):
                 parameter_name = section.tag
 
                 # Split out attributes that refer to units
-                handler_kwargs, attached_units = _extract_attached_units(
-                    section.attrib)
+                attached_units = _extract_attached_units(section.attrib)
                 # TODO: Attach units to handler_kwargs
-                # Make a copy of handler_kwargs that we can modify
-                handler_kwargs_dict = dict(handler_kwargs)
+                # Make a copy of section.attrib that we can modify
+                handler_kwargs_dict = dict(section.attrib)
                 handler_kwargs_dict = _attach_units(handler_kwargs_dict,
                                                     attached_units)
 
