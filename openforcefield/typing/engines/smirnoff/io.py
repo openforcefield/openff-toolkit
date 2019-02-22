@@ -81,8 +81,6 @@ def _extract_attached_units(attrib):
 
     Returns
     -------
-    attrib : dict
-       XML node attributes with keys ending in ``_unit`` removed.
     attached_units : dict str : simtk.unit.Unit
        ``attached_units[parameter_name]`` is the simtk.unit.Unit combination
        that should be attached to corresponding parameter ``parameter_name``.
@@ -116,7 +114,7 @@ def _extract_attached_units(attrib):
                 raise ValueError(err_msg)
             attached_units[parameter_name] = parameter_units
 
-    return attrib, attached_units
+    return attached_units
 
 
 def _attach_units(attrib, attached_units):
@@ -450,11 +448,10 @@ class XMLParameterIOHandler(ParameterIOHandler):
                 parameter_name = section.tag
 
                 # Split out attributes that refer to units
-                handler_kwargs, attached_units = _extract_attached_units(
-                    section.attrib)
+                attached_units = _extract_attached_units(section.attrib)
                 # TODO: Attach units to handler_kwargs
-                # Make a copy of handler_kwargs that we can modify
-                handler_kwargs_dict = dict(handler_kwargs)
+                # Make a copy of section.attrib that we can modify
+                handler_kwargs_dict = dict(section.attrib)
                 handler_kwargs_dict = _attach_units(handler_kwargs_dict,
                                                     attached_units)
 
