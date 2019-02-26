@@ -95,85 +95,134 @@ def get_data_filename(relative_path):
     return fn
 
 
-def serialize_quantity(quantity, output_unit=None):
+def unit_to_string(input_unit):
     """
-    Serialized a simtk.unit.Quantity into a dict of {'unitless_value': X, 'unit': Y}.
-    For example "5 angstroms" becomes {'unitless_value': 5, 'unit': (simtk.unit.angstrom, 1)}
+    Serialize a simtk.unit.Unit and return it as a string.
 
     Parameters
     ----------
-    quantity : A simtk.unit.Quantity-wrapped value or iterator over values
-        The Quantity to serialize
-    output_unit : A simtk.unit.Unit, optional. Default = None
-        An optional unit to convert the unit to before output. If None, the function retains
-        the original unit attached to `quantity`.
+    input_unit : A simtk.unit
+        The unit to serialize
 
     Returns
     -------
-    serialzied : dict with keys 'unitless_value' and 'unit'
-        The serialized Quantity.
+    unit_string : str
+        The serialized unit.
     """
 
-    serialized = dict()
 
-    # If it's None, just return None in all fields
-    if quantity is None:
-        serialized['unitless_value'] = None
-        serialized['unit'] = None
-        return serialized
-
-    # If it's not None, make sure it's a simtk.unit.Quantity
-    assert (hasattr(quantity, 'unit'))
-
-    # Describe the unit as a list of tuples, of the form [(base_unit, exponent)...]
-    output_unit_tuples = []
-
-    if output_unit is None:
-        output_unit = quantity.unit
-    else:
-        if not(output_unit.is_compatible(quantity.unit)):
-            raise ValueError("Requested output unit {} is not compatible with "
-                             "quantity unit {} .".format(output_unit, quantity.unit))
-
-    #unit_dict = {}
     # Decompose output_unit into a tuples of (base_dimension_unit, exponent)
-    for unit_component in output_unit.iter_base_or_scaled_units():
-        output_unit_tuples.append((unit_component[0].name, int(unit_component[1])))
-        #unit_dict[unit_component[0]] = unit_component[1]
-    #unitless_value = quantity.value_in_unit(unit.Unit(unit_dict))
-    unitless_value = quantity.value_in_unit(output_unit)
+    unit_string = None
 
-    # Package the results in a dict for return
-    serialized['unitless_value'] = unitless_value
-    serialized['unit'] = output_unit_tuples
-    return serialized
+    for unit_component in input_unit.iter_base_or_scaled_units():
+        contribution = '{} ** {}'.format(unit_component[0].name, int(unit_component[1]))
+        if unit_string is None:
+            unit_string = contribution
+        else:
+            unit_string += '* '.format(contribution)
 
+    return unit_string
 
-def deserialize_quantity(serialized):
+def quantity_to_string(input_quantity):
     """
-    Deserializes a simtk.unit.Quantity.
+    Serialize a simtk.unit.Quantity to a string.
 
     Parameters
     ----------
-    serialized : dict
-        Serialized representation of a simtk.unit.Quantity. Must have keys ["unitless_value", "unit"]
+    input_quantity : simtk.unit.Quantity
+        The quantity to serialize
 
     Returns
     -------
-    simtk.unit.Quantity
+    output_string : str
+        The serialized quantity
+
     """
-    if (serialized['unitless_value'] is None) and (serialized['unit'] is None):
-        return None
-    quantity_unit = None
-    for unit_name, power in serialized['unit']:
-        unit_name = unit_name.replace(
-            ' ', '_')  # Convert eg. 'elementary charge' to 'elementary_charge'
-        if quantity_unit is None:
-            quantity_unit = (getattr(unit, unit_name)**power)
-        else:
-            quantity_unit *= (getattr(unit, unit_name)**power)
-    quantity = unit.Quantity(serialized['unitless_value'], quantity_unit)
-    return quantity
+    unitless_value = input_quantity.in_units_of(input_quantity.unit)
+    unit_string = unit_to_string(input_quantity.unit)
+    output_string = '{} * {}'.format(unitless_value, unit_string)
+    return output_string
+
+def _ast_eval(node):
+    """
+    Performs an algebraic syntax tree evaluation of a unit.
+
+    Parameters
+    ----------
+    node : An ast parsing tree node
+    """
+    import ast
+    import operator as op
+
+    operators = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
+        ast.Div: op.truediv, ast.Pow: op.pow, ast.BitXor: op.xor,
+        ast.USub: op.neg}
+
+    if isinstance(node, ast.Num): # <number>
+        return node.n
+    elif isinstance(node, ast.BinOp): # <left> <operator> <right>
+        return operators[type(node.op)](_ast_eval(node.left), _ast_eval(node.right))
+    elif isinstance(node, ast.UnaryOp): # <operator> <operand> e.g., -1
+        return operators[type(node.op)](_ast_eval(node.operand))
+    elif isinstance(node, ast.Name):
+        # see if this is a simtk unit
+        b = getattr(unit, node.id)
+        return b
+    else:
+        raise TypeError(node)
+
+
+def string_to_unit(unit_string):
+    """
+    Deserializes a simtk.unit.Quantity from a string representation, for
+    example: "kilocalories_per_mole / angstrom ** 2"
+
+
+    Parameters
+    ----------
+    unit_string : dict
+        Serialized representation of a simtk.unit.Quantity.
+
+    Returns
+    -------
+    output_unit: simtk.unit.Quantity
+        The deserialized unit from the string
+    """
+    import ast
+    output_unit = _ast_eval(ast.parse(unit_string, mode='eval').body)
+    return output_unit
+
+    #if (serialized['unitless_value'] is None) and (serialized['unit'] is None):
+    #    return None
+    3#quantity_unit = None
+    #for unit_name, power in serialized['unit']:
+    #    unit_name = unit_name.replace(
+    #        ' ', '_')  # Convert eg. 'elementary charge' to 'elementary_charge'
+    #    if quantity_unit is None:
+    #        quantity_unit = (getattr(unit, unit_name)**power)
+    #    else:
+    #        quantity_unit *= (getattr(unit, unit_name)**power)
+    #quantity = unit.Quantity(serialized['unitless_value'], quantity_unit)
+    #return quantity
+
+def string_to_quantity(quantity_string):
+    """
+    Takes a string representation of a quantity and returns a simtk.unit.Quantity
+
+    Parameters
+    ----------
+    quantity_string : str
+        The quantity to deserialize
+
+    Returns
+    -------
+    output_quantity : simtk.unit.Quantity
+        The deserialized quantity
+    """
+    # This can be the exact same as string_to_unit
+    import ast
+    output_quantity = _ast_eval(ast.parse(quantity_string, mode='eval').body)
+    return output_quantity
 
 
 def extract_serialized_units_from_dict(input_dict):
@@ -271,34 +320,54 @@ def attach_units(unitless_dict, attached_units):
 
 
 
-def separate_unit_bearing_quantities(unit_bearing_dict):
+def detach_units(unit_bearing_dict, output_units=None):
     """
     Given a dict which may contain some simtk.unit.Quantity objects, return the same dict with the Quantities
-    replaced with unitless values, and a new dict containing entries with the suffix "_unit" added, containing string
-    representations of the units.
+    replaced with unitless values, and a new dict containing entries with the suffix "_unit" added, containing
+    the units.
 
     Parameters
     ----------
     unit_bearing_dict : dict
         A dictionary potentially containing simtk.unit.Quantity objects as values.
-
+    output_units : dict[str : simtk.unit.Unit], optional. Default = None
+        A mapping from the ParameterType attribute name to the output unit its value should be converted to. If no
+        output_unit is defined for a key:value pair in which the value is a simtk.unit.Quantity, a new one will be
+        added to the output unit_dict.
     Returns
     -------
     unitless_dict : dict
         The input smirnoff_dict object, with all simtk.unit.Quantity values converted to unitless values.
     unit_dict : dict
-        A dictionary in which keys are keys of simtk.unit.Quantity values in unit_bearing_dict, but suffixed with "_unit".
-        Values are string representations of the units.
+        A dictionary in which keys are keys of simtk.unit.Quantity values in unit_bearing_dict,
+        but suffixed with "_unit". Values are simtk.unit.Unit .
     """
     from simtk import unit
+
+    if output_units is None:
+        output_units = {}
+
+    # initialize dictionaries for outputs
     unit_dict = {}
     unitless_dict = unit_bearing_dict.copy()
+
     for key, value in unit_bearing_dict.items():
-        if isinstance(value, unit.Quantity):
-            unitless_val, unit = serialize_quantity(value)
-            unit_key = key + '_unit'
-            unit_dict[unit_key] = unit
-            unitless_dict[key] = unitless_val
+        # If no conversion is needed, skip this item
+        if not isinstance(value, unit.Quantity):
+            continue
+
+        # If conversion is needed, see if the user has requested an output unit
+        unit_key = key + '_unit'
+
+        if key in output_units:
+            output_unit = output_units[key]
+        else:
+            output_unit = value.unit
+        if not (output_unit.is_compatible(value.unit)):
+            raise ValueError("Requested output unit {} is not compatible with "
+                             "quantity unit {} .".format(output_unit, value.unit))
+        unitless_dict[key] = value.value_in_unit(output_unit)
+        unit_dict[unit_key] = output_unit
 
     return unitless_dict, unit_dict
 

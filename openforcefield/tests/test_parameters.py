@@ -16,6 +16,7 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 
 
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType, BondHandler, SMIRNOFFSpecError
+from openforcefield.utils import detach_units
 
 import pytest
 
@@ -87,6 +88,31 @@ class TestParameterList:
         assert p1 in parameters
         assert p2 not in parameters
 
+    def test_parameterlist_to_list(self):
+        """Test basic ParameterList.to_list() function"""
+        from simtk import unit
+        p1 = BondHandler.BondType(smirks='[*:1]',
+                                  length=1.01 * unit.angstrom,
+                                  k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+                                  )
+        p2 = BondHandler.BondType(smirks='[*:1]',
+                                  length=1.02 * unit.angstrom,
+                                  k=6 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+                                  )
+        p3 = BondHandler.BondType(smirks='[*:1]',
+                                  length=1.03 * unit.angstrom,
+                                  k=7 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+                                  )
+        parameters = ParameterList([p1, p2, p3])
+        print(parameters.to_list())
+
+    def test_parameterlist_with_different_units_to_list(self):
+        """Test ParameterList.to_list() function when some parameters are in
+        different units (proper behavior is to convert all quantities to the last-
+        read unit)
+        """
+        pass
+
 class TestParameterType:
 
     def test_base_parametertype_to_dict(self):
@@ -94,7 +120,7 @@ class TestParameterType:
         Test ParameterType to_dict.
         """
         p1 = ParameterType(smirks='[*:1]')
-        param_dict, attached_units = p1.to_dict()
+        param_dict = p1.to_dict()
         assert param_dict['smirks'] == '[*:1]'
         assert len(param_dict.keys()) == 1
 
@@ -105,17 +131,19 @@ class TestParameterType:
         from simtk import unit
 
         p1 = BondHandler.BondType(smirks='[*:1]',
-                                  length=1.02*unit.angstrom,
+                                  length=1.02 * unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
                                   )
-        param_dict, attached_units = p1.to_dict()
-        assert param_dict == {'smirks': '[*:1]',
-                              'length': 1.02,
-                              'k': 5,}
-        assert attached_units == {'length_unit': [('angstrom', 1)],
-                                  'k_unit': [('angstrom', -2), ('mole', -1), ('kilocalorie', 1)]
+        param_dict = p1.to_dict()
+        param_dict_unitless, attached_units = detach_units(param_dict)
+        assert param_dict_unitless == {'smirks': '[*:1]',
+                                       'length': 1.02,
+                                       'k': 5,}
+        assert attached_units == {'length_unit': unit.angstrom,
+                                  'k_unit': (unit.angstrom ** -2) * (unit.mole ** -1) * (unit.kilocalorie ** 1)
                                   }
 
+        #[('angstrom', -2), ('mole', -1), ('kilocalorie', 1)]
 
     def test_bondtype_to_dict_custom_output_units(self):
         """
@@ -126,9 +154,10 @@ class TestParameterType:
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
                                   )
-        param_dict, attached_units = p1.to_dict(output_units={'length': unit.nanometer})
-        assert attached_units['length_unit'] == [('nanometer', 1)]
-        assert abs(param_dict['length'] - 0.102) < 1e-10
+        param_dict = p1.to_dict()
+        param_dict_unitless, attached_units=detach_units(param_dict, output_units={'length': unit.nanometer})
+        assert attached_units['length_unit'] == unit.nanometer
+        assert abs(param_dict_unitless['length'] - 0.102) < 1e-10
 
 
     def test_bondtype_to_dict_invalid_output_units(self):
@@ -140,10 +169,11 @@ class TestParameterType:
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
                                   )
+        param_dict = p1.to_dict()
         with pytest.raises(ValueError,
                            match='Requested output unit calorie is not compatible with quantity unit angstrom .'
                            ) as context:
-            param_dict, attached_units = p1.to_dict(output_units={'length': unit.calorie})
+            param_dict_unitless, attached_units = detach_units(param_dict, output_units = {'length': unit.calorie})
 
     def test_read_write_cosmetic_parameter_attribute(self):
         """
@@ -157,7 +187,7 @@ class TestParameterType:
                                   pilot='alice',
                                   permit_cosmetic_attributes=True
                                   )
-        param_dict, attached_units = p1.to_dict(return_cosmetic_attributes=True)
+        param_dict= p1.to_dict(return_cosmetic_attributes=True)
         assert ('pilot', 'alice') in param_dict.items()
 
     def test_read_but_dont_write_cosmetic_parameter_attribute(self):
@@ -172,7 +202,7 @@ class TestParameterType:
                                   pilot='alice',
                                   permit_cosmetic_attributes=True
                                   )
-        param_dict, attached_units = p1.to_dict(return_cosmetic_attributes=False)
+        param_dict = p1.to_dict(return_cosmetic_attributes=False)
         assert ('pilot', 'alice') not in param_dict
 
     def test_error_cosmetic_parameter_attribute(self):
@@ -188,3 +218,5 @@ class TestParameterType:
                                       pilot='alice',
                                       permit_cosmetic_attributes=False
                                       )
+
+# Test multi_term_torsion to_dict

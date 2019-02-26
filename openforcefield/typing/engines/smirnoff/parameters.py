@@ -39,7 +39,7 @@ import lxml.etree as etree
 from simtk import openmm, unit
 from simtk.openmm.app import element as elem
 
-from openforcefield.utils import get_data_filename, all_subclasses, serialize_quantity
+from openforcefield.utils import detach_units, attach_units, unit_to_string, string_to_unit
 from openforcefield.topology import Topology, ValenceDict, ImproperDict
 from openforcefield.topology import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
@@ -177,11 +177,23 @@ class ParameterList(list):
 
 
         smirnoff_list = list()
-        for parameter in self:
-            attached_units, parameter_dict = parameter.to_dict(output_units,
-                                                   return_cosmetic_attributes=return_cosmetic_attributes)
-            smirnoff_list.append(parameter_dict)
-        return smirnoff_list, attached_units
+
+        # If output_units is None, initialize it as an empty dict.
+        # It will be populated as ParameterTypes are serialized.
+        if output_units is None:
+            output_units = dict()
+
+        # Iterate backwards over the list so that we get units from the last-read
+        # parameters first, and convert subsequent parameters to those units.
+        for parameter in self[::-1]:
+            parameter_dict = parameter.to_dict(return_cosmetic_attributes=return_cosmetic_attributes)
+            parameter_dict_unitless, attached_units = detach_units(parameter_dict, output_units)
+            smirnoff_list.append(parameter_dict_unitless)
+            output_units.update(attached_units)
+
+        # Reverse the order of the list (since it was serialized backwards)
+        smirnoff_list.reverse()
+        return smirnoff_list, output_units
 
 
 
@@ -195,8 +207,14 @@ class ParameterType(object):
     _VALENCE_TYPE = None  # ChemicalEnvironment valence type for checking SMIRKS is conformant
     # This list will be used for validating input and detecting cosmetic attributes.
     _SMIRNOFF_ATTRIBUTES = ['smirks'] # Attributes expected per the SMIRNOFF spec.
-    _COSMETIC_ATTRIBUTES = []
-    _OPTIONAL_SPEC_ATTRIBUTES = ['id', 'parent_id']
+
+    # TODO: Make sure that this doesn't get defined at the class level
+    _COSMETIC_ATTRIBUTES = [] # A list that may be populated to record the cosmetic
+                              # attributes read from a SMIRNOFF data source
+    _OPTIONAL_SPEC_ATTRIBUTES = ['id', 'parent_id'] # Attributes in the SMIRNOFF spec that may
+                                                    # be present but have no impact on performance
+
+
 
     # TODO: Allow preferred units for each parameter type to be specified and remembered as well for when we are writing out
 
@@ -214,6 +232,9 @@ class ParameterType(object):
             Whether to store non-spec kwargs as "cosmetic attributes", which can be accessed and written out.
 
         """
+        # TODO: Should this be defined here?
+        _COSMETIC_ATTRIBUTES = []
+
         if smirks is None:
             raise ValueError("'smirks' must be specified")
         self._smirks = smirks
@@ -254,7 +275,7 @@ class ParameterType(object):
     # For example, if we have a parameter with units energy/distance**2, can we check to make
     # sure the dimensionality is preserved when the parameter is modified?
 
-    def to_dict(self, output_units=None, return_cosmetic_attributes=False):
+    def to_dict(self, return_cosmetic_attributes=False):
         """
         Convert this ParameterType-derived object to dict. A unit-bearing attribute ('X') will be converted to two dict
         entries, one (['X'] containing the unitless value, and another (['X_unit']) containing a string representation
@@ -262,10 +283,6 @@ class ParameterType(object):
 
         Parameters
         ----------
-        output_units : dict[str : simtk.unit.Unit], optional. Default = None
-            A mapping from the ParameterType attribute name to the output unit its value should be converted to. If no
-            output_unit is defined for a key:value pair in which the value is a simtk.unit.Quantity, a new one will be
-            added to the final output_units dict.
         return_cosmetic_attributes : bool, optional. default = False
             Whether to return non-spec attributes of this ParameterType
 
@@ -274,17 +291,15 @@ class ParameterType(object):
         -------
         smirnoff_dict : dict
             The SMIRNOFF-compliant dict representation of this ParameterType-derived object.
-        output_units_tuples : dict[str: tuple of ('unit name', exponent)]
-            A mapping from the ParameterType attribute to a list of tuples describing the unit it was converted to.
+        output_units : dict[str: simtk.unit.Unit]
+            A mapping from each simtk.unit.Quanitity-valued ParameterType attribute
+            to the unit it was converted to during serialization.
 
         """
-        from simtk import unit
+        #from simtk import unit
 
 
-        if output_units is None:
-            output_units = {}
-
-        output_units_tuples = {}
+        #output_units = {}
 
         # Make a list of all attribs that should be included in the
         # returned dict (call list() to make a copy)
@@ -297,27 +312,27 @@ class ParameterType(object):
         # If attribs_to_return is ordered here, that will effectively be an informal output ordering
         for attrib_name in attribs_to_return:
             attrib_value = self.__getattribute__(attrib_name)
-            if isinstance(attrib_value, unit.Quantity):
-                # If the user specified a preferred output unit for this attrib
-                if attrib_name in output_units:
-                    # convert attrib_val to the desired unit
-                    output_unit = output_units[attrib_name]
-                    # ser_result is a dict of {'unitless_value': val, 'unit': simtk.unit.Unit}
-                    ser_result = serialize_quantity(attrib_value, output_unit=output_unit)
+            #if isinstance(attrib_value, unit.Quantity):
+            #    # If the user specified a preferred output unit for this attrib
+            #    if attrib_name in output_units:
+            #        # convert attrib_val to the desired unit
+            #        output_unit = output_units[attrib_name]
+            #        # ser_result is a dict of {'unitless_value': val, 'unit': simtk.unit.Unit}
+            #        ser_result = serialize_quantity(attrib_value, output_unit=output_unit)
+            #
+            #    # If the user didn't specify a preferred output unit for this attrib
+            #    else:
+            #        # Returns a dict of {'unitless_value': val, 'unit': simtk.unit.Unit}
+            #        ser_result = serialize_quantity(attrib_value)
+            #        # Since a preferred output unit wasn't specified, make this it.
+            #        output_units[attrib_name + '_unit'] = ser_result['unit']
+            #    smirnoff_dict[attrib_name] = ser_result['unitless_value']
+            #
+            ## If it's not a Quantity, just add the raw value to the dict
+            #else:
+            smirnoff_dict[attrib_name] = attrib_value
 
-                # If the user didn't specify a preferred output unit for this attrib
-                else:
-                    # Returns a dict of {'unitless_value': val, 'unit': simtk.unit.Unit}
-                    ser_result = serialize_quantity(attrib_value)
-                    # Since a preferred output unit wasn't specified, make this it.
-                output_units_tuples[attrib_name + '_unit'] = ser_result['unit']
-                smirnoff_dict[attrib_name] = ser_result['unitless_value']
-
-            # If it's not a Quantity, just add the raw value to the dict
-            else:
-                smirnoff_dict[attrib_name] = attrib_value
-
-        return smirnoff_dict, output_units_tuples
+        return smirnoff_dict
 
 # TODO: Should we have a parameter handler registry?
 
@@ -352,12 +367,9 @@ class ParameterHandler(object):
 
 
     # TODO: Do we need to store the parent forcefield object?
-    def __init__(self, forcefield, **kwargs):
+    def __init__(self, **kwargs):
         """
 
-        Parameters
-        ----------
-        forcefield : openforcefield.typing.engines.smirnoff.ForceField
 
         """
         #self._forcefield = forcefield  # the ForceField object that this ParameterHandler is registered with
@@ -368,6 +380,8 @@ class ParameterHandler(object):
         for key, val in kwargs.items():
             attr_name = '_' + key
             setattr(self, attr_name, val)
+
+
 
     # TODO: Do we need to return these, or can we handle this internally
     @property
@@ -523,9 +537,14 @@ class ParameterHandler(object):
         """
         pass
 
-    def to_smirnoff_data(self):
+    def to_dict(self, return_cosmetic_attributes=False):
         """
         Convert this ParameterHandler to an OrderedDict, compliant with the SMIRNOFF data spec.
+
+        Parameters
+        ----------
+        return_cosmetic_attributes : bool, optional. Default = False.
+            Whether to return non-spec attributes of the parameters in this ParameterHandler.
 
         Returns
         -------
@@ -539,8 +558,11 @@ class ParameterHandler(object):
         tag_data[self._VALENCE_TYPE] = parameter_list_data
 
         # Populate handler attributes
-        tag_data = self.header_attributes
+        header_attributes_to_add = self._HEADER_ATTRIBS
+        for header_attribute in header_attributes_to_add:
+            tag_data[header_attribute] = getattr(self, header_attribute)
         tag_data.update(attached_units)
+        # TODO: Cosmetic header attributes?
 
         smirnoff_data = OrderedDict()
         smirnoff_data[self._TAGNAME] = tag_data

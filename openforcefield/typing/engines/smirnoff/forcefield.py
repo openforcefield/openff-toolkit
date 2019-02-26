@@ -28,7 +28,7 @@ from collections import OrderedDict
 
 from simtk import openmm, unit
 
-from openforcefield.utils import all_subclasses, attach_units, extract_serialized_units_from_dict, separate_unit_bearing_quantities
+from openforcefield.utils import all_subclasses, attach_units, extract_serialized_units_from_dict
 from openforcefield.topology import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
