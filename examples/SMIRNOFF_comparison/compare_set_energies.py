@@ -1,12 +1,14 @@
 #!/bin/env python
+
+"""
+Cross-check energies of molecules from AlkEthOH set using SMIRNOFF xml file
+versus energies from AMBER .prmtop and .crd files (parm@frosst params).
+"""
+
 import os
 import glob
 
-
-# Cross-check energies of molecules from AlkEthOH set using SMIRNOFF xml file
-# versus energies from AMBER .prmtop and .crd files (parm@frosst params)
-
-#datapath = './AlkEthOH_tripos/AlkEthOH_chain_filt1'
+# datapath = './AlkEthOH_tripos/AlkEthOH_chain_filt1'
 # datapath = './AlkEthOH_tripos/AlkEthOH_rings_filt1'
 datapath = './AlkEthOH_tripos/AlkEthOH_test_filt1'
 
@@ -46,7 +48,6 @@ for mol_idx, mol_filepath in enumerate(mol_filepaths):
     from openforcefield.tests.utils import FailedParameterComparisonError, FailedEnergyComparisonError
     try:
         # We ignore the charges as they are not included in the force field.
-        # TODO: Reactivate this check when we'll be able to load charges from the file.
         energies = compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath,
                                           forcefield, molecule,
                                           ignore_charges=True)
