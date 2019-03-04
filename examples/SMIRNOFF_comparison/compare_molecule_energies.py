@@ -1,8 +1,11 @@
-#!/bin/env python
-import os
+#!/usr/bin/env python
 
-# Cross-check energies of molecules from AlkEthOH set using SMIRNOFF xml file
-# versus energies from AMBER .prmtop and .crd files (parm@frosst params)
+"""
+Cross-check energies of molecules from AlkEthOH set using SMIRNOFF xml file
+versus energies from AMBER .prmtop and .crd files (parm@frosst params).
+"""
+
+import os
 
 # datapath = './AlkEthOH_tripos/AlkEthOH_chain_filt1'
 # datapath = './AlkEthOH_tripos/AlkEthOH_rings_filt1'

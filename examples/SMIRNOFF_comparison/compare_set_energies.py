@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 
 """
 Cross-check energies of molecules from AlkEthOH set using SMIRNOFF xml file
