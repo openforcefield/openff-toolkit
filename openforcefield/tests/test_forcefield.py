@@ -18,10 +18,9 @@ import os
 
 from simtk import unit
 import numpy as np
-from numpy.testing import assert_almost_equal
 
 import pytest
-from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
+from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
 
 from openforcefield.utils import get_data_filename
 
@@ -256,27 +255,30 @@ class TestForceField():
         assert serialized_1 == serialized_2
 
 
-    @pytest.mark.skipif( not(OpenEyeToolkitWrapper.toolkit_is_available()), reason='Test requires OE toolkit')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='Test requires OE toolkit')
     def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
         The results of both should be identical.
         """
-        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper])
         from simtk.openmm import app
         from openforcefield.topology import Topology
         from simtk.openmm import XmlSerializer
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper])
         forcefield = ForceField('smirnoff99Frosst.offxml')
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
+
         # Load the unique molecules with one atom ordering
-        molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.sdf'))]
+        molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.mol2'))]
         topology1 = Topology.from_openmm(pdbfile.topology,
                                          unique_molecules=molecules1,
                                          )
         omm_system1 = forcefield.create_openmm_system(topology1,
                                                       toolkit_registry=toolkit_registry)
+
         # Load the unique molecules with a different atom ordering
-        molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.sdf'))]
+        molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.mol2'))]
         topology2 = Topology.from_openmm(pdbfile.topology,
                                          unique_molecules=molecules2,
                                          )
