@@ -15,7 +15,9 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 #=============================================================================================
 
 
-from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType, BondHandler, SMIRNOFFSpecError
+from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType, BondHandler, \
+    AngleHandler, ConstraintHandler, ProperTorsionHandler, ImproperTorsionHandler, \
+    ToolkitAM1BCCHandler, vdWHandler, SMIRNOFFSpecError
 from openforcefield.utils import detach_units
 
 import pytest
@@ -175,6 +177,21 @@ class TestParameterType:
                            ) as context:
             param_dict_unitless, attached_units = detach_units(param_dict, output_units = {'length': unit.calorie})
 
+
+    def test_read_writeoptional_parameter_attribute(self):
+        """
+        Test ParameterTypes' ability to store and write out optional attributes passed to __init__()
+        """
+        from simtk import unit
+
+        p1 = BondHandler.BondType(smirks='[*:1]',
+                                  length=1.02*unit.angstrom,
+                                  k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                                  id='b1'
+                                  )
+        param_dict= p1.to_dict()
+        assert ('id', 'b1') in param_dict.items()
+
     def test_read_write_cosmetic_parameter_attribute(self):
         """
         Test ParameterTypes' ability to store and write out cosmetic attributes passed to __init__()
@@ -203,7 +220,7 @@ class TestParameterType:
                                   permit_cosmetic_attributes=True
                                   )
         param_dict = p1.to_dict(return_cosmetic_attributes=False)
-        assert ('pilot', 'alice') not in param_dict
+        assert ('pilot', 'alice') not in param_dict.items()
 
     def test_error_cosmetic_parameter_attribute(self):
         """
@@ -219,4 +236,107 @@ class TestParameterType:
                                       permit_cosmetic_attributes=False
                                       )
 
+    def test_single_term_proper_torsion(self):
+        """
+        Test creation and serialization of a single-term proper torsion
+        """
+        from simtk import unit
+
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1=5 * unit.kilocalorie_per_mole
+                                                    )
+        print(p1.k)
+        param_dict = p1.to_dict()
+        print(param_dict)
+        assert ('k1', 5 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ('phase1', 30 * unit.degree) in param_dict.items()
+        assert ('periodicity1', 2) in param_dict.items()
+
+    def test_single_term_proper_torsion_w_idivf(self):
+        """
+        Test creation and serialization of a single-term proper torsion
+        """
+        from simtk import unit
+
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1=5 * unit.kilocalorie_per_mole,
+                                                    idivf1=4
+                                                    )
+
+        param_dict = p1.to_dict()
+        assert ('k1', 5 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ('phase1', 30 * unit.degree) in param_dict.items()
+        assert ('periodicity1', 2) in param_dict.items()
+        assert ('idivf1', 4) in param_dict.items()
+
+
+    def test_multi_term_proper_torsion(self):
+        """
+        Test creation and serialization of a multi-term proper torsion
+        """
+        from simtk import unit
+
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1=5 * unit.kilocalorie_per_mole,
+                                                    phase2=31 * unit.degree,
+                                                    periodicity2=3,
+                                                    k2=6 * unit.kilocalorie_per_mole,
+                                                    )
+        print(p1.k)
+        param_dict = p1.to_dict()
+        print(param_dict)
+        assert ('k1', 5 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ('phase1', 30 * unit.degree) in param_dict.items()
+        assert ('periodicity1', 2) in param_dict.items()
+        assert ('k2', 6 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ('phase2', 31 * unit.degree) in param_dict.items()
+        assert ('periodicity2', 3) in param_dict.items()
+
+    def test_multi_term_proper_torsion_skip_index(self):
+        """
+        Test creation and serialization of a multi-term proper torsion where
+        the indices are not consecutive and a SMIRNOFFSpecError is raised
+        """
+        from simtk import unit
+
+        with pytest.raises(SMIRNOFFSpecError, match="Incompatible kwarg {'phase3': ") as context:
+            p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]',
+                                                        phase1=30 * unit.degree,
+                                                        periodicity1=2,
+                                                        k1=5 * unit.kilocalorie_per_mole,
+                                                        phase3=31 * unit.degree,
+                                                        periodicity3=3,
+                                                        k3=6 * unit.kilocalorie_per_mole,
+                                                        )
+
+    def test_multi_term_proper_torsion_bad_units(self):
+        """
+        Test creation and serialization of a multi-term proper torsion where
+        one of the terms has incorrect units
+        """
+        from simtk import unit
+
+        with pytest.raises(SMIRNOFFSpecError, match="constructor received kwarg phase2 with value 31 A,") as context:
+            p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]',
+                                                        phase1=30 * unit.degree,
+                                                        periodicity1=2,
+                                                        k1=5 * unit.kilocalorie_per_mole,
+                                                        phase2=31 * unit.angstrom,
+                                                        periodicity2=3,
+                                                        k2=6 * unit.kilocalorie_per_mole,
+                                                        )
+
+# test_multi_term_torsion_from_dict_bad_units
+# test_multi_term_torsion_from_dict_default_idivf
+# test_multi_term_torsion_from_dict_custom_idivf
+
 # Test multi_term_torsion to_dict
+# test_optional_attribs
+# test_default_idivf
+# test_non_default_idivf
