@@ -10,6 +10,12 @@ Tests for molecular topology representations
 At least one supported cheminformatics toolkit must be installed to run these tests.
 Only the tests applicable to that toolkit will be run.
 
+TODO:
+- Add tests comparing RDKit and OpenEye aromaticity perception
+- Right now, the test database of TestMolecule is read from mol2, requiring the OE
+  toolkit. Find a different test set that RDKit can read, or make a database of
+  serialized OFFMols.
+
 """
 
 #=============================================================================================
@@ -17,33 +23,28 @@ Only the tests applicable to that toolkit will be run.
 #=============================================================================================
 
 import pickle
-from functools import partial
-from unittest import TestCase
-from numpy.testing import assert_almost_equal
 from tempfile import NamedTemporaryFile
-from simtk import unit
-import pytest
+from unittest import TestCase
+
 import numpy as np
-from openforcefield import utils, topology
-from openforcefield.topology.molecule import FrozenMolecule, Molecule, Atom, Bond, BondChargeVirtualSite, MonovalentLonePairVirtualSite, DivalentLonePairVirtualSite, TrivalentLonePairVirtualSite
-from openforcefield.utils.toolkits import DEFAULT_CHARGE_MODEL, ALLOWED_CHARGE_MODELS
+import pytest
+from simtk import unit
+
+from openforcefield.topology.molecule import Molecule, Atom
 from openforcefield.utils import get_data_filename
 # TODO: Will the ToolkitWrapper allow us to pare that down?
-#from openforcefield.utils import RDKIT_UNAVAILABLE, OPENEYE_UNAVAILABLE, SUPPORTED_TOOLKITS, TOOLKIT_PRECEDENCE, SUPPORTED_FILE_FORMATS
-from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry, BASIC_CHEMINFORMATICS_TOOLKITS
+from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
 
 
 #=============================================================================================
-# TESTS
+# TEST UTILITIES
 #=============================================================================================
 
-# TODO: Generalize this to instead catch ToolkitWrapper exceptions in case the toolkit capability is unavailable
 _OPENEYE_UNAVAILABLE_MESSAGE = 'requires the OpenEye toolkit'
 _RDKIT_UNAVAILABLE_MESSAGE = 'requires RDKit'
 
-# TODO: Add tests comparing RDKit and OpenEye aromaticity perception
 
-def assert_molecule_is_equal(molecule1, molecule2, msg):
+def assert_molecule_is_equal(molecule1, molecule2, msg, check_smiles=True):
     """Compare whether two Molecule objects are equal
 
     Parameters
@@ -52,29 +53,86 @@ def assert_molecule_is_equal(molecule1, molecule2, msg):
         Molecules to be compared
     msg : str
         Message to include if molecules fail to match.
+    check_smiles : bool, optional
+        If True, the SMILES representation of the two molecules is
+        checked in addition to their graphs. Default is True.
 
     """
     if not(molecule1.is_isomorphic(molecule2)):
-        raise Exception(msg)
+        raise AssertionError(msg)
 
 
-# Skipping this test -- The cheminformatics toolkit test is run inside of toolkits.py
-@pytest.mark.skip
-def test_cheminformatics_toolkit_is_installed():
-    """Ensure that at least one supported cheminformatics toolkit is installed."""
-    if not(any(tk.toolkit_is_available for tk in toolkits.BASIC_CHEMINFORMATICS_TOOLKITS)):
+def is_four_memebered_ring_torsion(torsion):
+    """Check that three atoms in the given torsion form a four-membered ring."""
+    # Push a copy of the first and second atom in the end to make the code simpler.
+    torsion = list(torsion) + [torsion[0], torsion[1]]
 
-        msg = 'No supported cheminformatics toolkits are installed. Please install a supported toolkit:\n'
-        for tk in basic_cheminf_toolkits:
-            msg += '{} : {}\n'.format(tk._toolkit_name, tk._toolkit_installation_instructions)
+    is_four_membered_ring = True
+    for i in range(4):
+        # The atom is bonded to the next one.
+        is_four_membered_ring &= torsion[i].is_bonded_to(torsion[i+1])
+        # The atom is not bonded to the atom on its diagonal.
+        is_four_membered_ring &= not torsion[i].is_bonded_to(torsion[i+2])
 
-        raise Exception(msg)
+    return is_four_membered_ring
 
-# TODO: Right now, the test database is read from mol2, requiring the OE toolkit. Find a different test set that RDKit
-# can read, or make a database of serialized OFFMols
 
-@pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason="OpenEye Toolkit is not available")
+def is_three_memebered_ring_torsion(torsion):
+    """Check that three atoms in the given torsion form a three-membered ring.
+
+    In order to be 4 atoms with a three-membered ring, there must be
+    1) A central atom connected to all other atoms.
+    2) An atom outside the ring connected exclusively to the central atom.
+    3) Two atoms in the ring connected to the central atom and to each other.
+
+    """
+    # A set of atom indices for the atoms in the torsion.
+    torsion_atom_indices = set(a.molecule_atom_index for a in torsion)
+
+    # Collect all the bonds involving exclusively atoms in the torsion.
+    bonds_by_atom_idx = {i: set() for i in torsion_atom_indices}
+    for atom in torsion:
+        for bond in atom.bonds:
+            # Consider the bond only if both atoms are in the torsion.
+            if (bond.atom1_index in torsion_atom_indices and
+                        bond.atom2_index in torsion_atom_indices):
+                bonds_by_atom_idx[bond.atom1_index].add(bond.atom2_index)
+                bonds_by_atom_idx[bond.atom2_index].add(bond.atom1_index)
+
+    # Find the central atom, which is connected to all other atoms.
+    atom_indices = [i for i in torsion_atom_indices if len(bonds_by_atom_idx[i]) == 3]
+    if len(atom_indices) != 1:
+        return False
+    central_atom_idx = atom_indices[0]
+
+    # Find the atom outside the ring.
+    atom_indices = [i for i in torsion_atom_indices if len(bonds_by_atom_idx[i]) == 1]
+    if len(atom_indices) != 1 or central_atom_idx not in bonds_by_atom_idx[atom_indices[0]]:
+        return False
+    outside_atom_idx = atom_indices[0]
+
+    # Check that the remaining two atoms are non-central atoms in the membered ring.
+    atom1, atom2 = [i for i in torsion_atom_indices if i not in [central_atom_idx, outside_atom_idx]]
+    # The two atoms are bonded to each other.
+    if atom2 not in bonds_by_atom_idx[atom1] or atom1 not in bonds_by_atom_idx[atom2]:
+        return False
+    # Check that they are both bonded to the central atom and none other.
+    for atom_idx in [atom1, atom2]:
+        if (central_atom_idx not in bonds_by_atom_idx[atom_idx] or
+                    len(bonds_by_atom_idx[atom_idx]) != 2):
+            return False
+
+    # This is a torsion including a three-membered ring.
+    return True
+
+
+#=============================================================================================
+# TESTS
+#=============================================================================================
+
+@pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason=_OPENEYE_UNAVAILABLE_MESSAGE)
 class TestMolecule(TestCase):
+
     @classmethod
     def setUpClass(cls):
         """
@@ -87,7 +145,6 @@ class TestMolecule(TestCase):
         molecules = Molecule.from_file(filename, exception_if_undefined_stereo=False)
         molecules = [mol for mol in molecules if not(mol is None)]
         cls.test_molecules = molecules
-
 
     def setUp(self):
         # TODO: Serialize the offmols instead so that we can run this test without toolkits
@@ -252,28 +309,9 @@ class TestMolecule(TestCase):
             molecule_copy = Molecule(molecule)
             assert molecule_copy == molecule
 
-    @pytest.mark.skipif( not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
-    def test_create_openeye(self):
-        """Test creation of a molecule from an OpenEye oemol"""
-        #known_failures = ['ZINC05964684', 'ZINC05885163', 'ZINC05543156', 'ZINC17211981',
-        #                  'ZINC17312986', 'ZINC06424847', 'ZINC04963126', ]
-        known_failures = ['DrugBank_5418', 'DrugBank_3930', 'DrugBank_1634', 'DrugBank_1962', 'DrugBank_5043',
-                          'DrugBank_2519']
-        toolkit_wrapper = OpenEyeToolkitWrapper()
-        for index, molecule in enumerate(self.molecules):
-            if molecule.name in known_failures:
-                continue
-            oemol = molecule.to_openeye()
-            molecule_copy = Molecule(oemol)
-            mol_smi = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-            mol_copy_smi = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
-            assert mol_smi == mol_copy_smi
-
-
-    @pytest.mark.skipif( not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason=_RDKIT_UNAVAILABLE_MESSAGE)
     def test_create_rdkit(self):
         """Test creation of a molecule from an RDKit rdmol"""
-        #toolkit_wrapper = OpenEyeToolkitWrapper()
         toolkit_wrapper = RDKitToolkitWrapper()
         # Using ZINC test set
         #known_failures = ['ZINC17060065', 'ZINC16448882', 'ZINC15772239','ZINC11539132',
@@ -342,7 +380,6 @@ class TestMolecule(TestCase):
         for i in range(nmolecules):
             for j in range(i, min(i+3, nmolecules)):
                 assert (self.molecules[i] == self.molecules[j]) == (i == j)
-
 
     def test_to_networkx(self):
         """Test generation of NetworkX graphs"""
@@ -588,12 +625,18 @@ class TestMolecule(TestCase):
         """Test propers property"""
         for molecule in self.molecules:
             for proper in molecule.propers:
-                assert proper[0].is_bonded_to(proper[1])
-                assert proper[1].is_bonded_to(proper[2])
-                assert proper[2].is_bonded_to(proper[3])
-                assert not(proper[0].is_bonded_to(proper[2]))
-                assert not(proper[0].is_bonded_to(proper[3]))
-                assert not(proper[1].is_bonded_to(proper[3]))
+                # The bonds should be in order 0-1-2-3 unless the
+                # atoms form a three- or four-membered ring.
+                is_chain = proper[0].is_bonded_to(proper[1])
+                is_chain &= proper[1].is_bonded_to(proper[2])
+                is_chain &= proper[2].is_bonded_to(proper[3])
+                is_chain &= not proper[0].is_bonded_to(proper[2])
+                is_chain &= not proper[0].is_bonded_to(proper[3])
+                is_chain &= not proper[1].is_bonded_to(proper[3])
+
+                assert (is_chain or
+                        is_three_memebered_ring_torsion(proper) or
+                        is_four_memebered_ring_torsion(proper))
 
     def test_impropers(self):
         """Test impropers property"""
@@ -603,18 +646,25 @@ class TestMolecule(TestCase):
                 assert improper[1].is_bonded_to(improper[2])
                 assert improper[1].is_bonded_to(improper[3])
 
-                # I think it's OK if two substituents of the central atom are bound to each other
-                #assert not((improper[0].is_bonded_to(improper[2])) or
-                #           (improper[0].is_bonded_to(improper[3])) or
-                #           (improper[2].is_bonded_to(improper[3])))
-                
-
+                # The non-central atoms can be connected only if
+                # the improper atoms form a three-membered ring.
+                is_not_cyclic = not((improper[0].is_bonded_to(improper[2])) or
+                                    (improper[0].is_bonded_to(improper[3])) or
+                                    (improper[2].is_bonded_to(improper[3])))
+                assert is_not_cyclic or is_three_memebered_ring_torsion(improper)
 
     def test_torsions(self):
         """Test torsions property"""
         for molecule in self.molecules:
-            assert frozenset(molecule.torsions) == frozenset(set(molecule.propers) | set(molecule.impropers))
-            assert len(molecule.propers & molecule.impropers) == 0
+            # molecule.torsions should be exactly equal to the union of propers and impropers.
+            assert set(molecule.torsions) == set(molecule.propers) | set(molecule.impropers)
+
+            # The intersection of molecule.propers and molecule.impropers should be largely null.
+            # The only exception is for molecules containing 3-membered rings (e.g., DrugBank_5514).
+            common_torsions = molecule.propers & molecule.impropers
+            if len(common_torsions) > 0:
+                for torsion in common_torsions:
+                    assert is_three_memebered_ring_torsion(torsion)
 
     def test_total_charge(self):
         """Test total charge"""
@@ -708,21 +758,20 @@ class TestMolecule(TestCase):
         assert molecule.name == name
 
     # TODO: This should be a toolkit test
-    #@pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason=_OPENEYE_UNAVAILABLE_MESSAGE)
     def test_iupac_roundtrip(self):
         """Test IUPAC conversion"""
-        known_failures = ['DrugBank_5418', 'DrugBank_390', 'DrugBank_5737', 'DrugBank_3332',
-                          'DrugBank_5902', 'DrugBank_810', 'DrugBank_3622', 'DrugBank_977',
-                          'DrugBank_3726', 'DrugBank_3844', 'DrugBank_1212', 'DrugBank_6304',
-                          'DrugBank_6305', 'DrugBank_3930', 'DrugBank_6329', 'DrugBank_6355',
-                          'DrugBank_6401', 'DrugBank_6509', 'DrugBank_1634', 'DrugBank_6647',
-                          'DrugBank_4316', 'DrugBank_4346', 'DrugBank_4584', 'DrugBank_4593',
-                          'DrugBank_1962', 'DrugBank_7124', 'DrugBank_4778', 'DrugBank_2148',
-                          'DrugBank_2178', 'DrugBank_2186', 'DrugBank_2208', 'DrugBank_2210',
-                          'DrugBank_4959', 'DrugBank_2397', 'DrugBank_5043', 'DrugBank_5076',
-                          'DrugBank_2519', 'DrugBank_2538', 'DrugBank_2543', 'DrugBank_5176',
-                          'DrugBank_2592', 'DrugBank_2642', 'DrugBank_2651']
+        known_failures = ['DrugBank_390', 'DrugBank_810', 'DrugBank_977', 'DrugBank_1212',
+                          'DrugBank_1634', 'DrugBank_1962', 'DrugBank_2148', 'DrugBank_2178',
+                          'DrugBank_2186', 'DrugBank_2208', 'DrugBank_2210', 'DrugBank_2397',
+                          'DrugBank_2519', 'DrugBank_2538', 'DrugBank_2543', 'DrugBank_2592',
+                          'DrugBank_2642', 'DrugBank_2651', 'DrugBank_3332', 'DrugBank_3622',
+                          'DrugBank_3726', 'DrugBank_3844', 'DrugBank_3930', 'DrugBank_4316',
+                          'DrugBank_4346', 'DrugBank_4584', 'DrugBank_4593', 'DrugBank_4778',
+                          'DrugBank_4959', 'DrugBank_5043', 'DrugBank_5076', 'DrugBank_5176',
+                          'DrugBank_5418', 'DrugBank_5737', 'DrugBank_5902', 'DrugBank_6304',
+                          'DrugBank_6305', 'DrugBank_6329', 'DrugBank_6355', 'DrugBank_6401',
+                          'DrugBank_6509', 'DrugBank_6647', 'DrugBank_7124']
 
         for index, molecule in enumerate(self.molecules):
             if molecule.name in known_failures:
@@ -745,6 +794,7 @@ class TestMolecule(TestCase):
         # TODO: Test all file capabilities; the current test is minimal
         # TODO: This makes no sense as implemented (don't know which toolkit it uses for what). Make this separate tests in test_toolkits
         for molecule in self.molecules:
+
             # Write and read mol2 file
             with NamedTemporaryFile(suffix='.mol2', delete=False) as iofile:
                 molecule.to_file(iofile.name, 'MOL2')
@@ -752,6 +802,7 @@ class TestMolecule(TestCase):
                 assert molecule == molecule2
                 # TODO: Test to make sure properties are preserved?
                 os.unlink(iofile.name)
+
             # Write and read SDF file
             with NamedTemporaryFile(suffix='.sdf', delete=False) as iofile:
                 molecule.to_file(iofile.name, 'SDF')
@@ -759,29 +810,62 @@ class TestMolecule(TestCase):
                 assert molecule == molecule2
                 # TODO: Test to make sure properties are preserved?
                 os.unlink(iofile.name)
+
             # Write and read PDB file
             with NamedTemporaryFile(suffix='.pdb', delete=False) as iofile:
                 molecule.to_file(iofile.name, 'PDB')
                 # NOTE: We can't read pdb files and expect chemical information to be preserved
                 os.unlink(iofile.name)
 
-    #@pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason=_OPENEYE_UNAVAILABLE_MESSAGE)
     def test_oemol_roundtrip(self):
-        """Test creation of Molecule object from OpenEye OEMol
-        """
-        known_failures = ['DrugBank_5418', 'DrugBank_3930', 'DrugBank_1634', 'DrugBank_1962', 'DrugBank_5043',
-                          'DrugBank_2519']
-        for molecule in self.molecules:
-            if molecule.name in known_failures:
-                continue
-            oemol = molecule.to_openeye()
-            molecule2 = Molecule.from_openeye(oemol)
-            assert_molecule_is_equal(molecule, molecule2, "Molecule.to_openeye()/from_openeye() round trip failed")
-            molecule3 = Molecule(oemol)
-            assert_molecule_is_equal(molecule, molecule3, "Molecule(oemol) constructor failed")
+        """Test that Molecule creation from/conversion to OpenEye OEMol is consistent."""
+        from openforcefield.utils.toolkits import UndefinedStereochemistryError
 
-    @pytest.mark.skip(reason="Takes too long")
+        # Known failures raise an UndefinedStereochemistryError, but
+        # the round-trip SMILES representation with the OpenEyeToolkit
+        # doesn't seem to be affected.
+
+        # ZINC test set known failures.
+        # known_failures = {'ZINC05964684', 'ZINC05885163', 'ZINC05543156', 'ZINC17211981',
+        #                   'ZINC17312986', 'ZINC06424847', 'ZINC04963126'}
+
+        # DrugBank test set known failures.
+        known_failures = {'DrugBank_1634', 'DrugBank_1700', 'DrugBank_1962',
+                          'DrugBank_2519', 'DrugBank_2987', 'DrugBank_3502',
+                          'DrugBank_3930', 'DrugBank_4161', 'DrugBank_4162',
+                          'DrugBank_5043', 'DrugBank_5418', 'DrugBank_6531'}
+
+        error_messages = [
+            "Molecule.to_openeye()/from_openeye() round trip failed",
+            "Molecule(oemol) constructor failed"
+        ]
+
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        for molecule in self.molecules:
+            oemol = molecule.to_openeye()
+            molecule_copies = []
+
+            # If this is a known failure, check that it raises UndefinedStereochemistryError
+            # and proceed with the test ignoring it.
+            if molecule.name in known_failures:
+                with pytest.raises(UndefinedStereochemistryError):
+                    Molecule(oemol)
+                molecule_copies.append(Molecule.from_openeye(oemol, exception_if_undefined_stereo=False))
+            else:
+                molecule_copies.append(Molecule.from_openeye(oemol, exception_if_undefined_stereo=True))
+                molecule_copies.append(Molecule(oemol))
+
+            molecule_smiles = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+            for molecule_copy, error_msg in zip(molecule_copies, error_messages):
+                # Check that the original and the copied molecules have the same SMILES representation.
+                molecule_copy_smiles = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
+                assert molecule_smiles == molecule_copy_smiles
+
+                # Check that the two topologies are isomorphic.
+                assert_molecule_is_equal(molecule, molecule_copy, error_msg)
+
+    @pytest.mark.slow
     def test_compute_partial_charges(self):
         """Test computation/retrieval of partial charges"""
         # TODO: Test only one molecule for speed?
@@ -824,9 +908,7 @@ class TestMolecule(TestCase):
                     charges2 = molecule._partial_charges
                     assert (np.allclose(charges1, charges2, atol=0.002))
 
-    #
-    #@pytest.mark.skipif(OPENEYE_UNAVAILABLE, reason=_OPENEYE_UNAVAILABLE_MESSAGE)    
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason=_OPENEYE_UNAVAILABLE_MESSAGE)
     def test_assign_fractional_bond_orders(self):
         """Test assignment of fractional bond orders
         """

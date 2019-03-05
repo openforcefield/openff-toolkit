@@ -151,6 +151,7 @@ if RDKitToolkitWrapper.toolkit_is_available() and AmberToolsToolkitWrapper.toolk
     toolkit_registries.append((ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]),
                                'RDKit+AmberTools'))
 
+
 class TestForceField():
     """Test the ForceField class"""
 
@@ -205,8 +206,7 @@ class TestForceField():
 
         omm_system = forcefield.create_openmm_system(topology)
 
-    # This test takes too long with the initial implementation of the toolkit
-    @pytest.mark.skip
+    @pytest.mark.slow
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_large_system(self, toolkit_registry, registry_description):
         from simtk.openmm import app
@@ -293,9 +293,9 @@ class TestForceField():
 
         assert serialized_1 == serialized_2
 
-    # We will not support going directly to ParmEd for now. We will instead feed OpenMM System objects to ParmEd for
-    # further processing.
-    @pytest.mark.skip
+    @pytest.mark.skip(reason="We will not support going directly to ParmEd for now."
+                             "We will instead feed OpenMM System objects to ParmEd "
+                             "for further processing.")
     def test_parameterize_ethanol_to_parmed(self):
         from simtk.openmm import app
         from openforcefield.topology import Topology
