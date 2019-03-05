@@ -39,7 +39,7 @@ import lxml.etree as etree
 from simtk import openmm, unit
 from simtk.openmm.app import element as elem
 
-from openforcefield.utils import detach_units, attach_units, unit_to_string, string_to_unit
+from openforcefield.utils import detach_units, attach_units, unit_to_string, string_to_unit, extract_serialized_units_from_dict
 from openforcefield.topology import Topology, ValenceDict, ImproperDict
 from openforcefield.topology import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
@@ -156,14 +156,13 @@ class ParameterList(list):
         # Fall back to traditional access
         return list.__contains__(self, item)
 
-    def to_list(self, output_units=None, return_cosmetic_attributes=False):
+    def to_list(self, return_cosmetic_attributes=False):
         """
         Render this ParameterList to a normal list, serializing each ParameterType-derived object in it.
 
         Parameters
         ----------
-        output_units : dict[str : simtk.unit.Unit], optional. Default = None
-            A mapping from the ParameterType attribute name to the output unit its value should be converted to.
+
         return_cosmetic_attributes : bool, optional. default = False
             Whether to return non-spec attributes of each ParameterType-derived object.
 
@@ -176,24 +175,24 @@ class ParameterList(list):
         """
 
 
-        smirnoff_list = list()
+        parameter_list = list()
 
         # If output_units is None, initialize it as an empty dict.
         # It will be populated as ParameterTypes are serialized.
-        if output_units is None:
-            output_units = dict()
+        #if output_units is None:
+        #    output_units = dict()
 
         # Iterate backwards over the list so that we get units from the last-read
         # parameters first, and convert subsequent parameters to those units.
-        for parameter in self[::-1]:
+        for parameter in self:
             parameter_dict = parameter.to_dict(return_cosmetic_attributes=return_cosmetic_attributes)
-            parameter_dict_unitless, attached_units = detach_units(parameter_dict, output_units)
-            smirnoff_list.append(parameter_dict_unitless)
-            output_units.update(attached_units)
+            # parameter_dict_unitless, attached_units = detach_units(parameter_dict, output_units)
+            parameter_list.append(parameter_dict)
+            # output_units.update(attached_units)
 
         # Reverse the order of the list (since it was serialized backwards)
-        smirnoff_list.reverse()
-        return smirnoff_list, output_units
+        #smirnoff_list.reverse()
+        return parameter_list
 
 
 
@@ -203,16 +202,16 @@ class ParameterType(object):
     Base class for SMIRNOFF parameter types.
 
     """
-
-    _VALENCE_TYPE = None  # ChemicalEnvironment valence type for checking SMIRKS is conformant
     # This list will be used for validating input and detecting cosmetic attributes.
-    _SMIRNOFF_ATTRIBUTES = ['smirks'] # Attributes expected per the SMIRNOFF spec.
-
+    _VALENCE_TYPE = None  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+    _SMIRNOFF_ATTRIBS = ['smirks'] # Attributes expected per the SMIRNOFF spec.
+    _REQUIRE_UNITS = {} # A dict of attribs which will be checked for unit compatibility
     # TODO: Make sure that this doesn't get defined at the class level
-    _COSMETIC_ATTRIBUTES = [] # A list that may be populated to record the cosmetic
-                              # attributes read from a SMIRNOFF data source
-    _OPTIONAL_SPEC_ATTRIBUTES = ['id', 'parent_id'] # Attributes in the SMIRNOFF spec that may
+    _OPTIONAL_ATTRIBS = ['id', 'parent_id'] # Attributes in the SMIRNOFF spec that may
                                                     # be present but have no impact on performance
+    _INDEXED_ATTRIBS = []  # list of attribs that will have consecutive numerical suffixes starting at 1
+
+
 
 
 
@@ -232,23 +231,71 @@ class ParameterType(object):
             Whether to store non-spec kwargs as "cosmetic attributes", which can be accessed and written out.
 
         """
-        # TODO: Should this be defined here?
-        _COSMETIC_ATTRIBUTES = []
+        import openforcefield.utils.toolkits
+
+        self._COSMETIC_ATTRIBS = []  # A list that may be populated to record the cosmetic
+        # attributes read from a SMIRNOFF data source
 
         if smirks is None:
             raise ValueError("'smirks' must be specified")
+
+        # TODO: Make better switch for toolkit registry
+        if openforcefield.utils.toolkits.OPENEYE_AVAILABLE:
+            toolkit = 'openeye'
+        elif openforcefield.utils.toolkits.RDKIT_AVAILABLE:
+            toolkit = 'rdkit'
+        ChemicalEnvironment.validate(
+            smirks, ensure_valence_type=self._VALENCE_TYPE, toolkit=toolkit)
+
         self._smirks = smirks
 
-        # Handle all unknown kwargs as cosmetic so we can write them back out
+
+        # First look for indexed attribs, removing them from kwargs as they're found
+        for unidx_key in self._INDEXED_ATTRIBS:
+            index = 1
+            idx_key = unidx_key+str(index)
+            if idx_key in kwargs:
+                setattr(self, unidx_key, list())
+            while idx_key in kwargs:
+                val = kwargs[idx_key]
+                if unidx_key in self._REQUIRE_UNITS:
+                    if not val.unit.is_compatible(self._REQUIRE_UNITS[unidx_key]):
+
+                        msg = "{} constructor received kwarg {} with value {}, " \
+                              "which is incompatible with expected unit {}".format(self.__class__,
+                                                                                   idx_key,
+                                                                                   val,
+                                                                                   self._REQUIRE_UNITS[unidx_key])
+                        raise SMIRNOFFSpecError(msg)
+                getattr(self, unidx_key).append(val)
+                del kwargs[idx_key]
+                index += 1
+                idx_key = unidx_key+str(index)
+
+
+
         for key, val in kwargs.items():
+            if key in self._REQUIRE_UNITS:
+                if not val.unit.is_compatible(self._REQUIRE_UNITS[key]):
+                    msg = "{} constructor received kwarg {} with value {}, " \
+                          "which is incompatible with expected unit {}".format(self.__class__,
+                                                                               key,
+                                                                               val,
+                                                                               self._REQUIRE_UNITS[key])
+                    raise SMIRNOFFSpecError(msg)
+
+            # Iterate through
             #attr_name = '_' + key
-            if key in self._SMIRNOFF_ATTRIBUTES:
+            if key in self._SMIRNOFF_ATTRIBS:
                 setattr(self, key, val)
-            if key in self._OPTIONAL_SPEC_ATTRIBUTES:
+
+            # If it's an optional attrib,
+            elif key in self._OPTIONAL_ATTRIBS:
                 setattr(self, key, val)
-                self._SMIRNOFF_ATTRIBUTES.append(key)
+
+            # Handle all unknown kwargs as cosmetic so we can write them back out
             elif permit_cosmetic_attributes:
-                self._COSMETIC_ATTRIBUTES.append(key)
+                self._COSMETIC_ATTRIBS.append(key)
                 setattr(self, key, val)
             else:
                 raise SMIRNOFFSpecError("Incompatible kwarg {} passed to {} constructor. If this is "
@@ -303,10 +350,12 @@ class ParameterType(object):
 
         # Make a list of all attribs that should be included in the
         # returned dict (call list() to make a copy)
-        attribs_to_return = list(self._SMIRNOFF_ATTRIBUTES)
+        attribs_to_return = list(self._SMIRNOFF_ATTRIBS)
+        attribs_to_return += [opt_attrib for opt_attrib in self._OPTIONAL_ATTRIBS if hasattr(self, opt_attrib)]
         if return_cosmetic_attributes:
-            attribs_to_return += self._COSMETIC_ATTRIBUTES
+            attribs_to_return += self._COSMETIC_ATTRIBS
 
+        print('attribs_to_return', attribs_to_return)
         # Start populating a dict of the attribs
         smirnoff_dict = OrderedDict()
         # If attribs_to_return is ordered here, that will effectively be an informal output ordering
@@ -330,7 +379,11 @@ class ParameterType(object):
             #
             ## If it's not a Quantity, just add the raw value to the dict
             #else:
-            smirnoff_dict[attrib_name] = attrib_value
+            if type(attrib_value) is list:
+                for idx, val in enumerate(attrib_value):
+                    smirnoff_dict[attrib_name + str(idx+1)] = val
+            else:
+                smirnoff_dict[attrib_name] = attrib_value
 
         return smirnoff_dict
 
@@ -349,37 +402,99 @@ class ParameterHandler(object):
 
     """
 
-    # TODO: Keep track of preferred units for parameter handlers.
-
-    # TODO: Remove these?
     _TAGNAME = None  # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
-    _VALENCE_TYPE = None  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
     _INFOTYPE = None  # container class with type information that will be stored in self._types
     _OPENMMTYPE = None  # OpenMM Force class (or None if no equivalent)
     _DEPENDENCIES = None  # list of ParameterHandler classes that must precede this, or None
-    _DEFAULTS = {}  # dict of attributes and their default values at tag-level
-    _KWARGS = []  # list of keyword arguments accepted by the force Handler on initialization
+    _REQUIRED_SPEC_ATTRIBS = []
+    _DEFAULT_SPEC_ATTRIBS = {}  # dict of tag-level attributes and their default values
+    _OPTIONAL_SPEC_ATTRIBS = []  # list of non-required attributes that can be defined on initialization
+    _INDEXED_ATTRIBS = []  # list of parameter attribs that will have consecutive numerical suffixes starting at 1
+    _REQUIRE_UNITS = {}  # dict of {header attrib : unit } for input checking
+    _KWARGS = [] # Kwargs to catch when create_force is called
     _SMIRNOFF_VERSION_INTRODUCED = 0.0  # the earliest version of SMIRNOFF spec that supports this ParameterHandler
     _SMIRNOFF_VERSION_DEPRECATED = None  # if deprecated, the first SMIRNOFF version number it is no longer used
-    _REQUIRE_UNITS = dict()  # dict of parameters that require units to be defined
-    _HEADER_ATTRIBS = [] # Expected section header attributes. ParameterType units are automatically added.
-    _OUTPUT_UNITS = None
 
 
-    # TODO: Do we need to store the parent forcefield object?
-    def __init__(self, **kwargs):
+    def __init__(self, permit_cosmetic_attributes=False, **kwargs):
+        """
+        Initialize a ParameterHandler, optionally with a list of parameters and other kwargs.
+
+        Parameters
+        ----------
+        permit_cosmetic_attributes : bool
+            Whether to accept non-spec kwargs
+        **kwargs : dict
+            The dict representation of the SMIRNOFF data source
+
         """
 
+        self._COSMETIC_ATTRIBS = []  # list of cosmetic header attributes to
+        # remember and optionally write out
 
-        """
-        #self._forcefield = forcefield  # the ForceField object that this ParameterHandler is registered with
-        self._parameters = ParameterList(
-        )  # list of ParameterType objects # TODO: Change to method accessor so we can access as list or dict
+        # Ensure that all required attribs are present
+        for reqd_attrib in self._REQUIRED_SPEC_ATTRIBS:
+            if not reqd_attrib in kwargs:
+                msg = "{} requires {} as a parameter during initialization, however this is not " \
+                      "provided. Defined kwargs are {}".format(self.__class__,
+                                                               reqd_attrib,
+                                                               list(kwargs.keys()))
+                raise SMIRNOFFSpecError(msg)
+
+        # list of ParameterType objects # TODO: Change to method accessor so we can access as list or dict
+        self._parameters = ParameterList()
+
         # Handle all the unknown kwargs as cosmetic so we can write them back out
-        # TODO: Should we do validation of these somehow (eg. with length_unit? It's already checked when constructing ParameterTypes)?
-        for key, val in kwargs.items():
-            attr_name = '_' + key
-            setattr(self, attr_name, val)
+        allowed_header_attribs = self._REQUIRED_SPEC_ATTRIBS + \
+                                 list(self._DEFAULT_SPEC_ATTRIBS.keys()) + \
+                                 self._OPTIONAL_SPEC_ATTRIBS
+
+        # Check for indexed attribs
+        for attrib_basename in self._INDEXED_ATTRIBS:
+            attrib_unit_key = attrib_basename + '_unit'
+
+            index = 1
+            attrib_w_index = '{}{}'.format(attrib_basename, index)
+            while attrib_w_index in kwargs:
+                # As long as we keep finding higher-indexed entries for
+                # this attrib, add them to the expected arguments
+                allowed_header_attribs.append(attrib_w_index)
+
+                # If there's a unit for this attrib, copy unit entries for each index instance
+                if attrib_unit_key in kwargs:
+                    kwargs[attrib_w_index+'_unit'] = kwargs[attrib_unit_key]
+
+        # Attach units to the handler kwargs, if applicable
+        unitless_kwargs, attached_units = extract_serialized_units_from_dict(kwargs)
+        smirnoff_data = attach_units(unitless_kwargs, attached_units)
+
+        # Add default values to smirnoff_data if they're not already there
+        for default_key, default_val in self.DEFAULT_SPEC_ATTRIBS.items():
+            if not (default_key in kwargs):
+                smirnoff_data[default_key] = default_val
+
+
+
+        for key, val in smirnoff_data.items():
+            # If we're reading the parameter list, iterate through and attach units to
+            # each parameter_dict, then use it to initialize a ParameterType
+            if key == self._TAGNAME:
+                for unitless_param_dict in val:
+                    param_dict = attach_units(unitless_param_dict, attached_units)
+                    new_parameter = self._INFOTYPE(**param_dict,
+                                                   permit_cosmetic_attributes=permit_cosmetic_attributes)
+                    self._parameters.append(new_parameter)
+                    #self.add_parameter(param_dict,
+                    #                   permit_cosmetic_attributes=permit_cosmetic_attributes)
+            elif key in allowed_header_attribs:
+                attr_name = '_' + key
+                setattr(self, attr_name, val)
+            elif permit_cosmetic_attributes:
+                self._COSMETIC_ATTRIBS.append(key)
+                attr_name = '_' + key
+                setattr(self, attr_name, val)
+
+
 
 
 
@@ -443,7 +558,6 @@ class ParameterHandler(object):
         parameter : dict
             The kwargs to pass to the ParameterHandler.INFOTYPE (a ParameterType) constructor
         """
-        import openforcefield.utils.toolkits
         #if not(isinstance(parameter, ParameterType)):
         #    raise TypeError("Inappropriate object type passed to ParameterHandler.add_parameter(): {}".format(parameter))
         # TODO: Do we need to check for incompatibility with existing parameters?
@@ -451,13 +565,6 @@ class ParameterHandler(object):
         # Perform unit compatibility checks
         self.check_parameter_compatibility(parameter_kwargs)
         # Check for correct SMIRKS valence
-        # TODO: Make better switch for toolkit registry
-        if openforcefield.utils.toolkits.OPENEYE_AVAILABLE:
-            toolkit = 'openeye'
-        elif openforcefield.utils.toolkits.RDKIT_AVAILABLE:
-            toolkit = 'rdkit'
-        ChemicalEnvironment.validate(
-            parameter_kwargs['smirks'], ensure_valence_type=self._VALENCE_TYPE, toolkit=toolkit)
 
         new_parameter = self._INFOTYPE(**parameter_kwargs)
         self._parameters.append(new_parameter)
@@ -537,36 +644,84 @@ class ParameterHandler(object):
         """
         pass
 
-    def to_dict(self, return_cosmetic_attributes=False):
+    def to_dict(self, output_units=None, return_cosmetic_attributes=False):
         """
         Convert this ParameterHandler to an OrderedDict, compliant with the SMIRNOFF data spec.
 
         Parameters
         ----------
+        output_units : dict[str : simtk.unit.Unit], optional. Default = None
+            A mapping from the ParameterType attribute name to the output unit its value should be converted to.
         return_cosmetic_attributes : bool, optional. Default = False.
-            Whether to return non-spec attributes of the parameters in this ParameterHandler.
+            Whether to return non-spec parameter and header attributes in this ParameterHandler.
 
         Returns
         -------
         smirnoff_data : OrderedDict
             SMIRNOFF-spec compliant representation of this ParameterHandler and its internal ParameterList.
         """
-        tag_data = OrderedDict()
+        smirnoff_data = OrderedDict()
+
+        if output_units is None:
+            output_units = dict()
 
         # Populate parameter list
-        parameter_list_data, attached_units = self._parameters.to_list(output_units=self._OUTPUT_UNITS)
-        tag_data[self._VALENCE_TYPE] = parameter_list_data
+        parameter_list = self._parameters.to_list(return_cosmetic_attributes=return_cosmetic_attributes)
+        unitless_parameter_list = list()
 
-        # Populate handler attributes
-        header_attributes_to_add = self._HEADER_ATTRIBS
-        for header_attribute in header_attributes_to_add:
-            tag_data[header_attribute] = getattr(self, header_attribute)
-        tag_data.update(attached_units)
-        # TODO: Cosmetic header attributes?
+        # Separate units into a separate dict. Iterate over the parameter list backwards
+        # so the most recently-read unit for each attrib gets forced onto all the others.
+        for parameter_dict in parameter_list[::-1]:
+            unitless_parameter_dict, attached_units = detach_units(parameter_dict, output_units=output_units)
+            unitless_parameter_list.append(parameter_dict)
+            output_units.update(attached_units)
+        # Un-reverse the list
+        unitless_parameter_list.reverse()
 
-        smirnoff_data = OrderedDict()
-        smirnoff_data[self._TAGNAME] = tag_data
+        # TODO: Collapse down indexed attribute units
+        for idxed_attrib in self._INDEXED_ATTRIBS:
+            attrib_unit = idxed_attrib + '_unit'
+            index = 1
+            idxed_attrib_unit = idxed_attrib + str(index) + '_unit'
+            while idxed_attrib_unit in output_units:
+                pass
+        smirnoff_data[self._TAGNAME] = unitless_parameter_list
 
+
+        # Collect the names of handler attributes to return
+        header_attribs_to_return = self._REQUIRED_SPEC_ATTRIBS + list(self._DEFAULT_SPEC_ATTRIBS.keys())
+
+        # Check whether the optional attribs are defined, and add them if so
+        for key in self._OPTIONAL_SPEC_ATTRIBS:
+            if hasattr(self, key):
+                header_attribs_to_return.append(key)
+        # Add the cosmetic attributes if requested
+        if return_cosmetic_attributes:
+            header_attribs_to_return += self._COSMETIC_ATTRIBS
+
+
+        # Go through the attribs of this ParameterHandler and collect the appropriate values to return
+        header_attribute_dict = {}
+        for header_attribute in header_attribs_to_return:
+            value = getattr(self, header_attribute)
+            header_attribute_dict[header_attribute] = value
+
+        # Detach all units from the header attribs
+        unitless_header_attribute_dict, attached_header_units = detach_units(header_attribute_dict)
+
+        # Convert all header attrib units (eg. {'length_unit': simtk.unit.angstrom}) to strings (eg.
+        # {'length_unit': 'angstrom'}) and add them to the header attribute dict
+        # TODO: Should I check for collisions between parameter "_unit" keys and header "_unit" keys?
+        output_units.update(attached_header_units)
+        for key, value in output_units.items():
+            value_str = unit_to_string(value)
+            # Made a note to add this to the smirnoff spec
+            output_units[key] = value_str
+
+        # Reattach the attached units here
+        smirnoff_data.update(unitless_header_attribute_dict)
+        smirnoff_data.update(output_units)
+        return smirnoff_data
 #=============================================================================================
 
 
@@ -579,23 +734,23 @@ class ConstraintHandler(ParameterHandler):
 
     class ConstraintType(ParameterType):
         """A SMIRNOFF constraint type"""
-        _SMIRNOFF_ATTRIBUTES = ['smirks']  # Attributes expected per the SMIRNOFF spec.
-        _COSMETIC_ATTRIBUTES = []
-        def __init__(self, node, parent):
-            super(ConstraintType, self).__init__(
-                **kwargs)  # Base class handles ``smirks`` and ``id`` fields
-            if 'distance' in node.attrib:
-                self.distance = _extract_quantity_from_xml_element(
-                    node, parent, 'distance'
-                )  # Constraint with specified distance will be added by ConstraintHandler
-            else:
-                self.distance = True  # Constraint to equilibrium bond length will be added by HarmonicBondHandler
+        _VALENCE_TYPE = 'Bond'
+        _SMIRNOFF_ATTRIBS = ['smirks']  # Attributes expected per the SMIRNOFF spec.
+        _OPTIONAL_ATTRIBS = ['distance', 'id', 'parent_id']
+        _REQUIRE_UNITS = {'distance': unit.angstrom}
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            # if 'distance' in node.attrib:
+            #     self.distance = _extract_quantity_from_xml_element(
+            #         node, parent, 'distance'
+            #     )  # Constraint with specified distance will be added by ConstraintHandler
+            # else:
+            #     self.distance = True  # Constraint to equilibrium bond length will be added by HarmonicBondHandler
 
     _TAGNAME = 'Constraint'
-    _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS # TODO: Do we support more exotic types as well?
     _INFOTYPE = ConstraintType
     _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
-    _REQUIRE_UNITS = {'distance': unit.angstrom}
+
 
     def __init__(self, forcefield, **kwargs):
         #super(ConstraintHandler, self).__init__(forcefield)
@@ -618,73 +773,84 @@ class ConstraintHandler(ParameterHandler):
 class BondHandler(ParameterHandler):
     """Handle SMIRNOFF ``<BondForce>`` tags"""
 
+
     class BondType(ParameterType):
         """A SMIRNOFF Bond parameter type"""
+        _VALENCE_TYPE = 'Bond' # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+        _SMIRNOFF_ATTRIBS = ['smirks', 'length', 'k']  # Attributes expected per the SMIRNOFF spec.
+        _REQUIRE_UNITS = {'length' : unit.angstrom,
+                          'k' : unit.kilocalorie_per_mole / unit.angstrom**2}
+        _INDEXED_ATTRIBS = ['k']  # May be indexed (by integer bond order) if fractional bond orders are used
 
-        _SMIRNOFF_ATTRIBUTES = ['smirks', 'length', 'k']  # Attributes expected per the SMIRNOFF spec.
         def __init__(self,
-                     k,
-                     length,
-                     fractional_bondorder_method=None,
-                     fractional_bondorder=None,
+                     #k,
+                     #length,
+                     #fractional_bondorder_method=None,
+                     #fractional_bondorder=None,
                      **kwargs):
+
             #super(ConstraintType, self).__init__(node, parent)  # Base class handles ``smirks`` and ``id`` fields
             super().__init__(
                 **kwargs)  # Base class handles ``smirks`` and ``id`` fields
+            # TODO: Add dynamic property-getter/setter for each thing in self._REQUIRE_UNITS
+            #for attrib in self._REQUIRE_UNITS:
+            #    property()
 
             # Determine if we are using fractional bond orders for this bond
             # First, check if this force uses fractional bond orders
-            if not (fractional_bondorder_method is None):
-                # If it does, see if this parameter line provides fractional bond order parameters
-                if 'length_bondorder1' in node.attrib and 'k_bondorder1' in node.attrib:
-                    # Store what interpolation scheme we're using
-                    self.fractional_bondorder = parent.attrib[
-                        'fractional_bondorder']
-                    # Store bondorder1 and bondorder2 parameters
-                    self.k = list()
-                    self.length = list()
-                    for ct in range(1, 3):
-                        self.length.append(
-                            _extract_quantity_from_xml_element(
-                                node,
-                                parent,
-                                'length_bondorder%s' % ct,
-                                unit_name='length_unit'))
-                        self.k.append(
-                            _extract_quantity_from_xml_element(
-                                node,
-                                parent,
-                                'k_bondorder%s' % ct,
-                                unit_name='k_unit'))
-                else:
-                    self.fractional_bondorder = None
-            else:
-                self.fractional_bondorder = None
+            #fractional_bondorder_method = kwargs['fractional_bondorder_method']
+            # #if not (fractional_bondorder_method is None):
+            #     raise NotImplementedError
+            #     # TODO: This belongs in BondHandler.create_forces
+            #     # If it does, see if this parameter line provides fractional bond order parameters
+            #     if 'length_bondorder1' in node.attrib and 'k_bondorder1' in node.attrib:
+            #         # Store what interpolation scheme we're using
+            #         self.fractional_bondorder = parent.attrib[
+            #             'fractional_bondorder']
+            #         # Store bondorder1 and bondorder2 parameters
+            #         self.k = list()
+            #         self.length = list()
+            #         for ct in range(1, 3):
+            #             self.length.append(
+            #                 _extract_quantity_from_xml_element(
+            #                     node,
+            #                     parent,
+            #                     'length_bondorder%s' % ct,
+            #                     unit_name='length_unit'))
+            #             self.k.append(
+            #                 _extract_quantity_from_xml_element(
+            #                     node,
+            #                     parent,
+            #                     'k_bondorder%s' % ct,
+            #                     unit_name='k_unit'))
+            #     else:
+            #         self.fractional_bondorder = None
+            # else:
+            #     self.fractional_bondorder = None
 
-            # If no fractional bond orders, just get normal length and k
-            if self.fractional_bondorder is None:
-                self.length = length
-                self.k = k
-                #self.length = _extract_quantity_from_xml_element(node, parent, 'length')
-                #self.k = _extract_quantity_from_xml_element(node, parent, 'k')
+            # # If no fractional bond orders, just get normal length and k
+            # if self.fractional_bondorder is None:
+            #     self.length = length
+            #     self.k = k
+            #     #self.length = _extract_quantity_from_xml_element(node, parent, 'length')
+            #     #self.k = _extract_quantity_from_xml_element(node, parent, 'k')
 
     _TAGNAME = 'Bonds'  # SMIRNOFF tag name to process
-    _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = BondType  # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicBondForce  # OpenMM force class to create
-    _DEPENDENCIES = [ConstraintHandler
-                     ]  # ConstraintHandler must be executed first
-    _REQUIRE_UNITS = {
-        'length': unit.angstrom,
-        'k': unit.kilocalorie_per_mole / unit.angstrom**2
-    }
+    _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
+    _DEFAULT_SPEC_ATTRIBS = {'potential': 'harmonic',
+                             'fractional_bondorder_method': None,
+                             'fractional_bondorder_interpolation': 'linear'}
+    _INDEXED_ATTRIBS = ['k'] # May be indexed (by integer bond order) if fractional bond orders are used
 
-    def __init__(self, forcefield, **kwargs):
+    def __init__(self, **kwargs):
         #super(HarmonicBondHandler, self).__init__(forcefield)
-        super().__init__(forcefield, **kwargs)
+        super().__init__(**kwargs)
 
     def create_force(self, system, topology, **kwargs):
         # Create or retrieve existing OpenMM Force object
+        # TODO: The commented line below should replace the system.getForce search
         #force = super(BondHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [f for f in existing if type(f) == self._OPENMMTYPE]
@@ -726,7 +892,7 @@ class BondHandler(ParameterHandler):
                 # Atom pair is constrained; we don't need to add a bond term.
                 skipped_constrained_bonds += 1
                 # Check if we need to add the constraint here to the equilibrium bond length.
-                if topology.is_constrained(*atoms) is True:
+                if topology.is_constrained(*atoms) is True: # Note: This could have a value of the constraint length
                     # Mark that we have now assigned a specific constraint distance to this constraint.
                     topology.add_constraint(*atoms, length)
                     # Add the constraint to the System.
@@ -753,8 +919,11 @@ class AngleHandler(ParameterHandler):
 
     class AngleType(ParameterType):
         """A SMIRNOFF angle type."""
+        _VALENCE_TYPE = 'Angle'  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+        _SMIRNOFF_ATTRIBS = ['smirks', 'angle', 'k']  # Attributes expected per the SMIRNOFF spec.
+        _REQUIRE_UNITS = {'angle': unit.degree,
+                          'k': unit.kilocalorie_per_mole / unit.degree**2}
 
-        _SMIRNOFF_ATTRIBUTES = ['smirks', 'angle', 'k']  # Attributes expected per the SMIRNOFF spec.
 
         def __init__(self, angle, k, fractional_bondorder=None, **kwargs):
             #super(AngleType, self).__init__(node, parent)  # base class handles ``smirks`` and ``id`` fields
@@ -768,17 +937,13 @@ class AngleHandler(ParameterHandler):
                 self.fractional_bondorder = None
 
     _TAGNAME = 'Angles'  # SMIRNOFF tag name to process
-    _VALENCE_TYPE = 'Angle'  # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = AngleType  # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicAngleForce  # OpenMM force class to create
-    _REQUIRE_UNITS = {
-        'angle': unit.degree,
-        'k': unit.kilocalorie_per_mole / unit.degree**2
-    }
+    _DEFAULT_SPEC_ATTRIBS = {'potential': 'harmonic'}
 
     def __init__(self, forcefield, **kwargs):
         #super(AngleHandler, self).__init__(forcefield)
-        super().__init__(forcefield, **kwargs)
+        super().__init__(**kwargs)
 
     def create_force(self, system, topology, **kwargs):
         #force = super(AngleHandler, self).create_force(system, topology, **kwargs)
@@ -827,62 +992,84 @@ class ProperTorsionHandler(ParameterHandler):
 
     class ProperTorsionType(ParameterType):
         """A SMIRNOFF torsion type for proper torsions."""
-        _SMIRNOFF_ATTRIBUTES = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
 
-        def __init__(self,
-                     fractional_bondorder_method=None,
-                     fractional_bondorder=None,
+        _VALENCE_TYPE = 'ProperTorsion'
+        _SMIRNOFF_ATTRIBS = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
+        _REQUIRE_UNITS = {'k': unit.kilocalorie_per_mole,
+                          'phase': unit.degree}
+        _OPTIONAL_ATTRIBS = ['id', 'parent_id', 'idivf']
+        _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
+
+    def __init__(self,
+                     #fractional_bondorder_method=None,
+                     #fractional_bondorder=None,
                      **kwargs):
 
-            self.periodicity = list()
-            self.phase = list()
-            self.k = list()
+            # self.periodicity = list()
+            # self.phase = list()
+            # self.k = list()
             # Store parameters.
-            index = 1
-            while 'phase%d' % index in kwargs:
-                self.periodicity.append(int(kwargs['periodicity%d' % index]))
-                self.phase.append(kwargs['phase%d' % index])
-                self.k.append(kwargs['k%d' % index])
-                del kwargs['periodicity%d' % index]
-                del kwargs['phase%d' % index]
-                del kwargs['k%d' % index]
+            #for param_dict in kwargs[self._TAGNAME]
+            #index = 1
+            #while 'phase%d' % index in kwargs:
+                # self.periodicity.append(int(kwargs['periodicity%d' % index]))
+                # self.phase.append(kwargs['phase%d' % index])
+                # self.k.append(kwargs['k%d' % index])
+                # del kwargs['periodicity%d' % index]
+                # del kwargs['phase%d' % index]
+                # del kwargs['k%d' % index]
 
                 # Optionally handle 'idivf', which divides the periodicity by the specified value
-                if ('idivf%d' % index) in kwargs:
-                    idivf = kwargs['idivf%d' % index]
-                    self.k[-1] /= float(idivf)
-                    del kwargs['idivf%d' % index]
-                index += 1
+            #    if not('idivf%d' % index) in kwargs:
+            #        kwargs['idivf%d' % index] =
+                    # idivf = kwargs['idivf%d' % index]
+                    # self.k[-1] /= float(idivf)
+                    # del kwargs['idivf%d' % index]
+            #    index += 1
 
             # Check for errors, i.e. 'phase' instead of 'phase1'
             # TODO: Can we raise a more useful error if there is no ``id``?
-            if len(self.phase) == 0:
-                raise Exception(
-                    "Error: Torsion with id %s has no parseable phase entries."
-                    % self.pid)
+            #if len(self.phase) == 0:
+            #    raise Exception(
+            #        "Error: Torsion with id %s has no parseable phase entries."
+            #        % self.pid)
 
-            super().__init__(
-                **kwargs)  # base class handles ``smirks`` and ``id`` fields
+            super().__init__(**kwargs)  # base class handles ``smirks`` and ``id`` fields
 
             # TODO: Fractional bond orders should be processed on the per-force basis instead of per-bond basis
-            if not (fractional_bondorder_method is None):
-                self.fractional_bondorder = fractional_bondorder
-            else:
-                self.fractional_bondorder = None
+            #if not (fractional_bondorder_method is None):
+            #    self.fractional_bondorder = fractional_bondorder
+            #else:
+            #    self.fractional_bondorder = None
 
     _TAGNAME = 'ProperTorsions'  # SMIRNOFF tag name to process
-    _VALENCE_TYPE = 'ProperTorsion'  # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = ProperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
-    _REQUIRE_UNITS = {'k1': unit.kilocalorie_per_mole, 'phase1': unit.degree}
+    _DEFAULT_SPEC_ATTRIBS = {'potential': 'charmm',
+                             'default_idivf': 'auto'}
 
-    def __init__(self, forcefield, potential=None, **kwargs):
-        #super(ProperTorsionHandler, self).__init__(forcefield)
-        super().__init__(forcefield, **kwargs)
-        if not (potential is None):
-            self._potential = potential
-        else:
-            self._potential = self._DEFAULTS['potential']
+    def __init__(self, potential=None, **kwargs):
+
+        # NOTE: We do not want to overwrite idivf values here! If they're missing from the ParameterType
+        # dictionary, that means they should be set to defualt _AT SYSTEM CREATION TIME_. The user may
+        # change that default to a different value than it is now. The solution here will be to leave
+        # those idivfX values uninitialized and deal with it during system creation
+
+
+        # Handle missing 'idivf' values, which divide the periodicity by the specified value
+        #for param_dict in kwargs[self._TAGNAME]:
+            # # Get default_idivf (if set), otherwise set it to auto
+            # #self._default_idivf = kwargs.get('default_idivf', 'auto')
+            #
+            # # Loop over all torsion terms
+            # index = 1
+            # while 'phase%d' % index in param_dict:
+            #     if not ('idivf%d' % index) in kwargs:
+            #         param_dict['idivf%d' % index] = None
+            #     index += 1
+
+        super().__init__(**kwargs)
+
 
     def create_force(self, system, topology, **kwargs):
         #force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
@@ -917,65 +1104,30 @@ class ImproperTorsionHandler(ParameterHandler):
 
     class ImproperTorsionType(ParameterType):
         """A SMIRNOFF torsion type for improper torsions."""
-        _SMIRNOFF_ATTRIBUTES = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
+        _VALENCE_TYPE = 'ImproperTorsion'
+        _SMIRNOFF_ATTRIBS = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
+        _REQUIRE_UNITS = {'k': unit.kilocalorie_per_mole,
+                          'phase': unit.degree}
+        _OPTIONAL_ATTRIBS = ['id', 'parent_id', 'idivf']
+        _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
 
-        def __init__(self,
-                     fractional_bondorder_method=None,
-                     fractional_bondorder=None,
-                     **kwargs):
+        def __init__(self, **kwargs):
+            super().__init__( **kwargs)
 
-            self.periodicity = list()
-            self.phase = list()
-            self.k = list()
-            # Store parameters.
-            index = 1
-            while 'phase%d' % index in kwargs:
-                self.periodicity.append(int(kwargs['periodicity%d' % index]))
-                self.phase.append(kwargs['phase%d' % index])
-                self.k.append(kwargs['k%d' % index])
-                del kwargs['periodicity%d' % index]
-                del kwargs['phase%d' % index]
-                del kwargs['k%d' % index]
-                # SMIRNOFF applies trefoil (three-fold, because of right-hand rule) impropers unlike AMBER
-                # If it's an improper, divide by the factor of three internally
-                self.k[-1] /= 3.
-
-                # Optionally handle 'idivf', which divides the periodicity by the specified value
-                if ('idivf%d' % index) in kwargs:
-                    idivf = kwargs['idivf%d' % index]
-                    self.k[-1] /= float(idivf)
-                    del kwargs['idivf%d' % index]
-                index += 1
-
-            # Check for errors, i.e. 'phase' instead of 'phase1'
-            # TODO: Can we raise a more useful error if there is no ``id``?
-            if len(self.phase) == 0:
-                raise Exception(
-                    "Error: Torsion with id %s has no parseable phase entries."
-                    % self.pid)
-
-            super().__init__(
-                **kwargs)  # base class handles ``smirks`` and ``id`` fields
-
-            # TODO: Fractional bond orders should be processed on the per-force basis instead of per-bond basis
-            if not (fractional_bondorder_method is None):
-                self.fractional_bondorder = fractional_bondorder
-            else:
-                self.fractional_bondorder = None
 
     _TAGNAME = 'ImproperTorsions'  # SMIRNOFF tag name to process
-    _VALENCE_TYPE = 'ImproperTorsion'  # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = ImproperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
-    _DEFAULTS = {'potential': 'charmm'}
+    _HANDLER_DEFAULTS = {'potential': 'charmm',
+                         'default_idivf': 'auto'}
 
     def __init__(self, forcefield, potential=None, **kwargs):
         #super(ImproperTorsionHandler, self).__init__(forcefield)
         super().__init__(forcefield, **kwargs)
-        if not (potential is None):
-            self._potential = potential
-        else:
-            self._potential = self._DEFAULTS['potential']
+        # if not (potential is None):
+        #     self._potential = potential
+        # else:
+        #     self._potential = self._DEFAULT_HEADER_ATTRIBS['potential']
 
 
 
@@ -1055,27 +1207,32 @@ class vdWHandler(ParameterHandler):
 
     class vdWType(ParameterType):
         """A SMIRNOFF vdWForce type."""
+        _VALENCE_TYPE = 'Atom'  # ChemicalEnvironment valence type expected for SMARTS
 
-        _SMIRNOFF_ATTRIBUTES = ['smirks', 'rmin_half', 'epsilon'] # Attributes expected per the SMIRNOFF spec.
+        _SMIRNOFF_ATTRIBS = ['smirks', 'epsilon'] # Attributes expected per the SMIRNOFF spec.
+        _REQUIRE_UNITS = {
+            'epsilon': unit.kilocalorie_per_mole,
+            'sigma': unit.angstrom,
+            'rmin_half': unit.angstrom
+        }
 
-        def __init__(self, sigma=None, rmin_half=None, epsilon=None, **kwargs):
-            #super(vdWType, self).__init__(smirks=smirks, id=id, parent_id=parent_id)
-            super().__init__(**kwargs)
-
+        def __init__(self, **kwargs):
+            sigma = kwargs.get('sigma', None)
+            rmin_half = kwargs.get('rmin_half', None)
             if (sigma is None) and (rmin_half is None):
-                raise ValueError("sigma or rmin_half must be specified.")
+                raise SMIRNOFFSpecError("Either sigma or rmin_half must be specified.")
             if (sigma is not None) and (rmin_half is not None):
-                raise ValueError(
+                raise SMIRNOFFSpecError(
                     "BOTH sigma and rmin_half cannot be specified simultaneously."
                 )
+
+            # TODO: Is it necessary to force everything to be sigma? We could handle having either when create_force runs
             if (rmin_half is not None):
-                sigma = 2. * rmin_half / (2.**(1. / 6.))
+                kwargs['sigma'] = 2. * rmin_half / (2.**(1. / 6.))
+                del kwargs['rmin_half']
 
-            self.sigma = sigma
+            super().__init__(**kwargs)
 
-            if epsilon is None:
-                raise ValueError("epsilon must be specified")
-            self.epsilon = epsilon
 
         @property
         def attrib(self):
@@ -1088,19 +1245,14 @@ class vdWHandler(ParameterHandler):
             }
 
     _TAGNAME = 'vdW'  # SMIRNOFF tag name to process
-    _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create
-    _VALENCE_TYPE = 'Atom'  # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = vdWType  # info type to store
-    _REQUIRE_UNITS = {
-        'epsilon': unit.kilocalorie_per_mole,
-        'sigma': unit.angstrom,
-        'rmin_half': unit.angstrom
-    }
+    _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create
+
     # TODO: Is this necessary
     _SCALETOL = 1e-5
+    _KWARGS = ['ewaldErrorTolerance', 'useDispersionCorrection'] # Kwargs to catch when create_force is called
 
-    _KWARGS = ['ewaldErrorTolerance', 'useDispersionCorrection']
-    _DEFAULTS = {
+    _DEFAULT_SPEC_ATTRIBS = {
         'potential': 'Lennard-Jones-12-6',
         'combining_rules': 'Loentz-Berthelot',
         'scale12': 0.0,
@@ -1125,98 +1277,44 @@ class vdWHandler(ParameterHandler):
         openmm.NonbondedForce.PME
     }
 
-    # Note: We don't define the default values in the constructor arguments because we need
-    # to be able to check against them in check_compatibility(). For example, if someone
     def __init__(self,
-                 forcefield,
-                 scale12=None,
-                 scale13=None,
-                 scale14=None,
-                 scale15=None,
-                 potential=None,
-                 switch=None,
-                 cutoff=None,
-                 long_range_dispersion=None,
-                 combining_rules=None,
-                 nonbonded_method=None,
+                 # forcefield,
+                 # scale12=None,
+                 # scale13=None,
+                 # scale14=None,
+                 # scale15=None,
+                 # potential=None,
+                 # switch=None,
+                 # cutoff=None,
+                 # long_range_dispersion=None,
+                 # combining_rules=None,
+                 # nonbonded_method=None,
                  **kwargs):
-        super().__init__(forcefield, **kwargs)
+        super().__init__(**kwargs)
 
         # TODO: Find a better way to set defaults
         # TODO: Validate these values against the supported output types (openMM force kwargs?)
         # TODO: Add conditional logic to assign NonbondedMethod and check compatibility
 
-        # Set the nonbonded method
-        if nonbonded_method is None:
-            self._nonbonded_method = NonbondedMethod.NoCutoff
-        else:
-            # If it's a string that's the name of a nonbonded method
-            if type(nonbonded_method) is str:
-                self._nonbonded_method = NonbondedMethod[nonbonded_method]
+        # # Set the nonbonded method
+        # if nonbonded_method is None:
+        #     self._nonbonded_method = NonbondedMethod.NoCutoff
+        # else:
+        #     # If it's a string that's the name of a nonbonded method
+        #     if type(nonbonded_method) is str:
+        #         self._nonbonded_method = NonbondedMethod[nonbonded_method]
+        #
+        #     # If it's an enum'ed value of NonbondedMethod
+        #     elif nonbonded_method in NonbondedMethod:
+        #         self._nonbonded_method = nonbonded_method
+        #     # If it's an openMM nonbonded method, reverse it back to a package-independent enum
+        #     elif nonbonded_method in self._NONBOND_METHOD_MAP.values():
+        #         for key, val in self._NONBOND_METHOD_MAP.items():
+        #             if nonbonded_method == val:
+        #                 self._nonbonded_method = key
+        #                 break
 
-            # If it's an enum'ed value of NonbondedMethod
-            elif nonbonded_method in NonbondedMethod:
-                self._nonbonded_method = nonbonded_method
-            # If it's an openMM nonbonded method, reverse it back to a package-independent enum
-            elif nonbonded_method in self._NONBOND_METHOD_MAP.values():
-                for key, val in self._NONBOND_METHOD_MAP.items():
-                    if nonbonded_method == val:
-                        self._nonbonded_method = key
-                        break
 
-        if scale12 is None:
-            self._scale12 = self._DEFAULTS['scale12']
-        elif type(scale12) is str:
-            self._scale12 = float(scale12)
-        else:
-            self._scale12 = scale12
-
-        if scale13 is None:
-            self._scale13 = self._DEFAULTS['scale13']
-        elif type(scale13) is str:
-            self._scale13 = float(scale13)
-        else:
-            self._scale13 = scale13
-
-        if scale14 is None:
-            self._scale14 = self._DEFAULTS['scale14']
-        elif type(scale14) is str:
-            self._scale14 = float(scale14)
-        else:
-            self._scale14 = scale14
-
-        if scale15 is None:
-            self._scale15 = self._DEFAULTS['scale15']
-        elif type(scale15) is str:
-            self._scale15 = float(scale15)
-        else:
-            self._scale15 = scale15
-
-        if potential is None:
-            self._potential = self._DEFAULTS['potential']
-        else:
-            self._potential = potential
-
-        if switch is None:
-            self._switch = self._DEFAULTS['switch']
-        else:
-            self._switch = switch
-
-        if cutoff is None:
-            self._cutoff = self._DEFAULTS['cutoff']
-        else:
-            self._cutoff = cutoff
-
-        if long_range_dispersion is None:
-            self._long_range_dispersion = self._DEFAULTS[
-                'long_range_dispersion']
-        else:
-            self._long_range_dispersion = long_range_dispersion
-
-        if combining_rules is None:
-            self._combining_rules = self._DEFAULTS['combining_rules']
-        else:
-            self._combining_rules = combining_rules
 
     def check_handler_compatibility(self,
                                     handler_kwargs,
@@ -1321,10 +1419,10 @@ class vdWHandler(ParameterHandler):
 class ToolkitAM1BCCHandler(ParameterHandler):
     """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags"""
 
-    _DEPENDENCIES = [vdWHandler] # vdWHandler must first run NonBondedForce.addParticle for each particle in the topology
     _TAGNAME = 'ToolkitAM1BCC'  # SMIRNOFF tag name to process
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create or utilize
-    _KWARGS = ['charge_from_molecules', 'toolkit_registry']
+    _DEPENDENCIES = [vdWHandler] # vdWHandler must first run NonBondedForce.addParticle for each particle in the topology
+    _KWARGS = ['charge_from_molecules', 'toolkit_registry'] # Kwargs to catch when create_force is called
 
 
 
@@ -1496,24 +1594,20 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
     class ChargeIncrementType(ParameterType):
         """A SMIRNOFF bond charge correction type."""
+        _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS
+        _SMIRNOFF_ATTRIBS = ['smirks', 'chargeIncrement']
+        _REQUIRE_UNITS = {
+            'chargeIncrement': unit.elementary_charge
+        }
+        _INDEXED_ATTRIBS = ['chargeIncrement']
 
         def __init__(self, node, parent):
-            super(BondChargeCorrectionHandler, self).__init__(
-                node,
-                parent)  # base class handles ``smirks`` and ``id`` fields
-            self.increment = _extract_quantity_from_xml_element(
-                node, parent, 'increment')
-            # If no units are specified, assume elementary charge
-            if type(self.increment) == float:
-                self.increment *= unit.elementary_charge
+            super().__init__(**kwargs)
 
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
-    _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create or utilize
-    _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS
     _INFOTYPE = ChargeIncrementType  # info type to store
-    _REQUIRE_UNITS = {
-        'increment': unit.elementary_charge
-    }
+    _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create or utilize
+    # TODO: The structure of this is still undecided
     _KWARGS = ['charge_from_molecules']
     _DEFAULTS = {'number_of_conformers': 10,
                  'quantum_chemical_method': 'AM1',
@@ -1524,14 +1618,14 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
 
     def __init__(self,
-                 forcefield,
-                 number_of_conformers=None,
-                 quantum_chemical_method=None,
-                 partial_charge_method=None,
+                 # forcefield,
+                 # number_of_conformers=None,
+                 # quantum_chemical_method=None,
+                 # partial_charge_method=None,
                  **kwargs):
         raise NotImplementedError("ChangeIncrementHandler is not yet implemented, pending finalization of the "
                                   "SMIRNOFF spec")
-        super().__init__(forcefield, **kwargs)
+        super().__init__(**kwargs)
 
         if number_of_conformers is None:
             self._number_of_conformers = self._DEFAULTS['number_of_conformers']
@@ -1738,35 +1832,44 @@ class GBSAParameterHandler(ParameterHandler):
 
     class GBSAType(ParameterType):
         """A SMIRNOFF GBSA type."""
+        _VALENCE_TYPE = 'Atom'
+        _SMIRNOFF_ATTRIBS = ['smirks', 'radius', 'scale']
+        _REQUIRE_UNITS = {'radius': unit.angstrom}
 
-        def __init__(self, node, parent):
-            super(GBSAType, self).__init__(node, parent)
+        def __init__(self, **kwargs):
+            super(GBSAType, self).__init__(**kwargs)
 
-            # Store model parameters.
-            gb_model = parent.attrib['gb_model']
-            expected_parameters = GBSAParameterHandler.GB_expected_parameters[
-                gb_model]
-            provided_parameters = list()
-            missing_parameters = list()
-            for name in expected_parameters:
-                if name in node.attrib:
-                    provided_parameters.append(name)
-                    value = _extract_quantity_from_xml_element(
-                        node, parent, name)
-                    setattr(self, name, value)
-                else:
-                    missing_parameters.append(name)
-            if len(missing_parameters) > 0:
-                msg = 'GBSAForce: missing per-atom parameters for tag %s' % str(
-                    node)
-                msg += 'model "%s" requires specification of per-atom parameters %s\n' % (
-                    gb_model, str(expected_parameters))
-                msg += 'provided parameters : %s\n' % str(provided_parameters)
-                msg += 'missing parameters: %s' % str(missing_parameters)
-                raise Exception(msg)
+            # # Store model parameters.
+            # gb_model = parent.attrib['gb_model']
+            # expected_parameters = GBSAParameterHandler.GB_expected_parameters[
+            #     gb_model]
+            # provided_parameters = list()
+            # missing_parameters = list()
+            # for name in expected_parameters:
+            #     if name in node.attrib:
+            #         provided_parameters.append(name)
+            #         value = _extract_quantity_from_xml_element(
+            #             node, parent, name)
+            #         setattr(self, name, value)
+            #     else:
+            #         missing_parameters.append(name)
+            # if len(missing_parameters) > 0:
+            #     msg = 'GBSAForce: missing per-atom parameters for tag %s' % str(
+            #         node)
+            #     msg += 'model "%s" requires specification of per-atom parameters %s\n' % (
+            #         gb_model, str(expected_parameters))
+            #     msg += 'provided parameters : %s\n' % str(provided_parameters)
+            #     msg += 'missing parameters: %s' % str(missing_parameters)
+            #     raise Exception(msg)
 
-    def __init__(self, forcefield):
-        super(GBSAParameterHandler, self).__init__(forcefield)
+    # TODO: Finish this
+    _TAGNAME = 'GBSA'
+    _INFOTYPE = GBSAType
+    #_OPENMMTYPE =
+
+    def __init__(self, **kwargs):
+
+        super().__init__(**kwargs)
 
     # TODO: Fix this
     def parseElement(self):
