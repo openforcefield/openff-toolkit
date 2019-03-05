@@ -255,7 +255,7 @@ def extract_serialized_units_from_dict(input_dict):
             parameter_name = key[:-5]
             parameter_units_string = input_dict[key]
             try:
-                parameter_units = eval(parameter_units_string, unit.__dict__)
+                parameter_units = string_to_unit(parameter_units_string)
             except Exception as e:
                 e.msg = "Could not parse units {}\n".format(
                     parameter_units_string) + e.msg
