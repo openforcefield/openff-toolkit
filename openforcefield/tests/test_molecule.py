@@ -22,9 +22,9 @@ TODO:
 # GLOBAL IMPORTS
 #=============================================================================================
 
+import copy
 import pickle
 from tempfile import NamedTemporaryFile
-from unittest import TestCase
 
 import numpy as np
 import pytest
@@ -127,46 +127,50 @@ def is_three_memebered_ring_torsion(torsion):
 
 
 #=============================================================================================
+# FIXTURES
+#=============================================================================================
+
+def mini_drug_bank():
+    """Load the full MiniDrugBank into Molecule objects."""
+    # If we have already loaded the data set, return the cached one.
+    if mini_drug_bank.molecules is not None:
+        molecules = mini_drug_bank.molecules
+    else:
+        # Load the dataset.
+        file_path = get_data_filename('molecules/MiniDrugBank_tripos.mol2')
+        molecules = Molecule.from_file(file_path, exception_if_undefined_stereo=False)
+        molecules = [mol for mol in molecules if mol is not None]
+        mini_drug_bank.molecules = molecules
+    return molecules
+
+# Use a "static" variable as a workaround as fixtures cannot be
+# used inside pytest.mark.parametrize (see issue #349 in pytest).
+mini_drug_bank.molecules = None
+
+
+#=============================================================================================
 # TESTS
 #=============================================================================================
 
 @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason=_OPENEYE_UNAVAILABLE_MESSAGE)
-class TestMolecule(TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        """
-        This will have us just load the test molecules once, as the setUp function runs for each test
-        """
-        super(TestMolecule, cls).setUpClass()
-        #filename = get_data_filename('molecules/zinc-subset-tripos.mol2.gz')
-        #filename = get_data_filename('molecules/DrugBank_tripos.mol2')
-        filename = get_data_filename('molecules/MiniDrugBank_tripos.mol2')
-        molecules = Molecule.from_file(filename, exception_if_undefined_stereo=False)
-        molecules = [mol for mol in molecules if not(mol is None)]
-        cls.test_molecules = molecules
-
-    def setUp(self):
-        # TODO: Serialize the offmols instead so that we can run this test without toolkits
-        import copy
-
-        self.molecules = copy.deepcopy(TestMolecule.test_molecules)
+class TestMolecule:
 
     # TODO: Test getstate/setstate
     # TODO: Test {to_from}_{dict|yaml|toml|json|bson|messagepack|pickle}
-    def test_pickle(self):
-        """Test pickling"""
-        serialized = pickle.dumps(self.molecules)
-        molecules_copy = pickle.loads(serialized)
-        for (molecule, molecule_copy) in zip(self.molecules, molecules_copy):
-            assert molecule == molecule_copy
 
-    def test_to_from_dict(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_pickle(self, molecule):
+        """Test pickling"""
+        serialized = pickle.dumps(molecule)
+        molecule_copy = pickle.loads(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_to_from_dict(self, molecule):
         """Test to_dict and from_dict functions"""
-        for molecule in self.molecules:
-            serialized = molecule.to_dict()
-            molecule_copy = Molecule.from_dict(serialized)
-            assert molecule == molecule_copy
+        serialized = molecule.to_dict()
+        molecule_copy = Molecule.from_dict(serialized)
+        assert molecule == molecule_copy
 
     def test_create_atom(self):
         """Test Atom creation"""
@@ -208,8 +212,6 @@ class TestMolecule(TestCase):
         molecule.add_bond(C, H3, 1, False)
         molecule.add_bond(C, H4, 1, False)
 
-
-
     def test_add_conformers(self):
         """Test addition of conformers to a molecule"""
         import numpy as np
@@ -245,13 +247,13 @@ class TestMolecule(TestCase):
         conf_missing_z = unit.Quantity(np.array([[101., 102. ,103.], [104. ,105. ,106.], [107., 108., 109.],
                                         [110.,111.,112.],   [113.,114.]]),
                                         unit.angstrom)
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as excinfo:
             molecule.add_conformer(conf_missing_z)
 
         conf_too_few_atoms = unit.Quantity(np.array([[101., 102. ,103.], [104. ,105. ,106.], [107., 108., 109.],
                                                      [110.,111.,112.]]),
                                                      unit.angstrom)
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as excinfo:
             molecule.add_conformer(conf_too_few_atoms)
 
 
@@ -259,13 +261,13 @@ class TestMolecule(TestCase):
         conf_too_many_atoms = unit.Quantity(np.array([[101., 102., 103.], [104., 105., 106.], [107., 108., 109.],
                                                       [110., 111., 112.], [113., 114., 115.], [116., 117., 118.]]),
                                             unit.angstrom)
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as excinfo:
             molecule.add_conformer(conf_too_many_atoms)
 
         # Add a conformer with no coordinates
         conf_no_coordinates = unit.Quantity(np.array([]),
                                             unit.angstrom)
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as excinfo:
             molecule.add_conformer(conf_no_coordinates)
 
         # Add a conforer with units of nanometers
@@ -280,15 +282,14 @@ class TestMolecule(TestCase):
         conf_nonsense_units = unit.Quantity(np.array([[ 1., 2.,3.] ,[4. ,5. ,6.],[7., 8., 9.],
                                         [10.,11.,12.],[13.,14.,15]]),
                               unit.joule)
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as excinfo:
             molecule.add_conformer(conf_nonsense_units)
 
         # Add a conformer with no units
         conf_unitless = np.array([[ 1., 2.,3.] ,[4. ,5. ,6.],[7., 8., 9.],
                                   [10.,11.,12.],[13.,14.,15]])
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as excinfo:
             molecule.add_conformer(conf_unitless)
-
 
     def test_create_empty(self):
         """Test creation of an empty Molecule"""
@@ -303,14 +304,15 @@ class TestMolecule(TestCase):
         molecule2.name = ''
         assert molecule1.name == molecule2.name
 
-    def test_create_copy(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_create_copy(self, molecule):
         """Test creation of a Molecule from another Molecule"""
-        for molecule in self.molecules:
-            molecule_copy = Molecule(molecule)
-            assert molecule_copy == molecule
+        molecule_copy = Molecule(molecule)
+        assert molecule_copy == molecule
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason=_RDKIT_UNAVAILABLE_MESSAGE)
-    def test_create_rdkit(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_create_rdkit(self, molecule):
         """Test creation of a molecule from an RDKit rdmol"""
         toolkit_wrapper = RDKitToolkitWrapper()
         # Using ZINC test set
@@ -320,31 +322,28 @@ class TestMolecule(TestCase):
         known_failures = ['DrugBank_349', 'DrugBank_1420', 'DrugBank_1671', 'DrugBank_4346']
         failures = []
         #fail_smileses = []
-        for index, molecule in enumerate(self.molecules):
-            if molecule.name in known_failures:
-                continue
-            rdmol = molecule.to_rdkit()
-            molecule_copy = Molecule(rdmol)
-            if not(molecule == molecule_copy):
-                print(index, molecule.name)
-                failures.append(molecule)
+        if molecule.name in known_failures:
+            return
+        rdmol = molecule.to_rdkit()
+        molecule_copy = Molecule(rdmol)
+        if not(molecule == molecule_copy):
+            failures.append(molecule)
         print("n_failures", len(failures))
-            # if not(molecule.to_dict() == molecule_copy.to_dict()):
-            #mol_smi = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-            #mol_copy_smi = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
-            # TODO: If I use OE to generate the SMILESes, 91/365 molecules don't match. What is going on?
-            #if not (mol_smi == mol_copy_smi):
-            #    failures.append(molecule.name)
-            #    fail_smileses.append((molecule.to_smiles(toolkit_registry=toolkit_wrapper),
-            #                          molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)))
-            #assert mol_smi == mol_copy_smi
+        # if not(molecule.to_dict() == molecule_copy.to_dict()):
+        #mol_smi = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+        #mol_copy_smi = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
+        # TODO: If I use OE to generate the SMILESes, 91/365 molecules don't match. What is going on?
+        #if not (mol_smi == mol_copy_smi):
+        #    failures.append(molecule.name)
+        #    fail_smileses.append((molecule.to_smiles(toolkit_registry=toolkit_wrapper),
+        #                          molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)))
+        #assert mol_smi == mol_copy_smi
         #print(len(self.molecules))
         #print(len(failures))
         #for name, (smi1, smi2) in zip(failures, fail_smileses):
         #    print(name)
         #    print(smi1)
         #    print(smi2)
-
 
     #These should be toolkit tests
     @pytest.mark.skip
@@ -366,46 +365,47 @@ class TestMolecule(TestCase):
             filename = get_data_filename('molecules/zinc-subset-tripos.mol2.gz')
             molecule = Molecule(filename)
 
-    def test_create_from_serialized(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_create_from_serialized(self, molecule):
         """Test creation from serialized molecule"""
-        for molecule in self.molecules:
-            serialized_molecule = molecule.__getstate__()
-            molecule_copy = Molecule(serialized_molecule)
-            assert molecule == molecule_copy
+        serialized_molecule = molecule.__getstate__()
+        molecule_copy = Molecule(serialized_molecule)
+        assert molecule == molecule_copy
 
     def test_equality(self):
         """Test equality operator"""
-        nmolecules = len(self.molecules)
+        molecules = mini_drug_bank()
+        nmolecules = len(molecules)
         # TODO: Performance improvements should let us un-restrict this test
         for i in range(nmolecules):
             for j in range(i, min(i+3, nmolecules)):
-                assert (self.molecules[i] == self.molecules[j]) == (i == j)
+                assert (molecules[i] == molecules[j]) == (i == j)
 
-    def test_to_networkx(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_to_networkx(self, molecule):
         """Test generation of NetworkX graphs"""
-        for molecule in self.molecules:
-            graph = molecule.to_networkx()
+        graph = molecule.to_networkx()
 
-    def test_add_atoms_and_bonds(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_add_atoms_and_bonds(self, molecule):
         """Test the creation of a molecule from the addition of atoms and bonds"""
-        for molecule in self.molecules:
-            molecule_copy = Molecule()
-            for atom in molecule.atoms:
-                molecule_copy.add_atom(atom.atomic_number, atom.formal_charge, atom.is_aromatic, stereochemistry=atom.stereochemistry)
-            for bond in molecule.bonds:
-                molecule_copy.add_bond(bond.atom1_index, bond.atom2_index, bond.bond_order, bond.is_aromatic,
-                                       stereochemistry=bond.stereochemistry,
-                                       fractional_bond_order=bond.fractional_bond_order)
-            # Try to add the final bond twice, which should raise an Exception
-            with self.assertRaises(Exception) as context:
-                molecule_copy.add_bond(bond.atom1_index, bond.atom2_index, bond.bond_order, bond.is_aromatic,
-                                       stereochemistry=bond.stereochemistry,
-                                       fractional_bond_order=bond.fractional_bond_order)
+        molecule_copy = Molecule()
+        for atom in molecule.atoms:
+            molecule_copy.add_atom(atom.atomic_number, atom.formal_charge, atom.is_aromatic, stereochemistry=atom.stereochemistry)
+        for bond in molecule.bonds:
+            molecule_copy.add_bond(bond.atom1_index, bond.atom2_index, bond.bond_order, bond.is_aromatic,
+                                   stereochemistry=bond.stereochemistry,
+                                   fractional_bond_order=bond.fractional_bond_order)
+        # Try to add the final bond twice, which should raise an Exception
+        with pytest.raises(Exception) as excinfo:
+            molecule_copy.add_bond(bond.atom1_index, bond.atom2_index, bond.bond_order, bond.is_aromatic,
+                                   stereochemistry=bond.stereochemistry,
+                                   fractional_bond_order=bond.fractional_bond_order)
 
-            assert molecule == molecule_copy
+        assert molecule == molecule_copy
 
-
-    def test_add_virtual_site_units(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_add_virtual_site_units(self, molecule):
         """
         Tests the unit type checking of the VirtualSite base class
         """
@@ -425,252 +425,267 @@ class TestMolecule(TestCase):
         #charge_increments = [i * unit.elementary_charge for i in charge_increments_unitless]
         charge_increments = charge_increments_unitless * unit.elementary_charge
 
-        for molecule in self.molecules:
-            atom1 = molecule.atoms[0]
-            atom2 = molecule.atoms[1]
-            atom3 = molecule.atoms[2]
-            atom4 = molecule.atoms[3]
+        # Do not modify the original molecule.
+        molecule = copy.deepcopy(molecule)
 
-            # Try to feed in unitless sigma
-            with self.assertRaises(Exception) as context:
-                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, sigma=sigma_unitless)
-            
-            # Try to feed in unitless rmin_half
-            with self.assertRaises(Exception) as context:
-                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, rmin_half=rmin_half_unitless)
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        atom4 = molecule.atoms[3]
 
-            # Try to feed in unitless epsilon
-            with self.assertRaises(Exception) as context:
-                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon_unitless, sigma=sigma, rmin_half=rmin_half)
+        # Try to feed in unitless sigma
+        with pytest.raises(Exception) as excinfo:
+            molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, sigma=sigma_unitless)
 
-            # Try to feed in unitless charges
-            with self.assertRaises(Exception) as context:
-                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3, atom4], distance, charge_incrtements=charge_increments_unitless)
-            
+        # Try to feed in unitless rmin_half
+        with pytest.raises(Exception) as excinfo:
+            molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, rmin_half=rmin_half_unitless)
 
-            # We shouldn't be able to give both rmin_half and sigma VdW parameters.
-            with self.assertRaises(Exception) as context:
-                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half)
-                
-            # Try creating virtual site from sigma+epsilon
-            vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, sigma=sigma)
-            # Try creating virutal site from rmin_half+epsilon
-            vsite2_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, rmin_half=rmin_half)
+        # Try to feed in unitless epsilon
+        with pytest.raises(Exception) as excinfo:
+            molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon_unitless, sigma=sigma, rmin_half=rmin_half)
 
-            # TODO: Test the @property getters for sigma, epsilon, and rmin_half
+        # Try to feed in unitless charges
+        with pytest.raises(Exception) as excinfo:
+            molecule.add_bond_charge_virtual_site([atom1, atom2, atom3, atom4], distance, charge_incrtements=charge_increments_unitless)
+
+
+        # We shouldn't be able to give both rmin_half and sigma VdW parameters.
+        with pytest.raises(Exception) as excinfo:
+            molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half)
+
+        # Try creating virtual site from sigma+epsilon
+        vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, sigma=sigma)
+        # Try creating virutal site from rmin_half+epsilon
+        vsite2_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, epsilon=epsilon, rmin_half=rmin_half)
+
+        # TODO: Test the @property getters for sigma, epsilon, and rmin_half
+
+        # We should have to give as many charge increments as atoms (len(charge_increments) = 4
+        with pytest.raises(Exception) as excinfo:
+            molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, charge_increments=charge_increments)
+
+        vsite3_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3, atom4], distance, charge_increments=charge_increments)
             
-            # We should have to give as many charge increments as atoms (len(charge_increments) = 4
-            with self.assertRaises(Exception) as context:
-                molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, charge_increments=charge_increments)
-                
-            vsite3_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3, atom4], distance, charge_increments=charge_increments)
-            
-            
-    def test_add_bond_charge_virtual_site(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_add_bond_charge_virtual_site(self, molecule):
         """Test the addition of a BondChargeVirtualSite to a molecule.
            Also tests many of the inputs of the parent VirtualSite class
         """
-        for molecule in self.molecules:
-            atom1 = molecule.atoms[0]
-            atom2 = molecule.atoms[1]
-            atom3 = molecule.atoms[2]
-            atom4 = molecule.atoms[3]
-            
-            # Prepare values for unit checks
-            distance_unitless = 0.4
-            distance = distance_unitless * unit.angstrom
+        # Do not modify the original molecule.
+        molecule = copy.deepcopy(molecule)
 
-            
-            # Try to feed in a unitless distance
-            with self.assertRaises(AssertionError) as context:
-                vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance_unitless)
-                
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        atom4 = molecule.atoms[3]
 
-            vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance)
-            vsite1 = molecule.virtual_sites[vsite1_index]
-            assert atom1 in vsite1.atoms
-            assert atom2 in vsite1.atoms
-            assert atom3 in vsite1.atoms
-            assert vsite1 in atom1.virtual_sites
-            assert vsite1 in atom2.virtual_sites
-            assert vsite1 in atom3.virtual_sites
-            assert vsite1.distance == distance
+        # Prepare values for unit checks
+        distance_unitless = 0.4
+        distance = distance_unitless * unit.angstrom
 
-            # Make an "everything bagel" virtual site
-            vsite2_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3],
-                                                                 distance,
-                                                                 sigma=0.1*unit.angstrom,
-                                                                 epsilon=1.0*unit.kilojoule_per_mole,
-                                                                 charge_increments=unit.Quantity(np.array([0.1, 0.2, 0.3]), unit.elementary_charge)
-                                                                 )
-            vsite2 = molecule.virtual_sites[vsite2_index]
 
-            # test serialization
-            molecule_dict = molecule.to_dict()
-            molecule2 = Molecule.from_dict(molecule_dict)
+        # Try to feed in a unitless distance
+        with pytest.raises(AssertionError) as excinfo:
+            vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance_unitless)
 
-            assert hash(molecule) == hash(molecule2)
-            #assert molecule.to_dict() == molecule2.to_dict()
+
+        vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance)
+        vsite1 = molecule.virtual_sites[vsite1_index]
+        assert atom1 in vsite1.atoms
+        assert atom2 in vsite1.atoms
+        assert atom3 in vsite1.atoms
+        assert vsite1 in atom1.virtual_sites
+        assert vsite1 in atom2.virtual_sites
+        assert vsite1 in atom3.virtual_sites
+        assert vsite1.distance == distance
+
+        # Make an "everything bagel" virtual site
+        vsite2_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3],
+                                                             distance,
+                                                             sigma=0.1*unit.angstrom,
+                                                             epsilon=1.0*unit.kilojoule_per_mole,
+                                                             charge_increments=unit.Quantity(np.array([0.1, 0.2, 0.3]), unit.elementary_charge)
+                                                             )
+        vsite2 = molecule.virtual_sites[vsite2_index]
+
+        # test serialization
+        molecule_dict = molecule.to_dict()
+        molecule2 = Molecule.from_dict(molecule_dict)
+
+        assert hash(molecule) == hash(molecule2)
+        #assert molecule.to_dict() == molecule2.to_dict()
 
     # TODO: Make a test for to_dict and from_dict for VirtualSites (even though they're currently just unloaded using
     #      (for example) Molecule._add_bond_virtual_site functions
-    def test_add_monovalent_lone_pair_virtual_site(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_add_monovalent_lone_pair_virtual_site(self, molecule):
         """Test addition of a MonovalentLonePairVirtualSite to the Molecule"""
-        for molecule in self.molecules:
-            atom1 = molecule.atoms[0]
-            atom2 = molecule.atoms[1]
-            atom3 = molecule.atoms[2]
-            atom4 = molecule.atoms[3]
+        # Do not modify the original molecule.
+        molecule = copy.deepcopy(molecule)
 
-            # Prepare values for unit checks
-            distance_unitless = 0.3
-            out_of_plane_angle_unitless = 30
-            in_plane_angle_unitless = 0.2
-            distance = distance_unitless * unit.angstrom
-            out_of_plane_angle = out_of_plane_angle_unitless * unit.degree
-            in_plane_angle = in_plane_angle_unitless * unit.radian
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        atom4 = molecule.atoms[3]
 
-            # Try passing in a unitless distance
-            with self.assertRaises(AssertionError) as context:
-                vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance_unitless, out_of_plane_angle, in_plane_angle)
+        # Prepare values for unit checks
+        distance_unitless = 0.3
+        out_of_plane_angle_unitless = 30
+        in_plane_angle_unitless = 0.2
+        distance = distance_unitless * unit.angstrom
+        out_of_plane_angle = out_of_plane_angle_unitless * unit.degree
+        in_plane_angle = in_plane_angle_unitless * unit.radian
 
-            # Try passing in a unitless out_of_plane_angle
-            with self.assertRaises(AssertionError) as context:
-                vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle_unitless, in_plane_angle)
-                
-            # Try passing in a unitless in_plane_angle
-            with self.assertRaises(AssertionError) as context:
-                vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle_unitless)
-                
-            # Try giving two atoms
-            with self.assertRaises(AssertionError) as context:
-                vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
-                
-            # Successfully make a virtual site
-            vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
-            # TODO: Check if we get the same values back out from the @properties
-            molecule_dict = molecule.to_dict()
-            molecule2 = Molecule.from_dict(molecule_dict)
-            assert molecule.to_dict() == molecule2.to_dict()
+        # Try passing in a unitless distance
+        with pytest.raises(AssertionError) as excinfo:
+            vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance_unitless, out_of_plane_angle, in_plane_angle)
 
-        
-    def test_add_divalent_lone_pair_virtual_site(self):
+        # Try passing in a unitless out_of_plane_angle
+        with pytest.raises(AssertionError) as excinfo:
+            vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle_unitless, in_plane_angle)
+
+        # Try passing in a unitless in_plane_angle
+        with pytest.raises(AssertionError) as excinfo:
+            vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle_unitless)
+
+        # Try giving two atoms
+        with pytest.raises(AssertionError) as excinfo:
+            vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
+
+        # Successfully make a virtual site
+        vsite1_index = molecule.add_monovalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
+        # TODO: Check if we get the same values back out from the @properties
+        molecule_dict = molecule.to_dict()
+        molecule2 = Molecule.from_dict(molecule_dict)
+        assert molecule.to_dict() == molecule2.to_dict()
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_add_divalent_lone_pair_virtual_site(self, molecule):
         """Test addition of a DivalentLonePairVirtualSite to the Molecule"""
-        for molecule in self.molecules:
-            atom1 = molecule.atoms[0]
-            atom2 = molecule.atoms[1]
-            atom3 = molecule.atoms[2]
-            atom4 = molecule.atoms[3]
-            distance = 0.3 * unit.angstrom
-            out_of_plane_angle = 30 * unit.degree
-            in_plane_angle = 0.2 * unit.radian
-            vsite1_index = molecule.add_divalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
-            with self.assertRaises(AssertionError) as context:
-                vsite1_index = molecule.add_divalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
-            molecule_dict = molecule.to_dict()
-            molecule2 = Molecule.from_dict(molecule_dict)
-            assert molecule.to_dict() == molecule2.to_dict()
+        # Do not modify the original molecule.
+        molecule = copy.deepcopy(molecule)
 
-    def test_add_trivalent_lone_pair_virtual_site(self):
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        atom4 = molecule.atoms[3]
+        distance = 0.3 * unit.angstrom
+        out_of_plane_angle = 30 * unit.degree
+        in_plane_angle = 0.2 * unit.radian
+        vsite1_index = molecule.add_divalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
+        with pytest.raises(AssertionError) as excinfo:
+            vsite1_index = molecule.add_divalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
+        molecule_dict = molecule.to_dict()
+        molecule2 = Molecule.from_dict(molecule_dict)
+        # try:
+        #     molecule.to_dict() == molecule2.to_dict()
+        # except ValueError:
+        #     import pdb; pdb.set_trace()
+        assert molecule_dict == molecule2.to_dict()
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_add_trivalent_lone_pair_virtual_site(self, molecule):
         """Test addition of a TrivalentLonePairVirtualSite to the Molecule"""
-        for molecule in self.molecules:
-            atom1 = molecule.atoms[0]
-            atom2 = molecule.atoms[1]
-            atom3 = molecule.atoms[2]
-            atom4 = molecule.atoms[3]
-            distance = 0.3 * unit.angstrom
-            out_of_plane_angle = 30 * unit.degree
-            in_plane_angle = 0.2 * unit.radian
-            vsite1_index = molecule.add_trivalent_lone_pair_virtual_site([atom1, atom2, atom3, atom4], distance, out_of_plane_angle, in_plane_angle)
-            # Test for assertion when giving too few atoms
-            with self.assertRaises(AssertionError) as context:
-                vsite1_index = molecule.add_trivalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
-            molecule_dict = molecule.to_dict()
-            molecule2 = Molecule.from_dict(molecule_dict)
-            assert molecule.to_dict() == molecule2.to_dict()
+        # Do not modify the original molecule.
+        molecule = copy.deepcopy(molecule)
 
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        atom4 = molecule.atoms[3]
+        distance = 0.3 * unit.angstrom
+        out_of_plane_angle = 30 * unit.degree
+        in_plane_angle = 0.2 * unit.radian
+        vsite1_index = molecule.add_trivalent_lone_pair_virtual_site([atom1, atom2, atom3, atom4], distance, out_of_plane_angle, in_plane_angle)
+        # Test for assertion when giving too few atoms
+        with pytest.raises(AssertionError) as excinfo:
+            vsite1_index = molecule.add_trivalent_lone_pair_virtual_site([atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle)
+        molecule_dict = molecule.to_dict()
+        molecule2 = Molecule.from_dict(molecule_dict)
+        assert molecule.to_dict() == molecule2.to_dict()
 
-    def test_n_particles(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_n_particles(self, molecule):
         """Test n_particles property"""
-        for molecule in self.molecules:
-            n_particles = sum([1 for particle in molecule.particles])
-            assert n_particles == molecule.n_particles
+        n_particles = sum([1 for particle in molecule.particles])
+        assert n_particles == molecule.n_particles
 
-    def test_n_atoms(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_n_atoms(self, molecule):
         """Test n_atoms property"""
-        for molecule in self.molecules:
-            n_atoms = sum([1 for atom in molecule.atoms])
-            assert n_atoms == molecule.n_atoms
+        n_atoms = sum([1 for atom in molecule.atoms])
+        assert n_atoms == molecule.n_atoms
 
-    def test_n_virtual_sites(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_n_virtual_sites(self, molecule):
         """Test n_virtual_sites property"""
-        for molecule in self.molecules:
-            n_virtual_sites = sum([1 for virtual_site in molecule.virtual_sites])
-            assert n_virtual_sites == molecule.n_virtual_sites
+        n_virtual_sites = sum([1 for virtual_site in molecule.virtual_sites])
+        assert n_virtual_sites == molecule.n_virtual_sites
 
-    def test_n_bonds(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_n_bonds(self, molecule):
         """Test n_bonds property"""
-        for molecule in self.molecules:
-            n_bonds = sum([1 for bond in molecule.bonds])
-            assert n_bonds == molecule.n_bonds
+        n_bonds = sum([1 for bond in molecule.bonds])
+        assert n_bonds == molecule.n_bonds
 
-    def test_angles(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_angles(self, molecule):
         """Test angles property"""
-        for molecule in self.molecules:
-            for angle in molecule.angles:
-                assert angle[0].is_bonded_to(angle[1])
-                assert angle[1].is_bonded_to(angle[2])
+        for angle in molecule.angles:
+            assert angle[0].is_bonded_to(angle[1])
+            assert angle[1].is_bonded_to(angle[2])
 
-    def test_propers(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_propers(self, molecule):
         """Test propers property"""
-        for molecule in self.molecules:
-            for proper in molecule.propers:
-                # The bonds should be in order 0-1-2-3 unless the
-                # atoms form a three- or four-membered ring.
-                is_chain = proper[0].is_bonded_to(proper[1])
-                is_chain &= proper[1].is_bonded_to(proper[2])
-                is_chain &= proper[2].is_bonded_to(proper[3])
-                is_chain &= not proper[0].is_bonded_to(proper[2])
-                is_chain &= not proper[0].is_bonded_to(proper[3])
-                is_chain &= not proper[1].is_bonded_to(proper[3])
+        for proper in molecule.propers:
+            # The bonds should be in order 0-1-2-3 unless the
+            # atoms form a three- or four-membered ring.
+            is_chain = proper[0].is_bonded_to(proper[1])
+            is_chain &= proper[1].is_bonded_to(proper[2])
+            is_chain &= proper[2].is_bonded_to(proper[3])
+            is_chain &= not proper[0].is_bonded_to(proper[2])
+            is_chain &= not proper[0].is_bonded_to(proper[3])
+            is_chain &= not proper[1].is_bonded_to(proper[3])
 
-                assert (is_chain or
-                        is_three_memebered_ring_torsion(proper) or
-                        is_four_memebered_ring_torsion(proper))
+            assert (is_chain or
+                    is_three_memebered_ring_torsion(proper) or
+                    is_four_memebered_ring_torsion(proper))
 
-    def test_impropers(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_impropers(self, molecule):
         """Test impropers property"""
-        for molecule in self.molecules:
-            for improper in molecule.impropers:
-                assert improper[0].is_bonded_to(improper[1])
-                assert improper[1].is_bonded_to(improper[2])
-                assert improper[1].is_bonded_to(improper[3])
+        for improper in molecule.impropers:
+            assert improper[0].is_bonded_to(improper[1])
+            assert improper[1].is_bonded_to(improper[2])
+            assert improper[1].is_bonded_to(improper[3])
 
-                # The non-central atoms can be connected only if
-                # the improper atoms form a three-membered ring.
-                is_not_cyclic = not((improper[0].is_bonded_to(improper[2])) or
-                                    (improper[0].is_bonded_to(improper[3])) or
-                                    (improper[2].is_bonded_to(improper[3])))
-                assert is_not_cyclic or is_three_memebered_ring_torsion(improper)
+            # The non-central atoms can be connected only if
+            # the improper atoms form a three-membered ring.
+            is_not_cyclic = not((improper[0].is_bonded_to(improper[2])) or
+                                (improper[0].is_bonded_to(improper[3])) or
+                                (improper[2].is_bonded_to(improper[3])))
+            assert is_not_cyclic or is_three_memebered_ring_torsion(improper)
 
-    def test_torsions(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_torsions(self, molecule):
         """Test torsions property"""
-        for molecule in self.molecules:
-            # molecule.torsions should be exactly equal to the union of propers and impropers.
-            assert set(molecule.torsions) == set(molecule.propers) | set(molecule.impropers)
+        # molecule.torsions should be exactly equal to the union of propers and impropers.
+        assert set(molecule.torsions) == set(molecule.propers) | set(molecule.impropers)
 
-            # The intersection of molecule.propers and molecule.impropers should be largely null.
-            # The only exception is for molecules containing 3-membered rings (e.g., DrugBank_5514).
-            common_torsions = molecule.propers & molecule.impropers
-            if len(common_torsions) > 0:
-                for torsion in common_torsions:
-                    assert is_three_memebered_ring_torsion(torsion)
+        # The intersection of molecule.propers and molecule.impropers should be largely null.
+        # The only exception is for molecules containing 3-membered rings (e.g., DrugBank_5514).
+        common_torsions = molecule.propers & molecule.impropers
+        if len(common_torsions) > 0:
+            for torsion in common_torsions:
+                assert is_three_memebered_ring_torsion(torsion)
 
-    def test_total_charge(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_total_charge(self, molecule):
         """Test total charge"""
-        for molecule in self.molecules:
-            total_charge = sum([atom.formal_charge for atom in molecule.atoms])
-            assert total_charge == molecule.total_charge
+        total_charge = sum([atom.formal_charge for atom in molecule.atoms])
+        assert total_charge == molecule.total_charge
 
     @OpenEyeToolkitWrapper.requires_toolkit()
     def test_chemical_environment_matches_OE(self):
@@ -748,8 +763,6 @@ class TestMolecule(TestCase):
         for match in matches:
             assert len(match) == 2 # each match should have two tagged atoms
 
-
-
     def test_name(self):
         """Test name property"""
         name = 'benzene'
@@ -759,7 +772,8 @@ class TestMolecule(TestCase):
 
     # TODO: This should be a toolkit test
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason=_OPENEYE_UNAVAILABLE_MESSAGE)
-    def test_iupac_roundtrip(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_iupac_roundtrip(self, molecule):
         """Test IUPAC conversion"""
         known_failures = ['DrugBank_390', 'DrugBank_810', 'DrugBank_977', 'DrugBank_1212',
                           'DrugBank_1634', 'DrugBank_1962', 'DrugBank_2148', 'DrugBank_2178',
@@ -773,52 +787,52 @@ class TestMolecule(TestCase):
                           'DrugBank_6305', 'DrugBank_6329', 'DrugBank_6355', 'DrugBank_6401',
                           'DrugBank_6509', 'DrugBank_6647', 'DrugBank_7124']
 
-        for index, molecule in enumerate(self.molecules):
-            if molecule.name in known_failures:
-                continue
-            iupac = molecule.to_iupac()
-            molecule_copy = Molecule.from_iupac(iupac)
-            assert molecule == molecule_copy
+        if molecule.name in known_failures:
+            return
+        iupac = molecule.to_iupac()
+        molecule_copy = Molecule.from_iupac(iupac)
+        assert molecule == molecule_copy
 
-    def test_topology_roundtrip(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_topology_roundtrip(self, molecule):
         """Test Topology round-trip"""
-        for molecule in self.molecules:
-            topology = molecule.to_topology()
-            molecule_copy = Molecule.from_topology(topology)
-            assert molecule == molecule_copy
+        topology = molecule.to_topology()
+        molecule_copy = Molecule.from_topology(topology)
+        assert molecule == molecule_copy
 
     # TODO: This should be a toolkit test
-    def test_file_roundtrip(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_file_roundtrip(self, molecule):
         """Test to/from file"""
         import os
         # TODO: Test all file capabilities; the current test is minimal
         # TODO: This makes no sense as implemented (don't know which toolkit it uses for what). Make this separate tests in test_toolkits
-        for molecule in self.molecules:
 
-            # Write and read mol2 file
-            with NamedTemporaryFile(suffix='.mol2', delete=False) as iofile:
-                molecule.to_file(iofile.name, 'MOL2')
-                molecule2 = Molecule.from_file(iofile.name)
-                assert molecule == molecule2
-                # TODO: Test to make sure properties are preserved?
-                os.unlink(iofile.name)
+        # Write and read mol2 file
+        with NamedTemporaryFile(suffix='.mol2', delete=False) as iofile:
+            molecule.to_file(iofile.name, 'MOL2')
+            molecule2 = Molecule.from_file(iofile.name)
+            assert molecule == molecule2
+            # TODO: Test to make sure properties are preserved?
+            os.unlink(iofile.name)
 
-            # Write and read SDF file
-            with NamedTemporaryFile(suffix='.sdf', delete=False) as iofile:
-                molecule.to_file(iofile.name, 'SDF')
-                molecule2 = Molecule.from_file(iofile.name)
-                assert molecule == molecule2
-                # TODO: Test to make sure properties are preserved?
-                os.unlink(iofile.name)
+        # Write and read SDF file
+        with NamedTemporaryFile(suffix='.sdf', delete=False) as iofile:
+            molecule.to_file(iofile.name, 'SDF')
+            molecule2 = Molecule.from_file(iofile.name)
+            assert molecule == molecule2
+            # TODO: Test to make sure properties are preserved?
+            os.unlink(iofile.name)
 
-            # Write and read PDB file
-            with NamedTemporaryFile(suffix='.pdb', delete=False) as iofile:
-                molecule.to_file(iofile.name, 'PDB')
-                # NOTE: We can't read pdb files and expect chemical information to be preserved
-                os.unlink(iofile.name)
+        # Write and read PDB file
+        with NamedTemporaryFile(suffix='.pdb', delete=False) as iofile:
+            molecule.to_file(iofile.name, 'PDB')
+            # NOTE: We can't read pdb files and expect chemical information to be preserved
+            os.unlink(iofile.name)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason=_OPENEYE_UNAVAILABLE_MESSAGE)
-    def test_oemol_roundtrip(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_oemol_roundtrip(self, molecule):
         """Test that Molecule creation from/conversion to OpenEye OEMol is consistent."""
         from openforcefield.utils.toolkits import UndefinedStereochemistryError
 
@@ -842,28 +856,28 @@ class TestMolecule(TestCase):
         ]
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        for molecule in self.molecules:
-            oemol = molecule.to_openeye()
-            molecule_copies = []
 
-            # If this is a known failure, check that it raises UndefinedStereochemistryError
-            # and proceed with the test ignoring it.
-            if molecule.name in known_failures:
-                with pytest.raises(UndefinedStereochemistryError):
-                    Molecule(oemol)
-                molecule_copies.append(Molecule.from_openeye(oemol, exception_if_undefined_stereo=False))
-            else:
-                molecule_copies.append(Molecule.from_openeye(oemol, exception_if_undefined_stereo=True))
-                molecule_copies.append(Molecule(oemol))
+        oemol = molecule.to_openeye()
+        molecule_copies = []
 
-            molecule_smiles = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-            for molecule_copy, error_msg in zip(molecule_copies, error_messages):
-                # Check that the original and the copied molecules have the same SMILES representation.
-                molecule_copy_smiles = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
-                assert molecule_smiles == molecule_copy_smiles
+        # If this is a known failure, check that it raises UndefinedStereochemistryError
+        # and proceed with the test ignoring it.
+        if molecule.name in known_failures:
+            with pytest.raises(UndefinedStereochemistryError):
+                Molecule(oemol)
+            molecule_copies.append(Molecule.from_openeye(oemol, exception_if_undefined_stereo=False))
+        else:
+            molecule_copies.append(Molecule.from_openeye(oemol, exception_if_undefined_stereo=True))
+            molecule_copies.append(Molecule(oemol))
 
-                # Check that the two topologies are isomorphic.
-                assert_molecule_is_equal(molecule, molecule_copy, error_msg)
+        molecule_smiles = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+        for molecule_copy, error_msg in zip(molecule_copies, error_messages):
+            # Check that the original and the copied molecules have the same SMILES representation.
+            molecule_copy_smiles = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
+            assert molecule_smiles == molecule_copy_smiles
+
+            # Check that the two topologies are isomorphic.
+            assert_molecule_is_equal(molecule, molecule_copy, error_msg)
 
     @pytest.mark.slow
     def test_compute_partial_charges(self):
@@ -872,6 +886,10 @@ class TestMolecule(TestCase):
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
         from simtk import unit
         import numpy as np
+
+        # Do not modify original molecules.
+        molecules = copy.deepcopy(mini_drug_bank())
+
         # Test a single toolkit at a time
         # Removed  ['amber', 'amberff94'] from OE list, as those won't find the residue types they're expecting
         toolkit_to_charge_method = {OpenEyeToolkitWrapper:['mmff', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10'],
@@ -886,7 +904,7 @@ class TestMolecule(TestCase):
             toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit])
             for charge_model in toolkit_to_charge_method[toolkit]:
                 c = 0
-                for molecule in self.molecules[:1]: # Just test first molecule to save time
+                for molecule in molecules[:1]: # Just test first molecule to save time
                     c += 1
                     if molecule.name in manual_skips:  # Manual skips, hopefully rare
                         continue
@@ -915,11 +933,14 @@ class TestMolecule(TestCase):
         # TODO: Test only one molecule for speed?
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
 
+        # Do not modify the original molecules.
+        molecules = copy.deepcopy(mini_drug_bank())
+
         toolkit_to_bondorder_method = {OpenEyeToolkitWrapper:['am1','pm3']}
         for toolkit in list(toolkit_to_bondorder_method.keys()):
             toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit])
             for charge_model in toolkit_to_bondorder_method[toolkit]:
-                for molecule in self.molecules[:5]: # Just test first five molecules for speed
+                for molecule in molecules[:5]: # Just test first five molecules for speed
                     molecule.compute_wiberg_bond_orders(charge_model=charge_model, toolkit_registry=toolkit_registry)
                     fbo1 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # Call should be faster the second time due to caching
