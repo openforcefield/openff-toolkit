@@ -355,7 +355,6 @@ class ParameterType(object):
         if return_cosmetic_attributes:
             attribs_to_return += self._COSMETIC_ATTRIBS
 
-        print('attribs_to_return', attribs_to_return)
         # Start populating a dict of the attribs
         smirnoff_dict = OrderedDict()
         # If attribs_to_return is ordered here, that will effectively be an informal output ordering

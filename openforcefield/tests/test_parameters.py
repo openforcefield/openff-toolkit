@@ -93,15 +93,15 @@ class TestParameterList:
     def test_parameterlist_to_list(self):
         """Test basic ParameterList.to_list() function"""
         from simtk import unit
-        p1 = BondHandler.BondType(smirks='[*:1]',
+        p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
                                   length=1.01 * unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
                                   )
-        p2 = BondHandler.BondType(smirks='[*:1]',
+        p2 = BondHandler.BondType(smirks='[*:1]=[*:2]',
                                   length=1.02 * unit.angstrom,
                                   k=6 * unit.kilocalorie_per_mole / unit.angstrom ** 2
                                   )
-        p3 = BondHandler.BondType(smirks='[*:1]',
+        p3 = BondHandler.BondType(smirks='[*:1]#[*:3]',
                                   length=1.03 * unit.angstrom,
                                   k=7 * unit.kilocalorie_per_mole / unit.angstrom ** 2
                                   )
@@ -114,6 +114,25 @@ class TestParameterList:
         read unit)
         """
         pass
+
+    def test_parameterlist_append(self):
+        """
+        Test ParameterList.append, ensuring that the new parameter was added to the bottom of the list
+        and that its units are set as the default for output.
+        """
+        pass
+
+
+    def test_parameterlist_insert(self):
+        """
+        Test ParameterList.insert, ensuring that the new parameter was added to the proper spot in
+        the list and that its units are set as the default for output.
+        """
+        pass
+
+# test_parameterlist_append
+# test_parameterlist_insert
+
 
 class TestParameterType:
 
@@ -132,13 +151,13 @@ class TestParameterType:
         """
         from simtk import unit
 
-        p1 = BondHandler.BondType(smirks='[*:1]',
+        p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
                                   length=1.02 * unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
                                   )
         param_dict = p1.to_dict()
         param_dict_unitless, attached_units = detach_units(param_dict)
-        assert param_dict_unitless == {'smirks': '[*:1]',
+        assert param_dict_unitless == {'smirks': '[*:1]-[*:2]',
                                        'length': 1.02,
                                        'k': 5,}
         assert attached_units == {'length_unit': unit.angstrom,
@@ -152,7 +171,7 @@ class TestParameterType:
         Test BondType to_dict with custom output units.
         """
         from simtk import unit
-        p1 = BondHandler.BondType(smirks='[*:1]',
+        p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
                                   )
@@ -167,7 +186,7 @@ class TestParameterType:
         Test ParameterType to_dict with invalid output units.
         """
         from simtk import unit
-        p1 = BondHandler.BondType(smirks='[*:1]',
+        p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
                                   )
@@ -184,7 +203,7 @@ class TestParameterType:
         """
         from simtk import unit
 
-        p1 = BondHandler.BondType(smirks='[*:1]',
+        p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
                                   id='b1'
@@ -198,7 +217,7 @@ class TestParameterType:
         """
         from simtk import unit
 
-        p1 = BondHandler.BondType(smirks='[*:1]',
+        p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
                                   pilot='alice',
@@ -213,7 +232,7 @@ class TestParameterType:
         """
         from simtk import unit
 
-        p1 = BondHandler.BondType(smirks='[*:1]',
+        p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
                                   pilot='alice',
@@ -229,7 +248,7 @@ class TestParameterType:
         from simtk import unit
 
         with pytest.raises(SMIRNOFFSpecError, match="Incompatible kwarg {'pilot': 'alice'}") as context:
-            p1 = BondHandler.BondType(smirks='[*:1]',
+            p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
                                       length=1.02*unit.angstrom,
                                       k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
                                       pilot='alice',
@@ -242,17 +261,16 @@ class TestParameterType:
         """
         from simtk import unit
 
-        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]',
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                     phase1=30 * unit.degree,
                                                     periodicity1=2,
                                                     k1=5 * unit.kilocalorie_per_mole
                                                     )
-        print(p1.k)
         param_dict = p1.to_dict()
-        print(param_dict)
         assert ('k1', 5 * unit.kilocalorie_per_mole) in param_dict.items()
         assert ('phase1', 30 * unit.degree) in param_dict.items()
         assert ('periodicity1', 2) in param_dict.items()
+        assert 'idivf' not in param_dict
 
     def test_single_term_proper_torsion_w_idivf(self):
         """
@@ -260,7 +278,7 @@ class TestParameterType:
         """
         from simtk import unit
 
-        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]',
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                     phase1=30 * unit.degree,
                                                     periodicity1=2,
                                                     k1=5 * unit.kilocalorie_per_mole,
@@ -280,7 +298,7 @@ class TestParameterType:
         """
         from simtk import unit
 
-        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]',
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                     phase1=30 * unit.degree,
                                                     periodicity1=2,
                                                     k1=5 * unit.kilocalorie_per_mole,
@@ -288,9 +306,7 @@ class TestParameterType:
                                                     periodicity2=3,
                                                     k2=6 * unit.kilocalorie_per_mole,
                                                     )
-        print(p1.k)
         param_dict = p1.to_dict()
-        print(param_dict)
         assert ('k1', 5 * unit.kilocalorie_per_mole) in param_dict.items()
         assert ('phase1', 30 * unit.degree) in param_dict.items()
         assert ('periodicity1', 2) in param_dict.items()
@@ -306,7 +322,7 @@ class TestParameterType:
         from simtk import unit
 
         with pytest.raises(SMIRNOFFSpecError, match="Incompatible kwarg {'phase3': ") as context:
-            p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]',
+            p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                         phase1=30 * unit.degree,
                                                         periodicity1=2,
                                                         k1=5 * unit.kilocalorie_per_mole,
@@ -323,20 +339,18 @@ class TestParameterType:
         from simtk import unit
 
         with pytest.raises(SMIRNOFFSpecError, match="constructor received kwarg phase2 with value 31 A,") as context:
-            p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]',
+            p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                         phase1=30 * unit.degree,
                                                         periodicity1=2,
                                                         k1=5 * unit.kilocalorie_per_mole,
-                                                        phase2=31 * unit.angstrom,
+                                                        phase2=31 * unit.angstrom, # This should be caught
                                                         periodicity2=3,
                                                         k2=6 * unit.kilocalorie_per_mole,
                                                         )
 
-# test_multi_term_torsion_from_dict_bad_units
-# test_multi_term_torsion_from_dict_default_idivf
-# test_multi_term_torsion_from_dict_custom_idivf
+
+# test_parametertype_unit_property_getter
+# test_parametertype_unit_property_setter
 
 # Test multi_term_torsion to_dict
 # test_optional_attribs
-# test_default_idivf
-# test_non_default_idivf
