@@ -299,9 +299,9 @@ class ParameterType(object):
     _REQUIRE_UNITS = {} # A dict of attribs which will be checked for unit compatibility
     # TODO: Make sure that this doesn't get defined at the class level
     _OPTIONAL_ATTRIBS = ['id', 'parent_id'] # Attributes in the SMIRNOFF spec that may
-                                                    # be present but have no impact on performance
+                                            # be present but have no impact on performance
     _INDEXED_ATTRIBS = []  # list of attribs that will have consecutive numerical suffixes starting at 1
-
+    _ATTRIBS_TO_TYPE = {}  # dict of attributes that need to be cast to a type (like int or float) to be interpreted
 
 
 
@@ -358,6 +358,9 @@ class ParameterType(object):
                                                                                    val,
                                                                                    self._REQUIRE_UNITS[unidx_key])
                         raise SMIRNOFFSpecError(msg)
+                if unidx_key in self._ATTRIBS_TO_TYPE:
+                    type_to_cast = self._ATTRIBS_TO_TYPE[unidx_key]
+                    val = type_to_cast(val)
                 getattr(self, unidx_key).append(val)
                 del kwargs[idx_key]
                 index += 1
@@ -375,6 +378,9 @@ class ParameterType(object):
                                                                                self._REQUIRE_UNITS[key])
                     raise SMIRNOFFSpecError(msg)
 
+                if key in self._ATTRIBS_TO_TYPE:
+                    type_to_cast = self._ATTRIBS_TO_TYPE[key]
+                    val = type_to_cast(val)
             # Iterate through
             #attr_name = '_' + key
             if key in self._SMIRNOFF_ATTRIBS:
@@ -501,6 +507,7 @@ class ParameterHandler(object):
     _OPTIONAL_SPEC_ATTRIBS = []  # list of non-required attributes that can be defined on initialization
     _INDEXED_ATTRIBS = []  # list of parameter attribs that will have consecutive numerical suffixes starting at 1
     _REQUIRE_UNITS = {}  # dict of {header attrib : unit } for input checking
+    _ATTRIBS_TO_TYPE = {} # dict of attribs that must be cast to a specific type to be interpreted correctly
     _KWARGS = [] # Kwargs to catch when create_force is called
     _SMIRNOFF_VERSION_INTRODUCED = 0.0  # the earliest version of SMIRNOFF spec that supports this ParameterHandler
     _SMIRNOFF_VERSION_DEPRECATED = None  # if deprecated, the first SMIRNOFF version number it is no longer used
@@ -539,6 +546,11 @@ class ParameterHandler(object):
                                  list(self._DEFAULT_SPEC_ATTRIBS.keys()) + \
                                  self._OPTIONAL_SPEC_ATTRIBS
 
+        # Check for attribs that need to be casted to specific types
+        for attrib, type_to_cast in self._ATTRIBS_TO_TYPE.items():
+            if attrib in kwargs:
+                kwargs[attrib] = type_to_cast(kwargs[attrib])
+
         # Check for indexed attribs
         for attrib_basename in self._INDEXED_ATTRIBS:
             attrib_unit_key = attrib_basename + '_unit'
@@ -559,7 +571,7 @@ class ParameterHandler(object):
         smirnoff_data = attach_units(unitless_kwargs, attached_units)
 
         # Add default values to smirnoff_data if they're not already there
-        for default_key, default_val in self.DEFAULT_SPEC_ATTRIBS.items():
+        for default_key, default_val in self._DEFAULT_SPEC_ATTRIBS.items():
             if not (default_key in kwargs):
                 smirnoff_data[default_key] = default_val
 
@@ -842,9 +854,8 @@ class ConstraintHandler(ParameterHandler):
     _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
 
 
-    def __init__(self, forcefield, **kwargs):
-        #super(ConstraintHandler, self).__init__(forcefield)
-        super().__init__(forcefield, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def create_force(self, system, topology, **kwargs):
         constraints = self.get_matches(topology)
@@ -935,7 +946,6 @@ class BondHandler(ParameterHandler):
     _INDEXED_ATTRIBS = ['k'] # May be indexed (by integer bond order) if fractional bond orders are used
 
     def __init__(self, **kwargs):
-        #super(HarmonicBondHandler, self).__init__(forcefield)
         super().__init__(**kwargs)
 
     def create_force(self, system, topology, **kwargs):
@@ -953,7 +963,7 @@ class BondHandler(ParameterHandler):
         # Add all bonds to the system.
         bonds = self.get_matches(topology)
         skipped_constrained_bonds = 0  # keep track of how many bonds were constrained (and hence skipped)
-        for (atoms, bond) in bonds.items():
+        for (atoms, bond_params) in bonds.items():
             # Get corresponding particle indices in Topology
             #particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
@@ -961,20 +971,21 @@ class BondHandler(ParameterHandler):
             topology.assert_bonded(atoms[0], atoms[1])
 
             # Compute equilibrium bond length and spring constant.
-            if bond.fractional_bondorder is None:
-                [k, length] = [bond.k, bond.length]
+            topology_bond = topology.get_bond_between(atoms[0], atoms[1])
+            if topology_bond.bond.fractional_bond_order is None:
+                [k, length] = [bond_params.k, bond_params.length]
             else:
                 # Interpolate using fractional bond orders
                 # TODO: Do we really want to allow per-bond specification of interpolation schemes?
-                order = topology.get_fractional_bond_order(*atoms)
-                if bond.fractional_bondorder_interpolation == 'interpolate-linear':
-                    k = bond.k[0] + (bond.k[1] - bond.k[0]) * (order - 1.)
-                    length = bond.length[0] + (
-                        bond.length[1] - bond.length[0]) * (order - 1.)
+                order = topology_bond.bond.fractional_bond_order
+                if self.fractional_bondorder_interpolation == 'interpolate-linear':
+                    k = bond_params.k[0] + (bond_params.k[1] - bond_params.k[0]) * (order - 1.)
+                    length = bond_params.length[0] + (
+                        bond_params.length[1] - bond_params.length[0]) * (order - 1.)
                 else:
                     raise Exception(
                         "Partial bondorder treatment {} is not implemented.".
-                        format(bond.fractional_bondorder))
+                        format(self.fractional_bondorder_method))
 
             # Handle constraints.
             # TODO: I don't understand why there are two if statements checking the same thing here.
@@ -1031,8 +1042,7 @@ class AngleHandler(ParameterHandler):
     _OPENMMTYPE = openmm.HarmonicAngleForce  # OpenMM force class to create
     _DEFAULT_SPEC_ATTRIBS = {'potential': 'harmonic'}
 
-    def __init__(self, forcefield, **kwargs):
-        #super(AngleHandler, self).__init__(forcefield)
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     def create_force(self, system, topology, **kwargs):
@@ -1089,48 +1099,12 @@ class ProperTorsionHandler(ParameterHandler):
                           'phase': unit.degree}
         _OPTIONAL_ATTRIBS = ['id', 'parent_id', 'idivf']
         _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
+        _ATTRIBS_TO_TYPE = {'periodicity': int,
+                            'idivf': float}
 
-    def __init__(self,
-                     #fractional_bondorder_method=None,
-                     #fractional_bondorder=None,
-                     **kwargs):
-
-            # self.periodicity = list()
-            # self.phase = list()
-            # self.k = list()
-            # Store parameters.
-            #for param_dict in kwargs[self._TAGNAME]
-            #index = 1
-            #while 'phase%d' % index in kwargs:
-                # self.periodicity.append(int(kwargs['periodicity%d' % index]))
-                # self.phase.append(kwargs['phase%d' % index])
-                # self.k.append(kwargs['k%d' % index])
-                # del kwargs['periodicity%d' % index]
-                # del kwargs['phase%d' % index]
-                # del kwargs['k%d' % index]
-
-                # Optionally handle 'idivf', which divides the periodicity by the specified value
-            #    if not('idivf%d' % index) in kwargs:
-            #        kwargs['idivf%d' % index] =
-                    # idivf = kwargs['idivf%d' % index]
-                    # self.k[-1] /= float(idivf)
-                    # del kwargs['idivf%d' % index]
-            #    index += 1
-
-            # Check for errors, i.e. 'phase' instead of 'phase1'
-            # TODO: Can we raise a more useful error if there is no ``id``?
-            #if len(self.phase) == 0:
-            #    raise Exception(
-            #        "Error: Torsion with id %s has no parseable phase entries."
-            #        % self.pid)
-
+        def __init__(self, **kwargs):
             super().__init__(**kwargs)  # base class handles ``smirks`` and ``id`` fields
 
-            # TODO: Fractional bond orders should be processed on the per-force basis instead of per-bond basis
-            #if not (fractional_bondorder_method is None):
-            #    self.fractional_bondorder = fractional_bondorder
-            #else:
-            #    self.fractional_bondorder = None
 
     _TAGNAME = 'ProperTorsions'  # SMIRNOFF tag name to process
     _INFOTYPE = ProperTorsionType  # info type to store
@@ -1200,6 +1174,8 @@ class ImproperTorsionHandler(ParameterHandler):
                           'phase': unit.degree}
         _OPTIONAL_ATTRIBS = ['id', 'parent_id', 'idivf']
         _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
+        _ATTRIBS_TO_TYPE = {'periodicity': int,
+                            'idivf': float}
 
         def __init__(self, **kwargs):
             super().__init__( **kwargs)
@@ -1211,13 +1187,14 @@ class ImproperTorsionHandler(ParameterHandler):
     _HANDLER_DEFAULTS = {'potential': 'charmm',
                          'default_idivf': 'auto'}
 
-    def __init__(self, forcefield, potential=None, **kwargs):
-        #super(ImproperTorsionHandler, self).__init__(forcefield)
-        super().__init__(forcefield, **kwargs)
-        # if not (potential is None):
-        #     self._potential = potential
-        # else:
-        #     self._potential = self._DEFAULT_HEADER_ATTRIBS['potential']
+    def __init__(self, potential=None, **kwargs):
+        # Cast necessary kwargs to int
+        int_kwargs = ['periodicity', 'idivf']
+        for kwarg in kwargs:
+            for int_kwarg in int_kwargs:
+                if int_kwarg in kwarg:
+                    kwargs[kwarg] = int(kwargs[kwargs])
+        super().__init__(**kwargs)
 
 
 
@@ -1298,8 +1275,8 @@ class vdWHandler(ParameterHandler):
     class vdWType(ParameterType):
         """A SMIRNOFF vdWForce type."""
         _VALENCE_TYPE = 'Atom'  # ChemicalEnvironment valence type expected for SMARTS
-
         _SMIRNOFF_ATTRIBS = ['smirks', 'epsilon'] # Attributes expected per the SMIRNOFF spec.
+        _OPTIONAL_ATTRIBS = ['id', 'parent_id', 'sigma', 'rmin_half']
         _REQUIRE_UNITS = {
             'epsilon': unit.kilocalorie_per_mole,
             'sigma': unit.angstrom,
@@ -1307,6 +1284,9 @@ class vdWHandler(ParameterHandler):
         }
 
         def __init__(self, **kwargs):
+
+
+
             sigma = kwargs.get('sigma', None)
             rmin_half = kwargs.get('rmin_half', None)
             if (sigma is None) and (rmin_half is None):
@@ -1337,9 +1317,6 @@ class vdWHandler(ParameterHandler):
     _TAGNAME = 'vdW'  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create
-
-    # TODO: Is this necessary
-    _SCALETOL = 1e-5
     _KWARGS = ['ewaldErrorTolerance', 'useDispersionCorrection'] # Kwargs to catch when create_force is called
 
     _DEFAULT_SPEC_ATTRIBS = {
@@ -1351,8 +1328,16 @@ class vdWHandler(ParameterHandler):
         'scale15': 1.0,
         'switch': 8.0 * unit.angstroms,
         'cutoff': 9.0 * unit.angstroms,
-        'long_range_dispersion': 'isotropic'
+        'long_range_dispersion': 'isotropic',
+        'nonbonded_method': NonbondedMethod.NoCutoff
     }
+    _ATTRIBS_TO_TYPE = {'scale12': float,
+                        'scale13': float,
+                        'scale14': float,
+                        'scale15': float}
+
+    # TODO: Is this necessary
+    _SCALETOL = 1e-5
 
     _NONBOND_METHOD_MAP = {
         NonbondedMethod.NoCutoff:
@@ -1516,10 +1501,8 @@ class ToolkitAM1BCCHandler(ParameterHandler):
 
 
 
-    def __init__(self,
-                 forcefield,
-                 **kwargs):
-        super().__init__(forcefield, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
 
 
@@ -1707,12 +1690,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
 
 
-    def __init__(self,
-                 # forcefield,
-                 # number_of_conformers=None,
-                 # quantum_chemical_method=None,
-                 # partial_charge_method=None,
-                 **kwargs):
+    def __init__(self, **kwargs):
         raise NotImplementedError("ChangeIncrementHandler is not yet implemented, pending finalization of the "
                                   "SMIRNOFF spec")
         super().__init__(**kwargs)
@@ -1925,9 +1903,10 @@ class GBSAParameterHandler(ParameterHandler):
         _VALENCE_TYPE = 'Atom'
         _SMIRNOFF_ATTRIBS = ['smirks', 'radius', 'scale']
         _REQUIRE_UNITS = {'radius': unit.angstrom}
+        _ATTRIBS_TO_TYPE = {'scale': float}
 
         def __init__(self, **kwargs):
-            super(GBSAType, self).__init__(**kwargs)
+            super().__init__(**kwargs)
 
             # # Store model parameters.
             # gb_model = parent.attrib['gb_model']
