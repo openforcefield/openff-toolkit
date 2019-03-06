@@ -38,6 +38,7 @@ forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
 # Compare energies
 from openforcefield.tests.utils import compare_amber_smirnoff
 # We ignore the charges as they are not included in the force field.
+# TODO: Reactivate this check when we'll be able to load charges from the file.
 energies = compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath,
                                   forcefield, molecule,
                                   ignore_charges=True)

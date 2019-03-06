@@ -18,7 +18,7 @@ offxml_filename = 'Frosst_AlkEthOH_parmAtFrosst.offxml'  # SMIRNOFF forcefield.
 time_step = 2*unit.femtoseconds  # Simulation timestep.
 temperature = 300*unit.kelvin  # Simulation temperature.
 friction = 1/unit.picosecond  # Collision rate.
-num_steps = 100  # Number of integration steps to run.
+num_steps = 100000  # Number of integration steps to run.
 trj_freq = 1000  # Number of steps per written trajectory frame.
 data_freq = 1000  # Number of steps per written simulation statistics.
 

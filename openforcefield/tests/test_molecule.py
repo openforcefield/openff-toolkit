@@ -40,11 +40,13 @@ from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWra
 # TEST UTILITIES
 #=============================================================================================
 
-_OPENEYE_UNAVAILABLE_MESSAGE = 'requires the OpenEye toolkit'
-_RDKIT_UNAVAILABLE_MESSAGE = 'requires RDKit'
+requires_openeye = pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(),
+                                      reason='Test requires OE toolkit')
+requires_rdkit = pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(),
+                                    reason='Test requires RDKit')
 
 
-def assert_molecule_is_equal(molecule1, molecule2, msg, check_smiles=True):
+def assert_molecule_is_equal(molecule1, molecule2, msg):
     """Compare whether two Molecule objects are equal
 
     Parameters
@@ -53,9 +55,6 @@ def assert_molecule_is_equal(molecule1, molecule2, msg, check_smiles=True):
         Molecules to be compared
     msg : str
         Message to include if molecules fail to match.
-    check_smiles : bool, optional
-        If True, the SMILES representation of the two molecules is
-        checked in addition to their graphs. Default is True.
 
     """
     if not(molecule1.is_isomorphic(molecule2)):
@@ -152,7 +151,7 @@ mini_drug_bank.molecules = None
 # TESTS
 #=============================================================================================
 
-@pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason=_OPENEYE_UNAVAILABLE_MESSAGE)
+@requires_openeye
 class TestMolecule:
 
     # TODO: Test getstate/setstate
@@ -310,7 +309,7 @@ class TestMolecule:
         molecule_copy = Molecule(molecule)
         assert molecule_copy == molecule
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason=_RDKIT_UNAVAILABLE_MESSAGE)
+    @requires_rdkit
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_create_rdkit(self, molecule):
         """Test creation of a molecule from an RDKit rdmol"""
@@ -771,7 +770,7 @@ class TestMolecule:
         assert molecule.name == name
 
     # TODO: This should be a toolkit test
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason=_OPENEYE_UNAVAILABLE_MESSAGE)
+    @requires_openeye
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_iupac_roundtrip(self, molecule):
         """Test IUPAC conversion"""
@@ -830,7 +829,7 @@ class TestMolecule:
             # NOTE: We can't read pdb files and expect chemical information to be preserved
             os.unlink(iofile.name)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason=_OPENEYE_UNAVAILABLE_MESSAGE)
+    @requires_openeye
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_oemol_roundtrip(self, molecule):
         """Test that Molecule creation from/conversion to OpenEye OEMol is consistent."""
@@ -926,7 +925,7 @@ class TestMolecule:
                     charges2 = molecule._partial_charges
                     assert (np.allclose(charges1, charges2, atol=0.002))
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason=_OPENEYE_UNAVAILABLE_MESSAGE)
+    @requires_openeye
     def test_assign_fractional_bond_orders(self):
         """Test assignment of fractional bond orders
         """
