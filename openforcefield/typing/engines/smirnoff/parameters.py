@@ -102,8 +102,13 @@ class NonbondedMethod(Enum):
     PME = 4
 
 
+# We can't actually make this derive from dict, because it's possible for the user to change SMIRKS
+# of parameters already in the list, which would cause the ParameterType object's SMIRKS and
+# the dictionary key's SMIRKS to be out of sync.
 class ParameterList(list):
-    """Parameter list that also supports accessing items by SMARTS string.
+    """
+    Parameter list that also supports accessing items by SMARTS string. Remembers the
+    most recent parameter that was added.
     """
 
     # TODO: Make this faster by caching SMARTS -> index lookup?
@@ -112,17 +117,106 @@ class ParameterList(list):
 
     # TODO: Allow retrieval by `id` as well
 
+    def __init__(self, input_parameter_list=None):
+        """
+        Initialize a new ParameterList, optionally providing a list of ParameterType objects
+        to initially populate it.
+
+        Parameters
+        ----------
+        input_parameter_list: list[ParameterType], default=None
+            A pre-existing list of ParameterType-based objects. If None, this ParameterList
+            will be initialized empty.
+        """
+        super().__init__()
+
+        # We keep track of the last parameter added as this will be
+        # used to set output units during serialization
+        self._last_added_param = None
+        input_parameter_list = input_parameter_list or []
+        for input_parameter in input_parameter_list:
+            self.append(input_parameter)
+            self._last_added_param = input_parameter_list
+
+    @property
+    def last_added_parameter(self):
+        """
+        Get a copy of the last parameter added to this ParameterList. Important
+        for serializing as the last parameter added determines the units used for
+        serializing all other parameters of this type.
+
+        Returns
+        -------
+        parameter : a ParameterType-derived object
+            The last parameter added to this ParameterList
+        """
+        return self._last_added_param
+
+    # def __setitem__(self, key, value):
+    #     """
+    #     Add a new entry to the ParameterList.
+    #     Parameters
+    #     ----------
+    #     key
+    #     value
+    #     """
+    #     super().__setitem__(key, value)
+    #     self._last_added_param = value
+
+    def append(self, parameter):
+        """
+        Add a ParameterType object to the end of the ParameterList
+
+        Parameters
+        ----------
+        parameter : a ParameterType-derived object
+
+        """
+        super().append(parameter)
+        self._last_added_param = parameter
+
+    def extend(self, other):
+        """
+        Add a ParameterType object to the end of the ParameterList
+
+        Parameters
+        ----------
+        parameter : a ParameterType-derived object
+
+        """
+        if not isinstance(other, ParameterList):
+            msg = 'ParameterList.extend(other) expected instance of ParameterList, ' \
+                  'but received {} (type {}) instead'.format(other, type(other))
+            raise TypeError(other)
+        super().extend(other)
+        if len(other) > 0:
+            self._last_added_param = other[-1]
+
+
+    def insert(self, index, parameter):
+        """
+        Add a ParameterType object as if this were a list
+
+        Parameters
+        ----------
+        parameter : a ParameterType-derived object
+
+        """
+        super().insert(index, parameter)
+        self._last_added_param = parameter
+
     def __delitem__(self, item):
         """
         Delete item by index or SMIRKS
         """
-        if type(item) == str:
+        if type(item) is str:
             # Try to find by SMIRKS
-            for result in self:
-                if result.smirks == item:
-                    self.remove(result)
+            for parameter in self:
+                if parameter.smirks == item:
+                    self.remove(parameter)
                     return
-        # Try traditional access. This will grab the item to remove by index, and
+
+        # Try numerical index access. This will grab the item to remove by index, and
         # then call __delitem__ again on its own SMIRKS, finishing in the "if" statement above
         item_to_remove = self[item].smirks
         del self[item_to_remove]
@@ -132,17 +226,14 @@ class ParameterList(list):
         """Retrieve item by index or SMIRKS
         """
         if type(item) == str:
-            # Try to retrieve by SMARTS
+            # Try to retrieve by SMIRKS
             for result in self:
                 if result.smirks == item:
                     return result
 
         # Try traditional access
-        result = list.__getitem__(self, item)
-        try:
-            return ParameterList(result)
-        except TypeError:
-            return result
+        result = super().__getitem__(item)
+        return result
 
     # TODO: Override __setitem__ and __del__ to ensure we can slice by SMIRKS as well
 

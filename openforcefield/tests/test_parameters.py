@@ -27,6 +27,16 @@ import pytest
 #=============================================================================================
 
 
+class TestParameterHandler:
+
+    def test_parameterhandler_with_different_units_to_dict(self):
+        """Test ParameterList.to_list() function when some parameters are in
+        different units (proper behavior is to convert all quantities to the last-
+        read unit)
+        """
+        pass
+
+
 class TestParameterList:
     """Test capabilities of ParameterList for accessing and manipulating SMIRNOFF parameter definitions.
     """
@@ -90,8 +100,58 @@ class TestParameterList:
         assert p1 in parameters
         assert p2 not in parameters
 
+
+    def test_parameterlist_append(self):
+        """
+        Test ParameterList.append, ensuring that the new parameter was added to the bottom of the list
+        and that it is properly recorded as the most recently-added.
+        """
+        p1 = ParameterType(smirks='[*:1]-[*:2]')
+        p2 = ParameterType(smirks='[*:1]=[*:2]')
+        param_list = ParameterList()
+        param_list.append(p1)
+        assert len(param_list) == 1
+        assert '[*:1]-[*:2]' in param_list
+        assert param_list.last_added_parameter == p1
+        param_list.append(p2)
+        assert len(param_list) == 2
+        assert '[*:1]=[*:2]' in param_list
+        assert param_list.last_added_parameter == p2
+
+
+    def test_parameterlist_insert(self):
+        """
+        Test ParameterList.insert, ensuring that the new parameter was added to the proper spot in
+        the list and that it is propertly recorded as the most recently added.
+        """
+        p1 = ParameterType(smirks='[*:1]-[*:2]')
+        p2 = ParameterType(smirks='[*:1]=[*:2]')
+        p3 = ParameterType(smirks='[*:1]#[*:2]')
+        param_list = ParameterList([p1, p2])
+        param_list.insert(1, p3)
+        assert param_list.last_added_parameter == p3
+        assert param_list[1] == p3
+
+    def test_parameterlist_extend(self):
+        """
+        Test ParameterList.extend, ensuring that the new parameter was added to the proper spot in
+        the list and that it is propertly recorded as the most recently added.
+        """
+        p1 = ParameterType(smirks='[*:1]-[*:2]')
+        p2 = ParameterType(smirks='[*:1]=[*:2]')
+        param_list1 = ParameterList()
+        param_list2 = ParameterList([p1, p2])
+
+        param_list1.extend(param_list2)
+        assert len(param_list1) == 2
+        assert '[*:1]-[*:2]' in param_list1
+        assert '[*:1]=[*:2]' in param_list1
+        assert param_list1.last_added_parameter == p2
+
+
+
     def test_parameterlist_to_list(self):
-        """Test basic ParameterList.to_list() function"""
+        """Test basic ParameterList.to_list() function, ensuring units are preserved"""
         from simtk import unit
         p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
                                   length=1.01 * unit.angstrom,
@@ -105,33 +165,37 @@ class TestParameterList:
                                   length=1.03 * unit.angstrom,
                                   k=7 * unit.kilocalorie_per_mole / unit.angstrom ** 2
                                   )
-        parameters = ParameterList([p1, p2, p3])
-        print(parameters.to_list())
-
-    def test_parameterlist_with_different_units_to_list(self):
-        """Test ParameterList.to_list() function when some parameters are in
-        different units (proper behavior is to convert all quantities to the last-
-        read unit)
-        """
-        pass
-
-    def test_parameterlist_append(self):
-        """
-        Test ParameterList.append, ensuring that the new parameter was added to the bottom of the list
-        and that its units are set as the default for output.
-        """
-        pass
+        parameter_list = ParameterList([p1, p2, p3])
+        ser_param_list = parameter_list.to_list()
+        assert len(ser_param_list) == 3
+        assert ser_param_list[0]['length'] == 1.01 * unit.angstrom
 
 
-    def test_parameterlist_insert(self):
-        """
-        Test ParameterList.insert, ensuring that the new parameter was added to the proper spot in
-        the list and that its units are set as the default for output.
-        """
-        pass
+    def test_parameterlist_round_trip(self):
+        """Test basic ParameterList.to_list() function and constructor"""
+        from simtk import unit
+        p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
+                                  length=1.01 * unit.angstrom,
+                                  k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+                                  )
+        p2 = BondHandler.BondType(smirks='[*:1]=[*:2]',
+                                  length=1.02 * unit.angstrom,
+                                  k=6 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+                                  )
+        p3 = BondHandler.BondType(smirks='[*:1]#[*:3]',
+                                  length=1.03 * unit.angstrom,
+                                  k=7 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+                                  )
+        parameter_list = ParameterList([p1, p2, p3])
+        param_dict_list = parameter_list.to_list()
+        parameter_list_2 = ParameterList()
+        for param_dict in param_dict_list:
+            new_parameter = BondHandler.BondType(**param_dict)
+            parameter_list_2.append(new_parameter)
+        assert parameter_list.to_list() == parameter_list_2.to_list()
 
-# test_parameterlist_append
-# test_parameterlist_insert
+
+
 
 
 class TestParameterType:
@@ -164,7 +228,6 @@ class TestParameterType:
                                   'k_unit': (unit.angstrom ** -2) * (unit.mole ** -1) * (unit.kilocalorie ** 1)
                                   }
 
-        #[('angstrom', -2), ('mole', -1), ('kilocalorie', 1)]
 
     def test_bondtype_to_dict_custom_output_units(self):
         """

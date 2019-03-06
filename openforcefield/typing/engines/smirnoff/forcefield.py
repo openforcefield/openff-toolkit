@@ -413,7 +413,8 @@ class ForceField(object):
                 "tag is already registered to {}".format(
                     parameter_handler_class, tagname,
                     self._parameter_handlers[tagname]))
-        new_handler = parameter_handler_class(self, **parameter_handler_kwargs)
+
+        new_handler = parameter_handler_class(**parameter_handler_kwargs)
 
         self._parameter_handlers[new_handler._TAGNAME] = new_handler
         return new_handler
