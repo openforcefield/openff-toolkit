@@ -642,7 +642,7 @@ class _TorsionParametersComparer:
         """
         diff_str = 'Parameters in first system:\n'
         diff_str += self._pretty_format_parameters(self.parameters, new_line=new_line)
-        diff_str = '\nParameters in second system:\n'
+        diff_str += '\nParameters in second system:\n'
         diff_str += self._pretty_format_parameters(other.parameters, new_line=new_line)
         if indent:
             diff_str = textwrap.indent(diff_str, '    ')

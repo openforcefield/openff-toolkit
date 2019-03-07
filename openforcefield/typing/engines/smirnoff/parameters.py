@@ -586,8 +586,6 @@ class ParameterHandler(object):
                     new_parameter = self._INFOTYPE(**param_dict,
                                                    permit_cosmetic_attributes=permit_cosmetic_attributes)
                     self._parameters.append(new_parameter)
-                    #self.add_parameter(param_dict,
-                    #                   permit_cosmetic_attributes=permit_cosmetic_attributes)
             elif key in allowed_header_attribs:
                 attr_name = '_' + key
                 # TODO: create @property.setter here if attrib requires unit
@@ -1167,7 +1165,7 @@ class ProperTorsionHandler(ParameterHandler):
             # Ensure atoms are actually bonded correct pattern in Topology
             for (i, j) in [(0, 1), (1, 2), (2, 3)]:
                 topology.assert_bonded(atom_indices[i], atom_indices[j])
-
+            print(atom_indices, torsion.phase, torsion.periodicity, torsion.k)
             for (periodicity, phase, k) in zip(torsion.periodicity,
                                                torsion.phase, torsion.k):
                 force.addTorsion(atom_indices[0], atom_indices[1],
@@ -1207,11 +1205,6 @@ class ImproperTorsionHandler(ParameterHandler):
 
     def __init__(self, potential=None, **kwargs):
         # Cast necessary kwargs to int
-        int_kwargs = ['periodicity', 'idivf']
-        for kwarg in kwargs:
-            for int_kwarg in int_kwargs:
-                if int_kwarg in kwarg:
-                    kwargs[kwarg] = int(kwargs[kwargs])
         super().__init__(**kwargs)
 
 
