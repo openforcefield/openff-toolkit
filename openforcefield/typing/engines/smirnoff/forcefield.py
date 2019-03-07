@@ -277,8 +277,9 @@ class ForceField(object):
         )  # ParameterIO classes to be used for each file type
         self._parameters = ParameterList(
         )  # ParameterHandler objects instantiated for each parameter type
-        self._used_aromaticity_models = set(
-        )  # Keep track of the aromaticity model(s) this ForceField uses
+        self._aromaticity_model = None
+        #self._used_aromaticity_models = set(
+        #)  # Keep track of the aromaticity model(s) this ForceField uses
 
 
     def _check_smirnoff_version_compatibility(self, version):
@@ -324,7 +325,9 @@ class ForceField(object):
         if aromaticity_model != 'OEAroModel_MDL':
             raise SMIRNOFFAromaticityError("Read aromaticity model {}. Currently only "
                                            "OEAroModel_MDL is supported.".format(aromaticity_model))
-        self._used_aromaticity_models.add(aromaticity_model)
+
+        self._aromaticity_model = aromaticity_model
+        #self._used_aromaticity_models.add(aromaticity_model)
 
 
     def _register_parameter_handler_classes(self, parameter_handler_classes):
@@ -645,19 +648,20 @@ class ForceField(object):
         smirnoff_dict : OrderedDict
             A nested OrderedDict representing this ForceField as a SMIRNOFF data object.
         """
-        smirnoff_dict = OrderedDict()
+        l1_dict = OrderedDict()
 
         # Assume we will write out SMIRNOFF data in compliance with the max supported spec version
-        smirnoff_dict['version'] = self._MAX_SUPPORTED_SMIRNOFF_VERSION
+        l1_dict['version'] = self._MAX_SUPPORTED_SMIRNOFF_VERSION
 
         # Write out all used aromaticity models
-        # TODO: Resolve if it's possible to have many aromaticity models
-        smirnoff_dict['aromaticity_model'] = list(self._used_aromaticity_models)
+        l1_dict['aromaticity_model'] = self._aromaticity_model
 
         for handler_format, parameter_handler in self._parameter_handlers.items():
             handler_tag = parameter_handler._TAGNAME
-            smirnoff_dict[handler_tag] = parameter_handler.to_smirnoff_data()
+            l1_dict[handler_tag] = parameter_handler.to_dict()
 
+        smirnoff_dict = OrderedDict()
+        smirnoff_dict['SMIRNOFF'] = l1_dict
         return smirnoff_dict
 
 
