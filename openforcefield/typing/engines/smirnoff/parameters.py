@@ -590,6 +590,7 @@ class ParameterHandler(object):
                     #                   permit_cosmetic_attributes=permit_cosmetic_attributes)
             elif key in allowed_header_attribs:
                 attr_name = '_' + key
+                # TODO: create @property.setter here if attrib requires unit
                 setattr(self, attr_name, val)
             elif permit_cosmetic_attributes:
                 self._COSMETIC_ATTRIBS.append(key)
@@ -764,29 +765,44 @@ class ParameterHandler(object):
         """
         smirnoff_data = OrderedDict()
 
-        if output_units is None:
-            output_units = dict()
+        # Set default output units to those from the last parameter added to the ParameterList
+        if (output_units is None):
+            if (self._parameters.last_added_parameter is not None):
+                _, output_units = detach_units(self._parameters.last_added_parameter.to_dict())
+            else:
+                output_units = dict()
 
         # Populate parameter list
         parameter_list = self._parameters.to_list(return_cosmetic_attributes=return_cosmetic_attributes)
         unitless_parameter_list = list()
 
-        # Separate units into a separate dict. Iterate over the parameter list backwards
-        # so the most recently-read unit for each attrib gets forced onto all the others.
-        for parameter_dict in parameter_list[::-1]:
+        # Detach units into a separate dict.
+        for parameter_dict in parameter_list:
             unitless_parameter_dict, attached_units = detach_units(parameter_dict, output_units=output_units)
-            unitless_parameter_list.append(parameter_dict)
+            unitless_parameter_list.append(unitless_parameter_dict)
             output_units.update(attached_units)
-        # Un-reverse the list
-        unitless_parameter_list.reverse()
 
-        # TODO: Collapse down indexed attribute units
-        for idxed_attrib in self._INDEXED_ATTRIBS:
-            attrib_unit = idxed_attrib + '_unit'
+        # Collapse down indexed attribute units
+        # (eg. {'k1_unit': angstrom, 'k2_unit': angstrom} --> {'k_unit': angstrom})
+        for attrib_key in self._INDEXED_ATTRIBS:
             index = 1
-            idxed_attrib_unit = idxed_attrib + str(index) + '_unit'
-            while idxed_attrib_unit in output_units:
-                pass
+            # Store a variable that is 'k1_unit'
+            idxed_attrib_unit_key = attrib_key + str(index) + '_unit'
+            # See if 'k1_unit' is in output_units
+            if idxed_attrib_unit_key in output_units:
+                # If so, define 'k_unit' and add it to the output_units dict
+                attrib_unit_key = attrib_key + '_unit'
+                output_units[attrib_unit_key] = output_units[idxed_attrib_unit_key]
+            # Increment the 'kN_unit' value, checking that each is the same as the
+            # 'k1_unit' value, and deleting them from output_units
+            while idxed_attrib_unit_key in output_units:
+                # Ensure that no different units are defined for higher indexes of this attrib
+                assert output_units[attrib_unit_key] == output_units[idxed_attrib_unit_key]
+                del output_units[idxed_attrib_unit_key]
+                index += 1
+                idxed_attrib_unit_key = attrib_key + str(index) + '_unit'
+
+
         smirnoff_data[self._TAGNAME] = unitless_parameter_list
 
 
@@ -805,7 +821,7 @@ class ParameterHandler(object):
         # Go through the attribs of this ParameterHandler and collect the appropriate values to return
         header_attribute_dict = {}
         for header_attribute in header_attribs_to_return:
-            value = getattr(self, header_attribute)
+            value = getattr(self, '_' + header_attribute)
             header_attribute_dict[header_attribute] = value
 
         # Detach all units from the header attribs
@@ -1111,6 +1127,7 @@ class ProperTorsionHandler(ParameterHandler):
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
     _DEFAULT_SPEC_ATTRIBS = {'potential': 'charmm',
                              'default_idivf': 'auto'}
+    _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
 
     def __init__(self, potential=None, **kwargs):
 
@@ -1186,6 +1203,7 @@ class ImproperTorsionHandler(ParameterHandler):
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
     _HANDLER_DEFAULTS = {'potential': 'charmm',
                          'default_idivf': 'auto'}
+    _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
 
     def __init__(self, potential=None, **kwargs):
         # Cast necessary kwargs to int
