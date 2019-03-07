@@ -49,7 +49,7 @@ MAX_SUPPORTED_VERSION = '1.0'  # maximum version of the SMIRNOFF spec supported 
 
 class ParameterHandlerRegistrationError(Exception):
     """
-    Exception for errors in ParameterHandler registration errors
+    Exception for errors in ParameterHandler registration
     """
 
     def __init__(self, msg):
@@ -77,7 +77,7 @@ class SMIRNOFFAromaticityError(Exception):
 
 class ParseError(Exception):
     """
-    Exception for when a SMIRNOFF data structure is not parseable by a ForceField
+    Error for when a SMIRNOFF data structure is not parseable by a ForceField
     """
 
     def __init__(self, msg):
@@ -267,17 +267,13 @@ class ForceField(object):
         self._MAX_SUPPORTED_SMIRNOFF_VERSION = 1.0
         self._disable_version_check = False  # if True, will disable checking compatibility version
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL  # aromaticity model
-        self._parameter_handler_classes = OrderedDict(
-        )  # Parameter handler classes that _can_ be initialized if needed
-        self._parameter_handlers = OrderedDict(
-        )  # ParameterHandler classes to be instantiated for each parameter type
-        self._parameter_io_handler_classes = OrderedDict(
-        )  # ParameterIOHandler classes that _can_ be initialiazed if needed
-        self._parameter_io_handlers = OrderedDict(
-        )  # ParameterIO classes to be used for each file type
-        self._parameters = ParameterList(
-        )  # ParameterHandler objects instantiated for each parameter type
+        self._parameter_handler_classes = OrderedDict()  # Parameter handler classes that _can_ be initialized if needed
+        self._parameter_handlers = OrderedDict()  # ParameterHandler classes to be instantiated for each parameter type
+        self._parameter_io_handler_classes = OrderedDict()  # ParameterIOHandler classes that _can_ be initialiazed if needed
+        self._parameter_io_handlers = OrderedDict()  # ParameterIO classes to be used for each file type
+        self._parameters = ParameterList()  # ParameterHandler objects instantiated for each parameter type
         self._aromaticity_model = None
+        # TODO: will it be possible for a ForceField to have multiple (compatible) aromaticity models?
         #self._used_aromaticity_models = set(
         #)  # Keep track of the aromaticity model(s) this ForceField uses
 
@@ -341,21 +337,17 @@ class ForceField(object):
         parameter_handler_classes : iterable of ParameterHandler subclasses
             List of ParameterHandler classes to register for this ForceField.
         """
-        #parsers = dict()
         for parameter_handler_class in parameter_handler_classes:
-            #tagname = subclass._TAGNAME
             tagname = parameter_handler_class._TAGNAME
             if tagname is not None:
                 if tagname in self._parameter_handler_classes.keys():
                     raise Exception(
-                        "ParameterHandler {} provides a parser for tag '{}', but ParameterHandler {} has "
-                        "already been registered to handle that tag.".format(
-                            parameter_handler_class, tagname,
-                            self._parameter_handler_classes[tagname]))
-                #parsers[tagname] = parameter_handler
-                self._parameter_handler_classes[
-                    tagname] = parameter_handler_class
-        #return parsers
+                        "Attempting to register ParameterHandler {}, which provides a parser for tag"
+                        " '{}', but ParameterHandler {} has already been registered to handle that tag.".format(
+                        parameter_handler_class, tagname,
+                        self._parameter_handler_classes[tagname])
+                    )
+                self._parameter_handler_classes[tagname] = parameter_handler_class
 
     def _register_parameter_io_handler_classes(self,
                                                parameter_io_handler_classes):
@@ -375,21 +367,20 @@ class ForceField(object):
         Exception if two ParameterIOHandlers are attempted to be registered for the same file format.
 
         """
-        #parsers = dict()
         for parameter_io_handler_class in parameter_io_handler_classes:
             serialization_format = parameter_io_handler_class._FORMAT
             if serialization_format is not None:
                 if serialization_format in self._parameter_io_handler_classes.keys(
                 ):
                     raise Exception(
-                        "ParameterIOHandler {} provides a IO parser for format '{}', but ParameterIOHandler {} has "
-                        "already been registered to handle that tag.".format(
-                            parameter_io_handler_class, serialization_format,
-                            self._parameter_io_handler_classes[
-                                serialization_format]))
+                        "Attempting to register ParameterIOHandler {}, which provides a IO parser for format "
+                        "'{}', but ParameterIOHandler {} has already been registered to handle that tag.".format(
+                        parameter_io_handler_class, serialization_format,
+                        self._parameter_io_handler_classes[
+                        serialization_format])
+                    )
                 self._parameter_io_handler_classes[
                     serialization_format] = parameter_io_handler_class
-        #return parsers
 
     def register_parameter_handler(self, parameter_handler_class,
                                    parameter_handler_kwargs):
@@ -603,7 +594,7 @@ class ForceField(object):
         return io_handler
 
 
-    def parse_sources(self, sources, input_format=None):
+    def parse_sources(self, sources):
         """Parse a SMIRNOFF force field definition.
 
         Parameters
@@ -637,7 +628,6 @@ class ForceField(object):
             self.load_smirnoff_data(smirnoff_data)
 
 
-
     def to_smirnoff_data(self):
         """
         Convert this ForceField and all related ParameterHandlers to an OrderedDict representing a SMIRNOFF
@@ -664,9 +654,7 @@ class ForceField(object):
         smirnoff_dict['SMIRNOFF'] = l1_dict
         return smirnoff_dict
 
-
-
-
+    # TODO: Should we call this "from_dict"?
     def load_smirnoff_data(self, smirnoff_data):
         """
         Add parameters from a SMIRNOFF-format data structure to this ForceField.
@@ -809,7 +797,7 @@ class ForceField(object):
         Iterable of ParameterHandlers
             The ParameterHandlers in this ForceField, in the order that they should be called to satisfy constraints.
         """
-        ordered_parameter_handlers = list()
+
         # Create a DAG expressing dependencies
         import networkx as nx
         G = nx.DiGraph()
@@ -897,12 +885,10 @@ class ForceField(object):
             raise ValueError(msg)
 
         # Add forces and parameters to the System
-        # TODO: Delete kwargs?
         for parameter_handler in parameter_handlers:
             parameter_handler.create_force(system, topology, **kwargs)
 
         # Let force Handlers do postprocessing
-        # TODO: Delete kwargs?
         for parameter_handler in parameter_handlers:
             parameter_handler.postprocess_system(system, topology, **kwargs)
 
