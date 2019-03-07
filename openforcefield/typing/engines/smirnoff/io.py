@@ -16,14 +16,16 @@ XML I/O parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 # GLOBAL IMPORTS
 #=============================================================================================
 
-import os
-import logging
 from collections import OrderedDict
+import logging
+import os
+import sys
 
 import xmltodict
 
 from simtk import openmm, unit
 from openforcefield.utils.utils import get_data_filename
+
 
 #=============================================================================================
 # CONFIGURE LOGGER
@@ -31,106 +33,39 @@ from openforcefield.utils.utils import get_data_filename
 
 logger = logging.getLogger(__name__)
 
+
 #=============================================================================================
-#
+# QUANTITY PARSING UTILITIES
 #=============================================================================================
 
+def _ast_unit_eval(node):
+    """
+    Performs a safe algebraic syntax tree evaluation of a unit.
 
-# #@staticmethod
-# def _extract_attached_units(attrib):
-#     """Form a (potentially unit-bearing) quantity from the specified attribute name.
-#
-#     Parameters
-#     ----------
-#     attrib : dict
-#        Dictionary of XML node attributes.
-#
-#     Returns
-#     -------
-#     attrib : dict
-#        XML node attributes with keys ending in ``_unit`` removed.
-#     attached_units : dict str : simtk.unit.Unit
-#        ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
-#        parameter ``parameter_name``
-#
-#     """
-#     # TODO: Should this scheme also convert unit-bearing quantities such as '8*angstroms' to 8*unit.angstroms?
-#     # TODO: Should this scheme also convert "1" to int(1) and "8.0" to float(8.0)?
-#
-#     attached_units = OrderedDict()
-#     for key in attrib.keys():
-#         if key.endswith('_unit'):
-#             parameter_name = key[:-5]
-#             parameter_units_string = attrib[key]
-#             try:
-#                 parameter_units = eval(parameter_units_string, unit.__dict__)
-#             except Exception as e:
-#                 e.msg = "Could not parse units {}\n".format(
-#                     parameter_units_string) + e.msg
-#                 raise e
-#             attached_units[parameter_name] = parameter_units
-#             #del attrib[parameter_name]
-#
-#     return attrib, attached_units
-#
-#
-# #@staticmethod
-# def _attach_units(attrib, attached_units):
-#     """Attach units to attributes for which units are specified.
-#
-#     Parameters
-#     ----------
-#     attrib : dict
-#        Dictionary of XML node attributes.
-#     attached_units : dict str : simtk.unit.Unit
-#        ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
-#        parameter ``parameter_name``
-#
-#     Returns
-#     -------
-#     attrib : dict
-#        Updated XML node attributes with simtk.unit.Unit units attached to values for which units were specified for their keys
-#
-#     """
-#     for parameter_name, units_to_attach in attached_units.items():
-#         if parameter_name in attrib.keys():
-#             parameter_attrib_string = attrib[parameter_name]
-#             try:
-#                 attrib[parameter_name] = float(
-#                     parameter_attrib_string) * units_to_attach
-#             except ValueError as e:
-#                 e.msg = (
-#                     "Expected numeric value for parameter '{}',"
-#                     "instead found '{}' when trying to attach units '{}'\n"
-#                 ).format(parameter_name, parameter_attrib_string, units_to_attach)
-#                 raise e
-#
-#         # Now check for matches like "phase1", "phase2"
-#         c = 1
-#         while (parameter_name + str(c)) in attrib.keys():
-#             indexed_parameter_name = parameter_name + str(c)
-#             parameter_attrib_string = attrib[indexed_parameter_name]
-#             try:
-#                 attrib[indexed_parameter_name] = float(
-#                     parameter_attrib_string) * units_to_attach
-#             except ValueError as e:
-#                 e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
-#                     indexed_parameter_name, parameter_attrib_string,
-#                     units_to_attach)
-#                 raise e
-#             c += 1
-#         #if parameter_name in attached_units:
-#         #units_to_attach = attached_units[parameter_name]
-#         # TODO: Do we have to worry about None or null values for parameters with attached units?
-#         #try:
-#         #    attrib[parameter_name_attrib] = float(parameter_value_string) * units_to_attach
-#         #except Exception as e:
-#         #    e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
-#         #        parameter_name, parameter_value_string, units_to_attach)
-#         #    raise e
-#
-#     return attrib
+    This will likely be replaced by the native implementation in Pint
+    if/when we'll switch over to Pint units.
+    """
+    import ast
+    import operator as op
 
+    operators = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
+        ast.Div: op.truediv, ast.Pow: op.pow, ast.BitXor: op.xor,
+        ast.USub: op.neg}
+
+    if isinstance(node, ast.Num):  # <number>
+        return node.n
+    elif isinstance(node, ast.BinOp):  # <left> <operator> <right>
+        return operators[type(node.op)](_ast_unit_eval(node.left), _ast_unit_eval(node.right))
+    elif isinstance(node, ast.UnaryOp):  # <operator>( <operand> ) e.g., -1
+        return operators[type(node.op)](_ast_unit_eval(node.operand))
+    elif isinstance(node, ast.Name):
+        # Check if this is a simtk unit.
+        u = getattr(unit, node.id)
+        if not isinstance(u, unit.Unit):
+            raise ValueError('No unit named {} found in simtk.unit.'.format(node.id))
+        return u
+    else:
+        raise TypeError(node)
 
 
 #=============================================================================================
@@ -378,24 +313,6 @@ class XMLParameterIOHandler(ParameterIOHandler):
     #    """
     #    return ForceField(xml)
 
-    # def to_lxml(self):
-    #     """Render the forcefield this ParameterIOHandler is registered to to an lxml.etree
-    #
-    #     Returns
-    #     -------
-    #     root : lxml.etree
-    #         Root node
-    #     """
-    #     root = etree.Element('SMIRNOFF', {'version': str(self._forcefield._MAX_SUPPORTED_SMIRNOFF_VERSION)})
-    #     for tagname, parameter_handler in self._forcefield._parameter_handlers.items(
-    #     ):
-    #         parameter_subtree = etree.SubElement(root, tagname,
-    #                                              parameter_handler.attribs)
-    #         for parameter in parameter_handler.parameters:
-    #             etree.SubElement(parameter_subtree, parameter.tagname,
-    #                              parameter.attribs)
-    #
-    #     return root
 
     # def from_lxml(self, root):
     #

@@ -11,7 +11,10 @@ DATE
 # Date: May 25, 2017
 # Date: Aug. 3, 2017
 # Date: Nov. 28, 2017
-Date: Feb. 27, 2018
+# Date: Feb. 27, 2018
+# Date: Nov. 7, 2018
+# Date: Dec. 12, 2018
+Date: Feb. 14, 2019
 
 # Author: please make sure all authors are on one line, only last line will be used
 AUTHOR
@@ -30,7 +33,7 @@ NONBON
 [#1:1]-[#6X3](~[#7,#8,#9,#16,#17,#35])~[#7,#8,#9,#16,#17,#35]  1.3590  0.0150  parm99 H5 Spellmeyer, two electrowithdr. neighbor
 [#1:1]-[#6X2]    1.4590  0.0150  parm99 HZ H bonded to sp C (Howard et al JCC 16)
 [#1:1]-[#7]      0.6000  0.0157  parm99 H
-[#1:1]-[#8]      5.27e-05  0.3000  SMIRNOFF HO Mobley et al. 2018
+[#1:1]-[#8]      0.3000  5.27e-05  SMIRNOFF HO Mobley et al. 2018
 [#1:1]-[#16]     0.6000  0.0157  parm99 HS
 # carbon
 [#6:1]           1.9080  0.0860  parm99 generic Spellmeyer
@@ -170,7 +173,7 @@ BOND
 # bonds to hydrogen
 [#6X4:1]-[#1:2]                 340.0  1.090   parm99 aliphatic CH
 [#6X3:1]-[#1:2]                 367.0  1.080   parm99 vinylic CH
-[#6X2:1]-[#1:2]                 340.0  1.090   parm99 CZ-HZ alkyne #C-H
+[#6X2:1]-[#1:2]                 400.0  1.056   parm99 CZ-HZ alkyne #C-H Correct by CCB 11/7/2018
 [#7:1]-[#1:2]                   434.0  1.010   parm99 any NH
 [#8:1]-[#1:2]                   553.0  0.960   parm99 any OH
 
@@ -195,7 +198,7 @@ ANGL
 # fused het6-het5 bridgehead outer angle
 [*;r6:1]~;@[*;r5:2]~;@[*;r5;x2:3] 70.0  130.    parm99 generic fused het6-het5 bridgehead outer angle
 # het5 outer angle
-[*:1]~;!@[*;r5:2]~;@[*;r5:3]  70.0  125.    Frosst generic het5 substituent outer angle
+[*:1]~;!@[*;X3;r5:2]~;@[*;r5:3]  70.0  125.    Frosst generic het5 substituent outer angle
 # carboxylic acid, ester, carboxylate
 [#8X1:1]~[#6X3:2]~[#8:3]  80.0  126.00  parm99 generic
 # Csp

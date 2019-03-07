@@ -1,18 +1,16 @@
-#!/bin/env python
+#!/usr/bin/env python
 
+from openforcefield.topology import Molecule, Topology
+from openforcefield.typing.engines.smirnoff import ForceField
 
-from openforcefield.utils import *
-from openforcefield.typing.engines.smirnoff import get_molecule_parameterIDs, ForceField
+# Create a propane molecule and its topology.
+molecule = Molecule.from_smiles('CCC')
+topology = Topology.from_molecules([molecule])
 
-# Create an oemol
-mol = OEMol()
-OEParseSmiles(mol, 'CCC')
-OEAddExplicitHydrogens(mol)
-
-
+# Load the Frosst AlkEthOH force field.
 ff = ForceField('Frosst_AlkEthOH.offxml')
 
-labels= ff.labelMolecules( [mol], verbose = True )
+labels = ff.label_molecules(topology, verbose=True)
 print(labels)
 for mol_entry in range(len(labels)):
     for force in labels[mol_entry].keys():

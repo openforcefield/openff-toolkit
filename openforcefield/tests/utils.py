@@ -90,6 +90,67 @@ def get_monomer_mol2file(prefix='ethanol'):
     return mol2_filename
 
 
+def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=None):
+    if (file_subpaths is None) == (filter_func is None):
+        raise ValueError('Only one between file_subpaths and filter_func must be specified.')
+
+    # Find the path of the tarfile with respect to the data/molecules/ folder.
+    molecules_dir_path = get_data_filename('molecules')
+    tar_file_path = os.path.join(molecules_dir_path, tar_file_name)
+    tar_root_dir_name = tar_file_name.split('.')[0]
+
+    # Return value: Paths to the extracted molecules.
+    extracted_file_paths = None
+
+    # Handle subpaths search.
+    if file_subpaths is not None:
+        # We can already check the paths of the extracted files
+        # and skipping opening the tarball if not necessary.
+        extracted_file_paths = [os.path.join(molecules_dir_path, tar_root_dir_name, file_subpath)
+                                for file_subpath in file_subpaths]
+
+        # Remove files that we have already extracted.
+        # Also, we augument the subpath with its root directory.
+        file_subpaths_set = {os.path.join(tar_root_dir_name, subpath)
+                             for subpath, fullpath in zip(file_subpaths, extracted_file_paths)
+                             if not os.path.isfile(fullpath)}
+
+        # If everything was already extracted, we don't need to open the tarball.
+        if len(file_subpaths_set) == 0:
+            return extracted_file_paths
+
+        # Otherwise, create a filter matching only the subpaths.
+        filter_func = lambda x: x in file_subpaths_set
+
+    # If no filter was specified, just create one matching everything.
+    if filter_func is None:
+        filter_func = lambda x: True
+
+    # Determine opening mode.
+    if '.gz' in tar_file_name:
+        mode = 'r:gz'
+    else:
+        mode = 'r'
+
+    # Extract required files.
+    import tarfile
+    with tarfile.open(tar_file_path, mode) as tar_file:
+        # Gather the paths to extract. Remove the
+        members = [m for m in tar_file.getmembers() if filter_func(m.name)]
+
+        # Built the paths to the extracted molecules we didn't already.
+        if extracted_file_paths is None:
+            extracted_file_paths = [os.path.join(molecules_dir_path, m.name)
+                                    for m in members]
+
+        # Extract only the members that we haven't already extracted.
+        members = [member for member, fullpath in zip(members, extracted_file_paths)
+                   if not os.path.isfile(fullpath)]
+        tar_file.extractall(path=molecules_dir_path, members=members)
+
+    return extracted_file_paths
+
+
 def get_alkethoh_filepath(alkethoh_name, get_amber=False):
     """Retrieve the mol2, top and crd files of a molecule in the AlkEthOH set.
 
@@ -108,46 +169,32 @@ def get_alkethoh_filepath(alkethoh_name, get_amber=False):
         list ``[mol2_path, top_path, crd_path]``.
 
     """
-    import tarfile
-
     # Determine if this is a ring or a chain molecule and the subfolder name.
     is_ring = alkethoh_name[9] == 'r'
     alkethoh_subdir_name = 'rings' if is_ring else 'chain'
     alkethoh_subdir_name = 'AlkEthOH_' + alkethoh_subdir_name + '_filt1'
 
-    # Determine which paths have to be returned. Paths are
-    # relative to the `data/molecules/` folder. We'll re-use
-    # these relative paths to extract files from the tar.gz.
-    molecule_file_relative_base_path = os.path.join('AlkEthOH_tripos', alkethoh_subdir_name, alkethoh_name)
+    # Determine which paths have to be returned.
+    file_base_subpath = os.path.join(alkethoh_subdir_name, alkethoh_name)
     # We always return the mol2 file.
-    molecule_relative_file_paths = [molecule_file_relative_base_path + '_tripos.mol2']
+    file_subpaths = [file_base_subpath + '_tripos.mol2']
     # Check if we need to return also Amber files.
     if get_amber:
-        molecule_relative_file_paths.append(molecule_file_relative_base_path + '.top')
-        molecule_relative_file_paths.append(molecule_file_relative_base_path + '.crd')
+        file_subpaths.append(file_base_subpath + '.top')
+        file_subpaths.append(file_base_subpath + '.crd')
 
-    # Build absolute paths.
-    molecules_dir_path = get_data_filename('molecules')
-    molecule_file_paths = [os.path.join(molecules_dir_path, p) for p in molecule_relative_file_paths]
+    return extract_compressed_molecules('AlkEthOH_tripos.tar.gz', file_subpaths=file_subpaths)
 
-    # Check if we need to extract some of the files from the tar archive.
-    files_to_extract = set()
-    for file_idx, molecule_file_path in enumerate(molecule_file_paths):
-        if not os.path.isfile(molecule_file_path):
-            files_to_extract.add(molecule_relative_file_paths[file_idx])
 
-    # Extract the files.
-    if len(files_to_extract) > 0:
-        alkethoh_tar_file_path = os.path.join(molecules_dir_path, 'AlkEthOH_tripos.tar.gz')
-        with tarfile.open(alkethoh_tar_file_path, 'r:gz') as tar:
-            # Find the files to extract.
-            members = [m for m in tar.getmembers() if m.name in files_to_extract]
-            tar.extractall(path=molecules_dir_path, members=members)
+def get_freesolv_filepath(freesolv_id, ff_version):
+    file_base_name = 'mobley_' + freesolv_id
+    mol2_file_subpath = os.path.join('mol2files_sybyl', file_base_name + '.mol2')
+    xml_dir = 'xml_' + ff_version.replace('.', '_')
+    xml_file_subpath = os.path.join(xml_dir, file_base_name + '_vacuum.xml')
 
-    # Decide whether to return a single path or a list of paths.
-    if len(molecule_file_paths) == 1:
-        return molecule_file_paths[0]
-    return molecule_file_paths
+    # Extract the files if needed.
+    file_subpaths = [mol2_file_subpath, xml_file_subpath]
+    return extract_compressed_molecules('FreeSolv.tar.gz', file_subpaths=file_subpaths)
 
 
 #=============================================================================================
@@ -732,6 +779,23 @@ def _compare_parameters(parameters_force1, parameters_force2, interaction_type,
     """
     diff_msg = ''
 
+    # First check the parameters that are unique to only one of the forces.
+    unique_keys1 = set(parameters_force1) - set(parameters_force2)
+    unique_keys2 = set(parameters_force2) - set(parameters_force1)
+    err_msg = '\n\n{} force has the following unique ' + interaction_type + 's: {}\n'
+    if len(unique_keys1) != 0:
+        force_label = systems_labels[0] if systems_labels is not None else 'First'
+        diff_msg += err_msg.format(force_label, sorted(unique_keys1))
+    if len(unique_keys2) != 0:
+        force_label = systems_labels[1] if systems_labels is not None else 'Second'
+        diff_msg += err_msg.format(force_label, sorted(unique_keys2))
+
+    # Create a diff for entries that have same keys but different parameters.
+    different_parameters = {}
+    for key in set(parameters_force1).intersection(set(parameters_force2)):
+        if parameters_force1[key] != parameters_force2[key]:
+            different_parameters[key] = (parameters_force1[key], parameters_force2[key])
+
     # Handle force and systems labels default arguments.
     if force_name != '':
         force_name += ' '  # Add space after.
@@ -739,21 +803,6 @@ def _compare_parameters(parameters_force1, parameters_force2, interaction_type,
         systems_labels = ' for the {} and {} systems respectively'.format(*systems_labels)
     else:
         systems_labels = ''
-
-    # First check the parameters that are unique to only one of the forces.
-    unique_keys1 = set(parameters_force1) - set(parameters_force2)
-    unique_keys2 = set(parameters_force2) - set(parameters_force1)
-    err_msg = '\n\nForce{} has the following unique ' + interaction_type + 's: {}\n'
-    if len(unique_keys1) != 0:
-        diff_msg += err_msg.format(1, sorted(unique_keys1))
-    if len(unique_keys2) != 0:
-        diff_msg += err_msg.format(2, sorted(unique_keys2))
-
-    # Create a diff for entries that have same keys but different parameters.
-    different_parameters = {}
-    for key in set(parameters_force1).intersection(set(parameters_force2)):
-        if parameters_force1[key] != parameters_force2[key]:
-            different_parameters[key] = (parameters_force1[key], parameters_force2[key])
 
     # Print error.
     if len(different_parameters) > 0:
@@ -882,9 +931,54 @@ def _get_nonbonded_force_parameters(force, _, ignored_parameters):
     return {'particle': particle_parameters, 'particle exception': exception_parameters}
 
 
+def _merge_impropers_folds(improper_parameters):
+    """Merge impropers with same periodicities and phases into a single folds.
+
+    See _get_torsion_force_parameters.
+
+    """
+    for improper_key, improper_comparer in improper_parameters.items():
+        # Group parameters by periodicity and phase and sum force constants.
+        for comparer2_idx in reversed(range(1, len(improper_comparer.parameters))):
+            parameter_comparer2 = improper_comparer.parameters[comparer2_idx]
+            parameters2 = parameter_comparer2.parameters
+
+            # parameter_comparer1 comes before parameter_comparer2 in the list.
+            for parameter_comparer1 in improper_comparer.parameters[:comparer2_idx]:
+                parameters1 = parameter_comparer1.parameters
+
+                # If phase and periodicity match, sum the force constants
+                # and remove one _ParametersComparer object from the list.
+                if (parameters1['phase'] == parameters2['phase'] and
+                    parameters1['periodicity'] == parameters2['periodicity']):
+                    # Update the force constant of the first parameter.
+                    parameters1['k'] += parameters2['k']
+                    # Remove the second parameter from the list.
+                    del improper_comparer.parameters[comparer2_idx]
+                    break
+
+
 @_get_force_parameters.register(openmm.PeriodicTorsionForce)
 def _get_torsion_force_parameters(force, system, ignored_parameters):
-    """Implementation of _get_force_parameters for NonbondedForces."""
+    """Implementation of _get_force_parameters for NonbondedForces.
+
+    If the special attribute 'n_improper_folds' is in ignored_parameters,
+    then impropers with same periodicity and phases are merged into a
+    single set of parameters having the sum of the force constants as k.
+    This allows to compare parameters before and after the 0.1 version of
+    the toolkit, in which the six-fold implementation was changed into
+    the current three-fold.
+
+    """
+    if 'n_improper_folds' not in ignored_parameters:
+        ignore_n_folds = False
+    else:
+        ignore_n_folds = True
+        # Create a copy of ignored_parameters without n_improper_folds
+        # that must be removed later from the _ParametersComparer object.
+        ignored_parameters = copy.deepcopy(ignored_parameters)
+        ignored_parameters.remove('n_improper_folds')
+
     # Find all bonds. We'll use this to distinguish
     # between proper and improper torsions.
     bond_set = _find_all_bonds(system)
@@ -923,6 +1017,13 @@ def _get_torsion_force_parameters(force, system, ignored_parameters):
         except KeyError:
             force_parameters[torsion_key] = _TorsionParametersComparer(parameters)
 
+    # Sum the force constants of all the improper torsion folds. This
+    # is fundamental to compare parameters with versions of the toolkit
+    # previous to 0.1, where the trefoil improper was six-fold rather
+    # than three-fold as in the current version.
+    if ignore_n_folds:
+        _merge_impropers_folds(improper_parameters)
+
     return {'proper torsion': proper_parameters, 'improper torsion': improper_parameters}
 
 
@@ -952,6 +1053,12 @@ def _find_all_bonds(system):
     bond_set = set()
     for bond_idx in range(bond_force.getNumBonds()):
         atom1, atom2, _, _ = bond_force.getBondParameters(bond_idx)
+        bond_set.add((atom1, atom2))
+        bond_set.add((atom2, atom1))
+
+    # Find all the constrained bonds, which do not have a HarmonicBondForce term.
+    for constraint_idx in range(system.getNumConstraints()):
+        atom1, atom2, distance = system.getConstraintParameters(constraint_idx)
         bond_set.add((atom1, atom2))
         bond_set.add((atom2, atom1))
 
@@ -1022,7 +1129,7 @@ def _get_improper_torsion_canonical_order(bond_set, i0, i1, i2, i3):
 
 
 def compare_system_parameters(system1, system2, systems_labels=None,
-                              ignore_charges=False):
+                              ignore_charges=False, ignore_improper_folds=False):
     """Check that two OpenMM systems have the same parameters.
 
     Parameters
@@ -1038,6 +1145,10 @@ def compare_system_parameters(system1, system2, systems_labels=None,
     ignore_charges : bool, optional
         If True, particle and exception charges are ignored during
         the comparison. Default is False.
+    ignore_improper_folds : bool, optional
+        If True, all the folds of the same impropers are merged into
+        a single one for the purpose of parameter comparison. Default
+        is False.
 
     Raises
     ------
@@ -1051,6 +1162,8 @@ def compare_system_parameters(system1, system2, systems_labels=None,
     ignored_parameters_by_force = {}
     if ignore_charges:
         ignored_parameters_by_force['NonbondedForce'] = ['charge', 'chargeprod']
+    if ignore_improper_folds:
+        ignored_parameters_by_force['PeriodicTorsionForce'] = ['n_improper_folds']
 
     # We need to perform some checks on the type and number of forces in the Systems.
     force_names1 = collections.Counter(f.__class__.__name__ for f in system1.getForces())
@@ -1107,7 +1220,7 @@ def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecul
     """
     Compare energies and parameters for OpenMM Systems/topologies created
     from an AMBER prmtop and crd versus from a SMIRNOFF forcefield file which
-    should parametrize the same system with same parameters.
+    should parameterize the same system with same parameters.
 
     Parameters
     ----------

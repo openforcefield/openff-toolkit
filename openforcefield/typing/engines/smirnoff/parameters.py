@@ -509,6 +509,7 @@ class ParameterHandler(object):
     _REQUIRE_UNITS = {}  # dict of {header attrib : unit } for input checking
     _ATTRIBS_TO_TYPE = {} # dict of attribs that must be cast to a specific type to be interpreted correctly
     _KWARGS = [] # Kwargs to catch when create_force is called
+
     _SMIRNOFF_VERSION_INTRODUCED = 0.0  # the earliest version of SMIRNOFF spec that supports this ParameterHandler
     _SMIRNOFF_VERSION_DEPRECATED = None  # if deprecated, the first SMIRNOFF version number it is no longer used
 
@@ -864,6 +865,7 @@ class ConstraintHandler(ParameterHandler):
             #     self.distance = True  # Constraint to equilibrium bond length will be added by HarmonicBondHandler
 
     _TAGNAME = 'Constraint'
+
     _INFOTYPE = ConstraintType
     _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
 
@@ -1246,6 +1248,39 @@ class ImproperTorsionHandler(ParameterHandler):
         return matches
 
 
+
+
+    def get_matches(self, entity):
+        """Retrieve all force terms for a chemical entity, which could be a Molecule, group of Molecules, or Topology.
+
+        Parameters
+        ----------
+        entity : openforcefield.topology.ChemicalEntity
+            Chemical entity for which constraints are to be enumerated
+
+        Returns
+        ---------
+        matches : ValenceDict
+            matches[atoms] is the ParameterType object corresponding to the tuple of Atom objects ``Atoms``
+
+        """
+        logger.info(self.__class__.__name__)  # TODO: Overhaul logging
+        matches = ImproperDict()
+        for force_type in self._parameters:
+            matches_for_this_type = {}
+            #atom_top_indexes = [()]
+            for atoms in entity.chemical_environment_matches(
+                    force_type.smirks):
+                atom_top_indexes = tuple(
+                    [atom.topology_particle_index for atom in atoms])
+                matches_for_this_type[atom_top_indexes] = force_type
+            #matches_for_this_type = { atoms : force_type for atoms in entity.chemical_environment_matches(force_type.smirks }
+            matches.update(matches_for_this_type)
+            logger.info('{:64} : {:8} matches'.format(
+                force_type.smirks, len(matches_for_this_type)))
+
+        logger.info('{} matches identified'.format(len(matches)))
+        return matches
     def create_force(self, system, topology, **kwargs):
         #force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
         #force = super().create_force(system, topology, **kwargs)
@@ -1277,6 +1312,7 @@ class ImproperTorsionHandler(ParameterHandler):
                     logger.warning("The OpenForceField toolkit hasn't implemented "
                                    "support for the torsion `idivf` value of 'auto'."
                                    "Currently assuming a value of '3' for impropers.")
+
                 # Permute non-central atoms
                 others = [atom_indices[0], atom_indices[2], atom_indices[3]]
                 # ((0, 1, 2), (1, 2, 0), and (2, 0, 1)) are the three paths around the trefoil
@@ -1285,7 +1321,7 @@ class ImproperTorsionHandler(ParameterHandler):
                     force.addTorsion(atom_indices[1], p[0], p[1], p[2],
                                      improper_periodicity, improper_phase, improper_k/improper_idivf)
         logger.info(
-            '{} impropers added, each applied in a six-fold trefoil'.format(
+            '{} impropers added, each applied in a three-fold trefoil'.format(
                 len(impropers)))
 
         # Check that no topological torsions are missing force parameters
@@ -1375,6 +1411,8 @@ class vdWHandler(ParameterHandler):
         openmm.NonbondedForce.PME
     }
 
+    # Note: We don't define the default values in the constructor arguments because we need
+    # to be able to check against them in check_compatibility(). For example, if someone
     def __init__(self,
                  # forcefield,
                  # scale12=None,
@@ -1548,8 +1586,9 @@ class ToolkitAM1BCCHandler(ParameterHandler):
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        pass
-
+        
+        return
+      
     def assign_charge_from_molecules(self, molecule, charge_mols):
         """
         Given an input molecule, checks against a list of molecules for an isomorphic match. If found, assigns
@@ -1701,7 +1740,6 @@ class ChargeIncrementModelHandler(ParameterHandler):
             super().__init__(**kwargs)
 
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
-    _INFOTYPE = ChargeIncrementType  # info type to store
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create or utilize
     # TODO: The structure of this is still undecided
     _KWARGS = ['charge_from_molecules']
@@ -1871,6 +1909,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
                     force.setParticleParameters(topology_particle_index,
                                                 particle_charge, sigma,
                                                 epsilon)
+
 
 
 

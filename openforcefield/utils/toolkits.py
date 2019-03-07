@@ -727,7 +727,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 raise UndefinedStereochemistryError(msg)
             else:
                 print(msg)
-                return
 
         # TODO: What other information should we preserve besides name?
         # TODO: How should we preserve the name?

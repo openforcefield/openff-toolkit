@@ -303,11 +303,11 @@ class TestOpenEyeToolkitWrapper:
         smiles = '[H]C([H])([H])C([H])([H])[H]'
         molecule = toolkit_wrapper.from_smiles(smiles)
         # Ensure that an exception is raised if no conformers are provided
-        with pytest.raises(Exception) as context:
+        with pytest.raises(Exception) as excinfo:
             molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper)
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
         # Ensure that an exception is raised if an invalid charge model is passed in
-        with pytest.raises(Exception) as context:
+        with pytest.raises(Exception) as excinfo:
             charge_model = 'notARealChargeModel'
             molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
 
@@ -318,7 +318,7 @@ class TestOpenEyeToolkitWrapper:
         # TODO: 'mmff' and 'mmff94' often assign charges of 0, presumably if the molecule is unrecognized.
         # charge_model = ['mmff', 'mmff94']
         for charge_model in ['noop', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']:
-            with pytest.raises(NotImplementedError) as contest:
+            with pytest.raises(NotImplementedError) as excinfo:
                 molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper)  # , charge_model=charge_model)
                 charge_sum = 0 * unit.elementary_charge
                 for pc in molecule._partial_charges:
@@ -341,7 +341,8 @@ class TestOpenEyeToolkitWrapper:
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
 
-        with pytest.raises(NotImplementedError) as context:
+
+        with pytest.raises(NotImplementedError) as excinfo:
             charge_model = 'notARealChargeModel'
             molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper)#, charge_model=charge_model)
 
@@ -352,7 +353,7 @@ class TestOpenEyeToolkitWrapper:
         # The 'noop' charge model doesn't add up to the formal charge, so we shouldn't test it
         # charge_model = ['noop']
         for charge_model in ['mmff', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']:
-            with pytest.raises(NotImplementedError) as context:
+            with pytest.raises(NotImplementedError) as excinfo:
                 molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper) #, charge_model=charge_model)
                 charge_sum = 0 * unit.elementary_charge
                 for pc in molecule._partial_charges:
@@ -452,7 +453,7 @@ class TestRDKitToolkitWrapper:
                                                 ("spec_db_smiles", spec_db_smiles, False),
                                                 ]:
             if raises_exception:
-                with pytest.raises(Exception) as context:
+                with pytest.raises(Exception) as excinfo:
                     molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
             else:
                 molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
@@ -676,13 +677,14 @@ class TestAmberToolsToolkitWrapper:
         molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_registry)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
 
-        with pytest.raises(NotImplementedError) as context:
+
+        with pytest.raises(NotImplementedError) as excinfo:
             charge_model = 'notARealChargeModel'
             molecule.compute_partial_charges(toolkit_registry=toolkit_registry)#, charge_model=charge_model)
 
         # ['cm1', 'cm2']
         for charge_model in ['gas', 'mul', 'bcc']:
-            with pytest.raises(NotImplementedError) as context:
+            with pytest.raises(NotImplementedError) as excinfo:
                 molecule.compute_partial_charges(toolkit_registry=toolkit_registry)#, charge_model=charge_model)
                 charge_sum = 0 * unit.elementary_charge
                 for pc in molecule._partial_charges:
@@ -707,13 +709,14 @@ class TestAmberToolsToolkitWrapper:
         molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_registry)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
 
-        with pytest.raises(NotImplementedError) as context:
+
+        with pytest.raises(NotImplementedError) as excinfo:
             charge_model = 'notARealChargeModel'
             molecule.compute_partial_charges(toolkit_registry=toolkit_registry)#, charge_model=charge_model)
 
         # TODO: Figure out why ['cm1', 'cm2'] fail
         for charge_model in  ['gas', 'mul', 'bcc']:
-            with pytest.raises(NotImplementedError) as context:
+            with pytest.raises(NotImplementedError) as excinfo:
                 molecule.compute_partial_charges(toolkit_registry=toolkit_registry)#, charge_model=charge_model)
                 charge_sum = 0 * unit.elementary_charge
                 for pc in molecule._partial_charges:
