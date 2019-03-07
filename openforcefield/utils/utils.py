@@ -115,11 +115,14 @@ def unit_to_string(input_unit):
     unit_string = None
 
     for unit_component in input_unit.iter_base_or_scaled_units():
-        contribution = '{} ** {}'.format(unit_component[0].name, int(unit_component[1]))
+        if unit_component[1] == 1:
+            contribution = '{}'.format(unit_component[0].name)
+        else:
+            contribution = '{}**{}'.format(unit_component[0].name, int(unit_component[1]))
         if unit_string is None:
             unit_string = contribution
         else:
-            unit_string += '* '.format(contribution)
+            unit_string += ' * {}'.format(contribution)
 
     return unit_string
 
