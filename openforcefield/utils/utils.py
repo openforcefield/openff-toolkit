@@ -141,6 +141,8 @@ def quantity_to_string(input_quantity):
         The serialized quantity
 
     """
+    if input_quantity is None:
+        return None
     unitless_value = input_quantity.in_units_of(input_quantity.unit)
     unit_string = unit_to_string(input_quantity.unit)
     output_string = '{} * {}'.format(unitless_value, unit_string)
@@ -222,6 +224,8 @@ def string_to_quantity(quantity_string):
     output_quantity : simtk.unit.Quantity
         The deserialized quantity
     """
+    if quantity_string is None:
+        return None
     # This can be the exact same as string_to_unit
     import ast
     output_quantity = _ast_eval(ast.parse(quantity_string, mode='eval').body)

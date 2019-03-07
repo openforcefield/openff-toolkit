@@ -622,8 +622,7 @@ class VirtualSite(Particle):
         vsite_dict['name'] = self._name
         vsite_dict['atoms'] = tuple(
             [i.molecule_atom_index for i in self.atoms])
-        vsite_dict['charge_increments'] = quantity_to_string(
-            self._charge_increments)
+        vsite_dict['charge_increments'] = quantity_to_string(self._charge_increments)
 
 
         vsite_dict['epsilon'] = quantity_to_string(self._epsilon)

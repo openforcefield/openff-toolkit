@@ -522,6 +522,7 @@ class ParameterHandler(object):
         # Perform unit compatibility checks
         for key, val in smirnoff_data.items():
             if key in self._REQUIRE_UNITS:
+                # TODO: Logic for indexed attributes
                 if not val.unit.is_compatible(self._REQUIRE_UNITS[key]):
                     msg = "{} constructor received kwarg {} with value {}, " \
                           "which is incompatible with expected unit {}".format(self.__class__,
