@@ -329,14 +329,48 @@ class XMLParameterIOHandler(ParameterIOHandler):
             msg += "Supported choices are: ['.offxml']"
             raise NotImplementedError(msg)
 
-    def to_string(self):
+    def to_string(self, smirnoff_data):
         """
+
+        Parameters
+        ----------
+        smirnoff_data : dict
+            A dictionary structured in compliance with the SMIRNOFF spec
 
         Returns
         -------
 
         """
-        return self.to_xml()
+        def prepend_all_keys(d, char='@'):
+            """
+            Modify a dictionary in-place, prepending a specified string to each key
+            that doesn't refer to a value that is list or dict.
+
+            Parameters
+            ----------
+            d : dict
+                Hierarchical dictionary to traverse and modify keys
+            char : string, optional. Default='@'
+                String to prepend onto each applicable dictionary key
+
+            """
+            if isinstance(d, dict):
+                for key in list(d.keys()):
+                    if isinstance(d[key], list) or isinstance(d[key], dict):
+                        prepend_all_keys(d[key])
+                    else:
+                        new_key = char + key
+                        d[new_key] = d[key]
+                        del d[key]
+                        prepend_all_keys(d[new_key])
+            elif isinstance(d, list):
+                for item in d:
+                    prepend_all_keys(item)
+
+        prepend_all_keys(smirnoff_data['SMIRNOFF'])
+        print(smirnoff_data)
+        print()
+        return xmltodict.unparse(smirnoff_data, pretty=True)
 
     #@staticmethod
     #def from_xml(xml):

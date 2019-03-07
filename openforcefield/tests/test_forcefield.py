@@ -50,7 +50,7 @@ simple_xml_ff = str.encode('''<?xml version='1.0' encoding='ASCII'?>
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5" periodicity1="2" phase1="180."/>
   </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0*angstroms" cutoff="9.0*angstroms" long_range_dispersion="isotropic">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" switch_unit="angstrom**2" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
     <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n2" rmin_half="1.4870"/>
   </vdW>
@@ -82,7 +82,7 @@ xml_ff_w_comments = '''<?xml version='1.0' encoding='ASCII'?>
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5" periodicity1="2" phase1="180."/>
   </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0*angstroms" cutoff="9.0*angstroms" long_range_dispersion="isotropic">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" switch_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
     <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n2" rmin_half="1.4870"/>
   </vdW>
@@ -114,7 +114,7 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5" periodicity1="2" phase1="180."/>
   </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0*angstroms" cutoff="9.0*angstroms" long_range_dispersion="isotropic">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" switch_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
     <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n2" rmin_half="1.4870"/>
   </vdW>
@@ -170,12 +170,22 @@ class TestForceField():
         assert len(forcefield._parameter_handlers['ImproperTorsions']._parameters) == 2
         assert len(forcefield._parameter_handlers['vdW']._parameters) == 2
 
-    # TODO: Support writing out offxml
-    @pytest.mark.skip
     def test_xml_string_roundtrip(self):
-        forcefield = ForceField(simple_xml_ff)
-        data = forcefield._parameter_io_handlers['XML'].to_string()
-        raise Exception(data)
+        """
+        Test
+        1) loading a forcefield from string
+        2) writing it to an XML string ("string_1")
+        3) Initialize "forcefield_2" using "string_1"
+        4) serialize "forcefield_2" to "string_2"
+        5) Check that "string_1" is equal to "string_2"
+
+        """
+        forcefield_1 = ForceField(simple_xml_ff)
+        string_1 = forcefield_1._parameter_io_handlers['XML'].to_string(forcefield_1.to_smirnoff_data())
+        forcefield_2 = ForceField(string_1)
+        string_2 = forcefield_2._parameter_io_handlers['XML'].to_string(forcefield_2.to_smirnoff_data())
+        assert string_1 == string_2
+
 
     #TODO : Use pytest.parameterize to run tests with OpenEyeToolkitWrapper and RDKitToolkitWrapper
     #@pytest.mark.parametrize("toolkit_registry", toolkit_registries)
