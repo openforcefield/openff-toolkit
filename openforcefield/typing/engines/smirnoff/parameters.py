@@ -306,8 +306,6 @@ class ParameterType(object):
 
 
 
-    # TODO: Allow preferred units for each parameter type to be specified and remembered as well for when we are writing out
-
     # TODO: Can we provide some shared tools for returning settable/gettable attributes, and checking unit-bearing attributes?
 
     def __init__(self, smirks=None, permit_cosmetic_attributes=False, **kwargs):
@@ -370,6 +368,7 @@ class ParameterType(object):
 
         for key, val in kwargs.items():
             if key in self._REQUIRE_UNITS:
+                # TODO: Add dynamic property-getter/setter for each thing in self._REQUIRE_UNITS
                 if not val.unit.is_compatible(self._REQUIRE_UNITS[key]):
                     msg = "{} constructor received kwarg {} with value {}, " \
                           "which is incompatible with expected unit {}".format(self.__class__,
@@ -575,7 +574,16 @@ class ParameterHandler(object):
             if not (default_key in kwargs):
                 smirnoff_data[default_key] = default_val
 
-
+        # Perform unit compatibility checks
+        for key, val in smirnoff_data.items():
+            if key in self._REQUIRE_UNITS:
+                if not val.unit.is_compatible(self._REQUIRE_UNITS[key]):
+                    msg = "{} constructor received kwarg {} with value {}, " \
+                          "which is incompatible with expected unit {}".format(self.__class__,
+                                                                               key,
+                                                                               val,
+                                                                               self._REQUIRE_UNITS[key])
+                    raise SMIRNOFFSpecError(msg)
 
         for key, val in smirnoff_data.items():
             # If we're reading the parameter list, iterate through and attach units to
@@ -897,58 +905,9 @@ class BondHandler(ParameterHandler):
                           'k' : unit.kilocalorie_per_mole / unit.angstrom**2}
         _INDEXED_ATTRIBS = ['k']  # May be indexed (by integer bond order) if fractional bond orders are used
 
-        def __init__(self,
-                     #k,
-                     #length,
-                     #fractional_bondorder_method=None,
-                     #fractional_bondorder=None,
-                     **kwargs):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)  # Base class handles ``smirks`` and ``id`` fields
 
-            #super(ConstraintType, self).__init__(node, parent)  # Base class handles ``smirks`` and ``id`` fields
-            super().__init__(
-                **kwargs)  # Base class handles ``smirks`` and ``id`` fields
-            # TODO: Add dynamic property-getter/setter for each thing in self._REQUIRE_UNITS
-            #for attrib in self._REQUIRE_UNITS:
-            #    property()
-
-            # Determine if we are using fractional bond orders for this bond
-            # First, check if this force uses fractional bond orders
-            #fractional_bondorder_method = kwargs['fractional_bondorder_method']
-            # #if not (fractional_bondorder_method is None):
-            #     raise NotImplementedError
-            #     # TODO: This belongs in BondHandler.create_forces
-            #     # If it does, see if this parameter line provides fractional bond order parameters
-            #     if 'length_bondorder1' in node.attrib and 'k_bondorder1' in node.attrib:
-            #         # Store what interpolation scheme we're using
-            #         self.fractional_bondorder = parent.attrib[
-            #             'fractional_bondorder']
-            #         # Store bondorder1 and bondorder2 parameters
-            #         self.k = list()
-            #         self.length = list()
-            #         for ct in range(1, 3):
-            #             self.length.append(
-            #                 _extract_quantity_from_xml_element(
-            #                     node,
-            #                     parent,
-            #                     'length_bondorder%s' % ct,
-            #                     unit_name='length_unit'))
-            #             self.k.append(
-            #                 _extract_quantity_from_xml_element(
-            #                     node,
-            #                     parent,
-            #                     'k_bondorder%s' % ct,
-            #                     unit_name='k_unit'))
-            #     else:
-            #         self.fractional_bondorder = None
-            # else:
-            #     self.fractional_bondorder = None
-
-            # # If no fractional bond orders, just get normal length and k
-            # if self.fractional_bondorder is None:
-            #     self.length = length
-            #     self.k = k
-            #     #self.length = _extract_quantity_from_xml_element(node, parent, 'length')
-            #     #self.k = _extract_quantity_from_xml_element(node, parent, 'k')
 
     _TAGNAME = 'Bonds'  # SMIRNOFF tag name to process
     _INFOTYPE = BondType  # class to hold force type info
@@ -1040,16 +999,9 @@ class AngleHandler(ParameterHandler):
                           'k': unit.kilocalorie_per_mole / unit.degree**2}
 
 
-        def __init__(self, angle, k, fractional_bondorder=None, **kwargs):
-            #super(AngleType, self).__init__(node, parent)  # base class handles ``smirks`` and ``id`` fields
-            super().__init__(
-                **kwargs)  # base class handles ``smirks`` and ``id`` fields
-            self.angle = angle
-            self.k = k
-            if not (fractional_bondorder) is None:
-                self.fractional_bondorder = fractional_bondorder
-            else:
-                self.fractional_bondorder = None
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)  # base class handles ``smirks`` and ``id`` fields
+
 
     _TAGNAME = 'Angles'  # SMIRNOFF tag name to process
     _INFOTYPE = AngleType  # class to hold force type info
@@ -1133,19 +1085,6 @@ class ProperTorsionHandler(ParameterHandler):
         # dictionary, that means they should be set to defualt _AT SYSTEM CREATION TIME_. The user may
         # change that default to a different value than it is now. The solution here will be to leave
         # those idivfX values uninitialized and deal with it during system creation
-
-
-        # Handle missing 'idivf' values, which divide the periodicity by the specified value
-        #for param_dict in kwargs[self._TAGNAME]:
-            # # Get default_idivf (if set), otherwise set it to auto
-            # #self._default_idivf = kwargs.get('default_idivf', 'auto')
-            #
-            # # Loop over all torsion terms
-            # index = 1
-            # while 'phase%d' % index in param_dict:
-            #     if not ('idivf%d' % index) in kwargs:
-            #         param_dict['idivf%d' % index] = None
-            #     index += 1
 
         super().__init__(**kwargs)
 
@@ -1341,7 +1280,8 @@ class vdWHandler(ParameterHandler):
     _INFOTYPE = vdWType  # info type to store
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create
     _KWARGS = ['ewaldErrorTolerance', 'useDispersionCorrection'] # Kwargs to catch when create_force is called
-
+    _REQUIRE_UNITS = {'switch': unit.angstrom,
+                      'cutoff': unit.angstrom}
     _DEFAULT_SPEC_ATTRIBS = {
         'potential': 'Lennard-Jones-12-6',
         'combining_rules': 'Loentz-Berthelot',
