@@ -32,12 +32,8 @@ import itertools
 
 from collections import OrderedDict
 
-import numpy as np
-
-import lxml.etree as etree
 
 from simtk import openmm, unit
-from simtk.openmm.app import element as elem
 
 from openforcefield.utils import detach_units, attach_units, unit_to_string, string_to_unit, extract_serialized_units_from_dict
 from openforcefield.topology import Topology, ValenceDict, ImproperDict
@@ -54,17 +50,16 @@ logger = logging.getLogger(__name__)
 # PARAMETER HANDLERS
 #
 # The following classes are Handlers that know how to create Force subclasses and add them to a System that is being
-# created.  Each Handler class must define three methods: 1) a static method that takes an etree Element and a ForceField,
-# and returns the corresponding Handler object; 2) a create_force() method that constructs the Force object and adds it
-# to the System; and 3) a labelForce() method that provides access to which
-# terms are applied to which atoms in specified oemols.
-# The static method should be added to the parsers map.
+# created.  Each Handler class must define three methods:
+# 1) a constructor which takes as input hierarchical dictionaries of data conformant to the SMIRNOFF spec;
+# 2) a create_force() method that constructs the Force object and adds it to the System; and
+# 3) a labelForce() method that provides access to which terms are applied to which atoms in specified mols.
 #=============================================================================================
 
 
 class SMIRNOFFSpecError(Exception):
     """
-    Exception for when a non-spec keyword is read and cosmetic attributes are not allowed.
+    Exception for when data is noncompliant with the SMIRNOFF data specification.
     """
 
     def __init__(self, msg):
@@ -134,6 +129,7 @@ class ParameterList(list):
         # used to set output units during serialization
         self._last_added_param = None
         input_parameter_list = input_parameter_list or []
+        # TODO: Should a ParameterList only contain a single kind of ParameterType?
         for input_parameter in input_parameter_list:
             self.append(input_parameter)
             self._last_added_param = input_parameter_list
@@ -142,7 +138,7 @@ class ParameterList(list):
     def last_added_parameter(self):
         """
         Get a copy of the last parameter added to this ParameterList. Important
-        for serializing as the last parameter added determines the units used for
+        during serialization as the last parameter added determines the units used for
         serializing all other parameters of this type.
 
         Returns
@@ -151,17 +147,6 @@ class ParameterList(list):
             The last parameter added to this ParameterList
         """
         return self._last_added_param
-
-    # def __setitem__(self, key, value):
-    #     """
-    #     Add a new entry to the ParameterList.
-    #     Parameters
-    #     ----------
-    #     key
-    #     value
-    #     """
-    #     super().__setitem__(key, value)
-    #     self._last_added_param = value
 
     def append(self, parameter):
         """
@@ -172,22 +157,24 @@ class ParameterList(list):
         parameter : a ParameterType-derived object
 
         """
+        # TODO: Ensure that newly added parameter is the same type as existing?
         super().append(parameter)
         self._last_added_param = parameter
 
     def extend(self, other):
         """
-        Add a ParameterType object to the end of the ParameterList
+        Add a ParameterList object to the end of the ParameterList
 
         Parameters
         ----------
-        parameter : a ParameterType-derived object
+        other : a ParameterList
 
         """
         if not isinstance(other, ParameterList):
             msg = 'ParameterList.extend(other) expected instance of ParameterList, ' \
                   'but received {} (type {}) instead'.format(other, type(other))
             raise TypeError(other)
+        # TODO: Check if other ParameterList contains the same ParameterTypes?
         super().extend(other)
         if len(other) > 0:
             self._last_added_param = other[-1]
@@ -202,6 +189,8 @@ class ParameterList(list):
         parameter : a ParameterType-derived object
 
         """
+        # TODO: Ensure that newly added parameter is the same type as existing?
+
         super().insert(index, parameter)
         self._last_added_param = parameter
 
@@ -249,7 +238,7 @@ class ParameterList(list):
 
     def to_list(self, return_cosmetic_attributes=False):
         """
-        Render this ParameterList to a normal list, serializing each ParameterType-derived object in it.
+        Render this ParameterList to a normal list, serializing each ParameterType-derived object in it to dict.
 
         Parameters
         ----------
@@ -260,29 +249,14 @@ class ParameterList(list):
         Returns
         -------
         parameter_list : List[dict]
-            A serialized representation of a parameter type, with all unit-bearing quantities reduced to a unitless form.
-        attached_units : dict['X_unit' : str]
-            A dict for converting each serialized quantity back to its unit-bearing form.
+            A serialized representation of a ParameterList, with each ParameterType it contains converted to dict.
         """
-
-
         parameter_list = list()
 
-        # If output_units is None, initialize it as an empty dict.
-        # It will be populated as ParameterTypes are serialized.
-        #if output_units is None:
-        #    output_units = dict()
-
-        # Iterate backwards over the list so that we get units from the last-read
-        # parameters first, and convert subsequent parameters to those units.
         for parameter in self:
             parameter_dict = parameter.to_dict(return_cosmetic_attributes=return_cosmetic_attributes)
-            # parameter_dict_unitless, attached_units = detach_units(parameter_dict, output_units)
             parameter_list.append(parameter_dict)
-            # output_units.update(attached_units)
 
-        # Reverse the order of the list (since it was serialized backwards)
-        #smirnoff_list.reverse()
         return parameter_list
 
 
@@ -297,14 +271,10 @@ class ParameterType(object):
     _VALENCE_TYPE = None  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
     _SMIRNOFF_ATTRIBS = ['smirks'] # Attributes expected per the SMIRNOFF spec.
     _REQUIRE_UNITS = {} # A dict of attribs which will be checked for unit compatibility
-    # TODO: Make sure that this doesn't get defined at the class level
     _OPTIONAL_ATTRIBS = ['id', 'parent_id'] # Attributes in the SMIRNOFF spec that may
                                             # be present but have no impact on performance
     _INDEXED_ATTRIBS = []  # list of attribs that will have consecutive numerical suffixes starting at 1
     _ATTRIBS_TO_TYPE = {}  # dict of attributes that need to be cast to a type (like int or float) to be interpreted
-
-
-
 
     # TODO: Can we provide some shared tools for returning settable/gettable attributes, and checking unit-bearing attributes?
 
@@ -328,7 +298,7 @@ class ParameterType(object):
         if smirks is None:
             raise ValueError("'smirks' must be specified")
 
-        # TODO: Make better switch for toolkit registry
+        # TODO: Make better switch using toolkit registry
         if openforcefield.utils.toolkits.OPENEYE_AVAILABLE:
             toolkit = 'openeye'
         elif openforcefield.utils.toolkits.RDKIT_AVAILABLE:
@@ -365,7 +335,7 @@ class ParameterType(object):
                 idx_key = unidx_key+str(index)
 
 
-
+        # Iterate through kwargs, doing validation and setting this ParameterType's attributes
         for key, val in kwargs.items():
             if key in self._REQUIRE_UNITS:
                 # TODO: Add dynamic property-getter/setter for each thing in self._REQUIRE_UNITS
@@ -381,6 +351,7 @@ class ParameterType(object):
                     type_to_cast = self._ATTRIBS_TO_TYPE[key]
                     val = type_to_cast(val)
             # Iterate through
+            # TODO: Decide on a scheme for prepending underscores to attributes
             #attr_name = '_' + key
             if key in self._SMIRNOFF_ATTRIBS:
                 setattr(self, key, val)
@@ -414,9 +385,6 @@ class ParameterType(object):
             smirks, ensure_valence_type=self._VALENCE_TYPE)
         self._smirks = smirks
 
-    # TODO: Can we automatically check unit compatibilities for other parameters we create?
-    # For example, if we have a parameter with units energy/distance**2, can we check to make
-    # sure the dimensionality is preserved when the parameter is modified?
 
     def to_dict(self, return_cosmetic_attributes=False):
         """
@@ -439,11 +407,6 @@ class ParameterType(object):
             to the unit it was converted to during serialization.
 
         """
-        #from simtk import unit
-
-
-        #output_units = {}
-
         # Make a list of all attribs that should be included in the
         # returned dict (call list() to make a copy)
         attribs_to_return = list(self._SMIRNOFF_ATTRIBS)
@@ -456,24 +419,7 @@ class ParameterType(object):
         # If attribs_to_return is ordered here, that will effectively be an informal output ordering
         for attrib_name in attribs_to_return:
             attrib_value = self.__getattribute__(attrib_name)
-            #if isinstance(attrib_value, unit.Quantity):
-            #    # If the user specified a preferred output unit for this attrib
-            #    if attrib_name in output_units:
-            #        # convert attrib_val to the desired unit
-            #        output_unit = output_units[attrib_name]
-            #        # ser_result is a dict of {'unitless_value': val, 'unit': simtk.unit.Unit}
-            #        ser_result = serialize_quantity(attrib_value, output_unit=output_unit)
-            #
-            #    # If the user didn't specify a preferred output unit for this attrib
-            #    else:
-            #        # Returns a dict of {'unitless_value': val, 'unit': simtk.unit.Unit}
-            #        ser_result = serialize_quantity(attrib_value)
-            #        # Since a preferred output unit wasn't specified, make this it.
-            #        output_units[attrib_name + '_unit'] = ser_result['unit']
-            #    smirnoff_dict[attrib_name] = ser_result['unitless_value']
-            #
-            ## If it's not a Quantity, just add the raw value to the dict
-            #else:
+
             if type(attrib_value) is list:
                 for idx, val in enumerate(attrib_value):
                     smirnoff_dict[attrib_name + str(idx+1)] = val
@@ -498,10 +444,10 @@ class ParameterHandler(object):
     """
 
     _TAGNAME = None  # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
-    _INFOTYPE = None  # container class with type information that will be stored in self._types
+    _INFOTYPE = None  # container class with type information that will be stored in self._parameters
     _OPENMMTYPE = None  # OpenMM Force class (or None if no equivalent)
     _DEPENDENCIES = None  # list of ParameterHandler classes that must precede this, or None
-    _REQUIRED_SPEC_ATTRIBS = []
+    _REQUIRED_SPEC_ATTRIBS = [] # list of kwargs that must be present during handler initialization
     _DEFAULT_SPEC_ATTRIBS = {}  # dict of tag-level attributes and their default values
     _OPTIONAL_SPEC_ATTRIBS = []  # list of non-required attributes that can be defined on initialization
     _INDEXED_ATTRIBS = []  # list of parameter attribs that will have consecutive numerical suffixes starting at 1
@@ -525,8 +471,7 @@ class ParameterHandler(object):
 
         """
 
-        self._COSMETIC_ATTRIBS = []  # list of cosmetic header attributes to
-        # remember and optionally write out
+        self._COSMETIC_ATTRIBS = []  # list of cosmetic header attributes to remember and optionally write out
 
         # Ensure that all required attribs are present
         for reqd_attrib in self._REQUIRED_SPEC_ATTRIBS:
@@ -537,7 +482,7 @@ class ParameterHandler(object):
                                                                list(kwargs.keys()))
                 raise SMIRNOFFSpecError(msg)
 
-        # list of ParameterType objects # TODO: Change to method accessor so we can access as list or dict
+        # list of ParameterType objects (also behaves like an OrderedDict where keys are SMARTS)
         self._parameters = ParameterList()
 
         # Handle all the unknown kwargs as cosmetic so we can write them back out
@@ -664,11 +609,10 @@ class ParameterHandler(object):
 
         Parameters
         ----------
-        parameter : dict
+        parameter_kwargs : dict
             The kwargs to pass to the ParameterHandler.INFOTYPE (a ParameterType) constructor
         """
-        #if not(isinstance(parameter, ParameterType)):
-        #    raise TypeError("Inappropriate object type passed to ParameterHandler.add_parameter(): {}".format(parameter))
+
         # TODO: Do we need to check for incompatibility with existing parameters?
 
         # Perform unit compatibility checks
@@ -687,21 +631,22 @@ class ParameterHandler(object):
         parameter_attrs : dict of {attr: value}
             The attrs mapped to desired values (for example {"smirks": "[*:1]~[#16:2]=,:[#6:3]~[*:4]", "id": "t105"} )
 
-
         Returns
         -------
         list of ParameterType-derived objects
             A list of matching ParameterType-derived objects
         """
         # TODO: This is a necessary API point for Lee-Ping's ForceBalance
+        pass
 
     def get_matches(self, entity):
-        """Retrieve all force terms for a chemical entity, which could be a Molecule, group of Molecules, or Topology.
+        """Retrieve all force terms for a Topology.
+        # TODO: Generalize to work on Molecules as well?
 
         Parameters
         ----------
-        entity : openforcefield.topology.ChemicalEntity
-            Chemical entity for which constraints are to be enumerated
+        entity : openforcefield.topology.Topology
+            Topology for which constraints are to be enumerated
 
         Returns
         ---------
@@ -713,13 +658,12 @@ class ParameterHandler(object):
         matches = ValenceDict()
         for force_type in self._parameters:
             matches_for_this_type = {}
-            #atom_top_indexes = [()]
             for atoms in entity.chemical_environment_matches(
                     force_type.smirks):
                 atom_top_indexes = tuple(
                     [atom.topology_particle_index for atom in atoms])
                 matches_for_this_type[atom_top_indexes] = force_type
-            #matches_for_this_type = { atoms : force_type for atoms in entity.chemical_environment_matches(force_type.smirks }
+
             matches.update(matches_for_this_type)
             logger.info('{:64} : {:8} matches'.format(
                 force_type.smirks, len(matches_for_this_type)))
@@ -835,7 +779,7 @@ class ParameterHandler(object):
 
         # Convert all header attrib units (eg. {'length_unit': simtk.unit.angstrom}) to strings (eg.
         # {'length_unit': 'angstrom'}) and add them to the header attribute dict
-        # TODO: Should I check for collisions between parameter "_unit" keys and header "_unit" keys?
+        # TODO: Should we check for collisions between parameter "_unit" keys and header "_unit" keys?
         output_units.update(attached_header_units)
         for key, value in output_units.items():
             value_str = unit_to_string(value)
@@ -864,6 +808,7 @@ class ConstraintHandler(ParameterHandler):
         _REQUIRE_UNITS = {'distance': unit.angstrom}
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
+            # TODO: Re-implement ability to set 'distance = True'
             # if 'distance' in node.attrib:
             #     self.distance = _extract_quantity_from_xml_element(
             #         node, parent, 'distance'
@@ -919,6 +864,7 @@ class BondHandler(ParameterHandler):
     _INDEXED_ATTRIBS = ['k'] # May be indexed (by integer bond order) if fractional bond orders are used
 
     def __init__(self, **kwargs):
+        # TODO: Do we want a docstring here? If not, check that docstring get inherited from ParameterHandler.
         super().__init__(**kwargs)
 
     def create_force(self, system, topology, **kwargs):
@@ -976,11 +922,11 @@ class BondHandler(ParameterHandler):
 
             # Add harmonic bond to HarmonicBondForce
             force.addBond(*atoms, length, k)
-            #force.addBond(*particle_indices, length, k)
 
         logger.info('{} bonds added ({} skipped due to constraints)'.format(
             len(bonds) - skipped_constrained_bonds, skipped_constrained_bonds))
 
+        # TODO: Reimplement missing valence checks
         # Check that no topological bonds are missing force parameters
         #_check_for_missing_valence_terms('BondForce', topology, bonds.keys(), topology.bonds)
 
@@ -1025,9 +971,6 @@ class AngleHandler(ParameterHandler):
         angles = self.get_matches(topology)
         skipped_constrained_angles = 0  # keep track of how many angles were constrained (and hence skipped)
         for (atoms, angle) in angles.items():
-            # Get corresponding particle indices in Topology
-            #particle_indices = tuple([ atom.particle_index for atom in atoms ])
-
             # Ensure atoms are actually bonded correct pattern in Topology
             for (i, j) in [(0, 1), (1, 2)]:
                 topology.assert_bonded(atoms[i], atoms[j])
@@ -1079,7 +1022,7 @@ class ProperTorsionHandler(ParameterHandler):
                              'default_idivf': 'auto'}
     _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
 
-    def __init__(self, potential=None, **kwargs):
+    def __init__(self, **kwargs):
 
         # NOTE: We do not want to overwrite idivf values here! If they're missing from the ParameterType
         # dictionary, that means they should be set to defualt _AT SYSTEM CREATION TIME_. The user may
@@ -1146,8 +1089,7 @@ class ImproperTorsionHandler(ParameterHandler):
                          'default_idivf': 'auto'}
     _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
 
-    def __init__(self, potential=None, **kwargs):
-        # Cast necessary kwargs to int
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
 
@@ -1170,13 +1112,11 @@ class ImproperTorsionHandler(ParameterHandler):
         matches = ImproperDict()
         for force_type in self._parameters:
             matches_for_this_type = {}
-            #atom_top_indexes = [()]
             for atoms in entity.chemical_environment_matches(
                     force_type.smirks):
                 atom_top_indexes = tuple(
                     [atom.topology_particle_index for atom in atoms])
                 matches_for_this_type[atom_top_indexes] = force_type
-            #matches_for_this_type = { atoms : force_type for atoms in entity.chemical_environment_matches(force_type.smirks }
             matches.update(matches_for_this_type)
             logger.info('{:64} : {:8} matches'.format(
                 force_type.smirks, len(matches_for_this_type)))
@@ -1205,7 +1145,6 @@ class ImproperTorsionHandler(ParameterHandler):
             # For impropers, central atom is atom 1
             for (i, j) in [(0, 1), (1, 2), (1, 3)]:
                 topology.assert_bonded(atom_indices[i], atom_indices[j])
-                #topology.assert_bonded(topology.atom(atom_indices[i]), topology.atom(atom_indices[j]))
 
             # Impropers are applied in three paths around the trefoil having the same handedness
             for (improper_periodicity, improper_phase, improper_k, improper_idivf) in zip(improper.periodicity,
@@ -1246,9 +1185,6 @@ class vdWHandler(ParameterHandler):
         }
 
         def __init__(self, **kwargs):
-
-
-
             sigma = kwargs.get('sigma', None)
             rmin_half = kwargs.get('rmin_half', None)
             if (sigma is None) and (rmin_half is None):
@@ -1299,7 +1235,7 @@ class vdWHandler(ParameterHandler):
                         'scale14': float,
                         'scale15': float}
 
-    # TODO: Is this necessary
+    # TODO: Is this necessary? It's used in check_compatibility but could be hard-coded.
     _SCALETOL = 1e-5
 
     _NONBOND_METHOD_MAP = {
@@ -1315,19 +1251,7 @@ class vdWHandler(ParameterHandler):
         openmm.NonbondedForce.PME
     }
 
-    def __init__(self,
-                 # forcefield,
-                 # scale12=None,
-                 # scale13=None,
-                 # scale14=None,
-                 # scale15=None,
-                 # potential=None,
-                 # switch=None,
-                 # cutoff=None,
-                 # long_range_dispersion=None,
-                 # combining_rules=None,
-                 # nonbonded_method=None,
-                 **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         # TODO: Find a better way to set defaults
