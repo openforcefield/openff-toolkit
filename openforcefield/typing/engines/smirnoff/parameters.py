@@ -1165,12 +1165,16 @@ class ProperTorsionHandler(ParameterHandler):
             # Ensure atoms are actually bonded correct pattern in Topology
             for (i, j) in [(0, 1), (1, 2), (2, 3)]:
                 topology.assert_bonded(atom_indices[i], atom_indices[j])
-            print(atom_indices, torsion.phase, torsion.periodicity, torsion.k)
-            for (periodicity, phase, k) in zip(torsion.periodicity,
-                                               torsion.phase, torsion.k):
+            for (periodicity, phase, k, idivf) in zip(torsion.periodicity,
+                                               torsion.phase, torsion.k, torsion.idivf):
+                if idivf == 'auto':
+                    # TODO: Implement correct "auto" behavior
+                    raise NotImplementedError("The OpenForceField toolkit hasn't implemented "
+                                              "support for the torsion `idivf` value of 'auto'")
+
                 force.addTorsion(atom_indices[0], atom_indices[1],
                                  atom_indices[2], atom_indices[3], periodicity,
-                                 phase, k)
+                                 phase, k/idivf)
 
         logger.info('{} torsions added'.format(len(torsions)))
 
@@ -1240,6 +1244,8 @@ class ImproperTorsionHandler(ParameterHandler):
 
         logger.info('{} matches identified'.format(len(matches)))
         return matches
+
+
     def create_force(self, system, topology, **kwargs):
         #force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
         #force = super().create_force(system, topology, **kwargs)
@@ -1263,15 +1269,21 @@ class ImproperTorsionHandler(ParameterHandler):
                 #topology.assert_bonded(topology.atom(atom_indices[i]), topology.atom(atom_indices[j]))
 
             # Impropers are applied in three paths around the trefoil having the same handedness
-            for (improper_periodicity, improper_phase, improper_k) in zip(improper.periodicity,
-                                               improper.phase, improper.k):
+            for (improper_periodicity, improper_phase, improper_k, improper_idivf) in zip(improper.periodicity,
+                                               improper.phase, improper.k, improper.idivf):
+                # TODO: Implement correct "auto" behavior
+                if improper_idivf == 'auto':
+                    improper_idivf = 3
+                    logger.warning("The OpenForceField toolkit hasn't implemented "
+                                   "support for the torsion `idivf` value of 'auto'."
+                                   "Currently assuming a value of '3' for impropers.")
                 # Permute non-central atoms
                 others = [atom_indices[0], atom_indices[2], atom_indices[3]]
                 # ((0, 1, 2), (1, 2, 0), and (2, 0, 1)) are the three paths around the trefoil
                 for p in [(others[i], others[j], others[k]) for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]]:
-                    # The torsion force gets added three times, since the original k was divided by three
+                    # The torsion force gets added three times, since the k is divided by three
                     force.addTorsion(atom_indices[1], p[0], p[1], p[2],
-                                     improper_periodicity, improper_phase, improper_k)
+                                     improper_periodicity, improper_phase, improper_k/improper_idivf)
         logger.info(
             '{} impropers added, each applied in a six-fold trefoil'.format(
                 len(impropers)))
