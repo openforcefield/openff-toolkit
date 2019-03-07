@@ -1,28 +1,26 @@
 #!/bin/env python
 
 import time
-import numpy as np
 
 # Import OpenMM tools
 from simtk import openmm, unit
-from simtk.openmm import app, Platform
+from simtk.openmm import app
 
-# Use MDTraj to write simulation trajectories
+# Use MDTraj to write simulation trajectories.
 from mdtraj.reporters import NetCDFReporter
 
-# Import the SMIRNOFF forcefield engine and some useful tools
+# Import the SMIRNOFF forcefield engine and some useful tools.
 from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.utils import get_data_filename, extractPositionsFromOEMol, generateTopologyFromOEMol
 
-# Define what molecule to work on, and a few simulation parameters
+# Define what molecule to work on, and a few simulation parameters.
 mol_filename = 'AlkEthOH_r51.mol2'
-offxml_filename = 'Frosst_AlkEthOH_parmAtFrosst.offxml'  # SMIRNOFF forcefield
-time_step = 2*unit.femtoseconds # simulation timestep
-temperature = 300*unit.kelvin # simulation temperature
-friction = 1/unit.picosecond # collision rate
-num_steps = 100000 # number of steps to run
-trj_freq = 1000 # number of steps per written trajectory frame
-data_freq = 1000 # number of steps per written simulation statistics
+offxml_filename = 'Frosst_AlkEthOH_parmAtFrosst.offxml'  # SMIRNOFF forcefield.
+time_step = 2*unit.femtoseconds  # Simulation timestep.
+temperature = 300*unit.kelvin  # Simulation temperature.
+friction = 1/unit.picosecond  # Collision rate.
+num_steps = 100000  # Number of integration steps to run.
+trj_freq = 1000  # Number of steps per written trajectory frame.
+data_freq = 1000  # Number of steps per written simulation statistics.
 
 # Load molecule
 from openforcefield.topology import Molecule
@@ -39,7 +37,7 @@ topology = Topology.from_molecules(molecule)
 forcefield = ForceField(offxml_filename)
 
 # Create the OpenMM system
-system = forcefield.create_system(topology)
+system = forcefield.create_openmm_system(topology)
 
 # Set up an OpenMM simulation
 integrator = openmm.LangevinIntegrator(temperature, friction, time_step)

@@ -18,10 +18,9 @@ import os
 
 from simtk import unit
 import numpy as np
-from numpy.testing import assert_almost_equal
 
 import pytest
-from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
+from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
 
 from openforcefield.utils import get_data_filename
 
@@ -152,6 +151,7 @@ if RDKitToolkitWrapper.toolkit_is_available() and AmberToolsToolkitWrapper.toolk
     toolkit_registries.append((ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]),
                                'RDKit+AmberTools'))
 
+
 class TestForceField():
     """Test the ForceField class"""
 
@@ -206,8 +206,7 @@ class TestForceField():
 
         omm_system = forcefield.create_openmm_system(topology)
 
-    # This test takes too long with the initial implementation of the toolkit
-    @pytest.mark.skip
+    @pytest.mark.slow
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_large_system(self, toolkit_registry, registry_description):
         from simtk.openmm import app
@@ -227,42 +226,6 @@ class TestForceField():
         The results of both should be identical.
         """
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
-        from simtk.openmm import app
-        from openforcefield.topology import Topology
-        from simtk.openmm import XmlSerializer
-        forcefield = ForceField('smirnoff99Frosst.offxml')
-        pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
-        # Load the unique molecules with one atom ordering
-        molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.mol2'))]
-        topology1 = Topology.from_openmm(pdbfile.topology,
-                                         unique_molecules=molecules1,
-                                         )
-        omm_system1 = forcefield.create_openmm_system(topology1,
-                                                      toolkit_registry=toolkit_registry)
-        # Load the unique molecules with a different atom ordering
-        molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.mol2'))]
-        topology2 = Topology.from_openmm(pdbfile.topology,
-                                         unique_molecules=molecules2,
-                                         )
-        omm_system2 = forcefield.create_openmm_system(topology2,
-                                                      toolkit_registry=toolkit_registry)
-
-        serialized_1 = XmlSerializer.serialize(omm_system1)
-        serialized_2 = XmlSerializer.serialize(omm_system2)
-
-        serialized_1 = round_charge(serialized_1)
-        serialized_2 = round_charge(serialized_2)
-
-        assert serialized_1 == serialized_2
-
-
-    @pytest.mark.skipif( not(OpenEyeToolkitWrapper.toolkit_is_available()), reason='Test requires OE toolkit')
-    def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
-        """
-        Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
-        The results of both should be identical.
-        """
-        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper])
         from simtk.openmm import app
         from openforcefield.topology import Topology
         from simtk.openmm import XmlSerializer
@@ -291,9 +254,48 @@ class TestForceField():
 
         assert serialized_1 == serialized_2
 
-    # We will not support going directly to ParmEd for now. We will instead feed OpenMM System objects to ParmEd for
-    # further processing.
-    @pytest.mark.skip
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='Test requires OE toolkit')
+    def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
+        """
+        Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
+        The results of both should be identical.
+        """
+        from simtk.openmm import app
+        from openforcefield.topology import Topology
+        from simtk.openmm import XmlSerializer
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper])
+        forcefield = ForceField('smirnoff99Frosst.offxml')
+        pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
+
+        # Load the unique molecules with one atom ordering
+        molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.mol2'))]
+        topology1 = Topology.from_openmm(pdbfile.topology,
+                                         unique_molecules=molecules1,
+                                         )
+        omm_system1 = forcefield.create_openmm_system(topology1,
+                                                      toolkit_registry=toolkit_registry)
+
+        # Load the unique molecules with a different atom ordering
+        molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.mol2'))]
+        topology2 = Topology.from_openmm(pdbfile.topology,
+                                         unique_molecules=molecules2,
+                                         )
+        omm_system2 = forcefield.create_openmm_system(topology2,
+                                                      toolkit_registry=toolkit_registry)
+
+        serialized_1 = XmlSerializer.serialize(omm_system1)
+        serialized_2 = XmlSerializer.serialize(omm_system2)
+
+        serialized_1 = round_charge(serialized_1)
+        serialized_2 = round_charge(serialized_2)
+
+        assert serialized_1 == serialized_2
+
+    @pytest.mark.skip(reason="We will not support going directly to ParmEd for now."
+                             "We will instead feed OpenMM System objects to ParmEd "
+                             "for further processing.")
     def test_parameterize_ethanol_to_parmed(self):
         from simtk.openmm import app
         from openforcefield.topology import Topology

@@ -828,10 +828,10 @@ class ForceField(object):
         """
         # Loop over molecules and label
         molecule_labels = list()
-        for molecule in enumerate(topology.unique_molecules):
+        for molecule_idx, molecule in enumerate(topology.reference_molecules):
             current_molecule_labels = dict()
-            for force in self.forces:
-                matches = force.get_matches(molecule)
-                molecule_labels[idx][force.name] = matches
+            for parameter_handler in self._parameter_handlers.values():
+                matches = parameter_handler.get_matches(molecule)
+                molecule_labels[molecule_idx][parameter_handler.name] = matches
             molecule_labels.append(current_molecule_labels)
         return molecule_labels
