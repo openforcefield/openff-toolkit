@@ -504,7 +504,9 @@ class TestMolecule:
                                                              distance,
                                                              sigma=0.1*unit.angstrom,
                                                              epsilon=1.0*unit.kilojoule_per_mole,
-                                                             charge_increments=unit.Quantity(np.array([0.1, 0.2, 0.3]), unit.elementary_charge)
+                                                             charge_increments=unit.Quantity(np.array([0.1, 0.2, 0.3]),
+                                                                                             unit.elementary_charge)
+                                                             #charge_increments=unit.Quantity([0.1, 0.2, 0.3], unit.elementary_charge)
                                                              )
         vsite2 = molecule.virtual_sites[vsite2_index]
 

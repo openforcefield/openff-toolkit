@@ -156,9 +156,6 @@ if RDKitToolkitWrapper.toolkit_is_available() and AmberToolsToolkitWrapper.toolk
 class TestForceField():
     """Test the ForceField class"""
 
-class TestForceField():
-    """Test the ForceField class"""
-
     def test_create_forcefield_from_file(self):
         """Test empty constructor"""
         forcefield = ForceField('smirnoff99Frosst.offxml')
