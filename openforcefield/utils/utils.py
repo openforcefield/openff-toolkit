@@ -115,10 +115,13 @@ def unit_to_string(input_unit):
     unit_string = None
 
     for unit_component in input_unit.iter_base_or_scaled_units():
+        unit_component_name = unit_component[0].name
+        # Convert, for example "elementary charge" --> "elementary_charge"
+        unit_component_name = unit_component_name.replace(' ', '_')
         if unit_component[1] == 1:
-            contribution = '{}'.format(unit_component[0].name)
+            contribution = '{}'.format(unit_component_name)
         else:
-            contribution = '{}**{}'.format(unit_component[0].name, int(unit_component[1]))
+            contribution = '{}**{}'.format(unit_component_name, int(unit_component[1]))
         if unit_string is None:
             unit_string = contribution
         else:
@@ -143,7 +146,7 @@ def quantity_to_string(input_quantity):
     """
     if input_quantity is None:
         return None
-    unitless_value = input_quantity.in_units_of(input_quantity.unit)
+    unitless_value = input_quantity.value_in_unit(input_quantity.unit)
     unit_string = unit_to_string(input_quantity.unit)
     output_string = '{} * {}'.format(unitless_value, unit_string)
     return output_string
