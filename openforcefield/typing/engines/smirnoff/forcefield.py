@@ -667,7 +667,7 @@ class ForceField(object):
         """
 
         # Ensure that SMIRNOFF is a top-level key of the dict
-        if not('SMIRNOFF' in smirnoff_data.keys()):
+        if not('SMIRNOFF' in smirnoff_data):
             raise ParseError("'SMIRNOFF' must be a top-level key in the SMIRNOFF object model")
 
         l1_dict = smirnoff_data['SMIRNOFF']

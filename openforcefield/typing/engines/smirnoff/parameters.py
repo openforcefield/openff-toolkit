@@ -1629,7 +1629,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
         for kwarg_key, attr in compare_kwarg_to_attr.items():
             # Skip this comparison if the kwarg isn't in handler_kwargs and we're not comparing against defaults
-            if not(assume_missing_is_default) and not(kwarg_key in handler_kwargs.keys()):
+            if not(assume_missing_is_default) and not(kwarg_key in handler_kwargs):
                 continue
 
             kwarg_val = handler_kwargs.get(kwarg_key, self._DEFAULTS[kwarg_key])
