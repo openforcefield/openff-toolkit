@@ -24,14 +24,23 @@ import pytest
 # UTILITY FUNCTIONS
 #=============================================================================================
 
-def untar_full_alkethoh_set():
-    """When running slow tests, we unpack the full AlkEthOH test in advance to speed things up."""
+def untar_full_alkethoh_and_freesolv_set():
+    """When running slow tests, we unpack the full AlkEthOH and FreeSolv test
+    sets in advance to speed things up.
+
+    See
+        test_forcefield.py::test_alkethoh_parameters_assignment
+        test_forcefield.py::test_freesolv_parameters_assignment
+    """
     import os
     import tarfile
     from openforcefield.utils import get_data_filename
-    tarfile_path = os.path.join(get_data_filename('molecules'), 'AlkEthOH_tripos.tar.gz')
-    with tarfile.open(tarfile_path, 'r:gz') as tar:
-        tar.extractall(path=os.path.dirname(tarfile_path))
+
+    molecule_dir_path = get_data_filename('molecules')
+    for tarfile_name in ['AlkEthOH_tripos.tar.gz', 'FreeSolv.tar.gz']:
+        tarfile_path = os.path.join(molecule_dir_path, tarfile_name)
+        with tarfile.open(tarfile_path, 'r:gz') as tar:
+            tar.extractall(path=molecule_dir_path)
 
 
 #=============================================================================================
@@ -58,6 +67,6 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(skip_slow)
     else:
         # If --runslow is given, we don't have to mark items for skipping,
-        # but we need to extract the whole AlkEthOH set (see
-        # test_forcefield::test_alkethoh_parameters_assignment).
-        untar_full_alkethoh_set()
+        # but we need to extract the whole AlkEthOH and FreeSolv sets (see
+        # test_forcefield::test_alkethoh/freesolv_parameters_assignment).
+        untar_full_alkethoh_and_freesolv_set()

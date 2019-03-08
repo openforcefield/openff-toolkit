@@ -15,12 +15,12 @@ Tests for forcefield class
 #=============================================================================================
 
 import os
+
 from simtk import unit
 import numpy as np
-from numpy.testing import assert_almost_equal
 
 import pytest
-from openforcefield.utils.toolkits import ToolkitWrapper, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
+from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
 
 from openforcefield.utils import get_data_filename
 
@@ -146,9 +146,15 @@ def round_charge(xml):
 
 toolkit_registries = []
 if OpenEyeToolkitWrapper.toolkit_is_available():
-    toolkit_registries.append(ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper]))
+
+    toolkit_registries.append((ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper]), "OE"))
 if RDKitToolkitWrapper.toolkit_is_available() and AmberToolsToolkitWrapper.toolkit_is_available():
-    toolkit_registries.append(ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]))
+    toolkit_registries.append((ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]),
+                               'RDKit+AmberTools'))
+
+
+class TestForceField():
+    """Test the ForceField class"""
 
 class TestForceField():
     """Test the ForceField class"""
@@ -187,9 +193,9 @@ class TestForceField():
         assert string_1 == string_2
 
 
-    #TODO : Use pytest.parameterize to run tests with OpenEyeToolkitWrapper and RDKitToolkitWrapper
-    #@pytest.mark.parametrize("toolkit_registry", toolkit_registries)
-    def test_parameterize_ethanol(self):#, toolkit_registry):
+
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    def test_parameterize_ethanol(self, toolkit_registry, registry_description):
         from simtk.openmm import app
         from openforcefield.topology import Topology
         forcefield = ForceField('smirnoff99Frosst.offxml')
@@ -197,9 +203,11 @@ class TestForceField():
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-        omm_system = forcefield.create_openmm_system(topology)#, toolkit_registry=toolkit_registry)
 
-    def test_parameterize_1_cyclohexane_1_ethanol(self):
+        omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
+
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    def test_parameterize_1_cyclohexane_1_ethanol(self, toolkit_registry, registry_description):
         from simtk.openmm import app
         from openforcefield.topology import Topology
         forcefield = ForceField('smirnoff99Frosst.offxml')
@@ -214,9 +222,9 @@ class TestForceField():
 
         omm_system = forcefield.create_openmm_system(topology)
 
-    # This test takes too long with the initial implementation of the toolkit
-    @pytest.mark.skip
-    def test_parameterize_large_system(self):
+    @pytest.mark.slow
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    def test_parameterize_large_system(self, toolkit_registry, registry_description):
         from simtk.openmm import app
         from openforcefield.topology import Topology
         forcefield = ForceField('smirnoff99Frosst.offxml')
@@ -225,27 +233,34 @@ class TestForceField():
                                                                               'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
-        omm_system = forcefield.create_openmm_system(topology)
+        omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
     @pytest.mark.skipif( not(OpenEyeToolkitWrapper.toolkit_is_available()), reason='Test requires OE toolkit')
-    def test_parameterize_different_reference_ordering(self):
+    def test_parameterize_ethanol_different_reference_ordering_openeye(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
         The results of both should be identical.
         """
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
         from simtk.openmm import app
         from openforcefield.topology import Topology
         from simtk.openmm import XmlSerializer
         forcefield = ForceField('smirnoff99Frosst.offxml')
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         # Load the unique molecules with one atom ordering
-        molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.mol2'))]
-        topology1 = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules1)
-        omm_system1 = forcefield.create_openmm_system(topology1)
+        molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.sdf'))]
+        topology1 = Topology.from_openmm(pdbfile.topology,
+                                         unique_molecules=molecules1,
+                                         )
+        omm_system1 = forcefield.create_openmm_system(topology1,
+                                                      toolkit_registry=toolkit_registry)
         # Load the unique molecules with a different atom ordering
-        molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.mol2'))]
-        topology2 = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules2)
-        omm_system2 = forcefield.create_openmm_system(topology2)
+        molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.sdf'))]
+        topology2 = Topology.from_openmm(pdbfile.topology,
+                                         unique_molecules=molecules2,
+                                         )
+        omm_system2 = forcefield.create_openmm_system(topology2,
+                                                      toolkit_registry=toolkit_registry)
 
         serialized_1 = XmlSerializer.serialize(omm_system1)
         serialized_2 = XmlSerializer.serialize(omm_system2)
@@ -255,9 +270,49 @@ class TestForceField():
 
         assert serialized_1 == serialized_2
 
-    # We will not support going directly to ParmEd for now. We will instead feed OpenMM System objects to ParmEd for
-    # further processing.
-    @pytest.mark.skip
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='Test requires OE toolkit')
+    def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
+        """
+        Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
+        The results of both should be identical.
+        """
+        from simtk.openmm import app
+        from openforcefield.topology import Topology
+        from simtk.openmm import XmlSerializer
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper])
+        forcefield = ForceField('smirnoff99Frosst.offxml')
+        pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
+
+        # Load the unique molecules with one atom ordering
+        molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.mol2'))]
+        topology1 = Topology.from_openmm(pdbfile.topology,
+                                         unique_molecules=molecules1,
+                                         )
+        omm_system1 = forcefield.create_openmm_system(topology1,
+                                                      toolkit_registry=toolkit_registry)
+
+        # Load the unique molecules with a different atom ordering
+        molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.mol2'))]
+        topology2 = Topology.from_openmm(pdbfile.topology,
+                                         unique_molecules=molecules2,
+                                         )
+        omm_system2 = forcefield.create_openmm_system(topology2,
+                                                      toolkit_registry=toolkit_registry)
+
+        serialized_1 = XmlSerializer.serialize(omm_system1)
+        serialized_2 = XmlSerializer.serialize(omm_system2)
+
+        serialized_1 = round_charge(serialized_1)
+        serialized_2 = round_charge(serialized_2)
+
+        assert serialized_1 == serialized_2
+
+
+    @pytest.mark.skip(reason="We will not support going directly to ParmEd for now."
+                             "We will instead feed OpenMM System objects to ParmEd "
+                             "for further processing.")
     def test_parameterize_ethanol_to_parmed(self):
         from simtk.openmm import app
         from openforcefield.topology import Topology
@@ -269,7 +324,8 @@ class TestForceField():
 
         parmed_system = forcefield.create_parmed_structure(topology, positions=pdbfile.getPositions())
 
-    def test_charges_from_molecule(self):
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    def test_charges_from_molecule(self, toolkit_registry, registry_description):
         """Test skipping charge generation and instead getting charges from the original Molecule"""
         # Create an ethanol molecule without using a toolkit
         mol = Molecule()
@@ -300,7 +356,8 @@ class TestForceField():
         forcefield = ForceField(filename)
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-        omm_system = forcefield.create_openmm_system(topology, charge_from_molecules=molecules)
+        omm_system = forcefield.create_openmm_system(topology, charge_from_molecules=molecules,
+                                                     toolkit_registry=toolkit_registry)
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
         expected_charges = ((0, -0.4 * unit.elementary_charge),
                             (1, -0.3 * unit.elementary_charge),
@@ -314,7 +371,9 @@ class TestForceField():
         # that the charges are correctly mapped according to this PDB in the resulting system.
         pdbfile2 = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol_reordered.pdb'))
         topology2 = Topology.from_openmm(pdbfile2.topology, unique_molecules=molecules)
-        omm_system2 = forcefield.create_openmm_system(topology2, charge_from_molecules=molecules)
+
+        omm_system2 = forcefield.create_openmm_system(topology2, charge_from_molecules=molecules,
+                                                      toolkit_registry=toolkit_registry)
         nonbondedForce2 = [f for f in omm_system2.getForces() if type(f) == NonbondedForce][0]
         expected_charges2 = ((0, -0.2*unit.elementary_charge),
                              (1, -0.4*unit.elementary_charge),
@@ -324,7 +383,9 @@ class TestForceField():
             q, sigma, epsilon = nonbondedForce2.getParticleParameters(particle_index)
             assert q == expected_charge
 
-    def test_some_charges_from_molecule(self):
+
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    def test_some_charges_from_molecule(self, toolkit_registry, registry_description):
         """
         Test creating an OpenMM system where some charges come from a Molecule, but others come from toolkit
         calculation
@@ -396,7 +457,10 @@ class TestForceField():
         forcefield = ForceField(filename)
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-        omm_system = forcefield.create_openmm_system(topology, charge_from_molecules=[ethane])
+
+        omm_system = forcefield.create_openmm_system(topology,
+                                                     charge_from_molecules=[ethane],
+                                                     toolkit_registry=toolkit_registry)
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
         expected_charges = ((18, -0.4 * unit.elementary_charge),
                             (19, -0.3 * unit.elementary_charge),
@@ -413,8 +477,9 @@ class TestForceField():
 
 
 
-    def test_pass_invalid_kwarg_to_create_openmm_system(self):
-        "Test to ensure an exception is raised when an unrecognized kwarg is passed "
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    def test_pass_invalid_kwarg_to_create_openmm_system(self, toolkit_registry, registry_description):
+        """Test to ensure an exception is raised when an unrecognized kwarg is passed """
         from simtk.openmm import app
         from openforcefield.topology import Topology
         filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
@@ -423,8 +488,9 @@ class TestForceField():
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-        with pytest.raises(ValueError) as e:
-            omm_system = forcefield.create_openmm_system(topology, invalid_kwarg='aaa')
+
+        with pytest.raises(ValueError, match=".* not used by any registered force Handler: {'invalid_kwarg'}.*") as e:
+            omm_system = forcefield.create_openmm_system(topology, invalid_kwarg='aaa', toolkit_registry=toolkit_registry)
 
 
 #=============================================================================================
@@ -432,7 +498,7 @@ class TestForceField():
 #=============================================================================================
 
 def generate_alkethoh_parameters_assignment_cases():
-    """Create dinamically all test cases that should be ."""
+    """Create dynamically all test cases that should be ran for the AlkEthOH set."""
     # These AlkEthOH molecules are always run by test_alkethoh_parameters_assignment.
     fast_test_cases = [
         'r0',
@@ -459,7 +525,7 @@ def generate_alkethoh_parameters_assignment_cases():
                            if 'crd' in m.name and 'test_filt1' not in m.name}
 
     # Remove fast test cases from slow ones to avoid duplicate tests.
-    # Remove also water (c1302), which was reparametrized in AlkEthOH
+    # Remove also water (c1302), which was reparameterized in AlkEthOH
     # to be TIP3P (not covered by Frosst_AlkEthOH_parmAtFrosst.
     for fast_test_case in fast_test_cases + ['c1302']:
         slow_test_cases.remove(fast_test_case)
@@ -507,6 +573,87 @@ def test_alkethoh_parameters_assignment(alkethoh_id):
     # TODO: Reactivate the charge check when we'll be able to load charges from files.
     compare_amber_smirnoff(top_filepath, crd_filepath, forcefield, molecule,
                            check_energies=False, ignore_charges=True)
+
+
+
+def generate_freesolv_parameters_assignment_cases():
+    """Create dynamically all test cases that should be ran for the FreeSolv set."""
+    import tarfile
+
+    # For these tests, UndefinedStereochemistryError is ignored.
+    # The chirality was manually checked (see issue #175).
+    ignore_undefined_stereo = {
+        '2501588',
+        '3266352',
+        '7829570'
+    }
+
+    # These molecules are always tested by test_freesolv_parameters_assignment().
+    # Each test case is (freesolv_id, force_field_version, exception_if_undefined_stereo).
+    fast_test_cases = [
+        ('1019269', '0_0_4_fixed', True),
+        ('63712', '0_0_2', True),  # The XML was regenerated after fixing the issue described in #179.
+        ('1723043', '0_0_2', True),
+        ('2501588', '0_0_2', False),  # Test impropers and undefined stereochemistry.
+        ('3323117', '0_0_2', True),  # The XML was regenerated after fixing the issue described in #179.
+    ]
+
+    def extract_id(file_path):
+        """Extract the FreeSolv ID and force field version from the file subpath."""
+        # An example of file path is FreeSolv/xml_0_0_4_fixed/mobley_7913234_vacuum.xml
+        freesolv_id = os.path.basename(file_path).split('_')[1]
+        force_field_version = os.path.basename(os.path.dirname(file_path))[4:]
+        exception_if_undefined_stereo = freesolv_id not in ignore_undefined_stereo
+        return (freesolv_id, force_field_version, exception_if_undefined_stereo)
+
+    # Get all the tarball XML files available. The tarball is extracted
+    # in conftest.py if slow tests are activated.
+    freesolv_tar_file_path = get_data_filename(os.path.join('molecules', 'FreeSolv.tar.gz'))
+    with tarfile.open(freesolv_tar_file_path, 'r:gz') as tar:
+        slow_test_cases = {extract_id(m.name) for m in tar.getmembers() if '.xml' in m.name}
+
+    # Remove fast test cases from slow ones to avoid duplicate tests.
+    for fast_test_case in fast_test_cases:
+        slow_test_cases.remove(fast_test_case)
+
+    # Mark all slow cases as slow.
+    slow_test_cases = [pytest.param(*case, marks=pytest.mark.slow)
+                       for case in sorted(slow_test_cases)]
+
+    return fast_test_cases + slow_test_cases
+
+
+@pytest.mark.parametrize(('freesolv_id', 'forcefield_version', 'exception_if_undefined_stereo'),
+                         generate_freesolv_parameters_assignment_cases())
+def test_freesolv_parameters_assignment(freesolv_id, forcefield_version, exception_if_undefined_stereo):
+    """Regression test on parameters assignment based on the FreeSolv set used in the 0.1 paper.
+
+    This, contrarily to the similar AlkEthOH test, checks also constraints
+    and improper torsions.
+
+    """
+    from openforcefield.tests.utils import get_freesolv_filepath, compare_system_parameters
+    mol2_file_path, xml_file_path = get_freesolv_filepath(freesolv_id, forcefield_version)
+
+    # Load molecules.
+    molecule = Molecule.from_file(mol2_file_path, exception_if_undefined_stereo=exception_if_undefined_stereo)
+
+    # Create OpenFF System with the current toolkit.
+    forcefield_file_path = 'old/smirnoff99Frosst_' + forcefield_version + '.offxml'
+    ff = ForceField(forcefield_file_path, 'old/hbonds.offxml')
+    ff_system = ff.create_openmm_system(molecule.to_topology())
+
+    # Load OpenMM System created with the 0.1 version of the toolkit.
+    from simtk import openmm
+    with open(xml_file_path, 'r') as f:
+        xml_system = openmm.XmlSerializer.deserialize(f.read())
+
+    # Compare parameters. We ignore the improper folds as in 0.0.3 we
+    # used a six-fold implementation while we now use a three-fold way.
+    # TODO: Reactivate charge comparison once we'll be able to read them from file.
+    compare_system_parameters(ff_system, xml_system,
+                              systems_labels=('current OpenFF', 'SMIRNOFF 0.0.4'),
+                              ignore_charges=True, ignore_improper_folds=True)
 
 
 # from_xml_bytes

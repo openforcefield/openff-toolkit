@@ -340,7 +340,7 @@ class ForceField(object):
         for parameter_handler_class in parameter_handler_classes:
             tagname = parameter_handler_class._TAGNAME
             if tagname is not None:
-                if tagname in self._parameter_handler_classes.keys():
+                if tagname in self._parameter_handler_classes:
                     raise Exception(
                         "Attempting to register ParameterHandler {}, which provides a parser for tag"
                         " '{}', but ParameterHandler {} has already been registered to handle that tag.".format(
@@ -540,11 +540,11 @@ class ForceField(object):
         KeyError if there is no ParameterHandler for the given tagname
         """
         handler = None
-        if tagname in self._parameter_handlers.keys():
+        if tagname in self._parameter_handlers:
             # If handler already exists, make sure it is compatible
             handler = self._parameter_handlers[tagname]
             handler.check_handler_compatibility(handler_kwargs)
-        elif tagname in self._parameter_handler_classes.keys():
+        elif tagname in self._parameter_handler_classes:
             new_ph_class = self._parameter_handler_classes[tagname]
             handler = self.register_parameter_handler(new_ph_class,
                                                       handler_kwargs)
@@ -965,10 +965,10 @@ class ForceField(object):
         """
         # Loop over molecules and label
         molecule_labels = list()
-        for molecule in enumerate(topology.unique_molecules):
+        for molecule_idx, molecule in enumerate(topology.reference_molecules):
             current_molecule_labels = dict()
-            for force in self.forces:
-                matches = force.get_matches(molecule)
-                molecule_labels[idx][force.name] = matches
+            for parameter_handler in self._parameter_handlers.values():
+                matches = parameter_handler.get_matches(molecule)
+                molecule_labels[molecule_idx][parameter_handler.name] = matches
             molecule_labels.append(current_molecule_labels)
         return molecule_labels
