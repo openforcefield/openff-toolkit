@@ -761,7 +761,9 @@ class ParameterHandler(object):
                 idxed_attrib_unit_key = attrib_key + str(index) + '_unit'
 
 
-        smirnoff_data[self._TAGNAME] = unitless_parameter_list
+        # NOTE: This assumes that a ParameterHandler will have just one homogenous ParameterList under it
+        if self._INFOTYPE is not None:
+            smirnoff_data[self._INFOTYPE._ELEMENT_NAME] = unitless_parameter_list
 
 
         # Collect the names of handler attributes to return
