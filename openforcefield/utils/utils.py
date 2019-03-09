@@ -303,8 +303,7 @@ def attach_units(unitless_dict, attached_units):
         if parameter_name in temp_dict.keys():
             parameter_attrib_string = temp_dict[parameter_name]
             try:
-                temp_dict[parameter_name] = float(
-                          parameter_attrib_string) * units_to_attach
+                temp_dict[parameter_name] = float(parameter_attrib_string) * units_to_attach
             except ValueError as e:
                 e.msg = (
                     "Expected numeric value for parameter '{}',"

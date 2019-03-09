@@ -675,9 +675,12 @@ class ForceField(object):
         # others loaded by this ForceField
         if 'aromaticity_model' in l1_dict.keys():
             aromaticity_model = l1_dict['aromaticity_model']
-        else:
-            raise ParseError("'aromaticity_model' attribute must be specified in SMIRNOFF tag")
-        self._register_aromaticity_model(aromaticity_model)
+            self._register_aromaticity_model(aromaticity_model)
+
+        elif self._aromaticity_model == None:
+            raise ParseError("'aromaticity_model' attribute must be specified in SMIRNOFF "
+                             "tag, or contained in a previously-loaded SMIRNOFF data source")
+
 
         #if aromaticity_model not in topology.ALLOWED_AROMATICITY_MODELS:
         #    self._raise_parsing_exception(
@@ -704,8 +707,8 @@ class ForceField(object):
 
         # Go through the subsections, delegating each to the proper ParameterHandler
 
-        # Define keys which are expected from the spec, but have no bearing on system energy
-        l1_spec_keys = ['Author','Date', 'version', 'aromaticity_model']
+        # Define keys which are expected from the spec, but are not parameter sections
+        l1_spec_keys = ['Author', 'Date', 'version', 'aromaticity_model']
 
         for parameter_name in l1_dict.keys():
             # Skip (for now) cosmetic l1 items
@@ -719,23 +722,23 @@ class ForceField(object):
             # Otherwise, we expect this l1_key to correspond to a ParameterHandler
             section_dict = l1_dict[parameter_name]
             # In the OFFXML format, attributes and sub-elements are distinguished by whether they're a list
-            raw_handler_kwargs = dict([(key, item) for key, item in section_dict.items() if not type(item) is list])
-            unitless_handler_kwargs, attached_units = extract_serialized_units_from_dict(raw_handler_kwargs)
-            handler_kwargs = attach_units(unitless_handler_kwargs, attached_units)
+            #raw_handler_kwargs = dict([(key, item) for key, item in section_dict.items() if not type(item) is list])
+            #unitless_handler_kwargs, attached_units = extract_serialized_units_from_dict(section_dict)
+            #handler_kwargs = attach_units(unitless_handler_kwargs, attached_units)
 
             # Retrieve or create parameter handler
             handler = self.get_handler(parameter_name,
-                                       handler_kwargs)
-
-            # This will get parameter lists in the form {'Bonds': [list of bonds]}.
-            parameter_lists = dict([(key, item) for key, item in section_dict.items() if type(item) is list])
-            for parameter_tag, parameter_list in parameter_lists.items():
-                for parameter_dict in parameter_list:
-                    # Append units to parameters as needed
-                    parameter_kwargs = attach_units(parameter_dict,
-                                                     attached_units)
-                    # Add parameter definition
-                    handler.add_parameter(parameter_kwargs)
+                                       # handler_kwargs)
+                                       section_dict)
+            # # This will get parameter lists in the form {'Bonds': [list of bonds]}.
+            # parameter_lists = dict([(key, item) for key, item in section_dict.items() if type(item) is list])
+            # for parameter_tag, parameter_list in parameter_lists.items():
+            #     for parameter_dict in parameter_list:
+            #         # Append units to parameters as needed
+            #         parameter_kwargs = attach_units(parameter_dict,
+            #                                          attached_units)
+            #         # Add parameter definition
+            #         handler.add_parameter(parameter_kwargs)
 
 
     def parse_smirnoff_from_source(self, source):

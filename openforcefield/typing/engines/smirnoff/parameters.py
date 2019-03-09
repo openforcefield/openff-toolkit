@@ -267,8 +267,9 @@ class ParameterType(object):
     Base class for SMIRNOFF parameter types.
 
     """
-    # This list will be used for validating input and detecting cosmetic attributes.
+    # These lists and dicts will be used for validating input and detecting cosmetic attributes.
     _VALENCE_TYPE = None  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+    _ELEMENT_NAME = None # The string mapping to this ParameterType in a SMIRNOFF data source
     _SMIRNOFF_ATTRIBS = ['smirks'] # Attributes expected per the SMIRNOFF spec.
     _REQUIRE_UNITS = {} # A dict of attribs which will be checked for unit compatibility
     _OPTIONAL_ATTRIBS = ['id', 'parent_id'] # Attributes in the SMIRNOFF spec that may
@@ -332,7 +333,7 @@ class ParameterType(object):
                 getattr(self, unidx_key).append(val)
                 del kwargs[idx_key]
                 index += 1
-                idx_key = unidx_key+str(index)
+                idx_key = unidx_key + str(index)
 
 
         # Iterate through kwargs, doing validation and setting this ParameterType's attributes
@@ -534,12 +535,17 @@ class ParameterHandler(object):
         for key, val in smirnoff_data.items():
             # If we're reading the parameter list, iterate through and attach units to
             # each parameter_dict, then use it to initialize a ParameterType
-            if key == self._TAGNAME:
+            #if key == self._TAGNAME:
+            if key == self._INFOTYPE._ELEMENT_NAME:
+                # If there are multiple parameters, this will be a list. If there's just one, make it a list
+                if not(isinstance(val, list)):
+                    val = [val]
                 for unitless_param_dict in val:
                     param_dict = attach_units(unitless_param_dict, attached_units)
                     new_parameter = self._INFOTYPE(**param_dict,
                                                    permit_cosmetic_attributes=permit_cosmetic_attributes)
                     self._parameters.append(new_parameter)
+
             elif key in allowed_header_attribs:
                 attr_name = '_' + key
                 # TODO: create @property.setter here if attrib requires unit
@@ -549,9 +555,10 @@ class ParameterHandler(object):
                 attr_name = '_' + key
                 setattr(self, attr_name, val)
 
-
-
-
+            else:
+                raise SMIRNOFFSpecError("Incompatible kwarg {} passed to {} constructor. If this is "
+                                        "a desired cosmetic attribute, consider setting "
+                                        "'permit_cosmetic_attributes=True'".format(key, self.__class__))
 
     # TODO: Do we need to return these, or can we handle this internally
     @property
@@ -804,6 +811,7 @@ class ConstraintHandler(ParameterHandler):
     class ConstraintType(ParameterType):
         """A SMIRNOFF constraint type"""
         _VALENCE_TYPE = 'Bond'
+        _ELEMENT_NAME = 'Constraint'
         _SMIRNOFF_ATTRIBS = ['smirks']  # Attributes expected per the SMIRNOFF spec.
         _OPTIONAL_ATTRIBS = ['distance', 'id', 'parent_id']
         _REQUIRE_UNITS = {'distance': unit.angstrom}
@@ -817,7 +825,7 @@ class ConstraintHandler(ParameterHandler):
             # else:
             #     self.distance = True  # Constraint to equilibrium bond length will be added by HarmonicBondHandler
 
-    _TAGNAME = 'Constraint'
+    _TAGNAME = 'Constraints'
     _INFOTYPE = ConstraintType
     _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
 
@@ -829,11 +837,14 @@ class ConstraintHandler(ParameterHandler):
         constraints = self.get_matches(topology)
         for (atoms, constraint) in constraints.items():
             # Update constrained atom pairs in topology
-            topology.add_constraint(*atoms, constraint.distance)
+            #topology.add_constraint(*atoms, constraint.distance)
             # If a distance is specified (constraint.distance != True), add the constraint here.
             # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondHandler
-            if constraint.distance is not True:
+            if hasattr(constraint, 'distance'):# is not True:
                 system.addConstraint(*atoms, constraint.distance)
+                topology.add_constraint(*atoms, constraint.distance)
+            else:
+                topology.add_constraint(*atoms, True)
 
 
 #=============================================================================================
@@ -846,6 +857,7 @@ class BondHandler(ParameterHandler):
     class BondType(ParameterType):
         """A SMIRNOFF Bond parameter type"""
         _VALENCE_TYPE = 'Bond' # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+        _ELEMENT_NAME = 'Bond'
         _SMIRNOFF_ATTRIBS = ['smirks', 'length', 'k']  # Attributes expected per the SMIRNOFF spec.
         _REQUIRE_UNITS = {'length' : unit.angstrom,
                           'k' : unit.kilocalorie_per_mole / unit.angstrom**2}
@@ -908,12 +920,11 @@ class BondHandler(ParameterHandler):
                         format(self.fractional_bondorder_method))
 
             # Handle constraints.
-            # TODO: I don't understand why there are two if statements checking the same thing here.
             if topology.is_constrained(*atoms):
                 # Atom pair is constrained; we don't need to add a bond term.
                 skipped_constrained_bonds += 1
                 # Check if we need to add the constraint here to the equilibrium bond length.
-                if topology.is_constrained(*atoms) is True: # Note: This could have a value of the constraint length
+                if topology.is_constrained(*atoms) is True:
                     # Mark that we have now assigned a specific constraint distance to this constraint.
                     topology.add_constraint(*atoms, length)
                     # Add the constraint to the System.
@@ -941,6 +952,7 @@ class AngleHandler(ParameterHandler):
     class AngleType(ParameterType):
         """A SMIRNOFF angle type."""
         _VALENCE_TYPE = 'Angle'  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+        _ELEMENT_NAME = 'Angle'
         _SMIRNOFF_ATTRIBS = ['smirks', 'angle', 'k']  # Attributes expected per the SMIRNOFF spec.
         _REQUIRE_UNITS = {'angle': unit.degree,
                           'k': unit.kilocalorie_per_mole / unit.degree**2}
@@ -1004,6 +1016,7 @@ class ProperTorsionHandler(ParameterHandler):
         """A SMIRNOFF torsion type for proper torsions."""
 
         _VALENCE_TYPE = 'ProperTorsion'
+        _ELEMENT_NAME = 'Proper'
         _SMIRNOFF_ATTRIBS = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
         _REQUIRE_UNITS = {'k': unit.kilocalorie_per_mole,
                           'phase': unit.degree}
@@ -1048,6 +1061,8 @@ class ProperTorsionHandler(ParameterHandler):
             # Ensure atoms are actually bonded correct pattern in Topology
             for (i, j) in [(0, 1), (1, 2), (2, 3)]:
                 topology.assert_bonded(atom_indices[i], atom_indices[j])
+
+
             for (periodicity, phase, k, idivf) in zip(torsion.periodicity,
                                                torsion.phase, torsion.k, torsion.idivf):
                 if idivf == 'auto':
@@ -1071,6 +1086,7 @@ class ImproperTorsionHandler(ParameterHandler):
     class ImproperTorsionType(ParameterType):
         """A SMIRNOFF torsion type for improper torsions."""
         _VALENCE_TYPE = 'ImproperTorsion'
+        _ELEMENT_NAME = 'Improper'
         _SMIRNOFF_ATTRIBS = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
         _REQUIRE_UNITS = {'k': unit.kilocalorie_per_mole,
                           'phase': unit.degree}
@@ -1086,6 +1102,7 @@ class ImproperTorsionHandler(ParameterHandler):
     _TAGNAME = 'ImproperTorsions'  # SMIRNOFF tag name to process
     _INFOTYPE = ImproperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
+    _OPTIONAL_SPEC_ATTRIBS = ['potential', 'default_idivf']
     _HANDLER_DEFAULTS = {'potential': 'charmm',
                          'default_idivf': 'auto'}
     _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
@@ -1147,6 +1164,9 @@ class ImproperTorsionHandler(ParameterHandler):
             for (i, j) in [(0, 1), (1, 2), (1, 3)]:
                 topology.assert_bonded(atom_indices[i], atom_indices[j])
 
+            # TODO: This is a lazy hack. idivf should be set according to the ParameterHandler's default_idivf attrib
+            if not hasattr(improper, 'idivf'):
+                improper.idivf = [3 for item in improper.k]
             # Impropers are applied in three paths around the trefoil having the same handedness
             for (improper_periodicity, improper_phase, improper_k, improper_idivf) in zip(improper.periodicity,
                                                improper.phase, improper.k, improper.idivf):
@@ -1177,6 +1197,7 @@ class vdWHandler(ParameterHandler):
     class vdWType(ParameterType):
         """A SMIRNOFF vdWForce type."""
         _VALENCE_TYPE = 'Atom'  # ChemicalEnvironment valence type expected for SMARTS
+        _ELEMENT_NAME = 'Atom'
         _SMIRNOFF_ATTRIBS = ['smirks', 'epsilon'] # Attributes expected per the SMIRNOFF spec.
         _OPTIONAL_ATTRIBS = ['id', 'parent_id', 'sigma', 'rmin_half']
         _REQUIRE_UNITS = {
@@ -1556,6 +1577,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
     class ChargeIncrementType(ParameterType):
         """A SMIRNOFF bond charge correction type."""
         _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS
+        _ELEMENT_NAME = 'ChargeIncrement'
         _SMIRNOFF_ATTRIBS = ['smirks', 'chargeIncrement']
         _REQUIRE_UNITS = {
             'chargeIncrement': unit.elementary_charge
@@ -1789,6 +1811,7 @@ class GBSAParameterHandler(ParameterHandler):
     class GBSAType(ParameterType):
         """A SMIRNOFF GBSA type."""
         _VALENCE_TYPE = 'Atom'
+        _ELEMENT_NAME = 'Atom' # TODO: This isn't actually in the spec
         _SMIRNOFF_ATTRIBS = ['smirks', 'radius', 'scale']
         _REQUIRE_UNITS = {'radius': unit.angstrom}
         _ATTRIBS_TO_TYPE = {'scale': float}
