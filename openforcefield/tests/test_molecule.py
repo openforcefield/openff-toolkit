@@ -460,7 +460,7 @@ class TestMolecule:
 
         # TODO: Test the @property getters for sigma, epsilon, and rmin_half
 
-        # We should have to give as many charge increments as atoms (len(charge_increments) = 4
+        # We should have to give as many charge increments as atoms (len(charge_increments)) = 4
         with pytest.raises(Exception) as excinfo:
             molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, charge_increments=charge_increments)
 

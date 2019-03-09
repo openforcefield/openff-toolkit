@@ -138,6 +138,77 @@ def round_charge(xml):
         xmlsp[index] = chunk
     return ' q="'.join(xmlsp)
 
+def create_ethanol():
+    """
+    Creates an openforcefield.topology.Molecule representation of
+    ethanol without the use of a cheminformatics toolkit
+    """
+    # Create an ethanol molecule without using a toolkit
+    ethanol = Molecule()
+    ethanol.add_atom(6, 0, False)  # C0
+    ethanol.add_atom(6, 0, False)  # C1
+    ethanol.add_atom(8, 0, False)  # O2
+    ethanol.add_atom(1, 0, False)  # H3
+    ethanol.add_atom(1, 0, False)  # H4
+    ethanol.add_atom(1, 0, False)  # H5
+    ethanol.add_atom(1, 0, False)  # H6
+    ethanol.add_atom(1, 0, False)  # H7
+    ethanol.add_atom(1, 0, False)  # H8
+    ethanol.add_bond(0, 1, 1, False)  # C0 - C1
+    ethanol.add_bond(1, 2, 1, False)  # C1 - O2
+    ethanol.add_bond(0, 3, 1, False)  # C0 - H3
+    ethanol.add_bond(0, 4, 1, False)  # C0 - H4
+    ethanol.add_bond(0, 5, 1, False)  # C0 - H5
+    ethanol.add_bond(1, 6, 1, False)  # C1 - H6
+    ethanol.add_bond(1, 7, 1, False)  # C1 - H7
+    ethanol.add_bond(2, 8, 1, False)  # O2 - H8
+    charges = unit.Quantity(np.array([-0.4, -0.3, -0.2, -0.1, 0.01, 0.1, 0.2, 0.3, 0.4]), unit.elementary_charge)
+    ethanol.partial_charges = charges
+    return ethanol
+
+def create_cyclohexane():
+    """
+    Creates an openforcefield.topology.Molecule representation of
+    cyclohexane without the use of a cheminformatics toolkit
+    """
+    cyclohexane = Molecule()
+    cyclohexane.add_atom(6, 0, False)  # C0
+    cyclohexane.add_atom(6, 0, False)  # C1
+    cyclohexane.add_atom(6, 0, False)  # C2
+    cyclohexane.add_atom(6, 0, False)  # C3
+    cyclohexane.add_atom(6, 0, False)  # C4
+    cyclohexane.add_atom(6, 0, False)  # C5
+    cyclohexane.add_atom(1, 0, False)  # H6
+    cyclohexane.add_atom(1, 0, False)  # H7
+    cyclohexane.add_atom(1, 0, False)  # H8
+    cyclohexane.add_atom(1, 0, False)  # H9
+    cyclohexane.add_atom(1, 0, False)  # H10
+    cyclohexane.add_atom(1, 0, False)  # H11
+    cyclohexane.add_atom(1, 0, False)  # H12
+    cyclohexane.add_atom(1, 0, False)  # H13
+    cyclohexane.add_atom(1, 0, False)  # H14
+    cyclohexane.add_atom(1, 0, False)  # H15
+    cyclohexane.add_atom(1, 0, False)  # H16
+    cyclohexane.add_atom(1, 0, False)  # H17
+    cyclohexane.add_bond(0, 1, 1, False)  # C0 - C1
+    cyclohexane.add_bond(1, 2, 1, False)  # C1 - C2
+    cyclohexane.add_bond(2, 3, 1, False)  # C2 - C3
+    cyclohexane.add_bond(3, 4, 1, False)  # C3 - C4
+    cyclohexane.add_bond(4, 5, 1, False)  # C4 - C5
+    cyclohexane.add_bond(5, 0, 1, False)  # C5 - C0
+    cyclohexane.add_bond(0, 6, 1, False)  # C0 - H6
+    cyclohexane.add_bond(0, 7, 1, False)  # C0 - H7
+    cyclohexane.add_bond(1, 8, 1, False)  # C1 - H8
+    cyclohexane.add_bond(1, 9, 1, False)  # C1 - H9
+    cyclohexane.add_bond(2, 10, 1, False)  # C2 - H10
+    cyclohexane.add_bond(2, 11, 1, False)  # C2 - H11
+    cyclohexane.add_bond(3, 12, 1, False)  # C3 - H12
+    cyclohexane.add_bond(3, 13, 1, False)  # C3 - H13
+    cyclohexane.add_bond(4, 14, 1, False)  # C4 - H14
+    cyclohexane.add_bond(4, 15, 1, False)  # C4 - H15
+    cyclohexane.add_bond(5, 16, 1, False)  # C5 - H16
+    cyclohexane.add_bond(5, 17, 1, False)  # C5 - H17
+    return cyclohexane
 
 #=============================================================================================
 # TESTS
@@ -325,27 +396,7 @@ class TestForceField():
     def test_charges_from_molecule(self, toolkit_registry, registry_description):
         """Test skipping charge generation and instead getting charges from the original Molecule"""
         # Create an ethanol molecule without using a toolkit
-        mol = Molecule()
-        mol.add_atom(6, 0, False) # C0
-        mol.add_atom(6, 0, False) # C1
-        mol.add_atom(8, 0, False) # O2
-        mol.add_atom(1, 0, False) # H3
-        mol.add_atom(1, 0, False) # H4
-        mol.add_atom(1, 0, False) # H5
-        mol.add_atom(1, 0, False) # H6
-        mol.add_atom(1, 0, False) # H7
-        mol.add_atom(1, 0, False) # H8
-        mol.add_bond(0, 1, 1, False) # C0 - C1
-        mol.add_bond(1, 2, 1, False) # C1 - O2
-        mol.add_bond(0, 3, 1, False) # C0 - H3
-        mol.add_bond(0, 4, 1, False) # C0 - H4
-        mol.add_bond(0, 5, 1, False) # C0 - H5
-        mol.add_bond(1, 6, 1, False) # C1 - H6
-        mol.add_bond(1, 7, 1, False) # C1 - H7
-        mol.add_bond(2, 8, 1, False) # O2 - H8
-        charges = unit.Quantity(np.array([-0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4]), unit.elementary_charge)
-        mol.partial_charges = charges
-        molecules = [mol]
+        molecules = [create_ethanol()]
 
         from simtk.openmm import app, XmlSerializer, NonbondedForce
         from openforcefield.topology import Topology
@@ -387,66 +438,9 @@ class TestForceField():
         Test creating an OpenMM system where some charges come from a Molecule, but others come from toolkit
         calculation
         """
-        # Create an ethanol molecule without using a toolkit
-        ethane = Molecule()
-        ethane.add_atom(6, 0, False) # C0
-        ethane.add_atom(6, 0, False) # C1
-        ethane.add_atom(8, 0, False) # O2
-        ethane.add_atom(1, 0, False) # H3
-        ethane.add_atom(1, 0, False) # H4
-        ethane.add_atom(1, 0, False) # H5
-        ethane.add_atom(1, 0, False) # H6
-        ethane.add_atom(1, 0, False) # H7
-        ethane.add_atom(1, 0, False) # H8
-        ethane.add_bond(0, 1, 1, False) # C0 - C1
-        ethane.add_bond(1, 2, 1, False) # C1 - O2
-        ethane.add_bond(0, 3, 1, False) # C0 - H3
-        ethane.add_bond(0, 4, 1, False) # C0 - H4
-        ethane.add_bond(0, 5, 1, False) # C0 - H5
-        ethane.add_bond(1, 6, 1, False) # C1 - H6
-        ethane.add_bond(1, 7, 1, False) # C1 - H7
-        ethane.add_bond(2, 8, 1, False) # O2 - H8
-        charges = unit.Quantity(np.array([-0.4, -0.3, -0.2, -0.1, 0.01, 0.1, 0.2, 0.3, 0.4]), unit.elementary_charge)
-        ethane.partial_charges = charges
-
-        cyclohexane = Molecule()
-        cyclohexane.add_atom(6, 0, False) # C0
-        cyclohexane.add_atom(6, 0, False) # C1
-        cyclohexane.add_atom(6, 0, False) # C2
-        cyclohexane.add_atom(6, 0, False) # C3
-        cyclohexane.add_atom(6, 0, False) # C4
-        cyclohexane.add_atom(6, 0, False) # C5
-        cyclohexane.add_atom(1, 0, False) # H6
-        cyclohexane.add_atom(1, 0, False) # H7
-        cyclohexane.add_atom(1, 0, False) # H8
-        cyclohexane.add_atom(1, 0, False) # H9
-        cyclohexane.add_atom(1, 0, False) # H10
-        cyclohexane.add_atom(1, 0, False) # H11
-        cyclohexane.add_atom(1, 0, False) # H12
-        cyclohexane.add_atom(1, 0, False) # H13
-        cyclohexane.add_atom(1, 0, False) # H14
-        cyclohexane.add_atom(1, 0, False) # H15
-        cyclohexane.add_atom(1, 0, False) # H16
-        cyclohexane.add_atom(1, 0, False) # H17
-        cyclohexane.add_bond(0, 1, 1, False) # C0 - C1
-        cyclohexane.add_bond(1, 2, 1, False) # C1 - C2
-        cyclohexane.add_bond(2, 3, 1, False) # C2 - C3
-        cyclohexane.add_bond(3, 4, 1, False) # C3 - C4
-        cyclohexane.add_bond(4, 5, 1, False) # C4 - C5
-        cyclohexane.add_bond(5, 0, 1, False) # C5 - C0
-        cyclohexane.add_bond(0, 6, 1, False) # C0 - H6
-        cyclohexane.add_bond(0, 7, 1, False) # C0 - H7
-        cyclohexane.add_bond(1, 8, 1, False) # C1 - H8
-        cyclohexane.add_bond(1, 9, 1, False) # C1 - H9
-        cyclohexane.add_bond(2, 10, 1, False) # C2 - H10
-        cyclohexane.add_bond(2, 11, 1, False) # C2 - H11
-        cyclohexane.add_bond(3, 12, 1, False) # C3 - H12
-        cyclohexane.add_bond(3, 13, 1, False) # C3 - H13
-        cyclohexane.add_bond(4, 14, 1, False) # C4 - H14
-        cyclohexane.add_bond(4, 15, 1, False) # C4 - H15
-        cyclohexane.add_bond(5, 16, 1, False) # C5 - H16
-        cyclohexane.add_bond(5, 17, 1, False) # C5 - H17
-        molecules = [ethane, cyclohexane]
+        ethanol = create_ethanol()
+        cyclohexane = create_cyclohexane()
+        molecules = [ethanol, cyclohexane]
 
         from simtk.openmm import app, NonbondedForce
         from openforcefield.topology import Topology
@@ -456,7 +450,7 @@ class TestForceField():
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         omm_system = forcefield.create_openmm_system(topology,
-                                                     charge_from_molecules=[ethane],
+                                                     charge_from_molecules=[ethanol],
                                                      toolkit_registry=toolkit_registry)
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
         expected_charges = ((18, -0.4 * unit.elementary_charge),
