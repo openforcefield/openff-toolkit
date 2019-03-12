@@ -101,7 +101,7 @@ class TestParameterList:
         assert p2 not in parameters
 
 
-    def test_parameterlist_append(self):
+    def test_append(self):
         """
         Test ParameterList.append, ensuring that the new parameter was added to the bottom of the list
         and that it is properly recorded as the most recently-added.
@@ -119,7 +119,7 @@ class TestParameterList:
         assert param_list.last_added_parameter == p2
 
 
-    def test_parameterlist_insert(self):
+    def test_insert(self):
         """
         Test ParameterList.insert, ensuring that the new parameter was added to the proper spot in
         the list and that it is propertly recorded as the most recently added.
@@ -132,7 +132,7 @@ class TestParameterList:
         assert param_list.last_added_parameter == p3
         assert param_list[1] == p3
 
-    def test_parameterlist_extend(self):
+    def test_extend(self):
         """
         Test ParameterList.extend, ensuring that the new parameter was added to the proper spot in
         the list and that it is propertly recorded as the most recently added.
@@ -150,7 +150,7 @@ class TestParameterList:
 
 
 
-    def test_parameterlist_to_list(self):
+    def test_to_list(self):
         """Test basic ParameterList.to_list() function, ensuring units are preserved"""
         from simtk import unit
         p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
@@ -171,7 +171,7 @@ class TestParameterList:
         assert ser_param_list[0]['length'] == 1.01 * unit.angstrom
 
 
-    def test_parameterlist_round_trip(self):
+    def test_round_trip(self):
         """Test basic ParameterList.to_list() function and constructor"""
         from simtk import unit
         p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
