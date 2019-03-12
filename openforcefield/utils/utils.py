@@ -340,9 +340,11 @@ def detach_units(unit_bearing_dict, output_units=None):
     unit_bearing_dict : dict
         A dictionary potentially containing simtk.unit.Quantity objects as values.
     output_units : dict[str : simtk.unit.Unit], optional. Default = None
-        A mapping from the ParameterType attribute name to the output unit its value should be converted to. If no
-        output_unit is defined for a key:value pair in which the value is a simtk.unit.Quantity, a new one will be
-        added to the output unit_dict.
+        A mapping from parameter fields to the output unit its value should be converted to.
+        For example, {'length_unit': unit.angstrom}. If no output_unit is defined for a key:value pair in which
+        the value is a simtk.unit.Quantity, the output unit will be the Quantity's unit, and this information
+        will be included in the unit_dict return value.
+
     Returns
     -------
     unitless_dict : dict
@@ -368,8 +370,8 @@ def detach_units(unit_bearing_dict, output_units=None):
         # If conversion is needed, see if the user has requested an output unit
         unit_key = key + '_unit'
 
-        if key in output_units:
-            output_unit = output_units[key]
+        if unit_key in output_units:
+            output_unit = output_units[unit_key]
         else:
             output_unit = value.unit
         if not (output_unit.is_compatible(value.unit)):

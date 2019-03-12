@@ -725,10 +725,12 @@ class ParameterHandler(object):
 
         # Set default output units to those from the last parameter added to the ParameterList
         if (output_units is None):
-            if (self._parameters.last_added_parameter is not None):
-                _, output_units = detach_units(self._parameters.last_added_parameter.to_dict())
-            else:
-                output_units = dict()
+            output_units = dict()
+        if (self._parameters.last_added_parameter is not None):
+            _, last_added_output_units = detach_units(self._parameters.last_added_parameter.to_dict())
+            # Overwrite key_value pairs in last_added_output_units with those specified by user in output_units
+            last_added_output_units.update(output_units)
+            output_units = last_added_output_units
 
         # Populate parameter list
         parameter_list = self._parameters.to_list(return_cosmetic_attributes=return_cosmetic_attributes)

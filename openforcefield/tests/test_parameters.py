@@ -16,25 +16,70 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 
 
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType, BondHandler, \
-    AngleHandler, ConstraintHandler, ProperTorsionHandler, ImproperTorsionHandler, \
+    ParameterHandler, AngleHandler, ConstraintHandler, ProperTorsionHandler, ImproperTorsionHandler, \
     ToolkitAM1BCCHandler, vdWHandler, SMIRNOFFSpecError
 from openforcefield.utils import detach_units
 
 import pytest
 
-#=============================================================================================
-# PARAMETER LIST
-#=============================================================================================
 
 
 class TestParameterHandler:
 
-    def test_parameterhandler_with_different_units_to_dict(self):
-        """Test ParameterList.to_list() function when some parameters are in
+    def test_different_units_to_dict(self):
+        """Test ParameterHandler.to_dict() function when some parameters are in
         different units (proper behavior is to convert all quantities to the last-
         read unit)
         """
-        pass
+        from simtk import unit
+        bh = BondHandler()
+        bh.add_parameter({'smirks': '[*:1]-[*:2]',
+                          'length': 1*unit.angstrom,
+                          'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2})
+        bh.add_parameter({'smirks': '[*:1]=[*:2]',
+                          'length': 0.2*unit.nanometer,
+                          'k': 0.4*unit.kilojoule_per_mole/unit.nanometer**2})
+        bh_dict = bh.to_dict()
+        assert ('length_unit', 'nanometer') in bh_dict.items()
+        assert ('k_unit', 'nanometer**-2 * mole**-1 * kilojoule') in bh_dict.items()
+        assert bh_dict['Bond'][0]['length'] == 0.1
+        assert bh_dict['Bond'][1]['length'] == 0.2
+
+    def test_to_dict_set_output_units(self):
+        """Test ParameterHandler.to_dict() function when some output units are specified
+        """
+        from simtk import unit
+        bh = BondHandler()
+        bh.add_parameter({'smirks': '[*:1]-[*:2]',
+                          'length': 1*unit.angstrom,
+                          'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2})
+        bh.add_parameter({'smirks': '[*:1]=[*:2]',
+                          'length': 0.2*unit.nanometer,
+                          'k': 0.4*unit.kilojoule_per_mole/unit.nanometer**2})
+        bh_dict = bh.to_dict(output_units={'length_unit': unit.picometer})
+        assert ('length_unit', 'picometer') in bh_dict.items()
+        assert ('k_unit', 'nanometer**-2 * mole**-1 * kilojoule') in bh_dict.items()
+        assert abs(bh_dict['Bond'][0]['length'] - 100.) < 1.e-8
+        assert abs(bh_dict['Bond'][1]['length'] - 200.) < 1.e-8
+
+    def test_to_dict_del_last_param(self):
+        """Test ParameterHandler.to_dict(), when the last-added parameter is deleted. The proper behavior is to
+        convert all unit-bearing attribs to the last-read unit, _even if that parameter was deleted_.
+        """
+        from simtk import unit
+        bh = BondHandler()
+        bh.add_parameter({'smirks': '[*:1]-[*:2]',
+                          'length': 1*unit.angstrom,
+                          'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2})
+        bh.add_parameter({'smirks': '[*:1]=[*:2]',
+                          'length': 0.2*unit.nanometer,
+                          'k': 0.4*unit.kilojoule_per_mole/unit.nanometer**2})
+        del bh._parameters[1]
+        bh_dict = bh.to_dict()
+        assert ('length_unit', 'nanometer') in bh_dict.items()
+        assert ('k_unit', 'nanometer**-2 * mole**-1 * kilojoule') in bh_dict.items()
+        assert bh_dict['Bond'][0]['length'] == 0.1
+
 
 
 class TestParameterList:
@@ -239,7 +284,8 @@ class TestParameterType:
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2
                                   )
         param_dict = p1.to_dict()
-        param_dict_unitless, attached_units=detach_units(param_dict, output_units={'length': unit.nanometer})
+        param_dict_unitless, attached_units=detach_units(param_dict, output_units={'length_unit':
+                                                                                       unit.nanometer})
         assert attached_units['length_unit'] == unit.nanometer
         assert abs(param_dict_unitless['length'] - 0.102) < 1e-10
 
@@ -257,10 +303,11 @@ class TestParameterType:
         with pytest.raises(ValueError,
                            match='Requested output unit calorie is not compatible with quantity unit angstrom .'
                            ) as context:
-            param_dict_unitless, attached_units = detach_units(param_dict, output_units = {'length': unit.calorie})
+            param_dict_unitless, attached_units = detach_units(param_dict, output_units = {'length_unit':
+                                                                                               unit.calorie})
 
 
-    def test_read_writeoptional_parameter_attribute(self):
+    def test_read_write_optional_parameter_attribute(self):
         """
         Test ParameterTypes' ability to store and write out optional attributes passed to __init__()
         """
