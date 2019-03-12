@@ -173,11 +173,35 @@ class ParameterList(list):
         if not isinstance(other, ParameterList):
             msg = 'ParameterList.extend(other) expected instance of ParameterList, ' \
                   'but received {} (type {}) instead'.format(other, type(other))
-            raise TypeError(other)
+            raise TypeError(msg)
         # TODO: Check if other ParameterList contains the same ParameterTypes?
         super().extend(other)
         if len(other) > 0:
             self._last_added_param = other[-1]
+
+
+    def index(self, item):
+        """
+        Get the numerical index of a ParameterType object or SMIRKS in this ParameterList. Raises ValueError
+        if the item is not found.
+
+        Parameters
+        ----------
+        item : ParameterType-derived object or str
+            The parameter or SMIRKS to look up in this ParameterList
+
+        Returns
+        -------
+        index : int
+            The index of the found item
+        """
+        if isinstance(item, ParameterType):
+            return super().index(item)
+        else:
+            for parameter in self:
+                if parameter.smirks == item:
+                    return self.index(parameter)
+            raise IndexError(f'SMIRKS {item} not found in ParameterList')
 
 
     def insert(self, index, parameter):
@@ -186,8 +210,10 @@ class ParameterList(list):
 
         Parameters
         ----------
+        index : int
+            The numerical position to insert the parameter at
         parameter : a ParameterType-derived object
-
+            The parameter to insert
         """
         # TODO: Ensure that newly added parameter is the same type as existing?
 
@@ -196,38 +222,47 @@ class ParameterList(list):
 
     def __delitem__(self, item):
         """
-        Delete item by index or SMIRKS
-        """
-        if type(item) is str:
-            # Try to find by SMIRKS
-            for parameter in self:
-                if parameter.smirks == item:
-                    self.remove(parameter)
-                    return
+        Delete item by index or SMIRKS.
 
-        # Try numerical index access. This will grab the item to remove by index, and
-        # then call __delitem__ again on its own SMIRKS, finishing in the "if" statement above
-        item_to_remove = self[item].smirks
-        del self[item_to_remove]
+        Parameters
+        ----------
+        item : str or int
+            SMIRKS or numerical index of item in this ParameterList
+        """
+        if type(item) is int:
+            index = item
+        else:
+            # Try to find by SMIRKS
+            index = self.index(item)
+        super().__delitem__(index)
 
 
     def __getitem__(self, item):
-        """Retrieve item by index or SMIRKS
         """
-        if type(item) == str:
-            # Try to retrieve by SMIRKS
-            for result in self:
-                if result.smirks == item:
-                    return result
+        Retrieve item by index or SMIRKS
 
-        # Try traditional access
-        result = super().__getitem__(item)
-        return result
+        Parameters
+        ----------
+        item : str or int
+            SMIRKS or numerical index of item in this ParameterList
+        """
+        if type(item) is int:
+            index = item
+        else:
+            index = self.index(item)
+        return super().__getitem__(index)
+
 
     # TODO: Override __setitem__ and __del__ to ensure we can slice by SMIRKS as well
 
     def __contains__(self, item):
         """Check to see if either Parameter or SMIRKS is contained in parameter list.
+
+
+        Parameters
+        ----------
+        item : str
+            SMIRKS of item in this ParameterList
         """
         if type(item) == str:
             # Special case for SMIRKS strings

@@ -109,6 +109,28 @@ class TestParameterList:
         assert parameters[0].smirks == '[*X4:1]'
         assert p1.smirks == '[*X4:1]'
 
+    def test_index(self):
+        """
+        Tests the ParameterList.index() function by attempting lookups by SMIRKS and by ParameterType equivalence.
+
+        """
+        p1 = ParameterType(smirks='[*:1]')
+        p2 = ParameterType(smirks='[#1:1]')
+        p3 = ParameterType(smirks='[#7:1]')
+        parameters = ParameterList([p1, p2, p3])
+        assert parameters.index(p1) == 0
+        assert parameters.index(p2) == 1
+        assert parameters.index(p3) == 2
+        assert parameters.index('[*:1]') == 0
+        assert parameters.index('[#1:1]') == 1
+        assert parameters.index('[#7:1]') == 2
+        with pytest.raises(IndexError, match='SMIRKS \[#2:1\] not found in ParameterList') as excinfo:
+            parameters.index('[#2:1]')
+
+        p4 = ParameterType(smirks='[#2:1]')
+        with pytest.raises(ValueError, match='ParameterType object at [0-9a-zA-Z]+[>] is not in list') as excinfo:
+            parameters.index(p4)
+
     def test_contains(self):
         """Test ParameterList __contains__ overloading.
         """
@@ -131,6 +153,11 @@ class TestParameterList:
         p2 = ParameterType(smirks='[#1:1]')
         p3 = ParameterType(smirks='[#7:1]')
         parameters = ParameterList([p1, p2, p3])
+
+        with pytest.raises(IndexError, match='list assignment index out of range'):
+            del parameters[4]
+        with pytest.raises(IndexError, match='SMIRKS \[#6:1\] not found in ParameterList'):
+            del parameters['[#6:1]']
 
         # Test that original list deletion behavior is preserved.
         del parameters[2]
