@@ -120,7 +120,10 @@ class ParameterIOHandler(object):
 
         Parameters
         ----------
-        filename
+        filename : str
+            The filename to write to.
+        smirnoff_data : dict
+            A dictionary structured in compliance with the SMIRNOFF spec
 
         Returns
         -------
@@ -128,27 +131,20 @@ class ParameterIOHandler(object):
         """
         pass
 
-    def to_string(self):
+    def to_string(self, smirnoff_data):
         """
         Render the forcefield parameter set to a string
+
+        Parameters
+        ----------
+        smirnoff_data : dict
+            A dictionary structured in compliance with the SMIRNOFF spec
 
         Returns
         -------
         str
         """
         pass
-
-    #def parameter_handler_tags_are_compatible(self, tags):
-    #    """
-    #
-    #    Parameters
-    #    ----------
-    #    tags : dict of {'length_unit': 'angstroms', 'k_unit': 'kilocalories_per_mole/angstrom**2'}
-    #
-    #    Returns
-    #    -------
-    #
-    #    """
 
 
 #=============================================================================================
@@ -185,10 +181,9 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         # this handles open file-like objects (and strings)
         try:
-            smirnoff_dict = xmltodict.parse(source, attr_prefix='')
-            print(smirnoff_dict)
-            return smirnoff_dict
-        except ExpatError:
+            smirnoff_data = self.parse_string(source)
+            return smirnoff_data
+        except ParseError:
             pass
 
         # This handles complete/local filenames
@@ -207,8 +202,9 @@ class XMLParameterIOHandler(ParameterIOHandler):
             # Check if the file exists in the data/forcefield directory
             temp_file = get_data_filename(os.path.join('forcefield', source))
             data = open(temp_file).read()
-            smirnoff_data = xmltodict.parse(data, attr_prefix='')
+            smirnoff_data = self.parse_string(data)
             return smirnoff_data
+
         except Exception as e:
             # Fail with an error message about which file could not be read.
             # TODO: Also handle case where fallback to 'data' directory encounters problems,
@@ -266,6 +262,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
     def to_string(self, smirnoff_data):
         """
+        Write the current forcefield parameter set to an XML string.
 
         Parameters
         ----------
@@ -274,6 +271,8 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         Returns
         -------
+        serialized_forcefield : str
+            XML String representation of this forcefield.
 
         """
         def prepend_all_keys(d, char='@'):
@@ -306,74 +305,6 @@ class XMLParameterIOHandler(ParameterIOHandler):
         print(smirnoff_data)
         print()
         return xmltodict.unparse(smirnoff_data, pretty=True)
-
-    #@staticmethod
-    #def from_xml(xml):
-    #    """Construct a ForceField object from a SMIRNOFF XML file.
-    #    """
-    #    return ForceField(xml)
-
-
-    # def from_lxml(self, root):
-    #
-    #
-    #     cosmetic_tags = ['Date', 'Author']
-    #
-    #     try:
-    #         exception_node = root  # node used for exception reporting
-    #         if not (root.tag == 'SMIRNOFF'):
-    #             raise ParseError("Root tag of tree is not 'SMIRNOFF'")
-    #         self._parse_version(root)
-    #         self._parse_aromaticity_model(root)
-    #         # Process handlers
-    #         #for section in root.iter(tag=etree.Element):
-    #         for section in root:
-    #             # Skip comment lines
-    #             if not isinstance(section.tag, str):
-    #                 continue
-    #             if section.tag in cosmetic_tags:
-    #                 continue
-    #             exception_node = section  # node used for exception reporting
-    #             # Extract parameter name from XML tag
-    #             parameter_name = section.tag
-    #
-    #             # Split out attributes that refer to units
-    #             handler_kwargs, attached_units = _extract_attached_units(
-    #                 section.attrib)
-    #             # TODO: Attach units to handler_kwargs
-    #             # Make a copy of handler_kwargs that we can modify
-    #             handler_kwargs_dict = dict(handler_kwargs)
-    #             handler_kwargs_dict = _attach_units(handler_kwargs_dict,
-    #                                                 attached_units)
-    #
-    #             # Retrieve or create parameter handler
-    #             handler = self._forcefield.get_handler(parameter_name,
-    #                                                    handler_kwargs_dict)
-    #
-    #             # Populate handler with parameter definitions
-    #             for parameter in section:
-    #                 # Skip comment lines
-    #                 if not isinstance(parameter.tag, str):
-    #                     continue
-    #                 exception_node = parameter  # node used for exception reporting
-    #
-    #                 # parameter.attrib doesn't support assignment of Quantity type, so make a copy as dict
-    #                 parameter_attrib_dict = dict(parameter.attrib)
-    #
-    #                 # Append units to parameters as needed
-    #                 parameter_kwargs = _attach_units(parameter_attrib_dict,
-    #                                                  attached_units)
-    #                 # Add parameter definition
-    #                 handler.add_parameter(parameter_kwargs)
-    #
-    #     except Exception as e:
-    #         # Prepend the line and line text of XML file to aid debugging
-    #         # TODO: Can we include the filename as well?
-    #         print(self._get_sourceline(exception_node))
-    #         #if not e.args:
-    #         #    e.args = ('',)
-    #         #e.args = e.args[0] + + e.args[1:]
-    #         raise e
 
     def to_xml(self):
         """Render the forcefield parameter set to XML.
