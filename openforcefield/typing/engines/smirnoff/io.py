@@ -238,20 +238,23 @@ class XMLParameterIOHandler(ParameterIOHandler):
         except ExpatError as e:
             raise ParseError(e)
 
-    def to_file(self, filename, root):
+    def to_file(self, filename, smirnoff_data):
         """Write the current forcefield parameter set to a file, autodetecting the type from the extension.
 
         Parameters
         ----------
         filename : str
             The name of the file to be written.
-            The `.offxml` file extension is auto-detected.
-        root : str, optional, default=None
+            The `.offxml` file extension must be present.
+        smirnoff_data : dict
+            A dict structured in compliance with the SMIRNOFF data spec.
 
         """
+        xml_string = self.to_string(smirnoff_data)
         (basename, extension) = os.path.splitext(filename)
         if extension == '.offxml':
-            root.write(filename, xml_declaration=True, pretty_print=True)
+            with open(filename, 'wb') as of:
+                of.write(xml_string)
         else:
             msg = "Cannot export forcefield parameters to file '{}'\n".format(
                 filename)
@@ -306,26 +309,25 @@ class XMLParameterIOHandler(ParameterIOHandler):
         print()
         return xmltodict.unparse(smirnoff_data, pretty=True)
 
-    def to_xml(self):
+    def to_xml(self, smirnoff_data):
         """Render the forcefield parameter set to XML.
 
         Returns
         -------
-        xml : str
-            The SMIRNOFF parameter set rendered as XML.
+        smirnoff_data : dict
+            A dictionary structures in comliance with the SMIRNOFF data spec.
         """
-        return etree.tostring(self.to_lxml())
-        # Test that this works
+        return self.to_string(smirnoff_data)
 
-    # TODO: Do we need this? Should we use built-in dict-based serialization?
-    def __getstate__(self):
-        """Serialize to XML.
-        """
-        return self.to_xml()
-
-    # TODO: Do we need this? Should we use built-in dict-based serialization?
-    def __setstate__(self, state):
-        """Deserialize from XML.
-        """
-        self._initialize()
-        self.parse_xml(state)
+    # # TODO: Do we need this? Should we use built-in dict-based serialization?
+    # def __getstate__(self):
+    #     """Serialize to XML.
+    #     """
+    #     return self.to_xml()
+    #
+    # # TODO: Do we need this? Should we use built-in dict-based serialization?
+    # def __setstate__(self, state):
+    #     """Deserialize from XML.
+    #     """
+    #     self._initialize()
+    #     self.parse_xml(state)
