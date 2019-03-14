@@ -32,29 +32,24 @@ from simtk.openmm import app
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL, ALLOWED_AROMATICITY_MODELS, DEFAULT_FRACTIONAL_BOND_ORDER_MODEL, ALLOWED_FRACTIONAL_BOND_ORDER_MODELS, DEFAULT_CHARGE_MODEL, GLOBAL_TOOLKIT_REGISTRY, ALLOWED_CHARGE_MODELS
 from openforcefield.utils.serialization import Serializable
+from openforcefield.utils import MessageException
 
 #=============================================================================================
 # Exceptions
 #=============================================================================================
 
 
-class DuplicateUniqueMoleculeError(Exception):
+class DuplicateUniqueMoleculeError(MessageException):
     """
     Exception for when the user provides indistinguishable unique molecules when trying to identify atoms from a PDB
     """
+    pass
 
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
-
-class NotBondedError(Exception):
+class NotBondedError(MessageException):
     """
     Exception for when a function requires a bond between two atoms, but none is present
     """
-
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
+    pass
 
 
 #=============================================================================================
