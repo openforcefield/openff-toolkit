@@ -75,7 +75,9 @@ class MissingPackageError(Exception):
 class ToolkitUnavailableException(Exception):
     """The requested toolkit is unavailable."""
     # TODO: Allow toolkit to be specified and used in formatting/printing exception.
-    pass
+    def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
 
 
 class InvalidToolkitError(Exception):

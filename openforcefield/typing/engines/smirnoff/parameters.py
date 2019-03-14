@@ -20,24 +20,18 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 # GLOBAL IMPORTS
 #=============================================================================================
 
-import os
-import re
-import sys
-import math
-import copy
-import time
+
 from enum import Enum
 import logging
-import itertools
 
 from collections import OrderedDict
 
 
 from simtk import openmm, unit
 
-from openforcefield.utils import detach_units, attach_units, unit_to_string, string_to_unit, extract_serialized_units_from_dict
+from openforcefield.utils import detach_units, attach_units, unit_to_string, string_to_unit, \
+    extract_serialized_units_from_dict, ToolkitUnavailableException
 from openforcefield.topology import Topology, ValenceDict, ImproperDict
-from openforcefield.topology import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 
 #=============================================================================================
@@ -335,53 +329,82 @@ class ParameterType(object):
             raise ValueError("'smirks' must be specified")
 
         # TODO: Make better switch using toolkit registry
+        toolkit = None
         if openforcefield.utils.toolkits.OPENEYE_AVAILABLE:
             toolkit = 'openeye'
         elif openforcefield.utils.toolkits.RDKIT_AVAILABLE:
             toolkit = 'rdkit'
+        if toolkit is None:
+            raise ToolkitUnavailableException("Validating SMIRKS required either the OpenEye Toolkit or the RDKit."
+                                              " Unable to find either.")
         ChemicalEnvironment.validate(
             smirks, ensure_valence_type=self._VALENCE_TYPE, toolkit=toolkit)
 
         self._smirks = smirks
 
 
+        def _assert_quantity_is_compatible(quantity_name, quantity, unit_to_check):
+            """
+            Checks whether a simtk.unit.Quantity is compatible with another unit.
+
+            Parameters
+            ----------
+            quantity_name : string
+            quantity : A simtk.unit.Quantity
+            unit_to_check : A simtk.unit.Unit
+
+            Returns
+            -------
+            is_compatible : bool
+            """
+
+            if not quantity.unit.is_compatible(unit_to_check):
+                msg = "{} constructor received kwarg {} with value {}, " \
+                      "which is incompatible with expected unit {}".format(self.__class__,
+                                                                           quantity_name,
+                                                                           val,
+                                                                           unit_to_check)
+                raise SMIRNOFFSpecError(msg)
+
+
+
         # First look for indexed attribs, removing them from kwargs as they're found
         for unidx_key in self._INDEXED_ATTRIBS:
+            # Start by generating a string with the key + an index
             index = 1
             idx_key = unidx_key+str(index)
+
+            # If the indexed key is present in the kwargs, set the attrib data type to be a list
             if idx_key in kwargs:
                 setattr(self, unidx_key, list())
+
+            # Iterate through increasing values on the index, appending them as they are found
             while idx_key in kwargs:
                 val = kwargs[idx_key]
-                if unidx_key in self._REQUIRE_UNITS:
-                    if not val.unit.is_compatible(self._REQUIRE_UNITS[unidx_key]):
 
-                        msg = "{} constructor received kwarg {} with value {}, " \
-                              "which is incompatible with expected unit {}".format(self.__class__,
-                                                                                   idx_key,
-                                                                                   val,
-                                                                                   self._REQUIRE_UNITS[unidx_key])
-                        raise SMIRNOFFSpecError(msg)
+                # If the indexed keys require units, ensure they are compatible
+                if unidx_key in self._REQUIRE_UNITS:
+                    _assert_quantity_is_compatible(idx_key, val, self._REQUIRE_UNITS[unidx_key])
+
+                # If the indexed keys need to be cast to a type, do that here
                 if unidx_key in self._ATTRIBS_TO_TYPE:
                     type_to_cast = self._ATTRIBS_TO_TYPE[unidx_key]
                     val = type_to_cast(val)
+
+                # Finally, append this value to the attribute and remove the key from kwargs
                 getattr(self, unidx_key).append(val)
                 del kwargs[idx_key]
                 index += 1
                 idx_key = unidx_key + str(index)
 
 
-        # Iterate through kwargs, doing validation and setting this ParameterType's attributes
+        # Iterate through the remaining, non-indexed kwargs,
+        # doing validation and setting this ParameterType's attributes
         for key, val in kwargs.items():
             if key in self._REQUIRE_UNITS:
                 # TODO: Add dynamic property-getter/setter for each thing in self._REQUIRE_UNITS
-                if not val.unit.is_compatible(self._REQUIRE_UNITS[key]):
-                    msg = "{} constructor received kwarg {} with value {}, " \
-                          "which is incompatible with expected unit {}".format(self.__class__,
-                                                                               key,
-                                                                               val,
-                                                                               self._REQUIRE_UNITS[key])
-                    raise SMIRNOFFSpecError(msg)
+                _assert_quantity_is_compatible(key, val, self._REQUIRE_UNITS[key])
+
 
                 if key in self._ATTRIBS_TO_TYPE:
                     type_to_cast = self._ATTRIBS_TO_TYPE[key]
