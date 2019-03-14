@@ -328,11 +328,6 @@ class TestForceField():
         string_2 = forcefield_2._parameter_io_handlers['XML'].to_string(forcefield_2.to_smirnoff_data())
         assert string_1 == string_2
 
-    def test_create_gbsa():
-        """Test reading of ffxml files with GBSA support.
-        """
-        forcefield = ForceField('Frosst_AlkEthOH_GBSA.offxml')
-
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_ethanol(self, toolkit_registry, registry_description):
         from simtk.openmm import app
