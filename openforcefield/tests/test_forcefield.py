@@ -236,6 +236,54 @@ class TestForceField():
         assert len(forcefield._parameter_handlers['ImproperTorsions']._parameters) == 4
         assert len(forcefield._parameter_handlers['vdW']._parameters) == 35
 
+    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    def test_create_forcefield_from_file_list(self):
+        # These offxml files are located in package data path, which is automatically installed and searched
+        filenames = [smirnoff99Frosst_offxml_filename, tip3p_offxml_filename]
+        # Create a forcefield from multiple offxml files
+        forcefield = ForceField(filenames)
+
+    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    def test_create_forcefield_from_filename_iterator(self):
+        # These offxml files are located in package data path, which is automatically installed and searched
+        filenames = [smirnoff99Frosst_offxml_filename, tip3p_offxml_filename]
+        # A generator should work as well
+        forcefield = ForceField(iter(filenames))
+
+    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    def test_create_gbsa():
+        """Test reading of ffxml files with GBSA support.
+        """
+        forcefield = ForceField('Frosst_AlkEthOH_GBSA.offxml')
+
+    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    def test_create_forcefield_from_url(self):
+        urls = [
+            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst.offxml',
+            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/tip3p.offxml'
+        ]
+        # Test creation with smirnoff99frosst URL
+        forcefield = ForceField(urls[0])
+
+    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    def test_create_forcefield_from_url_list(self):
+        urls = [
+            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst.offxml',
+            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/tip3p.offxml'
+        ]
+        # Test creation with multiple URLs
+        forcefield = ForceField(urls)
+
+    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    def test_create_forcefield_from_url_iterator(self):
+        urls = [
+            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst.offxml',
+            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/tip3p.offxml'
+        ]
+        # A generator should work as well
+        forcefield = ForceField(iter(urls))
+
+
     def test_create_forcefield_from_xml_string(self):
         forcefield = ForceField(simple_xml_ff)
         assert len(forcefield._parameter_handlers['Bonds']._parameters) == 2
@@ -243,6 +291,26 @@ class TestForceField():
         assert len(forcefield._parameter_handlers['ProperTorsions']._parameters) == 2
         assert len(forcefield._parameter_handlers['ImproperTorsions']._parameters) == 2
         assert len(forcefield._parameter_handlers['vdW']._parameters) == 2
+
+    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    def test_deep_copy(self):
+        forcefield = ForceField(smirnoff99Frosst_offxml_filename)
+        # Deep copy
+        forcefield2 = copy.deepcopy(cls.forcefield)
+        assert_forcefields_equal(cls.forcefield, forcefield2,
+                                 "ForceField deep copy does not match original ForceField")
+
+
+    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    # TODO: This should check the output of forcefield.to_dict
+    def test_serialize(self):
+
+        forcefield = ForceField(smirnoff99Frosst_offxml_filename)
+        # Serialize/deserialize
+        serialized_forcefield = cls.forcefield.__getstate__()
+        forcefield2 = ForceField.__setstate__(serialized_forcefield)
+        assert_forcefields_equal(cls.forcefield, forcefield2,
+                                 "Deserialized serialized ForceField does not match original ForceField")
 
     def test_xml_string_roundtrip(self):
         """
@@ -260,7 +328,10 @@ class TestForceField():
         string_2 = forcefield_2._parameter_io_handlers['XML'].to_string(forcefield_2.to_smirnoff_data())
         assert string_1 == string_2
 
-
+    def test_create_gbsa():
+        """Test reading of ffxml files with GBSA support.
+        """
+        forcefield = ForceField('Frosst_AlkEthOH_GBSA.offxml')
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_ethanol(self, toolkit_registry, registry_description):
@@ -292,16 +363,23 @@ class TestForceField():
 
     @pytest.mark.slow
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
-    def test_parameterize_large_system(self, toolkit_registry, registry_description):
+    @pytest.mark.parametrize("box", ['ethanol_water.pdb',
+                                     'cyclohexane_water.pdb',
+                                     'cyclohexane_ethanol_0.4_0.6.pdb',
+                                     'propane_methane_butanol_0.2_0.3_0.5.pdb'])
+    def test_parameterize_large_system(self, toolkit_registry, registry_description, box):
         from simtk.openmm import app
         from openforcefield.topology import Topology
         forcefield = ForceField('smirnoff99Frosst.offxml')
-        pdbfile = app.PDBFile(get_data_filename('systems/test_systems/cyclohexane_ethanol_0.4_0.6.pdb'))
-        molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
-                                                                              'molecules/cyclohexane.mol2')]
+        box_filename = get_data_filename(os.path.join('systems', 'packmol_boxes', box))
+        pdbfile = app.PDBFile(box_filename)
+        mol_names = ['water', 'cyclohexane', 'ethanol', 'propane', 'methane', 'butanol']
+        sdf_files = [get_data_filename(os.path.join('systems', 'monomers', name+'.sdf')) for name in mol_names]
+        molecules = [Molecule.from_file(sdf_file) for sdf_file in sdf_files]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
+        # TODO: Add check to ensure system energy is finite
 
     @pytest.mark.skipif( not(OpenEyeToolkitWrapper.toolkit_is_available()), reason='Test requires OE toolkit')
     def test_parameterize_ethanol_different_reference_ordering_openeye(self):
@@ -647,6 +725,44 @@ def test_freesolv_parameters_assignment(freesolv_id, forcefield_version, excepti
                               ignore_charges=True, ignore_improper_folds=True)
 
 
+@pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+def test_electrostatics_options(self):
+    """Test parameter assignment using smirnoff99Frosst on laromustine with various long-range electrostatics options.
+    """
+    molecules_filename = get_data_filename('molecules/laromustine_tripos.mol2')
+    molecule = openforcefield.topology.Molecule.from_file(molecules_filename)
+    forcefield = ForceField([smirnoff99Frosst_offxml_filename, chargeincrement_offxml_filename])
+    for method in ['PME', 'reaction-field', 'Coulomb']:
+        # Change electrostatics method
+        forcefield.forces['Electrostatics'].method = method
+        f = partial(check_system_creation_from_molecule, forcefield, molecule)
+        f.description = 'Testing {} parameter assignment using molecule {}'.format(offxml_filename, molecule.name)
+        #yield f
+    # TODO: Implement a similar test, where we compare OpenMM energy evals from an
+    #       AMBER-parameterized system to OFF-parameterized systems
+
+@pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+def test_chargeincrement(self):
+    """Test parameter assignment using smirnoff99Frosst on laromustine with ChargeIncrementModel.
+    """
+    molecules_filename = get_data_filename('molecules/laromustine_tripos.mol2')
+    molecule = openforcefield.topology.Molecule.from_file(molecules_filename)
+    forcefield = ForceField(['smirnoff99Frosst.offxml', 'chargeincrement-test'])
+    check_system_creation_from_molecule(forcefield, molecule)
+    # TODO: We can't implement a test for chargeincrement yet because we
+    #       haven't settled on a SMIRNOFF spec for chargeincrementmodel
+
+
+@pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+def test_create_system_molecules_parmatfrosst_gbsa(self):
+    """Test creation of a System object from small molecules to test parm@frosst forcefield with GBSA support.
+    """
+    molecules_filename = get_data_filename('molecules/AlkEthOH_test_filt1_tripos.mol2')
+    check_parameter_assignment(
+        offxml_filename='Frosst_AlkEthOH_GBSA.offxml', molecules_filename=molecules_filename)
+    # TODO: Figure out if we just want to check that energy is finite (this is what the original test did,
+    #       or compare numerically to a reference system.
+
 # from_xml_bytes
 # from_url
 # get_new_parameterhandler
@@ -664,3 +780,11 @@ def test_freesolv_parameters_assignment(freesolv_id, forcefield_version, excepti
 # invalid_file_version
 # library_charges
 # charges_from_molecule
+
+
+# forcefield_to_dict (ensure that ParameterHandlers serialize without collisions
+#     and header-level attribs include handler attribs as well as attached units,
+#     note that header attribs are not ordered)
+
+
+# create_gbsa

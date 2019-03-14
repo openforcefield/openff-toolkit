@@ -485,9 +485,16 @@ class TestParameterType:
                                                         k2=6 * unit.kilocalorie_per_mole,
                                                         )
 
+# test_(all attributes of all ParameterTypes)
 
-# test_parametertype_unit_property_getter
-# test_parametertype_unit_property_setter
+# test_get_indexed_attrib
+# test_set_unitbearing_attrib (requires implementing __getattr__ and __setattr__)
+
+# test_parametertype_unit_getattr
+# test_parametertype_unit_setattr
 
 # Test multi_term_torsion to_dict
 # test_optional_attribs
+
+# test_attach_units
+# test_detach_units
