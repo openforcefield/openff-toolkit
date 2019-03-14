@@ -29,10 +29,10 @@ from collections import OrderedDict
 
 from simtk import openmm, unit
 
-from openforcefield.utils import detach_units, attach_units, unit_to_string, string_to_unit, \
-    extract_serialized_units_from_dict, ToolkitUnavailableException
+from openforcefield.utils import detach_units, attach_units, unit_to_string, \
+    extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException
 from openforcefield.topology import Topology, ValenceDict, ImproperDict
-from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
+from openforcefield.typing.chemistry import ChemicalEnvironment
 
 #=============================================================================================
 # CONFIGURE LOGGER
@@ -51,33 +51,24 @@ logger = logging.getLogger(__name__)
 #=============================================================================================
 
 
-class SMIRNOFFSpecError(Exception):
+class SMIRNOFFSpecError(MessageException):
     """
     Exception for when data is noncompliant with the SMIRNOFF data specification.
     """
+    pass
 
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
-
-class IncompatibleUnitError(Exception):
+class IncompatibleUnitError(MessageException):
     """
     Exception for when a parameter is in the wrong units for a ParameterHandler's unit system
     """
-
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
+    pass
 
 
-class IncompatibleParameterError(Exception):
+class IncompatibleParameterError(MessageException):
     """
     Exception for when a set of parameters is scientifically incompatible with another
     """
-
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
+    pass
 
 
 class NonbondedMethod(Enum):

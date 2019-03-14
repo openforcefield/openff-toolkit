@@ -28,7 +28,7 @@ from collections import OrderedDict
 
 from simtk import openmm, unit
 
-from openforcefield.utils import all_subclasses, attach_units, extract_serialized_units_from_dict
+from openforcefield.utils import all_subclasses, MessageException
 from openforcefield.topology import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
@@ -47,42 +47,29 @@ logger = logging.getLogger(__name__)
 MAX_SUPPORTED_VERSION = '1.0'  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF forcefield
 
 
-class ParameterHandlerRegistrationError(Exception):
+class ParameterHandlerRegistrationError(MessageException):
     """
     Exception for errors in ParameterHandler registration
     """
+    pass
 
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
-
-class SMIRNOFFVersionError(Exception):
+class SMIRNOFFVersionError(MessageException):
     """
     Exception thrown when an incompatible SMIRNOFF version data structure in attempted to be read.
     """
+    pass
 
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
-
-class SMIRNOFFAromaticityError(Exception):
+class SMIRNOFFAromaticityError(MessageException):
     """
     Exception thrown when an incompatible SMIRNOFF aromaticity model is checked for compatibility.
     """
+    pass
 
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
-
-
-class ParseError(Exception):
+class ParseError(MessageException):
     """
     Error for when a SMIRNOFF data structure is not parseable by a ForceField
     """
-
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
+    pass
 
 
 

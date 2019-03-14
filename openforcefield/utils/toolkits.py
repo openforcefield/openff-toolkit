@@ -27,7 +27,7 @@ import importlib
 import logging
 from functools import wraps
 from openforcefield.utils.utils import inherit_docstrings
-from openforcefield.utils import all_subclasses
+from openforcefield.utils import all_subclasses, MessageException
 from openforcefield.typing.chemistry.environment import SMIRKSParsingError
 from distutils.spawn import find_executable
 from simtk import unit
@@ -67,31 +67,25 @@ class LicenseError(Exception):
     pass
 
 
-class MissingPackageError(Exception):
+class MissingPackageError(MessageException):
     """This function requires a package that is not installed."""
     pass
 
 
-class ToolkitUnavailableException(Exception):
+class ToolkitUnavailableException(MessageException):
     """The requested toolkit is unavailable."""
     # TODO: Allow toolkit to be specified and used in formatting/printing exception.
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
+    pass
 
 
-class InvalidToolkitError(Exception):
+class InvalidToolkitError(MessageException):
     """A non-toolkit object was received when a toolkit object was expected"""
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
 
 
-class UndefinedStereochemistryError(Exception):
+
+class UndefinedStereochemistryError(MessageException):
     """A molecule was attempted to be loaded with undefined stereochemistry"""
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
+    pass
 
 
 class GAFFAtomTypeWarning(RuntimeWarning):

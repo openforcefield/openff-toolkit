@@ -10,9 +10,25 @@ Utility subroutines
 import contextlib
 from simtk import unit
 
+
+
+
+
+
 #=============================================================================================
+# COMMON EXCEPTION TYPES
+#=============================================================================================
+
+
+class MessageException(Exception):
+    """A base class for exceptions that print out a string given in their constructor"""
+    def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
+
+# =============================================================================================
 # UTILITY SUBROUTINES
-#=============================================================================================
+# =============================================================================================
 
 
 def inherit_docstrings(cls):
