@@ -2807,7 +2807,7 @@ class FrozenMolecule(Serializable):
     def from_file(filename,
                   file_format=None,
                   toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-                  exception_if_undefined_stereo=True):
+                  allow_undefined_stereo=False):
         """
         Create one or more molecules from a file
 
@@ -2828,9 +2828,8 @@ class FrozenMolecule(Serializable):
         optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file loading. If a Toolkit is passed, only
             the highest-precedence toolkit is used
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
-            loading the molecule.
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
 
         Returns
         -------
@@ -2895,13 +2894,13 @@ class FrozenMolecule(Serializable):
             mols = toolkit.from_file(
                 filename,
                 file_format=file_format,
-                exception_if_undefined_stereo=exception_if_undefined_stereo)
+                allow_undefined_stereo=allow_undefined_stereo)
         elif hasattr(filename, 'read'):
             file_obj = filename
             mols = toolkit.from_file_obj(
                 file_obj,
                 file_format=file_format,
-                exception_if_undefined_stereo=exception_if_undefined_stereo)
+                allow_undefined_stereo=allow_undefined_stereo)
 
         if len(mols) == 0:
             raise Exception(
@@ -2983,7 +2982,7 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     @RDKitToolkitWrapper.requires_toolkit()
-    def from_rdkit(rdmol, exception_if_undefined_stereo=True):
+    def from_rdkit(rdmol, allow_undefined_stereo=False):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -2993,9 +2992,8 @@ class FrozenMolecule(Serializable):
         ----------
         rdmol : rkit.RDMol
             An RDKit molecule
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
-            loading the molecule.
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
 
         Returns
         -------
@@ -3012,7 +3010,7 @@ class FrozenMolecule(Serializable):
         """
         toolkit = RDKitToolkitWrapper()
         return toolkit.from_rdkit(
-            rdmol, exception_if_undefined_stereo=exception_if_undefined_stereo)
+            rdmol, allow_undefined_stereo=allow_undefined_stereo)
 
     @RDKitToolkitWrapper.requires_toolkit()
     def to_rdkit(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
@@ -3044,7 +3042,7 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
-    def from_openeye(oemol, exception_if_undefined_stereo=True):
+    def from_openeye(oemol, allow_undefined_stereo=False):
         """
         Create a Molecule from an OpenEye molecule.
 
@@ -3054,9 +3052,8 @@ class FrozenMolecule(Serializable):
         ----------
         oemol : openeye.oechem.OEMol
             An OpenEye molecule
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
-            loading the molecule.
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
 
         Returns
         -------
@@ -3073,7 +3070,7 @@ class FrozenMolecule(Serializable):
         """
         toolkit = OpenEyeToolkitWrapper()
         return toolkit.from_openeye(
-            oemol, exception_if_undefined_stereo=exception_if_undefined_stereo)
+            oemol, allow_undefined_stereo=allow_undefined_stereo)
 
     @OpenEyeToolkitWrapper.requires_toolkit()
     def to_openeye(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):

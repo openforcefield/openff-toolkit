@@ -566,13 +566,13 @@ def generate_freesolv_parameters_assignment_cases():
     }
 
     # These molecules are always tested by test_freesolv_parameters_assignment().
-    # Each test case is (freesolv_id, force_field_version, exception_if_undefined_stereo).
+    # Each test case is (freesolv_id, force_field_version, allow_undefined_stereo).
     fast_test_cases = [
-        ('1019269', '0_0_4_fixed', True),
-        ('63712', '0_0_2', True),  # The XML was regenerated after fixing the issue described in #179.
-        ('1723043', '0_0_2', True),
-        ('2501588', '0_0_2', False),  # Test impropers and undefined stereochemistry.
-        ('3323117', '0_0_2', True),  # The XML was regenerated after fixing the issue described in #179.
+        ('1019269', '0_0_4_fixed', False),
+        ('63712', '0_0_2', False),  # The XML was regenerated after fixing the issue described in #179.
+        ('1723043', '0_0_2', False),
+        ('2501588', '0_0_2', True),  # Test impropers and undefined stereochemistry.
+        ('3323117', '0_0_2', False),  # The XML was regenerated after fixing the issue described in #179.
     ]
 
     def extract_id(file_path):
@@ -580,8 +580,8 @@ def generate_freesolv_parameters_assignment_cases():
         # An example of file path is FreeSolv/xml_0_0_4_fixed/mobley_7913234_vacuum.xml
         freesolv_id = os.path.basename(file_path).split('_')[1]
         force_field_version = os.path.basename(os.path.dirname(file_path))[4:]
-        exception_if_undefined_stereo = freesolv_id not in ignore_undefined_stereo
-        return (freesolv_id, force_field_version, exception_if_undefined_stereo)
+        allow_undefined_stereo = freesolv_id in ignore_undefined_stereo
+        return (freesolv_id, force_field_version, allow_undefined_stereo)
 
     # Get all the tarball XML files available. The tarball is extracted
     # in conftest.py if slow tests are activated.
@@ -600,9 +600,9 @@ def generate_freesolv_parameters_assignment_cases():
     return fast_test_cases + slow_test_cases
 
 
-@pytest.mark.parametrize(('freesolv_id', 'forcefield_version', 'exception_if_undefined_stereo'),
+@pytest.mark.parametrize(('freesolv_id', 'forcefield_version', 'allow_undefined_stereo'),
                          generate_freesolv_parameters_assignment_cases())
-def test_freesolv_parameters_assignment(freesolv_id, forcefield_version, exception_if_undefined_stereo):
+def test_freesolv_parameters_assignment(freesolv_id, forcefield_version, allow_undefined_stereo):
     """Regression test on parameters assignment based on the FreeSolv set used in the 0.1 paper.
 
     This, contrarily to the similar AlkEthOH test, checks also constraints
@@ -613,7 +613,7 @@ def test_freesolv_parameters_assignment(freesolv_id, forcefield_version, excepti
     mol2_file_path, xml_file_path = get_freesolv_filepath(freesolv_id, forcefield_version)
 
     # Load molecules.
-    molecule = Molecule.from_file(mol2_file_path, exception_if_undefined_stereo=exception_if_undefined_stereo)
+    molecule = Molecule.from_file(mol2_file_path, allow_undefined_stereo=allow_undefined_stereo)
 
     # Create OpenFF System with the current toolkit.
     forcefield_file_path = 'old/smirnoff99Frosst_' + forcefield_version + '.offxml'
