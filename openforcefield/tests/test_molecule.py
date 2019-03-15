@@ -421,7 +421,6 @@ class TestMolecule:
         sigma = sigma_unitless * unit.angstrom
         rmin_half = rmin_half_unitless * unit.angstrom
         epsilon = epsilon_unitless * (unit.kilojoule / unit.mole)
-        #charge_increments = [i * unit.elementary_charge for i in charge_increments_unitless]
         charge_increments = charge_increments_unitless * unit.elementary_charge
 
         # Do not modify the original molecule.
@@ -506,7 +505,6 @@ class TestMolecule:
                                                              epsilon=1.0*unit.kilojoule_per_mole,
                                                              charge_increments=unit.Quantity(np.array([0.1, 0.2, 0.3]),
                                                                                              unit.elementary_charge)
-                                                             #charge_increments=unit.Quantity([0.1, 0.2, 0.3], unit.elementary_charge)
                                                              )
         vsite2 = molecule.virtual_sites[vsite2_index]
 
@@ -515,7 +513,6 @@ class TestMolecule:
         molecule2 = Molecule.from_dict(molecule_dict)
 
         assert hash(molecule) == hash(molecule2)
-        #assert molecule.to_dict() == molecule2.to_dict()
 
     # TODO: Make a test for to_dict and from_dict for VirtualSites (even though they're currently just unloaded using
     #      (for example) Molecule._add_bond_virtual_site functions
@@ -579,10 +576,6 @@ class TestMolecule:
             vsite1_index = molecule.add_divalent_lone_pair_virtual_site([atom1, atom2], distance, out_of_plane_angle, in_plane_angle)
         molecule_dict = molecule.to_dict()
         molecule2 = Molecule.from_dict(molecule_dict)
-        # try:
-        #     molecule.to_dict() == molecule2.to_dict()
-        # except ValueError:
-        #     import pdb; pdb.set_trace()
         assert molecule_dict == molecule2.to_dict()
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
