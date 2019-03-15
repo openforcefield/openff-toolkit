@@ -669,7 +669,7 @@ class ForceField(object):
 
 
         # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation
-        if 'version' in l1_dict.keys():
+        if 'version' in l1_dict:
             version = l1_dict['version']
         else:
             raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
@@ -681,7 +681,7 @@ class ForceField(object):
         # Define keys which are expected from the spec, but are not parameter sections
         l1_spec_keys = ['Author', 'Date', 'version', 'aromaticity_model']
 
-        for parameter_name in l1_dict.keys():
+        for parameter_name in l1_dict:
             # Skip (for now) cosmetic l1 items
             if parameter_name in l1_spec_keys:
                 continue
@@ -693,23 +693,12 @@ class ForceField(object):
             # Otherwise, we expect this l1_key to correspond to a ParameterHandler
             section_dict = l1_dict[parameter_name]
             # In the OFFXML format, attributes and sub-elements are distinguished by whether they're a list
-            #raw_handler_kwargs = dict([(key, item) for key, item in section_dict.items() if not type(item) is list])
-            #unitless_handler_kwargs, attached_units = extract_serialized_units_from_dict(section_dict)
-            #handler_kwargs = attach_units(unitless_handler_kwargs, attached_units)
 
             # Retrieve or create parameter handler
             handler = self.get_handler(parameter_name,
                                        # handler_kwargs)
                                        section_dict)
-            # # This will get parameter lists in the form {'Bonds': [list of bonds]}.
-            # parameter_lists = dict([(key, item) for key, item in section_dict.items() if type(item) is list])
-            # for parameter_tag, parameter_list in parameter_lists.items():
-            #     for parameter_dict in parameter_list:
-            #         # Append units to parameters as needed
-            #         parameter_kwargs = attach_units(parameter_dict,
-            #                                          attached_units)
-            #         # Add parameter definition
-            #         handler.add_parameter(parameter_kwargs)
+
 
 
     def parse_smirnoff_from_source(self, source):
