@@ -2693,13 +2693,15 @@ class FrozenMolecule(Serializable):
     # TODO: Move OE-dependent parts of this to toolkits.py
     @classmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
-    def from_iupac(cls, iupac_name):
+    def from_iupac(cls, iupac_name, **kwargs):
         """Generate a molecule from IUPAC or common name
 
         Parameters
         ----------
         iupac_name : str
             IUPAC name of molecule to be generated
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
 
         Returns
         -------
@@ -2728,7 +2730,7 @@ class FrozenMolecule(Serializable):
         if result == False:
             raise Exception(
                 "Addition of explicit hydrogens failed in from_iupac")
-        return cls.from_openeye(oemol)
+        return cls.from_openeye(oemol, **kwargs)
 
     # TODO: Move OE-dependent parts of this to toolkits.py
     @OpenEyeToolkitWrapper.requires_toolkit()
