@@ -260,9 +260,6 @@ class ForceField(object):
         self._parameter_io_handlers = OrderedDict()  # ParameterIO classes to be used for each file type
         self._parameters = ParameterList()  # ParameterHandler objects instantiated for each parameter type
         self._aromaticity_model = None
-        # TODO: will it be possible for a ForceField to have multiple (compatible) aromaticity models?
-        #self._used_aromaticity_models = set(
-        #)  # Keep track of the aromaticity model(s) this ForceField uses
 
 
     def _check_smirnoff_version_compatibility(self, version):
@@ -310,7 +307,6 @@ class ForceField(object):
                                            "OEAroModel_MDL is supported.".format(aromaticity_model))
 
         self._aromaticity_model = aromaticity_model
-        #self._used_aromaticity_models.add(aromaticity_model)
 
 
     def _register_parameter_handler_classes(self, parameter_handler_classes):
@@ -630,7 +626,7 @@ class ForceField(object):
         # Assume we will write out SMIRNOFF data in compliance with the max supported spec version
         l1_dict['version'] = self._MAX_SUPPORTED_SMIRNOFF_VERSION
 
-        # Write out all used aromaticity models
+        # Write out the aromaticity model used
         l1_dict['aromaticity_model'] = self._aromaticity_model
 
         for handler_format, parameter_handler in self._parameter_handlers.items():
@@ -660,7 +656,7 @@ class ForceField(object):
         l1_dict = smirnoff_data['SMIRNOFF']
         # Check that the aromaticity model required by this parameter set is compatible with
         # others loaded by this ForceField
-        if 'aromaticity_model' in l1_dict.keys():
+        if 'aromaticity_model' in l1_dict:
             aromaticity_model = l1_dict['aromaticity_model']
             self._register_aromaticity_model(aromaticity_model)
 
@@ -669,18 +665,6 @@ class ForceField(object):
                              "tag, or contained in a previously-loaded SMIRNOFF data source")
 
 
-        #if aromaticity_model not in topology.ALLOWED_AROMATICITY_MODELS:
-        #    self._raise_parsing_exception(
-        #        root,
-        #        "'aromaticity_model' (%s) must be one of the supported models: "
-        #        % (aromaticity_model, topology.ALLOWED_AROMATICITY_MODELS))
-        #
-        #if (self._aromaticity_model is not None) and (self._aromaticity_model
-        #                                              != aromaticity_model):
-        #    self._raise_parsing_exception(
-        #        root,
-        #        "'aromaticity_model' (%s) does not match earlier read 'aromaticity_model' (%s)"
-        #        % (aromaticity_model, self._aromaticity_model))
 
 
 
@@ -846,6 +830,7 @@ class ForceField(object):
         topology = copy.deepcopy(topology)
 
         # Set the topology aromaticity model to that used by the current forcefield
+        # TODO: See openforcefield issue #206 for proposed implementation of aromaticity
         #topology.set_aromaticity_model(self._aromaticity_model)
 
         # Create an empty OpenMM System
