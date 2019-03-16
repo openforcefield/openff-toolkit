@@ -1772,25 +1772,8 @@ class Topology(Serializable):
             The bond between i and j.
 
         """
-        if (type(i) is int) and (type(j) is int):
-            atomi = self.atom(i)
-            atomj = self.atom(j)
-        elif (type(i) is TopologyAtom) and (type(j) is TopologyAtom):
-            atomi = i
-            atomj = j
-        else:
-            raise Exception(
-                "Invalid input passed to get_bond_between(). Expected ints or TopologyAtoms, "
-                "got {} and {}".format(i, j))
-
-        for top_bond in atomi.topology_bonds:
-            for top_atom in top_bond.atoms:
-                if top_atom == atomi:
-                    continue
-                if top_atom == atomj:
-                    return top_bond
-        # If atomj wasn't found in any of atomi's bonds, then they aren't bonded.
-        raise NotBondedError('No bond between atom {} and {}'.format(atomi, atomj))
+        if not(self.is_bonded(i, j)):
+            raise NotBondedError('No bond between atom {} and {}'.format(i, j))
 
 
     def is_bonded(self, i, j):
