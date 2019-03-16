@@ -1772,24 +1772,6 @@ class Topology(Serializable):
             The bond between i and j.
 
         """
-        if not(self.is_bonded(i, j)):
-            raise NotBondedError('No bond between atom {} and {}'.format(i, j))
-
-
-    def is_bonded(self, i, j):
-        """Returns True if the two atoms are bonded
-
-        Parameters
-        ----------
-        i, j : int or TopologyAtom
-            Atoms or atom indices to check
-
-        Returns
-        -------
-        is_bonded : bool
-            True if atoms are bonded, False otherwise.
-
-        """
         if (type(i) is int) and (type(j) is int):
             atomi = self.atom(i)
             atomj = self.atom(j)
@@ -1806,9 +1788,30 @@ class Topology(Serializable):
                 if top_atom == atomi:
                     continue
                 if top_atom == atomj:
-                    return True
-        # If atomj wasn't found in any of atomi's bonds, then they aren't bonded.
-        return False
+                    return top_bond
+
+        raise NotBondedError('No bond between atom {} and {}'.format(i, j))
+
+
+    def is_bonded(self, i, j):
+        """Returns True if the two atoms are bonded
+
+        Parameters
+        ----------
+        i, j : int or TopologyAtom
+            Atoms or atom indices to check
+
+        Returns
+        -------
+        is_bonded : bool
+            True if atoms are bonded, False otherwise.
+
+        """
+        try:
+            self.get_bond_between(i, j)
+            return True
+        except NotBondedError:
+            return False
 
     def atom(self, atom_topology_index):
         """
