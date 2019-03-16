@@ -1850,29 +1850,46 @@ class FrozenMolecule(Serializable):
                 'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
-    def is_isomorphic(self, other):
+    def is_isomorphic(
+            self, other,
+            compare_atom_stereochemistry=True
+    ):
         """
-        Determines whether the molecules are isomorphic by comparing their SMILESes
+        Determines whether the molecules are isomorphic by comparing their graphs.
 
         Parameters
         ----------
         other : an openforcefield.topology.molecule.FrozenMolecule
-            The molecule to test for isomorphism
+            The molecule to test for isomorphism.
+        compare_atom_stereochemistry : bool, optional
+            If ``False``, atoms' stereochemistry is ignored for the
+            purpose of determining equality. Default is ``True``.
         
         Returns
         -------
         molecules_are_isomorphic : bool
         """
         import networkx as nx
-        node_match_func = lambda x, y: ((x['atomic_number'] == y['atomic_number']) and
-                                        (x['is_aromatic'] == y['is_aromatic']) and
-                                        (x['stereochemistry'] == y['stereochemistry']) and
-                                        (x['formal_charge'] == y['formal_charge'])
-                                        )
-        edge_match_func = lambda x, y: ((x['bond_order'] == y['bond_order']) and
-                                        (x['is_aromatic'] == y['is_aromatic']) and
-                                        (x['stereochemistry'] == y['stereochemistry'])
-                                        )
+
+        def node_match_func(x, y):
+            is_equal = (
+                (x['atomic_number'] == y['atomic_number']) and
+                (x['is_aromatic'] == y['is_aromatic']) and
+                (x['formal_charge'] == y['formal_charge'])
+            )
+            if compare_atom_stereochemistry:
+                is_equal &= x['stereochemistry'] == y['stereochemistry']
+            return is_equal
+
+        def edge_match_func(x, y):
+            return (
+                # We don't need to check the exact bond order (which is 1 or 2)
+                # if the bond is aromatic. This way we avoid missing a match only
+                # if the alternate bond orders 1 and 2 are assigned differently.
+                (x['is_aromatic'] == y['is_aromatic']) and
+                (x['bond_order'] == y['bond_order']) and
+                (x['stereochemistry'] == y['stereochemistry'])
+            )
 
         return nx.is_isomorphic(self.to_networkx(),
                                 other.to_networkx(),
