@@ -12,9 +12,6 @@ from simtk import unit
 
 
 
-
-
-
 #=============================================================================================
 # COMMON EXCEPTION TYPES
 #=============================================================================================
@@ -160,10 +157,16 @@ def quantity_to_string(input_quantity):
         The serialized quantity
 
     """
+    import numpy as np
     if input_quantity is None:
         return None
     unitless_value = input_quantity.value_in_unit(input_quantity.unit)
+    # The string representaiton of a numpy array doesn't have commas and breaks the
+    # parser, thus we convert any arrays to list here
+    if isinstance(unitless_value, np.ndarray):
+        unitless_value = list(unitless_value)
     unit_string = unit_to_string(input_quantity.unit)
+    print(input_quantity, type(unitless_value))
     output_string = '{} * {}'.format(unitless_value, unit_string)
     return output_string
 

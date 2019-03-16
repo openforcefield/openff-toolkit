@@ -29,7 +29,7 @@ import networkx as nx
 import re
 import copy
 
-from openforcefield.utils import MessageException
+import openforcefield.utils
 from numpy import random
 
 #==============================================================================
@@ -155,18 +155,20 @@ def _remove_blanks_repeats(init_list, remove_list = ['']):
     return list( set(final_list) )
 
 
-class SMIRKSMismatchError(MessageException):
+class SMIRKSMismatchError(openforcefield.utils.MessageException):
     """
     Exception for cases where smirks are inappropriate
     for the environment type they are being parsed into
     """
     pass
 
-class SMIRKSParsingError(MessageException):
+
+class SMIRKSParsingError(openforcefield.utils.MessageException):
     """
     Exception for when SMIRKS are not parseable for any environment
     """
     pass
+
 
 class ChemicalEnvironment(object):
     """Chemical environment abstract base class that matches an atom, bond, angle, etc.

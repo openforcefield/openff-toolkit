@@ -41,22 +41,18 @@ from simtk import unit
 from simtk.openmm.app import element
 
 import openforcefield
-from openforcefield.topology.topology import Topology
-from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, string_to_quantity
+from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper,\
+    InvalidToolkitError, GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.typing.chemistry import ChemicalEnvironment
-
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
-
 from openforcefield.utils.serialization import Serializable
 
-from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper, InvalidToolkitError
+
 
 #=============================================================================================
 # GLOBAL PARAMETERS
 #=============================================================================================
-
-# TODO: Move these to utils.toolkits?
 
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
@@ -2798,6 +2794,7 @@ class FrozenMolecule(Serializable):
         >>> topology = molecule.to_topology()
 
         """
+        from openforcefield.topology import Topology
         return Topology.from_molecules(self)
 
     @staticmethod

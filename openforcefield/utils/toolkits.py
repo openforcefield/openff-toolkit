@@ -26,9 +26,7 @@ Currently supported toolkits:
 import importlib
 import logging
 from functools import wraps
-from openforcefield.utils.utils import inherit_docstrings
-from openforcefield.utils import all_subclasses, MessageException
-from openforcefield.typing.chemistry.environment import SMIRKSParsingError
+from openforcefield.utils import all_subclasses, MessageException, inherit_docstrings
 from distutils.spawn import find_executable
 from simtk import unit
 import numpy as np
@@ -2253,7 +2251,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Set up query.
         qmol = Chem.MolFromSmarts(smirks)  #cannot catch the error
         if qmol is None:
-            raise SMIRKSParsingError(
+            raise ValueError(
                 'RDKit could not parse the SMIRKS string "{}"'.format(smirks))
 
         # Create atom mapping for query molecule
