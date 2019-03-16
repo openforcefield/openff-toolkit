@@ -2879,6 +2879,7 @@ class FrozenMolecule(Serializable):
 
         # Determine which toolkit to use (highest priority that's compatible with input type)
         if isinstance(toolkit_registry, ToolkitRegistry):
+            # TODO: Encapsulate this logic into ToolkitRegistry.call()?
             toolkit = None
             supported_read_formats = {}
             for query_toolkit in toolkit_registry.registered_toolkits:
@@ -2889,15 +2890,16 @@ class FrozenMolecule(Serializable):
                     query_toolkit.
                     toolkit_name] = query_toolkit.toolkit_file_read_formats
             if toolkit == None:
-                raise Exception(
+                raise NotImplementedError(
                     "No toolkits in registry can read file {} (format {}). Supported formats in the "
                     "provided ToolkitRegistry are {}".format(
                         filename, file_format, supported_read_formats))
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
+            # TODO: Encapsulate this logic in ToolkitWrapper?
             toolkit = toolkit_registry
-            if not (file_format in toolkit.toolkit_file_read_formats):
-                raise Exception(
+            if file_format not in toolkit.toolkit_file_read_formats:
+                raise NotImplementedError(
                     "Toolkit {} can not read file {} (format {}). Supported formats for this toolkit "
                     "are {}".format(toolkit.toolkit_name, filename,
                                     file_format,
