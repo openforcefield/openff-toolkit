@@ -119,19 +119,6 @@ class ParameterList(list):
             self.append(input_parameter)
             self._last_added_param = input_parameter_list
 
-    @property
-    def last_added_parameter(self):
-        """
-        Get a copy of the last parameter added to this ParameterList. Important
-        during serialization as the last parameter added determines the units used for
-        serializing all other parameters of this type.
-
-        Returns
-        -------
-        parameter : a ParameterType-derived object
-            The last parameter added to this ParameterList
-        """
-        return self._last_added_param
 
     def append(self, parameter):
         """
