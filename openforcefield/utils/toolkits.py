@@ -2091,34 +2091,46 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
 
-
-        #Assign atom stereochemsitry
+        # Assign atom stereochemsitry and collect atoms for which RDKit
+        # can't figure out chirality. The _CIPCode property of these atoms
+        # will be forcefully set to the stereo we want (see #196).
+        undefined_stereo_atoms = {}
         for index, atom in enumerate(molecule.atoms):
             rdatom = rdmol.GetAtomWithIdx(map_atoms[index])
-            if atom.stereochemistry:
-                if atom.stereochemistry == "R":
-                    desired_rdk_stereo_code = "R" # Yes, it's just a string
-                if atom.stereochemistry == "S":
-                    desired_rdk_stereo_code = "S"
-                # Let's randomly assign this atom's stereo to CW
-                rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
-                # We need to do force and cleanIt to recalculate CIP stereo
-                Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
-                # If our random initial assignment worked, then we're set
-                if rdatom.GetProp("_CIPCode") == desired_rdk_stereo_code:
-                    continue
-                # Otherwise, set it to CCW
-                rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CCW)
-                # We need to do force and cleanIt to recalculate CIP stereo
-                Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
-                # Hopefully this worked, otherwise something's wrong
-                if rdatom.GetProp("_CIPCode") == desired_rdk_stereo_code:
-                    continue
-                else:
-                    raise Exception("Unknown atom stereochemistry encountered in "
-                                    "to_rdkit. Desired stereochemistry: {}. Set stereochemistry {}".format(atom.stereochemistry,
-                                                                                                           rdatom.GetProp("_CIPCode")))
 
+            # Skip non-chiral atoms.
+            if atom.stereochemistry is None:
+                continue
+
+            # Let's randomly assign this atom's (local) stereo to CW
+            # and check if this causes the (global) stereo to be set
+            # to the desired one (S or R).
+            rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
+            # We need to do force and cleanIt to recalculate CIP stereo.
+            Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
+            # If our random initial assignment worked, then we're set.
+            if rdatom.HasProp('_CIPCode') and rdatom.GetProp("_CIPCode") == atom.stereochemistry:
+                continue
+
+            # Otherwise, set it to CCW.
+            rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CCW)
+            # We need to do force and cleanIt to recalculate CIP stereo.
+            Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
+            # Hopefully this worked, otherwise something's wrong
+            if rdatom.HasProp('_CIPCode') and rdatom.GetProp("_CIPCode") == atom.stereochemistry:
+                continue
+
+            # Keep track of undefined stereo atoms. We'll force stereochemistry
+            # at the end to avoid the next AssignStereochemistry to overwrite.
+            if not rdatom.HasProp('_CIPCode'):
+                undefined_stereo_atoms[rdatom] = atom.stereochemistry
+                continue
+
+            # Something is wrong.
+            err_msg = ("Unknown atom stereochemistry encountered in to_rdkit. "
+                       "Desired stereochemistry: {}. Set stereochemistry {}".format(
+                atom.stereochemistry, rdatom.GetProp("_CIPCode")))
+            raise RuntimeError(err_msg)
 
         # Assign bond stereochemistry
         for bond in molecule.bonds:
@@ -2196,8 +2208,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol.UpdatePropertyCache(strict=False)
         Chem.GetSSSR(rdmol)
         # I added AssignStereochemistry which takes the directions of the bond set
-        # and assigns the stereochemistry tags on the double bonds
+        # and assigns the stereochemistry tags on the double bonds.
         Chem.AssignStereochemistry(rdmol, force=False)
+
+        # Forcefully assign stereo information on the atoms that RDKit
+        # can't figure out. This must be done last as calling AssignStereochemistry
+        # again will delete these properties (see #196).
+        for rdatom, stereochemistry in undefined_stereo_atoms.items():
+            rdatom.SetProp('_CIPCode', stereochemistry)
 
         # Return non-editable version
         return Chem.Mol(rdmol)
