@@ -677,7 +677,7 @@ class TestAmberToolsToolkitWrapper:
         molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_registry)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
 
-
+        # TODO: Implementation of these tests is pending a decision on the API for our charge model
         with pytest.raises(NotImplementedError) as excinfo:
             charge_model = 'notARealChargeModel'
             molecule.compute_partial_charges(toolkit_registry=toolkit_registry)#, charge_model=charge_model)
