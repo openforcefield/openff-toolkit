@@ -192,6 +192,9 @@ def _ast_eval(node):
         # see if this is a simtk unit
         b = getattr(unit, node.id)
         return b
+    # TODO: This was a quick hack that surprisingly worked. We should validate this further.
+    elif isinstance(node, ast.List):
+        return ast.literal_eval(node)
     else:
         raise TypeError(node)
 
