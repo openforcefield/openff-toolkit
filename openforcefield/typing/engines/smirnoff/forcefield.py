@@ -286,7 +286,7 @@ class ForceField(object):
                 'up to version {}'.format(version, self._MAX_SUPPORTED_SMIRNOFF_VERSION))
 
 
-    def _register_aromaticity_model(self, aromaticity_model):
+    def _set_aromaticity_model(self, aromaticity_model):
         """
         Register that this forcefield is using an aromaticity model. Will check for
         compatibility with other aromaticity model(s) already in use.
@@ -658,7 +658,7 @@ class ForceField(object):
         # others loaded by this ForceField
         if 'aromaticity_model' in l1_dict:
             aromaticity_model = l1_dict['aromaticity_model']
-            self._register_aromaticity_model(aromaticity_model)
+            self._set_aromaticity_model(aromaticity_model)
 
         elif self._aromaticity_model == None:
             raise ParseError("'aromaticity_model' attribute must be specified in SMIRNOFF "
