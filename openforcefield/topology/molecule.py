@@ -235,6 +235,7 @@ class Atom(Particle):
         self._bonds = list()
         self._virtual_sites = list()
 
+    # TODO: Change this to add_bond(Bond) to improve encapsulation and extensibility?
     def add_bond(self, bond):
         """Adds a bond that this atom is involved in
         .. todo :: Is this how we want to keep records?
@@ -1886,8 +1887,7 @@ class FrozenMolecule(Serializable):
                 # We don't need to check the exact bond order (which is 1 or 2)
                 # if the bond is aromatic. This way we avoid missing a match only
                 # if the alternate bond orders 1 and 2 are assigned differently.
-                (x['is_aromatic'] == y['is_aromatic']) and
-                (x['bond_order'] == y['bond_order']) and
+                (x['is_aromatic'] == y['is_aromatic'] or x['bond_order'] == y['bond_order']) and
                 (x['stereochemistry'] == y['stereochemistry'])
             )
 
@@ -3372,6 +3372,7 @@ class Molecule(FrozenMolecule):
         #super(self, Molecule).__init__(*args, **kwargs)
         super(Molecule, self).__init__(*args, **kwargs)
 
+    # TODO: Change this to add_atom(Atom) to improve encapsulation and extensibility?
     def add_atom(self,
                  atomic_number,
                  formal_charge,
