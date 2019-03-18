@@ -1628,10 +1628,10 @@ class FrozenMolecule(Serializable):
         """
         # This implementation is a compromise to let this remain as a classmethod
         mol = cls()
-        mol.initialize_from_dict(molecule_dict)
+        mol._initialize_from_dict(molecule_dict)
         return mol
 
-    def initialize_from_dict(self, molecule_dict):
+    def _initialize_from_dict(self, molecule_dict):
         """
         Initialize this Molecule from a dictionary representation
 
@@ -1742,7 +1742,7 @@ class FrozenMolecule(Serializable):
         return self.to_dict()
 
     def __setstate__(self, state):
-        return self.initialize_from_dict(state)
+        return self._initialize_from_dict(state)
 
     def _initialize(self):
         """
@@ -1772,7 +1772,7 @@ class FrozenMolecule(Serializable):
         """
         #assert isinstance(other, type(self)), "can only copy instances of {}".format(type(self))
         other_dict = other.to_dict()
-        self.initialize_from_dict(other_dict)
+        self._initialize_from_dict(other_dict)
 
     def __eq__(self, other):
         """Test two molecules for equality to see if they are the chemical species, but do not check other annotated properties.
