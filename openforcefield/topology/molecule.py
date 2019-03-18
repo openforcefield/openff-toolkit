@@ -1413,7 +1413,8 @@ class FrozenMolecule(Serializable):
     def __init__(self,
                  other=None,
                  file_format=None,
-                 toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+                 toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+                 allow_undefined_stereo=False):
         """
         Create a new FrozenMolecule object
 
@@ -1436,12 +1437,15 @@ class FrozenMolecule(Serializable):
             * an ``rdkit.Chem.rdchem.Mol``
             * a serialized :class:`Molecule` object
         file_format : str, optional, default=None
-            If providing a file-like object, you must specify the format of the data. If providing a file, the file
-            format will attempt to be guessed from the suffix.
+            If providing a file-like object, you must specify the format
+            of the data. If providing a file, the file format will attempt
+            to be guessed from the suffix.
         toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
-            
-        
+        allow_undefined_stereo : bool, default=False
+            If loaded from a file and ``False``, raises an exception if
+            undefined stereochemistry is detected during the molecule's
+            construction.
 
         Examples
         --------
@@ -1523,7 +1527,8 @@ class FrozenMolecule(Serializable):
                 mol = Molecule.from_file(
                     other,
                     file_format=file_format,
-                    toolkit_registry=toolkit_registry
+                    toolkit_registry=toolkit_registry,
+                    allow_undefined_stereo=allow_undefined_stereo
                 )  # returns a list only if multiple molecules are found
                 if type(mol) == list:
                     raise ValueError(
