@@ -26,9 +26,7 @@ Currently supported toolkits:
 import importlib
 import logging
 from functools import wraps
-from openforcefield.utils.utils import inherit_docstrings
-from openforcefield.utils import all_subclasses
-from openforcefield.typing.chemistry.environment import SMIRKSParsingError
+from openforcefield.utils import all_subclasses, MessageException, inherit_docstrings
 from distutils.spawn import find_executable
 from simtk import unit
 import numpy as np
@@ -67,29 +65,25 @@ class LicenseError(Exception):
     pass
 
 
-class MissingPackageError(Exception):
+class MissingPackageError(MessageException):
     """This function requires a package that is not installed."""
     pass
 
 
-class ToolkitUnavailableException(Exception):
+class ToolkitUnavailableException(MessageException):
     """The requested toolkit is unavailable."""
     # TODO: Allow toolkit to be specified and used in formatting/printing exception.
     pass
 
 
-class InvalidToolkitError(Exception):
+class InvalidToolkitError(MessageException):
     """A non-toolkit object was received when a toolkit object was expected"""
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
 
 
-class UndefinedStereochemistryError(Exception):
+
+class UndefinedStereochemistryError(MessageException):
     """A molecule was attempted to be loaded with undefined stereochemistry"""
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
+    pass
 
 
 class GAFFAtomTypeWarning(RuntimeWarning):
@@ -1081,7 +1075,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
 
-    def compute_partial_charges(self, molecule, charge_model='None'):
+    def compute_partial_charges(self, molecule, quantum_chemical_method="AM1-BCC", partial_charge_method='None'):
+        #charge_model="am1bcc"):
         """
         Compute partial charges with OpenEye quacpac
 
@@ -2256,7 +2251,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Set up query.
         qmol = Chem.MolFromSmarts(smirks)  #cannot catch the error
         if qmol is None:
-            raise SMIRKSParsingError(
+            raise ValueError(
                 'RDKit could not parse the SMIRKS string "{}"'.format(smirks))
 
         # Create atom mapping for query molecule

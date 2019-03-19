@@ -41,22 +41,18 @@ from simtk import unit
 from simtk.openmm.app import element
 
 import openforcefield
-from openforcefield.topology.topology import Topology
-from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
-from openforcefield.utils import serialize_numpy, deserialize_numpy, serialize_quantity, deserialize_quantity
+from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, string_to_quantity
+from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper,\
+    InvalidToolkitError, GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.typing.chemistry import ChemicalEnvironment
-
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
-
 from openforcefield.utils.serialization import Serializable
 
-from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper, InvalidToolkitError
+
 
 #=============================================================================================
 # GLOBAL PARAMETERS
 #=============================================================================================
-
-# TODO: Move these to utils.toolkits?
 
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
@@ -622,14 +618,13 @@ class VirtualSite(Particle):
         vsite_dict['name'] = self._name
         vsite_dict['atoms'] = tuple(
             [i.molecule_atom_index for i in self.atoms])
-        vsite_dict['charge_increments'] = serialize_quantity(
-            self._charge_increments)
+        vsite_dict['charge_increments'] = quantity_to_string(self._charge_increments)
 
 
-        vsite_dict['epsilon'] = serialize_quantity(self._epsilon)
+        vsite_dict['epsilon'] = quantity_to_string(self._epsilon)
 
 
-        vsite_dict['sigma'] = serialize_quantity(self._sigma)
+        vsite_dict['sigma'] = quantity_to_string(self._sigma)
 
         return vsite_dict
 
@@ -643,10 +638,10 @@ class VirtualSite(Particle):
         vsite_dict_units = deepcopy(vsite_dict)
 
         # Attach units to epsilon term
-        vsite_dict_units['epsilon'] = deserialize_quantity(
+        vsite_dict_units['epsilon'] = string_to_quantity(
             vsite_dict['epsilon'])
-        vsite_dict_units['sigma'] = deserialize_quantity(vsite_dict['sigma'])
-        vsite_dict_units['charge_increments'] = deserialize_quantity(
+        vsite_dict_units['sigma'] = string_to_quantity(vsite_dict['sigma'])
+        vsite_dict_units['charge_increments'] = string_to_quantity(
             vsite_dict['charge_increments'])
 
         return VirtualSite(**vsite_dict_units)
@@ -804,7 +799,7 @@ class BondChargeVirtualSite(VirtualSite):
 
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict['distance'] = serialize_quantity(self._distance)
+        vsite_dict['distance'] = quantity_to_string(self._distance)
 
         #type = self.type
         vsite_dict['vsite_type'] = self.type
@@ -819,7 +814,7 @@ class BondChargeVirtualSite(VirtualSite):
         base_dict.pop('vsite_type')
         base_dict.pop('distance')
         vsite = super().from_dict(**base_dict)
-        vsite._distance = deserialize_quantity(vsite_dict['distance'])
+        vsite._distance = string_to_quantity(vsite_dict['distance'])
         return vsite
 
     @property
@@ -891,10 +886,10 @@ class MonovalentLonePairVirtualSite(VirtualSite):
 
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict['distance'] = serialize_quantity(self._distance)
-        vsite_dict['out_of_plane_angle'] = serialize_quantity(
+        vsite_dict['distance'] = quantity_to_string(self._distance)
+        vsite_dict['out_of_plane_angle'] = quantity_to_string(
             self._out_of_plane_angle)
-        vsite_dict['in_plane_angle'] = serialize_quantity(self._in_plane_angle)
+        vsite_dict['in_plane_angle'] = quantity_to_string(self._in_plane_angle)
         #vsite_dict['vsite_type'] = self.type.fget()
         vsite_dict['vsite_type'] = self.type
         #vsite_dict['vsite_type'] = 'MonovalentLonePairVirtualSite'
@@ -911,10 +906,10 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         base_dict.pop('out_of_plane_angle')
         base_dict.pop('in_plane_angle')
         vsite = super().from_dict(**base_dict)
-        vsite._distance = deserialize_quantity(vsite_dict['distance'])
-        vsite._in_plane_angle = deserialize_quantity(
+        vsite._distance = string_to_quantity(vsite_dict['distance'])
+        vsite._in_plane_angle = string_to_quantity(
             vsite_dict['in_plane_angle'])
-        vsite._out_of_plane_angle = deserialize_quantity(
+        vsite._out_of_plane_angle = string_to_quantity(
             vsite_dict['out_of_plane_angle'])
         return vsite
 
@@ -995,10 +990,10 @@ class DivalentLonePairVirtualSite(VirtualSite):
 
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict['distance'] = serialize_quantity(self._distance)
-        vsite_dict['out_of_plane_angle'] = serialize_quantity(
+        vsite_dict['distance'] = quantity_to_string(self._distance)
+        vsite_dict['out_of_plane_angle'] = quantity_to_string(
             self._out_of_plane_angle)
-        vsite_dict['in_plane_angle'] = serialize_quantity(self._in_plane_angle)
+        vsite_dict['in_plane_angle'] = quantity_to_string(self._in_plane_angle)
         vsite_dict['vsite_type'] = self.type
         return vsite_dict
 
@@ -1026,10 +1021,10 @@ class DivalentLonePairVirtualSite(VirtualSite):
         base_dict.pop('out_of_plane_angle')
         base_dict.pop('in_plane_angle')
         vsite = super().from_dict(**base_dict)
-        vsite._distance = deserialize_quantity(vsite_dict['distance'])
-        vsite._in_plane_angle = deserialize_quantity(
+        vsite._distance = string_to_quantity(vsite_dict['distance'])
+        vsite._in_plane_angle = string_to_quantity(
             vsite_dict['in_plane_angle'])
-        vsite._out_of_plane_angle = deserialize_quantity(
+        vsite._out_of_plane_angle = string_to_quantity(
             vsite_dict['out_of_plane_angle'])
 
         return vsite
@@ -1111,10 +1106,10 @@ class TrivalentLonePairVirtualSite(VirtualSite):
 
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict['distance'] = serialize_quantity(self._distance)
-        vsite_dict['out_of_plane_angle'] = serialize_quantity(
+        vsite_dict['distance'] = quantity_to_string(self._distance)
+        vsite_dict['out_of_plane_angle'] = quantity_to_string(
             self._out_of_plane_angle)
-        vsite_dict['in_plane_angle'] = serialize_quantity(self._in_plane_angle)
+        vsite_dict['in_plane_angle'] = quantity_to_string(self._in_plane_angle)
         vsite_dict['vsite_type'] = self.type
         return vsite_dict
 
@@ -1143,10 +1138,10 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         base_dict.pop('out_of_plane_angle')
         base_dict.pop('in_plane_angle')
         vsite = super().from_dict(**base_dict)
-        vsite._distance = deserialize_quantity(vsite_dict['distance'])
-        vsite._in_plane_angle = deserialize_quantity(
+        vsite._distance = string_to_quantity(vsite_dict['distance'])
+        vsite._in_plane_angle = string_to_quantity(
             vsite_dict['in_plane_angle'])
-        vsite._out_of_plane_angle = deserialize_quantity(
+        vsite._out_of_plane_angle = string_to_quantity(
             vsite_dict['out_of_plane_angle'])
 
         return vsite
@@ -1651,50 +1646,50 @@ class FrozenMolecule(Serializable):
             vsite_dict_units = deepcopy(vsite_dict)
 
             # Attach units to epsilon term
-            vsite_dict_units['epsilon'] = deserialize_quantity(
+            vsite_dict_units['epsilon'] = string_to_quantity(
                 vsite_dict['epsilon'])
-            vsite_dict_units['sigma'] = deserialize_quantity(
+            vsite_dict_units['sigma'] = string_to_quantity(
                 vsite_dict['sigma'])
-            vsite_dict_units['charge_increments'] = deserialize_quantity(
+            vsite_dict_units['charge_increments'] = string_to_quantity(
                 vsite_dict['charge_increments'])
 
             # Call the correct molecule._add_X_virtual_site function, based on the stated type
             if vsite_dict_units['vsite_type'] == "BondChargeVirtualSite":
                 del vsite_dict_units['vsite_type']
-                vsite_dict_units['distance'] = deserialize_quantity(
+                vsite_dict_units['distance'] = string_to_quantity(
                     vsite_dict['distance'])
                 self._add_bond_charge_virtual_site(**vsite_dict_units)
 
             elif vsite_dict_units[
                     'vsite_type'] == "MonovalentLonePairVirtualSite":
                 del vsite_dict_units['vsite_type']
-                vsite_dict_units['distance'] = deserialize_quantity(
+                vsite_dict_units['distance'] = string_to_quantity(
                     vsite_dict['distance'])
-                vsite_dict_units['in_plane_angle'] = deserialize_quantity(
+                vsite_dict_units['in_plane_angle'] = string_to_quantity(
                     vsite_dict['in_plane_angle'])
-                vsite_dict_units['out_of_plane_angle'] = deserialize_quantity(
+                vsite_dict_units['out_of_plane_angle'] = string_to_quantity(
                     vsite_dict['out_of_plane_angle'])
                 self._add_monovalent_lone_pair_virtual_site(**vsite_dict_units)
 
             elif vsite_dict_units[
                     'vsite_type'] == "DivalentLonePairVirtualSite":
                 del vsite_dict_units['vsite_type']
-                vsite_dict_units['distance'] = deserialize_quantity(
+                vsite_dict_units['distance'] = string_to_quantity(
                     vsite_dict['distance'])
-                vsite_dict_units['in_plane_angle'] = deserialize_quantity(
+                vsite_dict_units['in_plane_angle'] = string_to_quantity(
                     vsite_dict['in_plane_angle'])
-                vsite_dict_units['out_of_plane_angle'] = deserialize_quantity(
+                vsite_dict_units['out_of_plane_angle'] = string_to_quantity(
                     vsite_dict['out_of_plane_angle'])
                 self._add_divalent_lone_pair_virtual_site(**vsite_dict_units)
 
             elif vsite_dict_units[
                     'vsite_type'] == "TrivalentLonePairVirtualSite":
                 del vsite_dict_units['vsite_type']
-                vsite_dict_units['distance'] = deserialize_quantity(
+                vsite_dict_units['distance'] = string_to_quantity(
                     vsite_dict['distance'])
-                vsite_dict_units['in_plane_angle'] = deserialize_quantity(
+                vsite_dict_units['in_plane_angle'] = string_to_quantity(
                     vsite_dict['in_plane_angle'])
-                vsite_dict_units['out_of_plane_angle'] = deserialize_quantity(
+                vsite_dict_units['out_of_plane_angle'] = string_to_quantity(
                     vsite_dict['out_of_plane_angle'])
                 self._add_trivalent_lone_pair_virtual_site(**vsite_dict_units)
 
@@ -1722,7 +1717,7 @@ class FrozenMolecule(Serializable):
         else:
             self._conformers = list()
             for ser_conf in molecule_dict['conformers']:
-                # TODO: Update to use deserialize_quantity
+                # TODO: Update to use string_to_quantity
                 conformers_shape = ((self.n_atoms, 3))
                 conformer_unitless = deserialize_numpy(ser_conf,
                                                        conformers_shape)
@@ -1955,9 +1950,7 @@ class FrozenMolecule(Serializable):
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            charges = toolkit.compute_partial_charges_am1bcc(
-                self
-            )
+            charges = toolkit.compute_partial_charges_am1bcc(self)
         else:
             raise InvalidToolkitError(
                 'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
@@ -1966,8 +1959,8 @@ class FrozenMolecule(Serializable):
 
 
     def compute_partial_charges(self,
-                                quantum_chemical_method='AM1',
-                                partial_charge_method='Mulliken',
+                                #quantum_chemical_method='AM1-BCC',
+                                #partial_charge_method='None',
                                 toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         **Warning! Not Implemented!**
@@ -2006,8 +1999,8 @@ class FrozenMolecule(Serializable):
             toolkit = toolkit_registry
             charges = toolkit.compute_partial_charges_am1bcc(
                 self,
-                quantum_chemical_method=quantum_chemical_method,
-                partial_charge_method=partial_charge_method
+                #quantum_chemical_method=quantum_chemical_method,
+                #partial_charge_method=partial_charge_method
             )
         else:
             raise InvalidToolkitError(
@@ -2801,6 +2794,7 @@ class FrozenMolecule(Serializable):
         >>> topology = molecule.to_topology()
 
         """
+        from openforcefield.topology import Topology
         return Topology.from_molecules(self)
 
     @staticmethod
