@@ -32,20 +32,24 @@ from simtk.openmm import app
 from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL, ALLOWED_AROMATICITY_MODELS, DEFAULT_FRACTIONAL_BOND_ORDER_MODEL, ALLOWED_FRACTIONAL_BOND_ORDER_MODELS, DEFAULT_CHARGE_MODEL, GLOBAL_TOOLKIT_REGISTRY, ALLOWED_CHARGE_MODELS
 from openforcefield.utils.serialization import Serializable
+from openforcefield.utils import MessageException
 
 #=============================================================================================
 # Exceptions
 #=============================================================================================
 
 
-class DuplicateUniqueMoleculeError(Exception):
+class DuplicateUniqueMoleculeError(MessageException):
     """
     Exception for when the user provides indistinguishable unique molecules when trying to identify atoms from a PDB
     """
+    pass
 
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
+class NotBondedError(MessageException):
+    """
+    Exception for when a function requires a bond between two atoms, but none is present
+    """
+    pass
 
 
 #=============================================================================================
@@ -1754,8 +1758,8 @@ class Topology(Serializable):
 
         return oe_mol
 
-    def is_bonded(self, i, j):
-        """Returns True if the two atoms are bonded
+    def get_bond_between(self, i, j):
+        """Returns the bond between two atoms
 
         Parameters
         ----------
@@ -1764,8 +1768,8 @@ class Topology(Serializable):
 
         Returns
         -------
-        is_bonded : bool
-            True if atoms are bonded, False otherwise.
+        bond : TopologyBond
+            The bond between i and j.
 
         """
         if (type(i) is int) and (type(j) is int):
@@ -1784,9 +1788,30 @@ class Topology(Serializable):
                 if top_atom == atomi:
                     continue
                 if top_atom == atomj:
-                    return True
-        # If atomj wasn't found in any of atomi's bonds, then they aren't bonded.
-        return False
+                    return top_bond
+
+        raise NotBondedError('No bond between atom {} and {}'.format(i, j))
+
+
+    def is_bonded(self, i, j):
+        """Returns True if the two atoms are bonded
+
+        Parameters
+        ----------
+        i, j : int or TopologyAtom
+            Atoms or atom indices to check
+
+        Returns
+        -------
+        is_bonded : bool
+            True if atoms are bonded, False otherwise.
+
+        """
+        try:
+            self.get_bond_between(i, j)
+            return True
+        except NotBondedError:
+            return False
 
     def atom(self, atom_topology_index):
         """
