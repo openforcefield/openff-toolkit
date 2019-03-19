@@ -2495,14 +2495,15 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                            "AmberToolsToolkitWrapper.compute_partial_charges_am1bcc()"))
 
         if len(molecule._conformers) == 0:
-            raise Exception(
+            raise ValueError(
                 "No conformers present in molecule submitted for partial charge calculation. Consider "
                 "loading the molecule from a file with geometry already present or running "
                 "molecule.generate_conformers() before calling molecule.compute_partial_charges"
             )
         if len(molecule._conformers) > 1:
-            logger.warn("In AmberToolsToolkitwrapper.computer_partial_charges_am1bcc: Molecule '{}' has more than one "
-                        "conformer, but this function will only generate charges for the first one.".format(molecule.name))
+            logger.warning("In AmberToolsToolkitwrapper.computer_partial_charges_am1bcc: "
+                           "Molecule '{}' has more than one conformer, but this function "
+                           "will only generate charges for the first one.".format(molecule.name))
 
 
         # Compute charges
