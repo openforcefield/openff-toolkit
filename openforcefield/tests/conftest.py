@@ -48,25 +48,42 @@ def untar_full_alkethoh_and_freesolv_set():
 #=============================================================================================
 
 def pytest_addoption(parser):
-    """Add the pytest command line option --runslow.
+    """Add the pytest command line option --runslow and --failwip.
 
     If --runslow is not given, tests marked with pytest.mark.slow are
     skipped.
+
+    If --failwip is not give, tests marked with pytest.mark.wip are
+    xfailed.
     """
     parser.addoption(
         "--runslow", action="store_true", default=False, help="run slow tests"
     )
+    parser.addoption(
+        "--failwip", action="store_true", default=False, help="fail work in progress tests"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
-    if not config.getoption("runslow"):
-        # Mark for skipping all items marked as slow.
-        skip_slow = pytest.mark.skip(reason="need to set --runslow to run this test")
-        for item in items:
-            if "slow" in item.keywords:
-                item.add_marker(skip_slow)
-    else:
+
+    if config.getoption("runslow"):
         # If --runslow is given, we don't have to mark items for skipping,
         # but we need to extract the whole AlkEthOH and FreeSolv sets (see
         # test_forcefield::test_alkethoh/freesolv_parameters_assignment).
         untar_full_alkethoh_and_freesolv_set()
+    else:
+        # Mark for skipping all items marked as slow.
+        skip_slow = pytest.mark.skip(reason="specify --runslow pytest option to run this test.")
+        for item in items:
+            if "slow" in item.keywords:
+                item.add_marker(skip_slow)
+
+    # Mark work-in-progress tests for xfail.
+    if not config.getoption("failwip"):
+        xfail_wip_reason = ("This is a work in progress test. Specify "
+                            "--failwip pytest option to make this test fail.")
+        for item in items:
+            if 'wip' in item.keywords:
+                # Augment original reason.
+                reason = xfail_wip_reason + item.get_closest_marker('wip').kwargs.get('reason', '')
+                item.add_marker(pytest.mark.xfail(reason=reason))

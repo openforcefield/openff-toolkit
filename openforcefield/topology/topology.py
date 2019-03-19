@@ -865,7 +865,7 @@ class Topology(Serializable):
         elif isinstance(other, FrozenMolecule):
             self.from_molecules([other])
         elif isinstance(other, OrderedDict):
-            self.initialize_from_dict(other)
+            self._initialize_from_dict(other)
 
     def _initialize(self):
         """

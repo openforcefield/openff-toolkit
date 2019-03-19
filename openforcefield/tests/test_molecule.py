@@ -23,6 +23,7 @@ TODO:
 #=============================================================================================
 
 import copy
+import os
 import pickle
 from tempfile import NamedTemporaryFile
 
@@ -129,17 +130,55 @@ def is_three_memebered_ring_torsion(torsion):
 # FIXTURES
 #=============================================================================================
 
-def mini_drug_bank():
-    """Load the full MiniDrugBank into Molecule objects."""
+def mini_drug_bank(xfail_mols=None, wip_mols=None):
+    """Load the full MiniDrugBank into Molecule objects.
+
+    Parameters
+    ----------
+    xfail_mols : Dict[str, str or None]
+        Dictionary mapping the molecule names that are allowed to
+        failed to the failure reason.
+    wip_mols : Dict[str, str or None]
+        Dictionary mapping the molecule names that are work in progress
+        to the failure reason.
+
+    """
     # If we have already loaded the data set, return the cached one.
     if mini_drug_bank.molecules is not None:
         molecules = mini_drug_bank.molecules
     else:
         # Load the dataset.
         file_path = get_data_filename('molecules/MiniDrugBank_tripos.mol2')
-        molecules = Molecule.from_file(file_path, exception_if_undefined_stereo=False)
-        molecules = [mol for mol in molecules if mol is not None]
+        molecules = Molecule.from_file(file_path, allow_undefined_stereo=True)
+        # print([i for i, mol in enumerate(molecules) if mol is not None if mol.name == 'DrugBank_2210'])
+        # molecules = [mol for mol in molecules if mol is not None if mol.name == 'DrugBank_2210']
         mini_drug_bank.molecules = molecules
+
+    # Check if we need to mark anything.
+    if xfail_mols is None and wip_mols is None:
+        return molecules
+
+    # Handle mutable default.
+    if xfail_mols is None:
+        xfail_mols = {}
+    if wip_mols is None:
+        wip_mols = {}
+    # There should be no molecule in both dictionaries.
+    assert len(set(xfail_mols).intersection(set(wip_mols))) == 0
+
+    # Don't modify the cached molecules.
+    molecules = copy.deepcopy(molecules)
+    for i, mol in enumerate(molecules):
+        if mol.name in xfail_mols:
+            marker = pytest.mark.xfail(reason=xfail_mols[mol.name])
+        elif mol.name in wip_mols:
+            marker = pytest.mark.wip(reason=wip_mols[mol.name])
+        else:
+            marker = None
+
+        if marker is not None:
+            molecules[i] = pytest.param(mol, marks=marker)
+
     return molecules
 
 # Use a "static" variable as a workaround as fixtures cannot be
@@ -151,32 +190,19 @@ mini_drug_bank.molecules = None
 # TESTS
 #=============================================================================================
 
-@requires_openeye
-class TestMolecule:
+class TestAtom:
+    """Test Atom class."""
 
-    # TODO: Test getstate/setstate
-    # TODO: Test {to_from}_{dict|yaml|toml|json|bson|messagepack|pickle}
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_pickle(self, molecule):
-        """Test pickling"""
-        serialized = pickle.dumps(molecule)
-        molecule_copy = pickle.loads(serialized)
-        assert molecule == molecule_copy
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_to_from_dict(self, molecule):
-        """Test to_dict and from_dict functions"""
-        serialized = molecule.to_dict()
-        molecule_copy = Molecule.from_dict(serialized)
-        assert molecule == molecule_copy
-
-    def test_create_atom(self):
+    def test_atom_constructor(self):
         """Test Atom creation"""
         # Create a non-aromatic carbon atom
-        atom = Atom(6, 0, False)
+        atom1 = Atom(6, 0, False)
+        assert atom1.atomic_number == 6
+        assert atom1.formal_charge == 0
+
         # Create a chiral carbon atom
-        atom = Atom(6, 0, False, stereochemistry='R', name='CT')
+        atom2 = Atom(6, 0, False, stereochemistry='R', name='CT')
+        assert atom1.stereochemistry != atom2.stereochemistry
 
     def test_atom_properties(self):
         """Test that atom properties are correctly populated and gettable"""
@@ -196,20 +222,375 @@ class TestMolecule:
             assert atom.is_aromatic == is_aromatic
             assert atom.name == this_element.name
 
-    def test_create_molecule(self):
-        """Test creation of molecule by adding molecules and bonds"""
-        # Define a methane molecule
+
+@requires_openeye
+class TestMolecule:
+    """Test Molecule class."""
+
+    # TODO: Test getstate/setstate
+    # TODO: Test {to_from}_{dict|yaml|toml|json|bson|messagepack|pickle}
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_pickle_serialization(self, molecule):
+        """Test pickling of a molecule object."""
+        serialized = pickle.dumps(molecule)
+        molecule_copy = pickle.loads(serialized)
+        assert molecule == molecule_copy
+
+    # ----------------------------------------------------
+    # Test Molecule constructors and conversion utilities.
+    # ----------------------------------------------------
+
+    def test_create_empty(self):
+        """Test empty constructor."""
         molecule = Molecule()
-        molecule.name = 'methane'
-        C = molecule.add_atom(6, 0, False)
-        H1 = molecule.add_atom(1, 0, False)
-        H2 = molecule.add_atom(1, 0, False)
-        H3 = molecule.add_atom(1, 0, False)
-        H4 = molecule.add_atom(1, 0, False)
-        molecule.add_bond(C, H1, 1, False)
-        molecule.add_bond(C, H2, 1, False)
-        molecule.add_bond(C, H3, 1, False)
-        molecule.add_bond(C, H4, 1, False)
+        assert len(molecule.atoms) == 0
+        assert len(molecule.bonds) == 0
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_create_copy(self, molecule):
+        """Test copy constructor."""
+        molecule_copy = Molecule(molecule)
+        assert molecule_copy == molecule
+
+    # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
+    @pytest.mark.slow
+    def test_create_from_file(self):
+        """Test standard constructor taking a filename or file-like object."""
+        # TODO: Expand test to both openeye and rdkit toolkits
+        filename = get_data_filename('molecules/toluene.mol2')
+
+        molecule1 = Molecule(filename, allow_undefined_stereo=True)
+        with open(filename, 'r') as infile:
+            molecule2 = Molecule(infile, file_format='MOL2', allow_undefined_stereo=True)
+        assert molecule1 == molecule2
+
+        import gzip
+        with gzip.GzipFile(filename + '.gz', 'r') as infile:
+            molecule3 = Molecule(infile, file_format='MOL2', allow_undefined_stereo=True)
+        assert molecule3 == molecule1
+
+        # Ensure that attempting to initialize a single Molecule from a file
+        # containing multiple molecules raises a ValueError
+        with pytest.raises(ValueError) as exc_info:
+            filename = get_data_filename('molecules/zinc-subset-tripos.mol2.gz')
+            molecule = Molecule(filename, allow_undefined_stereo=True)
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_create_from_serialized(self, molecule):
+        """Test standard constructor taking the output of __getstate__()."""
+        serialized_molecule = molecule.__getstate__()
+        molecule_copy = Molecule(serialized_molecule)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_to_from_dict(self, molecule):
+        """Test that conversion/creation of a molecule to and from a dict is consistent."""
+        serialized = molecule.to_dict()
+        molecule_copy = Molecule.from_dict(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_to_networkx(self, molecule):
+        """Test conversion to NetworkX graph."""
+        graph = molecule.to_networkx()
+
+    @requires_rdkit
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    @pytest.mark.wip(reason="Most of these tests still fail and we still need to understand what's going on.")
+    def test_to_from_rdkit(self, molecule):
+        """Test that conversion/creation of a molecule to and from an RDKit rdmol is consistent."""
+        # TODO: Most of the test cases fail for this!
+        toolkit_wrapper = RDKitToolkitWrapper()
+        # Using ZINC test set
+        #known_failures = ['ZINC17060065', 'ZINC16448882', 'ZINC15772239','ZINC11539132',
+        #                  'ZINC05975187', 'ZINC17111082', 'ZINC00265517']
+        # Using DrugBank test set
+        known_failures = {}#['DrugBank_349', 'DrugBank_1420', 'DrugBank_1671', 'DrugBank_4346']
+        failures = []
+        #fail_smileses = []
+        if molecule.name in known_failures:
+            return
+        rdmol = molecule.to_rdkit()
+        molecule_copy1 = Molecule(rdmol)
+        molecule_copy2 = Molecule.from_rdkit(rdmol)
+        for molecule_copy in [molecule_copy1, molecule_copy2]:
+            assert molecule == molecule_copy
+
+        # if not(molecule == molecule_copy):
+        #     failures.append(molecule)
+        # print("n_failures", len(failures))
+        # if not(molecule.to_dict() == molecule_copy.to_dict()):
+        #mol_smi = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+        #mol_copy_smi = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
+        # TODO: If I use OE to generate the SMILESes, 91/365 molecules don't match. What is going on?
+        #if not (mol_smi == mol_copy_smi):
+        #    failures.append(molecule.name)
+        #    fail_smileses.append((molecule.to_smiles(toolkit_registry=toolkit_wrapper),
+        #                          molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)))
+        #assert mol_smi == mol_copy_smi
+        #print(len(self.molecules))
+        #print(len(failures))
+        #for name, (smi1, smi2) in zip(failures, fail_smileses):
+        #    print(name)
+        #    print(smi1)
+        #    print(smi2)
+
+    # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
+    @requires_openeye
+    @pytest.mark.parametrize('molecule', mini_drug_bank(
+        xfail_mols={
+            'DrugBank_2397': 'OpenEye cannot generate a correct IUPAC name and raises a "Warning: Incorrect name:" or simply return "BLAH".',
+            'DrugBank_2543': 'OpenEye cannot generate a correct IUPAC name and raises a "Warning: Incorrect name:" or simply return "BLAH".',
+            'DrugBank_2642': 'OpenEye cannot generate a correct IUPAC name and raises a "Warning: Incorrect name:" or simply return "BLAH".',
+        },
+        wip_mols={
+            'DrugBank_1212': 'the roundtrip generates molecules with very different IUPAC/SMILES!',
+            'DrugBank_2210': 'the roundtrip generates molecules with very different IUPAC/SMILES!',
+            'DrugBank_4584': 'the roundtrip generates molecules with very different IUPAC/SMILES!',
+
+            'DrugBank_390': 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
+            'DrugBank_810': 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
+            'DrugBank_4316': 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
+            'DrugBank_7124': 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
+
+            'DrugBank_4346': 'raises warning "Failed to parse name:"',
+        }
+    ))
+    def test_to_from_iupac(self, molecule):
+        """Test that conversion/creation of a molecule to and from a IUPAC name is consistent."""
+        from openforcefield.utils.toolkits import UndefinedStereochemistryError
+
+        # All the molecules that raise UndefinedStereochemistryError in Molecule.from_iupac()
+        undefined_stereo_mols = {'DrugBank_977', 'DrugBank_1634', 'DrugBank_1700', 'DrugBank_1962',
+                                 'DrugBank_2148', 'DrugBank_2178', 'DrugBank_2186', 'DrugBank_2208',
+                                 'DrugBank_2519', 'DrugBank_2538', 'DrugBank_2592', 'DrugBank_2651',
+                                 'DrugBank_2987', 'DrugBank_3332', 'DrugBank_3502', 'DrugBank_3622',
+                                 'DrugBank_3726', 'DrugBank_3844', 'DrugBank_3930', 'DrugBank_4161',
+                                 'DrugBank_4162', 'DrugBank_4778', 'DrugBank_4593', 'DrugBank_4959',
+                                 'DrugBank_5043', 'DrugBank_5076', 'DrugBank_5176', 'DrugBank_5418',
+                                 'DrugBank_5737', 'DrugBank_5902', 'DrugBank_6304', 'DrugBank_6305',
+                                 'DrugBank_6329', 'DrugBank_6355', 'DrugBank_6401', 'DrugBank_6509',
+                                 'DrugBank_6531', 'DrugBank_6647',
+
+                                 # These test cases are allowed to fail.
+                                 'DrugBank_390', 'DrugBank_810', 'DrugBank_4316', 'DrugBank_4346',
+                                 'DrugBank_7124'
+                                 }
+        undefined_stereo = molecule.name in undefined_stereo_mols
+
+        iupac = molecule.to_iupac()
+
+        if undefined_stereo:
+            with pytest.raises(UndefinedStereochemistryError):
+                Molecule.from_iupac(iupac)
+
+        molecule_copy = Molecule.from_iupac(iupac, allow_undefined_stereo=undefined_stereo)
+        assert molecule.is_isomorphic(molecule_copy, compare_atom_stereochemistry=not undefined_stereo)
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_to_from_topology(self, molecule):
+        """Test that conversion/creation of a molecule to and from a Topology is consistent."""
+        topology = molecule.to_topology()
+        molecule_copy = Molecule.from_topology(topology)
+        assert molecule == molecule_copy
+
+    # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    @pytest.mark.parametrize('format', [
+        'mol2',
+        'sdf',
+        pytest.param('pdb', marks=pytest.mark.wip(reason='Read from pdb has not bee implemented properly yet'))
+    ])
+    def test_to_from_file(self, molecule, format):
+        """Test that conversion/creation of a molecule to and from a file is consistent."""
+        from openforcefield.utils.toolkits import UndefinedStereochemistryError
+        # TODO: Test all file capabilities; the current test is minimal
+
+        # TODO: This is only for OE. Expand to both OE and RDKit toolkits.
+        # Molecules that are known to raise UndefinedStereochemistryError.
+        undefined_stereo_mols = {'DrugBank_1700', 'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
+                                 'DrugBank_4162', 'DrugBank_6531'}
+        undefined_stereo = molecule.name in undefined_stereo_mols
+
+        # The file is automatically deleted outside the with-clause.
+        with NamedTemporaryFile(suffix='.' + format) as iofile:
+            # If this has undefined stereo, check that the exception is raised.
+            extension = os.path.splitext(iofile.name)[1][1:]
+            molecule.to_file(iofile.name, extension)
+            if undefined_stereo:
+                with pytest.raises(UndefinedStereochemistryError):
+                    Molecule.from_file(iofile.name)
+            molecule2 = Molecule.from_file(iofile.name, allow_undefined_stereo=undefined_stereo)
+            assert molecule == molecule2
+            # TODO: Test to make sure properties are preserved?
+            # NOTE: We can't read pdb files and expect chemical information to be preserved
+
+    @requires_openeye
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_to_from_oemol(self, molecule):
+        """Test that conversion/creation of a molecule to and from a OEMol is consistent."""
+        from openforcefield.utils.toolkits import UndefinedStereochemistryError
+
+        # Known failures raise an UndefinedStereochemistryError, but
+        # the round-trip SMILES representation with the OpenEyeToolkit
+        # doesn't seem to be affected.
+
+        # ZINC test set known failures.
+        # known_failures = {'ZINC05964684', 'ZINC05885163', 'ZINC05543156', 'ZINC17211981',
+        #                   'ZINC17312986', 'ZINC06424847', 'ZINC04963126'}
+
+        # DrugBank test set known failures.
+        undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1700', 'DrugBank_1962',
+                                 'DrugBank_2519', 'DrugBank_2987', 'DrugBank_3502',
+                                 'DrugBank_3930', 'DrugBank_4161', 'DrugBank_4162',
+                                 'DrugBank_5043', 'DrugBank_5418', 'DrugBank_6531'}
+        undefined_stereo = molecule.name in undefined_stereo_mols
+
+        error_messages = [
+            "Molecule(oemol) constructor failed",
+            "Molecule.to_openeye()/from_openeye() round trip failed"
+        ]
+
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+
+        oemol = molecule.to_openeye()
+        molecule_copies = []
+
+        # If this is a known failure, check that it raises UndefinedStereochemistryError
+        # and proceed with the test ignoring it.
+        if undefined_stereo:
+            with pytest.raises(UndefinedStereochemistryError):
+                Molecule(oemol)
+        else:
+            molecule_copies.append(Molecule(oemol))
+        molecule_copies.append(Molecule.from_openeye(oemol, allow_undefined_stereo=undefined_stereo))
+
+        molecule_smiles = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+        for molecule_copy, error_msg in zip(molecule_copies, error_messages):
+            # Check that the original and the copied molecules have the same SMILES representation.
+            molecule_copy_smiles = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
+            assert molecule_smiles == molecule_copy_smiles
+
+            # Check that the two topologies are isomorphic.
+            assert_molecule_is_equal(molecule, molecule_copy, error_msg)
+
+    # ----------------------------------------------------
+    # Test properties.
+    # ----------------------------------------------------
+
+    def test_name(self):
+        """Test Molecule name property"""
+        molecule1 = Molecule()
+        molecule1.name = None
+
+        molecule2 = Molecule()
+        molecule2.name = ''
+        assert molecule1.name == molecule2.name
+
+        name = 'benzene'
+        molecule = Molecule()
+        molecule.name = name
+        assert molecule.name == name
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_n_particles(self, molecule):
+        """Test n_particles property"""
+        n_particles = sum([1 for particle in molecule.particles])
+        assert n_particles == molecule.n_particles
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_n_atoms(self, molecule):
+        """Test n_atoms property"""
+        n_atoms = sum([1 for atom in molecule.atoms])
+        assert n_atoms == molecule.n_atoms
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_n_virtual_sites(self, molecule):
+        """Test n_virtual_sites property"""
+        n_virtual_sites = sum([1 for virtual_site in molecule.virtual_sites])
+        assert n_virtual_sites == molecule.n_virtual_sites
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_n_bonds(self, molecule):
+        """Test n_bonds property"""
+        n_bonds = sum([1 for bond in molecule.bonds])
+        assert n_bonds == molecule.n_bonds
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_angles(self, molecule):
+        """Test angles property"""
+        for angle in molecule.angles:
+            assert angle[0].is_bonded_to(angle[1])
+            assert angle[1].is_bonded_to(angle[2])
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_propers(self, molecule):
+        """Test propers property"""
+        for proper in molecule.propers:
+            # The bonds should be in order 0-1-2-3 unless the
+            # atoms form a three- or four-membered ring.
+            is_chain = proper[0].is_bonded_to(proper[1])
+            is_chain &= proper[1].is_bonded_to(proper[2])
+            is_chain &= proper[2].is_bonded_to(proper[3])
+            is_chain &= not proper[0].is_bonded_to(proper[2])
+            is_chain &= not proper[0].is_bonded_to(proper[3])
+            is_chain &= not proper[1].is_bonded_to(proper[3])
+
+            assert (is_chain or
+                    is_three_memebered_ring_torsion(proper) or
+                    is_four_memebered_ring_torsion(proper))
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_impropers(self, molecule):
+        """Test impropers property"""
+        for improper in molecule.impropers:
+            assert improper[0].is_bonded_to(improper[1])
+            assert improper[1].is_bonded_to(improper[2])
+            assert improper[1].is_bonded_to(improper[3])
+
+            # The non-central atoms can be connected only if
+            # the improper atoms form a three-membered ring.
+            is_not_cyclic = not((improper[0].is_bonded_to(improper[2])) or
+                                (improper[0].is_bonded_to(improper[3])) or
+                                (improper[2].is_bonded_to(improper[3])))
+            assert is_not_cyclic or is_three_memebered_ring_torsion(improper)
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_torsions(self, molecule):
+        """Test torsions property"""
+        # molecule.torsions should be exactly equal to the union of propers and impropers.
+        assert set(molecule.torsions) == set(molecule.propers) | set(molecule.impropers)
+
+        # The intersection of molecule.propers and molecule.impropers should be largely null.
+        # The only exception is for molecules containing 3-membered rings (e.g., DrugBank_5514).
+        common_torsions = molecule.propers & molecule.impropers
+        if len(common_torsions) > 0:
+            for torsion in common_torsions:
+                assert is_three_memebered_ring_torsion(torsion)
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_total_charge(self, molecule):
+        """Test total charge"""
+        total_charge = sum([atom.formal_charge for atom in molecule.atoms])
+        assert total_charge == molecule.total_charge
+
+    # ----------------------------------------------------
+    # Test magic methods.
+    # ----------------------------------------------------
+
+    def test_equality(self):
+        """Test equality operator"""
+        molecules = mini_drug_bank()
+        nmolecules = len(molecules)
+        # TODO: Performance improvements should let us un-restrict this test
+        for i in range(nmolecules):
+            for j in range(i, min(i+3, nmolecules)):
+                assert (molecules[i] == molecules[j]) == (i == j)
+
+    # ----------------------
+    # Test Molecule methods.
+    # ----------------------
 
     def test_add_conformers(self):
         """Test addition of conformers to a molecule"""
@@ -289,101 +670,6 @@ class TestMolecule:
                                   [10.,11.,12.],[13.,14.,15]])
         with pytest.raises(Exception) as excinfo:
             molecule.add_conformer(conf_unitless)
-
-    def test_create_empty(self):
-        """Test creation of an empty Molecule"""
-        molecule = Molecule()
-
-    def test_molecule_name(self):
-        """Test Molecule name property"""
-        molecule1 = Molecule()
-        molecule1.name = None
-
-        molecule2 = Molecule()
-        molecule2.name = ''
-        assert molecule1.name == molecule2.name
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_create_copy(self, molecule):
-        """Test creation of a Molecule from another Molecule"""
-        molecule_copy = Molecule(molecule)
-        assert molecule_copy == molecule
-
-    @requires_rdkit
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_create_rdkit(self, molecule):
-        """Test creation of a molecule from an RDKit rdmol"""
-        toolkit_wrapper = RDKitToolkitWrapper()
-        # Using ZINC test set
-        #known_failures = ['ZINC17060065', 'ZINC16448882', 'ZINC15772239','ZINC11539132',
-        #                  'ZINC05975187', 'ZINC17111082', 'ZINC00265517']
-        # Using DrugBank test set
-        known_failures = ['DrugBank_349', 'DrugBank_1420', 'DrugBank_1671', 'DrugBank_4346']
-        failures = []
-        #fail_smileses = []
-        if molecule.name in known_failures:
-            return
-        rdmol = molecule.to_rdkit()
-        molecule_copy = Molecule(rdmol)
-        if not(molecule == molecule_copy):
-            failures.append(molecule)
-        print("n_failures", len(failures))
-        # if not(molecule.to_dict() == molecule_copy.to_dict()):
-        #mol_smi = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-        #mol_copy_smi = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
-        # TODO: If I use OE to generate the SMILESes, 91/365 molecules don't match. What is going on?
-        #if not (mol_smi == mol_copy_smi):
-        #    failures.append(molecule.name)
-        #    fail_smileses.append((molecule.to_smiles(toolkit_registry=toolkit_wrapper),
-        #                          molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)))
-        #assert mol_smi == mol_copy_smi
-        #print(len(self.molecules))
-        #print(len(failures))
-        #for name, (smi1, smi2) in zip(failures, fail_smileses):
-        #    print(name)
-        #    print(smi1)
-        #    print(smi2)
-
-    #These should be toolkit tests
-    @pytest.mark.skip
-    def test_create_from_file(self):
-        """Test creation of a molecule from a filename or file-like object"""
-        # TODO: Expand test to both openeye and rdkit toolkits
-        filename = get_data_filename('molecules/toluene.mol2')
-        molecule1 = Molecule(filename)
-        with open(filename, 'r') as infile:
-            molecule2 = Molecule(infile, file_format='MOL2')
-        assert molecule1 == molecule2
-        import gzip
-        with gzip.GzipFile(filename + '.gz', 'r') as infile:
-            molecule3 = Molecule(infile, file_format='MOL2')
-        assert molecule3 == molecule1
-
-        # Ensure that attempting to initialize a single Molecule from a file containing multiple molecules raises a ValueError
-        with pytest.raises(ValueError) as exc_info:
-            filename = get_data_filename('molecules/zinc-subset-tripos.mol2.gz')
-            molecule = Molecule(filename)
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_create_from_serialized(self, molecule):
-        """Test creation from serialized molecule"""
-        serialized_molecule = molecule.__getstate__()
-        molecule_copy = Molecule(serialized_molecule)
-        assert molecule == molecule_copy
-
-    def test_equality(self):
-        """Test equality operator"""
-        molecules = mini_drug_bank()
-        nmolecules = len(molecules)
-        # TODO: Performance improvements should let us un-restrict this test
-        for i in range(nmolecules):
-            for j in range(i, min(i+3, nmolecules)):
-                assert (molecules[i] == molecules[j]) == (i == j)
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_to_networkx(self, molecule):
-        """Test generation of NetworkX graphs"""
-        graph = molecule.to_networkx()
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_add_atoms_and_bonds(self, molecule):
@@ -599,89 +885,6 @@ class TestMolecule:
         molecule2 = Molecule.from_dict(molecule_dict)
         assert molecule.to_dict() == molecule2.to_dict()
 
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_n_particles(self, molecule):
-        """Test n_particles property"""
-        n_particles = sum([1 for particle in molecule.particles])
-        assert n_particles == molecule.n_particles
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_n_atoms(self, molecule):
-        """Test n_atoms property"""
-        n_atoms = sum([1 for atom in molecule.atoms])
-        assert n_atoms == molecule.n_atoms
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_n_virtual_sites(self, molecule):
-        """Test n_virtual_sites property"""
-        n_virtual_sites = sum([1 for virtual_site in molecule.virtual_sites])
-        assert n_virtual_sites == molecule.n_virtual_sites
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_n_bonds(self, molecule):
-        """Test n_bonds property"""
-        n_bonds = sum([1 for bond in molecule.bonds])
-        assert n_bonds == molecule.n_bonds
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_angles(self, molecule):
-        """Test angles property"""
-        for angle in molecule.angles:
-            assert angle[0].is_bonded_to(angle[1])
-            assert angle[1].is_bonded_to(angle[2])
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_propers(self, molecule):
-        """Test propers property"""
-        for proper in molecule.propers:
-            # The bonds should be in order 0-1-2-3 unless the
-            # atoms form a three- or four-membered ring.
-            is_chain = proper[0].is_bonded_to(proper[1])
-            is_chain &= proper[1].is_bonded_to(proper[2])
-            is_chain &= proper[2].is_bonded_to(proper[3])
-            is_chain &= not proper[0].is_bonded_to(proper[2])
-            is_chain &= not proper[0].is_bonded_to(proper[3])
-            is_chain &= not proper[1].is_bonded_to(proper[3])
-
-            assert (is_chain or
-                    is_three_memebered_ring_torsion(proper) or
-                    is_four_memebered_ring_torsion(proper))
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_impropers(self, molecule):
-        """Test impropers property"""
-
-        for improper in molecule.impropers:
-            assert improper[0].is_bonded_to(improper[1])
-            assert improper[1].is_bonded_to(improper[2])
-            assert improper[1].is_bonded_to(improper[3])
-
-            # The non-central atoms can be connected only if
-            # the improper atoms form a three-membered ring.
-            is_not_cyclic = not((improper[0].is_bonded_to(improper[2])) or
-                                (improper[0].is_bonded_to(improper[3])) or
-                                (improper[2].is_bonded_to(improper[3])))
-            assert is_not_cyclic or is_three_memebered_ring_torsion(improper)
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_torsions(self, molecule):
-        """Test torsions property"""
-        # molecule.torsions should be exactly equal to the union of propers and impropers.
-        assert set(molecule.torsions) == set(molecule.propers) | set(molecule.impropers)
-
-        # The intersection of molecule.propers and molecule.impropers should be largely null.
-        # The only exception is for molecules containing 3-membered rings (e.g., DrugBank_5514).
-        common_torsions = molecule.propers & molecule.impropers
-        if len(common_torsions) > 0:
-            for torsion in common_torsions:
-                assert is_three_memebered_ring_torsion(torsion)
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_total_charge(self, molecule):
-        """Test total charge"""
-        total_charge = sum([atom.formal_charge for atom in molecule.atoms])
-        assert total_charge == molecule.total_charge
-
     @OpenEyeToolkitWrapper.requires_toolkit()
     def test_chemical_environment_matches_OE(self):
         """Test chemical environment matches"""
@@ -757,122 +960,6 @@ class TestMolecule:
         assert len(matches) == 4 # there should be four matches
         for match in matches:
             assert len(match) == 2 # each match should have two tagged atoms
-
-    def test_name(self):
-        """Test name property"""
-        name = 'benzene'
-        molecule = Molecule()
-        molecule.name = name
-        assert molecule.name == name
-
-    # TODO: This should be a toolkit test
-    @requires_openeye
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_iupac_roundtrip(self, molecule):
-        """Test IUPAC conversion"""
-        known_failures = ['DrugBank_390', 'DrugBank_810', 'DrugBank_977', 'DrugBank_1212',
-                          'DrugBank_1634', 'DrugBank_1962', 'DrugBank_2148', 'DrugBank_2178',
-                          'DrugBank_2186', 'DrugBank_2208', 'DrugBank_2210', 'DrugBank_2397',
-                          'DrugBank_2519', 'DrugBank_2538', 'DrugBank_2543', 'DrugBank_2592',
-                          'DrugBank_2642', 'DrugBank_2651', 'DrugBank_3332', 'DrugBank_3622',
-                          'DrugBank_3726', 'DrugBank_3844', 'DrugBank_3930', 'DrugBank_4316',
-                          'DrugBank_4346', 'DrugBank_4584', 'DrugBank_4593', 'DrugBank_4778',
-                          'DrugBank_4959', 'DrugBank_5043', 'DrugBank_5076', 'DrugBank_5176',
-                          'DrugBank_5418', 'DrugBank_5737', 'DrugBank_5902', 'DrugBank_6304',
-                          'DrugBank_6305', 'DrugBank_6329', 'DrugBank_6355', 'DrugBank_6401',
-                          'DrugBank_6509', 'DrugBank_6647', 'DrugBank_7124']
-
-        if molecule.name in known_failures:
-            return
-        iupac = molecule.to_iupac()
-        molecule_copy = Molecule.from_iupac(iupac)
-        assert molecule == molecule_copy
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_topology_roundtrip(self, molecule):
-        """Test Topology round-trip"""
-        topology = molecule.to_topology()
-        molecule_copy = Molecule.from_topology(topology)
-        assert molecule == molecule_copy
-
-    # TODO: This should be a toolkit test
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_file_roundtrip(self, molecule):
-        """Test to/from file"""
-        import os
-        # TODO: Test all file capabilities; the current test is minimal
-        # TODO: This makes no sense as implemented (don't know which toolkit it uses for what). Make this separate tests in test_toolkits
-
-        # Write and read mol2 file
-        with NamedTemporaryFile(suffix='.mol2', delete=False) as iofile:
-            molecule.to_file(iofile.name, 'MOL2')
-            molecule2 = Molecule.from_file(iofile.name)
-            assert molecule == molecule2
-            # TODO: Test to make sure properties are preserved?
-            os.unlink(iofile.name)
-
-        # Write and read SDF file
-        with NamedTemporaryFile(suffix='.sdf', delete=False) as iofile:
-            molecule.to_file(iofile.name, 'SDF')
-            molecule2 = Molecule.from_file(iofile.name)
-            assert molecule == molecule2
-            # TODO: Test to make sure properties are preserved?
-            os.unlink(iofile.name)
-
-        # Write and read PDB file
-        with NamedTemporaryFile(suffix='.pdb', delete=False) as iofile:
-            molecule.to_file(iofile.name, 'PDB')
-            # NOTE: We can't read pdb files and expect chemical information to be preserved
-            os.unlink(iofile.name)
-
-    @requires_openeye
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_oemol_roundtrip(self, molecule):
-        """Test that Molecule creation from/conversion to OpenEye OEMol is consistent."""
-        from openforcefield.utils.toolkits import UndefinedStereochemistryError
-
-        # Known failures raise an UndefinedStereochemistryError, but
-        # the round-trip SMILES representation with the OpenEyeToolkit
-        # doesn't seem to be affected.
-
-        # ZINC test set known failures.
-        # known_failures = {'ZINC05964684', 'ZINC05885163', 'ZINC05543156', 'ZINC17211981',
-        #                   'ZINC17312986', 'ZINC06424847', 'ZINC04963126'}
-
-        # DrugBank test set known failures.
-        known_failures = {'DrugBank_1634', 'DrugBank_1700', 'DrugBank_1962',
-                          'DrugBank_2519', 'DrugBank_2987', 'DrugBank_3502',
-                          'DrugBank_3930', 'DrugBank_4161', 'DrugBank_4162',
-                          'DrugBank_5043', 'DrugBank_5418', 'DrugBank_6531'}
-
-        error_messages = [
-            "Molecule.to_openeye()/from_openeye() round trip failed",
-            "Molecule(oemol) constructor failed"
-        ]
-
-        toolkit_wrapper = OpenEyeToolkitWrapper()
-
-        oemol = molecule.to_openeye()
-        molecule_copies = []
-
-        # If this is a known failure, check that it raises UndefinedStereochemistryError
-        # and proceed with the test ignoring it.
-        if molecule.name in known_failures:
-            with pytest.raises(UndefinedStereochemistryError):
-                Molecule(oemol)
-            molecule_copies.append(Molecule.from_openeye(oemol, exception_if_undefined_stereo=False))
-        else:
-            molecule_copies.append(Molecule.from_openeye(oemol, exception_if_undefined_stereo=True))
-            molecule_copies.append(Molecule(oemol))
-
-        molecule_smiles = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-        for molecule_copy, error_msg in zip(molecule_copies, error_messages):
-            # Check that the original and the copied molecules have the same SMILES representation.
-            molecule_copy_smiles = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
-            assert molecule_smiles == molecule_copy_smiles
-
-            # Check that the two topologies are isomorphic.
-            assert_molecule_is_equal(molecule, molecule_copy, error_msg)
 
     @pytest.mark.slow
     def test_compute_partial_charges(self):

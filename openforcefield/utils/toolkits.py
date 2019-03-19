@@ -200,7 +200,7 @@ class ToolkitWrapper(object):
     def from_file(self,
                   filename,
                   file_format,
-                  exception_if_undefined_stereo=True):
+                  allow_undefined_stereo=False):
         """
         Return an openforcefield.topology.Molecule from a file using this toolkit.
         
@@ -211,9 +211,8 @@ class ToolkitWrapper(object):
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if any molecules contain undefined stereochemistry. If false, the function
-            skips loading the molecule.
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if any molecules contain undefined stereochemistry.
         Returns
         -------
         molecules : Molecule or list of Molecules
@@ -225,7 +224,7 @@ class ToolkitWrapper(object):
     def from_file_obj(self,
                       file_obj,
                       file_format,
-                      exception_if_undefined_stereo=True):
+                      allow_undefined_stereo=False):
         """
         Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using this
          toolkit.
@@ -237,8 +236,8 @@ class ToolkitWrapper(object):
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if any molecules contain undefined stereochemistry. If false, the function
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if any molecules contain undefined stereochemistry. If false, the function
             skips loading the molecule.
 
         Returns
@@ -369,7 +368,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     def from_file(self,
                   filename,
                   file_format,
-                  exception_if_undefined_stereo=True):
+                  allow_undefined_stereo=False):
         """
         Return an openforcefield.topology.Molecule from a file using this toolkit.
 
@@ -382,9 +381,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
-            loading the molecule.
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
 
         Returns
         -------
@@ -414,7 +412,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oechem.OE3DToInternalStereo(oemol)
             mol = Molecule.from_openeye(
                 oemol,
-                exception_if_undefined_stereo=exception_if_undefined_stereo)
+                allow_undefined_stereo=allow_undefined_stereo)
 
             mols.append(mol)
 
@@ -427,7 +425,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     def from_file_obj(self,
                       file_obj,
                       file_format,
-                      exception_if_undefined_stereo=True):
+                      allow_undefined_stereo=False):
         """
         Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using
         this toolkit.
@@ -441,9 +439,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
-            loading the molecule.
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
 
         Returns
         -------
@@ -466,7 +463,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oechem.OE3DToInternalStereo(oemol)
             mol = Molecule.from_openeye(
                 oemol,
-                exception_if_undefined_stereo=exception_if_undefined_stereo)
+                allow_undefined_stereo=allow_undefined_stereo)
             mols.append(mol)
         return mols
 
@@ -634,7 +631,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             return None
 
     @staticmethod
-    def from_openeye(oemol, exception_if_undefined_stereo=True):
+    def from_openeye(oemol, allow_undefined_stereo=False):
         """
         Create a Molecule from an OpenEye molecule.
 
@@ -644,9 +641,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         oemol : openeye.oechem.OEMol
             An OpenEye molecule
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
-            loading the molecule.
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
 
         Returns
         -------
@@ -717,10 +713,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     msg += describe_oeatom(problematic_atom) + '\n'
             if len(problematic_bonds) != 0:
                 msg += "Problematic bonds are: {}\n".format(problematic_bonds)
-            if exception_if_undefined_stereo:
-                raise UndefinedStereochemistryError(msg)
-            else:
+            if allow_undefined_stereo:
                 print(msg)
+            else:
+                raise UndefinedStereochemistryError(msg)
 
         # TODO: What other information should we preserve besides name?
         # TODO: How should we preserve the name?
@@ -1026,7 +1022,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if result == False:
                 raise Exception(
                     "Addition of explicit hydrogens failed in from_openeye")
-        # TODO: Add exception_if_undefined_stereo to this function, and pass to from_openeye?
+        # TODO: Add allow_undefined_stereo to this function, and pass to from_openeye?
         molecule = self.from_openeye(oemol)
         return molecule
 
@@ -1461,7 +1457,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     def from_file(self,
                   filename,
                   file_format,
-                  exception_if_undefined_stereo=True):
+                  allow_undefined_stereo=False):
         """
         Create an openforcefield.topology.Molecule from a file using this toolkit.
 
@@ -1475,9 +1471,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
-            loading the molecule.
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
 
         Returns
         -------
@@ -1503,7 +1498,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
                 mol = Molecule.from_rdkit(
                     rdmol,
-                    exception_if_undefined_stereo=exception_if_undefined_stereo
+                    allow_undefined_stereo=allow_undefined_stereo
                 )
 
                 mols.append(mol)
@@ -1533,7 +1528,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     def from_file_obj(self,
                       file_obj,
                       file_format,
-                      exception_if_undefined_stereo=True):
+                      allow_undefined_stereo=False):
         """
         Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using
         this toolkit.
@@ -1547,9 +1542,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
-            loading the molecule.
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
 
         Returns
         -------
@@ -1719,7 +1713,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             rdmol = Chem.AddHs(rdmol)
 
 
-        # TODO: Add exception_if_undefined_stereo to this function, and pass to from_rdkit?
+        # TODO: Add allow_undefined_stereo to this function, and pass to from_rdkit?
         molecule = Molecule.from_rdkit(rdmol)
 
         return molecule
@@ -1764,7 +1758,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
 
-    def from_rdkit(self, rdmol, exception_if_undefined_stereo=True):
+    def from_rdkit(self, rdmol, allow_undefined_stereo=False):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -1776,9 +1770,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         ----------
         rdmol : rkit.RDMol
             An RDKit molecule
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if rdmol contains undefined stereochemistry. If false, the function skips
-            loading the molecule.
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if rdmol contains undefined stereochemistry.
 
         Returns
         -------
@@ -1813,11 +1806,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         except RuntimeError as e:
             msg = "Unable to check stereochemistry for {}. Original error:\n".format(rdmol.GetProp('_Name'))
             msg += str(e)
-            if exception_if_undefined_stereo:
-                raise UndefinedStereochemistryError(msg)
-            else:
+            if allow_undefined_stereo:
                 stereoisomers = []
                 print(msg)
+            else:
+                raise UndefinedStereochemistryError(msg)
 
         # TODO: This will catch undefined tetrahedral centers, but not bond stereochemistry. How can we check for that?
         if len(stereoisomers) != 1:
@@ -1826,15 +1819,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         if unspec_stereo:
             msg = "RDMol has unspecified stereochemistry\n"
             msg += "RDMol name: " + rdmol.GetProp("_Name")
-            if exception_if_undefined_stereo:
-                raise UndefinedStereochemistryError(
-                    "Unable to make OFFMol from RDMol: " + msg
-                )
-            else:
+            if allow_undefined_stereo:
                 print(
                     "WARNING: " + msg
                 )
                 # TODO: Can we find a way to print more about the error here?
+            else:
+                raise UndefinedStereochemistryError(
+                    "Unable to make OFFMol from RDMol: " + msg
+                )
+
         # Create a new openforcefield Molecule
         mol = Molecule()
 
@@ -2092,34 +2086,46 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
 
-
-        #Assign atom stereochemsitry
+        # Assign atom stereochemsitry and collect atoms for which RDKit
+        # can't figure out chirality. The _CIPCode property of these atoms
+        # will be forcefully set to the stereo we want (see #196).
+        undefined_stereo_atoms = {}
         for index, atom in enumerate(molecule.atoms):
             rdatom = rdmol.GetAtomWithIdx(map_atoms[index])
-            if atom.stereochemistry:
-                if atom.stereochemistry == "R":
-                    desired_rdk_stereo_code = "R" # Yes, it's just a string
-                if atom.stereochemistry == "S":
-                    desired_rdk_stereo_code = "S"
-                # Let's randomly assign this atom's stereo to CW
-                rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
-                # We need to do force and cleanIt to recalculate CIP stereo
-                Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
-                # If our random initial assignment worked, then we're set
-                if rdatom.GetProp("_CIPCode") == desired_rdk_stereo_code:
-                    continue
-                # Otherwise, set it to CCW
-                rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CCW)
-                # We need to do force and cleanIt to recalculate CIP stereo
-                Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
-                # Hopefully this worked, otherwise something's wrong
-                if rdatom.GetProp("_CIPCode") == desired_rdk_stereo_code:
-                    continue
-                else:
-                    raise Exception("Unknown atom stereochemistry encountered in "
-                                    "to_rdkit. Desired stereochemistry: {}. Set stereochemistry {}".format(atom.stereochemistry,
-                                                                                                           rdatom.GetProp("_CIPCode")))
 
+            # Skip non-chiral atoms.
+            if atom.stereochemistry is None:
+                continue
+
+            # Let's randomly assign this atom's (local) stereo to CW
+            # and check if this causes the (global) stereo to be set
+            # to the desired one (S or R).
+            rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
+            # We need to do force and cleanIt to recalculate CIP stereo.
+            Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
+            # If our random initial assignment worked, then we're set.
+            if rdatom.HasProp('_CIPCode') and rdatom.GetProp("_CIPCode") == atom.stereochemistry:
+                continue
+
+            # Otherwise, set it to CCW.
+            rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CCW)
+            # We need to do force and cleanIt to recalculate CIP stereo.
+            Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
+            # Hopefully this worked, otherwise something's wrong
+            if rdatom.HasProp('_CIPCode') and rdatom.GetProp("_CIPCode") == atom.stereochemistry:
+                continue
+
+            # Keep track of undefined stereo atoms. We'll force stereochemistry
+            # at the end to avoid the next AssignStereochemistry to overwrite.
+            if not rdatom.HasProp('_CIPCode'):
+                undefined_stereo_atoms[rdatom] = atom.stereochemistry
+                continue
+
+            # Something is wrong.
+            err_msg = ("Unknown atom stereochemistry encountered in to_rdkit. "
+                       "Desired stereochemistry: {}. Set stereochemistry {}".format(
+                atom.stereochemistry, rdatom.GetProp("_CIPCode")))
+            raise RuntimeError(err_msg)
 
         # Assign bond stereochemistry
         for bond in molecule.bonds:
@@ -2197,8 +2203,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol.UpdatePropertyCache(strict=False)
         Chem.GetSSSR(rdmol)
         # I added AssignStereochemistry which takes the directions of the bond set
-        # and assigns the stereochemistry tags on the double bonds
+        # and assigns the stereochemistry tags on the double bonds.
         Chem.AssignStereochemistry(rdmol, force=False)
+
+        # Forcefully assign stereo information on the atoms that RDKit
+        # can't figure out. This must be done last as calling AssignStereochemistry
+        # again will delete these properties (see #196).
+        for rdatom, stereochemistry in undefined_stereo_atoms.items():
+            rdatom.SetProp('_CIPCode', stereochemistry)
 
         # Return non-editable version
         return Chem.Mol(rdmol)

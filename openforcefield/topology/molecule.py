@@ -231,6 +231,7 @@ class Atom(Particle):
         self._bonds = list()
         self._virtual_sites = list()
 
+    # TODO: Change this to add_bond(Bond) to improve encapsulation and extensibility?
     def add_bond(self, bond):
         """Adds a bond that this atom is involved in
         .. todo :: Is this how we want to keep records?
@@ -1407,7 +1408,8 @@ class FrozenMolecule(Serializable):
     def __init__(self,
                  other=None,
                  file_format=None,
-                 toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+                 toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+                 allow_undefined_stereo=False):
         """
         Create a new FrozenMolecule object
 
@@ -1430,12 +1432,15 @@ class FrozenMolecule(Serializable):
             * an ``rdkit.Chem.rdchem.Mol``
             * a serialized :class:`Molecule` object
         file_format : str, optional, default=None
-            If providing a file-like object, you must specify the format of the data. If providing a file, the file
-            format will attempt to be guessed from the suffix.
+            If providing a file-like object, you must specify the format
+            of the data. If providing a file, the file format will attempt
+            to be guessed from the suffix.
         toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
-            
-        
+        allow_undefined_stereo : bool, default=False
+            If loaded from a file and ``False``, raises an exception if
+            undefined stereochemistry is detected during the molecule's
+            construction.
 
         Examples
         --------
@@ -1517,7 +1522,8 @@ class FrozenMolecule(Serializable):
                 mol = Molecule.from_file(
                     other,
                     file_format=file_format,
-                    toolkit_registry=toolkit_registry
+                    toolkit_registry=toolkit_registry,
+                    allow_undefined_stereo=allow_undefined_stereo
                 )  # returns a list only if multiple molecules are found
                 if type(mol) == list:
                     raise ValueError(
@@ -1622,10 +1628,10 @@ class FrozenMolecule(Serializable):
         """
         # This implementation is a compromise to let this remain as a classmethod
         mol = cls()
-        mol.initialize_from_dict(molecule_dict)
+        mol._initialize_from_dict(molecule_dict)
         return mol
 
-    def initialize_from_dict(self, molecule_dict):
+    def _initialize_from_dict(self, molecule_dict):
         """
         Initialize this Molecule from a dictionary representation
 
@@ -1736,7 +1742,7 @@ class FrozenMolecule(Serializable):
         return self.to_dict()
 
     def __setstate__(self, state):
-        return self.initialize_from_dict(state)
+        return self._initialize_from_dict(state)
 
     def _initialize(self):
         """
@@ -1766,7 +1772,7 @@ class FrozenMolecule(Serializable):
         """
         #assert isinstance(other, type(self)), "can only copy instances of {}".format(type(self))
         other_dict = other.to_dict()
-        self.initialize_from_dict(other_dict)
+        self._initialize_from_dict(other_dict)
 
     def __eq__(self, other):
         """Test two molecules for equality to see if they are the chemical species, but do not check other annotated properties.
@@ -1845,29 +1851,49 @@ class FrozenMolecule(Serializable):
                 'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
-    def is_isomorphic(self, other):
+    def is_isomorphic(
+            self, other,
+            compare_atom_stereochemistry=True,
+            compare_bond_stereochemistry=True,
+    ):
         """
-        Determines whether the molecules are isomorphic by comparing their SMILESes
+        Determines whether the molecules are isomorphic by comparing their graphs.
 
         Parameters
         ----------
         other : an openforcefield.topology.molecule.FrozenMolecule
-            The molecule to test for isomorphism
+            The molecule to test for isomorphism.
+        compare_atom_stereochemistry : bool, optional
+            If ``False``, atoms' stereochemistry is ignored for the
+            purpose of determining equality. Default is ``True``.
+        compare_bond_stereochemistry : bool, optional
+            If ``False``, bonds' stereochemistry is ignored for the
+            purpose of determining equality. Default is ``True``.
         
         Returns
         -------
         molecules_are_isomorphic : bool
         """
         import networkx as nx
-        node_match_func = lambda x, y: ((x['atomic_number'] == y['atomic_number']) and
-                                        (x['is_aromatic'] == y['is_aromatic']) and
-                                        (x['stereochemistry'] == y['stereochemistry']) and
-                                        (x['formal_charge'] == y['formal_charge'])
-                                        )
-        edge_match_func = lambda x, y: ((x['bond_order'] == y['bond_order']) and
-                                        (x['is_aromatic'] == y['is_aromatic']) and
-                                        (x['stereochemistry'] == y['stereochemistry'])
-                                        )
+
+        def node_match_func(x, y):
+            is_equal = (
+                (x['atomic_number'] == y['atomic_number']) and
+                (x['is_aromatic'] == y['is_aromatic']) and
+                (x['formal_charge'] == y['formal_charge'])
+            )
+            if compare_atom_stereochemistry:
+                is_equal &= x['stereochemistry'] == y['stereochemistry']
+            return is_equal
+
+        def edge_match_func(x, y):
+            # We don't need to check the exact bond order (which is 1 or 2)
+            # if the bond is aromatic. This way we avoid missing a match only
+            # if the alternate bond orders 1 and 2 are assigned differently.
+            is_equal = x['is_aromatic'] == y['is_aromatic'] or x['bond_order'] == y['bond_order']
+            if compare_bond_stereochemistry:
+                is_equal &= x['stereochemistry'] == y['stereochemistry']
+            return is_equal
 
         return nx.is_isomorphic(self.to_networkx(),
                                 other.to_networkx(),
@@ -2686,13 +2712,15 @@ class FrozenMolecule(Serializable):
     # TODO: Move OE-dependent parts of this to toolkits.py
     @classmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
-    def from_iupac(cls, iupac_name):
+    def from_iupac(cls, iupac_name, **kwargs):
         """Generate a molecule from IUPAC or common name
 
         Parameters
         ----------
         iupac_name : str
             IUPAC name of molecule to be generated
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
 
         Returns
         -------
@@ -2721,7 +2749,7 @@ class FrozenMolecule(Serializable):
         if result == False:
             raise Exception(
                 "Addition of explicit hydrogens failed in from_iupac")
-        return cls.from_openeye(oemol)
+        return cls.from_openeye(oemol, **kwargs)
 
     # TODO: Move OE-dependent parts of this to toolkits.py
     @OpenEyeToolkitWrapper.requires_toolkit()
@@ -2801,7 +2829,7 @@ class FrozenMolecule(Serializable):
     def from_file(filename,
                   file_format=None,
                   toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-                  exception_if_undefined_stereo=True):
+                  allow_undefined_stereo=False):
         """
         Create one or more molecules from a file
 
@@ -2822,9 +2850,8 @@ class FrozenMolecule(Serializable):
         optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file loading. If a Toolkit is passed, only
             the highest-precedence toolkit is used
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
-            loading the molecule.
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
 
         Returns
         -------
@@ -2855,6 +2882,7 @@ class FrozenMolecule(Serializable):
 
         # Determine which toolkit to use (highest priority that's compatible with input type)
         if isinstance(toolkit_registry, ToolkitRegistry):
+            # TODO: Encapsulate this logic into ToolkitRegistry.call()?
             toolkit = None
             supported_read_formats = {}
             for query_toolkit in toolkit_registry.registered_toolkits:
@@ -2865,15 +2893,16 @@ class FrozenMolecule(Serializable):
                     query_toolkit.
                     toolkit_name] = query_toolkit.toolkit_file_read_formats
             if toolkit == None:
-                raise Exception(
+                raise NotImplementedError(
                     "No toolkits in registry can read file {} (format {}). Supported formats in the "
                     "provided ToolkitRegistry are {}".format(
                         filename, file_format, supported_read_formats))
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
+            # TODO: Encapsulate this logic in ToolkitWrapper?
             toolkit = toolkit_registry
-            if not (file_format in toolkit.toolkit_file_read_formats):
-                raise Exception(
+            if file_format not in toolkit.toolkit_file_read_formats:
+                raise NotImplementedError(
                     "Toolkit {} can not read file {} (format {}). Supported formats for this toolkit "
                     "are {}".format(toolkit.toolkit_name, filename,
                                     file_format,
@@ -2889,13 +2918,13 @@ class FrozenMolecule(Serializable):
             mols = toolkit.from_file(
                 filename,
                 file_format=file_format,
-                exception_if_undefined_stereo=exception_if_undefined_stereo)
+                allow_undefined_stereo=allow_undefined_stereo)
         elif hasattr(filename, 'read'):
             file_obj = filename
             mols = toolkit.from_file_obj(
                 file_obj,
                 file_format=file_format,
-                exception_if_undefined_stereo=exception_if_undefined_stereo)
+                allow_undefined_stereo=allow_undefined_stereo)
 
         if len(mols) == 0:
             raise Exception(
@@ -2977,7 +3006,7 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     @RDKitToolkitWrapper.requires_toolkit()
-    def from_rdkit(rdmol, exception_if_undefined_stereo=True):
+    def from_rdkit(rdmol, allow_undefined_stereo=False):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -2987,9 +3016,8 @@ class FrozenMolecule(Serializable):
         ----------
         rdmol : rkit.RDMol
             An RDKit molecule
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
-            loading the molecule.
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
 
         Returns
         -------
@@ -3006,7 +3034,7 @@ class FrozenMolecule(Serializable):
         """
         toolkit = RDKitToolkitWrapper()
         return toolkit.from_rdkit(
-            rdmol, exception_if_undefined_stereo=exception_if_undefined_stereo)
+            rdmol, allow_undefined_stereo=allow_undefined_stereo)
 
     @RDKitToolkitWrapper.requires_toolkit()
     def to_rdkit(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
@@ -3038,7 +3066,7 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
-    def from_openeye(oemol, exception_if_undefined_stereo=True):
+    def from_openeye(oemol, allow_undefined_stereo=False):
         """
         Create a Molecule from an OpenEye molecule.
 
@@ -3048,9 +3076,8 @@ class FrozenMolecule(Serializable):
         ----------
         oemol : openeye.oechem.OEMol
             An OpenEye molecule
-        exception_if_undefined_stereo : bool, default=True
-            If true, raises an exception if oemol contains undefined stereochemistry. If false, the function skips
-            loading the molecule.
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
 
         Returns
         -------
@@ -3067,7 +3094,7 @@ class FrozenMolecule(Serializable):
         """
         toolkit = OpenEyeToolkitWrapper()
         return toolkit.from_openeye(
-            oemol, exception_if_undefined_stereo=exception_if_undefined_stereo)
+            oemol, allow_undefined_stereo=allow_undefined_stereo)
 
     @OpenEyeToolkitWrapper.requires_toolkit()
     def to_openeye(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
@@ -3348,6 +3375,7 @@ class Molecule(FrozenMolecule):
         #super(self, Molecule).__init__(*args, **kwargs)
         super(Molecule, self).__init__(*args, **kwargs)
 
+    # TODO: Change this to add_atom(Atom) to improve encapsulation and extensibility?
     def add_atom(self,
                  atomic_number,
                  formal_charge,
