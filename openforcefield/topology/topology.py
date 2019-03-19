@@ -1367,7 +1367,8 @@ class Topology(Serializable):
 
         # For each connected subgraph (molecule) in the topology, find its match in unique_molecules
         topology_molecules_to_add = list()
-        for omm_mol_G in nx.connected_component_subgraphs(omm_topology_G):
+        for omm_mol_G in (omm_topology_G.subgraph(c).copy()
+                          for c in nx.connected_components(omm_topology_G)):
             match_found = False
             for unq_mol_G in graph_to_unq_mol.keys():
                 if nx.is_isomorphic(
