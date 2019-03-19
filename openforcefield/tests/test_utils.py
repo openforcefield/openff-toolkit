@@ -13,15 +13,20 @@ Tests for utility methods
 # GLOBAL IMPORTS
 #=============================================================================================
 
+import ast
+import os
+
+import pytest
+from simtk import unit
+
 from openforcefield import utils
 
-import os
 
 #=============================================================================================
 # TESTS
 #=============================================================================================
 
-def test_subclasses(self):
+def test_subclasses():
     """Test that all subclasses (and descendents) are correctly identified by all_subclasses()"""
     class Foo(object):
         pass
@@ -71,36 +76,6 @@ def test_get_data_filename():
     filename = get_data_filename('forcefield/tip3p.offxml')
     assert os.path.exists(filename)
 
-def test_one_dimension_serialize_quantity():
-    """Test utils.serialize_quantity's behavior for a single-dimension quantity"""
-    from simtk import unit
-    quantity =unit.Quantity(5, unit.angstrom)
-    serialized = utils.serialize_quantity(quantity)
-    assert serialized == {'unitless_value': 5, 'unit': [('angstrom', 1)]}
-
-def test_two_dimension_serialize_quantity():
-    """Test utils.serialize_quantity's behavior for a single-dimension quantity"""
-    from simtk import unit
-    quantity = unit.Quantity(5, unit.angstrom * unit.kilocalorie_per_mole)
-    serialized = utils.serialize_quantity(quantity)
-    assert serialized['unitless_value'] ==  5
-    assert ('angstrom', 1) in serialized['unit']
-    assert ('mole', -1) in serialized['unit']
-    assert ('kilocalorie', 1) in serialized['unit']
-
-def test_two_dimension_serialize_quantity_custom_output():
-    """Test utils.serialize_quantity's behavior for a single-dimension quantity"""
-    from simtk import unit
-    quantity = unit.Quantity(5, unit.angstrom * unit.kilocalorie_per_mole)
-    serialized = utils.serialize_quantity(quantity,
-                                          # output as eV*nm/mol
-                                          output_unit=unit.nanometer*unit.elementary_charge*unit.volt/unit.mole)
-    assert serialized['unitless_value'] == 1.3057238144187346e+22
-    assert ('nanometer', 1) in serialized['unit']
-    assert ('mole', -1) in serialized['unit']
-    assert ('elementary charge', 1) in serialized['unit']
-    assert ('volt', 1) in serialized['unit']
-
 
 @pytest.mark.parametrize('unit_string,expected_unit',[
     ('kilocalories_per_mole', unit.kilocalories_per_mole),
@@ -111,31 +86,9 @@ def test_two_dimension_serialize_quantity_custom_output():
     ('1 * kilojoule + 500 * joule', 1.5*unit.kilojoule),
     ('1 / meter', 1.0 / unit.meter)
 ])
-def test_ast_unit_eval(unit_string, expected_unit):
-    """Test that _ast_unit_eval() correctly parses string quantities."""
+def test_ast_eval(unit_string, expected_unit):
+    """Test that _ast_eval() correctly parses string quantities."""
+    from openforcefield.utils.utils import _ast_eval
     ast_root_node = ast.parse(unit_string, mode='eval').body
-    parsed_units = _ast_unit_eval(ast_root_node)
+    parsed_units = _ast_eval(ast_root_node)
     assert parsed_units == expected_unit
-
-
-@pytest.mark.parametrize('attributes,expected',[
-    ({'not_parsed': 'blabla'},
-        {}),
-    ({'not_parsed': 'blabla', 'attr_unit': 'angstrom/femtosecond'},
-        {'attr': unit.angstrom/unit.femtosecond}),
-    ({'not_parsed': 'blabla', 'attr1_unit': 'meter', 'attr2_unit': 'kilojoule_per_mole'},
-        {'attr1': unit.meter, 'attr2': unit.kilojoule_per_mole}),
-])
-def test_extract_attached_units(attributes, expected):
-    """Test that _extract_attached_units() correctly parses the correct."""
-    assert _extract_attached_units(attributes) == expected
-
-
-@pytest.mark.parametrize('attributes',[
-    {'attr_unit': '300.0 * kelvin'},
-    {'attr_unit': '1 / picosecond'}
-])
-def test_extract_attached_units_raises(attributes):
-    """Test that _extract_attached_units() raises an error when a quantity is specified instead of a unit."""
-    with pytest.raises(ValueError, match='associated to a quantity rather than only units'):
-        _extract_attached_units(attributes)
