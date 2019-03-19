@@ -1853,7 +1853,8 @@ class FrozenMolecule(Serializable):
 
     def is_isomorphic(
             self, other,
-            compare_atom_stereochemistry=True
+            compare_atom_stereochemistry=True,
+            compare_bond_stereochemistry=True,
     ):
         """
         Determines whether the molecules are isomorphic by comparing their graphs.
@@ -1864,6 +1865,9 @@ class FrozenMolecule(Serializable):
             The molecule to test for isomorphism.
         compare_atom_stereochemistry : bool, optional
             If ``False``, atoms' stereochemistry is ignored for the
+            purpose of determining equality. Default is ``True``.
+        compare_bond_stereochemistry : bool, optional
+            If ``False``, bonds' stereochemistry is ignored for the
             purpose of determining equality. Default is ``True``.
         
         Returns
@@ -1883,13 +1887,13 @@ class FrozenMolecule(Serializable):
             return is_equal
 
         def edge_match_func(x, y):
-            return (
-                # We don't need to check the exact bond order (which is 1 or 2)
-                # if the bond is aromatic. This way we avoid missing a match only
-                # if the alternate bond orders 1 and 2 are assigned differently.
-                (x['is_aromatic'] == y['is_aromatic'] or x['bond_order'] == y['bond_order']) and
-                (x['stereochemistry'] == y['stereochemistry'])
-            )
+            # We don't need to check the exact bond order (which is 1 or 2)
+            # if the bond is aromatic. This way we avoid missing a match only
+            # if the alternate bond orders 1 and 2 are assigned differently.
+            is_equal = x['is_aromatic'] == y['is_aromatic'] or x['bond_order'] == y['bond_order']
+            if compare_bond_stereochemistry:
+                is_equal &= x['stereochemistry'] == y['stereochemistry']
+            return is_equal
 
         return nx.is_isomorphic(self.to_networkx(),
                                 other.to_networkx(),
