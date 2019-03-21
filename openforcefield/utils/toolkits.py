@@ -23,14 +23,16 @@ Currently supported toolkits:
 # GLOBAL IMPORTS
 #=============================================================================================
 
+import copy
+from distutils.spawn import find_executable
+from functools import wraps
 import importlib
 import logging
-from functools import wraps
-from openforcefield.utils import all_subclasses, MessageException, inherit_docstrings
-from distutils.spawn import find_executable
+
 from simtk import unit
 import numpy as np
 
+from openforcefield.utils import all_subclasses, MessageException, inherit_docstrings
 
 
 #=============================================================================================
@@ -714,7 +716,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if len(problematic_bonds) != 0:
                 msg += "Problematic bonds are: {}\n".format(problematic_bonds)
             if allow_undefined_stereo:
-                print(msg)
+                logger.warning(msg)
             else:
                 raise UndefinedStereochemistryError(msg)
 
@@ -1671,7 +1673,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         ----------
         smiles : str
             The SMILES string to turn into a molecule
-        hydrogens_are_explicit : bool, default = False
+        hydrogens_are_explicit : bool, default=False
             If False, RDKit will perform hydrogen addition using Chem.AddHs
 
         Returns
@@ -1689,29 +1691,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
 
+        # Chem.MolFromSmiles adds bond directions (i.e. ENDDOWNRIGHT/ENDUPRIGHT), but
+        # doesn't set bond.GetStereo(). We need to call AssignStereochemistry for that.
+        Chem.AssignStereochemistry(rdmol)
 
-        # Adding H's can hide undefined bond stereochemistry, so we have to test for undefined stereo here
-        unspec_stereo = False
-        rdmol_copy = Chem.Mol(rdmol)
-        enumsi_opt = EnumerateStereoisomers.StereoEnumerationOptions(
-            maxIsomers=2, onlyUnassigned=True)
-        stereoisomers = [
-            isomer
-            for isomer in Chem.EnumerateStereoisomers.EnumerateStereoisomers(
-                rdmol_copy, enumsi_opt)
-        ]
-        if len(stereoisomers) != 1:
-            unspec_stereo = True
-
-        if unspec_stereo:
-            raise Exception(
-                "Unable to make OFFMol from SMILES: SMILES has unspecified stereochemistry: {}"
-                .format(smiles))
+        # Throw an exception/warning if there is unspecified stereochemistry.
+        self._detect_undefined_stereo(rdmol, err_msg_prefix='Unable to make OFFMol from SMILES: ')
 
         # Add explicit hydrogens if they aren't there already
-        if not (hydrogens_are_explicit):
+        if not hydrogens_are_explicit:
             rdmol = Chem.AddHs(rdmol)
-
 
         # TODO: Add allow_undefined_stereo to this function, and pass to from_rdkit?
         molecule = Molecule.from_rdkit(rdmol)
@@ -1789,45 +1778,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         from openforcefield.topology.molecule import Molecule
 
-        # Check for undefined stereochemistry
-        from rdkit.Chem import EnumerateStereoisomers
-        # TODO: Does this work for molecules with 3D geometry?
-        unspec_stereo = False
-        # Use a copy of the input, in case EnumerateStereochemstry changes anything in-place
-        rdmol_copy = Chem.Mol(rdmol)
-        enumsi_opt = EnumerateStereoisomers.StereoEnumerationOptions(
-            maxIsomers=2, onlyUnassigned=True)
-        try:
-            stereoisomers = [
-                isomer
-                for isomer in Chem.EnumerateStereoisomers.EnumerateStereoisomers(
-                    rdmol_copy, enumsi_opt)
-            ]
-        except RuntimeError as e:
-            msg = "Unable to check stereochemistry for {}. Original error:\n".format(rdmol.GetProp('_Name'))
-            msg += str(e)
-            if allow_undefined_stereo:
-                stereoisomers = []
-                print(msg)
-            else:
-                raise UndefinedStereochemistryError(msg)
-
-        # TODO: This will catch undefined tetrahedral centers, but not bond stereochemistry. How can we check for that?
-        if len(stereoisomers) != 1:
-            unspec_stereo = True
-
-        if unspec_stereo:
-            msg = "RDMol has unspecified stereochemistry\n"
-            msg += "RDMol name: " + rdmol.GetProp("_Name")
-            if allow_undefined_stereo:
-                print(
-                    "WARNING: " + msg
-                )
-                # TODO: Can we find a way to print more about the error here?
-            else:
-                raise UndefinedStereochemistryError(
-                    "Unable to make OFFMol from RDMol: " + msg
-                )
+        # Check for undefined stereochemistry.
+        self._detect_undefined_stereo(rdmol, raise_warning=allow_undefined_stereo,
+                                      err_msg_prefix="Unable to make OFFMol from RDMol: ")
 
         # Create a new openforcefield Molecule
         mol = Molecule()
@@ -1843,7 +1796,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # The rdmol will already have CW and CCW tags (if it didn't throw an exception above), but here we make
         # it generate CIP (R/S + E/Z) tags
         Chem.AssignStereochemistry(rdmol)
-
 
         # If RDMol has a title save it
         if rdmol.HasProp("_Name"):
@@ -1944,7 +1896,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             elif tag == Chem.BondStereo.STEREOE:
                 stereochemistry = 'E'
             elif tag == Chem.BondStereo.STEREOTRANS or tag == Chem.BondStereo.STEREOCIS:
-                raise Exception(
+                raise ValueError(
                     "Expected RDKit bond stereochemistry of E or Z, got {} instead"
                     .format(tag))
             offb._stereochemistry = stereochemistry
@@ -2306,6 +2258,154 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol = self.to_rdkit(molecule, aromaticity_model=aromaticity_model)
         return self._find_smarts_matches(
             rdmol, smarts, aromaticity_model='OEAroModel_MDL')
+
+    # ------------------------------------------
+    # Stereochemistry detection RDKit utilities.
+    # ------------------------------------------
+
+    @staticmethod
+    def _find_undefined_stereo_atoms(rdmol, assign_stereo=False):
+        """Find the chiral atoms with undefined stereochemsitry in the RDMol.
+
+        Parameters
+        ----------
+        rdmol : rdkit.RDMol
+            The RDKit molecule.
+        assign_stereo : bool, optional, default=False
+            As a side effect, this function calls ``Chem.AssignStereochemistry()``
+            so by default we work on a molecule copy. Set this to ``True`` to avoid
+            making a copy and assigning the stereochemistry to the Mol object.
+
+        Returns
+        -------
+        undefined_atom_indices : List[int]
+            A list of atom indices that are chiral centers with undefined
+            stereochemistry.
+
+        See Also
+        --------
+        rdkit.Chem.FindMolChiralCenters
+
+        """
+        from rdkit import Chem
+
+        if not assign_stereo:
+            # Avoid modifying the original molecule.
+            rdmol = copy.deepcopy(rdmol)
+
+        # Flag possible chiral centers with the "_ChiralityPossible".
+        Chem.AssignStereochemistry(rdmol, force=True, flagPossibleStereoCenters=True)
+
+        # Find all atoms with undefined stereo.
+        undefined_atom_indices = []
+        for atom_idx, atom in enumerate(rdmol.GetAtoms()):
+            if (atom.GetChiralTag() == Chem.ChiralType.CHI_UNSPECIFIED and
+                    atom.HasProp('_ChiralityPossible')):
+                undefined_atom_indices.append(atom_idx)
+        return undefined_atom_indices
+
+    @staticmethod
+    def _find_undefined_stereo_bonds(rdmol):
+        """Find the chiral atoms with undefined stereochemsitry in the RDMol.
+
+        Parameters
+        ----------
+        rdmol : rdkit.RDMol
+            The RDKit molecule.
+
+        Returns
+        -------
+        undefined_bond_indices : List[int]
+            A list of bond indices with undefined stereochemistry.
+
+        See Also
+        --------
+        Chem.EnumerateStereoisomers._getFlippers
+
+        Links
+        -----
+        https://github.com/rdkit/rdkit/blob/master/Code/GraphMol/Chirality.cpp#L1509-L1515
+            This comment in FindPotentialStereoBonds mention that the method
+            ignores ring bonds.
+        https://github.com/DrrDom/rdk/blob/master/gen_stereo_rdkit3.py
+            The function get_unspec_double_bonds() in this module looks like
+            may solve the problem with the rings.
+
+        """
+        from rdkit import Chem
+
+        # Copy the molecule to avoid side effects. Chem.FindPotentialStereoBonds
+        # assign Bond.STEREOANY to unspecific bond, which make subsequent calls
+        # of Chem.AssignStereochemistry ignore the bond even if there are
+        # ENDDOWNRIGHT/ENDUPRIGHT bond direction indications.
+        rdmol = copy.deepcopy(rdmol)
+
+        # This function assigns Bond.GetStereo() == Bond.STEREOANY to bonds with
+        # undefined stereochemistry.
+        Chem.FindPotentialStereoBonds(rdmol)
+
+        undefined_bond_indices = []
+        for bond_idx, bond in enumerate(rdmol.GetBonds()):
+            if bond.GetStereo() == Chem.BondStereo.STEREOANY:
+                undefined_bond_indices.append(bond_idx)
+        return undefined_bond_indices
+
+    @classmethod
+    def _detect_undefined_stereo(cls, rdmol, err_msg_prefix='', raise_warning=False):
+        """Raise UndefinedStereochemistryError if the RDMol has undefined stereochemistry.
+
+        Parameters
+        ----------
+        rdmol : rdkit.Chem.Mol
+            The RDKit molecule.
+        err_msg_prefix : str, optional
+            A string to prepend to the error/warning message.
+        raise_warning : bool, optional, default=False
+            If True, a warning is issued instead of an exception.
+
+        Raises
+        ------
+        UndefinedStereochemistryError
+            If the RDMol has undefined atom or bond stereochemistry.
+
+        """
+        # Find undefined atom/bond stereochemistry.
+        undefined_atom_indices = cls._find_undefined_stereo_atoms(rdmol)
+        undefined_bond_indices = cls._find_undefined_stereo_bonds(rdmol)
+
+        # Build error message.
+        if len(undefined_atom_indices) == 0 and len(undefined_bond_indices) == 0:
+            msg = None
+        else:
+            msg = err_msg_prefix + "RDMol has unspecified stereochemistry. "
+            # The "_Name" property is not always assigned.
+            if rdmol.HasProp("_Name"):
+                msg += "RDMol name: " + rdmol.GetProp("_Name")
+
+        # Details about undefined atoms.
+        if len(undefined_atom_indices) > 0:
+            msg += "Undefined chiral centers are:\n"
+            for undefined_atom_idx in undefined_atom_indices:
+                msg += ' - Atom {symbol} (index {index})\n'.format(
+                    symbol=rdmol.GetAtomWithIdx(undefined_atom_idx).GetSymbol(),
+                    index=undefined_atom_idx)
+
+        # Details about undefined bond.
+        if len(undefined_bond_indices) > 0:
+            msg += "Bonds with undefined stereochemistry are:\n"
+            for undefined_bond_idx in undefined_bond_indices:
+                bond = rdmol.GetBondWithIdx(undefined_bond_idx)
+                atom1, atom2 = bond.GetBeginAtom(), bond.GetEndAtom()
+                msg += ' - Bond {bindex} (atoms {aindex1}-{aindex2} of element ({symbol1}-{symbol2})\n'.format(
+                    bindex=undefined_bond_idx,
+                    aindex1=atom1.GetIdx(), aindex2=atom2.GetIdx(),
+                    symbol1=atom1.GetSymbol(), symbol2=atom2.GetSymbol())
+
+        if msg is not None:
+            if raise_warning:
+                logger.warning(msg)
+            else:
+                raise UndefinedStereochemistryError(msg)
 
 
 class AmberToolsToolkitWrapper(ToolkitWrapper):
