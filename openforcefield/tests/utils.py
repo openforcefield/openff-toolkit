@@ -85,8 +85,9 @@ def get_monomer_mol2file(prefix='ethanol'):
     mol2_filename : str
         Absolute path to the mol2 file
     """
+    # TODO: The mol2 files in this folder are not tripos mol2 files. Delete or convert them.
     prefix = os.path.join('systems', 'monomers', prefix)
-    mol2_filename = get_data_filename(prefix+'.pdb')
+    mol2_filename = get_data_filename(prefix + '.mol2')
     return mol2_filename
 
 
