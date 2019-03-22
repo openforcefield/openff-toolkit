@@ -2778,6 +2778,7 @@ class ToolkitRegistry(object):
                 raise ToolkitUnavailableException(msg)
             else:
                 logger.warning(msg)
+            return
 
         # Add toolkit to the registry.
         self._toolkits.append(toolkit_wrapper)

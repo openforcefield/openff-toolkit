@@ -1516,15 +1516,13 @@ class FrozenMolecule(Serializable):
                 self.__setstate__(other)
                 loaded = True
             # Check through the toolkit registry to find a compatible wrapper for loading
-            if not (loaded):
-                for toolkit_wrapper in toolkit_registry.registered_toolkits:
-                    if not (hasattr(toolkit_wrapper, 'from_object')):
-                        continue
-                    load_attempt = toolkit_wrapper.from_object(other)
-                    # TODO: Come up with a better check for load failure
-                    if type(load_attempt) is bool:
-                        continue
-                    self._copy_initializer(load_attempt)
+            if not loaded:
+                try:
+                    result = toolkit_registry.call('from_object', other)
+                except NotImplementedError:
+                    pass
+                else:
+                    self._copy_initializer(result)
                     loaded = True
             # TODO: Make this compatible with file-like objects (I couldn't figure out how to make an oemolistream
             # from a fileIO object)
