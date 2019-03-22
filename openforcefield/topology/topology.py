@@ -56,10 +56,16 @@ class NotBondedError(MessageException):
 # PRIVATE SUBROUTINES
 #=============================================================================================
 
-
 class _TransformedDict(MutableMapping):
-    """A dictionary that applies an arbitrary key-altering
-       function before accessing the keys"""
+    """A dictionary that transform and sort keys.
+
+    The function __keytransform__ can be inherited to apply an arbitrary
+    key-altering function before accessing the keys.
+
+    The function __sortfunc__ can be inherited to specify a particular
+    order over which to iterate over the dictionary.
+
+    """
 
     def __init__(self, *args, **kwargs):
         self.store = OrderedDict()
@@ -75,7 +81,7 @@ class _TransformedDict(MutableMapping):
         del self.store[self.__keytransform__(key)]
 
     def __iter__(self):
-        return iter(self.store)
+        return iter(sorted(self.store, key=self.__sortfunc__))
 
     def __len__(self):
         return len(self.store)
@@ -83,9 +89,13 @@ class _TransformedDict(MutableMapping):
     def __keytransform__(self, key):
         return key
 
+    @staticmethod
+    def __sortfunc__(key):
+        return key
+
 
 class ValenceDict(_TransformedDict):
-    """Enforce uniqueness in atom indices"""
+    """Enforce uniqueness in atom indices."""
 
     def __keytransform__(self, key):
         """Reverse tuple if first element is larger than last element."""
@@ -98,7 +108,7 @@ class ValenceDict(_TransformedDict):
 
 
 class ImproperDict(_TransformedDict):
-    """Symmetrize improper torsions"""
+    """Symmetrize improper torsions."""
 
     def __keytransform__(self, key):
         """Reorder tuple in numerical order except for element[1] which is the central atom; it retains its position."""
