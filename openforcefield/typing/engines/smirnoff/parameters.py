@@ -1468,6 +1468,45 @@ class vdWHandler(ParameterHandler):
                                                 self._scale14)
                 #force.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self._scale14)
 
+
+class ElectrostaticsHandler(ParameterHandler):
+    """Handles SMIRNOFF <Electrostatics> tags."""
+    _TAGNAME = 'Electrostatics'
+    _OPENMMTYPE = openmm.NonbondedForce
+    _DEPENDENCIES = [vdWHandler]
+    _DEFAULT_SPEC_ATTRIBS = {
+        'method': 'PME',
+        'scale12': '0.0',
+        'scale13': '0.0',
+        'scale14': '0.833333',
+        'scale15': '1.0',
+    }
+    _ATTRIBS_TO_TYPE = {'scale12': float,
+                        'scale13': float,
+                        'scale14': float,
+                        'scale15': float
+                        }
+
+    _OPTIONAL_SPEC_ATTRIBS = {
+        'switch_width': 8.0 * unit.angstrom,
+        'cutoff': 9.0 * unit.angstrom
+    }
+
+    # TODO: Can this have a distinct cutoff and switch value from vdW?
+    def __init__(self, **kwargs):
+        if self.scale12 != 0.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
+                                    "Specified 1-2 scaling was {}".format(self.scale12))
+        if self.scale13 != 0.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
+                                    "Specified 1-3 scaling was {}".format(self.scale13))
+        if self.scale15 != 1.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
+                                    "Specified 1-5 scaling was {}".format(self.scale15))
+
+        super().__init__(**kwargs)
+
+
 class ToolkitAM1BCCHandler(ParameterHandler):
     """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags"""
 
