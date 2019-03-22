@@ -143,6 +143,12 @@ def mini_drug_bank(xfail_mols=None, wip_mols=None):
         to the failure reason.
 
     """
+    # We need OpenEye to parse the molecules, but pytest executes fixtures
+    # whether or not tests are skipped so if OE is not available we just
+    # return an empty list of test cases.
+    if not OpenEyeToolkitWrapper.is_available():
+        return []
+
     # If we have already loaded the data set, return the cached one.
     if mini_drug_bank.molecules is not None:
         molecules = mini_drug_bank.molecules
