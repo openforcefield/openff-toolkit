@@ -216,11 +216,11 @@ Here is an example:
 ```XML
 <ChargeIncrementModel number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2" increment_unit="elementary_charge">
   <!-- A fractional charge can be moved along a single bond -->
-  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" charge1increment="-0.0073" charge2increment="+0.0073"/>
-  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" charge1increment="+0.0943" charge2increment="-0.0943"/>
-  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge1increment="-0.0718" charge2increment="+0.0718"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" chargeincrement1="-0.0073" chargeincrement2="+0.0073"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" chargeincrement1="+0.0943" chargeincrement2="-0.0943"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" chargeincrement1="-0.0718" chargeincrement2="+0.0718"/>
   <!--- Alternatively, factional charges can be redistributed among any number of bonded atoms -->
-  <ChargeIncrement smirks="[N:1](H:2)(H:3)" charge1increment="+0.02" charge2increment="-0.01" charge3increment="-0.01"/>
+  <ChargeIncrement smirks="[N:1](H:2)(H:3)" chargeincrement1="+0.02" chargeincrement2="-0.01" chargeincrement3="-0.01"/>
 </ChargeIncrementModel>
 ```
 The sum of formal charges for the molecule or fragment will be used to determine the total charge the molecule or fragment will possess.
