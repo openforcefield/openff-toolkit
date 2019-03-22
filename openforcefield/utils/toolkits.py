@@ -270,62 +270,62 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         'SLN', 'SMI', 'USM', 'XYC'
     ]
 
+    # TODO: AR - Do we need both toolkit_is_available() and is_available()?
     @staticmethod
     def toolkit_is_available(
             oetools=('oechem', 'oequacpac', 'oeiupac', 'oeomega')):
         """
-        Check if a given OpenEye toolkit component (or set of components) is installed and Licensed
+        Check if the given OpenEye toolkit components are available.
 
-        If the OpenEye toolkit is not installed, returns False
+        If the OpenEye toolkit is not installed or no license is found
+        for at least one the given toolkits , ``False`` is returned.
 
         Parameters
         ----------
-        oetools : str or iterable of strings, Optional, Default: ('oechem', 'oequacpac', 'oeiupac', 'oeomega')
-            Set of tools to check by their string name. Defaults to the complete set that YANK *could* use, depending on
-            feature requested.
-
-            Only checks the subset of tools if passed. Also accepts a single tool to check as a string instead of an
-            iterable of length 1.
+        oetools : str or iterable of strings, optional, default=('oechem', 'oequacpac', 'oeiupac', 'oeomega')
+            Set of tools to check by their Python module name. Defaults
+            to the complete set of tools supported by this function.
+            Also accepts a single tool to check as a string instead of
+            an iterable of length 1.
 
         Returns
         -------
         all_installed : bool
-            True if all tools in ``oetools`` are installed and licensed, False otherwise
+            ``True`` if all tools in ``oetools`` are installed and licensed,
+            ``False`` otherwise
 
         """
-        # Complete list of module: License check
-        tools_license = {
+        # Complete list of module -> license function to check.
+        license_function_names = {
             'oechem': 'OEChemIsLicensed',
             'oequacpac': 'OEQuacPacIsLicensed',
             'oeiupac': 'OEIUPACIsLicensed',
             'oeomega': 'OEOmegaIsLicensed'
         }
-        tool_keys = tools_license.keys()
+        supported_tools = set(license_function_names.keys())
 
-        # Cast oetools to tuple if its a single string
-        if type(oetools) is str:
-            oetools = (oetools, )
-        tool_set = set(oetools)
-        valid_tool_set = set(tool_keys)
-        if tool_set & valid_tool_set == set():
-            # Check for empty set intersection
-            raise ValueError(
-                "Expected OpenEye tools to have at least of the following {}, "
-                "but instead got {}".format(tool_keys, oetools))
-        try:
-            for tool in oetools:
-                if tool in tool_keys:
-                    # Try loading the module
-                    try:
-                        module = importlib.import_module('openeye', tool)
-                    except SystemError:  # Python 3.4 relative import fix
-                        module = importlib.import_module('openeye.' + tool)
-                    # Check that we have the license
-                    if not getattr(module, tools_license[tool])():
-                        raise ImportError
-        except ImportError:
-            return False
-        return True
+        # Make sure oetools is a set.
+        if isinstance(oetools, str):
+            oetools = {oetools}
+        else:
+            oetools = set(oetools)
+
+        # Check for unkown tools.
+        unknown_tools = oetools.difference(supported_tools)
+        if len(unknown_tools) > 0:
+            raise ValueError("Found unkown OpenEye tools: {}. Supported values are: {}".format(
+                sorted(unknown_tools), sorted(supported_tools)))
+
+        # Check license of all tools.
+        all_licensed = True
+        for tool in oetools:
+            try:
+                module = importlib.import_module('openeye.' + tool)
+            except (ImportError, ModuleNotFoundError):
+                return False
+            else:
+                all_licensed &= getattr(module, license_function_names[tool])()
+        return all_licensed
 
     @classmethod
     def is_available(cls):
