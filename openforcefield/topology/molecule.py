@@ -149,6 +149,17 @@ class Particle(Serializable):
         """
         return self._name
 
+    def to_dict(self):
+        """Convert to dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
+
+    @classmethod
+    def from_dict(cls, d):
+        """Static constructor from dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
+
 
 #=============================================================================================
 # Atom
