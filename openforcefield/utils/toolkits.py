@@ -354,18 +354,22 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         object : A molecule-like object
             An object to by type-checked.
+
         Returns
         -------
-        Molecule or False
-            An openforcefield.topology.molecule Molecule, or False if loading was unsuccessful
+        Molecule
+            An openforcefield.topology.molecule Molecule.
+
+        Raises
+        ------
+        NotImplementedError
+            If the object could not be converted into a Molecule.
         """
         # TODO: Add tests for the from_object functions
         from openeye import oechem
         if isinstance(object, oechem.OEMolBase):
-            mol = self.from_openeye(object)
-            return mol
-        else:
-            return False
+            return self.from_openeye(object)
+        raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_file(self,
                   filename,
@@ -1446,15 +1450,18 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Returns
         -------
         Molecule or False
-            An openforcefield.topology.molecule Molecule, or False if loading was unsuccessful
+            An openforcefield.topology.molecule Molecule.
+
+        Raises
+        ------
+        NotImplementedError
+            If the object could not be converted into a Molecule.
         """
         # TODO: Add tests for the from_object functions
         from rdkit import Chem
         if isinstance(object, Chem.rdchem.Mol):
-            mol = self.from_rdkit(object)
-            return mol
-        else:
-            return False
+            return self.from_rdkit(object)
+        raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_file(self,
                   filename,
@@ -2890,10 +2897,9 @@ class ToolkitRegistry(object):
         for toolkit in self._toolkits:
             if hasattr(toolkit, method_name):
                 method = getattr(toolkit, method_name)
-                #return method(*args, **kwargs)
                 try:
                     return method(*args, **kwargs)
-                except NotImplementedError as e:
+                except NotImplementedError:
                     pass
                 except ValueError as value_error:
                     value_errors.append((toolkit, value_error))
