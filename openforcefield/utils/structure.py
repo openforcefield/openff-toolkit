@@ -9,16 +9,11 @@ Utility subroutines for manipulating parmed Structure objects
 #=============================================================================================
 
 import os
-import re
-import sys
-import math
 import time
-import copy
-import string
 
 import numpy as np
 
-from simtk import unit
+from simtk import openmm, unit
 
 #=============================================================================================
 # PARMED UTILITIES
@@ -41,22 +36,21 @@ def generateSMIRNOFFStructure(oemol):
         The resulting Structure
 
     """
+    from openforcefield.topology import Molecule, Topology
     from openforcefield.typing.engines.smirnoff import ForceField
 
+    off_mol = Molecule.from_openeye(oemol)
+    off_top = Topology.from_molecules([off_mol])
     mol_ff = ForceField('smirnoff99Frosst.offxml')
 
-    # TODO: Charges should be handled by ForceField now, so charging isn't necessary
-    if not checkCharges(oemol):
-        from openmoltools.openeye import get_charges
-        print("Assigning charges to molecule.")
-        charged_molecule = get_charges(oemol)
-    else:
-        charged_molecule = oemol
+    # Create OpenMM System and Topology.
+    omm_top = generateTopologyFromOEMol(oemol)
+    system = mol_ff.create_openmm_system(off_top)
 
-    # TODO: This method has moved to the tests, but can be tackled in two or three lines
-    mol_top, mol_sys, mol_pos = create_system_from_molecule(mol_ff, charged_molecule)
+    # Convert to ParmEd structure.
     import parmed
-    molecule_structure = parmed.openmm.load_topology(mol_top, mol_sys, xyz=mol_pos)
+    xyz = extractPositionsFromOEMol(oemol)
+    molecule_structure = parmed.openmm.load_topology(omm_top, system, xyz=xyz)
 
     return molecule_structure
 
@@ -82,7 +76,7 @@ def generateProteinStructure(proteinpdb, protein_forcefield='amber99sbildn.xml',
     # Generate protein Structure object using OpenMM ForceField
     from simtk.openmm import app
     import parmed
-    forcefield = app.ForceField(protein_forcefield, solvent_forcefield)
+    forcefield = openmm.app.ForceField(protein_forcefield, solvent_forcefield)
     protein_system = forcefield.createSystem( proteinpdb.topology )
     protein_structure = parmed.openmm.load_topology(proteinpdb.topology,
                                                     protein_system,
@@ -189,7 +183,7 @@ def generateTopologyFromOEMol(molecule):
     # Create atoms in the residue.
     for atom in mol.GetAtoms():
         name = atom.GetName()
-        element = app.element.Element.getByAtomicNumber(atom.GetAtomicNum())
+        element = openmm.app.element.Element.getByAtomicNumber(atom.GetAtomicNum())
         openmm_atom = topology.addAtom(name, element, residue)
 
     # Create bonds.
@@ -381,7 +375,7 @@ def extractPositionsFromOEMol(oemol):
     positions : Nx3 array
         Unit-bearing via simtk.unit Nx3 array of coordinates
     """
-    positions = unit.Quantity(np.zeros([molecule.NumAtoms(), 3], np.float32), unit.angstroms)
+    positions = unit.Quantity(np.zeros([oemol.NumAtoms(), 3], np.float32), unit.angstroms)
     coords = oemol.GetCoords()
     for index in range(oemol.NumAtoms()):
         positions[index,:] = unit.Quantity(coords[index], unit.angstroms)

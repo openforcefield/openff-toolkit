@@ -13,42 +13,47 @@ Tests for utility methods that involve parmed Structure manipulation
 # GLOBAL IMPORTS
 #=============================================================================================
 
-from functools import partial
-from unittest import TestCase
 import parmed
+
 from openforcefield import utils
+import openforcefield.utils.structure as structure
+
 
 #=============================================================================================
 # TESTS
 #=============================================================================================
 
-class TestUtils(TestCase):
+class TestUtilsStructure:
+
     def test_read_molecules(self):
-        molecules = utils.read_molecules('zinc-subset-tripos.mol2.gz', verbose=False)
+        molecules = structure.read_molecules('zinc-subset-tripos.mol2.gz', verbose=False)
+
     def test_positions(self):
         """Test ability to extract and set positions."""
-        molecules = utils.read_molecules('zinc-subset-tripos.mol2.gz', verbose=False)
-        positions = utils.extractPositionsFromOEMol(molecules[0])
-        utils.setPositionsInOEMol(molecules[0], positions)
+        molecules = structure.read_molecules('zinc-subset-tripos.mol2.gz', verbose=False)
+        positions = structure.extractPositionsFromOEMol(molecules[0])
+        structure.setPositionsInOEMol(molecules[0], positions)
+
     def test_smirnoff_structure(self):
-       """Test function that generates the SMIRNOFF parmed.Structure."""
-       molecule = utils.read_molecules('toluene.pdb', verbose=False)[0]
-       molecule_structure = utils.generateSMIRNOFFStructure(molecule)
-       self.assertIsInstance(molecule_structure, parmed.structure.Structure)
+        """Test function that generates the SMIRNOFF parmed.Structure."""
+        molecule = structure.read_molecules('toluene.pdb', verbose=False)[0]
+        molecule_structure = structure.generateSMIRNOFFStructure(molecule)
+        assert isinstance(molecule_structure, parmed.structure.Structure)
+
     def test_protein_structure(self):
         from simtk.openmm import app
         pdbfile = utils.get_data_filename('proteins/T4-protein.pdb')
         proteinpdb = app.PDBFile(pdbfile)
-        protein_structure = utils.generateProteinStructure(proteinpdb)
-        self.assertIsInstance(protein_structure, parmed.structure.Structure)
+        protein_structure = structure.generateProteinStructure(proteinpdb)
+        assert isinstance(protein_structure, parmed.structure.Structure)
+
 
 def test_merge_system():
     """Test merging of a system created from AMBER and another created from SMIRNOFF."""
 
     # Create System from AMBER
-    # TODO: Add create_system_from_amber convenience function
-    from openforcefield.typing.engines.smirnoff import create_system_from_amber
-    prmtop_filename, inpcrd_filename = get_amber_filepaths('cyclohexane_ethanol_0.4_0.6')
+    from .utils import create_system_from_amber, get_amber_filepath
+    prmtop_filename, inpcrd_filename = get_amber_filepath('cyclohexane_ethanol_0.4_0.6')
     topology0, system0, positions0 = create_system_from_amber(prmtop_filename, inpcrd_filename)
 
     # TODO:
@@ -66,6 +71,7 @@ def test_merge_system():
     topology1, system1, positions1 = create_system_from_molecule(forcefield, mol)
 
     merge_system( topology0, topology1, system0, system1, positions0, positions1, verbose=True )
+
 
 def test_component_combination():
     """Test that a system still yields the same energy after rebuilding it out of its components
