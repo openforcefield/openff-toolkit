@@ -2747,7 +2747,7 @@ class ToolkitRegistry(object):
         return list(self._toolkits)
 
     def register_toolkit(self,
-                         toolkit_wrapper_class,
+                         toolkit_wrapper,
                          exception_if_unavailable=True):
         """
         Register the provided toolkit wrapper class, instantiating an object of it.
@@ -2761,22 +2761,26 @@ class ToolkitRegistry(object):
 
         Parameters
         ----------
-        toolkit_wrapper_class : subclass of ToolkitWrapper
-            The class of the toolkit wrapper to register.
+        toolkit_wrapper : instance or subclass of ToolkitWrapper
+            The toolkit wrapper to register or its class.
         exception_if_unavailable : bool, optional, default=True
             If True, an exception will be raised if the toolkit is unavailable
 
         """
-        # TODO: Instantiate class if class, or just add if already instantiated.
-        try:
-            toolkit_wrapper = toolkit_wrapper_class()
-            if not(toolkit_wrapper.is_available()):
-                raise ToolkitUnavailableException()
-            self._toolkits.append(toolkit_wrapper)
-        except ToolkitUnavailableException as e:
+        # Instantiate class if class, or just add if already instantiated.
+        if isinstance(toolkit_wrapper, type):
+            toolkit_wrapper = toolkit_wrapper()
+
+        # Raise exception if not available.
+        if not toolkit_wrapper.is_available():
+            msg = "Unable to load toolkit {}.".format(toolkit_wrapper)
             if exception_if_unavailable:
-                raise e
-            print("Unable to load toolkit {}.".format(toolkit_wrapper))
+                raise ToolkitUnavailableException(msg)
+            else:
+                logger.warning(msg)
+
+        # Add toolkit to the registry.
+        self._toolkits.append(toolkit_wrapper)
 
     def add_toolkit(self, toolkit_wrapper):
         """
