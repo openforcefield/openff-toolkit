@@ -892,7 +892,7 @@ class TestMolecule:
         molecule2 = Molecule.from_dict(molecule_dict)
         assert molecule.to_dict() == molecule2.to_dict()
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @requires_openeye
     def test_chemical_environment_matches_OE(self):
         """Test chemical environment matches"""
         # TODO: Move this to test_toolkits, test all available toolkits
@@ -934,7 +934,7 @@ class TestMolecule:
     # Potentially better OE stereo check: OEFlipper — Toolkits - - Python
     # https: // docs.eyesopen.com / toolkits / python / omegatk / OEConfGenFunctions / OEFlipper.html
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @requires_rdkit
     def test_chemical_environment_matches_RDKit(self):
         """Test chemical environment matches"""
         # Create chiral molecule

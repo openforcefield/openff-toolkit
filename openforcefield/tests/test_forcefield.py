@@ -412,7 +412,7 @@ class TestForceField():
         assert serialized_1 == serialized_2
 
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='Test requires OE toolkit')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='Test requires OE toolkit')
     def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
