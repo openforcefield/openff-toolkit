@@ -1282,27 +1282,55 @@ class vdWHandler(ParameterHandler):
     _ATTRIBS_TO_TYPE = {'scale12': float,
                         'scale13': float,
                         'scale14': float,
-                        'scale15': float}
+                        'scale15': float
+                        }
 
     # TODO: Is this necessary? It's used in check_compatibility but could be hard-coded.
     _SCALETOL = 1e-5
 
     _NONBOND_METHOD_MAP = {
-        NonbondedMethod.NoCutoff:
-        openmm.NonbondedForce.NoCutoff,
-        NonbondedMethod.CutoffPeriodic:
-        openmm.NonbondedForce.CutoffPeriodic,
-        NonbondedMethod.CutoffNonPeriodic:
-        openmm.NonbondedForce.CutoffNonPeriodic,
-        NonbondedMethod.Ewald:
-        openmm.NonbondedForce.Ewald,
-        NonbondedMethod.PME:
-        openmm.NonbondedForce.PME
+        NonbondedMethod.NoCutoff: openmm.NonbondedForce.NoCutoff,
+        NonbondedMethod.CutoffPeriodic: openmm.NonbondedForce.CutoffPeriodic,
+        NonbondedMethod.CutoffNonPeriodic: openmm.NonbondedForce.CutoffNonPeriodic,
+        NonbondedMethod.Ewald: openmm.NonbondedForce.Ewald,
+        NonbondedMethod.PME: openmm.NonbondedForce.PME
     }
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
 
+        super().__init__(**kwargs)
+        if self.scale12 != 0.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
+                                    "Specified 1-2 scaling was {}".format(self.scale12))
+        if self.scale13 != 0.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
+                                    "Specified 1-3 scaling was {}".format(self.scale13))
+        if self.scale15 != 1.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
+                                    "Specified 1-5 scaling was {}".format(self.scale15))
+
+        if self.long_range_dispersion == 'isotropic':
+            if self.cutoff == None:
+                raise SMIRNOFFSpecError("If vdW long_range_dispersion is isotropic, a cutoff distance"
+                                        "must be provided")
+            if self.switch == None:
+                raise SMIRNOFFSpecError("If vdW long_range_dispersion is isotropic, a switch distance"
+                                        "must be provided")
+        elif self.long_range_dispersion == 'PME':
+            pass
+        else:
+            raise SMIRNOFFSpecError("The Open Force Field toolkit currently only supports vdW long_range_dispersion"
+                                    "values of 'isotropic' (default) and 'PME'. Received unsupported value "
+                                    "{}".format(self.long_range_dispersion))
+
+        if self.potential != "Lennard-Jones-12-6":
+            raise SMIRNOFFSpecError("vdW potential set to {}. Only Lennard-Jones-12-6 is currently"
+                                    "supported".format(self.potential))
+
+
+        if self.combining_rules != "Lorentz-Berthelot":
+            raise SMIRNOFFSpecError("vdW combining_rules set to {}. Only 'Lorentz-Berthelot' is currently "
+                                    "supported".format(self.combining_rules))
         # TODO: Find a better way to set defaults
         # TODO: Validate these values against the supported output types (openMM force kwargs?)
         # TODO: Add conditional logic to assign NonbondedMethod and check compatibility
