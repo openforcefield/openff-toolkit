@@ -602,6 +602,8 @@ def generate_alkethoh_parameters_assignment_cases():
     return fast_test_cases + slow_test_cases
 
 
+@pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
+                    reason='Test requires OE toolkit to read mol2 files')
 @pytest.mark.parametrize('alkethoh_id', generate_alkethoh_parameters_assignment_cases())
 def test_alkethoh_parameters_assignment(alkethoh_id):
     """Test that ForceField assign parameters correctly in the AlkEthOH set.
@@ -687,6 +689,8 @@ def generate_freesolv_parameters_assignment_cases():
     return fast_test_cases + slow_test_cases
 
 
+@pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
+                    reason='Test requires OE toolkit to read mol2 files')
 @pytest.mark.parametrize(('freesolv_id', 'forcefield_version', 'allow_undefined_stereo'),
                          generate_freesolv_parameters_assignment_cases())
 def test_freesolv_parameters_assignment(freesolv_id, forcefield_version, allow_undefined_stereo):

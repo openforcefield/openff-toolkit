@@ -74,6 +74,8 @@ class TestParameterList:
         p2 = ParameterType(smirks='[#1:1]')
         parameters = ParameterList([p1, p2])
 
+    @pytest.mark.wip(reason="Until ChemicalEnvironment won't be refactored to use the ToolkitRegistry "
+                            "API, the smirks assignment will fail with RDKit.")
     def test_getitem(self):
         """Test ParameterList __getitem__ overloading.
         """

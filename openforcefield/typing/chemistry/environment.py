@@ -25,12 +25,14 @@ and David Mobley, UC Irvine.
 # GLOBAL IMPORTS
 #==============================================================================
 
-import networkx as nx
 import re
 import copy
 
-import openforcefield.utils
+import networkx as nx
 from numpy import random
+
+import openforcefield.utils
+
 
 #==============================================================================
 # Functions
@@ -452,20 +454,14 @@ class ChemicalEnvironment(object):
         replacements = list of lists, optional,
             [substitution, smarts] form for parsing SMIRKS
         """
-        if toolkit.lower() == 'openeye':
-            try:
-                from openeye import oechem
-                self.toolkit = 'openeye'
-            except:
-                raise Exception("Could not import openeye.oechem")
-        elif toolkit.lower() == 'rdkit':
-            try:
-                from rdkit import Chem
-                self.toolkit = 'rdkit'
-            except:
-                raise Exception("Could not import rdkit.Chem")
+        # TODO: Refactor all this class to use the ToolkitRegistry API.
+        if toolkit.lower() == 'openeye' and openforcefield.utils.OpenEyeToolkitWrapper.is_available():
+            self.toolkit = 'openeye'
+        elif toolkit.lower() == 'rdkit' and openforcefield.utils.RDKitToolkitWrapper.is_available():
+            self.toolkit = 'rdkit'
         else:
-            raise Exception("Toolkit %s was not recognized, please use openeye or rdkit" % toolkit)
+            raise ValueError("Could not find toolkit {}, please use/install "
+                             "openeye or rdkit.".format(toolkit))
 
         # Define the regular expressions used for all SMIRKS decorators
         # There are a limited number of descriptors for smirks string they are:

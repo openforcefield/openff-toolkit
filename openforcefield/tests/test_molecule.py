@@ -143,22 +143,23 @@ def mini_drug_bank(xfail_mols=None, wip_mols=None):
         to the failure reason.
 
     """
-    # We need OpenEye to parse the molecules, but pytest executes fixtures
-    # whether or not tests are skipped so if OE is not available we just
-    # return an empty list of test cases.
-    if not OpenEyeToolkitWrapper.is_available():
-        return []
-
     # If we have already loaded the data set, return the cached one.
     if mini_drug_bank.molecules is not None:
         molecules = mini_drug_bank.molecules
     else:
         # Load the dataset.
         file_path = get_data_filename('molecules/MiniDrugBank_tripos.mol2')
-        molecules = Molecule.from_file(file_path, allow_undefined_stereo=True)
-        # print([i for i, mol in enumerate(molecules) if mol is not None if mol.name == 'DrugBank_2210'])
-        # molecules = [mol for mol in molecules if mol is not None if mol.name == 'DrugBank_2210']
-        mini_drug_bank.molecules = molecules
+        try:
+            # We need OpenEye to parse the molecules, but pytest execute this
+            # whether or not the test class is skipped so if OE is not available
+            # we just return an empty list of test cases as a workaround.
+            molecules = Molecule.from_file(file_path, allow_undefined_stereo=True)
+        except NotImplementedError as e:
+            assert 'No toolkits in registry can read file' in str(e)
+            mini_drug_bank.molecules = []
+            return []
+        else:
+            mini_drug_bank.molecules = molecules
 
     # Check if we need to mark anything.
     if xfail_mols is None and wip_mols is None:
