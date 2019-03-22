@@ -1682,9 +1682,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             An openforcefield-style molecule.
         """
         from openforcefield.topology.molecule import Molecule
-        # inherits base class docstring
         from rdkit import Chem
-        from rdkit.Chem import EnumerateStereoisomers
 
         rdmol = Chem.MolFromSmiles(smiles, sanitize=False)
         rdmol.UpdatePropertyCache(strict=False)
