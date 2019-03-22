@@ -13,12 +13,15 @@ Serialization mix-in
 # GLOBAL IMPORTS
 #=============================================================================================
 
+import abc
+
+
 #=============================================================================================
 # SERIALIZATION MIX-IN
 #=============================================================================================
 
 
-class Serializable(object):
+class Serializable(abc.ABC):
     """Mix-in to add serialization and deserialization support via JSON, YAML, BSON, TOML, MessagePack, and XML.
 
     For more information on these formats, see: `JSON <https://www.json.org/>`_, `BSON <http://bsonspec.org/>`_, `YAML <http://yaml.org/>`_, `TOML <https://github.com/toml-lang/toml>`_, `MessagePack <https://msgpack.org/index.html>`_, and `XML <https://www.w3.org/XML/>`_.
@@ -44,9 +47,9 @@ class Serializable(object):
     ...     def to_dict(self):
     ...         return { 'description' : self.description }
     ...
-    ...     @staticmethod
-    ...     def from_dict(d):
-    ...         return Thing(d['description'])
+    ...     @classmethod
+    ...     def from_dict(cls, d):
+    ...         return cls(d['description'])
     ...
     ... # Create an example object
     ... thing = Thing('blorb')
@@ -101,11 +104,14 @@ class Serializable(object):
 
     """
 
+    @abc.abstractmethod
     def to_dict(self):
-        raise NotImplementedError
+        pass
 
-    def from_dict(self):
-        raise NotImplementedError
+    @classmethod
+    @abc.abstractmethod
+    def from_dict(cls, d):
+        pass
 
     def to_json(self, indent=None):
         """
@@ -200,6 +206,9 @@ class Serializable(object):
             A TOML serialized representation of the object
 
         """
+        raise NotImplementedError()
+        # TODO: This implementation currently discards dict keys associated to the None value.
+        #   See test_utils_serialization::TestUtilsSMIRNOFFSerialization::test_toml.
         import toml
         d = self.to_dict()
         return toml.dumps(d)
@@ -385,6 +394,9 @@ class Serializable(object):
             Instantiated object.
 
         """
+        raise NotImplementedError()
+        # TODO: This implementation currently loads numbers as strings.
+        #   See test_utils_serialization::TestUtilsSerialization::test_xml.
         import xmltodict
         d = xmltodict.parse(serialized)
         root_name = cls.__name__
