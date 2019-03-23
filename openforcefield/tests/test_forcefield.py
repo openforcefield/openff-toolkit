@@ -50,10 +50,11 @@ simple_xml_ff = str.encode('''<?xml version='1.0' encoding='ASCII'?>
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5" periodicity1="2" phase1="180."/>
   </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" switch_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" switch_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
     <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n2" rmin_half="1.4870"/>
   </vdW>
+  <Electrostatics method="PME" scale12="0.0" scale13="0.0" scale14="0.833333"/>
   <ToolkitAM1BCC/>
 </SMIRNOFF>
 ''')
@@ -82,10 +83,11 @@ xml_ff_w_comments = '''<?xml version='1.0' encoding='ASCII'?>
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5" periodicity1="2" phase1="180."/>
   </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" switch_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" switch_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
     <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n2" rmin_half="1.4870"/>
   </vdW>
+  <Electrostatics method="PME" scale12="0.0" scale13="0.0" scale14="0.833333"/>
   <ToolkitAM1BCC/>
 </SMIRNOFF>
 '''
@@ -114,12 +116,12 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5" periodicity1="2" phase1="180."/>
   </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" switch_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" switch_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
     <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n2" rmin_half="1.4870"/>
   </vdW>
-    <ToolkitAM1BCC/>
-
+  <Electrostatics method="PME" scale12="0.0" scale13="0.0" scale14="0.833333"/>
+  <ToolkitAM1BCC/>
 </SMIRNOFF>
 '''
 
