@@ -568,11 +568,15 @@ class ParameterHandler(object):
                                                                                self._REQUIRE_UNITS[key])
                     raise SMIRNOFFSpecError(msg)
 
+        element_name = None
+        if self._INFOTYPE is not None:
+            element_name = self._INFOTYPE._ELEMENT_NAME
+
         for key, val in smirnoff_data.items():
             # If we're reading the parameter list, iterate through and attach units to
             # each parameter_dict, then use it to initialize a ParameterType
             #if key == self._TAGNAME:
-            if key == self._INFOTYPE._ELEMENT_NAME:
+            if key == element_name:
                 # If there are multiple parameters, this will be a list. If there's just one, make it a list
                 if not(isinstance(val, list)):
                     val = [val]
@@ -1277,12 +1281,14 @@ class vdWHandler(ParameterHandler):
     _TAGNAME = 'vdW'  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create
-    _KWARGS = ['ewaldErrorTolerance', 'useDispersionCorrection'] # Kwargs to catch when create_force is called
+    _KWARGS = ['ewaldErrorTolerance',
+               'useDispersionCorrection',
+               'usePbc'] # Kwargs to catch when create_force is called
     _REQUIRE_UNITS = {'switch': unit.angstrom,
                       'cutoff': unit.angstrom}
     _DEFAULT_SPEC_ATTRIBS = {
         'potential': 'Lennard-Jones-12-6',
-        'combining_rules': 'Loentz-Berthelot',
+        'combining_rules': 'Lorentz-Berthelot',
         'scale12': 0.0,
         'scale13': 0.0,
         'scale14': 0.5,
@@ -1301,70 +1307,48 @@ class vdWHandler(ParameterHandler):
     # TODO: Is this necessary? It's used in check_compatibility but could be hard-coded.
     _SCALETOL = 1e-5
 
-    _NONBOND_METHOD_MAP = {
-        NonbondedMethod.NoCutoff: openmm.NonbondedForce.NoCutoff,
-        NonbondedMethod.CutoffPeriodic: openmm.NonbondedForce.CutoffPeriodic,
-        NonbondedMethod.CutoffNonPeriodic: openmm.NonbondedForce.CutoffNonPeriodic,
-        NonbondedMethod.Ewald: openmm.NonbondedForce.Ewald,
-        NonbondedMethod.PME: openmm.NonbondedForce.PME
-    }
 
     def __init__(self, **kwargs):
 
         super().__init__(**kwargs)
-        if self.scale12 != 0.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
-                                    "Specified 1-2 scaling was {}".format(self.scale12))
-        if self.scale13 != 0.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
-                                    "Specified 1-3 scaling was {}".format(self.scale13))
-        if self.scale15 != 1.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
-                                    "Specified 1-5 scaling was {}".format(self.scale15))
 
-        if self.long_range_dispersion == 'isotropic':
-            if self.cutoff == None:
+
+
+        if self._scale12 != 0.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
+                                    "Specified 1-2 scaling was {}".format(self._scale12))
+        if self._scale13 != 0.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
+                                    "Specified 1-3 scaling was {}".format(self._scale13))
+        if self._scale15 != 1.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
+                                    "Specified 1-5 scaling was {}".format(self._scale15))
+
+        if self._long_range_dispersion == 'isotropic':
+            if self._cutoff == None:
                 raise SMIRNOFFSpecError("If vdW long_range_dispersion is isotropic, a cutoff distance"
                                         "must be provided")
-            if self.switch == None:
+            if self._switch == None:
                 raise SMIRNOFFSpecError("If vdW long_range_dispersion is isotropic, a switch distance"
                                         "must be provided")
-        elif self.long_range_dispersion == 'PME':
+        elif self._long_range_dispersion == 'PME':
             pass
         else:
             raise SMIRNOFFSpecError("The Open Force Field toolkit currently only supports vdW long_range_dispersion"
                                     "values of 'isotropic' (default) and 'PME'. Received unsupported value "
-                                    "{}".format(self.long_range_dispersion))
+                                    "{}".format(self._long_range_dispersion))
 
-        if self.potential != "Lennard-Jones-12-6":
-            raise SMIRNOFFSpecError("vdW potential set to {}. Only Lennard-Jones-12-6 is currently"
-                                    "supported".format(self.potential))
+        if self._potential != "Lennard-Jones-12-6":
+            raise SMIRNOFFSpecError("vdW potential set to {}. Only 'Lennard-Jones-12-6' is currently"
+                                    "supported".format(self._potential))
 
 
-        if self.combining_rules != "Lorentz-Berthelot":
+        if self._combining_rules != "Lorentz-Berthelot":
             raise SMIRNOFFSpecError("vdW combining_rules set to {}. Only 'Lorentz-Berthelot' is currently "
-                                    "supported".format(self.combining_rules))
+                                    "supported".format(self._combining_rules))
         # TODO: Find a better way to set defaults
         # TODO: Validate these values against the supported output types (openMM force kwargs?)
         # TODO: Add conditional logic to assign NonbondedMethod and check compatibility
-
-        # # Set the nonbonded method
-        # if nonbonded_method is None:
-        #     self._nonbonded_method = NonbondedMethod.NoCutoff
-        # else:
-        #     # If it's a string that's the name of a nonbonded method
-        #     if type(nonbonded_method) is str:
-        #         self._nonbonded_method = NonbondedMethod[nonbonded_method]
-        #
-        #     # If it's an enum'ed value of NonbondedMethod
-        #     elif nonbonded_method in NonbondedMethod:
-        #         self._nonbonded_method = nonbonded_method
-        #     # If it's an openMM nonbonded method, reverse it back to a package-independent enum
-        #     elif nonbonded_method in self._NONBOND_METHOD_MAP.values():
-        #         for key, val in self._NONBOND_METHOD_MAP.items():
-        #             if nonbonded_method == val:
-        #                 self._nonbonded_method = key
-        #                 break
 
 
 
@@ -1413,13 +1397,17 @@ class vdWHandler(ParameterHandler):
         #self._long_range_dispersion:'long_range_dispersion'
         #}
 
-    # TODO: nonbondedMethod and nonbondedCutoff should now be specified by StericsForce attributes
     def create_force(self, system, topology, **kwargs):
-
         force = openmm.NonbondedForce()
-        nonbonded_method = self._NONBOND_METHOD_MAP[self._nonbonded_method]
-        force.setNonbondedMethod(nonbonded_method)
-        force.setCutoffDistance(self._cutoff.in_units_of(unit.nanometer))
+        # If we're using PME, then the only possible openMM Nonbonded type is LJPME
+        if self._long_range_dispersion == 'PME':
+            force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
+        else:
+            #nonbonded_method = self._NONBOND_METHOD_MAP[self._nonbonded_method]
+            #force.setNonbondedMethod(nonbonded_method)
+            force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+            force.setCutoffDistance(self._cutoff.in_units_of(unit.nanometer))
+            force.setSwitchingDistance(self._switch.in_units_of(unit.nanometer))
         if 'ewaldErrorTolerance' in kwargs:
             force.setEwaldErrorTolerance(kwargs['ewaldErrorTolerance'])
         if 'useDispersionCorrection' in kwargs:
@@ -1476,10 +1464,12 @@ class ElectrostaticsHandler(ParameterHandler):
     _DEPENDENCIES = [vdWHandler]
     _DEFAULT_SPEC_ATTRIBS = {
         'method': 'PME',
-        'scale12': '0.0',
-        'scale13': '0.0',
-        'scale14': '0.833333',
-        'scale15': '1.0',
+        'scale12': 0.0,
+        'scale13': 0.0,
+        'scale14': 0.833333,
+        'scale15': 1.0,
+        'switch_width': 8.0 * unit.angstrom,
+        'cutoff': 9.0 * unit.angstrom
     }
     _ATTRIBS_TO_TYPE = {'scale12': float,
                         'scale13': float,
@@ -1487,24 +1477,95 @@ class ElectrostaticsHandler(ParameterHandler):
                         'scale15': float
                         }
 
-    _OPTIONAL_SPEC_ATTRIBS = {
-        'switch_width': 8.0 * unit.angstrom,
-        'cutoff': 9.0 * unit.angstrom
-    }
+    _OPTIONAL_SPEC_ATTRIBS = ['cutoff', 'switch-width']
 
-    # TODO: Can this have a distinct cutoff and switch value from vdW?
+
+    # _NONBOND_METHOD_MAP = {
+    #     NonbondedMethod.NoCutoff: openmm.NonbondedForce.NoCutoff,
+    #     NonbondedMethod.CutoffPeriodic: openmm.NonbondedForce.CutoffPeriodic,
+    #     NonbondedMethod.CutoffNonPeriodic: openmm.NonbondedForce.CutoffNonPeriodic,
+    #     NonbondedMethod.Ewald: openmm.NonbondedForce.Ewald,
+    #     NonbondedMethod.PME: openmm.NonbondedForce.PME
+    #     NonbondedMethod.LJPME: openmm.NonbondedForce.LJPME
+    # }
+
+    # NOTE: In theory, this can have a different cutoff than the vdWHandler. However, we can't currently specify
+    #       different values for these in the OpenMM system.
     def __init__(self, **kwargs):
-        if self.scale12 != 0.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
-                                    "Specified 1-2 scaling was {}".format(self.scale12))
-        if self.scale13 != 0.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
-                                    "Specified 1-3 scaling was {}".format(self.scale13))
-        if self.scale15 != 1.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
-                                    "Specified 1-5 scaling was {}".format(self.scale15))
 
         super().__init__(**kwargs)
+
+        if self._scale12 != 0.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
+                                    "Specified 1-2 scaling was {}".format(self._scale12))
+        if self._scale13 != 0.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
+                                    "Specified 1-3 scaling was {}".format(self._scale13))
+        if self._scale15 != 1.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
+                                    "Specified 1-5 scaling was {}".format(self._scale15))
+
+        supported_methods = ['PME', 'reaction-field', 'Coulomb']
+        if not self._method in supported_methods:
+            raise SMIRNOFFSpecError("'method' parameter in Electrostatics tag {} is not a supported"
+                                    "option. Valid methods are {}".format(self._method, supported_methods))
+
+
+        if self._method == 'reaction-field' or self._method == 'Coulomb':
+            if self._cutoff == None:
+                raise SMIRNOFFSpecError("If Electrostatics method is 'reaction-field' or 'Coulomb', then 'cutoff' must"
+                                        "also be specified")
+
+
+
+
+
+    def create_force(self, system, topology, **kwargs):
+        existing = [system.getForce(i) for i in range(system.getNumForces())]
+        existing = [
+            f for f in existing if type(f) == openmm.NonbondedForce
+        ]
+        force = existing[0]
+
+        # Set the nonbonded method
+
+        if 'usePbc' in kwargs:
+            usePbc = bool(kwargs['usePbc'])
+        else:
+            usePbc = True
+
+        settings_matched = False
+
+
+        # First, check whether the vdWHandler set it to LJPME, because that means that electrostatics also has to be PME
+        current_nb_method = force.getNonbondedMethod()
+        if current_nb_method == openmm.NonbondedForce.LJPME:
+            if not self._method == 'PME':
+                raise SMIRNOFFSpecError("vdW long_range_dispersion set to PME, but electrostatics set "
+                                        "to {}. Current Open Force Field implementation only supports"
+                                        " PME electrostatics for this vdW setting.".format(self._method))
+            settings_matched = True
+
+        settings_tuples = (({'method': 'Coulomb', 'usePbc': False}, openmm.NonbondedForce.NoCutoff),
+                           ({'method': 'reaction-field', 'usePbc': True}, openmm.NonbondedForce.CutoffPeriodic),
+                           ({'method': 'reaction-field', 'usePbc': False}, openmm.NonbondedForce.CutoffNonPeriodic),
+                           ({'method': 'Coulomb', 'usePbc': True}, openmm.NonbondedForce.Ewald),
+                           ({'method': 'PME', 'usePbc': True}, openmm.NonbondedForce.PME),
+                           )
+
+        for setting_dict, nonbond_method in settings_tuples:
+            if self._method == setting_dict['method'] and usePbc == setting_dict['usePbc']:
+                settings_matched = True
+                force.setNonbondedMethod(nonbond_method)
+                break
+
+        if not(settings_matched):
+            raise SMIRNOFFSpecError('Unable to find an OpenMM NonbondedForce for the provided settings'
+                                    '(electrostatics method={}, usePbc={})'.format(self._method,
+                                                                                   usePbc))
+
+
+        # TODO: Check that the same cutoffs have been set for both this and vdWHandler
 
 
 class ToolkitAM1BCCHandler(ParameterHandler):
