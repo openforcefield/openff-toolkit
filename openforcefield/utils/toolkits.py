@@ -1692,6 +1692,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
 
         rdmol = Chem.MolFromSmiles(smiles, sanitize=False)
+        # TODO: I think UpdatePropertyCache(strict=True) is called anyway in Chem.SanitizeMol().
         rdmol.UpdatePropertyCache(strict=False)
         Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
@@ -1783,41 +1784,34 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         from openforcefield.topology.molecule import Molecule
 
+        # Sanitize the molecule. We handle aromaticity and chirality manually.
+        Chem.SanitizeMol(rdmol, (Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^
+                                 Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_CLEANUPCHIRALITY))
+        Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+        # Make sure the bond stereo tags are set before checking for
+        # undefined stereo. RDKit can figure out bond stereo from other
+        # information in the Mol object like bond direction properties.
+        # Do not overwrite eventual chiral tags provided by the user.
+        Chem.AssignStereochemistry(rdmol, cleanIt=False)
+
         # Check for undefined stereochemistry.
         self._detect_undefined_stereo(rdmol, raise_warning=allow_undefined_stereo,
                                       err_msg_prefix="Unable to make OFFMol from RDMol: ")
 
         # Create a new openforcefield Molecule
-        mol = Molecule()
-
-        # These checks cause rdkit to choke on one member of our test set: ZINC16448882
-        # http://zinc.docking.org/substance/16448882
-        # This has a pentavalent nitrogen, which I think is really resonance-stabilized.
-        # I think we should allow this as input, since a fractional bond order calculation will probably sort it out.
-
-        #Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^ Chem.SANITIZE_ADJUSTHS)
-        #Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-
-        # The rdmol will already have CW and CCW tags (if it didn't throw an exception above), but here we make
-        # it generate CIP (R/S + E/Z) tags
-        Chem.AssignStereochemistry(rdmol)
+        offmol = Molecule()
 
         # If RDMol has a title save it
         if rdmol.HasProp("_Name"):
             #raise Exception('{}'.format(rdmol.GetProp('name')))
-            mol.name = rdmol.GetProp("_Name")
+            offmol.name = rdmol.GetProp("_Name")
         else:
-            mol.name = ""
+            offmol.name = ""
 
         # Store all properties
         # TODO: Should there be an API point for storing properties?
         properties = rdmol.GetPropsAsDict()
-        mol._properties = properties
-
-        # We store bond orders as integers regardless of aromaticity.
-        # In order to properly extract these, we need to have the "Kekulized" version of the rdkit mol
-        kekul_mol = Chem.Mol(rdmol)
-        Chem.Kekulize(kekul_mol, clearAromaticFlags=False)#True)
+        offmol._properties = properties
 
         # setting chirality in openeye requires using neighbor atoms
         # therefore we can't do it until after the atoms and bonds are all added
@@ -1852,7 +1846,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     raise UndefinedStereochemistryError("In from_rdkit: Expected atom stereochemistry of R or S. "
                                                         "Got {} instead.".format(stereo_code))
 
-            atom_index = mol.add_atom(
+            atom_index = offmol.add_atom(
                 atomic_number,
                 formal_charge,
                 is_aromatic,
@@ -1876,14 +1870,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             order = rdb.GetBondTypeAsDouble()
             if order == 1.5:
                 # get the bond order for this bond in the kekulized molecule
-                order = kekul_mol.GetBondWithIdx(
+                order = rdmol.GetBondWithIdx(
                     rdb.GetIdx()).GetBondTypeAsDouble()
                 is_aromatic = True
             # Convert floating-point bond order to integral bond order
             order = int(order)
 
             # create a new bond
-            bond_index = mol.add_bond(map_atoms[a1], map_atoms[a2], order,
+            bond_index = offmol.add_bond(map_atoms[a1], map_atoms[a2], order,
                                       is_aromatic)
             map_bonds[rdb_idx] = bond_index
 
@@ -1892,7 +1886,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         for rdb in rdmol.GetBonds():
             rdb_idx = rdb.GetIdx()
             offb_idx = map_bonds[rdb_idx]
-            offb = mol.bonds[offb_idx]
+            offb = offmol.bonds[offb_idx]
             # determine if stereochemistry is needed
             stereochemistry = None
             tag = rdb.GetStereo()
@@ -1915,17 +1909,17 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # If the rdmol has a conformer, store its coordinates
         if len(rdmol.GetConformers()) != 0:
             for conf in rdmol.GetConformers():
-                n_atoms = mol.n_atoms
+                n_atoms = offmol.n_atoms
                 # TODO: Will this always be angstrom when loading from RDKit?
                 positions = unit.Quantity(
                     np.zeros((n_atoms, 3)), unit.angstrom)
                 for rd_idx, off_idx in map_atoms.items():
                     atom_coords = conf.GetPositions()[rd_idx, :] * unit.angstrom
                     positions[off_idx, :] = atom_coords
-                mol.add_conformer(positions)
+                offmol.add_conformer(positions)
 
         partial_charges = unit.Quantity(
-            np.zeros(mol.n_atoms, dtype=np.float), unit=unit.elementary_charge)
+            np.zeros(offmol.n_atoms, dtype=np.float), unit=unit.elementary_charge)
 
         any_atom_has_partial_charge = False
         for rd_idx, rd_atom in enumerate(rdmol.GetAtoms()):
@@ -1942,8 +1936,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                         "Some atoms in rdmol have partial charges, but others do not."
                     )
 
-            mol.partial_charges = partial_charges
-        return mol
+            offmol.partial_charges = partial_charges
+        return offmol
 
     @staticmethod
     def to_rdkit(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):

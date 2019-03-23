@@ -303,45 +303,30 @@ class TestMolecule:
         graph = molecule.to_networkx()
 
     @requires_rdkit
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    @pytest.mark.wip(reason="Most of these tests still fail and we still need to understand what's going on.")
+    @pytest.mark.parametrize('molecule', mini_drug_bank(
+        xfail_mols={
+            'DrugBank_2684': 'The RDKit round-trip assign incorrect info for the bond stereo',
+            'DrugBank_4346': 'The RDKit round-trip assign incorrect info for the bond stereo'
+        }
+    ))
     def test_to_from_rdkit(self, molecule):
         """Test that conversion/creation of a molecule to and from an RDKit rdmol is consistent."""
-        # TODO: Most of the test cases fail for this!
-        toolkit_wrapper = RDKitToolkitWrapper()
-        # Using ZINC test set
-        #known_failures = ['ZINC17060065', 'ZINC16448882', 'ZINC15772239','ZINC11539132',
-        #                  'ZINC05975187', 'ZINC17111082', 'ZINC00265517']
-        # Using DrugBank test set
-        known_failures = {}#['DrugBank_349', 'DrugBank_1420', 'DrugBank_1671', 'DrugBank_4346']
-        failures = []
-        #fail_smileses = []
-        if molecule.name in known_failures:
-            return
-        rdmol = molecule.to_rdkit()
-        molecule_copy1 = Molecule(rdmol)
-        molecule_copy2 = Molecule.from_rdkit(rdmol)
-        for molecule_copy in [molecule_copy1, molecule_copy2]:
-            assert molecule == molecule_copy
+        from openforcefield.utils.toolkits import UndefinedStereochemistryError
 
-        # if not(molecule == molecule_copy):
-        #     failures.append(molecule)
-        # print("n_failures", len(failures))
-        # if not(molecule.to_dict() == molecule_copy.to_dict()):
-        #mol_smi = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-        #mol_copy_smi = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
-        # TODO: If I use OE to generate the SMILESes, 91/365 molecules don't match. What is going on?
-        #if not (mol_smi == mol_copy_smi):
-        #    failures.append(molecule.name)
-        #    fail_smileses.append((molecule.to_smiles(toolkit_registry=toolkit_wrapper),
-        #                          molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)))
-        #assert mol_smi == mol_copy_smi
-        #print(len(self.molecules))
-        #print(len(failures))
-        #for name, (smi1, smi2) in zip(failures, fail_smileses):
-        #    print(name)
-        #    print(smi1)
-        #    print(smi2)
+        rdmol = molecule.to_rdkit()
+
+        # Check if this is a molecule with undefined stereo.
+        molecule_copies = []
+        try:
+            molecule_copies.append(Molecule(rdmol))
+        except UndefinedStereochemistryError:
+            allow_undefined_stereo = True
+        else:
+            allow_undefined_stereo = False
+        molecule_copies.append(Molecule.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo))
+
+        for molecule_copy in molecule_copies:
+            assert molecule == molecule_copy
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @requires_openeye
