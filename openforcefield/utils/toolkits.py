@@ -2001,8 +2001,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             7: Chem.BondType.ONEANDAHALF,
         }
 
-        # atom map lets you find atoms again
-        map_atoms = dict()  # { molecule index : rdkit index }
         for index, atom in enumerate(molecule.atoms):
             rdatom = Chem.Atom(atom.atomic_number)
             rdatom.SetFormalCharge(atom.formal_charge)
@@ -2017,14 +2015,15 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
             rd_index = rdmol.AddAtom(rdatom)
 
-            map_atoms[index] = rd_index
+            # Let's make sure al the atom indices in the two molecules
+            # are the same, otherwise we need to create an atom map.
+            assert index == atom.molecule_atom_index
             assert index == rd_index
 
         for bond in molecule.bonds:
-            rdatom1 = map_atoms[bond.atom1.molecule_atom_index]
-            rdatom2 = map_atoms[bond.atom2.molecule_atom_index]
-            rdmol.AddBond(rdatom1, rdatom2)
-            rdbond = rdmol.GetBondBetweenAtoms(rdatom1, rdatom2)
+            atom_indices = (bond.atom1.molecule_atom_index, bond.atom2.molecule_atom_index)
+            rdmol.AddBond(*atom_indices)
+            rdbond = rdmol.GetBondBetweenAtoms(*atom_indices)
             if not (bond.fractional_bond_order is None):
                 rdbond.SetDoubleProp("fractional_bond_order",
                                      bond.fractional_bond_order)
@@ -2043,7 +2042,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # will be forcefully set to the stereo we want (see #196).
         undefined_stereo_atoms = {}
         for index, atom in enumerate(molecule.atoms):
-            rdatom = rdmol.GetAtomWithIdx(map_atoms[index])
+            rdatom = rdmol.GetAtomWithIdx(index)
 
             # Skip non-chiral atoms.
             if atom.stereochemistry is None:
@@ -2086,9 +2085,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         if molecule._conformers:
             for conformer in molecule._conformers:
                 rdmol_conformer = Chem.Conformer()
-                for index, rd_idx in map_atoms.items():
-                    (x, y, z) = conformer[index, :] / unit.angstrom
-                    rdmol_conformer.SetAtomPosition(rd_idx,
+                for atom_idx in range(molecule.n_atoms):
+                    (x, y, z) = conformer[atom_idx, :] / unit.angstrom
+                    rdmol_conformer.SetAtomPosition(atom_idx,
                                                     Geometry.Point3D(x, y, z))
                 rdmol.AddConformer(rdmol_conformer)
 
@@ -2096,13 +2095,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         if not (molecule._partial_charges is None):
 
             rdk_indexed_charges = np.zeros((molecule.n_atoms), dtype=np.float)
-            for off_idx, charge in enumerate(molecule._partial_charges):
-                rdk_idx = map_atoms[off_idx]
+            for atom_idx, charge in enumerate(molecule._partial_charges):
                 charge_unitless = charge / unit.elementary_charge
-                rdk_indexed_charges[rdk_idx] = charge_unitless
-            for rdk_idx, rdk_atom in enumerate(rdmol.GetAtoms()):
+                rdk_indexed_charges[atom_idx] = charge_unitless
+            for atom_idx, rdk_atom in enumerate(rdmol.GetAtoms()):
                 rdk_atom.SetDoubleProp('partial_charge',
-                                       rdk_indexed_charges[rdk_idx])
+                                       rdk_indexed_charges[atom_idx])
 
         # Cleanup the rdmol
         rdmol.UpdatePropertyCache(strict=False)
