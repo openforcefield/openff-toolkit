@@ -303,12 +303,7 @@ class TestMolecule:
         graph = molecule.to_networkx()
 
     @requires_rdkit
-    @pytest.mark.parametrize('molecule', mini_drug_bank(
-        xfail_mols={
-            'DrugBank_2684': 'The RDKit round-trip assign incorrect info for the bond stereo',
-            'DrugBank_4346': 'The RDKit round-trip assign incorrect info for the bond stereo'
-        }
-    ))
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_to_from_rdkit(self, molecule):
         """Test that conversion/creation of a molecule to and from an RDKit rdmol is consistent."""
         from openforcefield.utils.toolkits import UndefinedStereochemistryError
@@ -323,7 +318,8 @@ class TestMolecule:
             allow_undefined_stereo = True
         else:
             allow_undefined_stereo = False
-        molecule_copies.append(Molecule.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo))
+        molecule_copies.append(Molecule.from_rdkit(
+            rdmol, allow_undefined_stereo=allow_undefined_stereo))
 
         for molecule_copy in molecule_copies:
             assert molecule == molecule_copy

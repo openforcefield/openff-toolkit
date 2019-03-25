@@ -242,7 +242,8 @@ class Atom(Particle):
         self._bonds = list()
         self._virtual_sites = list()
 
-    # TODO: Change this to add_bond(Bond) to improve encapsulation and extensibility?
+    # TODO: We can probably avoid an explicit call and determine this dynamically
+    #   from self._molecule (maybe caching the result) to get rid of some bookkeeping.
     def add_bond(self, bond):
         """Adds a bond that this atom is involved in
         .. todo :: Is this how we want to keep records?

@@ -1939,8 +1939,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             offmol.partial_charges = partial_charges
         return offmol
 
-    @staticmethod
-    def to_rdkit(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    @classmethod
+    def to_rdkit(cls, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an RDKit molecule
 
@@ -2018,6 +2018,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             rd_index = rdmol.AddAtom(rdatom)
 
             map_atoms[index] = rd_index
+            assert index == rd_index
 
         for bond in molecule.bonds:
             rdatom1 = map_atoms[bond.atom1.molecule_atom_index]
@@ -2078,55 +2079,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 atom.stereochemistry, rdatom.GetProp("_CIPCode")))
             raise RuntimeError(err_msg)
 
-        # Assign bond stereochemistry
-        for bond in molecule.bonds:
-            if bond.stereochemistry:
-                # Determine neighbors
-                # TODO: This API needs to be created
-                n1 = [
-                    n.molecule_atom_index for n in bond.atom1.bonded_atoms
-                    if n != bond.atom2
-                ][0]
-                n2 = [
-                    n.molecule_atom_index for n in bond.atom2.bonded_atoms
-                    if n != bond.atom1
-                ][0]
-                # Get rdmol bonds
-                bond_atom1_index = molecule.atoms.index(bond.atom1)
-                bond_atom2_index = molecule.atoms.index(bond.atom2)
-                bond1 = rdmol.GetBondBetweenAtoms(map_atoms[n1],
-                                                  map_atoms[bond.atom1_index])
-                bond2 = rdmol.GetBondBetweenAtoms(map_atoms[bond_atom1_index],
-                                                  map_atoms[bond.atom2_index])
-                bond3 = rdmol.GetBondBetweenAtoms(map_atoms[bond_atom2_index],
-                                                  map_atoms[n2])
-                # Set arbitrary stereochemistry
-                # Since this is relative, the first bond always goes up
-                # as explained above these names come from SMILES slashes so UP/UP is Trans and Up/Down is cis
-                bond1.SetBondDir(Chem.BondDir.ENDUPRIGHT)
-                bond3.SetBondDir(Chem.BondDir.ENDDOWNRIGHT)
-                # Flip the stereochemistry if it is incorrect
-                # TODO: Clean up _CIPCode atom and bond properties
-                Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
-                if bond.stereochemistry == 'E':
-                    desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOE
-                elif bond.stereochemistry == 'Z':
-                    desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOZ
-                else:
-                    raise Exception(
-                        "Unknown bond stereochemistry encountered in "
-                        "to_rdkit : {}".format(bond.stereochemistry))
-
-                if bond2.GetStereo() != desired_rdk_stereo_code:
-                    # Flip it
-                    bond3.SetBondDir(Chem.BondDir.ENDUPRIGHT)
-                    # Validate we have the right stereochemistry as a sanity check
-                    Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
-                    #if rdmol.GetProp('_CIPCode') != bond.stereochemistry:
-                    if bond2.GetStereo() != desired_rdk_stereo_code:
-                        raise Exception(
-                            'Programming error with assumptions about RDKit stereochemistry model'
-                        )
+        # Copy bond stereo info from molecule to rdmol.
+        cls._assign_rdmol_bonds_stereo(molecule, rdmol)
 
         # Set coordinates if we have them
         if molecule._conformers:
@@ -2153,9 +2107,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Cleanup the rdmol
         rdmol.UpdatePropertyCache(strict=False)
         Chem.GetSSSR(rdmol)
-        # I added AssignStereochemistry which takes the directions of the bond set
-        # and assigns the stereochemistry tags on the double bonds.
-        Chem.AssignStereochemistry(rdmol, force=False)
 
         # Forcefully assign stereo information on the atoms that RDKit
         # can't figure out. This must be done last as calling AssignStereochemistry
@@ -2258,9 +2209,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         return self._find_smarts_matches(
             rdmol, smarts, aromaticity_model='OEAroModel_MDL')
 
-    # ------------------------------------------
-    # Stereochemistry detection RDKit utilities.
-    # ------------------------------------------
+    # --------------------------------
+    # Stereochemistry RDKit utilities.
+    # --------------------------------
 
     @staticmethod
     def _find_undefined_stereo_atoms(rdmol, assign_stereo=False):
@@ -2405,6 +2356,127 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 logger.warning(msg)
             else:
                 raise UndefinedStereochemistryError(msg)
+
+    @staticmethod
+    def _flip_rdbond_direction(rdbond, paired_rdbonds):
+        """Flip the rdbond and all those paired to it.
+
+        Parameters
+        ----------
+        rdbond : rdkit.Chem.Bond
+            The Bond whose direction needs to be flipped.
+        paired_rdbonds : Dict[Tuple[int], List[rdkit.Chem.Bond]]
+            Maps bond atom indices that are assigned a bond direction to
+            the bonds on the other side of the double bond.
+        """
+        from rdkit import Chem
+
+        # The function assumes that all bonds are either up or down.
+        supported_directions = {Chem.BondDir.ENDUPRIGHT, Chem.BondDir.ENDDOWNRIGHT}
+
+        def _flip(b, paired, flipped, ignored):
+            # The function assumes that all bonds are either up or down.
+            assert b.GetBondDir() in supported_directions
+            bond_atom_indices = (b.GetBeginAtomIdx(), b.GetEndAtomIdx())
+
+            # Check that we haven't flipped this bond already.
+            if bond_atom_indices in flipped:
+                # This should never happen.
+                raise RuntimeError('Cannot flip the bond direction consistently.')
+
+            # Flip the bond.
+            if b.GetBondDir() == Chem.BondDir.ENDUPRIGHT:
+                b.SetBondDir(Chem.BondDir.ENDDOWNRIGHT)
+            else:
+                b.SetBondDir(Chem.BondDir.ENDUPRIGHT)
+            flipped.add(bond_atom_indices)
+
+            # Flip all the paired bonds as well (if there are any).
+            if bond_atom_indices in paired:
+                for paired_rdbond in paired[bond_atom_indices]:
+                    # Don't flip the bond that was flipped in the upper-level recursion.
+                    if (paired_rdbond.GetBeginAtomIdx(), paired_rdbond.GetEndAtomIdx()) != ignored:
+                        # Don't flip this bond in the next recursion.
+                        _flip(paired_rdbond, paired, flipped, ignored=bond_atom_indices)
+
+        _flip(rdbond, paired_rdbonds, flipped=set(), ignored=None)
+
+    @classmethod
+    def _assign_rdmol_bonds_stereo(cls, offmol, rdmol):
+        """Copy the info about bonds stereochemistry from the OFF Molecule to RDKit Mol."""
+        from rdkit import Chem
+
+        # Map the bonds indices that are assigned bond direction
+        # to the bond on the other side of the double bond.
+        # (atom_index1, atom_index2) -> List[rdkit.Chem.Bond]
+        paired_bonds = {}
+
+        for bond in offmol.bonds:
+            # No need to do anything with bonds without stereochemistry.
+            if not bond.stereochemistry:
+                continue
+
+            # Isolate stereo RDKit bond object.
+            rdbond_atom_indices = (bond.atom1.molecule_atom_index,
+                                   bond.atom2.molecule_atom_index)
+            stereo_rdbond = rdmol.GetBondBetweenAtoms(*rdbond_atom_indices)
+
+            # Collect all neighboring rdbonds of atom1 and atom2.
+            neighbor_rdbonds1 = [rdmol.GetBondBetweenAtoms(n.molecule_atom_index,
+                                                           bond.atom1.molecule_atom_index)
+                                 for n in bond.atom1.bonded_atoms if n != bond.atom2]
+            neighbor_rdbonds2 = [rdmol.GetBondBetweenAtoms(bond.atom2.molecule_atom_index,
+                                                           n.molecule_atom_index)
+                                 for n in bond.atom2.bonded_atoms if n != bond.atom1]
+
+            # Select only 1 neighbor bond per atom out of the two.
+            neighbor_rdbonds = []
+            for i, rdbonds in enumerate([neighbor_rdbonds1, neighbor_rdbonds2]):
+                # If there are no neighbors for which we have already
+                # assigned the bond direction, just pick the first one.
+                neighbor_rdbonds.append(rdbonds[0])
+                # Otherwise, pick neighbor that was already assigned to
+                # avoid inconsistencies and keep the tree non-cyclic.
+                for rdb in rdbonds:
+                    if (rdb.GetBeginAtomIdx(), rdb.GetBeginAtomIdx()) in paired_bonds:
+                        neighbor_rdbonds[i] = rdb
+                        break
+
+            # Assign a random direction to the bonds that were not already assigned
+            # keeping track of which bond would be best to flip later (i.e. does that
+            # are not already determining the stereochemistry of another double bond).
+            flipped_rdbond = neighbor_rdbonds[0]
+            for rdb in neighbor_rdbonds:
+                if (rdb.GetBeginAtomIdx(), rdb.GetEndAtomIdx()) not in paired_bonds:
+                    rdb.SetBondDir(Chem.BondDir.ENDUPRIGHT)
+                    # Set this bond as a possible bond to flip.
+                    flipped_rdbond = rdb
+
+            Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
+
+            # Verify that the current directions give us the desired stereochemistries.
+            assert bond.stereochemistry in {'E', 'Z'}
+            if bond.stereochemistry == 'E':
+                desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOE
+            else:
+                desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOZ
+
+            # If that doesn't work, flip the direction of one bond preferring
+            # those that are not already determining the stereo of another bond.
+            if stereo_rdbond.GetStereo() != desired_rdk_stereo_code:
+                cls._flip_rdbond_direction(flipped_rdbond, paired_bonds)
+                Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
+
+                # The stereo should be set correctly here.
+                assert stereo_rdbond.GetStereo() == desired_rdk_stereo_code
+
+            # Update paired bonds map.
+            neighbor_bond_indices = [(rdb.GetBeginAtomIdx(), rdb.GetEndAtomIdx()) for rdb in neighbor_rdbonds]
+            for i, bond_indices in enumerate(neighbor_bond_indices):
+                try:
+                    paired_bonds[bond_indices].append(neighbor_rdbonds[1-i])
+                except KeyError:
+                    paired_bonds[bond_indices] = [neighbor_rdbonds[1-i]]
 
 
 class AmberToolsToolkitWrapper(ToolkitWrapper):
