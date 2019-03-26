@@ -43,7 +43,7 @@ from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWra
 
 requires_openeye = pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(),
                                       reason='Test requires OE toolkit')
-requires_rdkit = pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(),
+requires_rdkit = pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(),
                                     reason='Test requires RDKit')
 
 
@@ -149,10 +149,17 @@ def mini_drug_bank(xfail_mols=None, wip_mols=None):
     else:
         # Load the dataset.
         file_path = get_data_filename('molecules/MiniDrugBank_tripos.mol2')
-        molecules = Molecule.from_file(file_path, allow_undefined_stereo=True)
-        # print([i for i, mol in enumerate(molecules) if mol is not None if mol.name == 'DrugBank_2210'])
-        # molecules = [mol for mol in molecules if mol is not None if mol.name == 'DrugBank_2210']
-        mini_drug_bank.molecules = molecules
+        try:
+            # We need OpenEye to parse the molecules, but pytest execute this
+            # whether or not the test class is skipped so if OE is not available
+            # we just return an empty list of test cases as a workaround.
+            molecules = Molecule.from_file(file_path, allow_undefined_stereo=True)
+        except NotImplementedError as e:
+            assert 'No toolkits in registry can read file' in str(e)
+            mini_drug_bank.molecules = []
+            return []
+        else:
+            mini_drug_bank.molecules = molecules
 
     # Check if we need to mark anything.
     if xfail_mols is None and wip_mols is None:
@@ -297,44 +304,40 @@ class TestMolecule:
 
     @requires_rdkit
     @pytest.mark.parametrize('molecule', mini_drug_bank())
-    @pytest.mark.wip(reason="Most of these tests still fail and we still need to understand what's going on.")
     def test_to_from_rdkit(self, molecule):
-        """Test that conversion/creation of a molecule to and from an RDKit rdmol is consistent."""
-        # TODO: Most of the test cases fail for this!
-        toolkit_wrapper = RDKitToolkitWrapper()
-        # Using ZINC test set
-        #known_failures = ['ZINC17060065', 'ZINC16448882', 'ZINC15772239','ZINC11539132',
-        #                  'ZINC05975187', 'ZINC17111082', 'ZINC00265517']
-        # Using DrugBank test set
-        known_failures = {}#['DrugBank_349', 'DrugBank_1420', 'DrugBank_1671', 'DrugBank_4346']
-        failures = []
-        #fail_smileses = []
-        if molecule.name in known_failures:
-            return
+        """Test that conversion/creation of a molecule to and from an RDKit rdmol is consistent.
+
+        This tests creating an OpenFF Molecule from an RDKit Mol both
+        through __init__() and from_rdkit(). However, __init__() doesn't
+        have an allow_undefined_stereo argument yet, so in that case, we
+        check for equality only for the from_rdkit() molecule.
+
+        """
+        import pickle
+        from openforcefield.utils.toolkits import UndefinedStereochemistryError
+
         rdmol = molecule.to_rdkit()
-        molecule_copy1 = Molecule(rdmol)
-        molecule_copy2 = Molecule.from_rdkit(rdmol)
-        for molecule_copy in [molecule_copy1, molecule_copy2]:
+
+        # The constructor should not change the molecule.
+        rdmol_pickle = pickle.dumps(rdmol)
+
+        # Check if this is a molecule with undefined stereo.
+        molecule_copies = []
+        try:
+            molecule_copies.append(Molecule(rdmol))
+        except UndefinedStereochemistryError:
+            allow_undefined_stereo = True
+        else:
+            allow_undefined_stereo = False
+        molecule_copies.append(Molecule.from_rdkit(
+            rdmol, allow_undefined_stereo=allow_undefined_stereo))
+
+        # Check that the roundtrip did not change anything in the OpenFF Molecule.
+        for molecule_copy in molecule_copies:
             assert molecule == molecule_copy
 
-        # if not(molecule == molecule_copy):
-        #     failures.append(molecule)
-        # print("n_failures", len(failures))
-        # if not(molecule.to_dict() == molecule_copy.to_dict()):
-        #mol_smi = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-        #mol_copy_smi = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
-        # TODO: If I use OE to generate the SMILESes, 91/365 molecules don't match. What is going on?
-        #if not (mol_smi == mol_copy_smi):
-        #    failures.append(molecule.name)
-        #    fail_smileses.append((molecule.to_smiles(toolkit_registry=toolkit_wrapper),
-        #                          molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)))
-        #assert mol_smi == mol_copy_smi
-        #print(len(self.molecules))
-        #print(len(failures))
-        #for name, (smi1, smi2) in zip(failures, fail_smileses):
-        #    print(name)
-        #    print(smi1)
-        #    print(smi2)
+        # Check that the constructor didn't modify rdmol.
+        assert rdmol_pickle == pickle.dumps(rdmol)
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @requires_openeye
@@ -885,7 +888,7 @@ class TestMolecule:
         molecule2 = Molecule.from_dict(molecule_dict)
         assert molecule.to_dict() == molecule2.to_dict()
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @requires_openeye
     def test_chemical_environment_matches_OE(self):
         """Test chemical environment matches"""
         # TODO: Move this to test_toolkits, test all available toolkits
@@ -927,7 +930,7 @@ class TestMolecule:
     # Potentially better OE stereo check: OEFlipper — Toolkits - - Python
     # https: // docs.eyesopen.com / toolkits / python / omegatk / OEConfGenFunctions / OEFlipper.html
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
+    @requires_rdkit
     def test_chemical_environment_matches_RDKit(self):
         """Test chemical environment matches"""
         # Create chiral molecule

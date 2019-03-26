@@ -23,14 +23,16 @@ Currently supported toolkits:
 # GLOBAL IMPORTS
 #=============================================================================================
 
+import copy
+from distutils.spawn import find_executable
+from functools import wraps
 import importlib
 import logging
-from functools import wraps
-from openforcefield.utils import all_subclasses, MessageException, inherit_docstrings
-from distutils.spawn import find_executable
+
 from simtk import unit
 import numpy as np
 
+from openforcefield.utils import all_subclasses, MessageException, inherit_docstrings
 
 
 #=============================================================================================
@@ -268,62 +270,62 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         'SLN', 'SMI', 'USM', 'XYC'
     ]
 
+    # TODO: AR - Do we need both toolkit_is_available() and is_available()?
     @staticmethod
     def toolkit_is_available(
             oetools=('oechem', 'oequacpac', 'oeiupac', 'oeomega')):
         """
-        Check if a given OpenEye toolkit component (or set of components) is installed and Licensed
+        Check if the given OpenEye toolkit components are available.
 
-        If the OpenEye toolkit is not installed, returns False
+        If the OpenEye toolkit is not installed or no license is found
+        for at least one the given toolkits , ``False`` is returned.
 
         Parameters
         ----------
-        oetools : str or iterable of strings, Optional, Default: ('oechem', 'oequacpac', 'oeiupac', 'oeomega')
-            Set of tools to check by their string name. Defaults to the complete set that YANK *could* use, depending on
-            feature requested.
-
-            Only checks the subset of tools if passed. Also accepts a single tool to check as a string instead of an
-            iterable of length 1.
+        oetools : str or iterable of strings, optional, default=('oechem', 'oequacpac', 'oeiupac', 'oeomega')
+            Set of tools to check by their Python module name. Defaults
+            to the complete set of tools supported by this function.
+            Also accepts a single tool to check as a string instead of
+            an iterable of length 1.
 
         Returns
         -------
         all_installed : bool
-            True if all tools in ``oetools`` are installed and licensed, False otherwise
+            ``True`` if all tools in ``oetools`` are installed and licensed,
+            ``False`` otherwise
 
         """
-        # Complete list of module: License check
-        tools_license = {
+        # Complete list of module -> license function to check.
+        license_function_names = {
             'oechem': 'OEChemIsLicensed',
             'oequacpac': 'OEQuacPacIsLicensed',
             'oeiupac': 'OEIUPACIsLicensed',
             'oeomega': 'OEOmegaIsLicensed'
         }
-        tool_keys = tools_license.keys()
+        supported_tools = set(license_function_names.keys())
 
-        # Cast oetools to tuple if its a single string
-        if type(oetools) is str:
-            oetools = (oetools, )
-        tool_set = set(oetools)
-        valid_tool_set = set(tool_keys)
-        if tool_set & valid_tool_set == set():
-            # Check for empty set intersection
-            raise ValueError(
-                "Expected OpenEye tools to have at least of the following {}, "
-                "but instead got {}".format(tool_keys, oetools))
-        try:
-            for tool in oetools:
-                if tool in tool_keys:
-                    # Try loading the module
-                    try:
-                        module = importlib.import_module('openeye', tool)
-                    except SystemError:  # Python 3.4 relative import fix
-                        module = importlib.import_module('openeye.' + tool)
-                    # Check that we have the license
-                    if not getattr(module, tools_license[tool])():
-                        raise ImportError
-        except ImportError:
-            return False
-        return True
+        # Make sure oetools is a set.
+        if isinstance(oetools, str):
+            oetools = {oetools}
+        else:
+            oetools = set(oetools)
+
+        # Check for unkown tools.
+        unknown_tools = oetools.difference(supported_tools)
+        if len(unknown_tools) > 0:
+            raise ValueError("Found unkown OpenEye tools: {}. Supported values are: {}".format(
+                sorted(unknown_tools), sorted(supported_tools)))
+
+        # Check license of all tools.
+        all_licensed = True
+        for tool in oetools:
+            try:
+                module = importlib.import_module('openeye.' + tool)
+            except (ImportError, ModuleNotFoundError):
+                return False
+            else:
+                all_licensed &= getattr(module, license_function_names[tool])()
+        return all_licensed
 
     @classmethod
     def is_available(cls):
@@ -352,18 +354,22 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         object : A molecule-like object
             An object to by type-checked.
+
         Returns
         -------
-        Molecule or False
-            An openforcefield.topology.molecule Molecule, or False if loading was unsuccessful
+        Molecule
+            An openforcefield.topology.molecule Molecule.
+
+        Raises
+        ------
+        NotImplementedError
+            If the object could not be converted into a Molecule.
         """
         # TODO: Add tests for the from_object functions
         from openeye import oechem
         if isinstance(object, oechem.OEMolBase):
-            mol = self.from_openeye(object)
-            return mol
-        else:
-            return False
+            return self.from_openeye(object)
+        raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_file(self,
                   filename,
@@ -714,7 +720,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if len(problematic_bonds) != 0:
                 msg += "Problematic bonds are: {}\n".format(problematic_bonds)
             if allow_undefined_stereo:
-                print(msg)
+                logger.warning(msg)
             else:
                 raise UndefinedStereochemistryError(msg)
 
@@ -1444,15 +1450,18 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Returns
         -------
         Molecule or False
-            An openforcefield.topology.molecule Molecule, or False if loading was unsuccessful
+            An openforcefield.topology.molecule Molecule.
+
+        Raises
+        ------
+        NotImplementedError
+            If the object could not be converted into a Molecule.
         """
         # TODO: Add tests for the from_object functions
         from rdkit import Chem
         if isinstance(object, Chem.rdchem.Mol):
-            mol = self.from_rdkit(object)
-            return mol
-        else:
-            return False
+            return self.from_rdkit(object)
+        raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_file(self,
                   filename,
@@ -1671,7 +1680,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         ----------
         smiles : str
             The SMILES string to turn into a molecule
-        hydrogens_are_explicit : bool, default = False
+        hydrogens_are_explicit : bool, default=False
             If False, RDKit will perform hydrogen addition using Chem.AddHs
 
         Returns
@@ -1680,38 +1689,24 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             An openforcefield-style molecule.
         """
         from openforcefield.topology.molecule import Molecule
-        # inherits base class docstring
         from rdkit import Chem
-        from rdkit.Chem import EnumerateStereoisomers
 
         rdmol = Chem.MolFromSmiles(smiles, sanitize=False)
+        # TODO: I think UpdatePropertyCache(strict=True) is called anyway in Chem.SanitizeMol().
         rdmol.UpdatePropertyCache(strict=False)
         Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
 
+        # Chem.MolFromSmiles adds bond directions (i.e. ENDDOWNRIGHT/ENDUPRIGHT), but
+        # doesn't set bond.GetStereo(). We need to call AssignStereochemistry for that.
+        Chem.AssignStereochemistry(rdmol)
 
-        # Adding H's can hide undefined bond stereochemistry, so we have to test for undefined stereo here
-        unspec_stereo = False
-        rdmol_copy = Chem.Mol(rdmol)
-        enumsi_opt = EnumerateStereoisomers.StereoEnumerationOptions(
-            maxIsomers=2, onlyUnassigned=True)
-        stereoisomers = [
-            isomer
-            for isomer in Chem.EnumerateStereoisomers.EnumerateStereoisomers(
-                rdmol_copy, enumsi_opt)
-        ]
-        if len(stereoisomers) != 1:
-            unspec_stereo = True
-
-        if unspec_stereo:
-            raise Exception(
-                "Unable to make OFFMol from SMILES: SMILES has unspecified stereochemistry: {}"
-                .format(smiles))
+        # Throw an exception/warning if there is unspecified stereochemistry.
+        self._detect_undefined_stereo(rdmol, err_msg_prefix='Unable to make OFFMol from SMILES: ')
 
         # Add explicit hydrogens if they aren't there already
-        if not (hydrogens_are_explicit):
+        if not hydrogens_are_explicit:
             rdmol = Chem.AddHs(rdmol)
-
 
         # TODO: Add allow_undefined_stereo to this function, and pass to from_rdkit?
         molecule = Molecule.from_rdkit(rdmol)
@@ -1789,78 +1784,37 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         from openforcefield.topology.molecule import Molecule
 
-        # Check for undefined stereochemistry
-        from rdkit.Chem import EnumerateStereoisomers
-        # TODO: Does this work for molecules with 3D geometry?
-        unspec_stereo = False
-        # Use a copy of the input, in case EnumerateStereochemstry changes anything in-place
-        rdmol_copy = Chem.Mol(rdmol)
-        enumsi_opt = EnumerateStereoisomers.StereoEnumerationOptions(
-            maxIsomers=2, onlyUnassigned=True)
-        try:
-            stereoisomers = [
-                isomer
-                for isomer in Chem.EnumerateStereoisomers.EnumerateStereoisomers(
-                    rdmol_copy, enumsi_opt)
-            ]
-        except RuntimeError as e:
-            msg = "Unable to check stereochemistry for {}. Original error:\n".format(rdmol.GetProp('_Name'))
-            msg += str(e)
-            if allow_undefined_stereo:
-                stereoisomers = []
-                print(msg)
-            else:
-                raise UndefinedStereochemistryError(msg)
+        # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
+        rdmol = Chem.Mol(rdmol)
 
-        # TODO: This will catch undefined tetrahedral centers, but not bond stereochemistry. How can we check for that?
-        if len(stereoisomers) != 1:
-            unspec_stereo = True
+        # Sanitize the molecule. We handle aromaticity and chirality manually.
+        Chem.SanitizeMol(rdmol, (Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^
+                                 Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_CLEANUPCHIRALITY))
+        Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+        # Make sure the bond stereo tags are set before checking for
+        # undefined stereo. RDKit can figure out bond stereo from other
+        # information in the Mol object like bond direction properties.
+        # Do not overwrite eventual chiral tags provided by the user.
+        Chem.AssignStereochemistry(rdmol, cleanIt=False)
 
-        if unspec_stereo:
-            msg = "RDMol has unspecified stereochemistry\n"
-            msg += "RDMol name: " + rdmol.GetProp("_Name")
-            if allow_undefined_stereo:
-                print(
-                    "WARNING: " + msg
-                )
-                # TODO: Can we find a way to print more about the error here?
-            else:
-                raise UndefinedStereochemistryError(
-                    "Unable to make OFFMol from RDMol: " + msg
-                )
+        # Check for undefined stereochemistry.
+        self._detect_undefined_stereo(rdmol, raise_warning=allow_undefined_stereo,
+                                      err_msg_prefix="Unable to make OFFMol from RDMol: ")
 
         # Create a new openforcefield Molecule
-        mol = Molecule()
-
-        # These checks cause rdkit to choke on one member of our test set: ZINC16448882
-        # http://zinc.docking.org/substance/16448882
-        # This has a pentavalent nitrogen, which I think is really resonance-stabilized.
-        # I think we should allow this as input, since a fractional bond order calculation will probably sort it out.
-
-        #Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^ Chem.SANITIZE_ADJUSTHS)
-        #Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-
-        # The rdmol will already have CW and CCW tags (if it didn't throw an exception above), but here we make
-        # it generate CIP (R/S + E/Z) tags
-        Chem.AssignStereochemistry(rdmol)
-
+        offmol = Molecule()
 
         # If RDMol has a title save it
         if rdmol.HasProp("_Name"):
             #raise Exception('{}'.format(rdmol.GetProp('name')))
-            mol.name = rdmol.GetProp("_Name")
+            offmol.name = rdmol.GetProp("_Name")
         else:
-            mol.name = ""
+            offmol.name = ""
 
         # Store all properties
         # TODO: Should there be an API point for storing properties?
         properties = rdmol.GetPropsAsDict()
-        mol._properties = properties
-
-        # We store bond orders as integers regardless of aromaticity.
-        # In order to properly extract these, we need to have the "Kekulized" version of the rdkit mol
-        kekul_mol = Chem.Mol(rdmol)
-        Chem.Kekulize(kekul_mol, clearAromaticFlags=False)#True)
+        offmol._properties = properties
 
         # setting chirality in openeye requires using neighbor atoms
         # therefore we can't do it until after the atoms and bonds are all added
@@ -1895,7 +1849,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     raise UndefinedStereochemistryError("In from_rdkit: Expected atom stereochemistry of R or S. "
                                                         "Got {} instead.".format(stereo_code))
 
-            atom_index = mol.add_atom(
+            atom_index = offmol.add_atom(
                 atomic_number,
                 formal_charge,
                 is_aromatic,
@@ -1919,14 +1873,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             order = rdb.GetBondTypeAsDouble()
             if order == 1.5:
                 # get the bond order for this bond in the kekulized molecule
-                order = kekul_mol.GetBondWithIdx(
+                order = rdmol.GetBondWithIdx(
                     rdb.GetIdx()).GetBondTypeAsDouble()
                 is_aromatic = True
             # Convert floating-point bond order to integral bond order
             order = int(order)
 
             # create a new bond
-            bond_index = mol.add_bond(map_atoms[a1], map_atoms[a2], order,
+            bond_index = offmol.add_bond(map_atoms[a1], map_atoms[a2], order,
                                       is_aromatic)
             map_bonds[rdb_idx] = bond_index
 
@@ -1935,7 +1889,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         for rdb in rdmol.GetBonds():
             rdb_idx = rdb.GetIdx()
             offb_idx = map_bonds[rdb_idx]
-            offb = mol.bonds[offb_idx]
+            offb = offmol.bonds[offb_idx]
             # determine if stereochemistry is needed
             stereochemistry = None
             tag = rdb.GetStereo()
@@ -1944,7 +1898,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             elif tag == Chem.BondStereo.STEREOE:
                 stereochemistry = 'E'
             elif tag == Chem.BondStereo.STEREOTRANS or tag == Chem.BondStereo.STEREOCIS:
-                raise Exception(
+                raise ValueError(
                     "Expected RDKit bond stereochemistry of E or Z, got {} instead"
                     .format(tag))
             offb._stereochemistry = stereochemistry
@@ -1958,17 +1912,17 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # If the rdmol has a conformer, store its coordinates
         if len(rdmol.GetConformers()) != 0:
             for conf in rdmol.GetConformers():
-                n_atoms = mol.n_atoms
+                n_atoms = offmol.n_atoms
                 # TODO: Will this always be angstrom when loading from RDKit?
                 positions = unit.Quantity(
                     np.zeros((n_atoms, 3)), unit.angstrom)
                 for rd_idx, off_idx in map_atoms.items():
                     atom_coords = conf.GetPositions()[rd_idx, :] * unit.angstrom
                     positions[off_idx, :] = atom_coords
-                mol.add_conformer(positions)
+                offmol.add_conformer(positions)
 
         partial_charges = unit.Quantity(
-            np.zeros(mol.n_atoms, dtype=np.float), unit=unit.elementary_charge)
+            np.zeros(offmol.n_atoms, dtype=np.float), unit=unit.elementary_charge)
 
         any_atom_has_partial_charge = False
         for rd_idx, rd_atom in enumerate(rdmol.GetAtoms()):
@@ -1985,11 +1939,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                         "Some atoms in rdmol have partial charges, but others do not."
                     )
 
-            mol.partial_charges = partial_charges
-        return mol
+            offmol.partial_charges = partial_charges
+        return offmol
 
-    @staticmethod
-    def to_rdkit(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    @classmethod
+    def to_rdkit(cls, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an RDKit molecule
 
@@ -2050,8 +2004,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             7: Chem.BondType.ONEANDAHALF,
         }
 
-        # atom map lets you find atoms again
-        map_atoms = dict()  # { molecule index : rdkit index }
         for index, atom in enumerate(molecule.atoms):
             rdatom = Chem.Atom(atom.atomic_number)
             rdatom.SetFormalCharge(atom.formal_charge)
@@ -2066,13 +2018,15 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
             rd_index = rdmol.AddAtom(rdatom)
 
-            map_atoms[index] = rd_index
+            # Let's make sure al the atom indices in the two molecules
+            # are the same, otherwise we need to create an atom map.
+            assert index == atom.molecule_atom_index
+            assert index == rd_index
 
         for bond in molecule.bonds:
-            rdatom1 = map_atoms[bond.atom1.molecule_atom_index]
-            rdatom2 = map_atoms[bond.atom2.molecule_atom_index]
-            rdmol.AddBond(rdatom1, rdatom2)
-            rdbond = rdmol.GetBondBetweenAtoms(rdatom1, rdatom2)
+            atom_indices = (bond.atom1.molecule_atom_index, bond.atom2.molecule_atom_index)
+            rdmol.AddBond(*atom_indices)
+            rdbond = rdmol.GetBondBetweenAtoms(*atom_indices)
             if not (bond.fractional_bond_order is None):
                 rdbond.SetDoubleProp("fractional_bond_order",
                                      bond.fractional_bond_order)
@@ -2091,7 +2045,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # will be forcefully set to the stereo we want (see #196).
         undefined_stereo_atoms = {}
         for index, atom in enumerate(molecule.atoms):
-            rdatom = rdmol.GetAtomWithIdx(map_atoms[index])
+            rdatom = rdmol.GetAtomWithIdx(index)
 
             # Skip non-chiral atoms.
             if atom.stereochemistry is None:
@@ -2127,63 +2081,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 atom.stereochemistry, rdatom.GetProp("_CIPCode")))
             raise RuntimeError(err_msg)
 
-        # Assign bond stereochemistry
-        for bond in molecule.bonds:
-            if bond.stereochemistry:
-                # Determine neighbors
-                # TODO: This API needs to be created
-                n1 = [
-                    n.molecule_atom_index for n in bond.atom1.bonded_atoms
-                    if n != bond.atom2
-                ][0]
-                n2 = [
-                    n.molecule_atom_index for n in bond.atom2.bonded_atoms
-                    if n != bond.atom1
-                ][0]
-                # Get rdmol bonds
-                bond_atom1_index = molecule.atoms.index(bond.atom1)
-                bond_atom2_index = molecule.atoms.index(bond.atom2)
-                bond1 = rdmol.GetBondBetweenAtoms(map_atoms[n1],
-                                                  map_atoms[bond.atom1_index])
-                bond2 = rdmol.GetBondBetweenAtoms(map_atoms[bond_atom1_index],
-                                                  map_atoms[bond.atom2_index])
-                bond3 = rdmol.GetBondBetweenAtoms(map_atoms[bond_atom2_index],
-                                                  map_atoms[n2])
-                # Set arbitrary stereochemistry
-                # Since this is relative, the first bond always goes up
-                # as explained above these names come from SMILES slashes so UP/UP is Trans and Up/Down is cis
-                bond1.SetBondDir(Chem.BondDir.ENDUPRIGHT)
-                bond3.SetBondDir(Chem.BondDir.ENDDOWNRIGHT)
-                # Flip the stereochemistry if it is incorrect
-                # TODO: Clean up _CIPCode atom and bond properties
-                Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
-                if bond.stereochemistry == 'E':
-                    desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOE
-                elif bond.stereochemistry == 'Z':
-                    desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOZ
-                else:
-                    raise Exception(
-                        "Unknown bond stereochemistry encountered in "
-                        "to_rdkit : {}".format(bond.stereochemistry))
-
-                if bond2.GetStereo() != desired_rdk_stereo_code:
-                    # Flip it
-                    bond3.SetBondDir(Chem.BondDir.ENDUPRIGHT)
-                    # Validate we have the right stereochemistry as a sanity check
-                    Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
-                    #if rdmol.GetProp('_CIPCode') != bond.stereochemistry:
-                    if bond2.GetStereo() != desired_rdk_stereo_code:
-                        raise Exception(
-                            'Programming error with assumptions about RDKit stereochemistry model'
-                        )
+        # Copy bond stereo info from molecule to rdmol.
+        cls._assign_rdmol_bonds_stereo(molecule, rdmol)
 
         # Set coordinates if we have them
         if molecule._conformers:
             for conformer in molecule._conformers:
                 rdmol_conformer = Chem.Conformer()
-                for index, rd_idx in map_atoms.items():
-                    (x, y, z) = conformer[index, :] / unit.angstrom
-                    rdmol_conformer.SetAtomPosition(rd_idx,
+                for atom_idx in range(molecule.n_atoms):
+                    x, y, z = conformer[atom_idx, :].value_in_unit(unit.angstrom)
+                    rdmol_conformer.SetAtomPosition(atom_idx,
                                                     Geometry.Point3D(x, y, z))
                 rdmol.AddConformer(rdmol_conformer)
 
@@ -2191,20 +2098,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         if not (molecule._partial_charges is None):
 
             rdk_indexed_charges = np.zeros((molecule.n_atoms), dtype=np.float)
-            for off_idx, charge in enumerate(molecule._partial_charges):
-                rdk_idx = map_atoms[off_idx]
-                charge_unitless = charge / unit.elementary_charge
-                rdk_indexed_charges[rdk_idx] = charge_unitless
-            for rdk_idx, rdk_atom in enumerate(rdmol.GetAtoms()):
+            for atom_idx, charge in enumerate(molecule._partial_charges):
+                charge_unitless = charge.value_in_unit(unit.elementary_charge)
+                rdk_indexed_charges[atom_idx] = charge_unitless
+            for atom_idx, rdk_atom in enumerate(rdmol.GetAtoms()):
                 rdk_atom.SetDoubleProp('partial_charge',
-                                       rdk_indexed_charges[rdk_idx])
+                                       rdk_indexed_charges[atom_idx])
 
         # Cleanup the rdmol
         rdmol.UpdatePropertyCache(strict=False)
         Chem.GetSSSR(rdmol)
-        # I added AssignStereochemistry which takes the directions of the bond set
-        # and assigns the stereochemistry tags on the double bonds.
-        Chem.AssignStereochemistry(rdmol, force=False)
 
         # Forcefully assign stereo information on the atoms that RDKit
         # can't figure out. This must be done last as calling AssignStereochemistry
@@ -2306,6 +2209,275 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol = self.to_rdkit(molecule, aromaticity_model=aromaticity_model)
         return self._find_smarts_matches(
             rdmol, smarts, aromaticity_model='OEAroModel_MDL')
+
+    # --------------------------------
+    # Stereochemistry RDKit utilities.
+    # --------------------------------
+
+    @staticmethod
+    def _find_undefined_stereo_atoms(rdmol, assign_stereo=False):
+        """Find the chiral atoms with undefined stereochemsitry in the RDMol.
+
+        Parameters
+        ----------
+        rdmol : rdkit.RDMol
+            The RDKit molecule.
+        assign_stereo : bool, optional, default=False
+            As a side effect, this function calls ``Chem.AssignStereochemistry()``
+            so by default we work on a molecule copy. Set this to ``True`` to avoid
+            making a copy and assigning the stereochemistry to the Mol object.
+
+        Returns
+        -------
+        undefined_atom_indices : List[int]
+            A list of atom indices that are chiral centers with undefined
+            stereochemistry.
+
+        See Also
+        --------
+        rdkit.Chem.FindMolChiralCenters
+
+        """
+        from rdkit import Chem
+
+        if not assign_stereo:
+            # Avoid modifying the original molecule.
+            rdmol = copy.deepcopy(rdmol)
+
+        # Flag possible chiral centers with the "_ChiralityPossible".
+        Chem.AssignStereochemistry(rdmol, force=True, flagPossibleStereoCenters=True)
+
+        # Find all atoms with undefined stereo.
+        undefined_atom_indices = []
+        for atom_idx, atom in enumerate(rdmol.GetAtoms()):
+            if (atom.GetChiralTag() == Chem.ChiralType.CHI_UNSPECIFIED and
+                    atom.HasProp('_ChiralityPossible')):
+                undefined_atom_indices.append(atom_idx)
+        return undefined_atom_indices
+
+    @staticmethod
+    def _find_undefined_stereo_bonds(rdmol):
+        """Find the chiral atoms with undefined stereochemsitry in the RDMol.
+
+        Parameters
+        ----------
+        rdmol : rdkit.RDMol
+            The RDKit molecule.
+
+        Returns
+        -------
+        undefined_bond_indices : List[int]
+            A list of bond indices with undefined stereochemistry.
+
+        See Also
+        --------
+        Chem.EnumerateStereoisomers._getFlippers
+
+        Links
+        -----
+        https://github.com/rdkit/rdkit/blob/master/Code/GraphMol/Chirality.cpp#L1509-L1515
+            This comment in FindPotentialStereoBonds mention that the method
+            ignores ring bonds.
+        https://github.com/DrrDom/rdk/blob/master/gen_stereo_rdkit3.py
+            The function get_unspec_double_bonds() in this module looks like
+            may solve the problem with the rings.
+
+        """
+        from rdkit import Chem
+
+        # Copy the molecule to avoid side effects. Chem.FindPotentialStereoBonds
+        # assign Bond.STEREOANY to unspecific bond, which make subsequent calls
+        # of Chem.AssignStereochemistry ignore the bond even if there are
+        # ENDDOWNRIGHT/ENDUPRIGHT bond direction indications.
+        rdmol = copy.deepcopy(rdmol)
+
+        # This function assigns Bond.GetStereo() == Bond.STEREOANY to bonds with
+        # undefined stereochemistry.
+        Chem.FindPotentialStereoBonds(rdmol)
+
+        undefined_bond_indices = []
+        for bond_idx, bond in enumerate(rdmol.GetBonds()):
+            if bond.GetStereo() == Chem.BondStereo.STEREOANY:
+                undefined_bond_indices.append(bond_idx)
+        return undefined_bond_indices
+
+    @classmethod
+    def _detect_undefined_stereo(cls, rdmol, err_msg_prefix='', raise_warning=False):
+        """Raise UndefinedStereochemistryError if the RDMol has undefined stereochemistry.
+
+        Parameters
+        ----------
+        rdmol : rdkit.Chem.Mol
+            The RDKit molecule.
+        err_msg_prefix : str, optional
+            A string to prepend to the error/warning message.
+        raise_warning : bool, optional, default=False
+            If True, a warning is issued instead of an exception.
+
+        Raises
+        ------
+        UndefinedStereochemistryError
+            If the RDMol has undefined atom or bond stereochemistry.
+
+        """
+        # Find undefined atom/bond stereochemistry.
+        undefined_atom_indices = cls._find_undefined_stereo_atoms(rdmol)
+        undefined_bond_indices = cls._find_undefined_stereo_bonds(rdmol)
+
+        # Build error message.
+        if len(undefined_atom_indices) == 0 and len(undefined_bond_indices) == 0:
+            msg = None
+        else:
+            msg = err_msg_prefix + "RDMol has unspecified stereochemistry. "
+            # The "_Name" property is not always assigned.
+            if rdmol.HasProp("_Name"):
+                msg += "RDMol name: " + rdmol.GetProp("_Name")
+
+        # Details about undefined atoms.
+        if len(undefined_atom_indices) > 0:
+            msg += "Undefined chiral centers are:\n"
+            for undefined_atom_idx in undefined_atom_indices:
+                msg += ' - Atom {symbol} (index {index})\n'.format(
+                    symbol=rdmol.GetAtomWithIdx(undefined_atom_idx).GetSymbol(),
+                    index=undefined_atom_idx)
+
+        # Details about undefined bond.
+        if len(undefined_bond_indices) > 0:
+            msg += "Bonds with undefined stereochemistry are:\n"
+            for undefined_bond_idx in undefined_bond_indices:
+                bond = rdmol.GetBondWithIdx(undefined_bond_idx)
+                atom1, atom2 = bond.GetBeginAtom(), bond.GetEndAtom()
+                msg += ' - Bond {bindex} (atoms {aindex1}-{aindex2} of element ({symbol1}-{symbol2})\n'.format(
+                    bindex=undefined_bond_idx,
+                    aindex1=atom1.GetIdx(), aindex2=atom2.GetIdx(),
+                    symbol1=atom1.GetSymbol(), symbol2=atom2.GetSymbol())
+
+        if msg is not None:
+            if raise_warning:
+                logger.warning(msg)
+            else:
+                raise UndefinedStereochemistryError(msg)
+
+    @staticmethod
+    def _flip_rdbond_direction(rdbond, paired_rdbonds):
+        """Flip the rdbond and all those paired to it.
+
+        Parameters
+        ----------
+        rdbond : rdkit.Chem.Bond
+            The Bond whose direction needs to be flipped.
+        paired_rdbonds : Dict[Tuple[int], List[rdkit.Chem.Bond]]
+            Maps bond atom indices that are assigned a bond direction to
+            the bonds on the other side of the double bond.
+        """
+        from rdkit import Chem
+
+        # The function assumes that all bonds are either up or down.
+        supported_directions = {Chem.BondDir.ENDUPRIGHT, Chem.BondDir.ENDDOWNRIGHT}
+
+        def _flip(b, paired, flipped, ignored):
+            # The function assumes that all bonds are either up or down.
+            assert b.GetBondDir() in supported_directions
+            bond_atom_indices = (b.GetBeginAtomIdx(), b.GetEndAtomIdx())
+
+            # Check that we haven't flipped this bond already.
+            if bond_atom_indices in flipped:
+                # This should never happen.
+                raise RuntimeError('Cannot flip the bond direction consistently.')
+
+            # Flip the bond.
+            if b.GetBondDir() == Chem.BondDir.ENDUPRIGHT:
+                b.SetBondDir(Chem.BondDir.ENDDOWNRIGHT)
+            else:
+                b.SetBondDir(Chem.BondDir.ENDUPRIGHT)
+            flipped.add(bond_atom_indices)
+
+            # Flip all the paired bonds as well (if there are any).
+            if bond_atom_indices in paired:
+                for paired_rdbond in paired[bond_atom_indices]:
+                    # Don't flip the bond that was flipped in the upper-level recursion.
+                    if (paired_rdbond.GetBeginAtomIdx(), paired_rdbond.GetEndAtomIdx()) != ignored:
+                        # Don't flip this bond in the next recursion.
+                        _flip(paired_rdbond, paired, flipped, ignored=bond_atom_indices)
+
+        _flip(rdbond, paired_rdbonds, flipped=set(), ignored=None)
+
+    @classmethod
+    def _assign_rdmol_bonds_stereo(cls, offmol, rdmol):
+        """Copy the info about bonds stereochemistry from the OFF Molecule to RDKit Mol."""
+        from rdkit import Chem
+
+        # Map the bonds indices that are assigned bond direction
+        # to the bond on the other side of the double bond.
+        # (atom_index1, atom_index2) -> List[rdkit.Chem.Bond]
+        paired_bonds = {}
+
+        for bond in offmol.bonds:
+            # No need to do anything with bonds without stereochemistry.
+            if not bond.stereochemistry:
+                continue
+
+            # Isolate stereo RDKit bond object.
+            rdbond_atom_indices = (bond.atom1.molecule_atom_index,
+                                   bond.atom2.molecule_atom_index)
+            stereo_rdbond = rdmol.GetBondBetweenAtoms(*rdbond_atom_indices)
+
+            # Collect all neighboring rdbonds of atom1 and atom2.
+            neighbor_rdbonds1 = [rdmol.GetBondBetweenAtoms(n.molecule_atom_index,
+                                                           bond.atom1.molecule_atom_index)
+                                 for n in bond.atom1.bonded_atoms if n != bond.atom2]
+            neighbor_rdbonds2 = [rdmol.GetBondBetweenAtoms(bond.atom2.molecule_atom_index,
+                                                           n.molecule_atom_index)
+                                 for n in bond.atom2.bonded_atoms if n != bond.atom1]
+
+            # Select only 1 neighbor bond per atom out of the two.
+            neighbor_rdbonds = []
+            for i, rdbonds in enumerate([neighbor_rdbonds1, neighbor_rdbonds2]):
+                # If there are no neighbors for which we have already
+                # assigned the bond direction, just pick the first one.
+                neighbor_rdbonds.append(rdbonds[0])
+                # Otherwise, pick neighbor that was already assigned to
+                # avoid inconsistencies and keep the tree non-cyclic.
+                for rdb in rdbonds:
+                    if (rdb.GetBeginAtomIdx(), rdb.GetBeginAtomIdx()) in paired_bonds:
+                        neighbor_rdbonds[i] = rdb
+                        break
+
+            # Assign a random direction to the bonds that were not already assigned
+            # keeping track of which bond would be best to flip later (i.e. does that
+            # are not already determining the stereochemistry of another double bond).
+            flipped_rdbond = neighbor_rdbonds[0]
+            for rdb in neighbor_rdbonds:
+                if (rdb.GetBeginAtomIdx(), rdb.GetEndAtomIdx()) not in paired_bonds:
+                    rdb.SetBondDir(Chem.BondDir.ENDUPRIGHT)
+                    # Set this bond as a possible bond to flip.
+                    flipped_rdbond = rdb
+
+            Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
+
+            # Verify that the current directions give us the desired stereochemistries.
+            assert bond.stereochemistry in {'E', 'Z'}
+            if bond.stereochemistry == 'E':
+                desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOE
+            else:
+                desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOZ
+
+            # If that doesn't work, flip the direction of one bond preferring
+            # those that are not already determining the stereo of another bond.
+            if stereo_rdbond.GetStereo() != desired_rdk_stereo_code:
+                cls._flip_rdbond_direction(flipped_rdbond, paired_bonds)
+                Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
+
+                # The stereo should be set correctly here.
+                assert stereo_rdbond.GetStereo() == desired_rdk_stereo_code
+
+            # Update paired bonds map.
+            neighbor_bond_indices = [(rdb.GetBeginAtomIdx(), rdb.GetEndAtomIdx()) for rdb in neighbor_rdbonds]
+            for i, bond_indices in enumerate(neighbor_bond_indices):
+                try:
+                    paired_bonds[bond_indices].append(neighbor_rdbonds[1-i])
+                except KeyError:
+                    paired_bonds[bond_indices] = [neighbor_rdbonds[1-i]]
 
 
 class AmberToolsToolkitWrapper(ToolkitWrapper):
@@ -2495,14 +2667,15 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                            "AmberToolsToolkitWrapper.compute_partial_charges_am1bcc()"))
 
         if len(molecule._conformers) == 0:
-            raise Exception(
+            raise ValueError(
                 "No conformers present in molecule submitted for partial charge calculation. Consider "
                 "loading the molecule from a file with geometry already present or running "
                 "molecule.generate_conformers() before calling molecule.compute_partial_charges"
             )
         if len(molecule._conformers) > 1:
-            logger.warn("In AmberToolsToolkitwrapper.computer_partial_charges_am1bcc: Molecule '{}' has more than one "
-                        "conformer, but this function will only generate charges for the first one.".format(molecule.name))
+            logger.warning("In AmberToolsToolkitwrapper.computer_partial_charges_am1bcc: "
+                           "Molecule '{}' has more than one conformer, but this function "
+                           "will only generate charges for the first one.".format(molecule.name))
 
 
         # Compute charges
@@ -2648,7 +2821,7 @@ class ToolkitRegistry(object):
         return list(self._toolkits)
 
     def register_toolkit(self,
-                         toolkit_wrapper_class,
+                         toolkit_wrapper,
                          exception_if_unavailable=True):
         """
         Register the provided toolkit wrapper class, instantiating an object of it.
@@ -2662,22 +2835,27 @@ class ToolkitRegistry(object):
 
         Parameters
         ----------
-        toolkit_wrapper_class : subclass of ToolkitWrapper
-            The class of the toolkit wrapper to register.
+        toolkit_wrapper : instance or subclass of ToolkitWrapper
+            The toolkit wrapper to register or its class.
         exception_if_unavailable : bool, optional, default=True
             If True, an exception will be raised if the toolkit is unavailable
 
         """
-        # TODO: Instantiate class if class, or just add if already instantiated.
-        try:
-            toolkit_wrapper = toolkit_wrapper_class()
-            if not(toolkit_wrapper.is_available()):
-                raise ToolkitUnavailableException()
-            self._toolkits.append(toolkit_wrapper)
-        except ToolkitUnavailableException as e:
+        # Instantiate class if class, or just add if already instantiated.
+        if isinstance(toolkit_wrapper, type):
+            toolkit_wrapper = toolkit_wrapper()
+
+        # Raise exception if not available.
+        if not toolkit_wrapper.is_available():
+            msg = "Unable to load toolkit {}.".format(toolkit_wrapper)
             if exception_if_unavailable:
-                raise e
-            print("Unable to load toolkit {}.".format(toolkit_wrapper))
+                raise ToolkitUnavailableException(msg)
+            else:
+                logger.warning(msg)
+            return
+
+        # Add toolkit to the registry.
+        self._toolkits.append(toolkit_wrapper)
 
     def add_toolkit(self, toolkit_wrapper):
         """
@@ -2786,10 +2964,9 @@ class ToolkitRegistry(object):
         for toolkit in self._toolkits:
             if hasattr(toolkit, method_name):
                 method = getattr(toolkit, method_name)
-                #return method(*args, **kwargs)
                 try:
                     return method(*args, **kwargs)
-                except NotImplementedError as e:
+                except NotImplementedError:
                     pass
                 except ValueError as value_error:
                     value_errors.append((toolkit, value_error))

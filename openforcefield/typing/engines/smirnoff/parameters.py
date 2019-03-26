@@ -87,8 +87,7 @@ class NonbondedMethod(Enum):
 # the dictionary key's SMIRKS to be out of sync.
 class ParameterList(list):
     """
-    Parameter list that also supports accessing items by SMARTS string. Remembers the
-    most recent parameter that was added.
+    Parameter list that also supports accessing items by SMARTS string.
     """
 
     # TODO: Make this faster by caching SMARTS -> index lookup?
@@ -110,15 +109,10 @@ class ParameterList(list):
         """
         super().__init__()
 
-        # We keep track of the last parameter added as this will be
-        # used to set output units during serialization
-        self._last_added_param = None
         input_parameter_list = input_parameter_list or []
         # TODO: Should a ParameterList only contain a single kind of ParameterType?
         for input_parameter in input_parameter_list:
             self.append(input_parameter)
-            self._last_added_param = input_parameter_list
-
 
     def append(self, parameter):
         """
@@ -131,7 +125,6 @@ class ParameterList(list):
         """
         # TODO: Ensure that newly added parameter is the same type as existing?
         super().append(parameter)
-        self._last_added_param = parameter
 
     def extend(self, other):
         """
@@ -148,9 +141,6 @@ class ParameterList(list):
             raise TypeError(msg)
         # TODO: Check if other ParameterList contains the same ParameterTypes?
         super().extend(other)
-        if len(other) > 0:
-            self._last_added_param = other[-1]
-
 
     def index(self, item):
         """
@@ -173,8 +163,7 @@ class ParameterList(list):
             for parameter in self:
                 if parameter.smirks == item:
                     return self.index(parameter)
-            raise IndexError(f'SMIRKS {item} not found in ParameterList')
-
+            raise IndexError('SMIRKS {item} not found in ParameterList'.format(item=item))
 
     def insert(self, index, parameter):
         """
@@ -188,9 +177,7 @@ class ParameterList(list):
             The parameter to insert
         """
         # TODO: Ensure that newly added parameter is the same type as existing?
-
         super().insert(index, parameter)
-        self._last_added_param = parameter
 
     def __delitem__(self, item):
         """
@@ -207,7 +194,6 @@ class ParameterList(list):
             # Try to find by SMIRKS
             index = self.index(item)
         super().__delitem__(index)
-
 
     def __getitem__(self, item):
         """
@@ -236,7 +222,7 @@ class ParameterList(list):
         item : str
             SMIRKS of item in this ParameterList
         """
-        if type(item) == str:
+        if isinstance(item, str):
             # Special case for SMIRKS strings
             if item in [result.smirks for result in self]:
                 return True
@@ -762,8 +748,9 @@ class ParameterHandler(object):
         # Set default output units to those from the last parameter added to the ParameterList
         if (output_units is None):
             output_units = dict()
-        if (self._parameters.last_added_parameter is not None):
-            _, last_added_output_units = detach_units(self._parameters.last_added_parameter.to_dict())
+        # TODO: What if self._parameters is an empty list?
+        if len(self._parameters) > 0:
+            _, last_added_output_units = detach_units(self._parameters[-1].to_dict())
             # Overwrite key_value pairs in last_added_output_units with those specified by user in output_units
             last_added_output_units.update(output_units)
             output_units = last_added_output_units

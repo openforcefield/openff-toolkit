@@ -62,25 +62,6 @@ class TestParameterHandler:
         assert abs(bh_dict['Bond'][0]['length'] - 100.) < 1.e-8
         assert abs(bh_dict['Bond'][1]['length'] - 200.) < 1.e-8
 
-    def test_to_dict_del_last_param(self):
-        """Test ParameterHandler.to_dict(), when the last-added parameter is deleted. The proper behavior is to
-        convert all unit-bearing attribs to the last-read unit, _even if that parameter was deleted_.
-        """
-        from simtk import unit
-        bh = BondHandler()
-        bh.add_parameter({'smirks': '[*:1]-[*:2]',
-                          'length': 1*unit.angstrom,
-                          'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2})
-        bh.add_parameter({'smirks': '[*:1]=[*:2]',
-                          'length': 0.2*unit.nanometer,
-                          'k': 0.4*unit.kilojoule_per_mole/unit.nanometer**2})
-        del bh._parameters[1]
-        bh_dict = bh.to_dict()
-        assert ('length_unit', 'nanometer') in bh_dict.items()
-        assert ('k_unit', 'nanometer**-2 * mole**-1 * kilojoule') in bh_dict.items()
-        assert bh_dict['Bond'][0]['length'] == 0.1
-
-
 
 class TestParameterList:
     """Test capabilities of ParameterList for accessing and manipulating SMIRNOFF parameter definitions.
@@ -93,6 +74,8 @@ class TestParameterList:
         p2 = ParameterType(smirks='[#1:1]')
         parameters = ParameterList([p1, p2])
 
+    @pytest.mark.wip(reason="Until ChemicalEnvironment won't be refactored to use the ToolkitRegistry "
+                            "API, the smirks assignment will fail with RDKit.")
     def test_getitem(self):
         """Test ParameterList __getitem__ overloading.
         """
@@ -124,7 +107,7 @@ class TestParameterList:
         assert parameters.index('[*:1]') == 0
         assert parameters.index('[#1:1]') == 1
         assert parameters.index('[#7:1]') == 2
-        with pytest.raises(IndexError, match='SMIRKS \[#2:1\] not found in ParameterList') as excinfo:
+        with pytest.raises(IndexError, match=r'SMIRKS \[#2:1\] not found in ParameterList') as excinfo:
             parameters.index('[#2:1]')
 
         p4 = ParameterType(smirks='[#2:1]')
@@ -156,7 +139,7 @@ class TestParameterList:
 
         with pytest.raises(IndexError, match='list assignment index out of range'):
             del parameters[4]
-        with pytest.raises(IndexError, match='SMIRKS \[#6:1\] not found in ParameterList'):
+        with pytest.raises(IndexError, match=r'SMIRKS \[#6:1\] not found in ParameterList'):
             del parameters['[#6:1]']
 
         # Test that original list deletion behavior is preserved.
@@ -184,12 +167,10 @@ class TestParameterList:
         param_list.append(p1)
         assert len(param_list) == 1
         assert '[*:1]-[*:2]' in param_list
-        assert param_list.last_added_parameter == p1
         param_list.append(p2)
         assert len(param_list) == 2
         assert '[*:1]=[*:2]' in param_list
-        assert param_list.last_added_parameter == p2
-
+        assert param_list[-1] == p2
 
     def test_insert(self):
         """
@@ -201,7 +182,6 @@ class TestParameterList:
         p3 = ParameterType(smirks='[*:1]#[*:2]')
         param_list = ParameterList([p1, p2])
         param_list.insert(1, p3)
-        assert param_list.last_added_parameter == p3
         assert param_list[1] == p3
 
     def test_extend(self):
@@ -218,9 +198,7 @@ class TestParameterList:
         assert len(param_list1) == 2
         assert '[*:1]-[*:2]' in param_list1
         assert '[*:1]=[*:2]' in param_list1
-        assert param_list1.last_added_parameter == p2
-
-
+        assert param_list1[-1] == p2
 
     def test_to_list(self):
         """Test basic ParameterList.to_list() function, ensuring units are preserved"""
@@ -241,7 +219,6 @@ class TestParameterList:
         ser_param_list = parameter_list.to_list()
         assert len(ser_param_list) == 3
         assert ser_param_list[0]['length'] == 1.01 * unit.angstrom
-
 
     def test_round_trip(self):
         """Test basic ParameterList.to_list() function and constructor"""
@@ -265,9 +242,6 @@ class TestParameterList:
             new_parameter = BondHandler.BondType(**param_dict)
             parameter_list_2.append(new_parameter)
         assert parameter_list.to_list() == parameter_list_2.to_list()
-
-
-
 
 
 class TestParameterType:

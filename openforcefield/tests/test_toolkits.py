@@ -20,7 +20,7 @@ from numpy.testing import assert_almost_equal
 import pytest
 from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWrapper,
                                            AmberToolsToolkitWrapper, ToolkitRegistry,
-                                           GAFFAtomTypeWarning)
+                                           GAFFAtomTypeWarning, UndefinedStereochemistryError)
 from openforcefield.utils import get_data_filename
 from openforcefield.topology.molecule import Molecule
 
@@ -52,10 +52,10 @@ class TestOpenEyeToolkitWrapper:
         """Test OpenEyeToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
 
-        unspec_chiral_smiles = "C\C(F)=C(/F)CC(C)(Cl)Br"
-        spec_chiral_smiles = "C\C(F)=C(/F)C[C@@](C)(Cl)Br"
-        unspec_db_smiles = "CC(F)=C(F)C[C@@](C)(Cl)Br"
-        spec_db_smiles = "C\C(F)=C(/F)C[C@@](C)(Cl)Br"
+        unspec_chiral_smiles = r"C\C(F)=C(/F)CC(C)(Cl)Br"
+        spec_chiral_smiles = r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"
+        unspec_db_smiles = r"CC(F)=C(F)C[C@@](C)(Cl)Br"
+        spec_db_smiles = r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"
 
         for title, smiles, raises_exception in [("unspec_chiral_smiles", unspec_chiral_smiles, True),
                                                 ("spec_chiral_smiles", spec_chiral_smiles, False),
@@ -63,7 +63,7 @@ class TestOpenEyeToolkitWrapper:
                                                 ("spec_db_smiles", spec_db_smiles, False),
                                                 ]:
             if raises_exception:
-                with pytest.raises(Exception) as context:
+                with pytest.raises(UndefinedStereochemistryError) as context:
                     molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
             else:
                 molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
@@ -101,8 +101,8 @@ class TestOpenEyeToolkitWrapper:
         toolkit_wrapper = OpenEyeToolkitWrapper()
 
         # Replacing with a simple molecule with stereochemistry
-        input_smiles = 'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
-        expected_output_smiles = '[H]C([H])([H])/C(=C(/C([H])([H])[C@@](C([H])([H])[H])(Cl)Br)\F)/F'
+        input_smiles = r'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
+        expected_output_smiles = r'[H]C([H])([H])/C(=C(/C([H])([H])[C@@](C([H])([H])[H])(Cl)Br)\F)/F'
         molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
         assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
@@ -173,9 +173,9 @@ class TestOpenEyeToolkitWrapper:
         toolkit_wrapper = OpenEyeToolkitWrapper()
 
         # Using a simple molecule with tetrahedral and bond stereochemistry
-        input_smiles = 'C\C(F)=C(/F)C[C@](C)(Cl)Br'
+        input_smiles = r'C\C(F)=C(/F)C[C@](C)(Cl)Br'
 
-        expected_output_smiles = '[H]C([H])([H])/C(=C(/C([H])([H])[C@](C([H])([H])[H])(Cl)Br)\F)/F'
+        expected_output_smiles = r'[H]C([H])([H])/C(=C(/C([H])([H])[C@](C([H])([H])[H])(Cl)Br)\F)/F'
         molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
         assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
@@ -397,7 +397,7 @@ class TestOpenEyeToolkitWrapper:
         """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with a double bond"""
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = 'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
+        smiles = r'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
         for charge_model in ['am1', 'pm3']:
@@ -438,25 +438,20 @@ class TestRDKitToolkitWrapper:
         assert smiles == smiles2
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
-    def test_smiles_missing_stereochemistry(self):
+    @pytest.mark.parametrize("smiles,exception_regex", [
+        (r"C\C(F)=C(/F)CC(C)(Cl)Br", "Undefined chiral centers"),
+        (r"C\C(F)=C(/F)C[C@@](C)(Cl)Br", None),
+        (r"CC(F)=C(F)C[C@@](C)(Cl)Br", "Bonds with undefined stereochemistry")
+    ])
+    def test_smiles_missing_stereochemistry(self, smiles, exception_regex):
         """Test RDKitToolkitWrapper to_smiles() and from_smiles() when given ambiguous stereochemistry"""
         toolkit_wrapper = RDKitToolkitWrapper()
 
-        unspec_chiral_smiles = "C\C(F)=C(/F)CC(C)(Cl)Br"
-        spec_chiral_smiles = "C\C(F)=C(/F)C[C@@](C)(Cl)Br"
-        unspec_db_smiles = "CC(F)=C(F)C[C@@](C)(Cl)Br"
-        spec_db_smiles = "C\C(F)=C(/F)C[C@@](C)(Cl)Br"
-
-        for title, smiles, raises_exception in [("unspec_chiral_smiles", unspec_chiral_smiles, True),
-                                                ("spec_chiral_smiles", spec_chiral_smiles, False),
-                                                ("unspec_db_smiles", unspec_db_smiles, True),
-                                                ("spec_db_smiles", spec_db_smiles, False),
-                                                ]:
-            if raises_exception:
-                with pytest.raises(Exception) as excinfo:
-                    molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
-            else:
-                molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+        if exception_regex is not None:
+            with pytest.raises(UndefinedStereochemistryError, match=exception_regex):
+                Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+        else:
+            Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
 
     # TODO: test_smiles_round_trip
 
@@ -490,8 +485,8 @@ class TestRDKitToolkitWrapper:
         toolkit_wrapper = RDKitToolkitWrapper()
 
         # Replacing with a simple molecule with stereochemistry
-        input_smiles = 'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
-        expected_output_smiles = '[H][C]([H])([H])/[C]([F])=[C](\[F])[C]([H])([H])[C@@]([Cl])([Br])[C]([H])([H])[H]'
+        input_smiles = r'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
+        expected_output_smiles = r'[H][C]([H])([H])/[C]([F])=[C](\[F])[C]([H])([H])[C@@]([Cl])([Br])[C]([H])([H])[H]'
         molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
         assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
@@ -557,8 +552,8 @@ class TestRDKitToolkitWrapper:
         toolkit_wrapper = RDKitToolkitWrapper()
 
         # Replacing with a simple molecule with stereochemistry
-        input_smiles = 'C\C(F)=C(/F)C[C@](C)(Cl)Br'
-        expected_output_smiles = '[H][C]([H])([H])/[C]([F])=[C](\[F])[C]([H])([H])[C@]([Cl])([Br])[C]([H])([H])[H]'
+        input_smiles = r'C\C(F)=C(/F)C[C@](C)(Cl)Br'
+        expected_output_smiles = r'[H][C]([H])([H])/[C]([F])=[C](\[F])[C]([H])([H])[C@]([Cl])([Br])[C]([H])([H])[H]'
         molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
         assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 

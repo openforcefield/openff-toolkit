@@ -68,8 +68,10 @@ install:
   - conda create -n test python=$PYTHON_VER pip pytest pytest-cov
   - source activate test
 
+  # TODO: Do we still need the beta version or can we do simply -c openeye openeye-toolkits?
   # Use beta version for partial bond orders
-  - if [[ "$OPENEYE" == true ]]; then conda install --yes -c openeye/label/Orion openeye-toolkits oeommtools && python -c "import openeye; print(openeye.__version__)"; fi
+  # TODO: Reactivate conda install instead of pip install once OpenEye is released for python 3.7 on conda-forge.
+  # - if [[ "$OPENEYE" == true ]]; then conda install --yes -c openeye/label/Orion openeye-toolkits oeommtools && python -c "import openeye; print(openeye.__version__)"; fi
 
   # Install RDKit
   - if [[ "$RDKIT" == true ]]; then conda install --yes -c rdkit rdkit; fi
@@ -78,13 +80,15 @@ install:
   # Install pip only modules
   - pip install codecov
   - pip install coverage==4.4
+  # TODO: Go back to conda install once OpenEye is released for python 3.7 on conda-forge.
+  - pip install -i https://pypi.anaconda.org/openeye/simple openeye-toolkits
 
   # Build and install package
   - conda build --python=$PYTHON_VER devtools/conda-recipe
   - conda install --use-local openforcefield
 
 script:
-  - pytest -v -s --cov=openforcefield openforcefield/tests/
+  - pytest -v --cov=openforcefield openforcefield/tests/
 
 notifications:
     email: false

@@ -412,7 +412,7 @@ class TestForceField():
         assert serialized_1 == serialized_2
 
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='Test requires OE toolkit')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='Test requires RDKit toolkit')
     def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
@@ -427,7 +427,7 @@ class TestForceField():
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
 
         # Load the unique molecules with one atom ordering
-        molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.mol2'))]
+        molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.sdf'))]
         topology1 = Topology.from_openmm(pdbfile.topology,
                                          unique_molecules=molecules1,
                                          )
@@ -435,7 +435,7 @@ class TestForceField():
                                                       toolkit_registry=toolkit_registry)
 
         # Load the unique molecules with a different atom ordering
-        molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.mol2'))]
+        molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.sdf'))]
         topology2 = Topology.from_openmm(pdbfile.topology,
                                          unique_molecules=molecules2,
                                          )
@@ -602,6 +602,8 @@ def generate_alkethoh_parameters_assignment_cases():
     return fast_test_cases + slow_test_cases
 
 
+@pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
+                    reason='Test requires OE toolkit to read mol2 files')
 @pytest.mark.parametrize('alkethoh_id', generate_alkethoh_parameters_assignment_cases())
 def test_alkethoh_parameters_assignment(alkethoh_id):
     """Test that ForceField assign parameters correctly in the AlkEthOH set.
@@ -687,6 +689,8 @@ def generate_freesolv_parameters_assignment_cases():
     return fast_test_cases + slow_test_cases
 
 
+@pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
+                    reason='Test requires OE toolkit to read mol2 files')
 @pytest.mark.parametrize(('freesolv_id', 'forcefield_version', 'allow_undefined_stereo'),
                          generate_freesolv_parameters_assignment_cases())
 def test_freesolv_parameters_assignment(freesolv_id, forcefield_version, allow_undefined_stereo):

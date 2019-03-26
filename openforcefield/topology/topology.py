@@ -56,10 +56,16 @@ class NotBondedError(MessageException):
 # PRIVATE SUBROUTINES
 #=============================================================================================
 
-
 class _TransformedDict(MutableMapping):
-    """A dictionary that applies an arbitrary key-altering
-       function before accessing the keys"""
+    """A dictionary that transform and sort keys.
+
+    The function __keytransform__ can be inherited to apply an arbitrary
+    key-altering function before accessing the keys.
+
+    The function __sortfunc__ can be inherited to specify a particular
+    order over which to iterate over the dictionary.
+
+    """
 
     def __init__(self, *args, **kwargs):
         self.store = OrderedDict()
@@ -75,7 +81,7 @@ class _TransformedDict(MutableMapping):
         del self.store[self.__keytransform__(key)]
 
     def __iter__(self):
-        return iter(self.store)
+        return iter(sorted(self.store, key=self.__sortfunc__))
 
     def __len__(self):
         return len(self.store)
@@ -83,9 +89,13 @@ class _TransformedDict(MutableMapping):
     def __keytransform__(self, key):
         return key
 
+    @staticmethod
+    def __sortfunc__(key):
+        return key
+
 
 class ValenceDict(_TransformedDict):
-    """Enforce uniqueness in atom indices"""
+    """Enforce uniqueness in atom indices."""
 
     def __keytransform__(self, key):
         """Reverse tuple if first element is larger than last element."""
@@ -98,7 +108,7 @@ class ValenceDict(_TransformedDict):
 
 
 class ImproperDict(_TransformedDict):
-    """Symmetrize improper torsions"""
+    """Symmetrize improper torsions."""
 
     def __keytransform__(self, key):
         """Reorder tuple in numerical order except for element[1] which is the central atom; it retains its position."""
@@ -245,6 +255,17 @@ class TopologyAtom(Serializable):
         return "TopologyAtom {} with reference atom {} and parent TopologyMolecule {}".format(
             self.topology_atom_index, self._atom, self._topology_molecule)
 
+    def to_dict(self):
+        """Convert to dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
+
+    @classmethod
+    def from_dict(cls, d):
+        """Static constructor from dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
+
     #@property
     #def bonds(self):
     #    """
@@ -351,6 +372,17 @@ class TopologyBond(Serializable):
         """
         for ref_atom in self._bond.atoms:
             yield TopologyAtom(ref_atom, self._topology_molecule)
+
+    def to_dict(self):
+        """Convert to dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
+
+    @classmethod
+    def from_dict(cls, d):
+        """Static constructor from dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
 
 
 #=============================================================================================
@@ -481,6 +513,17 @@ class TopologyVirtualSite(Serializable):
     def __eq__(self, other):
         return ((self._virtual_site == other._virtual_site)
                 and (self._topology_molecule == other._topology_molecule))
+
+    def to_dict(self):
+        """Convert to dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
+
+    @classmethod
+    def from_dict(cls, d):
+        """Static constructor from dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
 
 
 # =============================================================================================
@@ -765,6 +808,17 @@ class TopologyMolecule:
                 return virtual_site_start_topology_index
             virtual_site_start_topology_index += topology_molecule.n_virtual_sites
 
+    def to_dict(self):
+        """Convert to dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
+
+    @classmethod
+    def from_dict(cls, d):
+        """Static constructor from dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
+
 
 # TODO: pick back up figuring out how we want TopologyMolecules to know their starting TopologyParticle indices
 
@@ -892,8 +946,8 @@ class Topology(Serializable):
         for ref_mol in self._reference_molecule_to_topology_molecules.keys():
             yield ref_mol
 
-    @staticmethod
-    def from_molecules(molecules):
+    @classmethod
+    def from_molecules(cls, molecules):
         """
         Create a new Topology object containing one copy of each of the specified molecule(s).
 
@@ -915,7 +969,7 @@ class Topology(Serializable):
             molecules = [molecules]
 
         # Create Topology and populate it with specified molecules
-        topology = Topology()
+        topology = cls()
         for molecule in molecules:
             topology.add_molecule(molecule)
 
@@ -1302,6 +1356,17 @@ class Topology(Serializable):
 
         return matches
 
+    def to_dict(self):
+        """Convert to dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
+
+    @classmethod
+    def from_dict(cls, d):
+        """Static constructor from dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
+
     @classmethod
     def from_openmm(cls, openmm_topology, unique_molecules=None):
         """
@@ -1367,7 +1432,8 @@ class Topology(Serializable):
 
         # For each connected subgraph (molecule) in the topology, find its match in unique_molecules
         topology_molecules_to_add = list()
-        for omm_mol_G in nx.connected_component_subgraphs(omm_topology_G):
+        for omm_mol_G in (omm_topology_G.subgraph(c).copy()
+                          for c in nx.connected_components(omm_topology_G)):
             match_found = False
             for unq_mol_G in graph_to_unq_mol.keys():
                 if nx.is_isomorphic(

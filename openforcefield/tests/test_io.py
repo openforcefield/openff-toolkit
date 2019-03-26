@@ -14,15 +14,7 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.io.
 # GLOBAL IMPORTS
 #=============================================================================================
 
-import ast
-
 import pytest
-from simtk import unit
-
-from openforcefield.typing.engines.smirnoff.io import (
-    _ast_unit_eval,
-    _extract_attached_units,
-)
 
 
 #=============================================================================================
@@ -30,6 +22,7 @@ from openforcefield.typing.engines.smirnoff.io import (
 #=============================================================================================
 
 class TestXMLParameterIOHandler:
+
     def test_from_string(self):
         pass
 
