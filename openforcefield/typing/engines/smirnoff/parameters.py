@@ -670,35 +670,49 @@ class ParameterHandler(object):
         pass
 
     def get_matches(self, entity):
-        """Retrieve all force terms for a Topology.
-        # TODO: Generalize to work on Molecules as well?
+        """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
         ----------
-        entity : openforcefield.topology.Topology
-            Topology for which constraints are to be enumerated
+        entity : openforcefield.topology.Topology or openforcefield.topology.Molecule
+            Topology or molecule to search.
 
         Returns
         ---------
-        matches : ValenceDict
-            matches[atoms] is the ParameterType object corresponding to the tuple of Atom objects ``Atoms``
+        matches : ValenceDict[Tuple[int], ParameterType]
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the tuple of atom indices in ``entity``.
 
         """
-        logger.info(self.__class__.__name__)  # TODO: Overhaul logging
-        matches = ValenceDict()
-        for force_type in self._parameters:
+        return self._get_matches(entity)
+
+    def _get_matches(self, entity, transformed_dict_cls=ValenceDict):
+        """Implement get_matches() and allow using a difference valence dictionary."""
+        from openforcefield.topology import FrozenMolecule
+
+        logger.debug('Finding matches for {}'.format(self.__class__.__name__))
+
+        matches = transformed_dict_cls()
+        for parameter_type in self._parameters:
             matches_for_this_type = {}
-            for atoms in entity.chemical_environment_matches(
-                    force_type.smirks):
-                atom_top_indexes = tuple(
-                    [atom.topology_particle_index for atom in atoms])
-                matches_for_this_type[atom_top_indexes] = force_type
+            for atoms in entity.chemical_environment_matches(parameter_type.smirks):
+                # Collect the atom indices matching the entity.
+                if isinstance(entity, Topology):
+                    atom_indices = tuple([atom.topology_particle_index for atom in atoms])
+                elif isinstance(entity, FrozenMolecule):
+                    atom_indices = tuple([atom.molecule_particle_index for atom in atoms])
+                else:
+                    raise ValueError('Unknown entity type {}'.format(entity.__class__))
 
+                # Update the matches for this parameter type.
+                matches_for_this_type[atom_indices] = parameter_type
+
+            # Update matches of all parameter types.
             matches.update(matches_for_this_type)
-            logger.info('{:64} : {:8} matches'.format(
-                force_type.smirks, len(matches_for_this_type)))
+            logger.debug('{:64} : {:8} matches'.format(
+                parameter_type.smirks, len(matches_for_this_type)))
 
-        logger.info('{} matches identified'.format(len(matches)))
+        logger.debug('{} matches identified'.format(len(matches)))
         return matches
 
     def assign_parameters(self, topology, system):
@@ -1137,38 +1151,22 @@ class ImproperTorsionHandler(ParameterHandler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-
-
     def get_matches(self, entity):
-        """Retrieve all force terms for a chemical entity, which could be a Molecule, group of Molecules, or Topology.
+        """Find the improper torsions in the topology/molecule matched by a parameter type.
 
         Parameters
         ----------
-        entity : openforcefield.topology.ChemicalEntity
-            Chemical entity for which constraints are to be enumerated
+        entity : openforcefield.topology.Topology or openforcefield.topology.Molecule
+            Topology or molecule to search.
 
         Returns
         ---------
-        matches : ValenceDict
-            matches[atoms] is the ParameterType object corresponding to the tuple of Atom objects ``Atoms``
+        matches : ImproperDict[Tuple[int], ParameterType]
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the 4-tuple of atom indices in ``entity``.
 
         """
-        logger.info(self.__class__.__name__)  # TODO: Overhaul logging
-        matches = ImproperDict()
-        for force_type in self._parameters:
-            matches_for_this_type = {}
-            for atoms in entity.chemical_environment_matches(
-                    force_type.smirks):
-                atom_top_indexes = tuple(
-                    [atom.topology_particle_index for atom in atoms])
-                matches_for_this_type[atom_top_indexes] = force_type
-            matches.update(matches_for_this_type)
-            logger.info('{:64} : {:8} matches'.format(
-                force_type.smirks, len(matches_for_this_type)))
-
-        logger.info('{} matches identified'.format(len(matches)))
-        return matches
-
+        return self._get_matches(entity, transformed_dict_cls=ImproperDict)
 
     def create_force(self, system, topology, **kwargs):
         #force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
