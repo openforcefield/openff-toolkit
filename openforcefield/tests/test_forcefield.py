@@ -358,6 +358,18 @@ class TestForceField():
 
         omm_system = forcefield.create_openmm_system(topology)
 
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    def test_parameterize_no_matching_reference(self, toolkit_registry, registry_description):
+        from simtk.openmm import app
+        from openforcefield.topology import Topology
+        forcefield = ForceField('smirnoff99Frosst.offxml')
+        pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
+        # toolkit_wrapper = RDKitToolkitWrapper()
+        molecules = []
+        molecules.append(Molecule.from_smiles('CC'))
+        with pytest.raises(ValueError, match='No match found for molecule'):
+            topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
     @pytest.mark.slow
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     @pytest.mark.parametrize("box", ['ethanol_water.pdb',
