@@ -305,10 +305,21 @@ class TestMolecule:
     @requires_rdkit
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_to_from_rdkit(self, molecule):
-        """Test that conversion/creation of a molecule to and from an RDKit rdmol is consistent."""
+        """Test that conversion/creation of a molecule to and from an RDKit rdmol is consistent.
+
+        This tests creating an OpenFF Molecule from an RDKit Mol both
+        through __init__() and from_rdkit(). However, __init__() doesn't
+        have an allow_undefined_stereo argument yet, so in that case, we
+        check for equality only for the from_rdkit() molecule.
+
+        """
+        import pickle
         from openforcefield.utils.toolkits import UndefinedStereochemistryError
 
         rdmol = molecule.to_rdkit()
+
+        # The constructor should not change the molecule.
+        rdmol_pickle = pickle.dumps(rdmol)
 
         # Check if this is a molecule with undefined stereo.
         molecule_copies = []
@@ -321,8 +332,12 @@ class TestMolecule:
         molecule_copies.append(Molecule.from_rdkit(
             rdmol, allow_undefined_stereo=allow_undefined_stereo))
 
+        # Check that the roundtrip did not change anything in the OpenFF Molecule.
         for molecule_copy in molecule_copies:
             assert molecule == molecule_copy
+
+        # Check that the constructor didn't modify rdmol.
+        assert rdmol_pickle == pickle.dumps(rdmol)
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @requires_openeye

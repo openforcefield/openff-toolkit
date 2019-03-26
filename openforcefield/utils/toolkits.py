@@ -1784,6 +1784,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         from openforcefield.topology.molecule import Molecule
 
+        # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
+        rdmol = Chem.Mol(rdmol)
+
         # Sanitize the molecule. We handle aromaticity and chirality manually.
         Chem.SanitizeMol(rdmol, (Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^
                                  Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_CLEANUPCHIRALITY))
@@ -2086,7 +2089,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             for conformer in molecule._conformers:
                 rdmol_conformer = Chem.Conformer()
                 for atom_idx in range(molecule.n_atoms):
-                    (x, y, z) = conformer[atom_idx, :] / unit.angstrom
+                    x, y, z = conformer[atom_idx, :].value_in_unit(unit.angstrom)
                     rdmol_conformer.SetAtomPosition(atom_idx,
                                                     Geometry.Point3D(x, y, z))
                 rdmol.AddConformer(rdmol_conformer)
@@ -2096,7 +2099,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
             rdk_indexed_charges = np.zeros((molecule.n_atoms), dtype=np.float)
             for atom_idx, charge in enumerate(molecule._partial_charges):
-                charge_unitless = charge / unit.elementary_charge
+                charge_unitless = charge.value_in_unit(unit.elementary_charge)
                 rdk_indexed_charges[atom_idx] = charge_unitless
             for atom_idx, rdk_atom in enumerate(rdmol.GetAtoms()):
                 rdk_atom.SetDoubleProp('partial_charge',
