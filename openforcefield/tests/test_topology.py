@@ -102,7 +102,8 @@ class TestTopology(TestCase):
         assert topology.n_topology_virtual_sites == 0
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
-        assert topology.is_periodic == False
+        assert topology.is_vacuum == True
+        assert topology.is_condensed == False
 
     def test_box_vectors(self):
         """Test the getter and setter for box_vectors"""
@@ -111,12 +112,14 @@ class TestTopology(TestCase):
         bad_box_vectors = np.array([10,20,30]) # They're bad because they're unitless
         assert topology.box_vectors is None
 
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(ValueError) as context:
             topology.box_vectors = bad_box_vectors
         assert topology.box_vectors is None
 
         topology.box_vectors = good_box_vectors
         assert (topology.box_vectors == good_box_vectors).all()
+        assert topology.is_vacuum == False
+        assert topology.is_condensed == True
 
 
     def test_from_smiles(self):
@@ -131,7 +134,7 @@ class TestTopology(TestCase):
         assert topology.n_topology_virtual_sites == 0
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
-        assert topology.is_periodic == False
+        assert topology.is_condensed == False
 
         topology.add_molecule(self.ethane_from_smiles)
 
@@ -143,7 +146,7 @@ class TestTopology(TestCase):
         assert topology.n_topology_virtual_sites == 0
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
-        assert topology.is_periodic == False
+        assert topology.is_condensed == False
 
     def test_from_smiles_unique_mols(self):
         """Test the addition of two different molecules to a topology"""
