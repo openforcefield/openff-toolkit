@@ -883,11 +883,6 @@ class Topology(Serializable):
     >>> oemol = oechem.oemolistream('input.pdb')
     >>> topology = Topology.from_openeye(oemol)
 
-    .. todo ::
-
-       Should the :class:`Topology` object be able to have optional positions and box vectors?
-       If so, this would make the creation of input files for other molecular simulation packages much easier.
-
     """
 
     def __init__(self, other=None):
@@ -928,7 +923,7 @@ class Topology(Serializable):
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
         self._constrained_atom_pairs = dict()
         self._box_vectors = None
-        self._is_periodic = False
+        #self._is_periodic = False
         #self._reference_molecule_dicts = set()
         # TODO: Look into weakref and what it does. Having multiple topologies might cause a memory leak.
         self._reference_molecule_to_topology_molecules = OrderedDict()
@@ -1050,9 +1045,9 @@ class Topology(Serializable):
             self._box_vectors = None
             return
         if not hasattr(box_vectors, 'unit'):
-            raise Exception("Given unitless box vectors")
+            raise ValueError("Given unitless box vectors")
         if not (unit.angstrom.is_compatible(box_vectors.unit)):
-            raise Exception(
+            raise ValueError(
                 "Attempting to set box vectors in units that are incompatible with simtk.unit.Angstrom"
             )
         assert box_vectors.shape == (3, )
@@ -1457,7 +1452,9 @@ class Topology(Serializable):
                     match_found = True
                     break
             if not (match_found):
-                raise Exception('No match found for molecule')
+                # TODO: We should make this message way more informative. Maybe take the unmatched subgraph and
+                #       print the result of Molecule.from_networkx (which we need to implement)?
+                raise ValueError('No match found for molecule {}')
 
         # The connected_component_subgraph function above may have scrambled the molecule order, so sort molecules
         # by their first atom's topology index
@@ -2097,8 +2094,15 @@ class Topology(Serializable):
         pass
 
     @property
-    def is_periodic(self):
+    def is_condensed(self):
         """
-        ``True`` if the topology represents a periodic system; ``False`` otherwise
+        ``True`` if the topology represents a condensed/periodic system; ``False`` otherwise
         """
-        return self._is_periodic
+        return self._box_vectors is not None
+
+    @property
+    def is_vacuum(self):
+        """
+        ``True`` if the topology represents a vacuum/nonperiodic system; ``False`` otherwise
+        """
+        return self._box_vectors is None
