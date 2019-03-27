@@ -1280,11 +1280,14 @@ class vdWHandler(ParameterHandler):
         'scale13': 0.0,
         'scale14': 0.5,
         'scale15': 1.0,
-        'switch_width': 1.0 * unit.angstroms,
-        'cutoff': 9.0 * unit.angstroms,
+        #'switch_width': 1.0 * unit.angstroms,
+        #'cutoff': 9.0 * unit.angstroms,
         'long_range_dispersion': 'isotropic',
         'nonbonded_method': NonbondedMethod.NoCutoff
     }
+
+    _OPTIONAL_SPEC_ATTRIBS = ['switch_width',
+                              'cutoff']
     _ATTRIBS_TO_TYPE = {'scale12': float,
                         'scale13': float,
                         'scale14': float,
@@ -1310,29 +1313,29 @@ class vdWHandler(ParameterHandler):
                                     "Specified 1-5 scaling was {}".format(self._scale15))
 
 
-        supported_long_range_dispersions = [None, 'isotropic', 'LJPME']
+        supported_long_range_dispersions = ['None', 'isotropic', 'LJPME']
         if self._long_range_dispersion not in supported_long_range_dispersions:
-            raise SMIRNOFFSpecError("The Open Force Field toolkit currently only supports vdW long_range_dispersion"
+            raise SMIRNOFFSpecError("The Open Force Field toolkit currently only supports vdW long_range_dispersion "
                                     "values of {}. Received unsupported value "
                                     "{}".format(supported_long_range_dispersions, self._long_range_dispersion))
 
-        if self._long_range_dispersion is None:
-            if self._cutoff is not None:
-                raise SMIRNOFFSpecError("If vdW long_range_dispersion is None, a cutoff distance"
+        if self._long_range_dispersion == 'None':
+            if hasattr(self, '_cutoff'):
+                raise SMIRNOFFSpecError("If vdW long_range_dispersion is None, a cutoff distance "
                                         "must NOT be provided")
 
         elif self._long_range_dispersion == 'isotropic':
-            if self._cutoff is None:
-                raise SMIRNOFFSpecError("If vdW long_range_dispersion is isotropic, a cutoff distance"
+            if not (hasattr(self, '_cutoff')):
+                raise SMIRNOFFSpecError("If vdW long_range_dispersion is isotropic, a cutoff distance "
                                         "must be provided")
 
         elif self._long_range_dispersion == 'LJPME':
-            if self._cutoff == None:
-                raise SMIRNOFFSpecError("If vdW long_range_dispersion is LJPME, a cutoff distance"
+            if not(hasattr(self, '_cutoff')):
+                raise SMIRNOFFSpecError("If vdW long_range_dispersion is LJPME, a cutoff distance "
                                         "must be provided")
 
         if self._potential != "Lennard-Jones-12-6":
-            raise SMIRNOFFSpecError("vdW potential set to {}. Only 'Lennard-Jones-12-6' is currently"
+            raise SMIRNOFFSpecError("vdW potential set to {}. Only 'Lennard-Jones-12-6' is currently "
                                     "supported".format(self._potential))
 
 
@@ -1391,10 +1394,10 @@ class vdWHandler(ParameterHandler):
         #}
 
     def create_force(self, system, topology, **kwargs):
-        if (self._long_range_dispersion is None) and (not topology.is_vacuum):
+        if (self._long_range_dispersion ==  "None") and (not topology.is_vacuum):
             raise SMIRNOFFSpecError("If vdW long_range_dispersion is None, a vacuum/nonperiodic Topology "
                                     "must be provided")
-        if (self._long_range_dispersion is not None) and (not topology.is_condensed):
+        if (self._long_range_dispersion != "None") and (not topology.is_condensed):
             raise SMIRNOFFSpecError("If vdW long_range_dispersion is isotropic or LJPME, a condensed/periodic Topology "
                                     "must be provided")
 
@@ -1407,12 +1410,12 @@ class vdWHandler(ParameterHandler):
         elif self._long_range_dispersion == 'isotropic':
             force.setNonbondedMethod(openmm.NonbondedForce.PME)
             force.setCutoffDistance(self._cutoff.in_units_of(unit.nanometer))
-            if self._switch_width is None:
+            if hasattr(self, '_switch_width'):
                 force.setUseSwitchingFunction(False)
             else:
                 force.setUseSwitchingFunction(True)
                 force.setSwitchingDistance((self._cutoff - self._switch_width).in_units_of(unit.nanometer))
-        elif self._long_range_dispersion is None:
+        elif self._long_range_dispersion == "None":
             force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
 
         system.addForce(force)
@@ -1471,7 +1474,7 @@ class ElectrostaticsHandler(ParameterHandler):
         'scale14': 0.833333,
         'scale15': 1.0,
         #'switch_width': 8.0 * unit.angstrom, # OpenMM can't support an electrostatics switch
-        'switch_width': None,
+        #'switch_width': 0.0 * unit.angstrom,
         'cutoff': 9.0 * unit.angstrom
     }
     _ATTRIBS_TO_TYPE = {'scale12': float,
@@ -1510,13 +1513,13 @@ class ElectrostaticsHandler(ParameterHandler):
 
 
         if self._method == 'reaction-field' or self._method == 'PME':
-            if self._cutoff == None:
+            if not(hasattr(self, '_cutoff')):
                 raise SMIRNOFFSpecError("If Electrostatics method is 'reaction-field' or 'PME', then 'cutoff' must"
                                         "also be specified")
 
-        if self._switch_width is not None:
-            raise SMIRNOFFSpecError("The current implementation of the Open Force Field toolkit can not support"
-                                    "an electrostatic switching width. Currently only `None` is supported"
+        if hasattr(self, '_switch_width'):
+            raise SMIRNOFFSpecError("The current implementation of the Open Force Field toolkit can not support "
+                                    "an electrostatic switching width. Currently only `None` is supported "
                                     "(SMIRNOFF data specified {})".format(self._switch_width))
 
 
