@@ -212,7 +212,7 @@ For example, to ensure water molecules are assigned partial charges for [TIP3P](
 
 In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), partial charges for small molecules are usually assigned using a quantum chemical method (usually a semiempirical method such as [AM1](https://en.wikipedia.org/wiki/Austin_Model_1)) and a [partial charge determination scheme](https://en.wikipedia.org/wiki/Partial_charge) (such as [CM2](http://doi.org/10.1021/jp972682r) or [RESP](http://doi.org/10.1021/ja00074a030)), then subsequently corrected via charge increment rules, as in the highly successful [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach.
 
-Here is an example:
+Here is an example: 
 ```XML
 <ChargeIncrementModel number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2" increment_unit="elementary_charge">
   <!-- A fractional charge can be moved along a single bond -->
@@ -260,7 +260,7 @@ As an example of a complete SMIRNOFF force field specification, see the [AlkEthO
 
 van der Waals force parameters, which include repulsive forces arising from Pauli exclusion and attractive forces arising from dispersion, are specified via the `<vdW>` tag with sub-tags for individual `Atom` entries, such as:
 ```XML
-<vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1.0" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0" switch_unit="angstrom" cutoff="9.0" cutoff_unit="angstroms" long_range_dispersion="isotropic">
+<vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1.0" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch_width="8.0" switch_width_unit="angstrom" cutoff="9.0" cutoff_unit="angstroms" long_range_dispersion="isotropic">
    <Atom smirks="[#1:1]" sigma="1.4870" epsilon="0.0157"/>
    <Atom smirks="[#1:1]-[#6]" sigma="1.4870" epsilon="0.0157"/>
    ...
@@ -271,8 +271,7 @@ The two are related by `r0 = 2^(1/6)*sigma` and conversion is done internally in
 Note that, if `rmin_half` is specified instead of `sigma`, `rmin_half_unit` should be specified; both can be used in the same block if desired.
 
 Attributes in the `<vdW>` tag specify the scaling terms applied to the energies of 1-2 (`scale12`, default: 0), 1-3 (`scale13`, default: 0), 1-4 (`scale14`, default: 0.5), and 1-5 (`scale15`, default: 1.0) interactions,
-as well as the distance at which a switching function is applied (`switch`, default: `"8.0"` angstroms), the cutoff (`cutoff`, default: `"9.0"` angstroms), and long-range dispersion treatment scheme (`long_range_dispersion`, default: `"isotropic"`).
-If Lennard-Jones PME is to be used, `switch` and `cutoff` are omitted and `long_range_dispersion="PME"` is used.
+as well as the distance at which a switching function is applied (`switch_width`, default: `"1.0"` angstroms), the cutoff (`cutoff`, default: `"9.0"` angstroms), and long-range dispersion treatment scheme (`long_range_dispersion`, default: `"isotropic"`).
 
 The `potential` attribute (default: `"none"`) specifies the potential energy function to use.
 Currently, only `potential="Lennard-Jones-12-6"` is supported:
@@ -284,7 +283,7 @@ Support for [other Lennard-Jones mixing schemes](https://en.wikipedia.org/wiki/C
 
 Later revisions will add support for additional potential types (e.g., `Buckingham-exp-6`), as well as the ability to support arbitrary algebraic functional forms using a scheme such as
 ```XML
-<vdW potential="4*epsilon*((sigma/r)^12-(sigma/r)^6)" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" sigma_unit="angstrom" epsilon_unit="kilocalories_per_mole" switch="8.0" switch_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
+<vdW potential="4*epsilon*((sigma/r)^12-(sigma/r)^6)" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" sigma_unit="angstrom" epsilon_unit="kilocalories_per_mole" switch_width="8.0" switch_width_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
    <CombiningRules>
       <CombiningRule parameter="sigma" function="(sigma1+sigma2)/2"/>
       <CombiningRule parameter="epsilon" function="sqrt(epsilon1*epsilon2)"/>
