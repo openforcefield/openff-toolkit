@@ -386,6 +386,24 @@ class TestForceField():
         omm_system = forcefield.create_openmm_system(topology)
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    def test_parameterize_1_cyclohexane_1_ethanol_periodic(self, toolkit_registry, registry_description):
+        raise NotImplementedError
+        # TODO: Need to load a SMIRNOFF data source with vdw = isotropic and es = PME
+        from simtk.openmm import app
+        from openforcefield.topology import Topology
+        forcefield = ForceField('smirnoff99Frosst.offxml')
+        pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
+        # toolkit_wrapper = RDKitToolkitWrapper()
+        molecules = []
+        molecules.append(Molecule.from_smiles('CCO'))
+        molecules.append(Molecule.from_smiles('C1CCCCC1'))
+        # molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
+        #                                                                      'molecules/cyclohexane.mol2')]
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
+        omm_system = forcefield.create_openmm_system(topology)
+
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_no_matching_reference(self, toolkit_registry, registry_description):
         from simtk.openmm import app
         from openforcefield.topology import Topology
