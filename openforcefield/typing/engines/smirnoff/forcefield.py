@@ -792,6 +792,14 @@ class ForceField(object):
     # TODO: How do we know if the system is periodic or not?
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
 
+
+    def configure_vacuum(self):
+        """
+        A convenience function which calls the `convert_vacuum` function in each ofthis ForceField's ParameterHandlers.
+        """
+        for tag in self._parameter_handlers:
+            self._parameter_handlers[tag].configure_vacuum()
+
     def create_openmm_system(self,
                              topology,
                              default_box_vectors=None,

@@ -50,34 +50,7 @@ simple_xml_ff = str.encode('''<?xml version='1.0' encoding='ASCII'?>
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5" periodicity1="2" phase1="180."/>
   </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" long_range_dispersion="None">
-    <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
-    <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n2" rmin_half="1.4870"/>
-  </vdW>
-  <Electrostatics method="Coulomb" scale12="0.0" scale13="0.0" scale14="0.833333"/>
-  <ToolkitAM1BCC/>
-</SMIRNOFF>
-''')
-
-simple_xml_ff_periodic = str.encode('''<?xml version='1.0' encoding='ASCII'?>
-<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
-  <Bonds length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
-    <Bond smirks="[#6X4:1]-[#6X4:2]" id="b1" k="620.0" length="1.526"/>
-    <Bond smirks="[#6X4:1]-[#6X3:2]" id="b2" k="634.0" length="1.51"/>
-  </Bonds>
-  <Angles angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
-    <Angle smirks="[*:1]~[#6X4:2]-[*:3]" angle="109.5" id="a1" k="100.0"/>
-    <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.5" id="a2" k="70.0"/>
-  </Angles>
-  <ProperTorsions potential="charmm" phase_unit="degrees" k_unit="kilocalories_per_mole">
-    <Proper smirks="[*:1]-[#6X4:2]-[#6X4:3]-[*:4]" id="t1" idivf1="1" k1="0.156" periodicity1="3" phase1="0.0"/>
-    <Proper smirks="[#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]" id="t2" idivf1="1" k1="0.180" periodicity1="3" phase1="0.0" periodicity2="2" phase2="180.0" idivf2="1" k2="0.250" periodicity3="1" phase3="180.0" idivf3="1" k3="0.200"/>
-  </ProperTorsions>
-  <ImproperTorsions potential="charmm" phase_unit="degrees" k_unit="kilocalories_per_mole">
-    <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
-    <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5" periodicity1="2" phase1="180."/>
-  </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole"  switch_width="8.0" switch_width_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch_width="1.0" switch_width_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
     <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n2" rmin_half="1.4870"/>
   </vdW>
@@ -110,11 +83,11 @@ xml_ff_w_comments = '''<?xml version='1.0' encoding='ASCII'?>
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5" periodicity1="2" phase1="180."/>
   </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" long_range_dispersion="None">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch_width_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
     <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n2" rmin_half="1.4870"/>
   </vdW>
-  <Electrostatics method="isotropic" scale12="0.0" scale13="0.0" scale14="0.833333"/>
+  <Electrostatics method="PME" scale12="0.0" scale13="0.0" scale14="0.833333"/>
   <ToolkitAM1BCC/>
 </SMIRNOFF>
 '''
@@ -143,11 +116,11 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5" periodicity1="2" phase1="180."/>
   </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole"   long_range_dispersion="None">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch_width="8.0" switch_width_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
     <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n2" rmin_half="1.4870"/>
   </vdW>
-  <Electrostatics method="Coulomb" scale12="0.0" scale13="0.0" scale14="0.833333"/>
+  <Electrostatics method="PME" scale12="0.0" scale13="0.0" scale14="0.833333"/>
   <ToolkitAM1BCC/>
 </SMIRNOFF>
 '''
@@ -365,7 +338,7 @@ class TestForceField():
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, load_box_vectors=True)
 
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
@@ -381,17 +354,17 @@ class TestForceField():
         molecules.append(Molecule.from_smiles('C1CCCCC1'))
         # molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
         #                                                                      'molecules/cyclohexane.mol2')]
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, load_box_vectors=True)
 
         omm_system = forcefield.create_openmm_system(topology)
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
-    def test_parameterize_1_cyclohexane_1_ethanol_periodic(self, toolkit_registry, registry_description):
-        raise NotImplementedError
+    def test_parameterize_1_cyclohexane_1_ethanol_vacuum(self, toolkit_registry, registry_description):
         # TODO: Need to load a SMIRNOFF data source with vdw = isotropic and es = PME
         from simtk.openmm import app
         from openforcefield.topology import Topology
         forcefield = ForceField('smirnoff99Frosst.offxml')
+        forcefield.configure_vacuum()
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
         # toolkit_wrapper = RDKitToolkitWrapper()
         molecules = []
@@ -402,6 +375,8 @@ class TestForceField():
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         omm_system = forcefield.create_openmm_system(topology)
+
+        assert omm_system.getNonbonded
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_no_matching_reference(self, toolkit_registry, registry_description):
@@ -430,7 +405,7 @@ class TestForceField():
         mol_names = ['water', 'cyclohexane', 'ethanol', 'propane', 'methane', 'butanol']
         sdf_files = [get_data_filename(os.path.join('systems', 'monomers', name+'.sdf')) for name in mol_names]
         molecules = [Molecule.from_file(sdf_file) for sdf_file in sdf_files]
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, load_box_vectors=True)
 
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
         # TODO: Add check to ensure system energy is finite
@@ -451,6 +426,7 @@ class TestForceField():
         molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.sdf'))]
         topology1 = Topology.from_openmm(pdbfile.topology,
                                          unique_molecules=molecules1,
+                                         load_box_vectors = True
                                          )
         omm_system1 = forcefield.create_openmm_system(topology1,
                                                       toolkit_registry=toolkit_registry)
@@ -458,6 +434,7 @@ class TestForceField():
         molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.sdf'))]
         topology2 = Topology.from_openmm(pdbfile.topology,
                                          unique_molecules=molecules2,
+                                         load_box_vectors=True
                                          )
         omm_system2 = forcefield.create_openmm_system(topology2,
                                                       toolkit_registry=toolkit_registry)
@@ -489,6 +466,7 @@ class TestForceField():
         molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.sdf'))]
         topology1 = Topology.from_openmm(pdbfile.topology,
                                          unique_molecules=molecules1,
+                                         load_box_vectors=True
                                          )
         omm_system1 = forcefield.create_openmm_system(topology1,
                                                       toolkit_registry=toolkit_registry)
@@ -497,6 +475,7 @@ class TestForceField():
         molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.sdf'))]
         topology2 = Topology.from_openmm(pdbfile.topology,
                                          unique_molecules=molecules2,
+                                         load_box_vectors = True
                                          )
         omm_system2 = forcefield.create_openmm_system(topology2,
                                                       toolkit_registry=toolkit_registry)
@@ -535,7 +514,7 @@ class TestForceField():
         filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
         forcefield = ForceField(filename)
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, load_box_vectors = True)
         omm_system = forcefield.create_openmm_system(topology, charge_from_molecules=molecules,
                                                      toolkit_registry=toolkit_registry)
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
@@ -550,7 +529,7 @@ class TestForceField():
         # In 1_ethanol_reordered.pdb, the first three atoms go O-C-C instead of C-C-O. This part of the test ensures
         # that the charges are correctly mapped according to this PDB in the resulting system.
         pdbfile2 = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol_reordered.pdb'))
-        topology2 = Topology.from_openmm(pdbfile2.topology, unique_molecules=molecules)
+        topology2 = Topology.from_openmm(pdbfile2.topology, unique_molecules=molecules, load_box_vectors=True)
 
         omm_system2 = forcefield.create_openmm_system(topology2, charge_from_molecules=molecules,
                                                       toolkit_registry=toolkit_registry)
@@ -579,7 +558,7 @@ class TestForceField():
         filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
         forcefield = ForceField(filename)
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, load_box_vectors=True)
 
         omm_system = forcefield.create_openmm_system(topology,
                                                      charge_from_molecules=[ethanol],
@@ -610,7 +589,7 @@ class TestForceField():
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, load_box_vectors=True)
 
         with pytest.raises(ValueError, match=".* not used by any registered force Handler: {'invalid_kwarg'}.*") as e:
             omm_system = forcefield.create_openmm_system(topology, invalid_kwarg='aaa', toolkit_registry=toolkit_registry)
@@ -691,6 +670,7 @@ def test_alkethoh_parameters_assignment(alkethoh_id):
 
     # Load forcefield
     forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
+    forcefield.configure_vacuum()
 
     # Compare parameters. Skip the energy checks as the parameter check should be
     # sufficient. We test both energies and parameters in the slow test.
@@ -768,6 +748,7 @@ def test_freesolv_parameters_assignment(freesolv_id, forcefield_version, allow_u
     # Create OpenFF System with the current toolkit.
     forcefield_file_path = 'old/smirnoff99Frosst_' + forcefield_version + '.offxml'
     ff = ForceField(forcefield_file_path, 'old/hbonds.offxml')
+    ff.configure_vacuum()
     ff_system = ff.create_openmm_system(molecule.to_topology())
 
     # Load OpenMM System created with the 0.1 version of the toolkit.

@@ -66,7 +66,7 @@ class IncompatibleUnitError(MessageException):
 
 class IncompatibleParameterError(MessageException):
     """
-    Exception for when a set of parameters is scientifically incompatible with another
+    Exception for when a set of parameters is scientifically/technically incompatible with another
     """
     pass
 
@@ -594,6 +594,12 @@ class ParameterHandler(object):
         # TODO: Should we use introspection to inspect the function signature instead?
         return set(self._KWARGS)
 
+    def configure_vacuum(self):
+        """
+        Convenience function to configure this Handler with vacuum/nonperiodic default values
+        """
+        pass
+
     #@classmethod
     def check_parameter_compatibility(self, parameter_kwargs):
         """
@@ -800,7 +806,8 @@ class ParameterHandler(object):
 
         # Check whether the optional attribs are defined, and add them if so
         for key in self._OPTIONAL_SPEC_ATTRIBS:
-            if hasattr(self, key):
+            attr_key = '_' + key
+            if hasattr(self, attr_key):
                 header_attribs_to_return.append(key)
         # Add the cosmetic attributes if requested
         if return_cosmetic_attributes:
@@ -1283,7 +1290,7 @@ class vdWHandler(ParameterHandler):
         #'switch_width': 1.0 * unit.angstroms,
         #'cutoff': 9.0 * unit.angstroms,
         'long_range_dispersion': 'isotropic',
-        'nonbonded_method': NonbondedMethod.NoCutoff
+        #'nonbonded_method': NonbondedMethod.NoCutoff
     }
 
     _OPTIONAL_SPEC_ATTRIBS = ['switch_width',
@@ -1301,7 +1308,12 @@ class vdWHandler(ParameterHandler):
     def __init__(self, **kwargs):
 
         super().__init__(**kwargs)
+        self._validate_parameters()
 
+    def _validate_parameters(self):
+        """
+        Checks internal attributes, raising an exception if they are configured in an invalid way.
+        """
         if self._scale12 != 0.0:
             raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
                                     "Specified 1-2 scaling was {}".format(self._scale12))
@@ -1347,6 +1359,15 @@ class vdWHandler(ParameterHandler):
         # TODO: Add conditional logic to assign NonbondedMethod and check compatibility
 
 
+    def configure_vacuum(self):
+        """
+        Convenience function to configure this Handler with vacuum/nonperiodic default values
+        """
+        self._long_range_dispersion = 'None'
+        attrs_to_del = ['_cutoff', '_switch_width']
+        for attr in attrs_to_del:
+            if hasattr(self, attr):
+                delattr(self, attr)
 
     def check_handler_compatibility(self,
                                     handler_kwargs,
@@ -1394,9 +1415,14 @@ class vdWHandler(ParameterHandler):
         #}
 
     def create_force(self, system, topology, **kwargs):
-        if (self._long_range_dispersion ==  "None") and (not topology.is_vacuum):
+
+        self._validate_parameters()
+
+        # If there's no cutoff, make sure the system is nonperiodic/vacuum
+        if (self._long_range_dispersion == "None") and (not topology.is_vacuum):
             raise SMIRNOFFSpecError("If vdW long_range_dispersion is None, a vacuum/nonperiodic Topology "
                                     "must be provided")
+        # If there is a cutoff, make sure the system is periodic/condensed
         if (self._long_range_dispersion != "None") and (not topology.is_condensed):
             raise SMIRNOFFSpecError("If vdW long_range_dispersion is isotropic or LJPME, a condensed/periodic Topology "
                                     "must be provided")
@@ -1491,38 +1517,52 @@ class ElectrostaticsHandler(ParameterHandler):
     def __init__(self, **kwargs):
 
         super().__init__(**kwargs)
+        self._validate_parameters()
 
+    def _validate_parameters(self):
+        """
+        Checks internal attributes, raising an exception if they are configured in an invalid way.
+        """
         if self._scale12 != 0.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
-                                    "Specified 1-2 scaling was {}".format(self._scale12))
+            raise IncompatibleParameterError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
+                                             "Specified 1-2 scaling was {}".format(self._scale12))
         if self._scale13 != 0.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
-                                    "Specified 1-3 scaling was {}".format(self._scale13))
+            raise IncompatibleParameterError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
+                                             "Specified 1-3 scaling was {}".format(self._scale13))
         if self._scale15 != 1.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
+            raise IncompatibleParameterError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
                                     "Specified 1-5 scaling was {}".format(self._scale15))
 
         supported_methods = ['PME', 'Coulomb'] # 'reaction-field'
         if self._method == 'reaction-field':
-            raise SMIRNOFFSpecError('The Open Force Field toolkit does not currently support reaction-field '
-                                    'electrostatics. There are lingering issues in the implementation of reaction-field'
-                                    'in OpenMM.')
+            raise IncompatibleParameterError('The Open Force Field toolkit does not currently support reaction-field '
+                                             'electrostatics. There are lingering issues in the implementation of '
+                                             'reaction-field in OpenMM.')
         if not self._method in supported_methods:
-            raise SMIRNOFFSpecError("'method' parameter in Electrostatics tag {} is not a supported"
+            raise IncompatibleParameterError("'method' parameter in Electrostatics tag {} is not a supported "
                                     "option. Valid methods are {}".format(self._method, supported_methods))
 
 
         if self._method == 'reaction-field' or self._method == 'PME':
             if not(hasattr(self, '_cutoff')):
-                raise SMIRNOFFSpecError("If Electrostatics method is 'reaction-field' or 'PME', then 'cutoff' must"
+                raise SMIRNOFFSpecError("If Electrostatics method is 'reaction-field' or 'PME', then 'cutoff' must "
                                         "also be specified")
 
         if hasattr(self, '_switch_width'):
-            raise SMIRNOFFSpecError("The current implementation of the Open Force Field toolkit can not support "
-                                    "an electrostatic switching width. Currently only `None` is supported "
-                                    "(SMIRNOFF data specified {})".format(self._switch_width))
+            raise IncompatibleParameterError("The current implementation of the Open Force Field toolkit can not "
+                                             "support an electrostatic switching width. Currently only `None` is "
+                                             "supported (SMIRNOFF data specified {})".format(self._switch_width))
 
 
+    def configure_vacuum(self):
+        """
+        Convenience function to configure this Handler with vacuum/nonperiodic default values
+        """
+        self._method = 'Coulomb'
+        attrs_to_del = ['_cutoff', '_switch_width']
+        for attr in attrs_to_del:
+            if hasattr(self, attr):
+                delattr(self, attr)
 
     def create_force(self, system, topology, **kwargs):
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -1530,6 +1570,8 @@ class ElectrostaticsHandler(ParameterHandler):
             f for f in existing if type(f) == openmm.NonbondedForce
         ]
         force = existing[0]
+
+        self._validate_parameters()
 
         # Set the nonbonded method
         if topology.is_vacuum:
@@ -1539,17 +1581,17 @@ class ElectrostaticsHandler(ParameterHandler):
 
         settings_matched = False
 
-
         # First, check whether the vdWHandler set the nonbonded method to LJPME, because that means
         # that electrostatics also has to be PME
         current_nb_method = force.getNonbondedMethod()
         if current_nb_method == openmm.NonbondedForce.LJPME:
             if not self._method == 'PME':
-                raise SMIRNOFFSpecError("vdW long_range_dispersion set to PME, but electrostatics set "
-                                        "to {}. Current Open Force Field implementation only supports"
-                                        " PME electrostatics for this vdW setting.".format(self._method))
+                raise IncompatibleParameterError("vdW long_range_dispersion set to PME, but electrostatics set "
+                                                 "to {}. Current Open Force Field toolkit only supports"
+                                                 " PME electrostatics for this vdW setting.".format(self._method))
             settings_matched = True
 
+        # If the nonbonded method isn't LJPME, , then look up which treatment should be used
         settings_tuples = (({'method': 'Coulomb', 'usePbc': False}, openmm.NonbondedForce.NoCutoff),
                            #({'method': 'reaction-field', 'usePbc': True}, openmm.NonbondedForce.CutoffPeriodic),
                            #({'method': 'reaction-field', 'usePbc': False}, openmm.NonbondedForce.CutoffNonPeriodic),
@@ -1564,15 +1606,15 @@ class ElectrostaticsHandler(ParameterHandler):
                 break
 
         if not(settings_matched):
-            raise SMIRNOFFSpecError('Unable to find an OpenMM NonbondedForce for the provided settings'
-                                    '(electrostatics method={}, usePbc={})'.format(self._method,
-                                                                                   usePbc))
+            raise IncompatibleParameterError('The Open Force Field toolkit does not currently map the provided nonbonded '
+                                             'settings to an OpenMM NonbondedForce (electrostatics method={}, '
+                                             'usePbc={})'.format(self._method, usePbc))
 
         # Our current tie-in with OpenMM doesn't support having different cutoffs for vdW and electrostatic interactions
         if self._method == 'PME':
             vdw_cutoff = force.getCutoffDistance()
             if self._cutoff != vdw_cutoff:
-                raise SMIRNOFFSpecError("Current Open Force Field toolkit implementation only supports equal cutoff"
+                raise IncompatibleParameterError("Current Open Force Field toolkit implementation only supports equal cutoff"
                                         "distances between vdW and Electrostatics tags. Current vdW cutoff is"
                                         "{} and electrostatic cutoff is {}.".format(vdw_cutoff, self._cutoff))
 
