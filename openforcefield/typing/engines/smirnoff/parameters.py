@@ -40,16 +40,10 @@ from openforcefield.typing.chemistry import ChemicalEnvironment
 
 logger = logging.getLogger(__name__)
 
-#=============================================================================================
-# PARAMETER HANDLERS
-#
-# The following classes are Handlers that know how to create Force subclasses and add them to a System that is being
-# created.  Each Handler class must define three methods:
-# 1) a constructor which takes as input hierarchical dictionaries of data conformant to the SMIRNOFF spec;
-# 2) a create_force() method that constructs the Force object and adds it to the System; and
-# 3) a labelForce() method that provides access to which terms are applied to which atoms in specified mols.
-#=============================================================================================
 
+#======================================================================
+# CUSTOM EXCEPTIONS
+#======================================================================
 
 class SMIRNOFFSpecError(MessageException):
     """
@@ -70,6 +64,10 @@ class IncompatibleParameterError(MessageException):
     """
     pass
 
+
+#======================================================================
+# PARAMETER TYPE/LIST
+#======================================================================
 
 class NonbondedMethod(Enum):
     """
@@ -392,8 +390,6 @@ class ParameterType(object):
                                         "a desired cosmetic attribute, consider setting "
                                         "'permit_cosmetic_attributes=True'".format({key: val}, self.__class__))
 
-
-
     @property
     def smirks(self):
         return self._smirks
@@ -407,7 +403,6 @@ class ParameterType(object):
         ChemicalEnvironment.validate(
             smirks, ensure_valence_type=self._VALENCE_TYPE)
         self._smirks = smirks
-
 
     def to_dict(self, return_cosmetic_attributes=False):
         """
@@ -450,6 +445,21 @@ class ParameterType(object):
                 smirnoff_dict[attrib_name] = attrib_value
 
         return smirnoff_dict
+
+
+#======================================================================
+# PARAMETER HANDLERS
+#
+# The following classes are Handlers that know how to create Force
+# subclasses and add them to a System that is being created. Each Handler
+# class must define three methods:
+# 1) a constructor which takes as input hierarchical dictionaries of data
+#    conformant to the SMIRNOFF spec;
+# 2) a create_force() method that constructs the Force object and adds it
+#    to the System; and
+# 3) a labelForce() method that provides access to which terms are applied
+#    to which atoms in specified mols.
+#======================================================================
 
 # TODO: Should we have a parameter handler registry?
 
@@ -680,8 +690,8 @@ class ParameterHandler(object):
         Returns
         ---------
         matches : ValenceDict[Tuple[int], ParameterType]
-            ``matches[atom_indices]`` is the ``ParameterType`` object
-            matching the tuple of atom indices in ``entity``.
+            ``matches[particle_indices]`` is the ``ParameterType`` object
+            matching the tuple of particle indices in ``entity``.
 
         """
         return self._get_matches(entity)
@@ -839,6 +849,53 @@ class ParameterHandler(object):
         smirnoff_data.update(unitless_header_attribute_dict)
         smirnoff_data.update(output_units)
         return smirnoff_data
+
+    # -------------------------------
+    # Utilities for children classes.
+    # -------------------------------
+
+    @classmethod
+    def _check_all_valence_terms_assigned(cls, assigned_terms, valence_terms):
+        """Check that all valence terms have been assigned and print a user-friendly error message.
+
+        Parameters
+        ----------
+        assigned_terms : ValenceDict
+            Atom index tuples defining added valence terms.
+        valence_terms : Iterable[TopologyAtom] or Iterable[Iterable[TopologyAtom]]
+            Atom or atom tuples defining topological valence terms.
+
+        """
+        # Convert the valence term to a valence dictionary to make sure
+        # the order of atom indices doesn't matter for comparison.
+        valence_terms_dict = assigned_terms.__class__()
+        for atoms in valence_terms:
+            atom_indices = (a.topology_particle_index for a in atoms)
+            valence_terms_dict[atom_indices] = atoms
+
+        # Check that both valence dictionaries have the same keys (i.e. terms).
+        assigned_terms_set = set(assigned_terms.keys())
+        valence_terms_set = set(valence_terms_dict.keys())
+        unassigned_terms = valence_terms_set.difference(assigned_terms_set)
+        not_found_terms = assigned_terms_set.difference(valence_terms_set)
+
+        # Raise an error if there are unassigned terms.
+        err_msg = ""
+
+        if len(unassigned_terms) > 0:
+            err_msg += ("{parameter_handler} was not able to find parameters for the following valence terms:\n"
+                        "- {unassigned_str}").format(parameter_handler=cls.__name__,
+                                                     unassigned_str='\n- '.join(unassigned_terms))
+        if len(not_found_terms) > 0:
+            if err_msg != "":
+                err_msg += '\n'
+            err_msg += ("{parameter_handler} assigned terms that were not found in the topology:\n"
+                        "- {not_found_str}").format(parameter_handler=cls.__name__,
+                                                    not_found_str='\n- '.join(not_found_terms))
+        if err_msg != "":
+            raise RuntimeError(err_msg)
+
+
 #=============================================================================================
 
 
@@ -979,9 +1036,9 @@ class BondHandler(ParameterHandler):
         logger.info('{} bonds added ({} skipped due to constraints)'.format(
             len(bonds) - skipped_constrained_bonds, skipped_constrained_bonds))
 
-        # TODO: Reimplement missing valence checks
-        # Check that no topological bonds are missing force parameters
-        #_check_for_missing_valence_terms('BondForce', topology, bonds.keys(), topology.bonds)
+        # Check that no topological bonds are missing force parameters.
+        valence_terms = [(b.bond.atom1, b.bond.atom2) for b in topology.topology_bonds]
+        self._check_all_valence_terms_assigned(assigned_terms=bonds, valence_terms=valence_terms)
 
 
 #=============================================================================================
@@ -1044,7 +1101,9 @@ class AngleHandler(ParameterHandler):
             skipped_constrained_angles))
 
         # Check that no topological angles are missing force parameters
-        #_check_for_missing_valence_terms('AngleForce', topology, angles.keys(), topology.angles())
+        # TODO: Add topology.angles after taking a decision for #216, and reactivate valence check.
+        # valence_terms = [a.atoms for a in topology.topology_angles]
+        # self._check_all_valence_terms_assigned(assigned_terms=angles, valence_terms=valence_terms)
 
 
 #=============================================================================================
@@ -1118,7 +1177,9 @@ class ProperTorsionHandler(ParameterHandler):
         logger.info('{} torsions added'.format(len(torsions)))
 
         # Check that no topological torsions are missing force parameters
-        #_check_for_missing_valence_terms('ProperTorsionForce', topology, torsions.keys(), topology.torsions())
+        # TODO: Add topology.proper_torsions after taking a decision for #216, and reactivate valence check.
+        # valence_terms = [t.atoms for t in topology.topology_proper_torsions]
+        # self._check_all_valence_terms_assigned(assigned_terms=torsions, valence_terms=valence_terms)
 
 
 class ImproperTorsionHandler(ParameterHandler):
@@ -1213,7 +1274,9 @@ class ImproperTorsionHandler(ParameterHandler):
                 len(impropers)))
 
         # Check that no topological torsions are missing force parameters
-        #_check_for_missing_valence_terms('ImproperTorsionForce', topology, torsions.keys(), topology.impropers())
+        # TODO: Add topology.improper_torsions after taking a decision for #216, and reactivate valence check.
+        # valence_terms = [t.atoms for t in topology.topology_improper_torsions]
+        # self._check_all_valence_terms_assigned(assigned_terms=impropers, valence_terms=valence_terms)
 
 
 class vdWHandler(ParameterHandler):
@@ -1398,9 +1461,7 @@ class vdWHandler(ParameterHandler):
 
         # Check that no atoms are missing force parameters
         # QUESTION: Don't we want to allow atoms without force parameters? Or perhaps just *particles* without force parameters, but not atoms?
-        # TODO: Enable this check
-        #_check_for_missing_valence_terms('NonbondedForce Lennard-Jones parameters', topology, atoms.keys(), topology.atoms)
-
+        self._check_all_valence_terms_assigned(assigned_terms=atoms, valence_terms=topology.topology_atoms)
 
     # TODO: Can we express separate constraints for postprocessing and normal processing?
     def postprocess_system(self, system, topology, **kwargs):
