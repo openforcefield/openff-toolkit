@@ -338,7 +338,7 @@ class TestForceField():
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, load_box_vectors=True)
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, )
 
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
@@ -354,7 +354,7 @@ class TestForceField():
         molecules.append(Molecule.from_smiles('C1CCCCC1'))
         # molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
         #                                                                      'molecules/cyclohexane.mol2')]
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, load_box_vectors=True)
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, )
 
         omm_system = forcefield.create_openmm_system(topology)
 
@@ -373,10 +373,10 @@ class TestForceField():
         # molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
         #                                                                      'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        topology.box_vectors = None
 
         omm_system = forcefield.create_openmm_system(topology)
 
-        assert omm_system.getNonbonded
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_no_matching_reference(self, toolkit_registry, registry_description):
@@ -405,7 +405,7 @@ class TestForceField():
         mol_names = ['water', 'cyclohexane', 'ethanol', 'propane', 'methane', 'butanol']
         sdf_files = [get_data_filename(os.path.join('systems', 'monomers', name+'.sdf')) for name in mol_names]
         molecules = [Molecule.from_file(sdf_file) for sdf_file in sdf_files]
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, load_box_vectors=True)
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, )
 
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
         # TODO: Add check to ensure system energy is finite
@@ -426,7 +426,6 @@ class TestForceField():
         molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.sdf'))]
         topology1 = Topology.from_openmm(pdbfile.topology,
                                          unique_molecules=molecules1,
-                                         load_box_vectors = True
                                          )
         omm_system1 = forcefield.create_openmm_system(topology1,
                                                       toolkit_registry=toolkit_registry)
@@ -434,7 +433,6 @@ class TestForceField():
         molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.sdf'))]
         topology2 = Topology.from_openmm(pdbfile.topology,
                                          unique_molecules=molecules2,
-                                         load_box_vectors=True
                                          )
         omm_system2 = forcefield.create_openmm_system(topology2,
                                                       toolkit_registry=toolkit_registry)
@@ -466,7 +464,7 @@ class TestForceField():
         molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.sdf'))]
         topology1 = Topology.from_openmm(pdbfile.topology,
                                          unique_molecules=molecules1,
-                                         load_box_vectors=True
+                                         
                                          )
         omm_system1 = forcefield.create_openmm_system(topology1,
                                                       toolkit_registry=toolkit_registry)
@@ -475,7 +473,6 @@ class TestForceField():
         molecules2 = [Molecule.from_file(get_data_filename('molecules/ethanol_reordered.sdf'))]
         topology2 = Topology.from_openmm(pdbfile.topology,
                                          unique_molecules=molecules2,
-                                         load_box_vectors = True
                                          )
         omm_system2 = forcefield.create_openmm_system(topology2,
                                                       toolkit_registry=toolkit_registry)
@@ -514,7 +511,7 @@ class TestForceField():
         filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
         forcefield = ForceField(filename)
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, load_box_vectors = True)
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         omm_system = forcefield.create_openmm_system(topology, charge_from_molecules=molecules,
                                                      toolkit_registry=toolkit_registry)
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
@@ -529,7 +526,7 @@ class TestForceField():
         # In 1_ethanol_reordered.pdb, the first three atoms go O-C-C instead of C-C-O. This part of the test ensures
         # that the charges are correctly mapped according to this PDB in the resulting system.
         pdbfile2 = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol_reordered.pdb'))
-        topology2 = Topology.from_openmm(pdbfile2.topology, unique_molecules=molecules, load_box_vectors=True)
+        topology2 = Topology.from_openmm(pdbfile2.topology, unique_molecules=molecules, )
 
         omm_system2 = forcefield.create_openmm_system(topology2, charge_from_molecules=molecules,
                                                       toolkit_registry=toolkit_registry)
@@ -558,7 +555,7 @@ class TestForceField():
         filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
         forcefield = ForceField(filename)
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, load_box_vectors=True)
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, )
 
         omm_system = forcefield.create_openmm_system(topology,
                                                      charge_from_molecules=[ethanol],
@@ -589,7 +586,7 @@ class TestForceField():
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, load_box_vectors=True)
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, )
 
         with pytest.raises(ValueError, match=".* not used by any registered force Handler: {'invalid_kwarg'}.*") as e:
             omm_system = forcefield.create_openmm_system(topology, invalid_kwarg='aaa', toolkit_registry=toolkit_registry)
