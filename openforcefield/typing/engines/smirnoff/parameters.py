@@ -679,7 +679,7 @@ class ParameterHandler(object):
         # TODO: This is a necessary API point for Lee-Ping's ForceBalance
         pass
 
-    def get_matches(self, entity):
+    def find_matches(self, entity):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -694,10 +694,10 @@ class ParameterHandler(object):
             matching the tuple of particle indices in ``entity``.
 
         """
-        return self._get_matches(entity)
+        return self._find_matches(entity)
 
-    def _get_matches(self, entity, transformed_dict_cls=ValenceDict):
-        """Implement get_matches() and allow using a difference valence dictionary."""
+    def _find_matches(self, entity, transformed_dict_cls=ValenceDict):
+        """Implement find_matches() and allow using a difference valence dictionary."""
         from openforcefield.topology import FrozenMolecule
 
         logger.debug('Finding matches for {}'.format(self.__class__.__name__))
@@ -937,7 +937,7 @@ class ConstraintHandler(ParameterHandler):
         super().__init__(**kwargs)
 
     def create_force(self, system, topology, **kwargs):
-        constraints = self.get_matches(topology)
+        constraints = self.find_matches(topology)
         for (atoms, constraint) in constraints.items():
             # Update constrained atom pairs in topology
             #topology.add_constraint(*atoms, constraint.distance)
@@ -996,7 +996,7 @@ class BondHandler(ParameterHandler):
             force = existing[0]
 
         # Add all bonds to the system.
-        bonds = self.get_matches(topology)
+        bonds = self.find_matches(topology)
         skipped_constrained_bonds = 0  # keep track of how many bonds were constrained (and hence skipped)
         for (atoms, bond_params) in bonds.items():
             # Get corresponding particle indices in Topology
@@ -1084,7 +1084,7 @@ class AngleHandler(ParameterHandler):
             force = existing[0]
 
         # Add all angles to the system.
-        angles = self.get_matches(topology)
+        angles = self.find_matches(topology)
         skipped_constrained_angles = 0  # keep track of how many angles were constrained (and hence skipped)
         for (atoms, angle) in angles.items():
             # Ensure atoms are actually bonded correct pattern in Topology
@@ -1161,7 +1161,7 @@ class ProperTorsionHandler(ParameterHandler):
         else:
             force = existing[0]
         # Add all proper torsions to the system.
-        torsions = self.get_matches(topology)
+        torsions = self.find_matches(topology)
         for (atom_indices, torsion) in torsions.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             for (i, j) in [(0, 1), (1, 2), (2, 3)]:
@@ -1217,7 +1217,7 @@ class ImproperTorsionHandler(ParameterHandler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def get_matches(self, entity):
+    def find_matches(self, entity):
         """Find the improper torsions in the topology/molecule matched by a parameter type.
 
         Parameters
@@ -1232,7 +1232,7 @@ class ImproperTorsionHandler(ParameterHandler):
             matching the 4-tuple of atom indices in ``entity``.
 
         """
-        return self._get_matches(entity, transformed_dict_cls=ImproperDict)
+        return self._find_matches(entity, transformed_dict_cls=ImproperDict)
 
     def create_force(self, system, topology, **kwargs):
         #force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
@@ -1248,7 +1248,7 @@ class ImproperTorsionHandler(ParameterHandler):
             force = existing[0]
 
         # Add all improper torsions to the system
-        impropers = self.get_matches(topology)
+        impropers = self.find_matches(topology)
         for (atom_indices, improper) in impropers.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             # For impropers, central atom is atom 1
@@ -1453,7 +1453,7 @@ class vdWHandler(ParameterHandler):
         system.addForce(force)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
-        atoms = self.get_matches(topology)
+        atoms = self.find_matches(topology)
 
         # Create all particles.
         for particle in topology.topology_particles:
@@ -1635,7 +1635,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
     def postprocess_system(self, system, topology, **kwargs):
-        bonds = self.get_matches(topology)
+        bonds = self.find_matches(topology)
 
         # Apply bond charge increments to all appropriate force groups
         # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?
@@ -1855,7 +1855,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
     def postprocess_system(self, system, topology, **kwargs):
-        bonds = self.get_matches(topology)
+        bonds = self.find_matches(topology)
 
         # Apply bond charge increments to all appropriate force groups
         # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?

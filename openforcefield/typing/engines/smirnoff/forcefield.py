@@ -932,7 +932,7 @@ class ForceField(object):
         for molecule_idx, molecule in enumerate(topology.reference_molecules):
             current_molecule_labels = dict()
             for parameter_handler in self._parameter_handlers.values():
-                matches = parameter_handler.get_matches(molecule)
+                matches = parameter_handler.find_matches(molecule)
                 molecule_labels[molecule_idx][parameter_handler.name] = matches
             molecule_labels.append(current_molecule_labels)
         return molecule_labels
