@@ -1432,15 +1432,15 @@ class vdWHandler(ParameterHandler):
         # If we're using PME, then the only possible openMM Nonbonded type is LJPME
         if self._long_range_dispersion == 'LJPME':
             force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-            force.setCutoffDistance(self._cutoff.in_units_of(unit.nanometer))
+            force.setCutoffDistance(self._cutoff)
         elif self._long_range_dispersion == 'isotropic':
             force.setNonbondedMethod(openmm.NonbondedForce.PME)
-            force.setCutoffDistance(self._cutoff.in_units_of(unit.nanometer))
+            force.setCutoffDistance(self._cutoff)
             if hasattr(self, '_switch_width'):
                 force.setUseSwitchingFunction(False)
             else:
                 force.setUseSwitchingFunction(True)
-                force.setSwitchingDistance((self._cutoff - self._switch_width).in_units_of(unit.nanometer))
+                force.setSwitchingDistance(self._cutoff - self._switch_width)
         elif self._long_range_dispersion == "None":
             force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
 
