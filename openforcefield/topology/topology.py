@@ -833,6 +833,8 @@ class Topology(Serializable):
     """
     A Topology is a chemical representation of a system containing one or more molecules appearing in a specified order.
 
+    # TODO: Update list of attributes
+
     Attributes
     ----------
     molecules : list of Molecule
@@ -843,6 +845,8 @@ class Topology(Serializable):
         Number of molecules in the topology
     n_unique_molecules : int
         Number of unique molecules in the topology
+    box_vectors : iterable of simtk.unit.Quantity
+        The box vectors for a periodic system. If box_vectors=None, the system is assumed to be vacuum.
 
     Examples
     --------
