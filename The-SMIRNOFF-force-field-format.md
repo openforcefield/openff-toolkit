@@ -644,7 +644,7 @@ This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specificatio
     * `<BondChargeCorrections>` was renamed to `<ChargeIncrementModel>` and generalized to accommodate an arbitrary number of tagged atoms
     * `<GBSAForce>` was renamed to `<GBSA>`    
 * `<PeriodicTorsionForce>` was split into `<ProperTorsions>` and `<ImproperTorsions>`
-* `<vdW>` now specifies 1-2, 1-3, 1-4, and 1-5 scaling factors via `scale12` (default: 0), `scale13` (default: 0), and `scale14` (default: 0.5) attributes. Coulomb scaling parameters have been removed from `StericsForce`.
+* `<vdW>` now specifies 1-2, 1-3, 1-4, and 1-5 scaling factors via `scale12` (default: 0), `scale13` (default: 0), `scale14` (default: 0.5), and `scale15` (default 1.0) attributes. Coulomb scaling parameters have been removed from `StericsForce`.
 * Added the `<Electrostatics>` tag to separately specify 1-2, 1-3, 1-4, and 1-5 scaling factors for electrostatics, as well as the method used to compute electrostatics (`PME`, `reaction-field`, `Coulomb`) since this has a huge effect on the energetics of the system.
 * Made it clear that `<Constraint>` entries do not have to be between bonded atoms.
 * `<VirtualSites>` has been added, and the specification of charge increments harmonized with `<ChargeIncrementModel>`
