@@ -870,7 +870,12 @@ class ParameterHandler(object):
         # the order of atom indices doesn't matter for comparison.
         valence_terms_dict = assigned_terms.__class__()
         for atoms in valence_terms:
-            atom_indices = (a.topology_particle_index for a in atoms)
+            try:
+                # valence_terms is a list of TopologyAtom tuples.
+                atom_indices = (a.topology_particle_index for a in atoms)
+            except TypeError:
+                # valence_terms is a list of TopologyAtom.
+                atom_indices = (atoms.topology_particle_index,)
             valence_terms_dict[atom_indices] = atoms
 
         # Check that both valence dictionaries have the same keys (i.e. terms).
@@ -1037,7 +1042,7 @@ class BondHandler(ParameterHandler):
             len(bonds) - skipped_constrained_bonds, skipped_constrained_bonds))
 
         # Check that no topological bonds are missing force parameters.
-        valence_terms = [(b.bond.atom1, b.bond.atom2) for b in topology.topology_bonds]
+        valence_terms = [list(b.atoms) for b in topology.topology_bonds]
         self._check_all_valence_terms_assigned(assigned_terms=bonds, valence_terms=valence_terms)
 
 
@@ -1455,8 +1460,9 @@ class vdWHandler(ParameterHandler):
             force.addParticle(0.0, 1.0, 0.0)
 
         # Set the particle Lennard-Jones terms.
-        for (atoms, ljtype) in atoms.items():
-            force.setParticleParameters(atoms[0], 0.0, ljtype.sigma,
+        for atom_key, ljtype in atoms.items():
+            atom_idx = atom_key[0]
+            force.setParticleParameters(atom_idx, 0.0, ljtype.sigma,
                                         ljtype.epsilon)
 
         # Check that no atoms are missing force parameters
