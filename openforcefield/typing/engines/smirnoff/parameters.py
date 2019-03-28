@@ -1437,10 +1437,11 @@ class vdWHandler(ParameterHandler):
             force.setNonbondedMethod(openmm.NonbondedForce.PME)
             force.setCutoffDistance(self._cutoff)
             if hasattr(self, '_switch_width'):
-                force.setUseSwitchingFunction(False)
-            else:
                 force.setUseSwitchingFunction(True)
                 force.setSwitchingDistance(self._cutoff - self._switch_width)
+            else:
+                force.setUseSwitchingFunction(False)
+
         elif self._long_range_dispersion == "None":
             force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
 
