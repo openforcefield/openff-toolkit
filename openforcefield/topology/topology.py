@@ -1371,7 +1371,7 @@ class Topology(Serializable):
         raise NotImplementedError()  # TODO
 
     @classmethod
-    def from_openmm(cls, openmm_topology, unique_molecules=None, load_box_vectors=False):
+    def from_openmm(cls, openmm_topology, unique_molecules=None):
         """
         Construct an openforcefield Topology object from an OpenMM Topology object.
 
@@ -1386,9 +1386,6 @@ class Topology(Serializable):
             OpenMM ``Topology``, these will be used in matching as well.
             If all bonds have bond orders assigned in ``mdtraj_topology``, these bond orders will be used to attempt to construct
             the list of unique Molecules if the ``unique_molecules`` argument is omitted.
-        load_box_vectors : bool. Default=False
-            Whether to load the box vectors from the openMM topology into the Open Force Field topology. Note that, if
-            box vectors are loaded into the OFF topology, the system is assumed to be condensed-phase
 
         Returns
         -------
@@ -1478,8 +1475,7 @@ class Topology(Serializable):
                 graph_to_unq_mol[unq_mol_G],
                 local_topology_to_reference_index=local_top_to_ref_index)
 
-        if load_box_vectors:
-            topology.box_vectors = openmm_topology.getPeriodicBoxVectors()
+        topology.box_vectors = openmm_topology.getPeriodicBoxVectors()
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
 
