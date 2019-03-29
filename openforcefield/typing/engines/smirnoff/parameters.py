@@ -65,6 +65,11 @@ class IncompatibleParameterError(MessageException):
     pass
 
 
+class UnassignedValenceParameterException(Exception):
+    """Exception raised when there exist valence terms for which a ParameterHandler can't find parameters."""
+    pass
+
+
 #======================================================================
 # PARAMETER TYPE/LIST
 #======================================================================
@@ -898,7 +903,7 @@ class ParameterHandler(object):
                         "- {not_found_str}").format(parameter_handler=cls.__name__,
                                                     not_found_str='\n- '.join(not_found_terms))
         if err_msg != "":
-            raise RuntimeError(err_msg)
+            raise UnassignedValenceParameterException(err_msg)
 
 
 #=============================================================================================
@@ -1106,9 +1111,8 @@ class AngleHandler(ParameterHandler):
             skipped_constrained_angles))
 
         # Check that no topological angles are missing force parameters
-        # TODO: Add topology.angles after taking a decision for #216, and reactivate valence check.
-        # valence_terms = [a.atoms for a in topology.topology_angles]
-        # self._check_all_valence_terms_assigned(assigned_terms=angles, valence_terms=valence_terms)
+        self._check_all_valence_terms_assigned(assigned_terms=angles,
+                                               valence_terms=list(topology.angles))
 
 
 #=============================================================================================
@@ -1182,9 +1186,8 @@ class ProperTorsionHandler(ParameterHandler):
         logger.info('{} torsions added'.format(len(torsions)))
 
         # Check that no topological torsions are missing force parameters
-        # TODO: Add topology.proper_torsions after taking a decision for #216, and reactivate valence check.
-        # valence_terms = [t.atoms for t in topology.topology_proper_torsions]
-        # self._check_all_valence_terms_assigned(assigned_terms=torsions, valence_terms=valence_terms)
+        self._check_all_valence_terms_assigned(assigned_terms=torsions,
+                                               valence_terms=list(topology.propers))
 
 
 class ImproperTorsionHandler(ParameterHandler):
@@ -1279,9 +1282,8 @@ class ImproperTorsionHandler(ParameterHandler):
                 len(impropers)))
 
         # Check that no topological torsions are missing force parameters
-        # TODO: Add topology.improper_torsions after taking a decision for #216, and reactivate valence check.
-        # valence_terms = [t.atoms for t in topology.topology_improper_torsions]
-        # self._check_all_valence_terms_assigned(assigned_terms=impropers, valence_terms=valence_terms)
+        self._check_all_valence_terms_assigned(assigned_terms=impropers,
+                                               valence_terms=list(topology.impropers))
 
 
 class vdWHandler(ParameterHandler):
@@ -1467,7 +1469,8 @@ class vdWHandler(ParameterHandler):
 
         # Check that no atoms are missing force parameters
         # QUESTION: Don't we want to allow atoms without force parameters? Or perhaps just *particles* without force parameters, but not atoms?
-        self._check_all_valence_terms_assigned(assigned_terms=atoms, valence_terms=topology.topology_atoms)
+        self._check_all_valence_terms_assigned(assigned_terms=atoms,
+                                               valence_terms=topology.topology_atoms)
 
     # TODO: Can we express separate constraints for postprocessing and normal processing?
     def postprocess_system(self, system, topology, **kwargs):
