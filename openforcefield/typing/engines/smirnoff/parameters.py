@@ -66,7 +66,27 @@ class IncompatibleParameterError(MessageException):
 
 
 class UnassignedValenceParameterException(Exception):
-    """Exception raised when there exist valence terms for which a ParameterHandler can't find parameters."""
+    """Exception raised when there are valence terms for which a ParameterHandler can't find parameters."""
+    pass
+
+
+class UnassignedBondParameterException(UnassignedValenceParameterException):
+    """Exception raised when there are bond terms for which a ParameterHandler can't find parameters."""
+    pass
+
+
+class UnassignedAngleParameterException(UnassignedValenceParameterException):
+    """Exception raised when there are angle terms for which a ParameterHandler can't find parameters."""
+    pass
+
+
+class UnassignedProperTorsionParameterException(UnassignedValenceParameterException):
+    """Exception raised when there are proper torsion terms for which a ParameterHandler can't find parameters."""
+    pass
+
+
+class UnassignedImroperTorsionParameterException(UnassignedValenceParameterException):
+    """Exception raised when there are improper torsions terms for which a ParameterHandler can't find parameters."""
     pass
 
 
@@ -860,7 +880,8 @@ class ParameterHandler(object):
     # -------------------------------
 
     @classmethod
-    def _check_all_valence_terms_assigned(cls, assigned_terms, valence_terms):
+    def _check_all_valence_terms_assigned(cls, assigned_terms, valence_terms,
+                                          exception_cls=UnassignedValenceParameterException):
         """Check that all valence terms have been assigned and print a user-friendly error message.
 
         Parameters
@@ -869,6 +890,9 @@ class ParameterHandler(object):
             Atom index tuples defining added valence terms.
         valence_terms : Iterable[TopologyAtom] or Iterable[Iterable[TopologyAtom]]
             Atom or atom tuples defining topological valence terms.
+        exception_cls : UnassignedValenceParameterException
+            A specific exception class to raise to allow catching only specific
+            types of errors.
 
         """
         # Convert the valence term to a valence dictionary to make sure
@@ -893,17 +917,20 @@ class ParameterHandler(object):
         err_msg = ""
 
         if len(unassigned_terms) > 0:
+            unassigned_str = '\n- '.join([str(x) for x in unassigned_terms])
             err_msg += ("{parameter_handler} was not able to find parameters for the following valence terms:\n"
                         "- {unassigned_str}").format(parameter_handler=cls.__name__,
-                                                     unassigned_str='\n- '.join(unassigned_terms))
+                                                     unassigned_str=unassigned_str)
         if len(not_found_terms) > 0:
             if err_msg != "":
                 err_msg += '\n'
+            not_found_str = '\n- '.join([str(x) for x in not_found_terms])
             err_msg += ("{parameter_handler} assigned terms that were not found in the topology:\n"
                         "- {not_found_str}").format(parameter_handler=cls.__name__,
-                                                    not_found_str='\n- '.join(not_found_terms))
+                                                    not_found_str=not_found_str)
         if err_msg != "":
-            raise UnassignedValenceParameterException(err_msg)
+            err_msg += '\n'
+            raise exception_cls(err_msg)
 
 
 #=============================================================================================
@@ -1048,7 +1075,8 @@ class BondHandler(ParameterHandler):
 
         # Check that no topological bonds are missing force parameters.
         valence_terms = [list(b.atoms) for b in topology.topology_bonds]
-        self._check_all_valence_terms_assigned(assigned_terms=bonds, valence_terms=valence_terms)
+        self._check_all_valence_terms_assigned(assigned_terms=bonds, valence_terms=valence_terms,
+                                               exception_cls=UnassignedBondParameterException)
 
 
 #=============================================================================================
@@ -1112,7 +1140,8 @@ class AngleHandler(ParameterHandler):
 
         # Check that no topological angles are missing force parameters
         self._check_all_valence_terms_assigned(assigned_terms=angles,
-                                               valence_terms=list(topology.angles))
+                                               valence_terms=list(topology.angles),
+                                               exception_cls=UnassignedAngleParameterException)
 
 
 #=============================================================================================
@@ -1187,7 +1216,8 @@ class ProperTorsionHandler(ParameterHandler):
 
         # Check that no topological torsions are missing force parameters
         self._check_all_valence_terms_assigned(assigned_terms=torsions,
-                                               valence_terms=list(topology.propers))
+                                               valence_terms=list(topology.propers),
+                                               exception_cls=UnassignedProperTorsionParameterException)
 
 
 class ImproperTorsionHandler(ParameterHandler):
@@ -1283,7 +1313,8 @@ class ImproperTorsionHandler(ParameterHandler):
 
         # Check that no topological torsions are missing force parameters
         self._check_all_valence_terms_assigned(assigned_terms=impropers,
-                                               valence_terms=list(topology.impropers))
+                                               valence_terms=list(topology.impropers),
+                                               exception_cls=UnassignedImroperTorsionParameterException)
 
 
 class vdWHandler(ParameterHandler):
