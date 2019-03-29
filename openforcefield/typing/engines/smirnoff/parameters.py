@@ -85,11 +85,6 @@ class UnassignedProperTorsionParameterException(UnassignedValenceParameterExcept
     pass
 
 
-class UnassignedImroperTorsionParameterException(UnassignedValenceParameterException):
-    """Exception raised when there are improper torsions terms for which a ParameterHandler can't find parameters."""
-    pass
-
-
 #======================================================================
 # PARAMETER TYPE/LIST
 #======================================================================
@@ -1311,11 +1306,6 @@ class ImproperTorsionHandler(ParameterHandler):
             '{} impropers added, each applied in a six-fold trefoil'.format(
                 len(impropers)))
 
-        # Check that no topological torsions are missing force parameters
-        self._check_all_valence_terms_assigned(assigned_terms=impropers,
-                                               valence_terms=list(topology.impropers),
-                                               exception_cls=UnassignedImroperTorsionParameterException)
-
 
 class vdWHandler(ParameterHandler):
     """Handle SMIRNOFF ``<vdW>`` tags"""
@@ -1498,8 +1488,7 @@ class vdWHandler(ParameterHandler):
             force.setParticleParameters(atom_idx, 0.0, ljtype.sigma,
                                         ljtype.epsilon)
 
-        # Check that no atoms are missing force parameters
-        # QUESTION: Don't we want to allow atoms without force parameters? Or perhaps just *particles* without force parameters, but not atoms?
+        # Check that no atoms (n.b. not particles) are missing force parameters.
         self._check_all_valence_terms_assigned(assigned_terms=atoms,
                                                valence_terms=topology.topology_atoms)
 
