@@ -2102,16 +2102,3 @@ class Topology(Serializable):
 
         pass
 
-    @property
-    def is_condensed(self):
-        """
-        ``True`` if the topology represents a condensed/periodic system; ``False`` otherwise
-        """
-        return self._box_vectors is not None
-
-    @property
-    def is_vacuum(self):
-        """
-        ``True`` if the topology represents a vacuum/nonperiodic system; ``False`` otherwise
-        """
-        return self._box_vectors is None
