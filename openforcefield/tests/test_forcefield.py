@@ -360,11 +360,9 @@ class TestForceField():
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_1_cyclohexane_1_ethanol_vacuum(self, toolkit_registry, registry_description):
-        # TODO: Need to load a SMIRNOFF data source with vdw = isotropic and es = PME
         from simtk.openmm import app
         from openforcefield.topology import Topology
         forcefield = ForceField('smirnoff99Frosst.offxml')
-        forcefield.configure_vacuum()
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
         # toolkit_wrapper = RDKitToolkitWrapper()
         molecules = []
@@ -374,6 +372,8 @@ class TestForceField():
         #                                                                      'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         topology.box_vectors = None
+        forcefield.get_handler("Electrostatics", {})._method = "Coulomb"
+        forcefield.get_handler("vdW", {})._long_range_dispersion = "None"
 
         omm_system = forcefield.create_openmm_system(topology)
 
@@ -667,7 +667,6 @@ def test_alkethoh_parameters_assignment(alkethoh_id):
 
     # Load forcefield
     forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
-    forcefield.configure_vacuum()
 
     # Compare parameters. Skip the energy checks as the parameter check should be
     # sufficient. We test both energies and parameters in the slow test.
@@ -745,7 +744,6 @@ def test_freesolv_parameters_assignment(freesolv_id, forcefield_version, allow_u
     # Create OpenFF System with the current toolkit.
     forcefield_file_path = 'old/smirnoff99Frosst_' + forcefield_version + '.offxml'
     ff = ForceField(forcefield_file_path, 'old/hbonds.offxml')
-    ff.configure_vacuum()
     ff_system = ff.create_openmm_system(molecule.to_topology())
 
     # Load OpenMM System created with the 0.1 version of the toolkit.
