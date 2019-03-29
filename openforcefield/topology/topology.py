@@ -852,7 +852,8 @@ class TopologyMolecule:
     def _convert_to_topology_atom_tuples(self, molecule_atom_tuples):
         for atom_tuple in molecule_atom_tuples:
             mol_atom_indices = (a.molecule_atom_index for a in atom_tuple)
-            yield tuple(self.atom(i) for i in mol_atom_indices)
+            top_mol_atom_indices = (self._ref_to_top_index[mol_idx] for mol_idx in mol_atom_indices)
+            yield tuple(self.atom(i) for i in top_mol_atom_indices)
 
 
 # TODO: pick back up figuring out how we want TopologyMolecules to know their starting TopologyParticle indices
