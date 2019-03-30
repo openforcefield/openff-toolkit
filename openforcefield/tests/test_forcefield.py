@@ -25,7 +25,8 @@ from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWra
 from openforcefield.utils import get_data_filename
 
 from openforcefield.topology.molecule import Molecule
-from openforcefield.typing.engines.smirnoff import ForceField
+from openforcefield.typing.engines.smirnoff import ForceField, SMIRNOFFSpecError, IncompatibleParameterError
+from simtk import openmm
 
 
 #=============================================================================================
@@ -50,11 +51,11 @@ simple_xml_ff = str.encode('''<?xml version='1.0' encoding='ASCII'?>
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5" periodicity1="2" phase1="180."/>
   </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch_width="1.0" switch_width_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch_width="1.0" switch_width_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" method="cutoff">
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
     <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n2" rmin_half="1.4870"/>
   </vdW>
-  <Electrostatics method="PME" scale12="0.0" scale13="0.0" scale14="0.833333"/>
+  <Electrostatics method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0" cutoff_unit="angstrom"/>
   <ToolkitAM1BCC/>
 </SMIRNOFF>
 ''')
@@ -83,11 +84,11 @@ xml_ff_w_comments = '''<?xml version='1.0' encoding='ASCII'?>
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5" periodicity1="2" phase1="180."/>
   </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch_width_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch_width_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" method="cutoff">
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
     <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n2" rmin_half="1.4870"/>
   </vdW>
-  <Electrostatics method="PME" scale12="0.0" scale13="0.0" scale14="0.833333"/>
+  <Electrostatics method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0" cutoff_unit="angstrom" pme_tolerance="0.00001"/>
   <ToolkitAM1BCC/>
 </SMIRNOFF>
 '''
@@ -116,11 +117,11 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5" periodicity1="2" phase1="180."/>
   </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch_width="8.0" switch_width_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" long_range_dispersion="isotropic">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" rmin_half_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch_width="8.0" switch_width_unit="angstrom" cutoff="9.0" cutoff_unit="angstrom" method="cutoff">
     <Atom smirks="[#1:1]" epsilon="0.0157" id="n1" rmin_half="0.6000"/>
     <Atom smirks="[#1:1]-[#6X4]" epsilon="0.0157" id="n2" rmin_half="1.4870"/>
   </vdW>
-  <Electrostatics method="PME" scale12="0.0" scale13="0.0" scale14="0.833333"/>
+  <Electrostatics method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0" cutoff_unit="angstrom" pme_tolerance="0.00001"/>
   <ToolkitAM1BCC/>
 </SMIRNOFF>
 '''
@@ -211,6 +212,37 @@ def create_cyclohexane():
     cyclohexane.add_bond(5, 16, 1, False)  # C5 - H16
     cyclohexane.add_bond(5, 17, 1, False)  # C5 - H17
     return cyclohexane
+
+
+
+nonbonded_resolution_matrix = [
+    {'vdw_method': 'cutoff', 'electrostatics_method': 'Coulomb', 'has_periodic_box': True,
+     'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
+    {'vdw_method': 'cutoff', 'electrostatics_method': 'Coulomb', 'has_periodic_box': False,
+     'omm_force': openmm.NonbondedForce.NoCutoff, 'exception': None, 'exception_match': ''},
+    {'vdw_method': 'cutoff', 'electrostatics_method': 'reaction-field', 'has_periodic_box': True,
+     'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
+    {'vdw_method': 'cutoff', 'electrostatics_method': 'reaction-field', 'has_periodic_box': False,
+     'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
+    {'vdw_method': 'cutoff', 'electrostatics_method': 'PME', 'has_periodic_box': True,
+     'omm_force': openmm.NonbondedForce.PME, 'exception': None, 'exception_match': ''},
+    {'vdw_method': 'cutoff', 'electrostatics_method': 'PME', 'has_periodic_box': False,
+     'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
+
+    {'vdw_method': 'PME', 'electrostatics_method': 'Coulomb', 'has_periodic_box': True,
+     'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
+    {'vdw_method': 'PME', 'electrostatics_method': 'Coulomb', 'has_periodic_box': False,
+     'omm_force': None, 'exception': SMIRNOFFSpecError, 'exception_match': ''},
+    {'vdw_method': 'PME', 'electrostatics_method': 'reaction-field', 'has_periodic_box': True,
+     'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
+    {'vdw_method': 'PME', 'electrostatics_method': 'reaction-field', 'has_periodic_box': False,
+     'omm_force': None, 'exception': SMIRNOFFSpecError, 'exception_match': ''},
+    {'vdw_method': 'PME', 'electrostatics_method': 'PME', 'has_periodic_box': True,
+     'omm_force': openmm.NonbondedForce.LJPME, 'exception': None, 'exception_match': ''},
+    {'vdw_method': 'PME', 'electrostatics_method': 'PME', 'has_periodic_box': False,
+     'omm_force': None, 'exception': SMIRNOFFSpecError, 'exception_match': ''},
+     ]
+
 
 #=============================================================================================
 # TESTS
@@ -373,9 +405,10 @@ class TestForceField():
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         topology.box_vectors = None
         forcefield.get_handler("Electrostatics", {})._method = "Coulomb"
-        forcefield.get_handler("vdW", {})._long_range_dispersion = "None"
+        forcefield.get_handler("vdW", {})._method = "cutoff"
 
         omm_system = forcefield.create_openmm_system(topology)
+
 
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
@@ -590,6 +623,51 @@ class TestForceField():
 
         with pytest.raises(ValueError, match=".* not used by any registered force Handler: {'invalid_kwarg'}.*") as e:
             omm_system = forcefield.create_openmm_system(topology, invalid_kwarg='aaa', toolkit_registry=toolkit_registry)
+
+
+    @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
+    def test_nonbonded_method_resolution(self,
+                                         inputs
+                                         # vdw_method=None,
+                                         # electrostatics_method=None,
+                                         # has_periodic_box=None,
+                                         # omm_force=None,
+                                         # exception=None,
+                                         # exception_match=None
+                                         ):
+        """Test predefined permutations of input options to ensure nonbonded handling is correctly resolved"""
+        from simtk.openmm import app
+        from openforcefield.topology import Topology
+        vdw_method = inputs['vdw_method']
+        electrostatics_method = inputs['electrostatics_method']
+        has_periodic_box = inputs['has_periodic_box']
+        omm_force = inputs['omm_force']
+        exception = inputs['exception']
+        exception_match= inputs['exception_match']
+
+        molecules = [create_ethanol()]
+        forcefield = ForceField('smirnoff99Frosst.offxml')
+        forcefield.get_handler('vdW', {})._method = vdw_method
+        forcefield.get_handler('Electrostatics', {})._method = electrostatics_method
+
+        pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
+        if not(has_periodic_box):
+            topology.box_vectors = None
+
+        if exception is None:
+            omm_system = forcefield.create_openmm_system(topology)
+            nonbond_method_matched = False
+            for f_idx in range(omm_system.getNumForces()):
+                force = omm_system.getForce(f_idx)
+                if isinstance(force, openmm.NonbondedForce):
+                    if force.getNonbondedMethod() == omm_force:
+                        nonbond_method_matched = True
+            assert nonbond_method_matched
+        else:
+            with pytest.raises(exception, match=exception_match) as excinfo:
+                omm_system = forcefield.create_openmm_system(topology)
 
 
 #=============================================================================================
