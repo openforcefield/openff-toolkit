@@ -599,7 +599,7 @@ class TopologyMolecule:
 
     def atom(self, index):
         """
-        Get the TopologyAtom with a given reference molecule index in this TopologyMolecule
+        Get the TopologyAtom with a given topology molecule index in this TopologyMolecule.
 
         Parameters
         ----------
