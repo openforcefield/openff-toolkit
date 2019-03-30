@@ -11,12 +11,11 @@ topology = Topology.from_molecules([molecule])
 ff = ForceField('Frosst_AlkEthOH.offxml')
 
 labels = ff.label_molecules(topology, verbose=True)
-print(labels)
 for mol_entry in range(len(labels)):
     for force in labels[mol_entry].keys():
         print("\n%s:" % force)
-        for (atom_indices, pid, smirks) in labels[mol_entry][force]:
+        for (atom_indices, parameter) in labels[mol_entry][force].items():
             atomstr=''
             for idx in atom_indices:
                 atomstr += '%6s' % idx
-            print("%s : %s \t smirks %s" % (atomstr, pid, smirks) )
+            print("%s : %s \t smirks %s" % (atomstr, parameter.id, parameter.smirks) )
