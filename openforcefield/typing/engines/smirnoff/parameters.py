@@ -1286,11 +1286,8 @@ class vdWHandler(ParameterHandler):
         'switch_width': 1.0 * unit.angstroms,
         'cutoff': 9.0 * unit.angstroms,
         'method': 'cutoff',
-        #'nonbonded_method': NonbondedMethod.NoCutoff
     }
 
-    #_OPTIONAL_SPEC_ATTRIBS = ['switch_width',
-    #                          'cutoff']
     _ATTRIBS_TO_TYPE = {'scale12': float,
                         'scale13': float,
                         'scale14': float,
@@ -1327,14 +1324,9 @@ class vdWHandler(ParameterHandler):
                                     "values of {}. Received unsupported value "
                                     "{}".format(supported_methods, self._method))
 
-        # if self._method == 'None':
-        #     if hasattr(self, '_cutoff'):
-        #         raise SMIRNOFFSpecError("If vdW method is None, a cutoff distance "
-        #                                 "must NOT be provided")
-
-        elif self._method == 'isotropic':
+        elif self._method == 'cutoff':
             if self._cutoff is None:
-                raise SMIRNOFFSpecError("If vdW method is isotropic, a cutoff distance "
+                raise SMIRNOFFSpecError("If vdW method is cutoff, a cutoff distance "
                                         "must be provided")
 
         elif self._method == 'PME':
@@ -1421,7 +1413,7 @@ class vdWHandler(ParameterHandler):
             force.setCutoffDistance(9. * unit.angstrom)
             force.setEwaldErrorTolerance(1.e-4)
 
-        # If method is isotropic, then we only currently support PME
+        # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
         elif self._method == 'cutoff':
             if (topology.box_vectors is None):
                 force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
@@ -1429,24 +1421,6 @@ class vdWHandler(ParameterHandler):
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 force.setUseDispersionCorrection(True)
                 force.setCutoffDistance(self._cutoff)
-
-
-        # # If method is None, then we only support NoCutoff for nonperiodic systems and PME for periodic
-        # elif self._method == "None":
-        #     force.setUseDispersionCorrection(False)
-        #     # if topology.box_vectors is None:
-        #     #     force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-        #     # else:
-        #     #     force.setNonbondedMethod(openmm.NonbondedForce.PME)
-        #     force.setCutoffDistance(self._cutoff)
-        #     if hasattr(self, '_switch_width'):
-        #         force.setUseSwitchingFunction(True)
-        #         force.setSwitchingDistance(self._cutoff - self._switch_width)
-        #     else:
-        #         force.setUseSwitchingFunction(False)
-
-
-
 
         system.addForce(force)
 
@@ -1516,9 +1490,6 @@ class ElectrostaticsHandler(ParameterHandler):
 
     _OPTIONAL_SPEC_ATTRIBS = ['cutoff', 'switch_width']
 
-
-    # NOTE: In theory, this can have a different cutoff than the vdWHandler. However, we can't currently specify
-    #       different values for these in the OpenMM system.
     def __init__(self, **kwargs):
 
         super().__init__(**kwargs)
@@ -1542,18 +1513,15 @@ class ElectrostaticsHandler(ParameterHandler):
         if self._method == 'reaction-field':
             raise IncompatibleParameterError('The Open Force Field toolkit does not currently support reaction-field '
                                              'electrostatics.')
+
         if not self._method in supported_methods:
             raise IncompatibleParameterError("'method' parameter in Electrostatics tag {} is not a supported "
                                     "option. Valid methods are {}".format(self._method, supported_methods))
-
 
         if self._method == 'reaction-field' or self._method == 'PME':
             if self._cutoff is None:
                 raise SMIRNOFFSpecError("If Electrostatics method is 'reaction-field' or 'PME', then 'cutoff' must "
                                         "also be specified")
-
-        # if (self._method == 'PME') and (self._pme_tolerance is None):
-        #     raise SMIRNOFFSpecError("If PME electrostatics is selected, a pme_tolerance value must be specified.")
 
         if self._switch_width != 0.0 * unit.angstrom:
             raise IncompatibleParameterError("The current implementation of the Open Force Field toolkit can not "
@@ -1594,23 +1562,11 @@ class ElectrostaticsHandler(ParameterHandler):
                 pass
                 # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
 
-                # Ensure that vdW and PME error tolerance are the same
-                # if self._pme_tolerance != force.getEwaldErrorTolerance():
-                #     raise IncompatibleParameterError(
-                #         "vdW pme_tolerance set to {}, but Electrostatic pme_tolerance set to {}. Current "
-                #         "Open Force Field implementation can only support the same value "
-                #         "for both".format(force.getEwaldErrorTolerance(), self._pme_tolerance))
 
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 force.setCutoffDistance(9. * unit.angstrom)
                 force.setEwaldErrorTolerance(1.e-4)
-
-            # if self._cutoff != force.getCutoffDistance():
-            #     raise IncompatibleParameterError(
-            #         "vdW cutoff set to {}, but Electrostatic cutoff set to {}. Current "
-            #         "Open Force Field implementation can only support the same value "
-            #         "for both".format(force.getCutoffDistance(), self._cutoff))
 
             settings_matched = True
 
