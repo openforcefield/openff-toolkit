@@ -2543,6 +2543,24 @@ class FrozenMolecule(Serializable):
         return sum([1 for bond in self.bonds])
 
     @property
+    def n_angles(self):
+        """int: number of angles in the Molecule."""
+        self._construct_angles()
+        return len(self._angles)
+
+    @property
+    def n_propers(self):
+        """int: number of proper torsions in the Molecule."""
+        self._construct_torsions()
+        return len(self._propers)
+
+    @property
+    def n_impropers(self):
+        """int: number of improper torsions in the Molecule."""
+        self._construct_torsions()
+        return len(self._impropers)
+
+    @property
     def particles(self):
         """
         Iterate over all Particle objects.
@@ -2587,23 +2605,26 @@ class FrozenMolecule(Serializable):
         """
         return self._bonds
 
-    #@property
-    #def angles(self):
-    #    """
-    #    Iterate over all angles (Atom tuples) in the molecule
-    #    """
-    #    pass
+    @property
+    def angles(self):
+        """
+        Get an iterator over all i-j-k angles.
+        """
+        self._construct_angles()
+        return self._angles
 
-    #@property
-    #def torsions(self):
-    #    """
-    #    Iterate over all torsions (propers and impropers) in the molecule
-    #    .. todo::
+    @property
+    def torsions(self):
+        """
+        Get an iterator over all i-j-k-l torsions.
+        Note that i-j-k-i torsions (cycles) are excluded.
 
-    #       * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
-    #       * Should we call this ``dihedrals`` instead of ``torsions``?
-    #    """
-    #    pass
+        Returns
+        -------
+        torsions : iterable of 4-Atom tuples
+        """
+        self._construct_torsions()
+        return self._torsions
 
     @property
     def propers(self):
@@ -3176,50 +3197,30 @@ class FrozenMolecule(Serializable):
             'compute_fractional_bond_orders', method=method)
         return fractional_bond_orders
 
-    # TODO: Compute terms for each unique molecule, then use mapping to molecules to enumerate all terms
-    @property
-    def angles(self):
+    def _construct_angles(self):
         """
         Get an iterator over all i-j-k angles.
         """
-        # TODO: This assumes molecules are immutable. If they are mutable, we have to delete ``_angles`` when the atom/bond table is modified.
+        # TODO: Build Angle objects instead of tuple of atoms.
         if not hasattr(self, '_angles'):
             self._construct_bonded_atoms_list()
             self._angles = set()
             for atom1 in self._atoms:
                 for atom2 in self._bondedAtoms[atom1]:
                     for atom3 in self._bondedAtoms[atom2]:
-                        #atom1_id = atom1.molecule_atom_index
-                        #atom2_id = atom2.molecule_atom_index
-                        #atom3_id = atom3.molecule_atom_index
                         if atom1 == atom3:
                             continue
+                        # TODO: Encapsulate this logic into an Angle class.
                         if atom1.molecule_atom_index < atom3.molecule_atom_index:
                             self._angles.add((atom1, atom2, atom3))
                         else:
                             self._angles.add((atom3, atom2, atom1))
 
-        return iter(self._angles)
-
-    # TODO: Compute terms for each unique molecule, then use mapping to molecules to enumerate all terms
-    # TODO: This assumes molecules are immutable. If they are mutable, we have to delete ``_torsions`` when the atom/bond table is modified.
-    @property
-    def torsions(self):
-        """
-        Get an iterator over all i-j-k-l torsions.
-        Note that i-j-k-i torsions (cycles) are excluded.
-
-        Returns
-        -------
-        torsions : iterable of 4-Atom tuples
-        """
-        self._construct_torsions()
-        return self._torsions
-
     def _construct_torsions(self):
         """
         Construct sets containing the atoms improper and proper torsions
         """
+        # TODO: Build Proper/ImproperTorsion objects instead of tuple of atoms.
         if not hasattr(self, '_torsions'):
             self._construct_bonded_atoms_list()
 

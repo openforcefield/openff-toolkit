@@ -93,7 +93,7 @@ class _TransformedDict(MutableMapping):
     def __sortfunc__(key):
         return key
 
-
+# TODO: Encapsulate this atom ordering logic directly into Atom/Bond/Angle/Torsion classes?
 class ValenceDict(_TransformedDict):
     """Enforce uniqueness in atom indices."""
 
@@ -599,7 +599,7 @@ class TopologyMolecule:
 
     def atom(self, index):
         """
-        Get the TopologyAtom with a given reference molecule index in this TopologyMolecule
+        Get the TopologyAtom with a given topology molecule index in this TopologyMolecule.
 
         Parameters
         ----------
@@ -797,6 +797,36 @@ class TopologyMolecule:
         return self._reference_molecule.n_virtual_sites
 
     @property
+    def angles(self):
+        """Iterable of Tuple[TopologyAtom]: iterator over the angles in this Topology."""
+        return self._convert_to_topology_atom_tuples(self._reference_molecule.angles)
+
+    @property
+    def n_angles(self):
+        """int: number of angles in this Topology."""
+        return self._reference_molecule.n_angles
+
+    @property
+    def propers(self):
+        """Iterable of Tuple[TopologyAtom]: iterator over the proper torsions in this Topology."""
+        return self._convert_to_topology_atom_tuples(self._reference_molecule.propers)
+
+    @property
+    def n_propers(self):
+        """int: number of proper torsions in this Topology."""
+        return self._reference_molecule.n_propers
+
+    @property
+    def impropers(self):
+        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this Topology."""
+        return self._convert_to_topology_atom_tuples(self._reference_molecule.impropers)
+
+    @property
+    def n_impropers(self):
+        """int: number of proper torsions in this Topology."""
+        return self._reference_molecule.n_impropers
+
+    @property
     def virtual_site_start_topology_index(self):
         """Get the topology index of the first virtual site in this TopologyMolecule
 
@@ -818,6 +848,12 @@ class TopologyMolecule:
         """Static constructor from dictionary representation."""
         # Implement abstract method Serializable.to_dict()
         raise NotImplementedError()  # TODO
+
+    def _convert_to_topology_atom_tuples(self, molecule_atom_tuples):
+        for atom_tuple in molecule_atom_tuples:
+            mol_atom_indices = (a.molecule_atom_index for a in atom_tuple)
+            top_mol_atom_indices = (self._ref_to_top_index[mol_idx] for mol_idx in mol_atom_indices)
+            yield tuple(self.atom(i) for i in top_mol_atom_indices)
 
 
 # TODO: pick back up figuring out how we want TopologyMolecules to know their starting TopologyParticle indices
@@ -1289,6 +1325,42 @@ class Topology(Serializable):
             for virtual_site in topology_molecule.virtual_sites:
                 yield virtual_site
 
+    @property
+    def n_angles(self):
+        """int: number of angles in this Topology."""
+        return sum(mol.n_angles for mol in self._topology_molecules)
+
+    @property
+    def angles(self):
+        """Iterable of Tuple[TopologyAtom]: iterator over the angles in this Topology."""
+        for topology_molecule in self._topology_molecules:
+            for angle in topology_molecule.angles:
+                yield angle
+
+    @property
+    def n_propers(self):
+        """int: number of proper torsions in this Topology."""
+        return sum(mol.n_propers for mol in self._topology_molecules)
+
+    @property
+    def propers(self):
+        """Iterable of Tuple[TopologyAtom]: iterator over the proper torsions in this Topology."""
+        for topology_molecule in self._topology_molecules:
+            for proper in topology_molecule.propers:
+                yield proper
+
+    @property
+    def n_impropers(self):
+        """int: number of improper torsions in this Topology."""
+        return sum(mol.n_impropers for mol in self._topology_molecules)
+
+    @property
+    def impropers(self):
+        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this Topology."""
+        for topology_molecule in self._topology_molecules:
+            for improper in topology_molecule.impropers:
+                yield improper
+
     def chemical_environment_matches(self,
                                      query,
                                      aromaticity_model='MDL',
@@ -1578,6 +1650,7 @@ class Topology(Serializable):
             An openforcefield molecule
 
         """
+        # TODO: Convert this to cls.from_molecules(Molecule.from_openeye())?
         # OE Hierarchical molecule view
         hv = oechem.OEHierView(
             oemol, oechem.OEAssumption_BondedResidue +
