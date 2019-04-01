@@ -88,7 +88,7 @@ install:
   - conda install --use-local openforcefield
 
 script:
-  - pytest -v --cov=openforcefield openforcefield/tests/ --nbval-lax
+  - pytest -v --nbval-lax --cov=openforcefield
 
 notifications:
     email: false
