@@ -65,7 +65,7 @@ before_install:
 
 install:
   # Create test environment for package
-  - conda create -n test python=$PYTHON_VER pip pytest pytest-cov
+  - conda create -n test python=$PYTHON_VER pip pytest pytest-cov nbval
   - source activate test
 
   # TODO: Do we still need the beta version or can we do simply -c openeye openeye-toolkits?
@@ -88,7 +88,7 @@ install:
   - conda install --use-local openforcefield
 
 script:
-  - pytest -v --cov=openforcefield openforcefield/tests/
+  - pytest -v --cov=openforcefield openforcefield/tests/ --nbval-lax
 
 notifications:
     email: false
