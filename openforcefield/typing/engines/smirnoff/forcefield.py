@@ -33,6 +33,7 @@ from openforcefield.topology import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
 
+
 #=============================================================================================
 # CONFIGURE LOGGER
 #=============================================================================================
