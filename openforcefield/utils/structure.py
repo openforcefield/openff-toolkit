@@ -544,14 +544,16 @@ def get_molecule_parameterIDs(molecules, forcefield):
         in which that parameter occurs. No frequency information is stored.
 
     """
+    from openforcefield.topology import Topology
     # Create storage
     parameters_by_molecule = dict()
     parameters_by_ID = dict()
 
     # Generate isomeric SMILES for each molecule, ensuring all molecules are unique
-    isosmiles = [ molecule.canonical_isomeric_smiles for molecule in molecules ]
+    #isosmiles = [ molecule.canonical_isomeric_smiles for molecule in molecules ]
+    isosmiles = [ molecule.to_smiles() for molecule in molecules ]
     already_seen = set()
-    duplicates = set(smiles for smiles in isosmiles if smiles in already_seen or already_seen.add(x))
+    duplicates = set(smiles for smiles in isosmiles if smiles in already_seen or already_seen.add(smiles))
     if len(duplicates) > 0:
         raise ValueError("Error: get_molecule_parameterIDs has been provided a list of oemols which contains some duplicates: {}".format(duplicates))
 
@@ -572,7 +574,9 @@ def get_molecule_parameterIDs(molecules, forcefield):
         # Organize data for this molecule
         data = labels[idx]
         for force_type in data.keys():
-            for (atom_indices, pid, smirks) in data[force_type]:
+            for atom_indices, parameter_type in data[force_type].items():
+
+                pid = parameter_type.id
                 # Store pid to molecule
                 parameters_by_molecule[smi].append(pid)
 
