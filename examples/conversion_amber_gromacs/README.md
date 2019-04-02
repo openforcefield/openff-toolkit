@@ -1,9 +1,7 @@
 # Testing system conversion for SMIRNOFF
 
-This directory contains an IPython notebook and supporting files working to convert a system into AMBER format after parameterization via SMIRNOFF
+This example shows how you can convert a `System` generated with the Open Forcefield Toolkit, which can be simulated natively with OpenMM, into AMBER prmtop/inpcrd and GROMACS top/gro input files through the ParmEd library.
 
 ## Manifest:
-- `convert_to_amber.ipynb`: IPython notebook working towards converting an example SMIRNOFF system (cyclohexane and ethanol mixture) into AMBER format and validating the energy before and after conversion
-- ethanol and cyclohexane files
-
-**Converted system files not tracked on github as they are too large**
+- `convert_to_amber_gromacs.ipynb`: IPython notebook showing how to generate AMBER and GROMACS topology and coordinate files starting from a PDB.
+- `1_cyclohexane_1_ethanol.pdb`: PDB file containing one molecule of cyclohexane and one of ethanol in vacuum.
