@@ -550,7 +550,6 @@ def get_molecule_parameterIDs(molecules, forcefield):
     parameters_by_ID = dict()
 
     # Generate isomeric SMILES for each molecule, ensuring all molecules are unique
-    #isosmiles = [ molecule.canonical_isomeric_smiles for molecule in molecules ]
     isosmiles = [ molecule.to_smiles() for molecule in molecules ]
     already_seen = set()
     duplicates = set(smiles for smiles in isosmiles if smiles in already_seen or already_seen.add(smiles))
