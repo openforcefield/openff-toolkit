@@ -60,7 +60,7 @@ class IncompatibleUnitError(MessageException):
 
 class IncompatibleParameterError(MessageException):
     """
-    Exception for when a set of parameters is scientifically incompatible with another
+    Exception for when a set of parameters is scientifically/technically incompatible with another
     """
     pass
 
@@ -584,11 +584,15 @@ class ParameterHandler(object):
                                                                                self._REQUIRE_UNITS[key])
                     raise SMIRNOFFSpecError(msg)
 
+        element_name = None
+        if self._INFOTYPE is not None:
+            element_name = self._INFOTYPE._ELEMENT_NAME
+
         for key, val in smirnoff_data.items():
             # If we're reading the parameter list, iterate through and attach units to
             # each parameter_dict, then use it to initialize a ParameterType
             #if key == self._TAGNAME:
-            if key == self._INFOTYPE._ELEMENT_NAME:
+            if key == element_name:
                 # If there are multiple parameters, this will be a list. If there's just one, make it a list
                 if not(isinstance(val, list)):
                     val = [val]
@@ -619,6 +623,7 @@ class ParameterHandler(object):
         """
         # TODO: Should we use introspection to inspect the function signature instead?
         return set(self._KWARGS)
+
 
     #@classmethod
     def check_parameter_compatibility(self, parameter_kwargs):
@@ -840,7 +845,8 @@ class ParameterHandler(object):
 
         # Check whether the optional attribs are defined, and add them if so
         for key in self._OPTIONAL_SPEC_ATTRIBS:
-            if hasattr(self, key):
+            attr_key = '_' + key
+            if hasattr(self, attr_key):
                 header_attribs_to_return.append(key)
         # Add the cosmetic attributes if requested
         if return_cosmetic_attributes:
@@ -991,7 +997,7 @@ class BondHandler(ParameterHandler):
         _SMIRNOFF_ATTRIBS = ['smirks', 'length', 'k']  # Attributes expected per the SMIRNOFF spec.
         _REQUIRE_UNITS = {'length' : unit.angstrom,
                           'k' : unit.kilocalorie_per_mole / unit.angstrom**2}
-        _INDEXED_ATTRIBS = ['k']  # May be indexed (by integer bond order) if fractional bond orders are used
+        _INDEXED_ATTRIBS = ['length', 'k']  # May be indexed (by integer bond order) if fractional bond orders are used
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)  # Base class handles ``smirks`` and ``id`` fields
@@ -1353,66 +1359,86 @@ class vdWHandler(ParameterHandler):
     _TAGNAME = 'vdW'  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create
-    _KWARGS = ['ewaldErrorTolerance', 'useDispersionCorrection'] # Kwargs to catch when create_force is called
+    # _KWARGS = ['ewaldErrorTolerance',
+    #            'useDispersionCorrection',
+    #            'usePbc'] # Kwargs to catch when create_force is called
     _REQUIRE_UNITS = {'switch': unit.angstrom,
                       'cutoff': unit.angstrom}
     _DEFAULT_SPEC_ATTRIBS = {
         'potential': 'Lennard-Jones-12-6',
-        'combining_rules': 'Loentz-Berthelot',
+        'combining_rules': 'Lorentz-Berthelot',
         'scale12': 0.0,
         'scale13': 0.0,
         'scale14': 0.5,
         'scale15': 1.0,
-        'switch': 8.0 * unit.angstroms,
+        'pme_tolerance': 1.e-5,
+        'switch_width': 1.0 * unit.angstroms,
         'cutoff': 9.0 * unit.angstroms,
-        'long_range_dispersion': 'isotropic',
-        'nonbonded_method': NonbondedMethod.NoCutoff
+        'method': 'cutoff',
     }
+
     _ATTRIBS_TO_TYPE = {'scale12': float,
                         'scale13': float,
                         'scale14': float,
-                        'scale15': float}
+                        'scale15': float
+                        }
 
     # TODO: Is this necessary? It's used in check_compatibility but could be hard-coded.
     _SCALETOL = 1e-5
 
-    _NONBOND_METHOD_MAP = {
-        NonbondedMethod.NoCutoff:
-        openmm.NonbondedForce.NoCutoff,
-        NonbondedMethod.CutoffPeriodic:
-        openmm.NonbondedForce.CutoffPeriodic,
-        NonbondedMethod.CutoffNonPeriodic:
-        openmm.NonbondedForce.CutoffNonPeriodic,
-        NonbondedMethod.Ewald:
-        openmm.NonbondedForce.Ewald,
-        NonbondedMethod.PME:
-        openmm.NonbondedForce.PME
-    }
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
 
+        super().__init__(**kwargs)
+        self._validate_parameters()
+
+    def _validate_parameters(self):
+        """
+        Checks internal attributes, raising an exception if they are configured in an invalid way.
+        """
+        if self._scale12 != 0.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
+                                    "Specified 1-2 scaling was {}".format(self._scale12))
+        if self._scale13 != 0.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
+                                    "Specified 1-3 scaling was {}".format(self._scale13))
+        if self._scale15 != 1.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
+                                    "Specified 1-5 scaling was {}".format(self._scale15))
+
+
+        supported_methods = ['cutoff', 'PME']
+        if self._method not in supported_methods:
+            raise SMIRNOFFSpecError("The Open Force Field toolkit currently only supports vdW method "
+                                    "values of {}. Received unsupported value "
+                                    "{}".format(supported_methods, self._method))
+
+        elif self._method == 'cutoff':
+            if self._cutoff is None:
+                raise SMIRNOFFSpecError("If vdW method is cutoff, a cutoff distance "
+                                        "must be provided")
+
+        elif self._method == 'PME':
+            if self._cutoff is None:
+                raise SMIRNOFFSpecError("If vdW method is PME, a cutoff distance "
+                                        "must be provided")
+
+            if self._pme_tolerance is None:
+                raise SMIRNOFFSpecError("If PME vdW method is selected, a pme_tolerance value must "
+                                        "be specified.")
+
+        if self._potential != "Lennard-Jones-12-6":
+            raise SMIRNOFFSpecError("vdW potential set to {}. Only 'Lennard-Jones-12-6' is currently "
+                                    "supported".format(self._potential))
+
+
+        if self._combining_rules != "Lorentz-Berthelot":
+            raise SMIRNOFFSpecError("vdW combining_rules set to {}. Only 'Lorentz-Berthelot' is currently "
+                                    "supported".format(self._combining_rules))
         # TODO: Find a better way to set defaults
         # TODO: Validate these values against the supported output types (openMM force kwargs?)
         # TODO: Add conditional logic to assign NonbondedMethod and check compatibility
 
-        # # Set the nonbonded method
-        # if nonbonded_method is None:
-        #     self._nonbonded_method = NonbondedMethod.NoCutoff
-        # else:
-        #     # If it's a string that's the name of a nonbonded method
-        #     if type(nonbonded_method) is str:
-        #         self._nonbonded_method = NonbondedMethod[nonbonded_method]
-        #
-        #     # If it's an enum'ed value of NonbondedMethod
-        #     elif nonbonded_method in NonbondedMethod:
-        #         self._nonbonded_method = nonbonded_method
-        #     # If it's an openMM nonbonded method, reverse it back to a package-independent enum
-        #     elif nonbonded_method in self._NONBOND_METHOD_MAP.values():
-        #         for key, val in self._NONBOND_METHOD_MAP.items():
-        #             if nonbonded_method == val:
-        #                 self._nonbonded_method = key
-        #                 break
 
 
 
@@ -1420,23 +1446,23 @@ class vdWHandler(ParameterHandler):
                                     handler_kwargs,
                                     assume_missing_is_default=True):
         """
-               Checks if a set of kwargs used to create a ParameterHandler are compatible with this ParameterHandler. This is
-               called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
-               will be assumed to expect the ParameterHandler class default.
+        Checks if a set of kwargs used to create a ParameterHandler are compatible with this ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
+        will be assumed to expect the ParameterHandler class default.
 
-               Parameters
-               ----------
-               handler_kwargs : dict
-                   The kwargs that would be used to construct a ParameterHandler
-               assume_missing_is_default : bool
-                   If True, will assume that parameters not specified in handler_kwargs would have been set to the default.
-                   Therefore, an exception is raised if the ParameterHandler is incompatible with the default value for a
-                   unspecified field.
+        Parameters
+        ----------
+        handler_kwargs : dict
+            The kwargs that would be used to construct a ParameterHandler
+        assume_missing_is_default : bool
+            If True, will assume that parameters not specified in handler_kwargs would have been set to the default.
+            Therefore, an exception is raised if the ParameterHandler is incompatible with the default value for a
+            unspecified field.
 
-               Raises
-               ------
-               IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
-               """
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
         compare_attr_to_kwargs = {
             self._scale12: 'scale12',
             self._scale13: 'scale13',
@@ -1445,7 +1471,7 @@ class vdWHandler(ParameterHandler):
         }
         for attr, kwarg_key in compare_attr_to_kwargs.items():
             kwarg_val = handler_kwargs.get(kwarg_key,
-                                           self._DEFAULTS[kwarg_key])
+                                           self._DEFAULT_SPEC_ATTRIBS[kwarg_key])
             if abs(kwarg_val - attr) > self._SCALETOL:
                 raise IncompatibleParameterError(
                     "Difference between '{}' values is beyond allowed tolerance {}. "
@@ -1458,21 +1484,39 @@ class vdWHandler(ParameterHandler):
         #self._combining_rules: 'combining_rules',
         #self._switch: 'switch',
         #self._cutoff: 'cutoff',
-        #self._long_range_dispersion:'long_range_dispersion'
+        #self._method:'method'
         #}
 
-    # TODO: nonbondedMethod and nonbondedCutoff should now be specified by StericsForce attributes
     def create_force(self, system, topology, **kwargs):
 
+        self._validate_parameters()
+
         force = openmm.NonbondedForce()
-        nonbonded_method = self._NONBOND_METHOD_MAP[self._nonbonded_method]
-        force.setNonbondedMethod(nonbonded_method)
-        force.setCutoffDistance(self._cutoff.in_units_of(unit.nanometer))
-        if 'ewaldErrorTolerance' in kwargs:
-            force.setEwaldErrorTolerance(kwargs['ewaldErrorTolerance'])
-        if 'useDispersionCorrection' in kwargs:
-            force.setUseDispersionCorrection(
-                bool(kwargs['useDispersionCorrection']))
+
+
+        # If we're using PME, then the only possible openMM Nonbonded type is LJPME
+        if self._method == 'PME':
+            # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
+            if (topology.box_vectors is None):
+                force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+                # if (topology.box_vectors is None):
+                #     raise SMIRNOFFSpecError("If vdW method is  PME, a periodic Topology "
+                #                             "must be provided")
+            else:
+                force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
+                force.setCutoffDistance(9. * unit.angstrom)
+                force.setEwaldErrorTolerance(1.e-4)
+
+        # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
+        elif self._method == 'cutoff':
+            # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
+            if (topology.box_vectors is None):
+                force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+            else:
+                force.setNonbondedMethod(openmm.NonbondedForce.PME)
+                force.setUseDispersionCorrection(True)
+                force.setCutoffDistance(self._cutoff)
+
         system.addForce(force)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
@@ -1514,6 +1558,150 @@ class vdWHandler(ParameterHandler):
                 force.createExceptionsFromBonds(bond_particle_indices, 0.83333,
                                                 self._scale14)
                 #force.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self._scale14)
+
+
+class ElectrostaticsHandler(ParameterHandler):
+    """Handles SMIRNOFF <Electrostatics> tags."""
+    _TAGNAME = 'Electrostatics'
+    _OPENMMTYPE = openmm.NonbondedForce
+    _DEPENDENCIES = [vdWHandler]
+    _DEFAULT_SPEC_ATTRIBS = {
+        'method': 'PME',
+        'scale12': 0.0,
+        'scale13': 0.0,
+        'scale14': 0.833333,
+        'scale15': 1.0,
+        'pme_tolerance': 1.e-5,
+        #'switch_width': 8.0 * unit.angstrom, # OpenMM can't support an electrostatics switch
+        'switch_width': 0.0 * unit.angstrom,
+        'cutoff': 9.0 * unit.angstrom
+    }
+    _ATTRIBS_TO_TYPE = {'scale12': float,
+                        'scale13': float,
+                        'scale14': float,
+                        'scale15': float
+                        }
+
+    _OPTIONAL_SPEC_ATTRIBS = ['cutoff', 'switch_width']
+
+    def __init__(self, **kwargs):
+
+        super().__init__(**kwargs)
+        self._validate_parameters()
+
+    def _validate_parameters(self):
+        """
+        Checks internal attributes, raising an exception if they are configured in an invalid way.
+        """
+        if self._scale12 != 0.0:
+            raise IncompatibleParameterError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
+                                             "Specified 1-2 scaling was {}".format(self._scale12))
+        if self._scale13 != 0.0:
+            raise IncompatibleParameterError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
+                                             "Specified 1-3 scaling was {}".format(self._scale13))
+        if self._scale15 != 1.0:
+            raise IncompatibleParameterError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
+                                    "Specified 1-5 scaling was {}".format(self._scale15))
+
+        supported_methods = ['PME', 'Coulomb'] # 'reaction-field'
+        if self._method == 'reaction-field':
+            raise IncompatibleParameterError('The Open Force Field toolkit does not currently support reaction-field '
+                                             'electrostatics.')
+
+        if not self._method in supported_methods:
+            raise IncompatibleParameterError("'method' parameter in Electrostatics tag {} is not a supported "
+                                    "option. Valid methods are {}".format(self._method, supported_methods))
+
+        if self._method == 'reaction-field' or self._method == 'PME':
+            if self._cutoff is None:
+                raise SMIRNOFFSpecError("If Electrostatics method is 'reaction-field' or 'PME', then 'cutoff' must "
+                                        "also be specified")
+
+        if self._switch_width != 0.0 * unit.angstrom:
+            raise IncompatibleParameterError("The current implementation of the Open Force Field toolkit can not "
+                                             "support an electrostatic switching width. Currently only `0.0 angstroms` "
+                                             "is supported (SMIRNOFF data specified {})".format(self._switch_width))
+
+    def create_force(self, system, topology, **kwargs):
+        existing = [system.getForce(i) for i in range(system.getNumForces())]
+        existing = [
+            f for f in existing if type(f) == openmm.NonbondedForce
+        ]
+        force = existing[0]
+
+        # Among other sanity checks, this ensures that the switch value is 0.
+        self._validate_parameters()
+
+
+        # Set the nonbonded method
+        settings_matched = False
+        current_nb_method = force.getNonbondedMethod()
+
+
+        # First, check whether the vdWHandler set the nonbonded method to LJPME, because that means
+        # that electrostatics also has to be PME
+        if (current_nb_method == openmm.NonbondedForce.LJPME) and (self._method != 'PME'):
+            raise IncompatibleParameterError("In current Open Force Field toolkit implementation, if vdW "
+                                             "treatment is set to LJPME, electrostatics must also be PME "
+                                             "(electrostatics treatment currently set to {}".format(self._method))
+
+
+
+
+
+
+        # Then, set nonbonded methods based on method keyword
+        if self._method == 'PME':
+            # Check whether the topology is nonperiodic, in which case we always switch to NoCutoff
+            # (vdWHandler will have already set this to NoCutoff)
+            # TODO: This is an assumption right now, and a bad one. See issue #219
+            if topology.box_vectors is None:
+                assert current_nb_method == openmm.NonbondedForce.NoCutoff
+                settings_matched = True
+                # raise IncompatibleParameterError("Electrostatics handler received PME method keyword, but a nonperiodic"
+                #                                  " topology. Use of PME electrostatics requires a periodic topology.")
+            else:
+                if current_nb_method == openmm.NonbondedForce.LJPME:
+                    pass
+                    # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
+                else:
+                    force.setNonbondedMethod(openmm.NonbondedForce.PME)
+                    force.setCutoffDistance(9. * unit.angstrom)
+                    force.setEwaldErrorTolerance(1.e-4)
+
+            settings_matched = True
+
+        # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
+        elif self._method == 'Coulomb':
+            if topology.box_vectors is None:
+                # (vdWHandler will have already set this to NoCutoff)
+                assert current_nb_method == openmm.NonbondedForce.NoCutoff
+                settings_matched = True
+            else:
+                raise IncompatibleParameterError("Electrostatics method set to Coulomb, and topology is periodic. "
+                                                 "In the future, this will lead to use of OpenMM's CutoffPeriodic "
+                                                 "Nonbonded force method, however this is not supported in the "
+                                                 "current Open Force Field toolkit.")
+
+        # If the vdWHandler set the nonbonded method to PME, then ensure that it has the same cutoff
+        elif self._method == 'reaction-field':
+            if topology.box_vectors is None:
+                # (vdWHandler will have already set this to NoCutoff)
+                assert current_nb_method == openmm.NonbondedForce.NoCutoff
+                settings_matched = True
+            else:
+                raise IncompatibleParameterError("Electrostatics method set to reaction-field. In the future, "
+                                                 "this will lead to use of OpenMM's CutoffPeriodic or CutoffNonPeriodic"
+                                                " Nonbonded force method, however this is not supported in the "
+                                                 "current Open Force Field toolkit")
+
+        if not settings_matched:
+            raise IncompatibleParameterError("Unable to support provided vdW method, electrostatics "
+                                             "method ({}), and topology periodicity ({}) selections. Additional "
+                                             "options for nonbonded treatment may be added in future versions "
+                                             "of the Open Force Field toolkit.".format(self._method,
+                                                                                topology.box_vectors is not None))
+
 
 class ToolkitAM1BCCHandler(ParameterHandler):
     """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags"""

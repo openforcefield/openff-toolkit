@@ -869,6 +869,8 @@ class Topology(Serializable):
     """
     A Topology is a chemical representation of a system containing one or more molecules appearing in a specified order.
 
+    # TODO: Update list of attributes
+
     Attributes
     ----------
     molecules : list of Molecule
@@ -879,6 +881,8 @@ class Topology(Serializable):
         Number of molecules in the topology
     n_unique_molecules : int
         Number of unique molecules in the topology
+    box_vectors : iterable of simtk.unit.Quantity
+        The box vectors for a periodic system. If box_vectors=None, the system is assumed to be vacuum.
 
     Examples
     --------
@@ -918,11 +922,6 @@ class Topology(Serializable):
 
     >>> oemol = oechem.oemolistream('input.pdb')
     >>> topology = Topology.from_openeye(oemol)
-
-    .. todo ::
-
-       Should the :class:`Topology` object be able to have optional positions and box vectors?
-       If so, this would make the creation of input files for other molecular simulation packages much easier.
 
     """
 
@@ -964,7 +963,7 @@ class Topology(Serializable):
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
         self._constrained_atom_pairs = dict()
         self._box_vectors = None
-        self._is_periodic = False
+        #self._is_periodic = False
         #self._reference_molecule_dicts = set()
         # TODO: Look into weakref and what it does. Having multiple topologies might cause a memory leak.
         self._reference_molecule_to_topology_molecules = OrderedDict()
@@ -1086,12 +1085,16 @@ class Topology(Serializable):
             self._box_vectors = None
             return
         if not hasattr(box_vectors, 'unit'):
-            raise Exception("Given unitless box vectors")
+            raise ValueError("Given unitless box vectors")
         if not (unit.angstrom.is_compatible(box_vectors.unit)):
-            raise Exception(
+            raise ValueError(
                 "Attempting to set box vectors in units that are incompatible with simtk.unit.Angstrom"
             )
-        assert box_vectors.shape == (3, )
+
+        if hasattr(box_vectors, 'shape'):
+            assert box_vectors.shape == (3, )
+        else:
+            assert len(box_vectors) == 3
         self._box_vectors = box_vectors
 
     @property
@@ -1529,7 +1532,9 @@ class Topology(Serializable):
                     match_found = True
                     break
             if not (match_found):
-                raise Exception('No match found for molecule')
+                # TODO: We should make this message way more informative. Maybe take the unmatched subgraph and
+                #       print the result of Molecule.from_networkx (which we need to implement)?
+                raise ValueError('No match found for molecule {}')
 
         # The connected_component_subgraph function above may have scrambled the molecule order, so sort molecules
         # by their first atom's topology index
@@ -1542,6 +1547,7 @@ class Topology(Serializable):
                 graph_to_unq_mol[unq_mol_G],
                 local_topology_to_reference_index=local_top_to_ref_index)
 
+        topology.box_vectors = openmm_topology.getPeriodicBoxVectors()
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
 
@@ -2169,9 +2175,3 @@ class Topology(Serializable):
 
         pass
 
-    @property
-    def is_periodic(self):
-        """
-        ``True`` if the topology represents a periodic system; ``False`` otherwise
-        """
-        return self._is_periodic
