@@ -61,11 +61,11 @@ print("Parameters by molecule:")
 for smi in parameters_by_molecule.keys():
     print(smi)
     for parameter in parameters_by_molecule[smi]:
-        print(parameter)
+        print('\t', parameter)
 
 
 print("Molecules with parameter IDs:")
 for pid in parameters_by_ID.keys():
     print(pid)
     for ids in parameters_by_ID[pid]:
-        print ids
+        print('\t', ids)
