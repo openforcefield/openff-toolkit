@@ -227,20 +227,20 @@ nonbonded_resolution_matrix = [
     {'vdw_method': 'cutoff', 'electrostatics_method': 'PME', 'has_periodic_box': True,
      'omm_force': openmm.NonbondedForce.PME, 'exception': None, 'exception_match': ''},
     {'vdw_method': 'cutoff', 'electrostatics_method': 'PME', 'has_periodic_box': False,
-     'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
+     'omm_force': openmm.NonbondedForce.NoCutoff, 'exception': None, 'exception_match': ''},
 
     {'vdw_method': 'PME', 'electrostatics_method': 'Coulomb', 'has_periodic_box': True,
      'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
     {'vdw_method': 'PME', 'electrostatics_method': 'Coulomb', 'has_periodic_box': False,
-     'omm_force': None, 'exception': SMIRNOFFSpecError, 'exception_match': ''},
+     'omm_force': openmm.NonbondedForce.NoCutoff, 'exception': None, 'exception_match': ''},
     {'vdw_method': 'PME', 'electrostatics_method': 'reaction-field', 'has_periodic_box': True,
      'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
     {'vdw_method': 'PME', 'electrostatics_method': 'reaction-field', 'has_periodic_box': False,
-     'omm_force': None, 'exception': SMIRNOFFSpecError, 'exception_match': ''},
+     'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
     {'vdw_method': 'PME', 'electrostatics_method': 'PME', 'has_periodic_box': True,
      'omm_force': openmm.NonbondedForce.LJPME, 'exception': None, 'exception_match': ''},
     {'vdw_method': 'PME', 'electrostatics_method': 'PME', 'has_periodic_box': False,
-     'omm_force': None, 'exception': SMIRNOFFSpecError, 'exception_match': ''},
+     'omm_force': openmm.NonbondedForce.NoCutoff, 'exception': None, 'exception_match': ''},
      ]
 
 
@@ -404,8 +404,8 @@ class TestForceField():
         #                                                                      'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         topology.box_vectors = None
-        forcefield.get_handler("Electrostatics", {})._method = "Coulomb"
-        forcefield.get_handler("vdW", {})._method = "cutoff"
+        #forcefield.get_handler("Electrostatics", {})._method = "Coulomb"
+        #forcefield.get_handler("vdW", {})._method = "cutoff"
 
         omm_system = forcefield.create_openmm_system(topology)
 
@@ -628,12 +628,6 @@ class TestForceField():
     @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
     def test_nonbonded_method_resolution(self,
                                          inputs
-                                         # vdw_method=None,
-                                         # electrostatics_method=None,
-                                         # has_periodic_box=None,
-                                         # omm_force=None,
-                                         # exception=None,
-                                         # exception_match=None
                                          ):
         """Test predefined permutations of input options to ensure nonbonded handling is correctly resolved"""
         from simtk.openmm import app
