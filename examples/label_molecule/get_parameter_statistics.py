@@ -59,9 +59,13 @@ parameters_by_molecule, parameters_by_ID = get_molecule_parameterIDs( mols, offx
 # Print some info
 print("Parameters by molecule:")
 for smi in parameters_by_molecule.keys():
-    print(smi, parameters_by_molecule[smi])
+    print(smi)
+    for parameter in parameters_by_molecule[smi]:
+        print(parameter)
 
 
 print("Molecules with parameter IDs:")
 for pid in parameters_by_ID.keys():
-    print(pid, parameters_by_ID[pid])
+    print(pid)
+    for ids in parameters_by_ID[pid]:
+        print ids
