@@ -471,11 +471,19 @@ def compare_system_energies(system1, system2, positions, box_vectors=None,
 
     # Group force types into OpenMM force groups.
     if by_force_type:
+        # Remove eventual CMMotionRemover forces that do not affect energies.
+        for system in [system1, system2]:
+            for force_idx, force in enumerate(system.getForces()):
+                if isinstance(force, openmm.CMMotionRemover):
+                    system.removeForce(force_idx)
+                    break
+
         # First check that the two systems have the same force types.
         force_names1 = {f.__class__.__name__ for f in system1.getForces()}
         force_names2 = {f.__class__.__name__ for f in system2.getForces()}
-        err_msg = 'The two systems have difference force types: system1 {}, system2 {}'
-        assert force_names1 == force_names2, err_msg.format(force_names1, force_names2)
+        if set(force_names1) != set(force_names2):
+            err_msg = 'The two Systems have different forces to compare:\n - system1 {}\n - system2 {}'
+            raise ValueError(err_msg.format(sorted(force_names1), sorted(force_names2)))
 
         # Create a map from force group to force class and viceversa.
         group_to_force = {i: force_name for i, force_name in enumerate(force_names1)}
@@ -542,6 +550,8 @@ def compare_system_energies(system1, system2, positions, box_vectors=None,
         table += '\n\npotential energy system2:\n' + pprint.pformat(potential_energy2)
         raise type(e)(str(e) + table, e.potential_energy1, e.potential_energy2)
 
+    if by_force_type:
+        return map_energies_by_force_type(potential_energy1, potential_energy2)
     return potential_energy1, potential_energy2
 
 
@@ -1179,8 +1189,9 @@ def compare_system_parameters(system1, system2, systems_labels=None,
             del force_names['CMMotionRemover']
 
     # Check that the two systems have the same forces.
-    err_msg = 'The two Systems have different forces to compare: system1 {}, system2 {}'
-    assert set(force_names1) == set(force_names2), err_msg.format(force_names1, force_names2)
+    if set(force_names1) != set(force_names2):
+        err_msg = 'The two Systems have different forces to compare:\n - system1 {}\n - system2 {}'
+        raise ValueError(err_msg.format(sorted(force_names1), sorted(force_names2)))
 
     # Find all the pair of forces to compare.
     force_pairs = {force_name: [] for force_name in force_names1}
