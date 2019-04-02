@@ -13,25 +13,57 @@ Tests for Topology
 # GLOBAL IMPORTS
 #=============================================================================================
 
-import pickle
-from functools import partial
 from unittest import TestCase
 
-from openforcefield import utils, topology
-
 import pytest
-import copy
 import numpy as np
 from simtk import unit
-from openforcefield.utils import BASIC_CHEMINFORMATICS_TOOLKITS, RDKIT_AVAILABLE, OPENEYE_AVAILABLE, AMBERTOOLS_AVAILABLE, RDKitToolkitWrapper, OpenEyeToolkitWrapper, AmberToolsToolkitWrapper
+from openforcefield.utils import (BASIC_CHEMINFORMATICS_TOOLKITS, RDKIT_AVAILABLE, OPENEYE_AVAILABLE,
+                                  RDKitToolkitWrapper, OpenEyeToolkitWrapper)
 from openforcefield.tests.utils import get_data_filename
-from openforcefield.topology import Topology, TopologyAtom, TopologyBond, TopologyMolecule, TopologyVirtualSite, DuplicateUniqueMoleculeError
+from openforcefield.topology import Topology, ValenceDict, ImproperDict, DuplicateUniqueMoleculeError
 from openforcefield.topology import Molecule
+
+
+#=============================================================================================
+# UTILITY FUNCTIONS
+#=============================================================================================
+
+def assert_tuple_of_atoms_equal(atom_tuples1, atom_tuples2, transformed_dict_cls=ValenceDict):
+    """Check that two lists of atoms are the same.
+
+    The function compares that the parent molecules are isomorphic and
+    that the molecule index is the same.
+    """
+    assert len(atom_tuples1) == len(atom_tuples2)
+
+    # They are atoms of isomorphic molecules. We assume here that all
+    # atoms in the same list of tuples belong to the same molecule so
+    # that we can perform the check only once.
+    molecule1 = atom_tuples1[0][0]._molecule
+    molecule2 = atom_tuples2[0][0]._molecule
+    assert molecule1 == molecule2
+    for atom_tuple in atom_tuples1:
+        for a in atom_tuple:
+            assert a._molecule is molecule1
+    for atom_tuple in atom_tuples2:
+        for a in atom_tuple:
+            assert a._molecule is molecule2
+
+    # All atoms are equal. Use ValenceDict for this
+    atom_indices = []
+    for atom_tuples in [atom_tuples1, atom_tuples2]:
+        valence_dict = transformed_dict_cls()
+        for atom_tuple in atom_tuples:
+            key = tuple(a.molecule_atom_index for a in atom_tuple)
+            valence_dict[key] = atom_tuple
+        atom_indices.append(valence_dict)
+    assert set(atom_indices[0]) == set(atom_indices[1])
+
 
 #=============================================================================================
 # TESTS
 #=============================================================================================
-
 
 # IF we've done our jobs right, it shouldn't matter which toolkit the tests for Topology run using (both's behaviors
 # should be indistinguishable)
@@ -44,7 +76,6 @@ def test_cheminformatics_toolkit_is_installed():
 
 
 class TestTopology(TestCase):
-    from openforcefield.topology import Topology
 
     def setUp(self):
         self.empty_molecule = Molecule()
@@ -262,6 +293,97 @@ class TestTopology(TestCase):
         topology.assert_bonded(0,4)
         with self.assertRaises(Exception) as context:
             topology.assert_bonded(0, 2)
+
+    def test_angles(self):
+        """Topology.angles should return image angles of all topology molecules."""
+        molecule1 = self.ethane_from_smiles
+        molecule2 = self.propane_from_smiles
+
+        # Create topology.
+        topology = Topology()
+        topology.add_molecule(molecule1)
+        topology.add_molecule(molecule1)
+        topology.add_molecule(molecule2)
+
+        # The topology should have the correct number of angles.
+        topology_angles = list(topology.angles)
+        assert len(topology_angles) == topology.n_angles
+        assert topology.n_angles == 2*molecule1.n_angles + molecule2.n_angles
+
+        # Check that the topology angles are the correct ones.
+        mol_angle_atoms1 = list(molecule1.angles)
+        mol_angle_atoms2 = list(molecule2.angles)
+        top_angle_atoms1 = [tuple(a._atom for a in atoms)
+                            for atoms in topology_angles[:molecule1.n_angles]]
+        top_angle_atoms2 = [tuple(a._atom for a in atoms)
+                            for atoms in topology_angles[molecule1.n_angles:2*molecule1.n_angles]]
+        top_angle_atoms3 = [tuple(a._atom for a in atoms)
+                            for atoms in topology_angles[2*molecule1.n_angles:]]
+
+        assert_tuple_of_atoms_equal(top_angle_atoms1, mol_angle_atoms1)
+        assert_tuple_of_atoms_equal(top_angle_atoms2, mol_angle_atoms1)
+        assert_tuple_of_atoms_equal(top_angle_atoms3, mol_angle_atoms2)
+
+    def test_propers(self):
+        """Topology.propers should return image propers torsions of all topology molecules."""
+        molecule1 = self.ethane_from_smiles
+        molecule2 = self.propane_from_smiles
+
+        # Create topology.
+        topology = Topology()
+        topology.add_molecule(molecule1)
+        topology.add_molecule(molecule1)
+        topology.add_molecule(molecule2)
+
+        # The topology should have the correct number of propers.
+        topology_propers = list(topology.propers)
+        assert len(topology_propers) == topology.n_propers
+        assert topology.n_propers == 2*molecule1.n_propers + molecule2.n_propers
+
+        # Check that the topology propers are the correct ones.
+        mol_proper_atoms1 = list(molecule1.propers)
+        mol_proper_atoms2 = list(molecule2.propers)
+        top_proper_atoms1 = [tuple(a._atom for a in atoms)
+                            for atoms in topology_propers[:molecule1.n_propers]]
+        top_proper_atoms2 = [tuple(a._atom for a in atoms)
+                            for atoms in topology_propers[molecule1.n_propers:2*molecule1.n_propers]]
+        top_proper_atoms3 = [tuple(a._atom for a in atoms)
+                            for atoms in topology_propers[2*molecule1.n_propers:]]
+
+        assert_tuple_of_atoms_equal(top_proper_atoms1, mol_proper_atoms1)
+        assert_tuple_of_atoms_equal(top_proper_atoms2, mol_proper_atoms1)
+        assert_tuple_of_atoms_equal(top_proper_atoms3, mol_proper_atoms2)
+
+    def test_impropers(self):
+        """Topology.impropers should return image impropers torsions of all topology molecules."""
+        molecule1 = self.ethane_from_smiles
+        molecule2 = self.propane_from_smiles
+
+        # Create topology.
+        topology = Topology()
+        topology.add_molecule(molecule1)
+        topology.add_molecule(molecule1)
+        topology.add_molecule(molecule2)
+
+        # The topology should have the correct number of impropers.
+        topology_impropers = list(topology.impropers)
+        assert len(topology_impropers) == topology.n_impropers
+        assert topology.n_impropers == 2*molecule1.n_impropers + molecule2.n_impropers
+
+        # Check that the topology impropers are the correct ones.
+        mol_improper_atoms1 = list(molecule1.impropers)
+        mol_improper_atoms2 = list(molecule2.impropers)
+        top_improper_atoms1 = [tuple(a._atom for a in atoms)
+                            for atoms in topology_impropers[:molecule1.n_impropers]]
+        top_improper_atoms2 = [tuple(a._atom for a in atoms)
+                            for atoms in topology_impropers[molecule1.n_impropers:2*molecule1.n_impropers]]
+        top_improper_atoms3 = [tuple(a._atom for a in atoms)
+                            for atoms in topology_impropers[2*molecule1.n_impropers:]]
+
+        assert_tuple_of_atoms_equal(top_improper_atoms1, mol_improper_atoms1)
+        assert_tuple_of_atoms_equal(top_improper_atoms2, mol_improper_atoms1)
+        assert_tuple_of_atoms_equal(top_improper_atoms3, mol_improper_atoms2)
+
 
     # test_get_fractional_bond_order
     # test_two_of_same_molecule

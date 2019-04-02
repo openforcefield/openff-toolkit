@@ -40,16 +40,10 @@ from openforcefield.typing.chemistry import ChemicalEnvironment
 
 logger = logging.getLogger(__name__)
 
-#=============================================================================================
-# PARAMETER HANDLERS
-#
-# The following classes are Handlers that know how to create Force subclasses and add them to a System that is being
-# created.  Each Handler class must define three methods:
-# 1) a constructor which takes as input hierarchical dictionaries of data conformant to the SMIRNOFF spec;
-# 2) a create_force() method that constructs the Force object and adds it to the System; and
-# 3) a labelForce() method that provides access to which terms are applied to which atoms in specified mols.
-#=============================================================================================
 
+#======================================================================
+# CUSTOM EXCEPTIONS
+#======================================================================
 
 class SMIRNOFFSpecError(MessageException):
     """
@@ -70,6 +64,30 @@ class IncompatibleParameterError(MessageException):
     """
     pass
 
+
+class UnassignedValenceParameterException(Exception):
+    """Exception raised when there are valence terms for which a ParameterHandler can't find parameters."""
+    pass
+
+
+class UnassignedBondParameterException(UnassignedValenceParameterException):
+    """Exception raised when there are bond terms for which a ParameterHandler can't find parameters."""
+    pass
+
+
+class UnassignedAngleParameterException(UnassignedValenceParameterException):
+    """Exception raised when there are angle terms for which a ParameterHandler can't find parameters."""
+    pass
+
+
+class UnassignedProperTorsionParameterException(UnassignedValenceParameterException):
+    """Exception raised when there are proper torsion terms for which a ParameterHandler can't find parameters."""
+    pass
+
+
+#======================================================================
+# PARAMETER TYPE/LIST
+#======================================================================
 
 class NonbondedMethod(Enum):
     """
@@ -392,8 +410,6 @@ class ParameterType(object):
                                         "a desired cosmetic attribute, consider setting "
                                         "'permit_cosmetic_attributes=True'".format({key: val}, self.__class__))
 
-
-
     @property
     def smirks(self):
         return self._smirks
@@ -407,7 +423,6 @@ class ParameterType(object):
         ChemicalEnvironment.validate(
             smirks, ensure_valence_type=self._VALENCE_TYPE)
         self._smirks = smirks
-
 
     def to_dict(self, return_cosmetic_attributes=False):
         """
@@ -450,6 +465,21 @@ class ParameterType(object):
                 smirnoff_dict[attrib_name] = attrib_value
 
         return smirnoff_dict
+
+
+#======================================================================
+# PARAMETER HANDLERS
+#
+# The following classes are Handlers that know how to create Force
+# subclasses and add them to a System that is being created. Each Handler
+# class must define three methods:
+# 1) a constructor which takes as input hierarchical dictionaries of data
+#    conformant to the SMIRNOFF spec;
+# 2) a create_force() method that constructs the Force object and adds it
+#    to the System; and
+# 3) a labelForce() method that provides access to which terms are applied
+#    to which atoms in specified mols.
+#======================================================================
 
 # TODO: Should we have a parameter handler registry?
 
@@ -673,36 +703,50 @@ class ParameterHandler(object):
         # TODO: This is a necessary API point for Lee-Ping's ForceBalance
         pass
 
-    def get_matches(self, entity):
-        """Retrieve all force terms for a Topology.
-        # TODO: Generalize to work on Molecules as well?
+    def find_matches(self, entity):
+        """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
         ----------
-        entity : openforcefield.topology.Topology
-            Topology for which constraints are to be enumerated
+        entity : openforcefield.topology.Topology or openforcefield.topology.Molecule
+            Topology or molecule to search.
 
         Returns
         ---------
-        matches : ValenceDict
-            matches[atoms] is the ParameterType object corresponding to the tuple of Atom objects ``Atoms``
+        matches : ValenceDict[Tuple[int], ParameterType]
+            ``matches[particle_indices]`` is the ``ParameterType`` object
+            matching the tuple of particle indices in ``entity``.
 
         """
-        logger.info(self.__class__.__name__)  # TODO: Overhaul logging
-        matches = ValenceDict()
-        for force_type in self._parameters:
+        return self._find_matches(entity)
+
+    def _find_matches(self, entity, transformed_dict_cls=ValenceDict):
+        """Implement find_matches() and allow using a difference valence dictionary."""
+        from openforcefield.topology import FrozenMolecule
+
+        logger.debug('Finding matches for {}'.format(self.__class__.__name__))
+
+        matches = transformed_dict_cls()
+        for parameter_type in self._parameters:
             matches_for_this_type = {}
-            for atoms in entity.chemical_environment_matches(
-                    force_type.smirks):
-                atom_top_indexes = tuple(
-                    [atom.topology_particle_index for atom in atoms])
-                matches_for_this_type[atom_top_indexes] = force_type
+            for atoms in entity.chemical_environment_matches(parameter_type.smirks):
+                # Collect the atom indices matching the entity.
+                if isinstance(entity, Topology):
+                    atom_indices = tuple([atom.topology_particle_index for atom in atoms])
+                elif isinstance(entity, FrozenMolecule):
+                    atom_indices = tuple([atom.molecule_particle_index for atom in atoms])
+                else:
+                    raise ValueError('Unknown entity type {}'.format(entity.__class__))
 
+                # Update the matches for this parameter type.
+                matches_for_this_type[atom_indices] = parameter_type
+
+            # Update matches of all parameter types.
             matches.update(matches_for_this_type)
-            logger.info('{:64} : {:8} matches'.format(
-                force_type.smirks, len(matches_for_this_type)))
+            logger.debug('{:64} : {:8} matches'.format(
+                parameter_type.smirks, len(matches_for_this_type)))
 
-        logger.info('{} matches identified'.format(len(matches)))
+        logger.debug('{} matches identified'.format(len(matches)))
         return matches
 
     def assign_parameters(self, topology, system):
@@ -830,6 +874,65 @@ class ParameterHandler(object):
         smirnoff_data.update(unitless_header_attribute_dict)
         smirnoff_data.update(output_units)
         return smirnoff_data
+
+    # -------------------------------
+    # Utilities for children classes.
+    # -------------------------------
+
+    @classmethod
+    def _check_all_valence_terms_assigned(cls, assigned_terms, valence_terms,
+                                          exception_cls=UnassignedValenceParameterException):
+        """Check that all valence terms have been assigned and print a user-friendly error message.
+
+        Parameters
+        ----------
+        assigned_terms : ValenceDict
+            Atom index tuples defining added valence terms.
+        valence_terms : Iterable[TopologyAtom] or Iterable[Iterable[TopologyAtom]]
+            Atom or atom tuples defining topological valence terms.
+        exception_cls : UnassignedValenceParameterException
+            A specific exception class to raise to allow catching only specific
+            types of errors.
+
+        """
+        # Convert the valence term to a valence dictionary to make sure
+        # the order of atom indices doesn't matter for comparison.
+        valence_terms_dict = assigned_terms.__class__()
+        for atoms in valence_terms:
+            try:
+                # valence_terms is a list of TopologyAtom tuples.
+                atom_indices = (a.topology_particle_index for a in atoms)
+            except TypeError:
+                # valence_terms is a list of TopologyAtom.
+                atom_indices = (atoms.topology_particle_index,)
+            valence_terms_dict[atom_indices] = atoms
+
+        # Check that both valence dictionaries have the same keys (i.e. terms).
+        assigned_terms_set = set(assigned_terms.keys())
+        valence_terms_set = set(valence_terms_dict.keys())
+        unassigned_terms = valence_terms_set.difference(assigned_terms_set)
+        not_found_terms = assigned_terms_set.difference(valence_terms_set)
+
+        # Raise an error if there are unassigned terms.
+        err_msg = ""
+
+        if len(unassigned_terms) > 0:
+            unassigned_str = '\n- '.join([str(x) for x in unassigned_terms])
+            err_msg += ("{parameter_handler} was not able to find parameters for the following valence terms:\n"
+                        "- {unassigned_str}").format(parameter_handler=cls.__name__,
+                                                     unassigned_str=unassigned_str)
+        if len(not_found_terms) > 0:
+            if err_msg != "":
+                err_msg += '\n'
+            not_found_str = '\n- '.join([str(x) for x in not_found_terms])
+            err_msg += ("{parameter_handler} assigned terms that were not found in the topology:\n"
+                        "- {not_found_str}").format(parameter_handler=cls.__name__,
+                                                    not_found_str=not_found_str)
+        if err_msg != "":
+            err_msg += '\n'
+            raise exception_cls(err_msg)
+
+
 #=============================================================================================
 
 
@@ -866,7 +969,7 @@ class ConstraintHandler(ParameterHandler):
         super().__init__(**kwargs)
 
     def create_force(self, system, topology, **kwargs):
-        constraints = self.get_matches(topology)
+        constraints = self.find_matches(topology)
         for (atoms, constraint) in constraints.items():
             # Update constrained atom pairs in topology
             #topology.add_constraint(*atoms, constraint.distance)
@@ -893,7 +996,7 @@ class BondHandler(ParameterHandler):
         _SMIRNOFF_ATTRIBS = ['smirks', 'length', 'k']  # Attributes expected per the SMIRNOFF spec.
         _REQUIRE_UNITS = {'length' : unit.angstrom,
                           'k' : unit.kilocalorie_per_mole / unit.angstrom**2}
-        _INDEXED_ATTRIBS = ['k']  # May be indexed (by integer bond order) if fractional bond orders are used
+        _INDEXED_ATTRIBS = ['length', 'k']  # May be indexed (by integer bond order) if fractional bond orders are used
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)  # Base class handles ``smirks`` and ``id`` fields
@@ -925,7 +1028,7 @@ class BondHandler(ParameterHandler):
             force = existing[0]
 
         # Add all bonds to the system.
-        bonds = self.get_matches(topology)
+        bonds = self.find_matches(topology)
         skipped_constrained_bonds = 0  # keep track of how many bonds were constrained (and hence skipped)
         for (atoms, bond_params) in bonds.items():
             # Get corresponding particle indices in Topology
@@ -970,9 +1073,10 @@ class BondHandler(ParameterHandler):
         logger.info('{} bonds added ({} skipped due to constraints)'.format(
             len(bonds) - skipped_constrained_bonds, skipped_constrained_bonds))
 
-        # TODO: Reimplement missing valence checks
-        # Check that no topological bonds are missing force parameters
-        #_check_for_missing_valence_terms('BondForce', topology, bonds.keys(), topology.bonds)
+        # Check that no topological bonds are missing force parameters.
+        valence_terms = [list(b.atoms) for b in topology.topology_bonds]
+        self._check_all_valence_terms_assigned(assigned_terms=bonds, valence_terms=valence_terms,
+                                               exception_cls=UnassignedBondParameterException)
 
 
 #=============================================================================================
@@ -1013,7 +1117,7 @@ class AngleHandler(ParameterHandler):
             force = existing[0]
 
         # Add all angles to the system.
-        angles = self.get_matches(topology)
+        angles = self.find_matches(topology)
         skipped_constrained_angles = 0  # keep track of how many angles were constrained (and hence skipped)
         for (atoms, angle) in angles.items():
             # Ensure atoms are actually bonded correct pattern in Topology
@@ -1035,7 +1139,9 @@ class AngleHandler(ParameterHandler):
             skipped_constrained_angles))
 
         # Check that no topological angles are missing force parameters
-        #_check_for_missing_valence_terms('AngleForce', topology, angles.keys(), topology.angles())
+        self._check_all_valence_terms_assigned(assigned_terms=angles,
+                                               valence_terms=list(topology.angles),
+                                               exception_cls=UnassignedAngleParameterException)
 
 
 #=============================================================================================
@@ -1088,7 +1194,7 @@ class ProperTorsionHandler(ParameterHandler):
         else:
             force = existing[0]
         # Add all proper torsions to the system.
-        torsions = self.get_matches(topology)
+        torsions = self.find_matches(topology)
         for (atom_indices, torsion) in torsions.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             for (i, j) in [(0, 1), (1, 2), (2, 3)]:
@@ -1109,7 +1215,9 @@ class ProperTorsionHandler(ParameterHandler):
         logger.info('{} torsions added'.format(len(torsions)))
 
         # Check that no topological torsions are missing force parameters
-        #_check_for_missing_valence_terms('ProperTorsionForce', topology, torsions.keys(), topology.torsions())
+        self._check_all_valence_terms_assigned(assigned_terms=torsions,
+                                               valence_terms=list(topology.propers),
+                                               exception_cls=UnassignedProperTorsionParameterException)
 
 
 class ImproperTorsionHandler(ParameterHandler):
@@ -1142,38 +1250,22 @@ class ImproperTorsionHandler(ParameterHandler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-
-
-    def get_matches(self, entity):
-        """Retrieve all force terms for a chemical entity, which could be a Molecule, group of Molecules, or Topology.
+    def find_matches(self, entity):
+        """Find the improper torsions in the topology/molecule matched by a parameter type.
 
         Parameters
         ----------
-        entity : openforcefield.topology.ChemicalEntity
-            Chemical entity for which constraints are to be enumerated
+        entity : openforcefield.topology.Topology or openforcefield.topology.Molecule
+            Topology or molecule to search.
 
         Returns
         ---------
-        matches : ValenceDict
-            matches[atoms] is the ParameterType object corresponding to the tuple of Atom objects ``Atoms``
+        matches : ImproperDict[Tuple[int], ParameterType]
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the 4-tuple of atom indices in ``entity``.
 
         """
-        logger.info(self.__class__.__name__)  # TODO: Overhaul logging
-        matches = ImproperDict()
-        for force_type in self._parameters:
-            matches_for_this_type = {}
-            for atoms in entity.chemical_environment_matches(
-                    force_type.smirks):
-                atom_top_indexes = tuple(
-                    [atom.topology_particle_index for atom in atoms])
-                matches_for_this_type[atom_top_indexes] = force_type
-            matches.update(matches_for_this_type)
-            logger.info('{:64} : {:8} matches'.format(
-                force_type.smirks, len(matches_for_this_type)))
-
-        logger.info('{} matches identified'.format(len(matches)))
-        return matches
-
+        return self._find_matches(entity, transformed_dict_cls=ImproperDict)
 
     def create_force(self, system, topology, **kwargs):
         #force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
@@ -1189,7 +1281,7 @@ class ImproperTorsionHandler(ParameterHandler):
             force = existing[0]
 
         # Add all improper torsions to the system
-        impropers = self.get_matches(topology)
+        impropers = self.find_matches(topology)
         for (atom_indices, improper) in impropers.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             # For impropers, central atom is atom 1
@@ -1218,9 +1310,6 @@ class ImproperTorsionHandler(ParameterHandler):
         logger.info(
             '{} impropers added, each applied in a six-fold trefoil'.format(
                 len(impropers)))
-
-        # Check that no topological torsions are missing force parameters
-        #_check_for_missing_valence_terms('ImproperTorsionForce', topology, torsions.keys(), topology.impropers())
 
 
 class vdWHandler(ParameterHandler):
@@ -1403,17 +1492,23 @@ class vdWHandler(ParameterHandler):
 
         force = openmm.NonbondedForce()
 
+
         # If we're using PME, then the only possible openMM Nonbonded type is LJPME
         if self._method == 'PME':
+            # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
             if (topology.box_vectors is None):
-                raise SMIRNOFFSpecError("If vdW method is  PME, a periodic Topology "
-                                        "must be provided")
-            force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-            force.setCutoffDistance(9. * unit.angstrom)
-            force.setEwaldErrorTolerance(1.e-4)
+                force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+                # if (topology.box_vectors is None):
+                #     raise SMIRNOFFSpecError("If vdW method is  PME, a periodic Topology "
+                #                             "must be provided")
+            else:
+                force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
+                force.setCutoffDistance(9. * unit.angstrom)
+                force.setEwaldErrorTolerance(1.e-4)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
         elif self._method == 'cutoff':
+            # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
             if (topology.box_vectors is None):
                 force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
             else:
@@ -1424,22 +1519,21 @@ class vdWHandler(ParameterHandler):
         system.addForce(force)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
-        atoms = self.get_matches(topology)
+        atoms = self.find_matches(topology)
 
         # Create all particles.
         for particle in topology.topology_particles:
             force.addParticle(0.0, 1.0, 0.0)
 
         # Set the particle Lennard-Jones terms.
-        for (atoms, ljtype) in atoms.items():
-            force.setParticleParameters(atoms[0], 0.0, ljtype.sigma,
+        for atom_key, ljtype in atoms.items():
+            atom_idx = atom_key[0]
+            force.setParticleParameters(atom_idx, 0.0, ljtype.sigma,
                                         ljtype.epsilon)
 
-        # Check that no atoms are missing force parameters
-        # QUESTION: Don't we want to allow atoms without force parameters? Or perhaps just *particles* without force parameters, but not atoms?
-        # TODO: Enable this check
-        #_check_for_missing_valence_terms('NonbondedForce Lennard-Jones parameters', topology, atoms.keys(), topology.atoms)
-
+        # Check that no atoms (n.b. not particles) are missing force parameters.
+        self._check_all_valence_terms_assigned(assigned_terms=atoms,
+                                               valence_terms=topology.topology_atoms)
 
     # TODO: Can we express separate constraints for postprocessing and normal processing?
     def postprocess_system(self, system, topology, **kwargs):
@@ -1537,8 +1631,6 @@ class ElectrostaticsHandler(ParameterHandler):
         # Among other sanity checks, this ensures that the switch value is 0.
         self._validate_parameters()
 
-        # TODO: This is an assumption right now, and a bad one. See issue #219
-        is_periodic = topology.box_vectors is not None
 
         # Set the nonbonded method
         settings_matched = False
@@ -1552,46 +1644,62 @@ class ElectrostaticsHandler(ParameterHandler):
                                              "treatment is set to LJPME, electrostatics must also be PME "
                                              "(electrostatics treatment currently set to {}".format(self._method))
 
+
+
+
+
+
         # Then, set nonbonded methods based on method keyword
         if self._method == 'PME':
-            if not is_periodic:
-                raise IncompatibleParameterError("Electrostatics handler received PME method keyword, but a nonperiodic"
-                                                 " topology. Use of PME electrostatics requires a periodic topology.")
-            if current_nb_method == openmm.NonbondedForce.LJPME:
-                pass
-                # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
-
-
+            # Check whether the topology is nonperiodic, in which case we always switch to NoCutoff
+            # (vdWHandler will have already set this to NoCutoff)
+            # TODO: This is an assumption right now, and a bad one. See issue #219
+            if topology.box_vectors is None:
+                assert current_nb_method == openmm.NonbondedForce.NoCutoff
+                settings_matched = True
+                # raise IncompatibleParameterError("Electrostatics handler received PME method keyword, but a nonperiodic"
+                #                                  " topology. Use of PME electrostatics requires a periodic topology.")
             else:
-                force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                force.setCutoffDistance(9. * unit.angstrom)
-                force.setEwaldErrorTolerance(1.e-4)
+                if current_nb_method == openmm.NonbondedForce.LJPME:
+                    pass
+                    # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
+                else:
+                    force.setNonbondedMethod(openmm.NonbondedForce.PME)
+                    force.setCutoffDistance(9. * unit.angstrom)
+                    force.setEwaldErrorTolerance(1.e-4)
 
             settings_matched = True
 
         # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
         elif self._method == 'Coulomb':
-            if is_periodic:
+            if topology.box_vectors is None:
+                # (vdWHandler will have already set this to NoCutoff)
+                assert current_nb_method == openmm.NonbondedForce.NoCutoff
+                settings_matched = True
+            else:
                 raise IncompatibleParameterError("Electrostatics method set to Coulomb, and topology is periodic. "
                                                  "In the future, this will lead to use of OpenMM's CutoffPeriodic "
                                                  "Nonbonded force method, however this is not supported in the "
                                                  "current Open Force Field toolkit.")
-            else:
-                force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-                settings_matched = True
 
         # If the vdWHandler set the nonbonded method to PME, then ensure that it has the same cutoff
         elif self._method == 'reaction-field':
-            raise IncompatibleParameterError("Electrostatics method set to reaction-field. In the future, "
-                                             "this will lead to use of OpenMM's CutoffPeriodic or CutoffNonPeriodic "
-                                             "Nonbonded force method, however this is not supported in the "
-                                             "current Open Force Field toolkit")
+            if topology.box_vectors is None:
+                # (vdWHandler will have already set this to NoCutoff)
+                assert current_nb_method == openmm.NonbondedForce.NoCutoff
+                settings_matched = True
+            else:
+                raise IncompatibleParameterError("Electrostatics method set to reaction-field. In the future, "
+                                                 "this will lead to use of OpenMM's CutoffPeriodic or CutoffNonPeriodic"
+                                                " Nonbonded force method, however this is not supported in the "
+                                                 "current Open Force Field toolkit")
 
         if not settings_matched:
             raise IncompatibleParameterError("Unable to support provided vdW method, electrostatics "
                                              "method ({}), and topology periodicity ({}) selections. Additional "
                                              "options for nonbonded treatment may be added in future versions "
-                                             "of the Open Force Field toolkit.".format(self._method, is_periodic))
+                                             "of the Open Force Field toolkit.".format(self._method,
+                                                                                topology.box_vectors is not None))
 
 
 class ToolkitAM1BCCHandler(ParameterHandler):
@@ -1737,7 +1845,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
     def postprocess_system(self, system, topology, **kwargs):
-        bonds = self.get_matches(topology)
+        bonds = self.find_matches(topology)
 
         # Apply bond charge increments to all appropriate force groups
         # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?
@@ -1957,7 +2065,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
     def postprocess_system(self, system, topology, **kwargs):
-        bonds = self.get_matches(topology)
+        bonds = self.find_matches(topology)
 
         # Apply bond charge increments to all appropriate force groups
         # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?

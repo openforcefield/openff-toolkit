@@ -33,6 +33,7 @@ from openforcefield.topology import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
 
+
 #=============================================================================================
 # CONFIGURE LOGGER
 #=============================================================================================
@@ -923,5 +924,6 @@ class ForceField(object):
             for tag, parameter_handler in self._parameter_handlers.items():
                 matches = parameter_handler.get_matches(top_mol)
                 current_molecule_labels[tag] = matches
+
             molecule_labels.append(current_molecule_labels)
         return molecule_labels

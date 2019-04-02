@@ -45,6 +45,11 @@ def generateSMIRNOFFStructure(oemol):
 
     # Create OpenMM System and Topology.
     omm_top = generateTopologyFromOEMol(oemol)
+
+    # If it's a nonperiodic box, then we can't use default (PME) settings
+    if omm_top.getPeriodicBoxVectors() is None:
+        mol_ff.get_handler("Electrostatics", {})._method = 'Coulomb'
+
     system = mol_ff.create_openmm_system(off_top)
 
     # Convert to ParmEd structure.
