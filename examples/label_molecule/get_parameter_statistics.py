@@ -1,10 +1,16 @@
 #!/bin/env python
 
-from openforcefield.utils import *
-from openforcefield.typing.engines.smirnoff import get_molecule_parameterIDs
+from openforcefield.utils import get_data_filename
+#from openforcefield.typing.engines.smirnoff import get_molecule_parameterIDs
+from openforcefield.topology import Molecule
+from openforcefield.typing.engines.smirnoff import ForceField
 
-oemols = read_molecules(get_data_filename('molecules/AlkEthOH_test_filt1_tripos.mol2'))
-ffxml = get_data_filename('forcefield/Frosst_AlkEthOH.offxml')
+#oemols = read_molecules(get_data_filename('molecules/AlkEthOH_test_filt1_tripos.mol2'))
+mols = Molecule.from_file(get_data_filename('molecules/AlkEthOH_test_filt1_tripos.mol2'))
+ff = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH.offxml'))
+#ffxml = get_data_filename('forcefield/Frosst_AlkEthOH.offxml')
+
+
 
 parameters_by_molecule, parameters_by_ID = get_molecule_parameterIDs( oemols, ffxml)
 
