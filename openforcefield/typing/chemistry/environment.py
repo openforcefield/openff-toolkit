@@ -84,11 +84,11 @@ def _convert_embedded_SMIRKS(smirks):
     a_out = 0
     while smirks.find('$(') != -1:
         # Find first atom
-        atom, a_in, a_out = _find_embedded_brackets(smirks, '\[', '\]')
+        atom, a_in, a_out = _find_embedded_brackets(smirks, r'\[', r'\]')
         d = atom.find('$(')
         # Find atom with the $ string embedded
         while d == -1:
-            atom, temp_in, temp_out = _find_embedded_brackets(smirks[a_out+1:], '\[', '\]')
+            atom, temp_in, temp_out = _find_embedded_brackets(smirks[a_out+1:], r'\[', r'\]')
             a_in = a_out + temp_in + 1
             a_out += temp_out + 1
             d = atom.find('$(')
@@ -106,11 +106,11 @@ def _convert_embedded_SMIRKS(smirks):
         else:
             ring_out = ''
 
-        embedded, p_in, p_out = _find_embedded_brackets(atom, '\(', '\)')
+        embedded, p_in, p_out = _find_embedded_brackets(atom, r'\(', r'\)')
         # two forms of embedded strings $(*~stuff) or $([..]~stuff)
         # in the latter case the first atom refers the current atom
         if embedded[1] == '[':
-            first, f_in, f_out = _find_embedded_brackets(embedded, '\[','\]')
+            first, f_in, f_out = _find_embedded_brackets(embedded, r'\[', r'\]')
             first = _convert_embedded_SMIRKS(first)
             new_atom = atom[:d]+first[1:-1]+atom[p_out+1:]
             embedded = embedded[f_out+1:]
@@ -270,7 +270,7 @@ class ChemicalEnvironment(object):
 
             # Add label to the end of SMARTS
             else:
-                sub_string, start, end = _find_embedded_brackets(smirks, '\[','\]')
+                sub_string, start, end = _find_embedded_brackets(smirks, r'\[', r'\]')
                 if self.ring is not None:
                     return sub_string[:-1] + ':' + str(self.index) + ']'+str(self.ring)
                 else:
@@ -466,21 +466,21 @@ class ChemicalEnvironment(object):
         # Define the regular expressions used for all SMIRKS decorators
         # There are a limited number of descriptors for smirks string they are:
         # That is a # followed by one or more ints w/or w/o at ! in front '!#16'
-        element_num = "!?[#]\d+"
+        element_num = r"!?[#]\d+"
         # covers element symbols, i.e. N,C,O,Br not followed by a number
         element_sym = "!?[A-Z][a-z]?"
         # covers element symbols that are aromatic:
         aro_sym = "!?[cnops]"
         # replacement strings
-        replace_str = "\$\w+"
+        replace_str = r"\$\w+"
         # a or A w/ or w/o a ! in front 'A'
         aro_ali = "!?[aA]"
         # the decorators (D,H,j,r,V,X,^) followed by one or more integers
-        needs_int = "!?[DHjrVX^]\d+"
+        needs_int = r"!?[DHjrVX^]\d+"
         # R(x), +, - do not need to be followed by a integer w/ or w/o a ! 'R2'
-        optional_int = "!?[Rx+-]\d*"
+        optional_int = r"!?[Rx+-]\d*"
         # chirality options, "@", "@@", "@int" w/ or w/o a ! in front
-        chirality = "!?[@]\d+|!?[@]@?"
+        chirality = r"!?[@]\d+|!?[@]@?"
 
         # Generate RegEx string for decorators:
         self.no_bracket_atom_reg = r'('+'|'.join([element_sym, aro_sym, replace_str])+')'
@@ -613,7 +613,7 @@ into ChemicalEnvironments." % smirks)
         store = list() # to store indices while branching
         bondingTo = idx # which atom are we going to bond to
 
-        atom_string, start, end = _find_embedded_brackets(smirks, '\[', '\]')
+        atom_string, start, end = _find_embedded_brackets(smirks, r'\[', r'\]')
 
         if start != 0: # first atom is not in square brackets
             if start != -1:
@@ -665,7 +665,7 @@ into ChemicalEnvironments." % smirks)
                 continue
 
             # find beginning and end of next [atom]
-            atom_string, start, end = _find_embedded_brackets(leftover, '\[', '\]')
+            atom_string, start, end = _find_embedded_brackets(leftover, r'\[', r'\]')
 
             if start != -1: # no more square brackets
                 bond_string = leftover[:start]
