@@ -822,7 +822,8 @@ class ForceField(object):
         system = openmm.System()
 
         # Set periodic boundary conditions from topology
-        system.setDefaultPeriodicBoxVectors(topology.box_vectors)
+        if topology.box_vectors is not None:
+            system.setDefaultPeriodicBoxVectors(topology.box_vectors)
 
         # Add particles (both atoms and virtual sites) with appropriate masses
         for atom in topology.topology_particles:
