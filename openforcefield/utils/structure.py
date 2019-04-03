@@ -526,7 +526,8 @@ def get_energy(system, positions):
 # TODO: Reorganize this file, moving exporters to openforcefield.exporters
 
 def get_molecule_parameterIDs(molecules, forcefield):
-    """Process a list of molecules with a specified SMIRNOFF ffxml file and determine which parameters are used by which molecules, returning collated results.
+    """Process a list of molecules with a specified SMIRNOFF ffxml file and determine which parameters are used by
+    which molecules, returning collated results.
 
     Parameters
     ----------
