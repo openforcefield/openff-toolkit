@@ -591,7 +591,6 @@ class ParameterHandler(object):
         for key, val in smirnoff_data.items():
             # If we're reading the parameter list, iterate through and attach units to
             # each parameter_dict, then use it to initialize a ParameterType
-            #if key == self._TAGNAME:
             if key == element_name:
                 # If there are multiple parameters, this will be a list. If there's just one, make it a list
                 if not(isinstance(val, list)):
