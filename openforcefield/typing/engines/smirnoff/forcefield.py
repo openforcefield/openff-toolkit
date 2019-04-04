@@ -809,8 +809,6 @@ class ForceField(object):
         ----------
         topology : openforcefield.topology.Topology
             The ``Topology`` corresponding to the system to be parameterized
-        verbose : bool
-            If True, verbose output will be printed.
 
         Returns
         -------
@@ -864,7 +862,6 @@ class ForceField(object):
     def create_parmed_structure(self,
                                 topology,
                                 positions,
-                                default_box_vectors=None,
                                 **kwargs):
         """Create a ParmEd Structure object representing the interactions for the specified Topology with the current force field
 
@@ -876,10 +873,6 @@ class ForceField(object):
             The ``Topology`` corresponding to the ``System`` object to be created.
         positions : simtk.unit.Quantity of dimension (natoms,3) with units compatible with angstroms
             The positions corresponding to the ``System`` object to be created
-        default_box_vectors : simtk.unit.Quanity of shape [3,3] with units compatible with nanometers, optional, default=None
-            Default box vectors to use.
-            If not specified, default box vectors will be set to 1.0 nm edges.
-            Note that, for periodic systems, after creating a Context, box vectors *must* be set to the appropriate dimensions.
         verbose : bool
             If True, verbose output will be printed.
 
@@ -903,7 +896,7 @@ class ForceField(object):
 
         return structure
 
-    def label_molecules(self, topology, verbose=False):
+    def label_molecules(self, topology):
         """Return labels for a list of molecules corresponding to parameters from this force field.
         For each molecule, a dictionary of force types is returned, and for each force type,
         each force term is provided with the atoms involved, the parameter id assigned, and the corresponding SMIRKS.
