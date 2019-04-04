@@ -694,6 +694,37 @@ class TestForceField():
 
 
 #======================================================================
+# TEST CONSTRAINTS
+#======================================================================
+
+class TestForceFieldConstraints:
+    """Tests that constraints are correctly applied and behave correctly."""
+
+    @classmethod
+    def check_molecule_constraints(cls, molecule, system, bond_elements, bond_length):
+        """Check that the bonds in the molecule is correctly constrained."""
+        for constraint_idx in range(system.getNumConstraints()):
+            atom1_idx, atom2_idx, distance = system.getConstraintParameters(constraint_idx)
+            atom_elements = {molecule.atoms[atom1_idx].element.symbol,
+                             molecule.atoms[atom2_idx].element.symbol}
+            assert atom_elements == bond_elements
+            assert np.isclose(distance/unit.angstrom, bond_length/unit.angstrom)
+
+    def test_constraints_hbonds(self):
+        """Test that hydrogen bonds constraints are applied correctly to a ethane molecule."""
+        # Parametrize an ethane molecule.
+        ethane = Molecule.from_smiles('CC')
+        topology = Topology.from_molecules([ethane])
+        ff = ForceField(XML_FF_GENERICS, 'old/hbonds.offxml')
+        system = ff.create_openmm_system(topology)
+
+        # Check that all C-H bonds have been constrained to the FF bond length.
+        self.check_molecule_constraints(ethane, system,
+                                        bond_elements={'C', 'H'},
+                                        bond_length=GENERIC_BOND_LENGTH)
+
+
+#======================================================================
 # TEST PARAMETER ASSIGNMENT
 #======================================================================
 
