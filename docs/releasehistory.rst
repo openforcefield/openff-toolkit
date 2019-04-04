@@ -7,16 +7,17 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-1.0.0
+0.2.0
 -----
 
-This is the first major release of the toolkit intended for production use.
+This version of the toolkit implements many new features on the way to a 1.0.0 release.
 
 New features
 """"""""""""
 
 * Major overhaul of the `SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html>`_ and its XML representation
 * Updated API and infrastructure for reference SMIRNOFF :class:`ForceField` implementation
+* Implementation of modular :class:`ParameterHandler` objects which process the topology to add all necessary forces to the system.. 
 * Modular reader/writer support for different representations
 * Introduction of :class:`Molecule` and :class:`Topology` classes for representing molecules and biomolecular systems
 * New :class:`ToolkitWrapper` interface to RDKit, OpenEye, and AmberTools toolkits, managed by :class:`ToolkitRegistry`
