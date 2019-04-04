@@ -873,8 +873,6 @@ class ForceField(object):
             The ``Topology`` corresponding to the ``System`` object to be created.
         positions : simtk.unit.Quantity of dimension (natoms,3) with units compatible with angstroms
             The positions corresponding to the ``System`` object to be created
-        verbose : bool
-            If True, verbose output will be printed.
 
         Returns
         -------
@@ -888,7 +886,7 @@ class ForceField(object):
 
         # Create OpenMM System
         system = self.create_openmm_system(
-            topology, default_box_vectors=default_box_vectors, **kwargs)
+            topology, **kwargs)
 
         # Create a ParmEd Structure object
         structure = parmed.openmm.topsystem.load_topology(
@@ -923,12 +921,15 @@ class ForceField(object):
            Or should we label all interactions in a :class:`Topology` instead of just labeling its ``unique_molecules``?
 
         """
+        from openforcefield.topology import Topology
         # Loop over molecules and label
         molecule_labels = list()
         for molecule_idx, molecule in enumerate(topology.reference_molecules):
+            top_mol = Topology.from_molecules([molecule])
             current_molecule_labels = dict()
-            for parameter_handler in self._parameter_handlers.values():
-                matches = parameter_handler.find_matches(molecule)
-                molecule_labels[molecule_idx][parameter_handler.name] = matches
+            for tag, parameter_handler in self._parameter_handlers.items():
+                matches = parameter_handler.find_matches(top_mol)
+                current_molecule_labels[tag] = matches
+
             molecule_labels.append(current_molecule_labels)
         return molecule_labels
