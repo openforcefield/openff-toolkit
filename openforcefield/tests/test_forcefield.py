@@ -859,6 +859,68 @@ class TestForceFieldParameterAssignment:
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
                         reason='Test requires OE toolkit to read mol2 files')
+    def test_multi_alkethoh_parameters_assignment(self):
+        """Test that systems with multiple reference molecules are parametrized correctly.
+
+        The test relies on the fact that we have already verified we can
+        parametrize correctly single AlkEthOH molecules in
+        test_alkethoh_parameters_assignment(). We use ParmEd to merge
+        the AMBER files to be used as reference parameters.
+
+        """
+        import parmed
+        from openforcefield.tests.utils import (get_alkethoh_filepath,
+                                                compare_system_parameters,
+                                                compare_system_energies)
+
+        # The AlkEthOH molecule ids to mix in the systems.
+        alketoh_ids = ['r0', 'c38', 'c1161']
+
+        # Load molecules and structures.
+        molecules = []
+        structures = []
+        for alkethoh_id in alketoh_ids:
+            mol2_filepath, top_filepath, crd_filepath = get_alkethoh_filepath(
+                'AlkEthOH_'+alkethoh_id, get_amber=True)
+            molecules.append(Molecule.from_file(mol2_filepath))
+            amber_parm = parmed.load_file(top_filepath, crd_filepath)
+            # Convert this into a real structure as mixing AmberParm objects is bugged (see ParmEd#1045).
+            structures.append(amber_parm.copy(parmed.Structure))
+
+        # Merge the structures into a single system with two copies of the last molecule.
+        structure_mixture = structures[0] + structures[1] + structures[2] + structures[-1]
+        amber_system = structure_mixture.createSystem(nonbondedMethod=openmm.app.NoCutoff)
+
+        # Create the OpenFF System through ForceField.
+        topology = Topology.from_openmm(structure_mixture.topology, unique_molecules=molecules)
+        topology.box_vectors = None
+        ff = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
+        off_system = ff.create_openmm_system(topology)
+
+        # Translate the molecules a little to avoid overlapping atoms.
+        positions = copy.deepcopy(structure_mixture.positions)
+        translate_vectors = [
+            np.array([1.0, 0.0, 0.0])*unit.nanometer,
+            np.array([0.0, 1.0, 0.0])*unit.nanometer,
+            np.array([0.0, 0.0, 1.0])*unit.nanometer,
+            # Leave the fourth molecule where it is.
+        ]
+        current_atom_idx = 0
+        for mol_idx, (translate_vector, mol) in enumerate(zip(translate_vectors, molecules)):
+            n_mol_atoms = len(mol.atoms)
+            positions[current_atom_idx:current_atom_idx+n_mol_atoms] += translate_vector
+            current_atom_idx += n_mol_atoms
+
+        # Compare parameters and systems.
+        # TODO: Reactivate charges comparison when we'll be able to read them from the file.
+        compare_system_parameters(amber_system, off_system,
+                                  systems_labels=('AMBER', 'SMIRNOFF'),
+                                  ignore_charges=True)
+        compare_system_energies(amber_system, off_system, positions,
+                                ignore_charges=True)
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
+                        reason='Test requires OE toolkit to read mol2 files')
     @pytest.mark.parametrize(('freesolv_id', 'forcefield_version', 'allow_undefined_stereo'),
                              generate_freesolv_parameters_assignment_cases())
     def test_freesolv_parameters_assignment(self, freesolv_id, forcefield_version, allow_undefined_stereo):
