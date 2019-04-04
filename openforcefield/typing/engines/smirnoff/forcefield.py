@@ -802,7 +802,6 @@ class ForceField(object):
 
     def create_openmm_system(self,
                              topology,
-                             default_box_vectors=None,
                              **kwargs):
         """Create an OpenMM System representing the interactions for the specified Topology with the current force field
 
@@ -810,10 +809,6 @@ class ForceField(object):
         ----------
         topology : openforcefield.topology.Topology
             The ``Topology`` corresponding to the system to be parameterized
-        default_box_vectors : simtk.unit.Quanity of shape [3,3] with units compatible with nanometers, optional, default=None
-            Default box vectors to use.
-            If not specified, default box vectors will be set to 1.0 nm edges.
-            Note that, for periodic systems, after creating a Context, box vectors *must* be set to the appropriate dimensions.
         verbose : bool
             If True, verbose output will be printed.
 
@@ -834,8 +829,8 @@ class ForceField(object):
         system = openmm.System()
 
         # Set periodic boundary conditions if specified
-        if default_box_vectors is not None:
-            system.setDefaultPeriodicBoxVectors(default_box_vectors)
+        if topology.box_vectors is not None:
+            system.setDefaultPeriodicBoxVectors(*topology.box_vectors)
 
         # Add particles (both atoms and virtual sites) with appropriate masses
         for atom in topology.topology_particles:

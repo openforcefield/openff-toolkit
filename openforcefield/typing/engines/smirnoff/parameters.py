@@ -468,6 +468,15 @@ class ParameterType(object):
 
         return smirnoff_dict
 
+    def __repr__(self):
+        ret_str = '<{} with '.format(self.__class__.__name__)
+        for attr, val in self.to_dict().items():
+            ret_str += f'{attr}: {val}  '
+        ret_str += '>'
+        return ret_str
+
+
+
 
 #======================================================================
 # PARAMETER HANDLERS
@@ -1505,9 +1514,9 @@ class vdWHandler(ParameterHandler):
                 raise SMIRNOFFSpecError("If vdW method is PME, a cutoff distance "
                                         "must be provided")
 
-            if self._pme_tolerance is None:
-                raise SMIRNOFFSpecError("If PME vdW method is selected, a pme_tolerance value must "
-                                        "be specified.")
+            # if self._pme_tolerance is None:
+            #     raise SMIRNOFFSpecError("If PME vdW method is selected, a pme_tolerance value must "
+            #                             "be specified.")
 
         if self._potential != "Lennard-Jones-12-6":
             raise SMIRNOFFSpecError("vdW potential set to {}. Only 'Lennard-Jones-12-6' is currently "
@@ -1587,7 +1596,7 @@ class vdWHandler(ParameterHandler):
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
                 force.setCutoffDistance(9. * unit.angstrom)
-                force.setEwaldErrorTolerance(1.e-4)
+                force.setEwaldErrorTolerance(1.e-5)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
         elif self._method == 'cutoff':
@@ -1796,7 +1805,7 @@ class ElectrostaticsHandler(ParameterHandler):
                 else:
                     force.setNonbondedMethod(openmm.NonbondedForce.PME)
                     force.setCutoffDistance(9. * unit.angstrom)
-                    force.setEwaldErrorTolerance(1.e-4)
+                    force.setEwaldErrorTolerance(1.e-5)
 
             settings_matched = True
 
