@@ -501,7 +501,7 @@ class ForceField(object):
             raise Exception(
                 msg)  # TODO: Should we raise a more specific exception here?
 
-    def get_handler(self, tagname, handler_kwargs):
+    def get_handler(self, tagname, handler_kwargs=None):
         """Retrieve the parameter handlers associated with the provided tagname.
 
         If the parameter handler has not yet been instantiated, it will be created.
@@ -512,8 +512,9 @@ class ForceField(object):
         ----------
         tagame : str
             The name of the parameter to be handled.
-        handler_kwargs : dict
-            Dict to be passed to the handler for construction or checking compatibility.
+        handler_kwargs : dict, optional. Default=None
+            Dict to be passed to the handler for construction or checking compatibility. If None, will be assumed
+            to represent handler defaults.
 
         Returns
         -------
@@ -523,6 +524,10 @@ class ForceField(object):
         ------
         KeyError if there is no ParameterHandler for the given tagname
         """
+
+        if handler_kwargs is None:
+            handler_kwargs = dict()
+
         handler = None
         if tagname in self._parameter_handlers:
             # If handler already exists, make sure it is compatible
