@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='ASCII'?>
+<SMIRNOFF version="0.1">
+  <!-- SMIRks Native Open Force Field (SMIRNOFF) file -->
+  <Date>2017-05-01</Date>
+  <Author>J. D. Chodera, MSKCC; A. Rizzi, Weill Cornell;</Author>
+  <!-- SMIRNOFF file implementing hydrogen bond constraint. -->
+  <Constraints distance_unit="angstroms">
+    <!-- constrain all bonds to hydrogen to their equilibrium bond length -->
+    <Constraint smirks="[#1:1]-[*:2]" id="c1"/>
+  </Constraints>
+</SMIRNOFF>
