@@ -595,6 +595,7 @@ class TestSolventSupport:
     """Test support for rigid solvents like TIP3P.
     """
 
+    # TODO: Move this to test_forcefield::TestForceFieldConstraints when it will be possible to specify TIP3P electrostatics.
     def test_tip3p_constraints(self):
         """Test that TIP3P distance costraints are correctly applied."""
         # Specify TIP3P constraint distances
@@ -614,6 +615,7 @@ class TestSolventSupport:
         ff = ForceField(tip3p_offxml_filename)
         system = ff.create_system(topology)
 
+        # TODO: This is probably unnecessary and we can simply check that the System has all the Constraints in their position.
         # Run dynamics.
         integrator = openmm.VerletIntegrator(2.0 * unit.femtoseconds)
         context = openmm.Context(system, integrator)
@@ -629,6 +631,7 @@ class TestSolventSupport:
         err_msg = 'expected distances [O-H1, O-H2, H1-H2]: {} A, new distances: {} A'
         assert np.allclose(expected_distances, distances), err_msg.format(expected_distances, distances)
 
+    # TODO: Move this to test_forcefield::TestForceFieldParameterAssignment when it will be possible to specify TIP3P electrostatics.
     def test_tip3p_solvated_molecule_energy():
         """Check the energy of a TIP3P solvated molecule is the same with SMIRNOFF and OpenMM.
 
