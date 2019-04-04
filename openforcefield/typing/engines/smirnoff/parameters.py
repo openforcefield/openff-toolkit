@@ -84,6 +84,12 @@ class UnassignedProperTorsionParameterException(UnassignedValenceParameterExcept
     """Exception raised when there are proper torsion terms for which a ParameterHandler can't find parameters."""
     pass
 
+#======================================================================
+# UTILITY FUNCTIONS
+#======================================================================
+
+
+
 
 #======================================================================
 # PARAMETER TYPE/LIST
@@ -224,6 +230,8 @@ class ParameterList(list):
         """
         if type(item) is int:
             index = item
+        elif type(item) is slice:
+            index = item
         else:
             index = self.index(item)
         return super().__getitem__(index)
@@ -324,7 +332,6 @@ class ParameterType(object):
 
         self._smirks = smirks
 
-
         def _assert_quantity_is_compatible(quantity_name, quantity, unit_to_check):
             """
             Checks whether a simtk.unit.Quantity is compatible with another unit.
@@ -335,9 +342,6 @@ class ParameterType(object):
             quantity : A simtk.unit.Quantity
             unit_to_check : A simtk.unit.Unit
 
-            Returns
-            -------
-            is_compatible : bool
             """
 
             if not quantity.unit.is_compatible(unit_to_check):
@@ -347,8 +351,6 @@ class ParameterType(object):
                                                                            val,
                                                                            unit_to_check)
                 raise SMIRNOFFSpecError(msg)
-
-
 
         # First look for indexed attribs, removing them from kwargs as they're found
         for unidx_key in self._INDEXED_ATTRIBS:
@@ -615,6 +617,13 @@ class ParameterHandler(object):
                 raise SMIRNOFFSpecError("Incompatible kwarg {} passed to {} constructor. If this is "
                                         "a desired cosmetic attribute, consider setting "
                                         "'permit_cosmetic_attributes=True'".format(key, self.__class__))
+
+
+
+    @property
+    def parameters(self):
+        """The ParameterList that holds this ParameterHandler's parameter objects"""
+        return self._parameters
 
     # TODO: Do we need to return these, or can we handle this internally
     @property
@@ -1346,15 +1355,15 @@ class vdWHandler(ParameterHandler):
             super().__init__(**kwargs)
 
 
-        @property
-        def attrib(self):
-            """Return all storable attributes as a dict.
-            """
-            names = ['smirks', 'sigma', 'epsilon']
-            return {
-                name: getattr(self, name)
-                for name in names if hasattr(self, name)
-            }
+        # @property
+        # def attrib(self):
+        #     """Return all storable attributes as a dict.
+        #     """
+        #     names = ['smirks', 'sigma', 'epsilon']
+        #     return {
+        #         name: getattr(self, name)
+        #         for name in names if hasattr(self, name)
+        #     }
 
     _TAGNAME = 'vdW'  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
@@ -1362,7 +1371,7 @@ class vdWHandler(ParameterHandler):
     # _KWARGS = ['ewaldErrorTolerance',
     #            'useDispersionCorrection',
     #            'usePbc'] # Kwargs to catch when create_force is called
-    _REQUIRE_UNITS = {'switch': unit.angstrom,
+    _REQUIRE_UNITS = {'switch_width': unit.angstrom,
                       'cutoff': unit.angstrom}
     _DEFAULT_SPEC_ATTRIBS = {
         'potential': 'Lennard-Jones-12-6',
@@ -1371,7 +1380,7 @@ class vdWHandler(ParameterHandler):
         'scale13': 0.0,
         'scale14': 0.5,
         'scale15': 1.0,
-        'pme_tolerance': 1.e-5,
+        #'pme_tolerance': 1.e-5,
         'switch_width': 1.0 * unit.angstroms,
         'cutoff': 9.0 * unit.angstroms,
         'method': 'cutoff',
@@ -1391,6 +1400,79 @@ class vdWHandler(ParameterHandler):
 
         super().__init__(**kwargs)
         self._validate_parameters()
+
+    # TODO: These properties are a fast hack and should be replaced by something better
+    @property
+    def potential(self):
+        """The potential used to model van der Waals interactions"""
+        return self._potential
+
+    @potential.setter
+    def potential(self, other):
+        """The potential used to model van der Waals interactions"""
+        valid_potentials = ['Lennard-Jones-12-6']
+        if other not in valid_potentials:
+            raise IncompatibleParameterError(f"Attempted to set vdW potential to {other}. Expected "
+                                             f"one of {valid_potentials}")
+        self._potential = other
+
+    @property
+    def combining_rules(self):
+        """The combining_rules used to model van der Waals interactions"""
+        return self._combining_rules
+
+    @combining_rules.setter
+    def combining_rules(self, other):
+        """The combining_rules used to model van der Waals interactions"""
+        valid_combining_ruless = ['Lorentz-Berthelot']
+        if other not in valid_combining_ruless:
+            raise IncompatibleParameterError(f"Attempted to set vdW combining_rules to {other}. Expected "
+                                             f"one of {valid_combining_ruless}")
+        self._method = other
+
+    @property
+    def method(self):
+        """The method used to handle long-range van der Waals interactions"""
+        return self._method
+
+    @method.setter
+    def method(self, other):
+        """The method used to handle long-range van der Waals interactions"""
+        valid_methods = ['cutoff', 'PME']
+        if other not in valid_methods:
+            raise IncompatibleParameterError(f"Attempted to set vdW method to {other}. Expected "
+                                             f"one of {valid_methods}")
+        self._method = other
+
+    @property
+    def cutoff(self):
+        """The cutoff used for long-range van der Waals interactions"""
+        return self._cutoff
+
+    @cutoff.setter
+    def cutoff(self, other):
+        """The cutoff used for long-range van der Waals interactions"""
+        unit_to_check = self._REQUIRE_UNITS['cutoff']
+        if not unit_to_check.unit_is_compatible(other.unit):
+            raise IncompatibleParameterError(
+                f"Attempted to set vdW cutoff to {other}, which is not compatible with "
+                f"expected unit {unit_to_check}")
+        self._cutoff = other
+
+    @property
+    def switch_width(self):
+        """The switching width used for long-range van der Waals interactions"""
+        return self._switch_width
+
+    @switch_width.setter
+    def switch_width(self, other):
+        """The switching width used for long-range van der Waals interactions"""
+        unit_to_check = self._REQUIRE_UNITS['switch_width']
+        if not unit_to_check.unit_is_compatible(other.unit):
+            raise IncompatibleParameterError(
+                f"Attempted to set vdW switch_width to {other}, which is not compatible with "
+                f"expected unit {unit_to_check}")
+        self._switch_width = other
 
     def _validate_parameters(self):
         """
@@ -1571,7 +1653,7 @@ class ElectrostaticsHandler(ParameterHandler):
         'scale13': 0.0,
         'scale14': 0.833333,
         'scale15': 1.0,
-        'pme_tolerance': 1.e-5,
+        #'pme_tolerance': 1.e-5,
         #'switch_width': 8.0 * unit.angstrom, # OpenMM can't support an electrostatics switch
         'switch_width': 0.0 * unit.angstrom,
         'cutoff': 9.0 * unit.angstrom
@@ -1588,6 +1670,53 @@ class ElectrostaticsHandler(ParameterHandler):
 
         super().__init__(**kwargs)
         self._validate_parameters()
+
+
+    @property
+    def method(self):
+        """The method used to model long-range electrostatic interactions"""
+        return self._method
+
+    @method.setter
+    def method(self, other):
+        """The method used to model long-range electrostatic interactions"""
+        valid_methods = ['PME', 'Coulomb', 'reaction-field']
+        if other not in valid_methods:
+            raise IncompatibleParameterError(f"Attempted to set electrostatics method to {other}. Expected "
+                                             f"one of {valid_methods}")
+        self._method = other
+
+
+    @property
+    def cutoff(self):
+        """The cutoff used for long-range van der Waals interactions"""
+        return self._cutoff
+
+    @cutoff.setter
+    def cutoff(self, other):
+        """The cutoff used for long-range van der Waals interactions"""
+        unit_to_check = self._REQUIRE_UNITS['cutoff']
+        if not unit_to_check.unit_is_compatible(other.unit):
+            raise IncompatibleParameterError(
+                f"Attempted to set vdW cutoff to {other}, which is not compatible with "
+                f"expected unit {unit_to_check}")
+        self._cutoff = other
+
+    @property
+    def switch_width(self):
+        """The switching width used for long-range electrostatics interactions"""
+        return self._switch_width
+
+    @switch_width.setter
+    def switch_width(self, other):
+        """The switching width used for long-range van der Waals interactions"""
+        unit_to_check = self._REQUIRE_UNITS['switch_width']
+        if not unit_to_check.unit_is_compatible(other.unit):
+            raise IncompatibleParameterError(
+                f"Attempted to set vdW switch_width to {other}, which is not compatible with "
+                f"expected unit {unit_to_check}")
+        self._switch_width = other
+
 
     def _validate_parameters(self):
         """
