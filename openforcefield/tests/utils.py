@@ -241,7 +241,7 @@ def create_system_from_amber(prmtop_filepath, inpcrd_filepath, *args, **kwargs):
 # Utility functions for energy comparisons.
 #=============================================================================================
 
-def quantities_allclose(quantity1, quantity2):
+def quantities_allclose(quantity1, quantity2, **kwargs):
     """Check if two Quantity objects are close.
 
     If the quantities are arrays, all their elements must be close.
@@ -253,6 +253,8 @@ def quantities_allclose(quantity1, quantity2):
         The first unit to compare.
     quantity2 : simtk.unit.Quantity
         The second unit to compare.
+    **kwargs
+        Other parameters passed to ``numpy.allclose()``.
 
     Returns
     -------
@@ -268,7 +270,7 @@ def quantities_allclose(quantity1, quantity2):
         # Compare the values stripped of the units.
         quantity1 = quantity1.value_in_unit_system(unit.md_unit_system)
         quantity2 = quantity2.value_in_unit_system(unit.md_unit_system)
-    return np.allclose(quantity1, quantity2)
+    return np.allclose(quantity1, quantity2, **kwargs)
 
 
 def get_context_potential_energy(context, positions, box_vectors=None,
@@ -335,7 +337,7 @@ class FailedEnergyComparisonError(AssertionError):
         self.potential_energy2 = potential_energy2
 
 
-def compare_context_energies(context1, context2, *args, **kwargs):
+def compare_context_energies(context1, context2, *args, rtol=1.e-5, atol=1.e-8, **kwargs):
     """Compare energies of two Contexts given the same positions.
 
     Parameters
@@ -346,6 +348,10 @@ def compare_context_energies(context1, context2, *args, **kwargs):
         The second Context object to compare containing the system.
     positions : simtk.unit.Quantity
         A n_atoms x 3 arrays of coordinates with units of length.
+    rtol : float, optional, default=1e-5
+        The relative tolerance parameter used for the energy comparisons.
+    atol : float, optional, default=1e-8
+        The absolute tolerance parameter used for the energy comparisons.
     box_vectors : simtk.unit.Quantity, optional
         If specified, this should be a 3 x 3 array. Each row should
         be a box vector.
@@ -388,7 +394,8 @@ def compare_context_energies(context1, context2, *args, **kwargs):
     # dictionary and we need to compare force group by force group.
     if isinstance(potential_energy1, unit.Quantity):
         raise_assert(
-            assertion=quantities_allclose(potential_energy1, potential_energy2),
+            assertion=quantities_allclose(potential_energy1, potential_energy2,
+                                          rtol=rtol, atol=atol),
             err_msg='potential energy 1 {}, potential energy 2: {}',
             format_args=(potential_energy1, potential_energy2)
         )
@@ -405,7 +412,7 @@ def compare_context_energies(context1, context2, *args, **kwargs):
             energy1 = potential_energy1[force_group]
             energy2 = potential_energy2[force_group]
             raise_assert(
-                assertion=quantities_allclose(energy1, energy2),
+                assertion=quantities_allclose(energy1, energy2, rtol=rtol, atol=atol),
                 err_msg='Force group {} do not have the same energies: context1 {}, context2 {}',
                 format_args=(force_group, energy1, energy2)
             )
@@ -415,7 +422,7 @@ def compare_context_energies(context1, context2, *args, **kwargs):
 
 def compare_system_energies(system1, system2, positions, box_vectors=None,
                             by_force_type=True, ignore_charges=False,
-                            modify_system=False):
+                            modify_system=False, rtol=1.e-5, atol=1.e-8):
     """Compare energies of two Systems given the same positions.
 
     Parameters
@@ -442,6 +449,10 @@ def compare_system_energies(system1, system2, positions, box_vectors=None,
         to compute the separate contributions. Set this to False to
         work on a copy and avoid modifying the original objects.
         Default is False.
+    rtol : float, optional, default=1e-5
+        The relative tolerance parameter used for the energy comparisons.
+    atol : float, optional, default=1e-8
+        The absolute tolerance parameter used for the energy comparisons.
 
     Returns
     -------
@@ -535,7 +546,7 @@ def compare_system_energies(system1, system2, positions, box_vectors=None,
     try:
         potential_energy1, potential_energy2 = compare_context_energies(
             context1, context2, positions, box_vectors,
-            by_force_group=by_force_type
+            by_force_group=by_force_type, rtol=rtol, atol=atol
         )
     except FailedEnergyComparisonError as e:
         # We don't need to convert force groups into force types
