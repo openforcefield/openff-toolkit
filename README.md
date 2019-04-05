@@ -47,7 +47,9 @@ The SMIRNOFF `ForceField` class is essentially a drop-in replacement for the [Op
 ```python
 # Load a molecule into the openforcefield Molecule object
 from openforcefield.topology import Molecule
-molecule = Molecule.from_file(mol_filename)
+from openforcefield.utils import get_data_filename
+sdf_file_path = get_data_filename('molecules/ethanol.sdf')
+molecule = Molecule.from_file(sdf_file_path)
 
 # Create an openforcefield Topology object from the molecule
 from openforcefield.topology import Topology
@@ -61,7 +63,7 @@ forcefield = ForceField('smirnoff99Frosst.offxml')
 openmm_system = forcefield.create_openmm_system(topology)
 
 # Load a SMIRNOFF small molecule forcefield for alkanes, ethers, and alcohols
-forcefield = ForceField(offxml_filename)
+forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
 ```
 Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/topology/examples.html).
 
