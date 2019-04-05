@@ -60,7 +60,7 @@ XML_FF_GENERICS = f"""<?xml version='1.0' encoding='ASCII'?>
 """
 
 simple_xml_ff = str.encode('''<?xml version='1.0' encoding='ASCII'?>
-<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
   <Bonds length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
     <Bond smirks="[#6X4:1]-[#6X4:2]" id="b1" k="620.0" length="1.526"/>
     <Bond smirks="[#6X4:1]-[#6X3:2]" id="b2" k="634.0" length="1.51"/>
@@ -87,7 +87,7 @@ simple_xml_ff = str.encode('''<?xml version='1.0' encoding='ASCII'?>
 ''')
 
 xml_ff_w_comments = '''<?xml version='1.0' encoding='ASCII'?>
-<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRNOFF (SMIRKS Native Open Force Field) template file -->
   <Date>2018-07-14</Date>
   <Author>C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine</Author>
@@ -120,7 +120,7 @@ xml_ff_w_comments = '''<?xml version='1.0' encoding='ASCII'?>
 '''
 
 xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
-<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRNOFF (SMIRKS Native Open Force Field) template file -->
   <Date>2018-07-14</Date>
   <Author>C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine</Author>
@@ -300,27 +300,27 @@ class TestForceField():
         assert len(forcefield._parameter_handlers['ImproperTorsions']._parameters) == 4
         assert len(forcefield._parameter_handlers['vdW']._parameters) == 35
 
-    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_create_forcefield_from_file_list(self):
         # These offxml files are located in package data path, which is automatically installed and searched
         filenames = [smirnoff99Frosst_offxml_filename, tip3p_offxml_filename]
         # Create a forcefield from multiple offxml files
         forcefield = ForceField(filenames)
 
-    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_create_forcefield_from_filename_iterator(self):
         # These offxml files are located in package data path, which is automatically installed and searched
         filenames = [smirnoff99Frosst_offxml_filename, tip3p_offxml_filename]
         # A generator should work as well
         forcefield = ForceField(iter(filenames))
 
-    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_create_gbsa():
         """Test reading of ffxml files with GBSA support.
         """
         forcefield = ForceField('Frosst_AlkEthOH_GBSA.offxml')
 
-    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_create_forcefield_from_url(self):
         urls = [
             'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst.offxml',
@@ -329,7 +329,7 @@ class TestForceField():
         # Test creation with smirnoff99frosst URL
         forcefield = ForceField(urls[0])
 
-    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_create_forcefield_from_url_list(self):
         urls = [
             'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst.offxml',
@@ -338,7 +338,7 @@ class TestForceField():
         # Test creation with multiple URLs
         forcefield = ForceField(urls)
 
-    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_create_forcefield_from_url_iterator(self):
         urls = [
             'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst.offxml',
@@ -356,7 +356,7 @@ class TestForceField():
         assert len(forcefield._parameter_handlers['ImproperTorsions']._parameters) == 2
         assert len(forcefield._parameter_handlers['vdW']._parameters) == 2
 
-    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_deep_copy(self):
         forcefield = ForceField(smirnoff99Frosst_offxml_filename)
         # Deep copy
@@ -365,7 +365,7 @@ class TestForceField():
                                  "ForceField deep copy does not match original ForceField")
 
 
-    @pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+    @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     # TODO: This should check the output of forcefield.to_dict
     def test_serialize(self):
 
@@ -954,7 +954,7 @@ class TestForceFieldParameterAssignment:
                                   ignore_charges=True, ignore_improper_folds=True)
 
 
-@pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+@pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
 def test_electrostatics_options(self):
     """Test parameter assignment using smirnoff99Frosst on laromustine with various long-range electrostatics options.
     """
@@ -970,7 +970,7 @@ def test_electrostatics_options(self):
     # TODO: Implement a similar test, where we compare OpenMM energy evals from an
     #       AMBER-parameterized system to OFF-parameterized systems
 
-@pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+@pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
 def test_chargeincrement(self):
     """Test parameter assignment using smirnoff99Frosst on laromustine with ChargeIncrementModel.
     """
@@ -982,7 +982,7 @@ def test_chargeincrement(self):
     #       haven't settled on a SMIRNOFF spec for chargeincrementmodel
 
 
-@pytest.mark.skip(reason='Needs to be updated for 1.0.0 syntax')
+@pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
 def test_create_system_molecules_parmatfrosst_gbsa(self):
     """Test creation of a System object from small molecules to test parm@frosst forcefield with GBSA support.
     """
