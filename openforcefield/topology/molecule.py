@@ -1395,13 +1395,23 @@ class FrozenMolecule(Serializable):
     Examples
     --------
 
-    Create a molecule from a mol2 file
+    Create a molecule from a sdf file
 
-    >>> molecule = FrozenMolecule.from_file('molecule.mol2')
+    >>> from openforcefield.utils import get_data_filename
+    >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+    >>> molecule = FrozenMolecule.from_file(sdf_filepath)
+
+    Convert to OpenEye OEMol object
+
+    >>> oemol = molecule.to_openeye()
 
     Create a molecule from an OpenEye molecule
 
     >>> molecule = FrozenMolecule.from_openeye(oemol)
+
+    Convert to RDKit Mol object
+
+    >>> rdmol = molecule.to_rdkit()
 
     Create a molecule from an RDKit molecule
 
@@ -1461,20 +1471,33 @@ class FrozenMolecule(Serializable):
 
         >>> empty_molecule = FrozenMolecule()
 
-        Create a molecule from another molecule:
-
-        >>> molecule_copy = FrozenMolecule(molecule_copy)
-
         Create a molecule from a file that can be used to construct a molecule,
         using either a filename or file-like object:
 
-        >>> molecule = FrozenMolecule('molecule.mol2')
-        >>> molecule = FrozenMolecule(open('molecule.mol2', 'r'))
-        >>> molecule = FrozenMolecule(gzip.GzipFile('molecule.mol2.gz', 'r'))
+        >>> from openforcefield.utils import get_data_filename
+        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> molecule = FrozenMolecule(sdf_filepath)
+        >>> molecule = FrozenMolecule(open(sdf_filepath, 'r'), file_format='sdf')
+
+        >>> import gzip
+        >>> mol2_gz_filepath = get_data_filename('molecules/toluene.mol2.gz')
+        >>> molecule = FrozenMolecule(gzip.GzipFile(mol2_gz_filepath, 'r'), file_format='mol2')
+
+        Create a molecule from another molecule:
+
+        >>> molecule_copy = FrozenMolecule(molecule)
+
+        Convert to OpenEye OEMol object
+
+        >>> oemol = molecule.to_openeye()
 
         Create a molecule from an OpenEye molecule:
 
         >>> molecule = FrozenMolecule(oemol)
+
+        Convert to RDKit Mol object
+
+        >>> rdmol = molecule.to_rdkit()
 
         Create a molecule from an RDKit molecule:
 
@@ -1814,6 +1837,9 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
+        >>> from openforcefield.utils import get_data_filename
+        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> molecule = Molecule(sdf_filepath)
         >>> smiles = molecule.to_smiles()
 
         """
@@ -2014,9 +2040,9 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
-        >>> molecule = Molecule.from_smiles('CCCCCC')
-        >>> molecule.generate_conformers()
-        >>> molecule.compute_partial_charges()
+        molecule = Molecule.from_smiles('CCCCCC')
+        molecule.generate_conformers()
+        molecule.compute_partial_charges()
 
         Raises
         ------
@@ -2171,16 +2197,17 @@ class FrozenMolecule(Serializable):
 
         Define a methane molecule
 
-        >>> molecule = Molecule(name='methane')
+        >>> molecule = Molecule()
+        >>> molecule.name = 'methane'
         >>> C = molecule.add_atom(6, 0, False)
         >>> H1 = molecule.add_atom(1, 0, False)
         >>> H2 = molecule.add_atom(1, 0, False)
         >>> H3 = molecule.add_atom(1, 0, False)
         >>> H4 = molecule.add_atom(1, 0, False)
-        >>> molecule.add_bond(C, H1, False, 1)
-        >>> molecule.add_bond(C, H2, False, 1)
-        >>> molecule.add_bond(C, H3, False, 1)
-        >>> molecule.add_bond(C, H4, False, 1)
+        >>> bond_idx = molecule.add_bond(C, H1, False, 1)
+        >>> bond_idx = molecule.add_bond(C, H2, False, 1)
+        >>> bond_idx = molecule.add_bond(C, H3, False, 1)
+        >>> bond_idx = molecule.add_bond(C, H4, False, 1)
 
         """
         # Create an atom
@@ -2797,6 +2824,9 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
+        >>> from openforcefield.utils import get_data_filename
+        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> molecule = Molecule(sdf_filepath)
         >>> iupac_name = molecule.to_iupac()
 
         """
@@ -2828,7 +2858,7 @@ class FrozenMolecule(Serializable):
 
         Create a molecule from a Topology object that contains exactly one molecule
 
-        >>> molecule = Molecule.from_topology(topology)
+        >>> molecule = Molecule.from_topology(topology)  # doctest: +SKIP
 
         """
         # TODO: Ensure we are dealing with an openforcefield Topology object
@@ -2892,7 +2922,7 @@ class FrozenMolecule(Serializable):
 
         Examples
         --------
-        >>> from openforcefield.tests.utils.utils import get_monomer_mol2file
+        >>> from openforcefield.tests.utils import get_monomer_mol2file
         >>> mol2_filename = get_monomer_mol2file('cyclohexane')
         >>> molecule = Molecule.from_file(mol2_filename)
 
@@ -3060,6 +3090,9 @@ class FrozenMolecule(Serializable):
 
         Create a molecule from an RDKit molecule
 
+        >>> from rdkit import Chem
+        >>> from openforcefield.tests.utils import get_data_filename
+        >>> rdmol = Chem.MolFromMolFile(get_data_filename('systems/monomers/ethanol.sdf'))
         >>> molecule = Molecule.from_rdkit(rdmol)
 
         """
@@ -3089,6 +3122,9 @@ class FrozenMolecule(Serializable):
 
         Convert a molecule to RDKit
 
+        >>> from openforcefield.utils import get_data_filename
+        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> molecule = Molecule(sdf_filepath)
         >>> rdmol = molecule.to_rdkit()
 
         """
@@ -3120,7 +3156,11 @@ class FrozenMolecule(Serializable):
 
         Create a Molecule from an OpenEye OEMol
 
-        >>> molecule = Molecule.from_openeye(oemol)
+        >>> from openeye import oechem
+        >>> from openforcefield.tests.utils import get_data_filename
+        >>> ifs = oechem.oemolistream(get_data_filename('systems/monomers/ethanol.mol2'))
+        >>> oemols = list(ifs.GetOEGraphMols())
+        >>> molecule = Molecule.from_openeye(oemols[0])
 
         """
         toolkit = OpenEyeToolkitWrapper()
@@ -3183,18 +3223,23 @@ class FrozenMolecule(Serializable):
             * 'Wiberg' : Wiberg bond order
         toolkit_registry : openforcefield.utils.toolkits ToolkitRegistry
             The toolkit registry to use for molecule operations
+
         Examples
         --------
 
         Get fractional Wiberg bond orders
 
         >>> molecule = Molecule.from_iupac('imatinib')
+        >>> molecule.generate_conformers()
         >>> fractional_bond_orders = molecule.get_fractional_bond_orders(method='Wiberg')
 
         """
+        # TODO: Let ToolkitRegistry handle this once compute_fractional_bond_orders will be added to the Wrappers API.
+        if method != 'Wiberg':
+            raise NotImplementedError('Only Wiberg bond order is currently implemented')
         # TODO: Use memoization to speed up subsequent calls; use decorator?
         fractional_bond_orders = toolkit_registry.call(
-            'compute_fractional_bond_orders', method=method)
+            'compute_wiberg_bond_orders', molecule=self)
         return fractional_bond_orders
 
     def _construct_angles(self):
@@ -3306,13 +3351,23 @@ class Molecule(FrozenMolecule):
     Examples
     --------
 
-    Create a molecule from a mol2 file
+    Create a molecule from an sdf file
 
-    >>> molecule = Molecule.from_file('molecule.mol2')
+    >>> from openforcefield.utils import get_data_filename
+    >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+    >>> molecule = Molecule(sdf_filepath)
+
+    Convert to OpenEye OEMol object
+
+    >>> oemol = molecule.to_openeye()
 
     Create a molecule from an OpenEye molecule
 
     >>> molecule = Molecule.from_openeye(oemol)
+
+    Convert to RDKit Mol object
+
+    >>> rdmol = molecule.to_rdkit()
 
     Create a molecule from an RDKit molecule
 
@@ -3358,20 +3413,33 @@ class Molecule(FrozenMolecule):
 
         >>> empty_molecule = Molecule()
 
-        Create a molecule from another molecule:
-
-        >>> molecule_copy = Molecule(molecule_copy)
-
         Create a molecule from a file that can be used to construct a molecule,
         using either a filename or file-like object:
 
-        >>> molecule = Molecule('molecule.mol2')
-        >>> molecule = Molecule(open('molecule.mol2', 'r'))
-        >>> molecule = Molecule(gzip.GzipFile('molecule.mol2.gz', 'r'))
+        >>> from openforcefield.utils import get_data_filename
+        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> molecule = Molecule(sdf_filepath)
+        >>> molecule = Molecule(open(sdf_filepath, 'r'), file_format='sdf')
+
+        >>> import gzip
+        >>> mol2_gz_filepath = get_data_filename('molecules/toluene.mol2.gz')
+        >>> molecule = Molecule(gzip.GzipFile(mol2_gz_filepath, 'r'), file_format='mol2')
+
+        Create a molecule from another molecule:
+
+        >>> molecule_copy = Molecule(molecule)
+
+        Convert to OpenEye OEMol object
+
+        >>> oemol = molecule.to_openeye()
 
         Create a molecule from an OpenEye molecule:
 
         >>> molecule = Molecule(oemol)
+
+        Convert to RDKit Mol object
+
+        >>> rdmol = molecule.to_rdkit()
 
         Create a molecule from an RDKit molecule:
 
@@ -3421,16 +3489,17 @@ class Molecule(FrozenMolecule):
 
         Define a methane molecule
 
-        >>> molecule = Molecule(name='methane')
+        >>> molecule = Molecule()
+        >>> molecule.name = 'methane'
         >>> C = molecule.add_atom(6, 0, False)
         >>> H1 = molecule.add_atom(1, 0, False)
         >>> H2 = molecule.add_atom(1, 0, False)
         >>> H3 = molecule.add_atom(1, 0, False)
         >>> H4 = molecule.add_atom(1, 0, False)
-        >>> molecule.add_bond(C, H1, False, 1)
-        >>> molecule.add_bond(C, H2, False, 1)
-        >>> molecule.add_bond(C, H3, False, 1)
-        >>> molecule.add_bond(C, H4, False, 1)
+        >>> bond_idx = molecule.add_bond(C, H1, False, 1)
+        >>> bond_idx = molecule.add_bond(C, H2, False, 1)
+        >>> bond_idx = molecule.add_bond(C, H3, False, 1)
+        >>> bond_idx = molecule.add_bond(C, H4, False, 1)
 
         """
         atom_index = self._add_atom(

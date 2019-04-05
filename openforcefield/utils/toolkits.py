@@ -660,13 +660,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Create a Molecule from an OpenEye OEMol
 
-        >>> from openforcefield.topology import Molecule
-        >>> molecule = Molecule.from_smiles('CC')
-        >>> oemol = molecule.to_openeye()
+        >>> from openeye import oechem
+        >>> from openforcefield.tests.utils import get_data_filename
+        >>> ifs = oechem.oemolistream(get_data_filename('systems/monomers/ethanol.mol2'))
+        >>> oemols = list(ifs.GetOEGraphMols())
+
         >>> toolkit_wrapper = OpenEyeToolkitWrapper()
-        >>> molecule_from_oemol = toolkit_wrapper.from_openeye(oemol)
-        >>> molecule_from_oemol == molecule
-        True
+        >>> molecule = toolkit_wrapper.from_openeye(oemols[0])
 
         """
         from openeye import oechem
@@ -1784,12 +1784,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         Create a molecule from an RDKit molecule
 
-        >>> from openforcefield.topology import Molecule
-        >>> molecule = Molecule.from_smiles('CCO')
-        >>> rdmol = molecule.to_rdkit()
-        >>> molecule_from_rdkit = Molecule.from_rdkit(rdmol)
-        >>> molecule_from_rdkit == molecule
-        True
+        >>> from rdkit import Chem
+        >>> from openforcefield.tests.utils import get_data_filename
+        >>> rdmol = Chem.MolFromMolFile(get_data_filename('systems/monomers/ethanol.sdf'))
+
+        >>> toolkit_wrapper = RDKitToolkitWrapper()
+        >>> molecule = toolkit_wrapper.from_rdkit(rdmol)
 
         """
         from rdkit import Chem
