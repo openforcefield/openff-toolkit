@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding='ASCII'?>
 
-<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
 
 <!-- SMIRKS (SMIRKS Force Field) mockup1.0 for alkanes, ethers, and alcohols -->
 <Date>2018-07-14</Date>
