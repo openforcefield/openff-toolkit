@@ -51,8 +51,8 @@ class Serializable(abc.ABC):
     ...     def from_dict(cls, d):
     ...         return cls(d['description'])
     ...
-    ... # Create an example object
-    ... thing = Thing('blorb')
+    >>> # Create an example object
+    >>> thing = Thing('blorb')
 
     Get `JSON <https://www.json.org/>`_ representation:
 
@@ -78,14 +78,6 @@ class Serializable(abc.ABC):
 
     >>> thing_from_yaml = Thing.from_yaml(yaml_thing)
 
-    Get `TOML <https://github.com/toml-lang/toml>`_ representation:
-
-    >>> toml_thing = thing.to_toml()
-
-    Reconstruct an objecft from its `TOML <https://github.com/toml-lang/toml>`_ representation:
-
-    >>> thing_from_toml = Thing.from_toml(toml_thing)
-
     Get `MessagePack <https://msgpack.org/index.html>`_ representation:
 
     >>> messagepack_thing = thing.to_messagepack()
@@ -97,10 +89,6 @@ class Serializable(abc.ABC):
     Get `XML <https://www.w3.org/XML/>`_ representation:
 
     >>> xml_thing = thing.to_xml()
-
-    Reconstruct an objecft from its `XML <https://www.w3.org/XML/>`_ representation:
-
-    >>> thing_from_xml = Thing.from_xml(xml_thing)
 
     """
 

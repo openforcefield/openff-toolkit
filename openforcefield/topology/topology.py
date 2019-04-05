@@ -890,21 +890,22 @@ class Topology(Serializable):
     Import some utilities
 
     >>> from simtk.openmm import app
-    >>> from openforcefield.tests.utils.utils import get_monomer_mol2file, get_packmol_pdbfile
-    >>> pdb_filename = get_packmol_pdbfile('cyclohexane_ethanol_0.4_0.6.pdb')
+    >>> from openforcefield.tests.utils import get_monomer_mol2file, get_packmol_pdbfile
+    >>> pdb_filename = get_packmol_pdbfile('cyclohexane_ethanol_0.4_0.6')
     >>> monomer_names = ('cyclohexane', 'ethanol')
 
     Create a Topology object from a PDB file and mol2 files defining the molecular contents
 
+    >>> from openforcefield.topology import Molecule, Topology
     >>> pdbfile = app.PDBFile(pdb_filename)
-    >>> mol2_filenames = [ get_monomer_mol2file(name) for name in monomer_names ]
-    >>> unique_molecules = [ Molecule.from_file(mol2_filename) for mol2_filename in mol2_filenames ]
+    >>> mol2_filenames = [get_monomer_mol2file(name) for name in monomer_names]
+    >>> unique_molecules = [Molecule.from_file(mol2_filename) for mol2_filename in mol2_filenames]
     >>> topology = Topology.from_openmm(pdbfile.topology, unique_molecules=unique_molecules)
 
     Create a Topology object from a PDB file and IUPAC names of the molecular contents
 
     >>> pdbfile = app.PDBFile(pdb_filename)
-    >>> unique_molecules = [ Molecule.from_iupac(name) for name in monomer_names ]
+    >>> unique_molecules = [Molecule.from_iupac(name) for name in monomer_names]
     >>> topology = Topology.from_openmm(pdbfile.topology, unique_molecules=unique_molecules)
 
     Create an empty Topology object and add a few copies of a single benzene molecule

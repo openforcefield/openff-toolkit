@@ -59,7 +59,7 @@ def temporary_cd(dir_path):
     --------
     >>> dir_path = '/tmp'
     >>> with temporary_cd(dir_path):
-    ...     # do something in dir_path
+    ...     pass  # do something in dir_path
 
     """
     import os
