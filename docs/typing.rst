@@ -8,8 +8,6 @@ Chemical environments
 
 Tools for representing and operating on chemical environments
 
-.. warning :: This API will be remediated to comply with PEP8.
-
 .. currentmodule:: openforcefield.typing.chemistry
 .. autosummary::
     :nosignatures:

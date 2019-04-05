@@ -7,6 +7,8 @@
 """
 environment.py
 
+.. warning :: This API will be remediated to comply with PEP8.
+
 Classes defining a chemical environment for atoms and how they are connected
 using networkx graph objects to organize and make changes to the structure.
 Output will be in the form of SMARTS and SMIRKS.
