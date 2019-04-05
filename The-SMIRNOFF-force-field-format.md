@@ -677,65 +677,6 @@ Initial draft specification.
 
 ## Open Questions
 
-### What should we name parameter sections?
-
-* parameter sections?
-* force field terms?
-* force classes?
-* interaction types?
-
-### Should we have a separate `<Metadata>` or `<Provenance>` section that users can add whatever they want to?
-
-This would minimize the potential for accidentally colliding with other tags we add in the future.
-
-### Do we want to allow users to specify atomic or particle masses? This could allow, for example, heavy hydrogens to be specified easily.
-
-```XML
-<!-- Use average atomic masses (averaged over isotopes) except for heavy hydrogens -->
-<Masses default="average-atomic-mass" mass_unit="amu">
-   <!-- Make hydrogens heavy -->
-   <Mass smirks="[#1:1]" mass="3"/>
-</Masses>
-```
-While this won't affect thermodynamic properties, it could affect *kinetic* properties, which may be something our force fields optimize for in the future.
-
-### Should individual force classes be versioned, rather than having a global SMIRNOFF version?
-
-### Should we expand fractional bond orders beyond `<Bonds>`?
-
-### Should we have an XML Schema?
-
-An XML Schema would make it easier to validate XML representations of SMIRNOFF to make sure they are compliant and detect errors.
-
-### Handling extra XML tag attributes
-
-Currently, the XML parser ignores attributes in the XML that it does not understand, so providing a parameter line for an angle that specifies (for example) a second force constant `k2` will silently lead to no effect.
-Should we change this behavior to raise an error so that malformed `.offxml` files or typos are not silently processed without warning the user?
-On the one hand, it's useful to specify things like `id` and `parent_id`, and to allow users to extend this, but it makes errors or typos easier to go uncaught.
-
-### Should we integrate ParmEd and InterMol functionality by adding `create()` methods for other simulation packages?
-
-We could integrate ParmEd and InterMol as dependencies in our tooolkit and add methods like `ForceField.create_amber_system()` or `ForceField.create_charmm_system()` that generate input files for other packages without the need to convert.
-While perhaps not immediately useful for combining biopolymers parameterized with traditional force fields with SMIRNOFF-parameterized small molecules, once these legacy force fields are available in SMIRNOFF format or we have new biopolymer SMIRNOFF force fields, this drastically simplifies workflows.
-
-### Add link to complete open specification of `OEAroModel_MDL` aromaticity model
-
-### Are there ways we can simplify the integration of legacy biopolymer force fields?
-
-Are there ways we can make it easy to integrate pre-parameterized systems describing part of the topology (e.g. protein)?
-
-### How will we ensure the SMIRNOFF force field is correctly implemented by molecular simulation packages where nonbonded treatments are encoded by auxiliary input files?
-
-For gromacs, AMBER, and CHARMM, the nonbonded treatments (which are integrally specified by a SMIRNOFF force field) are instead specified by an auxiliary input file.
-Should we generate this auxiliary input file to, or part of it?
-How can we insist that the desired settings be used?
-
-### We should include some missing references
-
-* Supported aromaticity models
-* Supported fractional bond order models
-* Quantum chemical methods (e.g. AM1) and charge partitioning schemes (e.g. CM2)
-* AM1-BCC
 
 ### How should we use multiple conformations in charging?
 
@@ -743,11 +684,3 @@ Should we follow the RESP approach, where the charges or averaged?
 Or the ELF approach, where we use some kind of energy function to evaluate which single conformer is used to compute which conformer is to be used for quantum chemical calculations?
 What scheme should we use to generate the conformers in a deterministic manner?
 
-### Should we support RESP charging?
-
-### How should we fragment larger small molecules and polymers for charging?
-
-Larger small molecules may not benefit from quantum chemical calculations on the whole molecule.
-Instead, it might be more robust (and faster) to break the molecule into smaller capped fragments, compute charges separately for these fragments, and combine the charges according to some algorithms.
-This approach would also work for polymers, allowing us to parameterize arbitrary polymeric residues and covalent modifications of them.
-What is the best way to do this?
