@@ -824,7 +824,6 @@ class TestForceFieldParameterAssignment:
     @pytest.mark.parametrize('alkethoh_id', generate_alkethoh_parameters_assignment_cases())
     def test_alkethoh_parameters_assignment(self, alkethoh_id):
         """Test that ForceField assign parameters correctly in the AlkEthOH set.
-
         The test compares the System parameters of a AlkEthOH molecule
         parameterized with AMBER and Frosst_AlkEthOH_parmAtFrosst.offxml.
 
