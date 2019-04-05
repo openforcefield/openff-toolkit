@@ -914,14 +914,6 @@ class Topology(Serializable):
     >>> molecule = Molecule.from_iupac('benzene')
     >>> molecule_topology_indices = [topology.add_molecule(molecule) for index in range(10)]
 
-    Create a Topology from an OpenEye Molecule, including perception of chains and residues
-    (requires the OpenEye toolkit)
-
-    from openeye import oechem
-    ifs = oechem.oemolistream(get_data_filename('systems/monomers/ethanol.mol2'))
-    oemol = list(ifs.GetOEGraphMols())[0]
-    topology = Topology.from_openeye(oemol)
-
     """
 
     def __init__(self, other=None):
