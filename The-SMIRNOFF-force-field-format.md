@@ -1,4 +1,4 @@
-# The SMIRks Native Open Force Field (SMIRNOFF) specification v1.0
+# The SMIRks Native Open Force Field (SMIRNOFF) specification v0.2
 
 SMIRNOFF is a specification for encoding molecular mechanics force fields from the [Open Force Field Initiative](http://openforcefield.org) based on direct chemical perception using the broadly-supported [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) language, utilizing atom tagging extensions from [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html).
 
@@ -55,7 +55,7 @@ Below, we describe the main structure of such an XML representation.
 
 A SMIRNOFF forcefield XML specification always is enclosed in a `<SMIRNOFF>` tag, with certain required attributes provided.
 ```XML
-<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
 ...
 </SMIRNOFF>
 ```
@@ -64,7 +64,7 @@ A SMIRNOFF forcefield XML specification always is enclosed in a `<SMIRNOFF>` tag
 
 The SMIRNOFF force field format supports versioning via the `version` attribute to the root `<SMIRNOFF>` tag, e.g.:
 ```XML
-<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
 ...
 </SMIRNOFF>
 ```
@@ -632,7 +632,7 @@ We recommend generics be used sparingly unless it is your intention to provide t
 
 ## Version history
 
-### 1.0
+### 0.2
 
 This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specification along with `ForceField` implementation refactor:
 * Aromaticity model now defaults to `OEAroModel_MDL`, and aromaticity model names drop OpenEye-specific prefixes
@@ -644,7 +644,7 @@ This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specificatio
     * `<BondChargeCorrections>` was renamed to `<ChargeIncrementModel>` and generalized to accommodate an arbitrary number of tagged atoms
     * `<GBSAForce>` was renamed to `<GBSA>`    
 * `<PeriodicTorsionForce>` was split into `<ProperTorsions>` and `<ImproperTorsions>`
-* `<vdW>` now specifies 1-2, 1-3, 1-4, and 1-5 scaling factors via `scale12` (default: 0), `scale13` (default: 0), `scale14` (default: 0.5), and `scale15` (default 1.0) attributes. Coulomb scaling parameters have been removed from `StericsForce`.
+* `<vdW>` now specifies 1-2, 1-3, 1-4, and 1-5 scaling factors via `scale12` (default: 0), `scale13` (default: 0), `scale14` (default: 0.5), and `scale15` (default 1.0) attributes. It also specifies the long-range vdW method to use, currently supporting `cutoff` (default) and `PME`. Coulomb scaling parameters have been removed from `StericsForce`.
 * Added the `<Electrostatics>` tag to separately specify 1-2, 1-3, 1-4, and 1-5 scaling factors for electrostatics, as well as the method used to compute electrostatics (`PME`, `reaction-field`, `Coulomb`) since this has a huge effect on the energetics of the system.
 * Made it clear that `<Constraint>` entries do not have to be between bonded atoms.
 * `<VirtualSites>` has been added, and the specification of charge increments harmonized with `<ChargeIncrementModel>`
