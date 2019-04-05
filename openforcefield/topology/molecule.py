@@ -1248,7 +1248,7 @@ class Bond(Serializable):
 
     Attributes
     ----------
-    atom1, atom2 : Atom
+    atom1, atom2 : openforcefield.topology.Atom
         Atoms involved in the bond
     bondtype : int
         Discrete bond type representation for the Open Forcefield aromaticity model
