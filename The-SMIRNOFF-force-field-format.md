@@ -182,7 +182,7 @@ Currently, only classical fixed point charge models are supported, but future ex
 
 ### `<LibraryCharges>`: Library charges for polymeric residues and special solvent models
 
-.. note:: This functionality is not implemented in the current toolkit.
+.. warning:: This functionality is not implemented in the current toolkit.
 
 A mechanism is provided for specifying library charges that can be applied to molecules or residues that match provided templates.
 Library charges are applied first, and atoms for which library charges are applied will be excluded from alternative charging schemes listed below.
@@ -212,7 +212,7 @@ For example, to ensure water molecules are assigned partial charges for [TIP3P](
 
 ### `<ChargeIncrementModel>`: Small molecule and fragment charges
 
-.. note:: This functionality is not implemented in the current toolkit. This area of the SMIRNOFF spec is under further consideration. Please see [Issue 208 on the Open Force Field Toolkit issue tracker](https://github.com/openforcefield/openforcefield/issues/208).
+.. warning:: This functionality is not implemented in the current toolkit. This area of the SMIRNOFF spec is under further consideration. Please see [Issue 208 on the Open Force Field Toolkit issue tracker](https://github.com/openforcefield/openforcefield/issues/208).
 
 In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), partial charges for small molecules are usually assigned using a quantum chemical method (usually a semiempirical method such as [AM1](https://en.wikipedia.org/wiki/Austin_Model_1)) and a [partial charge determination scheme](https://en.wikipedia.org/wiki/Partial_charge) (such as [CM2](http://doi.org/10.1021/jp972682r) or [RESP](http://doi.org/10.1021/ja00074a030)), then subsequently corrected via charge increment rules, as in the highly successful [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach.
 
@@ -352,7 +352,7 @@ Constrained bonds are handled by a separate `<Constraints>` tag, which can eithe
 
 #### Fractional bond orders (EXPERIMENTAL)
 
-.. note:: This functionality is not implemented in the current toolkit.
+.. warning:: This functionality is not implemented in the current toolkit.
 
 Fractional bond orders can be used to allow interpolation of bond parameters.
 For example, these parameters:
@@ -447,7 +447,7 @@ The *second* atom in an improper (in the example above, the trivalent carbon) is
 
 ### `<GBSA>`
 
-.. note:: This functionality is not implemented in the current toolkit.
+.. warning:: This functionality is not implemented in the current toolkit.
 
 Generalized-Born surface area (GBSA) implicit solvent parameters are optionally specified via a `<GBSA>...</GBSA>` using `<Atom>` tags with GBSA model specific attributes:
 ```XML
@@ -531,7 +531,7 @@ Standard usage is expected to rely primarily on the features documented above an
 
 ### `<VirtualSites>`: Virtual sites for off-atom charges
 
-.. note:: This functionality is not implemented in the current toolkit.
+.. warning:: This functionality is not implemented in the current toolkit.
 
 We have implemented experimental support for placement of off-atom (off-center) charges in a variety of contexts which may be chemically important in order to allow easy exploration of when these will be warranted.
 Currently we support the following different types or geometries of off-center charges (as diagrammed below):
