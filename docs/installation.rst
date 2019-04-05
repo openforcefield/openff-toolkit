@@ -19,17 +19,21 @@ On ``linux``, you can install the Python 3 version into ``$HOME/miniconda3`` wit
 
    $ wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
    $ bash ./Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda3
-   $ export PATH="$HOME/miniconda3/bin:$PATH"
+   $ source ~/miniconda3/etc/profile.d/conda.sh
+   $ conda activate base
+
 
 On ``osx``, you want to use the ``osx`` binary
 
 .. code-block:: bash
 
    $ wget https://repo.continuum.io/miniconda/Miniconda2-latest-MacOSX-x86_64.sh
-   $ bash ./Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda3
-   $ export PATH="$HOME/miniconda3/bin:$PATH"
+   $ bash ./Miniconda2-latest-MacOSX-x86_64.sh -b -p $HOME/miniconda3
+   $ source ~/miniconda3/etc/profile.d/conda.sh
+   $ conda activate base
 
-You may want to add the new ``$PATH`` extension to your ``~/.bashrc`` file to ensure Anaconda Python is used by default.
+
+You may want to add the new ``source ~/miniconda3/etc/profile.d/conda.sh`` line to your ``~/.bashrc`` file to ensure Anaconda Python is enabled.
 Note that ``openforcefield`` will be installed into this local Python installation, so that you will not need to worry about disrupting existing Python installations.
 
 .. note:: Installation via the conda package manager is the preferred method since all dependencies are automatically fetched and installed for you.
@@ -94,6 +98,6 @@ To install the OpenEye toolkits (provided you have a valid license file):
 
    $ conda install --yes -c openeye openeye-toolkits
 
-None of the ``openforcefield`` release capabilities *require* this toolkit, but the Open Force Field developers make use of it in parameterizing new open source force fields.
+No essential ``openforcefield`` release capabilities *require* the OpenEye toolkit, but the Open Force Field developers make use of it in parameterizing new open source force fields. It is known that there are certain differences in toolkit behavior when reading a small fraction of molecules, and we encourage you to report any unexpected behavior that may be caused by toolkit differences to our `issue tracker <https://github.com/openforcefield/openforcefield/issues>`_.
 
 |
