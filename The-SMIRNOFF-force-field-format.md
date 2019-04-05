@@ -675,12 +675,5 @@ This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specificatio
 
 Initial draft specification.
 
-## Open Questions
 
-
-### How should we use multiple conformations in charging?
-
-Should we follow the RESP approach, where the charges or averaged?
-Or the ELF approach, where we use some kind of energy function to evaluate which single conformer is used to compute which conformer is to be used for quantum chemical calculations?
-What scheme should we use to generate the conformers in a deterministic manner?
 
