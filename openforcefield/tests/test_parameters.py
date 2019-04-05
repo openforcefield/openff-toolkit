@@ -111,7 +111,7 @@ class TestParameterList:
             parameters.index('[#2:1]')
 
         p4 = ParameterType(smirks='[#2:1]')
-        with pytest.raises(ValueError, match='ParameterType object at [0-9a-zA-Z]+[>] is not in list') as excinfo:
+        with pytest.raises(ValueError, match='is not in list') as excinfo:
             parameters.index(p4)
 
     def test_contains(self):
