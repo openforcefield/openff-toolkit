@@ -22,6 +22,7 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
 
 import copy
 import logging
+import os
 
 from collections import OrderedDict
 
@@ -130,26 +131,28 @@ class ForceField(object):
 
     Create an OpenMM system from a :class:`openforcefield.topology.Topology` object:
 
-    >>> from openforcefield.topology.testsystems import WaterBox
-    >>> system = forcefield.create_system(WaterBox.topology)
+    >>> from openforcefield.topology import Molecule, Topology
+    >>> ethanol = Molecule.from_smiles('CCO')
+    >>> topology = Topology.from_molecules(molecules=[ethanol])
+    >>> system = forcefield.create_openmm_system(topology)
 
     Modify the long-range electrostatics method:
 
-    >>> forcefield.forces['Electrostatics'].method = 'PME'
+    >>> forcefield.get_handler('Electrostatics').method = 'PME'
 
     Inspect the first few vdW parameters:
 
-    >>> print(forcefield.forces['vdW'].parameters[0:3])
+    >>> low_precedence_parameters = forcefield.get_handler('vdW').parameters[0:3]
 
     Retrieve the vdW parameters by SMIRKS string and manipulate it:
 
-    >>> parameter = forcefield.forces['vdW'].parameters['[#1:1]-[#7]']
+    >>> parameter = forcefield.get_handler('vdW').parameters['[#1:1]-[#7]']
     >>> parameter.sigma += 0.1 * unit.angstroms
     >>> parameter.epsilon *= 1.02
 
     Make a child vdW type more specific (checking modified SMIRKS for validity):
 
-    >>> forcefield.forces['vdW'].parameters[-1].smirks += '$(*~[#53])'
+    >>> forcefield.get_handler('vdW').parameters[-1].smirks += '~[#53]'
 
     .. warning ::
 
@@ -159,16 +162,13 @@ class ForceField(object):
 
     Delete a parameter:
 
-    >>> del forcefield.forces['vdW'].parameters['[#1:1]-[#6X4]']
-
-    .. warning ::
-
-       We currently don't check whether removing a parameter could accidentally remove the root type, so it's possible to no longer type all molecules this way.
+    >>> del forcefield.get_handler('vdW').parameters['[#1:1]-[#6X4]']
 
     Insert a parameter at a specific point in the parameter tree:
 
-    >>> new_parameter = vdWType(smirks='[*:1]', epsilon=0.0157*unit.kilocalories_per_mole, rmin_half=0.6000*unit.angstroms)
-    >>> forcefield.forces['vdW'].parameters.insert(0, new_parameter)
+    >>> from openforcefield.typing.engines.smirnoff import vdWHandler
+    >>> new_parameter = vdWHandler.vdWType(smirks='[*:1]', epsilon=0.0157*unit.kilocalories_per_mole, rmin_half=0.6000*unit.angstroms)
+    >>> forcefield.get_handler('vdW').parameters.insert(0, new_parameter)
 
     .. warning ::
 
@@ -212,15 +212,11 @@ class ForceField(object):
 
         Load multiple SMIRNOFF parameter sets:
 
-        >>> forcefield = ForceField(['smirnoff99Frosst.offxml', 'tip3p.offxml'])
-
-        Load a parameter set from a URL:
-
-        >>> forcefield = ForceField('https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/')
+        forcefield = ForceField('smirnoff99Frosst.offxml', 'tip3p.offxml')
 
         Load a parameter set from a string:
 
-        >>> offxml = '<SMIRNOFF version=1.0/>'
+        >>> offxml = '<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL"/>'
         >>> forcefield = ForceField(offxml)
 
         """
@@ -734,27 +730,34 @@ class ForceField(object):
         # Parse content depending on type
         for parameter_io_format in io_formats_to_try:
             parameter_io_handler = self.get_io_handler(parameter_io_format)
+
+            # Try parsing as a forcefield file or file-like object
+            try:
+                smirnoff_data = parameter_io_handler.parse_file(source)
+                return smirnoff_data
+            except ParseError as e:
+                exception_msg = str(e)
+                # TODO: Have parse_file() raise a different error type for file not found.
+                # If the file exists but there are syntax errors, don't
+                # parse as string to avoid overwriting the errors.
+                if os.path.exists(source):
+                    break
+
             # Try parsing as a forcefield string
             try:
                 smirnoff_data = parameter_io_handler.parse_string(source)
                 return smirnoff_data
             except ParseError as e:
-                pass
-            # Otherwise, try parsing as a forcefield file or file-like object
-            try:
-                smirnoff_data = parameter_io_handler.parse_file(source)
-                return smirnoff_data
-            except ParseError as e:
-                pass
+                exception_msg = str(e)
 
         # If we haven't returned by now, the parsing was unsuccessful
         valid_formats = [
             input_format
             for input_format in self._parameter_io_handlers.keys()
         ]
-        msg = "Source {} does not appear to be in a known SMIRNOFF encoding.\n".format(
-            source)
-        msg += "Valid formats are: {}".format(valid_formats)
+        msg = f"Source {source} does not appear to be in a known SMIRNOFF encoding.\n"
+        msg += f"Valid formats are: {valid_formats}\n"
+        msg += f"Parsing vailed with the following error:\n{exception_msg}\n"
         raise IOError(msg)
 
 

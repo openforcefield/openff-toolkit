@@ -660,8 +660,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Create a Molecule from an OpenEye OEMol
 
+        >>> from openeye import oechem
+        >>> from openforcefield.tests.utils import get_data_filename
+        >>> ifs = oechem.oemolistream(get_data_filename('systems/monomers/ethanol.mol2'))
+        >>> oemols = list(ifs.GetOEGraphMols())
+
         >>> toolkit_wrapper = OpenEyeToolkitWrapper()
-        >>> molecule = toolkit_wrapper.from_openeye(oemol)
+        >>> molecule = toolkit_wrapper.from_openeye(oemols[0])
 
         """
         from openeye import oechem
@@ -837,6 +842,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Create an OpenEye molecule from a Molecule
 
+        >>> from openforcefield.topology import Molecule
         >>> toolkit_wrapper = OpenEyeToolkitWrapper()
         >>> molecule = Molecule.from_smiles('CC')
         >>> oemol = toolkit_wrapper.to_openeye(molecule)
@@ -1778,7 +1784,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         Create a molecule from an RDKit molecule
 
-        >>> molecule = Molecule.from_rdkit(rdmol)
+        >>> from rdkit import Chem
+        >>> from openforcefield.tests.utils import get_data_filename
+        >>> rdmol = Chem.MolFromMolFile(get_data_filename('systems/monomers/ethanol.sdf'))
+
+        >>> toolkit_wrapper = RDKitToolkitWrapper()
+        >>> molecule = toolkit_wrapper.from_rdkit(rdmol)
 
         """
         from rdkit import Chem
@@ -1966,7 +1977,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         Convert a molecule to RDKit
 
-        >>> rdmol = molecule.to_rdkit()
+        >>> from openforcefield.topology import Molecule
+        >>> ethanol = Molecule.from_smiles('CCO')
+        >>> rdmol = ethanol.to_rdkit()
 
         """
         from rdkit import Chem, Geometry
@@ -2739,25 +2752,30 @@ class ToolkitRegistry(object):
     >>> from openforcefield.utils.toolkits import ToolkitRegistry
     >>> toolkit_registry = ToolkitRegistry()
     >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
-    >>> [ toolkit_registry.register(toolkit) for toolkit in toolkit_precedence if toolkit.is_available() ]
+    >>> for toolkit in toolkit_precedence:
+    ...     if toolkit.is_available():
+    ...         toolkit_registry.register_toolkit(toolkit)
 
     Register specified toolkits, raising an exception if one is unavailable
 
     >>> toolkit_registry = ToolkitRegistry()
     >>> toolkits = [OpenEyeToolkitWrapper, AmberToolsToolkitWrapper]
-    >>> for toolkit in toolkits: toolkit_registry.register(toolkit)
+    >>> for toolkit in toolkits:
+    ...     toolkit_registry.register_toolkit(toolkit)
 
     Register all available toolkits in arbitrary order
 
     >>> from openforcefield.utils import all_subclasses
     >>> toolkits = all_subclasses(ToolkitWrapper)
-    >>> [ toolkit_registry.register(toolkit) for toolkit in toolkits if toolkit.is_available() ]
+    >>> for toolkit in toolkit_precedence:
+    ...     if toolkit.is_available():
+    ...         toolkit_registry.register_toolkit(toolkit)
 
     Retrieve the global singleton toolkit registry, which is created when this module is imported from all available
     toolkits:
 
     >>> from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
-    >>> print(toolkit_registry.registered_toolkits())
+    >>> available_toolkits = toolkit_registry.registered_toolkits
 
     """
 
@@ -2903,6 +2921,7 @@ class ToolkitRegistry(object):
 
         Create a molecule, and call the toolkit ``to_smiles()`` method directly
 
+        >>> from openforcefield.topology import Molecule
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
         >>> toolkit_registry = ToolkitRegistry(register_imported_toolkit_wrappers=True)
         >>> method = toolkit_registry.resolve('to_smiles')
@@ -2935,9 +2954,7 @@ class ToolkitRegistry(object):
 
         ``*args`` and ``**kwargs`` are passed to the desired method, and return values of the method are returned
 
-        This is a convenient shorthand for
-
-        >>> toolkit_registry.resolve_method(method_name)(*args, **kwargs)
+        This is a convenient shorthand for ``toolkit_registry.resolve_method(method_name)(*args, **kwargs)``
 
         Parameters
         ----------
@@ -2953,6 +2970,7 @@ class ToolkitRegistry(object):
 
         Create a molecule, and call the toolkit ``to_smiles()`` method directly
 
+        >>> from openforcefield.topology import Molecule
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
         >>> toolkit_registry = ToolkitRegistry(register_imported_toolkit_wrappers=True)
         >>> smiles = toolkit_registry.call('to_smiles', molecule)
