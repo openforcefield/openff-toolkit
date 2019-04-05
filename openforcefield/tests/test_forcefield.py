@@ -827,7 +827,7 @@ def test_freesolv_parameters_assignment(freesolv_id, forcefield_version, allow_u
     # used a six-fold implementation while we now use a three-fold way.
     # TODO: Reactivate charge comparison once we'll be able to read them from file.
     compare_system_parameters(ff_system, xml_system,
-                              systems_labels=('current OpenFF', 'SMIRNOFF 0.0.4'),
+                              systems_labels=('current OpenFF', 'SMIRNOFF 0.2.0'),
                               ignore_charges=True, ignore_improper_folds=True)
 
 
