@@ -3021,9 +3021,9 @@ class FrozenMolecule(Serializable):
         --------
 
         >>> molecule = Molecule.from_iupac('imatinib')
-        >>> molecule.to_file('imatinib.mol2', outfile_format='mol2')
-        >>> molecule.to_file('imatinib.sdf', outfile_format='sdf')
-        >>> molecule.to_file('imatinib.pdb', outfile_format='pdb')
+        >>> molecule.to_file('imatinib.mol2', outfile_format='mol2')  # doctest: +SKIP
+        >>> molecule.to_file('imatinib.sdf', outfile_format='sdf')  # doctest: +SKIP
+        >>> molecule.to_file('imatinib.pdb', outfile_format='pdb')  # doctest: +SKIP
 
         """
 
