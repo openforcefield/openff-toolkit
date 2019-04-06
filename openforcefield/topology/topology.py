@@ -1544,7 +1544,10 @@ class Topology(Serializable):
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
 
-    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API. Fix?
+    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
+    #       Given the recent (2019_04) discussions about potential loss of parameters during conversion, we should
+    #       revisit this function to determine what sorts of guarantees we can put on system correctness before
+    #       we expose it.
     def _to_openmm(self):
         """
         Create an OpenMM Topology object.
@@ -1581,7 +1584,12 @@ class Topology(Serializable):
         return Topology.from_openmm(
             mdtraj_topology.to_openmm(), unique_molecules=unique_molecules)
 
-    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API. Fix?
+    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
+    #       Before exposing this, we should look carefully at the information that is preserved/lost during this
+    #       conversion, and make it clear what would happen to this information in a round trip. For example,
+    #       we should know what would happen to formal and partial bond orders and charges, stereochemistry, and
+    #       multi-conformer information. It will be important to document these risks to users, as all of these
+    #       factors could lead to unintended behavior during system parameterization.
     def _to_mdtraj(self):
         """
         Create an MDTraj Topology object.
@@ -1594,16 +1602,17 @@ class Topology(Serializable):
         import mdtraj as md
         return md.Topology.from_openmm(self.to_openmm())
 
-    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API. Fix?
     @staticmethod
-    def _from_parmed(parmed_structure, unique_molecules=None):
+    def from_parmed(parmed_structure, unique_molecules=None):
         """
+        .. warning:: This functionality will be implemented in a future toolkit release.
+
         Construct an openforcefield Topology object from a ParmEd Structure object.
 
         Parameters
         ----------
-        mdtraj_topology : mdtraj.Topology
-            An MDTraj Topology object
+        parmed_structure : parmed.Structure
+            A ParmEd structure object
         unique_molecules : iterable of objects that can be used to construct unique Molecule objects
             All unique molecules mult be provided, in any order, though multiple copies of each molecule are allowed.
             The atomic elements and bond connectivity will be used to match the reference molecules
@@ -1622,9 +1631,11 @@ class Topology(Serializable):
         # TODO: Implement functionality
         raise NotImplementedError
 
-    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API. Fix?
-    def _to_parmed(self):
+    def to_parmed(self):
         """
+
+        .. warning:: This functionality will be implemented in a future toolkit release.
+
         Create a ParmEd Structure object.
 
         Returns
@@ -1636,7 +1647,12 @@ class Topology(Serializable):
         # TODO: Implement functionality
         raise NotImplementedError
 
-    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API. Fix?
+    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
+    #       This function is deprecated and expects the OpenEye toolkit. We need to discuss what
+    #       to do with this functionality in light of our move to the ToolkitWrapper architecture.
+    #       Also, as written, this function implies several things about our toolkit's ability to
+    #       handle biopolymers. We need to discuss how much of this functionality we will expose
+    #       and how we can make our toolkit's current scope clear to users..
     @staticmethod
     def _from_openeye(oemol):
         """
@@ -1806,7 +1822,12 @@ class Topology(Serializable):
 
         return topology, positions
 
-    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API. Fix?
+    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
+    #       This function is deprecated and expects the OpenEye toolkit. We need to discuss what
+    #       to do with this functionality in light of our move to the ToolkitWrapper architecture.
+    #       It also expects Topology to be organized by chain, which is not currently the case.
+    #       Bringing this function back would require non-trivial engineering and testing, and we
+    #       would want to discuss what "guarantee" of correctness it could offer.
     def _to_openeye(self,
                    positions=None,
                    aromaticity_model=DEFAULT_AROMATICITY_MODEL):
