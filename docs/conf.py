@@ -37,7 +37,8 @@ import openforcefield
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
+    #'sphinx.ext.napoleon',
+    'numpydoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.todo',
