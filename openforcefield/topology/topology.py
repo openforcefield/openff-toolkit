@@ -136,7 +136,7 @@ class ImproperDict(_TransformedDict):
 class TopologyAtom(Serializable):
     """
     A TopologyAtom is a lightweight data structure that represents a single openforcefield.topology.molecule.Atom in
-    a Topology. A TopologyAtom consists of two pointers -- One to its fully detailed "atom", an
+    a Topology. A TopologyAtom consists of two references -- One to its fully detailed "atom", an
     openforcefield.topology.molecule.Atom, and another to its parent "topology_molecule", which occupies a spot in
     the parent Topology's TopologyMolecule list.
 
@@ -291,7 +291,7 @@ class TopologyAtom(Serializable):
 class TopologyBond(Serializable):
     """
     A TopologyBond is a lightweight data structure that represents a single openforcefield.topology.molecule.Bond in
-    a Topology. A TopologyBond consists of two pointers -- One to its fully detailed "bond", an
+    a Topology. A TopologyBond consists of two references -- One to its fully detailed "bond", an
     openforcefield.topology.molecule.Bond, and another to its parent "topology_molecule", which occupies a spot in
     the parent Topology's TopologyMolecule list.
 
@@ -404,12 +404,12 @@ class TopologyBond(Serializable):
 class TopologyVirtualSite(Serializable):
     """
     A TopologyVirtualSite is a lightweight data structure that represents a single
-    openforcefield.topology.molecule.VirtualSite in a Topology. A TopologyVirtualSite consists of two pointers --
+    openforcefield.topology.molecule.VirtualSite in a Topology. A TopologyVirtualSite consists of two references --
     One to its fully detailed "VirtualSite", an openforcefield.topology.molecule.VirtualSite, and another to its parent
     "topology_molecule", which occupies a spot in the parent Topology's TopologyMolecule list.
 
-    As some systems can be very large, there is no always-existing representation of a TopologyVirtualSite. They are created on
-    demand as the user requests them.
+    As some systems can be very large, there is no always-existing representation of a TopologyVirtualSite. They are
+    created on demand as the user requests them.
 
     .. warning :: This API is experimental and subject to change.
 
