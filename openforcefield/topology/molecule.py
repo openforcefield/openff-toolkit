@@ -131,13 +131,13 @@ class Particle(Serializable):
     #     #TODO: Add informative exception here
     #     assert self._topology == None
     #     self._topology = topology
-
-    @property
-    def topology_particle_index(self):
-        """
-        Returns the index of this particle in its parent topology
-        """
-        return self._topology.particles.index(self)
+    #
+    # @property
+    # def topology_particle_index(self):
+    #     """
+    #     Returns the index of this particle in its parent topology
+    #     """
+    #     return self._topology.particles.index(self)
 
     @property
     def name(self):
@@ -664,7 +664,7 @@ class VirtualSite(Particle):
     @property
     def molecule_virtual_site_index(self):
         """
-        The index of this VirtualSite within the list of virtual sites within ``Topology``
+        The index of this VirtualSite within the list of virtual sites within ``Molecule``
         Note that this can be different from ``particle_index``.
         """
         #if self._topology is None:
