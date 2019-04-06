@@ -1,5 +1,7 @@
 [![Build Status](https://travis-ci.org/openforcefield/openforcefield.svg?branch=master)](https://travis-ci.org/openforcefield/openforcefield?branch=master)
-[![Documentation](https://readthedocs.org/projects/open-forcefield-toolkit/badge/?version=topology)](http://open-forcefield-toolkit.readthedocs.io/en/latest/?badge=latest)
+[![Documentation](https://readthedocs.org/projects/open-forcefield-toolkit/badge/?version=latest)](http://open-forcefield-toolkit.readthedocs.io/en/latest/?badge=latest)
+[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/openforcefield/openforcefield.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/openforcefield/openforcefield/context:python)
+[![codecov](https://codecov.io/gh/openforcefield/openforcefield/branch/master/graph/badge.svg)](https://codecov.io/gh/openforcefield/openforcefield)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Install with Conda](https://anaconda.org/omnia/openforcefield/badges/installer/conda.svg)](https://anaconda.org/omnia/openforcefield)
 [![Anaconda Cloud platforms](https://anaconda.org/omnia/openforcefield/badges/platforms.svg)](https://anaconda.org/omnia/openforcefield)
