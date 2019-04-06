@@ -597,7 +597,7 @@ class _ParametersComparer:
     >>> par1 == par3
     False
     >>> str(par1)
-    '(charge: 1 e**2, rmin_half: 0.15 nm)'
+    '(charge: 1.0 e, rmin_half: 1.5 A)'
 
     """
 
