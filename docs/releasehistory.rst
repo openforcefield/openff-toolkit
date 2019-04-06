@@ -15,7 +15,7 @@ This version of the toolkit introduces many new features on the way to a 1.0.0 r
 New features
 """"""""""""
 
-* Major overhaul of the `SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/master/smirnoff.html>`_ and its XML representation
+* Major overhaul, resulting in the creation of the `0.2 SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/master/smirnoff.html>`_ and its XML representation
 * Updated API and infrastructure for reference SMIRNOFF :class:`ForceField` implementation
 * Implementation of modular :class:`ParameterHandler` classes which process the topology to add all necessary forces to the system..
 * Implementation of modular :class:`ParameterIOHandler` classes for reading/writing different serialized SMIRNOFF forcefield representations
