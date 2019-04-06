@@ -143,6 +143,8 @@ class TopologyAtom(Serializable):
     As some systems can be very large, there is no always-existing representation of a TopologyAtom. They are created on
     demand as the user requests them.
 
+    .. warning :: This API is experimental and subject to change.
+
     """
 
     def __init__(self, atom, topology_molecule):
@@ -288,6 +290,15 @@ class TopologyAtom(Serializable):
 
 class TopologyBond(Serializable):
     """
+    A TopologyBond is a lightweight data structure that represents a single openforcefield.topology.molecule.Bond in
+    a Topology. A TopologyBond consists of two pointers -- One to its fully detailed "bond", an
+    openforcefield.topology.molecule.Bond, and another to its parent "topology_molecule", which occupies a spot in
+    the parent Topology's TopologyMolecule list.
+
+    As some systems can be very large, there is no always-existing representation of a TopologyBond. They are created on
+    demand as the user requests them.
+
+    .. warning :: This API is experimental and subject to change.
 
     """
 
@@ -392,6 +403,15 @@ class TopologyBond(Serializable):
 
 class TopologyVirtualSite(Serializable):
     """
+    A TopologyVirtualSite is a lightweight data structure that represents a single
+    openforcefield.topology.molecule.VirtualSite in a Topology. A TopologyVirtualSite consists of two pointers --
+    One to its fully detailed "VirtualSite", an openforcefield.topology.molecule.VirtualSite, and another to its parent
+    "topology_molecule", which occupies a spot in the parent Topology's TopologyMolecule list.
+
+    As some systems can be very large, there is no always-existing representation of a TopologyVirtualSite. They are created on
+    demand as the user requests them.
+
+    .. warning :: This API is experimental and subject to change.
 
     """
 
@@ -535,6 +555,9 @@ class TopologyMolecule:
     """
     TopologyMolecules are built to be an efficient way to store large numbers of copies of the same molecule for
     parameterization and system preparation.
+
+    .. warning :: This API is experimental and subject to change.
+
     """
 
     def __init__(self,
@@ -635,8 +658,6 @@ class TopologyMolecule:
         """
         Get the topology index of the first atom in this TopologyMolecule
 
-        .. warning :: This API is experimental and subject to change.
-
         """
         atom_start_topology_index = 0
         for topology_molecule in self._topology.topology_molecules:
@@ -684,8 +705,6 @@ class TopologyMolecule:
     @property
     def bond_start_topology_index(self):
         """Get the topology index of the first bond in this TopologyMolecule
-
-        .. warning :: This API is experimental and subject to change.
 
         """
         bond_start_topology_index = 0
@@ -749,8 +768,6 @@ class TopologyMolecule:
     @property
     def particle_start_topology_index(self):
         """Get the topology index of the first particle in this TopologyMolecule.
-
-        .. warning :: This API is experimental and subject to change.
         """
         particle_start_topology_index = 0
         for topology_molecule in self._topology.topology_molecules:
@@ -829,8 +846,6 @@ class TopologyMolecule:
     @property
     def virtual_site_start_topology_index(self):
         """Get the topology index of the first virtual site in this TopologyMolecule
-
-        .. warning :: This API is experimental and subject to change.
         """
         virtual_site_start_topology_index = 0
         for topology_molecule in self._topology.topology_molecules:
@@ -869,20 +884,7 @@ class Topology(Serializable):
     """
     A Topology is a chemical representation of a system containing one or more molecules appearing in a specified order.
 
-    # TODO: Update list of attributes
-
-    Attributes
-    ----------
-    molecules : list of Molecule
-        Iterate over all Molecule objects in the system in the topology
-    unique_molecules : list of Molecule
-        Iterate over all unique Molecule objects in the topology
-    n_molecules : int
-        Number of molecules in the topology
-    n_unique_molecules : int
-        Number of unique molecules in the topology
-    box_vectors : iterable of simtk.unit.Quantity
-        The box vectors for a periodic system. If box_vectors=None, the system is assumed to be vacuum.
+    .. warning :: This API is experimental and subject to change.
 
     Examples
     --------
@@ -1542,7 +1544,8 @@ class Topology(Serializable):
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
 
-    def to_openmm(self):
+    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API. Fix?
+    def _to_openmm(self):
         """
         Create an OpenMM Topology object.
 
@@ -1578,7 +1581,8 @@ class Topology(Serializable):
         return Topology.from_openmm(
             mdtraj_topology.to_openmm(), unique_molecules=unique_molecules)
 
-    def to_mdtraj(self):
+    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API. Fix?
+    def _to_mdtraj(self):
         """
         Create an MDTraj Topology object.
 
@@ -1587,10 +1591,12 @@ class Topology(Serializable):
         mdtraj_topology : mdtraj.Topology
             An MDTraj Topology object
         """
+        import mdtraj as md
         return md.Topology.from_openmm(self.to_openmm())
 
+    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API. Fix?
     @staticmethod
-    def from_parmed(parmed_structure, unique_molecules=None):
+    def _from_parmed(parmed_structure, unique_molecules=None):
         """
         Construct an openforcefield Topology object from a ParmEd Structure object.
 
@@ -1616,7 +1622,8 @@ class Topology(Serializable):
         # TODO: Implement functionality
         raise NotImplementedError
 
-    def to_parmed(self):
+    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API. Fix?
+    def _to_parmed(self):
         """
         Create a ParmEd Structure object.
 
@@ -1629,8 +1636,9 @@ class Topology(Serializable):
         # TODO: Implement functionality
         raise NotImplementedError
 
+    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API. Fix?
     @staticmethod
-    def from_openeye(oemol):
+    def _from_openeye(oemol):
         """
         Create a Molecule from an OpenEye molecule.
 
@@ -1798,7 +1806,8 @@ class Topology(Serializable):
 
         return topology, positions
 
-    def to_openeye(self,
+    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API. Fix?
+    def _to_openeye(self,
                    positions=None,
                    aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
