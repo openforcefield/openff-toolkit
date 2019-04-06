@@ -1693,7 +1693,7 @@ class vdWHandler(ParameterHandler):
 
 
 class ElectrostaticsHandler(ParameterHandler):
-    """Handles SMIRNOFF <Electrostatics> tags.
+    """Handles SMIRNOFF ``<Electrostatics>`` tags.
 
     .. warning :: This API is experimental and subject to change.
     """
