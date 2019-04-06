@@ -1,4 +1,4 @@
-## Simulate a molecule in the gas phase using SMIRNOFF forcefield format
+## `SMIRNOFF_simulation`: Simulate a molecule in the gas phase using SMIRNOFF forcefield format
 
 This example code ([run_molecule.py](https://github.com/openforcefield/openforcefield/blob/master/examples/SMIRNOFF_simulation/run_molecule.py)) demonstrates how to simulate a molecule in the gas phase using the SMIRNOFF forcefield format.
 
