@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/openforcefield/openforcefield.svg?branch=master)](https://travis-ci.org/openforcefield/openforcefield?branch=master)
-[![Documentation](https://readthedocs.org/projects/open-forcefield-toolkit/badge/?version=topology)](http://open-forcefield-toolkit.readthedocs.io/en/topology/?badge=topology)
+[![Documentation](https://readthedocs.org/projects/open-forcefield-toolkit/badge/?version=topology)](http://open-forcefield-toolkit.readthedocs.io/en/latest/?badge=latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Install with Conda](https://anaconda.org/omnia/openforcefield/badges/installer/conda.svg)](https://anaconda.org/omnia/openforcefield)
 [![Anaconda Cloud platforms](https://anaconda.org/omnia/openforcefield/badges/platforms.svg)](https://anaconda.org/omnia/openforcefield)
@@ -11,12 +11,12 @@
 This repository contains a number of tools from the [Open Force Field Initiative](http://openforcefield.org) for the development and use of modern molecular mechanics forcefields based on direct chemical perception and parameterized with rigorous statistical methods.
 
 This repository hosts tools that we have committed to stably maintain throughout their lifetimes:
-* Tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) specification](https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html)
+* Tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) specification](https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html)
 * Tools for direct chemical environment perception and manipulation
 
 ## Documentation
 
-[Documentation](https://open-forcefield-toolkit.readthedocs.io/en/topology) for the `openforcefield` toolkit is hosted at [readthedocs](https://open-forcefield-toolkit.readthedocs.io/en/topology).
+[Documentation](https://open-forcefield-toolkit.readthedocs.io/en/latest/) for the `openforcefield` toolkit is hosted at [readthedocs](https://open-forcefield-toolkit.readthedocs.io/en/latest).
 
 ## Installation
 
@@ -24,21 +24,21 @@ This repository hosts tools that we have committed to stably maintain throughout
 
 ### Installing via conda
 
-Detailed installation instructions can be found [here](https://open-forcefield-toolkit.readthedocs.io/en/topology/installation.html).
+Detailed installation instructions can be found [here](https://open-forcefield-toolkit.readthedocs.io/en/latest/installation.html).
 
 ### Installing from source
 
-If you need to install via source, see the build and run package requirements listed in the [development conda recipe](https://github.com/openforcefield/openforcefield/blob/topology/devtools/conda-recipe/meta.yaml).
+If you need to install via source, see the build and run package requirements listed in the [development conda recipe](https://github.com/openforcefield/openforcefield/blob/master/devtools/conda-recipe/meta.yaml).
 
 # Features of the `openforcefield` toolkit
 
 ## The SMIRKS Native Open Force Field (SMIRNOFF) format
 
-This repository provides tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) specification](https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html), which currently supports an XML representation for force field definition files.
+This repository provides tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) specification](https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html), which currently supports an XML representation for force field definition files.
 
 By convention, files containing [XML representations](https://en.wikipedia.org/wiki/XML) of SMIRNOFF force fields carry `.offxml` extensions.
 
-Example SMIRNOFF `.offxml` force field definitions can be found in [`openforcefield/data/forcefield`](https://github.com/openforcefield/openforcefield/tree/topology/openforcefield/data/forcefield).
+Example SMIRNOFF `.offxml` force field definitions can be found in [`openforcefield/data/forcefield`](https://github.com/openforcefield/openforcefield/tree/master/openforcefield/data/forcefield).
 
 ### Working with SMIRNOFF parameter sets
 
@@ -65,7 +65,7 @@ openmm_system = forcefield.create_openmm_system(topology)
 # Load a SMIRNOFF small molecule forcefield for alkanes, ethers, and alcohols
 forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
 ```
-Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/topology/examples.html).
+Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/latest/examples.html).
 
 ## Chemical environments: Tools for chemical environment perception and manipulation
 
@@ -93,7 +93,7 @@ print(angle.asSMIRKS())
 ```
 Daylight provides detailed specifications of the [SMILES](http://www.daylight.com/dayhtml_tutorials/languages/smiles/index.html), [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html), and [SMIRKS](http://www.daylight.com/dayhtml_tutorials/languages/smirks/index.html) languages.
 
-For more detailed examples, see [`examples/chemicalEnvironments/README.md`](https://github.com/openforcefield/openforcefield/blob/topology/examples/chemicalEnvironments/README.md) and the corresponding [`examples/chemicalEnvironments/using_environment.ipynb`](https://github.com/openforcefield/openforcefield/blob/master/examples/chemicalEnvironments/using_environments.ipynb) example notebook.
+For more detailed examples, see [`examples/chemicalEnvironments/README.md`](https://github.com/openforcefield/openforcefield/blob/master/examples/chemicalEnvironments/README.md) and the corresponding [`examples/chemicalEnvironments/using_environment.ipynb`](https://github.com/openforcefield/openforcefield/blob/master/examples/chemicalEnvironments/using_environments.ipynb) example notebook.
 
 # Frequently asked questions (FAQ)
 

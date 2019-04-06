@@ -43,7 +43,7 @@ A reference implementation of the SMIRNOFF XML specification is provided in the 
 
 The reference implementation currently generates parameterized molecular mechanics systems for the GPU-accelerated [OpenMM](http://openmm.org) molecular simulation toolkit.
 Parameterized systems can subsequently be converted for use in other popular molecular dynamics simulation packages (including [AMBER](http://ambermd.org/), [CHARMM](https://www.charmm.org), [NAMD](http://www.ks.uiuc.edu/Research/namd/), [Desmond](https://www.deshawresearch.com/resources_desmond.html), and [LAMMPS](http://lammps.sandia.gov/)) via [ParmEd](http://parmed.github.io/ParmEd) and [InterMol](https://github.com/shirtsgroup/InterMol).
-See [Converting SMIRNOFF parameterized systems to other simulation packages](https://open-forcefield-toolkit.readthedocs.io/en/topology/converting.html) for more details.
+See [Converting SMIRNOFF parameterized systems to other simulation packages](https://open-forcefield-toolkit.readthedocs.io/en/latest/converting.html) for more details.
 
 ## Basic structure
 
@@ -93,7 +93,7 @@ The `<Date>` tag should conform to [ISO 8601 date formatting guidelines](https:/
 ### Parameter generators
 
 Within the `<SMIRNOFF>` tag, top-level tags encode parameters for a force field based on a SMARTS/SMIRKS-based specification describing the chemical environment the parameters are to be applied to.
-The file has tags corresponding to OpenMM force terms (`Bonds`, `Angles`, `TorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example offxml](https://github.com/openforcefield/openforcefield/blob/topology/openforcefield/data/forcefield/Frosst_AlkEthOH.offxml)):
+The file has tags corresponding to OpenMM force terms (`Bonds`, `Angles`, `TorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms.
 ```XML
 <Angles angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
    ...
@@ -588,7 +588,7 @@ See the [openforcefield GitHub issue tracker](https://github.com/openforcefield/
 
 A Python reference implementation of a parameterization engine implementing the SMIRNOFF force field specification can be found [online](http://github.com/openforcefield/openforcefield).
 This implementation can use either the free-for-academics (but commercially supported) [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/index.html) or the free and open source [RDKit cheminformatics toolkit](http://www.rdkit.org/).
-See the [installation instructions](https://open-forcefield-toolkit.readthedocs.io/en/topology/installation.html) for information on how to install this implementation and its dependencies.
+See the [installation instructions](https://open-forcefield-toolkit.readthedocs.io/en/latest/installation.html) for information on how to install this implementation and its dependencies.
 
 ### Examples
 
