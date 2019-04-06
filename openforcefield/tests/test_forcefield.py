@@ -38,7 +38,7 @@ TIP3P_SDF_FILE_PATH = get_data_filename(os.path.join('systems', 'monomers', 'wat
 
 GENERIC_BOND_LENGTH = 1.09 * unit.angstrom
 XML_FF_GENERICS = f"""<?xml version='1.0' encoding='ASCII'?>
-<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
   <Bonds length_unit="angstroms" k_unit="kilocalories_per_mole/angstrom**2">
     <Bond smirks="[*:1]~[*:2]" id="b1" k="680.0" length="{GENERIC_BOND_LENGTH/unit.angstrom}"/>
   </Bonds>
