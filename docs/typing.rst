@@ -58,3 +58,4 @@ A reference implementation of the SMIRNOFF specification for parameterizing biom
     :toctree: api/generated/
 
     ParameterIOHandler
+    XMLParameterIOHandler

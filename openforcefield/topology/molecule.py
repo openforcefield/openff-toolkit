@@ -167,8 +167,6 @@ class Atom(Particle):
     """
     A particle representing a chemical atom.
 
-    .. warning :: This API is experimental and subject to change.
-
     Note that non-chemical virtual sites are represented by the ``VirtualSite`` object.
 
     .. todo::
