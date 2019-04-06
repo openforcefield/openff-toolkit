@@ -22,7 +22,7 @@ This repository hosts tools that we have committed to stably maintain throughout
 
 ## Installation
 
-`openforcefield` is a Python toolkit, and supports Python 2.7, 3.5, and 3.6.
+`openforcefield` is a Python toolkit, and supports Python 3.6 and 3.7.
 
 ### Installing via conda
 
