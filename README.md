@@ -95,8 +95,6 @@ print(angle.asSMIRKS())
 ```
 Daylight provides detailed specifications of the [SMILES](http://www.daylight.com/dayhtml_tutorials/languages/smiles/index.html), [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html), and [SMIRKS](http://www.daylight.com/dayhtml_tutorials/languages/smirks/index.html) languages.
 
-For more detailed examples, see [`examples/chemicalEnvironments/README.md`](https://github.com/openforcefield/openforcefield/blob/master/examples/chemicalEnvironments/README.md) and the corresponding [`examples/chemicalEnvironments/using_environment.ipynb`](https://github.com/openforcefield/openforcefield/blob/master/examples/chemicalEnvironments/using_environments.ipynb) example notebook.
-
 # Frequently asked questions (FAQ)
 
 See [`Chemical-starting-points.md`](Chemical-starting-points.md) for answers to a variety of common problems, such as:
