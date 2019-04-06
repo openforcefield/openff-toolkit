@@ -8,8 +8,8 @@ These examples are described in more detail below.
 
 .. mdinclude:: ../examples/forcefield_modification/README.md
 
-.. mdinclude:: ../examples/conversion_amber_gromacs/README.md
+.. mdinclude:: ../examples/using_smirnoff_in_amber_or_gromacs/README.md
 
-.. mdinclude:: ../examples/label_molecule/README.md
+.. mdinclude:: ../examples/inspect_assigned_parameters/README.md
 
-.. mdinclude:: ../examples/mixedFF_complex/README.md
+.. mdinclude:: ../examples/using_smirnoff_with_amber_protein_forcefield/README.md

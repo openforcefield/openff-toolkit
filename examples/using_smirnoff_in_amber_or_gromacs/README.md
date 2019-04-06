@@ -1,4 +1,4 @@
-## `conversion_amber_gromacs`: Export OpenFF-generated System to AMBER and GROMACS files
+## Export OpenFF-generated System to AMBER and GROMACS files
 
 This example shows how you can convert a `System` generated with the Open Forcefield Toolkit, which can be simulated natively with OpenMM, into AMBER prmtop/inpcrd and GROMACS top/gro input files through the ParmEd library.
 
