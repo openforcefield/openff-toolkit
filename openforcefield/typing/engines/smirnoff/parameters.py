@@ -501,9 +501,11 @@ class ParameterType(object):
 
 
 class ParameterHandler(object):
-    """Virtual base class for parameter handlers.
+    """Base class for parameter handlers.
 
-    Parameter handlers are configured with some global parameters for a given section, and
+    Parameter handlers are configured with some global parameters for a given section. They may also contain a
+    :class:`ParameterList` populated with :class:`ParameterType` objects if they are responsile for assigning
+    SMIRKS-based parameters.
 
     .. warning
 
@@ -1023,7 +1025,7 @@ class BondHandler(ParameterHandler):
 
 
     class BondType(ParameterType):
-        """A SMIRNOFF Bond parameter type
+        """A SMIRNOFF bond type
 
         .. warning :: This API is experimental and subject to change.
         """

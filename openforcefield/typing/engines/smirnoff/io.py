@@ -75,7 +75,7 @@ def _ast_unit_eval(node):
 
 class ParameterIOHandler(object):
     """
-    Handles serialization/deserialization of SMIRNOFF ForceField objects
+    Base class for handling serialization/deserialization of SMIRNOFF ForceField objects
     """
     _FORMAT = None
 
@@ -154,6 +154,9 @@ class ParameterIOHandler(object):
 
 
 class XMLParameterIOHandler(ParameterIOHandler):
+    """
+    Handles serialization/deserialization of SMIRNOFF ForceField objects from OFFXML format.
+    """
     # TODO: Come up with a better keyword for format
     _FORMAT = 'XML'
 
