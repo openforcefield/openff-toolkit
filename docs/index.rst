@@ -18,7 +18,6 @@ User Guide
    releasehistory
    smirnoff
    examples
-   chemicalenvironments
    developing
    faq
 

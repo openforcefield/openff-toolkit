@@ -7,6 +7,8 @@
 """
 environment.py
 
+.. warning :: This file is  will be updated to comply with PEP8.
+
 Classes defining a chemical environment for atoms and how they are connected
 using networkx graph objects to organize and make changes to the structure.
 Output will be in the form of SMARTS and SMIRKS.
@@ -18,8 +20,6 @@ with contributions from John Chodera, Memorial Sloan Kettering Cancer Center
 and David Mobley, UC Irvine.
 
 """
-
-# QUESTION: should we ditch camelCase and go with PEP8 standard snake_case?
 
 #==============================================================================
 # GLOBAL IMPORTS
@@ -174,6 +174,9 @@ class SMIRKSParsingError(openforcefield.utils.MessageException):
 
 class ChemicalEnvironment(object):
     """Chemical environment abstract base class that matches an atom, bond, angle, etc.
+
+    .. warning :: This class is largely redundant with the same one in the Chemper package, and will likely be removed.
+
     """
     class Atom(object):
         """Atom representation, which may have some ORtypes and ANDtypes properties.

@@ -1,1 +1,1 @@
-.. mdinclude:: ../Chemical-starting-points.md
+.. mdinclude:: ../FAQ.md

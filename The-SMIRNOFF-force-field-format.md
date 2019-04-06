@@ -1,4 +1,4 @@
-# The SMIRks Native Open Force Field (SMIRNOFF) specification v1.0
+# The SMIRks Native Open Force Field (SMIRNOFF) specification v0.2
 
 SMIRNOFF is a specification for encoding molecular mechanics force fields from the [Open Force Field Initiative](http://openforcefield.org) based on direct chemical perception using the broadly-supported [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) language, utilizing atom tagging extensions from [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html).
 
@@ -43,7 +43,7 @@ A reference implementation of the SMIRNOFF XML specification is provided in the 
 
 The reference implementation currently generates parameterized molecular mechanics systems for the GPU-accelerated [OpenMM](http://openmm.org) molecular simulation toolkit.
 Parameterized systems can subsequently be converted for use in other popular molecular dynamics simulation packages (including [AMBER](http://ambermd.org/), [CHARMM](https://www.charmm.org), [NAMD](http://www.ks.uiuc.edu/Research/namd/), [Desmond](https://www.deshawresearch.com/resources_desmond.html), and [LAMMPS](http://lammps.sandia.gov/)) via [ParmEd](http://parmed.github.io/ParmEd) and [InterMol](https://github.com/shirtsgroup/InterMol).
-See [Converting SMIRNOFF parameterized systems to other simulation packages](https://open-forcefield-toolkit.readthedocs.io/en/topology/converting.html) for more details.
+See [Converting SMIRNOFF parameterized systems to other simulation packages](https://open-forcefield-toolkit.readthedocs.io/en/latest/converting.html) for more details.
 
 ## Basic structure
 
@@ -55,7 +55,7 @@ Below, we describe the main structure of such an XML representation.
 
 A SMIRNOFF forcefield XML specification always is enclosed in a `<SMIRNOFF>` tag, with certain required attributes provided.
 ```XML
-<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
 ...
 </SMIRNOFF>
 ```
@@ -64,7 +64,7 @@ A SMIRNOFF forcefield XML specification always is enclosed in a `<SMIRNOFF>` tag
 
 The SMIRNOFF force field format supports versioning via the `version` attribute to the root `<SMIRNOFF>` tag, e.g.:
 ```XML
-<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
 ...
 </SMIRNOFF>
 ```
@@ -93,7 +93,7 @@ The `<Date>` tag should conform to [ISO 8601 date formatting guidelines](https:/
 ### Parameter generators
 
 Within the `<SMIRNOFF>` tag, top-level tags encode parameters for a force field based on a SMARTS/SMIRKS-based specification describing the chemical environment the parameters are to be applied to.
-The file has tags corresponding to OpenMM force terms (`Bonds`, `Angles`, `TorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms, for example (see the [AlkEthOH example offxml](https://github.com/openforcefield/openforcefield/blob/topology/openforcefield/data/forcefield/Frosst_AlkEthOH.offxml)):
+The file has tags corresponding to OpenMM force terms (`Bonds`, `Angles`, `TorsionForce`, etc., as discussed in more detail below); these specify units used for the different constants provided for individual force terms.
 ```XML
 <Angles angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
    ...
@@ -182,6 +182,8 @@ Currently, only classical fixed point charge models are supported, but future ex
 
 ### `<LibraryCharges>`: Library charges for polymeric residues and special solvent models
 
+.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit
+
 A mechanism is provided for specifying library charges that can be applied to molecules or residues that match provided templates.
 Library charges are applied first, and atoms for which library charges are applied will be excluded from alternative charging schemes listed below.
 
@@ -209,6 +211,8 @@ For example, to ensure water molecules are assigned partial charges for [TIP3P](
 ```
 
 ### `<ChargeIncrementModel>`: Small molecule and fragment charges
+
+.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit. This area of the SMIRNOFF spec is under further consideration. Please see [Issue 208 on the Open Force Field Toolkit issue tracker](https://github.com/openforcefield/openforcefield/issues/208).
 
 In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), partial charges for small molecules are usually assigned using a quantum chemical method (usually a semiempirical method such as [AM1](https://en.wikipedia.org/wiki/Austin_Model_1)) and a [partial charge determination scheme](https://en.wikipedia.org/wiki/Partial_charge) (such as [CM2](http://doi.org/10.1021/jp972682r) or [RESP](http://doi.org/10.1021/ja00074a030)), then subsequently corrected via charge increment rules, as in the highly successful [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach.
 
@@ -240,8 +244,8 @@ Future additions will provide options for intelligently fragmenting large molecu
 
 ### Prespecified charges (reference implementation only)
 
-In our reference implementation of SMIRNOFF in the `openforcefield` toolkit, we also provide a method for specifying partial charges within the `Molecule` objects in the `Topology`.
-If the optional `user_specified_charges=True` flag is passed to `ForceField.create_system(topology)`, all charges will be drawn from `Molecule` objects in the `Topology`, which can be annotated with user-specified charges.
+In our reference implementation of SMIRNOFF in the `openforcefield` toolkit, we also provide a method for specifying user-defined partial charges during system creation.
+This functionality is accessed by using the `charge_from_molecules` optional argument during system creation, such as in  `ForceField.create_openmm_system(topology, charge_from_molecules=molecule_list)`. When this optional keyword is provided, all matching molecules will have their charges set by the entries in `molecule_list`.
 This method is provided solely for convenience in developing and exploring alternative charging schemes; actual force field releases for distribution will use one of the other mechanisms specified above.
 
 ## Parameter sections
@@ -252,7 +256,7 @@ This decoupling of how parameters are assigned for each term provides a great de
 
 Below, we describe the specification for each force field term definition using the XML representation of a SMIRNOFF force field.
 
-As an example of a complete SMIRNOFF force field specification, see the [AlkEthOH example offxml](https://github.com/openforcefield/openforcefield/blob/topology/openforcefield/data/forcefield/Frosst_AlkEthOH.offxml), or the larger prototype [SMIRNOFF99Frosst offxml](https://github.com/openforcefield/SMIRNOFF99Frosst/blob/topology/SMIRNOFF99Frosst.offxml).
+As an example of a complete SMIRNOFF force field specification, see the prototype [SMIRNOFF99Frosst offxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/smirnoff99Frosst.offxml).
 
 .. note :: Not all parameter sections *must* be specified in a SMIRNOFF force field. A wide variety of force field terms are provided in the specification, but a particular force field only needs to define a subset of those terms.
 
@@ -348,6 +352,8 @@ Constrained bonds are handled by a separate `<Constraints>` tag, which can eithe
 
 #### Fractional bond orders (EXPERIMENTAL)
 
+.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit.
+
 Fractional bond orders can be used to allow interpolation of bond parameters.
 For example, these parameters:
 ```XML
@@ -413,7 +419,9 @@ Currently, only `potential="charmm"` is supported, where we utilize the function
 ```
 U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 ```
-**Note that AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
+
+.. note:: **AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
+
 If the `potential` attribute is omitted, it defaults to `charmm`.
 
 ### `<ImproperTorsions>`
@@ -429,7 +437,8 @@ Currently, only `potential="charmm"` is supported, where we utilize the function
 ```
 U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 ```
-**Note that AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
+
+.. note:: **AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
 If the `potential` attribute is omitted, it defaults to `charmm`.
 
 The improper torsion energy is computed as the average over all three impropers (all with the same handedness) in a [trefoil](https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Trefoil_knot_left.svg/2000px-Trefoil_knot_left.svg.png).
@@ -438,9 +447,11 @@ The *second* atom in an improper (in the example above, the trivalent carbon) is
 
 ### `<GBSA>`
 
+.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit.
+
 Generalized-Born surface area (GBSA) implicit solvent parameters are optionally specified via a `<GBSA>...</GBSA>` using `<Atom>` tags with GBSA model specific attributes:
 ```XML
- <GBSA gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" radius_unit="nanometers" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
+ <GBSA gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" radius_unit="nanometers" sa_model="ACE" surface_area_penalty="5.4" surface_area_penalty_unit="calories/mole/angstroms**2" solvent_radius="1.4" solvent_radius_unit="angstroms">
    <Atom smirks="[#1:1]" radius="0.12" scale="0.85"/>
    <Atom smirks="[#1:1]~[#6]" radius="0.13" scale="0.85"/>
    <Atom smirks="[#1:1]~[#8]" radius="0.08" scale="0.85"/>
@@ -458,17 +469,16 @@ Generalized-Born surface area (GBSA) implicit solvent parameters are optionally 
 
 #### Supported Generalized Born (GB) models
 In the `<GBSA>` tag, `gb_model` selects which GB model is used.
-Currently, this can be selected from a subset of the [GBSA models available in OpenMM's `simtk.openmm.app`](http://docs.openmm.org/latest/userguide/application.html#amber-implicit-solvent:
+Currently, this can be selected from a subset of the [GBSA models available in OpenMM's `simtk.openmm.app`](http://docs.openmm.org/latest/userguide/application.html#amber-implicit-solvent):
 * `HCT`: [Hawkins-Cramer-Truhlar](http://docs.openmm.org/latest/userguide/zbibliography.html#hawkins1995) (corresponding to `igb=1` in AMBER): requires `[radius, scale]`
 * `OBC1`: [Onufriev-Bashford-Case](http://docs.openmm.org/latest/userguide/zbibliography.html#onufriev2004) using the GB(OBC)I parameters (corresponding to `igb=2` in AMBER): requires `[radius, scale]`
 * `OBC2`: [Onufriev-Bashford-Case](http://docs.openmm.org/latest/userguide/zbibliography.html#onufriev2004) using the GB(OBC)II parameters (corresponding to `igb=5` in AMBER): requires `[radius, scale]`
 
 If the `gb_model` attribute is omitted, it defaults to `OBC1`.
 
-Each GB model can possess several attributes, which may be unitless (`1.0`, `78.5`) or unit-bearing quantities (`1.4*angstrom`, `5.4*calories/mole/angstrom**2`).
 The attributes `solvent_dielectric` and `solute_dielectric` specify solvent and solute dielectric constants used by the GB model.
 In this example, `radius` and `scale` are per-particle parameters of the `OBC1` GB model supported by OpenMM.
-Units are for these per-particle parameters (such as `radius_units`) optionally specified in the `<GBSA>` tag.
+Units are for these per-particle parameters (such as `radius_units`) specified in the `<GBSA>` tag.
 
 #### Surface area (SA) penalty model
 
@@ -478,8 +488,8 @@ Currently, only the [analytical continuum electrostatics (ACE) model](http://doc
 If `sa_model` is not specified, it defaults to `ACE`.
 
 The `ACE` model permits two additional parameters to be specified:
-* The `surface_area_penalty` attribute specifies the surface area penalty for the `ACE` model. (Default: `5.4*calories/mole/angstroms**2`)
-* The `solvent_radius` attribute specifies the solvent radius. (Default: `1.4*angstroms`)
+* The `surface_area_penalty` attribute specifies the surface area penalty for the `ACE` model. (Default: `5.4 calories/mole/angstroms**2`)
+* The `solvent_radius` attribute specifies the solvent radius. (Default: `1.4 angstroms`)
 
 ### `<Constraints>`
 
@@ -521,16 +531,18 @@ Standard usage is expected to rely primarily on the features documented above an
 
 ### `<VirtualSites>`: Virtual sites for off-atom charges
 
+.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit
+
 We have implemented experimental support for placement of off-atom (off-center) charges in a variety of contexts which may be chemically important in order to allow easy exploration of when these will be warranted.
 Currently we support the following different types or geometries of off-center charges (as diagrammed below):
 - `BondCharge`: This supports placement of a virtual site `S` along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom (green in this image).
-<img src="figures/vsite_bondcharge.jpg" width="200">
+![Bond charge virtual site](figures/vsite_bondcharge.jpg)
 - `MonovalentLonePair`: This is originally intended for situations like a carbonyl, and allows placement of a virtual site `S` at a specified distance `d`, `inPlaneAngle` (theta 1 in the diagram), and `outOfPlaneAngle` (theta 2 in the diagram) relative to a central atom and two connected atoms.
-<img src="figures/vsite_monovalent.jpg" width=400>
+![Monovalent lone pair virtual site](figures/vsite_monovalent.jpg)
 - `DivalentLonePair`: This is suitable for cases like four-point and five-point water models as well as pyrimidine; a charge site `S` lies a specified distance `d` from the central atom among three atoms (blue) along the bisector of the angle between the atoms (if `outOfPlaneAngle` is zero) or out of the plane by the specified angle (if `outOfPlaneAngle` is nonzero) with its projection along the bisector. For positive values fo the distance `d` the virtual site lies outside the 2-1-3 angle and for negative values it lies inside.
-<img src="figures/vsite_divalent.jpg" width=500>
+![Divalent lone pair virtual site](figures/vsite_divalent.jpg)
 - `TrivalentLonePair`: This is suitable for planar or tetrahedral nitrogen lone pairs; a charge site `S` lies above  the central atom (e.g. nitrogen, blue) a distance `d` along the vector perpendicular to the plane of the three connected atoms (2,3,4). With positive values of `d` the site lies above the nitrogen and with negative values it lies below the nitrogen.
-<img src="figures/vsite_trivalent.jpg" width=500>
+![Trivalent lone pair virtual site](figures/vsite_trivalent.jpg)
 
 Each virtual site receives charge which is transferred from the desired atoms specified in the SMIRKS pattern via a `chargeincrement#` parameter, e.g., if `chargeincrement1=+0.1` then the virtual site will receive a charge of -0.1 and the atom labeled `1` will have its charge adjusted upwards by +0.1.
 N may index any indexed atom.
@@ -576,7 +588,7 @@ See the [openforcefield GitHub issue tracker](https://github.com/openforcefield/
 
 A Python reference implementation of a parameterization engine implementing the SMIRNOFF force field specification can be found [online](http://github.com/openforcefield/openforcefield).
 This implementation can use either the free-for-academics (but commercially supported) [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/index.html) or the free and open source [RDKit cheminformatics toolkit](http://www.rdkit.org/).
-See the [installation instructions](https://open-forcefield-toolkit.readthedocs.io/en/topology/installation.html) for information on how to install this implementation and its dependencies.
+See the [installation instructions](https://open-forcefield-toolkit.readthedocs.io/en/latest/installation.html) for information on how to install this implementation and its dependencies.
 
 ### Examples
 
@@ -632,7 +644,7 @@ We recommend generics be used sparingly unless it is your intention to provide t
 
 ## Version history
 
-### 1.0
+### 0.2
 
 This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specification along with `ForceField` implementation refactor:
 * Aromaticity model now defaults to `OEAroModel_MDL`, and aromaticity model names drop OpenEye-specific prefixes
@@ -644,7 +656,7 @@ This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specificatio
     * `<BondChargeCorrections>` was renamed to `<ChargeIncrementModel>` and generalized to accommodate an arbitrary number of tagged atoms
     * `<GBSAForce>` was renamed to `<GBSA>`    
 * `<PeriodicTorsionForce>` was split into `<ProperTorsions>` and `<ImproperTorsions>`
-* `<vdW>` now specifies 1-2, 1-3, 1-4, and 1-5 scaling factors via `scale12` (default: 0), `scale13` (default: 0), `scale14` (default: 0.5), and `scale15` (default 1.0) attributes. Coulomb scaling parameters have been removed from `StericsForce`.
+* `<vdW>` now specifies 1-2, 1-3, 1-4, and 1-5 scaling factors via `scale12` (default: 0), `scale13` (default: 0), `scale14` (default: 0.5), and `scale15` (default 1.0) attributes. It also specifies the long-range vdW method to use, currently supporting `cutoff` (default) and `PME`. Coulomb scaling parameters have been removed from `StericsForce`.
 * Added the `<Electrostatics>` tag to separately specify 1-2, 1-3, 1-4, and 1-5 scaling factors for electrostatics, as well as the method used to compute electrostatics (`PME`, `reaction-field`, `Coulomb`) since this has a huge effect on the energetics of the system.
 * Made it clear that `<Constraint>` entries do not have to be between bonded atoms.
 * `<VirtualSites>` has been added, and the specification of charge increments harmonized with `<ChargeIncrementModel>`
@@ -663,79 +675,5 @@ This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specificatio
 
 Initial draft specification.
 
-## Open Questions
 
-### What should we name parameter sections?
 
-* parameter sections?
-* force field terms?
-* force classes?
-* interaction types?
-
-### Should we have a separate `<Metadata>` or `<Provenance>` section that users can add whatever they want to?
-
-This would minimize the potential for accidentally colliding with other tags we add in the future.
-
-### Do we want to allow users to specify atomic or particle masses? This could allow, for example, heavy hydrogens to be specified easily.
-
-```XML
-<!-- Use average atomic masses (averaged over isotopes) except for heavy hydrogens -->
-<Masses default="average-atomic-mass" mass_unit="amu">
-   <!-- Make hydrogens heavy -->
-   <Mass smirks="[#1:1]" mass="3"/>
-</Masses>
-```
-While this won't affect thermodynamic properties, it could affect *kinetic* properties, which may be something our force fields optimize for in the future.
-
-### Should individual force classes be versioned, rather than having a global SMIRNOFF version?
-
-### Should we expand fractional bond orders beyond `<Bonds>`?
-
-### Should we have an XML Schema?
-
-An XML Schema would make it easier to validate XML representations of SMIRNOFF to make sure they are compliant and detect errors.
-
-### Handling extra XML tag attributes
-
-Currently, the XML parser ignores attributes in the XML that it does not understand, so providing a parameter line for an angle that specifies (for example) a second force constant `k2` will silently lead to no effect.
-Should we change this behavior to raise an error so that malformed `.offxml` files or typos are not silently processed without warning the user?
-On the one hand, it's useful to specify things like `id` and `parent_id`, and to allow users to extend this, but it makes errors or typos easier to go uncaught.
-
-### Should we integrate ParmEd and InterMol functionality by adding `create()` methods for other simulation packages?
-
-We could integrate ParmEd and InterMol as dependencies in our tooolkit and add methods like `ForceField.create_amber_system()` or `ForceField.create_charmm_system()` that generate input files for other packages without the need to convert.
-While perhaps not immediately useful for combining biopolymers parameterized with traditional force fields with SMIRNOFF-parameterized small molecules, once these legacy force fields are available in SMIRNOFF format or we have new biopolymer SMIRNOFF force fields, this drastically simplifies workflows.
-
-### Add link to complete open specification of `OEAroModel_MDL` aromaticity model
-
-### Are there ways we can simplify the integration of legacy biopolymer force fields?
-
-Are there ways we can make it easy to integrate pre-parameterized systems describing part of the topology (e.g. protein)?
-
-### How will we ensure the SMIRNOFF force field is correctly implemented by molecular simulation packages where nonbonded treatments are encoded by auxiliary input files?
-
-For gromacs, AMBER, and CHARMM, the nonbonded treatments (which are integrally specified by a SMIRNOFF force field) are instead specified by an auxiliary input file.
-Should we generate this auxiliary input file to, or part of it?
-How can we insist that the desired settings be used?
-
-### We should include some missing references
-
-* Supported aromaticity models
-* Supported fractional bond order models
-* Quantum chemical methods (e.g. AM1) and charge partitioning schemes (e.g. CM2)
-* AM1-BCC
-
-### How should we use multiple conformations in charging?
-
-Should we follow the RESP approach, where the charges or averaged?
-Or the ELF approach, where we use some kind of energy function to evaluate which single conformer is used to compute which conformer is to be used for quantum chemical calculations?
-What scheme should we use to generate the conformers in a deterministic manner?
-
-### Should we support RESP charging?
-
-### How should we fragment larger small molecules and polymers for charging?
-
-Larger small molecules may not benefit from quantum chemical calculations on the whole molecule.
-Instead, it might be more robust (and faster) to break the molecule into smaller capped fragments, compute charges separately for these fragments, and combine the charges according to some algorithms.
-This approach would also work for polymers, allowing us to parameterize arbitrary polymeric residues and covalent modifications of them.
-What is the best way to do this?

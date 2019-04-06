@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding='ASCII'?>
 
-<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
 
   <!-- SMIRks Native Open Force Field (SMIRNOFF) file -->
   <Date>2019-04-04</Date>

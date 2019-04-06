@@ -74,10 +74,9 @@ class Particle(Serializable):
     """
     Base class for all particles in a molecule.
 
-    .. warning :: This API experimental and subject to change.
-
     A particle object could be an ``Atom`` or a ``VirtualSite``.
 
+    .. warning :: This API is experimental and subject to change.
     """
 
     @property
@@ -98,8 +97,6 @@ class Particle(Serializable):
         Set the particle's molecule pointer. Note that this will only work if the particle currently 
         doesn't have a molecule
         """
-        #TODO: I forgot if python will hold a pointer to the molecule, or some sort of bulky copy here
-        #TODO: Should _molecule be a property?
         #TODO: Add informative exception here
         assert self._molecule == None
         self._molecule = molecule
@@ -111,36 +108,6 @@ class Particle(Serializable):
         """
         return self._molecule.particles.index(self)
 
-    @property
-    def topology(self):
-        """
-        The ``Topology`` this atom is part of.
-
-        .. todo::
-
-           * Should we have a single unique ``Topology`` for each topology type in the system,
-           or if we have multiple copies of the same topology, should we have multiple ``Topology``s?
-        """
-        return self._topology
-
-    @topology.setter
-    def topology(self, topology):
-        """
-        Set the particle's topology pointer. Note that this will only work if the particle currently 
-        doesn't have a topology
-        """
-        #TODO: I forgot if python will hold a pointer to the molecule, or some sort of bulky copy here
-        #TODO: Should _molecule be a property?
-        #TODO: Add informative exception here
-        assert self._topology == None
-        self._topology = topology
-
-    @property
-    def topology_particle_index(self):
-        """
-        Returns the index of this particle in its parent topology
-        """
-        return self._topology.particles.index(self)
 
     @property
     def name(self):
@@ -170,24 +137,20 @@ class Atom(Particle):
     """
     A particle representing a chemical atom.
 
-    .. warning :: This API experimental and subject to change.
-
     Note that non-chemical virtual sites are represented by the ``VirtualSite`` object.
 
     .. todo::
 
        * Should ``Atom`` objects be immutable or mutable?
-       * Should an ``Atom`` be able to belong to more than one ``Topology`` object?
        * Do we want to support the addition of arbitrary additional properties,
          such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial`` index in a PDB file),
          or string labels (such as Lennard-Jones types)?
-       * Should we be able to create ``Atom`` objects on their own, or only in the context of a ``Topology`` object they belong to?
 
     .. todo :: Allow atoms to have associated properties.
 
+    .. warning :: This API is experimental and subject to change.
     """
 
-    ## From Jeff: This version of the API will push forward with immutable atoms and molecules
     def __init__(self,
                  atomic_number,
                  formal_charge,
@@ -253,7 +216,7 @@ class Atom(Particle):
         bond: an openforcefield.topology.molecule.Bond
             A bond involving this atom
 
-        """
+"""
 
         self._bonds.append(bond)
         #self._stereochemistry = None
@@ -267,12 +230,14 @@ class Atom(Particle):
         bond: an openforcefield.topology.molecule.Bond
             A bond involving this atom
 
-        """
+"""
 
         self._virtual_sites.append(vsite)
 
     def to_dict(self):
-        """Return a dict representation of the atom."""
+        """Return a dict representation of the atom.
+
+"""
         # TODO
         atom_dict = OrderedDict()
         atom_dict['atomic_number'] = self._atomic_number
@@ -287,7 +252,9 @@ class Atom(Particle):
 
     @classmethod
     def from_dict(cls, atom_dict):
-        """Create an Atom from a dict representation."""
+        """Create an Atom from a dict representation.
+
+"""
         ## TODO: classmethod or static method? Classmethod is needed for Bond, so it have
         ## its _molecule set and then look up the Atom on each side of it by ID
         return cls.__init__(*atom_dict)
@@ -469,19 +436,19 @@ class Atom(Particle):
             raise ValueError('This Atom does not belong to a Molecule object')
         return self._molecule.particles.index(self)
 
-    ## From Jeff: Not sure if we actually need this
-    @property
-    def topology_atom_index(self):
-        """
-        The index of this Atom within the the list of atoms in ``Topology``.
-        Note that this can be different from ``particle_index``.
-
-        """
-        if self._topology is None:
-            raise ValueError('This Atom does not belong to a Topology object')
-        # TODO: This will be slow; can we cache this and update it only when needed?
-        #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
-        return self._topology.atoms.index(self)
+    # ## From Jeff: Not sure if we actually need this
+    # @property
+    # def topology_atom_index(self):
+    #     """
+    #     The index of this Atom within the the list of atoms in ``Topology``.
+    #     Note that this can be different from ``particle_index``.
+    #
+    #     """
+    #     if self._topology is None:
+    #         raise ValueError('This Atom does not belong to a Topology object')
+    #     # TODO: This will be slow; can we cache this and update it only when needed?
+    #     #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
+    #     return self._topology.atoms.index(self)
 
     def __repr__(self):
         # TODO: Also include particle_index and which molecule this atom belongs to?
@@ -503,9 +470,10 @@ class VirtualSite(Particle):
     """
     A particle representing a virtual site whose position is defined in terms of ``Atom`` positions.
 
-    .. warning :: This API experimental and subject to change.
-
     Note that chemical atoms are represented by the ``Atom``.
+
+
+    .. warning :: This API is experimental and subject to change.
 
     .. todo::
 
@@ -551,7 +519,7 @@ class VirtualSite(Particle):
         name : str or None, default=None
             The name of this virtual site. Default is None
 
-        """
+"""
 
         # Ensure we have as many charge_increments as we do atoms
         if not (charge_increments == None):
@@ -625,7 +593,9 @@ class VirtualSite(Particle):
         #self._weights = np.array(weights) # make a copy and convert to array internally
 
     def to_dict(self):
-        """Return a dict representation of the virtual site."""
+        """Return a dict representation of the virtual site.
+
+"""
         # Each subclass should have its own to_dict
         vsite_dict = OrderedDict()
         vsite_dict['name'] = self._name
@@ -644,7 +614,9 @@ class VirtualSite(Particle):
 
     @staticmethod
     def from_dict(vsite_dict):
-        """Create a virtual site from a dict representation."""
+        """Create a virtual site from a dict representation.
+
+"""
         # Each subclass needs to have its own from_dict
 
         # Make a copy of the vsite_dict, where we'll unit-wrap the appropriate values
@@ -662,7 +634,7 @@ class VirtualSite(Particle):
     @property
     def molecule_virtual_site_index(self):
         """
-        The index of this VirtualSite within the list of virtual sites within ``Topology``
+        The index of this VirtualSite within the list of virtual sites within ``Molecule``
         Note that this can be different from ``particle_index``.
         """
         #if self._topology is None:
@@ -682,19 +654,6 @@ class VirtualSite(Particle):
             raise ValueError(
                 'This VirtualSite does not belong to a Molecule object')
         return self._molecule.particles.index(self)
-
-    #@property
-    #def topology_virtual_site_index(self):
-    #    """
-    #    The index of this VirtualSite within the list of virtual sites within ``Topology``
-    #    Note that this can be different from ``particle_index``.
-
-    #    """
-    #    if self._topology is None:
-    #        raise ValueError('This VirtualSite does not belong to a Topology object')
-    #    # TODO: This will be slow; can we cache this and update it only when needed?
-    #    #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
-    #    return self._topology.virtual_sites.index(self)
 
     @property
     def atoms(self):
@@ -762,6 +721,7 @@ class BondChargeVirtualSite(VirtualSite):
     """
     A particle representing a "Bond Charge"-type virtual site, in which the location of the charge is specified by the positions of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
 
+    .. warning :: This API is experimental and subject to change.
     """
 
     def __init__(self,
@@ -796,7 +756,6 @@ class BondChargeVirtualSite(VirtualSite):
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=None
             The name of this virtual site. Default is None.
-            
         """
         assert hasattr(distance, 'unit')
         assert unit.angstrom.is_compatible(distance.unit)
@@ -839,7 +798,9 @@ class BondChargeVirtualSite(VirtualSite):
 class MonovalentLonePairVirtualSite(VirtualSite):
     """
     A particle representing a "Monovalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is originally intended for situations like a carbonyl, and allows placement of a virtual site S at a specified distance d, in_plane_angle, and out_of_plane_angle relative to a central atom and two connected atoms. 
-    """
+
+    .. warning :: This API is experimental and subject to change.
+   """
 
     def __init__(self,
                  atoms,
@@ -875,6 +836,8 @@ class MonovalentLonePairVirtualSite(VirtualSite):
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=None
             The name of this virtual site. Default is None.
+
+
         """
         #assert isinstance(distance, unit.Quantity)
         # TODO: Check for proper number of atoms
@@ -945,6 +908,8 @@ class MonovalentLonePairVirtualSite(VirtualSite):
 class DivalentLonePairVirtualSite(VirtualSite):
     """
     A particle representing a "Divalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is suitable for cases like four-point and five-point water models as well as pyrimidine; a charge site S lies a specified distance d from the central atom among three atoms along the bisector of the angle between the atoms (if out_of_plane_angle is zero) or out of the plane by the specified angle (if out_of_plane_angle is nonzero) with its projection along the bisector. For positive values of the distance d the virtual site lies outside the 2-1-3 angle and for negative values it lies inside. 
+
+    .. warning :: This API is experimental and subject to change.
     """
 
     def __init__(self,
@@ -1061,6 +1026,8 @@ class DivalentLonePairVirtualSite(VirtualSite):
 class TrivalentLonePairVirtualSite(VirtualSite):
     """
     A particle representing a "Trivalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of four atoms. This is suitable for planar or tetrahedral nitrogen lone pairs; a charge site S lies above the central atom (e.g. nitrogen a distance d along the vector perpendicular to the plane of the three connected atoms (2,3,4). With positive values of d the site lies above the nitrogen and with negative values it lies below the nitrogen.
+
+    .. warning :: This API is experimental and subject to change.
     """
 
     def __init__(self,
@@ -1097,6 +1064,7 @@ class TrivalentLonePairVirtualSite(VirtualSite):
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=None
             The name of this virtual site. Default is None.
+
         """
         assert len(atoms) == 4
         assert hasattr(distance, 'unit')
@@ -1248,7 +1216,7 @@ class Bond(Serializable):
 
     Attributes
     ----------
-    atom1, atom2 : Atom
+    atom1, atom2 : openforcefield.topology.Atom
         Atoms involved in the bond
     bondtype : int
         Discrete bond type representation for the Open Forcefield aromaticity model
@@ -1260,6 +1228,8 @@ class Bond(Serializable):
     fractional_bond_order : float, optional
         Fractional bond order, or None.
 
+
+    .. warning :: This API is experimental and subject to change.
     """
 
     def __init__(self,
@@ -1271,6 +1241,7 @@ class Bond(Serializable):
                  stereochemistry=None):
         """
         Create a new chemical bond.
+
         """
         assert type(atom1) == Atom
         assert type(atom2) == Atom
@@ -1292,7 +1263,10 @@ class Bond(Serializable):
         self._stereochemistry = stereochemistry
 
     def to_dict(self):
-        """Return a dict representation of the bond."""
+        """
+        Return a dict representation of the bond.
+
+        """
         bond_dict = OrderedDict()
         bond_dict['atom1'] = self.atom1.molecule_atom_index
         bond_dict['atom2'] = self.atom2.molecule_atom_index
@@ -1424,6 +1398,9 @@ class FrozenMolecule(Serializable):
     Create a molecule from SMILES
 
     >>> molecule = FrozenMolecule.from_smiles('Cc1ccccc1')
+
+    .. warning :: This API is experimental and subject to change.
+
 
     """
 
@@ -2172,8 +2149,6 @@ class FrozenMolecule(Serializable):
         """
         Add an atom
 
-        .. warning :: This API is experimental and subject to change.
-
         Parameters
         ----------
         atomic_number : int
@@ -2423,8 +2398,6 @@ class FrozenMolecule(Serializable):
         """
         Add a bond between two specified atom indices
 
-        .. warning :: This API experimental and subject to change.
-
         Parameters
         ----------
         atom1 : int or openforcefield.topology.molecule.Atom
@@ -2475,8 +2448,6 @@ class FrozenMolecule(Serializable):
     def _add_conformer(self, coordinates):
         """
         Add a conformation of the molecule
-
-        .. warning :: This API experimental and subject to change.
 
         Parameters
         ----------
@@ -2715,11 +2686,6 @@ class FrozenMolecule(Serializable):
                                      toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Retrieve all matches for a given chemical environment query.
 
-        .. todo ::
-
-           * Do we want to generalize ``query`` to allow other kinds of queries, such as mdtraj DSL, pymol selections, atom index slices, etc?
-             We could call it ``topology.matches(query)`` instead of ``chemical_environment_matches``
-
         Parameters
         ----------
         query : str or ChemicalEnvironment
@@ -2740,6 +2706,11 @@ class FrozenMolecule(Serializable):
 
         >>> molecule = Molecule.from_iupac('imatinib')
         >>> matches = molecule.chemical_environment_matches('[#6X3:1]~[#6X3:2]')
+
+        .. todo ::
+
+           * Do we want to generalize ``query`` to allow other kinds of queries, such as mdtraj DSL, pymol selections, atom index slices, etc?
+             We could call it ``topology.matches(query)`` instead of ``chemical_environment_matches``
 
         """
         # Resolve to SMIRKS if needed
@@ -2778,7 +2749,7 @@ class FrozenMolecule(Serializable):
         iupac_name : str
             IUPAC name of molecule to be generated
         allow_undefined_stereo : bool, default=False
-            If false, raises an exception if oemol contains undefined stereochemistry.
+            If false, raises an exception if molecule contains undefined stereochemistry.
 
         Returns
         -------
@@ -3207,16 +3178,6 @@ class FrozenMolecule(Serializable):
                                    toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Get fractional bond orders.
 
-        .. warning :: This API experimental and subject to change.
-
-        .. todo::
-            * Is it OK that the ``Molecule`` object does not store geometry, but will create it using ``openeye.omega`` or ``rdkit``?
-            * Should this method assign fractional bond orders to the ``Bond``s in the molecule, a separate ``bond_orders`` molecule property,
-              or just return the array of bond orders?
-            * How do we add enough flexibility to specify the toolkit and optional parameters, such as:
-              ``oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, 'OECharges_AM1BCCSym'), False, False)``
-            * Generalize to allow user to specify both QM method and bond order computation approach (e.g. ``AM1`` and ``Wiberg``)
-
         method : str, optional, default='Wiberg'
             The name of the charge method to use.
             Options are:
@@ -3232,6 +3193,16 @@ class FrozenMolecule(Serializable):
         >>> molecule = Molecule.from_iupac('imatinib')
         >>> molecule.generate_conformers()
         >>> fractional_bond_orders = molecule.get_fractional_bond_orders(method='Wiberg')
+
+
+        .. todo::
+            * Is it OK that the ``Molecule`` object does not store geometry, but will create it using ``openeye.omega`` or ``rdkit``?
+            * Should this method assign fractional bond orders to the ``Bond``s in the molecule, a separate ``bond_orders`` molecule property,
+              or just return the array of bond orders?
+            * How do we add enough flexibility to specify the toolkit and optional parameters, such as:
+              ``oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, 'OECharges_AM1BCCSym'), False, False)``
+            * Generalize to allow user to specify both QM method and bond order computation approach (e.g. ``AM1`` and ``Wiberg``)
+
 
         """
         # TODO: Let ToolkitRegistry handle this once compute_fractional_bond_orders will be added to the Wrappers API.
@@ -3381,18 +3352,13 @@ class Molecule(FrozenMolecule):
 
     >>> molecule = Molecule.from_smiles('Cc1ccccc1')
 
+    .. warning :: This API is experimental and subject to change.
+
     """
 
     def __init__(self, *args, **kwargs):
         """
         Create a new Molecule object
-
-        .. todo ::
-
-           * If a filename or file-like object is specified but the file contains more than one molecule, what is the
-           proper behavior? Read just the first molecule, or raise an exception if more than one molecule is found?
-
-           * Should we also support SMILES strings or IUPAC names for ``other``?
 
         Parameters
         ----------
@@ -3450,6 +3416,13 @@ class Molecule(FrozenMolecule):
         >>> serialized_molecule = molecule.__getstate__()
         >>> molecule_copy = Molecule(serialized_molecule)
 
+        .. todo ::
+
+           * If a filename or file-like object is specified but the file contains more than one molecule, what is the
+           proper behavior? Read just the first molecule, or raise an exception if more than one molecule is found?
+
+           * Should we also support SMILES strings or IUPAC names for ``other``?
+
         """
         #super(self, Molecule).__init__(*args, **kwargs)
         super(Molecule, self).__init__(*args, **kwargs)
@@ -3463,8 +3436,6 @@ class Molecule(FrozenMolecule):
                  name=None):
         """
         Add an atom
-
-        .. warning :: This API experimental and subject to change.
 
         Parameters
         ----------
@@ -3544,6 +3515,7 @@ class Molecule(FrozenMolecule):
         -------
         index : int
             The index of the newly-added virtual site in the molecule
+
         """
 
         vsite_index = self._add_bond_charge_virtual_site(
@@ -3557,7 +3529,6 @@ class Molecule(FrozenMolecule):
             name=name)
         return vsite_index
 
-    #def add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
     def add_monovalent_lone_pair_virtual_site(self, atoms, distance,
                                               out_of_plane_angle,
                                               in_plane_angle, **kwargs):
@@ -3589,6 +3560,8 @@ class Molecule(FrozenMolecule):
         -------
         index : int
             The index of the newly-added virtual site in the molecule
+
+
         """
 
         #vsite_index = self._add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
@@ -3628,6 +3601,7 @@ class Molecule(FrozenMolecule):
         -------
         index : int
             The index of the newly-added virtual site in the molecule
+
         """
         #vsite_index = self._add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         vsite_index = self._add_divalent_lone_pair_virtual_site(
@@ -3665,6 +3639,7 @@ class Molecule(FrozenMolecule):
         -------
         index : int
             The index of the newly-added virtual site in the molecule
+
         """
         vsite_index = self._add_trivalent_lone_pair_virtual_site(
             atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs)
@@ -3680,7 +3655,6 @@ class Molecule(FrozenMolecule):
         """
         Add a bond between two specified atom indices
 
-        .. warning :: This API experimental and subject to change.
 
         Parameters
         ----------
@@ -3701,7 +3675,8 @@ class Molecule(FrozenMolecule):
         -------
         index: int
             Index of the bond in this molecule
-        """
+
+"""
         bond_index = self._add_bond(
             atom1,
             atom2,
@@ -3725,5 +3700,7 @@ class Molecule(FrozenMolecule):
         -------
         index: int
             Index of the conformer in the Molecule
-        """
+
+
+"""
         return self._add_conformer(coordinates)

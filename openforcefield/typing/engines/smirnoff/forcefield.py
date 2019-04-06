@@ -248,7 +248,7 @@ class ForceField(object):
         """
         Initialize all object fields.
         """
-        self._MAX_SUPPORTED_SMIRNOFF_VERSION = 1.0
+        self._MAX_SUPPORTED_SMIRNOFF_VERSION = 0.2
         self._disable_version_check = False  # if True, will disable checking compatibility version
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL  # aromaticity model
         self._parameter_handler_classes = OrderedDict()  # Parameter handler classes that _can_ be initialized if needed

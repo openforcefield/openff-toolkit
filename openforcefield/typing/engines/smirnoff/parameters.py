@@ -112,6 +112,9 @@ class NonbondedMethod(Enum):
 class ParameterList(list):
     """
     Parameter list that also supports accessing items by SMARTS string.
+
+    .. warning :: This API is experimental and subject to change.
+
     """
 
     # TODO: Make this faster by caching SMARTS -> index lookup?
@@ -284,6 +287,8 @@ class ParameterList(list):
 class ParameterType(object):
     """
     Base class for SMIRNOFF parameter types.
+
+    .. warning :: This API is experimental and subject to change.
 
     """
     # These lists and dicts will be used for validating input and detecting cosmetic attributes.
@@ -496,14 +501,18 @@ class ParameterType(object):
 
 
 class ParameterHandler(object):
-    """Virtual base class for parameter handlers.
+    """Base class for parameter handlers.
 
-    Parameter handlers are configured with some global parameters for a given section, and
+    Parameter handlers are configured with some global parameters for a given section. They may also contain a
+    :class:`ParameterList` populated with :class:`ParameterType` objects if they are responsile for assigning
+    SMIRKS-based parameters.
 
     .. warning
 
        Parameter handler objects can only belong to a single :class:`ForceField` object.
        If you need to create a copy to attach to a different :class:`ForceField` object, use ``create_copy()``.
+
+    .. warning :: This API is experimental and subject to change.
 
     """
 
@@ -959,10 +968,15 @@ class ConstraintHandler(ParameterHandler):
 
     ``ConstraintHandler`` must be applied before ``BondHandler`` and ``AngleHandler``,
     since those classes add constraints for which equilibrium geometries are needed from those tags.
+
+    .. warning :: This API is experimental and subject to change.
     """
 
     class ConstraintType(ParameterType):
-        """A SMIRNOFF constraint type"""
+        """A SMIRNOFF constraint type
+
+        .. warning :: This API is experimental and subject to change.
+        """
         _VALENCE_TYPE = 'Bond'
         _ELEMENT_NAME = 'Constraint'
         _SMIRNOFF_ATTRIBS = ['smirks']  # Attributes expected per the SMIRNOFF spec.
@@ -1004,11 +1018,17 @@ class ConstraintHandler(ParameterHandler):
 
 
 class BondHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<BondForce>`` tags"""
+    """Handle SMIRNOFF ``<Bonds>`` tags
+
+    .. warning :: This API is experimental and subject to change.
+    """
 
 
     class BondType(ParameterType):
-        """A SMIRNOFF Bond parameter type"""
+        """A SMIRNOFF bond type
+
+        .. warning :: This API is experimental and subject to change.
+        """
         _VALENCE_TYPE = 'Bond' # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
         _ELEMENT_NAME = 'Bond'
         _SMIRNOFF_ATTRIBS = ['smirks', 'length', 'k']  # Attributes expected per the SMIRNOFF spec.
@@ -1101,10 +1121,16 @@ class BondHandler(ParameterHandler):
 
 
 class AngleHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<AngleForce>`` tags"""
+    """Handle SMIRNOFF ``<AngleForce>`` tags
+
+    .. warning :: This API is experimental and subject to change.
+    """
 
     class AngleType(ParameterType):
-        """A SMIRNOFF angle type."""
+        """A SMIRNOFF angle type.
+
+        .. warning :: This API is experimental and subject to change.
+        """
         _VALENCE_TYPE = 'Angle'  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
         _ELEMENT_NAME = 'Angle'
         _SMIRNOFF_ATTRIBS = ['smirks', 'angle', 'k']  # Attributes expected per the SMIRNOFF spec.
@@ -1166,10 +1192,16 @@ class AngleHandler(ParameterHandler):
 
 
 class ProperTorsionHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<ProperTorsionForce>`` tags"""
+    """Handle SMIRNOFF ``<ProperTorsionForce>`` tags
+
+    .. warning :: This API is experimental and subject to change.
+    """
 
     class ProperTorsionType(ParameterType):
-        """A SMIRNOFF torsion type for proper torsions."""
+        """A SMIRNOFF torsion type for proper torsions.
+
+        .. warning :: This API is experimental and subject to change.
+        """
 
         _VALENCE_TYPE = 'ProperTorsion'
         _ELEMENT_NAME = 'Proper'
@@ -1239,10 +1271,16 @@ class ProperTorsionHandler(ParameterHandler):
 
 
 class ImproperTorsionHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<ImproperTorsionForce>`` tags"""
+    """Handle SMIRNOFF ``<ImproperTorsionForce>`` tags
+
+    .. warning :: This API is experimental and subject to change.
+    """
 
     class ImproperTorsionType(ParameterType):
-        """A SMIRNOFF torsion type for improper torsions."""
+        """A SMIRNOFF torsion type for improper torsions.
+
+        .. warning :: This API is experimental and subject to change.
+        """
         _VALENCE_TYPE = 'ImproperTorsion'
         _ELEMENT_NAME = 'Improper'
         _SMIRNOFF_ATTRIBS = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
@@ -1331,10 +1369,16 @@ class ImproperTorsionHandler(ParameterHandler):
 
 
 class vdWHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<vdW>`` tags"""
+    """Handle SMIRNOFF ``<vdW>`` tags
+
+    .. warning :: This API is experimental and subject to change.
+    """
 
     class vdWType(ParameterType):
-        """A SMIRNOFF vdWForce type."""
+        """A SMIRNOFF vdWForce type.
+
+        .. warning :: This API is experimental and subject to change.
+        """
         _VALENCE_TYPE = 'Atom'  # ChemicalEnvironment valence type expected for SMARTS
         _ELEMENT_NAME = 'Atom'
         _SMIRNOFF_ATTRIBS = ['smirks', 'epsilon'] # Attributes expected per the SMIRNOFF spec.
@@ -1651,7 +1695,10 @@ class vdWHandler(ParameterHandler):
 
 
 class ElectrostaticsHandler(ParameterHandler):
-    """Handles SMIRNOFF <Electrostatics> tags."""
+    """Handles SMIRNOFF ``<Electrostatics>`` tags.
+
+    .. warning :: This API is experimental and subject to change.
+    """
     _TAGNAME = 'Electrostatics'
     _OPENMMTYPE = openmm.NonbondedForce
     _DEPENDENCIES = [vdWHandler]
@@ -1841,7 +1888,10 @@ class ElectrostaticsHandler(ParameterHandler):
 
 
 class ToolkitAM1BCCHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags"""
+    """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags
+
+    .. warning :: This API is experimental and subject to change.
+    """
 
     _TAGNAME = 'ToolkitAM1BCC'  # SMIRNOFF tag name to process
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create or utilize
@@ -2012,10 +2062,16 @@ class ToolkitAM1BCCHandler(ParameterHandler):
 
 
 class ChargeIncrementModelHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<ChargeIncrementModel>`` tags"""
+    """Handle SMIRNOFF ``<ChargeIncrementModel>`` tags
+
+    .. warning :: This API is experimental and subject to change.
+    """
 
     class ChargeIncrementType(ParameterType):
-        """A SMIRNOFF bond charge correction type."""
+        """A SMIRNOFF bond charge correction type.
+
+        .. warning :: This API is experimental and subject to change.
+        """
         _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS
         _ELEMENT_NAME = 'ChargeIncrement'
         _SMIRNOFF_ATTRIBS = ['smirks', 'chargeIncrement']
@@ -2232,7 +2288,10 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
 
 class GBSAParameterHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<GBSAParameterHandler>`` tags"""
+    """Handle SMIRNOFF ``<GBSAParameterHandler>`` tags
+
+    .. warning :: This API is experimental and subject to change.
+    """
     # TODO: Differentiate between global and per-particle parameters for each model.
 
     # Global parameters for surface area (SA) component of model
@@ -2249,7 +2308,10 @@ class GBSAParameterHandler(ParameterHandler):
     }
 
     class GBSAType(ParameterType):
-        """A SMIRNOFF GBSA type."""
+        """A SMIRNOFF GBSA type.
+
+        .. warning :: This API is experimental and subject to change.
+        """
         _VALENCE_TYPE = 'Atom'
         _ELEMENT_NAME = 'Atom' # TODO: This isn't actually in the spec
         _SMIRNOFF_ATTRIBS = ['smirks', 'radius', 'scale']
