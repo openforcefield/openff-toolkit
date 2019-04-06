@@ -2778,7 +2778,7 @@ class FrozenMolecule(Serializable):
         iupac_name : str
             IUPAC name of molecule to be generated
         allow_undefined_stereo : bool, default=False
-            If false, raises an exception if oemol contains undefined stereochemistry.
+            If false, raises an exception if molecule contains undefined stereochemistry.
 
         Returns
         -------
@@ -3207,15 +3207,7 @@ class FrozenMolecule(Serializable):
                                    toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Get fractional bond orders.
 
-        .. warning :: This API experimental and subject to change.
-
-        .. todo::
-            * Is it OK that the ``Molecule`` object does not store geometry, but will create it using ``openeye.omega`` or ``rdkit``?
-            * Should this method assign fractional bond orders to the ``Bond``s in the molecule, a separate ``bond_orders`` molecule property,
-              or just return the array of bond orders?
-            * How do we add enough flexibility to specify the toolkit and optional parameters, such as:
-              ``oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, 'OECharges_AM1BCCSym'), False, False)``
-            * Generalize to allow user to specify both QM method and bond order computation approach (e.g. ``AM1`` and ``Wiberg``)
+        .. warning :: This API is experimental and subject to change.
 
         method : str, optional, default='Wiberg'
             The name of the charge method to use.
@@ -3232,6 +3224,16 @@ class FrozenMolecule(Serializable):
         >>> molecule = Molecule.from_iupac('imatinib')
         >>> molecule.generate_conformers()
         >>> fractional_bond_orders = molecule.get_fractional_bond_orders(method='Wiberg')
+
+
+        .. todo::
+            * Is it OK that the ``Molecule`` object does not store geometry, but will create it using ``openeye.omega`` or ``rdkit``?
+            * Should this method assign fractional bond orders to the ``Bond``s in the molecule, a separate ``bond_orders`` molecule property,
+              or just return the array of bond orders?
+            * How do we add enough flexibility to specify the toolkit and optional parameters, such as:
+              ``oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, 'OECharges_AM1BCCSym'), False, False)``
+            * Generalize to allow user to specify both QM method and bond order computation approach (e.g. ``AM1`` and ``Wiberg``)
+
 
         """
         # TODO: Let ToolkitRegistry handle this once compute_fractional_bond_orders will be added to the Wrappers API.

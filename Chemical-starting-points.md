@@ -6,7 +6,7 @@ SMIRNOFF force fields use direct chemical perception meaning that, unlike many m
 This creates unique opportunities and allows them to encode a great deal of chemistry quite simply, but it also means that the *starting point* for parameter assignment must be well-defined chemically, giving not just the elements and connectivity for all of the atoms of all of the components of your system, but also providing the formal charges and bond orders.
 
 Specifically, to apply SMIRNOFF to a system, you must either:
-1. Provide molecules (currently `OEMol` objects, but an RDKit version is in development) corresponding to the components of your system, or
+1. Provide Open Force Field Toolkit `Molecule` objects corresponding to the components of your system, or
 2. Provide an OpenMM `Topology` which includes bond orders and thus can be converted to molecules corresponding to the components of your system
 
 Without this information, our direct chemical perception cannot be applied to your molecule, as it requires the chemical identity of the molecules in your system -- that is, bond order and formal charge as well as atoms and connectivity.
