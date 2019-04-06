@@ -108,36 +108,6 @@ class Particle(Serializable):
         """
         return self._molecule.particles.index(self)
 
-    # @property
-    # def topology(self):
-    #     """
-    #     The ``Topology`` this atom is part of.
-    #
-    #     .. todo::
-    #
-    #        * Should we have a single unique ``Topology`` for each topology type in the system,
-    #        or if we have multiple copies of the same topology, should we have multiple ``Topology``s?
-    #     """
-    #     return self._topology
-    #
-    # @topology.setter
-    # def topology(self, topology):
-    #     """
-    #     Set the particle's topology pointer. Note that this will only work if the particle currently
-    #     doesn't have a topology
-    #     """
-    #     #TODO: I forgot if python will hold a pointer to the molecule, or some sort of bulky copy here
-    #     #TODO: Should _molecule be a property?
-    #     #TODO: Add informative exception here
-    #     assert self._topology == None
-    #     self._topology = topology
-    #
-    # @property
-    # def topology_particle_index(self):
-    #     """
-    #     Returns the index of this particle in its parent topology
-    #     """
-    #     return self._topology.particles.index(self)
 
     @property
     def name(self):
@@ -684,19 +654,6 @@ class VirtualSite(Particle):
             raise ValueError(
                 'This VirtualSite does not belong to a Molecule object')
         return self._molecule.particles.index(self)
-
-    #@property
-    #def topology_virtual_site_index(self):
-    #    """
-    #    The index of this VirtualSite within the list of virtual sites within ``Topology``
-    #    Note that this can be different from ``particle_index``.
-
-    #    """
-    #    if self._topology is None:
-    #        raise ValueError('This VirtualSite does not belong to a Topology object')
-    #    # TODO: This will be slow; can we cache this and update it only when needed?
-    #    #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
-    #    return self._topology.virtual_sites.index(self)
 
     @property
     def atoms(self):
