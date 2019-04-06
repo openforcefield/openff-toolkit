@@ -109,7 +109,7 @@ class ToolkitWrapper(object):
     """
     Toolkit wrapper base class.
 
-    .. warning :: This API experimental and subject to change.
+    .. warning :: This API is experimental and subject to change.
     """
     _is_available = None  # True if toolkit is available
     _toolkit_name = None  # Name of the toolkit
@@ -254,6 +254,8 @@ class ToolkitWrapper(object):
 class OpenEyeToolkitWrapper(ToolkitWrapper):
     """
     OpenEye toolkit wrapper
+
+    .. warning :: This API is experimental and subject to change.
     """
     _toolkit_name = 'OpenEye Toolkit'
     _toolkit_installation_instructions = 'The OpenEye toolkit requires a (free for academics) license, and can be ' \
@@ -378,8 +380,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         Return an openforcefield.topology.Molecule from a file using this toolkit.
 
-        .. warning :: This API is experimental and subject to change.
-        
         Parameters
         ----------
         filename : str
@@ -435,8 +435,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using
         this toolkit.
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -566,8 +564,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     @staticmethod
     def _openeye_cip_atom_stereochemistry(oemol, oeatom):
         """
-        .. warning :: This API experimental and subject to change.
-
         Determine CIP stereochemistry (R/S) for the specified atom
 
         Parameters
@@ -603,8 +599,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     @staticmethod
     def _openeye_cip_bond_stereochemistry(oemol, oebond):
         """
-        .. warning :: This API experimental and subject to change.
-
         Determine CIP stereochemistry (E/Z) for the specified bond
 
         Parameters
@@ -1298,8 +1292,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     def _find_smarts_matches(oemol, smarts, aromaticity_model=None):
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
-        .. warning :: This API experimental and subject to change.
-
         Parameters
         ----------
         oemol : openeye.oechem.OEMol or similar
@@ -1404,6 +1396,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 class RDKitToolkitWrapper(ToolkitWrapper):
     """
     RDKit toolkit wrapper
+
+    .. warning :: This API is experimental and subject to change.
     """
     _toolkit_name = 'The RDKit'
     _toolkit_installation_instructions = 'A conda-installable version of the free and open source RDKit cheminformatics ' \
@@ -1476,7 +1470,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
         Create an openforcefield.topology.Molecule from a file using this toolkit.
 
-        .. warning :: This API is experimental and subject to change.
 
 
         Parameters
@@ -2136,8 +2129,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                              aromaticity_model='OEAroModel_MDL'):
         """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
-        .. warning :: This API experimental and subject to change.
-
         Parameters
         ----------
         rdmol : rdkit.Chem.Mol
@@ -2497,6 +2488,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
     """
     AmberTools toolkit wrapper
 
+    .. warning :: This API is experimental and subject to change.
     """
     _toolkit_name = 'AmberTools'
     _toolkit_installation_instructions = 'The AmberTools toolkit (free and open source) can be found at ' \
@@ -2777,6 +2769,7 @@ class ToolkitRegistry(object):
     >>> from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
     >>> available_toolkits = toolkit_registry.registered_toolkits
 
+    .. warning :: This API is experimental and subject to change.
     """
 
     def __init__(self,
@@ -2785,8 +2778,6 @@ class ToolkitRegistry(object):
                  exception_if_unavailable=True):
         """
         Create an empty toolkit registry.
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -2900,8 +2891,6 @@ class ToolkitRegistry(object):
         """
         Resolve the requested method name by checking all registered toolkits in order of precedence for one that provides the requested method.
 
-        .. warning :: This API is experimental and subject to change.
-
         Parameters
         ----------
         method_name : str
@@ -2949,8 +2938,6 @@ class ToolkitRegistry(object):
     def call(self, method_name, *args, **kwargs):
         """
         Execute the requested method by attempting to use all registered toolkits in order of precedence.
-
-        .. warning :: This API is experimental and subject to change.
 
         ``*args`` and ``**kwargs`` are passed to the desired method, and return values of the method are returned
 

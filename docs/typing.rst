@@ -8,6 +8,9 @@ Chemical environments
 
 Tools for representing and operating on chemical environments
 
+    .. warning :: This class is largely redundant with the same one in the Chemper package, and will likely be removed.
+
+
 .. currentmodule:: openforcefield.typing.chemistry
 .. autosummary::
     :nosignatures:
@@ -32,3 +35,26 @@ A reference implementation of the SMIRNOFF specification for parameterizing biom
     :toctree: api/generated/
 
     ForceField
+
+.. currentmodule:: openforcefield.typing.engines.smirnoff.parameters
+.. autosummary::
+    :nosignatures:
+    :toctree: api/generated/
+
+    ParameterType
+    ParameterList
+    ParameterHandler
+    BondHandler
+    AngleHandler
+    ProperTorsionHandler
+    ImproperTorsionHandler
+    vdWHandler
+    ElectrostaticsHandler
+    ToolkitAM1BCCHandler
+
+.. currentmodule:: openforcefield.typing.engines.smirnoff.io
+.. autosummary::
+    :nosignatures:
+    :toctree: api/generated/
+
+    ParameterIOHandler
