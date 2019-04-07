@@ -33,7 +33,10 @@ On ``osx``, you want to use the ``osx`` binary
    $ conda activate base
 
 
-You may want to add the new ``source ~/miniconda3/etc/profile.d/conda.sh`` line to your ``~/.bashrc`` file to ensure Anaconda Python is enabled.
+You may want to add the new ``source ~/miniconda3/etc/profile.d/conda.sh`` line to your ``~/.bashrc`` file to ensure Anaconda Python can enabled in subsequent terminal sessions.
+``conda activate base`` will need to be run in each subsequent terminal session to return to the environment where the toolkit will be installed.
+
+
 Note that ``openforcefield`` will be installed into this local Python installation, so that you will not need to worry about disrupting existing Python installations.
 
 .. note:: Installation via the conda package manager is the preferred method since all dependencies are automatically fetched and installed for you.
@@ -98,6 +101,7 @@ To install the OpenEye toolkits (provided you have a valid license file):
 
    $ conda install --yes -c openeye openeye-toolkits
 
-No essential ``openforcefield`` release capabilities *require* the OpenEye toolkit, but the Open Force Field developers make use of it in parameterizing new open source force fields. It is known that there are certain differences in toolkit behavior when reading a small fraction of molecules, and we encourage you to report any unexpected behavior that may be caused by toolkit differences to our `issue tracker <https://github.com/openforcefield/openforcefield/issues>`_.
+No essential ``openforcefield`` release capabilities *require* the OpenEye toolkit, but the Open Force Field developers make use of it in parameterizing new open source force fields.
+It is known that there are certain differences in toolkit behavior between RDKit and OpenEye when reading a small fraction of molecules, and we encourage you to report any unexpected behavior that may be caused by toolkit differences to our `issue tracker <https://github.com/openforcefield/openforcefield/issues>`_.
 
-|
+
