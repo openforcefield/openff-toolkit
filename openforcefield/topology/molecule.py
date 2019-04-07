@@ -94,7 +94,7 @@ class Particle(Serializable):
     @molecule.setter
     def molecule(self, molecule):
         """
-        Set the particle's molecule pointer. Note that this will only work if the particle currently 
+        Set the particle's molecule pointer. Note that this will only work if the particle currently
         doesn't have a molecule
         """
         #TODO: Add informative exception here
@@ -284,14 +284,14 @@ class Atom(Particle):
     @property
     def is_aromatic(self):
         """
-        The atom's is_aromatic flag 
+        The atom's is_aromatic flag
         """
         return self._is_aromatic
 
     @property
     def stereochemistry(self):
         """
-        The atom's stereochemistry (if defined, otherwise None) 
+        The atom's stereochemistry (if defined, otherwise None)
         """
         return self._stereochemistry
 
@@ -331,7 +331,7 @@ class Atom(Particle):
 
         .. todo :: Should we discriminate between standard atomic weight and most abundant isotopic mass?
         TODO (from jeff): Are there atoms that have different chemical properties based on their isotopes?
-        
+
         """
         return self.element.mass
 
@@ -390,7 +390,7 @@ class Atom(Particle):
         ----------
         atom2: openforcefield.topology.molecule.Atom
             a different atom in the same molecule
-        
+
         Returns
         -------
         bool
@@ -507,11 +507,11 @@ class VirtualSite(Particle):
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.  
+            Epsilon term for VdW properties of virtual site. Default is None.
         rmin_half : float
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=None
-            The name of this virtual site. Default is None.        
+            The name of this virtual site. Default is None.
 
 
         virtual_site_type : str
@@ -737,7 +737,7 @@ class BondChargeVirtualSite(VirtualSite):
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
 
         TODO: One of the examples on https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html#virtualsites-virtual-sites-for-off-atom-charges has a BondCharge defined with three atoms -- How does that work?
-        
+
         Parameters
         ----------
         atoms : list of openforcefield.topology.molecule.Atom objects of shape [N]
@@ -749,7 +749,7 @@ class BondChargeVirtualSite(VirtualSite):
         charge_increments : list of floats of shape [N], optional, default=None
             The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this list should match the ordering in the atoms list. Default is None.
         epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.  
+            Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
@@ -797,7 +797,7 @@ class BondChargeVirtualSite(VirtualSite):
 
 class MonovalentLonePairVirtualSite(VirtualSite):
     """
-    A particle representing a "Monovalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is originally intended for situations like a carbonyl, and allows placement of a virtual site S at a specified distance d, in_plane_angle, and out_of_plane_angle relative to a central atom and two connected atoms. 
+    A particle representing a "Monovalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is originally intended for situations like a carbonyl, and allows placement of a virtual site S at a specified distance d, in_plane_angle, and out_of_plane_angle relative to a central atom and two connected atoms.
 
     .. warning :: This API is experimental and subject to change.
    """
@@ -817,19 +817,19 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
 
         TODO : Do "weights" have any meaning here?
-        
+
         Parameters
         ----------
         atoms : list of three openforcefield.topology.molecule.Atom objects
             The three atoms defining the virtual site's position
-        distance : float 
-            
+        distance : float
+
         out_of_plane_angle : float
-            
+
         in_plane_angle : float
-            
+
         epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.  
+            Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
@@ -907,7 +907,7 @@ class MonovalentLonePairVirtualSite(VirtualSite):
 
 class DivalentLonePairVirtualSite(VirtualSite):
     """
-    A particle representing a "Divalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is suitable for cases like four-point and five-point water models as well as pyrimidine; a charge site S lies a specified distance d from the central atom among three atoms along the bisector of the angle between the atoms (if out_of_plane_angle is zero) or out of the plane by the specified angle (if out_of_plane_angle is nonzero) with its projection along the bisector. For positive values of the distance d the virtual site lies outside the 2-1-3 angle and for negative values it lies inside. 
+    A particle representing a "Divalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is suitable for cases like four-point and five-point water models as well as pyrimidine; a charge site S lies a specified distance d from the central atom among three atoms along the bisector of the angle between the atoms (if out_of_plane_angle is zero) or out of the plane by the specified angle (if out_of_plane_angle is nonzero) with its projection along the bisector. For positive values of the distance d the virtual site lies outside the 2-1-3 angle and for negative values it lies inside.
 
     .. warning :: This API is experimental and subject to change.
     """
@@ -924,22 +924,22 @@ class DivalentLonePairVirtualSite(VirtualSite):
                  rmin_half=None,
                  name=None):
         """
-        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms. 
+        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms.
 
         TODO : Do "weights" have any meaning here?
-        
+
         Parameters
         ----------
         atoms : list of 3 openforcefield.topology.molecule.Atom objects
             The three atoms defining the virtual site's position
-        distance : float 
-            
+        distance : float
+
         out_of_plane_angle : float
-            
+
         in_plane_angle : float
-            
+
         epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.  
+            Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
@@ -1042,22 +1042,22 @@ class TrivalentLonePairVirtualSite(VirtualSite):
                  rmin_half=None,
                  name=None):
         """
-        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms. 
+        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms.
 
         TODO : Do "weights" have any meaning here?
-        
+
         Parameters
         ----------
         atoms : list of 4 openforcefield.topology.molecule.Atom objects
             The three atoms defining the virtual site's position
-        distance : float 
-            
+        distance : float
+
         out_of_plane_angle : float
-            
+
         in_plane_angle : float
-            
+
         epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.  
+            Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
@@ -1624,7 +1624,7 @@ class FrozenMolecule(Serializable):
     def from_dict(cls, molecule_dict):
         """
         Create a new Molecule from a dictionary representation
-        
+
         Parameters
         ----------
         molecule_dict : OrderedDict
@@ -1882,7 +1882,7 @@ class FrozenMolecule(Serializable):
         compare_bond_stereochemistry : bool, optional
             If ``False``, bonds' stereochemistry is ignored for the
             purpose of determining equality. Default is ``True``.
-        
+
         Returns
         -------
         molecules_are_isomorphic : bool
@@ -2017,9 +2017,9 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
-        molecule = Molecule.from_smiles('CCCCCC')
-        molecule.generate_conformers()
-        molecule.compute_partial_charges()
+        >>> molecule = Molecule.from_smiles('CCCCCC')
+        >>> molecule.generate_conformers()
+        >>> molecule.compute_partial_charges()
 
         Raises
         ------
@@ -2058,6 +2058,7 @@ class FrozenMolecule(Serializable):
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         charge_model : string, optional
             The charge model to use for partial charge calculation
+
         Examples
         --------
 
@@ -2218,7 +2219,7 @@ class FrozenMolecule(Serializable):
             The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this
             list should match the ordering in the atoms list. Default is None.
         epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.  
+            Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
@@ -2255,19 +2256,19 @@ class FrozenMolecule(Serializable):
         three atoms.
 
         TODO : Do "weights" have any meaning here?
-        
+
         Parameters
         ----------
         atoms : list of three openforcefield.topology.molecule.Atom objects
             The three atoms defining the virtual site's position
-        distance : float 
-            
+        distance : float
+
         out_of_plane_angle : float
-            
+
         in_plane_angle : float
-            
+
         epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.  
+            Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
@@ -2304,19 +2305,19 @@ class FrozenMolecule(Serializable):
         of three atoms.
 
         TODO : Do "weights" have any meaning here?
-        
+
         Parameters
         ----------
         atoms : list of 3 openforcefield.topology.molecule.Atom objects
             The three atoms defining the virtual site's position
-        distance : float 
-            
+        distance : float
+
         out_of_plane_angle : float
-            
+
         in_plane_angle : float
-            
+
         epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.  
+            Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
@@ -2353,19 +2354,19 @@ class FrozenMolecule(Serializable):
          of four atoms.
 
         TODO : Do "weights" have any meaning here?
-        
+
         Parameters
         ----------
         atoms : list of 4 openforcefield.topology.molecule.Atom objects or atom indices
             The three atoms defining the virtual site's position
-        distance : float 
-            
+        distance : float
+
         out_of_plane_angle : float
-            
+
         in_plane_angle : float
-            
+
         epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.  
+            Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
@@ -2453,7 +2454,7 @@ class FrozenMolecule(Serializable):
         ----------
         coordinates: A simtk vector wrapped unit quantity
             The coordinates of the conformer to add.
-        
+
         Returns
         -------
         index: int
@@ -2693,7 +2694,7 @@ class FrozenMolecule(Serializable):
             Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
-            
+
 
         Returns
         -------
@@ -3503,7 +3504,7 @@ class Molecule(FrozenMolecule):
         charge_increments : list of floats of shape [N], optional, default=None
             The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this list should match the ordering in the atoms list. Default is None.
         epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.  
+            Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
@@ -3536,19 +3537,19 @@ class Molecule(FrozenMolecule):
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
 
         TODO : Do "weights" have any meaning here?
-        
+
         Parameters
         ----------
         atoms : list of three openforcefield.topology.molecule.Atom objects or ints
             The three atoms defining the virtual site's position or their molecule atom indices
-        distance : float 
-            
+        distance : float
+
         out_of_plane_angle : float
-            
+
         in_plane_angle : float
-            
+
         epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.  
+            Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
@@ -3574,22 +3575,22 @@ class Molecule(FrozenMolecule):
                                             out_of_plane_angle, in_plane_angle,
                                             **kwargs):
         """
-        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms. 
+        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms.
 
         TODO : Do "weights" have any meaning here?
-        
+
         Parameters
         ----------
         atoms : list of 3 openforcefield.topology.molecule.Atom objects or ints
             The three atoms defining the virtual site's position or their molecule atom indices
-        distance : float 
-            
+        distance : float
+
         out_of_plane_angle : float
-            
+
         in_plane_angle : float
-            
+
         epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.  
+            Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
@@ -3612,22 +3613,22 @@ class Molecule(FrozenMolecule):
                                              out_of_plane_angle,
                                              in_plane_angle, **kwargs):
         """
-        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms. 
+        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms.
 
         TODO : Do "weights" have any meaning here?
-        
+
         Parameters
         ----------
         atoms : list of 4 openforcefield.topology.molecule.Atom objects or ints
             The three atoms defining the virtual site's position or their molecule atom indices
-        distance : float 
-            
+        distance : float
+
         out_of_plane_angle : float
-            
+
         in_plane_angle : float
-            
+
         epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.  
+            Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         rmin_half : float
@@ -3690,7 +3691,7 @@ class Molecule(FrozenMolecule):
         """
         # TODO: Should this not be public?
         Adds a conformer of the molecule
-        
+
         Parameters
         ----------
         coordinates: simtk.unit.Quantity(np.array) with shape (n_atoms, 3)
