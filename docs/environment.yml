@@ -13,8 +13,6 @@ dependencies:
     - networkx
     - lxml
     - openmoltools >=0.7.3
-    - matplotlib
-    - pandas
     - nbsphinx
     - sphinx_bootstrap_theme
     - m2r >=0.2.1
