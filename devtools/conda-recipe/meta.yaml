@@ -13,22 +13,16 @@ requirements:
   build:
     - python
     - setuptools
-    - pandas
 
   run:
     - python
     - numpy
     - networkx
-    - lxml
-    - icu 58*  # This is a lxml dependency but sometimes conda installs version 56
     - parmed
-    - matplotlib
-    - pandas
     - packaging
     # Should we require this? It's useful for tests and examples, but not strictly required
     - openmmtools
     # Serialization: Should these be optional?
-    - pyyaml
     - toml
     - bson
     - msgpack-python
