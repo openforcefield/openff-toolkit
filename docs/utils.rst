@@ -51,6 +51,22 @@ Serialization support
 
     Serializable
 
+Miscellaneous utilities
+-----------------------
+
+Miscellaneous utility functions.
+
+.. currentmodule:: openforcefield.utils.utils
+.. autosummary::
+    :nosignatures:
+    :toctree: api/generated/
+
+    inherit_docstrings
+    all_subclasses
+    temporary_cd
+    temporary_directory
+    get_data_filename
+
 Structure tools
 ---------------
 
@@ -67,19 +83,3 @@ Tools for manipulating molecules and structures
     :toctree: api/generated/
 
     get_molecule_parameterIDs
-
-Miscellaneous utilities
------------------------
-
-Miscellaneous utility functions.
-
-.. currentmodule:: openforcefield.utils.utils
-.. autosummary::
-    :nosignatures:
-    :toctree: api/generated/
-
-    inherit_docstrings
-    all_subclasses
-    temporary_cd
-    temporary_directory
-    get_data_filename
