@@ -19,6 +19,8 @@ requirements:
     - numpy
     - networkx
     - parmed
+    - rdkit
+    - ambermini
     - packaging
     # Should we require this? It's useful for tests and examples, but not strictly required
     - openmmtools
