@@ -1,8 +1,3 @@
-# Simulate a molecule in the gas phase using SMIRNOFF forcefield format
+## Simulate a system parametrized with the Open Force Field toolkit
 
-This example shows how to simulate a molecule in the gas phase using the SMIRNOFF forcefield format.
-
-To run:
-```bash
-python run_molecule.py
-```
+The notebook `run_simulation.ipynb` shows how to use the Open Force Field Toolkit to create a parametrized `System` object that can be used to run a molecular dynamic simulation with OpenMM.

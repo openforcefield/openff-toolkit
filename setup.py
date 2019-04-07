@@ -25,6 +25,7 @@ setup(
         'openforcefield',
         'openforcefield/tests',
         'openforcefield/data',
+        'openforcefield/topology',
         'openforcefield/typing',
         'openforcefield/typing/chemistry',
         'openforcefield/typing/engines',

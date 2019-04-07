@@ -13,25 +13,23 @@ requirements:
   build:
     - python
     - setuptools
-    - pandas
 
   run:
     - python
     - numpy
     - networkx
-    - lxml
-    - icu 58*  # This is a lxml dependency but sometimes conda installs version 56
-    - openmoltools >=0.7.3
     - parmed
-    - matplotlib
-    - pandas
-
-test:
-  requires:
-    - nose
-    - nose-timer
-  imports:
-    - openforcefield
+    - rdkit
+    - ambermini
+    - packaging
+    # Should we require this? It's useful for tests and examples, but not strictly required
+    - openmmtools
+    # Serialization: Should these be optional?
+    - pyyaml
+    - toml
+    - bson
+    - msgpack-python
+    - xmltodict
 
 about:
   home: https://github.com/openforcefield/openforcefield

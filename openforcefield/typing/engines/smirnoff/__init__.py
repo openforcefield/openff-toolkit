@@ -1,5 +1,6 @@
 # The SMIRks Native Open Force Field (SMIRNOFF)
 
-from openforcefield.typing.engines.smirnoff.forcefield import *
-from openforcefield.typing.engines.smirnoff.forcefield_utils import *
-from openforcefield.typing.engines.smirnoff.gbsaforces import *
+from .forcefield import *
+from .io import *
+from .parameters import *
+from .gbsaforces import *

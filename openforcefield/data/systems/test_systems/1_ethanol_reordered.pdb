@@ -1,0 +1,24 @@
+REMARK   1 CREATED WITH MDTraj 1.7.2, 2016-06-27
+CRYST1   31.885   31.885   31.885  90.00  90.00  90.00 P 1           1 
+MODEL        0
+ATOM     20  O1  ZXQ S   1       8.752  30.264  26.234  1.00  0.00          O   
+ATOM     21  C1  ZXQ S   1      10.172  31.276  27.866  1.00  0.00          C   
+ATOM     22  C2  ZXQ S   1       8.746  30.961  27.471  1.00  0.00          C   
+ATOM     23  H1  ZXQ S   1      10.204  31.815  28.818  1.00  0.00          H   
+ATOM     24  H2  ZXQ S   1      10.758  30.356  27.962  1.00  0.00          H   
+ATOM     25  H3  ZXQ S   1      10.661  31.886  27.099  1.00  0.00          H   
+ATOM     26  H4  ZXQ S   1       8.169  31.883  27.352  1.00  0.00          H   
+ATOM     27  H5  ZXQ S   1       8.267  30.333  28.228  1.00  0.00          H   
+ATOM     28  H6  ZXQ S   1       7.826  30.079  26.011  1.00  0.00          H   
+TER      29      ZXQ S   1
+ENDMDL
+CONECT   21   22   23   24   25
+CONECT   22   21   20   26   27
+CONECT   20   22   28
+CONECT   23   21
+CONECT   24   21
+CONECT   25   21
+CONECT   26   22
+CONECT   27   22
+CONECT   28   20
+END

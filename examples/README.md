@@ -1,12 +1,11 @@
-# Examples for `openforcefield` tools
+# Examples using SMIRNOFF with the toolkit
 
-## Manifest
+The following examples are available in [the openforcefield toolkit repository](https://github.com/openforcefield/openforcefield/tree/master/examples):
 
-* `SMIRNOFF_simulation/` - simulation of a molecule in the gas phase with the SMIRNOFF forcefield format
-* `SMIRNOFF_comparison/` - compare molecule energies from SMIRNOFF/OpenMM and AMBER
-* `forcefield_modification/` - Jupyter notebook example of modifying a forcefield parameter and evaluating how it changes an energy
-* `chemicalEnvironments/` - example and documentation of using chemical environment objects to manipulate environment being considered, generate example SMIRKS, etc. Also contains IPython notebook using the chemical environment for depiction.
-* `mixedFF_structure` - example of how to use SMIRNOFF forcefields for small molecules in combination with more conventional force fields for proteins and other components of your system.
-* `partial_bondorder/` - example of using partial bond orders for parameterizing molecules, and showing how the SMIRNOFF format extends; see https://github.com/openforcefield/smarty/issues/53
-* `host_guest_simulation/` - example of setting up a basic MD simulation for a host-guest system using the SMIRNOFF force fields.
-* `label_molecule/` - example showing how to check which parameters are used in which molecules, do parameter usage statistics, etc.
+### Index of provided examples
+
+* [SMIRNOFF_simulation](https://github.com/openforcefield/openforcefield/tree/master/examples/SMIRNOFF_simulation) - simulation of a molecule in the gas phase with the SMIRNOFF forcefield format
+* [forcefield_modification](https://github.com/openforcefield/openforcefield/tree/master/examples/forcefield_modification) - modify forcefield parameters and evaluate how system energy changes
+* [using_smirnoff_in_amber_or_gromacs](https://github.com/openforcefield/openforcefield/tree/master/examples/using_smirnoff_in_amber_or_gromacs) - convert a System generated with the Open Forcefield Toolkit, which can be simulated natively with OpenMM, into AMBER prmtop/inpcrd and GROMACS top/gro input files through the ParmEd library.
+* [inspect_assigned_parameters](https://github.com/openforcefield/openforcefield/tree/master/examples/inspect_assigned_parameters) - check which parameters are used in which molecules and generate parameter usage statistics.
+* [using_smirnoff_with_amber_protein_forcefield](https://github.com/openforcefield/openforcefield/tree/master/examples/using_smirnoff_with_amber_protein_forcefield) - use SMIRNOFF parameters for small molecules in combination with more conventional force fields for proteins and other components of your system (using ParmEd to combine parameterized structures)

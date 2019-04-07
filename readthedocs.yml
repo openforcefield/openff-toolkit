@@ -1,0 +1,15 @@
+# .readthedocs.yml
+
+build:
+  image: latest
+
+python:
+  version: 3.6
+  setup_py_install: true 
+
+# Build PDF in addition to default HTML and JSON
+formats:
+    - pdf
+
+conda:
+  file: docs/environment.yml

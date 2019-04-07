@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='ASCII'?>
+
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
+  <!-- SMIRKS NATIVE OPEN FORCE FIELD (SMIRNOFF) FILE -->
+  <Date>2016-05-25</Date>
+  <Author>J. D. Chodera (MSKCC) charge increment tests</Author>
+  <!-- ELF-10 AM1-BCC is encoded here -->
+  <ChargeIncrementModel number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2" increment_unit="elementary_charge">
+    <!-- A fractional charge can be moved along a single bond -->
+    <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" charge1increment="-0.0073" charge2increment="+0.0073"/>
+    <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" charge1increment="+0.0943" charge2increment="-0.0943"/>
+    <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge1increment="-0.0718" charge2increment="+0.0718"/>
+    <!--- Alternatively, factional charges can be redistributed among any number of bonded atoms -->
+  <ChargeIncrement smirks="[N:1](H:2)(H:3)" charge1increment="+0.02" charge2increment="-0.01" charge3increment="-0.01"/>
+</ChargeIncrementModel>
+</SMIRNOFF>

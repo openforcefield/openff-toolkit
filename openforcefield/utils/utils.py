@@ -1,438 +1,459 @@
 #!/usr/bin/env python
-
 """
-Utility subroutines for open forcefield tools
+Utility subroutines
 
 """
 #=============================================================================================
 # GLOBAL IMPORTS
 #=============================================================================================
 
-import sys
-import string
-
-from optparse import OptionParser # For parsing of command line arguments
-
-import os
-import math
-import copy
-import re
-import numpy
-import random
-import parmed
-
-import openeye.oechem
-import openeye.oeomega
-import openeye.oequacpac
-
-from openeye.oechem import *
-from openeye.oeomega import *
-from openeye.oequacpac import *
-
-from simtk.openmm import app
-from simtk.openmm.app import element as elem
-from simtk.openmm.app import Topology
-
-import time
+import contextlib
 from simtk import unit
 
+
+
 #=============================================================================================
-# UTILITY ROUTINES
+# COMMON EXCEPTION TYPES
 #=============================================================================================
-def checkCharges(molecule):
-    # Check that molecule is charged.
-    #is_charged = False
-    for atom in molecule.GetAtoms():
-        if atom.GetPartialCharge() != 0.0:
-            return True
-        else:
-            print('WARNING: Molecule %s has no charges; input molecules must be charged.' % molecule.GetTitle())
-            return False
-
-def generateSMIRNOFFStructure(molecule):
-    """
-    Given an OpenEye molecule (oechem.OEMol), create an OpenMM System and use to
-    generate a ParmEd structure using the SMIRNOFF forcefield parameters.
-    """
-    from openforcefield.typing.engines.smirnoff import ForceField
-    from openforcefield.typing.engines.smirnoff.forcefield_utils import create_system_from_molecule
-
-    ff = get_data_filename('forcefield/smirnoff99Frosst.offxml')
-    with open(ff) as ffxml:
-        mol_ff = ForceField(ffxml)
-
-    if not checkCharges(molecule):
-        from openmoltools.openeye import get_charges
-        print("Assigning charges to molecule.")
-        charged_molecule = get_charges(molecule)
-    else:
-        charged_molecule = molecule
-    mol_top, mol_sys, mol_pos = create_system_from_molecule(mol_ff, charged_molecule)
-    molecule_structure = parmed.openmm.load_topology(mol_top, mol_sys, xyz=mol_pos)
-
-    return molecule_structure
-
-def generateProteinStructure(proteinpdb, protein_forcefield='amber99sbildn.xml', solvent_forcefield='tip3p.xml'):
-    """
-    Given an OpenMM PDBFile, create the OpenMM System of the protein and
-    then generate the parametrized ParmEd Structure of the protein.
-    Parameters
-    ----------
-    proteinpdb : openmm.app.PDBFile object,
-        Loaded PDBFile object of the protein.
-    protein_forcefield : xml file, default='amber99sbildn.xml'
-        Forcefield parameters for protein
-    solvent_forcefield : xml file, default='tip3p.xml'
-        Forcefield parameters for solvent
-    Returns
-    -------
-    solv_structure : parmed.structure.Structure
-        The parameterized Structure of the protein with solvent molecules. (No ligand).
-    """
-    #Generate protein Structure object
-    forcefield = app.ForceField(protein_forcefield, solvent_forcefield)
-    protein_system = forcefield.createSystem( proteinpdb.topology )
-    protein_structure = parmed.openmm.load_topology(proteinpdb.topology,
-                                                    protein_system,
-                                                    xyz=proteinpdb.positions)
-    return protein_structure
-
-def combinePostions(proteinPositions, molPositions):
-    """
-    Loops through the positions from the ParmEd structures of the protein and ligand,
-    divides by unit.angstroms which will ensure both positions arrays are in the same units.
-    Parameters
-    ----------
-    proteinPositions : list of 3-element Quantity tuples.
-        Positions list taken directly from the protein Structure.
-    molPositions : list of 3-element Quantity tuples.
-        Positions list taken directly from the molecule Structure.
-    Returns
-    -------
-    positions : list of 3-element Quantity tuples.
-        ex. unit.Quantity(positions, positions_unit)
-        Combined positions of the protein and molecule Structures.
-    """
-    positions_unit = unit.angstroms
-    positions0_dimensionless = numpy.array(proteinPositions / positions_unit)
-    positions1_dimensionless = numpy.array(molPositions / positions_unit)
-    coordinates = numpy.vstack(
-        (positions0_dimensionless, positions1_dimensionless))
-    natoms = len(coordinates)
-    positions = numpy.zeros([natoms, 3], numpy.float32)
-    for index in range(natoms):
-            (x, y, z) = coordinates[index]
-            positions[index, 0] = x
-            positions[index, 1] = y
-            positions[index, 2] = z
-    positions = unit.Quantity(positions, positions_unit)
-    return positions
-
-def mergeStructure(proteinStructure, molStructure):
-    """
-    Combines the parametrized ParmEd structures of the protein and ligand to
-    create the Structure for the protein:ligand complex, while retaining the SMIRNOFF
-    parameters on the ligand. Preserves positions and box vectors.
-    (Not as easily achieved using native OpenMM tools).
-    Parameters
-    ----------
-    proteinStructure : parmed.structure.Structure
-        The parametrized structure of the protein.
-    moleculeStructure : parmed.structure.Structure
-        The parametrized structure of the ligand.
-    Returns
-    -------
-    structure : parmed.structure.Structure
-        The parametrized structure of the protein:ligand complex.
-    """
-    structure = proteinStructure + molStructure
-    positions = combinePostions(proteinStructure.positions, molStructure.positions)
-    # Concatenate positions arrays (ensures same units)
-    structure.positions = positions
-    # Restore original box vectors
-    structure.box = proteinStructure.box
-    return structure
 
 
-def generateTopologyFromOEMol(molecule):
-    """
-    Generate an OpenMM Topology object from an OEMol molecule.
+class MessageException(Exception):
+    """A base class for exceptions that print out a string given in their constructor"""
+    def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
+
+# =============================================================================================
+# UTILITY SUBROUTINES
+# =============================================================================================
+
+
+def inherit_docstrings(cls):
+    """Inherit docstrings from parent class"""
+    from inspect import getmembers, isfunction
+    for name, func in getmembers(cls, isfunction):
+        if func.__doc__: continue
+        for parent in cls.__mro__[1:]:
+            if hasattr(parent, name):
+                func.__doc__ = getattr(parent, name).__doc__
+    return cls
+
+
+def all_subclasses(cls):
+    """Recursively retrieve all subclasses of the specified class"""
+    return cls.__subclasses__() + [
+        g for s in cls.__subclasses__() for g in all_subclasses(s)
+    ]
+
+
+@contextlib.contextmanager
+def temporary_cd(dir_path):
+    """Context to temporary change the working directory.
 
     Parameters
     ----------
-    molecule : openeye.oechem.OEMol
-        The molecule from which a Topology object is to be generated.
+    dir_path : str
+        The directory path to enter within the context
 
-    Returns
-    -------
-    topology : simtk.openmm.app.Topology
-        The Topology object generated from `molecule`.
+    Examples
+    --------
+    >>> dir_path = '/tmp'
+    >>> with temporary_cd(dir_path):
+    ...     pass  # do something in dir_path
 
     """
-    # Avoid manipulating the molecule
-    mol = OEMol(molecule)
+    import os
+    prev_dir = os.getcwd()
+    os.chdir(os.path.abspath(dir_path))
+    try:
+        yield
+    finally:
+        os.chdir(prev_dir)
 
-    # Create a Topology object with one Chain and one Residue.
-    from simtk.openmm.app import Topology
-    topology = Topology()
-    chain = topology.addChain()
-    resname = mol.GetTitle()
-    residue = topology.addResidue(resname, chain)
 
-    # Make sure the atoms have names, otherwise bonds won't be created properly below
-    if any([atom.GetName() =='' for atom in mol.GetAtoms()]):
-        oechem.OETriposAtomNames(mol)
-    # Check names are unique; non-unique names will also cause a problem
-    atomnames = [ atom.GetName() for atom in mol.GetAtoms() ]
-    if any( atomnames.count(atom.GetName())>1 for atom in mol.GetAtoms()):
-        raise Exception("Error: Reference molecule must have unique atom names in order to create a Topology.")
+@contextlib.contextmanager
+def temporary_directory():
+    """Context for safe creation of temporary directories."""
 
-    # Create atoms in the residue.
-    for atom in mol.GetAtoms():
-        name = atom.GetName()
-        element = elem.Element.getByAtomicNumber(atom.GetAtomicNum())
-        openmm_atom = topology.addAtom(name, element, residue)
+    import tempfile
+    tmp_dir = tempfile.mkdtemp()
+    try:
+        yield tmp_dir
+    finally:
+        import shutil
+        shutil.rmtree(tmp_dir)
 
-    # Create bonds.
-    atoms = { atom.name : atom for atom in topology.atoms() }
-    for bond in mol.GetBonds():
-        aromatic = None
-        if bond.IsAromatic(): aromatic = 'Aromatic'
-        # Add bond, preserving order assessed by OEChem
-        topology.addBond(atoms[bond.GetBgn().GetName()], atoms[bond.GetEnd().GetName()], type=aromatic, order=bond.GetOrder())
-
-    return topology
 
 def get_data_filename(relative_path):
     """Get the full path to one of the reference files in testsystems.
-
     In the source distribution, these files are in ``openforcefield/data/``,
     but on installation, they're moved to somewhere in the user's python
     site-packages directory.
-
     Parameters
     ----------
     name : str
         Name of the file to load (with respect to the repex folder).
-
     """
 
     from pkg_resources import resource_filename
-    fn = resource_filename('openforcefield', os.path.join('data', relative_path))
+    import os
+    fn = resource_filename('openforcefield', os.path.join(
+        'data', relative_path))
 
     if not os.path.exists(fn):
-        raise ValueError("Sorry! %s does not exist. If you just added it, you'll have to re-install" % fn)
+        raise ValueError(
+            "Sorry! %s does not exist. If you just added it, you'll have to re-install"
+            % fn)
 
     return fn
 
-def normalize_molecules(molecules):
+
+def unit_to_string(input_unit):
     """
-    Normalize all molecules in specified set.
+    Serialize a simtk.unit.Unit and return it as a string.
 
-    ARGUMENTS
+    Parameters
+    ----------
+    input_unit : A simtk.unit
+        The unit to serialize
 
-    molecules (list of OEMol) - molecules to be normalized (in place)
-
+    Returns
+    -------
+    unit_string : str
+        The serialized unit.
     """
 
-    # Add explicit hydrogens.
-    for molecule in molecules:
-        openeye.oechem.OEAddExplicitHydrogens(molecule)
 
-    # Build a conformation for all molecules with Omega.
-    print("Building conformations for all molecules...")
-    import openeye.oeomega
-    omega = openeye.oeomega.OEOmega()
-    omega.SetMaxConfs(1)
-    omega.SetFromCT(True)
-    for molecule in molecules:
-        #omega.SetFixMol(molecule)
-        omega(molecule)
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print("%.3f s elapsed" % elapsed_time)
+    # Decompose output_unit into a tuples of (base_dimension_unit, exponent)
+    unit_string = None
 
-    # Regularize all molecules through writing as mol2.
-    print("Regularizing all molecules...")
-    ligand_mol2_dirname  = os.path.dirname(mcmcDbName) + '/mol2'
-    if( not os.path.exists( ligand_mol2_dirname ) ):
-        os.makedirs(ligand_mol2_dirname)
-    ligand_mol2_filename = ligand_mol2_dirname + '/temp' + os.path.basename(mcmcDbName) + '.mol2'
-    start_time = time.time()
-    omolstream = openeye.oechem.oemolostream(ligand_mol2_filename)
-    for molecule in molecules:
-        # Write molecule as mol2, changing molecule through normalization.
-        openeye.oechem.OEWriteMolecule(omolstream, molecule)
-    omolstream.close()
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print("%.3f s elapsed" % elapsed_time)
-
-    # Assign AM1-BCC charges.
-    print("Assigning AM1-BCC charges...")
-    start_time = time.time()
-    for molecule in molecules:
-        # Assign AM1-BCC charges.
-        if molecule.NumAtoms() == 1:
-            # Use formal charges for ions.
-            OEFormalPartialCharges(molecule)
+    for unit_component in input_unit.iter_base_or_scaled_units():
+        unit_component_name = unit_component[0].name
+        # Convert, for example "elementary charge" --> "elementary_charge"
+        unit_component_name = unit_component_name.replace(' ', '_')
+        if unit_component[1] == 1:
+            contribution = '{}'.format(unit_component_name)
         else:
-            # Assign AM1-BCC charges for multiatom molecules.
-            OEAssignPartialCharges(molecule, OECharges_AM1BCC, False) # use explicit hydrogens
-        # Check to make sure we ended up with partial charges.
-        if OEHasPartialCharges(molecule) == False:
-            print("No charges on molecule: '%s'" % molecule.GetTitle())
-            print("IUPAC name: %s" % OECreateIUPACName(molecule))
-            # TODO: Write molecule out
-            # Delete themolecule.
-            molecules.remove(molecule)
+            contribution = '{}**{}'.format(unit_component_name, int(unit_component[1]))
+        if unit_string is None:
+            unit_string = contribution
+        else:
+            unit_string += ' * {}'.format(contribution)
 
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print("%.3f s elapsed" % elapsed_time)
-    print("%d molecules remaining" % len(molecules))
+    return unit_string
 
-    return
-
-def read_molecules(filename, verbose=True):
+def quantity_to_string(input_quantity):
     """
-    Read molecules from an OpenEye-supported file.
+    Serialize a simtk.unit.Quantity to a string.
 
     Parameters
     ----------
-    filename : str
-        Filename from which molecules are to be read (e.g. mol2, sdf)
+    input_quantity : simtk.unit.Quantity
+        The quantity to serialize
 
     Returns
     -------
-    molecules : list of OEMol
-        List of molecules read from file
+    output_string : str
+        The serialized quantity
 
     """
-
-    if not os.path.exists(filename):
-        built_in = get_data_filename('molecules/%s' % filename)
-        if not os.path.exists(built_in):
-            raise Exception("File '%s' not found." % filename)
-        filename = built_in
-
-    if verbose: print("Loading molecules from '%s'..." % filename)
-    start_time = time.time()
-    molecules = list()
-    input_molstream = oemolistream(filename)
-
-    from openeye import oechem
-    flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
-    input_molstream.SetFlavor(oechem.OEFormat_MOL2, flavor)
-
-    molecule = OECreateOEGraphMol()
-    while OEReadMolecule(input_molstream, molecule):
-        # If molecule has no title, try getting SD 'name' tag
-        if molecule.GetTitle() == '':
-            name = OEGetSDData(molecule, 'name').strip()
-            molecule.SetTitle(name)
-        # Append to list.
-        molecule_copy = OEMol(molecule)
-        molecules.append(molecule_copy)
-    input_molstream.close()
-    if verbose: print("%d molecules read" % len(molecules))
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    if verbose: print("%.3f s elapsed" % elapsed_time)
-
-    return molecules
-
-def setPositionsInOEMol(molecule, positions):
-    """Set the positions in an OEMol using a position array with units from simtk.unit, i.e. from OpenMM. Atoms must have same order.
-
-    Arguments:
-    ---------
-    molecule : OEMol
-        OpenEye molecule
-    positions : Nx3 array
-        Unit-bearing via simtk.unit Nx3 array of coordinates
-    """
-    if molecule.NumAtoms() != len(positions): raise ValueError("Number of atoms in molecule does not match length of position array.")
-    pos_unitless = positions/unit.angstroms
-
-    coordlist = []
-    for idx in range(len(pos_unitless)):
-        for j in range(3):
-            coordlist.append( pos_unitless[idx][j])
-    molecule.SetCoords(OEFloatArray(coordlist))
-
-def extractPositionsFromOEMol(molecule):
-    """Get the positions from an OEMol and return in a position array with units via simtk.unit, i.e. foramtted for OpenMM.
-    Adapted from choderalab/openmoltools test function extractPositionsFromOEMOL
-
-    Arguments:
-    ----------
-    molecule : OEMol
-        OpenEye molecule
-
-    Returns:
-    --------
-    positions : Nx3 array
-        Unit-bearing via simtk.unit Nx3 array of coordinates
-    """
-
-    positions = unit.Quantity(numpy.zeros([molecule.NumAtoms(), 3], numpy.float32), unit.angstroms)
-    coords = molecule.GetCoords()
-    for index in range(molecule.NumAtoms()):
-        positions[index,:] = unit.Quantity(coords[index], unit.angstroms)
-    return positions
-
-def read_typelist(filename):
-    """
-    Read a parameter type or decorator list from a file.
-    Lines in these files have the format
-    "SMARTS/SMIRKS  shorthand"
-    lines beginning with '%' are ignored
-
-    Parameters
-    ----------
-    filename : str
-        Path and name of file to be read
-        Could be file in openforcefield/data/
-
-    Returns
-    -------
-    typelist : list of tuples
-        Typelist[i] is element i of the typelist in format (smarts, shorthand)
-    """
-    if filename is None:
+    import numpy as np
+    if input_quantity is None:
         return None
+    unitless_value = input_quantity.value_in_unit(input_quantity.unit)
+    # The string representaiton of a numpy array doesn't have commas and breaks the
+    # parser, thus we convert any arrays to list here
+    if isinstance(unitless_value, np.ndarray):
+        unitless_value = list(unitless_value)
+    unit_string = unit_to_string(input_quantity.unit)
+    print(input_quantity, type(unitless_value))
+    output_string = '{} * {}'.format(unitless_value, unit_string)
+    return output_string
 
-    if not os.path.exists(filename):
-        built_in = get_data_filename(filename)
-        if not os.path.exists(built_in):
-            raise Exception("File '%s' not found." % filename)
-        filename = built_in
+def _ast_eval(node):
+    """
+    Performs an algebraic syntax tree evaluation of a unit.
 
-    typelist = list()
-    ifs = open(filename)
-    lines = ifs.readlines()
-    used_typenames = list()
+    Parameters
+    ----------
+    node : An ast parsing tree node
+    """
+    import ast
+    import operator as op
 
-    for line in lines:
-        # Strip trailing comments
-        index = line.find('%')
-        if index != -1:
-            line = line[0:index]
+    operators = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
+        ast.Div: op.truediv, ast.Pow: op.pow, ast.BitXor: op.xor,
+        ast.USub: op.neg}
 
-        # Split into tokens.
-        tokens = line.split()
-        # Process if we have enough tokens
-        if len(tokens) >= 2:
-            smarts = tokens[0]
-            typename = ' '.join(tokens[1:])
-            if typename not in used_typenames:
-                typelist.append([smarts,typename])
-                used_typenames.append(typename)
-            else:
-                raise Exception("Error in file '%s' -- each entry must "
-                        "have a unique name." % filename )
+    if isinstance(node, ast.Num): # <number>
+        return node.n
+    elif isinstance(node, ast.BinOp): # <left> <operator> <right>
+        return operators[type(node.op)](_ast_eval(node.left), _ast_eval(node.right))
+    elif isinstance(node, ast.UnaryOp): # <operator> <operand> e.g., -1
+        return operators[type(node.op)](_ast_eval(node.operand))
+    elif isinstance(node, ast.Name):
+        # see if this is a simtk unit
+        b = getattr(unit, node.id)
+        return b
+    # TODO: This was a quick hack that surprisingly worked. We should validate this further.
+    elif isinstance(node, ast.List):
+        return ast.literal_eval(node)
+    else:
+        raise TypeError(node)
 
-    ifs.close()
 
-    return typelist
+def string_to_unit(unit_string):
+    """
+    Deserializes a simtk.unit.Quantity from a string representation, for
+    example: "kilocalories_per_mole / angstrom ** 2"
+
+
+    Parameters
+    ----------
+    unit_string : dict
+        Serialized representation of a simtk.unit.Quantity.
+
+    Returns
+    -------
+    output_unit: simtk.unit.Quantity
+        The deserialized unit from the string
+    """
+    import ast
+    output_unit = _ast_eval(ast.parse(unit_string, mode='eval').body)
+    return output_unit
+
+    #if (serialized['unitless_value'] is None) and (serialized['unit'] is None):
+    #    return None
+    3#quantity_unit = None
+    #for unit_name, power in serialized['unit']:
+    #    unit_name = unit_name.replace(
+    #        ' ', '_')  # Convert eg. 'elementary charge' to 'elementary_charge'
+    #    if quantity_unit is None:
+    #        quantity_unit = (getattr(unit, unit_name)**power)
+    #    else:
+    #        quantity_unit *= (getattr(unit, unit_name)**power)
+    #quantity = unit.Quantity(serialized['unitless_value'], quantity_unit)
+    #return quantity
+
+def string_to_quantity(quantity_string):
+    """
+    Takes a string representation of a quantity and returns a simtk.unit.Quantity
+
+    Parameters
+    ----------
+    quantity_string : str
+        The quantity to deserialize
+
+    Returns
+    -------
+    output_quantity : simtk.unit.Quantity
+        The deserialized quantity
+    """
+    if quantity_string is None:
+        return None
+    # This can be the exact same as string_to_unit
+    import ast
+    output_quantity = _ast_eval(ast.parse(quantity_string, mode='eval').body)
+    return output_quantity
+
+
+def extract_serialized_units_from_dict(input_dict):
+    """
+    Create a mapping of (potentially unit-bearing) quantities from a dictionary, where some keys exist in pairs like
+    {'length': 8, 'length_unit':'angstrom'}.
+
+    Parameters
+    ----------
+    input_dict : dict
+       Dictionary where some keys are paired like {'X': 1.0, 'X_unit': angstrom}.
+
+    Returns
+    -------
+    unitless_dict : dict
+       input_dict, but with keys ending in ``_unit`` removed.
+    attached_units : dict str : simtk.unit.Unit
+       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
+       parameter ``parameter_name``. For example ``attached_units['X'] = simtk.unit.angstrom.
+
+    """
+
+    # TODO: Should this scheme also convert "1" to int(1) and "8.0" to float(8.0)?
+    from collections import OrderedDict
+    attached_units = OrderedDict()
+    unitless_dict = input_dict.copy()
+    keys_to_delete = []
+    for key in input_dict.keys():
+        if key.endswith('_unit'):
+            parameter_name = key[:-5]
+            parameter_units_string = input_dict[key]
+            try:
+                parameter_units = string_to_unit(parameter_units_string)
+            except Exception as e:
+                e.msg = "Could not parse units {}\n".format(
+                    parameter_units_string) + e.msg
+                raise e
+            attached_units[parameter_name] = parameter_units
+            # Remember this key and delete it later (we break the dict if we delete a key in the loop)
+            keys_to_delete.append(key)
+    # Clean out the '*_unit' keys that we processed
+    for key in keys_to_delete:
+        del unitless_dict[key]
+
+    return unitless_dict, attached_units
+
+
+def attach_units(unitless_dict, attached_units):
+    """
+    Attach units to dict entries for which units are specified.
+
+    Parameters
+    ----------
+    unitless_dict : dict
+       Dictionary, where some items are to have units applied.
+    attached_units : dict [str : simtk.unit.Unit]
+       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
+       parameter ``parameter_name``
+
+    Returns
+    -------
+    unit_bearing_dict : dict
+       Updated dict with simtk.unit.Unit units attached to values for which units were specified for their keys
+
+    """
+    temp_dict = unitless_dict.copy()
+    for parameter_name, units_to_attach in attached_units.items():
+        if parameter_name in temp_dict.keys():
+            parameter_attrib_string = temp_dict[parameter_name]
+            try:
+                temp_dict[parameter_name] = float(parameter_attrib_string) * units_to_attach
+            except ValueError as e:
+                e.msg = (
+                    "Expected numeric value for parameter '{}',"
+                    "instead found '{}' when trying to attach units '{}'\n"
+                ).format(parameter_name, parameter_attrib_string, units_to_attach)
+                raise e
+
+        # Now check for matches like "phase1", "phase2"
+        c = 1
+        while (parameter_name + str(c)) in temp_dict.keys():
+            indexed_parameter_name = parameter_name + str(c)
+            parameter_attrib_string = temp_dict[indexed_parameter_name]
+            try:
+                temp_dict[indexed_parameter_name] = float(
+                          parameter_attrib_string) * units_to_attach
+            except ValueError as e:
+                e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
+                    indexed_parameter_name, parameter_attrib_string,
+                    units_to_attach)
+                raise e
+            c += 1
+    return temp_dict
+
+
+
+def detach_units(unit_bearing_dict, output_units=None):
+    """
+    Given a dict which may contain some simtk.unit.Quantity objects, return the same dict with the Quantities
+    replaced with unitless values, and a new dict containing entries with the suffix "_unit" added, containing
+    the units.
+
+    Parameters
+    ----------
+    unit_bearing_dict : dict
+        A dictionary potentially containing simtk.unit.Quantity objects as values.
+    output_units : dict[str : simtk.unit.Unit], optional. Default = None
+        A mapping from parameter fields to the output unit its value should be converted to.
+        For example, {'length_unit': unit.angstrom}. If no output_unit is defined for a key:value pair in which
+        the value is a simtk.unit.Quantity, the output unit will be the Quantity's unit, and this information
+        will be included in the unit_dict return value.
+
+    Returns
+    -------
+    unitless_dict : dict
+        The input smirnoff_dict object, with all simtk.unit.Quantity values converted to unitless values.
+    unit_dict : dict
+        A dictionary in which keys are keys of simtk.unit.Quantity values in unit_bearing_dict,
+        but suffixed with "_unit". Values are simtk.unit.Unit .
+    """
+    from simtk import unit
+
+    if output_units is None:
+        output_units = {}
+
+    # initialize dictionaries for outputs
+    unit_dict = {}
+    unitless_dict = unit_bearing_dict.copy()
+
+    for key, value in unit_bearing_dict.items():
+        # If no conversion is needed, skip this item
+        if not isinstance(value, unit.Quantity):
+            continue
+
+        # If conversion is needed, see if the user has requested an output unit
+        unit_key = key + '_unit'
+
+        if unit_key in output_units:
+            output_unit = output_units[unit_key]
+        else:
+            output_unit = value.unit
+        if not (output_unit.is_compatible(value.unit)):
+            raise ValueError("Requested output unit {} is not compatible with "
+                             "quantity unit {} .".format(output_unit, value.unit))
+        unitless_dict[key] = value.value_in_unit(output_unit)
+        unit_dict[unit_key] = output_unit
+
+    return unitless_dict, unit_dict
+
+
+
+
+def serialize_numpy(np_array):
+    """
+    Serializes a numpy array into a JSON-compatible string. Leverages the numpy.save function,
+    thereby preserving the shape of the input array
+
+    from https://stackoverflow.com/questions/30698004/how-can-i-serialize-a-numpy-array-while-preserving-matrix-dimensions#30699208
+
+    Parameters
+    ----------
+    np_array : A numpy array
+        Input numpy array
+
+    Returns
+    -------
+    serialized : str
+        A serialized representation of the numpy array.
+    shape : tuple of ints
+        The shape of the serialized array
+    """
+
+    bigendian_array = np_array.newbyteorder('>')
+    serialized = bigendian_array.tobytes()
+    shape = np_array.shape
+    return serialized, shape
+
+
+def deserialize_numpy(serialized_np, shape):
+    """
+    Deserializes a numpy array from a JSON-compatible string.
+
+    from https://stackoverflow.com/questions/30698004/how-can-i-serialize-a-numpy-array-while-preserving-matrix-dimensions#30699208
+
+    Parameters
+    ----------
+    serialized_np : str
+        A serialized numpy array
+    shape : tuple of ints
+        The shape of the serialized array
+    Returns
+    -------
+    np_array : numpy.ndarray
+        The deserialized numpy array
+    """
+
+    import numpy as np
+    dt = np.dtype('float')
+    dt.newbyteorder('>')  # set to big-endian
+    np_array = np.frombuffer(serialized_np, dtype=dt)
+    np_array = np_array.reshape(shape)
+    return np_array
