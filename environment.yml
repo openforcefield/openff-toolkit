@@ -1,0 +1,8 @@
+# Environment file for Jupyter notebook examples
+name: openforcefield
+channels:
+    - conda-forge
+    - omnia
+    - defaults
+dependencies:
+    - openforcefield
