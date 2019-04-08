@@ -114,7 +114,7 @@ class ParameterIOHandler:
         """
         pass
 
-    def to_file(self, filename):
+    def to_file(self, filename, smirnoff_data):
         """
         Write the current forcefield parameter set to a file.
 
