@@ -551,7 +551,7 @@ class TopologyVirtualSite(Serializable):
 # =============================================================================================
 
 
-class TopologyMolecule(object):
+class TopologyMolecule:
     """
     TopologyMolecules are built to be an efficient way to store large numbers of copies of the same molecule for
     parameterization and system preparation.

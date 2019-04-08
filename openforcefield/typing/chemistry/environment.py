@@ -172,13 +172,13 @@ class SMIRKSParsingError(openforcefield.utils.MessageException):
     pass
 
 
-class ChemicalEnvironment(object):
+class ChemicalEnvironment:
     """Chemical environment abstract base class that matches an atom, bond, angle, etc.
 
     .. warning :: This class is largely redundant with the same one in the Chemper package, and will likely be removed.
 
     """
-    class Atom(object):
+    class Atom:
         """Atom representation, which may have some ORtypes and ANDtypes properties.
 
         Attributes

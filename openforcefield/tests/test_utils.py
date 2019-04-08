@@ -28,7 +28,7 @@ from openforcefield import utils
 
 def test_subclasses():
     """Test that all subclasses (and descendents) are correctly identified by all_subclasses()"""
-    class Foo(object):
+    class Foo:
         pass
     class FooSubclass1(Foo):
         pass

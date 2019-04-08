@@ -85,7 +85,7 @@ class ParseError(MessageException):
 # TODO: How do we serialize/deserialize `ForceField`'s object model? Can we rely on pickle?
 
 
-class ForceField(object):
+class ForceField:
     """A factory that assigns SMIRNOFF parameters to a molecular system
 
     :class:`ForceField` is a factory that constructs an OpenMM :class:`simtk.openmm.System` object from a
