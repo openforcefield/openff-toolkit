@@ -1794,15 +1794,15 @@ class Topology(Serializable):
                     off_bondtype = "Double"
                 elif oe_bond.GetOrder() == 3:
                     oe_bond.SetType("Triple")
-                    off_bond_type = "Triple"
+                    off_bondtype = "Triple"
                 elif IsAmideBond(oe_bond):
                     oe_bond.SetType("Amide")
-                    off_bond_type = "Amide"
+                    off_bondtype = "Amide"
                 elif oe_bond.GetOrder() == 1:
                     oe_bond.SetType("Single")
-                    off_bond_type = "Single"
+                    off_bondtype = "Single"
                 else:
-                    off_bond_type = None
+                    off_bondtype = None
 
             molecule.add_bond(
                 oe_atom_to_openmm_at[oe_bond.GetBgn()],
