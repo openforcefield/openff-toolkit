@@ -97,7 +97,7 @@ class Particle(Serializable):
         doesn't have a molecule
         """
         #TODO: Add informative exception here
-        assert self._molecule == None
+        assert self._molecule is None
         self._molecule = molecule
 
     @property
@@ -521,27 +521,27 @@ class VirtualSite(Particle):
 """
 
         # Ensure we have as many charge_increments as we do atoms
-        if not (charge_increments == None):
+        if not (charge_increments is None):
             if not (len(charge_increments) == len(atoms)):
                 raise Exception(
                     "VirtualSite definition must have same number of charge_increments ({}) and atoms({})"
                     .format(len(charge_increments), len(atoms)))
 
         # VdW parameters can either be epsilon+rmin_half or epsilon+sigma, but not both
-        if not (epsilon == None):
+        if not (epsilon is None):
             if ((rmin_half != None) and (sigma != None)):
                 raise Exception(
                     "VirtualSite constructor given epsilon (value : {}), rmin_half (value : {}), and sigma (value : {}). If epsilon is nonzero, it should receive either rmin_half OR sigma"
                     .format(epsilon, rmin_half, sigma))
-            if ((rmin_half == None) and (sigma == None)):
+            if ((rmin_half is None) and (sigma is None)):
                 raise Exception(
                     "VirtualSite constructor given epsilon (value : {}) but not given rmin_half (value : {}) or sigma (value : {})"
                     .format(epsilon, rmin_half, sigma))
-            if (sigma == None):
+            if (sigma is None):
                 # TODO: Save the 6th root of 2 if this starts being slow.
                 sigma = (2. * rmin_half) / (2.**(1. / 6))
 
-        elif epsilon == None:
+        elif epsilon is None:
             if ((rmin_half != None) or (sigma != None)):
                 raise Exception(
                     "VirtualSite constructor given rmin_half (value : {}) or sigma (value : {}), but not epsilon (value : {})"
@@ -554,21 +554,21 @@ class VirtualSite(Particle):
             assert atoms[atom_index].molecule is atoms[atom_index + 1].molecule
         assert isinstance(atoms[1].molecule, FrozenMolecule)
 
-        if sigma == None:
+        if sigma is None:
             self._sigma = None
         else:
             assert hasattr(sigma, 'unit')
             assert unit.angstrom.is_compatible(sigma.unit)
             self._sigma = sigma.in_units_of(unit.angstrom)
 
-        if epsilon == None:
+        if epsilon is None:
             self._epsilon = None
         else:
             assert hasattr(epsilon, 'unit')
             assert (unit.kilojoule_per_mole).is_compatible(epsilon.unit)
             self._epsilon = epsilon.in_units_of(unit.kilojoule_per_mole)
 
-        if charge_increments == None:
+        if charge_increments is None:
             self._charge_increments = None
         else:
             assert hasattr(charge_increments, 'unit')
@@ -1337,7 +1337,7 @@ class Bond(Serializable):
         """
         Sets the Bond's parent molecule. Can not be changed after assignment
         """
-        assert self._molecule == None
+        assert self._molecule is None
         self._molecule = value
 
     @property
@@ -1586,7 +1586,7 @@ class FrozenMolecule(Serializable):
         if hasattr(self, '_cached_properties'):
             molecule_dict['cached_properties'] = self._cached_properties
         # TODO: Conformers
-        if self._conformers == None:
+        if self._conformers is None:
             molecule_dict['conformers'] = None
         else:
             molecule_dict['conformers'] = []
@@ -1596,7 +1596,7 @@ class FrozenMolecule(Serializable):
                 conf_unitless = (conf / unit.angstrom)
                 conf_serialized, conf_shape = serialize_numpy((conf_unitless))
                 molecule_dict['conformers'].append(conf_serialized)
-        if self._partial_charges == None:
+        if self._partial_charges is None:
             molecule_dict['partial_charges'] = None
             molecule_dict['partial_charges_unit'] = None
 
@@ -1717,7 +1717,7 @@ class FrozenMolecule(Serializable):
             bond_dict['atom2'] = int(bond_dict['atom2'])
             self._add_bond(**bond_dict)
 
-        if molecule_dict['partial_charges'] == None:
+        if molecule_dict['partial_charges'] is None:
             self._partial_charges = None
         else:
             charges_shape = (self.n_atoms, )
@@ -1727,7 +1727,7 @@ class FrozenMolecule(Serializable):
             partial_charges = unit.Quantity(partial_charges_unitless, pc_unit)
             self._partial_charges = partial_charges
 
-        if molecule_dict['conformers'] == None:
+        if molecule_dict['conformers'] is None:
             self._conformers = None
         else:
             self._conformers = list()
@@ -2476,7 +2476,7 @@ class FrozenMolecule(Serializable):
                 'Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are '
                 'of type simtk.units.Quantity')
 
-        if self._conformers == None:
+        if self._conformers is None:
             self._conformers = []
         self._conformers.append(new_conf)
         return len(self._conformers)
@@ -2584,7 +2584,7 @@ class FrozenMolecule(Serializable):
         """
         Iterate over all Atom objects.
         """
-        if self._conformers == None:
+        if self._conformers is None:
             return 0
         return len(self._conformers)
 
@@ -2898,7 +2898,7 @@ class FrozenMolecule(Serializable):
 
         """
 
-        if file_format == None:
+        if file_format is None:
             if not (isinstance(filename, str)):
                 raise Exception(
                     "If providing a file-like object for reading molecules, the format must be specified"
@@ -2923,7 +2923,7 @@ class FrozenMolecule(Serializable):
                 supported_read_formats[
                     query_toolkit.
                     toolkit_name] = query_toolkit.toolkit_file_read_formats
-            if toolkit == None:
+            if toolkit is None:
                 raise NotImplementedError(
                     "No toolkits in registry can read file {} (format {}). Supported formats in the "
                     "provided ToolkitRegistry are {}".format(
@@ -3018,7 +3018,7 @@ class FrozenMolecule(Serializable):
                 break
 
         # Raise an exception if no toolkit was found to provide the requested outfile_format
-        if toolkit == None:
+        if toolkit is None:
             supported_formats = {}
             for toolkit in toolkit_registry.registered_toolkits:
                 supported_formats[
