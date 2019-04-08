@@ -880,18 +880,18 @@ class ForceField(object):
 
         """
         raise NotImplementedError
-        import parmed
+        #import parmed
         # TODO: Automagically handle expansion of virtual sites? Or is Topology supposed to do that?
 
         # Create OpenMM System
-        system = self.create_openmm_system(
-            topology, **kwargs)
+        #system = self.create_openmm_system(
+        #    topology, **kwargs)
 
         # Create a ParmEd Structure object
-        structure = parmed.openmm.topsystem.load_topology(
-            topology.to_openmm(), system, positions)
-
-        return structure
+        #structure = parmed.openmm.topsystem.load_topology(
+        #    topology.to_openmm(), system, positions)
+        #
+        #return structure
 
     def label_molecules(self, topology):
         """Return labels for a list of molecules corresponding to parameters from this force field.
