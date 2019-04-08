@@ -1,20 +1,25 @@
 name: openforcefield
 channels:
-    - omnia
     - conda-forge
-    - rdkit
+    - omnia
+    - defaults
 dependencies:
-    - python ==3.6
+    - python
     - numpy
-    - setuptools
     - openmm
-    - parmed
-    - numpydoc
     - networkx
-    - lxml
-    - openmoltools >=0.7.3
+    - parmed
+    - rdkit ==2018.09.01 # pinned because conda-forge 2018.09.03 causes segfaults on osx py37
+    - ambermini
+    - packaging
+    # Serialization: Should these be optional?
+    - toml
+    - bson
+    - msgpack-python
+    - xmltodict
+    - pyyaml
+    - cairo ==1.16
     - nbsphinx
     - sphinx_bootstrap_theme
     - m2r >=0.2.1
-    - rdkit
     - testpath =0.3.1

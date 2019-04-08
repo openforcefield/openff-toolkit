@@ -27,8 +27,8 @@ On ``osx``, you want to use the ``osx`` binary
 
 .. code-block:: bash
 
-   $ wget https://repo.continuum.io/miniconda/Miniconda2-latest-MacOSX-x86_64.sh
-   $ bash ./Miniconda2-latest-MacOSX-x86_64.sh -b -p $HOME/miniconda3
+   $ curl https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O
+   $ bash ./Miniconda3-latest-MacOSX-x86_64.sh -b -p $HOME/miniconda3
    $ source ~/miniconda3/etc/profile.d/conda.sh
    $ conda activate base
 

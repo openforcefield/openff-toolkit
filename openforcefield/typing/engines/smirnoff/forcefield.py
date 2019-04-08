@@ -186,7 +186,7 @@ class ForceField(object):
         Parameters
         ----------
         sources : string or file-like object or open file handle or URL (or iterable of these)
-            A list of files defining the SMIRNOFF force field to be loaded
+            A list of files defining the SMIRNOFF force field to be loaded.
             Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the forcefield XML data can be loaded.
@@ -194,11 +194,11 @@ class ForceField(object):
             with files appearing later in the sequence resulting in parameters that have higher precedence.
             Support for multiple files is primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
         parameter_handler_classes : iterable of ParameterHandler classes, optional, default=None
-            If not None, the specified set of ParameterHandler classes will be instantiated to create the parameter object model
-            By default, all imported subclasses of ParameterHandler are automatically registered
+            If not None, the specified set of ParameterHandler classes will be instantiated to create the parameter object model.
+            By default, all imported subclasses of ParameterHandler are automatically registered.
         parameter_io_handler_classes : iterable of ParameterIOHandler classes
-            If not None, the specified set of ParameterIOHandler classes will be used to parse/generate serialized parameter sets
-            By default, all imported subclasses of ParameterIOHandler are automatically registered
+            If not None, the specified set of ParameterIOHandler classes will be used to parse/generate serialized parameter sets.
+            By default, all imported subclasses of ParameterIOHandler are automatically registered.
         disable_version_check : bool, optional, default=False
             If True, will disable checks against the current highest supported forcefield version.
             This option is primarily intended for forcefield development.
@@ -585,7 +585,7 @@ class ForceField(object):
         Parameters
         ----------
         sources : string or file-like object or open file handle or URL (or iterable of these)
-            A list of files defining the SMIRNOFF force field to be loaded
+            A list of files defining the SMIRNOFF force field to be loaded.
             Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the forcefield XML data can be loaded.
@@ -665,10 +665,6 @@ class ForceField(object):
         elif self._aromaticity_model == None:
             raise ParseError("'aromaticity_model' attribute must be specified in SMIRNOFF "
                              "tag, or contained in a previously-loaded SMIRNOFF data source")
-
-
-
-
 
         # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation
         if 'version' in l1_dict:
@@ -914,7 +910,7 @@ class ForceField(object):
             one unique molecule in the Topology and is a dictionary keyed by force type,
             i.e., ``molecule_labels[0]['HarmonicBondForce']`` gives details for the harmonic
             bond parameters for the first molecule. Each element is a list of the form:
-            ``[ ( [ atom1, ..., atomN], parameter_id, SMIRKS), ... ]``
+            ``[ ( [ atom1, ..., atomN], parameter_id, SMIRKS), ... ]``.
 
         .. todo ::
 

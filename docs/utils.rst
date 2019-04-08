@@ -51,41 +51,6 @@ Serialization support
 
     Serializable
 
-Structure tools
----------------
-
-Tools for manipulating molecules and structures
-
-.. todo ::
-
-   These methods are deprecated and will be removed.
-   We recommend that no new code makes use of these functions.
-
-.. currentmodule:: openforcefield.utils.structure
-.. autosummary::
-    :nosignatures:
-    :toctree: api/generated/
-
-    generateSMIRNOFFStructure
-    generateProteinStructure
-    combinePositions
-    mergeStructure
-    generateTopologyFromOEMol
-    get_testdata_filename
-    normalize_molecules
-    read_molecules
-    setPositionsInOEMol
-    extractPositionsFromOEMol
-    read_typelist
-    positions_from_oemol
-    check_energy_is_finite
-    get_energy
-    get_molecule_parameterIDs
-    getMolParamIDToAtomIndex
-    merge_system
-    save_system_to_amber
-    save_system_to_gromacs
-
 Miscellaneous utilities
 -----------------------
 
@@ -101,3 +66,20 @@ Miscellaneous utility functions.
     temporary_cd
     temporary_directory
     get_data_filename
+
+Structure tools
+---------------
+
+Tools for manipulating molecules and structures
+
+.. warning ::
+
+   These methods are deprecated and will be removed and replaced with integrated API methods.
+   We recommend that no new code makes use of these functions.
+
+.. currentmodule:: openforcefield.utils.structure
+.. autosummary::
+    :nosignatures:
+    :toctree: api/generated/
+
+    get_molecule_parameterIDs
