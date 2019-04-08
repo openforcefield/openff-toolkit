@@ -10,6 +10,6 @@ These examples illustrate how the [ParmEd](http://parmed.github.io/ParmEd/html/i
 
 ### Toluene in complex with T4 lysozyme L99A
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openforcefield/master?filepath=examples%2Ftoluene_in_T4_lysozyme.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openforcefield/master?filepath=examples%2Fusing_smirnoff_with_amber_protein_forcefield%2Ftoluene_in_T4_lysozyme.ipynb)
 
 [`toluene_in_T4_lysozyme.ipynb`](toluene_in_T4_lysozyme.ipynb) contains an example illustrating applying SMIRNOFF and Amber99SB-ILDN parameters to toluene complexed with T4 lysozyme L99A.
