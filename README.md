@@ -10,11 +10,11 @@
 
 # The Open Force Field toolkit
 
-This repository contains a number of tools from the [Open Force Field Initiative](http://openforcefield.org) for the development and use of modern molecular mechanics forcefields based on direct chemical perception and parameterized with rigorous statistical methods.
+The Open Force Field Toolkit, built by the [Open Force Field Initiative](http://openforcefield.org), is a Python toolkit for the development and application of modern molecular mechanics force fields based on direct chemical perception and rigorous statistical parameterization methods.
 
-This repository hosts tools that we have committed to stably maintain throughout their lifetimes:
+The toolkit currently covers two main areas we have committed to stably maintain throughout their lifetimes:
 * Tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) specification](https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html)
-* Tools for direct chemical environment perception and manipulation
+* Tools for [direct chemical environment perception](https://dx.doi.org/10.1021/acs.jctc.8b00640) and manipulation
 
 ## Documentation
 
@@ -32,7 +32,7 @@ Detailed installation instructions can be found [here](https://open-forcefield-t
 
 If you need to install via source, see the build and run package requirements listed in the [development conda recipe](https://github.com/openforcefield/openforcefield/blob/master/devtools/conda-recipe/meta.yaml).
 
-# Features of the `openforcefield` toolkit
+# Toolkit features
 
 ## The SMIRKS Native Open Force Field (SMIRNOFF) format
 
@@ -69,7 +69,7 @@ forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
 ```
 Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/latest/examples.html).
 
-## Chemical environments: Tools for chemical environment perception and manipulation
+## Chemical environments: Chemical environment perception and manipulation
 
 The `ChemicalEnvironments` class can be used to parse and manipulate [tagged SMARTS strings](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) or single-fragment [SMIRKS strings](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html) representing chemical environments with tagged atoms.
 
