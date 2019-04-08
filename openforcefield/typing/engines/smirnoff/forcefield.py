@@ -662,7 +662,7 @@ class ForceField(object):
             aromaticity_model = l1_dict['aromaticity_model']
             self._set_aromaticity_model(aromaticity_model)
 
-        elif self._aromaticity_model == None:
+        elif self._aromaticity_model is None:
             raise ParseError("'aromaticity_model' attribute must be specified in SMIRNOFF "
                              "tag, or contained in a previously-loaded SMIRNOFF data source")
 
