@@ -4,7 +4,15 @@ channels:
     - omnia
     - defaults
 dependencies:
-    - python
+    # readthedocs dependencies
+    - numpydoc
+    - nbsphinx
+    - sphinx_bootstrap_theme
+    - m2r >=0.2.1
+    - testpath =0.3.1
+    # conda build dependencies
+    - python ==3.6
+    - setuptools
     - numpy
     - openmm
     - networkx
@@ -19,7 +27,3 @@ dependencies:
     - xmltodict
     - pyyaml
     - cairo ==1.16
-    - nbsphinx
-    - sphinx_bootstrap_theme
-    - m2r >=0.2.1
-    - testpath =0.3.1
