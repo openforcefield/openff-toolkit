@@ -1,22 +1,8 @@
+# Environment file for Jupyter notebook examples
 name: openforcefield
 channels:
     - conda-forge
     - omnia
     - defaults
 dependencies:
-    - python
-    - setuptools
-    - numpy
-    - openmm
-    - networkx
-    - parmed
-    - rdkit
-    - ambermini
-    - packaging
-    # Serialization: Should these be optional?
-    - toml
-    - bson
-    - msgpack-python
-    - xmltodict
-    - pyyaml
-    - cairo ==1.16
+    - openforcefield
