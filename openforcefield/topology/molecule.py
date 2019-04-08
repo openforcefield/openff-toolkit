@@ -2019,7 +2019,6 @@ class FrozenMolecule(Serializable):
 
         >>> molecule = Molecule.from_smiles('CCCCCC')
         >>> molecule.generate_conformers()
-        >>> molecule.compute_partial_charges()
 
         Raises
         ------

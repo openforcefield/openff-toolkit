@@ -216,7 +216,7 @@ class ForceField(object):
 
         Load a parameter set from a string:
 
-        >>> offxml = '<SMIRNOFF version="1.0" aromaticity_model="OEAroModel_MDL"/>'
+        >>> offxml = '<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL"/>'
         >>> forcefield = ForceField(offxml)
 
         """
