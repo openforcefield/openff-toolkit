@@ -44,7 +44,6 @@ import openforcefield
 from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, string_to_quantity
 from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper,\
     InvalidToolkitError, GLOBAL_TOOLKIT_REGISTRY
-from openforcefield.typing.chemistry import ChemicalEnvironment
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
 from openforcefield.utils.serialization import Serializable
 
