@@ -104,9 +104,4 @@ See [`FAQ.md`](FAQ.md) for answers to a variety of common problems, such as:
 
 # Contributors
 
-* [David L. Mobley (UCI)](https://github.com/davidlmobley)
-* [John D. Chodera (MSKCC)](https://github.com/jchodera)
-* [Caitlin Bannan (UCI)](https://github.com/bannanc)
-* [Camila Zanette (UCI)](https://github.com/camizanette)
-* [Christopher I. Bayly (OpenEye)](https://github.com/cbayly13)
-* [Nathan M. Lim (UCI)](https://github.com/nathanmlim)
+For a full list of contributors, see the [GitHub Contributors page](https://github.com/openforcefield/openforcefield/graphs/contributors).
