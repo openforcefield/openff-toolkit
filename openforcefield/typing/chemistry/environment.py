@@ -172,13 +172,13 @@ class SMIRKSParsingError(openforcefield.utils.MessageException):
     pass
 
 
-class ChemicalEnvironment(object):
+class ChemicalEnvironment:
     """Chemical environment abstract base class that matches an atom, bond, angle, etc.
 
     .. warning :: This class is largely redundant with the same one in the Chemper package, and will likely be removed.
 
     """
-    class Atom(object):
+    class Atom:
         """Atom representation, which may have some ORtypes and ANDtypes properties.
 
         Attributes
@@ -883,8 +883,11 @@ into ChemicalEnvironments." % smirks)
         if descriptor == None:
             return random.choice(self._graph_nodes())
 
-        try: descriptor = int(descriptor)
-        except: descriptor = descriptor
+        # TODO: Is there a better way to do this?
+        try:
+            descriptor = int(descriptor)
+        except:
+            pass
 
         if type(descriptor) is int:
             for atom in self.getAtoms():
@@ -963,8 +966,11 @@ into ChemicalEnvironments." % smirks)
         a single Bond object fitting the description
         or None if no such atom exists
         """
-        try: descriptor = int(descriptor)
-        except: descriptor = descriptor
+        # TODO: Is there a better way to do this?
+        try:
+            descriptor = int(descriptor)
+        except:
+            pass
 
         if type(descriptor) is int:
             for bond in self.getBonds():

@@ -73,7 +73,7 @@ def _ast_unit_eval(node):
 #=============================================================================================
 
 
-class ParameterIOHandler(object):
+class ParameterIOHandler:
     """
     Base class for handling serialization/deserialization of SMIRNOFF ForceField objects
     """
@@ -114,7 +114,7 @@ class ParameterIOHandler(object):
         """
         pass
 
-    def to_file(self, filename):
+    def to_file(self, filename, smirnoff_data):
         """
         Write the current forcefield parameter set to a file.
 

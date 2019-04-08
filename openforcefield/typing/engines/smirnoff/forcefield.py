@@ -30,7 +30,7 @@ from collections import OrderedDict
 from simtk import openmm, unit
 
 from openforcefield.utils import all_subclasses, MessageException
-from openforcefield.topology import DEFAULT_AROMATICITY_MODEL
+from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
 
@@ -85,7 +85,7 @@ class ParseError(MessageException):
 # TODO: How do we serialize/deserialize `ForceField`'s object model? Can we rely on pickle?
 
 
-class ForceField(object):
+class ForceField:
     """A factory that assigns SMIRNOFF parameters to a molecular system
 
     :class:`ForceField` is a factory that constructs an OpenMM :class:`simtk.openmm.System` object from a
@@ -662,7 +662,7 @@ class ForceField(object):
             aromaticity_model = l1_dict['aromaticity_model']
             self._set_aromaticity_model(aromaticity_model)
 
-        elif self._aromaticity_model == None:
+        elif self._aromaticity_model is None:
             raise ParseError("'aromaticity_model' attribute must be specified in SMIRNOFF "
                              "tag, or contained in a previously-loaded SMIRNOFF data source")
 
@@ -880,18 +880,18 @@ class ForceField(object):
 
         """
         raise NotImplementedError
-        import parmed
+        #import parmed
         # TODO: Automagically handle expansion of virtual sites? Or is Topology supposed to do that?
 
         # Create OpenMM System
-        system = self.create_openmm_system(
-            topology, **kwargs)
+        #system = self.create_openmm_system(
+        #    topology, **kwargs)
 
         # Create a ParmEd Structure object
-        structure = parmed.openmm.topsystem.load_topology(
-            topology.to_openmm(), system, positions)
-
-        return structure
+        #structure = parmed.openmm.topsystem.load_topology(
+        #    topology.to_openmm(), system, positions)
+        #
+        #return structure
 
     def label_molecules(self, topology):
         """Return labels for a list of molecules corresponding to parameters from this force field.

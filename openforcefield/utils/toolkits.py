@@ -105,7 +105,7 @@ class GAFFAtomTypeWarning(RuntimeWarning):
 # CHEMINFORMATICS TOOLKIT WRAPPERS
 #=============================================================================================
 
-class ToolkitWrapper(object):
+class ToolkitWrapper:
     """
     Toolkit wrapper base class.
 
@@ -2732,7 +2732,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 #=============================================================================================
 
 
-class ToolkitRegistry(object):
+class ToolkitRegistry:
     """
     Registry for ToolkitWrapper objects
 

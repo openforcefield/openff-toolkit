@@ -284,7 +284,7 @@ class ParameterList(list):
 
 
 # TODO: Rename to better reflect role as parameter base class?
-class ParameterType(object):
+class ParameterType:
     """
     Base class for SMIRNOFF parameter types.
 
@@ -500,7 +500,7 @@ class ParameterType(object):
 # TODO: Should we have a parameter handler registry?
 
 
-class ParameterHandler(object):
+class ParameterHandler:
     """Base class for parameter handlers.
 
     Parameter handlers are configured with some global parameters for a given section. They may also contain a
