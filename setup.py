@@ -37,6 +37,7 @@ setup(
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
         "License :: OSI Approved :: MIT",
+        'Programming Language :: Python :: 3',
     ],
     entry_points={'console_scripts': []},
     package_data={'openforcefield': find_package_data('openforcefield/data', 'openforcefield')},
