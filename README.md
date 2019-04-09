@@ -10,11 +10,11 @@
 
 # The Open Force Field toolkit
 
-This repository contains a number of tools from the [Open Force Field Initiative](http://openforcefield.org) for the development and use of modern molecular mechanics forcefields based on direct chemical perception and parameterized with rigorous statistical methods.
+The Open Force Field Toolkit, built by the [Open Force Field Initiative](http://openforcefield.org), is a Python toolkit for the development and application of modern molecular mechanics force fields based on direct chemical perception and rigorous statistical parameterization methods.
 
-This repository hosts tools that we have committed to stably maintain throughout their lifetimes:
+The toolkit currently covers two main areas we have committed to stably maintain throughout their lifetimes:
 * Tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) specification](https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html)
-* Tools for direct chemical environment perception and manipulation
+* Tools for [direct chemical environment perception](https://dx.doi.org/10.1021/acs.jctc.8b00640) and manipulation
 
 ## Documentation
 
@@ -32,7 +32,7 @@ Detailed installation instructions can be found [here](https://open-forcefield-t
 
 If you need to install via source, see the build and run package requirements listed in the [development conda recipe](https://github.com/openforcefield/openforcefield/blob/master/devtools/conda-recipe/meta.yaml).
 
-# Features of the `openforcefield` toolkit
+# Toolkit features
 
 ## The SMIRKS Native Open Force Field (SMIRNOFF) format
 
@@ -69,7 +69,7 @@ forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
 ```
 Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/latest/examples.html).
 
-## Chemical environments: Tools for chemical environment perception and manipulation
+## Chemical environments: Chemical environment perception and manipulation
 
 The `ChemicalEnvironments` class can be used to parse and manipulate [tagged SMARTS strings](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) or single-fragment [SMIRKS strings](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html) representing chemical environments with tagged atoms.
 
@@ -97,16 +97,11 @@ Daylight provides detailed specifications of the [SMILES](http://www.daylight.co
 
 # Frequently asked questions (FAQ)
 
-See [`Chemical-starting-points.md`](Chemical-starting-points.md) for answers to a variety of common problems, such as:
+See [`FAQ.md`](FAQ.md) for answers to a variety of common problems, such as:
 * Why do I need to provide molecules corresponding to the components of my system, or a `Topology` with bond orders?
 * Can I use an AMBER, CHARMM, or gromacs topology/coordinate file as a starting point for applying a SMIRNOFF force field?
 * What if I am starting from a PDB file?
 
 # Contributors
 
-* [David L. Mobley (UCI)](https://github.com/davidlmobley)
-* [John D. Chodera (MSKCC)](https://github.com/jchodera)
-* [Caitlin Bannan (UCI)](https://github.com/bannanc)
-* [Camila Zanette (UCI)](https://github.com/camizanette)
-* [Christopher I. Bayly (OpenEye)](https://github.com/cbayly13)
-* [Nathan M. Lim (UCI)](https://github.com/nathanmlim)
+For a full list of contributors, see the [GitHub Contributors page](https://github.com/openforcefield/openforcefield/graphs/contributors).
