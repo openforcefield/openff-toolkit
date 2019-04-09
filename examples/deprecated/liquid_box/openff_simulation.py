@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 
-import time 
-import numpy as np
+import time
 
 # Import OpenMM tools
 from simtk import openmm, unit
-from simtk.openmm import Platform
 from simtk.openmm.app import *
 
 # Use MDTraj to write simulation trajectories
@@ -15,7 +13,7 @@ from mdtraj.reporters import NetCDFReporter
 from openforcefield.typing.engines.smirnoff import ForceField
 # LPW: openforcefield's PME is different from openmm's PME
 from openforcefield.typing.engines.smirnoff.forcefield import PME
-from openforcefield.utils import get_data_filename, extractPositionsFromOEMol, generateTopologyFromOEMol
+from openforcefield.utils import get_data_filename
 
 # Import the OpenEye toolkit
 from openeye import oechem

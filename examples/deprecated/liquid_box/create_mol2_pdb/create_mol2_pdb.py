@@ -92,7 +92,6 @@ def GenerateBox(pdbin, pdbout, box, nmol, tries):
     ferr.close()
     t0 = time.time()
     print("Running %s to create a solvent box..." % gmxcmd)
-    stdout, stderr = p.communicate()
     print("Time elapsed: % .3f seconds" % (time.time() - t0))
     nmol_out = 0
     for line in open('genbox.err').readlines():

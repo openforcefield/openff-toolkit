@@ -224,7 +224,7 @@ def string_to_unit(unit_string):
 
     #if (serialized['unitless_value'] is None) and (serialized['unit'] is None):
     #    return None
-    3#quantity_unit = None
+    #quantity_unit = None
     #for unit_name, power in serialized['unit']:
     #    unit_name = unit_name.replace(
     #        ' ', '_')  # Convert eg. 'elementary charge' to 'elementary_charge'
