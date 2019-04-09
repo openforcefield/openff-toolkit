@@ -39,5 +39,7 @@ def main(argv=sys.argv):
     ofsff.close()
     ofsTri.close()
 
+    return 0
+
 if __name__ == "__main__":
     sys.exit(main(sys.argv))#!/usr/bin/env python
