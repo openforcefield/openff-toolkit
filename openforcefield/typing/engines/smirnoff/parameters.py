@@ -1657,7 +1657,7 @@ class vdWHandler(ParameterHandler):
         atoms = self.find_matches(topology)
 
         # Create all particles.
-        for particle in topology.topology_particles:
+        for _ in topology.topology_particles:
             force.addParticle(0.0, 1.0, 0.0)
 
         # Set the particle Lennard-Jones terms.
@@ -2408,7 +2408,7 @@ class GBSAParameterHandler(ParameterHandler):
         atoms = self.getMatches(topology)
         nparams = 1 + len(expected_parameters)  # charge + GBSA parameters
         params = [0.0 for i in range(nparams)]
-        for particle in topology.topology_particles():
+        for _ in topology.topology_particles():
             force.addParticle(params)
         # Set the GBSA parameters (keeping charges at zero for now)
         for (atoms, gbsa_type) in atoms.items():
