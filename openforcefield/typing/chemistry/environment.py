@@ -21,6 +21,18 @@ and David Mobley, UC Irvine.
 
 """
 
+__all__ = [
+    'SMIRKSMismatchError',
+    'SMIRKSParsingError',
+    'ChemicalEnvironment',
+    'AtomChemicalEnvironment',
+    'BondChemicalEnvironment',
+    'AngleChemicalEnvironment',
+    'TorsionChemicalEnvironment',
+    'ImproperChemicalEnvironment'
+]
+
+
 #==============================================================================
 # GLOBAL IMPORTS
 #==============================================================================

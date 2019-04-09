@@ -16,6 +16,16 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
 
 """
 
+__all__ = [
+    'MAX_SUPPORTED_VERSION',
+    'ParameterHandlerRegistrationError',
+    'SMIRNOFFVersionError',
+    'SMIRNOFFAromaticityError',
+    'ParseError',
+    'ForceField',
+]
+
+
 #=============================================================================================
 # GLOBAL IMPORTS
 #=============================================================================================

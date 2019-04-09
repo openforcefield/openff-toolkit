@@ -3,6 +3,25 @@
 Utility subroutines
 
 """
+
+__all__ = [
+    'MessageException',
+    'inherit_docstrings',
+    'all_subclasses',
+    'temporary_cd',
+    'temporary_directory',
+    'get_data_filename',
+    'unit_to_string',
+    'quantity_to_string',
+    'string_to_unit',
+    'string_to_quantity',
+    'extract_serialized_units_from_dict',
+    'attach_units',
+    'detach_units',
+    'serialize_numpy',
+    'deserialize_numpy',
+]
+
 #=============================================================================================
 # GLOBAL IMPORTS
 #=============================================================================================

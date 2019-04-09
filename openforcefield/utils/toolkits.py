@@ -19,6 +19,33 @@ Currently supported toolkits:
    * Change global variables from _INSTALLED to _AVAILABLE
 
 """
+
+__all__ = [
+    'DEFAULT_AROMATICITY_MODEL',
+    'ALLOWED_AROMATICITY_MODELS',
+    'DEFAULT_FRACTIONAL_BOND_ORDER_MODEL',
+    'ALLOWED_FRACTIONAL_BOND_ORDER_MODELS',
+    'DEFAULT_CHARGE_MODEL',
+    'ALLOWED_CHARGE_MODELS',
+    'LicenseError',
+    'MissingPackageError',
+    'ToolkitUnavailableException',
+    'InvalidToolkitError',
+    'UndefinedStereochemistryError',
+    'GAFFAtomTypeWarning',
+    'ToolkitWrapper',
+    'OpenEyeToolkitWrapper',
+    'RDKitToolkitWrapper',
+    'AmberToolsToolkitWrapper',
+    'ToolkitRegistry',
+    'GLOBAL_TOOLKIT_REGISTRY',
+    'OPENEYE_AVAILABLE',
+    'RDKIT_AVAILABLE',
+    'AMBERTOOLS_AVAILABLE',
+    'BASIC_CHEMINFORMATICS_TOOLKITS'
+]
+
+
 #=============================================================================================
 # GLOBAL IMPORTS
 #=============================================================================================
@@ -2986,7 +3013,7 @@ class ToolkitRegistry:
 #=============================================================================================
 
 # Create global toolkit registry, where all available toolkits are registered
-
+# TODO: Should this be all lowercase since it's not a constant?
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
     register_imported_toolkit_wrappers=True,
     exception_if_unavailable=False)

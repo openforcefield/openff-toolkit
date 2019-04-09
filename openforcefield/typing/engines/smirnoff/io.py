@@ -12,6 +12,12 @@ XML I/O parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 
 """
 
+__all__ = [
+    'ParameterIOHandler',
+    'XMLParameterIOHandler',
+]
+
+
 #=============================================================================================
 # GLOBAL IMPORTS
 #=============================================================================================
