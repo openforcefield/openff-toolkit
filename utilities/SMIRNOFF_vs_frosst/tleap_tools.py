@@ -96,12 +96,12 @@ def check_for_errors( outputtext, other_errors = None, ignore_errors = None ):
     for line in lines:
         if 'ERROR' in line.upper():
             error_lines.append( line )
-        if not other_errors == None:
+        if not other_errors is None:
             for err in other_errors:
                 if err.upper() in line.upper():
                     error_lines.append( line )
 
-    if not ignore_errors == None and len(error_lines)>0:
+    if not ignore_errors is None and len(error_lines)>0:
         new_error_lines = []
         for ign in ignore_errors:
             ignore = False

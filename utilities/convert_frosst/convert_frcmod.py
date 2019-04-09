@@ -1,6 +1,5 @@
 #!/bin/env python
 
-import lxml.etree as etree
 import numpy as np
 from openforcefield.typing.engines.smirnoff.forcefield import ForceField
 from openforcefield.typing.chemistry import environment
@@ -87,7 +86,7 @@ def add_date_and_author(inxml, date, author):
 
     # write fixed lines to ffxml tempate
     f = open(inxml,'w')
-    input_lines = f.writelines(output_lines)
+    f.writelines(output_lines)
     f.close()
 
 

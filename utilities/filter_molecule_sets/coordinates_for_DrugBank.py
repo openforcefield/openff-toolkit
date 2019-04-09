@@ -1,7 +1,6 @@
 from openforcefield.utils import utils
 from openeye import oechem
 from openeye import oeomega
-import openmoltools
 import multiprocessing
 
 
