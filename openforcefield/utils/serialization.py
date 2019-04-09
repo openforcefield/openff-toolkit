@@ -197,9 +197,9 @@ class Serializable(abc.ABC):
         raise NotImplementedError()
         # TODO: This implementation currently discards dict keys associated to the None value.
         #   See test_utils_serialization::TestUtilsSMIRNOFFSerialization::test_toml.
-        import toml
-        d = self.to_dict()
-        return toml.dumps(d)
+        # import toml
+        # d = self.to_dict()
+        # return toml.dumps(d)
 
     @classmethod
     def from_toml(cls, serialized):
@@ -385,10 +385,10 @@ class Serializable(abc.ABC):
         raise NotImplementedError()
         # TODO: This implementation currently loads numbers as strings.
         #   See test_utils_serialization::TestUtilsSerialization::test_xml.
-        import xmltodict
-        d = xmltodict.parse(serialized)
-        root_name = cls.__name__
-        return cls.from_dict(d[root_name])
+        # import xmltodict
+        # d = xmltodict.parse(serialized)
+        # root_name = cls.__name__
+        # return cls.from_dict(d[root_name])
 
     def to_pickle(self):
         """
