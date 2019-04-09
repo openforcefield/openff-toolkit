@@ -2027,22 +2027,22 @@ class FrozenMolecule(Serializable):
         """
         raise NotImplementedError
         # TODO: Implement this in a way that's compliant with SMIRNOFF's <ChargeIncrementModel> tag when the spec gets finalized
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            charges = toolkit_registry.call(
-                      'compute_partial_charges_am1bcc',
-                      self,
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            charges = toolkit.compute_partial_charges_am1bcc(
-                self,
-                #quantum_chemical_method=quantum_chemical_method,
-                #partial_charge_method=partial_charge_method
-            )
-        else:
-            raise InvalidToolkitError(
-                'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
-                .format(type(toolkit_registry)))
+        # if isinstance(toolkit_registry, ToolkitRegistry):
+        #     charges = toolkit_registry.call(
+        #               'compute_partial_charges_am1bcc',
+        #               self,
+        #     )
+        # elif isinstance(toolkit_registry, ToolkitWrapper):
+        #     toolkit = toolkit_registry
+        #     charges = toolkit.compute_partial_charges_am1bcc(
+        #         self,
+        #         #quantum_chemical_method=quantum_chemical_method,
+        #         #partial_charge_method=partial_charge_method
+        #     )
+        # else:
+        #     raise InvalidToolkitError(
+        #         'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
+        #         .format(type(toolkit_registry)))
 
     def compute_wiberg_bond_orders(self,
                                    charge_model=None,
