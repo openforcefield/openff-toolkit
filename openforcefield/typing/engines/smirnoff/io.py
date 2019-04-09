@@ -16,14 +16,12 @@ XML I/O parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 # GLOBAL IMPORTS
 #=============================================================================================
 
-from collections import OrderedDict
 import logging
 import os
-import sys
 
 import xmltodict
 
-from simtk import openmm, unit
+from simtk import unit
 from openforcefield.utils.utils import get_data_filename
 
 
