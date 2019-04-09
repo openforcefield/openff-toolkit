@@ -85,9 +85,9 @@ def GenerateBox(pdbin, pdbout, box, nmol, tries):
 
     fout=open('genbox.out', 'w')
     ferr=open('genbox.err', 'w')
-    p = subprocess.Popen('%s -ci %s -o genbox.pdb -box %.3f %.3f %.3f -nmol %i -try %i'
-                         % (gmxcmd, pdbin, box, box, box, nmol, tries),
-                         shell=True, stdout=fout, stderr=ferr)
+    subprocess.Popen('%s -ci %s -o genbox.pdb -box %.3f %.3f %.3f -nmol %i -try %i'
+                     % (gmxcmd, pdbin, box, box, box, nmol, tries),
+                     shell=True, stdout=fout, stderr=ferr)
     fout.close()
     ferr.close()
     t0 = time.time()
