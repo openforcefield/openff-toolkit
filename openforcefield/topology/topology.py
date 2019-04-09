@@ -29,8 +29,11 @@ from collections import OrderedDict
 from simtk import unit
 from simtk.openmm import app
 
-from openforcefield.typing.chemistry import ChemicalEnvironment, SMIRKSParsingError
-from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL, ALLOWED_AROMATICITY_MODELS, DEFAULT_FRACTIONAL_BOND_ORDER_MODEL, ALLOWED_FRACTIONAL_BOND_ORDER_MODELS, DEFAULT_CHARGE_MODEL, GLOBAL_TOOLKIT_REGISTRY, ALLOWED_CHARGE_MODELS
+from openforcefield.typing.chemistry import ChemicalEnvironment
+from openforcefield.utils.toolkits import (
+    DEFAULT_AROMATICITY_MODEL, ALLOWED_AROMATICITY_MODELS, ALLOWED_FRACTIONAL_BOND_ORDER_MODELS,
+    GLOBAL_TOOLKIT_REGISTRY, ALLOWED_CHARGE_MODELS
+)
 from openforcefield.utils.serialization import Serializable
 from openforcefield.utils import MessageException
 
@@ -991,7 +994,7 @@ class Topology(Serializable):
         """
         # Ensure that we are working with an iterable
         try:
-            some_object_iterator = iter(molecules)
+            iter(molecules)
         except TypeError as te:
             # Make iterable object
             molecules = [molecules]
@@ -1848,8 +1851,6 @@ class Topology(Serializable):
 
         """
         oe_mol = oechem.OEMol()
-        molecule_atom_to_oe_atom = {
-        }  # Mapping dictionary between Molecule atoms and oe atoms
 
         # Python set used to identify atoms that are not in protein residues
         keep = set(proteinResidues).union(dnaResidues).union(rnaResidues)
