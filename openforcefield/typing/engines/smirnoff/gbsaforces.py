@@ -32,12 +32,9 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 from __future__ import division, absolute_import
 
-from collections import defaultdict
-import copy
-from simtk.openmm.app import element as E
-from simtk.openmm import CustomGBForce, Discrete2DFunction
+from simtk.openmm import CustomGBForce
 from simtk import unit
-from math import floor, pi
+from math import pi
 
 
 
@@ -91,7 +88,7 @@ def _get_option_stripped(kwargs, name, default, dtype=None, compatible_units=Non
     else:
         if (compatible_units is not None):
             # Check unit compatibility, raising exception if not compatible
-            x = x.in_units_of(compatible_units)
+            x.in_units_of(compatible_units)
 
         return default.value_in_unit_system(unit.md_unit_system)
 
