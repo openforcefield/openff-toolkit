@@ -10,10 +10,6 @@ This file contains standard parameter handlers for the SMIRNOFF force field engi
 These classes implement the object model for self-contained parameter assignment.
 New pluggable handlers can be created by creating subclasses of :class:`ParameterHandler`.
 
-.. codeauthor:: John D. Chodera <john.chodera@choderalab.org>
-.. codeauthor:: David L. Mobley <dmobley@mobleylab.org>
-.. codeauthor:: Peter K. Eastman <peastman@stanford.edu>
-
 """
 
 #=============================================================================================
@@ -315,7 +311,7 @@ class ParameterType:
             Whether to store non-spec kwargs as "cosmetic attributes", which can be accessed and written out.
 
         """
-        import openforcefield.utils.toolkits
+        from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
 
         self._COSMETIC_ATTRIBS = []  # A list that may be populated to record the cosmetic
         # attributes read from a SMIRNOFF data source
@@ -325,9 +321,9 @@ class ParameterType:
 
         # TODO: Make better switch using toolkit registry
         toolkit = None
-        if openforcefield.utils.toolkits.OPENEYE_AVAILABLE:
+        if OPENEYE_AVAILABLE:
             toolkit = 'openeye'
-        elif openforcefield.utils.toolkits.RDKIT_AVAILABLE:
+        elif RDKIT_AVAILABLE:
             toolkit = 'rdkit'
         if toolkit is None:
             raise ToolkitUnavailableException("Validating SMIRKS required either the OpenEye Toolkit or the RDKit."
