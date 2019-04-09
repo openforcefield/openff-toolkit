@@ -2099,24 +2099,24 @@ class ChargeIncrementModelHandler(ParameterHandler):
     def __init__(self, **kwargs):
         raise NotImplementedError("ChangeIncrementHandler is not yet implemented, pending finalization of the "
                                   "SMIRNOFF spec")
-        super().__init__(**kwargs)
-
-        if number_of_conformers is None:
-            self._number_of_conformers = self._DEFAULTS['number_of_conformers']
-        elif type(number_of_conformers) is str:
-            self._number_of_conformers = int(number_of_conformers)
-        else:
-            self._number_of_conformers = number_of_conformers
-
-        if quantum_chemical_method is None:
-            self._quantum_chemical_method = self._DEFAULTS['quantum_chemical_method']
-        elif number_of_conformers in self._ALLOWED_VALUES['quantum_chemical_method']:
-            self._number_of_conformers = number_of_conformers
-
-        if partial_charge_method is None:
-            self._partial_charge_method = self._DEFAULTS['partial_charge_method']
-        elif partial_charge_method in self._ALLOWED_VALUES['partial_charge_method']:
-            self._partial_charge_method = partial_charge_method
+        # super().__init__(**kwargs)
+        #
+        # if number_of_conformers is None:
+        #     self._number_of_conformers = self._DEFAULTS['number_of_conformers']
+        # elif type(number_of_conformers) is str:
+        #     self._number_of_conformers = int(number_of_conformers)
+        # else:
+        #     self._number_of_conformers = number_of_conformers
+        #
+        # if quantum_chemical_method is None:
+        #     self._quantum_chemical_method = self._DEFAULTS['quantum_chemical_method']
+        # elif number_of_conformers in self._ALLOWED_VALUES['quantum_chemical_method']:
+        #     self._number_of_conformers = number_of_conformers
+        #
+        # if partial_charge_method is None:
+        #     self._partial_charge_method = self._DEFAULTS['partial_charge_method']
+        # elif partial_charge_method in self._ALLOWED_VALUES['partial_charge_method']:
+        #     self._partial_charge_method = partial_charge_method
 
 
 
