@@ -1561,6 +1561,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
         from openforcefield.topology import Molecule
         from rdkit import Chem
+
+        mols = []
+
         if (file_format == "MOL") or (file_format == "SDF"):
             # TODO: Iterate over all mols in file_data
             for rdmol in Chem.ForwardSDMolSupplier(file_obj):
