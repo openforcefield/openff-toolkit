@@ -496,7 +496,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 outfile = 'temp_molecule.' + outfile_format
                 ofs = oechem.oemolostream(outfile)
                 openeye_format = getattr(oechem, 'OEFormat_' + outfile_format)
-                ofs.SetFormat(outfile_format)
+                ofs.SetFormat(openeye_format)
                 oechem.OEWriteMolecule(ofs, oemol)
                 ofs.close()
                 file_data = open(outfile).read()
@@ -1417,7 +1417,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         try:
-            module = importlib.import_module('rdkit', 'Chem')
+            importlib.import_module('rdkit', 'Chem')
             return True
         except ImportError:
             return False
@@ -1825,7 +1825,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # setting chirality in openeye requires using neighbor atoms
         # therefore we can't do it until after the atoms and bonds are all added
-        chiral_atoms = dict()  # {rd_idx: openeye chirality}
         map_atoms = {}
         map_bonds = {}
         for rda in rdmol.GetAtoms():
@@ -1865,11 +1864,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             map_atoms[rd_idx] = atom_index
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
-        stereo_bonds = list()
-        # stereo_bonds stores tuples in the form (oe_bond, rd_idx1, rd_idx2, OE stereo specification)
-        # where rd_idx1 and 2 are the atoms on the outside of the bond
-        # i.e. Cl and F in the example above
-        aro_bond = 0
         for rdb in rdmol.GetBonds():
             rdb_idx = rdb.GetIdx()
             a1 = rdb.GetBeginAtomIdx()
@@ -1888,7 +1882,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
             # create a new bond
             bond_index = offmol.add_bond(map_atoms[a1], map_atoms[a2], order,
-                                      is_aromatic)
+                                         is_aromatic)
             map_bonds[rdb_idx] = bond_index
 
         # Now fill in the cached (structure-dependent) properties. We have to have the 2D structure of the molecule
@@ -2797,7 +2791,7 @@ class ToolkitRegistry:
 
         self._toolkits = list()
 
-        if toolkit_precedence == None:
+        if toolkit_precedence is None:
             toolkit_precedence = [
                 OpenEyeToolkitWrapper, RDKitToolkitWrapper,
                 AmberToolsToolkitWrapper
