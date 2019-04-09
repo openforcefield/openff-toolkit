@@ -611,8 +611,8 @@ class VirtualSite(Particle):
         return vsite_dict
 
 
-    @staticmethod
-    def from_dict(vsite_dict):
+    @classmethod
+    def from_dict(cls, vsite_dict):
         """Create a virtual site from a dict representation.
 
 """
@@ -777,8 +777,8 @@ class BondChargeVirtualSite(VirtualSite):
         #vsite_dict['vsite_type'] = 'BondChargeVirtualSite'
         return vsite_dict
 
-    @staticmethod
-    def from_dict(vsite_dict):
+    @classmethod
+    def from_dict(cls, vsite_dict):
         base_dict = deepcopy(vsite_dict)
         # Make sure it's the right type of virtual site
         assert vsite_dict['vsite_type'] == "BondChargeVirtualSite"
@@ -792,6 +792,28 @@ class BondChargeVirtualSite(VirtualSite):
     def distance(self):
         """The distance parameter of the virtual site"""
         return self._distance
+
+
+class _LonePairVirtualSite(VirtualSite):
+    """Private base class for mono/di/trivalent lone pair virtual sites."""
+
+    @classmethod
+    def from_dict(cls, vsite_dict):
+        base_dict = deepcopy(vsite_dict)
+
+        # Make sure it's the right type of virtual site
+        assert vsite_dict['vsite_type'] == cls.__name__
+        base_dict.pop('vsite_type')
+        base_dict.pop('distance')
+        base_dict.pop('out_of_plane_angle')
+        base_dict.pop('in_plane_angle')
+        vsite = super().from_dict(**base_dict)
+        vsite._distance = string_to_quantity(vsite_dict['distance'])
+        vsite._in_plane_angle = string_to_quantity(
+            vsite_dict['in_plane_angle'])
+        vsite._out_of_plane_angle = string_to_quantity(
+            vsite_dict['out_of_plane_angle'])
+        return vsite
 
 
 class MonovalentLonePairVirtualSite(VirtualSite):
@@ -870,23 +892,23 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         #vsite_dict['vsite_type'] = 'MonovalentLonePairVirtualSite'
         return vsite_dict
 
-    @staticmethod
-    def from_dict(vsite_dict):
-        base_dict = deepcopy(vsite_dict)
+    @classmethod
+    def from_dict(cls, vsite_dict):
+        """
+        Construct a new MonovalentLonePairVirtualSite from an serialized dictionary representation.
 
-        # Make sure it's the right type of virtual site
-        assert vsite_dict['vsite_type'] == "MonovalentLonePairVirtualSite"
-        base_dict.pop('vsite_type')
-        base_dict.pop('distance')
-        base_dict.pop('out_of_plane_angle')
-        base_dict.pop('in_plane_angle')
-        vsite = super().from_dict(**base_dict)
-        vsite._distance = string_to_quantity(vsite_dict['distance'])
-        vsite._in_plane_angle = string_to_quantity(
-            vsite_dict['in_plane_angle'])
-        vsite._out_of_plane_angle = string_to_quantity(
-            vsite_dict['out_of_plane_angle'])
-        return vsite
+        Parameters
+        ----------
+        vsite_dict : dict
+            The VirtualSite to deserialize.
+
+        Returns
+        -------
+        The newly created MonovalentLonePairVirtualSite
+
+        """
+        # The function is overridden only to have a custom docstring.
+        return super().from_dict(vsite_dict)
 
     @property
     def distance(self):
@@ -974,10 +996,10 @@ class DivalentLonePairVirtualSite(VirtualSite):
         vsite_dict['vsite_type'] = self.type
         return vsite_dict
 
-    @staticmethod
-    def from_dict(vsite_dict):
+    @classmethod
+    def from_dict(cls, vsite_dict):
         """
-        Construct a new DivalentPairVirtualSite from an serialized dictionary representation.
+        Construct a new DivalentLonePairVirtualSite from an serialized dictionary representation.
 
         Parameters
         ----------
@@ -989,22 +1011,8 @@ class DivalentLonePairVirtualSite(VirtualSite):
         The newly created DivalentLonePairVirtualSite
 
         """
-        base_dict = deepcopy(vsite_dict)
-
-        # Make sure it's the right type of virtual site
-        assert vsite_dict['vsite_type'] == "DivalentLonePairVirtualSite"
-        base_dict.pop('vsite_type')
-        base_dict.pop('distance')
-        base_dict.pop('out_of_plane_angle')
-        base_dict.pop('in_plane_angle')
-        vsite = super().from_dict(**base_dict)
-        vsite._distance = string_to_quantity(vsite_dict['distance'])
-        vsite._in_plane_angle = string_to_quantity(
-            vsite_dict['in_plane_angle'])
-        vsite._out_of_plane_angle = string_to_quantity(
-            vsite_dict['out_of_plane_angle'])
-
-        return vsite
+        # The function is overridden only to have a custom docstring.
+        return super().from_dict(vsite_dict)
 
     @property
     def distance(self):
@@ -1093,8 +1101,8 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         vsite_dict['vsite_type'] = self.type
         return vsite_dict
 
-    @staticmethod
-    def from_dict(vsite_dict):
+    @classmethod
+    def from_dict(cls, vsite_dict):
         """
         Construct a new TrivalentPairVirtualSite from an serialized dictionary representation.
 
@@ -1109,22 +1117,8 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         The newly created TrivalentLonePairVirtualSite
 
         """
-        base_dict = deepcopy(vsite_dict)
-
-        # Make sure it's the right type of virtual site
-        assert vsite_dict['vsite_type'] == "TrivalentLonePairVirtualSite"
-        base_dict.pop('vsite_type')
-        base_dict.pop('distance')
-        base_dict.pop('out_of_plane_angle')
-        base_dict.pop('in_plane_angle')
-        vsite = super().from_dict(**base_dict)
-        vsite._distance = string_to_quantity(vsite_dict['distance'])
-        vsite._in_plane_angle = string_to_quantity(
-            vsite_dict['in_plane_angle'])
-        vsite._out_of_plane_angle = string_to_quantity(
-            vsite_dict['out_of_plane_angle'])
-
-        return vsite
+        # The function is overridden only to have a custom docstring.
+        return super().from_dict(vsite_dict)
 
     @property
     def distance(self):
