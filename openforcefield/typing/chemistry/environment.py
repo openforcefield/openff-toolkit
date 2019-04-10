@@ -21,6 +21,18 @@ and David Mobley, UC Irvine.
 
 """
 
+__all__ = [
+    'SMIRKSMismatchError',
+    'SMIRKSParsingError',
+    'ChemicalEnvironment',
+    'AtomChemicalEnvironment',
+    'BondChemicalEnvironment',
+    'AngleChemicalEnvironment',
+    'TorsionChemicalEnvironment',
+    'ImproperChemicalEnvironment'
+]
+
+
 #==============================================================================
 # GLOBAL IMPORTS
 #==============================================================================
@@ -268,7 +280,7 @@ class ChemicalEnvironment:
             smirks = self.asSMARTS()
 
             # No index specified so SMIRKS = SMARTS
-            if self.index == None:
+            if self.index is None:
                 return smirks
 
             # Add label to the end of SMARTS
@@ -823,7 +835,7 @@ into ChemicalEnvironments." % smirks)
         if len(self._graph_nodes()) == 0:
             return ""
 
-        if initialAtom == None:
+        if initialAtom is None:
             initialAtom = self.getAtoms()[0]
 
         if neighbors is None:
@@ -880,7 +892,7 @@ into ChemicalEnvironments." % smirks)
         a single Atom object fitting the description
         or None if no such atom exists
         """
-        if descriptor == None:
+        if descriptor is None:
             return random.choice(self._graph_nodes())
 
         # TODO: Is there a better way to do this?
@@ -1010,11 +1022,11 @@ into ChemicalEnvironments." % smirks)
         --------
         newAtom: atom object for the newly created atom
         """
-        if bondToAtom == None:
+        if bondToAtom is None:
             if len(self._graph_nodes()) > 0:
                 return None
             newType = newAtomIndex
-            if newType == None:
+            if newType is None:
                 newType = 0
 
             newAtom = self.Atom(newORtypes, newANDtypes, newAtomIndex, newAtomRing)
@@ -1108,7 +1120,7 @@ into ChemicalEnvironments." % smirks)
         --------
         a complete list of bonds in the fragment
         """
-        if atom == None:
+        if atom is None:
             edge_list = self._graph_edges(data=True)
             bonds = [data['bond'] for a1, a2, data in edge_list]
         else:
@@ -1236,7 +1248,7 @@ into ChemicalEnvironments." % smirks)
         returns True if the atom or bond is not indexed
         """
         if component._atom:
-            return component.index == None
+            return component.index is None
         else:
             return component._bond_type < 1
 
@@ -1408,7 +1420,7 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
 
         # Add initial atom
         self.atom2 = self.selectAtom(2)
-        if self.atom2 == None:
+        if self.atom2 is None:
             raise Exception("Error: Bonds need 2 indexed atoms, there were not enough in %s" % smirks)
 
         self.bond2 = self._graph_get_edge_data(self.atom1, self.atom2)['bond']

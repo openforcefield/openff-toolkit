@@ -19,6 +19,33 @@ Currently supported toolkits:
    * Change global variables from _INSTALLED to _AVAILABLE
 
 """
+
+__all__ = [
+    'DEFAULT_AROMATICITY_MODEL',
+    'ALLOWED_AROMATICITY_MODELS',
+    'DEFAULT_FRACTIONAL_BOND_ORDER_MODEL',
+    'ALLOWED_FRACTIONAL_BOND_ORDER_MODELS',
+    'DEFAULT_CHARGE_MODEL',
+    'ALLOWED_CHARGE_MODELS',
+    'LicenseError',
+    'MissingPackageError',
+    'ToolkitUnavailableException',
+    'InvalidToolkitError',
+    'UndefinedStereochemistryError',
+    'GAFFAtomTypeWarning',
+    'ToolkitWrapper',
+    'OpenEyeToolkitWrapper',
+    'RDKitToolkitWrapper',
+    'AmberToolsToolkitWrapper',
+    'ToolkitRegistry',
+    'GLOBAL_TOOLKIT_REGISTRY',
+    'OPENEYE_AVAILABLE',
+    'RDKIT_AVAILABLE',
+    'AMBERTOOLS_AVAILABLE',
+    'BASIC_CHEMINFORMATICS_TOOLKITS'
+]
+
+
 #=============================================================================================
 # GLOBAL IMPORTS
 #=============================================================================================
@@ -496,7 +523,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 outfile = 'temp_molecule.' + outfile_format
                 ofs = oechem.oemolostream(outfile)
                 openeye_format = getattr(oechem, 'OEFormat_' + outfile_format)
-                ofs.SetFormat(outfile_format)
+                ofs.SetFormat(openeye_format)
                 oechem.OEWriteMolecule(ofs, oemol)
                 ofs.close()
                 file_data = open(outfile).read()
@@ -1108,67 +1135,67 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         raise NotImplementedError
         # TODO: Implement this in a way that's compliant with SMIRNOFF's <ChargeIncrementModel> tag when the spec gets finalized
 
-        from openeye import oequacpac
-        import numpy as np
-
-        if molecule.n_conformers == 0:
-            raise Exception(
-                "No conformers present in molecule submitted for partial charge calculation. Consider "
-                "loading the molecule from a file with geometry already present or running "
-                "molecule.generate_conformers() before calling molecule.compute_partial_charges"
-            )
-        oemol = molecule.to_openeye()
-
-        ## This seems like a big decision. Implemented a simple solution here. Not to be considered final.
-        ## Some discussion at https://github.com/openforcefield/openforcefield/pull/86#issuecomment-350111236
-
-        if charge_model is None:
-            charge_model = "am1bcc"
-
-        if charge_model == "noop":
-            result = oequacpac.OEAssignCharges(oemol,
-                                               oequacpac.OEChargeEngineNoOp())
-        elif charge_model == "mmff" or charge_model == "mmff94":
-            result = oequacpac.OEAssignCharges(oemol,
-                                               oequacpac.OEMMFF94Charges())
-        elif charge_model == "am1bcc":
-            result = oequacpac.OEAssignCharges(oemol,
-                                               oequacpac.OEAM1BCCCharges())
-        elif charge_model == "am1bccnosymspt":
-            optimize = True
-            symmetrize = True
-            result = oequacpac.OEAssignCharges(
-                oemol, oequacpac.OEAM1BCCCharges(not optimize, not symmetrize))
-        elif charge_model == "amber" or charge_model == "amberff94":
-            result = oequacpac.OEAssignCharges(oemol,
-                                               oequacpac.OEAmberFF94Charges())
-        elif charge_model == "am1bccelf10":
-            result = oequacpac.OEAssignCharges(
-                oemol, oequacpac.OEAM1BCCELF10Charges())
-        else:
-            raise ValueError('charge_model {} unknown'.format(charge_model))
-
-        if result is False:
-            raise Exception('Unable to assign charges')
-
-        # Extract and return charges
-        ## TODO: Behavior when given multiple conformations?
-        ## TODO: Make sure atom mapping remains constant
-
-        charges = unit.Quantity(
-            np.zeros([oemol.NumAtoms()], np.float64), unit.elementary_charge)
-        for index, atom in enumerate(oemol.GetAtoms()):
-            charge = atom.GetPartialCharge()
-            charge = charge * unit.elementary_charge
-            charges[index] = charge
-
-        if ((charges / unit.elementary_charge) == 0.
-            ).all() and not (charge_model == 'noop'):
-            # TODO: These will be 0 if the charging failed. What behavior do we want in that case?
-            raise Exception(
-                "Partial charge calculation failed. Charges from compute_partial_charges() are all 0."
-            )
-        molecule.set_partial_charges(charges)
+        # from openeye import oequacpac
+        # import numpy as np
+        #
+        # if molecule.n_conformers == 0:
+        #     raise Exception(
+        #         "No conformers present in molecule submitted for partial charge calculation. Consider "
+        #         "loading the molecule from a file with geometry already present or running "
+        #         "molecule.generate_conformers() before calling molecule.compute_partial_charges"
+        #     )
+        # oemol = molecule.to_openeye()
+        #
+        # ## This seems like a big decision. Implemented a simple solution here. Not to be considered final.
+        # ## Some discussion at https://github.com/openforcefield/openforcefield/pull/86#issuecomment-350111236
+        #
+        # if charge_model is None:
+        #     charge_model = "am1bcc"
+        #
+        # if charge_model == "noop":
+        #     result = oequacpac.OEAssignCharges(oemol,
+        #                                        oequacpac.OEChargeEngineNoOp())
+        # elif charge_model == "mmff" or charge_model == "mmff94":
+        #     result = oequacpac.OEAssignCharges(oemol,
+        #                                        oequacpac.OEMMFF94Charges())
+        # elif charge_model == "am1bcc":
+        #     result = oequacpac.OEAssignCharges(oemol,
+        #                                        oequacpac.OEAM1BCCCharges())
+        # elif charge_model == "am1bccnosymspt":
+        #     optimize = True
+        #     symmetrize = True
+        #     result = oequacpac.OEAssignCharges(
+        #         oemol, oequacpac.OEAM1BCCCharges(not optimize, not symmetrize))
+        # elif charge_model == "amber" or charge_model == "amberff94":
+        #     result = oequacpac.OEAssignCharges(oemol,
+        #                                        oequacpac.OEAmberFF94Charges())
+        # elif charge_model == "am1bccelf10":
+        #     result = oequacpac.OEAssignCharges(
+        #         oemol, oequacpac.OEAM1BCCELF10Charges())
+        # else:
+        #     raise ValueError('charge_model {} unknown'.format(charge_model))
+        #
+        # if result is False:
+        #     raise Exception('Unable to assign charges')
+        #
+        # # Extract and return charges
+        # ## TODO: Behavior when given multiple conformations?
+        # ## TODO: Make sure atom mapping remains constant
+        #
+        # charges = unit.Quantity(
+        #     np.zeros([oemol.NumAtoms()], np.float64), unit.elementary_charge)
+        # for index, atom in enumerate(oemol.GetAtoms()):
+        #     charge = atom.GetPartialCharge()
+        #     charge = charge * unit.elementary_charge
+        #     charges[index] = charge
+        #
+        # if ((charges / unit.elementary_charge) == 0.
+        #     ).all() and not (charge_model == 'noop'):
+        #     # TODO: These will be 0 if the charging failed. What behavior do we want in that case?
+        #     raise Exception(
+        #         "Partial charge calculation failed. Charges from compute_partial_charges() are all 0."
+        #     )
+        # molecule.set_partial_charges(charges)
 
 
 
@@ -1417,7 +1444,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         try:
-            module = importlib.import_module('rdkit', 'Chem')
+            importlib.import_module('rdkit', 'Chem')
             return True
         except ImportError:
             return False
@@ -1526,9 +1553,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 "is likely to be lost.")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
             # https://github.com/openforcefield/openforcefield/issues/121
-            rdmol = Chem.MolFromPDBFile(filename, removeHs=False)
-            mol = Molecule.from_rdkit(rdmol)
-            mols.append(mol)
+            # rdmol = Chem.MolFromPDBFile(filename, removeHs=False)
+            # mol = Molecule.from_rdkit(rdmol)
+            # mols.append(mol)
             # TODO: Add SMI, TDT(?) support
 
         return mols
@@ -1561,6 +1588,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
         from openforcefield.topology import Molecule
         from rdkit import Chem
+
+        mols = []
+
         if (file_format == "MOL") or (file_format == "SDF"):
             # TODO: Iterate over all mols in file_data
             for rdmol in Chem.ForwardSDMolSupplier(file_obj):
@@ -1583,9 +1613,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 "is likely to be lost.")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
             # https://github.com/openforcefield/openforcefield/issues/121
-            rdmol = Chem.MolFromPDBBlock(file_data)
-            mol = Molecule.from_rdkit(rdmol)
-            mols.append(mol)
+            # rdmol = Chem.MolFromPDBBlock(file_data)
+            # mol = Molecule.from_rdkit(rdmol)
+            # mols.append(mol)
         # TODO: TDT file support
         return mols
 
@@ -1822,7 +1852,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # setting chirality in openeye requires using neighbor atoms
         # therefore we can't do it until after the atoms and bonds are all added
-        chiral_atoms = dict()  # {rd_idx: openeye chirality}
         map_atoms = {}
         map_bonds = {}
         for rda in rdmol.GetAtoms():
@@ -1862,11 +1891,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             map_atoms[rd_idx] = atom_index
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
-        stereo_bonds = list()
-        # stereo_bonds stores tuples in the form (oe_bond, rd_idx1, rd_idx2, OE stereo specification)
-        # where rd_idx1 and 2 are the atoms on the outside of the bond
-        # i.e. Cl and F in the example above
-        aro_bond = 0
         for rdb in rdmol.GetBonds():
             rdb_idx = rdb.GetIdx()
             a1 = rdb.GetBeginAtomIdx()
@@ -1885,7 +1909,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
             # create a new bond
             bond_index = offmol.add_bond(map_atoms[a1], map_atoms[a2], order,
-                                      is_aromatic)
+                                         is_aromatic)
             map_bonds[rdb_idx] = bond_index
 
         # Now fill in the cached (structure-dependent) properties. We have to have the 2D structure of the molecule
@@ -2568,78 +2592,78 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         raise NotImplementedError
         # TODO: Implement this in a way that's compliant with SMIRNOFF's <ChargeIncrementModel> tag when the spec gets finalized
 
-        import os
-        from simtk import unit
-
-        if charge_model is None:
-            charge_model = 'bcc'
-
-        # Check that the requested charge method is supported
-        # Needs to be fixed: 'cm1', 'cm2',
-        SUPPORTED_ANTECHAMBER_CHARGE_MODELS = ['gas', 'mul', 'bcc']
-        if charge_model not in SUPPORTED_ANTECHAMBER_CHARGE_MODELS:
-            raise ValueError(
-                'Requested charge method {} not among supported charge '
-                'methods {}'.format(charge_model,
-                                    SUPPORTED_ANTECHAMBER_CHARGE_MODELS))
-
-        # Find the path to antechamber
-        # TODO: How should we implement find_executable?
-        ANTECHAMBER_PATH = find_executable("antechamber")
-        if ANTECHAMBER_PATH is None:
-            raise (IOError("Antechamber not found, cannot run charge_mol()"))
-
-        if len(molecule._conformers) == 0:
-            raise Exception(
-                "No conformers present in molecule submitted for partial charge calculation. Consider "
-                "loading the molecule from a file with geometry already present or running "
-                "molecule.generate_conformers() before calling molecule.compute_partial_charges"
-            )
-
-
-        # Compute charges
-        from openforcefield.utils import temporary_directory, temporary_cd
-        with temporary_directory() as tmpdir:
-            with temporary_cd(tmpdir):
-                net_charge = molecule.total_charge
-                # Write out molecule in SDF format
-                ## TODO: How should we handle multiple conformers?
-                self._rdkit_toolkit_wrapper.to_file(
-                    molecule, 'molecule.sdf', outfile_format='sdf')
-                #os.system('ls')
-                #os.system('cat molecule.sdf')
-                # Compute desired charges
-                # TODO: Add error handling if antechamber chokes
-                # TODO: Add something cleaner than os.system
-                os.system(
-                    "antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf "
-                    "yes -c {} -nc {}".format(charge_model, net_charge))
-                #os.system('cat charged.mol2')
-
-                # Write out just charges
-                os.system(
-                    "antechamber -i charged.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc "
-                    "-cf charges.txt -pf yes")
-                #os.system('cat charges.txt')
-                # Check to ensure charges were actually produced
-                if not os.path.exists('charges.txt'):
-                    # TODO: copy files into local directory to aid debugging?
-                    raise Exception(
-                        "Antechamber/sqm partial charge calculation failed on "
-                        "molecule {} (SMILES {})".format(
-                            molecule.name, molecule.to_smiles()))
-                # Read the charges
-                with open('charges.txt', 'r') as infile:
-                    contents = infile.read()
-                text_charges = contents.split()
-                charges = np.zeros([molecule.n_atoms], np.float64)
-                for index, token in enumerate(text_charges):
-                    charges[index] = float(token)
-                # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
-
-        charges = unit.Quantity(charges, unit.elementary_charge)
-
-        molecule.set_partial_charges(charges)
+        # import os
+        # from simtk import unit
+        #
+        # if charge_model is None:
+        #     charge_model = 'bcc'
+        #
+        # # Check that the requested charge method is supported
+        # # Needs to be fixed: 'cm1', 'cm2',
+        # SUPPORTED_ANTECHAMBER_CHARGE_MODELS = ['gas', 'mul', 'bcc']
+        # if charge_model not in SUPPORTED_ANTECHAMBER_CHARGE_MODELS:
+        #     raise ValueError(
+        #         'Requested charge method {} not among supported charge '
+        #         'methods {}'.format(charge_model,
+        #                             SUPPORTED_ANTECHAMBER_CHARGE_MODELS))
+        #
+        # # Find the path to antechamber
+        # # TODO: How should we implement find_executable?
+        # ANTECHAMBER_PATH = find_executable("antechamber")
+        # if ANTECHAMBER_PATH is None:
+        #     raise (IOError("Antechamber not found, cannot run charge_mol()"))
+        #
+        # if len(molecule._conformers) == 0:
+        #     raise Exception(
+        #         "No conformers present in molecule submitted for partial charge calculation. Consider "
+        #         "loading the molecule from a file with geometry already present or running "
+        #         "molecule.generate_conformers() before calling molecule.compute_partial_charges"
+        #     )
+        #
+        #
+        # # Compute charges
+        # from openforcefield.utils import temporary_directory, temporary_cd
+        # with temporary_directory() as tmpdir:
+        #     with temporary_cd(tmpdir):
+        #         net_charge = molecule.total_charge
+        #         # Write out molecule in SDF format
+        #         ## TODO: How should we handle multiple conformers?
+        #         self._rdkit_toolkit_wrapper.to_file(
+        #             molecule, 'molecule.sdf', outfile_format='sdf')
+        #         #os.system('ls')
+        #         #os.system('cat molecule.sdf')
+        #         # Compute desired charges
+        #         # TODO: Add error handling if antechamber chokes
+        #         # TODO: Add something cleaner than os.system
+        #         os.system(
+        #             "antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf "
+        #             "yes -c {} -nc {}".format(charge_model, net_charge))
+        #         #os.system('cat charged.mol2')
+        #
+        #         # Write out just charges
+        #         os.system(
+        #             "antechamber -i charged.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc "
+        #             "-cf charges.txt -pf yes")
+        #         #os.system('cat charges.txt')
+        #         # Check to ensure charges were actually produced
+        #         if not os.path.exists('charges.txt'):
+        #             # TODO: copy files into local directory to aid debugging?
+        #             raise Exception(
+        #                 "Antechamber/sqm partial charge calculation failed on "
+        #                 "molecule {} (SMILES {})".format(
+        #                     molecule.name, molecule.to_smiles()))
+        #         # Read the charges
+        #         with open('charges.txt', 'r') as infile:
+        #             contents = infile.read()
+        #         text_charges = contents.split()
+        #         charges = np.zeros([molecule.n_atoms], np.float64)
+        #         for index, token in enumerate(text_charges):
+        #             charges[index] = float(token)
+        #         # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
+        #
+        # charges = unit.Quantity(charges, unit.elementary_charge)
+        #
+        # molecule.set_partial_charges(charges)
 
     def compute_partial_charges_am1bcc(self, molecule):
         """
@@ -2794,7 +2818,7 @@ class ToolkitRegistry:
 
         self._toolkits = list()
 
-        if toolkit_precedence == None:
+        if toolkit_precedence is None:
             toolkit_precedence = [
                 OpenEyeToolkitWrapper, RDKitToolkitWrapper,
                 AmberToolsToolkitWrapper
@@ -2922,10 +2946,7 @@ class ToolkitRegistry:
         for toolkit in self._toolkits:
             if hasattr(toolkit, method_name):
                 method = getattr(toolkit, method_name)
-                try:
-                    return method
-                except NotImplementedError as e:
-                    pass
+                return method
 
         # No toolkit was found to provide the requested capability
         # TODO: Can we help developers by providing a check for typos in expected method names?
@@ -2992,7 +3013,7 @@ class ToolkitRegistry:
 #=============================================================================================
 
 # Create global toolkit registry, where all available toolkits are registered
-
+# TODO: Should this be all lowercase since it's not a constant?
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
     register_imported_toolkit_wrappers=True,
     exception_if_unavailable=False)

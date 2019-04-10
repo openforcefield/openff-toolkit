@@ -27,7 +27,6 @@ print('Molecule:', molecule_structure)
 #
 
 # Load the protein topology
-from openforcefield.utils import generate_protein_structure
 protein_pdb_filename = get_data_filename('proteins/T4-protein.pdb')
 protein_pdbfile = app.PDBFile(protein_pdb_filename)
 

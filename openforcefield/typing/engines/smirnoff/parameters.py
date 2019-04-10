@@ -10,11 +10,27 @@ This file contains standard parameter handlers for the SMIRNOFF force field engi
 These classes implement the object model for self-contained parameter assignment.
 New pluggable handlers can be created by creating subclasses of :class:`ParameterHandler`.
 
-.. codeauthor:: John D. Chodera <john.chodera@choderalab.org>
-.. codeauthor:: David L. Mobley <dmobley@mobleylab.org>
-.. codeauthor:: Peter K. Eastman <peastman@stanford.edu>
-
 """
+
+__all__ = [
+    'SMIRNOFFSpecError',
+    'IncompatibleUnitError',
+    'IncompatibleParameterError',
+    'UnassignedValenceParameterException',
+    'UnassignedBondParameterException',
+    'UnassignedAngleParameterException',
+    'NonbondedMethod',
+    'ParameterList',
+    'ParameterType',
+    'ParameterHandler',
+    'ConstraintHandler',
+    'BondHandler',
+    'AngleHandler',
+    'ProperTorsionHandler',
+    'ImproperTorsionHandler',
+    'vdWHandler'
+]
+
 
 #=============================================================================================
 # GLOBAL IMPORTS
@@ -315,7 +331,7 @@ class ParameterType:
             Whether to store non-spec kwargs as "cosmetic attributes", which can be accessed and written out.
 
         """
-        import openforcefield.utils.toolkits
+        from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
 
         self._COSMETIC_ATTRIBS = []  # A list that may be populated to record the cosmetic
         # attributes read from a SMIRNOFF data source
@@ -325,9 +341,9 @@ class ParameterType:
 
         # TODO: Make better switch using toolkit registry
         toolkit = None
-        if openforcefield.utils.toolkits.OPENEYE_AVAILABLE:
+        if OPENEYE_AVAILABLE:
             toolkit = 'openeye'
-        elif openforcefield.utils.toolkits.RDKIT_AVAILABLE:
+        elif RDKIT_AVAILABLE:
             toolkit = 'rdkit'
         if toolkit is None:
             raise ToolkitUnavailableException("Validating SMIRKS required either the OpenEye Toolkit or the RDKit."
@@ -1657,7 +1673,7 @@ class vdWHandler(ParameterHandler):
         atoms = self.find_matches(topology)
 
         # Create all particles.
-        for particle in topology.topology_particles:
+        for _ in topology.topology_particles:
             force.addParticle(0.0, 1.0, 0.0)
 
         # Set the particle Lennard-Jones terms.
@@ -2099,24 +2115,24 @@ class ChargeIncrementModelHandler(ParameterHandler):
     def __init__(self, **kwargs):
         raise NotImplementedError("ChangeIncrementHandler is not yet implemented, pending finalization of the "
                                   "SMIRNOFF spec")
-        super().__init__(**kwargs)
-
-        if number_of_conformers is None:
-            self._number_of_conformers = self._DEFAULTS['number_of_conformers']
-        elif type(number_of_conformers) is str:
-            self._number_of_conformers = int(number_of_conformers)
-        else:
-            self._number_of_conformers = number_of_conformers
-
-        if quantum_chemical_method is None:
-            self._quantum_chemical_method = self._DEFAULTS['quantum_chemical_method']
-        elif number_of_conformers in self._ALLOWED_VALUES['quantum_chemical_method']:
-            self._number_of_conformers = number_of_conformers
-
-        if partial_charge_method is None:
-            self._partial_charge_method = self._DEFAULTS['partial_charge_method']
-        elif partial_charge_method in self._ALLOWED_VALUES['partial_charge_method']:
-            self._partial_charge_method = partial_charge_method
+        # super().__init__(**kwargs)
+        #
+        # if number_of_conformers is None:
+        #     self._number_of_conformers = self._DEFAULTS['number_of_conformers']
+        # elif type(number_of_conformers) is str:
+        #     self._number_of_conformers = int(number_of_conformers)
+        # else:
+        #     self._number_of_conformers = number_of_conformers
+        #
+        # if quantum_chemical_method is None:
+        #     self._quantum_chemical_method = self._DEFAULTS['quantum_chemical_method']
+        # elif number_of_conformers in self._ALLOWED_VALUES['quantum_chemical_method']:
+        #     self._number_of_conformers = number_of_conformers
+        #
+        # if partial_charge_method is None:
+        #     self._partial_charge_method = self._DEFAULTS['partial_charge_method']
+        # elif partial_charge_method in self._ALLOWED_VALUES['partial_charge_method']:
+        #     self._partial_charge_method = partial_charge_method
 
 
 
@@ -2408,7 +2424,7 @@ class GBSAParameterHandler(ParameterHandler):
         atoms = self.getMatches(topology)
         nparams = 1 + len(expected_parameters)  # charge + GBSA parameters
         params = [0.0 for i in range(nparams)]
-        for particle in topology.topology_particles():
+        for _ in topology.topology_particles():
             force.addParticle(params)
         # Set the GBSA parameters (keeping charges at zero for now)
         for (atoms, gbsa_type) in atoms.items():

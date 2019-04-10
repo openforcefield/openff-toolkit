@@ -85,14 +85,13 @@ def GenerateBox(pdbin, pdbout, box, nmol, tries):
 
     fout=open('genbox.out', 'w')
     ferr=open('genbox.err', 'w')
-    p = subprocess.Popen('%s -ci %s -o genbox.pdb -box %.3f %.3f %.3f -nmol %i -try %i'
-                         % (gmxcmd, pdbin, box, box, box, nmol, tries),
-                         shell=True, stdout=fout, stderr=ferr)
+    subprocess.Popen('%s -ci %s -o genbox.pdb -box %.3f %.3f %.3f -nmol %i -try %i'
+                     % (gmxcmd, pdbin, box, box, box, nmol, tries),
+                     shell=True, stdout=fout, stderr=ferr)
     fout.close()
     ferr.close()
     t0 = time.time()
     print("Running %s to create a solvent box..." % gmxcmd)
-    stdout, stderr = p.communicate()
     print("Time elapsed: % .3f seconds" % (time.time() - t0))
     nmol_out = 0
     for line in open('genbox.err').readlines():
@@ -130,8 +129,6 @@ def run_create_mol2_pdb(**kwargs):
     
     smiles_string = open(input_txt).readlines()[0].strip()
     print("The following SMILES string will be converted: %s" % smiles_string)
-    
-    ofs = oechem.oemolostream()
     
     # create a new molecule
     oemol = oechem.OEGraphMol()

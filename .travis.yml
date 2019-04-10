@@ -90,8 +90,8 @@ install:
 script:
   # Run doctests only if both RDKit and OpenEye are installed.
   - if [[ "$RDKIT" == true && "$OPENEYE" == true ]];
-    then pytest -v --ignore=utilities --ignore=examples/deprecated --ignore=docs --doctest-modules --nbval-lax --cov=openforcefield;
-    else pytest -v --ignore=utilities --ignore=examples/deprecated --nbval-lax --cov=openforcefield;
+    then pytest --ignore=utilities --ignore=examples/deprecated --ignore=docs --doctest-modules --nbval-lax --cov=openforcefield;
+    else pytest --ignore=utilities --ignore=examples/deprecated --nbval-lax --cov=openforcefield;
     fi
 
 notifications:

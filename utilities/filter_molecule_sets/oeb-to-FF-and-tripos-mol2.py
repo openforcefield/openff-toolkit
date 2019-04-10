@@ -8,7 +8,7 @@ Example:
 """
 from __future__ import division
 from __future__ import print_function
-import os,sys
+import sys
 import openeye.oechem as oechem
 
 def main(argv=sys.argv):
@@ -38,6 +38,8 @@ def main(argv=sys.argv):
     ifs.close()
     ofsff.close()
     ofsTri.close()
+
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))#!/usr/bin/env python

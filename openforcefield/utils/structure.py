@@ -189,7 +189,7 @@ def generateTopologyFromOEMol(molecule):
     for atom in mol.GetAtoms():
         name = atom.GetName()
         element = openmm.app.element.Element.getByAtomicNumber(atom.GetAtomicNum())
-        openmm_atom = topology.addAtom(name, element, residue)
+        topology.addAtom(name, element, residue)
 
     # Create bonds.
     atoms = { atom.name : atom for atom in topology.atoms() }
@@ -464,7 +464,7 @@ def positions_from_oemol(mol):
         omega.SetIncludeInput(False)
         omega.SetCanonOrder(False)
         omega.SetSampleHydrogens(True)  # Word to the wise: skipping this step can lead to significantly different charges!
-        status = omega(mol)  # generate conformation
+        omega(mol)  # generate conformation
 
     coordinates = mol.GetCoords()
     natoms = len(coordinates)
