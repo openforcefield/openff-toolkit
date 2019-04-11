@@ -242,6 +242,12 @@ Note that atoms for which library charges have already been applied are excluded
 
 Future additions will provide options for intelligently fragmenting large molecules and biopolymers, as well as a `capping` attribute to specify how fragments with dangling bonds are to be capped to allow these groups to be charged.
 
+### `<ToolkitAM1BCC/>`: Temporary support for basic charge calculation
+
+.. warning:: Until `<ChargeIncrementModel>` is implemented, support for the `<ToolkitAM1BCC/>` tag has been enabled in the toolkit. This tag is not permanent and may be phased out in future versions of the spec.
+
+This tag calculates molecule charges using the default settings of the highest-priority cheminformatics toolkit that can perform AM1-BCC charge assignment. Currently, if the OpenEye toolkit is licensed and available, this method calls `oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCELF10Charges())`. Otherwise the toolkit will use RDKit for initial conformer generation and AmberTools' antechamber/sqm software for charge calculation.
+
 ### Prespecified charges (reference implementation only)
 
 In our reference implementation of SMIRNOFF in the `openforcefield` toolkit, we also provide a method for specifying user-defined partial charges during system creation.
