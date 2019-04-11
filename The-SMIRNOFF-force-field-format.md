@@ -235,18 +235,22 @@ The sum of formal charges for the molecule or fragment will be used to determine
 * The `partial_charge_method` attribute (default: `"CM2"`) is used to specify how uncorrected partial charges are to be generated from the quantum chemical wavefunction. Later additions will add restrained electrostatic potential fitting (RESP) capabilities.   
 
 The `<ChargeIncrement>` tags specify how the quantum chemical derived charges are to be corrected to produce the final charges.
-The `charge#increment` attribute specify how much the charge on the associated tagged atom index (replacing `#`) should be modified.
+The `chargeincrement#` attribute specify how much the charge on the associated tagged atom index (replacing `#`) should be modified.
 The sum of charge increments should equal zero.
 
 Note that atoms for which library charges have already been applied are excluded from charging via `<ChargeIncrementModel>`.
 
 Future additions will provide options for intelligently fragmenting large molecules and biopolymers, as well as a `capping` attribute to specify how fragments with dangling bonds are to be capped to allow these groups to be charged.
 
-### `<ToolkitAM1BCC/>`: Temporary support for basic charge calculation
+### `<ToolkitAM1BCC>`: Temporary support for basic charge calculation
 
-.. warning:: Until `<ChargeIncrementModel>` is implemented, support for the `<ToolkitAM1BCC/>` tag has been enabled in the toolkit. This tag is not permanent and may be phased out in future versions of the spec.
+.. warning:: Until `<ChargeIncrementModel>` is implemented, support for the `<ToolkitAM1BCC>` tag has been enabled in the toolkit. This tag is not permanent and may be phased out in future versions of the spec.
 
-This tag calculates molecule charges using the default settings of the highest-priority cheminformatics toolkit that can perform AM1-BCC charge assignment. Currently, if the OpenEye toolkit is licensed and available, this method calls `oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCELF10Charges())`. Otherwise the toolkit will use RDKit for initial conformer generation and AmberTools' antechamber/sqm software for charge calculation.
+This tag calculates molecule charges using the default settings of the highest-priority cheminformatics toolkit that can perform AM1-BCC charge assignment. 
+Currently, if the OpenEye toolkit is licensed and available, this will cause the toolkit to call `oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCELF10Charges())` on each molecule in the system. 
+Otherwise the toolkit will use RDKit for initial conformer generation and AmberTools' antechamber/sqm software for charge calculation.
+Conformer generation is performed regardless of whether conformations of the input molecule were provided. 
+Only the first conformer is used for charge calculation.
 
 ### Prespecified charges (reference implementation only)
 
