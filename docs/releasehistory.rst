@@ -14,9 +14,9 @@ This release features various documentation fixes, minor bugfixes, and code clea
 
 Bugfixes
 """"""""
-* [(PR #268)](https://github.com/openforcefield/openforcefield/pull/268): Fix "!..." typo in smirnoff99Frosst [(issue #247)](https://github.com/openforcefield/openforcefield/issues/247)
-* [(PR #267)](https://github.com/openforcefield/openforcefield/pull/267): Add neglected `<ToolkitAM1BCC>` to the SMIRNOFF 0.2 spec
-* [(PR #244)](https://github.com/openforcefield/openforcefield/pull/244): Improvements and typo fixes for BRD4:inhibitor benchmark
+* `PR #267 <https://github.com/openforcefield/openforcefield/pull/267>`_: Add neglected `<ToolkitAM1BCC>` to the SMIRNOFF 0.2 spec
+* `PR #258 <https://github.com/openforcefield/openforcefield/pull/258>`_: General cleanup and removal of unused/inaccessible code.
+* `PR #244 <https://github.com/openforcefield/openforcefield/pull/244>`_: Improvements and typo fixes for BRD4:inhibitor benchmark
 
 0.2.0 - Initial RDKit support
 -----------------------------
