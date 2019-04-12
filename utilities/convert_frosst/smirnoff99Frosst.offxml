@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.1" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRNOFF (SMIRKS Native Open Force Field) template file -->
-  <Date>Date: Feb. 14, 2019</Date>
+  <Date>Date: April 11, 2019</Date>
   <Author>C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine</Author>
   <!-- This file is meant for processing via openforcefield.typing.engines.smirnoff -->
   <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
@@ -195,7 +195,7 @@
     <Proper smirks="[*:1]-[#7X4,#7X3:2]-[#6X4;r3:3]-[*:4]" id="t53" idivf1="1" k1="1.000" periodicity1="3" phase1="0.0"/>
     <Proper smirks="[#1:1]-[#7X4,#7X3:2]-[#6X4;r3:3]-[*:4]" id="t54" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
     <Proper smirks="[#1:1]-[#7X4,#7X3:2]-[#6X4;r3:3]-[#6X4;r3:4]" id="t55" idivf1="1" k1="2.700" periodicity1="1" phase1="0.0"/>
-    <Proper smirks="[!1:1]-[#7X4,#7X3:2]-[#6X4;r3:3]-[*:4]" id="t56" idivf1="1" k1="0.156" periodicity1="3" phase1="0.0"/>
+    <Proper smirks="[!#1:1]-[#7X4,#7X3:2]-[#6X4;r3:3]-[*:4]" id="t56" idivf1="1" k1="0.156" periodicity1="3" phase1="0.0"/>
     <Proper smirks="[!#1:1]-[#7X4,#7X3:2]-[#6X4;r3:3]-[#6X4;r3:4]" id="t57" idivf1="1" k1="1.000" periodicity1="3" phase1="0.0"/>
     <Proper smirks="[*:1]-[#7X4:2]-[#6X3:3]~[*:4]" id="t58" idivf1="1" k1="0.000" periodicity1="1" phase1="0.0"/>
     <Proper smirks="[*:1]-[#6X4:2]-[#7X3$(*~[#6X3,#6X2]):3]~[*:4]" id="t59" idivf1="1" k1="0.000" periodicity1="2" phase1="0.0" phase2="0.0" k2="0.000" periodicity2="3" idivf2="1"/>

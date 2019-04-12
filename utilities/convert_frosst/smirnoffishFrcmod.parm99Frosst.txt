@@ -14,7 +14,8 @@ DATE
 # Date: Feb. 27, 2018
 # Date: Nov. 7, 2018
 # Date: Dec. 12, 2018
-Date: Feb. 14, 2019
+# Date: Feb. 14, 2019
+Date: April 11, 2019
 
 # Author: please make sure all authors are on one line, only last line will be used
 AUTHOR
@@ -362,7 +363,7 @@ DIHE
 [*:1]-[#7X4,#7X3:2]-[#6X4;r3:3]-[*:4]         1  1.000    0.0     3  Frosst CT-N3-CJ-CJ  from CT-CT-CJ-CJ
 [#1:1]-[#7X4,#7X3:2]-[#6X4;r3:3]-[*:4]        1  0.000    0.0     1   Frosst generic
 [#1:1]-[#7X4,#7X3:2]-[#6X4;r3:3]-[#6X4;r3:4]   1  2.700    0.0     1  Frosst H_-N3-CJ-CJ  from CJ-CJ-CJ-HC
-[!1:1]-[#7X4,#7X3:2]-[#6X4;r3:3]-[*:4]        1  0.156    0.0     3  Frosst CT-N3-CJ-CT  N3-CT-CJ-CJ
+[!#1:1]-[#7X4,#7X3:2]-[#6X4;r3:3]-[*:4]        1  0.156    0.0     3  Frosst CT-N3-CJ-CT  N3-CT-CJ-CJ
 [!#1:1]-[#7X4,#7X3:2]-[#6X4;r3:3]-[#6X4;r3:4]  1  1.000    0.0     3  Frosst SO-N3-CJ-CJ  from S-CT-CJ-CJ
 #
 # conj trivalent Nsp3-Csp2
