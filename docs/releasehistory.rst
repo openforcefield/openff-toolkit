@@ -7,8 +7,19 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-0.2.0
------
+0.2.1 - Bugfix release
+----------------------
+
+This release features various documentation fixes, minor bugfixes, and code cleanup.
+
+Bugfixes
+""""""""
+* [(PR #268)](https://github.com/openforcefield/openforcefield/pull/268): Fix "!..." typo in smirnoff99Frosst [(issue #247)](https://github.com/openforcefield/openforcefield/issues/247)
+* [(PR #267)](https://github.com/openforcefield/openforcefield/pull/267): Add neglected `<ToolkitAM1BCC>` to the SMIRNOFF 0.2 spec
+* [(PR #244)](https://github.com/openforcefield/openforcefield/pull/244): Improvements and typo fixes for BRD4:inhibitor benchmark
+
+0.2.0 - Initial RDKit support
+-----------------------------
 
 This version of the toolkit introduces many new features on the way to a 1.0.0 release.
 
@@ -24,8 +35,8 @@ New features
 * API improvements to more closely follow `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ guidelines
 * Improved documentation and examples
 
-0.1.0
------
+0.1.0 - Early preview release
+-----------------------------
 
 This is an early preview release of the toolkit that matches the functionality described in the preprint describing the SMIRNOFF v0.1 force field format: `[DOI] <https://doi.org/10.1101/286542>`_.
 
