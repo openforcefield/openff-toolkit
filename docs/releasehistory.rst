@@ -7,8 +7,19 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-0.2.0
------
+0.2.1 - Bugfix release
+----------------------
+
+This release features various documentation fixes, minor bugfixes, and code cleanup.
+
+Bugfixes
+""""""""
+* [(PR #267)](https://github.com/openforcefield/openforcefield/pull/267): Add neglected `<ToolkitAM1BCC>` to the SMIRNOFF 0.2 spec
+* [(PR #258)](https://github.com/openforcefield/openforcefield/pull/258): General cleanup of potentially unsafe code.
+* [(PR #244)](https://github.com/openforcefield/openforcefield/pull/244): Improvements and typo fixes for BRD4:inhibitor benchmark
+
+0.2.0 - Initial RDKit support
+-----------------------------
 
 This version of the toolkit introduces many new features on the way to a 1.0.0 release.
 
