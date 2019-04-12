@@ -84,7 +84,7 @@ def find_examples():
 
 
 def find_readme_examples():
-    """Yield the Python scripts in a readme file.
+    """Yield the Python scripts in the main README.md file.
 
     Returns
     -------
@@ -97,17 +97,42 @@ def find_readme_examples():
     return re.findall('```python(.*?)```', readme_content, flags=re.DOTALL)
 
 
+def find_readme_links():
+    """Yield all the links in the main README.md file.
+
+    Returns
+    -------
+    readme_examples : List[str]
+        The list of links included in the README.md file.
+    """
+    readme_file_path = os.path.join(ROOT_DIR_PATH, 'README.md')
+    with open(readme_file_path, 'r') as f:
+        readme_content = f.read()
+    return re.findall('http[s]?://(?:[0-9a-zA-Z]|[-/.%:])+', readme_content)
+
+
 #======================================================================
 # TESTS
 #======================================================================
 
 @pytest.mark.parametrize('readme_example_str', find_readme_examples())
-def test_readme(readme_example_str):
+def test_readme_examples(readme_example_str):
     """Test the example"""
     run_script_str(readme_example_str)
+
+
+@pytest.mark.parametrize('readme_link', find_readme_links())
+def test_readme_links(readme_link):
+    """Test the example"""
+    from urllib.request import Request, urlopen
+    headers = {'User-Agent':'Mozilla/5.0',
+               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',}
+    request = Request(readme_link, headers=headers)
+    urlopen(request)
 
 
 @pytest.mark.parametrize('example_file_path', find_examples())
 def test_examples(example_file_path):
     """Test that the example run without errors."""
     run_script_file(example_file_path)
+
