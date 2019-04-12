@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Install with Conda](https://anaconda.org/omnia/openforcefield/badges/installer/conda.svg)](https://anaconda.org/omnia/openforcefield)
 [![Anaconda Cloud platforms](https://anaconda.org/omnia/openforcefield/badges/platforms.svg)](https://anaconda.org/omnia/openforcefield)
-[![Anaconda Cloud downloads](https://anaconda.org/omnia/openforcefield/badges/downloads.svg)](https://anaconda.org/openforcefield/openforcefield)
+[![Anaconda Cloud downloads](https://anaconda.org/omnia/openforcefield/badges/downloads.svg)](https://anaconda.org/omnia/openforcefield)
 [![Funding](https://img.shields.io/badge/Funding-Open%20Force%20Field%20Consortium-brightgreen.svg)](http://openforcefield.org)
 
 # The Open Force Field toolkit
