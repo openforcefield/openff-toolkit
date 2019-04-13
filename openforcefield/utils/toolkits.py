@@ -419,8 +419,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Returns
         -------
-        molecules : list of Molecules
-            a list of Molecule objects is returned.
+        molecules : List[Molecule]
+            The list of ``Molecule`` objects in the file.
 
         Raises
         ------
@@ -428,32 +428,20 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             If the loaded mol2 file possibly uses GAFF atom types, which
             are not supported.
 
+        Examples
+        --------
+
+        Load a mol2 file into an OpenFF ``Molecule`` object.
+
+        >>> from openforcefield.utils import get_data_filename
+        >>> mol2_file_path = get_data_filename('molecules/cyclohexane.mol2')
+        >>> toolkit = OpenEyeToolkitWrapper()
+        >>> molecule = toolkit.from_file(mol2_file_path, file_format='mol2')
+
         """
-        from openforcefield.topology import Molecule
         from openeye import oechem
-
-        # With mol2 files, we raise a warning if we detect OS or HO types
-        # that OpenEye interprets as Osmium and Holmium.
-        is_mol2 = file_format.lower() == 'mol2'
-
-        mols = list()
-        oemol = oechem.OEMol()
         ifs = oechem.oemolistream(filename)
-        while oechem.OEReadMolecule(ifs, oemol):
-            oechem.OEPerceiveChiral(oemol)
-            oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
-            oechem.OE3DToInternalStereo(oemol)
-            mol = Molecule.from_openeye(
-                oemol,
-                allow_undefined_stereo=allow_undefined_stereo)
-
-            mols.append(mol)
-
-            # Check if this file may be using GAFF atom types.
-            if is_mol2 and not(mol is None):
-                self._check_mol2_gaff_atom_type(mol, filename)
-
-        return mols
+        return self._read_oemolistream_molecules(ifs, allow_undefined_stereo, file_path=filename)
 
     def from_file_obj(self,
                       file_obj,
@@ -475,28 +463,25 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Returns
         -------
-        molecules : Molecule or list of Molecules
-            a list of Molecule objects is
+        molecules : List[Molecule]
+            The list of Molecule objects in the file object.
+
+        Raises
+        ------
+        GAFFAtomTypeWarning
+            If the loaded mol2 file possibly uses GAFF atom types, which
+            are not supported.
 
         """
-        from openforcefield.topology import Molecule
         from openeye import oechem
-        mols = list()
-        oemol = oechem.OEMol()
-        file_data = file_obj.read()
+
+        # Configure input molecule stream.
         ifs = oechem.oemolistream()
-        ifs.openstring(file_data)
+        ifs.openstring(file_obj.read())
         oeformat = getattr(oechem, 'OEFormat_' + file_format)
         ifs.SetFormat(oeformat)
-        while oechem.OEReadMolecule(ifs, oemol):
-            oechem.OEPerceiveChiral(oemol)
-            oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
-            oechem.OE3DToInternalStereo(oemol)
-            mol = Molecule.from_openeye(
-                oemol,
-                allow_undefined_stereo=allow_undefined_stereo)
-            mols.append(mol)
-        return mols
+
+        return self._read_oemolistream_molecules(ifs, allow_undefined_stereo)
 
     def to_file_obj(self, molecule, file_obj, outfile_format):
         """
@@ -551,8 +536,50 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
 
+    @classmethod
+    def _read_oemolistream_molecules(cls, oemolistream, allow_undefined_stereo, file_path=None):
+        """
+        Reads and return the Molecules in a OEMol input stream.
+
+        Parameters
+        ----------
+        oemolistream : oechem.oemolistream
+            The OEMol input stream to read from.
+        allow_undefined_stereo : bool
+            If false, raises an exception if oemol contains undefined stereochemistry.
+        file_path : str, optional
+            The path to the mol2 file. This is used exclusively to make
+            the error message more meaningful when the mol2 files doesn't
+            use Tripos atom types.
+
+        Returns
+        -------
+        molecules : List[Molecule]
+            The list of Molecule objects in the stream.
+
+        """
+        from openforcefield.topology import Molecule
+        from openeye import oechem
+
+        mols = list()
+        oemol = oechem.OEMol()
+        while oechem.OEReadMolecule(oemolistream, oemol):
+            oechem.OEPerceiveChiral(oemol)
+            oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
+            oechem.OE3DToInternalStereo(oemol)
+            mol = Molecule.from_openeye(
+                oemol,
+                allow_undefined_stereo=allow_undefined_stereo)
+            mols.append(mol)
+
+            # Check if this file may be using GAFF atom types.
+            if oemolistream.GetFormat() == oechem.OEFormat_MOL2:
+                cls._check_mol2_gaff_atom_type(mol, file_path)
+
+        return mols
+
     @staticmethod
-    def _check_mol2_gaff_atom_type(molecule, file_path):
+    def _check_mol2_gaff_atom_type(molecule, file_path=None):
         """Attempts to detect the presence of GAFF atom types in a molecule loaded from a mol2 file.
 
         For now, this raises a ``GAFFAtomTypeWarning`` if the molecule
@@ -563,11 +590,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : openforcefield.topology.molecule.Molecule
             The loaded molecule.
-        file_path : str
+        file_path : str, optional
             The path to the mol2 file. This is used exclusively to make
             the error message more meaningful.
 
         """
+        # Handle default.
+        if file_path is None:
+            file_path = ''
+        else:
+            # Append a ':' character that will separate the file
+            # path from the molecule string representation.
+            file_path = file_path + ':'
         # atomic_number: (GAFF_type, element_name)
         warning_atomic_numbers = {
             76: ('OS', 'Osmium'),
@@ -581,11 +615,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 pass
             else:
                 import warnings
-                warn_msg = ('OpenEye interpreted the type "{atom_type}" in {file_path}:{mol_name}'
-                            ' as {element_name}. Does your mol2 file uses Tripos SYBYL atom types?'
-                            ' Other atom types such as GAFF are not supported.').format(
-                    atom_type=atom_type, mol_name=molecule.name,
-                    file_path=file_path, element_name=element_name)
+                warn_msg = (f'OpenEye interpreted the type "{atom_type}" in {file_path}{molecule.name}'
+                            f' as {element_name}. Does your mol2 file uses Tripos SYBYL atom types?'
+                            ' Other atom types such as GAFF are not supported.')
                 warnings.warn(warn_msg, GAFFAtomTypeWarning)
 
     @staticmethod
