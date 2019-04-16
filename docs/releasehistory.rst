@@ -14,7 +14,7 @@ This release features various documentation fixes, minor bugfixes, and code clea
 
 Bugfixes
 """"""""
-* `PR #267 <https://github.com/openforcefield/openforcefield/pull/267>`_: Add neglected `<ToolkitAM1BCC>` to the SMIRNOFF 0.2 spec
+* `PR #267 <https://github.com/openforcefield/openforcefield/pull/267>`_: Add neglected ``<ToolkitAM1BCC>`` documentation to the SMIRNOFF 0.2 spec
 * `PR #258 <https://github.com/openforcefield/openforcefield/pull/258>`_: General cleanup and removal of unused/inaccessible code.
 * `PR #244 <https://github.com/openforcefield/openforcefield/pull/244>`_: Improvements and typo fixes for BRD4:inhibitor benchmark
 
