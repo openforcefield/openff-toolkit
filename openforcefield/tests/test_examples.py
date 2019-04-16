@@ -125,6 +125,9 @@ def test_readme_examples(readme_example_str):
 def test_readme_links(readme_link):
     """Test the example"""
     from urllib.request import Request, urlopen
+    # Some websites do not accept requests that don't specify the
+    # client and the type of accepted documents so we add fake info
+    # to avoid the response being an error.
     headers = {'User-Agent':'Mozilla/5.0',
                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',}
     request = Request(readme_link, headers=headers)
