@@ -2164,8 +2164,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 charge_unitless = charge.value_in_unit(unit.elementary_charge)
                 rdk_indexed_charges[atom_idx] = charge_unitless
             for atom_idx, rdk_atom in enumerate(rdmol.GetAtoms()):
-                rdk_atom.SetDoubleProp('partial_charge',
+                rdk_atom.SetDoubleProp('PartialCharge',
                                        rdk_indexed_charges[atom_idx])
+
+            # Note: We could put this outside the "if" statement, which would result in all partial charges in the
+            #       resulting file being set to "n/a" if they weren't set in the Open Force Field Molecule
+            Chem.CreateAtomDoublePropertyList(rdmol, 'PartialCharge')
 
         # Cleanup the rdmol
         rdmol.UpdatePropertyCache(strict=False)
