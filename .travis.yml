@@ -70,7 +70,7 @@ install:
 
   # TODO: Do we still need the beta version or can we do simply -c openeye openeye-toolkits?
   # Use beta version for partial bond orders
-  # TODO: Reactivate conda install instead of pip install once OpenEye is released for python 3.7 on conda-forge.
+  # TODO: Reactivate conda install instead of pip install once OpenEye is released for python 3.7 on conda-forge, but I don't think we need oemmtools anymore.
   # - if [[ "$OPENEYE" == true ]]; then conda install --yes -c openeye/label/Orion openeye-toolkits oeommtools && python -c "import openeye; print(openeye.__version__)"; fi
 
   # Install RDKit
@@ -81,7 +81,7 @@ install:
   - pip install codecov
   - pip install coverage==4.4
   # TODO: Go back to conda install once OpenEye is released for python 3.7 on conda-forge.
-  - pip install -i https://pypi.anaconda.org/openeye/simple openeye-toolkits
+  - if [[ "$OPENEYE" == true ]]; then pip install -i https://pypi.anaconda.org/openeye/simple openeye-toolkits; fi
 
   # Build and install package
   - conda build --python=$PYTHON_VER devtools/conda-recipe

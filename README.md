@@ -79,7 +79,7 @@ The `ChemicalEnvironments` class can be used to parse and manipulate [tagged SMA
 from openforcefield.typing.chemistry import environment
 
 smirks = "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
-angle = environment.AngleChemicalEnvironment(smirks=smirks)
+angle = environment.AngleChemicalEnvironment(smirks=smirks, toolkit='rdkit')
 print(angle.asSMIRKS())
 # "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
 
