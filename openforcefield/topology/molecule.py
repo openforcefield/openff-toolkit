@@ -2494,16 +2494,20 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
-            The partial charges to assign to the molecule. Must be in units compatible with simtk.unit.elementary_charge
+        charges : None or a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
+            The partial charges to assign to the molecule. If not None, must be in units compatible with simtk.unit.elementary_charge
 
         """
-        assert hasattr(charges, 'unit')
-        assert unit.elementary_charge.is_compatible(charges.unit)
-        assert charges.shape == (self.n_atoms, )
+        if charges is None:
+            self._partial_charges = None
+            return
+        else:
+            assert hasattr(charges, 'unit')
+            assert unit.elementary_charge.is_compatible(charges.unit)
+            assert charges.shape == (self.n_atoms, )
 
-        charges_ec = charges.in_units_of(unit.elementary_charge)
-        self._partial_charges = charges_ec
+            charges_ec = charges.in_units_of(unit.elementary_charge)
+            self._partial_charges = charges_ec
 
     @property
     def n_particles(self):

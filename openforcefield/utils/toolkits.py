@@ -1987,9 +1987,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         any_atom_has_partial_charge = False
         for rd_idx, rd_atom in enumerate(rdmol.GetAtoms()):
             off_idx = map_atoms[rd_idx]
-            if rd_atom.HasProp("partial_charge"):
+            if rd_atom.HasProp("PartialCharge"):
                 charge = rd_atom.GetDoubleProp(
-                    "partial_charge") * unit.elementary_charge
+                    "PartialCharge") * unit.elementary_charge
                 partial_charges[off_idx] = charge
                 any_atom_has_partial_charge = True
             else:
