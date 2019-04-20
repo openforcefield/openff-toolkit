@@ -16,6 +16,7 @@ Tests for cheminformatics toolkit wrappers
 from simtk import unit
 import numpy as np
 from numpy.testing import assert_almost_equal
+from tempfile import NamedTemporaryFile
 
 import pytest
 from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWrapper,
@@ -230,6 +231,54 @@ class TestOpenEyeToolkitWrapper:
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    def test_write_sdf_charges(self):
+        """Test OpenEyeToolkitWrapper for writing partial charges to a sdf file"""
+        from openforcefield.tests.test_forcefield import create_ethanol
+        from io import StringIO
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        ethanol = create_ethanol()
+        sio = StringIO()
+        ethanol.to_file(sio, 'SDF', toolkit_registry=toolkit_wrapper)
+        sdf_text = sio.getvalue()
+        # The output lines of interest here will look like
+        # >  <atom.dprop.PartialCharge>  (1)
+        # -0.40000000000000002 -0.29999999999999999 -0.20000000000000001 -0.10000000000000001 0.01 0.10000000000000001 0.20000000000000001 0.29999999999999999 0.40000000000000002
+
+        # Parse the SDF text, grabbing the numeric line above
+        sdf_split = sdf_text.split('\n')
+        is_charge_line = False
+        for line in sdf_split:
+            if is_charge_line:
+                charges = [float(i) for i in line.split()]
+                break
+            if '>  <atom.dprop.PartialCharge>  (1)' in line:
+                is_charge_line = True
+
+        # Make sure that a charge line was ever found
+        assert is_charge_line == True
+
+        # Make sure that the charges found were correct
+        assert_almost_equal(charges, [-0.4, -0.3, -0.2, -0.1, 0.01, 0.1, 0.2, 0.3, 0.4])
+
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    def test_write_sdf_no_charges(self):
+        """Test OpenEyeToolkitWrapper for importing a charges from a sdf file"""
+        from openforcefield.tests.test_forcefield import create_ethanol
+        from io import StringIO
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        ethanol = create_ethanol()
+        ethanol.partial_charges = None
+        sio = StringIO()
+        ethanol.to_file(sio, 'SDF', toolkit_registry=toolkit_wrapper)
+        sdf_text = sio.getvalue()
+        # In our current configuration, if the OFFMol doesn't have partial charges, we DO NOT want a partial charge
+        # block to be written. For reference, it's possible to indicate that a partial charge is not known by writing
+        # out "n/a" (or another placeholder) in the partial charge block atoms without charges.
+        assert '>  <atom.dprop.PartialCharge>  (1)' not in sdf_text
+
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_coordinates(self):
@@ -639,6 +688,19 @@ class TestRDKitToolkitWrapper:
         # Make sure that the charges found were correct
         assert_almost_equal(charges, [-0.4, -0.3, -0.2, -0.1, 0.01, 0.1, 0.2, 0.3, 0.4])
 
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    def test_sdf_charges_roundtrip(self):
+        """Test RDKitToolkitWrapper for performing a round trip of a molecule with partial charge to and from
+        a sdf file"""
+        from openforcefield.tests.test_forcefield import create_ethanol
+        toolkit_wrapper = RDKitToolkitWrapper()
+        ethanol = create_ethanol()
+        # The file is automatically deleted outside the with-clause.
+        with NamedTemporaryFile(suffix='.sdf') as iofile:
+            ethanol.to_file(iofile.name, outfile_format='SDF', toolkit_registry=toolkit_wrapper)
+            ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
+        assert (ethanol.partial_charges == ethanol2.partial_charges).all()
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
     def test_write_sdf_no_charges(self):

@@ -1560,7 +1560,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^ Chem.SANITIZE_ADJUSTHS)
                     Chem.AssignStereochemistryFrom3D(rdmol)
                 except ValueError as e:
-                    print(rdmol.GetProp('_Name'), e)
+                    logger.warn(rdmol.GetProp('_Name') + e)
                     continue
                 Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
                 mol = Molecule.from_rdkit(
@@ -1625,7 +1625,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         if (file_format == "MOL") or (file_format == "SDF"):
             # TODO: Iterate over all mols in file_data
-            for rdmol in Chem.ForwardSDMolSupplier(file_obj):
+            for rdmol in Chem.ForwardSDMolSupplier(file_obj, removeHs=False, sanitize=False, strictParsing=True):
                 mol = Molecule.from_rdkit(rdmol)
                 mols.append(mol)
 
