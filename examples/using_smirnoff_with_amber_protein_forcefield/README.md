@@ -8,8 +8,8 @@ These examples illustrate how the [ParmEd](http://parmed.github.io/ParmEd/html/i
 
 [`BRD4_inhibitor_benchmark.ipynb`](BRD4_inhibitor_benchmark.ipynb) contains an example illustrating applying SMIRNOFF and Amber14 parameters to a BRD4:inhibitor complex taken from the [free energy benchmark systems living review](https://www.annualreviews.org/doi/abs/10.1146/annurev-biophys-070816-033654) [GitHub repo](https://github.com/MobleyLab/benchmarksets/tree/master/input_files/BRD4).
 
-### Toluene in complex with T4 lysozyme L99A
+### Toluene in complex with T4 lysozyme L99A in TIP3P water
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openforcefield/master?filepath=examples%2Fusing_smirnoff_with_amber_protein_forcefield%2Ftoluene_in_T4_lysozyme.ipynb)
 
-[`toluene_in_T4_lysozyme.ipynb`](toluene_in_T4_lysozyme.ipynb) contains an example illustrating applying SMIRNOFF and Amber99SB-ILDN parameters to toluene complexed with T4 lysozyme L99A.
+[`toluene_in_T4_lysozyme.ipynb`](toluene_in_T4_lysozyme.ipynb) contains an example illustrating applying SMIRNOFF and Amber99SB-ILDN parameters to toluene complexed with T4 lysozyme L99A in a TIP3P water box.
