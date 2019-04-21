@@ -1,5 +1,3 @@
-# <img src="https://avatars1.githubusercontent.com/u/18539698?s=200&v=4">
-
 | **Status** | [![Travis build](https://img.shields.io/travis/openforcefield/openforcefield/master.svg?logo=linux&logoColor=white)](https://travis-ci.org/openforcefield/openforcefield) [![Codecov coverage](https://img.shields.io/codecov/c/github/openforcefield/openforcefield.svg?logo=Codecov&logoColor=white)](https://codecov.io/gh/openforcefield/openforcefield) [![LGTM analysis](https://img.shields.io/lgtm/grade/python/g/openforcefield/openforcefield.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/openforcefield/openforcefield/context:python) |
 | :------ | :------- |
 | **Latest Release** | [![Last release tag](https://img.shields.io/github/release-pre/openforcefield/openforcefield.svg)](https://github.com/openforcefield/openforcefield/releases)  [![Commits since release](https://img.shields.io/github/commits-since/openforcefield/openforcefield/0.2.1.svg)](https://github.com/openforcefield/openforcefield/releases/tag/0.2.1) |
