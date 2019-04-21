@@ -8,7 +8,8 @@
 [![Install with Conda](https://anaconda.org/omnia/openforcefield/badges/installer/conda.svg)](https://anaconda.org/omnia/openforcefield)
 [![Anaconda Cloud version](https://anaconda.org/omnia/openmmtools/badges/version.svg)](https://anaconda.org/omnia/openmmtools)
 [![Anaconda Cloud platforms](https://anaconda.org/omnia/openforcefield/badges/platforms.svg)](https://anaconda.org/omnia/openforcefield)
-[![Anaconda Cloud downloads](https://anaconda.org/omnia/openforcefield/badges/downloads.svg)](https://anaconda.org/openforcefield/openforcefield)
+[![Anaconda Cloud downloads](https://anaconda.org/omnia/openforcefield/badges/downloads.svg)](https://anaconda.org/omnia/openforcefield)
+[![Funding](https://img.shields.io/badge/Funding-Open%20Force%20Field%20Consortium-brightgreen.svg)](http://openforcefield.org)
 
 # The Open Force Field toolkit
 
@@ -81,7 +82,7 @@ The `ChemicalEnvironments` class can be used to parse and manipulate [tagged SMA
 from openforcefield.typing.chemistry import environment
 
 smirks = "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
-angle = environment.AngleChemicalEnvironment(smirks=smirks)
+angle = environment.AngleChemicalEnvironment(smirks=smirks, toolkit='rdkit')
 print(angle.asSMIRKS())
 # "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
 
