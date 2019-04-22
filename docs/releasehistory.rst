@@ -11,7 +11,7 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.2.2 - Bugfix release
 ----------------------
 
-This release features various documentation fixes, minor bugfixes, and code cleanup.
+This release adds example code for paramterizing a solvated system, as well as cleaning up some code and testing README links.
 
 Bugfixes
 """"""""
