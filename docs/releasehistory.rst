@@ -11,7 +11,7 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.2.2 - Bugfix release
 ----------------------
 
-This release modifies an example to show how to parameterize a solvated system, cleans up backend code, and automates testing README links.
+This release modifies an example to show how to parameterize a solvated system, cleans up backend code, and makes several improvements to the README.
 
 Bugfixes
 """"""""
