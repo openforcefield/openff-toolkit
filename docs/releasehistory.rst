@@ -17,7 +17,7 @@ Bugfixes
 """"""""
 * `PR #279 <https://github.com/openforcefield/openforcefield/pull/279>`_: Cleanup of unused code/warnings in main package ``__init__``
 * `PR #259 <https://github.com/openforcefield/openforcefield/pull/259>`_: Update T4 Lysozyme + toluene example to show how to set up solvated systems
-* `PR #256 <https://github.com/openforcefield/openforcefield/pull/256>`_: Add functionality to ensure that links in READMEs resolve successfully
+* `PR #256 <https://github.com/openforcefield/openforcefield/pull/256>`_ and `PR #274 <https://github.com/openforcefield/openforcefield/pull/274>`_: Add functionality to ensure that links in READMEs resolve successfully
 
 
 0.2.1 - Bugfix release
