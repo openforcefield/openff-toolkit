@@ -11,13 +11,13 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.2.2 - Bugfix release
 ----------------------
 
-This release adds example code for parameterizing a solvated system, as well as cleaning up some code and testing README links.
+This release modifies an example to show how to parameterize a solvated system, cleans up backend code, and automates testing README links.
 
 Bugfixes
 """"""""
 * `PR #279 <https://github.com/openforcefield/openforcefield/pull/279>`_: Cleanup of unused code/warnings in main package ``__init__``
-* `PR #259 <https://github.com/openforcefield/openforcefield/pull/259>`_: Updated T4 Lysozyme + toluene example to show how to set up solvated systems
-* `PR #256 <https://github.com/openforcefield/openforcefield/pull/256>`_: Added functionality to ensure that links in READMEs resolve successfully
+* `PR #259 <https://github.com/openforcefield/openforcefield/pull/259>`_: Update T4 Lysozyme + toluene example to show how to set up solvated systems
+* `PR #256 <https://github.com/openforcefield/openforcefield/pull/256>`_: Add functionality to ensure that links in READMEs resolve successfully
 
 
 0.2.1 - Bugfix release
