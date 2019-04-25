@@ -387,9 +387,9 @@ class TestForceField():
 
         """
         forcefield_1 = ForceField(simple_xml_ff)
-        string_1 = forcefield_1._parameter_io_handlers['XML'].to_string(forcefield_1.to_smirnoff_data())
+        string_1 = forcefield_1._parameter_io_handlers['XML'].to_string(forcefield_1._to_smirnoff_data())
         forcefield_2 = ForceField(string_1)
-        string_2 = forcefield_2._parameter_io_handlers['XML'].to_string(forcefield_2.to_smirnoff_data())
+        string_2 = forcefield_2._parameter_io_handlers['XML'].to_string(forcefield_2._to_smirnoff_data())
         assert string_1 == string_2
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)

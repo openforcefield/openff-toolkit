@@ -620,10 +620,10 @@ class ForceField:
         # TODO: If a non-first source fails here, the forcefield might be partially modified
         for source in sources:
             smirnoff_data = self.parse_smirnoff_from_source(source)
-            self.load_smirnoff_data(smirnoff_data)
+            self._load_smirnoff_data(smirnoff_data)
 
 
-    def to_smirnoff_data(self):
+    def _to_smirnoff_data(self):
         """
         Convert this ForceField and all related ParameterHandlers to an OrderedDict representing a SMIRNOFF
         data object.
@@ -650,7 +650,7 @@ class ForceField:
         return smirnoff_dict
 
     # TODO: Should we call this "from_dict"?
-    def load_smirnoff_data(self, smirnoff_data):
+    def _load_smirnoff_data(self, smirnoff_data):
         """
         Add parameters from a SMIRNOFF-format data structure to this ForceField.
 
