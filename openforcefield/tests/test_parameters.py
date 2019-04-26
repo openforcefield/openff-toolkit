@@ -332,9 +332,9 @@ class TestParameterType:
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
                                   pilot='alice',
-                                  permit_cosmetic_attributes=True
+                                  discard_cosmetic_attributes=False
                                   )
-        param_dict= p1.to_dict(return_cosmetic_attributes=True)
+        param_dict= p1.to_dict(discard_cosmetic_attributes=False)
         assert ('pilot', 'alice') in param_dict.items()
 
     def test_read_but_dont_write_cosmetic_parameter_attribute(self):
@@ -347,9 +347,9 @@ class TestParameterType:
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
                                   pilot='alice',
-                                  permit_cosmetic_attributes=True
+                                  discard_cosmetic_attributes=False
                                   )
-        param_dict = p1.to_dict(return_cosmetic_attributes=False)
+        param_dict = p1.to_dict(discard_cosmetic_attributes=True)
         assert ('pilot', 'alice') not in param_dict.items()
 
     def test_error_cosmetic_parameter_attribute(self):
@@ -363,7 +363,7 @@ class TestParameterType:
                                       length=1.02*unit.angstrom,
                                       k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
                                       pilot='alice',
-                                      permit_cosmetic_attributes=False
+                                      discard_cosmetic_attributes=True
                                       )
 
     def test_single_term_proper_torsion(self):
@@ -464,6 +464,10 @@ class TestParameterType:
 # TODO: test_nonbonded_settings (ensure that choices in Electrostatics and vdW tags resolve
 #                                to correct openmm.NonbondedForce subtypes, that setting different cutoffs raises
 #                                exceptions, etc)
+
+# TODO: test_extend_parameter_section
+
+
 # TODO: test_(all attributes of all ParameterTypes)
 # TODO: test_add_parameter_fractional_bondorder
 # TODO: test_get_indexed_attrib

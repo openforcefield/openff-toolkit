@@ -131,7 +131,7 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
     <Bond smirks="[#6X4:1]-[#6X3:2]" id="b2" k="634.0" length="1.51"/>
   </Bonds>
   <!-- WARNING: AMBER functional forms drop the factor of 2 in the angle energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
-  <Angles angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
+  <Angles angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2" cosmetic_element="why not?">
     <Angle smirks="[*:1]~[#6X4:2]-[*:3]" angle="109.5" id="a1" k="100.0"/>
     <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.5" id="a2" k="70.0"/>
   </Angles>
@@ -151,6 +151,8 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
   <ToolkitAM1BCC/>
 </SMIRNOFF>
 '''
+
+
 
 
 #======================================================================
@@ -378,19 +380,32 @@ class TestForceField():
 
     def test_xml_string_roundtrip(self):
         """
-        Test
-        1) loading a forcefield from string
-        2) writing it to an XML string ("string_1")
-        3) Initialize "forcefield_2" using "string_1"
-        4) serialize "forcefield_2" to "string_2"
-        5) Check that "string_1" is equal to "string_2"
-
+        Test writing a ForceField to XML
         """
         forcefield_1 = ForceField(simple_xml_ff)
-        string_1 = forcefield_1._parameter_io_handlers['XML'].to_string(forcefield_1._to_smirnoff_data())
+        string_1 = forcefield_1.to_string('XML')
         forcefield_2 = ForceField(string_1)
-        string_2 = forcefield_2._parameter_io_handlers['XML'].to_string(forcefield_2._to_smirnoff_data())
+        string_2 = forcefield_2.to_string('XML')
         assert string_1 == string_2
+
+
+    def test_xml_string_roundtrip_keep_cosmetic(self):
+        """
+        Test roundtripping a forcefield to XML with and without retaining cosmetic elements
+        """
+        forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, discard_cosmetic_attributes=False)
+        string_1 = forcefield_1.to_string('XML', discard_cosmetic_attributes=False)
+        forcefield_2 = ForceField(string_1, discard_cosmetic_attributes=False)
+        string_2 = forcefield_2.to_string('XML', discard_cosmetic_attributes=False)
+        assert string_1 == string_2
+
+        # Discard the cosmetic attributes and ensure that the string is different
+        string_3 = forcefield_2.to_string('XML', discard_cosmetic_attributes=True)
+        assert string_1 != string_3
+
+
+
+
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_ethanol(self, toolkit_registry, registry_description):

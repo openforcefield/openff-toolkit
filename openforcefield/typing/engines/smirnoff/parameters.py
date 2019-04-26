@@ -274,15 +274,15 @@ class ParameterList(list):
         # Fall back to traditional access
         return list.__contains__(self, item)
 
-    def to_list(self, return_cosmetic_attributes=False):
+    def to_list(self, discard_cosmetic_attributes=True):
         """
         Render this ParameterList to a normal list, serializing each ParameterType-derived object in it to dict.
 
         Parameters
         ----------
 
-        return_cosmetic_attributes : bool, optional. default = False
-            Whether to return non-spec attributes of each ParameterType-derived object.
+        discard_cosmetic_attributes : bool, optional. Default = True
+            Whether to discard non-spec attributes of each ParameterType-derived object.
 
         Returns
         -------
@@ -292,7 +292,7 @@ class ParameterList(list):
         parameter_list = list()
 
         for parameter in self:
-            parameter_dict = parameter.to_dict(return_cosmetic_attributes=return_cosmetic_attributes)
+            parameter_dict = parameter.to_dict(discard_cosmetic_attributes=discard_cosmetic_attributes)
             parameter_list.append(parameter_dict)
 
         return parameter_list
@@ -319,7 +319,7 @@ class ParameterType:
 
     # TODO: Can we provide some shared tools for returning settable/gettable attributes, and checking unit-bearing attributes?
 
-    def __init__(self, smirks=None, permit_cosmetic_attributes=False, **kwargs):
+    def __init__(self, smirks=None, discard_cosmetic_attributes=True, **kwargs):
         """
         Create a ParameterType
 
@@ -327,8 +327,9 @@ class ParameterType:
         ----------
         smirks : str
             The SMIRKS match for the provided parameter type.
-        permit_cosmetic_attributes : bool optional. Default = False
-            Whether to store non-spec kwargs as "cosmetic attributes", which can be accessed and written out.
+        discard_cosmetic_attributes : bool optional. Default = True
+            Whether to discard non-spec kwargs ("cosmetic attributes"). If False, non-spec kwargs will be stored as
+            an attribute of this parameter which can be accessed and written out.
 
         """
         from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
@@ -425,7 +426,7 @@ class ParameterType:
                 setattr(self, key, val)
 
             # Handle all unknown kwargs as cosmetic so we can write them back out
-            elif permit_cosmetic_attributes:
+            elif not(discard_cosmetic_attributes):
                 self._COSMETIC_ATTRIBS.append(key)
                 setattr(self, key, val)
             else:
@@ -447,7 +448,7 @@ class ParameterType:
             smirks, ensure_valence_type=self._VALENCE_TYPE)
         self._smirks = smirks
 
-    def to_dict(self, return_cosmetic_attributes=False):
+    def to_dict(self, discard_cosmetic_attributes=True):
         """
         Convert this ParameterType-derived object to dict. A unit-bearing attribute ('X') will be converted to two dict
         entries, one (['X'] containing the unitless value, and another (['X_unit']) containing a string representation
@@ -455,8 +456,8 @@ class ParameterType:
 
         Parameters
         ----------
-        return_cosmetic_attributes : bool, optional. default = False
-            Whether to return non-spec attributes of this ParameterType
+        discard_cosmetic_attributes : bool, optional. Default = True
+            Whether to discard non-spec attributes of this ParameterType
 
 
         Returns
@@ -472,7 +473,7 @@ class ParameterType:
         # returned dict (call list() to make a copy)
         attribs_to_return = list(self._SMIRNOFF_ATTRIBS)
         attribs_to_return += [opt_attrib for opt_attrib in self._OPTIONAL_ATTRIBS if hasattr(self, opt_attrib)]
-        if return_cosmetic_attributes:
+        if not(discard_cosmetic_attributes):
             attribs_to_return += self._COSMETIC_ATTRIBS
 
         # Start populating a dict of the attribs
@@ -547,14 +548,15 @@ class ParameterHandler:
     _SMIRNOFF_VERSION_DEPRECATED = None  # if deprecated, the first SMIRNOFF version number it is no longer used
 
 
-    def __init__(self, permit_cosmetic_attributes=False, **kwargs):
+    def __init__(self, discard_cosmetic_attributes=True, **kwargs):
         """
         Initialize a ParameterHandler, optionally with a list of parameters and other kwargs.
 
         Parameters
         ----------
-        permit_cosmetic_attributes : bool
-            Whether to accept non-spec kwargs
+        discard_cosmetic_attributes : bool, optional. Default = True
+            Whether to discard non-spec kwargs. If False, non-spec kwargs will be stored as attributes of this object
+            and can be accessed and modified.
         **kwargs : dict
             The dict representation of the SMIRNOFF data source
 
@@ -628,20 +630,22 @@ class ParameterHandler:
             # If we're reading the parameter list, iterate through and attach units to
             # each parameter_dict, then use it to initialize a ParameterType
             if key == element_name:
-                # If there are multiple parameters, this will be a list. If there's just one, make it a list
-                if not(isinstance(val, list)):
-                    val = [val]
-                for unitless_param_dict in val:
-                    param_dict = attach_units(unitless_param_dict, attached_units)
-                    new_parameter = self._INFOTYPE(**param_dict,
-                                                   permit_cosmetic_attributes=permit_cosmetic_attributes)
-                    self._parameters.append(new_parameter)
+                # Don't populate parameter list here
+                continue
+                # # If there are multiple parameters, this will be a list. If there's just one, make it a list
+                # if not (isinstance(val, list)):
+                #     val = [val]
+                # for unitless_param_dict in val:
+                #     param_dict = attach_units(unitless_param_dict, attached_units)
+                #     new_parameter = self._INFOTYPE(**param_dict,
+                #                                    discard_cosmetic_attributes=discard_cosmetic_attributes)
+                #     self._parameters.append(new_parameter)
 
             elif key in allowed_header_attribs:
                 attr_name = '_' + key
                 # TODO: create @property.setter here if attrib requires unit
                 setattr(self, attr_name, val)
-            elif permit_cosmetic_attributes:
+            elif not(discard_cosmetic_attributes):
                 self._COSMETIC_ATTRIBS.append(key)
                 attr_name = '_' + key
                 setattr(self, attr_name, val)
@@ -652,6 +656,38 @@ class ParameterHandler:
                                         "'permit_cosmetic_attributes=True'".format(key, self.__class__))
 
 
+    def _add_parameters(self, section_dict, discard_cosmetic_attributes=True):
+        """
+        Extend the ParameterList in this ParameterHandler using a SMIRNOFF data source.
+
+        Parameters
+        ----------
+        section_dict : dict
+            The dict representation of a SMIRNOFF data source containing parameters to att to this ParameterHandler
+        discard_cosmetic_attributes : bool, optional. Default = True
+            Whether to store non-spec fields in section_dict.
+
+        """
+        unitless_kwargs, attached_units = extract_serialized_units_from_dict(section_dict)
+        smirnoff_data = attach_units(unitless_kwargs, attached_units)
+
+        element_name = None
+        if self._INFOTYPE is not None:
+            element_name = self._INFOTYPE._ELEMENT_NAME
+
+        for key, val in smirnoff_data.items():
+            # If we're reading the parameter list, iterate through and attach units to
+            # each parameter_dict, then use it to initialize a ParameterType
+            if key == element_name:
+                # Don't populate parameter list here
+                # If there are multiple parameters, this will be a list. If there's just one, make it a list
+                if not (isinstance(val, list)):
+                    val = [val]
+                for unitless_param_dict in val:
+                    param_dict = attach_units(unitless_param_dict, attached_units)
+                    new_parameter = self._INFOTYPE(**param_dict,
+                                                   discard_cosmetic_attributes=discard_cosmetic_attributes)
+                    self._parameters.append(new_parameter)
 
     @property
     def parameters(self):
@@ -818,7 +854,7 @@ class ParameterHandler:
         """
         pass
 
-    def to_dict(self, output_units=None, return_cosmetic_attributes=False):
+    def to_dict(self, output_units=None, discard_cosmetic_attributes=True):
         """
         Convert this ParameterHandler to an OrderedDict, compliant with the SMIRNOFF data spec.
 
@@ -826,8 +862,8 @@ class ParameterHandler:
         ----------
         output_units : dict[str : simtk.unit.Unit], optional. Default = None
             A mapping from the ParameterType attribute name to the output unit its value should be converted to.
-        return_cosmetic_attributes : bool, optional. Default = False.
-            Whether to return non-spec parameter and header attributes in this ParameterHandler.
+        discard_cosmetic_attributes : bool, optional. Default = True.
+            Whether to discard non-spec parameter and header attributes in this ParameterHandler.
 
         Returns
         -------
@@ -847,7 +883,7 @@ class ParameterHandler:
             output_units = last_added_output_units
 
         # Populate parameter list
-        parameter_list = self._parameters.to_list(return_cosmetic_attributes=return_cosmetic_attributes)
+        parameter_list = self._parameters.to_list(discard_cosmetic_attributes=discard_cosmetic_attributes)
         unitless_parameter_list = list()
 
         # Detach units into a separate dict.
@@ -891,7 +927,7 @@ class ParameterHandler:
             if hasattr(self, attr_key):
                 header_attribs_to_return.append(key)
         # Add the cosmetic attributes if requested
-        if return_cosmetic_attributes:
+        if not(discard_cosmetic_attributes):
             header_attribs_to_return += self._COSMETIC_ATTRIBS
 
 
