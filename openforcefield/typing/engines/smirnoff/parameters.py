@@ -319,7 +319,7 @@ class ParameterType:
 
     # TODO: Can we provide some shared tools for returning settable/gettable attributes, and checking unit-bearing attributes?
 
-    def __init__(self, smirks=None, discard_cosmetic_attributes=True, **kwargs):
+    def __init__(self, smirks=None, permit_cosmetic_attributes=True, **kwargs):
         """
         Create a ParameterType
 
@@ -327,9 +327,10 @@ class ParameterType:
         ----------
         smirks : str
             The SMIRKS match for the provided parameter type.
-        discard_cosmetic_attributes : bool optional. Default = True
-            Whether to discard non-spec kwargs ("cosmetic attributes"). If False, non-spec kwargs will be stored as
-            an attribute of this parameter which can be accessed and written out.
+        permit_cosmetic_attributes : bool optional. Default = False
+            Whether to permit non-spec kwargs ("cosmetic attributes"). If True, non-spec kwargs will be stored as
+            an attribute of this parameter which can be accessed and written out. Otherwise an exception will
+            be raised.
 
         """
         from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
@@ -426,11 +427,11 @@ class ParameterType:
                 setattr(self, key, val)
 
             # Handle all unknown kwargs as cosmetic so we can write them back out
-            elif not(discard_cosmetic_attributes):
+            elif permit_cosmetic_attributes:
                 self._COSMETIC_ATTRIBS.append(key)
                 setattr(self, key, val)
             else:
-                raise SMIRNOFFSpecError("Incompatible kwarg {} passed to {} constructor. If this is "
+                raise SMIRNOFFSpecError("Unexpected kwarg {} passed to {} constructor. If this is "
                                         "a desired cosmetic attribute, consider setting "
                                         "'permit_cosmetic_attributes=True'".format({key: val}, self.__class__))
 
@@ -548,15 +549,15 @@ class ParameterHandler:
     _SMIRNOFF_VERSION_DEPRECATED = None  # if deprecated, the first SMIRNOFF version number it is no longer used
 
 
-    def __init__(self, discard_cosmetic_attributes=True, **kwargs):
+    def __init__(self, permit_cosmetic_attributes=False, **kwargs):
         """
         Initialize a ParameterHandler, optionally with a list of parameters and other kwargs.
 
         Parameters
         ----------
-        discard_cosmetic_attributes : bool, optional. Default = True
-            Whether to discard non-spec kwargs. If False, non-spec kwargs will be stored as attributes of this object
-            and can be accessed and modified.
+        permit_cosmetic_attributes : bool, optional. Default = False
+            Whether to permit non-spec kwargs. If True, non-spec kwargs will be stored as attributes of this object
+            and can be accessed and modified. Otherwise an exception will be raised if a non-spec kwarg is encountered.
         **kwargs : dict
             The dict representation of the SMIRNOFF data source
 
@@ -645,7 +646,7 @@ class ParameterHandler:
                 attr_name = '_' + key
                 # TODO: create @property.setter here if attrib requires unit
                 setattr(self, attr_name, val)
-            elif not(discard_cosmetic_attributes):
+            elif permit_cosmetic_attributes:
                 self._COSMETIC_ATTRIBS.append(key)
                 attr_name = '_' + key
                 setattr(self, attr_name, val)
@@ -656,7 +657,7 @@ class ParameterHandler:
                                         "'permit_cosmetic_attributes=True'".format(key, self.__class__))
 
 
-    def _add_parameters(self, section_dict, discard_cosmetic_attributes=True):
+    def _add_parameters(self, section_dict, permit_cosmetic_attributes=False):
         """
         Extend the ParameterList in this ParameterHandler using a SMIRNOFF data source.
 
@@ -664,8 +665,9 @@ class ParameterHandler:
         ----------
         section_dict : dict
             The dict representation of a SMIRNOFF data source containing parameters to att to this ParameterHandler
-        discard_cosmetic_attributes : bool, optional. Default = True
-            Whether to store non-spec fields in section_dict.
+        permit_cosmetic_attributes : bool, optional. Default = False
+            Whether to allow non-spec fields in section_dict. If True, non-spec kwargs will be stored as an
+            attribute of the parameter. If False, non-spec kwargs will raise an exception.
 
         """
         unitless_kwargs, attached_units = extract_serialized_units_from_dict(section_dict)
@@ -686,7 +688,7 @@ class ParameterHandler:
                 for unitless_param_dict in val:
                     param_dict = attach_units(unitless_param_dict, attached_units)
                     new_parameter = self._INFOTYPE(**param_dict,
-                                                   discard_cosmetic_attributes=discard_cosmetic_attributes)
+                                                   permit_cosmetic_attributes=permit_cosmetic_attributes)
                     self._parameters.append(new_parameter)
 
     @property

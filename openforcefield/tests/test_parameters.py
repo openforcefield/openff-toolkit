@@ -358,13 +358,14 @@ class TestParameterType:
         """
         from simtk import unit
 
-        with pytest.raises(SMIRNOFFSpecError, match="Incompatible kwarg {'pilot': 'alice'}") as context:
-            p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
-                                      length=1.02*unit.angstrom,
-                                      k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
-                                      pilot='alice',
-                                      discard_cosmetic_attributes=True
-                                      )
+        #with pytest.raises(SMIRNOFFSpecError, match="Incompatible kwarg {'pilot': 'alice'}") as context:
+        p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
+                                  length=1.02*unit.angstrom,
+                                  k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                                  pilot='alice',
+                                  discard_cosmetic_attributes=True
+                                  )
+        assert not(hasattr(p1, 'pilot'))
 
     def test_single_term_proper_torsion(self):
         """

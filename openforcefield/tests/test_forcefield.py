@@ -26,7 +26,7 @@ from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWra
 from openforcefield.utils import get_data_filename
 
 from openforcefield.topology import Molecule, Topology
-from openforcefield.typing.engines.smirnoff import ForceField, IncompatibleParameterError
+from openforcefield.typing.engines.smirnoff import ForceField, IncompatibleParameterError, SMIRNOFFSpecError
 
 
 #======================================================================
@@ -393,9 +393,11 @@ class TestForceField():
         """
         Test roundtripping a forcefield to XML with and without retaining cosmetic elements
         """
-        forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, discard_cosmetic_attributes=False)
+        forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
         string_1 = forcefield_1.to_string('XML', discard_cosmetic_attributes=False)
-        forcefield_2 = ForceField(string_1, discard_cosmetic_attributes=False)
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
+            forcefield_2 = ForceField(string_1, permit_cosmetic_attributes=False)
+        forcefield_2 = ForceField(string_1, permit_cosmetic_attributes=True)
         string_2 = forcefield_2.to_string('XML', discard_cosmetic_attributes=False)
         assert string_1 == string_2
 
