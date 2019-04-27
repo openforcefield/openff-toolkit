@@ -332,7 +332,7 @@ class TestParameterType:
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
                                   pilot='alice',
-                                  discard_cosmetic_attributes=False
+                                  permit_cosmetic_attributes=True
                                   )
         param_dict= p1.to_dict(discard_cosmetic_attributes=False)
         assert ('pilot', 'alice') in param_dict.items()
@@ -347,7 +347,7 @@ class TestParameterType:
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
                                   pilot='alice',
-                                  discard_cosmetic_attributes=False
+                                  permit_cosmetic_attributes=True
                                   )
         param_dict = p1.to_dict(discard_cosmetic_attributes=True)
         assert ('pilot', 'alice') not in param_dict.items()
@@ -358,14 +358,13 @@ class TestParameterType:
         """
         from simtk import unit
 
-        #with pytest.raises(SMIRNOFFSpecError, match="Incompatible kwarg {'pilot': 'alice'}") as context:
-        p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
-                                  length=1.02*unit.angstrom,
-                                  k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
-                                  pilot='alice',
-                                  discard_cosmetic_attributes=True
-                                  )
-        assert not(hasattr(p1, 'pilot'))
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'pilot': 'alice'}") as context:
+            p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
+                                      length=1.02*unit.angstrom,
+                                      k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                                      pilot='alice',
+                                      permit_cosmetic_attributes=False
+                                      )
 
     def test_single_term_proper_torsion(self):
         """
@@ -433,7 +432,7 @@ class TestParameterType:
         """
         from simtk import unit
 
-        with pytest.raises(SMIRNOFFSpecError, match="Incompatible kwarg {'phase3': ") as context:
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'phase3': ") as context:
             p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                         phase1=30 * unit.degree,
                                                         periodicity1=2,

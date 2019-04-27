@@ -397,13 +397,11 @@ class TestForceField():
         with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
-        # Create a forcefield from XML successfully
+        # Create a forcefield from XML successfully, by explicitly permitting cosmetic attributes
         forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
 
         # Convert the forcefield back to XML
         string_1 = forcefield_1.to_string('XML', discard_cosmetic_attributes=False)
-
-        # Ensure that the new XML string has cosmetic attributes in it
 
         # Ensure that the new XML string has cosmetic attributes in it
         assert 'cosmetic_element="why not?"' in string_1
@@ -411,7 +409,7 @@ class TestForceField():
         with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
             forcefield = ForceField(string_1, permit_cosmetic_attributes=False)
 
-        # Complete the round trip from forcefield_1 successfully
+        # Complete the forcefield_1 --> string --> forcefield_2 roundtrip
         forcefield_2 = ForceField(string_1, permit_cosmetic_attributes=True)
 
         # Ensure that the forcefield remains the same after the roundtrip

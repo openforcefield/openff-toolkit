@@ -319,7 +319,7 @@ class ParameterType:
 
     # TODO: Can we provide some shared tools for returning settable/gettable attributes, and checking unit-bearing attributes?
 
-    def __init__(self, smirks=None, permit_cosmetic_attributes=True, **kwargs):
+    def __init__(self, smirks=None, permit_cosmetic_attributes=False, **kwargs):
         """
         Create a ParameterType
 
