@@ -587,6 +587,13 @@ class ForceField:
         ------
         KeyError if there is no ParameterIOHandler for the given tagname
         """
+        # Uppercase the format string to avoid case mismatches
+        io_format = io_format.upper()
+
+        # Remove "." (format strings do not include it
+        io_format = io_format.strip('.')
+
+        # Find or initialize ParameterIOHandler for this format
         io_handler = None
         if io_format in self._parameter_io_handlers.keys():
             io_handler = self._parameter_io_handlers[io_format]
@@ -815,6 +822,41 @@ class ForceField:
         smirnoff_data = self._to_smirnoff_data(discard_cosmetic_attributes=discard_cosmetic_attributes)
         string_data = io_handler.to_string(smirnoff_data)
         return string_data
+
+    def to_file(self, filename, format=None, discard_cosmetic_attributes=True):
+        """
+        Write this Forcefield and all its associated parameters to a string in a given format which
+        complies with the SMIRNOFF spec.
+
+
+        Parameters
+        ----------
+        filename : str
+            The filename to write to
+        format : str
+            The serialization format to write out. If None, will attempt to be inferred from the filename.
+        discard_cosmetic_attributes : bool, default=True
+            Whether to discard any non-spec attributes stored in the ForceField.
+
+        Returns
+        -------
+        forcefield_string : str
+            The string representation of the serialized forcefield
+        """
+        if format is None:
+            basename, format = os.path.splitext(filename)
+
+
+        # Handle the fact that .offxml is the same as .xml
+        if format.lower() == 'offxml' or format.lower() == '.offxml':
+            format = 'xml'
+
+        # Resolve which IO handler to use
+        io_handler = self.get_io_handler(format)
+
+        # Write out the SMIRNOFF data to the IOHandler
+        smirnoff_data = self._to_smirnoff_data(discard_cosmetic_attributes=discard_cosmetic_attributes)
+        io_handler.to_file(filename, smirnoff_data)
 
 
     def _resolve_parameter_handler_order(self):

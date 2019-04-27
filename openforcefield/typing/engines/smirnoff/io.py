@@ -246,29 +246,29 @@ class XMLParameterIOHandler(ParameterIOHandler):
             raise ParseError(e)
 
     def to_file(self, filename, smirnoff_data):
-        """Write the current forcefield parameter set to a file, autodetecting the type from the extension.
+        """Write the current forcefield parameter set to a file.
 
         Parameters
         ----------
         filename : str
             The name of the file to be written.
-            The `.offxml` file extension must be present.
+            The `.offxml` or `.xml` file extension must be present.
         smirnoff_data : dict
             A dict structured in compliance with the SMIRNOFF data spec.
 
         """
         xml_string = self.to_string(smirnoff_data)
-        (basename, extension) = os.path.splitext(filename)
-        if extension == '.offxml':
-            with open(filename, 'wb') as of:
-                of.write(xml_string)
-        else:
-            msg = "Cannot export forcefield parameters to file '{}'\n".format(
-                filename)
-            msg += 'Export to extension {} not implemented yet.\n'.format(
-                extension)
-            msg += "Supported choices are: ['.offxml']"
-            raise NotImplementedError(msg)
+        #(basename, extension) = os.path.splitext(filename)
+        #if extension == '.offxml' or extension == '.xml':
+        with open(filename, 'w') as of:
+            of.write(xml_string)
+        # else:
+        #     msg = "Cannot export forcefield parameters to file '{}'\n".format(
+        #         filename)
+        #     msg += 'Export to extension {} not implemented yet.\n'.format(
+        #         extension)
+        #     msg += "Supported choices are: ['.offxml']"
+        #     raise NotImplementedError(msg)
 
     def to_string(self, smirnoff_data):
         """

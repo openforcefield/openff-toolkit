@@ -21,10 +21,10 @@ from simtk import openmm, unit
 import numpy as np
 
 import pytest
+from tempfile import NamedTemporaryFile
+
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
-
 from openforcefield.utils import get_data_filename
-
 from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff import ForceField, IncompatibleParameterError, SMIRNOFFSpecError
 
@@ -380,7 +380,7 @@ class TestForceField():
 
     def test_xml_string_roundtrip(self):
         """
-        Test writing a ForceField to XML
+        Test writing a ForceField to an XML string
         """
         forcefield_1 = ForceField(simple_xml_ff)
         string_1 = forcefield_1.to_string('XML')
@@ -391,21 +391,101 @@ class TestForceField():
 
     def test_xml_string_roundtrip_keep_cosmetic(self):
         """
-        Test roundtripping a forcefield to XML with and without retaining cosmetic elements
+        Test roundtripping a forcefield to an XML string with and without retaining cosmetic elements
         """
-        forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
-        string_1 = forcefield_1.to_string('XML', discard_cosmetic_attributes=False)
+        # Ensure an exception is raised if we try to read the XML string with cosmetic attributes
         with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
-            forcefield_2 = ForceField(string_1, permit_cosmetic_attributes=False)
+            forcefield = ForceField(xml_ff_w_cosmetic_elements)
+
+        # Create a forcefield from XML successfully
+        forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
+
+        # Convert the forcefield back to XML
+        string_1 = forcefield_1.to_string('XML', discard_cosmetic_attributes=False)
+
+        # Ensure that the new XML string has cosmetic attributes in it
+
+        # Ensure that the new XML string has cosmetic attributes in it
+        assert 'cosmetic_element="why not?"' in string_1
+        assert 'parameterize_eval="blah=blah2"' in string_1
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
+            forcefield = ForceField(string_1, permit_cosmetic_attributes=False)
+
+        # Complete the round trip from forcefield_1 successfully
         forcefield_2 = ForceField(string_1, permit_cosmetic_attributes=True)
+
+        # Ensure that the forcefield remains the same after the roundtrip
         string_2 = forcefield_2.to_string('XML', discard_cosmetic_attributes=False)
         assert string_1 == string_2
 
         # Discard the cosmetic attributes and ensure that the string is different
         string_3 = forcefield_2.to_string('XML', discard_cosmetic_attributes=True)
         assert string_1 != string_3
+        # Ensure that the new XML string does NOT have cosmetic attributes in it
+        assert 'cosmetic_element="why not?"' not in string_3
+        assert 'parameterize_eval="blah=blah2"' not in string_3
+
+    @pytest.mark.parametrize('filename_extension', ['xml', 'XML', '.xml', '.XML',
+                                                    'offxml', 'OFFXML', '.offxml', '.OFFXML'])
+    @pytest.mark.parametrize('specified_format', [None, 'xml', 'XML', '.xml', '.XML',
+                                                  'offxml', 'OFFXML', '.offxml', '.OFFXML'])
+    def test_xml_file_roundtrip(self, filename_extension, specified_format):
+        """
+        Test roundtripping a ForceField to and from an XML file
+        """
+        # These files will be deleted once garbage collection runs (end of this function)
+        iofile1 = NamedTemporaryFile(suffix='.' + filename_extension)
+        iofile2 = NamedTemporaryFile(suffix='.' + filename_extension)
+        forcefield_1 = ForceField(simple_xml_ff)
+        forcefield_1.to_file(iofile1.name, format=specified_format)
+        forcefield_2 = ForceField(iofile1.name)
+        forcefield_2.to_file(iofile2.name, format=specified_format)
+        assert open(iofile1.name).read() == open(iofile2.name).read()
 
 
+    @pytest.mark.parametrize('filename_extension', ['xml', 'XML', '.xml', '.XML',
+                                                    'offxml', 'OFFXML', '.offxml', '.OFFXML'])
+    @pytest.mark.parametrize('specified_format', [None, 'xml', 'XML', '.xml', '.XML',
+                                                  'offxml', 'OFFXML', '.offxml', '.OFFXML'])
+    def test_xml_file_roundtrip_keep_cosmetic(self, filename_extension, specified_format):
+        """
+        Test roundtripping a forcefield to an XML file with and without retaining cosmetic elements
+        """
+        # These files will be deleted once garbage collection runs (end of this function)
+        iofile1 = NamedTemporaryFile(suffix='.' + filename_extension)
+        iofile2 = NamedTemporaryFile(suffix='.' + filename_extension)
+        iofile3 = NamedTemporaryFile(suffix='.' + filename_extension)
+
+        # Ensure an exception is raised if we try to read the XML string with cosmetic attributes
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
+            forcefield = ForceField(xml_ff_w_cosmetic_elements)
+
+        # Create a forcefield from XML successfully
+        forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
+
+        # Convert the forcefield back to XML, keeping cosmetic attributes
+        forcefield_1.to_file(iofile1.name, discard_cosmetic_attributes=False, format=specified_format)
+
+        # Ensure that the new XML string has cosmetic attributes in it
+        assert 'cosmetic_element="why not?"' in open(iofile1.name).read()
+        assert 'parameterize_eval="blah=blah2"' in open(iofile1.name).read()
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
+            forcefield = ForceField(iofile1.name, permit_cosmetic_attributes=False)
+
+        # Complete the forcefield_1 --> file --> forcefield_2 roundtrip
+        forcefield_2 = ForceField(iofile1.name, permit_cosmetic_attributes=True)
+
+        # Ensure that the forcefield remains the same after the roundtrip
+        forcefield_2.to_file(iofile2.name, discard_cosmetic_attributes=False, format=specified_format)
+        assert open(iofile1.name).read() == open(iofile2.name).read()
+
+        # Discard the cosmetic attributes and ensure that the string is different
+        forcefield_2.to_file(iofile3.name, discard_cosmetic_attributes=True, format=specified_format)
+        assert open(iofile1.name).read() != open(iofile3.name).read()
+
+        # Ensure that the new XML string does NOT have cosmetic attributes in it
+        assert 'cosmetic_element="why not?"' not in open(iofile3.name).read()
+        assert 'parameterize_eval="blah=blah2"' not in open(iofile3.name).read()
 
 
 
