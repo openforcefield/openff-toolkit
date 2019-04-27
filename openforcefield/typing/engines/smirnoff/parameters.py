@@ -628,20 +628,9 @@ class ParameterHandler:
             element_name = self._INFOTYPE._ELEMENT_NAME
 
         for key, val in smirnoff_data.items():
-            # If we're reading the parameter list, iterate through and attach units to
-            # each parameter_dict, then use it to initialize a ParameterType
+            # We don't initialize parameters here, only ParameterHandler attributes
             if key == element_name:
-                # Don't populate parameter list here
                 continue
-                # # If there are multiple parameters, this will be a list. If there's just one, make it a list
-                # if not (isinstance(val, list)):
-                #     val = [val]
-                # for unitless_param_dict in val:
-                #     param_dict = attach_units(unitless_param_dict, attached_units)
-                #     new_parameter = self._INFOTYPE(**param_dict,
-                #                                    discard_cosmetic_attributes=discard_cosmetic_attributes)
-                #     self._parameters.append(new_parameter)
-
             elif key in allowed_header_attribs:
                 attr_name = '_' + key
                 # TODO: create @property.setter here if attrib requires unit
@@ -681,7 +670,6 @@ class ParameterHandler:
             # If we're reading the parameter list, iterate through and attach units to
             # each parameter_dict, then use it to initialize a ParameterType
             if key == element_name:
-                # Don't populate parameter list here
                 # If there are multiple parameters, this will be a list. If there's just one, make it a list
                 if not (isinstance(val, list)):
                     val = [val]

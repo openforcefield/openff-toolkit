@@ -590,7 +590,7 @@ class ForceField:
         # Uppercase the format string to avoid case mismatches
         io_format = io_format.upper()
 
-        # Remove "." (format strings do not include it
+        # Remove "." (ParameterIOHandler tags do not include it)
         io_format = io_format.strip('.')
 
         # Find or initialize ParameterIOHandler for this format
