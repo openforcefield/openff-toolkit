@@ -281,7 +281,6 @@ nonbonded_resolution_matrix = [
 
 toolkit_registries = []
 if OpenEyeToolkitWrapper.is_available():
-
     toolkit_registries.append((ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper]), "OE"))
 if RDKitToolkitWrapper.is_available() and AmberToolsToolkitWrapper.is_available():
     toolkit_registries.append((ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]),
