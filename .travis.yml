@@ -8,7 +8,7 @@ branches:
   only:
   - master
   # Regex for feature release branches
-  - /.*[.]0-branch
+  - /.*[.]0-branch$/
 
 matrix:
   include:
