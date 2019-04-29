@@ -153,7 +153,7 @@ class ToolkitWrapper:
         def decorator(func):
             @wraps(func)
             def wrapped_function(*args, **kwargs):
-                if not cls.toolkit_is_available():
+                if not cls.is_available():
                     msg = 'This function requires the {} toolkit'.format(
                         cls._toolkit_name)
                     raise LicenseError(msg)
@@ -197,31 +197,14 @@ class ToolkitWrapper:
         return self._toolkit_file_write_formats
 
     @staticmethod
-    def toolkit_is_available():
+    def is_available():
         """
         Check whether the corresponding toolkit can be imported
-
-        .. note :: This method call may be expensive.
 
         Returns
         -------
         is_installed : bool
             True if corresponding toolkit is installed, False otherwise.
-
-        """
-        return NotImplementedError
-
-    @classmethod
-    def is_available(cls):
-        """
-        Check whether this toolkit wrapper is available for use because the underlying toolkit can be found.
-
-        .. note :: This method caches the result of any costly checks for file paths or module imports.
-
-        Parameters
-        ----------
-        is_available : bool
-            True if toolkit is available for use, False otherwise
 
         """
         return NotImplementedError
@@ -299,9 +282,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         'SLN', 'SMI', 'USM', 'XYC'
     ]
 
-    # TODO: AR - Do we need both toolkit_is_available() and is_available()?
     @staticmethod
-    def toolkit_is_available(
+    def is_available(
             oetools=('oechem', 'oequacpac', 'oeiupac', 'oeomega')):
         """
         Check if the given OpenEye toolkit components are available.
@@ -355,24 +337,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             else:
                 all_licensed &= getattr(module, license_function_names[tool])()
         return all_licensed
-
-    @classmethod
-    def is_available(cls):
-        """
-        Check whether this toolkit wrapper is available for use because the underlying toolkit can be found.
-
-        .. note :: This method caches the result of any costly checks for file paths or module imports.
-
-        Parameters
-        ----------
-        is_available : bool
-            True if toolkit wrapper is available for use, False otherwise
-
-        """
-        if cls._is_available is None:
-            cls._is_available = cls.toolkit_is_available()
-                #oetools=('oechem', 'oequacpac')
-        return cls._is_available
 
     def from_object(self, object):
         """
@@ -1465,7 +1429,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     _toolkit_file_write_formats = ['SDF', 'MOL', 'SMI', 'PDB']
 
     @staticmethod
-    def toolkit_is_available():
+    def is_available():
         """
         Check whether the RDKit toolkit can be imported
 
@@ -1480,21 +1444,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             return True
         except ImportError:
             return False
-
-    @classmethod
-    def is_available(cls):
-        """
-        Check whether toolkit is available for use.
-
-        Parameters
-        ----------
-        is_available : bool
-            True if toolkit is available for use, False otherwise
-
-        """
-        if cls._is_available is None:
-            cls._is_available = cls.toolkit_is_available()
-        return cls._is_available
 
     def from_object(self, object):
         """
@@ -2553,7 +2502,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
     _toolkit_file_write_formats = []
 
     @staticmethod
-    def toolkit_is_available():
+    def is_available():
         """
         Check whether the AmberTools toolkit is installed
 
@@ -2570,23 +2519,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             return False
         else:
             return True
-
-    @classmethod
-    def is_available(cls):
-        """
-        Check whether this toolkit wrapper is available for use because the underlying toolkit can be found.
-
-        .. note :: This method caches the result of any costly checks for file paths or module imports.
-
-        Parameters
-        ----------
-        is_available : bool
-            True if toolkit wrapper is available for use, False otherwise
-
-        """
-        if cls._is_available is None:
-            cls._is_available = cls.toolkit_is_available()
-        return cls._is_available
 
     def __init__(self):
         # TODO: Find AMBERHOME or executable home, checking miniconda if needed
@@ -3077,7 +3009,7 @@ BASIC_CHEMINFORMATICS_TOOLKITS = [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
 
 # Ensure we have at least one basic toolkit
 if sum([
-        tk.toolkit_is_available()
+        tk.is_available()
         for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
         if type(tk) in BASIC_CHEMINFORMATICS_TOOLKITS
 ]) == 0:

@@ -280,10 +280,10 @@ nonbonded_resolution_matrix = [
 
 
 toolkit_registries = []
-if OpenEyeToolkitWrapper.toolkit_is_available():
+if OpenEyeToolkitWrapper.is_available():
 
     toolkit_registries.append((ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper]), "OE"))
-if RDKitToolkitWrapper.toolkit_is_available() and AmberToolsToolkitWrapper.toolkit_is_available():
+if RDKitToolkitWrapper.is_available() and AmberToolsToolkitWrapper.is_available():
     toolkit_registries.append((ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]),
                                'RDKit+AmberTools'))
 
@@ -473,7 +473,7 @@ class TestForceField():
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
         # TODO: Add check to ensure system energy is finite
 
-    @pytest.mark.skipif( not(OpenEyeToolkitWrapper.toolkit_is_available()), reason='Test requires OE toolkit')
+    @pytest.mark.skipif( not(OpenEyeToolkitWrapper.is_available()), reason='Test requires OE toolkit')
     def test_parameterize_ethanol_different_reference_ordering_openeye(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
@@ -509,7 +509,7 @@ class TestForceField():
         assert serialized_1 == serialized_2
 
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='Test requires RDKit toolkit')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='Test requires RDKit toolkit')
     def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.

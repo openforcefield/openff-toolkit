@@ -85,7 +85,7 @@ class TestTopology(TestCase):
 
         filename = get_data_filename('molecules/toluene.sdf')
         self.toluene_from_sdf = Molecule.from_file(filename)
-        if OpenEyeToolkitWrapper.toolkit_is_available():
+        if OpenEyeToolkitWrapper.is_available():
             filename = get_data_filename('molecules/toluene_charged.mol2')
             # TODO: This will require openeye to load
             self.toluene_from_charged_mol2 = Molecule.from_file(filename)
@@ -461,7 +461,7 @@ class TestTopology(TestCase):
             assert bond.bond_order == bond_copy.bond_order
             assert bond.bond.is_aromatic == bond_copy.bond.is_aromatic
 
-    @pytest.mark.skipif( not(OpenEyeToolkitWrapper.toolkit_is_available()), reason='Test requires OE toolkit')
+    @pytest.mark.skipif( not(OpenEyeToolkitWrapper.is_available()), reason='Test requires OE toolkit')
     def test_from_openmm_duplicate_unique_mol(self):
         """Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols"""
         from simtk.openmm import app
@@ -480,7 +480,7 @@ class TestTopology(TestCase):
         # process doesn't encode stereochemistry.
         raise NotImplementedError
 
-    @pytest.mark.skipif( not(OpenEyeToolkitWrapper.toolkit_is_available()), reason='Test requires OE toolkit')
+    @pytest.mark.skipif( not(OpenEyeToolkitWrapper.is_available()), reason='Test requires OE toolkit')
     def test_chemical_environments_matches_OE(self):
         """Test Topology.chemical_environment_matches"""
         from simtk.openmm import app
@@ -502,7 +502,7 @@ class TestTopology(TestCase):
         matches = topology.chemical_environment_matches("[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 0
 
-    @pytest.mark.skipif( not(RDKitToolkitWrapper.toolkit_is_available()), reason='Test requires RDKit')
+    @pytest.mark.skipif( not(RDKitToolkitWrapper.is_available()), reason='Test requires RDKit')
     def test_chemical_environments_matches_RDK(self):
         """Test Topology.chemical_environment_matches"""
         from simtk.openmm import app
