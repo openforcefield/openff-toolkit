@@ -614,7 +614,7 @@ class ParameterHandler:
         # Perform unit compatibility checks
         for key, val in smirnoff_data.items():
             if key in self._REQUIRE_UNITS:
-                # TODO: Logic for indexed attributes
+                # TODO: Logic for indexed ParameterHandler attributes (none exist so far, but they might in the future)
                 if not val.unit.is_compatible(self._REQUIRE_UNITS[key]):
                     msg = "{} constructor received kwarg {} with value {}, " \
                           "which is incompatible with expected unit {}".format(self.__class__,
@@ -667,17 +667,19 @@ class ParameterHandler:
             element_name = self._INFOTYPE._ELEMENT_NAME
 
         for key, val in smirnoff_data.items():
+            # Skip sections that aren't the parameter list
+            if key != element_name:
+                continue
+            # If there are multiple parameters, this will be a list. If there's just one, make it a list
+            if not (isinstance(val, list)):
+                val = [val]
             # If we're reading the parameter list, iterate through and attach units to
             # each parameter_dict, then use it to initialize a ParameterType
-            if key == element_name:
-                # If there are multiple parameters, this will be a list. If there's just one, make it a list
-                if not (isinstance(val, list)):
-                    val = [val]
-                for unitless_param_dict in val:
-                    param_dict = attach_units(unitless_param_dict, attached_units)
-                    new_parameter = self._INFOTYPE(**param_dict,
-                                                   permit_cosmetic_attributes=permit_cosmetic_attributes)
-                    self._parameters.append(new_parameter)
+            for unitless_param_dict in val:
+                param_dict = attach_units(unitless_param_dict, attached_units)
+                new_parameter = self._INFOTYPE(**param_dict,
+                                               permit_cosmetic_attributes=permit_cosmetic_attributes)
+                self._parameters.append(new_parameter)
 
     @property
     def parameters(self):
@@ -1095,6 +1097,33 @@ class BondHandler(ParameterHandler):
         # TODO: Do we want a docstring here? If not, check that docstring get inherited from ParameterHandler.
         super().__init__(**kwargs)
 
+    def check_handler_compatibility(self,
+                                    other_handler):
+        """
+        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
+        will be assumed to expect the ParameterHandler class default.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler-derived object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        string_attrs_to_compare = ['potential', 'fractional_bondorder_method', 'fractional_bondorder_interpolation']
+
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
     def create_force(self, system, topology, **kwargs):
         # Create or retrieve existing OpenMM Force object
         # TODO: The commented line below should replace the system.getForce search
@@ -1192,6 +1221,36 @@ class AngleHandler(ParameterHandler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+    def check_handler_compatibility(self,
+                                    other_handler):
+        """
+        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
+        will be assumed to expect the ParameterHandler class default.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler-derived object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        string_attrs_to_compare = ['potential']
+
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
+
+
+
     def create_force(self, system, topology, **kwargs):
         #force = super(AngleHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -1276,6 +1335,49 @@ class ProperTorsionHandler(ParameterHandler):
         super().__init__(**kwargs)
 
 
+    def check_handler_compatibility(self,
+                                    other_handler):
+        """
+        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
+        will be assumed to expect the ParameterHandler class default.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler-derived object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        float_attrs_to_compare = []
+        string_attrs_to_compare = ['potential']
+
+        if self._default_idivf == 'auto':
+            string_attrs_to_compare.append('default_idivf')
+        else:
+            float_attrs_to_compare.append('default_idivf')
+
+        for float_attr in float_attrs_to_compare:
+            this_val = getattr(self, '_' + float_attr)
+            other_val = getattr(other_handler, '_' + float_attr)
+            if abs(this_val - other_val) > 1.e-6:
+                raise IncompatibleParameterError(
+                    "Difference between '{}' values is beyond allowed tolerance {}. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        float_attr, self._SCALETOL, this_val, other_val))
+
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
+
     def create_force(self, system, topology, **kwargs):
         #force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -1341,12 +1443,56 @@ class ImproperTorsionHandler(ParameterHandler):
     _INFOTYPE = ImproperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
     _OPTIONAL_SPEC_ATTRIBS = ['potential', 'default_idivf']
-    _HANDLER_DEFAULTS = {'potential': 'charmm',
-                         'default_idivf': 'auto'}
+    _DEFAULT_SPEC_ATTRIBS = {'potential': 'charmm',
+                             'default_idivf': 'auto'}
     _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+
+    def check_handler_compatibility(self,
+                                    other_handler):
+        """
+        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
+        will be assumed to expect the ParameterHandler class default.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler-derived object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        float_attrs_to_compare = []
+        string_attrs_to_compare = ['potential']
+
+        if self._default_idivf == 'auto':
+            string_attrs_to_compare.append('default_idivf')
+        else:
+            float_attrs_to_compare.append('default_idivf')
+
+        for float_attr in float_attrs_to_compare:
+            this_val = getattr(self, '_' + float_attr)
+            other_val = getattr(other_handler, '_' + float_attr)
+            if abs(this_val - other_val) > 1.e-6:
+                raise IncompatibleParameterError(
+                    "Difference between '{}' values is beyond allowed tolerance {}. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        float_attr, self._SCALETOL, this_val, other_val))
+
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
 
     def find_matches(self, entity):
         """Find the improper torsions in the topology/molecule matched by a parameter type.
@@ -1556,7 +1702,7 @@ class vdWHandler(ParameterHandler):
     @property
     def switch_width(self):
         """The switching width used for long-range van der Waals interactions"""
-        return self._switch_width
+        return self.switch_width
 
     @switch_width.setter
     def switch_width(self, other):
@@ -1566,7 +1712,7 @@ class vdWHandler(ParameterHandler):
             raise IncompatibleParameterError(
                 f"Attempted to set vdW switch_width to {other}, which is not compatible with "
                 f"expected unit {unit_to_check}")
-        self._switch_width = other
+        self.switch_width = other
 
     def _validate_parameters(self):
         """
@@ -1615,53 +1761,53 @@ class vdWHandler(ParameterHandler):
         # TODO: Validate these values against the supported output types (openMM force kwargs?)
         # TODO: Add conditional logic to assign NonbondedMethod and check compatibility
 
-
-
-
     def check_handler_compatibility(self,
-                                    handler_kwargs,
-                                    assume_missing_is_default=True):
+                                    other_handler):
         """
-        Checks if a set of kwargs used to create a ParameterHandler are compatible with this ParameterHandler. This is
+        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
         will be assumed to expect the ParameterHandler class default.
 
         Parameters
         ----------
-        handler_kwargs : dict
-            The kwargs that would be used to construct a ParameterHandler
-        assume_missing_is_default : bool
-            If True, will assume that parameters not specified in handler_kwargs would have been set to the default.
-            Therefore, an exception is raised if the ParameterHandler is incompatible with the default value for a
-            unspecified field.
+        other_handler : a ParameterHandler-derived object
+            The handler to compare to.
 
         Raises
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        compare_attr_to_kwargs = {
-            self._scale12: 'scale12',
-            self._scale13: 'scale13',
-            self._scale14: 'scale14',
-            self._scale15: 'scale15'
-        }
-        for attr, kwarg_key in compare_attr_to_kwargs.items():
-            kwarg_val = handler_kwargs.get(kwarg_key,
-                                           self._DEFAULT_SPEC_ATTRIBS[kwarg_key])
-            if abs(kwarg_val - attr) > self._SCALETOL:
+        float_attrs_to_compare = ['scale12', 'scale13', 'scale14', 'scale15']
+        string_attrs_to_compare = ['potential', 'combining_rules', 'method']
+        unit_attrs_to_compare = ['cutoff']
+
+        for float_attr in float_attrs_to_compare:
+            this_val = getattr(self, '_' + float_attr)
+            other_val = getattr(other_handler, '_' + float_attr)
+            if abs(this_val - other_val) > self._SCALETOL:
                 raise IncompatibleParameterError(
                     "Difference between '{}' values is beyond allowed tolerance {}. "
-                    "(handler value: {}, incompatible valie: {}".format(
-                        kwarg_key, self._SCALETOL, attr, kwarg_val))
+                    "(handler value: {}, incompatible value: {}".format(
+                        float_attr, self._SCALETOL, this_val, other_val))
 
-        # TODO: Test for other possible incompatibilities here -- Probably just check for string equality for now,
-        # detailed check will require some openMM/MD expertise)
-        #self._potential: 'potential',
-        #self._combining_rules: 'combining_rules',
-        #self._switch: 'switch',
-        #self._cutoff: 'cutoff',
-        #self._method:'method'
-        #}
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
+        for unit_attr in unit_attrs_to_compare:
+            this_val = getattr(self, '_' + unit_attr)
+            other_val = getattr(other_handler, '_' + unit_attr)
+            unit_tol = (self._SCALETOL * this_val.unit) # TODO: do we want a different quantity_tol here?
+            if abs(this_val - other_val) > unit_tol:
+                raise IncompatibleParameterError(
+                    "Difference between '{}' values is beyond allowed tolerance {}. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        unit_attr, unit_tol, this_val, other_val))
 
     def create_force(self, system, topology, **kwargs):
 
@@ -1763,6 +1909,8 @@ class ElectrostaticsHandler(ParameterHandler):
 
     _OPTIONAL_SPEC_ATTRIBS = ['cutoff', 'switch_width']
 
+    _SCALETOL = 1e-5
+
     def __init__(self, **kwargs):
 
         super().__init__(**kwargs)
@@ -1847,6 +1995,54 @@ class ElectrostaticsHandler(ParameterHandler):
             raise IncompatibleParameterError("The current implementation of the Open Force Field toolkit can not "
                                              "support an electrostatic switching width. Currently only `0.0 angstroms` "
                                              "is supported (SMIRNOFF data specified {})".format(self._switch_width))
+    def check_handler_compatibility(self,
+                                    other_handler):
+        """
+        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
+        will be assumed to expect the ParameterHandler class default.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler-derived object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        float_attrs_to_compare = ['scale12', 'scale13', 'scale14', 'scale15']
+        string_attrs_to_compare = ['method']
+        unit_attrs_to_compare = ['cutoff', 'switch_width']
+
+        for float_attr in float_attrs_to_compare:
+            this_val = getattr(self, '_' + float_attr)
+            other_val = getattr(other_handler, '_' + float_attr)
+            if abs(this_val - other_val) > self._SCALETOL:
+                raise IncompatibleParameterError(
+                    "Difference between '{}' values is beyond allowed tolerance {}. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        float_attr, self._SCALETOL, this_val, other_val))
+
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
+        for unit_attr in unit_attrs_to_compare:
+            this_val = getattr(self, '_' + unit_attr)
+            other_val = getattr(other_handler, '_' + unit_attr)
+            unit_tol = (self._SCALETOL * this_val.unit) # TODO: do we want a different quantity_tol here?
+            if abs(this_val - other_val) > unit_tol:
+                raise IncompatibleParameterError(
+                    "Difference between '{}' values is beyond allowed tolerance {}. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        unit_attr, unit_tol, this_val, other_val))
+
 
     def create_force(self, system, topology, **kwargs):
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -1947,20 +2143,18 @@ class ToolkitAM1BCCHandler(ParameterHandler):
 
 
 
-    def check_handler_compatibility(self, handler_kwargs, assume_missing_is_default=True):
+    def check_handler_compatibility(self,
+                                    other_handler,
+                                    assume_missing_is_default=True):
         """
-        Checks if a set of kwargs used to create a ParameterHandler are compatible with this ParameterHandler. This is
+        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
         will be assumed to expect the ParameterHandler class default.
 
         Parameters
         ----------
-        handler_kwargs : dict
-            The kwargs that would be used to construct a ParameterHandler
-        assume_missing_is_default : bool
-            If True, will assume that parameters not specified in handler_kwargs would have been set to the default.
-            Therefore, an exception is raised if the ParameterHandler is incompatible with the default value for a
-            unspecified field.
+        other_handler : a ParameterHandler-derived object
+            The handler to compare to.
 
         Raises
         ------
@@ -2162,41 +2356,45 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
 
 
-    def check_handler_compatibility(self, handler_kwargs, assume_missing_is_default=True):
+    def check_handler_compatibility(self,
+                                    other_handler,
+                                    assume_missing_is_default=True):
         """
-        Checks if a set of kwargs used to create a ParameterHandler are compatible with this ParameterHandler. This is
+        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
         will be assumed to expect the ParameterHandler class default.
 
         Parameters
         ----------
-        handler_kwargs : dict
-            The kwargs that would be used to construct a ParameterHandler
-        assume_missing_is_default : bool
-            If True, will assume that parameters not specified in handler_kwargs would have been set to the default.
-            Therefore, an exception is raised if the ParameterHandler is incompatible with the default value for a
-            unspecified field.
+        other_handler : a ParameterHandler-derived object
+            The handler to compare to.
 
         Raises
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        compare_kwarg_to_attr = {
-            'number_of_conformers': self._number_of_conformers,
-            'quantum_chemical_method': self._quantum_chemical_method,
-            'partial_charge_method': self._partial_charge_method,
-        }
 
-        for kwarg_key, attr in compare_kwarg_to_attr.items():
-            # Skip this comparison if the kwarg isn't in handler_kwargs and we're not comparing against defaults
-            if not(assume_missing_is_default) and not(kwarg_key in handler_kwargs):
-                continue
+        int_attrs_to_compare = ['number_of_conformers']
+        string_attrs_to_compare = ['quantum_chemical_method', 'partial_charge_method']
 
-            kwarg_val = handler_kwargs.get(kwarg_key, self._DEFAULTS[kwarg_key])
-            if kwarg_val != attr:
+        for int_attr in int_attrs_to_compare:
+            this_val = getattr(self, '_' + int_attr)
+            other_val = getattr(other_handler, '_' + int_attr)
+            if this_val != other_val:
                 raise IncompatibleParameterError(
-                    "Incompatible '{}' values found during handler compatibility check."
-                    "(existing handler value: {}, new existing value: {}".format(kwarg_key, attr, kwarg_val))
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        int_attr, this_val, other_val))
+
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
 
     def assign_charge_from_molecules(self, molecule, charge_mols):
         """
