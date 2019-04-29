@@ -1450,7 +1450,6 @@ class ImproperTorsionHandler(ParameterHandler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-
     def check_handler_compatibility(self,
                                     other_handler):
         """
