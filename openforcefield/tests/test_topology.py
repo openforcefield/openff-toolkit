@@ -413,13 +413,27 @@ class TestTopology(TestCase):
 
     def test_to_from_openmm(self):
         """Test a round-trip OpenFF -> OpenMM -> OpenFF Topology."""
+        from simtk.openmm.app import Aromatic
+
         # Create OpenFF topology with 1 ethanol and 2 benzenes.
         ethanol = Molecule.from_smiles('CCO')
         benzene = Molecule.from_smiles('c1ccccc1')
         off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
 
-        # Convert to OpenMM Topology and back.
+        # Convert to OpenMM Topology.
         omm_topology = off_topology.to_openmm()
+
+        # Check that bond orders are preserved.
+        n_double_bonds = sum([b.order == 2 for b in omm_topology.bonds()])
+        n_aromatic_bonds = sum([b.type is Aromatic for b in omm_topology.bonds()])
+        assert n_double_bonds == 6
+        assert n_aromatic_bonds == 12
+
+        # Check that there is one residue for each molecule.
+        assert omm_topology.getNumResidues() == 3
+        assert omm_topology.getNumChains() == 3
+
+        # Convert back to OpenFF Topology.
         off_topology_copy = Topology.from_openmm(omm_topology, unique_molecules=[ethanol, benzene])
 
         # The round-trip OpenFF Topology is identical to the original.

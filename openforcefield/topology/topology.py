@@ -1575,39 +1575,44 @@ class Topology(Serializable):
 
         # Go through atoms in OpenFF to preserve the order.
         omm_atoms = []
-        for i, atom in enumerate(self.topology_atoms):
-            reference_molecule = atom.topology_molecule.reference_molecule
-            n_molecules = len(self._reference_molecule_to_topology_molecules[reference_molecule])
+        # We need to iterate over the topology molecules if we want to
+        # keep track of chains/residues as Atom.topology_molecule is
+        # instantiated every time and can't be used as a key.
+        for topology_molecule in self.topology_molecules:
+            for atom in topology_molecule.atoms:
+                reference_molecule = topology_molecule.reference_molecule
+                n_molecules = len(self._reference_molecule_to_topology_molecules[reference_molecule])
 
-            # Add 1 chain per molecule unless there are more than 5 copies,
-            # in which case we add a single chain for all of them.
-            if n_molecules <= 5:
-                # We associate a chain to all the topology molecule.
-                key_molecule = reference_molecule
-            else:
-                # We associate a chain to each molecule.
-                key_molecule = atom.topology_molecule
+                # Add 1 chain per molecule unless there are more than 5 copies,
+                # in which case we add a single chain for all of them.
+                if n_molecules <= 5:
+                    # We associate a chain to each molecule.
+                    key_molecule = topology_molecule
+                else:
+                    # We associate a chain to all the topology molecule.
+                    key_molecule = reference_molecule
 
-            # Create a new chain if it doesn't exit.
-            try:
-                chain = mol_to_chains[key_molecule]
-            except KeyError:
-                chain = omm_topology.addChain()
-                mol_to_chains[key_molecule] = chain
+                # Create a new chain if it doesn't exit.
+                try:
+                    chain = mol_to_chains[key_molecule]
+                except KeyError:
+                    chain = omm_topology.addChain()
+                    mol_to_chains[key_molecule] = chain
 
-            # Add one molecule for each topology molecule.
-            try:
-                residue = mol_to_residues[atom.topology_molecule]
-            except:
-                residue = omm_topology.addResidue(reference_molecule.name, chain)
+                # Add one molecule for each topology molecule.
+                try:
+                    residue = mol_to_residues[topology_molecule]
+                except KeyError:
+                    residue = omm_topology.addResidue(reference_molecule.name, chain)
+                    mol_to_residues[topology_molecule] = residue
 
-            # Add atom.
-            element = OMMElement.getByAtomicNumber(atom.atomic_number)
-            omm_atom = omm_topology.addAtom(atom.atom.name, element, residue)
+                # Add atom.
+                element = OMMElement.getByAtomicNumber(atom.atomic_number)
+                omm_atom = omm_topology.addAtom(atom.atom.name, element, residue)
 
-            # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
-            assert atom.topology_atom_index == int(omm_atom.id)-1
-            omm_atoms.append(omm_atom)
+                # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
+                assert atom.topology_atom_index == int(omm_atom.id)-1
+                omm_atoms.append(omm_atom)
 
         # Add all bonds.
         bond_types = {
