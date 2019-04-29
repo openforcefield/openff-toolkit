@@ -312,8 +312,6 @@ class XMLParameterIOHandler(ParameterIOHandler):
                     prepend_all_keys(item)
 
         prepend_all_keys(smirnoff_data['SMIRNOFF'])
-        print(smirnoff_data)
-        print()
         return xmltodict.unparse(smirnoff_data, pretty=True)
 
     def to_xml(self, smirnoff_data):

@@ -375,67 +375,50 @@ class ForceField:
                 self._parameter_io_handler_classes[
                     serialization_format] = parameter_io_handler_class
 
-    def register_parameter_handler(self, parameter_handler_class,
-                                   parameter_handler_kwargs, permit_cosmetic_attributes=False):
+    def register_parameter_handler(self, parameter_handler):
         """
-        Register a new ParameterHandler from a specified class, instantiating the ParameterHandler object and making it
-        available for lookup in the ForceField. ParameterHandler-level attributes will be read from
-        parameter_handler_kwargs.
+        Register a new ParameterHandler for a specific tag, making it
+        available for lookup in the ForceField.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        parameter_handler_class : A ParameterHandler-derived object
-            The ParameterHandler to register
-        parameter_handler_kwargs : dict:
-            Hierarchical dict structured in compliance with the SMIRNOFF spec.
-        permit_cosmetic_attributes : bool, optional. Default = False
-            Whether to permit non-spec kwargs if a new ParameterHandler is initialized.
+        parameter_handler : A ParameterHandler-derived object
+            The ParameterHandler to register. The TAGNAME attribute of this object will be used as the key for
+            registration.
 
-        Returns
-        -------
-        new_handler : an openforcefield.engines.typing.smirnoff.ParameterHandler-derived object.
-            The newly-created ParameterHandler
         """
-        tagname = parameter_handler_class._TAGNAME
+        tagname = parameter_handler._TAGNAME
         if tagname in self._parameter_handlers.keys():
             raise ParameterHandlerRegistrationError(
                 "Tried to register parameter handler '{}' for tag '{}', but "
                 "tag is already registered to {}".format(
-                    parameter_handler_class, tagname,
+                    parameter_handler, tagname,
                     self._parameter_handlers[tagname]))
 
-        new_handler = parameter_handler_class(**parameter_handler_kwargs,
-                                              permit_cosmetic_attributes=permit_cosmetic_attributes)
+        self._parameter_handlers[parameter_handler._TAGNAME] = parameter_handler
 
-
-        self._parameter_handlers[new_handler._TAGNAME] = new_handler
-        return new_handler
-
-    def register_parameter_io_handler(self, parameter_io_handler_class):
+    def register_parameter_io_handler(self, parameter_io_handler):
         """
-        Register a new ParameterIOHandler from a specified class, instantiating the ParameterIOHandler object and making
-        it available for lookup in the ForceField.
+        Register a new ParameterIOHandler, making it available for lookup in the ForceField.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        parameter_io_handler_class : A subclass of ParameterIOHandler
+        parameter_io_handler :  ParameterIOHandler
 
         """
-        io_format = parameter_io_handler_class._FORMAT
+        io_format = parameter_io_handler._FORMAT
         if io_format in self._parameter_io_handlers.keys():
             raise ParameterHandlerRegistrationError(
                 "Tried to register parameter IO handler '{}' for tag '{}', but "
                 "tag is already registered to {}".format(
-                    parameter_io_handler_class, io_format,
+                    parameter_io_handler, io_format,
                     self._parameter_io_handlers[io_format]))
-        new_io_handler = parameter_io_handler_class()
+        self._parameter_io_handlers[io_format] = parameter_io_handler
 
-        self._parameter_io_handlers[io_format] = new_io_handler
-        return new_io_handler
 
     # TODO: Do we want to make this optional?
 
@@ -543,36 +526,38 @@ class ForceField:
         ------
         KeyError if there is no ParameterHandler for the given tagname
         """
-
+        # If there are no kwargs for the handler, initialize handler_kwargs as an empty dict
         if handler_kwargs is None:
             handler_kwargs = dict()
 
-        handler = None
-        if tagname in self._parameter_handlers:
-            # If handler already exists, make sure it is compatible
-            handler = self._parameter_handlers[tagname]
-            handler.check_handler_compatibility(handler_kwargs)
-        elif tagname in self._parameter_handler_classes:
-            new_ph_class = self._parameter_handler_classes[tagname]
-            handler = self.register_parameter_handler(new_ph_class,
-                                                      handler_kwargs,
-                                                      permit_cosmetic_attributes=permit_cosmetic_attributes)
-
-        if handler is None:
-            msg = "Cannot find a registered parameter handler for tag '{}'\n".format(
+        # Ensure that the ForceField has a ParameterHandler class registered that can handle this tag
+        if tagname in self._parameter_handler_classes:
+            ph_class = self._parameter_handler_classes[tagname]
+        else:
+            msg = "Cannot find a registered parameter handler class for tag '{}'\n".format(
                 tagname)
-            msg += "Registered parameter handlers: {}\n".format(
-                self._parameter_handlers.keys())
+            msg += "Known parameter handler class tags are {}".format(self._parameter_handler_classes.keys())
             raise KeyError(msg)
 
-        return handler
+        # Initialize a new instance of this parameter handler class with the given kwargs
+        new_handler = ph_class(**handler_kwargs,
+                               permit_cosmetic_attributes=permit_cosmetic_attributes)
+
+        if tagname in self._parameter_handlers:
+            # If a handler of this class already exists, ensure that the two handlers encode compatible science
+            old_handler = self._parameter_handlers[tagname]
+            old_handler.check_handler_compatibility(new_handler)
+            return_handler = old_handler
+        elif tagname in self._parameter_handler_classes:
+            # Otherwise, register this handler in the forcefield
+            self.register_parameter_handler(new_handler)
+            return_handler = new_handler
+
+        return return_handler
 
     def get_io_handler(self, io_format):
         """Retrieve the parameter handlers associated with the provided tagname.
-
-        If the parameter handler has not yet been instantiated, it will be created.
-        If a parameter handler object already exists, it will be checked for compatibility
-        and an Exception raised if it is incompatible with the provided kwargs.
+        If the parameter IO handler has not yet been instantiated, it will be created.
 
         Parameters
         ----------
@@ -598,8 +583,9 @@ class ForceField:
         if io_format in self._parameter_io_handlers.keys():
             io_handler = self._parameter_io_handlers[io_format]
         elif io_format in self._parameter_io_handler_classes.keys():
-            new_ph_class = self._parameter_io_handler_classes[io_format]
-            io_handler = self.register_parameter_io_handler(new_ph_class)
+            new_handler_class = self._parameter_io_handler_classes[io_format]
+            io_handler = new_handler_class()
+            self.register_parameter_io_handler(io_handler)
         if io_handler is None:
             msg = "Cannot find a registered parameter IO handler for format '{}'\n".format(
                 io_format)

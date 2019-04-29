@@ -487,6 +487,18 @@ class TestForceField():
 
 
 
+    def test_load_two_sources(self):
+        """Test loading data from two SMIRNOFF data sources"""
+        ff = ForceField(simple_xml_ff, xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
+        assert len(ff.get_handler('Bonds').parameters) == 4
+
+    def test_load_two_sources_incompatible_tags(self):
+        """Test loading data from two SMIRNOFF data sources which have incompatible physics"""
+        # Make an XML forcefield with a modifiedvdW 1-4 scaling factor
+        nonstandard_xml_ff = xml_ff_w_comments.replace('scale14="0.5"', 'scale14="1.0"')
+        with pytest.raises(IncompatibleParameterError, match="handler value: 0.5, incompatible value: 1.0") as excinfo:
+            ff = ForceField(simple_xml_ff, nonstandard_xml_ff)
+
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_ethanol(self, toolkit_registry, registry_description):
         from simtk.openmm import app
@@ -728,8 +740,6 @@ class TestForceField():
         for particle_index in range(topology.n_topology_particles):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != (0. * unit.elementary_charge)
-        #from simtk.openmm import XmlSerializer
-        #print(XmlSerializer.serialize(omm_system))
 
 
 
