@@ -464,10 +464,6 @@ class TestParameterType:
 # TODO: test_nonbonded_settings (ensure that choices in Electrostatics and vdW tags resolve
 #                                to correct openmm.NonbondedForce subtypes, that setting different cutoffs raises
 #                                exceptions, etc)
-
-# TODO: test_extend_parameter_section
-
-
 # TODO: test_(all attributes of all ParameterTypes)
 # TODO: test_add_parameter_fractional_bondorder
 # TODO: test_get_indexed_attrib

@@ -1101,8 +1101,7 @@ class BondHandler(ParameterHandler):
                                     other_handler):
         """
         Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
-        will be assumed to expect the ParameterHandler class default.
+        called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
@@ -1225,8 +1224,7 @@ class AngleHandler(ParameterHandler):
                                     other_handler):
         """
         Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
-        will be assumed to expect the ParameterHandler class default.
+        called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
@@ -1339,8 +1337,7 @@ class ProperTorsionHandler(ParameterHandler):
                                     other_handler):
         """
         Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
-        will be assumed to expect the ParameterHandler class default.
+        called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
@@ -1454,8 +1451,7 @@ class ImproperTorsionHandler(ParameterHandler):
                                     other_handler):
         """
         Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
-        will be assumed to expect the ParameterHandler class default.
+        called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
@@ -1701,7 +1697,7 @@ class vdWHandler(ParameterHandler):
     @property
     def switch_width(self):
         """The switching width used for long-range van der Waals interactions"""
-        return self.switch_width
+        return self._switch_width
 
     @switch_width.setter
     def switch_width(self, other):
@@ -1711,7 +1707,7 @@ class vdWHandler(ParameterHandler):
             raise IncompatibleParameterError(
                 f"Attempted to set vdW switch_width to {other}, which is not compatible with "
                 f"expected unit {unit_to_check}")
-        self.switch_width = other
+        self._switch_width = other
 
     def _validate_parameters(self):
         """
@@ -1764,8 +1760,7 @@ class vdWHandler(ParameterHandler):
                                     other_handler):
         """
         Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
-        will be assumed to expect the ParameterHandler class default.
+        called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
@@ -1998,8 +1993,7 @@ class ElectrostaticsHandler(ParameterHandler):
                                     other_handler):
         """
         Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
-        will be assumed to expect the ParameterHandler class default.
+        called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
@@ -2147,8 +2141,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
                                     assume_missing_is_default=True):
         """
         Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
-        will be assumed to expect the ParameterHandler class default.
+        called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
@@ -2360,8 +2353,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
                                     assume_missing_is_default=True):
         """
         Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
-        will be assumed to expect the ParameterHandler class default.
+        called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------

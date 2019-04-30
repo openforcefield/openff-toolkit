@@ -258,17 +258,8 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         """
         xml_string = self.to_string(smirnoff_data)
-        #(basename, extension) = os.path.splitext(filename)
-        #if extension == '.offxml' or extension == '.xml':
         with open(filename, 'w') as of:
             of.write(xml_string)
-        # else:
-        #     msg = "Cannot export forcefield parameters to file '{}'\n".format(
-        #         filename)
-        #     msg += 'Export to extension {} not implemented yet.\n'.format(
-        #         extension)
-        #     msg += "Supported choices are: ['.offxml']"
-        #     raise NotImplementedError(msg)
 
     def to_string(self, smirnoff_data):
         """

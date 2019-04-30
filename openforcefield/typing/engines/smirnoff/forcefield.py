@@ -407,7 +407,9 @@ class ForceField:
 
         Parameters
         ----------
-        parameter_io_handler :  ParameterIOHandler
+        parameter_io_handler :  A ParameterIOHandler-derived object
+            The ParameterIOHandler to register. The FORMAT attribute of this object will be used
+            to associate it to a file format/suffix.
 
         """
         io_format = parameter_io_handler._FORMAT
@@ -426,7 +428,8 @@ class ForceField:
     def _check_for_missing_valence_terms(name, topology, assigned_terms,
                                          topological_terms):
         """
-        Check to ensure there are no missing valence terms in the given topology, identifying potential gaps in parameter coverage.
+        Check to ensure there are no missing valence terms in the given topology, identifying potential gaps in
+        parameter coverage.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -510,7 +513,7 @@ class ForceField:
 
         Parameters
         ----------
-        tagame : str
+        tagname : str
             The name of the parameter to be handled.
         handler_kwargs : dict, optional. Default = None
             Dict to be passed to the handler for construction or checking compatibility. If None, will be assumed
@@ -611,8 +614,8 @@ class ForceField:
             Support for multiple files is primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
         permit_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs present in the source.
-        .. notes ::
 
+        .. notes ::
            * New SMIRNOFF sections are handled independently, as if they were specified in the same file.
            * If a SMIRNOFF section that has already been read appears again, its definitions are appended to the end of the previously-read
              definitions if the sections are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
