@@ -549,7 +549,9 @@ class ForceField:
         if tagname in self._parameter_handlers:
             # If a handler of this class already exists, ensure that the two handlers encode compatible science
             old_handler = self._parameter_handlers[tagname]
-            old_handler.check_handler_compatibility(new_handler)
+            # If no handler kwargs were provided, skip the compatibility check
+            if handler_kwargs != {}:
+                old_handler.check_handler_compatibility(new_handler)
             return_handler = old_handler
         elif tagname in self._parameter_handler_classes:
             # Otherwise, register this handler in the forcefield
