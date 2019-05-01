@@ -1806,6 +1806,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Chem.SanitizeMol(rdmol, (Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^
                                  Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_CLEANUPCHIRALITY))
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+        Chem.Kekulize(rdmol)
+
         # Make sure the bond stereo tags are set before checking for
         # undefined stereo. RDKit can figure out bond stereo from other
         # information in the Mol object like bond direction properties.
@@ -1878,13 +1880,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             a2 = rdb.GetEndAtomIdx()
 
             # Determine bond aromaticity and Kekulized bond order
-            is_aromatic = False
+            is_aromatic = rdb.GetIsAromatic()
             order = rdb.GetBondTypeAsDouble()
-            if order == 1.5:
-                # get the bond order for this bond in the kekulized molecule
-                order = rdmol.GetBondWithIdx(
-                    rdb.GetIdx()).GetBondTypeAsDouble()
-                is_aromatic = True
             # Convert floating-point bond order to integral bond order
             order = int(order)
 
