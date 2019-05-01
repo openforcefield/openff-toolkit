@@ -1472,7 +1472,7 @@ class Topology(Serializable):
         # Set functions for determining equality between nodes and edges
         node_match_func = lambda x, y: x['atomic_number'] == y['atomic_number']
         if omm_has_bond_orders:
-            edge_match_func = lambda x, y: x['order'] == y['order']
+            edge_match_func = lambda x, y: x['bond_order'] == y['bond_order']
         else:
             edge_match_func = None
 
@@ -1499,7 +1499,7 @@ class Topology(Serializable):
                 atom.index, atomic_number=atom.element.atomic_number)
         for bond in openmm_topology.bonds():
             omm_topology_G.add_edge(
-                bond.atom1.index, bond.atom2.index, order=bond.order)
+                bond.atom1.index, bond.atom2.index, bond_order=bond.order)
 
         # For each connected subgraph (molecule) in the topology, find its match in unique_molecules
         topology_molecules_to_add = list()
@@ -1547,20 +1547,86 @@ class Topology(Serializable):
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
 
-    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
-    #       Given the recent (2019_04) discussions about potential loss of parameters during conversion, we should
-    #       revisit this function to determine what sorts of guarantees we can put on system correctness before
-    #       we expose it.
-    def _to_openmm(self):
+    def to_openmm(self):
         """
         Create an OpenMM Topology object.
+
+        The OpenMM ``Topology`` object will have one residue per topology
+        molecule. Currently, the number of chains depends on how many copies
+        of the same molecule are in the ``Topology``. Molecules with more
+        than 5 copies are all assigned to a single chain, otherwise one
+        chain is created for each molecule. This behavior may change in
+        the future.
 
         Parameters
         ----------
         openmm_topology : simtk.openmm.app.Topology
             An OpenMM Topology object
         """
-        raise NotImplementedError
+        from simtk.openmm.app import Topology as OMMTopology
+        from simtk.openmm.app import Single, Double, Triple, Aromatic
+        from simtk.openmm.app.element import Element as OMMElement
+
+        omm_topology = OMMTopology()
+
+        # Keep track of which chains and residues have been added.
+        mol_to_chains = {}
+        mol_to_residues = {}
+
+        # Go through atoms in OpenFF to preserve the order.
+        omm_atoms = []
+        # We need to iterate over the topology molecules if we want to
+        # keep track of chains/residues as Atom.topology_molecule is
+        # instantiated every time and can't be used as a key.
+        for topology_molecule in self.topology_molecules:
+            for atom in topology_molecule.atoms:
+                reference_molecule = topology_molecule.reference_molecule
+                n_molecules = len(self._reference_molecule_to_topology_molecules[reference_molecule])
+
+                # Add 1 chain per molecule unless there are more than 5 copies,
+                # in which case we add a single chain for all of them.
+                if n_molecules <= 5:
+                    # We associate a chain to each molecule.
+                    key_molecule = topology_molecule
+                else:
+                    # We associate a chain to all the topology molecule.
+                    key_molecule = reference_molecule
+
+                # Create a new chain if it doesn't exit.
+                try:
+                    chain = mol_to_chains[key_molecule]
+                except KeyError:
+                    chain = omm_topology.addChain()
+                    mol_to_chains[key_molecule] = chain
+
+                # Add one molecule for each topology molecule.
+                try:
+                    residue = mol_to_residues[topology_molecule]
+                except KeyError:
+                    residue = omm_topology.addResidue(reference_molecule.name, chain)
+                    mol_to_residues[topology_molecule] = residue
+
+                # Add atom.
+                element = OMMElement.getByAtomicNumber(atom.atomic_number)
+                omm_atom = omm_topology.addAtom(atom.atom.name, element, residue)
+
+                # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
+                assert atom.topology_atom_index == int(omm_atom.id)-1
+                omm_atoms.append(omm_atom)
+
+        # Add all bonds.
+        bond_types = {
+            1: Single,
+            2: Double,
+            3: Triple
+        }
+        for bond in self.topology_bonds:
+            atom1, atom2 = bond.atoms
+            atom1_idx, atom2_idx = atom1.topology_atom_index, atom2.topology_atom_index
+            bond_type = Aromatic if bond.bond.is_aromatic else bond_types[bond.bond_order]
+            omm_topology.addBond(omm_atoms[atom1_idx], omm_atoms[atom2_idx],
+                                 type=bond_type, order=bond.bond_order)
+        return omm_topology
 
     @staticmethod
     def from_mdtraj(mdtraj_topology, unique_molecules=None):

@@ -41,9 +41,9 @@ from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWra
 # TEST UTILITIES
 #=============================================================================================
 
-requires_openeye = pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(),
+requires_openeye = pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
                                       reason='Test requires OE toolkit')
-requires_rdkit = pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(),
+requires_rdkit = pytest.mark.skipif(not RDKitToolkitWrapper.is_available(),
                                     reason='Test requires RDKit')
 
 
