@@ -89,7 +89,6 @@ class ParameterIOHandler:
 
         """
         pass
-        #self._forcefield = forcefield
 
     def parse_file(self, filename):
         """
@@ -305,25 +304,4 @@ class XMLParameterIOHandler(ParameterIOHandler):
         prepend_all_keys(smirnoff_data['SMIRNOFF'])
         return xmltodict.unparse(smirnoff_data, pretty=True)
 
-    def to_xml(self, smirnoff_data):
-        """Render the forcefield parameter set to XML.
 
-        Returns
-        -------
-        smirnoff_data : dict
-            A dictionary structures in comliance with the SMIRNOFF data spec.
-        """
-        return self.to_string(smirnoff_data)
-
-    # # TODO: Do we need this? Should we use built-in dict-based serialization?
-    # def __getstate__(self):
-    #     """Serialize to XML.
-    #     """
-    #     return self.to_xml()
-    #
-    # # TODO: Do we need this? Should we use built-in dict-based serialization?
-    # def __setstate__(self, state):
-    #     """Deserialize from XML.
-    #     """
-    #     self._initialize()
-    #     self.parse_xml(state)
