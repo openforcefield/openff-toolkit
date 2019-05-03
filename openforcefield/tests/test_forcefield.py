@@ -153,8 +153,6 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
 '''
 
 
-
-
 #======================================================================
 # TEST UTILITY FUNCTIONS
 #======================================================================
@@ -423,8 +421,7 @@ class TestForceField():
         assert 'cosmetic_element="why not?"' not in string_3
         assert 'parameterize_eval="blah=blah2"' not in string_3
 
-    @pytest.mark.parametrize('filename_extension', ['xml', 'XML', '.xml', '.XML',
-                                                    'offxml', 'OFFXML', '.offxml', '.OFFXML'])
+    @pytest.mark.parametrize('filename_extension', ['xml', 'XML', 'offxml', 'OFFXML'])
     @pytest.mark.parametrize('specified_format', [None, 'xml', 'XML', '.xml', '.XML',
                                                   'offxml', 'OFFXML', '.offxml', '.OFFXML'])
     def test_xml_file_roundtrip(self, filename_extension, specified_format):
@@ -441,8 +438,7 @@ class TestForceField():
         assert open(iofile1.name).read() == open(iofile2.name).read()
 
 
-    @pytest.mark.parametrize('filename_extension', ['xml', 'XML', '.xml', '.XML',
-                                                    'offxml', 'OFFXML', '.offxml', '.OFFXML'])
+    @pytest.mark.parametrize('filename_extension', ['xml', 'XML', 'offxml', 'OFFXML'])
     @pytest.mark.parametrize('specified_format', [None, 'xml', 'XML', '.xml', '.XML',
                                                   'offxml', 'OFFXML', '.offxml', '.OFFXML'])
     def test_xml_file_roundtrip_keep_cosmetic(self, filename_extension, specified_format):
@@ -490,7 +486,7 @@ class TestForceField():
     def test_load_two_sources(self):
         """Test loading data from two SMIRNOFF data sources"""
         ff = ForceField(simple_xml_ff, xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
-        assert len(ff.get_handler('Bonds').parameters) == 4
+        assert len(ff.get_parameter_handler('Bonds').parameters) == 4
 
     def test_load_two_sources_incompatible_tags(self):
         """Test loading data from two SMIRNOFF data sources which have incompatible physics"""
@@ -537,12 +533,8 @@ class TestForceField():
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
         molecules.append(Molecule.from_smiles('C1CCCCC1'))
-        # molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
-        #                                                                      'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         topology.box_vectors = None
-        #forcefield.get_handler("Electrostatics", {})._method = "Coulomb"
-        #forcefield.get_handler("vdW", {})._method = "cutoff"
 
         omm_system = forcefield.create_openmm_system(topology)
 
@@ -775,8 +767,8 @@ class TestForceField():
 
         molecules = [create_ethanol()]
         forcefield = ForceField('smirnoff99Frosst.offxml')
-        forcefield.get_handler('vdW', {})._method = vdw_method
-        forcefield.get_handler('Electrostatics', {})._method = electrostatics_method
+        forcefield.get_parameter_handler('vdW', {})._method = vdw_method
+        forcefield.get_parameter_handler('Electrostatics', {})._method = electrostatics_method
 
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)

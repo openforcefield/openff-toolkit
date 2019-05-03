@@ -148,21 +148,21 @@ class ForceField:
 
     Modify the long-range electrostatics method:
 
-    >>> forcefield.get_handler('Electrostatics').method = 'PME'
+    >>> forcefield.get_parameter_handler('Electrostatics').method = 'PME'
 
     Inspect the first few vdW parameters:
 
-    >>> low_precedence_parameters = forcefield.get_handler('vdW').parameters[0:3]
+    >>> low_precedence_parameters = forcefield.get_parameter_handler('vdW').parameters[0:3]
 
     Retrieve the vdW parameters by SMIRKS string and manipulate it:
 
-    >>> parameter = forcefield.get_handler('vdW').parameters['[#1:1]-[#7]']
+    >>> parameter = forcefield.get_parameter_handler('vdW').parameters['[#1:1]-[#7]']
     >>> parameter.sigma += 0.1 * unit.angstroms
     >>> parameter.epsilon *= 1.02
 
     Make a child vdW type more specific (checking modified SMIRKS for validity):
 
-    >>> forcefield.get_handler('vdW').parameters[-1].smirks += '~[#53]'
+    >>> forcefield.get_parameter_handler('vdW').parameters[-1].smirks += '~[#53]'
 
     .. warning ::
 
@@ -172,13 +172,13 @@ class ForceField:
 
     Delete a parameter:
 
-    >>> del forcefield.get_handler('vdW').parameters['[#1:1]-[#6X4]']
+    >>> del forcefield.get_parameter_handler('vdW').parameters['[#1:1]-[#6X4]']
 
     Insert a parameter at a specific point in the parameter tree:
 
     >>> from openforcefield.typing.engines.smirnoff import vdWHandler
     >>> new_parameter = vdWHandler.vdWType(smirks='[*:1]', epsilon=0.0157*unit.kilocalories_per_mole, rmin_half=0.6000*unit.angstroms)
-    >>> forcefield.get_handler('vdW').parameters.insert(0, new_parameter)
+    >>> forcefield.get_parameter_handler('vdW').parameters.insert(0, new_parameter)
 
     .. warning ::
 
@@ -503,7 +503,7 @@ class ForceField:
             raise Exception(
                 msg)  # TODO: Should we raise a more specific exception here?
 
-    def get_handler(self, tagname, handler_kwargs=None, permit_cosmetic_attributes=False):
+    def get_parameter_handler(self, tagname, handler_kwargs=None, permit_cosmetic_attributes=False):
         """Retrieve the parameter handlers associated with the provided tagname.
 
         If the parameter handler has not yet been instantiated, it will be created and returned.
@@ -560,7 +560,7 @@ class ForceField:
 
         return return_handler
 
-    def get_io_handler(self, io_format):
+    def get_parameter_io_handler(self, io_format):
         """Retrieve the parameter handlers associated with the provided tagname.
         If the parameter IO handler has not yet been instantiated, it will be created.
 
@@ -713,7 +713,7 @@ class ForceField:
                 continue
             # Handle cases where a parameter name has no info (eg. ToolkitAM1BCC)
             if l1_dict[parameter_name] is None:
-                handler = self.get_handler(parameter_name, {})
+                handler = self.get_parameter_handler(parameter_name, {})
                 continue
 
             # Otherwise, we expect this l1_key to correspond to a ParameterHandler
@@ -721,9 +721,9 @@ class ForceField:
 
             # Retrieve or create parameter handler, passing in section_dict to check for
             # compatibility if a handler for this parameter name already exists
-            handler = self.get_handler(parameter_name,
-                                       section_dict,
-                                       permit_cosmetic_attributes=permit_cosmetic_attributes)
+            handler = self.get_parameter_handler(parameter_name,
+                                                 section_dict,
+                                                 permit_cosmetic_attributes=permit_cosmetic_attributes)
             handler._add_parameters(section_dict,
                                     permit_cosmetic_attributes=permit_cosmetic_attributes)
 
@@ -756,7 +756,7 @@ class ForceField:
 
         # Parse content depending on type
         for parameter_io_format in io_formats_to_try:
-            parameter_io_handler = self.get_io_handler(parameter_io_format)
+            parameter_io_handler = self.get_parameter_io_handler(parameter_io_format)
 
             # Try parsing as a forcefield file or file-like object
             try:
@@ -789,7 +789,7 @@ class ForceField:
         raise IOError(msg)
 
 
-    def to_string(self, format, discard_cosmetic_attributes=True):
+    def to_string(self, format='XML', discard_cosmetic_attributes=True):
         """
         Write this Forcefield and all its associated parameters to a string in a given format which
         complies with the SMIRNOFF spec.
@@ -797,7 +797,7 @@ class ForceField:
 
         Parameters
         ----------
-        format : str
+        format : str, optional. Default='XML'
             The serialization format to write to
         discard_cosmetic_attributes : bool, default=True
             Whether to discard any non-spec attributes stored in the ForceField.
@@ -808,7 +808,7 @@ class ForceField:
             The string representation of the serialized forcefield
         """
         # Resolve which IO handler to use
-        io_handler = self.get_io_handler(format)
+        io_handler = self.get_parameter_io_handler(format)
 
         smirnoff_data = self._to_smirnoff_data(discard_cosmetic_attributes=discard_cosmetic_attributes)
         string_data = io_handler.to_string(smirnoff_data)
@@ -843,7 +843,7 @@ class ForceField:
             format = 'xml'
 
         # Resolve which IO handler to use
-        io_handler = self.get_io_handler(format)
+        io_handler = self.get_parameter_io_handler(format)
 
         # Write out the SMIRNOFF data to the IOHandler
         smirnoff_data = self._to_smirnoff_data(discard_cosmetic_attributes=discard_cosmetic_attributes)
@@ -877,8 +877,8 @@ class ForceField:
             else:
                 # TODO: Is it safe to pass "{}" as the handler_kwargs? If the handler doesn't exist, do we want to assume default values?
                 ordered_parameter_handlers.append(
-                    self.get_handler(tagname, {}))
-        #ordered_parameter_handlers = [ self.get_handler(tagname, {}) for tagname in nx.topological_sort(G) ]
+                    self.get_parameter_handler(tagname, {}))
+        #ordered_parameter_handlers = [ self.get_parameter_handler(tagname, {}) for tagname in nx.topological_sort(G) ]
         return ordered_parameter_handlers
 
     # TODO: Should we add convenience methods to parameterize a Topology and export directly to AMBER, gromacs, CHARMM, etc.?
