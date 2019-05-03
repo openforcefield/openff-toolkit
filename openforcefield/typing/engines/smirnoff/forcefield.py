@@ -384,7 +384,7 @@ class ForceField:
 
         Parameters
         ----------
-        parameter_handler : A ParameterHandler-derived object
+        parameter_handler : A ParameterHandler object
             The ParameterHandler to register. The TAGNAME attribute of this object will be used as the key for
             registration.
 
@@ -407,7 +407,7 @@ class ForceField:
 
         Parameters
         ----------
-        parameter_io_handler :  A ParameterIOHandler-derived object
+        parameter_io_handler :  A ParameterIOHandler object
             The ParameterIOHandler to register. The FORMAT attribute of this object will be used
             to associate it to a file format/suffix.
 

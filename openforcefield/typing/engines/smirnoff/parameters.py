@@ -163,7 +163,7 @@ class ParameterList(list):
 
         Parameters
         ----------
-        parameter : a ParameterType-derived object
+        parameter : a ParameterType object
 
         """
         # TODO: Ensure that newly added parameter is the same type as existing?
@@ -192,7 +192,7 @@ class ParameterList(list):
 
         Parameters
         ----------
-        item : ParameterType-derived object or str
+        item : ParameterType object or str
             The parameter or SMIRKS to look up in this ParameterList
 
         Returns
@@ -216,7 +216,7 @@ class ParameterList(list):
         ----------
         index : int
             The numerical position to insert the parameter at
-        parameter : a ParameterType-derived object
+        parameter : a ParameterType object
             The parameter to insert
         """
         # TODO: Ensure that newly added parameter is the same type as existing?
@@ -276,13 +276,13 @@ class ParameterList(list):
 
     def to_list(self, discard_cosmetic_attributes=True):
         """
-        Render this ParameterList to a normal list, serializing each ParameterType-derived object in it to dict.
+        Render this ParameterList to a normal list, serializing each ParameterType object in it to dict.
 
         Parameters
         ----------
 
         discard_cosmetic_attributes : bool, optional. Default = True
-            Whether to discard non-spec attributes of each ParameterType-derived object.
+            Whether to discard non-spec attributes of each ParameterType object.
 
         Returns
         -------
@@ -451,7 +451,7 @@ class ParameterType:
 
     def to_dict(self, discard_cosmetic_attributes=True):
         """
-        Convert this ParameterType-derived object to dict. A unit-bearing attribute ('X') will be converted to two dict
+        Convert this ParameterType object to dict. A unit-bearing attribute ('X') will be converted to two dict
         entries, one (['X'] containing the unitless value, and another (['X_unit']) containing a string representation
         of its unit.
 
@@ -464,7 +464,7 @@ class ParameterType:
         Returns
         -------
         smirnoff_dict : dict
-            The SMIRNOFF-compliant dict representation of this ParameterType-derived object.
+            The SMIRNOFF-compliant dict representation of this ParameterType object.
         output_units : dict[str: simtk.unit.Unit]
             A mapping from each simtk.unit.Quanitity-valued ParameterType attribute
             to the unit it was converted to during serialization.
@@ -768,8 +768,8 @@ class ParameterHandler:
 
         Returns
         -------
-        list of ParameterType-derived objects
-            A list of matching ParameterType-derived objects
+        list of ParameterType objects
+            A list of matching ParameterType objects
         """
         # TODO: This is a necessary API point for Lee-Ping's ForceBalance
         pass
@@ -1105,7 +1105,7 @@ class BondHandler(ParameterHandler):
 
         Parameters
         ----------
-        other_handler : a ParameterHandler-derived object
+        other_handler : a ParameterHandler object
             The handler to compare to.
 
         Raises
@@ -1228,7 +1228,7 @@ class AngleHandler(ParameterHandler):
 
         Parameters
         ----------
-        other_handler : a ParameterHandler-derived object
+        other_handler : a ParameterHandler object
             The handler to compare to.
 
         Raises
@@ -1341,7 +1341,7 @@ class ProperTorsionHandler(ParameterHandler):
 
         Parameters
         ----------
-        other_handler : a ParameterHandler-derived object
+        other_handler : a ParameterHandler object
             The handler to compare to.
 
         Raises
@@ -1455,7 +1455,7 @@ class ImproperTorsionHandler(ParameterHandler):
 
         Parameters
         ----------
-        other_handler : a ParameterHandler-derived object
+        other_handler : a ParameterHandler object
             The handler to compare to.
 
         Raises
@@ -1764,7 +1764,7 @@ class vdWHandler(ParameterHandler):
 
         Parameters
         ----------
-        other_handler : a ParameterHandler-derived object
+        other_handler : a ParameterHandler object
             The handler to compare to.
 
         Raises
@@ -1997,7 +1997,7 @@ class ElectrostaticsHandler(ParameterHandler):
 
         Parameters
         ----------
-        other_handler : a ParameterHandler-derived object
+        other_handler : a ParameterHandler object
             The handler to compare to.
 
         Raises
@@ -2145,7 +2145,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
 
         Parameters
         ----------
-        other_handler : a ParameterHandler-derived object
+        other_handler : a ParameterHandler object
             The handler to compare to.
 
         Raises
@@ -2357,7 +2357,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
         Parameters
         ----------
-        other_handler : a ParameterHandler-derived object
+        other_handler : a ParameterHandler object
             The handler to compare to.
 
         Raises
