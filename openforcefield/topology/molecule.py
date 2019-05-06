@@ -2851,7 +2851,7 @@ class FrozenMolecule(Serializable):
         return Topology.from_molecules(self)
 
     @staticmethod
-    def from_file(filename,
+    def from_file(file_path,
                   file_format=None,
                   toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
                   allow_undefined_stereo=False):
@@ -2865,8 +2865,8 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        filename : str or file-like object
-            The name of the file or file-like object to stream one or more molecules from.
+        file_path : str or file-like object
+            The path to the file or file-like object to stream one or more molecules from.
         file_format : str, optional, default=None
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for your
@@ -2887,22 +2887,22 @@ class FrozenMolecule(Serializable):
         Examples
         --------
         >>> from openforcefield.tests.utils import get_monomer_mol2_file_path
-        >>> mol2_filename = get_monomer_mol2_file_path('cyclohexane')
-        >>> molecule = Molecule.from_file(mol2_filename)
+        >>> mol2_file_path = get_monomer_mol2_file_path('cyclohexane')
+        >>> molecule = Molecule.from_file(mol2_file_path)
 
         """
 
         if file_format is None:
-            if not (isinstance(filename, str)):
+            if not (isinstance(file_path, str)):
                 raise Exception(
                     "If providing a file-like object for reading molecules, the format must be specified"
                 )
             # Assume that files ending in ".gz" should use their second-to-last suffix for compatibility check
             # TODO: Will all cheminformatics packages be OK with gzipped files?
-            if filename[-3:] == '.gz':
-                file_format = filename.split('.')[-2]
+            if file_path[-3:] == '.gz':
+                file_format = file_path.split('.')[-2]
             else:
-                file_format = filename.split('.')[-1]
+                file_format = file_path.split('.')[-1]
         file_format = file_format.upper()
 
         # Determine which toolkit to use (highest priority that's compatible with input type)
@@ -2921,7 +2921,7 @@ class FrozenMolecule(Serializable):
                 raise NotImplementedError(
                     "No toolkits in registry can read file {} (format {}). Supported formats in the "
                     "provided ToolkitRegistry are {}".format(
-                        filename, file_format, supported_read_formats))
+                        file_path, file_format, supported_read_formats))
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
             # TODO: Encapsulate this logic in ToolkitWrapper?
@@ -2929,7 +2929,7 @@ class FrozenMolecule(Serializable):
             if file_format not in toolkit.toolkit_file_read_formats:
                 raise NotImplementedError(
                     "Toolkit {} can not read file {} (format {}). Supported formats for this toolkit "
-                    "are {}".format(toolkit.toolkit_name, filename,
+                    "are {}".format(toolkit.toolkit_name, file_path,
                                     file_format,
                                     toolkit.toolkit_file_read_formats))
         else:
@@ -2939,13 +2939,13 @@ class FrozenMolecule(Serializable):
 
         mols = list()
 
-        if isinstance(filename, str):
+        if isinstance(file_path, str):
             mols = toolkit.from_file(
-                filename,
+                file_path,
                 file_format=file_format,
                 allow_undefined_stereo=allow_undefined_stereo)
-        elif hasattr(filename, 'read'):
-            file_obj = filename
+        elif hasattr(file_path, 'read'):
+            file_obj = file_path
             mols = toolkit.from_file_obj(
                 file_obj,
                 file_format=file_format,
@@ -2953,22 +2953,22 @@ class FrozenMolecule(Serializable):
 
         if len(mols) == 0:
             raise Exception(
-                'Unable to read molecule from file: {}'.format(filename))
+                'Unable to read molecule from file: {}'.format(file_path))
         elif len(mols) == 1:
             return mols[0]
         return mols
 
     def to_file(self,
-                outfile,
-                outfile_format,
+                file_path,
+                file_format,
                 toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Write the current molecule to a file or file-like object
 
         Parameters
         ----------
-        outfile : str or file-like object
-            A file-like object or the filename of the file to be written to
-        outfile_format : str
+        file_path : str or file-like object
+            A file-like object or the path to the file to be written.
+        file_format : str
             Format specifier, one of ['MOL2', 'MOL2H', 'SDF', 'PDB', 'SMI', 'CAN', 'TDT']
             Note that not all toolkits support all formats
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper,
@@ -2979,15 +2979,15 @@ class FrozenMolecule(Serializable):
         Raises
         ------
         ValueError
-            If the requested outfile_format is not supported by one of the installed cheminformatics toolkits
+            If the requested file_format is not supported by one of the installed cheminformatics toolkits
 
         Examples
         --------
 
         >>> molecule = Molecule.from_iupac('imatinib')
-        >>> molecule.to_file('imatinib.mol2', outfile_format='mol2')  # doctest: +SKIP
-        >>> molecule.to_file('imatinib.sdf', outfile_format='sdf')  # doctest: +SKIP
-        >>> molecule.to_file('imatinib.pdb', outfile_format='pdb')  # doctest: +SKIP
+        >>> molecule.to_file('imatinib.mol2', file_format='mol2')  # doctest: +SKIP
+        >>> molecule.to_file('imatinib.sdf', file_format='sdf')  # doctest: +SKIP
+        >>> molecule.to_file('imatinib.pdb', file_format='pdb')  # doctest: +SKIP
 
         """
 
@@ -3002,16 +3002,16 @@ class FrozenMolecule(Serializable):
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
-        outfile_format = outfile_format.upper()
+        file_format = file_format.upper()
 
         # Take the first toolkit that can write the desired output format
         toolkit = None
         for query_toolkit in toolkit_registry.registered_toolkits:
-            if outfile_format in query_toolkit.toolkit_file_write_formats:
+            if file_format in query_toolkit.toolkit_file_write_formats:
                 toolkit = query_toolkit
                 break
 
-        # Raise an exception if no toolkit was found to provide the requested outfile_format
+        # Raise an exception if no toolkit was found to provide the requested file_format
         if toolkit is None:
             supported_formats = {}
             for toolkit in toolkit_registry.registered_toolkits:
@@ -3019,15 +3019,15 @@ class FrozenMolecule(Serializable):
                     toolkit.toolkit_name] = toolkit.toolkit_file_write_formats
             raise ValueError(
                 'The requested file format ({}) is not available from any of the installed toolkits '
-                '(supported formats: {})'.format(outfile_format,
+                '(supported formats: {})'.format(file_format,
                                                  supported_formats))
 
         # Write file
-        if type(outfile) == str:
+        if type(file_path) == str:
             # Open file for writing
-            toolkit.to_file(self, outfile, outfile_format)
+            toolkit.to_file(self, file_path, file_format)
         else:
-            toolkit.to_file_obj(self, outfile, outfile_format)
+            toolkit.to_file_obj(self, file_path, file_format)
 
     @staticmethod
     @RDKitToolkitWrapper.requires_toolkit()

@@ -210,7 +210,7 @@ class ToolkitWrapper:
         return NotImplementedError
 
     def from_file(self,
-                  filename,
+                  file_path,
                   file_format,
                   allow_undefined_stereo=False):
         """
@@ -218,7 +218,7 @@ class ToolkitWrapper:
         
         Parameters
         ----------
-        filename : str
+        file_path : str
             The file to read the molecule from
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
@@ -365,7 +365,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_file(self,
-                  filename,
+                  file_path,
                   file_format,
                   allow_undefined_stereo=False):
         """
@@ -373,7 +373,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Parameters
         ----------
-        filename : str
+        file_path : str
             The file to read the molecule from
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
@@ -404,8 +404,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         from openeye import oechem
-        ifs = oechem.oemolistream(filename)
-        return self._read_oemolistream_molecules(ifs, allow_undefined_stereo, file_path=filename)
+        ifs = oechem.oemolistream(file_path)
+        return self._read_oemolistream_molecules(ifs, allow_undefined_stereo, file_path=file_path)
 
     def from_file_obj(self,
                       file_obj,
@@ -447,7 +447,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return self._read_oemolistream_molecules(ifs, allow_undefined_stereo)
 
-    def to_file_obj(self, molecule, file_obj, outfile_format):
+    def to_file_obj(self, molecule, file_obj, file_format):
         """
         Writes an OpenFF Molecule to a file-like object
 
@@ -457,7 +457,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The molecule to write
         file_obj
             The file-like object to write to
-        outfile_format
+        file_format
             The format for writing the molecule data
 
         """
@@ -469,16 +469,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # TODO: This is inefficiently implemented. Is there any way to attach a file-like object to an oemolstream?
         with temporary_directory() as tmpdir:
             with temporary_cd(tmpdir):
-                outfile = 'temp_molecule.' + outfile_format
+                outfile = 'temp_molecule.' + file_format
                 ofs = oechem.oemolostream(outfile)
-                openeye_format = getattr(oechem, 'OEFormat_' + outfile_format)
+                openeye_format = getattr(oechem, 'OEFormat_' + file_format)
                 ofs.SetFormat(openeye_format)
                 oechem.OEWriteMolecule(ofs, oemol)
                 ofs.close()
                 file_data = open(outfile).read()
         file_obj.write(file_data)
 
-    def to_file(self, molecule, outfile, outfile_format):
+    def to_file(self, molecule, file_path, file_format):
         """
         Writes an OpenFF Molecule to a file-like object
 
@@ -486,16 +486,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : an OpenFF Molecule
             The molecule to write
-        outfile
-            The filename to write to
-        outfile_format
+        file_path
+            The file path to write to.
+        file_format
             The format for writing the molecule data
 
         """
         from openeye import oechem
         oemol = self.to_openeye(molecule)
-        ofs = oechem.oemolostream(outfile)
-        openeye_format = getattr(oechem, 'OEFormat_' + outfile_format)
+        ofs = oechem.oemolostream(file_path)
+        openeye_format = getattr(oechem, 'OEFormat_' + file_format)
         ofs.SetFormat(openeye_format)
         oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
@@ -1472,7 +1472,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_file(self,
-                  filename,
+                  file_path,
                   file_format,
                   allow_undefined_stereo=False):
         """
@@ -1482,7 +1482,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         Parameters
         ----------
-        filename : str
+        file_path : str
             The file to read the molecule from
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
@@ -1500,7 +1500,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         mols = list()
         if (file_format == 'MOL') or (file_format == 'SDF'):
-            for rdmol in Chem.SupplierFromFilename(filename, removeHs=False, sanitize=False, strictParsing=True):
+            for rdmol in Chem.SupplierFromFilename(file_path, removeHs=False, sanitize=False, strictParsing=True):
                 if rdmol is None:
                     continue
 
@@ -1523,7 +1523,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # just adding H's, but could get fancier in the future). It might be
             # worthwhile to parse the SMILES file ourselves and pass each SMILES
             # through the from_smiles function instead
-            for rdmol in Chem.SmilesMolSupplier(filename):
+            for rdmol in Chem.SmilesMolSupplier(file_path):
                 rdmol = Chem.AddHs(rdmol)
                 mol = Molecule.from_rdkit(rdmol)
                 mols.append(mol)
@@ -1534,7 +1534,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 "is likely to be lost.")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
             # https://github.com/openforcefield/openforcefield/issues/121
-            # rdmol = Chem.MolFromPDBFile(filename, removeHs=False)
+            # rdmol = Chem.MolFromPDBFile(file_path, removeHs=False)
             # mol = Molecule.from_rdkit(rdmol)
             # mols.append(mol)
             # TODO: Add SMI, TDT(?) support
@@ -1600,7 +1600,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # TODO: TDT file support
         return mols
 
-    def to_file_obj(self, molecule, file_obj, outfile_format):
+    def to_file_obj(self, molecule, file_obj, file_format):
         """
         Writes an OpenFF Molecule to a file-like object
 
@@ -1610,7 +1610,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             The molecule to write
         file_obj
             The file-like object to write to
-        outfile_format
+        file_format
             The format for writing the molecule data
 
         Returns
@@ -1618,7 +1618,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
-        outfile_format = outfile_format.upper()
+        file_format = file_format.upper()
         rdmol = self.to_rdkit(molecule)
         rdkit_writers = {
             'SDF': Chem.SDWriter,
@@ -1626,11 +1626,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             'SMI': Chem.SmilesWriter,
             'TDT': Chem.TDTWriter
         }
-        writer = rdkit_writers[outfile_format](file_obj)
+        writer = rdkit_writers[file_format](file_obj)
         writer.write(rdmol)
         writer.close()
 
-    def to_file(self, molecule, outfile, outfile_format):
+    def to_file(self, molecule, file_path, file_format):
         """
         Writes an OpenFF Molecule to a file-like object
 
@@ -1638,9 +1638,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : an OpenFF Molecule
             The molecule to write
-        outfile
-            The filename to write to
-        outfile_format
+        file_path
+            The file path to write to
+        file_format
             The format for writing the molecule data
 
         Returns
@@ -1648,8 +1648,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
-        outfile_format = outfile_format.upper()
-        with open(outfile, 'w') as file_obj:
+        file_format = file_format.upper()
+        with open(file_path, 'w') as file_obj:
             rdmol = self.to_rdkit(molecule)
             rdkit_writers = {
                 'SDF': Chem.SDWriter,
@@ -1657,7 +1657,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 'SMI': Chem.SmilesWriter,
                 'TDT': Chem.TDTWriter
             }
-            writer = rdkit_writers[outfile_format](file_obj)
+            writer = rdkit_writers[file_format](file_obj)
             writer.write(rdmol)
             writer.close()
 
@@ -2591,7 +2591,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         #         # Write out molecule in SDF format
         #         ## TODO: How should we handle multiple conformers?
         #         self._rdkit_toolkit_wrapper.to_file(
-        #             molecule, 'molecule.sdf', outfile_format='sdf')
+        #             molecule, 'molecule.sdf', file_format='sdf')
         #         #os.system('ls')
         #         #os.system('cat molecule.sdf')
         #         # Compute desired charges
@@ -2677,7 +2677,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # Write out molecule in SDF format
                 ## TODO: How should we handle multiple conformers?
                 self._rdkit_toolkit_wrapper.to_file(
-                    molecule, 'molecule.sdf', outfile_format='sdf')
+                    molecule, 'molecule.sdf', file_format='sdf')
                 #os.system('ls')
                 #os.system('cat molecule.sdf')
                 # Compute desired charges
