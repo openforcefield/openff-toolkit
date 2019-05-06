@@ -21,12 +21,13 @@ from simtk import openmm, unit
 import numpy as np
 
 import pytest
+from tempfile import NamedTemporaryFile
+
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
-
 from openforcefield.utils import get_data_filename
-
 from openforcefield.topology import Molecule, Topology
-from openforcefield.typing.engines.smirnoff import ForceField, IncompatibleParameterError
+from openforcefield.typing.engines.smirnoff import ForceField, IncompatibleParameterError, SMIRNOFFSpecError
+from openforcefield.typing.engines.smirnoff import XMLParameterIOHandler
 
 
 #======================================================================
@@ -131,7 +132,7 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
     <Bond smirks="[#6X4:1]-[#6X3:2]" id="b2" k="634.0" length="1.51"/>
   </Bonds>
   <!-- WARNING: AMBER functional forms drop the factor of 2 in the angle energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
-  <Angles angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2">
+  <Angles angle_unit="degrees" k_unit="kilocalories_per_mole/radian**2" cosmetic_element="why not?">
     <Angle smirks="[*:1]~[#6X4:2]-[*:3]" angle="109.5" id="a1" k="100.0"/>
     <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.5" id="a2" k="70.0"/>
   </Angles>
@@ -377,19 +378,124 @@ class TestForceField():
 
     def test_xml_string_roundtrip(self):
         """
-        Test
-        1) loading a forcefield from string
-        2) writing it to an XML string ("string_1")
-        3) Initialize "forcefield_2" using "string_1"
-        4) serialize "forcefield_2" to "string_2"
-        5) Check that "string_1" is equal to "string_2"
-
+        Test writing a ForceField to an XML string
         """
         forcefield_1 = ForceField(simple_xml_ff)
-        string_1 = forcefield_1._parameter_io_handlers['XML'].to_string(forcefield_1.to_smirnoff_data())
+        string_1 = forcefield_1.to_string('XML')
         forcefield_2 = ForceField(string_1)
-        string_2 = forcefield_2._parameter_io_handlers['XML'].to_string(forcefield_2.to_smirnoff_data())
+        string_2 = forcefield_2.to_string('XML')
         assert string_1 == string_2
+
+
+    def test_xml_string_roundtrip_keep_cosmetic(self):
+        """
+        Test roundtripping a forcefield to an XML string with and without retaining cosmetic elements
+        """
+        # Ensure an exception is raised if we try to read the XML string with cosmetic attributes
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
+            forcefield = ForceField(xml_ff_w_cosmetic_elements)
+
+        # Create a forcefield from XML successfully, by explicitly permitting cosmetic attributes
+        forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
+
+        # Convert the forcefield back to XML
+        string_1 = forcefield_1.to_string('XML', discard_cosmetic_attributes=False)
+
+        # Ensure that the new XML string has cosmetic attributes in it
+        assert 'cosmetic_element="why not?"' in string_1
+        assert 'parameterize_eval="blah=blah2"' in string_1
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
+            forcefield = ForceField(string_1, permit_cosmetic_attributes=False)
+
+        # Complete the forcefield_1 --> string --> forcefield_2 roundtrip
+        forcefield_2 = ForceField(string_1, permit_cosmetic_attributes=True)
+
+        # Ensure that the forcefield remains the same after the roundtrip
+        string_2 = forcefield_2.to_string('XML', discard_cosmetic_attributes=False)
+        assert string_1 == string_2
+
+        # Discard the cosmetic attributes and ensure that the string is different
+        string_3 = forcefield_2.to_string('XML', discard_cosmetic_attributes=True)
+        assert string_1 != string_3
+        # Ensure that the new XML string does NOT have cosmetic attributes in it
+        assert 'cosmetic_element="why not?"' not in string_3
+        assert 'parameterize_eval="blah=blah2"' not in string_3
+
+    @pytest.mark.parametrize('filename_extension', ['xml', 'XML', 'offxml', 'OFFXML'])
+    @pytest.mark.parametrize('specified_format', [None, 'xml', 'XML', '.xml', '.XML',
+                                                  'offxml', 'OFFXML', '.offxml', '.OFFXML',
+                                                  XMLParameterIOHandler()])
+    def test_xml_file_roundtrip(self, filename_extension, specified_format):
+        """
+        Test roundtripping a ForceField to and from an XML file
+        """
+        # These files will be deleted once garbage collection runs (end of this function)
+        iofile1 = NamedTemporaryFile(suffix='.' + filename_extension)
+        iofile2 = NamedTemporaryFile(suffix='.' + filename_extension)
+        forcefield_1 = ForceField(simple_xml_ff)
+        forcefield_1.to_file(iofile1.name, io_format=specified_format)
+        forcefield_2 = ForceField(iofile1.name)
+        forcefield_2.to_file(iofile2.name, io_format=specified_format)
+        assert open(iofile1.name).read() == open(iofile2.name).read()
+
+
+    @pytest.mark.parametrize('filename_extension', ['xml', 'XML', 'offxml', 'OFFXML'])
+    @pytest.mark.parametrize('specified_format', [None, 'xml', 'XML', '.xml', '.XML',
+                                                  'offxml', 'OFFXML', '.offxml', '.OFFXML',
+                                                  XMLParameterIOHandler()])
+    def test_xml_file_roundtrip_keep_cosmetic(self, filename_extension, specified_format):
+        """
+        Test roundtripping a forcefield to an XML file with and without retaining cosmetic elements
+        """
+        # These files will be deleted once garbage collection runs (end of this function)
+        iofile1 = NamedTemporaryFile(suffix='.' + filename_extension)
+        iofile2 = NamedTemporaryFile(suffix='.' + filename_extension)
+        iofile3 = NamedTemporaryFile(suffix='.' + filename_extension)
+
+        # Ensure an exception is raised if we try to read the XML string with cosmetic attributes
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
+            forcefield = ForceField(xml_ff_w_cosmetic_elements)
+
+        # Create a forcefield from XML successfully
+        forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
+
+        # Convert the forcefield back to XML, keeping cosmetic attributes
+        forcefield_1.to_file(iofile1.name, discard_cosmetic_attributes=False, io_format=specified_format)
+
+        # Ensure that the new XML string has cosmetic attributes in it
+        assert 'cosmetic_element="why not?"' in open(iofile1.name).read()
+        assert 'parameterize_eval="blah=blah2"' in open(iofile1.name).read()
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
+            forcefield = ForceField(iofile1.name, permit_cosmetic_attributes=False)
+
+        # Complete the forcefield_1 --> file --> forcefield_2 roundtrip
+        forcefield_2 = ForceField(iofile1.name, permit_cosmetic_attributes=True)
+
+        # Ensure that the forcefield remains the same after the roundtrip
+        forcefield_2.to_file(iofile2.name, discard_cosmetic_attributes=False, io_format=specified_format)
+        assert open(iofile1.name).read() == open(iofile2.name).read()
+
+        # Discard the cosmetic attributes and ensure that the string is different
+        forcefield_2.to_file(iofile3.name, discard_cosmetic_attributes=True, io_format=specified_format)
+        assert open(iofile1.name).read() != open(iofile3.name).read()
+
+        # Ensure that the new XML string does NOT have cosmetic attributes in it
+        assert 'cosmetic_element="why not?"' not in open(iofile3.name).read()
+        assert 'parameterize_eval="blah=blah2"' not in open(iofile3.name).read()
+
+
+
+    def test_load_two_sources(self):
+        """Test loading data from two SMIRNOFF data sources"""
+        ff = ForceField(simple_xml_ff, xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
+        assert len(ff.get_parameter_handler('Bonds').parameters) == 4
+
+    def test_load_two_sources_incompatible_tags(self):
+        """Test loading data from two SMIRNOFF data sources which have incompatible physics"""
+        # Make an XML forcefield with a modifiedvdW 1-4 scaling factor
+        nonstandard_xml_ff = xml_ff_w_comments.replace('scale14="0.5"', 'scale14="1.0"')
+        with pytest.raises(IncompatibleParameterError, match="handler value: 0.5, incompatible value: 1.0") as excinfo:
+            ff = ForceField(simple_xml_ff, nonstandard_xml_ff)
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_ethanol(self, toolkit_registry, registry_description):
@@ -429,12 +535,8 @@ class TestForceField():
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
         molecules.append(Molecule.from_smiles('C1CCCCC1'))
-        # molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
-        #                                                                      'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         topology.box_vectors = None
-        #forcefield.get_handler("Electrostatics", {})._method = "Coulomb"
-        #forcefield.get_handler("vdW", {})._method = "cutoff"
 
         omm_system = forcefield.create_openmm_system(topology)
 
@@ -632,8 +734,6 @@ class TestForceField():
         for particle_index in range(topology.n_topology_particles):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != (0. * unit.elementary_charge)
-        #from simtk.openmm import XmlSerializer
-        #print(XmlSerializer.serialize(omm_system))
 
 
 
@@ -669,8 +769,8 @@ class TestForceField():
 
         molecules = [create_ethanol()]
         forcefield = ForceField('smirnoff99Frosst.offxml')
-        forcefield.get_handler('vdW', {})._method = vdw_method
-        forcefield.get_handler('Electrostatics', {})._method = electrostatics_method
+        forcefield.get_parameter_handler('vdW', {})._method = vdw_method
+        forcefield.get_parameter_handler('Electrostatics', {})._method = electrostatics_method
 
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
