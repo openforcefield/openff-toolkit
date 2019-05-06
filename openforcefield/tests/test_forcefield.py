@@ -396,7 +396,7 @@ class TestForceField():
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
         # Create a forcefield from XML successfully, by explicitly permitting cosmetic attributes
-        forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
+        forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True)
 
         # Convert the forcefield back to XML
         string_1 = forcefield_1.to_string('XML', discard_cosmetic_attributes=False)
@@ -405,10 +405,10 @@ class TestForceField():
         assert 'cosmetic_element="why not?"' in string_1
         assert 'parameterize_eval="blah=blah2"' in string_1
         with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
-            forcefield = ForceField(string_1, permit_cosmetic_attributes=False)
+            forcefield = ForceField(string_1, allow_cosmetic_attributes=False)
 
         # Complete the forcefield_1 --> string --> forcefield_2 roundtrip
-        forcefield_2 = ForceField(string_1, permit_cosmetic_attributes=True)
+        forcefield_2 = ForceField(string_1, allow_cosmetic_attributes=True)
 
         # Ensure that the forcefield remains the same after the roundtrip
         string_2 = forcefield_2.to_string('XML', discard_cosmetic_attributes=False)
@@ -457,7 +457,7 @@ class TestForceField():
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
         # Create a forcefield from XML successfully
-        forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
+        forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True)
 
         # Convert the forcefield back to XML, keeping cosmetic attributes
         forcefield_1.to_file(iofile1.name, discard_cosmetic_attributes=False, io_format=specified_format)
@@ -466,10 +466,10 @@ class TestForceField():
         assert 'cosmetic_element="why not?"' in open(iofile1.name).read()
         assert 'parameterize_eval="blah=blah2"' in open(iofile1.name).read()
         with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
-            forcefield = ForceField(iofile1.name, permit_cosmetic_attributes=False)
+            forcefield = ForceField(iofile1.name, allow_cosmetic_attributes=False)
 
         # Complete the forcefield_1 --> file --> forcefield_2 roundtrip
-        forcefield_2 = ForceField(iofile1.name, permit_cosmetic_attributes=True)
+        forcefield_2 = ForceField(iofile1.name, allow_cosmetic_attributes=True)
 
         # Ensure that the forcefield remains the same after the roundtrip
         forcefield_2.to_file(iofile2.name, discard_cosmetic_attributes=False, io_format=specified_format)
@@ -487,7 +487,7 @@ class TestForceField():
 
     def test_load_two_sources(self):
         """Test loading data from two SMIRNOFF data sources"""
-        ff = ForceField(simple_xml_ff, xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
+        ff = ForceField(simple_xml_ff, xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True)
         assert len(ff.get_parameter_handler('Bonds').parameters) == 4
 
     def test_load_two_sources_incompatible_tags(self):
