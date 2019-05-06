@@ -201,27 +201,6 @@ def generateTopologyFromOEMol(molecule):
 
     return topology
 
-def get_testdata_filename(relative_path):
-    """Get the full path to one of the reference files in testsystems.
-
-    In the source distribution, these files are in ``openforcefield/data/``,
-    but on installation, they're moved to somewhere in the user's python
-    site-packages directory.
-
-    Parameters
-    ----------
-    name : str
-        Name of the file to load (with respect to the repex folder).
-
-    """
-
-    from pkg_resources import resource_filename
-    fn = resource_filename('openforcefield', os.path.join('data', relative_path))
-
-    if not os.path.exists(fn):
-        raise ValueError("Sorry! %s does not exist. If you just added it, you'll have to re-install" % fn)
-
-    return fn
 
 # TODO: Do we need this?
 def normalize_molecules(molecules):
@@ -295,13 +274,13 @@ def normalize_molecules(molecules):
     return
 
 # TODO: Migrate into Molecule
-def read_molecules(filename, verbose=True):
+def read_molecules(file_path, verbose=True):
     """
     Read molecules from an OpenEye-supported file.
 
     Parameters
     ----------
-    filename : str
+    file_path : str
         Filename from which molecules are to be read (e.g. mol2, sdf)
 
     Returns
@@ -311,17 +290,18 @@ def read_molecules(filename, verbose=True):
 
     """
     from openeye import oechem
+    from openforcefield.utils import get_data_file_path
 
-    if not os.path.exists(filename):
-        built_in = get_testdata_filename('molecules/%s' % filename)
+    if not os.path.exists(file_path):
+        built_in = get_data_file_path('molecules/%s' % file_path)
         if not os.path.exists(built_in):
-            raise Exception("File '%s' not found." % filename)
-        filename = built_in
+            raise Exception("File '%s' not found." % file_path)
+        file_path = built_in
 
-    if verbose: print("Loading molecules from '%s'..." % filename)
+    if verbose: print("Loading molecules from '%s'..." % file_path)
     start_time = time.time()
     molecules = list()
-    input_molstream = oechem.oemolistream(filename)
+    input_molstream = oechem.oemolistream(file_path)
 
     flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
     input_molstream.SetFlavor(oechem.OEFormat_MOL2, flavor)
@@ -386,7 +366,7 @@ def extractPositionsFromOEMol(oemol):
         positions[index,:] = unit.Quantity(coords[index], unit.angstroms)
     return positions
 
-def read_typelist(filename):
+def read_typelist(file_path):
     """
     Read a parameter type or decorator list from a file.
     Lines in these files have the format
@@ -395,7 +375,7 @@ def read_typelist(filename):
 
     Parameters
     ----------
-    filename : str
+    file_path : str
         Path and name of file to be read
         Could be file in openforcefield/data/
 
@@ -404,17 +384,19 @@ def read_typelist(filename):
     typelist : list of tuples
         Typelist[i] is element i of the typelist in format (smarts, shorthand)
     """
-    if filename is None:
+    from openforcefield.utils import get_data_file_path
+
+    if file_path is None:
         return None
 
-    if not os.path.exists(filename):
-        built_in = get_testdata_filename(filename)
+    if not os.path.exists(file_path):
+        built_in = get_data_file_path(file_path)
         if not os.path.exists(built_in):
-            raise Exception("File '%s' not found." % filename)
-        filename = built_in
+            raise Exception("File '%s' not found." % file_path)
+        file_path = built_in
 
     typelist = list()
-    ifs = open(filename)
+    ifs = open(file_path)
     lines = ifs.readlines()
     used_typenames = list()
 
@@ -435,7 +417,7 @@ def read_typelist(filename):
                 used_typenames.append(typename)
             else:
                 raise Exception("Error in file '%s' -- each entry must "
-                        "have a unique name." % filename )
+                        "have a unique name." % file_path )
 
     ifs.close()
 
