@@ -1804,10 +1804,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Sanitizing the molecule. We handle aromaticity and chirality manually.
         # This SanitizeMol(...) calls cleanUp, updatePropertyCache, symmetrizeSSSR,
-        # Kekulize, assignRadicals, setConjugation, and setHybridization.
+        # assignRadicals, setConjugation, and setHybridization.
         Chem.SanitizeMol(rdmol, (Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^
-                                 Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_CLEANUPCHIRALITY))
+                                 Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_CLEANUPCHIRALITY ^
+                                 Chem.SANITIZE_KEKULIZE))
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+        # SetAromaticity set aromatic bonds to 1.5, but Molecule.bond_order is an
+        # integer (contrarily to fractional_bond_order) so we need the Kekule order.
+        Chem.Kekulize(rdmol)
 
         # Make sure the bond stereo tags are set before checking for
         # undefined stereo. RDKit can figure out bond stereo from other
