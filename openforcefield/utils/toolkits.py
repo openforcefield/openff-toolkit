@@ -1802,11 +1802,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
         rdmol = Chem.Mol(rdmol)
 
-        # Sanitize the molecule. We handle aromaticity and chirality manually.
+        # Sanitizing the molecule. We handle aromaticity and chirality manually.
+        # This SanitizeMol(...) calls cleanUp, updatePropertyCache, symmetrizeSSSR,
+        # Kekulize, assignRadicals, setConjugation, and setHybridization.
         Chem.SanitizeMol(rdmol, (Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^
                                  Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_CLEANUPCHIRALITY))
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-        Chem.Kekulize(rdmol)
 
         # Make sure the bond stereo tags are set before checking for
         # undefined stereo. RDKit can figure out bond stereo from other
