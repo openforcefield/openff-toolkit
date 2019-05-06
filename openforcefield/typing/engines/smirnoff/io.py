@@ -91,12 +91,12 @@ class ParameterIOHandler:
         pass
         #self._forcefield = forcefield
 
-    def parse_file(self, filename):
+    def parse_file(self, file_path):
         """
 
         Parameters
         ----------
-        filename
+        file_path
 
         Returns
         -------
@@ -118,14 +118,14 @@ class ParameterIOHandler:
         """
         pass
 
-    def to_file(self, filename, smirnoff_data):
+    def to_file(self, file_path, smirnoff_data):
         """
         Write the current forcefield parameter set to a file.
 
         Parameters
         ----------
-        filename : str
-            The filename to write to.
+        file_path : str
+            The path to the file to write to.
         smirnoff_data : dict
             A dictionary structured in compliance with the SMIRNOFF spec
 
@@ -245,26 +245,26 @@ class XMLParameterIOHandler(ParameterIOHandler):
         except ExpatError as e:
             raise ParseError(e)
 
-    def to_file(self, filename, smirnoff_data):
+    def to_file(self, file_path, smirnoff_data):
         """Write the current forcefield parameter set to a file, autodetecting the type from the extension.
 
         Parameters
         ----------
-        filename : str
-            The name of the file to be written.
+        file_path : str
+            The path to the file to be written.
             The `.offxml` file extension must be present.
         smirnoff_data : dict
             A dict structured in compliance with the SMIRNOFF data spec.
 
         """
         xml_string = self.to_string(smirnoff_data)
-        (basename, extension) = os.path.splitext(filename)
+        (basename, extension) = os.path.splitext(file_path)
         if extension == '.offxml':
-            with open(filename, 'wb') as of:
+            with open(file_path, 'wb') as of:
                 of.write(xml_string)
         else:
             msg = "Cannot export forcefield parameters to file '{}'\n".format(
-                filename)
+                file_path)
             msg += 'Export to extension {} not implemented yet.\n'.format(
                 extension)
             msg += "Supported choices are: ['.offxml']"
