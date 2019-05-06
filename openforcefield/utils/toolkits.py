@@ -397,8 +397,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Load a mol2 file into an OpenFF ``Molecule`` object.
 
-        >>> from openforcefield.utils import get_data_filename
-        >>> mol2_file_path = get_data_filename('molecules/cyclohexane.mol2')
+        >>> from openforcefield.utils import get_data_file_path
+        >>> mol2_file_path = get_data_file_path('molecules/cyclohexane.mol2')
         >>> toolkit = OpenEyeToolkitWrapper()
         >>> molecule = toolkit.from_file(mol2_file_path, file_format='mol2')
 
@@ -678,8 +678,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         Create a Molecule from an OpenEye OEMol
 
         >>> from openeye import oechem
-        >>> from openforcefield.tests.utils import get_data_filename
-        >>> ifs = oechem.oemolistream(get_data_filename('systems/monomers/ethanol.mol2'))
+        >>> from openforcefield.tests.utils import get_data_file_path
+        >>> ifs = oechem.oemolistream(get_data_file_path('systems/monomers/ethanol.mol2'))
         >>> oemols = list(ifs.GetOEGraphMols())
 
         >>> toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -1789,8 +1789,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Create a molecule from an RDKit molecule
 
         >>> from rdkit import Chem
-        >>> from openforcefield.tests.utils import get_data_filename
-        >>> rdmol = Chem.MolFromMolFile(get_data_filename('systems/monomers/ethanol.sdf'))
+        >>> from openforcefield.tests.utils import get_data_file_path
+        >>> rdmol = Chem.MolFromMolFile(get_data_file_path('systems/monomers/ethanol.sdf'))
 
         >>> toolkit_wrapper = RDKitToolkitWrapper()
         >>> molecule = toolkit_wrapper.from_rdkit(rdmol)

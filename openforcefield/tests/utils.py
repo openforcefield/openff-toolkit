@@ -24,7 +24,7 @@ import textwrap
 import numpy as np
 from simtk import unit, openmm
 
-from openforcefield.utils import get_data_filename
+from openforcefield.utils import get_data_file_path
 
 
 #=============================================================================================
@@ -49,8 +49,8 @@ def get_amber_filepath(prefix):
 
     """
     prefix = os.path.join('systems', 'amber', prefix)
-    prmtop_filepath = get_data_filename(prefix+'.prmtop')
-    inpcrd_filepath = get_data_filename(prefix+'.inpcrd')
+    prmtop_filepath = get_data_file_path(prefix+'.prmtop')
+    inpcrd_filepath = get_data_file_path(prefix+'.inpcrd')
     return prmtop_filepath, inpcrd_filepath
 
 
@@ -68,7 +68,7 @@ def get_packmol_pdbfile(prefix='cyclohexane_ethanol_0.4_0.6'):
         Absolute path to the PDB file
     """
     prefix = os.path.join('systems', 'packmol_boxes', prefix)
-    pdb_filename = get_data_filename(prefix+'.pdb')
+    pdb_filename = get_data_file_path(prefix+'.pdb')
     return pdb_filename
 
 
@@ -87,7 +87,7 @@ def get_monomer_mol2file(prefix='ethanol'):
     """
     # TODO: The mol2 files in this folder are not tripos mol2 files. Delete or convert them.
     prefix = os.path.join('systems', 'monomers', prefix)
-    mol2_filename = get_data_filename(prefix + '.mol2')
+    mol2_filename = get_data_file_path(prefix + '.mol2')
     return mol2_filename
 
 
@@ -96,7 +96,7 @@ def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=
         raise ValueError('Only one between file_subpaths and filter_func must be specified.')
 
     # Find the path of the tarfile with respect to the data/molecules/ folder.
-    molecules_dir_path = get_data_filename('molecules')
+    molecules_dir_path = get_data_file_path('molecules')
     tar_file_path = os.path.join(molecules_dir_path, tar_file_name)
     tar_root_dir_name = tar_file_name.split('.')[0]
 

@@ -32,7 +32,7 @@ import pytest
 from simtk import unit
 
 from openforcefield.topology.molecule import Molecule, Atom
-from openforcefield.utils import get_data_filename
+from openforcefield.utils import get_data_file_path
 # TODO: Will the ToolkitWrapper allow us to pare that down?
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
 
@@ -148,7 +148,7 @@ def mini_drug_bank(xfail_mols=None, wip_mols=None):
         molecules = mini_drug_bank.molecules
     else:
         # Load the dataset.
-        file_path = get_data_filename('molecules/MiniDrugBank_tripos.mol2')
+        file_path = get_data_file_path('molecules/MiniDrugBank_tripos.mol2')
         try:
             # We need OpenEye to parse the molecules, but pytest execute this
             # whether or not the test class is skipped so if OE is not available
@@ -265,7 +265,7 @@ class TestMolecule:
     def test_create_from_file(self):
         """Test standard constructor taking a filename or file-like object."""
         # TODO: Expand test to both openeye and rdkit toolkits
-        filename = get_data_filename('molecules/toluene.mol2')
+        filename = get_data_file_path('molecules/toluene.mol2')
 
         molecule1 = Molecule(filename, allow_undefined_stereo=True)
         with open(filename, 'r') as infile:
@@ -280,7 +280,7 @@ class TestMolecule:
         # Ensure that attempting to initialize a single Molecule from a file
         # containing multiple molecules raises a ValueError
         with pytest.raises(ValueError) as exc_info:
-            filename = get_data_filename('molecules/zinc-subset-tripos.mol2.gz')
+            filename = get_data_file_path('molecules/zinc-subset-tripos.mol2.gz')
             molecule = Molecule(filename, allow_undefined_stereo=True)
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())

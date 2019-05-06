@@ -53,7 +53,7 @@ class TestUtilsStructure:
 
     def test_protein_structure(self):
         from simtk.openmm import app
-        pdbfile = utils.get_data_filename('proteins/T4-protein.pdb')
+        pdbfile = utils.get_data_file_path('proteins/T4-protein.pdb')
         proteinpdb = app.PDBFile(pdbfile)
         protein_structure = structure.generateProteinStructure(proteinpdb)
         assert isinstance(protein_structure, parmed.structure.Structure)
@@ -80,7 +80,7 @@ def test_merge_system():
     oechem.OETriposAtomNames(mol)
 
     # Load forcefield file.
-    AlkEthOH_offxml_filename = utils.get_data_filename('forcefield/Frosst_AlkEthOH.offxml')
+    AlkEthOH_offxml_filename = utils.get_data_file_path('forcefield/Frosst_AlkEthOH.offxml')
     forcefield = ForceField(AlkEthOH_offxml_filename)
 
     # Create OpenMM System and Topology.
@@ -106,10 +106,10 @@ def test_component_combination():
     # a system out of its components
 
     # Create an OpenMM System from mol2 files containing a cyclohexane-ethanol mixture.
-    AlkEthOH_offxml_filename = utils.get_data_filename('forcefield/Frosst_AlkEthOH.offxml')
+    AlkEthOH_offxml_filename = utils.get_data_file_path('forcefield/Frosst_AlkEthOH.offxml')
     forcefield = ForceField(AlkEthOH_offxml_filename)
     pdbfile = openmm.app.PDBFile(get_packmol_pdbfile('cyclohexane_ethanol_0.4_0.6'))
-    sdf_file_paths = [utils.get_data_filename(os.path.join('systems', 'monomers', name+'.sdf'))
+    sdf_file_paths = [utils.get_data_file_path(os.path.join('systems', 'monomers', name+'.sdf'))
                       for name in ('ethanol', 'cyclohexane')]
     molecules = [Molecule.from_file(file_path) for file_path in sdf_file_paths]
     topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)

@@ -1364,8 +1364,8 @@ class FrozenMolecule(Serializable):
 
     Create a molecule from a sdf file
 
-    >>> from openforcefield.utils import get_data_filename
-    >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+    >>> from openforcefield.utils import get_data_file_path
+    >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
     >>> molecule = FrozenMolecule.from_file(sdf_filepath)
 
     Convert to OpenEye OEMol object
@@ -1444,13 +1444,13 @@ class FrozenMolecule(Serializable):
         Create a molecule from a file that can be used to construct a molecule,
         using either a filename or file-like object:
 
-        >>> from openforcefield.utils import get_data_filename
-        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> from openforcefield.utils import get_data_file_path
+        >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
         >>> molecule = FrozenMolecule(sdf_filepath)
         >>> molecule = FrozenMolecule(open(sdf_filepath, 'r'), file_format='sdf')
 
         >>> import gzip
-        >>> mol2_gz_filepath = get_data_filename('molecules/toluene.mol2.gz')
+        >>> mol2_gz_filepath = get_data_file_path('molecules/toluene.mol2.gz')
         >>> molecule = FrozenMolecule(gzip.GzipFile(mol2_gz_filepath, 'r'), file_format='mol2')
 
         Create a molecule from another molecule:
@@ -1807,8 +1807,8 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
-        >>> from openforcefield.utils import get_data_filename
-        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> from openforcefield.utils import get_data_file_path
+        >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
         >>> molecule = Molecule(sdf_filepath)
         >>> smiles = molecule.to_smiles()
 
@@ -2788,8 +2788,8 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
-        >>> from openforcefield.utils import get_data_filename
-        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> from openforcefield.utils import get_data_file_path
+        >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
         >>> molecule = Molecule(sdf_filepath)
         >>> iupac_name = molecule.to_iupac()
 
@@ -3055,8 +3055,8 @@ class FrozenMolecule(Serializable):
         Create a molecule from an RDKit molecule
 
         >>> from rdkit import Chem
-        >>> from openforcefield.tests.utils import get_data_filename
-        >>> rdmol = Chem.MolFromMolFile(get_data_filename('systems/monomers/ethanol.sdf'))
+        >>> from openforcefield.tests.utils import get_data_file_path
+        >>> rdmol = Chem.MolFromMolFile(get_data_file_path('systems/monomers/ethanol.sdf'))
         >>> molecule = Molecule.from_rdkit(rdmol)
 
         """
@@ -3086,8 +3086,8 @@ class FrozenMolecule(Serializable):
 
         Convert a molecule to RDKit
 
-        >>> from openforcefield.utils import get_data_filename
-        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> from openforcefield.utils import get_data_file_path
+        >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
         >>> molecule = Molecule(sdf_filepath)
         >>> rdmol = molecule.to_rdkit()
 
@@ -3121,8 +3121,8 @@ class FrozenMolecule(Serializable):
         Create a Molecule from an OpenEye OEMol
 
         >>> from openeye import oechem
-        >>> from openforcefield.tests.utils import get_data_filename
-        >>> ifs = oechem.oemolistream(get_data_filename('systems/monomers/ethanol.mol2'))
+        >>> from openforcefield.tests.utils import get_data_file_path
+        >>> ifs = oechem.oemolistream(get_data_file_path('systems/monomers/ethanol.mol2'))
         >>> oemols = list(ifs.GetOEGraphMols())
         >>> molecule = Molecule.from_openeye(oemols[0])
 
@@ -3317,8 +3317,8 @@ class Molecule(FrozenMolecule):
 
     Create a molecule from an sdf file
 
-    >>> from openforcefield.utils import get_data_filename
-    >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+    >>> from openforcefield.utils import get_data_file_path
+    >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
     >>> molecule = Molecule(sdf_filepath)
 
     Convert to OpenEye OEMol object
@@ -3375,13 +3375,13 @@ class Molecule(FrozenMolecule):
         Create a molecule from a file that can be used to construct a molecule,
         using either a filename or file-like object:
 
-        >>> from openforcefield.utils import get_data_filename
-        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> from openforcefield.utils import get_data_file_path
+        >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
         >>> molecule = Molecule(sdf_filepath)
         >>> molecule = Molecule(open(sdf_filepath, 'r'), file_format='sdf')
 
         >>> import gzip
-        >>> mol2_gz_filepath = get_data_filename('molecules/toluene.mol2.gz')
+        >>> mol2_gz_filepath = get_data_file_path('molecules/toluene.mol2.gz')
         >>> molecule = Molecule(gzip.GzipFile(mol2_gz_filepath, 'r'), file_format='mol2')
 
         Create a molecule from another molecule:

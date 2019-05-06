@@ -28,7 +28,7 @@ import os
 import xmltodict
 
 from simtk import unit
-from openforcefield.utils.utils import get_data_filename
+from openforcefield.utils.utils import get_data_file_path
 
 
 #=============================================================================================
@@ -207,7 +207,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
         # This handles nonlocal filenames
         try:
             # Check if the file exists in the data/forcefield directory
-            temp_file = get_data_filename(os.path.join('forcefield', source))
+            temp_file = get_data_file_path(os.path.join('forcefield', source))
             data = open(temp_file).read()
             smirnoff_data = self.parse_string(data)
             return smirnoff_data

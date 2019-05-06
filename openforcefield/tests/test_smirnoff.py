@@ -24,7 +24,7 @@ import parmed
 from simtk import unit, openmm
 from simtk.openmm import app
 
-# from openforcefield.utils import get_data_filename  #, generateTopologyFromOEMol, read_molecules
+# from openforcefield.utils import get_data_file_path  #, generateTopologyFromOEMol, read_molecules
 # from openforcefield.utils import check_energy_is_finite, get_energy
 # from openforcefield.tests.utils import get_packmol_pdbfile, get_monomer_mol2file, compare_system_energies
 from openforcefield.tests.utils import *
@@ -39,13 +39,13 @@ pytestmark = pytest.mark.skip('tests in test_smirnoff are outdated and should be
 #=============================================================================================
 
 # TODO: Move these to setup?
-# These paths should only be found in the test data directories, so we need to use get_data_filename()
+# These paths should only be found in the test data directories, so we need to use get_data_file_path()
 AlkEthOH_offxml_filename = 'Frosst_AlkEthOH.offxml'
-AlkEthOH_molecules_filename = get_data_filename('molecules/AlkEthOH_test_filt1_tripos.mol2')
-MiniDrugBank_molecules_filename = get_data_filename('molecules/MiniDrugBank_tripos.mol2')
-#chargeincrement_offxml_filename = get_data_filename('chargeincrement-test.offxml')
+AlkEthOH_molecules_filename = get_data_file_path('molecules/AlkEthOH_test_filt1_tripos.mol2')
+MiniDrugBank_molecules_filename = get_data_file_path('molecules/MiniDrugBank_tripos.mol2')
+#chargeincrement_offxml_filename = get_data_file_path('chargeincrement-test.offxml')
 # TODO: Swtich all paths to use os.path.join
-tip3p_molecule_filename = get_data_filename(os.path.join('systems', 'monomers', 'tip3p_water.mol2'))
+tip3p_molecule_filename = get_data_file_path(os.path.join('systems', 'monomers', 'tip3p_water.mol2'))
 
 # This is the production form of smirnoff99Frosst that should be found in the data directories
 smirnoff99Frosst_offxml_filename = 'smirnoff99Frosst.offxml'
@@ -342,8 +342,8 @@ class TestApplyForceField:
         ff = ForceField('benzene_minimal.offxml')
 
         # Load AMBER files and compare
-        inpcrd = get_data_filename('molecules/benzene.crd')
-        prmtop = get_data_filename('molecules/benzene.top')
+        inpcrd = get_data_file_path('molecules/benzene.crd')
+        prmtop = get_data_file_path('molecules/benzene.top')
         g0, g1, e0, e1 = compare_amber_smirnoff(prmtop, inpcrd, ff, mol, skip_assert=True)
 
         # Check that torsional energies the same to 1 in 10^6
@@ -360,8 +360,8 @@ class TestForceFieldLabeling:
 
     def test_label_molecules(self):
         """Test labeling/getting stats on labeling molecules"""
-        molecules = read_molecules(get_data_filename('molecules/AlkEthOH_test_filt1_tripos.mol2'), verbose=verbose)
-        ffxml = get_data_filename('forcefield/Frosst_AlkEthOH.offxml')
+        molecules = read_molecules(get_data_file_path('molecules/AlkEthOH_test_filt1_tripos.mol2'), verbose=verbose)
+        ffxml = get_data_file_path('forcefield/Frosst_AlkEthOH.offxml')
         get_molecule_parameterIDs(molecules, ffxml)
 
     def test_molecule_labeling(self):
@@ -415,7 +415,7 @@ def test_improper_pyramidal(verbose=False):
     from openeye import oeomega
     from openeye import oequacpac
     from oeommtools.utils import oemol_to_openmmTop, openmmTop_to_oemol
-    from openforcefield.utils import get_data_filename, extractPositionsFromOEMol
+    from openforcefield.utils import get_data_file_path, extractPositionsFromOEMol
     # Prepare ammonia
     mol = oechem.OEMol()
     oechem.OESmilesToMol(mol, 'N')
@@ -484,7 +484,7 @@ def test_change_parameters(verbose=False):
     """Test modification of forcefield parameters."""
     from openeye import oechem
     # Load simple OEMol
-    ifs = oechem.oemolistream(get_data_filename('molecules/AlkEthOH_c100.mol2'))
+    ifs = oechem.oemolistream(get_data_file_path('molecules/AlkEthOH_c100.mol2'))
     mol = oechem.OEMol()
     flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
     ifs.SetFlavor(oechem.OEFormat_MOL2, flavor)
@@ -653,7 +653,7 @@ class TestSolventSupport:
                     force.addBond(particle1=0, particle2=1, length=length_tip3p, k=k_tip3p)
                     force.addBond(particle1=0, particle2=2, length=length_tip3p, k=k_tip3p)
 
-        monomers_dir = get_data_filename(os.path.join('systems', 'monomers'))
+        monomers_dir = get_data_file_path(os.path.join('systems', 'monomers'))
 
         # Load TIP3P molecule
         tip3p_molecule = Molecule.from_file(tip3p_molecule_filename)
