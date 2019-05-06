@@ -836,11 +836,11 @@ class TestForceFieldParameterAssignment:
         does the job.
 
         """
-        from openforcefield.tests.utils import get_alkethoh_filepath, compare_amber_smirnoff
+        from openforcefield.tests.utils import get_alkethoh_file_path, compare_amber_smirnoff
 
         # Obtain the path to the input files.
         alkethoh_name = 'AlkEthOH_' + alkethoh_id
-        mol2_filepath, top_filepath, crd_filepath = get_alkethoh_filepath(alkethoh_name, get_amber=True)
+        mol2_filepath, top_filepath, crd_filepath = get_alkethoh_file_path(alkethoh_name, get_amber=True)
 
         # Load molecule.
         molecule = Molecule.from_file(mol2_filepath)
@@ -867,7 +867,7 @@ class TestForceFieldParameterAssignment:
 
         """
         import parmed
-        from openforcefield.tests.utils import (get_alkethoh_filepath,
+        from openforcefield.tests.utils import (get_alkethoh_file_path,
                                                 compare_system_parameters,
                                                 compare_system_energies)
 
@@ -878,7 +878,7 @@ class TestForceFieldParameterAssignment:
         molecules = []
         structures = []
         for alkethoh_id in alketoh_ids:
-            mol2_filepath, top_filepath, crd_filepath = get_alkethoh_filepath(
+            mol2_filepath, top_filepath, crd_filepath = get_alkethoh_file_path(
                 'AlkEthOH_'+alkethoh_id, get_amber=True)
             molecules.append(Molecule.from_file(mol2_filepath))
             amber_parm = parmed.load_file(top_filepath, crd_filepath)
@@ -928,8 +928,8 @@ class TestForceFieldParameterAssignment:
         and improper torsions.
 
         """
-        from openforcefield.tests.utils import get_freesolv_filepath, compare_system_parameters
-        mol2_file_path, xml_file_path = get_freesolv_filepath(freesolv_id, forcefield_version)
+        from openforcefield.tests.utils import get_freesolv_file_path, compare_system_parameters
+        mol2_file_path, xml_file_path = get_freesolv_file_path(freesolv_id, forcefield_version)
 
         # Load molecules.
         molecule = Molecule.from_file(mol2_file_path, allow_undefined_stereo=allow_undefined_stereo)

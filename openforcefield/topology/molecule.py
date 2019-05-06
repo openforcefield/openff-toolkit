@@ -2886,8 +2886,8 @@ class FrozenMolecule(Serializable):
 
         Examples
         --------
-        >>> from openforcefield.tests.utils import get_monomer_mol2file
-        >>> mol2_filename = get_monomer_mol2file('cyclohexane')
+        >>> from openforcefield.tests.utils import get_monomer_mol2_file_path
+        >>> mol2_filename = get_monomer_mol2_file_path('cyclohexane')
         >>> molecule = Molecule.from_file(mol2_filename)
 
         """

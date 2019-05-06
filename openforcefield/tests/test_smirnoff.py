@@ -26,7 +26,7 @@ from simtk.openmm import app
 
 # from openforcefield.utils import get_data_file_path  #, generateTopologyFromOEMol, read_molecules
 # from openforcefield.utils import check_energy_is_finite, get_energy
-# from openforcefield.tests.utils import get_packmol_pdbfile, get_monomer_mol2file, compare_system_energies
+# from openforcefield.tests.utils import get_packmol_pdb_file_path, get_monomer_mol2_file_path, compare_system_energies
 from openforcefield.tests.utils import *
 from openforcefield.typing.engines.smirnoff import *
 
@@ -539,8 +539,8 @@ class TestForceFieldExport:
         positions : simtk.unit.Quantity with dimension (nparticles,3) with units compatible with angstroms
             Positions corresponding to particles in ``topology``
         """
-        pdbfile = app.PDBFile(get_packmol_pdbfile(packmol_boxname))
-        molecules = [Molecule.from_file(get_monomer_mol2file(name)) for name in monomers]
+        pdbfile = app.PDBFile(get_packmol_pdb_file_path(packmol_boxname))
+        molecules = [Molecule.from_file(get_monomer_mol2_file_path(name)) for name in monomers]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         positions = pdbfile.positions
         return topology, positions

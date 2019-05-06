@@ -31,7 +31,7 @@ from openforcefield.utils import get_data_file_path
 # Shortcut functions to get file paths to test data.
 #=============================================================================================
 
-def get_amber_filepath(prefix):
+def get_amber_file_path(prefix):
     """Get AMBER prmtop and inpcrd test data filepaths.
 
     Parameters
@@ -54,7 +54,7 @@ def get_amber_filepath(prefix):
     return prmtop_filepath, inpcrd_filepath
 
 
-def get_packmol_pdbfile(prefix='cyclohexane_ethanol_0.4_0.6'):
+def get_packmol_pdb_file_path(prefix='cyclohexane_ethanol_0.4_0.6'):
     """Get PDB filename for a packmol-generated box
 
     Parameters
@@ -72,7 +72,7 @@ def get_packmol_pdbfile(prefix='cyclohexane_ethanol_0.4_0.6'):
     return pdb_filename
 
 
-def get_monomer_mol2file(prefix='ethanol'):
+def get_monomer_mol2_file_path(prefix='ethanol'):
     """Get absolute filepath for a mol2 file denoting a small molecule monomer in testdata
 
     Parameters
@@ -152,7 +152,7 @@ def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=
     return extracted_file_paths
 
 
-def get_alkethoh_filepath(alkethoh_name, get_amber=False):
+def get_alkethoh_file_path(alkethoh_name, get_amber=False):
     """Retrieve the mol2, top and crd files of a molecule in the AlkEthOH set.
 
     Parameters
@@ -187,7 +187,7 @@ def get_alkethoh_filepath(alkethoh_name, get_amber=False):
     return extract_compressed_molecules('AlkEthOH_tripos.tar.gz', file_subpaths=file_subpaths)
 
 
-def get_freesolv_filepath(freesolv_id, ff_version):
+def get_freesolv_file_path(freesolv_id, ff_version):
     file_base_name = 'mobley_' + freesolv_id
     mol2_file_subpath = os.path.join('mol2files_sybyl', file_base_name + '.mol2')
     xml_dir = 'xml_' + ff_version.replace('.', '_')
@@ -202,14 +202,14 @@ def get_freesolv_filepath(freesolv_id, ff_version):
 # Shortcut functions to create System objects from system files.
 #=============================================================================================
 
-def create_system_from_amber(prmtop_filepath, inpcrd_filepath, *args, **kwargs):
+def create_system_from_amber(prmtop_file_path, inpcrd_file_path, *args, **kwargs):
     """Create an OpenMM System and Topology from the AMBER files.
 
     Parameters
     ----------
-    prmtop_filepath : str
+    prmtop_file_path : str
         Path to the topology/parameter file in AMBER prmtop format.
-    inpcrd_filepath : str
+    inpcrd_file_path : str
         Path to the coordinates file in AMBER inpcrd or rst7 format.
     *args
     **kwargs
@@ -1238,7 +1238,7 @@ def compare_system_parameters(system1, system2, systems_labels=None,
 # Utility functions to compare SMIRNOFF and AMBER force fields.
 #=============================================================================================
 
-def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecule,
+def compare_amber_smirnoff(prmtop_file_path, inpcrd_file_path, forcefield, molecule,
                            check_parameters=True, check_energies=True, **kwargs):
     """
     Compare energies and parameters for OpenMM Systems/topologies created
@@ -1247,9 +1247,9 @@ def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecul
 
     Parameters
     ----------
-    prmtop_filepath : str
+    prmtop_file_path : str
         Path to the topology/parameter file in AMBER prmtop format
-    inpcrd_filepath : str
+    inpcrd_file_path : str
         Path to the coordinates file in AMBER inpcrd or rst7 format
     forcefield : ForceField
         Force field instance used to create the system to compare.
