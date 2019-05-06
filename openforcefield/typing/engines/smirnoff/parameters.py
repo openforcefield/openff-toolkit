@@ -2024,7 +2024,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
             # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
             if not(charges_from_charge_mol):
                 toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
-                temp_mol.generate_conformers(num_conformers=10, toolkit_registry=toolkit_registry)
+                temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
                 #temp_mol.compute_partial_charges(quantum_chemical_method=self._quantum_chemical_method,
                 #                                 partial_charge_method=self._partial_charge_method)
                 temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
@@ -2250,7 +2250,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
             # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
             if not(charges_from_charge_mol):
-                temp_mol.generate_conformers(num_conformers=10)
+                temp_mol.generate_conformers(n_conformers=10)
                 temp_mol.compute_partial_charges(quantum_chemical_method=self._quantum_chemical_method,
                                                  partial_charge_method=self._partial_charge_method)
 

@@ -1055,7 +1055,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         molecule = self.from_openeye(oemol)
         return molecule
 
-    def generate_conformers(self, molecule, num_conformers=1, clear_existing=True):
+    def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):
         """
         Generate molecule conformers using OpenEye Omega. 
 
@@ -1071,7 +1071,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ---------
         molecule : a :class:`Molecule` 
             The molecule to generate conformers for.
-        num_conformers : int, default=1
+        n_conformers : int, default=1
             The maximum number of conformers to generate.
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
@@ -1080,7 +1080,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openeye import oeomega
         oemol = self.to_openeye(molecule)
         omega = oeomega.OEOmega()
-        omega.SetMaxConfs(num_conformers)
+        omega.SetMaxConfs(n_conformers)
         omega.SetCanonOrder(False)
         omega.SetSampleHydrogens(True)
         omega.SetEnergyWindow(15.0)  #unit?
@@ -1723,7 +1723,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         return molecule
 
-    def generate_conformers(self, molecule, num_conformers=1, clear_existing=True):
+    def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):
         """
         Generate molecule conformers using RDKit. 
 
@@ -1738,7 +1738,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         ---------
         molecule : a :class:`Molecule` 
             The molecule to generate conformers for.
-        num_conformers : int, default=1
+        n_conformers : int, default=1
             Maximum number of conformers to generate.
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule.
@@ -1750,7 +1750,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # TODO: This generates way more conformations than omega, given the same nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
         AllChem.EmbedMultipleConfs(
             rdmol,
-            numConfs=num_conformers,
+            numConfs=n_conformers,
             pruneRmsThresh=1.0,
             randomSeed=1,
             #params=AllChem.ETKDG()
