@@ -27,6 +27,7 @@ from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWra
 from openforcefield.utils import get_data_filename
 from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff import ForceField, IncompatibleParameterError, SMIRNOFFSpecError
+from openforcefield.typing.engines.smirnoff import XMLParameterIOHandler
 
 
 #======================================================================
@@ -423,7 +424,8 @@ class TestForceField():
 
     @pytest.mark.parametrize('filename_extension', ['xml', 'XML', 'offxml', 'OFFXML'])
     @pytest.mark.parametrize('specified_format', [None, 'xml', 'XML', '.xml', '.XML',
-                                                  'offxml', 'OFFXML', '.offxml', '.OFFXML'])
+                                                  'offxml', 'OFFXML', '.offxml', '.OFFXML',
+                                                  XMLParameterIOHandler()])
     def test_xml_file_roundtrip(self, filename_extension, specified_format):
         """
         Test roundtripping a ForceField to and from an XML file
@@ -432,15 +434,16 @@ class TestForceField():
         iofile1 = NamedTemporaryFile(suffix='.' + filename_extension)
         iofile2 = NamedTemporaryFile(suffix='.' + filename_extension)
         forcefield_1 = ForceField(simple_xml_ff)
-        forcefield_1.to_file(iofile1.name, format=specified_format)
+        forcefield_1.to_file(iofile1.name, io_format=specified_format)
         forcefield_2 = ForceField(iofile1.name)
-        forcefield_2.to_file(iofile2.name, format=specified_format)
+        forcefield_2.to_file(iofile2.name, io_format=specified_format)
         assert open(iofile1.name).read() == open(iofile2.name).read()
 
 
     @pytest.mark.parametrize('filename_extension', ['xml', 'XML', 'offxml', 'OFFXML'])
     @pytest.mark.parametrize('specified_format', [None, 'xml', 'XML', '.xml', '.XML',
-                                                  'offxml', 'OFFXML', '.offxml', '.OFFXML'])
+                                                  'offxml', 'OFFXML', '.offxml', '.OFFXML',
+                                                  XMLParameterIOHandler()])
     def test_xml_file_roundtrip_keep_cosmetic(self, filename_extension, specified_format):
         """
         Test roundtripping a forcefield to an XML file with and without retaining cosmetic elements
@@ -458,7 +461,7 @@ class TestForceField():
         forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, permit_cosmetic_attributes=True)
 
         # Convert the forcefield back to XML, keeping cosmetic attributes
-        forcefield_1.to_file(iofile1.name, discard_cosmetic_attributes=False, format=specified_format)
+        forcefield_1.to_file(iofile1.name, discard_cosmetic_attributes=False, io_format=specified_format)
 
         # Ensure that the new XML string has cosmetic attributes in it
         assert 'cosmetic_element="why not?"' in open(iofile1.name).read()
@@ -470,11 +473,11 @@ class TestForceField():
         forcefield_2 = ForceField(iofile1.name, permit_cosmetic_attributes=True)
 
         # Ensure that the forcefield remains the same after the roundtrip
-        forcefield_2.to_file(iofile2.name, discard_cosmetic_attributes=False, format=specified_format)
+        forcefield_2.to_file(iofile2.name, discard_cosmetic_attributes=False, io_format=specified_format)
         assert open(iofile1.name).read() == open(iofile2.name).read()
 
         # Discard the cosmetic attributes and ensure that the string is different
-        forcefield_2.to_file(iofile3.name, discard_cosmetic_attributes=True, format=specified_format)
+        forcefield_2.to_file(iofile3.name, discard_cosmetic_attributes=True, io_format=specified_format)
         assert open(iofile1.name).read() != open(iofile3.name).read()
 
         # Ensure that the new XML string does NOT have cosmetic attributes in it

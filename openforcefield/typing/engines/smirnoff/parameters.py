@@ -1100,7 +1100,7 @@ class BondHandler(ParameterHandler):
     def check_handler_compatibility(self,
                                     other_handler):
         """
-        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
@@ -1223,7 +1223,7 @@ class AngleHandler(ParameterHandler):
     def check_handler_compatibility(self,
                                     other_handler):
         """
-        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
@@ -1336,7 +1336,7 @@ class ProperTorsionHandler(ParameterHandler):
     def check_handler_compatibility(self,
                                     other_handler):
         """
-        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
@@ -1450,7 +1450,7 @@ class ImproperTorsionHandler(ParameterHandler):
     def check_handler_compatibility(self,
                                     other_handler):
         """
-        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
@@ -1759,7 +1759,7 @@ class vdWHandler(ParameterHandler):
     def check_handler_compatibility(self,
                                     other_handler):
         """
-        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
@@ -1992,7 +1992,7 @@ class ElectrostaticsHandler(ParameterHandler):
     def check_handler_compatibility(self,
                                     other_handler):
         """
-        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
@@ -2140,7 +2140,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
                                     other_handler,
                                     assume_missing_is_default=True):
         """
-        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
@@ -2352,7 +2352,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
                                     other_handler,
                                     assume_missing_is_default=True):
         """
-        Checks whether this ParameterHandler encodes the same physics as another ParameterHandler. This is
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
