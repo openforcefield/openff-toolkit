@@ -225,9 +225,9 @@ def create_system_from_amber(prmtop_file_path, inpcrd_file_path, *args, **kwargs
         Initial positions loaded from the inpcrd or restart file.
 
     """
-    prmtop_file = openmm.app.AmberPrmtopFile(prmtop_filepath)
+    prmtop_file = openmm.app.AmberPrmtopFile(prmtop_file_path)
     # AmberInpcrdFile parses also rst7 files.
-    inpcrd_file = openmm.app.AmberInpcrdFile(inpcrd_filepath)
+    inpcrd_file = openmm.app.AmberInpcrdFile(inpcrd_file_path)
     # Create system and update box vectors (if needed)
     system = prmtop_file.createSystem(*args, **kwargs)
     if inpcrd_file.boxVectors is not None:
