@@ -1293,7 +1293,7 @@ def compare_amber_smirnoff(prmtop_file_path, inpcrd_file_path, forcefield, molec
     # Create System from AMBER files. By default, contrarily to ForceField,
     # systems from AMBER files are created with removeCMMotion=True
     amber_system, openmm_topology, positions = create_system_from_amber(
-        prmtop_filepath, inpcrd_filepath, removeCMMotion=False)
+        prmtop_file_path, inpcrd_file_path, removeCMMotion=False)
     box_vectors = amber_system.getDefaultPeriodicBoxVectors()
 
     # Create System from forcefield.
