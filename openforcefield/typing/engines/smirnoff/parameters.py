@@ -319,7 +319,7 @@ class ParameterType:
 
     # TODO: Can we provide some shared tools for returning settable/gettable attributes, and checking unit-bearing attributes?
 
-    def __init__(self, smirks=None, permit_cosmetic_attributes=False, **kwargs):
+    def __init__(self, smirks=None, allow_cosmetic_attributes=False, **kwargs):
         """
         Create a ParameterType
 
@@ -327,7 +327,7 @@ class ParameterType:
         ----------
         smirks : str
             The SMIRKS match for the provided parameter type.
-        permit_cosmetic_attributes : bool optional. Default = False
+        allow_cosmetic_attributes : bool optional. Default = False
             Whether to permit non-spec kwargs ("cosmetic attributes"). If True, non-spec kwargs will be stored as
             an attribute of this parameter which can be accessed and written out. Otherwise an exception will
             be raised.
@@ -427,13 +427,13 @@ class ParameterType:
                 setattr(self, key, val)
 
             # Handle all unknown kwargs as cosmetic so we can write them back out
-            elif permit_cosmetic_attributes:
+            elif allow_cosmetic_attributes:
                 self._COSMETIC_ATTRIBS.append(key)
                 setattr(self, key, val)
             else:
                 raise SMIRNOFFSpecError("Unexpected kwarg {} passed to {} constructor. If this is "
                                         "a desired cosmetic attribute, consider setting "
-                                        "'permit_cosmetic_attributes=True'".format({key: val}, self.__class__))
+                                        "'allow_cosmetic_attributes=True'".format({key: val}, self.__class__))
 
     @property
     def smirks(self):
@@ -549,13 +549,13 @@ class ParameterHandler:
     _SMIRNOFF_VERSION_DEPRECATED = None  # if deprecated, the first SMIRNOFF version number it is no longer used
 
 
-    def __init__(self, permit_cosmetic_attributes=False, **kwargs):
+    def __init__(self, allow_cosmetic_attributes=False, **kwargs):
         """
         Initialize a ParameterHandler, optionally with a list of parameters and other kwargs.
 
         Parameters
         ----------
-        permit_cosmetic_attributes : bool, optional. Default = False
+        allow_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs. If True, non-spec kwargs will be stored as attributes of this object
             and can be accessed and modified. Otherwise an exception will be raised if a non-spec kwarg is encountered.
         **kwargs : dict
@@ -635,7 +635,7 @@ class ParameterHandler:
                 attr_name = '_' + key
                 # TODO: create @property.setter here if attrib requires unit
                 setattr(self, attr_name, val)
-            elif permit_cosmetic_attributes:
+            elif allow_cosmetic_attributes:
                 self._COSMETIC_ATTRIBS.append(key)
                 attr_name = '_' + key
                 setattr(self, attr_name, val)
@@ -643,10 +643,10 @@ class ParameterHandler:
             else:
                 raise SMIRNOFFSpecError("Incompatible kwarg {} passed to {} constructor. If this is "
                                         "a desired cosmetic attribute, consider setting "
-                                        "'permit_cosmetic_attributes=True'".format(key, self.__class__))
+                                        "'allow_cosmetic_attributes=True'".format(key, self.__class__))
 
 
-    def _add_parameters(self, section_dict, permit_cosmetic_attributes=False):
+    def _add_parameters(self, section_dict, allow_cosmetic_attributes=False):
         """
         Extend the ParameterList in this ParameterHandler using a SMIRNOFF data source.
 
@@ -654,7 +654,7 @@ class ParameterHandler:
         ----------
         section_dict : dict
             The dict representation of a SMIRNOFF data source containing parameters to att to this ParameterHandler
-        permit_cosmetic_attributes : bool, optional. Default = False
+        allow_cosmetic_attributes : bool, optional. Default = False
             Whether to allow non-spec fields in section_dict. If True, non-spec kwargs will be stored as an
             attribute of the parameter. If False, non-spec kwargs will raise an exception.
 
@@ -678,7 +678,7 @@ class ParameterHandler:
             for unitless_param_dict in val:
                 param_dict = attach_units(unitless_param_dict, attached_units)
                 new_parameter = self._INFOTYPE(**param_dict,
-                                               permit_cosmetic_attributes=permit_cosmetic_attributes)
+                                               allow_cosmetic_attributes=allow_cosmetic_attributes)
                 self._parameters.append(new_parameter)
 
     @property
@@ -2236,7 +2236,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
             # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
             if not(charges_from_charge_mol):
                 toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
-                temp_mol.generate_conformers(num_conformers=10, toolkit_registry=toolkit_registry)
+                temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
                 #temp_mol.compute_partial_charges(quantum_chemical_method=self._quantum_chemical_method,
                 #                                 partial_charge_method=self._partial_charge_method)
                 temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
@@ -2465,7 +2465,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
             # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
             if not(charges_from_charge_mol):
-                temp_mol.generate_conformers(num_conformers=10)
+                temp_mol.generate_conformers(n_conformers=10)
                 temp_mol.compute_partial_charges(quantum_chemical_method=self._quantum_chemical_method,
                                                  partial_charge_method=self._partial_charge_method)
 

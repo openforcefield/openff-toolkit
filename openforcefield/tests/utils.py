@@ -24,14 +24,14 @@ import textwrap
 import numpy as np
 from simtk import unit, openmm
 
-from openforcefield.utils import get_data_filename
+from openforcefield.utils import get_data_file_path
 
 
 #=============================================================================================
 # Shortcut functions to get file paths to test data.
 #=============================================================================================
 
-def get_amber_filepath(prefix):
+def get_amber_file_path(prefix):
     """Get AMBER prmtop and inpcrd test data filepaths.
 
     Parameters
@@ -49,12 +49,12 @@ def get_amber_filepath(prefix):
 
     """
     prefix = os.path.join('systems', 'amber', prefix)
-    prmtop_filepath = get_data_filename(prefix+'.prmtop')
-    inpcrd_filepath = get_data_filename(prefix+'.inpcrd')
+    prmtop_filepath = get_data_file_path(prefix+'.prmtop')
+    inpcrd_filepath = get_data_file_path(prefix+'.inpcrd')
     return prmtop_filepath, inpcrd_filepath
 
 
-def get_packmol_pdbfile(prefix='cyclohexane_ethanol_0.4_0.6'):
+def get_packmol_pdb_file_path(prefix='cyclohexane_ethanol_0.4_0.6'):
     """Get PDB filename for a packmol-generated box
 
     Parameters
@@ -68,11 +68,11 @@ def get_packmol_pdbfile(prefix='cyclohexane_ethanol_0.4_0.6'):
         Absolute path to the PDB file
     """
     prefix = os.path.join('systems', 'packmol_boxes', prefix)
-    pdb_filename = get_data_filename(prefix+'.pdb')
+    pdb_filename = get_data_file_path(prefix+'.pdb')
     return pdb_filename
 
 
-def get_monomer_mol2file(prefix='ethanol'):
+def get_monomer_mol2_file_path(prefix='ethanol'):
     """Get absolute filepath for a mol2 file denoting a small molecule monomer in testdata
 
     Parameters
@@ -87,7 +87,7 @@ def get_monomer_mol2file(prefix='ethanol'):
     """
     # TODO: The mol2 files in this folder are not tripos mol2 files. Delete or convert them.
     prefix = os.path.join('systems', 'monomers', prefix)
-    mol2_filename = get_data_filename(prefix + '.mol2')
+    mol2_filename = get_data_file_path(prefix + '.mol2')
     return mol2_filename
 
 
@@ -96,7 +96,7 @@ def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=
         raise ValueError('Only one between file_subpaths and filter_func must be specified.')
 
     # Find the path of the tarfile with respect to the data/molecules/ folder.
-    molecules_dir_path = get_data_filename('molecules')
+    molecules_dir_path = get_data_file_path('molecules')
     tar_file_path = os.path.join(molecules_dir_path, tar_file_name)
     tar_root_dir_name = tar_file_name.split('.')[0]
 
@@ -152,7 +152,7 @@ def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=
     return extracted_file_paths
 
 
-def get_alkethoh_filepath(alkethoh_name, get_amber=False):
+def get_alkethoh_file_path(alkethoh_name, get_amber=False):
     """Retrieve the mol2, top and crd files of a molecule in the AlkEthOH set.
 
     Parameters
@@ -187,7 +187,7 @@ def get_alkethoh_filepath(alkethoh_name, get_amber=False):
     return extract_compressed_molecules('AlkEthOH_tripos.tar.gz', file_subpaths=file_subpaths)
 
 
-def get_freesolv_filepath(freesolv_id, ff_version):
+def get_freesolv_file_path(freesolv_id, ff_version):
     file_base_name = 'mobley_' + freesolv_id
     mol2_file_subpath = os.path.join('mol2files_sybyl', file_base_name + '.mol2')
     xml_dir = 'xml_' + ff_version.replace('.', '_')
@@ -202,14 +202,14 @@ def get_freesolv_filepath(freesolv_id, ff_version):
 # Shortcut functions to create System objects from system files.
 #=============================================================================================
 
-def create_system_from_amber(prmtop_filepath, inpcrd_filepath, *args, **kwargs):
+def create_system_from_amber(prmtop_file_path, inpcrd_file_path, *args, **kwargs):
     """Create an OpenMM System and Topology from the AMBER files.
 
     Parameters
     ----------
-    prmtop_filepath : str
+    prmtop_file_path : str
         Path to the topology/parameter file in AMBER prmtop format.
-    inpcrd_filepath : str
+    inpcrd_file_path : str
         Path to the coordinates file in AMBER inpcrd or rst7 format.
     *args
     **kwargs
@@ -225,9 +225,9 @@ def create_system_from_amber(prmtop_filepath, inpcrd_filepath, *args, **kwargs):
         Initial positions loaded from the inpcrd or restart file.
 
     """
-    prmtop_file = openmm.app.AmberPrmtopFile(prmtop_filepath)
+    prmtop_file = openmm.app.AmberPrmtopFile(prmtop_file_path)
     # AmberInpcrdFile parses also rst7 files.
-    inpcrd_file = openmm.app.AmberInpcrdFile(inpcrd_filepath)
+    inpcrd_file = openmm.app.AmberInpcrdFile(inpcrd_file_path)
     # Create system and update box vectors (if needed)
     system = prmtop_file.createSystem(*args, **kwargs)
     if inpcrd_file.boxVectors is not None:
@@ -1238,7 +1238,7 @@ def compare_system_parameters(system1, system2, systems_labels=None,
 # Utility functions to compare SMIRNOFF and AMBER force fields.
 #=============================================================================================
 
-def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecule,
+def compare_amber_smirnoff(prmtop_file_path, inpcrd_file_path, forcefield, molecule,
                            check_parameters=True, check_energies=True, **kwargs):
     """
     Compare energies and parameters for OpenMM Systems/topologies created
@@ -1247,9 +1247,9 @@ def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecul
 
     Parameters
     ----------
-    prmtop_filepath : str
+    prmtop_file_path : str
         Path to the topology/parameter file in AMBER prmtop format
-    inpcrd_filepath : str
+    inpcrd_file_path : str
         Path to the coordinates file in AMBER inpcrd or rst7 format
     forcefield : ForceField
         Force field instance used to create the system to compare.
@@ -1293,7 +1293,7 @@ def compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath, forcefield, molecul
     # Create System from AMBER files. By default, contrarily to ForceField,
     # systems from AMBER files are created with removeCMMotion=True
     amber_system, openmm_topology, positions = create_system_from_amber(
-        prmtop_filepath, inpcrd_filepath, removeCMMotion=False)
+        prmtop_file_path, inpcrd_file_path, removeCMMotion=False)
     box_vectors = amber_system.getDefaultPeriodicBoxVectors()
 
     # Create System from forcefield.

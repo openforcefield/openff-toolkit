@@ -70,10 +70,10 @@ def test_temporary_directory():
     assert not os.path.exists(tmp_dir), "Temporary directory was not automatically cleaned up."
     assert not os.path.exists(output_filename), "Temporary directory was not automatically cleaned up."
 
-def test_get_data_filename():
-    """Test get_data_filename()"""
-    from openforcefield.utils import get_data_filename
-    filename = get_data_filename('forcefield/tip3p.offxml')
+def test_get_data_file_path():
+    """Test get_data_file_path()"""
+    from openforcefield.utils import get_data_file_path
+    filename = get_data_file_path('forcefield/tip3p.offxml')
     assert os.path.exists(filename)
 
 

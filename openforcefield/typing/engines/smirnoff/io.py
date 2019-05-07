@@ -28,7 +28,7 @@ import os
 import xmltodict
 
 from simtk import unit
-from openforcefield.utils.utils import get_data_filename
+from openforcefield.utils.utils import get_data_file_path
 
 
 #=============================================================================================
@@ -90,12 +90,12 @@ class ParameterIOHandler:
         """
         pass
 
-    def parse_file(self, filename):
+    def parse_file(self, file_path):
         """
 
         Parameters
         ----------
-        filename
+        file_path
 
         Returns
         -------
@@ -117,14 +117,14 @@ class ParameterIOHandler:
         """
         pass
 
-    def to_file(self, filename, smirnoff_data):
+    def to_file(self, file_path, smirnoff_data):
         """
         Write the current forcefield parameter set to a file.
 
         Parameters
         ----------
-        filename : str
-            The filename to write to.
+        file_path : str
+            The path to the file to write to.
         smirnoff_data : dict
             A dictionary structured in compliance with the SMIRNOFF spec
 
@@ -206,7 +206,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
         # This handles nonlocal filenames
         try:
             # Check if the file exists in the data/forcefield directory
-            temp_file = get_data_filename(os.path.join('forcefield', source))
+            temp_file = get_data_file_path(os.path.join('forcefield', source))
             data = open(temp_file).read()
             smirnoff_data = self.parse_string(data)
             return smirnoff_data
@@ -244,20 +244,20 @@ class XMLParameterIOHandler(ParameterIOHandler):
         except ExpatError as e:
             raise ParseError(e)
 
-    def to_file(self, filename, smirnoff_data):
+    def to_file(self, file_path, smirnoff_data):
         """Write the current forcefield parameter set to a file.
 
         Parameters
         ----------
-        filename : str
-            The name of the file to be written.
+        file_path : str
+            The path to the file to be written.
             The `.offxml` or `.xml` file extension must be present.
         smirnoff_data : dict
             A dict structured in compliance with the SMIRNOFF data spec.
 
         """
         xml_string = self.to_string(smirnoff_data)
-        with open(filename, 'w') as of:
+        with open(file_path, 'w') as of:
             of.write(xml_string)
 
     def to_string(self, smirnoff_data):

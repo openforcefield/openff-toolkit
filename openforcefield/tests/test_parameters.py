@@ -332,7 +332,7 @@ class TestParameterType:
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
                                   pilot='alice',
-                                  permit_cosmetic_attributes=True
+                                  allow_cosmetic_attributes=True
                                   )
         param_dict= p1.to_dict(discard_cosmetic_attributes=False)
         assert ('pilot', 'alice') in param_dict.items()
@@ -347,7 +347,7 @@ class TestParameterType:
                                   length=1.02*unit.angstrom,
                                   k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
                                   pilot='alice',
-                                  permit_cosmetic_attributes=True
+                                  allow_cosmetic_attributes=True
                                   )
         param_dict = p1.to_dict(discard_cosmetic_attributes=True)
         assert ('pilot', 'alice') not in param_dict.items()
@@ -363,7 +363,7 @@ class TestParameterType:
                                       length=1.02*unit.angstrom,
                                       k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
                                       pilot='alice',
-                                      permit_cosmetic_attributes=False
+                                      allow_cosmetic_attributes=False
                                       )
 
     def test_single_term_proper_torsion(self):

@@ -20,7 +20,7 @@ import numpy as np
 from simtk import unit
 from openforcefield.utils import (BASIC_CHEMINFORMATICS_TOOLKITS, RDKIT_AVAILABLE, OPENEYE_AVAILABLE,
                                   RDKitToolkitWrapper, OpenEyeToolkitWrapper)
-from openforcefield.tests.utils import get_data_filename
+from openforcefield.tests.utils import get_data_file_path
 from openforcefield.topology import Topology, ValenceDict, ImproperDict, DuplicateUniqueMoleculeError
 from openforcefield.topology import Molecule
 
@@ -83,10 +83,10 @@ class TestTopology(TestCase):
         self.ethene_from_smiles = Molecule.from_smiles('C=C')
         self.propane_from_smiles = Molecule.from_smiles('CCC')
 
-        filename = get_data_filename('molecules/toluene.sdf')
+        filename = get_data_file_path('molecules/toluene.sdf')
         self.toluene_from_sdf = Molecule.from_file(filename)
         if OpenEyeToolkitWrapper.is_available():
-            filename = get_data_filename('molecules/toluene_charged.mol2')
+            filename = get_data_file_path('molecules/toluene_charged.mol2')
             # TODO: This will require openeye to load
             self.toluene_from_charged_mol2 = Molecule.from_file(filename)
         self.charged_methylamine_from_smiles = Molecule.from_smiles('[H]C([H])([H])[N+]([H])([H])[H]')
@@ -401,7 +401,7 @@ class TestTopology(TestCase):
     def test_from_openmm(self):
         """Test creation of an openforcefield Topology object from an OpenMM Topology and component molecules"""
         from simtk.openmm import app
-        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
+        pdbfile = app.PDBFile(get_data_file_path('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
 
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
@@ -465,9 +465,9 @@ class TestTopology(TestCase):
     def test_from_openmm_duplicate_unique_mol(self):
         """Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols"""
         from simtk.openmm import app
-        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
+        pdbfile = app.PDBFile(get_data_file_path('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
         #toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = [ Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
+        molecules = [ Molecule.from_file(get_data_file_path(name)) for name in ('molecules/ethanol.mol2',
                                                                                'molecules/ethanol_reordered.mol2',
                                                                                'molecules/cyclohexane.mol2')]
         with self.assertRaises(DuplicateUniqueMoleculeError) as context:
@@ -485,9 +485,9 @@ class TestTopology(TestCase):
         """Test Topology.chemical_environment_matches"""
         from simtk.openmm import app
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
+        pdbfile = app.PDBFile(get_data_file_path('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
         # toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
+        molecules = [Molecule.from_file(get_data_file_path(name)) for name in ('molecules/ethanol.mol2',
                                                                               'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         # Test for substructure match
@@ -507,9 +507,9 @@ class TestTopology(TestCase):
         """Test Topology.chemical_environment_matches"""
         from simtk.openmm import app
         toolkit_wrapper = RDKitToolkitWrapper()
-        pdbfile = app.PDBFile(get_data_filename('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
+        pdbfile = app.PDBFile(get_data_file_path('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
         # toolkit_wrapper = RDKitToolkitWrapper()
-        #molecules = [Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',
+        #molecules = [Molecule.from_file(get_data_file_path(name)) for name in ('molecules/ethanol.mol2',
         #                                                                      'molecules/cyclohexane.mol2')]
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))

@@ -21,7 +21,7 @@ import pytest
 from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWrapper,
                                            AmberToolsToolkitWrapper, ToolkitRegistry,
                                            GAFFAtomTypeWarning, UndefinedStereochemistryError)
-from openforcefield.utils import get_data_filename
+from openforcefield.utils import get_data_file_path
 from openforcefield.topology.molecule import Molecule
 
 
@@ -215,7 +215,7 @@ class TestOpenEyeToolkitWrapper:
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.sdf')
+        filename = get_data_file_path('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
@@ -226,7 +226,7 @@ class TestOpenEyeToolkitWrapper:
         """Test OpenEyeToolkitWrapper for importing multiple sets of coordinates from a sdf file"""
         raise NotImplementedError
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.sdf')
+        filename = get_data_file_path('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
@@ -235,7 +235,7 @@ class TestOpenEyeToolkitWrapper:
     def test_get_mol2_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of molecule coordinates"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.mol2')
+        filename = get_data_file_path('molecules/toluene.mol2')
         molecule1 = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule1._conformers) == 1
         assert molecule1._conformers[0].shape == (15, 3)
@@ -262,7 +262,7 @@ class TestOpenEyeToolkitWrapper:
     def test_get_mol2_charges(self):
         """Test OpenEyeToolkitWrapper for importing a mol2 file specifying partial charges"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        filename = get_data_filename('molecules/toluene_charged.mol2')
+        filename = get_data_file_path('molecules/toluene_charged.mol2')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
@@ -280,7 +280,7 @@ class TestOpenEyeToolkitWrapper:
     def test_get_mol2_gaff_atom_types(self):
         """Test that a warning is raised OpenEyeToolkitWrapper when it detects GAFF atom types in a mol2 file."""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        mol2_file_path = get_data_filename('molecules/AlkEthOH_test_filt1_ff.mol2')
+        mol2_file_path = get_data_file_path('molecules/AlkEthOH_test_filt1_ff.mol2')
         with pytest.warns(GAFFAtomTypeWarning, match='SYBYL'):
             Molecule.from_file(mol2_file_path, toolkit_registry=toolkit_wrapper)
 
@@ -593,7 +593,7 @@ class TestRDKitToolkitWrapper:
     def test_get_sdf_coordinates(self):
         """Test RDKitToolkitWrapper for importing a single set of coordinates from a sdf file"""
         toolkit_wrapper = RDKitToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.sdf')
+        filename = get_data_file_path('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15, 3)
@@ -606,7 +606,7 @@ class TestRDKitToolkitWrapper:
         """Test RDKitToolkitWrapper for importing a single set of coordinates from a sdf file"""
         raise NotImplementedError
         toolkit_wrapper = RDKitToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.sdf')
+        filename = get_data_file_path('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
@@ -617,7 +617,7 @@ class TestRDKitToolkitWrapper:
     def test_get_pdb_coordinates(self):
         """Test RDKitToolkitWrapper for importing a single set of coordinates from a pdb file"""
         toolkit_wrapper = RDKitToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.pdb')
+        filename = get_data_file_path('molecules/toluene.pdb')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
@@ -628,7 +628,7 @@ class TestRDKitToolkitWrapper:
     def test_load_aromatic_pdb(self):
         """Test OpenEyeToolkitWrapper for importing molecule conformers"""
         toolkit_wrapper = RDKitToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.pdb')
+        filename = get_data_file_path('molecules/toluene.pdb')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)

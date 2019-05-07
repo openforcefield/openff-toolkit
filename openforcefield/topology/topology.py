@@ -895,15 +895,15 @@ class Topology(Serializable):
     Import some utilities
 
     >>> from simtk.openmm import app
-    >>> from openforcefield.tests.utils import get_data_filename, get_packmol_pdbfile
-    >>> pdb_filepath = get_packmol_pdbfile('cyclohexane_ethanol_0.4_0.6')
+    >>> from openforcefield.tests.utils import get_data_file_path, get_packmol_pdb_file_path
+    >>> pdb_filepath = get_packmol_pdb_file_path('cyclohexane_ethanol_0.4_0.6')
     >>> monomer_names = ('cyclohexane', 'ethanol')
 
     Create a Topology object from a PDB file and sdf files defining the molecular contents
 
     >>> from openforcefield.topology import Molecule, Topology
     >>> pdbfile = app.PDBFile(pdb_filepath)
-    >>> sdf_filepaths = [get_data_filename(f'systems/monomers/{name}.sdf') for name in monomer_names]
+    >>> sdf_filepaths = [get_data_file_path(f'systems/monomers/{name}.sdf') for name in monomer_names]
     >>> unique_molecules = [Molecule.from_file(sdf_filepath) for sdf_filepath in sdf_filepaths]
     >>> topology = Topology.from_openmm(pdbfile.topology, unique_molecules=unique_molecules)
 
