@@ -814,7 +814,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                                                     unit.angstrom)
                     off_atom_index = map_atoms[oe_id]
                     positions[off_atom_index, :] = off_atom_coords
-                if (positions == 0 * unit.angstrom).all():
+                if (positions == 0 * unit.angstrom).all() and n_atoms > 1:
                     continue
                 molecule.add_conformer(positions)
 
