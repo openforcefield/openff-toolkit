@@ -2522,14 +2522,14 @@ class FrozenMolecule(Serializable):
         """
         The number of Particle objects, which corresponds to how many positions must be used.
         """
-        return sum([1 for particle in self.particles])
+        return len(self._atoms) + len(self._virtual_sites)
 
     @property
     def n_atoms(self):
         """
         The number of Atom objects.
         """
-        return sum([1 for atom in self.atoms])
+        return len(self._atoms)
 
     @property
     def n_virtual_sites(self):
