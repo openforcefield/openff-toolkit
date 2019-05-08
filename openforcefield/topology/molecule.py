@@ -1480,6 +1480,8 @@ class FrozenMolecule(Serializable):
 
         """
 
+        self._cached_smiles = None
+
         # Figure out if toolkit_registry is a whole registry, or just a single wrapper
         if isinstance(toolkit_registry, ToolkitRegistry):
             pass
@@ -1611,7 +1613,10 @@ class FrozenMolecule(Serializable):
         -------
         string
         """
-        return hash(self.to_smiles())
+        if self._cached_smiles is None:
+            self._cached_smiles = self.to_smiles()
+
+        return hash(self._cached_smiles)
 
     @classmethod
     def from_dict(cls, molecule_dict):
@@ -2086,6 +2091,8 @@ class FrozenMolecule(Serializable):
         self._partial_charges = None
         self._propers = None
         self._impropers = None
+
+        self._cached_smiles = None
         # TODO: Clear fractional bond orders
 
     def to_networkx(self):
