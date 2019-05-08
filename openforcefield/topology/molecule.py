@@ -1613,10 +1613,7 @@ class FrozenMolecule(Serializable):
         -------
         string
         """
-        if self._cached_smiles is None:
-            self._cached_smiles = self.to_smiles()
-
-        return hash(self._cached_smiles)
+        return hash(self.to_smiles())
 
     @classmethod
     def from_dict(cls, molecule_dict):
@@ -1818,15 +1815,23 @@ class FrozenMolecule(Serializable):
         >>> smiles = molecule.to_smiles()
 
         """
+        smiles = self._cached_smiles
+
+        if smiles is not None:
+            return smiles
+
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('to_smiles', self)
+            smiles = toolkit_registry.call('to_smiles', self)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.to_smiles(self)
+            smiles = toolkit.to_smiles(self)
         else:
             raise Exception(
                 'Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
+
+        self._cached_smiles = smiles
+        return smiles
 
     @staticmethod
     def from_smiles(smiles, hydrogens_are_explicit=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
