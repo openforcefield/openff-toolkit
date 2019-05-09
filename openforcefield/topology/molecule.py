@@ -1480,6 +1480,8 @@ class FrozenMolecule(Serializable):
 
         """
 
+        self._cached_smiles = None
+
         # Figure out if toolkit_registry is a whole registry, or just a single wrapper
         if isinstance(toolkit_registry, ToolkitRegistry):
             pass
@@ -1813,15 +1815,23 @@ class FrozenMolecule(Serializable):
         >>> smiles = molecule.to_smiles()
 
         """
+        smiles = self._cached_smiles
+
+        if smiles is not None:
+            return smiles
+
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('to_smiles', self)
+            smiles = toolkit_registry.call('to_smiles', self)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.to_smiles(self)
+            smiles = toolkit.to_smiles(self)
         else:
             raise Exception(
                 'Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
+
+        self._cached_smiles = smiles
+        return smiles
 
     @staticmethod
     def from_smiles(smiles, hydrogens_are_explicit=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
@@ -2086,6 +2096,8 @@ class FrozenMolecule(Serializable):
         self._partial_charges = None
         self._propers = None
         self._impropers = None
+
+        self._cached_smiles = None
         # TODO: Clear fractional bond orders
 
     def to_networkx(self):
@@ -2510,14 +2522,14 @@ class FrozenMolecule(Serializable):
         """
         The number of Particle objects, which corresponds to how many positions must be used.
         """
-        return sum([1 for particle in self.particles])
+        return len(self._atoms) + len(self._virtual_sites)
 
     @property
     def n_atoms(self):
         """
         The number of Atom objects.
         """
-        return sum([1 for atom in self.atoms])
+        return len(self._atoms)
 
     @property
     def n_virtual_sites(self):
