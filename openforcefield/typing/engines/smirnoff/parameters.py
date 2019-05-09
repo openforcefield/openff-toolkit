@@ -14,7 +14,6 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 
 __all__ = [
     'SMIRNOFFSpecError',
-    'IncompatibleUnitError',
     'IncompatibleParameterError',
     'UnassignedValenceParameterException',
     'UnassignedBondParameterException',
@@ -46,7 +45,8 @@ from collections import OrderedDict
 from simtk import openmm, unit
 
 from openforcefield.utils import detach_units, attach_units, unit_to_string, \
-    extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException
+    extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
+    string_to_quantity, assert_object_units_are_compatible, object_to_quantity
 from openforcefield.topology import Topology, ValenceDict, ImproperDict
 from openforcefield.typing.chemistry import ChemicalEnvironment
 
@@ -64,12 +64,6 @@ logger = logging.getLogger(__name__)
 class SMIRNOFFSpecError(MessageException):
     """
     Exception for when data is noncompliant with the SMIRNOFF data specification.
-    """
-    pass
-
-class IncompatibleUnitError(MessageException):
-    """
-    Exception for when a parameter is in the wrong units for a ParameterHandler's unit system
     """
     pass
 
@@ -310,11 +304,12 @@ class ParameterType:
     # These lists and dicts will be used for validating input and detecting cosmetic attributes.
     _VALENCE_TYPE = None  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
     _ELEMENT_NAME = None # The string mapping to this ParameterType in a SMIRNOFF data source
-    _SMIRNOFF_ATTRIBS = ['smirks'] # Attributes expected per the SMIRNOFF spec.
-    _REQUIRE_UNITS = {} # A dict of attribs which will be checked for unit compatibility
-    _OPTIONAL_ATTRIBS = ['id', 'parent_id'] # Attributes in the SMIRNOFF spec that may
-                                            # be present but have no impact on performance
+    _REQUIRED_SPEC_ATTRIBS = ['smirks'] # Attributes expected per the SMIRNOFF spec.
+    _DEFAULT_SPEC_ATTRIBS = {}  # dict of parameter-level attributes and their default values
+    _OPTIONAL_SPEC_ATTRIBS = ['id', 'parent_id'] # Attributes in the SMIRNOFF spec that may
+                                                 # be present but have no impact on performance
     _INDEXED_ATTRIBS = []  # list of attribs that will have consecutive numerical suffixes starting at 1
+    _REQUIRE_UNITS = {} # A dict of attribs which will be checked for unit compatibility
     _ATTRIBS_TO_TYPE = {}  # dict of attributes that need to be cast to a type (like int or float) to be interpreted
 
     # TODO: Can we provide some shared tools for returning settable/gettable attributes, and checking unit-bearing attributes?
@@ -336,7 +331,7 @@ class ParameterType:
         from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
 
         self._COSMETIC_ATTRIBS = []  # A list that may be populated to record the cosmetic
-        # attributes read from a SMIRNOFF data source
+                                     # attributes read from a SMIRNOFF data source
 
         if smirks is None:
             raise ValueError("'smirks' must be specified")
@@ -355,85 +350,97 @@ class ParameterType:
 
         self._smirks = smirks
 
-        def _assert_quantity_is_compatible(quantity_name, quantity, unit_to_check):
-            """
-            Checks whether a simtk.unit.Quantity is compatible with another unit.
 
-            Parameters
-            ----------
-            quantity_name : string
-            quantity : A simtk.unit.Quantity
-            unit_to_check : A simtk.unit.Unit
+        # Handle all the unknown kwargs as cosmetic so we can write them back out
+        allowed_attribs = self._REQUIRED_SPEC_ATTRIBS + \
+                          list(self._DEFAULT_SPEC_ATTRIBS.keys()) + \
+                          self._OPTIONAL_SPEC_ATTRIBS
 
-            """
 
-            if not quantity.unit.is_compatible(unit_to_check):
-                msg = "{} constructor received kwarg {} with value {}, " \
-                      "which is incompatible with expected unit {}".format(self.__class__,
-                                                                           quantity_name,
-                                                                           val,
-                                                                           unit_to_check)
+        # Make a copy of input kwargs as we will be modifying them by attaching units
+        smirnoff_data = kwargs.copy()
+
+
+        # Check for indexed attribs and stack them into list
+        for attrib_basename in self._INDEXED_ATTRIBS:
+            # attrib_unit_key = attrib_basename + '_unit'
+            index = 1
+            attrib_w_index = '{}{}'.format(attrib_basename, index)
+            if attrib_w_index in smirnoff_data:
+                smirnoff_data[attrib_basename] = list()
+
+            while attrib_w_index in smirnoff_data:
+                # As long as we keep finding higher-indexed entries for
+                # this attrib, add them to the expected arguments
+                # allowed_attribs.append(attrib_w_index)
+
+                # if attrib_basename in self._REQUIRE_UNITS:
+                #     self._REQUIRE_UNITS[attrib_w_index] = self._REQUIRE_UNITS[attrib_basename]
+                # if attrib_basename in self._ATTRIBS_TO_TYPE:
+                #     self._ATTRIBS_TO_TYPE[attrib_w_index] = self._ATTRIBS_TO_TYPE[attrib_basename]
+                smirnoff_data[attrib_basename].append(smirnoff_data[attrib_w_index])
+                del smirnoff_data[attrib_w_index]
+                index += 1
+                attrib_w_index = '{}{}'.format(attrib_basename, index)
+
+        # Check for attribs that need to be casted to specific types
+        for attrib, type_to_cast in self._ATTRIBS_TO_TYPE.items():
+            if attrib in smirnoff_data:
+                # Handle indexed attributes separately, since they'll be lists
+                if attrib in self._INDEXED_ATTRIBS:
+                    smirnoff_data[attrib] = [type_to_cast(obj) for obj in smirnoff_data[attrib]]
+                else:
+                    smirnoff_data[attrib] = type_to_cast(smirnoff_data[attrib])
+
+
+        # Add default values to smirnoff_data if they're not already there
+        for default_key, default_val in self._DEFAULT_SPEC_ATTRIBS.items():
+            if not (default_key in smirnoff_data):
+                smirnoff_data[default_key] = default_val
+
+
+
+        # Perform unit conversion (if string) and unit compatibility checks
+        for key in smirnoff_data.keys():
+            if key in self._REQUIRE_UNITS:
+                # # If the value is a string or list, try converting it to quantity here
+                # if isinstance(smirnoff_data[key], str):
+                #     smirnoff_data[key] = string_to_quantity(smirnoff_data[key])
+
+                # Handle any necessary conversion to Quantity here
+                smirnoff_data[key] = object_to_quantity(smirnoff_data[key])
+
+                # Check for unit compatibility
+                context = f"In {self.__class__}'s __init__ function. "
+                assert_object_units_are_compatible(key, smirnoff_data[key], self._REQUIRE_UNITS[key], context=context)
+
+
+        # Ensure that all required attribs are present
+        for reqd_attrib in self._REQUIRED_SPEC_ATTRIBS:
+            # SMIRKS are a special case which is handled above
+            if reqd_attrib == 'smirks':
+                continue
+            if not reqd_attrib in smirnoff_data:
+                msg = "{} requires {} as a parameter during initialization, however this is not " \
+                      "provided. Defined kwargs are {}".format(self.__class__,
+                                                               reqd_attrib,
+                                                               list(smirnoff_data.keys()))
                 raise SMIRNOFFSpecError(msg)
 
-        # First look for indexed attribs, removing them from kwargs as they're found
-        for unidx_key in self._INDEXED_ATTRIBS:
-            # Start by generating a string with the key + an index
-            index = 1
-            idx_key = unidx_key+str(index)
 
-            # If the indexed key is present in the kwargs, set the attrib data type to be a list
-            if idx_key in kwargs:
-                setattr(self, unidx_key, list())
-
-            # Iterate through increasing values on the index, appending them as they are found
-            while idx_key in kwargs:
-                val = kwargs[idx_key]
-
-                # If the indexed keys require units, ensure they are compatible
-                if unidx_key in self._REQUIRE_UNITS:
-                    _assert_quantity_is_compatible(idx_key, val, self._REQUIRE_UNITS[unidx_key])
-
-                # If the indexed keys need to be cast to a type, do that here
-                if unidx_key in self._ATTRIBS_TO_TYPE:
-                    type_to_cast = self._ATTRIBS_TO_TYPE[unidx_key]
-                    val = type_to_cast(val)
-
-                # Finally, append this value to the attribute and remove the key from kwargs
-                getattr(self, unidx_key).append(val)
-                del kwargs[idx_key]
-                index += 1
-                idx_key = unidx_key + str(index)
-
-
-        # Iterate through the remaining, non-indexed kwargs,
-        # doing validation and setting this ParameterType's attributes
-        for key, val in kwargs.items():
-            if key in self._REQUIRE_UNITS:
-                # TODO: Add dynamic property-getter/setter for each thing in self._REQUIRE_UNITS
-                _assert_quantity_is_compatible(key, val, self._REQUIRE_UNITS[key])
-
-
-                if key in self._ATTRIBS_TO_TYPE:
-                    type_to_cast = self._ATTRIBS_TO_TYPE[key]
-                    val = type_to_cast(val)
-            # Iterate through
-            # TODO: Decide on a scheme for prepending underscores to attributes
-            #attr_name = '_' + key
-            if key in self._SMIRNOFF_ATTRIBS:
+        # Finally, set attributes of this ParameterType
+        for key, val in smirnoff_data.items():
+            if key in allowed_attribs:
+                # TODO: create @property.setter here if attrib requires unit
                 setattr(self, key, val)
-
-            # If it's an optional attrib,
-            elif key in self._OPTIONAL_ATTRIBS:
-                setattr(self, key, val)
-
-            # Handle all unknown kwargs as cosmetic so we can write them back out
             elif permit_cosmetic_attributes:
                 self._COSMETIC_ATTRIBS.append(key)
                 setattr(self, key, val)
             else:
-                raise SMIRNOFFSpecError("Unexpected kwarg {} passed to {} constructor. If this is "
-                                        "a desired cosmetic attribute, consider setting "
-                                        "'permit_cosmetic_attributes=True'".format({key: val}, self.__class__))
+                raise SMIRNOFFSpecError(f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. " 
+                                        "If this is a desired cosmetic attribute, consider setting " 
+                                        "'permit_cosmetic_attributes=True'")
+
 
     @property
     def smirks(self):
@@ -472,8 +479,8 @@ class ParameterType:
         """
         # Make a list of all attribs that should be included in the
         # returned dict (call list() to make a copy)
-        attribs_to_return = list(self._SMIRNOFF_ATTRIBS)
-        attribs_to_return += [opt_attrib for opt_attrib in self._OPTIONAL_ATTRIBS if hasattr(self, opt_attrib)]
+        attribs_to_return = list(self._REQUIRED_SPEC_ATTRIBS)
+        attribs_to_return += [opt_attrib for opt_attrib in self._OPTIONAL_SPEC_ATTRIBS if hasattr(self, opt_attrib)]
         if not(discard_cosmetic_attributes):
             attribs_to_return += self._COSMETIC_ATTRIBS
 
@@ -488,6 +495,8 @@ class ParameterType:
                     smirnoff_dict[attrib_name + str(idx+1)] = val
             else:
                 smirnoff_dict[attrib_name] = attrib_value
+            if attrib_name == 'smirks':
+                pass
 
         return smirnoff_dict
 
@@ -582,14 +591,10 @@ class ParameterHandler:
                                  list(self._DEFAULT_SPEC_ATTRIBS.keys()) + \
                                  self._OPTIONAL_SPEC_ATTRIBS
 
-        # Check for attribs that need to be casted to specific types
-        for attrib, type_to_cast in self._ATTRIBS_TO_TYPE.items():
-            if attrib in kwargs:
-                kwargs[attrib] = type_to_cast(kwargs[attrib])
 
         # Check for indexed attribs
         for attrib_basename in self._INDEXED_ATTRIBS:
-            attrib_unit_key = attrib_basename + '_unit'
+            # attrib_unit_key = attrib_basename + '_unit'
 
             index = 1
             attrib_w_index = '{}{}'.format(attrib_basename, index)
@@ -598,13 +603,26 @@ class ParameterHandler:
                 # this attrib, add them to the expected arguments
                 allowed_header_attribs.append(attrib_w_index)
 
-                # If there's a unit for this attrib, copy unit entries for each index instance
-                if attrib_unit_key in kwargs:
-                    kwargs[attrib_w_index+'_unit'] = kwargs[attrib_unit_key]
+                if attrib_basename in self._REQUIRE_UNITS:
+                    self._REQUIRE_UNITS[attrib_w_index] = self._REQUIRE_UNITS[attrib_basename]
+                if attrib_basename in self._ATTRIBS_TO_TYPE:
+                    self._ATTRIBS_TO_TYPE[attrib_w_index] = self._ATTRIBS_TO_TYPE[attrib_basename]
+
+                # # If there's a unit for this attrib, copy unit entries for each index instance
+                # if attrib_unit_key in kwargs:
+                #     kwargs[attrib_w_index+'_unit'] = kwargs[attrib_unit_key]
 
         # Attach units to the handler kwargs, if applicable
-        unitless_kwargs, attached_units = extract_serialized_units_from_dict(kwargs)
-        smirnoff_data = attach_units(unitless_kwargs, attached_units)
+        # unitless_kwargs, attached_units = extract_serialized_units_from_dict(kwargs)
+        # smirnoff_data = attach_units(unitless_kwargs, attached_units)
+
+        # Check for attribs that need to be casted to specific types
+        for attrib, type_to_cast in self._ATTRIBS_TO_TYPE.items():
+            if attrib in kwargs:
+                kwargs[attrib] = type_to_cast(kwargs[attrib])
+
+        smirnoff_data = kwargs
+
 
         # Add default values to smirnoff_data if they're not already there
         for default_key, default_val in self._DEFAULT_SPEC_ATTRIBS.items():
@@ -612,14 +630,17 @@ class ParameterHandler:
                 smirnoff_data[default_key] = default_val
 
         # Perform unit compatibility checks
-        for key, val in smirnoff_data.items():
+        for key in smirnoff_data.keys():
             if key in self._REQUIRE_UNITS:
-                # TODO: Logic for indexed ParameterHandler attributes (none exist so far, but they might in the future)
-                if not val.unit.is_compatible(self._REQUIRE_UNITS[key]):
+                # If the value is a string, try converting it to quantity here
+                if isinstance(smirnoff_data[key], str):
+                    smirnoff_data[key] = string_to_quantity(smirnoff_data[key])
+
+                if not smirnoff_data[key].unit.is_compatible(self._REQUIRE_UNITS[key]):
                     msg = "{} constructor received kwarg {} with value {}, " \
                           "which is incompatible with expected unit {}".format(self.__class__,
                                                                                key,
-                                                                               val,
+                                                                               smirnoff_data[key],
                                                                                self._REQUIRE_UNITS[key])
                     raise SMIRNOFFSpecError(msg)
 
@@ -641,7 +662,7 @@ class ParameterHandler:
                 setattr(self, attr_name, val)
 
             else:
-                raise SMIRNOFFSpecError("Incompatible kwarg {} passed to {} constructor. If this is "
+                raise SMIRNOFFSpecError("Unexpected kwarg {} passed to {} constructor. If this is "
                                         "a desired cosmetic attribute, consider setting "
                                         "'permit_cosmetic_attributes=True'".format(key, self.__class__))
 
@@ -717,10 +738,12 @@ class ParameterHandler:
                 #    raise Exception(cls)
                 #    reqd_unit = cls._REQUIRE_UNITS[arg]
                 val = parameter_kwargs[key]
-                if not (reqd_unit.is_compatible(val.unit)):
-                    raise IncompatibleUnitError(
-                        "Input unit {} is not compatible with ParameterHandler unit {}"
-                        .format(val.unit, reqd_unit))
+                context = f"In {self.__class__}'s check_parameter_compatibility. "
+                assert_object_units_are_compatible(key, val, reqd_unit,context=context)
+                # if not (reqd_unit.is_compatible(val.unit)):
+                #     raise IncompatibleUnitError(
+                #         "Input unit {} is not compatible with ParameterHandler unit {}"
+                #         .format(val.unit, reqd_unit))
 
     def check_handler_compatibility(self, handler_kwargs):
         """
@@ -1023,8 +1046,8 @@ class ConstraintHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Bond'
         _ELEMENT_NAME = 'Constraint'
-        _SMIRNOFF_ATTRIBS = ['smirks']  # Attributes expected per the SMIRNOFF spec.
-        _OPTIONAL_ATTRIBS = ['distance', 'id', 'parent_id']
+        _REQUIRED_SPEC_ATTRIBS = ['smirks']  # Attributes expected per the SMIRNOFF spec.
+        _OPTIONAL_SPEC_ATTRIBS = ['distance', 'id', 'parent_id']
         _REQUIRE_UNITS = {'distance': unit.angstrom}
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -1075,13 +1098,13 @@ class BondHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Bond' # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
         _ELEMENT_NAME = 'Bond'
-        _SMIRNOFF_ATTRIBS = ['smirks', 'length', 'k']  # Attributes expected per the SMIRNOFF spec.
+        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'length', 'k']  # Attributes expected per the SMIRNOFF spec.
         _REQUIRE_UNITS = {'length' : unit.angstrom,
                           'k' : unit.kilocalorie_per_mole / unit.angstrom**2}
         _INDEXED_ATTRIBS = ['length', 'k']  # May be indexed (by integer bond order) if fractional bond orders are used
 
         def __init__(self, **kwargs):
-            super().__init__(**kwargs)  # Base class handles ``smirks`` and ``id`` fields
+            super().__init__(**kwargs)
 
 
     _TAGNAME = 'Bonds'  # SMIRNOFF tag name to process
@@ -1203,13 +1226,13 @@ class AngleHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Angle'  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
         _ELEMENT_NAME = 'Angle'
-        _SMIRNOFF_ATTRIBS = ['smirks', 'angle', 'k']  # Attributes expected per the SMIRNOFF spec.
+        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'angle', 'k']  # Attributes expected per the SMIRNOFF spec.
         _REQUIRE_UNITS = {'angle': unit.degree,
                           'k': unit.kilocalorie_per_mole / unit.degree**2}
 
 
         def __init__(self, **kwargs):
-            super().__init__(**kwargs)  # base class handles ``smirks`` and ``id`` fields
+            super().__init__(**kwargs)
 
 
     _TAGNAME = 'Angles'  # SMIRNOFF tag name to process
@@ -1304,16 +1327,17 @@ class ProperTorsionHandler(ParameterHandler):
 
         _VALENCE_TYPE = 'ProperTorsion'
         _ELEMENT_NAME = 'Proper'
-        _SMIRNOFF_ATTRIBS = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
+        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
         _REQUIRE_UNITS = {'k': unit.kilocalorie_per_mole,
                           'phase': unit.degree}
-        _OPTIONAL_ATTRIBS = ['id', 'parent_id', 'idivf']
+        _OPTIONAL_SPEC_ATTRIBS = ['id', 'parent_id', 'idivf']
         _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
+        # Note that we don't need to type k or phase, since those will be interpreted as Quantity
         _ATTRIBS_TO_TYPE = {'periodicity': int,
                             'idivf': float}
 
         def __init__(self, **kwargs):
-            super().__init__(**kwargs)  # base class handles ``smirks`` and ``id`` fields
+            super().__init__(**kwargs)
 
 
     _TAGNAME = 'ProperTorsions'  # SMIRNOFF tag name to process
@@ -1322,6 +1346,7 @@ class ProperTorsionHandler(ParameterHandler):
     _DEFAULT_SPEC_ATTRIBS = {'potential': 'charmm',
                              'default_idivf': 'auto'}
     _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
+
 
     def __init__(self, **kwargs):
 
@@ -1424,11 +1449,12 @@ class ImproperTorsionHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'ImproperTorsion'
         _ELEMENT_NAME = 'Improper'
-        _SMIRNOFF_ATTRIBS = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
+        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
         _REQUIRE_UNITS = {'k': unit.kilocalorie_per_mole,
                           'phase': unit.degree}
-        _OPTIONAL_ATTRIBS = ['id', 'parent_id', 'idivf']
+        _OPTIONAL_SPEC_ATTRIBS = ['id', 'parent_id', 'idivf']
         _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
+        # Note that we don't need to type k or phase, since those will be interpreted as Quantity
         _ATTRIBS_TO_TYPE = {'periodicity': int,
                             'idivf': float}
 
@@ -1443,6 +1469,8 @@ class ImproperTorsionHandler(ParameterHandler):
     _DEFAULT_SPEC_ATTRIBS = {'potential': 'charmm',
                              'default_idivf': 'auto'}
     _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
+
+
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1564,8 +1592,8 @@ class vdWHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Atom'  # ChemicalEnvironment valence type expected for SMARTS
         _ELEMENT_NAME = 'Atom'
-        _SMIRNOFF_ATTRIBS = ['smirks', 'epsilon'] # Attributes expected per the SMIRNOFF spec.
-        _OPTIONAL_ATTRIBS = ['id', 'parent_id', 'sigma', 'rmin_half']
+        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'epsilon'] # Attributes expected per the SMIRNOFF spec.
+        _OPTIONAL_SPEC_ATTRIBS = ['id', 'parent_id', 'sigma', 'rmin_half']
         _REQUIRE_UNITS = {
             'epsilon': unit.kilocalorie_per_mole,
             'sigma': unit.angstrom,
@@ -2302,7 +2330,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS
         _ELEMENT_NAME = 'ChargeIncrement'
-        _SMIRNOFF_ATTRIBS = ['smirks', 'chargeIncrement']
+        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'chargeIncrement']
         _REQUIRE_UNITS = {
             'chargeIncrement': unit.elementary_charge
         }
@@ -2545,7 +2573,7 @@ class GBSAParameterHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Atom'
         _ELEMENT_NAME = 'Atom' # TODO: This isn't actually in the spec
-        _SMIRNOFF_ATTRIBS = ['smirks', 'radius', 'scale']
+        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'radius', 'scale']
         _REQUIRE_UNITS = {'radius': unit.angstrom}
         _ATTRIBS_TO_TYPE = {'scale': float}
 

@@ -18,7 +18,7 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType, BondHandler, \
     ParameterHandler, AngleHandler, ConstraintHandler, ProperTorsionHandler, ImproperTorsionHandler, \
     ToolkitAM1BCCHandler, vdWHandler, SMIRNOFFSpecError
-from openforcefield.utils import detach_units
+from openforcefield.utils import detach_units, IncompatibleUnitError
 
 import pytest
 
@@ -358,7 +358,7 @@ class TestParameterType:
         """
         from simtk import unit
 
-        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'pilot': 'alice'}") as context:
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg (pilot: alice)*") as context:
             p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
                                       length=1.02*unit.angstrom,
                                       k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
@@ -432,7 +432,7 @@ class TestParameterType:
         """
         from simtk import unit
 
-        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'phase3': ") as context:
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg (phase3: 31 deg)*") as context:
             p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                         phase1=30 * unit.degree,
                                                         periodicity1=2,
@@ -449,7 +449,8 @@ class TestParameterType:
         """
         from simtk import unit
 
-        with pytest.raises(SMIRNOFFSpecError, match="constructor received kwarg phase2 with value 31 A,") as context:
+        with pytest.raises(IncompatibleUnitError, match="__init__ function.  phase with value 31 A, is incompatible")\
+                as context:
             p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                         phase1=30 * unit.degree,
                                                         periodicity1=2,

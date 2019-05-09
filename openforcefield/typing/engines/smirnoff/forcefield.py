@@ -261,6 +261,7 @@ class ForceField:
         """
         Initialize all object fields.
         """
+        self._MIN_SUPPORTED_SMIRNOFF_VERSION = 0.2
         self._MAX_SUPPORTED_SMIRNOFF_VERSION = 0.2
         self._disable_version_check = False  # if True, will disable checking compatibility version
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL  # aromaticity model
@@ -708,7 +709,7 @@ class ForceField:
         l1_spec_keys = ['Author', 'Date', 'version', 'aromaticity_model']
 
         for parameter_name in l1_dict:
-            # Skip (for now) cosmetic l1 items
+            # Skip (for now) cosmetic l1 items. They're handled above
             if parameter_name in l1_spec_keys:
                 continue
             # Handle cases where a parameter name has no info (eg. ToolkitAM1BCC)

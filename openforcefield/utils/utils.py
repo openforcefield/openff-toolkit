@@ -6,6 +6,7 @@ Utility subroutines
 
 __all__ = [
     'MessageException',
+    'IncompatibleUnitError',
     'inherit_docstrings',
     'all_subclasses',
     'temporary_cd',
@@ -15,6 +16,8 @@ __all__ = [
     'quantity_to_string',
     'string_to_unit',
     'string_to_quantity',
+    'object_to_quantity',
+    'assert_object_units_are_compatible',
     'extract_serialized_units_from_dict',
     'attach_units',
     'detach_units',
@@ -41,6 +44,12 @@ class MessageException(Exception):
     def __init__(self, msg):
         super().__init__(self, msg)
         self.msg = msg
+
+class IncompatibleUnitError(MessageException):
+    """
+    Exception for when a parameter is in the wrong units for a ParameterHandler's unit system
+    """
+    pass
 
 # =============================================================================================
 # UTILITY SUBROUTINES
@@ -274,6 +283,60 @@ def string_to_quantity(quantity_string):
     import ast
     output_quantity = _ast_eval(ast.parse(quantity_string, mode='eval').body)
     return output_quantity
+
+def object_to_quantity(object):
+    """
+    Attempts to turn the provided object into simtk.unit.Quantity(s). Can handle strings, quantities, or iterators over
+    the same. Raises an exception if unable to convert all inputs
+
+    Parameters
+    ----------
+    object : string, quantity, or iterator of strings of quantities
+
+    Returns
+    -------
+    converted_object : simtk.unit.Quantity or list of simtk.unit.Quantity
+
+    """
+    from simtk import unit
+    if isinstance(object, unit.Quantity):
+        return object
+    elif isinstance(object, str):
+        return string_to_quantity(object)
+    else:
+        return [object_to_quantity(sub_obj) for sub_obj in object]
+
+
+def assert_object_units_are_compatible(object_name, object, unit_to_check, context=None):
+    """
+    Checks whether a simtk.unit.Quantity or list of simtk.unit.Quantitys is compatible with given unit.
+
+    Parameters
+    ----------
+    object_name : string
+        Name of object, used in printing exception.
+    object : A simtk.unit.Quantity or list of simtk.unit.Quantitys
+    unit_to_check : A simtk.unit.Unit
+    context : string, optional. Default=None
+        Additional information to provide at the beginning of the exception message if raised
+
+    Raises
+    ------
+    IncompatibleUnitError
+    """
+    from simtk import unit
+    if isinstance(object, list):
+        for sub_object in object:
+            assert_object_units_are_compatible(object_name, sub_object, unit_to_check, context=context)
+    elif isinstance(object, unit.Quantity):
+        if not object.unit.is_compatible(unit_to_check):
+            msg = f"{context} {object_name} with " \
+                  f"value {object}, is incompatible with expected unit {unit_to_check}"
+            raise IncompatibleUnitError(msg)
+    else:
+        msg = f"{context} {object_name} with " \
+              f"value {object}, is incompatible with expected unit {unit_to_check}"
+        raise IncompatibleUnitError(msg)
 
 
 def extract_serialized_units_from_dict(input_dict):
