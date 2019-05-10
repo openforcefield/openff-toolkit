@@ -185,7 +185,6 @@ def quantity_to_string(input_quantity):
     if isinstance(unitless_value, np.ndarray):
         unitless_value = list(unitless_value)
     unit_string = unit_to_string(input_quantity.unit)
-    print(input_quantity, type(unitless_value))
     output_string = '{} * {}'.format(unitless_value, unit_string)
     return output_string
 
