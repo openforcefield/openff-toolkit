@@ -461,6 +461,34 @@ class TestParameterType:
                                                         )
 
 
+    def test_torsion_handler_potential_setting(self):
+        """
+        Test creation of TorsionHandlers with the deprecated 0.2 potential value "charmm" instead of the current
+        supported potential value "fourier".
+        """
+        # Test creating ProperTorsionHandlers
+        with pytest.raises(SMIRNOFFSpecError, match="ProperTorsionHandler given 'potential' value of 'charmm'. "
+                                                        "Supported options are [[]'fourier'[]].")\
+                as context:
+            ph1 = ProperTorsionHandler(potential='charmm')
+        ph1 = ProperTorsionHandler(potential='fourier')
+
+        # Same test, but with ImproperTorsionHandler
+        with pytest.raises(SMIRNOFFSpecError, match="ImproperTorsionHandler given 'potential' value of 'charmm'. "
+                                                        "Supported options are [[]'fourier'[]].")\
+                as context:
+            ph1 = ImproperTorsionHandler(potential='charmm')
+        ph1 = ImproperTorsionHandler(potential='fourier')
+
+
+        #     p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+        #                                                 phase1=30 * unit.degree,
+        #                                                 periodicity1=2,
+        #                                                 k1=5 * unit.kilocalorie_per_mole,
+        #                                                 phase2=31 * unit.angstrom, # This should be caught
+        #                                                 periodicity2=3,
+        #                                                 k2=6 * unit.kilocalorie_per_mole,
+        #                                                 )
 
 # TODO: test_nonbonded_settings (ensure that choices in Electrostatics and vdW tags resolve
 #                                to correct openmm.NonbondedForce subtypes, that setting different cutoffs raises

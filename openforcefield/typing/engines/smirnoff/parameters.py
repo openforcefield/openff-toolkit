@@ -1360,6 +1360,7 @@ class ProperTorsionHandler(ParameterHandler):
         # those idivfX values uninitialized and deal with it during system creation
 
         super().__init__(**kwargs)
+        self.validate_parameters()
 
 
     def check_handler_compatibility(self,
@@ -1403,8 +1404,14 @@ class ProperTorsionHandler(ParameterHandler):
                     "(handler value: {}, incompatible value: {}".format(
                         string_attr, this_val, other_val))
 
+    def validate_parameters(self):
+        supported_torsion_potentials = ['fourier']
+        if self._potential not in supported_torsion_potentials:
+            raise SMIRNOFFSpecError(f"ProperTorsionHandler given 'potential' value of "
+                                    f"'{self._potential}'. Supported options are {supported_torsion_potentials}.")
 
     def create_force(self, system, topology, **kwargs):
+        self.validate_parameters()
         #force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [f for f in existing if type(f) == self._OPENMMTYPE]
@@ -1478,6 +1485,7 @@ class ImproperTorsionHandler(ParameterHandler):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.validate_parameters()
 
     def check_handler_compatibility(self,
                                     other_handler):
@@ -1521,6 +1529,12 @@ class ImproperTorsionHandler(ParameterHandler):
                         string_attr, this_val, other_val))
 
 
+    def validate_parameters(self):
+        supported_torsion_potentials = ['fourier']
+        if self._potential not in supported_torsion_potentials:
+            raise SMIRNOFFSpecError(f"ImproperTorsionHandler given 'potential' value of "
+                                    f"'{self._potential}'. Supported options are {supported_torsion_potentials}.")
+
     def find_matches(self, entity):
         """Find the improper torsions in the topology/molecule matched by a parameter type.
 
@@ -1541,6 +1555,7 @@ class ImproperTorsionHandler(ParameterHandler):
     def create_force(self, system, topology, **kwargs):
         #force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
         #force = super().create_force(system, topology, **kwargs)
+        self.validate_parameters()
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [
             f for f in existing if type(f) == openmm.PeriodicTorsionForce
