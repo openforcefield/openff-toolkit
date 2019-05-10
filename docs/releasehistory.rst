@@ -14,7 +14,7 @@ Description goes here.
 
 Bugfixes
 """"""""
-* `PR #315 <https://github.com/openforcefield/openforcefield/pull/315>`_: Fix formatting issues in GBSA section of SMIRNOFF spec
+* `PR #316 <https://github.com/openforcefield/openforcefield/pull/316>`_: Fix formatting issues in GBSA section of SMIRNOFF spec
 
 0.2.2 - Bugfix release
 ----------------------
