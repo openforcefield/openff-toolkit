@@ -32,7 +32,7 @@ from openforcefield.typing.engines.smirnoff import *
 
 # TODO: Fix these imports and unskip these tests
 import pytest
-pytestmark = pytest.mark.skip('tests in test_smirnoff are outdated and should be integrated with test_forcefield.py')
+pytestmark = pytest.mark.skip('tests in test_smirnoff are outdated and should be integrated with test_forcefield_0_2.py')
 
 #=============================================================================================
 # CONSTANTS

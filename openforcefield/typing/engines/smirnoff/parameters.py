@@ -44,7 +44,7 @@ from collections import OrderedDict
 
 from simtk import openmm, unit
 
-from openforcefield.utils import detach_units, attach_units, unit_to_string, \
+from openforcefield.utils import detach_units, attach_units, quantity_to_string, \
     extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
     string_to_quantity, assert_object_units_are_compatible, object_to_quantity
 from openforcefield.topology import Topology, ValenceDict, ImproperDict
@@ -633,8 +633,8 @@ class ParameterHandler:
         for key in smirnoff_data.keys():
             if key in self._REQUIRE_UNITS:
                 # If the value is a string, try converting it to quantity here
-                if isinstance(smirnoff_data[key], str):
-                    smirnoff_data[key] = string_to_quantity(smirnoff_data[key])
+                # if isinstance(smirnoff_data[key], str):
+                #     smirnoff_data[key] = string_to_quantity(smirnoff_data[key])
 
                 if not smirnoff_data[key].unit.is_compatible(self._REQUIRE_UNITS[key]):
                     msg = "{} constructor received kwarg {} with value {}, " \
@@ -888,49 +888,50 @@ class ParameterHandler:
         smirnoff_data = OrderedDict()
 
         # Set default output units to those from the last parameter added to the ParameterList
-        if (output_units is None):
-            output_units = dict()
+        # if (output_units is None):
+        #     output_units = dict()
         # TODO: What if self._parameters is an empty list?
-        if len(self._parameters) > 0:
-            _, last_added_output_units = detach_units(self._parameters[-1].to_dict())
-            # Overwrite key_value pairs in last_added_output_units with those specified by user in output_units
-            last_added_output_units.update(output_units)
-            output_units = last_added_output_units
+        # if len(self._parameters) > 0:
+        #     _, last_added_output_units = detach_units(self._parameters[-1].to_dict())
+        #     # Overwrite key_value pairs in last_added_output_units with those specified by user in output_units
+        #     last_added_output_units.update(output_units)
+        #     output_units = last_added_output_units
 
         # Populate parameter list
         parameter_list = self._parameters.to_list(discard_cosmetic_attributes=discard_cosmetic_attributes)
-        unitless_parameter_list = list()
+        # unitless_parameter_list = list()
 
         # Detach units into a separate dict.
-        for parameter_dict in parameter_list:
-            unitless_parameter_dict, attached_units = detach_units(parameter_dict, output_units=output_units)
-            unitless_parameter_list.append(unitless_parameter_dict)
-            output_units.update(attached_units)
+        # for parameter_dict in parameter_list:
+        #     unitless_parameter_dict, attached_units = detach_units(parameter_dict, output_units=output_units)
+        #     unitless_parameter_list.append(unitless_parameter_dict)
+        #     output_units.update(attached_units)
 
         # Collapse down indexed attribute units
         # (eg. {'k1_unit': angstrom, 'k2_unit': angstrom} --> {'k_unit': angstrom})
-        for attrib_key in self._INDEXED_ATTRIBS:
-            index = 1
-            # Store a variable that is 'k1_unit'
-            idxed_attrib_unit_key = attrib_key + str(index) + '_unit'
-            # See if 'k1_unit' is in output_units
-            if idxed_attrib_unit_key in output_units:
-                # If so, define 'k_unit' and add it to the output_units dict
-                attrib_unit_key = attrib_key + '_unit'
-                output_units[attrib_unit_key] = output_units[idxed_attrib_unit_key]
-            # Increment the 'kN_unit' value, checking that each is the same as the
-            # 'k1_unit' value, and deleting them from output_units
-            while idxed_attrib_unit_key in output_units:
-                # Ensure that no different units are defined for higher indexes of this attrib
-                assert output_units[attrib_unit_key] == output_units[idxed_attrib_unit_key]
-                del output_units[idxed_attrib_unit_key]
-                index += 1
-                idxed_attrib_unit_key = attrib_key + str(index) + '_unit'
+        # for attrib_key in self._INDEXED_ATTRIBS:
+        #     index = 1
+        #     # Store a variable that is 'k1_unit'
+        #     idxed_attrib_unit_key = attrib_key + str(index) + '_unit'
+        #     # See if 'k1_unit' is in output_units
+        #     if idxed_attrib_unit_key in output_units:
+        #         # If so, define 'k_unit' and add it to the output_units dict
+        #         attrib_unit_key = attrib_key + '_unit'
+        #         output_units[attrib_unit_key] = output_units[idxed_attrib_unit_key]
+        #     # Increment the 'kN_unit' value, checking that each is the same as the
+        #     # 'k1_unit' value, and deleting them from output_units
+        #     while idxed_attrib_unit_key in output_units:
+        #         # Ensure that no different units are defined for higher indexes of this attrib
+        #         assert output_units[attrib_unit_key] == output_units[idxed_attrib_unit_key]
+        #         del output_units[idxed_attrib_unit_key]
+        #         index += 1
+        #         idxed_attrib_unit_key = attrib_key + str(index) + '_unit'
 
 
         # NOTE: This assumes that a ParameterHandler will have just one homogenous ParameterList under it
         if self._INFOTYPE is not None:
-            smirnoff_data[self._INFOTYPE._ELEMENT_NAME] = unitless_parameter_list
+            #smirnoff_data[self._INFOTYPE._ELEMENT_NAME] = unitless_parameter_list
+            smirnoff_data[self._INFOTYPE._ELEMENT_NAME] = parameter_list
 
 
         # Collect the names of handler attributes to return
@@ -950,23 +951,26 @@ class ParameterHandler:
         header_attribute_dict = {}
         for header_attribute in header_attribs_to_return:
             value = getattr(self, '_' + header_attribute)
+            # if isinstance(value, unit.Quantity):
+            #     value = quantity_to_string(value)
             header_attribute_dict[header_attribute] = value
 
         # Detach all units from the header attribs
-        unitless_header_attribute_dict, attached_header_units = detach_units(header_attribute_dict)
+        # unitless_header_attribute_dict, attached_header_units = detach_units(header_attribute_dict)
 
         # Convert all header attrib units (eg. {'length_unit': simtk.unit.angstrom}) to strings (eg.
         # {'length_unit': 'angstrom'}) and add them to the header attribute dict
         # TODO: Should we check for collisions between parameter "_unit" keys and header "_unit" keys?
-        output_units.update(attached_header_units)
-        for key, value in output_units.items():
-            value_str = unit_to_string(value)
-            # Made a note to add this to the smirnoff spec
-            output_units[key] = value_str
+        # output_units.update(attached_header_units)
+        # for key, value in output_units.items():
+        #     value_str = unit_to_string(value)
+        #     # Made a note to add this to the smirnoff spec
+        #     output_units[key] = value_str
 
         # Reattach the attached units here
-        smirnoff_data.update(unitless_header_attribute_dict)
-        smirnoff_data.update(output_units)
+        # smirnoff_data.update(unitless_header_attribute_dict)
+        smirnoff_data.update(header_attribute_dict)
+        # smirnoff_data.update(output_units)
         return smirnoff_data
 
     # -------------------------------
@@ -1610,10 +1614,6 @@ class vdWHandler(ParameterHandler):
                     "BOTH sigma and rmin_half cannot be specified simultaneously."
                 )
 
-            # TODO: Is it necessary to force everything to be sigma? We could handle having either when create_force runs
-            if (rmin_half is not None):
-                kwargs['sigma'] = 2. * rmin_half / (2.**(1. / 6.))
-                del kwargs['rmin_half']
 
             super().__init__(**kwargs)
 
@@ -1873,7 +1873,11 @@ class vdWHandler(ParameterHandler):
         # Set the particle Lennard-Jones terms.
         for atom_key, ljtype in atoms.items():
             atom_idx = atom_key[0]
-            force.setParticleParameters(atom_idx, 0.0, ljtype.sigma,
+            if not(hasattr(ljtype, 'sigma')):
+                sigma = 2. * ljtype.rmin_half / (2.**(1. / 6.))
+            else:
+                sigma = ljtype.sigma
+            force.setParticleParameters(atom_idx, 0.0, sigma,
                                         ljtype.epsilon)
 
         # Check that no atoms (n.b. not particles) are missing force parameters.

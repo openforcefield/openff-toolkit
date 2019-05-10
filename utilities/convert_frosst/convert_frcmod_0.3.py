@@ -10,8 +10,8 @@ def _parse_nonbon_line( line ):
     tmp = line.split()
     params = {}
     params['smirks'] = tmp[0]
-    params['rmin_half'] = tmp[1]
-    params['epsilon'] = tmp[2]
+    params['rmin_half'] = tmp[1] + ' * angstrom'
+    params['epsilon'] = tmp[2] + ' * kilocalories_per_mole'
 
     return params
 
@@ -21,8 +21,8 @@ def _parse_bond_line( line ):
     tmp = line.split()
     params = {}
     params['smirks'] = tmp[0]
-    params['k'] = str(2*float(tmp[1]))
-    params['length'] = tmp[2]
+    params['k'] = str(2*float(tmp[1])) + "* kilocalories_per_mole/angstrom**2"
+    params['length'] = tmp[2] + " * angstrom"
     return params
 
 def _parse_angl_line( line ):
@@ -31,8 +31,8 @@ def _parse_angl_line( line ):
     tmp = line.split()
     params = {}
     params['smirks'] = tmp[0]
-    params['k'] = str(2*float(tmp[1]))
-    params['angle'] = tmp[2]
+    params['k'] = str(2*float(tmp[1])) + " * kilocalories_per_mole/radian**2"
+    params['angle'] = tmp[2] + " * degree"
     return params
 
 def _parse_dihe_line( line ):
@@ -42,8 +42,8 @@ def _parse_dihe_line( line ):
     params = {}
     params['smirks'] = tmp[0]
     params['idivf1'] = tmp[1]
-    params['k1'] = tmp[2]
-    params['phase1'] = tmp[3]
+    params['k1'] = tmp[2] + " * kilocalories_per_mole"
+    params['phase1'] = tmp[3] + " * degree"
     params['periodicity1'] = str(int(np.abs(float(tmp[4]))))
     return params
 
@@ -53,8 +53,8 @@ def _parse_impr_line( line ):
     tmp = line.split()
     params = {}
     params['smirks'] = tmp[0]
-    params['k1'] = tmp[1]
-    params['phase1'] = tmp[2]
+    params['k1'] = tmp[1] + " * kilocalories_per_mole"
+    params['phase1'] = tmp[2] + " * degree"
     params['periodicity1'] = str(int(np.abs(float(tmp[3]))))
     return params
 

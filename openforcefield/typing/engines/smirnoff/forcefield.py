@@ -39,7 +39,8 @@ from collections import OrderedDict
 
 from simtk import openmm, unit
 
-from openforcefield.utils import all_subclasses, MessageException
+from openforcefield.utils import all_subclasses, MessageException, \
+    convert_smirnoff_data_quantitys_to_string, convert_smirnoff_data_strings_to_quantity
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
@@ -262,7 +263,7 @@ class ForceField:
         Initialize all object fields.
         """
         self._MIN_SUPPORTED_SMIRNOFF_VERSION = 0.2
-        self._MAX_SUPPORTED_SMIRNOFF_VERSION = 0.2
+        self._MAX_SUPPORTED_SMIRNOFF_VERSION = 0.3
         self._disable_version_check = False  # if True, will disable checking compatibility version
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL  # aromaticity model
         self._parameter_handler_classes = OrderedDict()  # Parameter handler classes that _can_ be initialized if needed
@@ -271,6 +272,8 @@ class ForceField:
         self._parameter_io_handlers = OrderedDict()  # ParameterIO classes to be used for each file type
         self._parameters = ParameterList()  # ParameterHandler objects instantiated for each parameter type
         self._aromaticity_model = None
+        self._author = None
+        self._date = None
 
 
     def _check_smirnoff_version_compatibility(self, version):
@@ -290,11 +293,20 @@ class ForceField:
         import packaging.version
         # Use PEP-440 compliant version number comparison, if requested
         if (not self.disable_version_check) and (
+                (
                 packaging.version.parse(str(version)) >
-                packaging.version.parse(str(self._MAX_SUPPORTED_SMIRNOFF_VERSION))):
+                packaging.version.parse(str(self._MAX_SUPPORTED_SMIRNOFF_VERSION))
+
+                ) or (
+                packaging.version.parse(str(version)) <
+                packaging.version.parse(str(self._MIN_SUPPORTED_SMIRNOFF_VERSION))
+                )
+              ):
             raise SMIRNOFFVersionError(
                 'SMIRNOFF offxml file was written with version {}, but this version of ForceField only supports '
-                'up to version {}'.format(version, self._MAX_SUPPORTED_SMIRNOFF_VERSION))
+                'version {} to version {}'.format(version,
+                                                  self._MIN_SUPPORTED_SMIRNOFF_VERSION,
+                                                  self._MAX_SUPPORTED_SMIRNOFF_VERSION))
 
 
     def _set_aromaticity_model(self, aromaticity_model):
@@ -665,6 +677,7 @@ class ForceField:
 
         smirnoff_dict = OrderedDict()
         smirnoff_dict['SMIRNOFF'] = l1_dict
+        smirnoff_dict = convert_smirnoff_data_quantitys_to_string(smirnoff_dict)
         return smirnoff_dict
 
     # TODO: Should we call this "from_dict"?
@@ -684,6 +697,8 @@ class ForceField:
         if not('SMIRNOFF' in smirnoff_data):
             raise ParseError("'SMIRNOFF' must be a top-level key in the SMIRNOFF object model")
 
+        smirnoff_data = convert_smirnoff_data_strings_to_quantity(smirnoff_data)
+
         l1_dict = smirnoff_data['SMIRNOFF']
         # Check that the aromaticity model required by this parameter set is compatible with
         # others loaded by this ForceField
@@ -701,6 +716,13 @@ class ForceField:
         else:
             raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
         self._check_smirnoff_version_compatibility(str(version))
+
+        # TODO: What should we do if multiple authors or dates are read? Concatenate them?
+        # if 'author' in l1_dict:
+        #     self._author = l1_dict['author']
+        #
+        # if 'date' in l1_dict:
+        #     self._date = l1_dict['date']
 
 
         # Go through the subsections, delegating each to the proper ParameterHandler

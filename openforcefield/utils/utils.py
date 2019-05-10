@@ -23,6 +23,8 @@ __all__ = [
     'detach_units',
     'serialize_numpy',
     'deserialize_numpy',
+    'convert_smirnoff_data_quantitys_to_string',
+    'convert_smirnoff_data_strings_to_quantity',
 ]
 
 #=============================================================================================
@@ -189,12 +191,11 @@ def quantity_to_string(input_quantity):
     if input_quantity is None:
         return None
     unitless_value = input_quantity.value_in_unit(input_quantity.unit)
-    # The string representaiton of a numpy array doesn't have commas and breaks the
+    # The string representation of a numpy array doesn't have commas and breaks the
     # parser, thus we convert any arrays to list here
     if isinstance(unitless_value, np.ndarray):
         unitless_value = list(unitless_value)
     unit_string = unit_to_string(input_quantity.unit)
-    print(input_quantity, type(unitless_value))
     output_string = '{} * {}'.format(unitless_value, unit_string)
     return output_string
 
@@ -284,6 +285,77 @@ def string_to_quantity(quantity_string):
     output_quantity = _ast_eval(ast.parse(quantity_string, mode='eval').body)
     return output_quantity
 
+def convert_smirnoff_data_strings_to_quantity(smirnoff_data):
+    """
+    Traverses a SMIRNOFF data structure, attempting to convert all
+    quantity-defining strings into simtk.unit.Quantity objects.
+
+    Parameters
+    ----------
+    smirnoff_data : dict
+        A hierarchical dict structured in compliance with the SMIRNOFF spec
+
+    Returns
+    -------
+    converted_smirnoff_data : dict
+        A hierarchical dict structured in compliance with the SMIRNOFF spec,
+        with quantity-defining strings converted to simtk.unit.Quantity objects
+    """
+    if isinstance(smirnoff_data, dict):
+        for key, value in smirnoff_data.items():
+            smirnoff_data[key] = convert_smirnoff_data_strings_to_quantity(value)
+        obj_to_return = smirnoff_data
+
+    elif isinstance(smirnoff_data, list):
+        for index, item in enumerate(smirnoff_data):
+            smirnoff_data[index] = convert_smirnoff_data_strings_to_quantity(item)
+        obj_to_return = smirnoff_data
+    else:
+        try:
+            obj_to_return = object_to_quantity(smirnoff_data)
+        except AttributeError:
+            obj_to_return = smirnoff_data
+        except TypeError:
+            obj_to_return = smirnoff_data
+        except SyntaxError:
+            obj_to_return = smirnoff_data
+
+    return obj_to_return
+
+
+def convert_smirnoff_data_quantitys_to_string(smirnoff_data):
+    """
+    Traverses a SMIRNOFF data structure, attempting to convert all
+    quantities into strings.
+
+    Parameters
+    ----------
+    smirnoff_data : dict
+        A hierarchical dict structured in compliance with the SMIRNOFF spec
+
+    Returns
+    -------
+    converted_smirnoff_data : dict
+        A hierarchical dict structured in compliance with the SMIRNOFF spec,
+        with simtk.unit.Quantitys converted to string
+    """
+
+    if isinstance(smirnoff_data, dict):
+        for key, value in smirnoff_data.items():
+            smirnoff_data[key] = convert_smirnoff_data_quantitys_to_string(value)
+        obj_to_return = smirnoff_data
+    elif isinstance(smirnoff_data, list):
+        for index, item in enumerate(smirnoff_data):
+            smirnoff_data[index] = convert_smirnoff_data_quantitys_to_string(item)
+        obj_to_return = smirnoff_data
+    elif isinstance(smirnoff_data, unit.Quantity):
+        obj_to_return = quantity_to_string(smirnoff_data)
+    else:
+        obj_to_return = smirnoff_data
+
+    return obj_to_return
+
+
 def object_to_quantity(object):
     """
     Attempts to turn the provided object into simtk.unit.Quantity(s). Can handle strings, quantities, or iterators over
@@ -305,7 +377,6 @@ def object_to_quantity(object):
         return string_to_quantity(object)
     else:
         return [object_to_quantity(sub_obj) for sub_obj in object]
-
 
 def assert_object_units_are_compatible(object_name, object, unit_to_check, context=None):
     """
