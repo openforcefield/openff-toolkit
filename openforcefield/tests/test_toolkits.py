@@ -21,7 +21,7 @@ import pytest
 from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWrapper,
                                            AmberToolsToolkitWrapper, ToolkitRegistry,
                                            GAFFAtomTypeWarning, UndefinedStereochemistryError)
-from openforcefield.utils import get_data_filename
+from openforcefield.utils import get_data_file_path
 from openforcefield.topology.molecule import Molecule
 
 
@@ -34,7 +34,7 @@ class TestOpenEyeToolkitWrapper:
 
     # TODO: Make separate smiles_add_H and smiles_explicit_H tests
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_smiles(self):
         """Test OpenEyeToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -47,7 +47,7 @@ class TestOpenEyeToolkitWrapper:
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_smiles_missing_stereochemistry(self):
         """Test OpenEyeToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -71,7 +71,7 @@ class TestOpenEyeToolkitWrapper:
     # TODO: test_smiles_round_trip
 
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_smiles_add_H(self):
         """Test OpenEyeToolkitWrapper for adding explicit hydrogens"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -83,7 +83,7 @@ class TestOpenEyeToolkitWrapper:
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert expected_output_smiles == smiles2
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_smiles_charged(self):
         """Test OpenEyeToolkitWrapper functions for reading/writing charged SMILES"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -95,7 +95,7 @@ class TestOpenEyeToolkitWrapper:
         assert smiles == smiles2
 
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_to_from_openeye_core_props_filled(self):
         """Test OpenEyeToolkitWrapper to_openeye() and from_openeye()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -167,7 +167,7 @@ class TestOpenEyeToolkitWrapper:
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_to_from_openeye_core_props_unset(self):
         """Test OpenEyeToolkitWrapper to_openeye() and from_openeye() when given empty core property fields"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -211,31 +211,31 @@ class TestOpenEyeToolkitWrapper:
             assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.sdf')
+        filename = get_data_file_path('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     @pytest.mark.skip
     def test_get_multiconformer_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing multiple sets of coordinates from a sdf file"""
         raise NotImplementedError
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.sdf')
+        filename = get_data_file_path('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of molecule coordinates"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.mol2')
+        filename = get_data_file_path('molecules/toluene.mol2')
         molecule1 = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule1._conformers) == 1
         assert molecule1._conformers[0].shape == (15, 3)
@@ -258,11 +258,11 @@ class TestOpenEyeToolkitWrapper:
         assert molecule3._conformers[0].shape == (15, 3)
         assert_almost_equal(molecule3.conformers[0][5][1] / unit.angstrom, 22.98, decimal=2)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_charges(self):
         """Test OpenEyeToolkitWrapper for importing a mol2 file specifying partial charges"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        filename = get_data_filename('molecules/toluene_charged.mol2')
+        filename = get_data_file_path('molecules/toluene_charged.mol2')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
@@ -276,15 +276,15 @@ class TestOpenEyeToolkitWrapper:
             pc2_ul = pc2 / unit.elementary_charge
             assert_almost_equal(pc1_ul, pc2_ul, decimal=4)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_gaff_atom_types(self):
         """Test that a warning is raised OpenEyeToolkitWrapper when it detects GAFF atom types in a mol2 file."""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        mol2_file_path = get_data_filename('molecules/AlkEthOH_test_filt1_ff.mol2')
+        mol2_file_path = get_data_file_path('molecules/AlkEthOH_test_filt1_ff.mol2')
         with pytest.warns(GAFFAtomTypeWarning, match='SYBYL'):
             Molecule.from_file(mol2_file_path, toolkit_registry=toolkit_wrapper)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_generate_conformers(self):
         """Test OpenEyeToolkitWrapper generate_conformers()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -296,7 +296,7 @@ class TestOpenEyeToolkitWrapper:
 
         # TODO: Make this test more robust
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_partial_charges(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -332,7 +332,7 @@ class TestOpenEyeToolkitWrapper:
             charge_sum += pc
         assert charge_sum < 0.001 * unit.elementary_charge
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_partial_charges_net_charge(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule with a net +1 charge"""
 
@@ -366,7 +366,7 @@ class TestOpenEyeToolkitWrapper:
             charge_sum += pc
         assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders(self):
         """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders()"""
 
@@ -379,7 +379,7 @@ class TestOpenEyeToolkitWrapper:
             print([bond.fractional_bond_order for bond in molecule.bonds])
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders_charged(self):
         """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with net charge +1"""
 
@@ -391,7 +391,7 @@ class TestOpenEyeToolkitWrapper:
             molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(),
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
     reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders_double_bond(self):
         """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with a double bond"""
@@ -425,7 +425,7 @@ class TestOpenEyeToolkitWrapper:
 class TestRDKitToolkitWrapper:
     """Test the RDKitToolkitWrapper"""
     
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_smiles(self):
         """Test RDKitToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -437,7 +437,7 @@ class TestRDKitToolkitWrapper:
         #print(smiles, smiles2)
         assert smiles == smiles2
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     @pytest.mark.parametrize("smiles,exception_regex", [
         (r"C\C(F)=C(/F)CC(C)(Cl)Br", "Undefined chiral centers"),
         (r"C\C(F)=C(/F)C[C@@](C)(Cl)Br", None),
@@ -455,7 +455,7 @@ class TestRDKitToolkitWrapper:
 
     # TODO: test_smiles_round_trip
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_smiles_add_H(self):
         """Test RDKitToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -468,7 +468,7 @@ class TestRDKitToolkitWrapper:
         assert smiles2 == expected_output_smiles
 
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_smiles_charged(self):
         """Test RDKitWrapper functions for reading/writing charged SMILES"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -479,7 +479,7 @@ class TestRDKitToolkitWrapper:
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_to_from_rdkit_core_props_filled(self):
         """Test RDKitToolkitWrapper to_rdkit() and from_rdkit() when given populated core property fields"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -546,7 +546,7 @@ class TestRDKitToolkitWrapper:
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
         # TODO: This should be its own test
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_to_from_rdkit_core_props_unset(self):
         """Test RDKitToolkitWrapper to_rdkit() and from_rdkit() when given empty core property fields"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -589,11 +589,11 @@ class TestRDKitToolkitWrapper:
             assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
         
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_get_sdf_coordinates(self):
         """Test RDKitToolkitWrapper for importing a single set of coordinates from a sdf file"""
         toolkit_wrapper = RDKitToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.sdf')
+        filename = get_data_file_path('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15, 3)
@@ -601,39 +601,39 @@ class TestRDKitToolkitWrapper:
 
     # Find a multiconformer SDF file
     @pytest.mark.skip
-    #@pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    #@pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_get_multiconformer_sdf_coordinates(self):
         """Test RDKitToolkitWrapper for importing a single set of coordinates from a sdf file"""
         raise NotImplementedError
         toolkit_wrapper = RDKitToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.sdf')
+        filename = get_data_file_path('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
 
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_get_pdb_coordinates(self):
         """Test RDKitToolkitWrapper for importing a single set of coordinates from a pdb file"""
         toolkit_wrapper = RDKitToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.pdb')
+        filename = get_data_file_path('molecules/toluene.pdb')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
 
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_load_aromatic_pdb(self):
         """Test OpenEyeToolkitWrapper for importing molecule conformers"""
         toolkit_wrapper = RDKitToolkitWrapper()
-        filename = get_data_filename('molecules/toluene.pdb')
+        filename = get_data_file_path('molecules/toluene.pdb')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule._conformers) == 1
         assert molecule._conformers[0].shape == (15,3)
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_generate_conformers(self):
         """Test RDKitToolkitWrapper generate_conformers()"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -662,7 +662,7 @@ class TestRDKitToolkitWrapper:
 class TestAmberToolsToolkitWrapper:
     """Test the AmberToolsToolkitWrapper"""
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available() or not AmberToolsToolkitWrapper.toolkit_is_available(),
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
                     reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_compute_partial_charges(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges()"""
@@ -695,7 +695,7 @@ class TestAmberToolsToolkitWrapper:
 
 
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available() or not AmberToolsToolkitWrapper.toolkit_is_available(),
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
                         reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_compute_partial_charges_net_charge(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule with a net +1 charge"""
@@ -729,7 +729,7 @@ class TestAmberToolsToolkitWrapper:
 class TestToolkitRegistry:
     """Test the ToolkitRegistry"""
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.toolkit_is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_register_openeye(self):
         """Test creation of toolkit registry with OpenEye toolkit"""
         # Test registration of OpenEyeToolkitWrapper
@@ -747,7 +747,7 @@ class TestToolkitRegistry:
         smiles2 = registry.call('to_smiles', molecule)
         assert smiles == smiles2
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_register_rdkit(self):
         """Test creation of toolkit registry with RDKit toolkit"""
         # Test registration of RDKitToolkitWrapper
@@ -767,7 +767,7 @@ class TestToolkitRegistry:
         assert smiles == smiles2
 
     @pytest.mark.skipif(
-        not RDKitToolkitWrapper.toolkit_is_available() or not AmberToolsToolkitWrapper.toolkit_is_available(),
+        not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
         reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_register_ambertools(self):
         """Test creation of toolkit registry with AmberToolsToolkitWrapper and RDKitToolkitWrapper

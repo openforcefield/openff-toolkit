@@ -35,7 +35,7 @@ def genConfs(c_mol, ofsff, ofsTri, index):
 
 flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
 
-in_file = utils.get_data_filename('molecules/DrugBank_atyped.oeb')
+in_file = utils.get_data_file_path('molecules/DrugBank_atyped.oeb')
 ff_out = 'DrugBank_ff.mol2'
 tripos_out = 'DrugBank_tripos.mol2'
 failed_out = 'DrugBank_no3D.mol2'

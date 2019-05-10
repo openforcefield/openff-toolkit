@@ -163,7 +163,7 @@ class ParameterList(list):
 
         Parameters
         ----------
-        parameter : a ParameterType-derived object
+        parameter : a ParameterType object
 
         """
         # TODO: Ensure that newly added parameter is the same type as existing?
@@ -192,7 +192,7 @@ class ParameterList(list):
 
         Parameters
         ----------
-        item : ParameterType-derived object or str
+        item : ParameterType object or str
             The parameter or SMIRKS to look up in this ParameterList
 
         Returns
@@ -216,7 +216,7 @@ class ParameterList(list):
         ----------
         index : int
             The numerical position to insert the parameter at
-        parameter : a ParameterType-derived object
+        parameter : a ParameterType object
             The parameter to insert
         """
         # TODO: Ensure that newly added parameter is the same type as existing?
@@ -274,15 +274,15 @@ class ParameterList(list):
         # Fall back to traditional access
         return list.__contains__(self, item)
 
-    def to_list(self, return_cosmetic_attributes=False):
+    def to_list(self, discard_cosmetic_attributes=True):
         """
-        Render this ParameterList to a normal list, serializing each ParameterType-derived object in it to dict.
+        Render this ParameterList to a normal list, serializing each ParameterType object in it to dict.
 
         Parameters
         ----------
 
-        return_cosmetic_attributes : bool, optional. default = False
-            Whether to return non-spec attributes of each ParameterType-derived object.
+        discard_cosmetic_attributes : bool, optional. Default = True
+            Whether to discard non-spec attributes of each ParameterType object.
 
         Returns
         -------
@@ -292,7 +292,7 @@ class ParameterList(list):
         parameter_list = list()
 
         for parameter in self:
-            parameter_dict = parameter.to_dict(return_cosmetic_attributes=return_cosmetic_attributes)
+            parameter_dict = parameter.to_dict(discard_cosmetic_attributes=discard_cosmetic_attributes)
             parameter_list.append(parameter_dict)
 
         return parameter_list
@@ -319,7 +319,7 @@ class ParameterType:
 
     # TODO: Can we provide some shared tools for returning settable/gettable attributes, and checking unit-bearing attributes?
 
-    def __init__(self, smirks=None, permit_cosmetic_attributes=False, **kwargs):
+    def __init__(self, smirks=None, allow_cosmetic_attributes=False, **kwargs):
         """
         Create a ParameterType
 
@@ -327,8 +327,10 @@ class ParameterType:
         ----------
         smirks : str
             The SMIRKS match for the provided parameter type.
-        permit_cosmetic_attributes : bool optional. Default = False
-            Whether to store non-spec kwargs as "cosmetic attributes", which can be accessed and written out.
+        allow_cosmetic_attributes : bool optional. Default = False
+            Whether to permit non-spec kwargs ("cosmetic attributes"). If True, non-spec kwargs will be stored as
+            an attribute of this parameter which can be accessed and written out. Otherwise an exception will
+            be raised.
 
         """
         from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
@@ -425,13 +427,13 @@ class ParameterType:
                 setattr(self, key, val)
 
             # Handle all unknown kwargs as cosmetic so we can write them back out
-            elif permit_cosmetic_attributes:
+            elif allow_cosmetic_attributes:
                 self._COSMETIC_ATTRIBS.append(key)
                 setattr(self, key, val)
             else:
-                raise SMIRNOFFSpecError("Incompatible kwarg {} passed to {} constructor. If this is "
+                raise SMIRNOFFSpecError("Unexpected kwarg {} passed to {} constructor. If this is "
                                         "a desired cosmetic attribute, consider setting "
-                                        "'permit_cosmetic_attributes=True'".format({key: val}, self.__class__))
+                                        "'allow_cosmetic_attributes=True'".format({key: val}, self.__class__))
 
     @property
     def smirks(self):
@@ -447,22 +449,22 @@ class ParameterType:
             smirks, ensure_valence_type=self._VALENCE_TYPE)
         self._smirks = smirks
 
-    def to_dict(self, return_cosmetic_attributes=False):
+    def to_dict(self, discard_cosmetic_attributes=True):
         """
-        Convert this ParameterType-derived object to dict. A unit-bearing attribute ('X') will be converted to two dict
+        Convert this ParameterType object to dict. A unit-bearing attribute ('X') will be converted to two dict
         entries, one (['X'] containing the unitless value, and another (['X_unit']) containing a string representation
         of its unit.
 
         Parameters
         ----------
-        return_cosmetic_attributes : bool, optional. default = False
-            Whether to return non-spec attributes of this ParameterType
+        discard_cosmetic_attributes : bool, optional. Default = True
+            Whether to discard non-spec attributes of this ParameterType
 
 
         Returns
         -------
         smirnoff_dict : dict
-            The SMIRNOFF-compliant dict representation of this ParameterType-derived object.
+            The SMIRNOFF-compliant dict representation of this ParameterType object.
         output_units : dict[str: simtk.unit.Unit]
             A mapping from each simtk.unit.Quanitity-valued ParameterType attribute
             to the unit it was converted to during serialization.
@@ -472,7 +474,7 @@ class ParameterType:
         # returned dict (call list() to make a copy)
         attribs_to_return = list(self._SMIRNOFF_ATTRIBS)
         attribs_to_return += [opt_attrib for opt_attrib in self._OPTIONAL_ATTRIBS if hasattr(self, opt_attrib)]
-        if return_cosmetic_attributes:
+        if not(discard_cosmetic_attributes):
             attribs_to_return += self._COSMETIC_ATTRIBS
 
         # Start populating a dict of the attribs
@@ -547,14 +549,15 @@ class ParameterHandler:
     _SMIRNOFF_VERSION_DEPRECATED = None  # if deprecated, the first SMIRNOFF version number it is no longer used
 
 
-    def __init__(self, permit_cosmetic_attributes=False, **kwargs):
+    def __init__(self, allow_cosmetic_attributes=False, **kwargs):
         """
         Initialize a ParameterHandler, optionally with a list of parameters and other kwargs.
 
         Parameters
         ----------
-        permit_cosmetic_attributes : bool
-            Whether to accept non-spec kwargs
+        allow_cosmetic_attributes : bool, optional. Default = False
+            Whether to permit non-spec kwargs. If True, non-spec kwargs will be stored as attributes of this object
+            and can be accessed and modified. Otherwise an exception will be raised if a non-spec kwarg is encountered.
         **kwargs : dict
             The dict representation of the SMIRNOFF data source
 
@@ -611,7 +614,7 @@ class ParameterHandler:
         # Perform unit compatibility checks
         for key, val in smirnoff_data.items():
             if key in self._REQUIRE_UNITS:
-                # TODO: Logic for indexed attributes
+                # TODO: Logic for indexed ParameterHandler attributes (none exist so far, but they might in the future)
                 if not val.unit.is_compatible(self._REQUIRE_UNITS[key]):
                     msg = "{} constructor received kwarg {} with value {}, " \
                           "which is incompatible with expected unit {}".format(self.__class__,
@@ -625,23 +628,14 @@ class ParameterHandler:
             element_name = self._INFOTYPE._ELEMENT_NAME
 
         for key, val in smirnoff_data.items():
-            # If we're reading the parameter list, iterate through and attach units to
-            # each parameter_dict, then use it to initialize a ParameterType
+            # We don't initialize parameters here, only ParameterHandler attributes
             if key == element_name:
-                # If there are multiple parameters, this will be a list. If there's just one, make it a list
-                if not(isinstance(val, list)):
-                    val = [val]
-                for unitless_param_dict in val:
-                    param_dict = attach_units(unitless_param_dict, attached_units)
-                    new_parameter = self._INFOTYPE(**param_dict,
-                                                   permit_cosmetic_attributes=permit_cosmetic_attributes)
-                    self._parameters.append(new_parameter)
-
+                continue
             elif key in allowed_header_attribs:
                 attr_name = '_' + key
                 # TODO: create @property.setter here if attrib requires unit
                 setattr(self, attr_name, val)
-            elif permit_cosmetic_attributes:
+            elif allow_cosmetic_attributes:
                 self._COSMETIC_ATTRIBS.append(key)
                 attr_name = '_' + key
                 setattr(self, attr_name, val)
@@ -649,9 +643,43 @@ class ParameterHandler:
             else:
                 raise SMIRNOFFSpecError("Incompatible kwarg {} passed to {} constructor. If this is "
                                         "a desired cosmetic attribute, consider setting "
-                                        "'permit_cosmetic_attributes=True'".format(key, self.__class__))
+                                        "'allow_cosmetic_attributes=True'".format(key, self.__class__))
 
 
+    def _add_parameters(self, section_dict, allow_cosmetic_attributes=False):
+        """
+        Extend the ParameterList in this ParameterHandler using a SMIRNOFF data source.
+
+        Parameters
+        ----------
+        section_dict : dict
+            The dict representation of a SMIRNOFF data source containing parameters to att to this ParameterHandler
+        allow_cosmetic_attributes : bool, optional. Default = False
+            Whether to allow non-spec fields in section_dict. If True, non-spec kwargs will be stored as an
+            attribute of the parameter. If False, non-spec kwargs will raise an exception.
+
+        """
+        unitless_kwargs, attached_units = extract_serialized_units_from_dict(section_dict)
+        smirnoff_data = attach_units(unitless_kwargs, attached_units)
+
+        element_name = None
+        if self._INFOTYPE is not None:
+            element_name = self._INFOTYPE._ELEMENT_NAME
+
+        for key, val in smirnoff_data.items():
+            # Skip sections that aren't the parameter list
+            if key != element_name:
+                continue
+            # If there are multiple parameters, this will be a list. If there's just one, make it a list
+            if not (isinstance(val, list)):
+                val = [val]
+            # If we're reading the parameter list, iterate through and attach units to
+            # each parameter_dict, then use it to initialize a ParameterType
+            for unitless_param_dict in val:
+                param_dict = attach_units(unitless_param_dict, attached_units)
+                new_parameter = self._INFOTYPE(**param_dict,
+                                               allow_cosmetic_attributes=allow_cosmetic_attributes)
+                self._parameters.append(new_parameter)
 
     @property
     def parameters(self):
@@ -740,8 +768,8 @@ class ParameterHandler:
 
         Returns
         -------
-        list of ParameterType-derived objects
-            A list of matching ParameterType-derived objects
+        list of ParameterType objects
+            A list of matching ParameterType objects
         """
         # TODO: This is a necessary API point for Lee-Ping's ForceBalance
         pass
@@ -818,7 +846,7 @@ class ParameterHandler:
         """
         pass
 
-    def to_dict(self, output_units=None, return_cosmetic_attributes=False):
+    def to_dict(self, output_units=None, discard_cosmetic_attributes=True):
         """
         Convert this ParameterHandler to an OrderedDict, compliant with the SMIRNOFF data spec.
 
@@ -826,8 +854,8 @@ class ParameterHandler:
         ----------
         output_units : dict[str : simtk.unit.Unit], optional. Default = None
             A mapping from the ParameterType attribute name to the output unit its value should be converted to.
-        return_cosmetic_attributes : bool, optional. Default = False.
-            Whether to return non-spec parameter and header attributes in this ParameterHandler.
+        discard_cosmetic_attributes : bool, optional. Default = True.
+            Whether to discard non-spec parameter and header attributes in this ParameterHandler.
 
         Returns
         -------
@@ -847,7 +875,7 @@ class ParameterHandler:
             output_units = last_added_output_units
 
         # Populate parameter list
-        parameter_list = self._parameters.to_list(return_cosmetic_attributes=return_cosmetic_attributes)
+        parameter_list = self._parameters.to_list(discard_cosmetic_attributes=discard_cosmetic_attributes)
         unitless_parameter_list = list()
 
         # Detach units into a separate dict.
@@ -891,7 +919,7 @@ class ParameterHandler:
             if hasattr(self, attr_key):
                 header_attribs_to_return.append(key)
         # Add the cosmetic attributes if requested
-        if return_cosmetic_attributes:
+        if not(discard_cosmetic_attributes):
             header_attribs_to_return += self._COSMETIC_ATTRIBS
 
 
@@ -1069,6 +1097,32 @@ class BondHandler(ParameterHandler):
         # TODO: Do we want a docstring here? If not, check that docstring get inherited from ParameterHandler.
         super().__init__(**kwargs)
 
+    def check_handler_compatibility(self,
+                                    other_handler):
+        """
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        string_attrs_to_compare = ['potential', 'fractional_bondorder_method', 'fractional_bondorder_interpolation']
+
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
     def create_force(self, system, topology, **kwargs):
         # Create or retrieve existing OpenMM Force object
         # TODO: The commented line below should replace the system.getForce search
@@ -1117,8 +1171,8 @@ class BondHandler(ParameterHandler):
                     # Mark that we have now assigned a specific constraint distance to this constraint.
                     topology.add_constraint(*atoms, length)
                     # Add the constraint to the System.
-                system.addConstraint(*atoms, length)
-                #system.addConstraint(*particle_indices, length)
+                    system.addConstraint(*atoms, length)
+                    #system.addConstraint(*particle_indices, length)
                 continue
 
             # Add harmonic bond to HarmonicBondForce
@@ -1161,10 +1215,40 @@ class AngleHandler(ParameterHandler):
     _TAGNAME = 'Angles'  # SMIRNOFF tag name to process
     _INFOTYPE = AngleType  # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicAngleForce  # OpenMM force class to create
+    _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
     _DEFAULT_SPEC_ATTRIBS = {'potential': 'harmonic'}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    def check_handler_compatibility(self,
+                                    other_handler):
+        """
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        string_attrs_to_compare = ['potential']
+
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
+
+
 
     def create_force(self, system, topology, **kwargs):
         #force = super(AngleHandler, self).create_force(system, topology, **kwargs)
@@ -1250,6 +1334,48 @@ class ProperTorsionHandler(ParameterHandler):
         super().__init__(**kwargs)
 
 
+    def check_handler_compatibility(self,
+                                    other_handler):
+        """
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        float_attrs_to_compare = []
+        string_attrs_to_compare = ['potential']
+
+        if self._default_idivf == 'auto':
+            string_attrs_to_compare.append('default_idivf')
+        else:
+            float_attrs_to_compare.append('default_idivf')
+
+        for float_attr in float_attrs_to_compare:
+            this_val = getattr(self, '_' + float_attr)
+            other_val = getattr(other_handler, '_' + float_attr)
+            if abs(this_val - other_val) > 1.e-6:
+                raise IncompatibleParameterError(
+                    "Difference between '{}' values is beyond allowed tolerance {}. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        float_attr, self._SCALETOL, this_val, other_val))
+
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
+
     def create_force(self, system, topology, **kwargs):
         #force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -1315,12 +1441,54 @@ class ImproperTorsionHandler(ParameterHandler):
     _INFOTYPE = ImproperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
     _OPTIONAL_SPEC_ATTRIBS = ['potential', 'default_idivf']
-    _HANDLER_DEFAULTS = {'potential': 'charmm',
-                         'default_idivf': 'auto'}
+    _DEFAULT_SPEC_ATTRIBS = {'potential': 'charmm',
+                             'default_idivf': 'auto'}
     _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    def check_handler_compatibility(self,
+                                    other_handler):
+        """
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        float_attrs_to_compare = []
+        string_attrs_to_compare = ['potential']
+
+        if self._default_idivf == 'auto':
+            string_attrs_to_compare.append('default_idivf')
+        else:
+            float_attrs_to_compare.append('default_idivf')
+
+        for float_attr in float_attrs_to_compare:
+            this_val = getattr(self, '_' + float_attr)
+            other_val = getattr(other_handler, '_' + float_attr)
+            if abs(this_val - other_val) > 1.e-6:
+                raise IncompatibleParameterError(
+                    "Difference between '{}' values is beyond allowed tolerance {}. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        float_attr, self._SCALETOL, this_val, other_val))
+
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
 
     def find_matches(self, entity):
         """Find the improper torsions in the topology/molecule matched by a parameter type.
@@ -1589,53 +1757,52 @@ class vdWHandler(ParameterHandler):
         # TODO: Validate these values against the supported output types (openMM force kwargs?)
         # TODO: Add conditional logic to assign NonbondedMethod and check compatibility
 
-
-
-
     def check_handler_compatibility(self,
-                                    handler_kwargs,
-                                    assume_missing_is_default=True):
+                                    other_handler):
         """
-        Checks if a set of kwargs used to create a ParameterHandler are compatible with this ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
-        will be assumed to expect the ParameterHandler class default.
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
-        handler_kwargs : dict
-            The kwargs that would be used to construct a ParameterHandler
-        assume_missing_is_default : bool
-            If True, will assume that parameters not specified in handler_kwargs would have been set to the default.
-            Therefore, an exception is raised if the ParameterHandler is incompatible with the default value for a
-            unspecified field.
+        other_handler : a ParameterHandler object
+            The handler to compare to.
 
         Raises
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        compare_attr_to_kwargs = {
-            self._scale12: 'scale12',
-            self._scale13: 'scale13',
-            self._scale14: 'scale14',
-            self._scale15: 'scale15'
-        }
-        for attr, kwarg_key in compare_attr_to_kwargs.items():
-            kwarg_val = handler_kwargs.get(kwarg_key,
-                                           self._DEFAULT_SPEC_ATTRIBS[kwarg_key])
-            if abs(kwarg_val - attr) > self._SCALETOL:
+        float_attrs_to_compare = ['scale12', 'scale13', 'scale14', 'scale15']
+        string_attrs_to_compare = ['potential', 'combining_rules', 'method']
+        unit_attrs_to_compare = ['cutoff']
+
+        for float_attr in float_attrs_to_compare:
+            this_val = getattr(self, '_' + float_attr)
+            other_val = getattr(other_handler, '_' + float_attr)
+            if abs(this_val - other_val) > self._SCALETOL:
                 raise IncompatibleParameterError(
                     "Difference between '{}' values is beyond allowed tolerance {}. "
-                    "(handler value: {}, incompatible valie: {}".format(
-                        kwarg_key, self._SCALETOL, attr, kwarg_val))
+                    "(handler value: {}, incompatible value: {}".format(
+                        float_attr, self._SCALETOL, this_val, other_val))
 
-        # TODO: Test for other possible incompatibilities here -- Probably just check for string equality for now,
-        # detailed check will require some openMM/MD expertise)
-        #self._potential: 'potential',
-        #self._combining_rules: 'combining_rules',
-        #self._switch: 'switch',
-        #self._cutoff: 'cutoff',
-        #self._method:'method'
-        #}
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
+        for unit_attr in unit_attrs_to_compare:
+            this_val = getattr(self, '_' + unit_attr)
+            other_val = getattr(other_handler, '_' + unit_attr)
+            unit_tol = (self._SCALETOL * this_val.unit) # TODO: do we want a different quantity_tol here?
+            if abs(this_val - other_val) > unit_tol:
+                raise IncompatibleParameterError(
+                    "Difference between '{}' values is beyond allowed tolerance {}. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        unit_attr, unit_tol, this_val, other_val))
 
     def create_force(self, system, topology, **kwargs):
 
@@ -1737,6 +1904,8 @@ class ElectrostaticsHandler(ParameterHandler):
 
     _OPTIONAL_SPEC_ATTRIBS = ['cutoff', 'switch_width']
 
+    _SCALETOL = 1e-5
+
     def __init__(self, **kwargs):
 
         super().__init__(**kwargs)
@@ -1821,6 +1990,53 @@ class ElectrostaticsHandler(ParameterHandler):
             raise IncompatibleParameterError("The current implementation of the Open Force Field toolkit can not "
                                              "support an electrostatic switching width. Currently only `0.0 angstroms` "
                                              "is supported (SMIRNOFF data specified {})".format(self._switch_width))
+    def check_handler_compatibility(self,
+                                    other_handler):
+        """
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        float_attrs_to_compare = ['scale12', 'scale13', 'scale14', 'scale15']
+        string_attrs_to_compare = ['method']
+        unit_attrs_to_compare = ['cutoff', 'switch_width']
+
+        for float_attr in float_attrs_to_compare:
+            this_val = getattr(self, '_' + float_attr)
+            other_val = getattr(other_handler, '_' + float_attr)
+            if abs(this_val - other_val) > self._SCALETOL:
+                raise IncompatibleParameterError(
+                    "Difference between '{}' values is beyond allowed tolerance {}. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        float_attr, self._SCALETOL, this_val, other_val))
+
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
+        for unit_attr in unit_attrs_to_compare:
+            this_val = getattr(self, '_' + unit_attr)
+            other_val = getattr(other_handler, '_' + unit_attr)
+            unit_tol = (self._SCALETOL * this_val.unit) # TODO: do we want a different quantity_tol here?
+            if abs(this_val - other_val) > unit_tol:
+                raise IncompatibleParameterError(
+                    "Difference between '{}' values is beyond allowed tolerance {}. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        unit_attr, unit_tol, this_val, other_val))
+
 
     def create_force(self, system, topology, **kwargs):
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -1921,20 +2137,17 @@ class ToolkitAM1BCCHandler(ParameterHandler):
 
 
 
-    def check_handler_compatibility(self, handler_kwargs, assume_missing_is_default=True):
+    def check_handler_compatibility(self,
+                                    other_handler,
+                                    assume_missing_is_default=True):
         """
-        Checks if a set of kwargs used to create a ParameterHandler are compatible with this ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
-        will be assumed to expect the ParameterHandler class default.
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
-        handler_kwargs : dict
-            The kwargs that would be used to construct a ParameterHandler
-        assume_missing_is_default : bool
-            If True, will assume that parameters not specified in handler_kwargs would have been set to the default.
-            Therefore, an exception is raised if the ParameterHandler is incompatible with the default value for a
-            unspecified field.
+        other_handler : a ParameterHandler object
+            The handler to compare to.
 
         Raises
         ------
@@ -2024,7 +2237,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
             # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
             if not(charges_from_charge_mol):
                 toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
-                temp_mol.generate_conformers(num_conformers=10, toolkit_registry=toolkit_registry)
+                temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
                 #temp_mol.compute_partial_charges(quantum_chemical_method=self._quantum_chemical_method,
                 #                                 partial_charge_method=self._partial_charge_method)
                 temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
@@ -2136,41 +2349,44 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
 
 
-    def check_handler_compatibility(self, handler_kwargs, assume_missing_is_default=True):
+    def check_handler_compatibility(self,
+                                    other_handler,
+                                    assume_missing_is_default=True):
         """
-        Checks if a set of kwargs used to create a ParameterHandler are compatible with this ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag. If no value is given for a field, it
-        will be assumed to expect the ParameterHandler class default.
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
-        handler_kwargs : dict
-            The kwargs that would be used to construct a ParameterHandler
-        assume_missing_is_default : bool
-            If True, will assume that parameters not specified in handler_kwargs would have been set to the default.
-            Therefore, an exception is raised if the ParameterHandler is incompatible with the default value for a
-            unspecified field.
+        other_handler : a ParameterHandler object
+            The handler to compare to.
 
         Raises
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        compare_kwarg_to_attr = {
-            'number_of_conformers': self._number_of_conformers,
-            'quantum_chemical_method': self._quantum_chemical_method,
-            'partial_charge_method': self._partial_charge_method,
-        }
 
-        for kwarg_key, attr in compare_kwarg_to_attr.items():
-            # Skip this comparison if the kwarg isn't in handler_kwargs and we're not comparing against defaults
-            if not(assume_missing_is_default) and not(kwarg_key in handler_kwargs):
-                continue
+        int_attrs_to_compare = ['number_of_conformers']
+        string_attrs_to_compare = ['quantum_chemical_method', 'partial_charge_method']
 
-            kwarg_val = handler_kwargs.get(kwarg_key, self._DEFAULTS[kwarg_key])
-            if kwarg_val != attr:
+        for int_attr in int_attrs_to_compare:
+            this_val = getattr(self, '_' + int_attr)
+            other_val = getattr(other_handler, '_' + int_attr)
+            if this_val != other_val:
                 raise IncompatibleParameterError(
-                    "Incompatible '{}' values found during handler compatibility check."
-                    "(existing handler value: {}, new existing value: {}".format(kwarg_key, attr, kwarg_val))
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        int_attr, this_val, other_val))
+
+        for string_attr in string_attrs_to_compare:
+            this_val = getattr(self, '_' + string_attr)
+            other_val = getattr(other_handler, '_' + string_attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        string_attr, this_val, other_val))
+
 
     def assign_charge_from_molecules(self, molecule, charge_mols):
         """
@@ -2250,7 +2466,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
             # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
             if not(charges_from_charge_mol):
-                temp_mol.generate_conformers(num_conformers=10)
+                temp_mol.generate_conformers(n_conformers=10)
                 temp_mol.compute_partial_charges(quantum_chemical_method=self._quantum_chemical_method,
                                                  partial_charge_method=self._partial_charge_method)
 

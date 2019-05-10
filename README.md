@@ -46,8 +46,8 @@ The SMIRNOFF `ForceField` class is essentially a drop-in replacement for the [Op
 ```python
 # Load a molecule into the openforcefield Molecule object
 from openforcefield.topology import Molecule
-from openforcefield.utils import get_data_filename
-sdf_file_path = get_data_filename('molecules/ethanol.sdf')
+from openforcefield.utils import get_data_file_path
+sdf_file_path = get_data_file_path('molecules/ethanol.sdf')
 molecule = Molecule.from_file(sdf_file_path)
 
 # Create an openforcefield Topology object from the molecule

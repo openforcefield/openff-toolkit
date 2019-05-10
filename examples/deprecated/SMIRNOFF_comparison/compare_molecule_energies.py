@@ -21,8 +21,8 @@ inpcrd_filepath = os.path.join(datapath, molname + '.crd')
 if not os.path.isdir(datapath):
     print("Extracting archived molecule files.")
     # Extract the AlkEthOH dataset shipped with the toolkit in data/molecules/ in the working directory.
-    from openforcefield.tests.utils import get_data_filename
-    tarfile_path = os.path.join(get_data_filename('molecules'), 'AlkEthOH_tripos.tar.gz')
+    from openforcefield.tests.utils import get_data_file_path
+    tarfile_path = os.path.join(get_data_file_path('molecules'), 'AlkEthOH_tripos.tar.gz')
     import tarfile
     with tarfile.open(tarfile_path, 'r:gz') as tar:
         tar.extractall()
