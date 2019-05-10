@@ -1171,8 +1171,8 @@ class BondHandler(ParameterHandler):
                     # Mark that we have now assigned a specific constraint distance to this constraint.
                     topology.add_constraint(*atoms, length)
                     # Add the constraint to the System.
-                system.addConstraint(*atoms, length)
-                #system.addConstraint(*particle_indices, length)
+                    system.addConstraint(*atoms, length)
+                    #system.addConstraint(*particle_indices, length)
                 continue
 
             # Add harmonic bond to HarmonicBondForce
@@ -1215,6 +1215,7 @@ class AngleHandler(ParameterHandler):
     _TAGNAME = 'Angles'  # SMIRNOFF tag name to process
     _INFOTYPE = AngleType  # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicAngleForce  # OpenMM force class to create
+    _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
     _DEFAULT_SPEC_ATTRIBS = {'potential': 'harmonic'}
 
     def __init__(self, **kwargs):
