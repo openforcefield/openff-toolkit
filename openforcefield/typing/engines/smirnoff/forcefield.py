@@ -40,7 +40,8 @@ from collections import OrderedDict
 from simtk import openmm, unit
 
 from openforcefield.utils import all_subclasses, MessageException, \
-    convert_smirnoff_data_quantitys_to_string, convert_smirnoff_data_strings_to_quantity
+    convert_smirnoff_data_quantitys_to_string, convert_smirnoff_data_strings_to_quantity, \
+    convert_0_2_smirnoff_to_0_3
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
@@ -294,7 +295,7 @@ class ForceField:
         # Use PEP-440 compliant version number comparison, if requested
         if (not self.disable_version_check) and (
                 (
-                packaging.version.parse(str(version)) >
+                        packaging.version.parse(str(version)) >
                 packaging.version.parse(str(self._MAX_SUPPORTED_SMIRNOFF_VERSION))
 
                 ) or (
@@ -692,12 +693,11 @@ class ForceField:
         permit_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs in smirnoff_data.
         """
-
+        import packaging.version
         # Ensure that SMIRNOFF is a top-level key of the dict
         if not('SMIRNOFF' in smirnoff_data):
             raise ParseError("'SMIRNOFF' must be a top-level key in the SMIRNOFF object model")
 
-        smirnoff_data = convert_smirnoff_data_strings_to_quantity(smirnoff_data)
 
         l1_dict = smirnoff_data['SMIRNOFF']
         # Check that the aromaticity model required by this parameter set is compatible with
@@ -724,6 +724,13 @@ class ForceField:
         # if 'date' in l1_dict:
         #     self._date = l1_dict['date']
 
+        # Convert 0.2 spec files to 0.3 SMIRNOFF data format by removing units
+        # from section headers and adding them to strings at all levels.
+        if packaging.version.parse(str(version)) == packaging.version.parse("0.2"):
+            smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
+
+        # Go through the whole SMIRNOFF data structure, trying to convert all strings to Quantity
+        smirnoff_data = convert_smirnoff_data_strings_to_quantity(smirnoff_data)
 
         # Go through the subsections, delegating each to the proper ParameterHandler
 

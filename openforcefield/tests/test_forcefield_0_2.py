@@ -294,7 +294,7 @@ class TestForceField():
 
     def test_create_forcefield_from_file(self):
         """Test empty constructor"""
-        forcefield = ForceField('smirnoff99Frosst.offxml')
+        forcefield = ForceField('smirnoff99Frosst-1.1.8.offxml')
         assert len(forcefield._parameter_handlers['Bonds']._parameters) == 87
         assert len(forcefield._parameter_handlers['Angles']._parameters) == 38
         assert len(forcefield._parameter_handlers['ProperTorsions']._parameters) == 158
@@ -324,7 +324,7 @@ class TestForceField():
     @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_create_forcefield_from_url(self):
         urls = [
-            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst.offxml',
+            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst-1.1.8.offxml',
             'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/tip3p.offxml'
         ]
         # Test creation with smirnoff99frosst URL
@@ -333,7 +333,7 @@ class TestForceField():
     @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_create_forcefield_from_url_list(self):
         urls = [
-            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst.offxml',
+            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst-1.1.8.offxml',
             'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/tip3p.offxml'
         ]
         # Test creation with multiple URLs
@@ -342,7 +342,7 @@ class TestForceField():
     @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_create_forcefield_from_url_iterator(self):
         urls = [
-            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst.offxml',
+            'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/smirnoff99Frosst-1.1.8.offxml',
             'https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/forcefield/tip3p.offxml'
         ]
         # A generator should work as well
@@ -393,7 +393,7 @@ class TestForceField():
         Test roundtripping a forcefield to an XML string with and without retaining cosmetic elements
         """
         # Ensure an exception is raised if we try to read the XML string with cosmetic attributes
-        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg [(]parameters: k, length[)]  passed") as excinfo:
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
         # Create a forcefield from XML successfully, by explicitly permitting cosmetic attributes
@@ -405,7 +405,7 @@ class TestForceField():
         # Ensure that the new XML string has cosmetic attributes in it
         assert 'cosmetic_element="why not?"' in string_1
         assert 'parameterize_eval="blah=blah2"' in string_1
-        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg [(]parameters: k, length[)]  passed") as excinfo:
             forcefield = ForceField(string_1, permit_cosmetic_attributes=False)
 
         # Complete the forcefield_1 --> string --> forcefield_2 roundtrip
@@ -454,7 +454,7 @@ class TestForceField():
         iofile3 = NamedTemporaryFile(suffix='.' + filename_extension)
 
         # Ensure an exception is raised if we try to read the XML string with cosmetic attributes
-        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg [(]parameters: k, length[)]  passed") as excinfo:
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
         # Create a forcefield from XML successfully
@@ -466,7 +466,7 @@ class TestForceField():
         # Ensure that the new XML string has cosmetic attributes in it
         assert 'cosmetic_element="why not?"' in open(iofile1.name).read()
         assert 'parameterize_eval="blah=blah2"' in open(iofile1.name).read()
-        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'parameters': 'k, length'} passed") as excinfo:
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg [(]parameters: k, length[)]  passed") as excinfo:
             forcefield = ForceField(iofile1.name, permit_cosmetic_attributes=False)
 
         # Complete the forcefield_1 --> file --> forcefield_2 roundtrip
@@ -502,7 +502,7 @@ class TestForceField():
     def test_parameterize_ethanol(self, toolkit_registry, registry_description):
         from simtk.openmm import app
 
-        forcefield = ForceField('smirnoff99Frosst.offxml')
+        forcefield = ForceField('smirnoff99Frosst-1.1.8.offxml')
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
@@ -514,7 +514,7 @@ class TestForceField():
     def test_parameterize_1_cyclohexane_1_ethanol(self, toolkit_registry, registry_description):
         from simtk.openmm import app
 
-        forcefield = ForceField('smirnoff99Frosst.offxml')
+        forcefield = ForceField('smirnoff99Frosst-1.1.8.offxml')
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
         # toolkit_wrapper = RDKitToolkitWrapper()
         molecules = []
@@ -530,7 +530,7 @@ class TestForceField():
     def test_parameterize_1_cyclohexane_1_ethanol_vacuum(self, toolkit_registry, registry_description):
         from simtk.openmm import app
 
-        forcefield = ForceField('smirnoff99Frosst.offxml')
+        forcefield = ForceField('smirnoff99Frosst-1.1.8.offxml')
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
         # toolkit_wrapper = RDKitToolkitWrapper()
         molecules = []
@@ -547,7 +547,7 @@ class TestForceField():
     def test_parameterize_no_matching_reference(self, toolkit_registry, registry_description):
         from simtk.openmm import app
 
-        forcefield = ForceField('smirnoff99Frosst.offxml')
+        forcefield = ForceField('smirnoff99Frosst-1.1.8.offxml')
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
         # toolkit_wrapper = RDKitToolkitWrapper()
         molecules = []
@@ -564,7 +564,7 @@ class TestForceField():
     def test_parameterize_large_system(self, toolkit_registry, registry_description, box):
         from simtk.openmm import app
 
-        forcefield = ForceField('smirnoff99Frosst.offxml')
+        forcefield = ForceField('smirnoff99Frosst-1.1.8.offxml')
         box_filename = get_data_filename(os.path.join('systems', 'packmol_boxes', box))
         pdbfile = app.PDBFile(box_filename)
         mol_names = ['water', 'cyclohexane', 'ethanol', 'propane', 'methane', 'butanol']
@@ -585,7 +585,7 @@ class TestForceField():
         from simtk.openmm import app
         from simtk.openmm import XmlSerializer
 
-        forcefield = ForceField('smirnoff99Frosst.offxml')
+        forcefield = ForceField('smirnoff99Frosst-1.1.8.offxml')
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         # Load the unique molecules with one atom ordering
         molecules1 = [Molecule.from_file(get_data_filename('molecules/ethanol.sdf'))]
@@ -621,7 +621,7 @@ class TestForceField():
         from simtk.openmm import XmlSerializer
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper])
-        forcefield = ForceField('smirnoff99Frosst.offxml')
+        forcefield = ForceField('smirnoff99Frosst-1.1.8.offxml')
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
 
         # Load the unique molecules with one atom ordering
@@ -656,7 +656,7 @@ class TestForceField():
     def test_parameterize_ethanol_to_parmed(self):
         from simtk.openmm import app
 
-        forcefield = ForceField('smirnoff99Frosst.offxml')
+        forcefield = ForceField('smirnoff99Frosst-1.1.8.offxml')
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         #toolkit_wrapper = RDKitToolkitWrapper()
         molecules = [ Molecule.from_file(get_data_filename(name)) for name in ('molecules/ethanol.mol2',) ]
@@ -672,7 +672,7 @@ class TestForceField():
 
         from simtk.openmm import app, NonbondedForce
 
-        filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
+        filename = get_data_filename('forcefield/smirnoff99Frosst-1.1.8.offxml')
         forcefield = ForceField(filename)
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
@@ -716,7 +716,7 @@ class TestForceField():
 
         from simtk.openmm import app, NonbondedForce
 
-        filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
+        filename = get_data_filename('forcefield/smirnoff99Frosst-1.1.8.offxml')
         forcefield = ForceField(filename)
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, )
@@ -743,7 +743,7 @@ class TestForceField():
         """Test to ensure an exception is raised when an unrecognized kwarg is passed """
         from simtk.openmm import app
 
-        filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
+        filename = get_data_filename('forcefield/smirnoff99Frosst-1.1.8.offxml')
         forcefield = ForceField(filename)
         pdbfile = app.PDBFile(get_data_filename('systems/test_systems/1_ethanol.pdb'))
         molecules = []
@@ -769,7 +769,7 @@ class TestForceField():
         exception_match= inputs['exception_match']
 
         molecules = [create_ethanol()]
-        forcefield = ForceField('smirnoff99Frosst.offxml')
+        forcefield = ForceField('smirnoff99Frosst-1.1.8.offxml')
         forcefield.get_parameter_handler('vdW', {})._method = vdw_method
         forcefield.get_parameter_handler('Electrostatics', {})._method = electrostatics_method
 
@@ -1075,7 +1075,7 @@ def test_chargeincrement(self):
     """
     molecules_filename = get_data_filename('molecules/laromustine_tripos.mol2')
     molecule = openforcefield.topology.Molecule.from_file(molecules_filename)
-    forcefield = ForceField(['smirnoff99Frosst.offxml', 'chargeincrement-test'])
+    forcefield = ForceField(['smirnoff99Frosst-1.1.8.offxml', 'chargeincrement-test'])
     check_system_creation_from_molecule(forcefield, molecule)
     # TODO: We can't implement a test for chargeincrement yet because we
     #       haven't settled on a SMIRNOFF spec for chargeincrementmodel

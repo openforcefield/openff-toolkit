@@ -25,6 +25,7 @@ __all__ = [
     'deserialize_numpy',
     'convert_smirnoff_data_quantitys_to_string',
     'convert_smirnoff_data_strings_to_quantity',
+    'convert_0_2_smirnoff_to_0_3'
 ]
 
 #=============================================================================================
@@ -610,3 +611,103 @@ def deserialize_numpy(serialized_np, shape):
     np_array = np.frombuffer(serialized_np, dtype=dt)
     np_array = np_array.reshape(shape)
     return np_array
+
+def convert_0_2_smirnoff_to_0_3(smirnoff_data_0_2):
+    """
+    Convert an 0.2-compliant SMIRNOFF dict to an 0.3-compliant one.
+    This involves removing units from header tags and adding them
+    to attributes of child elements.
+    It also requires converting ProperTorsions and ImproperTorsions
+    potentials from "charmm" to "fourier".
+
+    Parameters
+    ----------
+    smirnoff_data_0_2 : dict
+        Hierarchical dict representing a SMIRNOFF data structure according the the 0.2 spec
+
+    Returns
+    -------
+    smirnoff_data_0_3
+        Hierarchical dict representing a SMIRNOFF data structure according the the 0.3 spec
+    """
+    # Recursively attach unit strings
+    smirnoff_data = recursive_attach_unit_strings(smirnoff_data_0_2, {})
+
+    # Change TorsionHandler potential from "charmm" to "fourier". Note that, scientifically,
+    # we really meant "fourier" all along, since "charmm" technically implies that we would support a
+    # harmonic potential for torsion terms with periodicity 0
+    # More at: https://github.com/openforcefield/openforcefield/issues/303#issuecomment-490156779
+    if 'ProperTorsions' in smirnoff_data['SMIRNOFF']:
+        if 'potential' in smirnoff_data['SMIRNOFF']['ProperTorsions']:
+            if smirnoff_data['SMIRNOFF']['ProperTorsions']['potential'] == 'charmm':
+                smirnoff_data['SMIRNOFF']['ProperTorsions']['potential'] = 'fourier'
+    if 'ImproperTorsions' in smirnoff_data['SMIRNOFF']:
+        if 'potential' in smirnoff_data['SMIRNOFF']['ImproperTorsions']:
+            if smirnoff_data['SMIRNOFF']['ImproperTorsions']['potential'] == 'charmm':
+                smirnoff_data['SMIRNOFF']['ImproperTorsions']['potential'] = 'fourier'
+
+    return smirnoff_data
+
+
+def recursive_attach_unit_strings(smirnoff_data, units_to_attach):
+    """
+    Recursively traverse a SMIRNOFF data structure, appending "* {unit}" to values in key:value pairs
+    where "key_unit":"unit_string" is present at a higher level in the hierarchy.
+    This function expects all items in smirnoff_data to be formatted as strings.
+
+    Parameters
+    ----------
+    smirnoff_data : dict
+        Any level of hierarchy that is part of a SMIRNOFF dict, with all data members
+        formatted as string.
+    units_to_attach : dict
+        Dict of the form {key:unit_string}
+
+    Returns
+    -------
+    unit_appended_smirnoff_data: dict
+    """
+    import re
+    # Make a copy of units_to_attach so we don't modify the original (otherwise things like k_unit could
+    # leak between sections)
+    units_to_attach = units_to_attach.copy()
+    #smirnoff_data = smirnoff_data.copy()
+
+    # If we're working with a dict, see if there are any new unit entries and store them,
+    # then operate recursively on the values in the dict.
+    if isinstance(smirnoff_data, dict):
+
+        # Go over all key:value pairs once to see if there are new units to attach.
+        # Note that units to be attached can be defined in the same dict as the
+        # key:value pair they will be attached to, so we need to complete this check
+        # before we are able to check other items in the dict.
+        for key, value in list(smirnoff_data.items()):
+            if key[-5:] == '_unit':
+                units_to_attach[key[:-5]] = value
+                del smirnoff_data[key]
+
+        # Go through once more to attach units as appropriate
+        for key in smirnoff_data.keys():
+
+            # We use regular expressions to catch possible indexed attributes
+            attach_unit = None
+            for unit_key, unit_string in units_to_attach.items():
+                if re.match(f'{unit_key}[0-9]*', key):
+                    attach_unit = unit_string
+
+            if attach_unit is not None:
+                smirnoff_data[key] = smirnoff_data[key] + " * " + attach_unit
+
+            # And recursively act on value, in case it's a deeper level of hierarchy
+            smirnoff_data[key] = recursive_attach_unit_strings(smirnoff_data[key], units_to_attach)
+
+    # If it's a list, operate on each member of the list
+    elif isinstance(smirnoff_data, list):
+        for index, value in enumerate(smirnoff_data):
+            smirnoff_data[index] = recursive_attach_unit_strings(value, units_to_attach)
+
+    # Otherwise, just return smirnoff_data unchanged
+    else:
+        pass
+
+    return smirnoff_data
