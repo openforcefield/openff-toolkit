@@ -51,7 +51,7 @@ XML_FF_GENERICS = """<?xml version='1.0' encoding='ASCII'?>
   <ImproperTorsions potential="fourier">
     <Improper smirks="[*:1]~[*:2](~[*:3])~[*:4]" id="i1" k1="1.1 * kilocalories_per_mole" periodicity1="2" phase1="180. * degree"/>
   </ImproperTorsions>
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1"  switch_width="1.0 * angstrom cutoff="9.0 * angstrom" method="cutoff">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1"  switch_width="1.0 * angstrom" cutoff="9.0 * angstrom" method="cutoff">
     <Atom smirks="[*:1]" epsilon="0.0157 * kilocalories_per_mole" id="n1" rmin_half="0.6000 * angstrom"/>
   </vdW>
   <Electrostatics method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
@@ -854,7 +854,7 @@ class TestForceFieldConstraints:
         # Check that all C-H bonds have been constrained to the FF bond length.
         self.check_molecule_constraints(ethane, system,
                                         bond_elements={'C', 'H'},
-                                        bond_length=GENERIC_BOND_LENGTH)
+                                        bond_length= 1.09 * unit.angstrom)
 
 
 #======================================================================
