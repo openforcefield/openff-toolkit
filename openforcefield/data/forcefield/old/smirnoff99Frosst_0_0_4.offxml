@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='ASCII'?>
-<SMIRNOFF version="0.1" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRNOFF (SMIRKS Native Open Force Field) template file -->
   <Date>Date: Feb. 27, 2018</Date>
   <Author>C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine</Author>

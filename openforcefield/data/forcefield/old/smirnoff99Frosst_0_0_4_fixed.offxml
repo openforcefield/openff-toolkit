@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='ASCII'?>
 <!-- All the parameters are the same as in the original file shipped with openforcefield 0.0.4 except for n12, which was fixed (see issue #179) -->
-<SMIRNOFF version="0.1" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRNOFF (SMIRKS Native Open Force Field) template file -->
   <Date>Date: Feb. 27, 2018</Date>
   <Author>C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine</Author>
