@@ -10,7 +10,7 @@ __all__ = [
     'all_subclasses',
     'temporary_cd',
     'temporary_directory',
-    'get_data_filename',
+    'get_data_file_path',
     'unit_to_string',
     'quantity_to_string',
     'string_to_unit',
@@ -103,7 +103,7 @@ def temporary_directory():
         shutil.rmtree(tmp_dir)
 
 
-def get_data_filename(relative_path):
+def get_data_file_path(relative_path):
     """Get the full path to one of the reference files in testsystems.
     In the source distribution, these files are in ``openforcefield/data/``,
     but on installation, they're moved to somewhere in the user's python
@@ -185,7 +185,6 @@ def quantity_to_string(input_quantity):
     if isinstance(unitless_value, np.ndarray):
         unitless_value = list(unitless_value)
     unit_string = unit_to_string(input_quantity.unit)
-    print(input_quantity, type(unitless_value))
     output_string = '{} * {}'.format(unitless_value, unit_string)
     return output_string
 
