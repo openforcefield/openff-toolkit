@@ -7,6 +7,14 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+0.3.0 - API Improvements
+------------------------
+
+Description goes here.
+
+Bugfixes
+""""""""
+* `PR #316 <https://github.com/openforcefield/openforcefield/pull/316>`_: Fix formatting issues in GBSA section of SMIRNOFF spec
 
 0.2.2 - Bugfix release
 ----------------------
