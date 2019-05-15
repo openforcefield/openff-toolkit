@@ -943,6 +943,9 @@ class ForceField:
         ----------
         topology : openforcefield.topology.Topology
             The ``Topology`` corresponding to the system to be parameterized
+        charge_from_molecules : List[openforcefield.molecule.Molecule], optional
+            If specified, partial charges will be taken from the given molecules
+            instead of being determined by the force field.
 
         Returns
         -------
