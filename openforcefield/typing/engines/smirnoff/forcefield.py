@@ -55,6 +55,34 @@ logger = logging.getLogger(__name__)
 # PRIVATE METHODS
 #=============================================================================================
 
+# Directory paths used by ForceField to discover offxml files.
+_installed_offxml_dir_paths = []
+
+def _get_installed_offxml_dir_paths():
+    """Return the list of directory paths where to search for offxml files.
+
+    This function load the information by calling all the entry points
+    registered in the "openff.forcefielddirs" group. Each entry point
+    (i.e. a function) should return a list of paths to directories
+    containing the offxml files.
+
+    Returns
+    -------
+    _installed_offxml_dir_paths : List[str]
+        All the installed directory paths where ``ForceField`` will
+        look for offxml files.
+
+    """
+    global _installed_offxml_dir_paths
+    if len(_installed_offxml_dir_paths) == 0:
+        from pkg_resources import iter_entry_points
+        # Find all registered entry points that should return a list of
+        # paths to directories where to search for offxml files.
+        for entry_point in iter_entry_points(group='openff.forcefielddirs'):
+            _installed_offxml_dir_paths.extend(entry_point.load()())
+    return _installed_offxml_dir_paths
+
+
 # TODO: Instead of having a global version number, alow each Force to have a separate version number
 MAX_SUPPORTED_VERSION = '1.0'  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF forcefield
 
@@ -727,9 +755,6 @@ class ForceField:
             handler._add_parameters(section_dict,
                                     allow_cosmetic_attributes=allow_cosmetic_attributes)
 
-
-
-
     def parse_smirnoff_from_source(self, source):
         """
         Reads a SMIRNOFF data structure from a source, which can be one of many types.
@@ -749,6 +774,20 @@ class ForceField:
             A representation of a SMIRNOFF-format data structure. Begins at top-level 'SMIRNOFF' key.
 
         """
+        # Check whether this could be a file path. It could also be a
+        # file handler or a simple XML string.
+        try:
+            # This support str, bytes, and PathLike objects.
+            source = os.fspath(source)
+        except (AttributeError, TypeError):
+            pass
+        else:
+            # If this could be a file path, check if the file was installed somewhere.
+            for dir_path in [''] + _get_installed_offxml_dir_paths():
+                file_path = os.path.join(dir_path, source)
+                if os.path.isfile(file_path):
+                    source = file_path
+                    break
 
         # Process all SMIRNOFF definition files or objects
         # QUESTION: Allow users to specify forcefield URLs so they can pull forcefield definitions from the web too?
@@ -764,18 +803,13 @@ class ForceField:
                 return smirnoff_data
             except ParseError as e:
                 exception_msg = str(e)
-                # TODO: Have parse_file() raise a different error type for file not found.
-                # If the file exists but there are syntax errors, don't
-                # parse as string to avoid overwriting the errors.
-                if os.path.exists(source):
-                    break
-
-            # Try parsing as a forcefield string
-            try:
-                smirnoff_data = parameter_io_handler.parse_string(source)
-                return smirnoff_data
-            except ParseError as e:
-                exception_msg = str(e)
+            except FileNotFoundError:
+                # If this is not a file path or a file handle, attempt parsing as a string.
+                try:
+                    smirnoff_data = parameter_io_handler.parse_string(source)
+                    return smirnoff_data
+                except ParseError as e:
+                    exception_msg = str(e)
 
         # If we haven't returned by now, the parsing was unsuccessful
         valid_formats = [
