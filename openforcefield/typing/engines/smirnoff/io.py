@@ -23,12 +23,9 @@ __all__ = [
 #=============================================================================================
 
 import logging
-import os
 
 import xmltodict
-
 from simtk import unit
-from openforcefield.utils.utils import get_data_file_path
 
 
 #=============================================================================================
