@@ -12,6 +12,11 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 Several improvements and changes to public API.
 
+New features
+""""""""""""
+
+* `PR #322 <https://github.com/openforcefield/openforcefield/pull/322>`_: Install directories for the lookup of OFFXML files through the entry point group ``openff.forcefielddirs``. Test force fields in ``data/`` are not automatically found anymore.
+
 API Changes
 """""""""""
 * `PR #278 <https://github.com/openforcefield/openforcefield/pull/278>`_: Standardize variable/method names
