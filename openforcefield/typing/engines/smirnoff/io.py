@@ -154,8 +154,6 @@ class ParameterIOHandler:
 # XML I/O
 #=============================================================================================
 
-
-
 class XMLParameterIOHandler(ParameterIOHandler):
     """
     Handles serialization/deserialization of SMIRNOFF ForceField objects from OFFXML format.
@@ -163,65 +161,32 @@ class XMLParameterIOHandler(ParameterIOHandler):
     # TODO: Come up with a better keyword for format
     _FORMAT = 'XML'
 
-
-
-    # TODO: Fix this
     def parse_file(self, source):
         """Parse a SMIRNOFF force field definition in XML format, read from a file.
 
-        A ``ParseError`` is raised if the XML cannot be processed.
-
         Parameters
         ----------
-        source : str or file-like obj
-            File path of file-like obj specifying a SMIRNOFF force field definition in `the SMIRNOFF XML format <https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md>`_.
+        source : str or io.RawIOBase
+            File path of file-like object implementing a ``read()`` method
+            specifying a SMIRNOFF force field definition in `the SMIRNOFF XML format <https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md>`_.
 
-        .. notes ::
+        Raises
+        ------
+        ParseError
+            If the XML cannot be processed.
+        FileNotFoundError
+            If the file could not found.
 
-           * New SMIRNOFF sections are handled independently, as if they were specified in the same file.
-           * If a SMIRNOFF section that has already been read appears again, its definitions are appended to the end of the previously-read
-             definitions if the sections are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
         """
-        from pyexpat import ExpatError
-        from openforcefield.typing.engines.smirnoff.forcefield import ParseError
-
-        # this handles open file-like objects (and strings)
+        # If this is a file-like object, we should be able to read it.
         try:
-            smirnoff_data = self.parse_string(source)
-            return smirnoff_data
-        except ParseError:
-            pass
+            raw_data = source.read()
+        except AttributeError:
+            # This raises FileNotFoundError if the file doesn't exist.
+            raw_data = open(source).read()
 
-        # This handles complete/local filenames
-        try:
-            # Check if the file exists in the data/forcefield directory
-            data = open(source).read()
-            smirnoff_data = xmltodict.parse(data, attr_prefix='')
-            return smirnoff_data
-        except ExpatError:
-            pass
-        except FileNotFoundError:
-            pass
-
-        # This handles nonlocal filenames
-        try:
-            # Check if the file exists in the data/forcefield directory
-            temp_file = get_data_file_path(os.path.join('forcefield', source))
-            data = open(temp_file).read()
-            smirnoff_data = self.parse_string(data)
-            return smirnoff_data
-
-        except Exception as e:
-            # Fail with an error message about which file could not be read.
-            # TODO: Also handle case where fallback to 'data' directory encounters problems,
-            # but this is much less worrisome because we control those files.
-            msg = str(e) + '\n'
-            if hasattr(source, 'name'):
-                filename = source.name
-            else:
-                filename = str(source)
-            msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
-            raise ParseError(msg)
+        # Parse the data in string format.
+        return self.parse_string(raw_data)
 
     def parse_string(self, data):
         """Parse a SMIRNOFF force field definition in XML format.
