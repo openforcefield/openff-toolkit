@@ -7,7 +7,8 @@ dist: xenial
 branches:
   only:
   - master
-  - topology
+  # Regex for feature release branches
+  - /.*[.]0-branch$/
 
 matrix:
   include:

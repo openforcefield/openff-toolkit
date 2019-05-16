@@ -11,7 +11,7 @@ __all__ = [
     'all_subclasses',
     'temporary_cd',
     'temporary_directory',
-    'get_data_filename',
+    'get_data_file_path',
     'unit_to_string',
     'quantity_to_string',
     'string_to_unit',
@@ -115,7 +115,7 @@ def temporary_directory():
         shutil.rmtree(tmp_dir)
 
 
-def get_data_filename(relative_path):
+def get_data_file_path(relative_path):
     """Get the full path to one of the reference files in testsystems.
     In the source distribution, these files are in ``openforcefield/data/``,
     but on installation, they're moved to somewhere in the user's python

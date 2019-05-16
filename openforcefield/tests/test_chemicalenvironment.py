@@ -1,6 +1,6 @@
 from functools import partial
 from openforcefield.typing.chemistry import *
-from openforcefield.utils import get_data_filename
+from openforcefield.utils import get_data_file_path
 from unittest import TestCase
 import pytest
 from openforcefield.utils.toolkits import OPENEYE_AVAILABLE

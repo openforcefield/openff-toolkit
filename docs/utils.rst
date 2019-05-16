@@ -65,7 +65,7 @@ Miscellaneous utility functions.
     all_subclasses
     temporary_cd
     temporary_directory
-    get_data_filename
+    get_data_file_path
 
 Structure tools
 ---------------

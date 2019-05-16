@@ -193,7 +193,7 @@ class ForceField:
                  parameter_handler_classes=None,
                  parameter_io_handler_classes=None,
                  disable_version_check=False,
-                 permit_cosmetic_attributes=False):
+                 allow_cosmetic_attributes=False):
         """Create a new :class:`ForceField` object from one or more SMIRNOFF parameter definition files.
 
         Parameters
@@ -215,7 +215,7 @@ class ForceField:
         disable_version_check : bool, optional, default=False
             If True, will disable checks against the current highest supported forcefield version.
             This option is primarily intended for forcefield development.
-        permit_cosmetic_attributes : bool, optional. Default = False
+        allow_cosmetic_attributes : bool, optional. Default = False
             Whether to retain non-spec kwargs from data sources.
 
         Examples
@@ -257,7 +257,7 @@ class ForceField:
             parameter_io_handler_classes)
 
         # Parse all sources containing SMIRNOFF parameter definitions
-        self.parse_sources(sources, permit_cosmetic_attributes=permit_cosmetic_attributes)
+        self.parse_sources(sources, allow_cosmetic_attributes=allow_cosmetic_attributes)
 
     def _initialize(self):
         """
@@ -517,7 +517,7 @@ class ForceField:
             raise Exception(
                 msg)  # TODO: Should we raise a more specific exception here?
 
-    def get_parameter_handler(self, tagname, handler_kwargs=None, permit_cosmetic_attributes=False):
+    def get_parameter_handler(self, tagname, handler_kwargs=None, allow_cosmetic_attributes=False):
         """Retrieve the parameter handlers associated with the provided tagname.
 
         If the parameter handler has not yet been instantiated, it will be created and returned.
@@ -532,7 +532,7 @@ class ForceField:
         handler_kwargs : dict, optional. Default = None
             Dict to be passed to the handler for construction or checking compatibility. If None, will be assumed
             to represent handler defaults.
-        permit_cosmetic_attributes : bool, optional. Default = False
+        allow_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs in smirnoff_data.
 
         Returns
@@ -558,7 +558,7 @@ class ForceField:
 
         # Initialize a new instance of this parameter handler class with the given kwargs
         new_handler = ph_class(**handler_kwargs,
-                               permit_cosmetic_attributes=permit_cosmetic_attributes)
+                               allow_cosmetic_attributes=allow_cosmetic_attributes)
 
         if tagname in self._parameter_handlers:
             # If a handler of this class already exists, ensure that the two handlers encode compatible science
@@ -615,7 +615,7 @@ class ForceField:
         return io_handler
 
 
-    def parse_sources(self, sources, permit_cosmetic_attributes=True):
+    def parse_sources(self, sources, allow_cosmetic_attributes=True):
         """Parse a SMIRNOFF force field definition.
 
         Parameters
@@ -628,7 +628,7 @@ class ForceField:
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
             with files appearing later in the sequence resulting in parameters that have higher precedence.
             Support for multiple files is primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
-        permit_cosmetic_attributes : bool, optional. Default = False
+        allow_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs present in the source.
 
         .. notes ::
@@ -648,7 +648,7 @@ class ForceField:
         for source in sources:
             smirnoff_data = self.parse_smirnoff_from_source(source)
             self._load_smirnoff_data(smirnoff_data,
-                                     permit_cosmetic_attributes=permit_cosmetic_attributes)
+                                     allow_cosmetic_attributes=allow_cosmetic_attributes)
 
 
     def _to_smirnoff_data(self, discard_cosmetic_attributes=True):
@@ -682,7 +682,7 @@ class ForceField:
         return smirnoff_dict
 
     # TODO: Should we call this "from_dict"?
-    def _load_smirnoff_data(self, smirnoff_data, permit_cosmetic_attributes=False):
+    def _load_smirnoff_data(self, smirnoff_data, allow_cosmetic_attributes=False):
         """
         Add parameters from a SMIRNOFF-format data structure to this ForceField.
 
@@ -690,7 +690,7 @@ class ForceField:
         ----------
         smirnoff_data : OrderedDict
             A representation of a SMIRNOFF-format data structure. Begins at top-level 'SMIRNOFF' key.
-        permit_cosmetic_attributes : bool, optional. Default = False
+        allow_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs in smirnoff_data.
         """
         import packaging.version
@@ -753,9 +753,9 @@ class ForceField:
             # compatibility if a handler for this parameter name already exists
             handler = self.get_parameter_handler(parameter_name,
                                                  section_dict,
-                                                 permit_cosmetic_attributes=permit_cosmetic_attributes)
+                                                 allow_cosmetic_attributes=allow_cosmetic_attributes)
             handler._add_parameters(section_dict,
-                                    permit_cosmetic_attributes=permit_cosmetic_attributes)
+                                    allow_cosmetic_attributes=allow_cosmetic_attributes)
 
 
 
