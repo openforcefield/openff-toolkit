@@ -774,6 +774,8 @@ class ForceField:
             A representation of a SMIRNOFF-format data structure. Begins at top-level 'SMIRNOFF' key.
 
         """
+        from openforcefield.utils import get_data_file_path
+
         # Check whether this could be a file path. It could also be a
         # file handler or a simple XML string.
         try:
@@ -783,7 +785,10 @@ class ForceField:
             pass
         else:
             # If this could be a file path, check if the file was installed somewhere.
-            for dir_path in [''] + _get_installed_offxml_dir_paths():
+            searched_dirs_paths = [''] + _get_installed_offxml_dir_paths()
+            # TODO: Remove this when smirnoff99Frosst 1.0.9 will be released.
+            searched_dirs_paths.append(get_data_file_path('forcefield'))
+            for dir_path in searched_dirs_paths:
                 file_path = os.path.join(dir_path, source)
                 if os.path.isfile(file_path):
                     source = file_path
