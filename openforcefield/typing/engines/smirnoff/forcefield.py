@@ -68,7 +68,7 @@ def _get_installed_offxml_dir_paths():
 
     Returns
     -------
-    _installed_offxml_dir_paths : List[str]
+    installed_offxml_dir_paths : List[str]
         All the installed directory paths where ``ForceField`` will
         look for offxml files.
 
