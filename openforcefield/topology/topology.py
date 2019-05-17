@@ -1438,6 +1438,54 @@ class Topology(Serializable):
         # Implement abstract method Serializable.to_dict()
         raise NotImplementedError()  # TODO
 
+    @staticmethod
+    def _networkx_to_hill_formula(mol_graph):
+        """
+        Convert a networkX representation of a molecule to a molecule formula. Used in printing out
+        informative error messages when a molecule from an openmm topology can't be matched.
+
+        Parameters
+        ----------
+        mol_graph : a networkX graph
+            The graph representation of a molecule
+
+        Returns
+        -------
+        formula : str
+            The molecular formula of the graph molecule
+        """
+        from simtk.openmm.app import Element
+
+        # Make a flat list of all atomic numbers in the molecule
+        atom_nums = []
+        for idx in mol_graph.nodes:
+            atom_nums.append(mol_graph.node[idx]['atomic_number'])
+
+        # Count the number of instances of each atomic number
+        at_num_to_counts = dict([(unq, atom_nums.count(unq)) for unq in atom_nums])
+
+        symbol_to_counts = {}
+        # Check for C and H first, to make a correct hill formula (remember dicts in python 3.6+ are ordered)
+        if 6 in at_num_to_counts:
+            symbol_to_counts['C'] = at_num_to_counts[6]
+            del at_num_to_counts[6]
+
+        if 1 in at_num_to_counts:
+            symbol_to_counts['H'] = at_num_to_counts[1]
+            del at_num_to_counts[1]
+
+        # Now count instances of all elements other than C and H, in order of ascending atomic number
+        sorted_atom_nums = sorted(at_num_to_counts.keys())
+        for atom_num in sorted_atom_nums:
+            symbol_to_counts[Element.getByAtomicNumber(atom_num).symbol] = at_num_to_counts[atom_num]
+
+        # Finally format the formula as string
+        formula = ''
+        for ele, count in symbol_to_counts.items():
+            formula += f'{ele}{count}'
+        return(formula)
+
+
     @classmethod
     def from_openmm(cls, openmm_topology, unique_molecules=None):
         """
@@ -1528,9 +1576,8 @@ class Topology(Serializable):
                     match_found = True
                     break
             if not (match_found):
-                # TODO: We should make this message way more informative. Maybe take the unmatched subgraph and
-                #       print the result of Molecule.from_networkx (which we need to implement)?
-                raise ValueError('No match found for molecule {}')
+                hill_formula = Topology._networkx_to_hill_formula(omm_mol_G)
+                raise ValueError(f'No match found for molecule {hill_formula}')
 
         # The connected_component_subgraph function above may have scrambled the molecule order, so sort molecules
         # by their first atom's topology index
