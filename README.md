@@ -56,7 +56,7 @@ topology = Topology.from_molecules(molecule)
 
 # Load the smirnoff99Frosst SMIRNOFF force field definition
 from openforcefield.typing.engines.smirnoff import ForceField
-forcefield = ForceField('smirnoff99Frosst.offxml')
+forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
 
 # Create an OpenMM system representing the molecule with SMIRNOFF-applied parameters
 openmm_system = forcefield.create_openmm_system(topology)

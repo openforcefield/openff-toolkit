@@ -48,7 +48,7 @@ MiniDrugBank_molecules_filename = get_data_file_path('molecules/MiniDrugBank_tri
 tip3p_molecule_filename = get_data_file_path(os.path.join('systems', 'monomers', 'tip3p_water.mol2'))
 
 # This is the production form of smirnoff99Frosst that should be found in the data directories
-smirnoff99Frosst_offxml_filename = 'smirnoff99Frosst.offxml'
+smirnoff99Frosst_offxml_filename = os.path.join('test_forcefields', 'smirnoff99Frosst.offxml')
 tip3p_offxml_filename = 'tip3p.offxml'
 
 # TODO: Add tests to compare RDKit and OpenEye derived forcefields to make sure they are the same
@@ -289,7 +289,7 @@ class TestApplyForceField:
 
         Parameters
         ----------
-        offxml_filename : str, optional, default='smirnoff99Frosst.offxml'
+        offxml_filename : str, optional, default='test_forcefields/smirnoff99Frosst.offxml'
             Filename from which SMIRNOFF .offxml XML file is to be loaded.
         molecules_filename : str, optional, default='molecules/AlkEthOH_test_filt1_tripos.mol2
             Filename from which molecule identities and positions are to be loaded.
