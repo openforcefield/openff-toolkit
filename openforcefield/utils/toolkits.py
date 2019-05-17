@@ -733,7 +733,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                         oeatom_to_str(oebond.GetNbr(oeatom)))
                 return description
 
-            msg = "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry. " \
+            msg = "OEMol has unspecified stereochemistry. " \
                   "oemol.GetTitle(): {}\n".format(oemol.GetTitle())
             if len(problematic_atoms) != 0:
                 msg += "Problematic atoms are:\n"
@@ -742,8 +742,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if len(problematic_bonds) != 0:
                 msg += "Problematic bonds are: {}\n".format(problematic_bonds)
             if allow_undefined_stereo:
+                msg = 'Warning (not error because allow_undefined_stereo=True): ' + msg
                 logger.warning(msg)
             else:
+                msg = 'Unable to make OFFMol from OEMol: ' + msg
                 raise UndefinedStereochemistryError(msg)
 
         # TODO: What other information should we preserve besides name?
@@ -2365,8 +2367,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         if msg is not None:
             if raise_warning:
+                msg = 'Warning (not error because allow_undefined_stereo=True): '
                 logger.warning(msg)
             else:
+                msg = 'Unable to make OFFMol from RDMol: ' + msg
                 raise UndefinedStereochemistryError(msg)
 
     @staticmethod
