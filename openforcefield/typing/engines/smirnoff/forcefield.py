@@ -253,7 +253,7 @@ class ForceField:
 
         Load multiple SMIRNOFF parameter sets:
 
-        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml', 'tip3p.offxml')
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml', 'test_forcefields/tip3p.offxml')
 
         Load a parameter set from a string:
 

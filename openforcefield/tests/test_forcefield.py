@@ -318,7 +318,7 @@ class TestForceField():
     def test_create_gbsa():
         """Test reading of ffxml files with GBSA support.
         """
-        forcefield = ForceField('Frosst_AlkEthOH_GBSA.offxml')
+        forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_GBSA.offxml')
 
     @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_create_forcefield_from_url(self):
@@ -813,7 +813,7 @@ class TestForceFieldConstraints:
         # Parametrize an ethane molecule.
         ethane = Molecule.from_smiles('CC')
         topology = Topology.from_molecules([ethane])
-        ff = ForceField(XML_FF_GENERICS, 'old/hbonds.offxml')
+        ff = ForceField(XML_FF_GENERICS, 'test_forcefields/old/hbonds.offxml')
         system = ff.create_openmm_system(topology)
 
         # Check that all C-H bonds have been constrained to the FF bond length.
@@ -945,7 +945,7 @@ class TestForceFieldParameterAssignment:
         molecule = Molecule.from_file(mol2_filepath)
 
         # Load forcefield
-        forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
+        forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 
         # Compare parameters. Skip the energy checks as the parameter check should be
         # sufficient. We test both energies and parameters in the slow test.
@@ -991,7 +991,7 @@ class TestForceFieldParameterAssignment:
         # Create the OpenFF System through ForceField.
         topology = Topology.from_openmm(structure_mixture.topology, unique_molecules=molecules)
         topology.box_vectors = None
-        ff = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
+        ff = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
         off_system = ff.create_openmm_system(topology)
 
         # Translate the molecules a little to avoid overlapping atoms.
@@ -1034,8 +1034,8 @@ class TestForceFieldParameterAssignment:
         molecule = Molecule.from_file(mol2_file_path, allow_undefined_stereo=allow_undefined_stereo)
 
         # Create OpenFF System with the current toolkit.
-        forcefield_file_path = 'old/smirnoff99Frosst_' + forcefield_version + '.offxml'
-        ff = ForceField(forcefield_file_path, 'old/hbonds.offxml')
+        forcefield_file_path = 'test_forcefields/old/smirnoff99Frosst_' + forcefield_version + '.offxml'
+        ff = ForceField(forcefield_file_path, 'test_forcefields/old/hbonds.offxml')
         ff_system = ff.create_openmm_system(molecule.to_topology())
 
         # Load OpenMM System created with the 0.1 version of the toolkit.

@@ -33,7 +33,7 @@ molecule = Molecule.from_file(mol_filepath)
 
 # Load forcefield
 from openforcefield.typing.engines.smirnoff import ForceField
-forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
+forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 
 # Compare energies
 from openforcefield.tests.utils import compare_amber_smirnoff

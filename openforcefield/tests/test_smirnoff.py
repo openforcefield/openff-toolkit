@@ -40,7 +40,7 @@ pytestmark = pytest.mark.skip('tests in test_smirnoff are outdated and should be
 
 # TODO: Move these to setup?
 # These paths should only be found in the test data directories, so we need to use get_data_file_path()
-AlkEthOH_offxml_filename = 'Frosst_AlkEthOH.offxml'
+AlkEthOH_offxml_filename = os.path.join('test_forcefields', 'Frosst_AlkEthOH.offxml')
 AlkEthOH_molecules_filename = get_data_file_path('molecules/AlkEthOH_test_filt1_tripos.mol2')
 MiniDrugBank_molecules_filename = get_data_file_path('molecules/MiniDrugBank_tripos.mol2')
 #chargeincrement_offxml_filename = get_data_file_path('chargeincrement-test.offxml')
@@ -49,7 +49,7 @@ tip3p_molecule_filename = get_data_file_path(os.path.join('systems', 'monomers',
 
 # This is the production form of smirnoff99Frosst that should be found in the data directories
 smirnoff99Frosst_offxml_filename = os.path.join('test_forcefields', 'smirnoff99Frosst.offxml')
-tip3p_offxml_filename = 'tip3p.offxml'
+tip3p_offxml_filename = os.path.join('test_forcefields', 'tip3p.offxml')
 
 # TODO: Add tests to compare RDKit and OpenEye derived forcefields to make sure they are the same
 
@@ -339,7 +339,7 @@ class TestApplyForceField:
         topology = molecule.to_topology()
 
         # Load forcefield
-        ff = ForceField('benzene_minimal.offxml')
+        ff = ForceField('test_forcefields/benzene_minimal.offxml')
 
         # Load AMBER files and compare
         inpcrd = get_data_file_path('molecules/benzene.crd')
@@ -361,7 +361,7 @@ class TestForceFieldLabeling:
     def test_label_molecules(self):
         """Test labeling/getting stats on labeling molecules"""
         molecules = read_molecules(get_data_file_path('molecules/AlkEthOH_test_filt1_tripos.mol2'), verbose=verbose)
-        ffxml = get_data_file_path('forcefield/Frosst_AlkEthOH.offxml')
+        ffxml = get_data_file_path('test_forcefields/Frosst_AlkEthOH.offxml')
         get_molecule_parameterIDs(molecules, ffxml)
 
     def test_molecule_labeling(self):
@@ -369,7 +369,7 @@ class TestForceFieldLabeling:
         """
         from openforcefield.topology.testsystems import SMILESTopology
         topology = SMILESTopology('CCC')
-        forcefield = ForceField('Frosst_AlkEthOH.offxml')
+        forcefield = ForceField('test_forcefields/Frosst_AlkEthOH.offxml')
         labels = forcefield.label_molecules(topology)[0]
 
         # Check that force terms aren't empty
@@ -396,7 +396,7 @@ class TestExceptionHandling:
             ('ProperTorsions', '[#136:1]~[*:2]~[*:3]~[*:4]'),
         ]
         for (tag, smirks) in parameter_edits:
-            forcefield = ForceField('Frosst_AlkEthOH.offxml')
+            forcefield = ForceField('test_forcefields/Frosst_AlkEthOH.offxml')
             forcefield.forces[tag].parameters[0].smirks = smirks
             with self.assertRaises(Exception):
                 system = forcefield.create_system(topology)
@@ -432,7 +432,7 @@ def test_improper_pyramidal(verbose=False):
     oechem.OETriposAtomTypes(mol)
     oechem.OETriposAtomNames(mol)
     # Set up minimization
-    ff = ForceField('ammonia_minimal.offxml')
+    ff = ForceField('test_forcefields/ammonia_minimal.offxml')
     topology, positions = oemol_to_openmmTop(mol)
     system = ff.createSystem(topology, [mol], verbose=verbose)
     positions = extractPositionsFromOEMol(mol)
@@ -492,7 +492,7 @@ def test_change_parameters(verbose=False):
     oechem.OETriposAtomNames(mol)
 
     # Load forcefield file
-    ff = ForceField('Frosst_AlkEthOH.offxml')
+    ff = ForceField('test_forcefields/Frosst_AlkEthOH.offxml')
 
     topology = generateTopologyFromOEMol(mol)
     # Create initial system

@@ -37,7 +37,7 @@ This repository provides tools for using the [SMIRKS Native Open Force Field (SM
 
 By convention, files containing [XML representations](https://en.wikipedia.org/wiki/XML) of SMIRNOFF force fields carry `.offxml` extensions.
 
-Example SMIRNOFF `.offxml` force field definitions can be found in [`openforcefield/data/forcefield`](https://github.com/openforcefield/openforcefield/tree/master/openforcefield/data/forcefield).
+Example SMIRNOFF `.offxml` force field definitions can be found in [`openforcefield/data/test_forcefields/`](https://github.com/openforcefield/openforcefield/tree/master/openforcefield/data/test_forcefields).
 
 ### Working with SMIRNOFF parameter sets
 
@@ -62,7 +62,7 @@ forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
 openmm_system = forcefield.create_openmm_system(topology)
 
 # Load a SMIRNOFF small molecule forcefield for alkanes, ethers, and alcohols
-forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
+forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 ```
 Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/latest/examples.html).
 
