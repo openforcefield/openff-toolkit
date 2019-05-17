@@ -788,6 +788,7 @@ class ForceField:
             searched_dirs_paths.append(get_data_file_path(''))
 
             # Determine the actual path of the file.
+            # TODO: What is desired toolkit behavior if two files with the desired name are available?
             for dir_path in searched_dirs_paths:
                 file_path = os.path.join(dir_path, source)
                 if os.path.isfile(file_path):
