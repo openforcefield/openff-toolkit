@@ -778,16 +778,16 @@ class ForceField:
 
         # Check whether this could be a file path. It could also be a
         # file handler or a simple XML string.
-        try:
-            # This support str, bytes, and PathLike objects.
-            source = os.fspath(source)
-        except (AttributeError, TypeError):
-            pass
-        else:
-            # If this could be a file path, check if the file was installed somewhere.
-            searched_dirs_paths = [''] + _get_installed_offxml_dir_paths()
+        if isinstance(source, str):
+            # Try first the simple path.
+            searched_dirs_paths = ['']
+            # Then try a relative file path w.r.t. an installed directory.
+            searched_dirs_paths.extend( _get_installed_offxml_dir_paths())
+            # Finally, search in openforcefield/data/.
             # TODO: Remove this when smirnoff99Frosst 1.0.9 will be released.
             searched_dirs_paths.append(get_data_file_path('forcefield'))
+
+            # Determine the actual path of the file.
             for dir_path in searched_dirs_paths:
                 file_path = os.path.join(dir_path, source)
                 if os.path.isfile(file_path):
@@ -808,7 +808,7 @@ class ForceField:
                 return smirnoff_data
             except ParseError as e:
                 exception_msg = str(e)
-            except FileNotFoundError:
+            except (FileNotFoundError, OSError):
                 # If this is not a file path or a file handle, attempt parsing as a string.
                 try:
                     smirnoff_data = parameter_io_handler.parse_string(source)
