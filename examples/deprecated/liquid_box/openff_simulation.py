@@ -33,7 +33,7 @@ data_freq = 1000 # number of steps per written simulation statistics
 pdb = PDBFile(pdb_filename)
 
 # Load a SMIRNOFF forcefield
-forcefield = ForceField(get_data_file_path('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml'))
+forcefield = ForceField(get_data_file_path('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml'))
 
 # Load molecule using OpenEye tools
 mol = oechem.OEGraphMol()

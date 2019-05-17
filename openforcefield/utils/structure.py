@@ -41,7 +41,7 @@ def generateSMIRNOFFStructure(oemol):
 
     off_mol = Molecule.from_openeye(oemol)
     off_top = Topology.from_molecules([off_mol])
-    mol_ff = ForceField('smirnoff99Frosst.offxml')
+    mol_ff = ForceField('test_forcefields/smirnoff99Frosst.offxml')
 
     # Create OpenMM System and Topology.
     omm_top = generateTopologyFromOEMol(oemol)

@@ -55,6 +55,34 @@ logger = logging.getLogger(__name__)
 # PRIVATE METHODS
 #=============================================================================================
 
+# Directory paths used by ForceField to discover offxml files.
+_installed_offxml_dir_paths = []
+
+def _get_installed_offxml_dir_paths():
+    """Return the list of directory paths where to search for offxml files.
+
+    This function load the information by calling all the entry points
+    registered in the "openff.forcefielddirs" group. Each entry point
+    (i.e. a function) should return a list of paths to directories
+    containing the offxml files.
+
+    Returns
+    -------
+    installed_offxml_dir_paths : List[str]
+        All the installed directory paths where ``ForceField`` will
+        look for offxml files.
+
+    """
+    global _installed_offxml_dir_paths
+    if len(_installed_offxml_dir_paths) == 0:
+        from pkg_resources import iter_entry_points
+        # Find all registered entry points that should return a list of
+        # paths to directories where to search for offxml files.
+        for entry_point in iter_entry_points(group='openforcefield.smirnoff_forcefield_directory'):
+            _installed_offxml_dir_paths.extend(entry_point.load()())
+    return _installed_offxml_dir_paths
+
+
 # TODO: Instead of having a global version number, alow each Force to have a separate version number
 MAX_SUPPORTED_VERSION = '1.0'  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF forcefield
 
@@ -137,7 +165,7 @@ class ForceField:
     Create a new ForceField containing the smirnoff99Frosst parameter set:
 
     >>> from openforcefield.typing.engines.smirnoff import ForceField
-    >>> forcefield = ForceField('smirnoff99Frosst.offxml')
+    >>> forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
 
     Create an OpenMM system from a :class:`openforcefield.topology.Topology` object:
 
@@ -221,11 +249,11 @@ class ForceField:
 
         Load one SMIRNOFF parameter set in XML format (searching the package data directory by default, which includes some standard parameter sets):
 
-        >>> forcefield = ForceField('smirnoff99Frosst.offxml')
+        >>> forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
 
         Load multiple SMIRNOFF parameter sets:
 
-        forcefield = ForceField('smirnoff99Frosst.offxml', 'tip3p.offxml')
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml', 'test_forcefields/tip3p.offxml')
 
         Load a parameter set from a string:
 
@@ -727,9 +755,6 @@ class ForceField:
             handler._add_parameters(section_dict,
                                     allow_cosmetic_attributes=allow_cosmetic_attributes)
 
-
-
-
     def parse_smirnoff_from_source(self, source):
         """
         Reads a SMIRNOFF data structure from a source, which can be one of many types.
@@ -749,6 +774,26 @@ class ForceField:
             A representation of a SMIRNOFF-format data structure. Begins at top-level 'SMIRNOFF' key.
 
         """
+        from openforcefield.utils import get_data_file_path
+
+        # Check whether this could be a file path. It could also be a
+        # file handler or a simple XML string.
+        if isinstance(source, str):
+            # Try first the simple path.
+            searched_dirs_paths = ['']
+            # Then try a relative file path w.r.t. an installed directory.
+            searched_dirs_paths.extend( _get_installed_offxml_dir_paths())
+            # Finally, search in openforcefield/data/.
+            # TODO: Remove this when smirnoff99Frosst 1.0.9 will be released.
+            searched_dirs_paths.append(get_data_file_path(''))
+
+            # Determine the actual path of the file.
+            # TODO: What is desired toolkit behavior if two files with the desired name are available?
+            for dir_path in searched_dirs_paths:
+                file_path = os.path.join(dir_path, source)
+                if os.path.isfile(file_path):
+                    source = file_path
+                    break
 
         # Process all SMIRNOFF definition files or objects
         # QUESTION: Allow users to specify forcefield URLs so they can pull forcefield definitions from the web too?
@@ -764,18 +809,13 @@ class ForceField:
                 return smirnoff_data
             except ParseError as e:
                 exception_msg = str(e)
-                # TODO: Have parse_file() raise a different error type for file not found.
-                # If the file exists but there are syntax errors, don't
-                # parse as string to avoid overwriting the errors.
-                if os.path.exists(source):
-                    break
-
-            # Try parsing as a forcefield string
-            try:
-                smirnoff_data = parameter_io_handler.parse_string(source)
-                return smirnoff_data
-            except ParseError as e:
-                exception_msg = str(e)
+            except (FileNotFoundError, OSError):
+                # If this is not a file path or a file handle, attempt parsing as a string.
+                try:
+                    smirnoff_data = parameter_io_handler.parse_string(source)
+                    return smirnoff_data
+                except ParseError as e:
+                    exception_msg = str(e)
 
         # If we haven't returned by now, the parsing was unsuccessful
         valid_formats = [
@@ -909,6 +949,9 @@ class ForceField:
         ----------
         topology : openforcefield.topology.Topology
             The ``Topology`` corresponding to the system to be parameterized
+        charge_from_molecules : List[openforcefield.molecule.Molecule], optional
+            If specified, partial charges will be taken from the given molecules
+            instead of being determined by the force field.
 
         Returns
         -------

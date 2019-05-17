@@ -16,6 +16,8 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.io.
 
 import pytest
 
+from openforcefield.typing.engines.smirnoff.io import XMLParameterIOHandler
+
 
 #=============================================================================================
 # QUANTITY PARSING UTILITIES
@@ -25,6 +27,12 @@ class TestXMLParameterIOHandler:
 
     def test_from_string(self):
         pass
+
+    def test_raise_file_not_found(self):
+        """Raise FileNotFoundError when the file doesn't exist."""
+        io_handler = XMLParameterIOHandler()
+        with pytest.raises(FileNotFoundError):
+            io_handler.parse_file('nonexisting_file.xml')
 
     #
     # Tests for ForceField writing to XML files
@@ -54,5 +62,3 @@ class TestXMLParameterIOHandler:
         forcefield2 = ForceField(xml)
         assert_forcefields_equal(cls.forcefield, forcefield2,
                                  "ForceField serialized to XML does not match original ForceField")
-
-

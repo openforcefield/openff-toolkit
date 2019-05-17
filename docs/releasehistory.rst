@@ -12,10 +12,15 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 Several improvements and changes to public API.
 
-API Changes
-"""""""""""
-* `PR #278 <https://github.com/openforcefield/openforcefield/pull/278>`_: Standardize variable/method names
+New features
+""""""""""""
+
 * `PR #292 <https://github.com/openforcefield/openforcefield/pull/292>`_: Implement ``Topology.to_openmm`` and remove ``ToolkitRegistry.toolkit_is_available``
+* `PR #322 <https://github.com/openforcefield/openforcefield/pull/322>`_: Install directories for the lookup of OFFXML files through the entry point group ``openforcefield.smirnoff_forcefield_directory``. The ``ForceField`` class doesn't search in the ``data/forcefield/`` folder anymore (now renamed ``data/test_forcefields/``), but only in ``data/``.
+
+API-breaking Changes
+""""""""""""""""""""
+* `PR #278 <https://github.com/openforcefield/openforcefield/pull/278>`_: Standardize variable/method names
 * `PR #291 <https://github.com/openforcefield/openforcefield/pull/291>`_: Remove ``ForceField.load/to_smirnoff_data``, add ``ForceField.to_file/string`` and ``ParameterHandler.add_parameters``. Change behavior of ``ForceField.register_X_handler`` functions.
 
 Bugfixes
