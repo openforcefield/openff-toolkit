@@ -1438,6 +1438,7 @@ class Topology(Serializable):
         # Implement abstract method Serializable.to_dict()
         raise NotImplementedError()  # TODO
 
+    # TODO: Merge this into Molecule.from_networkx if/when we implement that.
     @staticmethod
     def _networkx_to_hill_formula(mol_graph):
         """
