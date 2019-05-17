@@ -785,7 +785,7 @@ class ForceField:
             searched_dirs_paths.extend( _get_installed_offxml_dir_paths())
             # Finally, search in openforcefield/data/.
             # TODO: Remove this when smirnoff99Frosst 1.0.9 will be released.
-            searched_dirs_paths.append(get_data_file_path('forcefield'))
+            searched_dirs_paths.append(get_data_file_path(''))
 
             # Determine the actual path of the file.
             for dir_path in searched_dirs_paths:
