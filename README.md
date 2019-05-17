@@ -37,7 +37,7 @@ This repository provides tools for using the [SMIRKS Native Open Force Field (SM
 
 By convention, files containing [XML representations](https://en.wikipedia.org/wiki/XML) of SMIRNOFF force fields carry `.offxml` extensions.
 
-Example SMIRNOFF `.offxml` force field definitions can be found in [`openforcefield/data/test_forcefields/`](https://github.com/openforcefield/openforcefield/tree/master/openforcefield/data/test_forcefields).
+Example SMIRNOFF `.offxml` force field definitions can be found in [`openforcefield/data/test_forcefields/`](https://github.com/openforcefield/openforcefield/tree/master/openforcefield/data/test_forcefields). These force fields are for testing only, and we neither record versions of these files, nor do we guarantee their correctness or completeness.
 
 ### Working with SMIRNOFF parameter sets
 
