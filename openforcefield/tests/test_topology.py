@@ -397,7 +397,6 @@ class TestTopology(TestCase):
     # test_is_bonded
     # TODO: Test serialization
 
-
     def test_from_openmm(self):
         """Test creation of an openforcefield Topology object from an OpenMM Topology and component molecules"""
         from simtk.openmm import app
@@ -410,6 +409,16 @@ class TestTopology(TestCase):
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         assert topology.n_reference_molecules == 2
         assert topology.n_topology_molecules == 239
+
+    def test_from_openmm_missing_reference(self):
+        """Test creation of an openforcefield Topology object from an OpenMM Topology when missing a unique molecule"""
+        from simtk.openmm import app
+        pdbfile = app.PDBFile(get_data_file_path('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
+
+        molecules = []
+        molecules.append(Molecule.from_smiles('CCO'))
+        with pytest.raises(ValueError, match='No match found for molecule C6H12') as excinfo:
+            topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
     def test_to_from_openmm(self):
         """Test a round-trip OpenFF -> OpenMM -> OpenFF Topology."""

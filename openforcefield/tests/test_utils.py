@@ -73,7 +73,7 @@ def test_temporary_directory():
 def test_get_data_file_path():
     """Test get_data_file_path()"""
     from openforcefield.utils import get_data_file_path
-    filename = get_data_file_path('forcefield/tip3p.offxml')
+    filename = get_data_file_path('test_forcefields/tip3p.offxml')
     assert os.path.exists(filename)
 
 

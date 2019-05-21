@@ -273,7 +273,7 @@ This decoupling of how parameters are assigned for each term provides a great de
 
 Below, we describe the specification for each force field term definition using the XML representation of a SMIRNOFF force field.
 
-As an example of a complete SMIRNOFF force field specification, see the prototype [SMIRNOFF99Frosst offxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/forcefield/smirnoff99Frosst.offxml).
+As an example of a complete SMIRNOFF force field specification, see the prototype [SMIRNOFF99Frosst offxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/test_forcefields/smirnoff99Frosst.offxml).
 
 .. note :: Not all parameter sections *must* be specified in a SMIRNOFF force field. A wide variety of force field terms are provided in the specification, but a particular force field only needs to define a subset of those terms.
 
@@ -624,7 +624,7 @@ topology = molecule.to_topology()
 
 # Load the smirnoff99Frosst forcefield
 from openforcefield.typing.engines import smirnoff
-forcefield = smirnoff.ForceField('smirnoff99Frosst.offxml')
+forcefield = smirnoff.ForceField('test_forcefields/smirnoff99Frosst.offxml')
 
 # Create an OpenMM System from the topology
 system = forcefield.create_openmm_system(topology)

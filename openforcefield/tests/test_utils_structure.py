@@ -80,7 +80,7 @@ def test_merge_system():
     oechem.OETriposAtomNames(mol)
 
     # Load forcefield file.
-    AlkEthOH_offxml_filename = utils.get_data_file_path('forcefield/Frosst_AlkEthOH.offxml')
+    AlkEthOH_offxml_filename = utils.get_data_file_path('test_forcefields/Frosst_AlkEthOH.offxml')
     forcefield = ForceField(AlkEthOH_offxml_filename)
 
     # Create OpenMM System and Topology.
@@ -106,7 +106,7 @@ def test_component_combination():
     # a system out of its components
 
     # Create an OpenMM System from mol2 files containing a cyclohexane-ethanol mixture.
-    AlkEthOH_offxml_filename = utils.get_data_file_path('forcefield/Frosst_AlkEthOH.offxml')
+    AlkEthOH_offxml_filename = utils.get_data_file_path('test_forcefields/Frosst_AlkEthOH.offxml')
     forcefield = ForceField(AlkEthOH_offxml_filename)
     pdbfile = openmm.app.PDBFile(get_packmol_pdb_file_path('cyclohexane_ethanol_0.4_0.6'))
     sdf_file_paths = [utils.get_data_file_path(os.path.join('systems', 'monomers', name+'.sdf'))
