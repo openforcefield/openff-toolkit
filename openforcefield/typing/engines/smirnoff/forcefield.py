@@ -1079,7 +1079,7 @@ class ForceField:
                 parameter_matches = matches.__class__()
 
                 for match in matches:
-                    parameter_matches[match] = matches[match].parameter_tyoe
+                    parameter_matches[match] = matches[match].parameter_type
 
                 current_molecule_labels[tag] = parameter_matches
 
