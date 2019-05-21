@@ -41,7 +41,7 @@ from simtk import openmm, unit
 
 from openforcefield.utils import all_subclasses, MessageException, \
     convert_smirnoff_data_quantitys_to_string, convert_smirnoff_data_strings_to_quantity, \
-    convert_0_2_smirnoff_to_0_3
+    convert_0_1_smirnoff_to_0_2, convert_0_2_smirnoff_to_0_3
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
@@ -723,6 +723,14 @@ class ForceField:
         #
         # if 'date' in l1_dict:
         #     self._date = l1_dict['date']
+
+
+        # Convert 0.1 spec files to 0.3 SMIRNOFF data format by converting
+        # from 0.1 spec to 0.2, then 0.2 to 0.3
+        if packaging.version.parse(str(version)) == packaging.version.parse("0.1"):
+            smirnoff_data = convert_0_1_smirnoff_to_0_2(smirnoff_data)
+            smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
+
 
         # Convert 0.2 spec files to 0.3 SMIRNOFF data format by removing units
         # from section headers and adding them to strings at all levels.

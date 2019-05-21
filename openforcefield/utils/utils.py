@@ -25,6 +25,7 @@ __all__ = [
     'deserialize_numpy',
     'convert_smirnoff_data_quantitys_to_string',
     'convert_smirnoff_data_strings_to_quantity',
+    'convert_0_1_smirnoff_to_0_2',
     'convert_0_2_smirnoff_to_0_3'
 ]
 
@@ -34,7 +35,14 @@ __all__ = [
 
 import contextlib
 from simtk import unit
+import logging
 
+
+#=============================================================================================
+# CONFIGURE LOGGER
+#=============================================================================================
+
+logger = logging.getLogger(__name__)
 
 
 #=============================================================================================
@@ -645,6 +653,119 @@ def convert_0_2_smirnoff_to_0_3(smirnoff_data_0_2):
         if 'potential' in smirnoff_data['SMIRNOFF']['ImproperTorsions']:
             if smirnoff_data['SMIRNOFF']['ImproperTorsions']['potential'] == 'charmm':
                 smirnoff_data['SMIRNOFF']['ImproperTorsions']['potential'] = 'fourier'
+
+    return smirnoff_data
+
+def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
+    """
+    Convert an 0.1-compliant SMIRNOFF dict to an 0.2-compliant one.
+    This involves renaming several tags, adding Electrostatics and ToolkitAM1BCC tags, and
+    separating improper torsions into their own section.
+
+    Parameters
+    ----------
+    smirnoff_data_0_1 : dict
+        Hierarchical dict representing a SMIRNOFF data structure according the the 0.2 spec
+
+    Returns
+    -------
+    smirnoff_data_0_2
+        Hierarchical dict representing a SMIRNOFF data structure according the the 0.3 spec
+    """
+    smirnoff_data = smirnoff_data_0_1.copy()
+
+    l0_replacement_dict = {'SMIRFF', 'SMIRNOFF'}
+    l1_replacement_dict = {'HarmonicBondForce': 'Bonds',
+                           'HarmonicAngleForce': 'Angles',
+                           'PeriodicTorsionForce': 'ProperTorsions',
+                           'NonbondedForce': 'vdW'
+                           }
+    for l0_tag in smirnoff_data.keys():
+        # Convert first-level smirnoff_data tags.
+        # Right now this just changes the SMIRFF tag to SMIRNOFF
+        if l0_tag in l0_replacement_dict.keys():
+            new_tag = l0_replacement_dict[l0_tag]
+            smirnoff_data[new_tag] = smirnoff_data[l0_tag]
+            del smirnoff_data[l0_tag]
+        # SMIRFF tag will have been converted to SMIRNOFF here
+        # Convert second-level tags here
+        for l1_tag in smirnoff_data['SMIRNOFF'].keys():
+            if l1_tag in l1_replacement_dict:
+                new_tag = l1_replacement_dict[l1_tag]
+                smirnoff_data['SMIRNOFF'][new_tag] = smirnoff_data['SMIRNOFF'][l1_tag]
+                del smirnoff_data['SMIRNOFF'][l1_tag]
+
+    # Add 'potential' field to each l1 tag
+    default_potential = {'Bonds': 'harmonic',
+                         'Angles': 'harmonic',
+                         'ProperTorsions': 'charmm',
+                         # Note that "charmm" isn't actually correct, and was later changed
+                         # in the 0.3 spec. More info at
+                         # https://github.com/openforcefield/openforcefield/pull/311#commitcomment-33494506
+                         'vdW': 'Lennard-Jones-6-12'
+                         }
+    for l1_tag in smirnoff_data['SMIRNOFF'].keys():
+        if l1_tag in default_potential.keys():
+            # Ensure that it isn't there already (shouldn't happen, but better to be safe)
+            if 'potential' in smirnoff_data[l1_tag].keys:
+                assert smirnoff_data[l1_tag].keys == default_potential[l1_tag]
+                continue
+            # Issue an informative warning about assumptions made during conversion.
+            logger.warning(f"0.1 SMIRNOFF spec file does not contain 'potential' field for {l1_tag} tag. "
+                           f"The SMIRNOFF spec converter is assuming it has a value of {default_potential[l1_tag]}")
+            smirnoff_data['SMIRNOFF'][l1_tag]['potential'] = default_potential[l1_tag]
+
+
+    # Separate improper torsions from propers
+    if 'ProperTorsions' in smirnoff_data['SMIRNOFF']:
+        if 'Improper' in smirnoff_data['SMIRNOFF']['ProperTorsions']:
+            # First generate an ImproperTorsions header, taking the relevant values from the ProperTorsions header
+            improper_section = {'k_unit': smirnoff_data['SMIRNOFF']['ProperTorsions']['k_unit'],
+                                'phase_unit': smirnoff_data['SMIRNOFF']['ProperTorsions']['phase_unit'],
+                                'potential': smirnoff_data['SMIRNOFF']['ProperTorsions']['potential'],
+                                'Improper': smirnoff_data['SMIRNOFF']['ProperTorsions']['Improper']
+                                }
+
+            # Then, attach the newly-made ImproperTorsions section
+            smirnoff_data['SMIRNOFF']['ImproperTorsions'] = improper_section
+            del smirnoff_data['SMIRNOFF']['ProperTorsions']['Improper']
+
+
+
+    # Add Electrostatics tag, setting several values to their defaults and
+    # warning about assumptions that are being made
+    electrostatics_section = {'method': 'PME',
+                              'scale12': 0.0,
+                              'scale13': 0.0,
+                              'scale15': 1.0,
+                              'cutoff': 9.0,
+                              'cutoff_unit': 'angstrom'
+                              }
+    logger.warning("0.1 spec does not contain 'Electrostatics' section. Adding it in 0.2 spec conversion, and"
+                   "assuming the following values:")
+    for key, val in electrostatics_section.items():
+        logger.warning(f"\t{key}: {val}")
+
+    # Take 1-4 scaling term from 0.1 spec's NonBondedForce tag
+    electrostatics_section['scale14'] = smirnoff_data['SMIRNOFF']['vdW']['coulomb14scale']
+    del smirnoff_data['SMIRNOFF']['vdW']['coulomb14scale']
+
+    # Change vdW's lj14scale to 14scale, add other scaling terms
+    vdw_section_additions = {'method': "cutoff",
+                             'combining_rules': "Lorentz-Berthelot",
+                             'scale12': "0.0",
+                             'scale13': "0.0",
+                             'scale15': "1",
+                             'switch_width': "1.0",
+                             'switch_width_unit': "angstrom",
+                             'cutoff': "9.0",
+                             'cutoff_unit': "angstrom"
+                             }
+    for key, val in vdw_section_additions:
+        if not key in smirnoff_data['SMIRNOFF']['vdW'].keys():
+            logger.warning(f"NonBondedMethod/vdW attribute '{key}' was not in 0.1 SMIRNOFF data source. "
+                           f"Assuming a value of {val} in 0.1 -> 0.2 spec conversion")
+            smirnoff_data['vdW'][key] = val
 
     return smirnoff_data
 
