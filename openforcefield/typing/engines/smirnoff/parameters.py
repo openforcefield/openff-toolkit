@@ -47,7 +47,7 @@ from simtk import openmm, unit
 
 from openforcefield.utils import detach_units, attach_units, unit_to_string, \
     extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException
-from openforcefield.topology import Topology, ValenceDict, ImproperDict
+from openforcefield.topology import ValenceDict, ImproperDict
 from openforcefield.typing.chemistry import ChemicalEnvironment
 
 #=============================================================================================
