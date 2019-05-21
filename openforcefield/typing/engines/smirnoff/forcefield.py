@@ -994,11 +994,15 @@ class ForceField:
 
         # Add forces and parameters to the System
         for parameter_handler in parameter_handlers:
+            logging.info(f'Handling handler {type(parameter_handler).__name__}')
             parameter_handler.create_force(system, topology, **kwargs)
+            logging.info(f'Handling handler {type(parameter_handler).__name__} finished')
 
         # Let force Handlers do postprocessing
         for parameter_handler in parameter_handlers:
+            logging.info(f'Post handling handler {type(parameter_handler).__name__}')
             parameter_handler.postprocess_system(system, topology, **kwargs)
+            logging.info(f'Post handling handler {type(parameter_handler).__name__} finished')
 
         return system
 
@@ -1071,8 +1075,17 @@ class ForceField:
             top_mol = Topology.from_molecules([molecule])
             current_molecule_labels = dict()
             for tag, parameter_handler in self._parameter_handlers.items():
+
                 matches = parameter_handler.find_matches(top_mol)
-                current_molecule_labels[tag] = matches
+
+                # Remove the chemical environment matches from the
+                # matched results.
+                parameter_matches = matches.__class__()
+
+                for match in matches:
+                    parameter_matches[match] = matches[match].parameter_tyoe
+
+                current_molecule_labels[tag] = parameter_matches
 
             molecule_labels.append(current_molecule_labels)
         return molecule_labels

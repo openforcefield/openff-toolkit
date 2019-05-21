@@ -2702,8 +2702,8 @@ class FrozenMolecule(Serializable):
 
         Returns
         -------
-        matches : list of Atom tuples
-            A list of all matching Atom tuples
+        matches : list of atom index tuples
+            A list of tuples, containing the indices of the matching atoms.
 
         Examples
         --------
@@ -3316,6 +3316,44 @@ class FrozenMolecule(Serializable):
         atom1 = self._atoms[atom_index_1]
         atom2 = self._atoms[atom_index_2]
         return atom2 in self._bondedAtoms[atom1]
+
+    def get_bond_between(self, i, j):
+        """Returns the bond between two atoms
+
+        Parameters
+        ----------
+        i, j : int or Atom
+            Atoms or atom indices to check
+
+        Returns
+        -------
+        bond : Bond
+            The bond between i and j.
+
+        """
+        if isinstance(i, int) and isinstance(j, int):
+            atom_i = self._atoms[i]
+            atom_j = self._atoms[j]
+        elif isinstance(i, Atom) and isinstance(j, Atom):
+            atom_i = i
+            atom_j = j
+        else:
+            raise Exception(
+                "Invalid input passed to is_bonded(). Expected ints or TopologyAtoms, "
+                "got {} and {}".format(i, j))
+
+        for bond in atom_i.bonds:
+
+            for atom in bond.atoms:
+
+                if atom == atom_i:
+                    continue
+
+                if atom == atom_j:
+                    return bond
+
+        from openforcefield.topology import NotBondedError
+        raise NotBondedError('No bond between atom {} and {}'.format(i, j))
 
 
 class Molecule(FrozenMolecule):

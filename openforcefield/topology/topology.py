@@ -22,6 +22,8 @@ Class definitions to represent a molecular system and its chemical components
 #=============================================================================================
 
 import itertools
+import logging
+import time
 
 from collections import MutableMapping
 from collections import OrderedDict
@@ -219,8 +221,7 @@ class TopologyAtom(Serializable):
         int
             The index of this atom in its parent topology.
         """
-        mapped_molecule_atom_index = self._topology_molecule._ref_to_top_index[
-            self._atom.molecule_atom_index]
+        mapped_molecule_atom_index = self._topology_molecule._ref_to_top_index[self._atom.molecule_atom_index]
         return self._topology_molecule.atom_start_topology_index + mapped_molecule_atom_index
 
     @property
@@ -234,8 +235,7 @@ class TopologyAtom(Serializable):
             The index of this atom in its parent topology.
         """
         # This assumes that particles in a molecule are ordered with all the Atoms first and VirtualSites last.
-        mapped_molecule_particle_index = self._topology_molecule._ref_to_top_index[
-            self._atom.molecule_atom_index]
+        mapped_molecule_particle_index = self._topology_molecule._ref_to_top_index[self._atom.molecule_atom_index]
         return self._topology_molecule.particle_start_topology_index + mapped_molecule_particle_index
 
     @property
@@ -1360,6 +1360,47 @@ class Topology(Serializable):
             for improper in topology_molecule.impropers:
                 yield improper
 
+    class ChemicalEnvironmentMatch:
+        """Represents the match of a given chemical environment query, storing
+        both the matched topology atom indices and the indices of the corresponding
+        reference molecule atoms, as well as a reference to the reference molecule.
+        """
+
+        @property
+        def reference_atom_indices(self):
+            """tuple of int: The indices of the corresponding reference molecule atoms."""
+            return self._reference_atom_indices
+
+        @property
+        def reference_molecule(self):
+            """topology.molecule.Molecule: The corresponding reference molecule."""
+            return self._reference_molecule
+
+        @property
+        def topology_atom_indices(self):
+            """tuple of int: The matched topology atom indices."""
+            return self._topology_atom_indices
+
+        def __init__(self, reference_atom_indices, reference_molecule, topology_atom_indices):
+            """Constructs a new ChemicalEnvironmentMatch object
+
+            Parameters
+            ----------
+            reference_atom_indices: tuple of int
+                The indices of the corresponding reference molecule atoms.
+            reference_molecule: topology.molecule.Molecule
+                The corresponding reference molecule.
+            topology_atom_indices: tuple of int
+                The matched topology atom indices.
+            """
+
+            assert len(reference_atom_indices) == len(topology_atom_indices)
+
+            self._reference_atom_indices = reference_atom_indices
+            self._reference_molecule = reference_molecule
+
+            self._topology_atom_indices = topology_atom_indices
+
     def chemical_environment_matches(self,
                                      query,
                                      aromaticity_model='MDL',
@@ -1382,48 +1423,60 @@ class Topology(Serializable):
 
         Returns
         -------
-        matches : list of TopologyAtom tuples
-            A list of all matching Atom tuples
+        matches : list of Topology.ChemicalEnvironmentMatch
+            A list of tuples, containing the topology indices of the matching atoms.
 
         """
+
+        start_time = time.perf_counter()
+
         # Render the query to a SMARTS string
         if type(query) is str:
             smarts = query
         elif type(query) is ChemicalEnvironment:
             smarts = query.as_smarts()
         else:
-            raise ValueError(
-                "Don't know how to convert query '%s' into SMARTS string" %
-                query)
+            raise ValueError("Don't know how to convert query '%s' into SMARTS string" %query)
 
-        # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
+        # Perform matching on each unique molecule, unrolling the matches to all matching copies
+        # of that molecule in the Topology object.
         matches = list()
-        for ref_mol in self.reference_molecules:
-            # Find all atomsets that match this definition in the reference molecule
-            # This will automatically attempt to match chemically identical atoms in a canonical order within the Topology
-            refmol_matches = ref_mol.chemical_environment_matches(
-                smarts, toolkit_registry=toolkit_registry)
 
-            # Loop over matches
-            for reference_match in refmol_matches:
-                #mol_dict = molecule.to_dict
-                # Unroll corresponding atom indices over all instances of this molecule
-                for topology_molecule in self._reference_molecule_to_topology_molecules[
-                        ref_mol]:
-                    match = list()
-                    # Create match TopologyAtoms.
-                    for reference_molecule_atom_index in reference_match:
-                        reference_atom = topology_molecule._reference_molecule.atoms[
-                            reference_molecule_atom_index]
-                        topology_atom = TopologyAtom(reference_atom,
-                                                     topology_molecule)
-                        match.append(topology_atom)
-                        #topology_molecule_atom_index = topology_molecule._ref_to_top_index[reference_molecule_atom_index]
-                        #atom_topology_index = topology_molecule.atom_start_topology_index+topology_molecule_atom_index
-                        #match.append(self.atom(atom_topology_index))
-                    match = tuple(match)
-                    #match = tuple([topology_molecule.atom_start_topology_index+ref_mol_atom_index for ref_mol_atom_index in reference_match])
-                    matches.append(match)
+        for ref_mol in self.reference_molecules:
+
+            # Find all atomsets that match this definition in the reference molecule
+            # This will automatically attempt to match chemically identical atoms in
+            # a canonical order within the Topology
+            ref_mol_matches = ref_mol.chemical_environment_matches(smarts, toolkit_registry=toolkit_registry)
+
+            if len(ref_mol_matches) == 0:
+                continue
+
+            # Unroll corresponding atom indices over all instances of this molecule. We
+            # should loop over the topology molecules first so as to avoid unnecessary
+            # calls to atom_start_topology_index
+            for topology_molecule in self._reference_molecule_to_topology_molecules[ref_mol]:
+
+                topology_molecule_start_index = topology_molecule.atom_start_topology_index
+
+                # Loop over matches
+                for reference_match in ref_mol_matches:
+
+                    # As far as I can tell the only consumed output of this method is the
+                    # atom_topology_index, and so we should be reasonably safe only returning
+                    # this to significantly decrease the ..._start_topology_index overhead.
+                    topology_atom_indices = tuple([topology_molecule_start_index +
+                                                   topology_molecule._ref_to_top_index[reference_molecule_atom_index]
+                                                   for reference_molecule_atom_index in reference_match])
+
+                    enviroment_match = Topology.ChemicalEnvironmentMatch(tuple(reference_match),
+                                                                         ref_mol,
+                                                                         topology_atom_indices)
+
+                    matches.append(enviroment_match)
+
+        end_time = time.perf_counter()
+        # logging.info(f'Finished chemical_environment_matches after {(end_time - start_time) * 1000} ms')
 
         return matches
 
