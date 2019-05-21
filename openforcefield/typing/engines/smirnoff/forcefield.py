@@ -994,15 +994,11 @@ class ForceField:
 
         # Add forces and parameters to the System
         for parameter_handler in parameter_handlers:
-            logging.info(f'Handling handler {type(parameter_handler).__name__}')
             parameter_handler.create_force(system, topology, **kwargs)
-            logging.info(f'Handling handler {type(parameter_handler).__name__} finished')
 
         # Let force Handlers do postprocessing
         for parameter_handler in parameter_handlers:
-            logging.info(f'Post handling handler {type(parameter_handler).__name__}')
             parameter_handler.postprocess_system(system, topology, **kwargs)
-            logging.info(f'Post handling handler {type(parameter_handler).__name__} finished')
 
         return system
 

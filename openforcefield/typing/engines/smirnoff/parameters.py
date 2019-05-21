@@ -11,7 +11,6 @@ These classes implement the object model for self-contained parameter assignment
 New pluggable handlers can be created by creating subclasses of :class:`ParameterHandler`.
 
 """
-import time
 
 __all__ = [
     'SMIRNOFFSpecError',
@@ -1232,12 +1231,8 @@ class BondHandler(ParameterHandler):
         else:
             force = existing[0]
 
-        logging.info('Matching bonds')
-
         # Add all bonds to the system.
         bond_matches = self.find_matches(topology)
-
-        logging.info('Applying bonds')
 
         skipped_constrained_bonds = 0  # keep track of how many bonds were constrained (and hence skipped)
         for (topology_atom_indices, bond_match) in bond_matches.items():
@@ -1498,18 +1493,8 @@ class ProperTorsionHandler(ParameterHandler):
         # Add all proper torsions to the system.
         torsion_matches = self.find_matches(topology)
 
-        logging.info('Adding torsion forces')
-
         for (atom_indices, torsion_match) in torsion_matches.items():
             # Ensure atoms are actually bonded correct pattern in Topology
-
-            # for (i, j) in [(0, 1), (1, 2), (2, 3)]:
-
-                # POSPERFISSUE - why do we need to check this - do we expect
-                # chemical_environment_matches to be returning invalid valence
-                # graphs? If so can we punt this into the loop over reference
-                # torsions, and not production ones?
-                # topology.assert_bonded(atom_indices[i], atom_indices[j])
             ParameterHandler._assert_correct_connectivity(torsion_match)
 
             torsion = torsion_match.parameter_type
@@ -1539,8 +1524,6 @@ class ProperTorsionHandler(ParameterHandler):
         self._check_all_valence_terms_assigned(assigned_terms=torsion_matches,
                                                valence_terms=list(topology.propers),
                                                exception_cls=UnassignedProperTorsionParameterException)
-
-        logging.info('torsion terms checked')
 
 
 class ImproperTorsionHandler(ParameterHandler):
@@ -1974,7 +1957,6 @@ class vdWHandler(ParameterHandler):
         atom_matches = self.find_matches(topology)
 
         # Create all particles.
-        # POSPERFISSUE - replace with n_topo_parts?
         for _ in topology.topology_particles:
             force.addParticle(0.0, 1.0, 0.0)
 

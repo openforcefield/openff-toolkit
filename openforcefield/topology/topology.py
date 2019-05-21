@@ -22,8 +22,6 @@ Class definitions to represent a molecular system and its chemical components
 #=============================================================================================
 
 import itertools
-import logging
-import time
 
 from collections import MutableMapping
 from collections import OrderedDict
@@ -1428,8 +1426,6 @@ class Topology(Serializable):
 
         """
 
-        start_time = time.perf_counter()
-
         # Render the query to a SMARTS string
         if type(query) is str:
             smarts = query
@@ -1474,9 +1470,6 @@ class Topology(Serializable):
                                                                          topology_atom_indices)
 
                     matches.append(enviroment_match)
-
-        end_time = time.perf_counter()
-        # logging.info(f'Finished chemical_environment_matches after {(end_time - start_time) * 1000} ms')
 
         return matches
 
