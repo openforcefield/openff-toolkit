@@ -1086,6 +1086,19 @@ class TestForceFieldParameterAssignment:
                                   ignore_charges=True, ignore_improper_folds=True)
 
 
+class TestSmirnoffVersionConverter:
+    def test_read_0_2_smirnoff_spec(self):
+        """Test reading an 0.2 smirnoff spec file, by reading an 0.1 spec representation of a set of parameters,
+        and ensuring that it parameterizes molecules identically to the same FF in the most recent spec"""
+        pass
+
+
+    def test_read_0_1_smirnoff_spec(self):
+        """Test reading an 0.2 smirnoff spec file, by reading an 0.1 spec representation of a set of parameters,
+        and ensuring that it parameterizes molecules identically to the same FF in the most recent spec"""
+        pass
+
+
 @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
 def test_electrostatics_options(self):
     """Test parameter assignment using smirnoff99Frosst on laromustine with various long-range electrostatics options.
