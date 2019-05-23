@@ -544,7 +544,7 @@ class ParameterHandler:
     _INDEXED_ATTRIBS = []  # list of parameter attribs that will have consecutive numerical suffixes starting at 1
     _REQUIRE_UNITS = {}  # dict of {header attrib : unit } for input checking
     _ATTRIBS_TO_TYPE = {} # dict of attribs that must be cast to a specific type to be interpreted correctly
-    _KWARGS = [] # Kwargs to catch when create_force is called
+    _KWARGS = ['allow_missing_parameters'] # Kwargs to catch when create_force is called
     _SMIRNOFF_VERSION_INTRODUCED = 0.0  # the earliest version of SMIRNOFF spec that supports this ParameterHandler
     _SMIRNOFF_VERSION_DEPRECATED = None  # if deprecated, the first SMIRNOFF version number it is no longer used
 
@@ -1284,10 +1284,16 @@ class BondHandler(ParameterHandler):
         logger.info('{} bonds added ({} skipped due to constraints)'.format(
             len(bond_matches) - skipped_constrained_bonds, skipped_constrained_bonds))
 
-        # Check that no topological bonds are missing force parameters.
-        valence_terms = [list(b.atoms) for b in topology.topology_bonds]
-        self._check_all_valence_terms_assigned(assigned_terms=bond_matches, valence_terms=valence_terms,
-                                               exception_cls=UnassignedBondParameterException)
+        allow_missing_parameters = False
+
+        if 'allow_missing_parameters' in kwargs:
+            allow_missing_parameters = kwargs['allow_missing_parameters']
+
+        if allow_missing_parameters is False:
+            # Check that no topological bonds are missing force parameters.
+            valence_terms = [list(b.atoms) for b in topology.topology_bonds]
+            self._check_all_valence_terms_assigned(assigned_terms=bond_matches, valence_terms=valence_terms,
+                                                   exception_cls=UnassignedBondParameterException)
 
 
 #=============================================================================================
@@ -1387,10 +1393,16 @@ class AngleHandler(ParameterHandler):
             len(angle_matches) - skipped_constrained_angles,
             skipped_constrained_angles))
 
-        # Check that no topological angles are missing force parameters
-        self._check_all_valence_terms_assigned(assigned_terms=angle_matches,
-                                               valence_terms=list(topology.angles),
-                                               exception_cls=UnassignedAngleParameterException)
+        allow_missing_parameters = False
+
+        if 'allow_missing_parameters' in kwargs:
+            allow_missing_parameters = kwargs['allow_missing_parameters']
+
+        if allow_missing_parameters is False:
+            # Check that no topological angles are missing force parameters
+            self._check_all_valence_terms_assigned(assigned_terms=angle_matches,
+                                                   valence_terms=list(topology.angles),
+                                                   exception_cls=UnassignedAngleParameterException)
 
 
 #=============================================================================================
@@ -1521,9 +1533,16 @@ class ProperTorsionHandler(ParameterHandler):
         # is focused on the single unique molecules, and then simply just cloned
         # onto the system. It seems like John's proposed System object would do
         # exactly this.
-        self._check_all_valence_terms_assigned(assigned_terms=torsion_matches,
-                                               valence_terms=list(topology.propers),
-                                               exception_cls=UnassignedProperTorsionParameterException)
+        allow_missing_parameters = False
+
+        if 'allow_missing_parameters' in kwargs:
+            allow_missing_parameters = kwargs['allow_missing_parameters']
+
+        if allow_missing_parameters is False:
+
+            self._check_all_valence_terms_assigned(assigned_terms=torsion_matches,
+                                                   valence_terms=list(topology.propers),
+                                                   exception_cls=UnassignedProperTorsionParameterException)
 
 
 class ImproperTorsionHandler(ParameterHandler):
@@ -1968,9 +1987,15 @@ class vdWHandler(ParameterHandler):
             force.setParticleParameters(atom_idx, 0.0, ljtype.sigma,
                                         ljtype.epsilon)
 
-        # Check that no atoms (n.b. not particles) are missing force parameters.
-        self._check_all_valence_terms_assigned(assigned_terms=atom_matches,
-                                               valence_terms=list(topology.topology_atoms))
+        allow_missing_parameters = False
+
+        if 'allow_missing_parameters' in kwargs:
+            allow_missing_parameters = kwargs['allow_missing_parameters']
+
+        if allow_missing_parameters is False:
+            # Check that no atoms (n.b. not particles) are missing force parameters.
+            self._check_all_valence_terms_assigned(assigned_terms=atom_matches,
+                                                   valence_terms=list(topology.topology_atoms))
 
     # TODO: Can we express separate constraints for postprocessing and normal processing?
     def postprocess_system(self, system, topology, **kwargs):
