@@ -1076,7 +1076,16 @@ class ForceField:
 
                 # Remove the chemical environment matches from the
                 # matched results.
+
+                # Because we sometimes need to enforce atom ordering,
+                # `matches` here is not a normal `dict`, but rather
+                # one that transforms keys in arbitrary ways. Thus,
+                # we need to make a copy of its specific class here.
+
                 parameter_matches = matches.__class__()
+
+                # Now make parameter_matches into a dict mapping
+                # match objects to ParameterTypes
 
                 for match in matches:
                     parameter_matches[match] = matches[match].parameter_type

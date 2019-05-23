@@ -3338,8 +3338,8 @@ class FrozenMolecule(Serializable):
             atom_i = i
             atom_j = j
         else:
-            raise Exception(
-                "Invalid input passed to is_bonded(). Expected ints or TopologyAtoms, "
+            raise TypeError(
+                "Invalid input passed to is_bonded(). Expected ints or Atoms, "
                 "got {} and {}".format(i, j))
 
         for bond in atom_i.bonds:
