@@ -142,7 +142,7 @@ def mergeStructure(proteinStructure, molStructure):
         The parametrized structure of the protein:ligand complex.
     """
     structure = proteinStructure + molStructure
-    positions = combinePostions(proteinStructure.positions, molStructure.positions)
+    positions = combinePositions(proteinStructure.positions, molStructure.positions)
     # Concatenate positions arrays (ensures same units)
     structure.positions = positions
     # Restore original box vectors
