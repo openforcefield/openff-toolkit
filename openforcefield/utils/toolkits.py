@@ -1094,7 +1094,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if status is False:
             raise Exception("OpenEye Omega conformer generation failed")
 
-        molecule2 = self.from_openeye(oemol)
+        molecule2 = self.from_openeye(oemol, allow_undefined_stereo=True)
 
         if clear_existing:
             molecule._conformers = list()
@@ -1757,7 +1757,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             randomSeed=1,
             #params=AllChem.ETKDG()
         )
-        molecule2 = self.from_rdkit(rdmol)
+        molecule2 = self.from_rdkit(rdmol, allow_undefined_stereo=True)
 
         if clear_existing:
             molecule._conformers = list()
