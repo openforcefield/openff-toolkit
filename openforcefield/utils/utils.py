@@ -665,35 +665,34 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
     Parameters
     ----------
     smirnoff_data_0_1 : dict
-        Hierarchical dict representing a SMIRNOFF data structure according the the 0.2 spec
+        Hierarchical dict representing a SMIRNOFF data structure according the the 0.1 spec
 
     Returns
     -------
     smirnoff_data_0_2
-        Hierarchical dict representing a SMIRNOFF data structure according the the 0.3 spec
+        Hierarchical dict representing a SMIRNOFF data structure according the the 0.2 spec
     """
     smirnoff_data = smirnoff_data_0_1.copy()
 
-    l0_replacement_dict = {'SMIRFF', 'SMIRNOFF'}
+    l0_replacement_dict = {'SMIRFF': 'SMIRNOFF'}
     l1_replacement_dict = {'HarmonicBondForce': 'Bonds',
                            'HarmonicAngleForce': 'Angles',
                            'PeriodicTorsionForce': 'ProperTorsions',
                            'NonbondedForce': 'vdW'
                            }
-    for l0_tag in smirnoff_data.keys():
+    for old_l0_tag, new_l0_tag in l0_replacement_dict.items():
         # Convert first-level smirnoff_data tags.
         # Right now this just changes the SMIRFF tag to SMIRNOFF
-        if l0_tag in l0_replacement_dict.keys():
-            new_tag = l0_replacement_dict[l0_tag]
-            smirnoff_data[new_tag] = smirnoff_data[l0_tag]
-            del smirnoff_data[l0_tag]
-        # SMIRFF tag will have been converted to SMIRNOFF here
-        # Convert second-level tags here
-        for l1_tag in smirnoff_data['SMIRNOFF'].keys():
-            if l1_tag in l1_replacement_dict:
-                new_tag = l1_replacement_dict[l1_tag]
-                smirnoff_data['SMIRNOFF'][new_tag] = smirnoff_data['SMIRNOFF'][l1_tag]
-                del smirnoff_data['SMIRNOFF'][l1_tag]
+        if old_l0_tag in smirnoff_data.keys():
+            smirnoff_data[new_l0_tag] = smirnoff_data[old_l0_tag]
+            del smirnoff_data[old_l0_tag]
+
+    # SMIRFF tag will have been converted to SMIRNOFF here
+    # Convert second-level tags here
+    for old_l1_tag, new_l1_tag in l1_replacement_dict.items():
+        if old_l1_tag in  smirnoff_data['SMIRNOFF'].keys():
+            smirnoff_data['SMIRNOFF'][new_l1_tag] = smirnoff_data['SMIRNOFF'][old_l1_tag]
+            del smirnoff_data['SMIRNOFF'][old_l1_tag]
 
     # Add 'potential' field to each l1 tag
     default_potential = {'Bonds': 'harmonic',
@@ -702,12 +701,12 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
                          # Note that "charmm" isn't actually correct, and was later changed
                          # in the 0.3 spec. More info at
                          # https://github.com/openforcefield/openforcefield/pull/311#commitcomment-33494506
-                         'vdW': 'Lennard-Jones-6-12'
+                         'vdW': 'Lennard-Jones-12-6'
                          }
     for l1_tag in smirnoff_data['SMIRNOFF'].keys():
         if l1_tag in default_potential.keys():
             # Ensure that it isn't there already (shouldn't happen, but better to be safe)
-            if 'potential' in smirnoff_data[l1_tag].keys:
+            if 'potential' in smirnoff_data['SMIRNOFF'][l1_tag].keys():
                 assert smirnoff_data[l1_tag].keys == default_potential[l1_tag]
                 continue
             # Issue an informative warning about assumptions made during conversion.
@@ -746,9 +745,14 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
     for key, val in electrostatics_section.items():
         logger.warning(f"\t{key}: {val}")
 
-    # Take 1-4 scaling term from 0.1 spec's NonBondedForce tag
+    # Take electrostatics 1-4 scaling term from 0.1 spec's NonBondedForce tag
     electrostatics_section['scale14'] = smirnoff_data['SMIRNOFF']['vdW']['coulomb14scale']
     del smirnoff_data['SMIRNOFF']['vdW']['coulomb14scale']
+    smirnoff_data['SMIRNOFF']['Electrostatics'] = electrostatics_section
+
+
+
+
 
     # Change vdW's lj14scale to 14scale, add other scaling terms
     vdw_section_additions = {'method': "cutoff",
@@ -761,12 +765,19 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
                              'cutoff': "9.0",
                              'cutoff_unit': "angstrom"
                              }
-    for key, val in vdw_section_additions:
+    for key, val in vdw_section_additions.items():
         if not key in smirnoff_data['SMIRNOFF']['vdW'].keys():
             logger.warning(f"NonBondedMethod/vdW attribute '{key}' was not in 0.1 SMIRNOFF data source. "
                            f"Assuming a value of {val} in 0.1 -> 0.2 spec conversion")
-            smirnoff_data['vdW'][key] = val
+            smirnoff_data['SMIRNOFF']['vdW'][key] = val
 
+    # Rename L-J 1-4 scaling term from 0.1 spec's NonBondedForce tag to vdW's scale14
+    smirnoff_data['SMIRNOFF']['vdW']['scale14'] = smirnoff_data['SMIRNOFF']['vdW']['lj14scale']
+    del smirnoff_data['SMIRNOFF']['vdW']['lj14scale']
+
+
+    # Add <ToolkitAM1BCC/> tag
+    smirnoff_data['SMIRNOFF']['ToolkitAM1BCC'] = None
     return smirnoff_data
 
 
@@ -817,7 +828,7 @@ def recursive_attach_unit_strings(smirnoff_data, units_to_attach):
                     attach_unit = unit_string
 
             if attach_unit is not None:
-                smirnoff_data[key] = smirnoff_data[key] + " * " + attach_unit
+                smirnoff_data[key] = str(smirnoff_data[key]) + " * " + attach_unit
 
             # And recursively act on value, in case it's a deeper level of hierarchy
             smirnoff_data[key] = recursive_attach_unit_strings(smirnoff_data[key], units_to_attach)

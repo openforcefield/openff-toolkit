@@ -1092,7 +1092,8 @@ class TestSmirnoffVersionConverter:
                         reason='Test requires OE toolkit to read mol2 files')
     @pytest.mark.parametrize(('freesolv_id', 'forcefield_version', 'allow_undefined_stereo'),
                              generate_freesolv_parameters_assignment_cases())
-    def test_read_0_2_smirnoff_spec_freesolv(self, freesolv_id, forcefield_version, allow_undefined_stereo):
+    @pytest.mark.parametrize(('spec'), ['0_1', '0_2'])
+    def test_read_smirnoff_spec_freesolv(self, freesolv_id, forcefield_version, allow_undefined_stereo, spec):
         """
         Test reading an 0.2 smirnoff spec file, by reading an 0.1 spec representation of a set of parameters,
         and ensuring that it parameterizes molecules identically to the same FF in the most recent spec
@@ -1114,8 +1115,8 @@ class TestSmirnoffVersionConverter:
         molecule = Molecule.from_file(mol2_file_path, allow_undefined_stereo=allow_undefined_stereo)
 
         # Create OpenFF System with the current toolkit.
-        forcefield_file_path = 'test_forcefields/old/smirnoff99Frosst_1_0_8_spec_0_2.offxml'
-        #forcefield_file_path = 'old/smirnoff99Frosst_' + forcefield_version + '.offxml'
+        #forcefield_file_path = 'test_forcefields/old/smirnoff99Frosst_1_0_8_spec_0_2.offxml'
+        forcefield_file_path = f'test_forcefields/old/smirnoff99Frosst_{forcefield_version}_spec_{spec}.offxml'
         ff = ForceField(forcefield_file_path, 'test_forcefields/old/hbonds.offxml')
         ff_system = ff.create_openmm_system(molecule.to_topology())
 

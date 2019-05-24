@@ -291,7 +291,7 @@ class ForceField:
         """
         Initialize all object fields.
         """
-        self._MIN_SUPPORTED_SMIRNOFF_VERSION = 0.2
+        self._MIN_SUPPORTED_SMIRNOFF_VERSION = 0.1
         self._MAX_SUPPORTED_SMIRNOFF_VERSION = 0.3
         self._disable_version_check = False  # if True, will disable checking compatibility version
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL  # aromaticity model
