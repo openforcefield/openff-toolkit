@@ -654,6 +654,15 @@ def convert_0_2_smirnoff_to_0_3(smirnoff_data_0_2):
             if smirnoff_data['SMIRNOFF']['ImproperTorsions']['potential'] == 'charmm':
                 smirnoff_data['SMIRNOFF']['ImproperTorsions']['potential'] = 'fourier'
 
+    # Add per-section tag
+    sections_not_to_version_0_3 = ['Author', 'Date', 'version', 'aromaticity_model']
+    for l1_tag in smirnoff_data['SMIRNOFF'].keys():
+        if l1_tag not in sections_not_to_version_0_3:
+            smirnoff_data['SMIRNOFF'][l1_tag]['version'] = 0.3
+
+    # Update top-level tag
+    smirnoff_data['SMIRNOFF']['version'] = 0.3
+
     return smirnoff_data
 
 def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
@@ -710,8 +719,8 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
                 assert smirnoff_data[l1_tag].keys == default_potential[l1_tag]
                 continue
             # Issue an informative warning about assumptions made during conversion.
-            logger.warning(f"0.1 SMIRNOFF spec file does not contain 'potential' field for {l1_tag} tag. "
-                           f"The SMIRNOFF spec converter is assuming it has a value of {default_potential[l1_tag]}")
+            logger.warning(f"0.1 SMIRNOFF spec file does not contain 'potential' field for '{l1_tag}' tag. "
+                           f"The SMIRNOFF spec converter is assuming it has a value of '{default_potential[l1_tag]}'")
             smirnoff_data['SMIRNOFF'][l1_tag]['potential'] = default_potential[l1_tag]
 
 
@@ -750,10 +759,6 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
     del smirnoff_data['SMIRNOFF']['vdW']['coulomb14scale']
     smirnoff_data['SMIRNOFF']['Electrostatics'] = electrostatics_section
 
-
-
-
-
     # Change vdW's lj14scale to 14scale, add other scaling terms
     vdw_section_additions = {'method': "cutoff",
                              'combining_rules': "Lorentz-Berthelot",
@@ -768,7 +773,7 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
     for key, val in vdw_section_additions.items():
         if not key in smirnoff_data['SMIRNOFF']['vdW'].keys():
             logger.warning(f"NonBondedMethod/vdW attribute '{key}' was not in 0.1 SMIRNOFF data source. "
-                           f"Assuming a value of {val} in 0.1 -> 0.2 spec conversion")
+                           f"Assuming a value of '{val}' in 0.1 -> 0.2 spec conversion")
             smirnoff_data['SMIRNOFF']['vdW'][key] = val
 
     # Rename L-J 1-4 scaling term from 0.1 spec's NonBondedForce tag to vdW's scale14
@@ -777,7 +782,11 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
 
 
     # Add <ToolkitAM1BCC/> tag
-    smirnoff_data['SMIRNOFF']['ToolkitAM1BCC'] = None
+    smirnoff_data['SMIRNOFF']['ToolkitAM1BCC'] = {}
+
+    # Update top-level tag
+    smirnoff_data['SMIRNOFF']['version'] = 0.2
+
     return smirnoff_data
 
 

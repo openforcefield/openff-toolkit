@@ -547,7 +547,7 @@ class ParameterHandler:
     _INFOTYPE = None  # container class with type information that will be stored in self._parameters
     _OPENMMTYPE = None  # OpenMM Force class (or None if no equivalent)
     _DEPENDENCIES = None  # list of ParameterHandler classes that must precede this, or None
-    _REQUIRED_SPEC_ATTRIBS = [] # list of kwargs that must be present during handler initialization
+    _REQUIRED_SPEC_ATTRIBS = ['version'] # list of kwargs that must be present during handler initialization
     _DEFAULT_SPEC_ATTRIBS = {}  # dict of tag-level attributes and their default values
     _OPTIONAL_SPEC_ATTRIBS = []  # list of non-required attributes that can be defined on initialization
     _INDEXED_ATTRIBS = []  # list of parameter attribs that will have consecutive numerical suffixes starting at 1
@@ -556,6 +556,8 @@ class ParameterHandler:
     _KWARGS = [] # Kwargs to catch when create_force is called
     _SMIRNOFF_VERSION_INTRODUCED = 0.0  # the earliest version of SMIRNOFF spec that supports this ParameterHandler
     _SMIRNOFF_VERSION_DEPRECATED = None  # if deprecated, the first SMIRNOFF version number it is no longer used
+    _MIN_SUPPORTED_SECTION_VERSION = 0.3
+    _MAX_SUPPORTED_SECTION_VERSION = 0.3
 
 
     def __init__(self, allow_cosmetic_attributes=False, **kwargs):
@@ -571,6 +573,10 @@ class ParameterHandler:
             The dict representation of the SMIRNOFF data source
 
         """
+
+        if 'version' in self._REQUIRED_SPEC_ATTRIBS:
+            version = kwargs['version']
+            self._check_section_version_compatibility(version)
 
         self._COSMETIC_ATTRIBS = []  # list of cosmetic header attributes to remember and optionally write out
 
@@ -665,6 +671,40 @@ class ParameterHandler:
                 raise SMIRNOFFSpecError("Unexpected kwarg {} passed to {} constructor. If this is "
                                         "a desired cosmetic attribute, consider setting "
                                         "'allow_cosmetic_attributes=True'".format(key, self.__class__))
+
+
+
+    def _check_section_version_compatibility(self, version):
+        """
+        Raise a parsing exception if the given section version is incompatible with this ParameterHandler class.
+
+        Parameters
+        ----------
+        version : str
+            The SMIRNOFF section version being read.
+
+        Raises
+        ------
+        SMIRNOFFVersionError if an incompatible version is passed in.
+
+        """
+        import packaging.version
+        from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
+        # Use PEP-440 compliant version number comparison, if requested
+        if (
+                packaging.version.parse(str(version)) >
+                packaging.version.parse(str(self._MAX_SUPPORTED_SECTION_VERSION))
+
+                ) or (
+                packaging.version.parse(str(version)) <
+                packaging.version.parse(str(self._MIN_SUPPORTED_SECTION_VERSION))
+                ):
+
+            raise SMIRNOFFVersionError(
+                'SMIRNOFF offxml file was written with version {}, but this version of ForceField only supports '
+                'version {} to version {}'.format(version,
+                                                  self._MIN_SUPPORTED_SECTION_VERSION,
+                                                  self._MAX_SUPPORTED_SECTION_VERSION))
 
 
     def _add_parameters(self, section_dict, allow_cosmetic_attributes=False):
