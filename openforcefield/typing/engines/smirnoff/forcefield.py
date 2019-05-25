@@ -558,8 +558,10 @@ class ForceField:
         tagname : str
             The name of the parameter to be handled.
         handler_kwargs : dict, optional. Default = None
-            Dict to be passed to the handler for construction or checking compatibility. If None, will be assumed
-            to represent handler defaults.
+            Dict to be passed to the handler for construction or checking compatibility. If this is None and no
+            existing ParameterHandler exists for the desired tag, a handler will be initialized with all default
+            values. If this is None and a handler for the desired tag exists, the existing ParameterHandler will
+            be returned.
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs in smirnoff_data.
 
@@ -572,8 +574,10 @@ class ForceField:
         KeyError if there is no ParameterHandler for the given tagname
         """
         # If there are no kwargs for the handler, initialize handler_kwargs as an empty dict
+        skip_version_check = False
         if handler_kwargs is None:
             handler_kwargs = dict()
+            skip_version_check = True
 
         # Ensure that the ForceField has a ParameterHandler class registered that can handle this tag
         if tagname in self._parameter_handler_classes:
@@ -584,19 +588,25 @@ class ForceField:
             msg += "Known parameter handler class tags are {}".format(self._parameter_handler_classes.keys())
             raise KeyError(msg)
 
-        # Initialize a new instance of this parameter handler class with the given kwargs
-        new_handler = ph_class(**handler_kwargs,
-                               allow_cosmetic_attributes=allow_cosmetic_attributes)
+
 
         if tagname in self._parameter_handlers:
             # If a handler of this class already exists, ensure that the two handlers encode compatible science
             old_handler = self._parameter_handlers[tagname]
             # If no handler kwargs were provided, skip the compatibility check
             if handler_kwargs != {}:
+                # Initialize a new instance of this parameter handler class with the given kwargs
+                new_handler = ph_class(**handler_kwargs,
+                                       allow_cosmetic_attributes=allow_cosmetic_attributes,
+                                       skip_version_check=skip_version_check)
                 old_handler.check_handler_compatibility(new_handler)
             return_handler = old_handler
         elif tagname in self._parameter_handler_classes:
             # Otherwise, register this handler in the forcefield
+            # Initialize a new instance of this parameter handler class with the given kwargs
+            new_handler = ph_class(**handler_kwargs,
+                                   allow_cosmetic_attributes=allow_cosmetic_attributes,
+                                   skip_version_check=skip_version_check)
             self.register_parameter_handler(new_handler)
             return_handler = new_handler
 
