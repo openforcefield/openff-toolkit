@@ -560,7 +560,7 @@ class ParameterHandler:
     _MAX_SUPPORTED_SECTION_VERSION = 0.3
 
 
-    def __init__(self, allow_cosmetic_attributes=False, **kwargs):
+    def __init__(self, allow_cosmetic_attributes=False, skip_version_check=False, **kwargs):
         """
         Initialize a ParameterHandler, optionally with a list of parameters and other kwargs.
 
@@ -569,12 +569,21 @@ class ParameterHandler:
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs. If True, non-spec kwargs will be stored as attributes of this object
             and can be accessed and modified. Otherwise an exception will be raised if a non-spec kwarg is encountered.
+        skip_version_check: bool, optional. Default = False
+            If False, the SMIRNOFF section version will not be checked, and the ParameterHandler will be initialized
+            with version set to _MAX_SUPPORTED_SECTION_VERSION.
         **kwargs : dict
             The dict representation of the SMIRNOFF data source
 
         """
-
         if 'version' in self._REQUIRED_SPEC_ATTRIBS:
+            if not 'version' in kwargs:
+                if skip_version_check:
+                    kwargs['version'] = self._MAX_SUPPORTED_SECTION_VERSION
+                else:
+                    raise SMIRNOFFSpecError(f"Missing version while trying to construct {self.__class__}. "
+                                            f"0.3 SMIRNOFF spec requires each parameter section to have its own "
+                                            f"version.")
             version = kwargs['version']
             self._check_section_version_compatibility(version)
 
