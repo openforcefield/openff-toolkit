@@ -623,13 +623,6 @@ class ParameterHandler:
                 if attrib_basename in self._ATTRIBS_TO_TYPE:
                     self._ATTRIBS_TO_TYPE[attrib_w_index] = self._ATTRIBS_TO_TYPE[attrib_basename]
 
-                # # If there's a unit for this attrib, copy unit entries for each index instance
-                # if attrib_unit_key in kwargs:
-                #     kwargs[attrib_w_index+'_unit'] = kwargs[attrib_unit_key]
-
-        # Attach units to the handler kwargs, if applicable
-        # unitless_kwargs, attached_units = extract_serialized_units_from_dict(kwargs)
-        # smirnoff_data = attach_units(unitless_kwargs, attached_units)
 
         # Check for attribs that need to be casted to specific types
         for attrib, type_to_cast in self._ATTRIBS_TO_TYPE.items():
