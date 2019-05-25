@@ -737,7 +737,6 @@ class ForceField:
             raise ParseError("'SMIRNOFF' must be a top-level key in the SMIRNOFF object model")
 
 
-        #l1_dict = smirnoff_data['SMIRNOFF']
         # Check that the aromaticity model required by this parameter set is compatible with
         # others loaded by this ForceField
         if 'aromaticity_model' in smirnoff_data['SMIRNOFF']:

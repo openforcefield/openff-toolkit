@@ -44,9 +44,9 @@ from collections import OrderedDict
 
 from simtk import openmm, unit
 
-from openforcefield.utils import detach_units, attach_units, quantity_to_string, \
+from openforcefield.utils import attach_units,  \
     extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
-    string_to_quantity, assert_object_units_are_compatible, object_to_quantity
+    assert_object_units_are_compatible, object_to_quantity
 from openforcefield.topology import Topology, ValenceDict, ImproperDict
 from openforcefield.typing.chemistry import ChemicalEnvironment
 
