@@ -715,7 +715,7 @@ class TestForceField():
 
         from simtk.openmm import app, NonbondedForce
 
-        file_path = get_data_file_path('forcefield/smirnoff99Frosst.offxml')
+        file_path = get_data_file_path('test_forcefields/smirnoff99Frosst.offxml')
         forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
@@ -759,7 +759,7 @@ class TestForceField():
 
         from simtk.openmm import app, NonbondedForce
 
-        file_path = get_data_file_path('forcefield/smirnoff99Frosst.offxml')
+        file_path = get_data_file_path('test_forcefields/smirnoff99Frosst.offxml')
         forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules, )
@@ -786,7 +786,7 @@ class TestForceField():
         """Test to ensure an exception is raised when an unrecognized kwarg is passed """
         from simtk.openmm import app
 
-        file_path = get_data_file_path('forcefield/smirnoff99Frosst.offxml')
+        file_path = get_data_file_path('test_forcefields/smirnoff99Frosst.offxml')
         forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
         molecules = []
