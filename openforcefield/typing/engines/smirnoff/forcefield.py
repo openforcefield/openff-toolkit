@@ -971,10 +971,8 @@ class ForceField:
                 ordered_parameter_handlers.append(
                     self._parameter_handlers[tagname])
             else:
-                # TODO: Is it safe to pass "{}" as the handler_kwargs? If the handler doesn't exist, do we want to assume default values?
                 ordered_parameter_handlers.append(
-                    self.get_parameter_handler(tagname, {}))
-        #ordered_parameter_handlers = [ self.get_parameter_handler(tagname, {}) for tagname in nx.topological_sort(G) ]
+                    self.get_parameter_handler(tagname))
         return ordered_parameter_handlers
 
     # TODO: Should we add convenience methods to parameterize a Topology and export directly to AMBER, gromacs, CHARMM, etc.?
