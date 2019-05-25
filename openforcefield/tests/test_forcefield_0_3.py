@@ -39,16 +39,16 @@ TIP3P_SDF_FILE_PATH = get_data_file_path(os.path.join('systems', 'monomers', 'wa
 
 XML_FF_GENERICS = """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-  <Bonds>
-    <Bond version="0.3" smirks="[*:1]~[*:2]" id="b1" k="680.0 * kilocalories_per_mole/angstrom**2" length="1.09 * angstrom"/>
+  <Bonds version="0.3">
+    <Bond smirks="[*:1]~[*:2]" id="b1" k="680.0 * kilocalories_per_mole/angstrom**2" length="1.09 * angstrom"/>
   </Bonds>
-  <Angles>
-    <Angle version="0.3" smirks="[*:1]~[*:2]~[*:3]" angle="109.5 * degree" id="a1" k="100.0 * kilocalories_per_mole/radian**2"/>
+  <Angles version="0.3">
+    <Angle smirks="[*:1]~[*:2]~[*:3]" angle="109.5 * degree" id="a1" k="100.0 * kilocalories_per_mole/radian**2"/>
   </Angles>
-  <ProperTorsions version="0.3" potential="fourier">
+  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Proper smirks="[*:1]~[*:2]~[*:3]-[*:4]" id="t1" idivf1="1" k1="0.156 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree"/>
   </ProperTorsions>
-  <ImproperTorsions version="0.3" potential="fourier">
+  <ImproperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Improper smirks="[*:1]~[*:2](~[*:3])~[*:4]" id="i1" k1="1.1 * kilocalories_per_mole" periodicity1="2" phase1="180. * degree"/>
   </ImproperTorsions>
   <vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1"  switch_width="1.0 * angstrom" cutoff="9.0 * angstrom" method="cutoff">
@@ -69,11 +69,11 @@ simple_xml_ff = str.encode('''<?xml version='1.0' encoding='ASCII'?>
     <Angle smirks="[*:1]~[#6X4:2]-[*:3]" angle="109.5 * degree" id="a1" k="100.0 * kilocalories_per_mole/radian**2"/>
     <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.5 * degree" id="a2" k="70.0 * kilocalories_per_mole/radian**2"/>
   </Angles>
-  <ProperTorsions version="0.3" potential="fourier">
+  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Proper smirks="[*:1]-[#6X4:2]-[#6X4:3]-[*:4]" id="t1" idivf1="1" k1="0.156 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree"/>
     <Proper smirks="[#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]" id="t2" idivf1="1" k1="0.180 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree" periodicity2="2" phase2="180.0 * degree" idivf2="1" k2="0.250 * kilocalories_per_mole" periodicity3="1" phase3="180.0 * degree" idivf3="1" k3="0.200 * kilocalories_per_mole"/>
   </ProperTorsions>
-  <ImproperTorsions version="0.3" potential="fourier">
+  <ImproperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1 * kilocalories_per_mole" periodicity1="2" phase1="180. * degree"/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5 * kilocalories_per_mole" periodicity1="2" phase1="180. * degree"/>
   </ImproperTorsions>
@@ -102,11 +102,11 @@ xml_ff_w_comments = '''<?xml version='1.0' encoding='ASCII'?>
     <Angle smirks="[*:1]~[#6X4:2]-[*:3]" angle="109.5 * degree" id="a1" k="100.0 * kilocalories_per_mole/radian**2"/>
     <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.5 * degree" id="a2" k="70.0 * kilocalories_per_mole/radian**2"/>
   </Angles>
-  <ProperTorsions version="0.3" potential="fourier">
+  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Proper smirks="[*:1]-[#6X4:2]-[#6X4:3]-[*:4]" id="t1" idivf1="1" k1="0.156 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree"/>
     <Proper smirks="[#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]" id="t2" idivf1="1" k1="0.180 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree" periodicity2="2" phase2="180.0 * degree" idivf2="1" k2="0.250 * kilocalories_per_mole" periodicity3="1" phase3="180.0 * degree" idivf3="1" k3="0.200 * kilocalories_per_mole"/>
   </ProperTorsions>
-  <ImproperTorsions version="0.3" potential="fourier">
+  <ImproperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1 * kilocalories_per_mole" periodicity1="2" phase1="180. * degree"/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5 * kilocalories_per_mole" periodicity1="2" phase1="180. * degree"/>
   </ImproperTorsions>
@@ -136,11 +136,11 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
     <Angle smirks="[*:1]~[#6X4:2]-[*:3]" angle="109.5 * degree" id="a1" k="100.0 * kilocalories_per_mole/radian**2"/>
     <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.5 * degree" id="a2" k="70.0 * kilocalories_per_mole/radian**2"/>
   </Angles>
-  <ProperTorsions version="0.3" potential="fourier">
+  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Proper smirks="[*:1]-[#6X4:2]-[#6X4:3]-[*:4]" id="t1" idivf1="1" k1="0.156 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree"/>
     <Proper smirks="[#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]" id="t2" idivf1="1" k1="0.180 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree" periodicity2="2" phase2="180.0 * degree" idivf2="1" k2="0.250 * kilocalories_per_mole" periodicity3="1" phase3="180.0 * degree" idivf3="1" k3="0.200 * kilocalories_per_mole"/>
   </ProperTorsions>
-  <ImproperTorsions version="0.3" potential="fourier">
+  <ImproperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1 * kilocalories_per_mole" periodicity1="2" phase1="180. * degree"/>
     <Improper smirks="[*:1]~[#6X3:2](~[#8X1:3])~[#8:4]" id="i2" k1="10.5 * kilocalories_per_mole" periodicity1="2" phase1="180. * degree"/>
   </ImproperTorsions>
@@ -858,7 +858,7 @@ class TestForceFieldConstraints:
         # Parametrize an ethane molecule.
         ethane = Molecule.from_smiles('CC')
         topology = Topology.from_molecules([ethane])
-        ff = ForceField(XML_FF_GENERICS, 'old/hbonds.offxml')
+        ff = ForceField(XML_FF_GENERICS, 'test_forcefields/old/hbonds.offxml')
         system = ff.create_openmm_system(topology)
 
         # Check that all C-H bonds have been constrained to the FF bond length.
@@ -1079,8 +1079,8 @@ class TestForceFieldParameterAssignment:
         molecule = Molecule.from_file(mol2_file_path, allow_undefined_stereo=allow_undefined_stereo)
 
         # Create OpenFF System with the current toolkit.
-        forcefield_file_path = 'old/smirnoff99Frosst_' + forcefield_version + '.offxml'
-        ff = ForceField(forcefield_file_path, 'old/hbonds.offxml')
+        forcefield_file_path = 'test_forcefields/old/smirnoff99Frosst_' + forcefield_version + '.offxml'
+        ff = ForceField(forcefield_file_path, 'test_forcefields/old/hbonds.offxml')
         ff_system = ff.create_openmm_system(molecule.to_topology())
 
         # Load OpenMM System created with the 0.1 version of the toolkit.

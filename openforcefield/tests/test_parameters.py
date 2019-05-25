@@ -18,6 +18,7 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType, BondHandler, \
     ParameterHandler, AngleHandler, ConstraintHandler, ProperTorsionHandler, ImproperTorsionHandler, \
     ToolkitAM1BCCHandler, vdWHandler, SMIRNOFFSpecError
+from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.utils import detach_units, IncompatibleUnitError
 
 import pytest
@@ -32,7 +33,7 @@ class TestParameterHandler:
         read unit)
         """
         from simtk import unit
-        bh = BondHandler()
+        bh = BondHandler(skip_version_check=True)
         bh.add_parameter({'smirks': '[*:1]-[*:2]',
                           'length': 1*unit.angstrom,
                           'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2})
@@ -40,16 +41,14 @@ class TestParameterHandler:
                           'length': 0.2*unit.nanometer,
                           'k': 0.4*unit.kilojoule_per_mole/unit.nanometer**2})
         bh_dict = bh.to_dict()
-        assert ('length_unit', 'nanometer') in bh_dict.items()
-        assert ('k_unit', 'nanometer**-2 * mole**-1 * kilojoule') in bh_dict.items()
-        assert bh_dict['Bond'][0]['length'] == 0.1
-        assert bh_dict['Bond'][1]['length'] == 0.2
+        assert bh_dict['Bond'][0]['length'] == unit.Quantity(value=1, unit=unit.angstrom)
+        assert bh_dict['Bond'][1]['length'] == unit.Quantity(value=2, unit=unit.angstrom)
 
     def test_to_dict_set_output_units(self):
         """Test ParameterHandler.to_dict() function when some output units are specified
         """
         from simtk import unit
-        bh = BondHandler()
+        bh = BondHandler(skip_version_check=True)
         bh.add_parameter({'smirks': '[*:1]-[*:2]',
                           'length': 1*unit.angstrom,
                           'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2})
@@ -57,10 +56,37 @@ class TestParameterHandler:
                           'length': 0.2*unit.nanometer,
                           'k': 0.4*unit.kilojoule_per_mole/unit.nanometer**2})
         bh_dict = bh.to_dict(output_units={'length_unit': unit.picometer})
-        assert ('length_unit', 'picometer') in bh_dict.items()
-        assert ('k_unit', 'nanometer**-2 * mole**-1 * kilojoule') in bh_dict.items()
-        assert abs(bh_dict['Bond'][0]['length'] - 100.) < 1.e-8
-        assert abs(bh_dict['Bond'][1]['length'] - 200.) < 1.e-8
+        assert bh_dict['Bond'][0]['length'] == unit.Quantity(1., unit.angstrom)
+        assert bh_dict['Bond'][0]['length'].unit == unit.angstrom
+        assert bh_dict['Bond'][1]['length'] == unit.Quantity(0.2, unit.nanometer)
+        assert bh_dict['Bond'][1]['length'].unit == unit.nanometer
+
+
+    def test_missing_section_version(self):
+        """Test that exceptions are raised if invalid or improper section versions are provided during intialization"""
+        # Generate a SMIRNOFFSpecError by not providing a section version
+        with pytest.raises(SMIRNOFFSpecError, match='Missing version while trying to construct') as excinfo:
+            ph = ParameterHandler()
+        # Successfully create ParameterHandler by skipping version check
+        ph = ParameterHandler(skip_version_check=True)
+
+        # Successfully create ParameterHandler by providing max supported version
+        ph = ParameterHandler(version=ParameterHandler._MAX_SUPPORTED_SECTION_VERSION)
+
+        # Successfully create ParameterHandler by providing min supported version
+        ph = ParameterHandler(version=ParameterHandler._MIN_SUPPORTED_SECTION_VERSION)
+
+        # Generate a SMIRNOFFSpecError ParameterHandler by providing a value higher than the max supported
+        with pytest.raises(SMIRNOFFVersionError, match='SMIRNOFF offxml file was written with version 1000.0, '
+                                                    'but this version of ForceField only supports version') as excinfo:
+            ph = ParameterHandler(version='1000.0')
+
+
+        # Generate a SMIRNOFFSpecError ParameterHandler by providing a value lower than the min supported
+        with pytest.raises(SMIRNOFFVersionError, match='SMIRNOFF offxml file was written with version 0.1, '
+                                                    'but this version of ForceField only supports version') as excinfo:
+            ph = ParameterHandler(version='0.1')
+
 
 
 class TestParameterList:
@@ -468,17 +494,19 @@ class TestParameterType:
         """
         # Test creating ProperTorsionHandlers
         with pytest.raises(SMIRNOFFSpecError, match="ProperTorsionHandler given 'potential' value of 'charmm'. "
-                                                        "Supported options are [[]'fourier'[]].")\
+                                                    "Supported options are "
+                                                    "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
                 as context:
-            ph1 = ProperTorsionHandler(potential='charmm')
-        ph1 = ProperTorsionHandler(potential='fourier')
+            ph1 = ProperTorsionHandler(potential='charmm', skip_version_check=True)
+        ph1 = ProperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
         # Same test, but with ImproperTorsionHandler
         with pytest.raises(SMIRNOFFSpecError, match="ImproperTorsionHandler given 'potential' value of 'charmm'. "
-                                                        "Supported options are [[]'fourier'[]].")\
+                                                    "Supported options are "
+                                                    "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
                 as context:
-            ph1 = ImproperTorsionHandler(potential='charmm')
-        ph1 = ImproperTorsionHandler(potential='fourier')
+            ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
+        ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
 
         #     p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',

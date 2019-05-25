@@ -641,18 +641,18 @@ def convert_0_2_smirnoff_to_0_3(smirnoff_data_0_2):
     # Recursively attach unit strings
     smirnoff_data = recursive_attach_unit_strings(smirnoff_data_0_2, {})
 
-    # Change TorsionHandler potential from "charmm" to "fourier". Note that, scientifically,
-    # we really meant "fourier" all along, since "charmm" technically implies that we would support a
-    # harmonic potential for torsion terms with periodicity 0
+    # Change TorsionHandler potential from "charmm" to "k*(1+cos(periodicity*theta-phase))". Note that, scientifically,
+    # we should have used "k*(1+cos(periodicity*theta-phase))" all along, since "charmm" technically
+    # implies that we would support a harmonic potential for torsion terms with periodicity 0
     # More at: https://github.com/openforcefield/openforcefield/issues/303#issuecomment-490156779
     if 'ProperTorsions' in smirnoff_data['SMIRNOFF']:
         if 'potential' in smirnoff_data['SMIRNOFF']['ProperTorsions']:
             if smirnoff_data['SMIRNOFF']['ProperTorsions']['potential'] == 'charmm':
-                smirnoff_data['SMIRNOFF']['ProperTorsions']['potential'] = 'fourier'
+                smirnoff_data['SMIRNOFF']['ProperTorsions']['potential'] = 'k*(1+cos(periodicity*theta-phase))'
     if 'ImproperTorsions' in smirnoff_data['SMIRNOFF']:
         if 'potential' in smirnoff_data['SMIRNOFF']['ImproperTorsions']:
             if smirnoff_data['SMIRNOFF']['ImproperTorsions']['potential'] == 'charmm':
-                smirnoff_data['SMIRNOFF']['ImproperTorsions']['potential'] = 'fourier'
+                smirnoff_data['SMIRNOFF']['ImproperTorsions']['potential'] = 'k*(1+cos(periodicity*theta-phase))'
 
     # Add per-section tag
     sections_not_to_version_0_3 = ['Author', 'Date', 'version', 'aromaticity_model']

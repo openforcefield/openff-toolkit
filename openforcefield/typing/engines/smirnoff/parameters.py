@@ -1390,7 +1390,7 @@ class ProperTorsionHandler(ParameterHandler):
     _TAGNAME = 'ProperTorsions'  # SMIRNOFF tag name to process
     _INFOTYPE = ProperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
-    _DEFAULT_SPEC_ATTRIBS = {'potential': 'charmm',
+    _DEFAULT_SPEC_ATTRIBS = {'potential': 'k*(1+cos(periodicity*theta-phase))',
                              'default_idivf': 'auto'}
     _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
 
@@ -1448,7 +1448,7 @@ class ProperTorsionHandler(ParameterHandler):
                         string_attr, this_val, other_val))
 
     def validate_parameters(self):
-        supported_torsion_potentials = ['fourier']
+        supported_torsion_potentials = ['k*(1+cos(periodicity*theta-phase))']
         if self._potential not in supported_torsion_potentials:
             raise SMIRNOFFSpecError(f"ProperTorsionHandler given 'potential' value of "
                                     f"'{self._potential}'. Supported options are {supported_torsion_potentials}.")
@@ -1520,7 +1520,7 @@ class ImproperTorsionHandler(ParameterHandler):
     _INFOTYPE = ImproperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
     _OPTIONAL_SPEC_ATTRIBS = ['potential', 'default_idivf']
-    _DEFAULT_SPEC_ATTRIBS = {'potential': 'charmm',
+    _DEFAULT_SPEC_ATTRIBS = {'potential': 'k*(1+cos(periodicity*theta-phase))',
                              'default_idivf': 'auto'}
     _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
 
@@ -1573,7 +1573,7 @@ class ImproperTorsionHandler(ParameterHandler):
 
 
     def validate_parameters(self):
-        supported_torsion_potentials = ['fourier']
+        supported_torsion_potentials = ['k*(1+cos(periodicity*theta-phase))']
         if self._potential not in supported_torsion_potentials:
             raise SMIRNOFFSpecError(f"ImproperTorsionHandler given 'potential' value of "
                                     f"'{self._potential}'. Supported options are {supported_torsion_potentials}.")
