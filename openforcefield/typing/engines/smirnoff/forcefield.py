@@ -737,11 +737,11 @@ class ForceField:
             raise ParseError("'SMIRNOFF' must be a top-level key in the SMIRNOFF object model")
 
 
-        l1_dict = smirnoff_data['SMIRNOFF']
+        #l1_dict = smirnoff_data['SMIRNOFF']
         # Check that the aromaticity model required by this parameter set is compatible with
         # others loaded by this ForceField
-        if 'aromaticity_model' in l1_dict:
-            aromaticity_model = l1_dict['aromaticity_model']
+        if 'aromaticity_model' in smirnoff_data['SMIRNOFF']:
+            aromaticity_model = smirnoff_data['SMIRNOFF']['aromaticity_model']
             self._set_aromaticity_model(aromaticity_model)
 
         elif self._aromaticity_model is None:
@@ -749,18 +749,18 @@ class ForceField:
                              "tag, or contained in a previously-loaded SMIRNOFF data source")
 
         # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation
-        if 'version' in l1_dict:
-            version = l1_dict['version']
+        if 'version' in smirnoff_data['SMIRNOFF']:
+            version = smirnoff_data['SMIRNOFF']['version']
         else:
             raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
         self._check_smirnoff_version_compatibility(str(version))
 
         # TODO: What should we do if multiple authors or dates are read? Concatenate them?
-        # if 'author' in l1_dict:
-        #     self._author = l1_dict['author']
+        # if 'author' in smirnoff_data['SMIRNOFF']:
+        #     self._author = smirnoff_data['SMIRNOFF']['author']
         #
-        # if 'date' in l1_dict:
-        #     self._date = l1_dict['date']
+        # if 'date' in smirnoff_data['SMIRNOFF']:
+        #     self._date = smirnoff_data['SMIRNOFF']['date']
 
 
         # Convert 0.1 spec files to 0.3 SMIRNOFF data format by converting
@@ -772,7 +772,7 @@ class ForceField:
 
         # Convert 0.2 spec files to 0.3 SMIRNOFF data format by removing units
         # from section headers and adding them to strings at all levels.
-        if packaging.version.parse(str(version)) == packaging.version.parse("0.2"):
+        elif packaging.version.parse(str(version)) == packaging.version.parse("0.2"):
             smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
 
         # Go through the whole SMIRNOFF data structure, trying to convert all strings to Quantity
@@ -783,17 +783,17 @@ class ForceField:
         # Define keys which are expected from the spec, but are not parameter sections
         l1_spec_keys = ['Author', 'Date', 'version', 'aromaticity_model']
 
-        for parameter_name in l1_dict:
+        for parameter_name in smirnoff_data['SMIRNOFF']:
             # Skip (for now) cosmetic l1 items. They're handled above
             if parameter_name in l1_spec_keys:
                 continue
             # Handle cases where a parameter name has no info (eg. ToolkitAM1BCC)
-            if l1_dict[parameter_name] is None:
+            if smirnoff_data['SMIRNOFF'][parameter_name] is None:
                 handler = self.get_parameter_handler(parameter_name, {})
                 continue
 
             # Otherwise, we expect this l1_key to correspond to a ParameterHandler
-            section_dict = l1_dict[parameter_name]
+            section_dict = smirnoff_data['SMIRNOFF'][parameter_name]
 
             # Retrieve or create parameter handler, passing in section_dict to check for
             # compatibility if a handler for this parameter name already exists
