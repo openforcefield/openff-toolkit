@@ -87,6 +87,34 @@ class TestParameterHandler:
                                                     'but this version of ForceField only supports version') as excinfo:
             ph = ParameterHandler(version='0.1')
 
+    def test_add_delete_cosmetic_attributes(self):
+        """Test ParameterHandler.to_dict() function when some parameters are in
+        different units (proper behavior is to convert all quantities to the last-
+        read unit)
+        """
+        from simtk import unit
+        bh = BondHandler(skip_version_check=True)
+        bh.add_parameter({'smirks': '[*:1]-[*:2]',
+                          'length': 1*unit.angstrom,
+                          'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2})
+        bh.add_parameter({'smirks': '[*:1]=[*:2]',
+                          'length': 0.2*unit.nanometer,
+                          'k': 0.4*unit.kilojoule_per_mole/unit.nanometer**2})
+
+        # Ensure the cosmetic attribute is present by default during output
+        bh.add_cosmetic_attribute('pilot', 'alice')
+        param_dict = bh.to_dict()
+        assert ('pilot', 'alice') in param_dict.items()
+
+        # Ensure the cosmetic attribute isn't present if we request that it be discarded
+        param_dict = bh.to_dict(discard_cosmetic_attributes=True)
+        assert ('pilot', 'alice') not in param_dict.items()
+
+        # Manually delete the cosmetic attribute and ensure it doesn't get written out
+        bh.delete_cosmetic_attribute('pilot')
+        param_dict = bh.to_dict()
+        assert ('pilot', 'alice') not in param_dict.items()
+
 
 
 class TestParameterList:
@@ -391,6 +419,34 @@ class TestParameterType:
                                       pilot='alice',
                                       allow_cosmetic_attributes=False
                                       )
+
+
+    def test_add_delete_cosmetic_attrib(self):
+        """
+        Test adding and deleting cosmetic attributes for already-initialized ParameterType objects
+        """
+        from simtk import unit
+
+        p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
+                                  length=1.02*unit.angstrom,
+                                  k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                                  )
+        # Ensure the cosmetic attribute is present by default during output
+        p1.add_cosmetic_attribute('pilot', 'alice')
+        param_dict = p1.to_dict()
+        assert ('pilot', 'alice') in param_dict.items()
+
+        # Ensure the cosmetic attribute isn't present if we request that it be discarded
+        param_dict = p1.to_dict(discard_cosmetic_attributes=True)
+        assert ('pilot', 'alice') not in param_dict.items()
+
+        # Manually delete the cosmetic attribute and ensure it doesn't get written out
+        p1.delete_cosmetic_attribute('pilot')
+        param_dict = p1.to_dict()
+        assert ('pilot', 'alice') not in param_dict.items()
+
+
+
 
     def test_single_term_proper_torsion(self):
         """

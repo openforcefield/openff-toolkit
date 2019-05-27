@@ -456,7 +456,7 @@ class ParameterType:
             smirks, ensure_valence_type=self._VALENCE_TYPE)
         self._smirks = smirks
 
-    def to_dict(self, discard_cosmetic_attributes=True):
+    def to_dict(self, discard_cosmetic_attributes=False):
         """
         Convert this ParameterType object to dict. A unit-bearing attribute ('X') will be converted to two dict
         entries, one (['X'] containing the unitless value, and another (['X_unit']) containing a string representation
@@ -464,7 +464,7 @@ class ParameterType:
 
         Parameters
         ----------
-        discard_cosmetic_attributes : bool, optional. Default = True
+        discard_cosmetic_attributes : bool, optional. Default = False
             Whether to discard non-spec attributes of this ParameterType
 
 
@@ -499,6 +499,36 @@ class ParameterType:
                 pass
 
         return smirnoff_dict
+
+    def add_cosmetic_attribute(self, attr_name, attr_value):
+        """
+        Add a cosmetic attribute to this ParameterType object. This attribute will not have a functional effect
+        on the object in the Open Force Field toolkit, but can be written out during output.
+
+        Parameters
+        ----------
+        attr_name : str
+            Name of the attribute to define for this ParameterType object.
+        attr_value : str
+            The value of the attribute to define for this ParameterType object.
+        """
+        setattr(self, attr_name, attr_value)
+        self._COSMETIC_ATTRIBS.append(attr_name)
+
+    def delete_cosmetic_attribute(self, attr_name):
+        """
+        Delete a cosmetic attribute from this ParameterType object.
+
+        Parameters
+        ----------
+        attr_name : str
+            Name of the attribute to delete.
+        """
+        # TODO: Can we handle this by overriding __delattr__ instead?
+        #  Would we also need to override __del__ as well to cover both deletation methods?
+        delattr(self, attr_name)
+        self._COSMETIC_ATTRIBS.remove(attr_name)
+
 
     def __repr__(self):
         ret_str = '<{} with '.format(self.__class__.__name__)
@@ -749,6 +779,37 @@ class ParameterHandler:
         """The ParameterList that holds this ParameterHandler's parameter objects"""
         return self._parameters
 
+    def add_cosmetic_attribute(self, attr_name, attr_value):
+        """
+        Add a cosmetic attribute to this ParameterHandler object. This attribute will not have a functional effect
+        on the object in the Open Force Field toolkit, but can be written out during output.
+
+        Parameters
+        ----------
+        attr_name : str
+            Name of the attribute to define for this ParameterType object.
+        attr_value : str
+            The value of the attribute to define for this ParameterType object.
+        """
+        setattr(self, '_'+attr_name, attr_value)
+        self._COSMETIC_ATTRIBS.append(attr_name)
+
+    def delete_cosmetic_attribute(self, attr_name):
+        """
+        Delete a cosmetic attribute from this ParameterHandler object.
+
+        Parameters
+        ----------
+        attr_name : str
+            Name of the attribute to delete.
+        """
+        # TODO: Can we handle this by overriding __delattr__ instead?
+        #  Would we also need to override __del__ as well to cover both deletation methods?
+        delattr(self, '_'+attr_name)
+        self._COSMETIC_ATTRIBS.remove(attr_name)
+
+
+
     # TODO: Do we need to return these, or can we handle this internally
     @property
     def known_kwargs(self):
@@ -911,15 +972,14 @@ class ParameterHandler:
         """
         pass
 
-    def to_dict(self, output_units=None, discard_cosmetic_attributes=True):
+
+    def to_dict(self, discard_cosmetic_attributes=False):
         """
         Convert this ParameterHandler to an OrderedDict, compliant with the SMIRNOFF data spec.
 
         Parameters
         ----------
-        output_units : dict[str : simtk.unit.Unit], optional. Default = None
-            A mapping from the ParameterType attribute name to the output unit its value should be converted to.
-        discard_cosmetic_attributes : bool, optional. Default = True.
+        discard_cosmetic_attributes : bool, optional. Default = False.
             Whether to discard non-spec parameter and header attributes in this ParameterHandler.
 
         Returns
@@ -929,46 +989,9 @@ class ParameterHandler:
         """
         smirnoff_data = OrderedDict()
 
-        # Set default output units to those from the last parameter added to the ParameterList
-        # if (output_units is None):
-        #     output_units = dict()
-        # TODO: What if self._parameters is an empty list?
-        # if len(self._parameters) > 0:
-        #     _, last_added_output_units = detach_units(self._parameters[-1].to_dict())
-        #     # Overwrite key_value pairs in last_added_output_units with those specified by user in output_units
-        #     last_added_output_units.update(output_units)
-        #     output_units = last_added_output_units
 
         # Populate parameter list
         parameter_list = self._parameters.to_list(discard_cosmetic_attributes=discard_cosmetic_attributes)
-        # unitless_parameter_list = list()
-
-        # Detach units into a separate dict.
-        # for parameter_dict in parameter_list:
-        #     unitless_parameter_dict, attached_units = detach_units(parameter_dict, output_units=output_units)
-        #     unitless_parameter_list.append(unitless_parameter_dict)
-        #     output_units.update(attached_units)
-
-        # Collapse down indexed attribute units
-        # (eg. {'k1_unit': angstrom, 'k2_unit': angstrom} --> {'k_unit': angstrom})
-        # for attrib_key in self._INDEXED_ATTRIBS:
-        #     index = 1
-        #     # Store a variable that is 'k1_unit'
-        #     idxed_attrib_unit_key = attrib_key + str(index) + '_unit'
-        #     # See if 'k1_unit' is in output_units
-        #     if idxed_attrib_unit_key in output_units:
-        #         # If so, define 'k_unit' and add it to the output_units dict
-        #         attrib_unit_key = attrib_key + '_unit'
-        #         output_units[attrib_unit_key] = output_units[idxed_attrib_unit_key]
-        #     # Increment the 'kN_unit' value, checking that each is the same as the
-        #     # 'k1_unit' value, and deleting them from output_units
-        #     while idxed_attrib_unit_key in output_units:
-        #         # Ensure that no different units are defined for higher indexes of this attrib
-        #         assert output_units[attrib_unit_key] == output_units[idxed_attrib_unit_key]
-        #         del output_units[idxed_attrib_unit_key]
-        #         index += 1
-        #         idxed_attrib_unit_key = attrib_key + str(index) + '_unit'
-
 
         # NOTE: This assumes that a ParameterHandler will have just one homogenous ParameterList under it
         if self._INFOTYPE is not None:
@@ -993,24 +1016,9 @@ class ParameterHandler:
         header_attribute_dict = {}
         for header_attribute in header_attribs_to_return:
             value = getattr(self, '_' + header_attribute)
-            # if isinstance(value, unit.Quantity):
-            #     value = quantity_to_string(value)
             header_attribute_dict[header_attribute] = value
 
-        # Detach all units from the header attribs
-        # unitless_header_attribute_dict, attached_header_units = detach_units(header_attribute_dict)
 
-        # Convert all header attrib units (eg. {'length_unit': simtk.unit.angstrom}) to strings (eg.
-        # {'length_unit': 'angstrom'}) and add them to the header attribute dict
-        # TODO: Should we check for collisions between parameter "_unit" keys and header "_unit" keys?
-        # output_units.update(attached_header_units)
-        # for key, value in output_units.items():
-        #     value_str = unit_to_string(value)
-        #     # Made a note to add this to the smirnoff spec
-        #     output_units[key] = value_str
-
-        # Reattach the attached units here
-        # smirnoff_data.update(unitless_header_attribute_dict)
         smirnoff_data.update(header_attribute_dict)
         # smirnoff_data.update(output_units)
         return smirnoff_data

@@ -874,7 +874,8 @@ class ForceField:
                 continue
             # Handle cases where a parameter name has no info (eg. ToolkitAM1BCC)
             if smirnoff_data['SMIRNOFF'][parameter_name] is None:
-                handler = self.get_parameter_handler(parameter_name, {})
+                # "get"ting the parameter handler here will also initialize it.
+                _ = self.get_parameter_handler(parameter_name, {})
                 continue
 
             # Otherwise, we expect this l1_key to correspond to a ParameterHandler
