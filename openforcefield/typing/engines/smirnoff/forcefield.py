@@ -689,7 +689,7 @@ class ForceField:
                                      allow_cosmetic_attributes=allow_cosmetic_attributes)
 
 
-    def _to_smirnoff_data(self, discard_cosmetic_attributes=True):
+    def _to_smirnoff_data(self, discard_cosmetic_attributes=False):
         """
         Convert this ForceField and all related ParameterHandlers to an OrderedDict representing a SMIRNOFF
         data object.
@@ -698,7 +698,7 @@ class ForceField:
         -------
         smirnoff_dict : OrderedDict
             A nested OrderedDict representing this ForceField as a SMIRNOFF data object.
-        discard_cosmetic_attributes : bool, optional. Default=True
+        discard_cosmetic_attributes : bool, optional. Default=False
             Whether to discard any non-spec attributes stored in the ForceField.
 
         """
@@ -876,7 +876,7 @@ class ForceField:
         raise IOError(msg)
 
 
-    def to_string(self, io_format='XML', discard_cosmetic_attributes=True):
+    def to_string(self, io_format='XML', discard_cosmetic_attributes=False):
         """
         Write this Forcefield and all its associated parameters to a string in a given format which
         complies with the SMIRNOFF spec.
@@ -886,7 +886,7 @@ class ForceField:
         ----------
         io_format : str or ParameterIOHandler, optional. Default='XML'
             The serialization format to write to
-        discard_cosmetic_attributes : bool, default=True
+        discard_cosmetic_attributes : bool, default=False
             Whether to discard any non-spec attributes stored in the ForceField.
 
         Returns
@@ -904,7 +904,7 @@ class ForceField:
         string_data = io_handler.to_string(smirnoff_data)
         return string_data
 
-    def to_file(self, filename, io_format=None, discard_cosmetic_attributes=True):
+    def to_file(self, filename, io_format=None, discard_cosmetic_attributes=False):
         """
         Write this Forcefield and all its associated parameters to a string in a given format which
         complies with the SMIRNOFF spec.
@@ -916,7 +916,7 @@ class ForceField:
             The filename to write to
         io_format : str or ParameterIOHandler, optional. Default=None
             The serialization format to write out. If None, will attempt to be inferred from the filename.
-        discard_cosmetic_attributes : bool, default=True
+        discard_cosmetic_attributes : bool, default=False
             Whether to discard any non-spec attributes stored in the ForceField.
 
         Returns
