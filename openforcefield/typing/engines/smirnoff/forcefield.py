@@ -360,6 +360,83 @@ class ForceField:
 
         self._aromaticity_model = aromaticity_model
 
+    def _add_author(self, author):
+        """
+        Add an author to this forcefield. If this functional is called multiple times, all provided authors
+        will be concatenated with the string " AND ". No redundancy checking is performed by this function.
+
+        Parameters
+        ----------
+        author : str
+            The author to add to this ForceField object
+        """
+        if self._author is None:
+            self._author = author
+        else:
+            self._author += ' AND ' + author
+
+
+    def _add_date(self, date):
+        """
+        Add an date to this forcefield. If this functional is called multiple times, all provided dates
+        will be concatenated with the string " AND ". No redundancy checking is performed by this function.
+
+        Parameters
+        ----------
+        date : str
+            The author to add to this ForceField object
+        """
+        if self._date is None:
+            self._date = date
+        else:
+            self._date += ' AND ' + date
+
+    @property
+    def author(self):
+        """Returns the author data for this ForceField object. If not defined in any loaded files, this will be None.
+
+        Returns
+        -------
+        author : str
+            The author data for this forcefield.
+        """
+        return self._author
+
+
+    @author.setter
+    def author(self, author):
+        """Set the author data for this ForceField object. If not defined in any loaded files, this will be None.
+
+        Parameters
+        ----------
+        author : str
+            The author data to set for this forcefield.
+        """
+        self._author = author
+
+
+    @property
+    def date(self):
+        """Returns the date data for this ForceField object. If not defined in any loaded files, this will be None.
+
+        Returns
+        -------
+        date : str
+            The date data for this forcefield.
+        """
+        return self._date
+
+
+    @date.setter
+    def date(self, date):
+        """Set the author data for this ForceField object. If not defined in any loaded files, this will be None.
+
+        Parameters
+        ----------
+        date : str
+            The date data to set for this forcefield.
+        """
+        self._date = date
 
     def _register_parameter_handler_classes(self, parameter_handler_classes):
         """
@@ -710,6 +787,14 @@ class ForceField:
         # Write out the aromaticity model used
         l1_dict['aromaticity_model'] = self._aromaticity_model
 
+        # Write out author and date (if they have been set)
+        if not (self._author is None):
+            l1_dict['Author'] = self._author
+
+        # Write out author and date (if they have been set)
+        if not (self._date is None):
+            l1_dict['Date'] = self._date
+
         for handler_format, parameter_handler in self._parameter_handlers.items():
             handler_tag = parameter_handler._TAGNAME
             l1_dict[handler_tag] = parameter_handler.to_dict(discard_cosmetic_attributes=discard_cosmetic_attributes)
@@ -755,11 +840,11 @@ class ForceField:
         self._check_smirnoff_version_compatibility(str(version))
 
         # TODO: What should we do if multiple authors or dates are read? Concatenate them?
-        # if 'author' in smirnoff_data['SMIRNOFF']:
-        #     self._author = smirnoff_data['SMIRNOFF']['author']
-        #
-        # if 'date' in smirnoff_data['SMIRNOFF']:
-        #     self._date = smirnoff_data['SMIRNOFF']['date']
+        if 'Author' in smirnoff_data['SMIRNOFF']:
+            self._add_author(smirnoff_data['SMIRNOFF']['Author'])
+
+        if 'Date' in smirnoff_data['SMIRNOFF']:
+            self._add_date(smirnoff_data['SMIRNOFF']['Date'])
 
 
         # Convert 0.1 spec files to 0.3 SMIRNOFF data format by converting
@@ -781,6 +866,7 @@ class ForceField:
 
         # Define keys which are expected from the spec, but are not parameter sections
         l1_spec_keys = ['Author', 'Date', 'version', 'aromaticity_model']
+        # TODO: Throw SMIRNOFFSpecError for unrecognized keywords
 
         for parameter_name in smirnoff_data['SMIRNOFF']:
             # Skip (for now) cosmetic l1 items. They're handled above
