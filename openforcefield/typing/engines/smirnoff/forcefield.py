@@ -187,7 +187,7 @@ class ForceField:
     Retrieve the vdW parameters by SMIRKS string and manipulate it:
 
     >>> parameter = forcefield.get_parameter_handler('vdW').parameters['[#1:1]-[#7]']
-    >>> parameter.sigma += 0.1 * unit.angstroms
+    >>> parameter.rmin_half += 0.1 * unit.angstroms
     >>> parameter.epsilon *= 1.02
 
     Make a child vdW type more specific (checking modified SMIRKS for validity):
