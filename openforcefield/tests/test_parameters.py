@@ -44,8 +44,8 @@ class TestParameterHandler:
         assert bh_dict['Bond'][0]['length'] == unit.Quantity(value=1, unit=unit.angstrom)
         assert bh_dict['Bond'][1]['length'] == unit.Quantity(value=2, unit=unit.angstrom)
 
-    def test_to_dict_set_output_units(self):
-        """Test ParameterHandler.to_dict() function when some output units are specified
+    def test_to_dict_maintain_units(self):
+        """Test ParameterHandler.to_dict() function when parameters were provided in different units
         """
         from simtk import unit
         bh = BondHandler(skip_version_check=True)
@@ -55,7 +55,7 @@ class TestParameterHandler:
         bh.add_parameter({'smirks': '[*:1]=[*:2]',
                           'length': 0.2*unit.nanometer,
                           'k': 0.4*unit.kilojoule_per_mole/unit.nanometer**2})
-        bh_dict = bh.to_dict(output_units={'length_unit': unit.picometer})
+        bh_dict = bh.to_dict()
         assert bh_dict['Bond'][0]['length'] == unit.Quantity(1., unit.angstrom)
         assert bh_dict['Bond'][0]['length'].unit == unit.angstrom
         assert bh_dict['Bond'][1]['length'] == unit.Quantity(0.2, unit.nanometer)
