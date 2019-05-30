@@ -333,9 +333,9 @@ Later revisions will also provide support for special interactions using the `<A
 </vdW>   
 ```
 
-| vdW section tag version | Required tag attributes and default values                                                                                                                                                                                        | Optional tag attributes | Required parameter attributes                 | Optional parameter attributes |
-|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------|-----------------------------------------------|-------------------------------|
-| 0.3                     | `potential="Lennard-Jones-12-6`, `combining_rules="Lorentz-Berthelot"`, `scale12="0"`, `scale13="0"`, `scale14="0.5"`, `scale15="1.0"`, `cutoff="9.0*angstrom"`, `switch_width="1.0*angstrom"`, `method="cutoff"` |                         | `smirks`, `epsilon`, (`sigma` OR `rmin_half`) | `id`, `parent_id`             |
+| vdW section tag version | Tag attributes and default values                                                                                                                                                                                 | Required parameter attributes                 | Optional parameter attributes |
+|-------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------|
+| 0.3                     | `potential="Lennard-Jones-12-6`, `combining_rules="Lorentz-Berthelot"`, `scale12="0"`, `scale13="0"`, `scale14="0.5"`, `scale15="1.0"`, `cutoff="9.0*angstrom"`, `switch_width="1.0*angstrom"`, `method="cutoff"` | `smirks`, `epsilon`, (`sigma` OR `rmin_half`) | `id`, `parent_id`             |
 
 
 ### `<Electrostatics>`
@@ -359,9 +359,9 @@ Currently, no child tags are used because the charge model is specified via diff
 
 For methods where the cutoff is not simply an implementation detail but determines the potential energy of the system (`reaction-field` and `Coulomb`), the `cutoff` distance must also be specified, and a `switch_width` if a switching function is to be used.
 
-| Electrostatics section tag version | Required tag attributes and default values                                                                                                                                                                       | Optional tag attributes | Required parameter attributes                 | Optional parameter attributes |
-|------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------|-----------------------------------------------|-------------------------------|
-| 0.3                                | `scale12="0"`, `scale13="0"`, `scale14="0.833333"`, `scale15="1.0"`, `cutoff="9.0*angstrom"`, `switch_width="0*angstrom", `method="PME"`                                                                         |                         | N/A                                           | N/A                           |
+| Electrostatics section tag version | Tag attributes and default values                                                                                                         | Required parameter attributes | Optional parameter attributes |
+|------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------|-------------------------------|
+| 0.3                                | `scale12="0"`, `scale13="0"`, `scale14="0.833333"`, `scale15="1.0"`, `cutoff="9.0*angstrom"`, `switch_width="0*angstrom"`, `method="PME"`  | N/A                           | N/A                           |
 
 
 ### `<Bonds>`
@@ -409,9 +409,9 @@ This allows specification of force constants and lengths for bond orders 1 and 2
 * `fractional_bondorder_method` defaults to `none`, but the `Wiberg` method is supported.
 * `fractional_bondorder_interpolation` defaults to `linear`, which is the only supported scheme for now.
 
-| Bonds section tag version | Required tag attributes and default values                                                                                                                                                                       | Optional tag attributes | Required parameter attributes                 | Optional parameter attributes |
-|---------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------|-----------------------------------------------|-------------------------------|
-| 0.3                       | `potential="harmonic"`, `fractional_bondorder_method="none"`, `fractional_bondorder_interpolation="linear"`                                                                                                      |                         | `smirks`, `length`, `k`                       |  `id`, `parent_id`            |
+| Bonds section tag version | Tag attributes and default values                                                                           | Required parameter attributes                 | Optional parameter attributes |
+|---------------------------|-------------------------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------|
+| 0.3                       | `potential="harmonic"`, `fractional_bondorder_method="none"`, `fractional_bondorder_interpolation="linear"` | `smirks`, `length`, `k`                       |  `id`, `parent_id`            |
 
 
 ### `<Angles>`
@@ -433,9 +433,9 @@ If the `potential` attribute is omitted, it defaults to `harmonic`.
 
 **Note that AMBER and CHARMM define a modified functional form**, such that `U(r) = k*(theta-angle)^2`, so that force constants would need to be multiplied by two in order to be used in the SMIRNOFF format.
 
-|  Angles section tag version | Required tag attributes and default values | Optional tag attributes | Required parameter attributes | Optional parameter attributes |
-|-----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------|-----------------------------------------------|-------------------------------|
-| 0.3 | `potential="harmonic"` |  | `smirks`, `angle`, `k` | `id`, `parent_id` |
+|  Angles section tag version | Tag attributes and default values | Required parameter attributes | Optional parameter attributes |
+|-----------------------------|-----------------------------------|-------------------------------|-------------------------------|
+| 0.3                         | `potential="harmonic"`            | `smirks`, `angle`, `k`        | `id`, `parent_id`             |
 
 
 ### `<ProperTorsions>`
@@ -470,9 +470,9 @@ U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 
 If the `potential` attribute is omitted, it defaults to `k*(1+cos(periodicity*theta-phase))`.
 
-|  ProperTorsions section tag version | Required tag attributes and default values | Optional tag attributes | Required parameter attributes | Optional parameter attributes |
-|-------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------|-----------------------------------------------|-------------------------------|
-| 0.3 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"` |  | `smirks`, `k`, `phase`, `periodicity` | `idivf`, `id`, `parent_id` |
+|  ProperTorsions section tag version | Tag attributes and default values                                        | Required parameter attributes         | Optional parameter attributes |
+|-------------------------------------|--------------------------------------------------------------------------|---------------------------------------|-------------------------------|
+| 0.3                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"` | `smirks`, `k`, `phase`, `periodicity` | `idivf`, `id`, `parent_id`    |
 
 
 ### `<ImproperTorsions>`
@@ -496,9 +496,9 @@ The improper torsion energy is computed as the average over all three impropers 
 This avoids the dependence on arbitrary atom orderings that occur in more traditional typing engines such as those used in AMBER.
 The *second* atom in an improper (in the example above, the trivalent carbon) is the central atom in the trefoil.
 
-|  ImproperTorsions section tag version | Required tag attributes and default values | Optional tag attributes | Required parameter attributes | Optional parameter attributes |
-|-------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------|-----------------------------------------------|-------------------------------|
-| 0.3 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"` |  | `smirks`, `k`, `phase`, `periodicity` | `idivf`, `id`, `parent_id` |
+|ImproperTorsions section tag version | Tag attributes and default values                                        | Required parameter attributes         | Optional parameter attributes |
+|-------------------------------------|--------------------------------------------------------------------------|---------------------------------------|-------------------------------|
+| 0.3                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"` | `smirks`, `k`, `phase`, `periodicity` | `idivf`, `id`, `parent_id`    |
 
 
 ### `<GBSA>`
@@ -547,9 +547,9 @@ The `ACE` model permits two additional parameters to be specified:
 * The `surface_area_penalty` attribute specifies the surface area penalty for the `ACE` model. (Default: `5.4 calories/mole/angstroms**2`)
 * The `solvent_radius` attribute specifies the solvent radius. (Default: `1.4 angstroms`)
 
-|  GBSA section tag version | Required tag attributes and default values | Optional tag attributes | Required parameter attributes | Optional parameter attributes |
-|---------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------|-----------------------------------------------|-------------------------------|
-| 0.3 | `gb_model="OBC1"`, `solvent_dielectric="78.5"`, `solute_dielectric="1"`, `sa_model="ACE"`, `surface_area_penalty="5.4*calories/mole/angstrom**2"`, `solvent_radius="1.4*angstrom"` |  | `smirks`, `radius`, `scale` | `id`, `parent_id` |
+|  GBSA section tag version | Tag attributes and default values                                                                                                                                          | Required parameter attributes | Optional parameter attributes |
+|---------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------|-------------------------------|
+| 0.3                       | `gb_model="OBC1"`, `solvent_dielectric="78.5"`, `solute_dielectric="1"`, `sa_model="ACE"`, `surface_area_penalty="5.4*calories/mole/angstrom**2"`, `solvent_radius="1.4*angstrom"`  | `smirks`, `radius`, `scale`   | `id`, `parent_id`             |
 
 
 ### `<Constraints>`
@@ -586,9 +586,9 @@ Typical molecular simulation practice is to constrain all bonds to hydrogen to t
 </Constraints>
 ```
 
-|  Constraint section tag version | Required tag attributes and default values | Optional tag attributes | Required parameter attributes | Optional parameter attributes |
-|---------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------|-----------------------------------------------|-------------------------------|
-| 0.3 |  |  | `smirks` | `distance` |
+|  Constraint section tag version | Required tag attributes and default values | Required parameter attributes | Optional parameter attributes |
+|---------------------------------|--------------------------------------------|-------------------------------|-------------------------------|
+| 0.3                             |                                            |  `smirks`                     | `distance`                    |
 
 
 ## Advanced features
