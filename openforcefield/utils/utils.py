@@ -719,7 +719,7 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
                 assert smirnoff_data[l1_tag].keys == default_potential[l1_tag]
                 continue
             # Issue an informative warning about assumptions made during conversion.
-            logger.warning(f"0.1 SMIRNOFF spec file does not contain 'potential' field for '{l1_tag}' tag. "
+            logger.warning(f"0.1 SMIRNOFF spec file does not contain 'potential' attribute for '{l1_tag}' tag. "
                            f"The SMIRNOFF spec converter is assuming it has a value of '{default_potential[l1_tag]}'")
             smirnoff_data['SMIRNOFF'][l1_tag]['potential'] = default_potential[l1_tag]
 
@@ -749,7 +749,7 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
                               'cutoff': 9.0,
                               'cutoff_unit': 'angstrom'
                               }
-    logger.warning("0.1 spec does not contain 'Electrostatics' section. Adding it in 0.2 spec conversion, and"
+    logger.warning("0.1 SMIRNOFF spec did not allow the 'Electrostatics' tag. Adding it in 0.2 spec conversion, and "
                    "assuming the following values:")
     for key, val in electrostatics_section.items():
         logger.warning(f"\t{key}: {val}")
@@ -772,8 +772,8 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
                              }
     for key, val in vdw_section_additions.items():
         if not key in smirnoff_data['SMIRNOFF']['vdW'].keys():
-            logger.warning(f"NonBondedMethod/vdW attribute '{key}' was not in 0.1 SMIRNOFF data source. "
-                           f"Assuming a value of '{val}' in 0.1 -> 0.2 spec conversion")
+            logger.warning(f"0.1 SMIRNOFF spec file does not contain '{key}' attribute for 'NonBondedMethod/vdW'' tag. "
+                           f"The SMIRNOFF spec converter is assuming it has a value of '{val}'")
             smirnoff_data['SMIRNOFF']['vdW'][key] = val
 
     # Rename L-J 1-4 scaling term from 0.1 spec's NonBondedForce tag to vdW's scale14
