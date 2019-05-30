@@ -55,7 +55,7 @@ Below, we describe the main structure of such an XML representation.
 
 A SMIRNOFF forcefield XML specification always is enclosed in a `<SMIRNOFF>` tag, with certain required attributes provided. The required and permitted attributes defined in the ``<SMIRNOFF>`` are recorded in the version attribute, which describes the top-level attributes that are expected or permitted to be defined.
 ```XML
-<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
 ...
 </SMIRNOFF>
 ```
@@ -64,21 +64,22 @@ A SMIRNOFF forcefield XML specification always is enclosed in a `<SMIRNOFF>` tag
 
 The SMIRNOFF force field format supports versioning via the `version` attribute to the root `<SMIRNOFF>` tag, e.g.:
 ```XML
-<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
 ...
 </SMIRNOFF>
 ```
 The version format is `x.y`, where `x` denotes the major version and `y` denotes the minor version.
 SMIRNOFF versions are guaranteed to be backward-compatible within the *same major version number series*, but it is possible major version increments will break backwards-compatibility.
 
+
+| SMIRNOFF tag version | Required attributes | Optional attributes | 
+|----------------------|---------------------|---------------------| 
+| 0.1                  | `aromaticity_model` | `Date`, `Author`    | 
+| 0.2                  | `aromaticity_model` | `Date`, `Author`    | 
+| 0.3                  | `aromaticity_model` | `Date`, `Author`    | 
+
+
 The SMIRNOFF tag versions describe the required and allowed force field-wide settings. The list of keywords is as follows:
-
-| SMIRNOFF tag version | Required attributes | Optional attributes |   |   |
-|----------------------|---------------------|---------------------|---|---|
-| 0.1                  | `aromaticity_model` | `Date`, `Author`    |   |   |
-| 0.2                  | `aromaticity_model` | `Date`, `Author`    |   |   |
-| 0.3                  | `aromaticity_model` | `Date`, `Author`    |   |   |
-
 
 #### Aromaticity model
 
@@ -114,7 +115,7 @@ which introduces the following `Angle` child elements which will use a harmonic 
 
 Under each of these force terms, there are tags for individual parameter lines such as these:
 ```XML
-<Angles potential="harmonic">
+<Angles version="0.3" potential="harmonic">
    <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50*degree" k="100.0*kilocalorie_per_mole/radian**2"/>
    <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50*degree" k="70.0*kilocalorie_per_mole/radian**2"/>
 </Angles>     
@@ -140,7 +141,7 @@ This hierarchical structure means that a typical parameter file will tend to hav
 
 ### Multiple SMIRNOFF representations can be processed in sequence
 
-Multiple SMIRNOFF data sources can be loaded by the openforcefield `ForceField` in sequence.
+Multiple SMIRNOFF data sources (e.g. multiple OFFXML files) can be loaded by the openforcefield `ForceField` in sequence.
 If these files each contain unique top-level tags (such as `<Bonds>`, `<Angles>`, etc.), the resulting forcefield will be independent of the order in which the files are loaded.
 If, however, the same tag occurs in multiple files, the contents of the tags are merged, with the tags read later taking precedence over the parameters read earlier, provided the top-level tags have compatible attributes.
 The resulting force field will therefore depend on the order in which parameters are read.
@@ -163,13 +164,13 @@ The SMIRNOFF uses direct chemical perception to assign parameters for potential 
 Rather than first applying atom typing rules and then looking up combinations of the resulting atom types for each force term, the rules for directly applying parameters to atoms is compartmentalized in separate sections.
 The file consists of multiple top-level tags defining individual components of the potential energy (in addition to charge models or modifiers), with each section specifying the typing rules used to assign parameters for that potential term:
 ```XML
-<Bonds potential="harmonic">
+<Bonds version="0.3" potential="harmonic">
    <Bond smirks="[#6X4:1]-[#6X4:2]" length="1.526*angstrom" k="620.0*kilocalories_per_mole/angstrom**2"/>
    <Bond smirks="[#6X4:1]-[#1:2]" length="1.090*angstrom" k="680.0*kilocalories_per_mole/angstrom**2"/>
    ...
 </Bonds>
 
-<Angles potential="harmonic">
+<Angles version="0.3" potential="harmonic">
    <Angle smirks="[a,A:1]-[#6X4:2]-[a,A:3]" angle="109.50*degree" k="100.0*kilocalories_per_mole/radian**2"/>
    <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50*degree" k="70.0*kilocalories_per_mole/radian**2"/>
    ...
@@ -196,7 +197,7 @@ Library charges are applied first, and atoms for which library charges are appli
 
 For example, to assign partial charges for a non-terminal ALA residue from the [AMBER ff14SB](http://doi.org/10.1021/acs.jctc.5b00255) parameter set:
 ```XML
-<LibraryCharges>
+<LibraryCharges version="0.3">
    <!-- match a non-terminal alanine residue with AMBER ff14SB partial charges-->
    <LibraryCharge name="ALA" smirks="[NX3:1]([#1:2])([#6])[#6H1:3]([#1:4])([#6:5]([#1:6])([#1:7])[#1:8])[#6:9](=[#8:10])[#7]" charge1="-0.4157*elementary_charge" charge2="0.2719*elementary_charge" charge3="0.0337*elementary_charge" charge4="0.0823*elementary_charge" charge5="-0.1825*elementary_charge" charge6="0.0603*elementary_charge" charge7="0.0603*elementary_charge" charge8="0.0603*elementary_charge" charge9="0.5973*elementary_charge" charge10="-0.5679*elementary_charge">
    ...
@@ -211,7 +212,7 @@ If multiple templates match the same set of atoms, the last template specified w
 Solvent models or excipients can also have partial charges specified via the `<LibraryCharges>` tag.
 For example, to ensure water molecules are assigned partial charges for [TIP3P](http://www.sklogwiki.org/SklogWiki/index.php/TIP3P_model_of_water) water, we can specify a library charge entry:
 ```XML
-<LibraryCharges>
+<LibraryCharges version="0.3">
    <!-- TIP3P water oxygen with charge override -->
    <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="+0.417*elementary_charge" charge2="-0.834*elementary_charge" charge3="+0.417*elementary_charge"/>
 </LibraryCharges>
@@ -225,7 +226,7 @@ In keeping with the AMBER force field philosophy, especially as implemented in s
 
 Here is an example:
 ```XML
-<ChargeIncrementModel number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2">
+<ChargeIncrementModel version="0.3" number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2">
   <!-- A fractional charge can be moved along a single bond -->
   <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" chargeincrement1="-0.0073*elementary_charge" chargeincrement2="+0.0073*elementary_charge"/>
   <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" chargeincrement1="+0.0943*elementary_charge" chargeincrement2="-0.0943*elementary_charge"/>
@@ -300,7 +301,7 @@ For standard Lennard-Jones 12-6 potentials (specified via `potential="Lennard-Jo
 The two are related by `r0 = 2^(1/6)*sigma` and conversion is done internally in `ForceField` into the `sigma` values used in OpenMM.
 
 Attributes in the `<vdW>` tag specify the scaling terms applied to the energies of 1-2 (`scale12`, default: 0), 1-3 (`scale13`, default: 0), 1-4 (`scale14`, default: 0.5), and 1-5 (`scale15`, default: 1.0) interactions,
-as well as the distance at which a switching function is applied (`switch_width`, default: `"1.0*angstrom"`), the cutoff (`cutoff`, default: `"9.0angstroms"`), and long-range dispersion treatment scheme (`long_range_dispersion`, default: `"isotropic"`).
+as well as the distance at which a switching function is applied (`switch_width`, default: `"1.0*angstrom"`), the cutoff (`cutoff`, default: `"9.0*angstroms"`), and long-range dispersion treatment scheme (`long_range_dispersion`, default: `"isotropic"`).
 
 The `potential` attribute (default: `"none"`) specifies the potential energy function to use.
 Currently, only `potential="Lennard-Jones-12-6"` is supported:
@@ -312,7 +313,7 @@ Support for [other Lennard-Jones mixing schemes](https://en.wikipedia.org/wiki/C
 
 Later revisions will add support for additional potential types (e.g., `Buckingham-exp-6`), as well as the ability to support arbitrary algebraic functional forms using a scheme such as
 ```XML
-<vdW potential="4*epsilon*((sigma/r)^12-(sigma/r)^6)" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" switch_width="8.0*angstrom" cutoff="9.0*angstrom" long_range_dispersion="isotropic">
+<vdW version="0.3" potential="4*epsilon*((sigma/r)^12-(sigma/r)^6)" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" switch_width="8.0*angstrom" cutoff="9.0*angstrom" long_range_dispersion="isotropic">
    <CombiningRules>
       <CombiningRule parameter="sigma" function="(sigma1+sigma2)/2"/>
       <CombiningRule parameter="epsilon" function="sqrt(epsilon1*epsilon2)"/>
@@ -326,7 +327,7 @@ If the `<CombiningRules>` tag is provided, it overrides the `combining_rules` at
 
 Later revisions will also provide support for special interactions using the `<AtomPair>` tag:
 ```XML
-<vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1">
+<vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1">
    <AtomPair smirks1="[#1:1]" smirks2="[#6:2]" sigma="1.4870*angstrom" epsilon="0.0157*kilocalories_per_mole"/>   
    ...
 </vdW>   
