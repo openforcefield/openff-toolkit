@@ -839,7 +839,6 @@ class ForceField:
             raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
         self._check_smirnoff_version_compatibility(str(version))
 
-        # TODO: What should we do if multiple authors or dates are read? Concatenate them?
         if 'Author' in smirnoff_data['SMIRNOFF']:
             self._add_author(smirnoff_data['SMIRNOFF']['Author'])
 
@@ -855,7 +854,7 @@ class ForceField:
 
 
         # Convert 0.2 spec files to 0.3 SMIRNOFF data format by removing units
-        # from section headers and adding them to strings at all levels.
+        # from section headers and adding them to quantity strings at all levels.
         elif packaging.version.parse(str(version)) == packaging.version.parse("0.2"):
             smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
 
