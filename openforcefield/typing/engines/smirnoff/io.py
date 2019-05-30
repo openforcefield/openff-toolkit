@@ -263,7 +263,27 @@ class XMLParameterIOHandler(ParameterIOHandler):
                 for item in d:
                     prepend_all_keys(item)
 
+        # the "xmltodict" library defaults to print out all element attributes on separate lines
+        # unless they're prepended by "@"
         prepend_all_keys(smirnoff_data['SMIRNOFF'])
+
+        # Un-prepend "@" from "Author" and "Date" fields, as they SHOULD be printed on
+        # separate lines from the top-level SMIRNOFF tag
+        if '@Author' in smirnoff_data['SMIRNOFF'].keys():
+            smirnoff_data['SMIRNOFF']['Author'] = smirnoff_data['SMIRNOFF']['@Author']
+            del smirnoff_data['SMIRNOFF']['@Author']
+        if '@Date' in smirnoff_data['SMIRNOFF'].keys():
+            smirnoff_data['SMIRNOFF']['Date'] = smirnoff_data['SMIRNOFF']['@Date']
+            del smirnoff_data['SMIRNOFF']['@Date']
+
+        # Reorder parameter sections to put Author and Date at the top (this is the only
+        # way to change the order of items in a dict, as far as I can tell)
+        for key, value in list(smirnoff_data['SMIRNOFF'].items()):
+            if key in ['Author', 'Date']:
+                continue
+            del smirnoff_data['SMIRNOFF'][key]
+            smirnoff_data['SMIRNOFF'][key] = value
+
         return xmltodict.unparse(smirnoff_data, pretty=True)
 
 
