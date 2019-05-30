@@ -23,8 +23,8 @@ __all__ = [
     'detach_units',
     'serialize_numpy',
     'deserialize_numpy',
-    'convert_smirnoff_data_quantity_to_string',
-    'convert_smirnoff_data_strings_to_quantity',
+    'convert_all_quantities_to_string',
+    'convert_all_strings_to_quantity',
     'convert_0_1_smirnoff_to_0_2',
     'convert_0_2_smirnoff_to_0_3'
 ]
@@ -294,7 +294,7 @@ def string_to_quantity(quantity_string):
     output_quantity = _ast_eval(ast.parse(quantity_string, mode='eval').body)
     return output_quantity
 
-def convert_smirnoff_data_strings_to_quantity(smirnoff_data):
+def convert_all_strings_to_quantity(smirnoff_data):
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
     quantity-defining strings into simtk.unit.Quantity objects.
@@ -312,12 +312,12 @@ def convert_smirnoff_data_strings_to_quantity(smirnoff_data):
     """
     if isinstance(smirnoff_data, dict):
         for key, value in smirnoff_data.items():
-            smirnoff_data[key] = convert_smirnoff_data_strings_to_quantity(value)
+            smirnoff_data[key] = convert_all_strings_to_quantity(value)
         obj_to_return = smirnoff_data
 
     elif isinstance(smirnoff_data, list):
         for index, item in enumerate(smirnoff_data):
-            smirnoff_data[index] = convert_smirnoff_data_strings_to_quantity(item)
+            smirnoff_data[index] = convert_all_strings_to_quantity(item)
         obj_to_return = smirnoff_data
     else:
         try:
@@ -332,7 +332,7 @@ def convert_smirnoff_data_strings_to_quantity(smirnoff_data):
     return obj_to_return
 
 
-def convert_smirnoff_data_quantity_to_string(smirnoff_data):
+def convert_all_quantities_to_string(smirnoff_data):
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
     quantities into strings.
@@ -351,11 +351,11 @@ def convert_smirnoff_data_quantity_to_string(smirnoff_data):
 
     if isinstance(smirnoff_data, dict):
         for key, value in smirnoff_data.items():
-            smirnoff_data[key] = convert_smirnoff_data_quantity_to_string(value)
+            smirnoff_data[key] = convert_all_quantities_to_string(value)
         obj_to_return = smirnoff_data
     elif isinstance(smirnoff_data, list):
         for index, item in enumerate(smirnoff_data):
-            smirnoff_data[index] = convert_smirnoff_data_quantity_to_string(item)
+            smirnoff_data[index] = convert_all_quantities_to_string(item)
         obj_to_return = smirnoff_data
     elif isinstance(smirnoff_data, unit.Quantity):
         obj_to_return = quantity_to_string(smirnoff_data)
