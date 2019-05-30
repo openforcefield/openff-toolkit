@@ -23,7 +23,7 @@ __all__ = [
     'detach_units',
     'serialize_numpy',
     'deserialize_numpy',
-    'convert_smirnoff_data_quantitys_to_string',
+    'convert_smirnoff_data_quantity_to_string',
     'convert_smirnoff_data_strings_to_quantity',
     'convert_0_1_smirnoff_to_0_2',
     'convert_0_2_smirnoff_to_0_3'
@@ -332,7 +332,7 @@ def convert_smirnoff_data_strings_to_quantity(smirnoff_data):
     return obj_to_return
 
 
-def convert_smirnoff_data_quantitys_to_string(smirnoff_data):
+def convert_smirnoff_data_quantity_to_string(smirnoff_data):
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
     quantities into strings.
@@ -351,11 +351,11 @@ def convert_smirnoff_data_quantitys_to_string(smirnoff_data):
 
     if isinstance(smirnoff_data, dict):
         for key, value in smirnoff_data.items():
-            smirnoff_data[key] = convert_smirnoff_data_quantitys_to_string(value)
+            smirnoff_data[key] = convert_smirnoff_data_quantity_to_string(value)
         obj_to_return = smirnoff_data
     elif isinstance(smirnoff_data, list):
         for index, item in enumerate(smirnoff_data):
-            smirnoff_data[index] = convert_smirnoff_data_quantitys_to_string(item)
+            smirnoff_data[index] = convert_smirnoff_data_quantity_to_string(item)
         obj_to_return = smirnoff_data
     elif isinstance(smirnoff_data, unit.Quantity):
         obj_to_return = quantity_to_string(smirnoff_data)

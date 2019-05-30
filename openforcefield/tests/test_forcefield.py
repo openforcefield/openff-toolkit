@@ -506,9 +506,9 @@ class TestForceField():
         """Test that authors and dates are handled properly"""
         ff = ForceField(xml_ff_w_cosmetic_elements, xml_ff_w_comments, allow_cosmetic_attributes=True)
         xml_str = ff.to_string('XML')
-        assert 'Author="Alice and Bob AND C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, ' \
-               'UC Irvine; D. L. Mobley, UC Irvine"' in xml_str
-        assert 'Date="MMXVIII-VII-XIV AND 2018-07-14">' in xml_str
+        assert '<Author>Alice and Bob AND C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, ' \
+               'UC Irvine; D. L. Mobley, UC Irvine</Author>' in xml_str
+        assert '<Date>MMXVIII-VII-XIV AND 2018-07-14</Date>' in xml_str
 
         # Test property getters
         assert 'Alice and Bob AND C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, ' \
@@ -519,15 +519,15 @@ class TestForceField():
         ff.author = 'Me'
         ff.date = 'yesteryear'
         xml_str = ff.to_string('XML')
-        assert 'Author="Me"' in xml_str
-        assert 'Date="yesteryear"' in xml_str
+        assert '<Author>Me</Author>' in xml_str
+        assert '<Date>yesteryear</Date>' in xml_str
 
         # Unset both author and date and ensure they don't get written out.
         ff.author = None
         ff.date = None
         xml_str = ff.to_string('XML')
-        assert 'Author=' not in xml_str
-        assert 'Date=' not in xml_str
+        assert '<Author>' not in xml_str
+        assert '<Date>' not in xml_str
 
 
     def test_load_two_sources_incompatible_tags(self):

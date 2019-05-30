@@ -40,7 +40,7 @@ from collections import OrderedDict
 from simtk import openmm, unit
 
 from openforcefield.utils import all_subclasses, MessageException, \
-    convert_smirnoff_data_quantitys_to_string, convert_smirnoff_data_strings_to_quantity, \
+    convert_smirnoff_data_quantity_to_string, convert_smirnoff_data_strings_to_quantity, \
     convert_0_1_smirnoff_to_0_2, convert_0_2_smirnoff_to_0_3
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
@@ -801,7 +801,7 @@ class ForceField:
 
         smirnoff_dict = OrderedDict()
         smirnoff_dict['SMIRNOFF'] = l1_dict
-        smirnoff_dict = convert_smirnoff_data_quantitys_to_string(smirnoff_dict)
+        smirnoff_dict = convert_smirnoff_data_quantity_to_string(smirnoff_dict)
         return smirnoff_dict
 
     # TODO: Should we call this "from_dict"?
