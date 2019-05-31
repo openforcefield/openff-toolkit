@@ -46,7 +46,7 @@ from simtk import openmm, unit
 
 from openforcefield.utils import attach_units,  \
     extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
-    assert_object_units_are_compatible, object_to_quantity
+    check_units_are_compatible, object_to_quantity
 from openforcefield.topology import Topology, ValenceDict, ImproperDict
 from openforcefield.typing.chemistry import ChemicalEnvironment
 
@@ -370,14 +370,8 @@ class ParameterType:
                 smirnoff_data[attrib_basename] = list()
 
             while attrib_w_index in smirnoff_data:
-                # As long as we keep finding higher-indexed entries for
-                # this attrib, add them to the expected arguments
-                # allowed_attribs.append(attrib_w_index)
-
-                # if attrib_basename in self._REQUIRE_UNITS:
-                #     self._REQUIRE_UNITS[attrib_w_index] = self._REQUIRE_UNITS[attrib_basename]
-                # if attrib_basename in self._ATTRIBS_TO_TYPE:
-                #     self._ATTRIBS_TO_TYPE[attrib_w_index] = self._ATTRIBS_TO_TYPE[attrib_basename]
+                # Keep iterating as long as we keep finding higher-indexed entries for
+                # this attrib
                 smirnoff_data[attrib_basename].append(smirnoff_data[attrib_w_index])
                 del smirnoff_data[attrib_w_index]
                 index += 1
@@ -403,16 +397,13 @@ class ParameterType:
         # Perform unit conversion (if string) and unit compatibility checks
         for key in smirnoff_data.keys():
             if key in self._REQUIRE_UNITS:
-                # # If the value is a string or list, try converting it to quantity here
-                # if isinstance(smirnoff_data[key], str):
-                #     smirnoff_data[key] = string_to_quantity(smirnoff_data[key])
 
                 # Handle any necessary conversion to Quantity here
                 smirnoff_data[key] = object_to_quantity(smirnoff_data[key])
 
                 # Check for unit compatibility
                 context = f"In {self.__class__}'s __init__ function. "
-                assert_object_units_are_compatible(key, smirnoff_data[key], self._REQUIRE_UNITS[key], context=context)
+                check_units_are_compatible(key, smirnoff_data[key], self._REQUIRE_UNITS[key], context=context)
 
 
         # Ensure that all required attribs are present
@@ -435,8 +426,9 @@ class ParameterType:
                 setattr(self, key, val)
             # Handle all unknown kwargs as cosmetic so we can write them back out
             elif allow_cosmetic_attributes:
-                self._COSMETIC_ATTRIBS.append(key)
-                setattr(self, key, val)
+                self.add_cosmetic_attribute(key, val)
+                # self._COSMETIC_ATTRIBS.append(key)
+                # setattr(self, key, val)
             else:
                 raise SMIRNOFFSpecError(f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. " 
                                         "If this is a desired cosmetic attribute, consider setting " 
@@ -670,17 +662,8 @@ class ParameterHandler:
         # Perform unit compatibility checks
         for key in smirnoff_data.keys():
             if key in self._REQUIRE_UNITS:
-                # If the value is a string, try converting it to quantity here
-                # if isinstance(smirnoff_data[key], str):
-                #     smirnoff_data[key] = string_to_quantity(smirnoff_data[key])
-
-                if not smirnoff_data[key].unit.is_compatible(self._REQUIRE_UNITS[key]):
-                    msg = "{} constructor received kwarg {} with value {}, " \
-                          "which is incompatible with expected unit {}".format(self.__class__,
-                                                                               key,
-                                                                               smirnoff_data[key],
-                                                                               self._REQUIRE_UNITS[key])
-                    raise SMIRNOFFSpecError(msg)
+                context = f"In {self.__class__}'s __init__ function. "
+                check_units_are_compatible(key, smirnoff_data[key], self._REQUIRE_UNITS[key], context=context)
 
         element_name = None
         if self._INFOTYPE is not None:
@@ -695,9 +678,11 @@ class ParameterHandler:
                 # TODO: create @property.setter here if attrib requires unit
                 setattr(self, attr_name, val)
             elif allow_cosmetic_attributes:
-                self._COSMETIC_ATTRIBS.append(key)
-                attr_name = '_' + key
-                setattr(self, attr_name, val)
+                self.add_cosmetic_attribute(key, val)
+                #self._COSMETIC_ATTRIBS.append(key)
+                #attr_name = '_' + key
+                #setattr(self, attr_name, val)
+
 
             else:
                 raise SMIRNOFFSpecError("Unexpected kwarg {} passed to {} constructor. If this is "
@@ -837,16 +822,10 @@ class ParameterHandler:
         for key in parameter_kwargs:
             if key in self._REQUIRE_UNITS:
                 reqd_unit = self._REQUIRE_UNITS[key]
-                #if arg in cls._REQUIRE_UNITS:
-                #    raise Exception(cls)
-                #    reqd_unit = cls._REQUIRE_UNITS[arg]
                 val = parameter_kwargs[key]
                 context = f"In {self.__class__}'s check_parameter_compatibility. "
-                assert_object_units_are_compatible(key, val, reqd_unit,context=context)
-                # if not (reqd_unit.is_compatible(val.unit)):
-                #     raise IncompatibleUnitError(
-                #         "Input unit {} is not compatible with ParameterHandler unit {}"
-                #         .format(val.unit, reqd_unit))
+                check_units_are_compatible(key, val, reqd_unit, context=context)
+
 
     def check_handler_compatibility(self, handler_kwargs):
         """

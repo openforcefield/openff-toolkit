@@ -17,7 +17,7 @@ __all__ = [
     'string_to_unit',
     'string_to_quantity',
     'object_to_quantity',
-    'assert_object_units_are_compatible',
+    'check_units_are_compatible',
     'extract_serialized_units_from_dict',
     'attach_units',
     'detach_units',
@@ -387,7 +387,7 @@ def object_to_quantity(object):
     else:
         return [object_to_quantity(sub_obj) for sub_obj in object]
 
-def assert_object_units_are_compatible(object_name, object, unit_to_check, context=None):
+def check_units_are_compatible(object_name, object, unit_to_check, context=None):
     """
     Checks whether a simtk.unit.Quantity or list of simtk.unit.Quantitys is compatible with given unit.
 
@@ -407,7 +407,7 @@ def assert_object_units_are_compatible(object_name, object, unit_to_check, conte
     from simtk import unit
     if isinstance(object, list):
         for sub_object in object:
-            assert_object_units_are_compatible(object_name, sub_object, unit_to_check, context=context)
+            check_units_are_compatible(object_name, sub_object, unit_to_check, context=context)
     elif isinstance(object, unit.Quantity):
         if not object.unit.is_compatible(unit_to_check):
             msg = f"{context} {object_name} with " \
