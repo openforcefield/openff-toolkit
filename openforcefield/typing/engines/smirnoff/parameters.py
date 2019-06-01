@@ -880,7 +880,7 @@ class ParameterHandler:
         # TODO: This is a necessary API point for Lee-Ping's ForceBalance
         pass
 
-    class Match:
+    class _Match:
         """Represents a ParameterType which has been matched to
         a given chemical environment.
         """
@@ -892,7 +892,7 @@ class ParameterHandler:
 
         @property
         def environment_match(self):
-            """Topology.ChemicalEnvironmentMatch: The environment which matched the type."""
+            """Topology._ChemicalEnvironmentMatch: The environment which matched the type."""
             return self._environment_match
 
         def __init__(self, parameter_type, environment_match):
@@ -902,7 +902,7 @@ class ParameterHandler:
             ----------
             parameter_type: ParameterType
                 The matched parameter type.
-            environment_match: Topology.ChemicalEnvironmentMatch
+            environment_match: Topology._ChemicalEnvironmentMatch
                 The environment which matched the type.
             """
             self._parameter_type = parameter_type
@@ -918,7 +918,7 @@ class ParameterHandler:
 
         Returns
         ---------
-        matches : ValenceDict[Tuple[int], ParameterHandler.Match]
+        matches : ValenceDict[Tuple[int], ParameterHandler._Match]
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
@@ -959,7 +959,7 @@ class ParameterHandler:
 
             for environment_match in entity.chemical_environment_matches(parameter_type.smirks):
                 # Update the matches for this parameter type.
-                handler_match = ParameterHandler.Match(parameter_type, environment_match)
+                handler_match = ParameterHandler._Match(parameter_type, environment_match)
                 matches_for_this_type[environment_match.topology_atom_indices] = handler_match
 
             # Update matches of all parameter types.
@@ -984,7 +984,7 @@ class ParameterHandler:
 
         Parameters
         ----------
-        match: ParameterHandler.Match
+        match: ParameterHandler._Match
             The match found by `_find_matches`
         connectivity: list of tuple of int, optional
             The expected connectivity of the match (e.g. for a torsion
@@ -1690,7 +1690,7 @@ class ImproperTorsionHandler(ParameterHandler):
 
         Returns
         ---------
-        matches : ImproperDict[Tuple[int], ParameterHandler.Match]
+        matches : ImproperDict[Tuple[int], ParameterHandler._Match]
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the 4-tuple of atom indices in ``entity``.
 

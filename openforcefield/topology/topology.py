@@ -1395,7 +1395,7 @@ class Topology(Serializable):
             for improper in topology_molecule.impropers:
                 yield improper
 
-    class ChemicalEnvironmentMatch:
+    class _ChemicalEnvironmentMatch:
         """Represents the match of a given chemical environment query, storing
         both the matched topology atom indices and the indices of the corresponding
         reference molecule atoms, as well as a reference to the reference molecule.
@@ -1417,7 +1417,7 @@ class Topology(Serializable):
             return self._topology_atom_indices
 
         def __init__(self, reference_atom_indices, reference_molecule, topology_atom_indices):
-            """Constructs a new ChemicalEnvironmentMatch object
+            """Constructs a new _ChemicalEnvironmentMatch object
 
             Parameters
             ----------
@@ -1458,7 +1458,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        matches : list of Topology.ChemicalEnvironmentMatch
+        matches : list of Topology._ChemicalEnvironmentMatch
             A list of tuples, containing the topology indices of the matching atoms.
 
         """
@@ -1500,7 +1500,7 @@ class Topology(Serializable):
                         topology_atom = TopologyAtom(reference_atom, topology_molecule)
                         topology_atom_indices.append(topology_atom.topology_particle_index)
 
-                    environment_match = Topology.ChemicalEnvironmentMatch(
+                    environment_match = Topology._ChemicalEnvironmentMatch(
                         tuple(reference_match),
                         ref_mol,
                         tuple(topology_atom_indices))
