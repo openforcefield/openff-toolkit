@@ -1202,8 +1202,26 @@ class ForceField:
             top_mol = Topology.from_molecules([molecule])
             current_molecule_labels = dict()
             for tag, parameter_handler in self._parameter_handlers.items():
+
                 matches = parameter_handler.find_matches(top_mol)
-                current_molecule_labels[tag] = matches
+
+                # Remove the chemical environment matches from the
+                # matched results.
+
+                # Because we sometimes need to enforce atom ordering,
+                # `matches` here is not a normal `dict`, but rather
+                # one that transforms keys in arbitrary ways. Thus,
+                # we need to make a copy of its specific class here.
+
+                parameter_matches = matches.__class__()
+
+                # Now make parameter_matches into a dict mapping
+                # match objects to ParameterTypes
+
+                for match in matches:
+                    parameter_matches[match] = matches[match].parameter_type
+
+                current_molecule_labels[tag] = parameter_matches
 
             molecule_labels.append(current_molecule_labels)
         return molecule_labels

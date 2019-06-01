@@ -219,8 +219,7 @@ class TopologyAtom(Serializable):
         int
             The index of this atom in its parent topology.
         """
-        mapped_molecule_atom_index = self._topology_molecule._ref_to_top_index[
-            self._atom.molecule_atom_index]
+        mapped_molecule_atom_index = self._topology_molecule._ref_to_top_index[self._atom.molecule_atom_index]
         return self._topology_molecule.atom_start_topology_index + mapped_molecule_atom_index
 
     @property
@@ -234,8 +233,7 @@ class TopologyAtom(Serializable):
             The index of this atom in its parent topology.
         """
         # This assumes that particles in a molecule are ordered with all the Atoms first and VirtualSites last.
-        mapped_molecule_particle_index = self._topology_molecule._ref_to_top_index[
-            self._atom.molecule_atom_index]
+        mapped_molecule_particle_index = self._topology_molecule._ref_to_top_index[self._atom.molecule_atom_index]
         return self._topology_molecule.particle_start_topology_index + mapped_molecule_particle_index
 
     @property
@@ -590,6 +588,21 @@ class TopologyMolecule:
         self._ref_to_top_index = dict(
             (k, j) for j, k in local_topology_to_reference_index.items())
 
+        # Initialize cached data
+        self._atom_start_topology_index = None
+        self._particle_start_topology_index = None
+        self._bond_start_topology_index = None
+        self._virtual_site_start_topology_index = None
+
+
+    def _invalidate_cached_data(self):
+        """Unset all cached data, in response to an appropriate change"""
+        self._atom_start_topology_index = None
+        self._particle_start_topology_index = None
+        self._bond_start_topology_index = None
+        self._virtual_site_start_topology_index = None
+
+
     @property
     def topology(self):
         """
@@ -625,7 +638,7 @@ class TopologyMolecule:
 
     def atom(self, index):
         """
-        Get the TopologyAtom with a given topology molecule index in this TopologyMolecule.
+        Get the TopologyAtom with a given topology atom index in this TopologyMolecule.
 
         Parameters
         ----------
@@ -662,11 +675,17 @@ class TopologyMolecule:
         Get the topology index of the first atom in this TopologyMolecule
 
         """
-        atom_start_topology_index = 0
-        for topology_molecule in self._topology.topology_molecules:
-            if self == topology_molecule:
-                return atom_start_topology_index
-            atom_start_topology_index += topology_molecule.n_atoms
+        # If cached value is not available, generate it.
+        if self._atom_start_topology_index is None:
+            atom_start_topology_index = 0
+            for topology_molecule in self._topology.topology_molecules:
+                if self == topology_molecule:
+                    self._atom_start_topology_index = atom_start_topology_index
+                    break
+                atom_start_topology_index += topology_molecule.n_atoms
+
+        # Return cached value
+        return self._atom_start_topology_index
 
     def bond(self, index):
         """
@@ -710,11 +729,17 @@ class TopologyMolecule:
         """Get the topology index of the first bond in this TopologyMolecule
 
         """
-        bond_start_topology_index = 0
-        for topology_molecule in self._topology.topology_molecules:
-            if self == topology_molecule:
-                return bond_start_topology_index
-            bond_start_topology_index += topology_molecule.n_bonds
+        # If cached value is not available, generate it.
+        if self._bond_start_topology_index is None:
+            bond_start_topology_index = 0
+            for topology_molecule in self._topology.topology_molecules:
+                if self == topology_molecule:
+                    self._bond_start_topology_index = bond_start_topology_index
+                    break
+                bond_start_topology_index += topology_molecule.n_bonds
+
+        # Return cached value
+        return self._bond_start_topology_index
 
     def particle(self, index):
         """
@@ -772,11 +797,17 @@ class TopologyMolecule:
     def particle_start_topology_index(self):
         """Get the topology index of the first particle in this TopologyMolecule.
         """
-        particle_start_topology_index = 0
-        for topology_molecule in self._topology.topology_molecules:
-            if self == topology_molecule:
-                return particle_start_topology_index
-            particle_start_topology_index += topology_molecule.n_particles
+        # If cached value is not available, generate it.
+        if self._particle_start_topology_index is None:
+            particle_start_topology_index = 0
+            for topology_molecule in self._topology.topology_molecules:
+                if self == topology_molecule:
+                    self._particle_start_topology_index = particle_start_topology_index
+                    break
+                particle_start_topology_index += topology_molecule.n_particles
+
+        # Return the cached value
+        return self._particle_start_topology_index
 
     def virtual_site(self, index):
         """
@@ -850,11 +881,15 @@ class TopologyMolecule:
     def virtual_site_start_topology_index(self):
         """Get the topology index of the first virtual site in this TopologyMolecule
         """
-        virtual_site_start_topology_index = 0
-        for topology_molecule in self._topology.topology_molecules:
-            if self == topology_molecule:
-                return virtual_site_start_topology_index
-            virtual_site_start_topology_index += topology_molecule.n_virtual_sites
+        # If the cached value is not available, generate it
+        if self._virtual_site_start_topology_index is None:
+            virtual_site_start_topology_index = 0
+            for topology_molecule in self._topology.topology_molecules:
+                if self == topology_molecule:
+                    self._virtual_site_start_topology_index = virtual_site_start_topology_index
+                virtual_site_start_topology_index += topology_molecule.n_virtual_sites
+        # Return cached value
+        return self._virtual_site_start_topology_index
 
     def to_dict(self):
         """Convert to dictionary representation."""
@@ -1360,6 +1395,47 @@ class Topology(Serializable):
             for improper in topology_molecule.impropers:
                 yield improper
 
+    class _ChemicalEnvironmentMatch:
+        """Represents the match of a given chemical environment query, storing
+        both the matched topology atom indices and the indices of the corresponding
+        reference molecule atoms, as well as a reference to the reference molecule.
+        """
+
+        @property
+        def reference_atom_indices(self):
+            """tuple of int: The indices of the corresponding reference molecule atoms."""
+            return self._reference_atom_indices
+
+        @property
+        def reference_molecule(self):
+            """topology.molecule.Molecule: The corresponding reference molecule."""
+            return self._reference_molecule
+
+        @property
+        def topology_atom_indices(self):
+            """tuple of int: The matched topology atom indices."""
+            return self._topology_atom_indices
+
+        def __init__(self, reference_atom_indices, reference_molecule, topology_atom_indices):
+            """Constructs a new _ChemicalEnvironmentMatch object
+
+            Parameters
+            ----------
+            reference_atom_indices: tuple of int
+                The indices of the corresponding reference molecule atoms.
+            reference_molecule: topology.molecule.Molecule
+                The corresponding reference molecule.
+            topology_atom_indices: tuple of int
+                The matched topology atom indices.
+            """
+
+            assert len(reference_atom_indices) == len(topology_atom_indices)
+
+            self._reference_atom_indices = reference_atom_indices
+            self._reference_molecule = reference_molecule
+
+            self._topology_atom_indices = topology_atom_indices
+
     def chemical_environment_matches(self,
                                      query,
                                      aromaticity_model='MDL',
@@ -1382,48 +1458,54 @@ class Topology(Serializable):
 
         Returns
         -------
-        matches : list of TopologyAtom tuples
-            A list of all matching Atom tuples
+        matches : list of Topology._ChemicalEnvironmentMatch
+            A list of tuples, containing the topology indices of the matching atoms.
 
         """
+
         # Render the query to a SMARTS string
         if type(query) is str:
             smarts = query
         elif type(query) is ChemicalEnvironment:
             smarts = query.as_smarts()
         else:
-            raise ValueError(
-                "Don't know how to convert query '%s' into SMARTS string" %
-                query)
+            raise ValueError("Don't know how to convert query '%s' into SMARTS string" %query)
 
-        # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
+        # Perform matching on each unique molecule, unrolling the matches to all matching copies
+        # of that molecule in the Topology object.
         matches = list()
-        for ref_mol in self.reference_molecules:
-            # Find all atomsets that match this definition in the reference molecule
-            # This will automatically attempt to match chemically identical atoms in a canonical order within the Topology
-            refmol_matches = ref_mol.chemical_environment_matches(
-                smarts, toolkit_registry=toolkit_registry)
 
-            # Loop over matches
-            for reference_match in refmol_matches:
-                #mol_dict = molecule.to_dict
-                # Unroll corresponding atom indices over all instances of this molecule
-                for topology_molecule in self._reference_molecule_to_topology_molecules[
-                        ref_mol]:
-                    match = list()
-                    # Create match TopologyAtoms.
+        for ref_mol in self.reference_molecules:
+
+            # Find all atomsets that match this definition in the reference molecule
+            # This will automatically attempt to match chemically identical atoms in
+            # a canonical order within the Topology
+            ref_mol_matches = ref_mol.chemical_environment_matches(smarts, toolkit_registry=toolkit_registry)
+
+            if len(ref_mol_matches) == 0:
+                continue
+
+            # Unroll corresponding atom indices over all instances of this molecule.
+            for topology_molecule in self._reference_molecule_to_topology_molecules[ref_mol]:
+
+                # topology_molecule_start_index = topology_molecule.atom_start_topology_index
+
+                # Loop over matches
+                for reference_match in ref_mol_matches:
+
+                    # Collect indices of matching TopologyAtoms.
+                    topology_atom_indices = []
                     for reference_molecule_atom_index in reference_match:
-                        reference_atom = topology_molecule._reference_molecule.atoms[
-                            reference_molecule_atom_index]
-                        topology_atom = TopologyAtom(reference_atom,
-                                                     topology_molecule)
-                        match.append(topology_atom)
-                        #topology_molecule_atom_index = topology_molecule._ref_to_top_index[reference_molecule_atom_index]
-                        #atom_topology_index = topology_molecule.atom_start_topology_index+topology_molecule_atom_index
-                        #match.append(self.atom(atom_topology_index))
-                    match = tuple(match)
-                    #match = tuple([topology_molecule.atom_start_topology_index+ref_mol_atom_index for ref_mol_atom_index in reference_match])
-                    matches.append(match)
+                        reference_atom = topology_molecule.reference_molecule.atoms[reference_molecule_atom_index]
+                        topology_atom = TopologyAtom(reference_atom, topology_molecule)
+                        topology_atom_indices.append(topology_atom.topology_particle_index)
+
+                    environment_match = Topology._ChemicalEnvironmentMatch(
+                        tuple(reference_match),
+                        ref_mol,
+                        tuple(topology_atom_indices))
+
+                    matches.append(environment_match)
 
         return matches
 

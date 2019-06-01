@@ -44,10 +44,11 @@ from collections import OrderedDict
 
 from simtk import openmm, unit
 
+
 from openforcefield.utils import attach_units,  \
     extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
     check_units_are_compatible, object_to_quantity
-from openforcefield.topology import Topology, ValenceDict, ImproperDict
+from openforcefield.topology import ValenceDict, ImproperDict
 from openforcefield.typing.chemistry import ChemicalEnvironment
 
 #=============================================================================================
@@ -879,51 +880,130 @@ class ParameterHandler:
         # TODO: This is a necessary API point for Lee-Ping's ForceBalance
         pass
 
+    class _Match:
+        """Represents a ParameterType which has been matched to
+        a given chemical environment.
+        """
+
+        @property
+        def parameter_type(self):
+            """ParameterType: The matched parameter type."""
+            return self._parameter_type
+
+        @property
+        def environment_match(self):
+            """Topology._ChemicalEnvironmentMatch: The environment which matched the type."""
+            return self._environment_match
+
+        def __init__(self, parameter_type, environment_match):
+            """Constructs a new ParameterHandlerMatch object.
+
+            Parameters
+            ----------
+            parameter_type: ParameterType
+                The matched parameter type.
+            environment_match: Topology._ChemicalEnvironmentMatch
+                The environment which matched the type.
+            """
+            self._parameter_type = parameter_type
+            self._environment_match = environment_match
+
     def find_matches(self, entity):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
         ----------
-        entity : openforcefield.topology.Topology or openforcefield.topology.Molecule
-            Topology or molecule to search.
+        entity : openforcefield.topology.Topology
+            Topology to search.
 
         Returns
         ---------
-        matches : ValenceDict[Tuple[int], ParameterType]
+        matches : ValenceDict[Tuple[int], ParameterHandler._Match]
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
-
         """
+
+        # TODO: Right now, this method is only ever called with an entity that is a Topoogy.
+        #  Should we reduce its scope and have a check here to make sure entity is a Topology?
         return self._find_matches(entity)
 
     def _find_matches(self, entity, transformed_dict_cls=ValenceDict):
-        """Implement find_matches() and allow using a difference valence dictionary."""
-        from openforcefield.topology import FrozenMolecule
+        """Implement find_matches() and allow using a difference valence dictionary.
+                Parameters
+        ----------
+        entity : openforcefield.topology.Topology
+            Topology to search.
+        transformed_dict_cls: class
+            The type of dictionary to store the matches in. This
+            will determine how groups of atom indices are stored
+            and accessed (e.g for angles indices should be 0-1-2
+            and not 2-1-0).
 
+        Returns
+        ---------
+        matches : `transformed_dict_cls` of ParameterHandlerMatch
+            ``matches[particle_indices]`` is the ``ParameterType`` object
+            matching the tuple of particle indices in ``entity``.
+        """
         logger.debug('Finding matches for {}'.format(self.__class__.__name__))
 
         matches = transformed_dict_cls()
+
+        # TODO: There are probably performance gains to be had here
+        #       by performing this loop in reverse order, and breaking early once
+        #       all environments have been matched.
         for parameter_type in self._parameters:
             matches_for_this_type = {}
-            for atoms in entity.chemical_environment_matches(parameter_type.smirks):
-                # Collect the atom indices matching the entity.
-                if isinstance(entity, Topology):
-                    atom_indices = tuple([atom.topology_particle_index for atom in atoms])
-                elif isinstance(entity, FrozenMolecule):
-                    atom_indices = tuple([atom.molecule_particle_index for atom in atoms])
-                else:
-                    raise ValueError('Unknown entity type {}'.format(entity.__class__))
 
+            for environment_match in entity.chemical_environment_matches(parameter_type.smirks):
                 # Update the matches for this parameter type.
-                matches_for_this_type[atom_indices] = parameter_type
+                handler_match = ParameterHandler._Match(parameter_type, environment_match)
+                matches_for_this_type[environment_match.topology_atom_indices] = handler_match
 
             # Update matches of all parameter types.
             matches.update(matches_for_this_type)
+
             logger.debug('{:64} : {:8} matches'.format(
                 parameter_type.smirks, len(matches_for_this_type)))
 
         logger.debug('{} matches identified'.format(len(matches)))
         return matches
+
+    @staticmethod
+    def _assert_correct_connectivity(match, expected_connectivity=None):
+        """A more performant version of the `topology.assert_bonded` method
+        to ensure that the results of `_find_matches` are valid.
+
+        Raises
+        ------
+        ValueError
+            Raise an exception when the atoms in the match don't have
+            the correct connectivity.
+
+        Parameters
+        ----------
+        match: ParameterHandler._Match
+            The match found by `_find_matches`
+        connectivity: list of tuple of int, optional
+            The expected connectivity of the match (e.g. for a torsion
+            expected_connectivity=[(0, 1), (1, 2), (2, 3)]). If `None`,
+            a connectivity of [(0, 1), ... (n - 1, n)] is assumed.
+        """
+
+        # I'm not 100% sure this is really necessary... but this should do
+        # the same checks as the more costly assert_bonded method in the
+        # ParameterHandler.create_force methods.
+        if expected_connectivity is None:
+            expected_connectivity = [(i, i + 1) for i in range(len(match.environment_match.topology_atom_indices) - 1)]
+
+        reference_molecule = match.environment_match.reference_molecule
+
+        for connectivity in expected_connectivity:
+
+            atom_i = match.environment_match.reference_atom_indices[connectivity[0]]
+            atom_j = match.environment_match.reference_atom_indices[connectivity[1]]
+
+            reference_molecule.get_bond_between(atom_i, atom_j)
 
     def assign_parameters(self, topology, system):
         """Assign parameters for the given Topology to the specified System object.
@@ -1022,6 +1102,19 @@ class ParameterHandler:
             types of errors.
 
         """
+
+        # Provided there are no duplicates in either list,
+        # or something weird like a bond has been added to
+        # a torsions list - this should work just fine I think.
+        # If we expect either of those assumptions to be incorrect,
+        # (i.e len(not_found_terms) > 0) we have bigger issues
+        # in the code and should be catching those cases elsewhere!
+        # The fact that we graph match all topol molecules to ref
+        # molecules should avoid the len(not_found_terms) > 0 case.
+
+        if len(assigned_terms) == len(valence_terms):
+            return
+
         # Convert the valence term to a valence dictionary to make sure
         # the order of atom indices doesn't matter for comparison.
         valence_terms_dict = assigned_terms.__class__()
@@ -1101,12 +1194,14 @@ class ConstraintHandler(ParameterHandler):
         super().__init__(**kwargs)
 
     def create_force(self, system, topology, **kwargs):
-        constraints = self.find_matches(topology)
-        for (atoms, constraint) in constraints.items():
+        constraint_matches = self.find_matches(topology)
+        for (atoms, constraint_match) in constraint_matches.items():
             # Update constrained atom pairs in topology
             #topology.add_constraint(*atoms, constraint.distance)
             # If a distance is specified (constraint.distance != True), add the constraint here.
             # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondHandler
+            constraint = constraint_match.parameter_type
+
             if hasattr(constraint, 'distance'):# is not True:
                 system.addConstraint(*atoms, constraint.distance)
                 topology.add_constraint(*atoms, constraint.distance)
@@ -1192,23 +1287,28 @@ class BondHandler(ParameterHandler):
             force = existing[0]
 
         # Add all bonds to the system.
-        bonds = self.find_matches(topology)
+        bond_matches = self.find_matches(topology)
+
         skipped_constrained_bonds = 0  # keep track of how many bonds were constrained (and hence skipped)
-        for (atoms, bond_params) in bonds.items():
+        for (topology_atom_indices, bond_match) in bond_matches.items():
             # Get corresponding particle indices in Topology
             #particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
             # Ensure atoms are actually bonded correct pattern in Topology
-            topology.assert_bonded(atoms[0], atoms[1])
+            ParameterHandler._assert_correct_connectivity(bond_match)
+            # topology.assert_bonded(atoms[0], atoms[1])
+            bond_params = bond_match.parameter_type
+            match = bond_match.environment_match
 
             # Compute equilibrium bond length and spring constant.
-            topology_bond = topology.get_bond_between(atoms[0], atoms[1])
-            if topology_bond.bond.fractional_bond_order is None:
+            bond = match.reference_molecule.get_bond_between(*match.reference_atom_indices)
+
+            if bond.fractional_bond_order is None:
                 [k, length] = [bond_params.k, bond_params.length]
             else:
                 # Interpolate using fractional bond orders
                 # TODO: Do we really want to allow per-bond specification of interpolation schemes?
-                order = topology_bond.bond.fractional_bond_order
+                order = bond.fractional_bond_order
                 if self.fractional_bondorder_interpolation == 'interpolate-linear':
                     k = bond_params.k[0] + (bond_params.k[1] - bond_params.k[0]) * (order - 1.)
                     length = bond_params.length[0] + (
@@ -1218,28 +1318,30 @@ class BondHandler(ParameterHandler):
                         "Partial bondorder treatment {} is not implemented.".
                         format(self.fractional_bondorder_method))
 
+            is_constrained = topology.is_constrained(*topology_atom_indices)
+
             # Handle constraints.
-            if topology.is_constrained(*atoms):
+            if is_constrained:
                 # Atom pair is constrained; we don't need to add a bond term.
                 skipped_constrained_bonds += 1
                 # Check if we need to add the constraint here to the equilibrium bond length.
-                if topology.is_constrained(*atoms) is True:
+                if is_constrained is True:
                     # Mark that we have now assigned a specific constraint distance to this constraint.
-                    topology.add_constraint(*atoms, length)
+                    topology.add_constraint(*topology_atom_indices, length)
                     # Add the constraint to the System.
-                    system.addConstraint(*atoms, length)
+                    system.addConstraint(*topology_atom_indices, length)
                     #system.addConstraint(*particle_indices, length)
                 continue
 
             # Add harmonic bond to HarmonicBondForce
-            force.addBond(*atoms, length, k)
+            force.addBond(*topology_atom_indices, length, k)
 
         logger.info('{} bonds added ({} skipped due to constraints)'.format(
-            len(bonds) - skipped_constrained_bonds, skipped_constrained_bonds))
+            len(bond_matches) - skipped_constrained_bonds, skipped_constrained_bonds))
 
         # Check that no topological bonds are missing force parameters.
         valence_terms = [list(b.atoms) for b in topology.topology_bonds]
-        self._check_all_valence_terms_assigned(assigned_terms=bonds, valence_terms=valence_terms,
+        self._check_all_valence_terms_assigned(assigned_terms=bond_matches, valence_terms=valence_terms,
                                                exception_cls=UnassignedBondParameterException)
 
 
@@ -1317,12 +1419,13 @@ class AngleHandler(ParameterHandler):
             force = existing[0]
 
         # Add all angles to the system.
-        angles = self.find_matches(topology)
+        angle_matches = self.find_matches(topology)
         skipped_constrained_angles = 0  # keep track of how many angles were constrained (and hence skipped)
-        for (atoms, angle) in angles.items():
+        for (atoms, angle_match) in angle_matches.items():
             # Ensure atoms are actually bonded correct pattern in Topology
-            for (i, j) in [(0, 1), (1, 2)]:
-                topology.assert_bonded(atoms[i], atoms[j])
+            # for (i, j) in [(0, 1), (1, 2)]:
+            #     topology.assert_bonded(atoms[i], atoms[j])
+            ParameterHandler._assert_correct_connectivity(angle_match)
 
             if topology.is_constrained(
                     atoms[0], atoms[1]) and topology.is_constrained(
@@ -1332,14 +1435,15 @@ class AngleHandler(ParameterHandler):
                 skipped_constrained_angles += 1
                 continue
 
+            angle = angle_match.parameter_type
             force.addAngle(*atoms, angle.angle, angle.k)
 
         logger.info('{} angles added ({} skipped due to constraints)'.format(
-            len(angles) - skipped_constrained_angles,
+            len(angle_matches) - skipped_constrained_angles,
             skipped_constrained_angles))
 
         # Check that no topological angles are missing force parameters
-        self._check_all_valence_terms_assigned(assigned_terms=angles,
+        self._check_all_valence_terms_assigned(assigned_terms=angle_matches,
                                                valence_terms=list(topology.angles),
                                                exception_cls=UnassignedAngleParameterException)
 
@@ -1451,12 +1555,13 @@ class ProperTorsionHandler(ParameterHandler):
         else:
             force = existing[0]
         # Add all proper torsions to the system.
-        torsions = self.find_matches(topology)
-        for (atom_indices, torsion) in torsions.items():
-            # Ensure atoms are actually bonded correct pattern in Topology
-            for (i, j) in [(0, 1), (1, 2), (2, 3)]:
-                topology.assert_bonded(atom_indices[i], atom_indices[j])
+        torsion_matches = self.find_matches(topology)
 
+        for (atom_indices, torsion_match) in torsion_matches.items():
+            # Ensure atoms are actually bonded correct pattern in Topology
+            ParameterHandler._assert_correct_connectivity(torsion_match)
+
+            torsion = torsion_match.parameter_type
 
             for (periodicity, phase, k, idivf) in zip(torsion.periodicity,
                                                torsion.phase, torsion.k, torsion.idivf):
@@ -1469,10 +1574,18 @@ class ProperTorsionHandler(ParameterHandler):
                                  atom_indices[2], atom_indices[3], periodicity,
                                  phase, k/idivf)
 
-        logger.info('{} torsions added'.format(len(torsions)))
+        logger.info('{} torsions added'.format(len(torsion_matches)))
 
         # Check that no topological torsions are missing force parameters
-        self._check_all_valence_terms_assigned(assigned_terms=torsions,
+
+        # I can see the apeal of these kind of methods as an 'absolute' check
+        # that things have gone well, but I think just making sure that the
+        # reference molecule has been fully parametrised should have the same
+        # effect! It would be good to eventually refactor things so that everything
+        # is focused on the single unique molecules, and then simply just cloned
+        # onto the system. It seems like John's proposed System object would do
+        # exactly this.
+        self._check_all_valence_terms_assigned(assigned_terms=torsion_matches,
                                                valence_terms=list(topology.propers),
                                                exception_cls=UnassignedProperTorsionParameterException)
 
@@ -1570,12 +1683,12 @@ class ImproperTorsionHandler(ParameterHandler):
 
         Parameters
         ----------
-        entity : openforcefield.topology.Topology or openforcefield.topology.Molecule
-            Topology or molecule to search.
+        entity : openforcefield.topology.Topology
+            Topology to search.
 
         Returns
         ---------
-        matches : ImproperDict[Tuple[int], ParameterType]
+        matches : ImproperDict[Tuple[int], ParameterHandler._Match]
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the 4-tuple of atom indices in ``entity``.
 
@@ -1597,12 +1710,15 @@ class ImproperTorsionHandler(ParameterHandler):
             force = existing[0]
 
         # Add all improper torsions to the system
-        impropers = self.find_matches(topology)
-        for (atom_indices, improper) in impropers.items():
+        improper_matches = self.find_matches(topology)
+        for (atom_indices, improper_match) in improper_matches.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             # For impropers, central atom is atom 1
-            for (i, j) in [(0, 1), (1, 2), (1, 3)]:
-                topology.assert_bonded(atom_indices[i], atom_indices[j])
+            # for (i, j) in [(0, 1), (1, 2), (1, 3)]:
+            #     topology.assert_bonded(atom_indices[i], atom_indices[j])
+            ParameterHandler._assert_correct_connectivity(improper_match, [(0, 1), (1, 2), (1, 3)])
+
+            improper = improper_match.parameter_type
 
             # TODO: This is a lazy hack. idivf should be set according to the ParameterHandler's default_idivf attrib
             if not hasattr(improper, 'idivf'):
@@ -1625,7 +1741,7 @@ class ImproperTorsionHandler(ParameterHandler):
                                      improper_periodicity, improper_phase, improper_k/improper_idivf)
         logger.info(
             '{} impropers added, each applied in a six-fold trefoil'.format(
-                len(impropers)))
+                len(improper_matches)))
 
 
 class vdWHandler(ParameterHandler):
@@ -1909,15 +2025,16 @@ class vdWHandler(ParameterHandler):
         system.addForce(force)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
-        atoms = self.find_matches(topology)
+        atom_matches = self.find_matches(topology)
 
         # Create all particles.
         for _ in topology.topology_particles:
             force.addParticle(0.0, 1.0, 0.0)
 
         # Set the particle Lennard-Jones terms.
-        for atom_key, ljtype in atoms.items():
+        for atom_key, atom_match in atom_matches.items():
             atom_idx = atom_key[0]
+            ljtype = atom_match.parameter_type
             if not(hasattr(ljtype, 'sigma')):
                 sigma = 2. * ljtype.rmin_half / (2.**(1. / 6.))
             else:
@@ -1926,8 +2043,8 @@ class vdWHandler(ParameterHandler):
                                         ljtype.epsilon)
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
-        self._check_all_valence_terms_assigned(assigned_terms=atoms,
-                                               valence_terms=topology.topology_atoms)
+        self._check_all_valence_terms_assigned(assigned_terms=atom_matches,
+                                               valence_terms=list(topology.topology_atoms))
 
     # TODO: Can we express separate constraints for postprocessing and normal processing?
     def postprocess_system(self, system, topology, **kwargs):
@@ -1935,11 +2052,21 @@ class vdWHandler(ParameterHandler):
         # TODO: This postprocessing must occur after the ChargeIncrementModelHandler
         # QUESTION: Will we want to do this for *all* cases, or would we ever want flexibility here?
         bond_particle_indices = []
-        for bond in topology.topology_bonds:
-            topology_atoms = [atom for atom in bond.atoms]
-            bond_particle_indices.append(
-                (topology_atoms[0].topology_particle_index,
-                 topology_atoms[1].topology_particle_index))
+
+        for topology_molecule in topology.topology_molecules:
+
+            top_mol_particle_start_index = topology_molecule.atom_start_topology_index
+
+            for topology_bond in topology_molecule.bonds:
+
+                top_index_1 = topology_molecule._ref_to_top_index[topology_bond.bond.atom1_index]
+                top_index_2 = topology_molecule._ref_to_top_index[topology_bond.bond.atom2_index]
+
+                top_index_1 += top_mol_particle_start_index
+                top_index_2 += top_mol_particle_start_index
+
+                bond_particle_indices.append((top_index_1, top_index_2))
+
         for force in system.getForces():
             # TODO: Should we just store which `Force` object we are adding to and use that instead,
             # to prevent interference with other kinds of forces in the future?
@@ -2317,14 +2444,25 @@ class ToolkitAM1BCCHandler(ParameterHandler):
                 #temp_mol.compute_partial_charges(quantum_chemical_method=self._quantum_chemical_method,
                 #                                 partial_charge_method=self._partial_charge_method)
                 temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
+
+                top_mol_particle_start_index = topology_molecule.particle_start_topology_index
+
                 for topology_particle in topology_molecule.particles:
-                    topology_particle_index = topology_particle.topology_particle_index
+
                     if type(topology_particle) is TopologyAtom:
                         ref_mol_particle_index = topology_particle.atom.molecule_particle_index
-                    if type(topology_particle) is TopologyVirtualSite:
+                        top_mol_particle_index = topology_molecule._ref_to_top_index[ref_mol_particle_index]
+                    elif type(topology_particle) is TopologyVirtualSite:
                         ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
+                        top_mol_particle_index = ref_mol_particle_index
+                    else:
+                        raise ValueError(f'Particles of type {type(topology_particle)} are not supported')
+
+                    topology_particle_index = top_mol_particle_start_index + top_mol_particle_index
+
                     particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
 
                     # Retrieve nonbonded parameters for reference atom (charge not set yet)
@@ -2334,11 +2472,10 @@ class ToolkitAM1BCCHandler(ParameterHandler):
                                                 particle_charge, sigma,
                                                 epsilon)
 
-
-
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
     def postprocess_system(self, system, topology, **kwargs):
-        bonds = self.find_matches(topology)
+
+        bond_matches = self.find_matches(topology)
 
         # Apply bond charge increments to all appropriate force groups
         # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?
@@ -2346,8 +2483,10 @@ class ToolkitAM1BCCHandler(ParameterHandler):
             if force.__class__.__name__ in [
                     'NonbondedForce'
             ]:  # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and CustomNonbondedForce
-                for (atoms, bond) in bonds.items():
+                for (atoms, bond_match) in bond_matches.items():
                     # Get corresponding particle indices in Topology
+                    bond = bond_match.parameter_type
+
                     particle_indices = tuple(
                         [atom.particle_index for atom in atoms])
                     # Retrieve parameters
@@ -2567,7 +2706,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
     def postprocess_system(self, system, topology, **kwargs):
-        bonds = self.find_matches(topology)
+        bond_matches = self.find_matches(topology)
 
         # Apply bond charge increments to all appropriate force groups
         # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?
@@ -2575,7 +2714,9 @@ class ChargeIncrementModelHandler(ParameterHandler):
             if force.__class__.__name__ in [
                     'NonbondedForce'
             ]:  # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and CustomNonbondedForce
-                for (atoms, bond) in bonds.items():
+                for (atoms, bond_match) in bond_matches.items():
+                    bond = bond_match.parameter_type
+
                     # Get corresponding particle indices in Topology
                     particle_indices = tuple(
                         [atom.particle_index for atom in atoms])

@@ -502,11 +502,11 @@ class TestTopology(TestCase):
         # Test for substructure match
         matches = topology.chemical_environment_matches("[C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 143
-        assert tuple(i.topology_atom_index for i in matches[0]) == (1728, 1729, 1730)
+        assert matches[0].topology_atom_indices == (1728, 1729, 1730)
         # Test for whole-molecule match
         matches = topology.chemical_environment_matches("[H][C:1]([H])([H])-[C:2]([H])([H])-[O:3][H]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 1716 # 143 * 12 (there are 12 possible hydrogen mappings)
-        assert tuple(i.topology_atom_index for i in matches[0]) == (1728, 1729, 1730)
+        assert matches[0].topology_atom_indices == (1728, 1729, 1730)
         # Search for a substructure that isn't there
         matches = topology.chemical_environment_matches("[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 0
@@ -527,10 +527,10 @@ class TestTopology(TestCase):
         # Count CCO matches
         matches = topology.chemical_environment_matches("[C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 143
-        assert tuple(i.topology_atom_index for i in matches[0]) == (1728, 1729, 1730)
+        assert matches[0].topology_atom_indices == (1728, 1729, 1730)
         matches = topology.chemical_environment_matches("[H][C:1]([H])([H])-[C:2]([H])([H])-[O:3][H]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 1716 # 143 * 12 (there are 12 possible hydrogen mappings)
-        assert tuple(i.topology_atom_index for i in matches[0]) == (1728, 1729, 1730)
+        assert matches[0].topology_atom_indices == (1728, 1729, 1730)
         # Search for a substructure that isn't there
         matches = topology.chemical_environment_matches("[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 0
