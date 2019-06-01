@@ -18,7 +18,8 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType, BondHandler, \
     ParameterHandler, AngleHandler, ConstraintHandler, ProperTorsionHandler, ImproperTorsionHandler, \
     ToolkitAM1BCCHandler, vdWHandler, SMIRNOFFSpecError
-from openforcefield.utils import detach_units
+from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
+from openforcefield.utils import detach_units, IncompatibleUnitError
 
 import pytest
 
@@ -32,7 +33,7 @@ class TestParameterHandler:
         read unit)
         """
         from simtk import unit
-        bh = BondHandler()
+        bh = BondHandler(skip_version_check=True)
         bh.add_parameter({'smirks': '[*:1]-[*:2]',
                           'length': 1*unit.angstrom,
                           'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2})
@@ -40,27 +41,80 @@ class TestParameterHandler:
                           'length': 0.2*unit.nanometer,
                           'k': 0.4*unit.kilojoule_per_mole/unit.nanometer**2})
         bh_dict = bh.to_dict()
-        assert ('length_unit', 'nanometer') in bh_dict.items()
-        assert ('k_unit', 'nanometer**-2 * mole**-1 * kilojoule') in bh_dict.items()
-        assert bh_dict['Bond'][0]['length'] == 0.1
-        assert bh_dict['Bond'][1]['length'] == 0.2
+        assert bh_dict['Bond'][0]['length'] == unit.Quantity(value=1, unit=unit.angstrom)
+        assert bh_dict['Bond'][1]['length'] == unit.Quantity(value=2, unit=unit.angstrom)
 
-    def test_to_dict_set_output_units(self):
-        """Test ParameterHandler.to_dict() function when some output units are specified
+    def test_to_dict_maintain_units(self):
+        """Test ParameterHandler.to_dict() function when parameters were provided in different units
         """
         from simtk import unit
-        bh = BondHandler()
+        bh = BondHandler(skip_version_check=True)
         bh.add_parameter({'smirks': '[*:1]-[*:2]',
                           'length': 1*unit.angstrom,
                           'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2})
         bh.add_parameter({'smirks': '[*:1]=[*:2]',
                           'length': 0.2*unit.nanometer,
                           'k': 0.4*unit.kilojoule_per_mole/unit.nanometer**2})
-        bh_dict = bh.to_dict(output_units={'length_unit': unit.picometer})
-        assert ('length_unit', 'picometer') in bh_dict.items()
-        assert ('k_unit', 'nanometer**-2 * mole**-1 * kilojoule') in bh_dict.items()
-        assert abs(bh_dict['Bond'][0]['length'] - 100.) < 1.e-8
-        assert abs(bh_dict['Bond'][1]['length'] - 200.) < 1.e-8
+        bh_dict = bh.to_dict()
+        assert bh_dict['Bond'][0]['length'] == unit.Quantity(1., unit.angstrom)
+        assert bh_dict['Bond'][0]['length'].unit == unit.angstrom
+        assert bh_dict['Bond'][1]['length'] == unit.Quantity(0.2, unit.nanometer)
+        assert bh_dict['Bond'][1]['length'].unit == unit.nanometer
+
+
+    def test_missing_section_version(self):
+        """Test that exceptions are raised if invalid or improper section versions are provided during intialization"""
+        # Generate a SMIRNOFFSpecError by not providing a section version
+        with pytest.raises(SMIRNOFFSpecError, match='Missing version while trying to construct') as excinfo:
+            ph = ParameterHandler()
+        # Successfully create ParameterHandler by skipping version check
+        ph = ParameterHandler(skip_version_check=True)
+
+        # Successfully create ParameterHandler by providing max supported version
+        ph = ParameterHandler(version=ParameterHandler._MAX_SUPPORTED_SECTION_VERSION)
+
+        # Successfully create ParameterHandler by providing min supported version
+        ph = ParameterHandler(version=ParameterHandler._MIN_SUPPORTED_SECTION_VERSION)
+
+        # Generate a SMIRNOFFSpecError ParameterHandler by providing a value higher than the max supported
+        with pytest.raises(SMIRNOFFVersionError, match='SMIRNOFF offxml file was written with version 1000.0, '
+                                                    'but this version of ForceField only supports version') as excinfo:
+            ph = ParameterHandler(version='1000.0')
+
+
+        # Generate a SMIRNOFFSpecError ParameterHandler by providing a value lower than the min supported
+        with pytest.raises(SMIRNOFFVersionError, match='SMIRNOFF offxml file was written with version 0.1, '
+                                                    'but this version of ForceField only supports version') as excinfo:
+            ph = ParameterHandler(version='0.1')
+
+    def test_add_delete_cosmetic_attributes(self):
+        """Test ParameterHandler.to_dict() function when some parameters are in
+        different units (proper behavior is to convert all quantities to the last-
+        read unit)
+        """
+        from simtk import unit
+        bh = BondHandler(skip_version_check=True)
+        bh.add_parameter({'smirks': '[*:1]-[*:2]',
+                          'length': 1*unit.angstrom,
+                          'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2})
+        bh.add_parameter({'smirks': '[*:1]=[*:2]',
+                          'length': 0.2*unit.nanometer,
+                          'k': 0.4*unit.kilojoule_per_mole/unit.nanometer**2})
+
+        # Ensure the cosmetic attribute is present by default during output
+        bh.add_cosmetic_attribute('pilot', 'alice')
+        param_dict = bh.to_dict()
+        assert ('pilot', 'alice') in param_dict.items()
+
+        # Ensure the cosmetic attribute isn't present if we request that it be discarded
+        param_dict = bh.to_dict(discard_cosmetic_attributes=True)
+        assert ('pilot', 'alice') not in param_dict.items()
+
+        # Manually delete the cosmetic attribute and ensure it doesn't get written out
+        bh.delete_cosmetic_attribute('pilot')
+        param_dict = bh.to_dict()
+        assert ('pilot', 'alice') not in param_dict.items()
+
 
 
 class TestParameterList:
@@ -358,13 +412,41 @@ class TestParameterType:
         """
         from simtk import unit
 
-        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'pilot': 'alice'}") as context:
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg (pilot: alice)*") as context:
             p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
                                       length=1.02*unit.angstrom,
                                       k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
                                       pilot='alice',
                                       allow_cosmetic_attributes=False
                                       )
+
+
+    def test_add_delete_cosmetic_attrib(self):
+        """
+        Test adding and deleting cosmetic attributes for already-initialized ParameterType objects
+        """
+        from simtk import unit
+
+        p1 = BondHandler.BondType(smirks='[*:1]-[*:2]',
+                                  length=1.02*unit.angstrom,
+                                  k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                                  )
+        # Ensure the cosmetic attribute is present by default during output
+        p1.add_cosmetic_attribute('pilot', 'alice')
+        param_dict = p1.to_dict()
+        assert ('pilot', 'alice') in param_dict.items()
+
+        # Ensure the cosmetic attribute isn't present if we request that it be discarded
+        param_dict = p1.to_dict(discard_cosmetic_attributes=True)
+        assert ('pilot', 'alice') not in param_dict.items()
+
+        # Manually delete the cosmetic attribute and ensure it doesn't get written out
+        p1.delete_cosmetic_attribute('pilot')
+        param_dict = p1.to_dict()
+        assert ('pilot', 'alice') not in param_dict.items()
+
+
+
 
     def test_single_term_proper_torsion(self):
         """
@@ -432,7 +514,7 @@ class TestParameterType:
         """
         from simtk import unit
 
-        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg {'phase3': ") as context:
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg (phase3: 31 deg)*") as context:
             p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                         phase1=30 * unit.degree,
                                                         periodicity1=2,
@@ -449,7 +531,8 @@ class TestParameterType:
         """
         from simtk import unit
 
-        with pytest.raises(SMIRNOFFSpecError, match="constructor received kwarg phase2 with value 31 A,") as context:
+        with pytest.raises(IncompatibleUnitError, match="__init__ function.  phase with value 31 A, is incompatible")\
+                as context:
             p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                         phase1=30 * unit.degree,
                                                         periodicity1=2,
@@ -460,6 +543,36 @@ class TestParameterType:
                                                         )
 
 
+    def test_torsion_handler_potential_setting(self):
+        """
+        Test creation of TorsionHandlers with the deprecated 0.2 potential value "charmm" instead of the current
+        supported potential value "fourier".
+        """
+        # Test creating ProperTorsionHandlers
+        with pytest.raises(SMIRNOFFSpecError, match="ProperTorsionHandler given 'potential' value of 'charmm'. "
+                                                    "Supported options are "
+                                                    "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
+                as context:
+            ph1 = ProperTorsionHandler(potential='charmm', skip_version_check=True)
+        ph1 = ProperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
+
+        # Same test, but with ImproperTorsionHandler
+        with pytest.raises(SMIRNOFFSpecError, match="ImproperTorsionHandler given 'potential' value of 'charmm'. "
+                                                    "Supported options are "
+                                                    "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
+                as context:
+            ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
+        ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
+
+
+        #     p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+        #                                                 phase1=30 * unit.degree,
+        #                                                 periodicity1=2,
+        #                                                 k1=5 * unit.kilocalorie_per_mole,
+        #                                                 phase2=31 * unit.angstrom, # This should be caught
+        #                                                 periodicity2=3,
+        #                                                 k2=6 * unit.kilocalorie_per_mole,
+        #                                                 )
 
 # TODO: test_nonbonded_settings (ensure that choices in Electrostatics and vdW tags resolve
 #                                to correct openmm.NonbondedForce subtypes, that setting different cutoffs raises
