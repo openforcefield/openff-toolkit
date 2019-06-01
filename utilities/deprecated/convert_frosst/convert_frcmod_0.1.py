@@ -234,7 +234,7 @@ if __name__=="__main__":
     usage_string="""\
     Convert specified SMIRKS-ified AMBER frcmod file into SMIRNOFF FFXML format, inserting converted parameters into a template FFXML file and writing to a new output file.
 
-    usage: convert_frcmod.py --frcmod test.frcmod --template template.offxml --xml test.offxml
+    usage: convert_frcmod_0.1.py --frcmod test.frcmod --template template.offxml --xml test.offxml
     """
     parser = OptionParser(usage=usage_string)
 

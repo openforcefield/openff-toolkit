@@ -237,7 +237,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
             XML String representation of this forcefield.
 
         """
-        def prepend_all_keys(d, char='@'):
+        def prepend_all_keys(d, char='@', ignore_keys=frozenset()):
             """
             Modify a dictionary in-place, prepending a specified string to each key
             that doesn't refer to a value that is list or dict.
@@ -248,22 +248,37 @@ class XMLParameterIOHandler(ParameterIOHandler):
                 Hierarchical dictionary to traverse and modify keys
             char : string, optional. Default='@'
                 String to prepend onto each applicable dictionary key
+            ignore_keys : iterable of str
+                A set or list of strings, indicating keys not to prepend in the data structure
 
             """
             if isinstance(d, dict):
                 for key in list(d.keys()):
+                    if key in ignore_keys:
+                        continue
                     if isinstance(d[key], list) or isinstance(d[key], dict):
-                        prepend_all_keys(d[key])
+                        prepend_all_keys(d[key], char=char, ignore_keys=ignore_keys)
                     else:
                         new_key = char + key
                         d[new_key] = d[key]
                         del d[key]
-                        prepend_all_keys(d[new_key])
+                        prepend_all_keys(d[new_key], char=char, ignore_keys=ignore_keys)
             elif isinstance(d, list):
                 for item in d:
-                    prepend_all_keys(item)
+                    prepend_all_keys(item, char=char, ignore_keys=ignore_keys)
 
-        prepend_all_keys(smirnoff_data['SMIRNOFF'])
+        # the "xmltodict" library defaults to print out all element attributes on separate lines
+        # unless they're prepended by "@"
+        prepend_all_keys(smirnoff_data['SMIRNOFF'], ignore_keys=['Author', 'Date'])
+
+        # Reorder parameter sections to put Author and Date at the top (this is the only
+        # way to change the order of items in a dict, as far as I can tell)
+        for key, value in list(smirnoff_data['SMIRNOFF'].items()):
+            if key in ['Author', 'Date']:
+                continue
+            del smirnoff_data['SMIRNOFF'][key]
+            smirnoff_data['SMIRNOFF'][key] = value
+
         return xmltodict.unparse(smirnoff_data, pretty=True)
 
 
