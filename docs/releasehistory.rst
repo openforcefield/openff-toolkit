@@ -7,6 +7,55 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+
+
+0.4.0 - SMIRNOFF Spec Update and Performance Optimization
+---------------------------------------------------------
+
+This update introduces the 0.3 SMIRNOFF spec.
+This spec upgrade is the result of discussions about how to handle the evolution of data and parameter types as further functional forms are added to the SMIRNOFF spec.
+
+The toolkit now contains functionality to "upgrade" the spec of a data source.
+These methods are called automatically when loading an 0.1 or 0.2-spec data source.
+This functionality allows the toolkit to continue to read 0.2-spec files, and also implements backwards-compatibility for 0.1-spec files.
+
+
+WARNING: The 0.1 SMIRNOFF spec did not contain fields for several energy-determining parameters that are exposed in the 0.2 spec.
+Thus, the 0.1-to-0.2 spec conversion process makes assumptions about the values that should be added for the newly-required fields.
+These assumptions are intended to reproduce the spec update process for the smirnoff99Frosst family of force fields.
+If you use the spec conversion functionality for other force field families, please carefully review the warning messages printed during spec conversion to ensure they are providing your desired behavior.
+
+
+This update also greatly improves performance when running ``create_openmm_system`` on large topologies.
+
+SMIRNOFF Spec Changes
+"""""""""""""""""""""
+* All individual sections are now versioned. The top-level ``SMIRNOFF`` tag, containing information like ``aromaticity_model``, ``Author``, and ``Date``, still has a version (currently 0.3).
+  But, to allow for independent development of individual parameter types, each section (`such as ``Bonds``, ``Angles``, etc) has its own version as well (currently all 0.3).
+* All units are now stored in expressions with their corresponding values. For example, distances are now stored as ``1.526*angstrom``, instead of storing the unit separately.
+* The ``potential`` field for ``ProperTorsions`` and ``ImproperTorsions`` tags is no longer ``charmm``, but is rather ``k*(1+cos(periodicity*theta-phase))``.
+  It was pointed out to us that CHARMM-style torsions deviate from this formula when the periodicity of a torsion term is 0.
+
+API extensions
+""""""""""""""
+Adds the following new functions:
+
+* ``utils/utils.py``: Adds ``convert_0_2_smirnoff_to_0_3``, which takes a 0.2-spec SMIRNOFF data dict, and upgrades it to 0.3.
+  This function is called automatically when creating a ``ForceField`` from an 0.2 spec OFFXML file.
+* ``utils/utils.py``: Adds ``convert_0_1_smirnoff_to_0_2``, which takes a 0.1-spec SMIRNOFF data dict, and upgrades it to 0.2.
+  This function is called automatically when creating a ``ForceField`` from an 0.1 spec OFFXML file.
+* ``typing/engines/smirnoff/parameters.py``: Adds ``ParameterHandler`` and ``ParameterType`` ``add_cosmetic_attribute`` and ``delete_cosmetic_attribute`` functions.
+  Once created, these can be accessed and modified as attributes of the underlying object (eg. ``ParameterType.my_cosmetic_attrib = 'blue'``)
+  These functions are experimental, and we are interested in feedback on how  cosmetic attribute handling could be improved (`Issue #338 <https://github.com/openforcefield/openforcefield/issues/338>`_)
+
+API-breaking changes
+""""""""""""""""""""
+* ``ParameterType`` and ``ParameterHandler`` constructors now expect the ``version`` kwarg (per the SMIRNOFF spec change above)
+  This requirement can be skipped by providing the kwarg ``skip_version_check=True``
+* ``ParameterType`` and ``ParameterHandler`` functions no longer handle ``X_unit`` attributes in SMIRNOFF data (per the SMIRNOFF spec change above).
+* The scripts in ``utilities/convert_frosst`` are now deprecated.
+  This functionality will be migrated to the ``openforcefield/smirnoff99Frosst`` repository in the coming weeks.
+
 0.3.0 - API Improvements
 ------------------------
 
