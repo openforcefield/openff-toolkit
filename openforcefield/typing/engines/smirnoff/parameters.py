@@ -48,7 +48,7 @@ from simtk import openmm, unit
 from openforcefield.utils import attach_units,  \
     extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
     check_units_are_compatible, object_to_quantity
-from openforcefield.topology import Topology, ValenceDict, ImproperDict
+from openforcefield.topology import ValenceDict, ImproperDict
 from openforcefield.typing.chemistry import ChemicalEnvironment
 
 #=============================================================================================
@@ -923,10 +923,8 @@ class ParameterHandler:
             matching the tuple of particle indices in ``entity``.
         """
 
-        # NOTETOJEFF - as far as I can tell in the current use cases
-        #              entity is always a Topology, even in label_molecule.
-        #              I think it should (for now) be safe to enforce then
-        #              that entity be just a Topology.
+        # TODO: Right now, this method is only ever called with an entity that is a Topoogy.
+        #  Should we reduce its scope and have a check here to make sure entity is a Topology?
         return self._find_matches(entity)
 
     def _find_matches(self, entity, transformed_dict_cls=ValenceDict):
@@ -951,9 +949,9 @@ class ParameterHandler:
 
         matches = transformed_dict_cls()
 
-        # POSPERFISSUE - There are probably performance gains to be had here
-        # by performing this loop in reverse order, and breaking early once
-        # all environments have been matched.
+        # TODO: There are probably performance gains to be had here
+        #       by performing this loop in reverse order, and breaking early once
+        #       all environments have been matched.
         for parameter_type in self._parameters:
             matches_for_this_type = {}
 
