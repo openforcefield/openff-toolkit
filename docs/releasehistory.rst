@@ -36,8 +36,8 @@ SMIRNOFF Spec Changes
 * The ``potential`` field for ``ProperTorsions`` and ``ImproperTorsions`` tags is no longer ``charmm``, but is rather ``k*(1+cos(periodicity*theta-phase))``.
   It was pointed out to us that CHARMM-style torsions deviate from this formula when the periodicity of a torsion term is 0.
 
-API extensions
-""""""""""""""
+New features
+""""""""""""
 Adds the following new functions:
 
 * ``utils/utils.py``: Adds ``convert_0_2_smirnoff_to_0_3``, which takes a 0.2-spec SMIRNOFF data dict, and upgrades it to 0.3.
