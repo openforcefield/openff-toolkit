@@ -658,6 +658,11 @@ def convert_0_2_smirnoff_to_0_3(smirnoff_data_0_2):
     sections_not_to_version_0_3 = ['Author', 'Date', 'version', 'aromaticity_model']
     for l1_tag in smirnoff_data['SMIRNOFF'].keys():
         if l1_tag not in sections_not_to_version_0_3:
+
+            if smirnoff_data['SMIRNOFF'][l1_tag] is None:
+                # Handle empty entries, such as the ToolkitAM1BCC handler.
+                smirnoff_data['SMIRNOFF'][l1_tag] = {}
+
             smirnoff_data['SMIRNOFF'][l1_tag]['version'] = 0.3
 
     # Update top-level tag
