@@ -638,6 +638,20 @@ def convert_0_2_smirnoff_to_0_3(smirnoff_data_0_2):
     smirnoff_data_0_3
         Hierarchical dict representing a SMIRNOFF data structure according the the 0.3 spec
     """
+    # Legacy forcefields sometimes specify the NonbondedForce's sigma_unit value, but then provide
+    # atom size as rmin_half. Here we correct for this behavior by explicitly defining both as
+    # the same unit if either one is defined.
+    if 'vdW' in smirnoff_data_0_2['SMIRNOFF'].keys():
+        rmh_unit = smirnoff_data_0_2['SMIRNOFF']['vdW'].get('rmin_half_unit', None)
+        sig_unit = smirnoff_data_0_2['SMIRNOFF']['vdW'].get('sigma_unit', None)
+        if (rmh_unit is not None) and (sig_unit is None):
+            smirnoff_data_0_2['SMIRNOFF']['vdW']['sigma_unit'] = rmh_unit
+        elif (sig_unit is not None) and (rmh_unit is None):
+            smirnoff_data_0_2['SMIRNOFF']['vdW']['rmin_half_unit'] = sig_unit
+        # If both are None, or both are defined, don't overwrite anything
+        else:
+            pass
+
     # Recursively attach unit strings
     smirnoff_data = recursive_attach_unit_strings(smirnoff_data_0_2, {})
 

@@ -422,6 +422,17 @@ class TestForceField():
         assert 'cosmetic_element="why not?"' not in string_3
         assert 'parameterize_eval="blah=blah2"' not in string_3
 
+
+    def test_read_0_1_smirnoff(self):
+        """Test reading an 0.1 spec OFFXML file"""
+        ff = ForceField('test_forcefields/smirnoff99Frosst_reference_0_1_spec.offxml')
+
+
+    def test_read_0_2_smirnoff(self):
+        """Test reading an 0.2 spec OFFXML file"""
+        ff = ForceField('test_forcefields/smirnoff99Frosst_reference_0_2_spec.offxml')
+
+
     @pytest.mark.parametrize('file_path_extension', ['xml', 'XML', 'offxml', 'OFFXML'])
     @pytest.mark.parametrize('specified_format', [None, 'xml', 'XML', '.xml', '.XML',
                                                   'offxml', 'OFFXML', '.offxml', '.OFFXML',
