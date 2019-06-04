@@ -59,7 +59,7 @@ API-breaking changes
   This requirement can be skipped by providing the kwarg ``skip_version_check=True``
 * ``ParameterType`` and ``ParameterHandler`` functions no longer handle ``X_unit`` attributes in SMIRNOFF data (per the SMIRNOFF spec change above).
 * The scripts in ``utilities/convert_frosst`` are now deprecated.
-  This functionality is importance for provenance and will be migrated to the ``openforcefield/smirnoff99Frosst`` repository in the coming weeks.
+  This functionality is important for provenance and will be migrated to the ``openforcefield/smirnoff99Frosst`` repository in the coming weeks.
 
 0.3.0 - API Improvements
 ------------------------
