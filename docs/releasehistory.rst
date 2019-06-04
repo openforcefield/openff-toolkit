@@ -9,37 +9,44 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 
 
-0.4.0 - SMIRNOFF Spec Update and Performance Optimization
----------------------------------------------------------
+0.4.0 - SMIRNOFF spec update, API changes, and performance optimization
+-----------------------------------------------------------------------
 
 This update introduces the 0.3 SMIRNOFF spec.
-This spec upgrade is the result of discussions about how to handle the evolution of data and parameter types as further functional forms are added to the SMIRNOFF spec.
+This change is intended to more explicitly represent parameter data and facilitate the long-term development of sophisticated parameter sections.
 
 The toolkit now contains functionality to "upgrade" the spec of a data source.
 These methods are called automatically when loading an 0.1 or 0.2-spec data source.
 This functionality allows the toolkit to continue to read 0.2-spec files, and also implements backwards-compatibility for 0.1-spec files.
 
 
-WARNING: The 0.1 SMIRNOFF spec did not contain fields for several energy-determining parameters that are exposed in the 0.2 spec.
+WARNING: The 0.1 SMIRNOFF spec did not contain fields for several energy-determining parameters that are exposed in later SMIRNOFF specs.
 Thus, the 0.1-to-0.2 spec conversion process makes assumptions about the values that should be added for the newly-required fields.
 These assumptions are intended to reproduce the spec update process for the smirnoff99Frosst family of force fields.
-If you use the spec conversion functionality for other force field families, please carefully review the warning messages printed during spec conversion to ensure they are providing your desired behavior.
+If you use this functionality for other force field families, please carefully review the warning messages printed during spec conversion to ensure they are providing your desired behavior.
 
 
-This update also greatly improves performance when running ``create_openmm_system`` on large topologies.
+This update also improves runtime when running ``create_openmm_system`` on large topologies.
 
 SMIRNOFF Spec Changes
 """""""""""""""""""""
-* All individual sections are now versioned.
+* All individual parameter sections are now versioned.
   The top-level ``SMIRNOFF`` tag, containing information like ``aromaticity_model``, ``Author``, and ``Date``, still has a version (currently 0.3).
-  But, to allow for independent development of individual parameter types, each section (`such as ``Bonds``, ``Angles``, etc) has its own version as well (currently all 0.3).
-* All units are now stored in expressions with their corresponding values. For example, distances are now stored as ``1.526*angstrom``, instead of storing the unit separately.
+  But, to allow for independent development of individual parameter types, each section (such as ``Bonds``, ``Angles``, etc) now has its own version as well (currently all 0.3).
+* All units are now stored in expressions with their corresponding values. For example, distances are now stored as ``1.526*angstrom``, instead of storing the unit separately in the section header.
 * The ``potential`` field for ``ProperTorsions`` and ``ImproperTorsions`` tags is no longer ``charmm``, but is rather ``k*(1+cos(periodicity*theta-phase))``.
-  It was pointed out to us that CHARMM-style torsions deviate from this formula when the periodicity of a torsion term is 0.
+  It was pointed out to us that CHARMM-style torsions deviate from this formula when the periodicity of a torsion term is 0, and we do not intend to reproduce that behavior.
+* SMIRNOFF spec documentation has been updated with tables of keywords and their defaults for each parameter section and parameter type.
+  These tables will track the allowed keywords and default behavior as updated versions of individual parameter sections are released.
+
+Performance improvements
+""""""""""""""""""""""""
+
+* `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Improved runtime for system creation in large topologies.
+
 
 New features
 """"""""""""
-Adds the following new functions:
 
 * `PR #311 <https://github.com/openforcefield/openforcefield/pull/311>`_:
     * ``utils/utils.py``: Adds ``convert_0_2_smirnoff_to_0_3``, which takes a 0.2-spec SMIRNOFF data dict, and upgrades it to 0.3.
@@ -47,19 +54,25 @@ Adds the following new functions:
     * ``utils/utils.py``: Adds ``convert_0_1_smirnoff_to_0_2``, which takes a 0.1-spec SMIRNOFF data dict, and upgrades it to 0.2.
       This function is called automatically when creating a ``ForceField`` from a 0.1 spec OFFXML file.
     * ``typing/engines/smirnoff/parameters.py``: Adds ``ParameterHandler`` and ``ParameterType`` ``add_cosmetic_attribute`` and ``delete_cosmetic_attribute`` functions.
-      Once created, these can be accessed and modified as attributes of the underlying object (eg. ``ParameterType.my_cosmetic_attrib = 'blue'``)
-      These functions are experimental, and we are interested in feedback on how  cosmetic attribute handling could be improved. (`See Issue #338 <https://github.com/openforcefield/openforcefield/issues/338>`_)
-* `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Improved runtime for system creation in large topologies.
+      Once created, cosmetic attributes can be accessed and modified as attributes of the underlying object (eg. ``ParameterType.my_cosmetic_attrib = 'blue'``)
+      These functions are experimental, and we are interested in feedback on how cosmetic attribute handling could be improved. (`See Issue #338 <https://github.com/openforcefield/openforcefield/issues/338>`_)
+      Note that if a new cosmetic attribute is added to an object without using these functions, it will not be recognized by the toolkit and will not be written out during serialization.
+    * Values for the top-level ``Author`` and ``Date`` tags are now kept during SMIRNOFF data I/O.
+      If multiple data sources containing these fields are read, the values are concatenated using "AND" as a separator.
 
 
 
 API-breaking changes
 """"""""""""""""""""
+* ``ForceField.to_string`` and ``ForceField.to_file`` have had the default value of their ``discard_cosmetic_attributes`` kwarg set to False.
 * ``ParameterType`` and ``ParameterHandler`` constructors now expect the ``version`` kwarg (per the SMIRNOFF spec change above)
   This requirement can be skipped by providing the kwarg ``skip_version_check=True``
 * ``ParameterType`` and ``ParameterHandler`` functions no longer handle ``X_unit`` attributes in SMIRNOFF data (per the SMIRNOFF spec change above).
 * The scripts in ``utilities/convert_frosst`` are now deprecated.
   This functionality is important for provenance and will be migrated to the ``openforcefield/smirnoff99Frosst`` repository in the coming weeks.
+* ``ParameterType._SMIRNOFF_ATTRIBS`` is now ``ParameterType._REQUIRED_SPEC_ATTRIBS``, to better parallel the structure of the ``ParameterHandler`` class.
+* ``ParameterType._OPTIONAL_ATTRIBS`` is now ``ParameterType._OPTIONAL_SPEC_ATTRIBS``, to better parallel the structure of the ``ParameterHandler`` class.
+* Added class-level dictionaries ``ParameterHandler._DEFAULT_SPEC_ATTRIBS`` and ``ParameterType._DEFAULT_SPEC_ATTRIBS``.
 
 0.3.0 - API Improvements
 ------------------------
