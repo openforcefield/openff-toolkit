@@ -30,7 +30,8 @@ This update also greatly improves performance when running ``create_openmm_syste
 
 SMIRNOFF Spec Changes
 """""""""""""""""""""
-* All individual sections are now versioned. The top-level ``SMIRNOFF`` tag, containing information like ``aromaticity_model``, ``Author``, and ``Date``, still has a version (currently 0.3).
+* All individual sections are now versioned.
+  The top-level ``SMIRNOFF`` tag, containing information like ``aromaticity_model``, ``Author``, and ``Date``, still has a version (currently 0.3).
   But, to allow for independent development of individual parameter types, each section (`such as ``Bonds``, ``Angles``, etc) has its own version as well (currently all 0.3).
 * All units are now stored in expressions with their corresponding values. For example, distances are now stored as ``1.526*angstrom``, instead of storing the unit separately.
 * The ``potential`` field for ``ProperTorsions`` and ``ImproperTorsions`` tags is no longer ``charmm``, but is rather ``k*(1+cos(periodicity*theta-phase))``.
@@ -40,13 +41,17 @@ New features
 """"""""""""
 Adds the following new functions:
 
-* ``utils/utils.py``: Adds ``convert_0_2_smirnoff_to_0_3``, which takes a 0.2-spec SMIRNOFF data dict, and upgrades it to 0.3.
-  This function is called automatically when creating a ``ForceField`` from an 0.2 spec OFFXML file.
-* ``utils/utils.py``: Adds ``convert_0_1_smirnoff_to_0_2``, which takes a 0.1-spec SMIRNOFF data dict, and upgrades it to 0.2.
-  This function is called automatically when creating a ``ForceField`` from an 0.1 spec OFFXML file.
-* ``typing/engines/smirnoff/parameters.py``: Adds ``ParameterHandler`` and ``ParameterType`` ``add_cosmetic_attribute`` and ``delete_cosmetic_attribute`` functions.
-  Once created, these can be accessed and modified as attributes of the underlying object (eg. ``ParameterType.my_cosmetic_attrib = 'blue'``)
-  These functions are experimental, and we are interested in feedback on how  cosmetic attribute handling could be improved (`Issue #338 <https://github.com/openforcefield/openforcefield/issues/338>`_)
+* `PR #311 <https://github.com/openforcefield/openforcefield/pull/311>`_:
+    * ``utils/utils.py``: Adds ``convert_0_2_smirnoff_to_0_3``, which takes a 0.2-spec SMIRNOFF data dict, and upgrades it to 0.3.
+      This function is called automatically when creating a ``ForceField`` from a 0.2 spec OFFXML file.
+    * ``utils/utils.py``: Adds ``convert_0_1_smirnoff_to_0_2``, which takes a 0.1-spec SMIRNOFF data dict, and upgrades it to 0.2.
+      This function is called automatically when creating a ``ForceField`` from a 0.1 spec OFFXML file.
+    * ``typing/engines/smirnoff/parameters.py``: Adds ``ParameterHandler`` and ``ParameterType`` ``add_cosmetic_attribute`` and ``delete_cosmetic_attribute`` functions.
+      Once created, these can be accessed and modified as attributes of the underlying object (eg. ``ParameterType.my_cosmetic_attrib = 'blue'``)
+      These functions are experimental, and we are interested in feedback on how  cosmetic attribute handling could be improved. (`See Issue #338 <https://github.com/openforcefield/openforcefield/issues/338>`_)
+* `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Improved runtime for system creation in large topologies.
+
+
 
 API-breaking changes
 """"""""""""""""""""
@@ -54,7 +59,7 @@ API-breaking changes
   This requirement can be skipped by providing the kwarg ``skip_version_check=True``
 * ``ParameterType`` and ``ParameterHandler`` functions no longer handle ``X_unit`` attributes in SMIRNOFF data (per the SMIRNOFF spec change above).
 * The scripts in ``utilities/convert_frosst`` are now deprecated.
-  This functionality will be migrated to the ``openforcefield/smirnoff99Frosst`` repository in the coming weeks.
+  This functionality is importance for provenance and will be migrated to the ``openforcefield/smirnoff99Frosst`` repository in the coming weeks.
 
 0.3.0 - API Improvements
 ------------------------
