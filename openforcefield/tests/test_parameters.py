@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-#=============================================================================================
+#======================================================================
 # MODULE DOCSTRING
-#=============================================================================================
+#======================================================================
 
 """
 Test classes and function in module openforcefield.typing.engines.smirnoff.parameters.
@@ -10,20 +10,107 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 """
 
 
-#=============================================================================================
+#======================================================================
 # GLOBAL IMPORTS
-#=============================================================================================
+#======================================================================
 
+from simtk import unit
+import pytest
 
-from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType, BondHandler, \
-    ParameterHandler, AngleHandler, ConstraintHandler, ProperTorsionHandler, ImproperTorsionHandler, \
-    ToolkitAM1BCCHandler, vdWHandler, SMIRNOFFSpecError
+from openforcefield.typing.engines.smirnoff.parameters import (
+    _ParameterAttribute, ParameterList, ParameterType, BondHandler,
+    ParameterHandler, ProperTorsionHandler, ImproperTorsionHandler,
+    ToolkitAM1BCCHandler, SMIRNOFFSpecError
+)
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.utils import detach_units, IncompatibleUnitError
 
-import pytest
+
+#======================================================================
+# Test ParameterAttribute descriptor
+#======================================================================
+
+class TestParameterAttribute:
+    """Test cases for the descriptor _ParameterAttribute."""
+
+    def test_default_value(self):
+        """Default values are assigned correctly on initialization."""
+        class MyParameter:
+            attr_optional = _ParameterAttribute(default=2)
+        my_par = MyParameter()
+        assert my_par.attr_optional == 2
+
+    def test_none_default_value(self):
+        """None is a valid default value for ParameterAttribute."""
+        class MyParameter:
+            attr_optional = _ParameterAttribute(default=None)
+        my_par = MyParameter()
+        assert my_par.attr_optional is None
+
+    def test_mandatory_value(self):
+        """AttributeError is raised if a mandatory attribute is accessed before being initialized."""
+        class MyParameter:
+            attr_mandatory = _ParameterAttribute()
+        my_par = MyParameter()
+        with pytest.raises(AttributeError):
+            my_par.attr_mandatory
+
+    def test_unit_validation(self):
+        """ParameterAttributes attached to a unit are validated correctly."""
+        class MyParameter:
+            attr_unit = _ParameterAttribute(unit=unit.kilocalories_per_mole/unit.angstrom**2)
+        my_par = MyParameter()
+
+        # TypeError is raised when setting a unit-less value.
+        with pytest.raises(TypeError, match='should have units of'):
+            my_par.attr_unit = 3.0
+        # TypeError is raised when setting a value with incorrect units.
+        with pytest.raises(TypeError, match='should have units of'):
+            my_par.attr_unit = 3.0 * unit.kilocalories_per_mole
+
+        # Otherwise the attribute is assigned correctly.
+        value = 3.0 * unit.kilocalories_per_mole/unit.angstrom**2
+        my_par.attr_unit = value
+        assert my_par.attr_unit == value
+
+    def test_custom_validator(self):
+        """Custom validators of ParameterAttributes are executed correctly."""
+        class MyParameter:
+            attr_all_to_float = _ParameterAttribute(validator=float)
+            attr_int_to_float = _ParameterAttribute()
+            @attr_int_to_float.validator
+            def attr_int_to_float(self, value):
+                """Convert only integers to float"""
+                if isinstance(value, int):
+                    return float(value)
+                elif not isinstance(value, float):
+                    raise TypeError()
+                return value
+
+        my_par = MyParameter()
+
+        # Both strings and integers are converted to floats when casted with float().
+        my_par.attr_all_to_float = '1.0'
+        assert isinstance(my_par.attr_all_to_float, float) and my_par.attr_all_to_float == 1.0
+        my_par.attr_all_to_float = 2
+        assert isinstance(my_par.attr_all_to_float, float) and my_par.attr_all_to_float == 2.0
+
+        # Only integers are converted with the custom validator
+        with pytest.raises(TypeError):
+            my_par.attr_int_to_float = '1.0'
+        my_par.attr_int_to_float = 2
+        assert isinstance(my_par.attr_int_to_float, float) and my_par.attr_int_to_float == 2.0
+
+    def test_incosistent_default(self):
+        """An exception is raised when a default that doesn't pass validation is used."""
+        with pytest.raises(TypeError, match='default value None does not pass validation'):
+            class MyParameter:
+                attr_inconsistent = _ParameterAttribute(default=None, validator=float)
 
 
+#======================================================================
+# Test ParameterHandler
+#======================================================================
 
 class TestParameterHandler:
 

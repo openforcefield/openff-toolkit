@@ -35,21 +35,18 @@ __all__ = [
 # GLOBAL IMPORTS
 #=============================================================================================
 
-
+from collections import OrderedDict
 from enum import Enum
 import logging
 
-from collections import OrderedDict
-
-
 from simtk import openmm, unit
-
 
 from openforcefield.utils import attach_units,  \
     extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
     check_units_are_compatible, object_to_quantity
 from openforcefield.topology import ValenceDict, ImproperDict
 from openforcefield.typing.chemistry import ChemicalEnvironment
+
 
 #=============================================================================================
 # CONFIGURE LOGGER
@@ -95,15 +92,9 @@ class UnassignedProperTorsionParameterException(UnassignedValenceParameterExcept
     """Exception raised when there are proper torsion terms for which a ParameterHandler can't find parameters."""
     pass
 
-#======================================================================
-# UTILITY FUNCTIONS
-#======================================================================
-
-
-
 
 #======================================================================
-# PARAMETER TYPE/LIST
+# ENUM TYPES
 #======================================================================
 
 class NonbondedMethod(Enum):
@@ -116,6 +107,167 @@ class NonbondedMethod(Enum):
     Ewald = 3
     PME = 4
 
+
+#======================================================================
+# PARAMETER ATTRIBUTES
+#======================================================================
+
+class _UNDEFINED:
+    """Custom type used by _ParameterAttribute to differentiate between None and undeclared variables."""
+    pass
+
+
+class _ParameterAttribute:
+    """A descriptor for ``ParameterType`` attributes.
+
+    The descriptors allows associating to the parameter a default value,
+    which makes the attribute optional, a unit validator, and a custom
+    validator.
+
+    Because we may want to have ``None`` as a default value, mandatory
+    attributes have the ``default`` set to the special type ``_UNDEFINED``.
+
+    Validators can be both static or instance functions/methods with signature
+
+    def validator(value): -> validated_value
+
+    A decorator syntax is available (see example below).
+
+    Parameters
+    ----------
+    default : object, optional
+        When specified, the descriptor makes this attribute optional by
+        attaching a default value to it.
+    unit : simtk.unit.Quantity, optional
+        When specified, only quantities with compatible units are allowed
+        to be set.
+    validator : callable, optional
+        An optional function that can be used to validate and cast values
+        before setting the attribute.
+
+    Examples
+    -------
+
+    Create a parameter type with an optional and a mandatory attributes.
+
+    >>> class MyParameter:
+    ...     attr_mandatory = _ParameterAttribute()
+    ...     attr_optional = _ParameterAttribute(default=2)
+    ...
+    >>> my_par = MyParameter()
+
+    Even without explicit assignment, the default value is returned.
+
+    >>> my_par.attr_optional
+    2
+
+    If you try to access an attribute without setting it first, an
+    exception is raised.
+
+    >>> my_par.attr_mandatory
+    Traceback (most recent call last):
+    ...
+    AttributeError: 'MyParameter' object has no attribute '_attr_mandatory'.
+
+    You can attach a custom validator to an attribute.
+
+    >>> class MyParameter:
+    ...     # Both strings and integers convert nicely to floats with float().
+    ...     attr_all_to_float = _ParameterAttribute(validator=float)
+    ...     attr_int_to_float = _ParameterAttribute()
+    ...     @attr_int_to_float.validator
+    ...     def attr_int_to_float(self, value):
+    ...         # This validator convert only integers to float
+    ...         # and raise an exception for the other types.
+    ...         if isinstance(value, int):
+    ...             return float(value)
+    ...         elif not isinstance(value, float):
+    ...             raise TypeError(f"Cannot convert '{value}' to float")
+    ...         return value
+    ...
+    >>> my_par = MyParameter()
+
+    attr_all_to_float accepts and convert to float both strings and integers
+
+    >>> my_par.attr_all_to_float = 1
+    >>> my_par.attr_all_to_float
+    1.0
+    >>> my_par.attr_all_to_float = '2.0'
+    >>> my_par.attr_all_to_float
+    2.0
+
+    The custom validator associated to attr_int_to_float converts only integers instead.
+    >>> my_par.attr_int_to_float = 3
+    >>> my_par.attr_int_to_float
+    3.0
+    >>> my_par.attr_int_to_float = '4.0'
+    Traceback (most recent call last):
+    ...
+    TypeError: Cannot convert '4.0' to float.
+
+    """
+
+    def __init__(self, default=_UNDEFINED, unit=None, validator=None):
+        self._default = default
+        self._unit = unit
+        self._validator = validator
+
+        # If given, check that the default value pass the validation.
+        if self._default is not _UNDEFINED and validator is not None:
+            try:
+                self._call_validator(self._default)
+            except:
+                raise TypeError(f'default value {self._default} does not pass validation')
+
+    def __set_name__(self, owner, name):
+        self._name = '_' + name
+
+    def __get__(self, instance, owner):
+        try:
+            return getattr(instance, self._name)
+        except AttributeError:
+            # The attribute has not initialized. Check if there's a default.
+            if self._default is _UNDEFINED:
+                raise
+            return self._default
+
+    def __set__(self, instance, value):
+        # Validate units.
+        if self._unit is not None:
+            try:
+                # Check if units are compatible.
+                if not self._unit.is_compatible(value.unit):
+                    raise TypeError(f'{value} should have units of {self._unit}')
+            except AttributeError:
+                # This is not a Quantity object.
+                raise TypeError(f'{value} should have units of {self._unit}')
+
+        # Call the custom validator before setting the value.
+        if self._validator is not None:
+            value = self._call_validator(value)
+
+        setattr(instance, self._name, value)
+
+    def validator(self, validator):
+        """Create a new ParameterAttribute with an associated validator.
+
+        This is meant to be used as a decorator (see main examples).
+        """
+        return self.__class__(default=self._default, validator=validator)
+
+    def _call_validator(self, value):
+        """Correctly calls static, class, and instance validators."""
+        try:
+            # Static function.
+            return self._validator(value)
+        except TypeError:
+            # Instance or class method.
+            return self._validator(self, value)
+
+
+#======================================================================
+# PARAMETER TYPE/LIST
+#======================================================================
 
 # We can't actually make this derive from dict, because it's possible for the user to change SMIRKS
 # of parameters already in the list, which would cause the ParameterType object's SMIRKS and
