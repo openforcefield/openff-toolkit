@@ -167,7 +167,22 @@ class _ParameterAttribute:
     >>> my_par.attr_mandatory
     Traceback (most recent call last):
     ...
-    AttributeError: 'MyParameter' object has no attribute '_attr_mandatory'.
+    AttributeError: 'MyParameter' object has no attribute '_attr_mandatory'
+
+    The attribute allow automatic conversion and validation of units.
+
+    >>> from simtk import unit
+    >>> class MyParameter:
+    ...     attr_quantity = _ParameterAttribute(unit=unit.angstrom)
+    ...
+    >>> my_par = MyParameter()
+    >>> my_par.attr_quantity = '1.0 * nanometer'
+    >>> my_par.attr_quantity
+    Quantity(value=1.0, unit=nanometer)
+    >>> my_par.attr_quantity = 3.0
+    Traceback (most recent call last):
+    ...
+    TypeError: 3.0 dimensionless should have units of angstrom
 
     You can attach a custom validator to an attribute.
 
@@ -203,7 +218,7 @@ class _ParameterAttribute:
     >>> my_par.attr_int_to_float = '4.0'
     Traceback (most recent call last):
     ...
-    TypeError: Cannot convert '4.0' to float.
+    TypeError: Cannot convert '4.0' to float
 
     """
 
@@ -3075,3 +3090,8 @@ class GBSAParameterHandler(ParameterHandler):
                 getattr(gbsa_type, name) for name in expected_parameters
             ]
             force.setParticleParameters(atom.particle_index, params)
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.run_docstring_examples(_ParameterAttribute, globals())
