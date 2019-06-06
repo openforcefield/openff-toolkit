@@ -18,9 +18,9 @@ from simtk import unit
 import pytest
 
 from openforcefield.typing.engines.smirnoff.parameters import (
-    _ParameterAttribute, ParameterList, ParameterType, BondHandler,
-    ParameterHandler, ProperTorsionHandler, ImproperTorsionHandler,
-    ToolkitAM1BCCHandler, SMIRNOFFSpecError
+    _ParameterAttribute, _IndexedParameterAttribute, ParameterList,
+    ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
+    ImproperTorsionHandler, ToolkitAM1BCCHandler, SMIRNOFFSpecError
 )
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.utils import detach_units, IncompatibleUnitError
@@ -121,6 +121,50 @@ class TestParameterAttribute:
         with pytest.raises(TypeError, match='default value None does not pass validation'):
             class MyParameter:
                 attr_inconsistent = _ParameterAttribute(default=None, validator=float)
+
+
+class TestIndexedParameterAttribute:
+    """Tests for the IndexedParameterAttribute descriptor."""
+
+    def test_tuple_conversion(self):
+        """IndexedParameterAttribute converts internally sequences to tuples."""
+        class MyParameter:
+            attr_indexed = _IndexedParameterAttribute()
+        my_par = MyParameter()
+        my_par.attr_indexed = [1, 2, 3]
+        assert isinstance(my_par.attr_indexed, tuple)
+
+    def test_indexed_default(self):
+        """IndexedParameterAttribute handles default values correctly."""
+        class MyParameter:
+            attr_indexed_optional = _IndexedParameterAttribute(default=None)
+        my_par = MyParameter()
+        assert my_par.attr_indexed_optional is None
+
+    def test_units_on_all_elements(self):
+        """IndexedParameterAttribute validates every single element of the sequence."""
+        class MyParameter:
+            attr_indexed_unit = _IndexedParameterAttribute(unit=unit.gram)
+        my_par = MyParameter()
+
+        # Strings are correctly converted.
+        my_par.attr_indexed_unit = ['1.0*gram', 2*unit.gram]
+        assert my_par.attr_indexed_unit == (1.0*unit.gram, 2*unit.gram)
+
+        # Incompatible units on a single elements are correctly caught.
+        with pytest.raises(TypeError, match='should have units of'):
+            my_par.attr_indexed_unit = [3.0, 2*unit.gram]
+        with pytest.raises(TypeError, match='should have units of'):
+            my_par.attr_indexed_unit = [2*unit.gram, 4.0*unit.meter]
+
+    def test_validator_on_all_elements(self):
+        """IndexedParameterAttribute calls custom validators on every single element of the sequence."""
+        class MyParameter:
+            attr_indexed_validator = _IndexedParameterAttribute(validator=float)
+        my_par = MyParameter()
+
+        my_par.attr_indexed_validator = [1, '2.0', '1e-3', 4.0]
+        assert my_par.attr_indexed_validator == (1.0, 2.0, 1e-3, 4.0)
 
 
 #======================================================================

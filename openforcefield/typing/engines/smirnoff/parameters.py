@@ -272,6 +272,55 @@ class _ParameterAttribute:
         return value
 
 
+class _IndexedParameterAttribute(_ParameterAttribute):
+    """The attribute of a parameter with an unspecified number of terms.
+
+    Some parameters can be associated to multiple terms, For example,
+    torsions have parameters such as k1, k2, ..., and ``IndexedParameterAttribute``
+    can be used to encapsulate the sequence of terms.
+
+    The only substantial difference with ``ParameterAttribute`` is that
+    only sequences are supported as values and validators and units are
+    checked on each element of the sequence.
+
+    Currently, the descriptor makes the sequence immutable. This is to
+    avoid that an element of the sequence could be set without being
+    properly validated. In the future, the data could be wrapped in a
+    safe list that would safely allow mutability.
+
+    Parameters
+    ----------
+    default : object, optional
+        When specified, the descriptor makes this attribute optional by
+        attaching a default value to it.
+    unit : simtk.unit.Quantity, optional
+        When specified, only sequences of quantities with compatible units
+        are allowed to be set.
+    validator : callable, optional
+        An optional function that can be used to validate and cast each
+        element of the sequence before setting the attribute.
+
+    """
+
+    def __set__(self, instance, sequence):
+        # Validate units and call custom validator on every element of the sequence.
+        if self._unit is not None:
+            # This is only a generator now that we'll convert to tuple later.
+            sequence = (self._validate_units(element) for element in sequence)
+        if  self._validator is not None:
+            # This is only a generator now that we'll convert to tuple later.
+            sequence = (self._call_validator(element) for element in sequence)
+
+        # Make the sequence immutable.
+        # TODO: Instead of making the sequence immutable, we could just
+        #       wrap it around a list extension that enables callbacks
+        #       similar to this: https://stackoverflow.com/questions/13259179/list-callbacks
+        #       and validate the elements in the callback function. This
+        #       shouldn't break the API but only extend it.
+        if not isinstance(sequence, tuple):
+            sequence = tuple(sequence)
+        setattr(instance, self._name, sequence)
+
 #======================================================================
 # PARAMETER TYPE/LIST
 #======================================================================
