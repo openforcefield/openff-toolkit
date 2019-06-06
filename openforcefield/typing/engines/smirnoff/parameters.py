@@ -213,7 +213,7 @@ class _ParameterAttribute:
         self._validator = validator
 
         # If given, check that the default value pass the validation.
-        if self._default is not _UNDEFINED and validator is not None:
+        if self._default is not _UNDEFINED:
             try:
                 self._call_validator(self._default)
             except:
@@ -232,20 +232,10 @@ class _ParameterAttribute:
             return self._default
 
     def __set__(self, instance, value):
-        # Validate units.
-        if self._unit is not None:
-            try:
-                # Check if units are compatible.
-                if not self._unit.is_compatible(value.unit):
-                    raise TypeError(f'{value} should have units of {self._unit}')
-            except AttributeError:
-                # This is not a Quantity object.
-                raise TypeError(f'{value} should have units of {self._unit}')
-
+        # Validate units if requested.
+        value = self._validate_units(value)
         # Call the custom validator before setting the value.
-        if self._validator is not None:
-            value = self._call_validator(value)
-
+        value = self._call_validator(value)
         setattr(instance, self._name, value)
 
     def validator(self, validator):
@@ -255,14 +245,31 @@ class _ParameterAttribute:
         """
         return self.__class__(default=self._default, validator=validator)
 
+    def _validate_units(self, value):
+        """Convert strings expressions to Quantity and validate the units if requested."""
+        if self._unit is not None:
+            # Convert eventual strings to Quantity objects.
+            value = object_to_quantity(value)
+
+            # Check if units are compatible.
+            try:
+                if not self._unit.is_compatible(value.unit):
+                    raise TypeError(f'{value} should have units of {self._unit}')
+            except AttributeError:
+                # This is not a Quantity object.
+                raise TypeError(f'{value} should have units of {self._unit}')
+        return value
+
     def _call_validator(self, value):
-        """Correctly calls static, class, and instance validators."""
-        try:
-            # Static function.
-            return self._validator(value)
-        except TypeError:
-            # Instance or class method.
-            return self._validator(self, value)
+        """Correctly calls static and instance validators."""
+        if self._validator is not None:
+            try:
+                # Static function.
+                return self._validator(value)
+            except TypeError:
+                # Instance method.
+                return self._validator(self, value)
+        return value
 
 
 #======================================================================

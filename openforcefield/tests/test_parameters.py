@@ -73,6 +73,21 @@ class TestParameterAttribute:
         my_par.attr_unit = value
         assert my_par.attr_unit == value
 
+    def test_quantity_string_parsing(self):
+        """ParameterAttributes attached to units convert strings into Quantity objects."""
+        class MyParameter:
+            attr_unit = _ParameterAttribute(unit=unit.meter/unit.second**2)
+        my_par = MyParameter()
+
+        my_par.attr_unit = '3.0*meter/second**2'
+        assert my_par.attr_unit == 3.0 * unit.meter/unit.second**2
+
+        # Assigning incorrect units still raises an error.
+        with pytest.raises(TypeError, match='should have units of'):
+            my_par.attr_unit = '3.0'
+        with pytest.raises(TypeError, match='should have units of'):
+            my_par.attr_unit = '3.0*meter/second'
+
     def test_custom_validator(self):
         """Custom validators of ParameterAttributes are executed correctly."""
         class MyParameter:
