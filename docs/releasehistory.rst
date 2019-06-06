@@ -9,28 +9,31 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 
 
-0.4.0 - SMIRNOFF spec update, API changes, and performance optimization
------------------------------------------------------------------------
+0.4.0 - Performance optimizations and support for SMIRNOFF 0.3 specification
+----------------------------------------------------------------------------
 
-This update introduces the 0.3 SMIRNOFF spec.
-This change is intended to more explicitly represent parameter data and facilitate the long-term development of sophisticated parameter sections.
+This update improves runtime when running ``create_openmm_system`` on large topologies.
 
-The toolkit now contains functionality to "upgrade" the spec of a data source.
-These methods are called automatically when loading an 0.1 or 0.2-spec data source.
+This update also introduces the `SMIRNOFF 0.3 spec <https://open-forcefield-toolkit.readthedocs.io/en/0.4.0/smirnoff.html>`_.
+The spec update is the result of discussions about how to handle the evolution of data and parameter types as further functional forms are added to the SMIRNOFF spec.
+
+
+We provide methods to convert SMIRNOFF 0.1 and 0.2 forcefields written with the XML serialization (.offxml) to SMIRNOFF 0.3 XML specification.
+These methods are called automatically when loading a serialized SMIRNOFF data representation written in the 0.1 or 0.2 specification.
 This functionality allows the toolkit to continue to read 0.2-spec files, and also implements backwards-compatibility for 0.1-spec files.
 
 
-WARNING: The 0.1 SMIRNOFF spec did not contain fields for several energy-determining parameters that are exposed in later SMIRNOFF specs.
-Thus, the 0.1-to-0.2 spec conversion process makes assumptions about the values that should be added for the newly-required fields.
-These assumptions are intended to reproduce the spec update process for the smirnoff99Frosst family of force fields.
-If you use this functionality for other force field families, please carefully review the warning messages printed during spec conversion to ensure they are providing your desired behavior.
+WARNING: The SMIRNOFF 0.1 spec did not contain fields for several energy-determining parameters that are exposed in later SMIRNOFF specs.
+Thus, when reading SMIRNOFF 0.1 spec data, the toolkit must make assumptions about the values that should be added for the newly-required fields.
+The values that are added include 1-2, 1-3 and 1-5 scaling factors, cutoffs, and long-range treatments for nonbonded interactions.
+Each assumption is printed as a warning during the conversion process.
+Please carefully review the warning messages to ensure that the conversion is providing your desired behavior.
 
 
-This update also improves runtime when running ``create_openmm_system`` on large topologies.
 
 SMIRNOFF Spec Changes
 """""""""""""""""""""
-* All individual parameter sections are now versioned.
+* SMIRNOFF 0.3 introduces versioning for each individual parameter section, allowing asynchronous updates to the features of each parameter class.
   The top-level ``SMIRNOFF`` tag, containing information like ``aromaticity_model``, ``Author``, and ``Date``, still has a version (currently 0.3).
   But, to allow for independent development of individual parameter types, each section (such as ``Bonds``, ``Angles``, etc) now has its own version as well (currently all 0.3).
 * All units are now stored in expressions with their corresponding values. For example, distances are now stored as ``1.526*angstrom``, instead of storing the unit separately in the section header.
@@ -48,12 +51,14 @@ Performance improvements
 New features
 """"""""""""
 
-* `PR #311 <https://github.com/openforcefield/openforcefield/pull/311>`_:
-    * ``utils/utils.py``: Adds ``convert_0_2_smirnoff_to_0_3``, which takes a 0.2-spec SMIRNOFF data dict, and upgrades it to 0.3.
-      This function is called automatically when creating a ``ForceField`` from a 0.2 spec OFFXML file.
-    * ``utils/utils.py``: Adds ``convert_0_1_smirnoff_to_0_2``, which takes a 0.1-spec SMIRNOFF data dict, and upgrades it to 0.2.
-      This function is called automatically when creating a ``ForceField`` from a 0.1 spec OFFXML file.
-    * ``typing/engines/smirnoff/parameters.py``: Adds ``ParameterHandler`` and ``ParameterType`` ``add_cosmetic_attribute`` and ``delete_cosmetic_attribute`` functions.
+* `PR #311 <https://github.com/openforcefield/openforcefield/pull/311>`_: Several new experimental functions.
+    * Adds ``convert_0_2_smirnoff_to_0_3``, which takes a SMIRNOFF 0.2-spec data dict, and updates it to 0.3.
+      This function is called automatically when creating a ``ForceField`` from a SMIRNOFF 0.2 spec OFFXML file.
+    * Adds ``convert_0_1_smirnoff_to_0_2``, which takes a SMIRNOFF 0.1-spec data dict, and updates it to 0.2.
+      This function is called automatically when creating a ``ForceField`` from a SMIRNOFF 0.1 spec OFFXML file.
+    * NOTE: The format of the "SMIRNOFF data dict" above is likely to change significantly in the future.
+      Users that require a stable serialized ForceField object should use the output of ``ForceField.to_string('XML')`` instead.
+    * Adds ``ParameterHandler`` and ``ParameterType`` ``add_cosmetic_attribute`` and ``delete_cosmetic_attribute`` functions.
       Once created, cosmetic attributes can be accessed and modified as attributes of the underlying object (eg. ``ParameterType.my_cosmetic_attrib = 'blue'``)
       These functions are experimental, and we are interested in feedback on how cosmetic attribute handling could be improved. (`See Issue #338 <https://github.com/openforcefield/openforcefield/issues/338>`_)
       Note that if a new cosmetic attribute is added to an object without using these functions, it will not be recognized by the toolkit and will not be written out during serialization.
