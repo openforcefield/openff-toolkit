@@ -314,6 +314,43 @@ class IndexedParameterAttribute(ParameterAttribute):
         An optional function that can be used to validate and cast each
         element of the sequence before setting the attribute.
 
+    Examples
+    --------
+
+    Create an optional indexed attribute with unit of angstrom.
+
+    >>> from simtk import unit
+    >>> class MyParameter:
+    ...     length = IndexedParameterAttribute(default=None, unit=unit.angstrom)
+    ...
+    >>> my_par = MyParameter()
+    >>> my_par.length is None
+    True
+
+    Strings are parsed into Quantity objects.
+
+    >>> my_par.length = ['1 * angstrom', 0.5 * unit.nanometer]
+    >>> my_par.length[0]
+    Quantity(value=1, unit=angstrom)
+
+    Note that ``IndexedParameterAttribute`s are immutable right now. This
+    may change in the future
+    >>> my_par.length[0] = 3.0 * unit.angstrom
+    Traceback (most recent call last):
+    ...
+    TypeError: 'tuple' object does not support item assignment
+
+    Similarly, custom validators work as with ``ParameterAttribute``, but
+    they are used to validate each value in the sequence.
+
+    >>> class MyParameter:
+    ...     attr_indexed = IndexedParameterAttribute(validator=float)
+    ...
+    >>> my_par = MyParameter()
+    >>> my_par.attr_indexed = [1, '1.0', '1e-2', 4.0]
+    >>> my_par.attr_indexed
+    (1.0, 1.0, 0.01, 4.0)
+
     """
 
     def __set__(self, instance, sequence):
