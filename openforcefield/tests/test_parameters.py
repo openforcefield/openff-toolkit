@@ -18,7 +18,7 @@ from simtk import unit
 import pytest
 
 from openforcefield.typing.engines.smirnoff.parameters import (
-    _ParameterAttribute, _IndexedParameterAttribute, ParameterList,
+    ParameterAttribute, IndexedParameterAttribute, ParameterList,
     ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
     ImproperTorsionHandler, ToolkitAM1BCCHandler, SMIRNOFFSpecError
 )
@@ -31,26 +31,26 @@ from openforcefield.utils import detach_units, IncompatibleUnitError
 #======================================================================
 
 class TestParameterAttribute:
-    """Test cases for the descriptor _ParameterAttribute."""
+    """Test cases for the descriptor ParameterAttribute."""
 
     def test_default_value(self):
         """Default values are assigned correctly on initialization."""
         class MyParameter:
-            attr_optional = _ParameterAttribute(default=2)
+            attr_optional = ParameterAttribute(default=2)
         my_par = MyParameter()
         assert my_par.attr_optional == 2
 
     def test_none_default_value(self):
         """None is a valid default value for ParameterAttribute."""
         class MyParameter:
-            attr_optional = _ParameterAttribute(default=None)
+            attr_optional = ParameterAttribute(default=None)
         my_par = MyParameter()
         assert my_par.attr_optional is None
 
     def test_mandatory_value(self):
         """AttributeError is raised if a mandatory attribute is accessed before being initialized."""
         class MyParameter:
-            attr_mandatory = _ParameterAttribute()
+            attr_mandatory = ParameterAttribute()
         my_par = MyParameter()
         with pytest.raises(AttributeError):
             my_par.attr_mandatory
@@ -58,7 +58,7 @@ class TestParameterAttribute:
     def test_unit_validation(self):
         """ParameterAttributes attached to a unit are validated correctly."""
         class MyParameter:
-            attr_unit = _ParameterAttribute(unit=unit.kilocalories_per_mole/unit.angstrom**2)
+            attr_unit = ParameterAttribute(unit=unit.kilocalories_per_mole/unit.angstrom**2)
         my_par = MyParameter()
 
         # TypeError is raised when setting a unit-less value.
@@ -76,7 +76,7 @@ class TestParameterAttribute:
     def test_quantity_string_parsing(self):
         """ParameterAttributes attached to units convert strings into Quantity objects."""
         class MyParameter:
-            attr_unit = _ParameterAttribute(unit=unit.meter/unit.second**2)
+            attr_unit = ParameterAttribute(unit=unit.meter/unit.second**2)
         my_par = MyParameter()
 
         my_par.attr_unit = '3.0*meter/second**2'
@@ -91,8 +91,8 @@ class TestParameterAttribute:
     def test_custom_validator(self):
         """Custom validators of ParameterAttributes are executed correctly."""
         class MyParameter:
-            attr_all_to_float = _ParameterAttribute(validator=float)
-            attr_int_to_float = _ParameterAttribute()
+            attr_all_to_float = ParameterAttribute(validator=float)
+            attr_int_to_float = ParameterAttribute()
             @attr_int_to_float.validator
             def attr_int_to_float(self, value):
                 """Convert only integers to float"""
@@ -120,7 +120,7 @@ class TestParameterAttribute:
         """An exception is raised when a default that doesn't pass validation is used."""
         with pytest.raises(TypeError, match='default value None does not pass validation'):
             class MyParameter:
-                attr_inconsistent = _ParameterAttribute(default=None, validator=float)
+                attr_inconsistent = ParameterAttribute(default=None, validator=float)
 
 
 class TestIndexedParameterAttribute:
@@ -129,7 +129,7 @@ class TestIndexedParameterAttribute:
     def test_tuple_conversion(self):
         """IndexedParameterAttribute converts internally sequences to tuples."""
         class MyParameter:
-            attr_indexed = _IndexedParameterAttribute()
+            attr_indexed = IndexedParameterAttribute()
         my_par = MyParameter()
         my_par.attr_indexed = [1, 2, 3]
         assert isinstance(my_par.attr_indexed, tuple)
@@ -137,14 +137,14 @@ class TestIndexedParameterAttribute:
     def test_indexed_default(self):
         """IndexedParameterAttribute handles default values correctly."""
         class MyParameter:
-            attr_indexed_optional = _IndexedParameterAttribute(default=None)
+            attr_indexed_optional = IndexedParameterAttribute(default=None)
         my_par = MyParameter()
         assert my_par.attr_indexed_optional is None
 
     def test_units_on_all_elements(self):
         """IndexedParameterAttribute validates every single element of the sequence."""
         class MyParameter:
-            attr_indexed_unit = _IndexedParameterAttribute(unit=unit.gram)
+            attr_indexed_unit = IndexedParameterAttribute(unit=unit.gram)
         my_par = MyParameter()
 
         # Strings are correctly converted.
@@ -160,7 +160,7 @@ class TestIndexedParameterAttribute:
     def test_validator_on_all_elements(self):
         """IndexedParameterAttribute calls custom validators on every single element of the sequence."""
         class MyParameter:
-            attr_indexed_validator = _IndexedParameterAttribute(validator=float)
+            attr_indexed_validator = IndexedParameterAttribute(validator=float)
         my_par = MyParameter()
 
         my_par.attr_indexed_validator = [1, '2.0', '1e-3', 4.0]

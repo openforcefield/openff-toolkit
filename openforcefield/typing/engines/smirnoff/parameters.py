@@ -112,12 +112,7 @@ class NonbondedMethod(Enum):
 # PARAMETER ATTRIBUTES
 #======================================================================
 
-class _UNDEFINED:
-    """Custom type used by _ParameterAttribute to differentiate between None and undeclared variables."""
-    pass
-
-
-class _ParameterAttribute:
+class ParameterAttribute:
     """A descriptor for ``ParameterType`` attributes.
 
     The descriptors allows associating to the parameter a default value,
@@ -125,7 +120,7 @@ class _ParameterAttribute:
     validator.
 
     Because we may want to have ``None`` as a default value, mandatory
-    attributes have the ``default`` set to the special type ``_UNDEFINED``.
+    attributes have the ``default`` set to the special type ``UNDEFINED``.
 
     Validators can be both static or instance functions/methods with signature
 
@@ -151,8 +146,8 @@ class _ParameterAttribute:
     Create a parameter type with an optional and a mandatory attributes.
 
     >>> class MyParameter:
-    ...     attr_mandatory = _ParameterAttribute()
-    ...     attr_optional = _ParameterAttribute(default=2)
+    ...     attr_mandatory = ParameterAttribute()
+    ...     attr_optional = ParameterAttribute(default=2)
     ...
     >>> my_par = MyParameter()
 
@@ -173,7 +168,7 @@ class _ParameterAttribute:
 
     >>> from simtk import unit
     >>> class MyParameter:
-    ...     attr_quantity = _ParameterAttribute(unit=unit.angstrom)
+    ...     attr_quantity = ParameterAttribute(unit=unit.angstrom)
     ...
     >>> my_par = MyParameter()
     >>> my_par.attr_quantity = '1.0 * nanometer'
@@ -188,8 +183,8 @@ class _ParameterAttribute:
 
     >>> class MyParameter:
     ...     # Both strings and integers convert nicely to floats with float().
-    ...     attr_all_to_float = _ParameterAttribute(validator=float)
-    ...     attr_int_to_float = _ParameterAttribute()
+    ...     attr_all_to_float = ParameterAttribute(validator=float)
+    ...     attr_int_to_float = ParameterAttribute()
     ...     @attr_int_to_float.validator
     ...     def attr_int_to_float(self, value):
     ...         # This validator convert only integers to float
@@ -222,13 +217,17 @@ class _ParameterAttribute:
 
     """
 
-    def __init__(self, default=_UNDEFINED, unit=None, validator=None):
+    class UNDEFINED:
+        """Custom type used by ``ParameterAttribute`` to differentiate between ``None`` and undeclared default."""
+        pass
+
+    def __init__(self, default=UNDEFINED, unit=None, validator=None):
         self._default = default
         self._unit = unit
         self._validator = validator
 
         # If given, check that the default value pass the validation.
-        if self._default is not _UNDEFINED:
+        if self._default is not ParameterAttribute.UNDEFINED:
             try:
                 self._call_validator(self._default)
             except:
@@ -242,7 +241,7 @@ class _ParameterAttribute:
             return getattr(instance, self._name)
         except AttributeError:
             # The attribute has not initialized. Check if there's a default.
-            if self._default is _UNDEFINED:
+            if self._default is ParameterAttribute.UNDEFINED:
                 raise
             return self._default
 
@@ -287,7 +286,7 @@ class _ParameterAttribute:
         return value
 
 
-class _IndexedParameterAttribute(_ParameterAttribute):
+class IndexedParameterAttribute(ParameterAttribute):
     """The attribute of a parameter with an unspecified number of terms.
 
     Some parameters can be associated to multiple terms, For example,
@@ -3094,4 +3093,4 @@ class GBSAParameterHandler(ParameterHandler):
 
 if __name__ == '__main__':
     import doctest
-    doctest.run_docstring_examples(_ParameterAttribute, globals())
+    doctest.run_docstring_examples(ParameterAttribute, globals())
