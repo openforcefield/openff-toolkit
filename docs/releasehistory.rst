@@ -12,22 +12,22 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.4.0 - Performance optimizations and support for SMIRNOFF 0.3 specification
 ----------------------------------------------------------------------------
 
-This update improves runtime when running ``create_openmm_system`` on large topologies.
+This update contains performance enhancements that significantly reduce the time to create OpenMM systems for topologies containing many molecules via ``ForceField.create_openmm_system()``.
 
 This update also introduces the `SMIRNOFF 0.3 specification <https://open-forcefield-toolkit.readthedocs.io/en/0.4.0/smirnoff.html>`_.
 The spec update is the result of discussions about how to handle the evolution of data and parameter types as further functional forms are added to the SMIRNOFF spec.
 
 
-We provide methods to convert SMIRNOFF 0.1 and 0.2 forcefields written with the XML serialization (.offxml) to the SMIRNOFF 0.3 XML specification.
+We provide methods to convert SMIRNOFF 0.1 and 0.2 forcefields written with the XML serialization (``.offxml``) to the SMIRNOFF 0.3 XML specification.
 These methods are called automatically when loading a serialized SMIRNOFF data representation written in the 0.1 or 0.2 specification.
 This functionality allows the toolkit to continue to read files containing SMIRNOFF 0.2 spec force fields, and also implements backwards-compatibility for SMIRNOFF 0.1 spec force fields.
 
 
-WARNING: The SMIRNOFF 0.1 spec did not contain fields for several energy-determining parameters that are exposed in later SMIRNOFF specs.
-Thus, when reading SMIRNOFF 0.1 spec data, the toolkit must make assumptions about the values that should be added for the newly-required fields.
-The values that are added include 1-2, 1-3 and 1-5 scaling factors, cutoffs, and long-range treatments for nonbonded interactions.
-Each assumption is printed as a warning during the conversion process.
-Please carefully review the warning messages to ensure that the conversion is providing your desired behavior.
+.. warning :: The SMIRNOFF 0.1 spec did not contain fields for several energy-determining parameters that are exposed in later SMIRNOFF specs.
+  Thus, when reading SMIRNOFF 0.1 spec data, the toolkit must make assumptions about the values that should be added for the newly-required fields.
+  The values that are added include 1-2, 1-3 and 1-5 scaling factors, cutoffs, and long-range treatments for nonbonded interactions.
+  Each assumption is printed as a warning during the conversion process.
+  Please carefully review the warning messages to ensure that the conversion is providing your desired behavior.
 
 
 
@@ -45,14 +45,14 @@ Please carefully review the warning messages to ensure that the conversion is pr
 Performance improvements
 """"""""""""""""""""""""
 
-* `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Improved runtime for system creation in large topologies.
+* `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Performance improvements when creating systems for topologies with many atoms.
 
 
 New features
 """"""""""""
 
 * `PR #311 <https://github.com/openforcefield/openforcefield/pull/311>`_: Several new experimental functions.
-    * Adds ``convert_0_2_smirnoff_to_0_3``, which takes a SMIRNOFF 0.2-spec data dict, and updates it to 0.3.
+    * Adds :py:meth:`openforcefield.utils.convert_0_2_smirnoff_to_0_3`, which takes a SMIRNOFF 0.2-spec data dict, and updates it to 0.3.
       This function is called automatically when creating a ``ForceField`` from a SMIRNOFF 0.2 spec OFFXML file.
     * Adds ``convert_0_1_smirnoff_to_0_2``, which takes a SMIRNOFF 0.1-spec data dict, and updates it to 0.2.
       This function is called automatically when creating a ``ForceField`` from a SMIRNOFF 0.1 spec OFFXML file.
