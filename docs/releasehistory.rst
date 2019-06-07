@@ -52,18 +52,19 @@ New features
 """"""""""""
 
 * `PR #311 <https://github.com/openforcefield/openforcefield/pull/311>`_: Several new experimental functions.
-    * Adds :py:meth:`openforcefield.utils.convert_0_2_smirnoff_to_0_3`, which takes a SMIRNOFF 0.2-spec data dict, and updates it to 0.3.
-      This function is called automatically when creating a ``ForceField`` from a SMIRNOFF 0.2 spec OFFXML file.
-    * Adds ``convert_0_1_smirnoff_to_0_2``, which takes a SMIRNOFF 0.1-spec data dict, and updates it to 0.2.
-      This function is called automatically when creating a ``ForceField`` from a SMIRNOFF 0.1 spec OFFXML file.
-    * NOTE: The format of the "SMIRNOFF data dict" above is likely to change significantly in the future.
-      Users that require a stable serialized ForceField object should use the output of ``ForceField.to_string('XML')`` instead.
-    * Adds ``ParameterHandler`` and ``ParameterType`` ``add_cosmetic_attribute`` and ``delete_cosmetic_attribute`` functions.
-      Once created, cosmetic attributes can be accessed and modified as attributes of the underlying object (eg. ``ParameterType.my_cosmetic_attrib = 'blue'``)
-      These functions are experimental, and we are interested in feedback on how cosmetic attribute handling could be improved. (`See Issue #338 <https://github.com/openforcefield/openforcefield/issues/338>`_)
-      Note that if a new cosmetic attribute is added to an object without using these functions, it will not be recognized by the toolkit and will not be written out during serialization.
-    * Values for the top-level ``Author`` and ``Date`` tags are now kept during SMIRNOFF data I/O.
-      If multiple data sources containing these fields are read, the values are concatenated using "AND" as a separator.
+
+  * Adds :py:meth:`convert_0_2_smirnoff_to_0_3 <openforcefield.utils.utils.convert_0_2_smirnoff_to_0_3>`, which takes a SMIRNOFF 0.2-spec data dict, and updates it to 0.3.
+    This function is called automatically when creating a ``ForceField`` from a SMIRNOFF 0.2 spec OFFXML file.
+  * Adds :py:meth:`convert_0_1_smirnoff_to_0_2 <openforcefield.utils.utils.convert_0_1_smirnoff_to_0_2>`, which takes a SMIRNOFF 0.1-spec data dict, and updates it to 0.2.
+    This function is called automatically when creating a ``ForceField`` from a SMIRNOFF 0.1 spec OFFXML file.
+  * NOTE: The format of the "SMIRNOFF data dict" above is likely to change significantly in the future.
+    Users that require a stable serialized ForceField object should use the output of :py:meth:`ForceField.to_string('XML') <openforcefield.typing.engines.smirnoff.forcefield.ForceField.to_string>` instead.
+  * Adds ``ParameterHandler`` and ``ParameterType`` :py:meth:`add_cosmetic_attribute <openforcefield.typing.engines.smirnoff.parameters.ParameterType.add_cosmetic_attribute>` and ``delete_cosmetic_attribute`` functions.
+    Once created, cosmetic attributes can be accessed and modified as attributes of the underlying object (eg. ``ParameterType.my_cosmetic_attrib = 'blue'``)
+    These functions are experimental, and we are interested in feedback on how cosmetic attribute handling could be improved. (`See Issue #338 <https://github.com/openforcefield/openforcefield/issues/338>`_)
+    Note that if a new cosmetic attribute is added to an object without using these functions, it will not be recognized by the toolkit and will not be written out during serialization.
+  * Values for the top-level ``Author`` and ``Date`` tags are now kept during SMIRNOFF data I/O.
+    If multiple data sources containing these fields are read, the values are concatenated using "AND" as a separator.
 
 
 
