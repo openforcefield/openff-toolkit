@@ -14,13 +14,13 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 This update improves runtime when running ``create_openmm_system`` on large topologies.
 
-This update also introduces the `SMIRNOFF 0.3 spec <https://open-forcefield-toolkit.readthedocs.io/en/0.4.0/smirnoff.html>`_.
+This update also introduces the `SMIRNOFF 0.3 specification <https://open-forcefield-toolkit.readthedocs.io/en/0.4.0/smirnoff.html>`_.
 The spec update is the result of discussions about how to handle the evolution of data and parameter types as further functional forms are added to the SMIRNOFF spec.
 
 
-We provide methods to convert SMIRNOFF 0.1 and 0.2 forcefields written with the XML serialization (.offxml) to SMIRNOFF 0.3 XML specification.
+We provide methods to convert SMIRNOFF 0.1 and 0.2 forcefields written with the XML serialization (.offxml) to the SMIRNOFF 0.3 XML specification.
 These methods are called automatically when loading a serialized SMIRNOFF data representation written in the 0.1 or 0.2 specification.
-This functionality allows the toolkit to continue to read 0.2-spec files, and also implements backwards-compatibility for 0.1-spec files.
+This functionality allows the toolkit to continue to read files containing SMIRNOFF 0.2 spec force fields, and also implements backwards-compatibility for SMIRNOFF 0.1 spec force fields.
 
 
 WARNING: The SMIRNOFF 0.1 spec did not contain fields for several energy-determining parameters that are exposed in later SMIRNOFF specs.
@@ -31,9 +31,9 @@ Please carefully review the warning messages to ensure that the conversion is pr
 
 
 
-SMIRNOFF Spec Changes
-"""""""""""""""""""""
-* SMIRNOFF 0.3 introduces versioning for each individual parameter section, allowing asynchronous updates to the features of each parameter class.
+`SMIRNOFF 0.3 specification updates <https://open-forcefield-toolkit.readthedocs.io/en/0.4.0/smirnoff.html>`_
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+* The SMIRNOFF 0.3 spec introduces versioning for each individual parameter section, allowing asynchronous updates to the features of each parameter class.
   The top-level ``SMIRNOFF`` tag, containing information like ``aromaticity_model``, ``Author``, and ``Date``, still has a version (currently 0.3).
   But, to allow for independent development of individual parameter types, each section (such as ``Bonds``, ``Angles``, etc) now has its own version as well (currently all 0.3).
 * All units are now stored in expressions with their corresponding values. For example, distances are now stored as ``1.526*angstrom``, instead of storing the unit separately in the section header.
