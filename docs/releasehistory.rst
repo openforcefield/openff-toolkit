@@ -12,13 +12,13 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.4.0 - Performance optimizations and support for SMIRNOFF 0.3 specification
 ----------------------------------------------------------------------------
 
-This update contains performance enhancements that significantly reduce the time to create OpenMM systems for topologies containing many molecules via ``ForceField.create_openmm_system()``.
+This update contains performance enhancements that significantly reduce the time to create OpenMM systems for topologies containing many molecules via :py:meth:`ForceField.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`.
 
 This update also introduces the `SMIRNOFF 0.3 specification <https://open-forcefield-toolkit.readthedocs.io/en/0.4.0/smirnoff.html>`_.
 The spec update is the result of discussions about how to handle the evolution of data and parameter types as further functional forms are added to the SMIRNOFF spec.
 
 
-We provide methods to convert SMIRNOFF 0.1 and 0.2 forcefields written with the XML serialization (``.offxml``) to the SMIRNOFF 0.3 XML specification.
+We provide methods to convert SMIRNOFF 0.1 and 0.2 forcefields written with the XML serialization (``.offxml``) to the SMIRNOFF 0.3 specification.
 These methods are called automatically when loading a serialized SMIRNOFF data representation written in the 0.1 or 0.2 specification.
 This functionality allows the toolkit to continue to read files containing SMIRNOFF 0.2 spec force fields, and also implements backwards-compatibility for SMIRNOFF 0.1 spec force fields.
 
@@ -37,7 +37,7 @@ This functionality allows the toolkit to continue to read files containing SMIRN
   The top-level ``SMIRNOFF`` tag, containing information like ``aromaticity_model``, ``Author``, and ``Date``, still has a version (currently 0.3).
   But, to allow for independent development of individual parameter types, each section (such as ``Bonds``, ``Angles``, etc) now has its own version as well (currently all 0.3).
 * All units are now stored in expressions with their corresponding values. For example, distances are now stored as ``1.526*angstrom``, instead of storing the unit separately in the section header.
-* The ``potential`` field for ``ProperTorsions`` and ``ImproperTorsions`` tags is no longer ``charmm``, but is rather ``k*(1+cos(periodicity*theta-phase))``.
+* The current allowed value of the ``potential`` field for ``ProperTorsions`` and ``ImproperTorsions`` tags is no longer ``charmm``, but is rather ``k*(1+cos(periodicity*theta-phase))``.
   It was pointed out to us that CHARMM-style torsions deviate from this formula when the periodicity of a torsion term is 0, and we do not intend to reproduce that behavior.
 * SMIRNOFF spec documentation has been updated with tables of keywords and their defaults for each parameter section and parameter type.
   These tables will track the allowed keywords and default behavior as updated versions of individual parameter sections are released.
