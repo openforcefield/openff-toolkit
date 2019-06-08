@@ -2378,6 +2378,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
 
         from networkx.algorithms.isomorphism import GraphMatcher
         import simtk.unit
+        import copy
         # Define the node/edge attributes that we will use to match the atoms/bonds during molecule comparison
         node_match_func = lambda x, y: ((x['atomic_number'] == y['atomic_number']) and
                                         (x['stereochemistry'] == y['stereochemistry']) and
@@ -2405,7 +2406,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
 
                 # Get the partial charges
                 # Make a copy of the charge molecule's charges array (this way it's the right shape)
-                temp_mol_charges = simtk.unit.Quantity(charge_mol.partial_charges)
+                temp_mol_charges = copy.deepcopy(simtk.unit.Quantity(charge_mol.partial_charges))
                 for charge_idx, ref_idx in topology_atom_map.items():
                     temp_mol_charges[ref_idx] = charge_mol.partial_charges[charge_idx]
                 molecule.partial_charges = temp_mol_charges
