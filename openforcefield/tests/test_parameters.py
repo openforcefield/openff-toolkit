@@ -62,10 +62,10 @@ class TestParameterAttribute:
         my_par = MyParameter()
 
         # TypeError is raised when setting a unit-less value.
-        with pytest.raises(TypeError, match='should have units of'):
+        with pytest.raises(IncompatibleUnitError, match='should have units of'):
             my_par.attr_unit = 3.0
         # TypeError is raised when setting a value with incorrect units.
-        with pytest.raises(TypeError, match='should have units of'):
+        with pytest.raises(IncompatibleUnitError, match='should have units of'):
             my_par.attr_unit = 3.0 * unit.kilocalories_per_mole
 
         # Otherwise the attribute is assigned correctly.
@@ -83,9 +83,9 @@ class TestParameterAttribute:
         assert my_par.attr_unit == 3.0 * unit.meter/unit.second**2
 
         # Assigning incorrect units still raises an error.
-        with pytest.raises(TypeError, match='should have units of'):
+        with pytest.raises(IncompatibleUnitError, match='should have units of'):
             my_par.attr_unit = '3.0'
-        with pytest.raises(TypeError, match='should have units of'):
+        with pytest.raises(IncompatibleUnitError, match='should have units of'):
             my_par.attr_unit = '3.0*meter/second'
 
     def test_custom_converter(self):
@@ -160,9 +160,9 @@ class TestIndexedParameterAttribute:
         assert my_par.attr_indexed_unit == (1.0*unit.gram, 2*unit.gram)
 
         # Incompatible units on a single elements are correctly caught.
-        with pytest.raises(TypeError, match='should have units of'):
+        with pytest.raises(IncompatibleUnitError, match='should have units of'):
             my_par.attr_indexed_unit = [3.0, 2*unit.gram]
-        with pytest.raises(TypeError, match='should have units of'):
+        with pytest.raises(IncompatibleUnitError, match='should have units of'):
             my_par.attr_indexed_unit = [2*unit.gram, 4.0*unit.meter]
 
     def test_converter_on_all_elements(self):
@@ -524,8 +524,10 @@ class TestParameterType:
         """ParameterType handles indexed attributes correctly."""
         class MyParameter(ParameterType):
             a = IndexedParameterAttribute()
-        my_par = MyParameter(smirks='[*:1]', a1=1, a3=3, a2=2)
+            b = IndexedParameterAttribute()
+        my_par = MyParameter(smirks='[*:1]', a1=1, a3=3, a2=2, b1=4, b2=5, b3=6)
         assert my_par.a == (1, 2, 3)
+        assert my_par.b == (4, 5, 6)
 
     def test_single_value_indexed_attr(self):
         """ParameterType handle single-value indexed attributes correctly."""

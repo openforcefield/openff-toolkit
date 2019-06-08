@@ -48,6 +48,7 @@ from openforcefield.utils import attach_units,  \
     check_units_are_compatible, object_to_quantity
 from openforcefield.topology import ValenceDict, ImproperDict
 from openforcefield.typing.chemistry import ChemicalEnvironment
+from openforcefield.utils import IncompatibleUnitError
 
 
 #=============================================================================================
@@ -279,10 +280,10 @@ class ParameterAttribute:
             # Check if units are compatible.
             try:
                 if not self._unit.is_compatible(value.unit):
-                    raise TypeError(f'{value} should have units of {self._unit}')
+                    raise IncompatibleUnitError(f'{self._name[1:]}: {value} should have units of {self._unit}')
             except AttributeError:
                 # This is not a Quantity object.
-                raise TypeError(f'{value} should have units of {self._unit}')
+                raise IncompatibleUnitError(f'{self._name[1:]}: {value} should have units of {self._unit}')
         return value
 
     def _call_converter(self, value, instance):
@@ -689,7 +690,7 @@ class ParameterType:
 
         # Raise an error if we there are different indexed
         # attributes with a different number of terms.
-        if len(list(indexed_attr_lengths.values())) > 1:
+        if len(set(indexed_attr_lengths.values())) > 1:
             raise TypeError('The following indexed attributes have '
                             f'different lengths: {indexed_attr_lengths}')
 
@@ -743,13 +744,14 @@ class ParameterType:
         if not(discard_cosmetic_attributes):
             attribs_to_return += self._COSMETIC_ATTRIBS
 
-        # Start populating a dict of the attribs
+        # Start populating a dict of the attribs.
+        indexed_attribs = set(self._get_indexed_parameter_attributes().keys())
         smirnoff_dict = OrderedDict()
         # If attribs_to_return is ordered here, that will effectively be an informal output ordering
         for attrib_name in attribs_to_return:
-            attrib_value = self.__getattribute__(attrib_name)
+            attrib_value = getattr(self, attrib_name)
 
-            if type(attrib_value) is list:
+            if attrib_name in indexed_attribs and isinstance(attrib_value, tuple):
                 for idx, val in enumerate(attrib_value):
                     smirnoff_dict[attrib_name + str(idx+1)] = val
             else:
