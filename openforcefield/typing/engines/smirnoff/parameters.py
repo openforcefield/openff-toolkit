@@ -360,23 +360,37 @@ class IndexedParameterAttribute(ParameterAttribute):
     >>> my_par.attr_indexed
     (1.0, 1.0, 0.01, 4.0)
 
+    Single values are still supported as usual.
+
+    >>> my_par.attr_indexed = '1.0'
+    >>> my_par.attr_indexed
+    1.0
+
     """
 
-    def _validate_units(self, sequence):
+    def _validate_units(self, value):
         """Overwrite ParameterAttribute._validate_units to validate each element of the sequence."""
         if self._unit is not None:
-            # Note that this is a generator. The tuple memory will be allocated in _call_converter.
-            sequence = (super(IndexedParameterAttribute, self)._validate_units(element)
-                        for element in sequence)
-        return sequence
+            try:
+                # Trye treating this as single value.
+                value = super()._validate_units(value)
+            except:
+                # Note that this is a generator. The tuple memory will be allocated in _call_converter.
+                value = (super(IndexedParameterAttribute, self)._validate_units(element)
+                            for element in value)
+        return value
 
-    def _call_converter(self, sequence, instance):
+    def _call_converter(self, value, instance):
         """Overwrite ParameterAttribute._call_converter to convert each
         element of the sequence and make it immutable."""
         if self._converter is not None:
-            # Note that this is a generator. The tuple memory will be allocated below.
-            sequence = (super(IndexedParameterAttribute, self)._call_converter(element, instance)
-                        for element in sequence)
+            try:
+                # Try treating this as a single value.
+                value = super()._call_converter(value, instance)
+            except:
+                # Note that this is a generator. The tuple memory will be allocated below.
+                value = (super(IndexedParameterAttribute, self)._call_converter(element, instance)
+                         for element in value)
 
         # Make the sequence immutable.
         # TODO: Instead of making the sequence immutable, we could just
@@ -384,9 +398,9 @@ class IndexedParameterAttribute(ParameterAttribute):
         #       similar to this: https://stackoverflow.com/questions/13259179/list-callbacks
         #       and validate the elements in the callback function. This
         #       shouldn't break the API but only extend it.
-        if not isinstance(sequence, tuple):
-            sequence = tuple(sequence)
-        return sequence
+        if isinstance(value, abc.MutableSequence) or isinstance(value, abc.Generator):
+            value = tuple(value)
+        return value
 
 #======================================================================
 # PARAMETER TYPE/LIST
@@ -1489,7 +1503,6 @@ class BondHandler(ParameterHandler):
 
     .. warning :: This API is experimental and subject to change.
     """
-
 
     class BondType(ParameterType):
         """A SMIRNOFF bond type

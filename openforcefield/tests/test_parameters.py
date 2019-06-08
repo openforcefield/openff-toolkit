@@ -174,6 +174,18 @@ class TestIndexedParameterAttribute:
         my_par.attr_indexed_converter = [1, '2.0', '1e-3', 4.0]
         assert my_par.attr_indexed_converter == (1.0, 2.0, 1e-3, 4.0)
 
+    def test_handle_single_value(self):
+        """IndexedParameterAttribute handle also single values instead of sequences."""
+        class MyParameter:
+            attr_indexed_converter = IndexedParameterAttribute(converter=str)
+            attr_indexed_unit = IndexedParameterAttribute(unit=unit.meter)
+        my_par = MyParameter()
+
+        my_par.attr_indexed_converter = 3.0
+        assert my_par.attr_indexed_converter == '3.0'
+        my_par.attr_indexed_unit = '1.0*nanometer'
+        assert my_par.attr_indexed_unit == 1.0 * unit.nanometer
+
 
 #======================================================================
 # Test ParameterHandler
