@@ -1514,18 +1514,9 @@ class ConstraintHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Bond'
         _ELEMENT_NAME = 'Constraint'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks']  # Attributes expected per the SMIRNOFF spec.
-        _OPTIONAL_SPEC_ATTRIBS = ['distance', 'id', 'parent_id']
-        _REQUIRE_UNITS = {'distance': unit.angstrom}
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
-            # TODO: Re-implement ability to set 'distance = True'
-            # if 'distance' in node.attrib:
-            #     self.distance = _extract_quantity_from_xml_element(
-            #         node, parent, 'distance'
-            #     )  # Constraint with specified distance will be added by ConstraintHandler
-            # else:
-            #     self.distance = True  # Constraint to equilibrium bond length will be added by HarmonicBondHandler
+
+        distance = ParameterAttribute(default=None, unit=unit.angstrom)
+
 
     _TAGNAME = 'Constraints'
     _INFOTYPE = ConstraintType
@@ -1543,12 +1534,11 @@ class ConstraintHandler(ParameterHandler):
             # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondHandler
             constraint = constraint_match.parameter_type
 
-            if hasattr(constraint, 'distance'):# is not True:
+            if constraint.distance is None:
+                topology.add_constraint(*atoms, True)
+            else:
                 system.addConstraint(*atoms, constraint.distance)
                 topology.add_constraint(*atoms, constraint.distance)
-            else:
-                topology.add_constraint(*atoms, True)
-
 
 #=============================================================================================
 
@@ -1564,15 +1554,13 @@ class BondHandler(ParameterHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
-        _VALENCE_TYPE = 'Bond' # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+        # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+        _VALENCE_TYPE = 'Bond'
         _ELEMENT_NAME = 'Bond'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'length', 'k']  # Attributes expected per the SMIRNOFF spec.
-        _REQUIRE_UNITS = {'length' : unit.angstrom,
-                          'k' : unit.kilocalorie_per_mole / unit.angstrom**2}
-        _INDEXED_ATTRIBS = ['length', 'k']  # May be indexed (by integer bond order) if fractional bond orders are used
 
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
+        # These attributes may be indexed (by integer bond order) if fractional bond orders are used.
+        length = IndexedParameterAttribute(unit=unit.angstrom)
+        k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
 
 
     _TAGNAME = 'Bonds'  # SMIRNOFF tag name to process
@@ -1701,13 +1689,9 @@ class AngleHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Angle'  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
         _ELEMENT_NAME = 'Angle'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'angle', 'k']  # Attributes expected per the SMIRNOFF spec.
-        _REQUIRE_UNITS = {'angle': unit.degree,
-                          'k': unit.kilocalorie_per_mole / unit.degree**2}
 
-
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
+        angle = ParameterAttribute(unit=unit.degree)
+        k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.degree**2)
 
 
     _TAGNAME = 'Angles'  # SMIRNOFF tag name to process
@@ -1805,17 +1789,11 @@ class ProperTorsionHandler(ParameterHandler):
 
         _VALENCE_TYPE = 'ProperTorsion'
         _ELEMENT_NAME = 'Proper'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
-        _REQUIRE_UNITS = {'k': unit.kilocalorie_per_mole,
-                          'phase': unit.degree}
-        _OPTIONAL_SPEC_ATTRIBS = ['id', 'parent_id', 'idivf']
-        _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
-        # Note that we don't need to type k or phase, since those will be interpreted as Quantity
-        _ATTRIBS_TO_TYPE = {'periodicity': int,
-                            'idivf': float}
 
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
+        periodicity = IndexedParameterAttribute(converter=int)
+        phase = IndexedParameterAttribute(unit=unit.degree)
+        k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+        idivf = IndexedParameterAttribute(default=None, converter=float)
 
 
     _TAGNAME = 'ProperTorsions'  # SMIRNOFF tag name to process
@@ -1943,17 +1921,11 @@ class ImproperTorsionHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'ImproperTorsion'
         _ELEMENT_NAME = 'Improper'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
-        _REQUIRE_UNITS = {'k': unit.kilocalorie_per_mole,
-                          'phase': unit.degree}
-        _OPTIONAL_SPEC_ATTRIBS = ['id', 'parent_id', 'idivf']
-        _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
-        # Note that we don't need to type k or phase, since those will be interpreted as Quantity
-        _ATTRIBS_TO_TYPE = {'periodicity': int,
-                            'idivf': float}
 
-        def __init__(self, **kwargs):
-            super().__init__( **kwargs)
+        periodicity = IndexedParameterAttribute(converter=int)
+        phase = IndexedParameterAttribute(unit=unit.degree)
+        k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+        idivf = IndexedParameterAttribute(default=None, converter=float)
 
 
     _TAGNAME = 'ImproperTorsions'  # SMIRNOFF tag name to process
@@ -2097,13 +2069,10 @@ class vdWHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Atom'  # ChemicalEnvironment valence type expected for SMARTS
         _ELEMENT_NAME = 'Atom'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'epsilon'] # Attributes expected per the SMIRNOFF spec.
-        _OPTIONAL_SPEC_ATTRIBS = ['id', 'parent_id', 'sigma', 'rmin_half']
-        _REQUIRE_UNITS = {
-            'epsilon': unit.kilocalorie_per_mole,
-            'sigma': unit.angstrom,
-            'rmin_half': unit.angstrom
-        }
+
+        epsilon = ParameterAttribute(unit=unit.kilocalorie_per_mole)
+        sigma = ParameterAttribute(default=None, unit=unit.angstrom)
+        rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
 
         def __init__(self, **kwargs):
             sigma = kwargs.get('sigma', None)
@@ -2115,19 +2084,8 @@ class vdWHandler(ParameterHandler):
                     "BOTH sigma and rmin_half cannot be specified simultaneously."
                 )
 
-
             super().__init__(**kwargs)
 
-
-        # @property
-        # def attrib(self):
-        #     """Return all storable attributes as a dict.
-        #     """
-        #     names = ['smirks', 'sigma', 'epsilon']
-        #     return {
-        #         name: getattr(self, name)
-        #         for name in names if hasattr(self, name)
-        #     }
 
     _TAGNAME = 'vdW'  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
@@ -2858,14 +2816,9 @@ class ChargeIncrementModelHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS
         _ELEMENT_NAME = 'ChargeIncrement'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'chargeIncrement']
-        _REQUIRE_UNITS = {
-            'chargeIncrement': unit.elementary_charge
-        }
-        _INDEXED_ATTRIBS = ['chargeIncrement']
 
-        def __init__(self, node, parent):
-            super().__init__(**kwargs)
+        charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
+
 
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
     _INFOTYPE = ChargeIncrementType  # info type to store
@@ -3103,9 +3056,9 @@ class GBSAParameterHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Atom'
         _ELEMENT_NAME = 'Atom' # TODO: This isn't actually in the spec
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'radius', 'scale']
-        _REQUIRE_UNITS = {'radius': unit.angstrom}
-        _ATTRIBS_TO_TYPE = {'scale': float}
+
+        radius = ParameterAttribute(unit=unit.angstrom)
+        scale = ParameterAttribute(converter=float)
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)

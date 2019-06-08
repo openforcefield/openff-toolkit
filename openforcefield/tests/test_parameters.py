@@ -798,7 +798,7 @@ class TestProperTorsionType:
         """
         from simtk import unit
 
-        with pytest.raises(IncompatibleUnitError, match="__init__ function.  phase with value 31 A, is incompatible")\
+        with pytest.raises(IncompatibleUnitError, match="should have units of")\
                 as context:
             p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                         phase1=30 * unit.degree,
