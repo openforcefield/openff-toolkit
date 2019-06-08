@@ -362,14 +362,21 @@ class IndexedParameterAttribute(ParameterAttribute):
 
     """
 
-    def __set__(self, instance, sequence):
-        # Validate units and call custom converter on every element of the sequence.
+    def _validate_units(self, sequence):
+        """Overwrite ParameterAttribute._validate_units to validate each element of the sequence."""
         if self._unit is not None:
-            # This is only a generator now that we'll convert to tuple later.
-            sequence = (self._validate_units(element) for element in sequence)
-        if  self._converter is not None:
-            # This is only a generator now that we'll convert to tuple later.
-            sequence = (self._call_converter(element, instance) for element in sequence)
+            # Note that this is a generator. The tuple memory will be allocated in _call_converter.
+            sequence = (super(IndexedParameterAttribute, self)._validate_units(element)
+                        for element in sequence)
+        return sequence
+
+    def _call_converter(self, sequence, instance):
+        """Overwrite ParameterAttribute._call_converter to convert each
+        element of the sequence and make it immutable."""
+        if self._converter is not None:
+            # Note that this is a generator. The tuple memory will be allocated below.
+            sequence = (super(IndexedParameterAttribute, self)._call_converter(element, instance)
+                        for element in sequence)
 
         # Make the sequence immutable.
         # TODO: Instead of making the sequence immutable, we could just
@@ -379,7 +386,7 @@ class IndexedParameterAttribute(ParameterAttribute):
         #       shouldn't break the API but only extend it.
         if not isinstance(sequence, tuple):
             sequence = tuple(sequence)
-        setattr(instance, self._name, sequence)
+        return sequence
 
 #======================================================================
 # PARAMETER TYPE/LIST
