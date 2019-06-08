@@ -116,11 +116,14 @@ class TestParameterAttribute:
         my_par.attr_int_to_float = 2
         assert isinstance(my_par.attr_int_to_float, float) and my_par.attr_int_to_float == 2.0
 
-    def test_incosistent_default(self):
-        """An exception is raised when a default that doesn't pass validation is used."""
-        with pytest.raises(TypeError, match='default value None does not pass validation'):
-            class MyParameter:
-                attr_inconsistent = ParameterAttribute(default=None, validator=float)
+    def test_default_pass_validation(self):
+        """The default value of ParameterAttribute is always allowed regardless of the validator."""
+        class MyParameter:
+            attr = ParameterAttribute(default=None, validator=float)
+        my_par = MyParameter()
+        my_par.attr = 3.0
+        my_par.attr = None
+        assert my_par.attr is None
 
     def test_get_descriptor_object(self):
         """When the descriptor is called from the class, the ParameterAttribute descriptor is returned."""

@@ -227,13 +227,6 @@ class ParameterAttribute:
         self._unit = unit
         self._validator = validator
 
-        # If given, check that the default value pass the validation.
-        if self.default is not ParameterAttribute.UNDEFINED:
-            try:
-                self._call_validator(self.default)
-            except:
-                raise TypeError(f'default value {self.default} does not pass validation')
-
     def __set_name__(self, owner, name):
         self._name = '_' + name
 
@@ -251,10 +244,8 @@ class ParameterAttribute:
             return self.default
 
     def __set__(self, instance, value):
-        # Validate units if requested.
-        value = self._validate_units(value)
-        # Call the custom validator before setting the value.
-        value = self._call_validator(value)
+        # Convert and validate the value.
+        value = self._convert_and_validate(instance, value)
         setattr(instance, self._name, value)
 
     def validator(self, validator):
@@ -263,6 +254,17 @@ class ParameterAttribute:
         This is meant to be used as a decorator (see main examples).
         """
         return self.__class__(default=self.default, validator=validator)
+
+    def _convert_and_validate(self, instance, value):
+        """Convert to Quantity, validate units, and call custom validator."""
+        # The default value is always allowed.
+        if self.default is not ParameterAttribute.UNDEFINED and value == self.default:
+            return value
+        # Convert and validate units.
+        value = self._validate_units(value)
+        # Call the custom validator before setting the value.
+        value = self._call_validator(value)
+        return value
 
     def _validate_units(self, value):
         """Convert strings expressions to Quantity and validate the units if requested."""
