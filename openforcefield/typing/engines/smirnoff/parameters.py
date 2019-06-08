@@ -238,6 +238,10 @@ class ParameterAttribute:
         self._name = '_' + name
 
     def __get__(self, instance, owner):
+        if instance is None:
+            # This is called from the class. Return the descriptor object.
+            return self
+
         try:
             return getattr(instance, self._name)
         except AttributeError:

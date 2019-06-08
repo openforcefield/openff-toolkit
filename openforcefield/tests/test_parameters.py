@@ -122,6 +122,11 @@ class TestParameterAttribute:
             class MyParameter:
                 attr_inconsistent = ParameterAttribute(default=None, validator=float)
 
+    def test_get_descriptor_object(self):
+        """When the descriptor is called from the class, the ParameterAttribute descriptor is returned."""
+        class MyParameter:
+            attr = ParameterAttribute()
+        assert isinstance(MyParameter.attr, ParameterAttribute)
 
 class TestIndexedParameterAttribute:
     """Tests for the IndexedParameterAttribute descriptor."""
