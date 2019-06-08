@@ -112,6 +112,7 @@ class NonbondedMethod(Enum):
 # PARAMETER ATTRIBUTES
 #======================================================================
 
+# TODO: Think about adding attrs to the dependencies and inherit from attr.ib
 class ParameterAttribute:
     """A descriptor for ``ParameterType`` attributes.
 
@@ -222,16 +223,16 @@ class ParameterAttribute:
         pass
 
     def __init__(self, default=UNDEFINED, unit=None, validator=None):
-        self._default = default
+        self.default = default
         self._unit = unit
         self._validator = validator
 
         # If given, check that the default value pass the validation.
-        if self._default is not ParameterAttribute.UNDEFINED:
+        if self.default is not ParameterAttribute.UNDEFINED:
             try:
-                self._call_validator(self._default)
+                self._call_validator(self.default)
             except:
-                raise TypeError(f'default value {self._default} does not pass validation')
+                raise TypeError(f'default value {self.default} does not pass validation')
 
     def __set_name__(self, owner, name):
         self._name = '_' + name
@@ -241,9 +242,9 @@ class ParameterAttribute:
             return getattr(instance, self._name)
         except AttributeError:
             # The attribute has not initialized. Check if there's a default.
-            if self._default is ParameterAttribute.UNDEFINED:
+            if self.default is ParameterAttribute.UNDEFINED:
                 raise
-            return self._default
+            return self.default
 
     def __set__(self, instance, value):
         # Validate units if requested.
@@ -257,7 +258,7 @@ class ParameterAttribute:
 
         This is meant to be used as a decorator (see main examples).
         """
-        return self.__class__(default=self._default, validator=validator)
+        return self.__class__(default=self.default, validator=validator)
 
     def _validate_units(self, value):
         """Convert strings expressions to Quantity and validate the units if requested."""
@@ -690,8 +691,8 @@ class ParameterType:
                 # self._COSMETIC_ATTRIBS.append(key)
                 # setattr(self, key, val)
             else:
-                raise SMIRNOFFSpecError(f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. " 
-                                        "If this is a desired cosmetic attribute, consider setting " 
+                raise SMIRNOFFSpecError(f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. "
+                                        "If this is a desired cosmetic attribute, consider setting "
                                         "'permit_cosmetic_attributes=True'")
 
     @property
