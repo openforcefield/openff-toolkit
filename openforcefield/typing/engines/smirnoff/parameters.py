@@ -117,15 +117,16 @@ class ParameterAttribute:
     """A descriptor for ``ParameterType`` attributes.
 
     The descriptors allows associating to the parameter a default value,
-    which makes the attribute optional, a unit validator, and a custom
-    validator.
+    which makes the attribute optional, a unit, and a custom converter.
 
     Because we may want to have ``None`` as a default value, required
     attributes have the ``default`` set to the special type ``UNDEFINED``.
 
-    Validators can be both static or instance functions/methods with signature
+    Converters can be both static or instance functions/methods with
+    respective signatures
 
-    def validator(value): -> validated_value
+    converter(value): -> converted_value
+    converter(instance, parameter_attribute, value): -> converted_value
 
     A decorator syntax is available (see example below).
 
@@ -136,10 +137,11 @@ class ParameterAttribute:
         attaching a default value to it.
     unit : simtk.unit.Quantity, optional
         When specified, only quantities with compatible units are allowed
-        to be set.
-    validator : callable, optional
-        An optional function that can be used to validate and cast values
-        before setting the attribute.
+        to be set, and string expressions are automatically parsed into a
+        ``Quantity``.
+    converter : callable, optional
+        An optional function that can be used to convert values before
+        setting the attribute.
 
     Examples
     -------
@@ -180,15 +182,15 @@ class ParameterAttribute:
     ...
     TypeError: 3.0 dimensionless should have units of angstrom
 
-    You can attach a custom validator to an attribute.
+    You can attach a custom converter to an attribute.
 
     >>> class MyParameter:
     ...     # Both strings and integers convert nicely to floats with float().
-    ...     attr_all_to_float = ParameterAttribute(validator=float)
+    ...     attr_all_to_float = ParameterAttribute(converter=float)
     ...     attr_int_to_float = ParameterAttribute()
-    ...     @attr_int_to_float.validator
-    ...     def attr_int_to_float(self, value):
-    ...         # This validator convert only integers to float
+    ...     @attr_int_to_float.converter
+    ...     def attr_int_to_float(self, attr, value):
+    ...         # This converter converts only integers to float
     ...         # and raise an exception for the other types.
     ...         if isinstance(value, int):
     ...             return float(value)
@@ -207,7 +209,7 @@ class ParameterAttribute:
     >>> my_par.attr_all_to_float
     2.0
 
-    The custom validator associated to attr_int_to_float converts only integers instead.
+    The custom converter associated to attr_int_to_float converts only integers instead.
     >>> my_par.attr_int_to_float = 3
     >>> my_par.attr_int_to_float
     3.0
@@ -222,10 +224,10 @@ class ParameterAttribute:
         """Custom type used by ``ParameterAttribute`` to differentiate between ``None`` and undeclared default."""
         pass
 
-    def __init__(self, default=UNDEFINED, unit=None, validator=None):
+    def __init__(self, default=UNDEFINED, unit=None, converter=None):
         self.default = default
         self._unit = unit
-        self._validator = validator
+        self._converter = converter
 
     def __set_name__(self, owner, name):
         self._name = '_' + name
@@ -248,22 +250,22 @@ class ParameterAttribute:
         value = self._convert_and_validate(instance, value)
         setattr(instance, self._name, value)
 
-    def validator(self, validator):
-        """Create a new ParameterAttribute with an associated validator.
+    def converter(self, converter):
+        """Create a new ParameterAttribute with an associated converter.
 
         This is meant to be used as a decorator (see main examples).
         """
-        return self.__class__(default=self.default, validator=validator)
+        return self.__class__(default=self.default, converter=converter)
 
     def _convert_and_validate(self, instance, value):
-        """Convert to Quantity, validate units, and call custom validator."""
+        """Convert to Quantity, validate units, and call custom converter."""
         # The default value is always allowed.
         if self.default is not ParameterAttribute.UNDEFINED and value == self.default:
             return value
         # Convert and validate units.
         value = self._validate_units(value)
-        # Call the custom validator before setting the value.
-        value = self._call_validator(value)
+        # Call the custom converter before setting the value.
+        value = self._call_converter(value, instance)
         return value
 
     def _validate_units(self, value):
@@ -281,15 +283,15 @@ class ParameterAttribute:
                 raise TypeError(f'{value} should have units of {self._unit}')
         return value
 
-    def _call_validator(self, value):
-        """Correctly calls static and instance validators."""
-        if self._validator is not None:
+    def _call_converter(self, value, instance):
+        """Correctly calls static and instance converters."""
+        if self._converter is not None:
             try:
                 # Static function.
-                return self._validator(value)
+                return self._converter(value)
             except TypeError:
                 # Instance method.
-                return self._validator(self, value)
+                return self._converter(instance, self, value)
         return value
 
 
@@ -301,7 +303,7 @@ class IndexedParameterAttribute(ParameterAttribute):
     can be used to encapsulate the sequence of terms.
 
     The only substantial difference with ``ParameterAttribute`` is that
-    only sequences are supported as values and validators and units are
+    only sequences are supported as values and converters and units are
     checked on each element of the sequence.
 
     Currently, the descriptor makes the sequence immutable. This is to
@@ -317,7 +319,7 @@ class IndexedParameterAttribute(ParameterAttribute):
     unit : simtk.unit.Quantity, optional
         When specified, only sequences of quantities with compatible units
         are allowed to be set.
-    validator : callable, optional
+    converter : callable, optional
         An optional function that can be used to validate and cast each
         element of the sequence before setting the attribute.
 
@@ -347,11 +349,11 @@ class IndexedParameterAttribute(ParameterAttribute):
     ...
     TypeError: 'tuple' object does not support item assignment
 
-    Similarly, custom validators work as with ``ParameterAttribute``, but
+    Similarly, custom converters work as with ``ParameterAttribute``, but
     they are used to validate each value in the sequence.
 
     >>> class MyParameter:
-    ...     attr_indexed = IndexedParameterAttribute(validator=float)
+    ...     attr_indexed = IndexedParameterAttribute(converter=float)
     ...
     >>> my_par = MyParameter()
     >>> my_par.attr_indexed = [1, '1.0', '1e-2', 4.0]
@@ -361,13 +363,13 @@ class IndexedParameterAttribute(ParameterAttribute):
     """
 
     def __set__(self, instance, sequence):
-        # Validate units and call custom validator on every element of the sequence.
+        # Validate units and call custom converter on every element of the sequence.
         if self._unit is not None:
             # This is only a generator now that we'll convert to tuple later.
             sequence = (self._validate_units(element) for element in sequence)
-        if  self._validator is not None:
+        if  self._converter is not None:
             # This is only a generator now that we'll convert to tuple later.
-            sequence = (self._call_validator(element) for element in sequence)
+            sequence = (self._call_converter(element, instance) for element in sequence)
 
         # Make the sequence immutable.
         # TODO: Instead of making the sequence immutable, we could just

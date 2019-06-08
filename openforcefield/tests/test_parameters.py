@@ -88,13 +88,13 @@ class TestParameterAttribute:
         with pytest.raises(TypeError, match='should have units of'):
             my_par.attr_unit = '3.0*meter/second'
 
-    def test_custom_validator(self):
-        """Custom validators of ParameterAttributes are executed correctly."""
+    def test_custom_converter(self):
+        """Custom converters of ParameterAttributes are executed correctly."""
         class MyParameter:
-            attr_all_to_float = ParameterAttribute(validator=float)
+            attr_all_to_float = ParameterAttribute(converter=float)
             attr_int_to_float = ParameterAttribute()
-            @attr_int_to_float.validator
-            def attr_int_to_float(self, value):
+            @attr_int_to_float.converter
+            def attr_int_to_float(self, attr, value):
                 """Convert only integers to float"""
                 if isinstance(value, int):
                     return float(value)
@@ -110,18 +110,18 @@ class TestParameterAttribute:
         my_par.attr_all_to_float = 2
         assert isinstance(my_par.attr_all_to_float, float) and my_par.attr_all_to_float == 2.0
 
-        # Only integers are converted with the custom validator
+        # Only integers are converted with the custom converter function.
         with pytest.raises(TypeError):
             my_par.attr_int_to_float = '1.0'
         my_par.attr_int_to_float = 2
         assert isinstance(my_par.attr_int_to_float, float) and my_par.attr_int_to_float == 2.0
 
     def test_default_pass_validation(self):
-        """The default value of ParameterAttribute is always allowed regardless of the validator."""
+        """The default value of ParameterAttribute is always allowed regardless of the validator/converter."""
         class MyParameter:
-            attr = ParameterAttribute(default=None, validator=float)
+            attr = ParameterAttribute(default=None, unit=unit.angstrom, converter=unit.Quantity)
         my_par = MyParameter()
-        my_par.attr = 3.0
+        my_par.attr = 3.0 * unit.nanometer
         my_par.attr = None
         assert my_par.attr is None
 
@@ -165,14 +165,14 @@ class TestIndexedParameterAttribute:
         with pytest.raises(TypeError, match='should have units of'):
             my_par.attr_indexed_unit = [2*unit.gram, 4.0*unit.meter]
 
-    def test_validator_on_all_elements(self):
-        """IndexedParameterAttribute calls custom validators on every single element of the sequence."""
+    def test_converter_on_all_elements(self):
+        """IndexedParameterAttribute calls custom converters on every single element of the sequence."""
         class MyParameter:
-            attr_indexed_validator = IndexedParameterAttribute(validator=float)
+            attr_indexed_converter = IndexedParameterAttribute(converter=float)
         my_par = MyParameter()
 
-        my_par.attr_indexed_validator = [1, '2.0', '1e-3', 4.0]
-        assert my_par.attr_indexed_validator == (1.0, 2.0, 1e-3, 4.0)
+        my_par.attr_indexed_converter = [1, '2.0', '1e-3', 4.0]
+        assert my_par.attr_indexed_converter == (1.0, 2.0, 1e-3, 4.0)
 
 
 #======================================================================
