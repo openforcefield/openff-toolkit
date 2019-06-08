@@ -645,7 +645,7 @@ class ParameterType:
         """
         # A list that may be populated to record the cosmetic attributes
         # read from a SMIRNOFF data source.
-        self._COSMETIC_ATTRIBS = []
+        self._cosmetic_attribs = []
 
         # Do not modify the original data.
         smirnoff_data = copy.deepcopy(kwargs)
@@ -742,7 +742,7 @@ class ParameterType:
         # optional attributes that are set to their defaults.
         attribs_to_return = list(self._get_defined_parameter_attributes().keys())
         if not(discard_cosmetic_attributes):
-            attribs_to_return += self._COSMETIC_ATTRIBS
+            attribs_to_return += self._cosmetic_attribs
 
         # Start populating a dict of the attribs.
         indexed_attribs = set(self._get_indexed_parameter_attributes().keys())
@@ -774,7 +774,7 @@ class ParameterType:
             The value of the attribute to define for this ParameterType object.
         """
         setattr(self, attr_name, attr_value)
-        self._COSMETIC_ATTRIBS.append(attr_name)
+        self._cosmetic_attribs.append(attr_name)
 
     def delete_cosmetic_attribute(self, attr_name):
         """
@@ -788,7 +788,7 @@ class ParameterType:
         # TODO: Can we handle this by overriding __delattr__ instead?
         #  Would we also need to override __del__ as well to cover both deletation methods?
         delattr(self, attr_name)
-        self._COSMETIC_ATTRIBS.remove(attr_name)
+        self._cosmetic_attribs.remove(attr_name)
 
 
     def __repr__(self):
@@ -952,7 +952,7 @@ class ParameterHandler:
             version = kwargs['version']
             self._check_section_version_compatibility(version)
 
-        self._COSMETIC_ATTRIBS = []  # list of cosmetic header attributes to remember and optionally write out
+        self._cosmetic_attribs = []  # list of cosmetic header attributes to remember and optionally write out
 
         # Ensure that all required attribs are present
         for reqd_attrib in self._REQUIRED_SPEC_ATTRIBS:
@@ -1022,7 +1022,7 @@ class ParameterHandler:
                 setattr(self, attr_name, val)
             elif allow_cosmetic_attributes:
                 self.add_cosmetic_attribute(key, val)
-                #self._COSMETIC_ATTRIBS.append(key)
+                #self._cosmetic_attribs.append(key)
                 #attr_name = '_' + key
                 #setattr(self, attr_name, val)
 
@@ -1120,7 +1120,7 @@ class ParameterHandler:
             The value of the attribute to define for this ParameterType object.
         """
         setattr(self, '_'+attr_name, attr_value)
-        self._COSMETIC_ATTRIBS.append(attr_name)
+        self._cosmetic_attribs.append(attr_name)
 
     def delete_cosmetic_attribute(self, attr_name):
         """
@@ -1134,7 +1134,7 @@ class ParameterHandler:
         # TODO: Can we handle this by overriding __delattr__ instead?
         #  Would we also need to override __del__ as well to cover both deletation methods?
         delattr(self, '_'+attr_name)
-        self._COSMETIC_ATTRIBS.remove(attr_name)
+        self._cosmetic_attribs.remove(attr_name)
 
 
 
@@ -1410,7 +1410,7 @@ class ParameterHandler:
                 header_attribs_to_return.append(key)
         # Add the cosmetic attributes if requested
         if not(discard_cosmetic_attributes):
-            header_attribs_to_return += self._COSMETIC_ATTRIBS
+            header_attribs_to_return += self._cosmetic_attribs
 
 
         # Go through the attribs of this ParameterHandler and collect the appropriate values to return
