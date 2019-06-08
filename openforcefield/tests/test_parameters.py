@@ -47,13 +47,13 @@ class TestParameterAttribute:
         my_par = MyParameter()
         assert my_par.attr_optional is None
 
-    def test_mandatory_value(self):
-        """AttributeError is raised if a mandatory attribute is accessed before being initialized."""
+    def test_required_value(self):
+        """AttributeError is raised if a required attribute is accessed before being initialized."""
         class MyParameter:
-            attr_mandatory = ParameterAttribute()
+            attr_required = ParameterAttribute()
         my_par = MyParameter()
         with pytest.raises(AttributeError):
-            my_par.attr_mandatory
+            my_par.attr_required
 
     def test_unit_validation(self):
         """ParameterAttributes attached to a unit are validated correctly."""
@@ -455,6 +455,10 @@ class TestParameterType:
         assert param_dict['smirks'] == '[*:1]'
         assert len(param_dict.keys()) == 1
 
+
+class TestBondType:
+    """Tests for the BondType class."""
+
     def test_bondtype_to_dict(self):
         """
         Test BondType to_dict.
@@ -474,7 +478,6 @@ class TestParameterType:
                                   'k_unit': (unit.angstrom ** -2) * (unit.mole ** -1) * (unit.kilocalorie ** 1)
                                   }
 
-
     def test_bondtype_to_dict_custom_output_units(self):
         """
         Test BondType to_dict with custom output units.
@@ -489,7 +492,6 @@ class TestParameterType:
                                                                                        unit.nanometer})
         assert attached_units['length_unit'] == unit.nanometer
         assert abs(param_dict_unitless['length'] - 0.102) < 1e-10
-
 
     def test_bondtype_to_dict_invalid_output_units(self):
         """
@@ -592,7 +594,8 @@ class TestParameterType:
         assert ('pilot', 'alice') not in param_dict.items()
 
 
-
+class TestProperTorsionType:
+    """Tests for the ProperTorsionType class."""
 
     def test_single_term_proper_torsion(self):
         """
@@ -629,7 +632,6 @@ class TestParameterType:
         assert ('phase1', 30 * unit.degree) in param_dict.items()
         assert ('periodicity1', 2) in param_dict.items()
         assert ('idivf1', 4) in param_dict.items()
-
 
     def test_multi_term_proper_torsion(self):
         """
@@ -688,37 +690,37 @@ class TestParameterType:
                                                         k2=6 * unit.kilocalorie_per_mole,
                                                         )
 
+def test_torsion_handler_charmm_potential():
+    """
+    Test creation of TorsionHandlers with the deprecated 0.2 potential value "charmm" instead of the current
+    supported potential value "fourier".
+    """
+    # Test creating ProperTorsionHandlers
+    with pytest.raises(SMIRNOFFSpecError, match="ProperTorsionHandler given 'potential' value of 'charmm'. "
+                                                "Supported options are "
+                                                "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
+            as context:
+        ph1 = ProperTorsionHandler(potential='charmm', skip_version_check=True)
+    ph1 = ProperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
-    def test_torsion_handler_potential_setting(self):
-        """
-        Test creation of TorsionHandlers with the deprecated 0.2 potential value "charmm" instead of the current
-        supported potential value "fourier".
-        """
-        # Test creating ProperTorsionHandlers
-        with pytest.raises(SMIRNOFFSpecError, match="ProperTorsionHandler given 'potential' value of 'charmm'. "
-                                                    "Supported options are "
-                                                    "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
-                as context:
-            ph1 = ProperTorsionHandler(potential='charmm', skip_version_check=True)
-        ph1 = ProperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
-
-        # Same test, but with ImproperTorsionHandler
-        with pytest.raises(SMIRNOFFSpecError, match="ImproperTorsionHandler given 'potential' value of 'charmm'. "
-                                                    "Supported options are "
-                                                    "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
-                as context:
-            ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
-        ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
+    # Same test, but with ImproperTorsionHandler
+    with pytest.raises(SMIRNOFFSpecError, match="ImproperTorsionHandler given 'potential' value of 'charmm'. "
+                                                "Supported options are "
+                                                "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
+            as context:
+        ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
+    ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
 
-        #     p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
-        #                                                 phase1=30 * unit.degree,
-        #                                                 periodicity1=2,
-        #                                                 k1=5 * unit.kilocalorie_per_mole,
-        #                                                 phase2=31 * unit.angstrom, # This should be caught
-        #                                                 periodicity2=3,
-        #                                                 k2=6 * unit.kilocalorie_per_mole,
-        #                                                 )
+    #     p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+    #                                                 phase1=30 * unit.degree,
+    #                                                 periodicity1=2,
+    #                                                 k1=5 * unit.kilocalorie_per_mole,
+    #                                                 phase2=31 * unit.angstrom, # This should be caught
+    #                                                 periodicity2=3,
+    #                                                 k2=6 * unit.kilocalorie_per_mole,
+    #                                                 )
+
 
 # TODO: test_nonbonded_settings (ensure that choices in Electrostatics and vdW tags resolve
 #                                to correct openmm.NonbondedForce subtypes, that setting different cutoffs raises
