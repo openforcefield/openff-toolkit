@@ -120,7 +120,7 @@ class ParameterAttribute:
     which makes the attribute optional, a unit validator, and a custom
     validator.
 
-    Because we may want to have ``None`` as a default value, mandatory
+    Because we may want to have ``None`` as a default value, required
     attributes have the ``default`` set to the special type ``UNDEFINED``.
 
     Validators can be both static or instance functions/methods with signature
@@ -144,10 +144,10 @@ class ParameterAttribute:
     Examples
     -------
 
-    Create a parameter type with an optional and a mandatory attributes.
+    Create a parameter type with an optional and a required attributes.
 
     >>> class MyParameter:
-    ...     attr_mandatory = ParameterAttribute()
+    ...     attr_required = ParameterAttribute()
     ...     attr_optional = ParameterAttribute(default=2)
     ...
     >>> my_par = MyParameter()
@@ -160,10 +160,10 @@ class ParameterAttribute:
     If you try to access an attribute without setting it first, an
     exception is raised.
 
-    >>> my_par.attr_mandatory
+    >>> my_par.attr_required
     Traceback (most recent call last):
     ...
-    AttributeError: 'MyParameter' object has no attribute '_attr_mandatory'
+    AttributeError: 'MyParameter' object has no attribute '_attr_required'
 
     The attribute allow automatic conversion and validation of units.
 
@@ -553,7 +553,6 @@ class ParameterList(list):
         return parameter_list
 
 
-
 # TODO: Rename to better reflect role as parameter base class?
 class ParameterType:
     """
@@ -719,7 +718,6 @@ class ParameterType:
         ----------
         discard_cosmetic_attributes : bool, optional. Default = False
             Whether to discard non-spec attributes of this ParameterType
-
 
         Returns
         -------
@@ -1448,7 +1446,6 @@ class ConstraintHandler(ParameterHandler):
     _TAGNAME = 'Constraints'
     _INFOTYPE = ConstraintType
     _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
-
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
