@@ -466,6 +466,103 @@ class TestParameterList:
 
 class TestParameterType:
 
+    def test_find_all_parameter_attrs(self):
+        """ParameterType find all ParameterAttributes in the declared order."""
+        class MyParameter(ParameterType):
+            attr = ParameterAttribute()
+            indexed = IndexedParameterAttribute()
+
+        parameter_attributes = MyParameter._get_parameter_attributes()
+
+        # The function should find also the parent's attributes and in the correct order.
+        expected_attributes = ['smirks', 'id', 'parent_id', 'attr', 'indexed']
+        assert list(parameter_attributes.keys()) == expected_attributes
+
+        # The keys map to the descriptor instances.
+        assert type(parameter_attributes['attr']) is ParameterAttribute
+        assert type(parameter_attributes['indexed']) is IndexedParameterAttribute
+
+    def test_find_all_indexed_parameter_attrs(self):
+        """ParameterType find all IndexedParameterAttributes."""
+        class MyParameter(ParameterType):
+            attr = ParameterAttribute()
+            indexed = IndexedParameterAttribute()
+            attr2 = ParameterAttribute()
+            indexed2 = IndexedParameterAttribute(default=None)
+
+        expected_names = ['indexed', 'indexed2']
+        parameter_attributes = MyParameter._get_indexed_parameter_attributes()
+        assert list(parameter_attributes.keys()) == expected_names
+        assert all(isinstance(parameter_attributes[name], IndexedParameterAttribute)
+                   for name in expected_names)
+
+    def test_find_all_required_and_optional_parameter_attrs(self):
+        """ParameterType distinguish between required and optional ParameterAttributes."""
+        class MyParameter(ParameterType):
+            required = ParameterAttribute()
+            optional = ParameterAttribute(default=1)
+            required_indexed = IndexedParameterAttribute()
+            optional_indexed2 = IndexedParameterAttribute(default=None)
+
+        expected_names = ['smirks', 'required', 'required_indexed']
+        parameter_attributes = MyParameter._get_required_parameter_attributes()
+        assert list(parameter_attributes.keys()) == expected_names
+
+        expected_names = ['id', 'parent_id', 'optional', 'optional_indexed2']
+        parameter_attributes = MyParameter._get_optional_parameter_attributes()
+        assert list(parameter_attributes.keys()) == expected_names
+
+    def test_required_attribute_on_init(self):
+        """ParameterType raises TypeError if a required attribute is not specified on construction."""
+        class MyParameter(ParameterType):
+            required = ParameterAttribute()
+            optional = ParameterAttribute(default=None)
+        with pytest.raises(SMIRNOFFSpecError, match="require the following missing parameters"):
+            MyParameter(smirks='[*:1]', optional=1)
+
+    def test_indexed_attrs(self):
+        """ParameterType handles indexed attributes correctly."""
+        class MyParameter(ParameterType):
+            a = IndexedParameterAttribute()
+        my_par = MyParameter(smirks='[*:1]', a1=1, a3=3, a2=2)
+        assert my_par.a == (1, 2, 3)
+
+    def test_single_value_indexed_attr(self):
+        """ParameterType handle single-value indexed attributes correctly."""
+        class MyParameter(ParameterType):
+            a = IndexedParameterAttribute()
+        my_par = MyParameter(smirks='[*:1]', a=1)
+        assert my_par.a == 1
+
+    def test_same_length_indexed_attrs(self):
+        """ParameterType raises TypeError if indexed attributes of different lengths are given."""
+        class MyParameter(ParameterType):
+            a = IndexedParameterAttribute()
+            b = IndexedParameterAttribute()
+        with pytest.raises(TypeError, match="indexed attributes have different lengths"):
+            MyParameter(smirks='[*:1]', a1=1, a2=2, a3=3, b1=1, b2=2)
+
+    def test_error_single_value_plus_index(self):
+        """ParameterType raises an error if an indexed attribute is specified with and without index."""
+        class MyParameter(ParameterType):
+            a = IndexedParameterAttribute()
+        with pytest.raises(TypeError, match="'a' has been specified with and without index"):
+            MyParameter(smirks='[*:1]', a=1, a1=2)
+
+    def test_find_all_defined_parameter_attrs(self):
+        """ParameterType._get_defined_attributes() discards default-value attributes."""
+        class MyParameter(ParameterType):
+            required1 = ParameterAttribute()
+            optional1 = ParameterAttribute(default=1)
+            optional2 = IndexedParameterAttribute(default=None)
+            required2 = IndexedParameterAttribute()
+            optional3 = ParameterAttribute(default=2)
+        my_par = MyParameter(smirks='[*:1]', required1=0, optional1=10, required2=0)
+
+        expected_names = ['smirks', 'required1', 'required2', 'optional1']
+        parameter_attributes = my_par._get_defined_parameter_attributes()
+        assert list(parameter_attributes.keys()) == expected_names
+
     def test_base_parametertype_to_dict(self):
         """
         Test ParameterType to_dict.

@@ -35,8 +35,10 @@ __all__ = [
 # GLOBAL IMPORTS
 #=============================================================================================
 
-from collections import OrderedDict
+import copy
+from collections import OrderedDict, abc
 from enum import Enum
+import inspect
 import logging
 
 from simtk import openmm, unit
@@ -590,20 +592,43 @@ class ParameterType:
     .. warning :: This API is experimental and subject to change.
 
     """
-    # These lists and dicts will be used for validating input and detecting cosmetic attributes.
-    _VALENCE_TYPE = None  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
-    _ELEMENT_NAME = None # The string mapping to this ParameterType in a SMIRNOFF data source
-    _REQUIRED_SPEC_ATTRIBS = ['smirks'] # Attributes expected per the SMIRNOFF spec.
-    _DEFAULT_SPEC_ATTRIBS = {}  # dict of parameter-level attributes and their default values
-    _OPTIONAL_SPEC_ATTRIBS = ['id', 'parent_id'] # Attributes in the SMIRNOFF spec that may
-                                                 # be present but have no impact on performance
-    _INDEXED_ATTRIBS = []  # list of attribs that will have consecutive numerical suffixes starting at 1
-    _REQUIRE_UNITS = {} # A dict of attribs which will be checked for unit compatibility
-    _ATTRIBS_TO_TYPE = {}  # dict of attributes that need to be cast to a type (like int or float) to be interpreted
 
-    # TODO: Can we provide some shared tools for returning settable/gettable attributes, and checking unit-bearing attributes?
+    # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+    _VALENCE_TYPE = None
+    # The string mapping to this ParameterType in a SMIRNOFF data source
+    # TODO: Can we find a way to create this map in the IOHandler to decouple the data structure from parsing?
+    _ELEMENT_NAME = None
 
-    def __init__(self, smirks=None, allow_cosmetic_attributes=False, **kwargs):
+    # Parameter attributes shared among all parameter types.
+    smirks = ParameterAttribute()
+    id = ParameterAttribute(default=None)
+    parent_id = ParameterAttribute(default=None)
+
+    @smirks.converter
+    def smirks(self, attr, smirks):
+        # Validate the SMIRKS string to ensure it matches the expected
+        # parameter type, raising an exception if it is invalid or doesn't
+        # tag a valid set of atoms.
+
+        # TODO: Make better switch using toolkit registry after refactoring ChemicalEnvironment module.
+        from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
+        toolkit = None
+        if OPENEYE_AVAILABLE:
+            toolkit = 'openeye'
+        elif RDKIT_AVAILABLE:
+            toolkit = 'rdkit'
+        if toolkit is None:
+            raise ToolkitUnavailableException(
+                "Validating SMIRKS required either the OpenEye Toolkit or the RDKit."
+                " Unable to find either.")
+
+        # TODO: Add check to make sure we can't make tree non-hierarchical
+        #       This would require parameter type knows which ParameterList it belongs to
+        ChemicalEnvironment.validate(
+            smirks, ensure_valence_type=self._VALENCE_TYPE, toolkit=toolkit)
+        return smirks
+
+    def __init__(self, smirks, allow_cosmetic_attributes=False, **kwargs):
         """
         Create a ParameterType
 
@@ -617,125 +642,79 @@ class ParameterType:
             be raised.
 
         """
-        from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
+        # A list that may be populated to record the cosmetic attributes
+        # read from a SMIRNOFF data source.
+        self._COSMETIC_ATTRIBS = []
 
-        self._COSMETIC_ATTRIBS = []  # A list that may be populated to record the cosmetic
-                                     # attributes read from a SMIRNOFF data source
+        # Do not modify the original data.
+        smirnoff_data = copy.deepcopy(kwargs)
+        smirnoff_data['smirks'] = smirks
 
-        if smirks is None:
-            raise ValueError("'smirks' must be specified")
-
-        # TODO: Make better switch using toolkit registry
-        toolkit = None
-        if OPENEYE_AVAILABLE:
-            toolkit = 'openeye'
-        elif RDKIT_AVAILABLE:
-            toolkit = 'rdkit'
-        if toolkit is None:
-            raise ToolkitUnavailableException("Validating SMIRKS required either the OpenEye Toolkit or the RDKit."
-                                              " Unable to find either.")
-        ChemicalEnvironment.validate(
-            smirks, ensure_valence_type=self._VALENCE_TYPE, toolkit=toolkit)
-
-        self._smirks = smirks
-
-
-        # Handle all the unknown kwargs as cosmetic so we can write them back out
-        allowed_attribs = self._REQUIRED_SPEC_ATTRIBS + \
-                          list(self._DEFAULT_SPEC_ATTRIBS.keys()) + \
-                          self._OPTIONAL_SPEC_ATTRIBS
-
-
-        # Make a copy of input kwargs as we will be modifying them by attaching units
-        smirnoff_data = kwargs.copy()
-
-
-        # Check for indexed attribs and stack them into list
-        for attrib_basename in self._INDEXED_ATTRIBS:
-            # attrib_unit_key = attrib_basename + '_unit'
+        # Check for indexed attributes and stack them into a list.
+        # Keep track of how many indexed attribute we find to make sure they all have the same length.
+        indexed_attr_lengths = {}
+        for attrib_basename in self._get_indexed_parameter_attributes().keys():
             index = 1
-            attrib_w_index = '{}{}'.format(attrib_basename, index)
-            if attrib_w_index in smirnoff_data:
-                smirnoff_data[attrib_basename] = list()
-
-            while attrib_w_index in smirnoff_data:
-                # Keep iterating as long as we keep finding higher-indexed entries for
-                # this attrib
-                smirnoff_data[attrib_basename].append(smirnoff_data[attrib_w_index])
-                del smirnoff_data[attrib_w_index]
-                index += 1
+            while True:
                 attrib_w_index = '{}{}'.format(attrib_basename, index)
 
-        # Check for attribs that need to be casted to specific types
-        for attrib, type_to_cast in self._ATTRIBS_TO_TYPE.items():
-            if attrib in smirnoff_data:
-                # Handle indexed attributes separately, since they'll be lists
-                if attrib in self._INDEXED_ATTRIBS:
-                    smirnoff_data[attrib] = [type_to_cast(obj) for obj in smirnoff_data[attrib]]
-                else:
-                    smirnoff_data[attrib] = type_to_cast(smirnoff_data[attrib])
+                # Exit the while loop if the indexed attribute is not given.
+                try:
+                    attrib_w_index_value = smirnoff_data[attrib_w_index]
+                except KeyError:
+                    break
 
+                # Check if this is the first iteration.
+                if index == 1:
+                    # Check if this attribute has been specified with and without index.
+                    if attrib_basename in smirnoff_data:
+                        err_msg = (f"The attribute '{attrib_basename}' has been specified "
+                                   f"with and without index: '{attrib_w_index}'")
+                        raise TypeError(err_msg)
 
-        # Add default values to smirnoff_data if they're not already there
-        for default_key, default_val in self._DEFAULT_SPEC_ATTRIBS.items():
-            if not (default_key in smirnoff_data):
-                smirnoff_data[default_key] = default_val
+                    # Otherwise create the list object.
+                    smirnoff_data[attrib_basename] = list()
 
+                # Append the new value to the list.
+                smirnoff_data[attrib_basename].append(attrib_w_index_value)
 
+                # Remove the indexed attribute from the kwargs as it will
+                # be exposed only as an element of the list.
+                del smirnoff_data[attrib_w_index]
+                index += 1
 
-        # Perform unit conversion (if string) and unit compatibility checks
-        for key in smirnoff_data.keys():
-            if key in self._REQUIRE_UNITS:
+            # Update the lengths with this attribute (if it was found).
+            if index > 1:
+                indexed_attr_lengths[attrib_basename] = len(smirnoff_data[attrib_basename])
 
-                # Handle any necessary conversion to Quantity here
-                smirnoff_data[key] = object_to_quantity(smirnoff_data[key])
+        # Raise an error if we there are different indexed
+        # attributes with a different number of terms.
+        if len(list(indexed_attr_lengths.values())) > 1:
+            raise TypeError('The following indexed attributes have '
+                            f'different lengths: {indexed_attr_lengths}')
 
-                # Check for unit compatibility
-                context = f"In {self.__class__}'s __init__ function. "
-                check_units_are_compatible(key, smirnoff_data[key], self._REQUIRE_UNITS[key], context=context)
+        # Check for missing required arguments.
+        given_attributes = set(smirnoff_data.keys())
+        required_attributes = set(self._get_required_parameter_attributes().keys())
+        missing_attributes = required_attributes.difference(given_attributes)
+        if len(missing_attributes) != 0:
+            msg = (f"{self.__class__} require the following missing parameters: {sorted(missing_attributes)}."
+                   f" Defined kwargs are {sorted(smirnoff_data.keys())}")
+            raise SMIRNOFFSpecError(msg)
 
-
-        # Ensure that all required attribs are present
-        for reqd_attrib in self._REQUIRED_SPEC_ATTRIBS:
-            # SMIRKS are a special case which is handled above
-            if reqd_attrib == 'smirks':
-                continue
-            if not reqd_attrib in smirnoff_data:
-                msg = "{} requires {} as a parameter during initialization, however this is not " \
-                      "provided. Defined kwargs are {}".format(self.__class__,
-                                                               reqd_attrib,
-                                                               list(smirnoff_data.keys()))
-                raise SMIRNOFFSpecError(msg)
-
-
-        # Finally, set attributes of this ParameterType
+        # Finally, set attributes of this ParameterType and handle cosmetic attributes.
+        allowed_attributes = set(self._get_parameter_attributes().keys())
         for key, val in smirnoff_data.items():
-            if key in allowed_attribs:
-                # TODO: create @property.setter here if attrib requires unit
+            if key in allowed_attributes:
                 setattr(self, key, val)
             # Handle all unknown kwargs as cosmetic so we can write them back out
             elif allow_cosmetic_attributes:
                 self.add_cosmetic_attribute(key, val)
-                # self._COSMETIC_ATTRIBS.append(key)
-                # setattr(self, key, val)
             else:
-                raise SMIRNOFFSpecError(f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. "
-                                        "If this is a desired cosmetic attribute, consider setting "
-                                        "'permit_cosmetic_attributes=True'")
-
-    @property
-    def smirks(self):
-        return self._smirks
-
-    @smirks.setter
-    def smirks(self, smirks):
-        # Validate the SMIRKS string to ensure it matches the expected parameter type,
-        # raising an exception if it is invalid or doesn't tag a valid set of atoms
-        # TODO: Add check to make sure we can't make tree non-hierarchical
-        #       This would require parameter type knows which ParameterList it belongs to
-        ChemicalEnvironment.validate(
-            smirks, ensure_valence_type=self._VALENCE_TYPE)
-        self._smirks = smirks
+                msg = (f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. "
+                        "If this is a desired cosmetic attribute, consider setting "
+                        "'allow_cosmetic_attributes=True'")
+                raise SMIRNOFFSpecError(msg)
 
     def to_dict(self, discard_cosmetic_attributes=False):
         """
@@ -758,9 +737,9 @@ class ParameterType:
 
         """
         # Make a list of all attribs that should be included in the
-        # returned dict (call list() to make a copy)
-        attribs_to_return = list(self._REQUIRED_SPEC_ATTRIBS)
-        attribs_to_return += [opt_attrib for opt_attrib in self._OPTIONAL_SPEC_ATTRIBS if hasattr(self, opt_attrib)]
+        # returned dict (call list() to make a copy). We discard
+        # optional attributes that are set to their defaults.
+        attribs_to_return = list(self._get_defined_parameter_attributes().keys())
         if not(discard_cosmetic_attributes):
             attribs_to_return += self._COSMETIC_ATTRIBS
 
@@ -817,8 +796,82 @@ class ParameterType:
         ret_str += '>'
         return ret_str
 
+    @classmethod
+    def _get_parameter_attributes(cls, filter=None):
+        """Return all the attributes of the parameters.
 
+        This is constructed dynamically by introspection gathering all
+        the descriptors that are instances of the ParameterAttribute class.
+        Parent classes of the parameter types are inspected as well.
 
+        Note that since Python 3.6 the order of the class attribute definition
+        is preserved (see PEP 520) so this function will return the attribute
+        in their declaration order.
+
+        Parameters
+        ----------
+        filter : Callable, optional
+            An optional function with signature filter(ParameterAttribute) -> bool.
+            If specified, only attributes for which this functions returns
+            True are returned.
+
+        Returns
+        -------
+        parameter_attributes : Dict[str, ParameterAttribute]
+            A map from the name of the controlled parameter to the
+            ParameterAttribute descriptor handling it.
+
+        Examples
+        --------
+        >>> parameter_attributes = ParameterType._get_parameter_attributes()
+        >>> sorted(parameter_attributes.keys())
+        ['id', 'parent_ids', 'smirks']
+        >>> isinstance(parameter_attributes['id'], ParameterAttribute)
+        True
+
+        """
+        # If no filter is specified, get all the parameters.
+        if filter is None:
+            filter = lambda x: True
+
+        # Go through MRO and retrieve also parents descriptors. The function
+        # inspect.getmembers() automatically resolves the MRO, but it also
+        # sorts the attribute alphabetically by name. Here we want the order
+        # to be the same as the declaration order, which is guaranteed by PEP 520,
+        # starting from the parent class.
+        parameter_attributes = OrderedDict((name, descriptor) for c in reversed(inspect.getmro(cls))
+                                           for name, descriptor in c.__dict__.items()
+                                           if isinstance(descriptor, ParameterAttribute) and filter(descriptor))
+        return parameter_attributes
+
+    @classmethod
+    def _get_indexed_parameter_attributes(cls):
+        """Shortcut to retrieve only IndexedParameterAttributes."""
+        return cls._get_parameter_attributes(filter=lambda x: isinstance(x, IndexedParameterAttribute))
+
+    @classmethod
+    def _get_required_parameter_attributes(cls):
+        """Shortcut to retrieve only required ParameterAttributes."""
+        return cls._get_parameter_attributes(filter=lambda x: x.default is x.UNDEFINED)
+
+    @classmethod
+    def _get_optional_parameter_attributes(cls):
+        """Shortcut to retrieve only required ParameterAttributes."""
+        return cls._get_parameter_attributes(filter=lambda x: x.default is not x.UNDEFINED)
+
+    def _get_defined_parameter_attributes(self):
+        """Returns all the attributes except for the optional attributes that have their default value.
+
+        This returns first the required attributes and then the defined optional
+        attribute in their respective declaration order.
+        """
+        required = self._get_required_parameter_attributes()
+        optional = self._get_optional_parameter_attributes()
+        # Filter the optional parameters that are set to their default.
+        optional = OrderedDict((name, descriptor) for name, descriptor in optional.items()
+                               if getattr(self, name) != descriptor.default)
+        required.update(optional)
+        return required
 
 #======================================================================
 # PARAMETER HANDLERS
