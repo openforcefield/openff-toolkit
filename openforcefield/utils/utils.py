@@ -51,12 +51,15 @@ logger = logging.getLogger(__name__)
 # COMMON EXCEPTION TYPES
 #=============================================================================================
 
-
 class MessageException(Exception):
     """A base class for exceptions that print out a string given in their constructor"""
     def __init__(self, msg):
         super().__init__(self, msg)
         self.msg = msg
+
+    def __str__(self):
+        return self.msg
+
 
 class IncompatibleUnitError(MessageException):
     """
@@ -64,10 +67,10 @@ class IncompatibleUnitError(MessageException):
     """
     pass
 
+
 # =============================================================================================
 # UTILITY SUBROUTINES
 # =============================================================================================
-
 
 def inherit_docstrings(cls):
     """Inherit docstrings from parent class"""
