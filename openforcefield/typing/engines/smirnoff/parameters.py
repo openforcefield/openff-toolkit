@@ -377,7 +377,7 @@ class IndexedParameterAttribute(ParameterAttribute):
             try:
                 # Trye treating this as single value.
                 value = super()._validate_units(value)
-            except:
+            except Exception:
                 # Note that this is a generator. The tuple memory will be allocated in _call_converter.
                 value = (super(IndexedParameterAttribute, self)._validate_units(element)
                             for element in value)
@@ -390,7 +390,7 @@ class IndexedParameterAttribute(ParameterAttribute):
             try:
                 # Try treating this as a single value.
                 value = super()._call_converter(value, instance)
-            except:
+            except Exception:
                 # Note that this is a generator. The tuple memory will be allocated below.
                 value = (super(IndexedParameterAttribute, self)._call_converter(element, instance)
                          for element in value)
@@ -2796,7 +2796,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
 
         from networkx.algorithms.isomorphism import GraphMatcher
         import simtk.unit
-        import copy
+
         # Define the node/edge attributes that we will use to match the atoms/bonds during molecule comparison
         node_match_func = lambda x, y: ((x['atomic_number'] == y['atomic_number']) and
                                         (x['stereochemistry'] == y['stereochemistry']) and
