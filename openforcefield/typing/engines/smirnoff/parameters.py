@@ -2033,7 +2033,7 @@ class ImproperTorsionHandler(ParameterHandler):
             improper = improper_match.parameter_type
 
             # TODO: This is a lazy hack. idivf should be set according to the ParameterHandler's default_idivf attrib
-            if not hasattr(improper, 'idivf'):
+            if improper.idivf is None:
                 improper.idivf = [3 for item in improper.k]
             # Impropers are applied in three paths around the trefoil having the same handedness
             for (improper_periodicity, improper_phase, improper_k, improper_idivf) in zip(improper.periodicity,
@@ -2333,7 +2333,7 @@ class vdWHandler(ParameterHandler):
         for atom_key, atom_match in atom_matches.items():
             atom_idx = atom_key[0]
             ljtype = atom_match.parameter_type
-            if not(hasattr(ljtype, 'sigma')):
+            if ljtype.sigma is None:
                 sigma = 2. * ljtype.rmin_half / (2.**(1. / 6.))
             else:
                 sigma = ljtype.sigma
