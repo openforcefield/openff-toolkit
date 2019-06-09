@@ -183,7 +183,7 @@ class ParameterAttribute:
     >>> my_par.attr_quantity = 3.0
     Traceback (most recent call last):
     ...
-    TypeError: 3.0 dimensionless should have units of angstrom
+    openforcefield.utils.utils.IncompatibleUnitError: attr_quantity=3.0 dimensionless should have units of angstrom
 
     You can attach a custom converter to an attribute.
 
@@ -280,10 +280,10 @@ class ParameterAttribute:
             # Check if units are compatible.
             try:
                 if not self._unit.is_compatible(value.unit):
-                    raise IncompatibleUnitError(f'{self._name[1:]}: {value} should have units of {self._unit}')
+                    raise IncompatibleUnitError(f'{self._name[1:]}={value} should have units of {self._unit}')
             except AttributeError:
                 # This is not a Quantity object.
-                raise IncompatibleUnitError(f'{self._name[1:]}: {value} should have units of {self._unit}')
+                raise IncompatibleUnitError(f'{self._name[1:]}={value} should have units of {self._unit}')
         return value
 
     def _call_converter(self, value, instance):
@@ -590,14 +590,134 @@ class ParameterType:
     """
     Base class for SMIRNOFF parameter types.
 
+    This class provides a constructor that can handle the initialization
+    of ``ParameterAttribute``s and the general interface for cosmetic
+    attributes.
+
     .. warning :: This API is experimental and subject to change.
+
+    Attributes
+    ----------
+    smirks : str
+        The SMIRKS pattern that this parameter matches.
+    id : str or None
+        An optional identifier for the parameter.
+    parent_id : str or None
+        Optionally, the identifier of the parameter of which this parameter
+        is a specialization.
+
+    See Also
+    --------
+    ParameterAttribute
+    IndexedParameterAttribute
+
+    Examples
+    --------
+
+    This class allows to define new parameter types by just listing its
+    attributes. In the example below, ``_VALENCE_TYPE`` AND ``_ELEMENT_NAME``
+    are used for the validation of the SMIRKS pattern associated to the
+    parameter and the automatic serialization/deserialization into a ``dict``.
+
+    >>> class MyBondParameter(ParameterType):
+    ...     _VALENCE_TYPE = 'Bond'
+    ...     _ELEMENT_NAME = 'Bond'
+    ...     length = ParameterAttribute(unit=unit.angstrom)
+    ...     k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
+    ...
+
+    The parameter automatically inherits the required smirks attribute
+    from ``ParameterType``. Associating a ``unit`` to a ``ParameterAttribute``
+    cause the attribute to accept only values in compatible units and to
+    parse string expressions.
+
+    >>> my_par = MyBondParameter(
+    ...     smirks='[*:1]-[*:2]',
+    ...     length='1.01 * angstrom',
+    ...     k=5 * unit.kilocalorie_per_mole / unit.angstrom**2
+    ... )
+    >>> my_par.length
+    Quantity(value=1.01, unit=angstrom)
+    >>> my_par.k = 3.0 * unit.gram
+    Traceback (most recent call last):
+    ...
+    openforcefield.utils.utils.IncompatibleUnitError: k=3.0 g should have units of kilocalorie/(angstrom**2*mole)
+
+    Each attribute can be made optional by specifying a default value,
+    and you can attach a converter function by passing a callable as an
+    argument or through the decorator syntax.
+
+    >>> class MyParameterType(ParameterType):
+    ...     _VALENCE_TYPE = 'Atom'
+    ...     _ELEMENT_NAME = 'Atom'
+    ...
+    ...     attr_optional = ParameterAttribute(default=2)
+    ...     attr_all_to_float = ParameterAttribute(converter=float)
+    ...     attr_int_to_float = ParameterAttribute()
+    ...
+    ...     @attr_int_to_float.converter
+    ...     def attr_int_to_float(self, attr, value):
+    ...         # This converter converts only integers to floats
+    ...         # and raise an exception for the other types.
+    ...         if isinstance(value, int):
+    ...             return float(value)
+    ...         elif not isinstance(value, float):
+    ...             raise TypeError(f"Cannot convert '{value}' to float")
+    ...         return value
+    ...
+    >>> my_par = MyParameterType(smirks='[*:1]', attr_all_to_float='3.0', attr_int_to_float=1)
+    >>> my_par.attr_optional
+    2
+    >>> my_par.attr_all_to_float
+    3.0
+    >>> my_par.attr_int_to_float
+    1.0
+
+    The float() function can convert strings to integers, but our custom
+    converter forbids it
+
+    >>> my_par.attr_all_to_float = '2.0'
+    >>> my_par.attr_int_to_float = '4.0'
+    Traceback (most recent call last):
+    ...
+    TypeError: Cannot convert '4.0' to float
+
+    Parameter attributes that can be indexed can be handled with the
+    ``IndexedParameterAttribute``. These supports unit validation and
+    converters exactly as ``ParameterAttribute``s, but the validation/conversion
+    is performed for each indexed attribute.
+
+    >>> class MyTorsionType(ParameterType):
+    ...     _VALENCE_TYPE = 'ProperTorsion'
+    ...     _ELEMENT_NAME = 'Proper'
+    ...     periodicity = IndexedParameterAttribute(converter=int)
+    ...     k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+    ...
+    >>> my_par = MyTorsionType(
+    ...     smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+    ...     periodicity1=2,
+    ...     k1=5 * unit.kilocalorie_per_mole,
+    ...     periodicity2='3',
+    ...     k2=6 * unit.kilocalorie_per_mole,
+    ... )
+    >>> my_par.periodicity
+    (2, 3)
+
+    Single values can be also passed normally.
+
+    >>> my_par = MyTorsionType(
+    ...     smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+    ...     periodicity=2,
+    ...     k=5 * unit.kilocalorie_per_mole,
+    ... )
+    >>> my_par.periodicity
+    2
 
     """
 
     # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
     _VALENCE_TYPE = None
     # The string mapping to this ParameterType in a SMIRNOFF data source
-    # TODO: Can we find a way to create this map in the IOHandler to decouple the data structure from parsing?
     _ELEMENT_NAME = None
 
     # Parameter attributes shared among all parameter types.
