@@ -304,6 +304,9 @@ def convert_all_strings_to_quantity(smirnoff_data):
     Traverses a SMIRNOFF data structure, attempting to convert all
     quantity-defining strings into simtk.unit.Quantity objects.
 
+    Integers and floats are ignored and not converted into a dimensionless
+    ``simtk.unit.Quantity`` object.
+
     Parameters
     ----------
     smirnoff_data : dict
@@ -324,14 +327,14 @@ def convert_all_strings_to_quantity(smirnoff_data):
         for index, item in enumerate(smirnoff_data):
             smirnoff_data[index] = convert_all_strings_to_quantity(item)
         obj_to_return = smirnoff_data
+
+    elif isinstance(smirnoff_data, int) or isinstance(smirnoff_data, float):
+        obj_to_return = smirnoff_data
+
     else:
         try:
             obj_to_return = object_to_quantity(smirnoff_data)
-        except AttributeError:
-            obj_to_return = smirnoff_data
-        except TypeError:
-            obj_to_return = smirnoff_data
-        except SyntaxError:
+        except (AttributeError, TypeError, SyntaxError):
             obj_to_return = smirnoff_data
 
     return obj_to_return
@@ -381,6 +384,7 @@ def object_to_quantity(object):
     Parameters
     ----------
     object : int, float, string, quantity, or iterator of strings of quantities
+        The object to convert to a ``simtk.unit.Quantity`` object.
 
     Returns
     -------
