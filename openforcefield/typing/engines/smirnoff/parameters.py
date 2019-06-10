@@ -947,7 +947,7 @@ class ParameterType:
         --------
         >>> parameter_attributes = ParameterType._get_parameter_attributes()
         >>> sorted(parameter_attributes.keys())
-        ['id', 'parent_ids', 'smirks']
+        ['id', 'parent_id', 'smirks']
         >>> isinstance(parameter_attributes['id'], ParameterAttribute)
         True
 
