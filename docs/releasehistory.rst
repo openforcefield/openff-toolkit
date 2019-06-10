@@ -42,10 +42,11 @@ This functionality allows the toolkit to continue to read files containing SMIRN
 * SMIRNOFF spec documentation has been updated with tables of keywords and their defaults for each parameter section and parameter type.
   These tables will track the allowed keywords and default behavior as updated versions of individual parameter sections are released.
 
-Performance improvements
-""""""""""""""""""""""""
+Performance improvements and bugfixes
+"""""""""""""""""""""""""""""""""""""
 
 * `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Performance improvements when creating systems for topologies with many atoms.
+* `PR #347 <https://github.com/openforcefield/openforcefield/pull/347>`_: Fixes bug in charge assignment that occurs when charges are read from file, and reference and charge molecules have different atom orderings.
 
 
 New features
@@ -65,7 +66,6 @@ New features
     Note that if a new cosmetic attribute is added to an object without using these functions, it will not be recognized by the toolkit and will not be written out during serialization.
   * Values for the top-level ``Author`` and ``Date`` tags are now kept during SMIRNOFF data I/O.
     If multiple data sources containing these fields are read, the values are concatenated using "AND" as a separator.
-
 
 
 API-breaking changes
