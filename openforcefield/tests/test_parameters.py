@@ -72,6 +72,7 @@ class TestParameterAttribute:
         value = 3.0 * unit.kilocalories_per_mole/unit.angstrom**2
         my_par.attr_unit = value
         assert my_par.attr_unit == value
+        assert my_par.attr_unit.unit == value.unit
 
     def test_quantity_string_parsing(self):
         """ParameterAttributes attached to units convert strings into Quantity objects."""
@@ -81,6 +82,7 @@ class TestParameterAttribute:
 
         my_par.attr_unit = '3.0*meter/second**2'
         assert my_par.attr_unit == 3.0 * unit.meter/unit.second**2
+        assert my_par.attr_unit.unit == unit.meter/unit.second**2
 
         # Assigning incorrect units still raises an error.
         with pytest.raises(IncompatibleUnitError, match='should have units of'):
@@ -185,6 +187,7 @@ class TestIndexedParameterAttribute:
         assert my_par.attr_indexed_converter == '3.0'
         my_par.attr_indexed_unit = '1.0*nanometer'
         assert my_par.attr_indexed_unit == 1.0 * unit.nanometer
+        assert my_par.attr_indexed_unit.unit == unit.nanometer
 
 
 #======================================================================
