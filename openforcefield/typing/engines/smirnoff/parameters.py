@@ -149,7 +149,7 @@ class ParameterAttribute:
     Examples
     -------
 
-    Create a parameter type with an optional and a required attributes.
+    Create a parameter type with an optional and a required attribute.
 
     >>> class MyParameter:
     ...     attr_required = ParameterAttribute()
@@ -345,7 +345,7 @@ class IndexedParameterAttribute(ParameterAttribute):
     >>> my_par.length[0]
     Quantity(value=1, unit=angstrom)
 
-    Note that ``IndexedParameterAttribute`s are immutable right now. This
+    Note that ``IndexedParameterAttribute``s are immutable right now. This
     may change in the future
     >>> my_par.length[0] = 3.0 * unit.angstrom
     Traceback (most recent call last):
@@ -375,7 +375,7 @@ class IndexedParameterAttribute(ParameterAttribute):
         """Overwrite ParameterAttribute._validate_units to validate each element of the sequence."""
         if self._unit is not None:
             try:
-                # Trye treating this as single value.
+                # Try treating this as single value.
                 value = super()._validate_units(value)
             except Exception:
                 # Note that this is a generator. The tuple memory will be allocated in _call_converter.
@@ -683,7 +683,7 @@ class ParameterType:
     TypeError: Cannot convert '4.0' to float
 
     Parameter attributes that can be indexed can be handled with the
-    ``IndexedParameterAttribute``. These supports unit validation and
+    ``IndexedParameterAttribute``. These support unit validation and
     converters exactly as ``ParameterAttribute``s, but the validation/conversion
     is performed for each indexed attribute.
 
