@@ -2938,7 +2938,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
         _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS
         _ELEMENT_NAME = 'ChargeIncrement'
 
-        charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
+        chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
 
 
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
