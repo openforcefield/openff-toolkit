@@ -1680,7 +1680,7 @@ class BondHandler(ParameterHandler):
 
         # These attributes may be indexed (by integer bond order) if fractional bond orders are used.
         length = IndexedParameterAttribute(unit=unit.angstrom)
-        k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
+        k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
 
 
     _TAGNAME = 'Bonds'  # SMIRNOFF tag name to process
