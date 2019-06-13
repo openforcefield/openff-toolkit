@@ -433,7 +433,7 @@ class ParameterType:
             else:
                 raise SMIRNOFFSpecError(f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. " 
                                         "If this is a desired cosmetic attribute, consider setting " 
-                                        "'permit_cosmetic_attributes=True'")
+                                        "'allow_cosmetic_attributes=True'")
 
     @property
     def smirks(self):
