@@ -2902,7 +2902,8 @@ class ToolkitRegistry:
 
     def resolve(self, method_name):
         """
-        Resolve the requested method name by checking all registered toolkits in order of precedence for one that provides the requested method.
+        Resolve the requested method name by checking all registered toolkits in
+        order of precedence for one that provides the requested method.
 
         Parameters
         ----------

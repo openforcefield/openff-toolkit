@@ -1815,23 +1815,33 @@ class FrozenMolecule(Serializable):
         >>> smiles = molecule.to_smiles()
 
         """
-        smiles = self._cached_smiles
+        # Initialize cached_smiles dict for this molecule if none exists
+        if self._cached_smiles is None:
+            self._cached_smiles = {}
 
-        if smiles is not None:
-            return smiles
-
+        # Figure out which toolkit should be used to create the SMILES
         if isinstance(toolkit_registry, ToolkitRegistry):
-            smiles = toolkit_registry.call('to_smiles', self)
+            to_smiles_method = toolkit_registry.resolve('to_smiles')
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            smiles = toolkit.to_smiles(self)
+            to_smiles_method = toolkit_registry.to_smiles
         else:
             raise Exception(
                 'Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
-        self._cached_smiles = smiles
-        return smiles
+        # Get a string representation of the function containing the toolkit name so we can check
+        # if a SMILES was already cached for this molecule. This will return, for example
+        # "RDKitToolkitWrapper.to_smiles"
+        func_qualname = to_smiles_method.__qualname__
+
+        # Check to see if a SMILES for this molecule was already cached using this method
+        if func_qualname in self._cached_smiles.keys():
+            return self._cached_smiles[func_qualname]
+        else:
+            smiles = to_smiles_method(self)
+            self._cached_smiles[func_qualname] = smiles
+            return smiles
+
 
     @staticmethod
     def from_smiles(smiles,
