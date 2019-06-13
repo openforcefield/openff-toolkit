@@ -859,7 +859,7 @@ class ParameterType:
         """
         # Make a list of all attribs that should be included in the
         # returned dict (call list() to make a copy). We discard
-        # optional attributes that are set to their defaults.
+        # optional attributes that are set to None defaults.
         attribs_to_return = list(self._get_defined_parameter_attributes().keys())
         if not(discard_cosmetic_attributes):
             attribs_to_return += self._cosmetic_attribs
@@ -982,7 +982,7 @@ class ParameterType:
         return cls._get_parameter_attributes(filter=lambda x: x.default is not x.UNDEFINED)
 
     def _get_defined_parameter_attributes(self):
-        """Returns all the attributes except for the optional attributes that have their default value.
+        """Returns all the attributes except for the optional attributes that have None default value.
 
         This returns first the required attributes and then the defined optional
         attribute in their respective declaration order.
@@ -991,7 +991,7 @@ class ParameterType:
         optional = self._get_optional_parameter_attributes()
         # Filter the optional parameters that are set to their default.
         optional = OrderedDict((name, descriptor) for name, descriptor in optional.items()
-                               if getattr(self, name) != descriptor.default)
+                               if not(descriptor.default is None and getattr(self, name) == descriptor.default))
         required.update(optional)
         return required
 

@@ -555,16 +555,19 @@ class TestParameterType:
             MyParameter(smirks='[*:1]', a=1, a1=2)
 
     def test_find_all_defined_parameter_attrs(self):
-        """ParameterType._get_defined_attributes() discards default-value attributes."""
+        """ParameterType._get_defined_attributes() discards None default-value attributes."""
         class MyParameter(ParameterType):
             required1 = ParameterAttribute()
-            optional1 = ParameterAttribute(default=1)
+            optional1 = ParameterAttribute(default=None)
             optional2 = IndexedParameterAttribute(default=None)
+            optional3 = ParameterAttribute(default=5)
             required2 = IndexedParameterAttribute()
             optional3 = ParameterAttribute(default=2)
         my_par = MyParameter(smirks='[*:1]', required1=0, optional1=10, required2=0)
 
-        expected_names = ['smirks', 'required1', 'required2', 'optional1']
+        # _get_defined_parameter_attributes discards only the attribute
+        # that are set to None as a default value.
+        expected_names = ['smirks', 'required1', 'required2', 'optional1', 'optional3']
         parameter_attributes = my_par._get_defined_parameter_attributes()
         assert list(parameter_attributes.keys()) == expected_names
 
