@@ -1062,7 +1062,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 raise Exception(
                     "Addition of explicit hydrogens failed in from_openeye")
         # TODO: Add allow_undefined_stereo to this function, and pass to from_openeye?
-        molecule = self.from_openeye(oemol)
+        molecule = self.from_openeye(oemol,
+                                     allow_undefined_stereo=allow_undefined_stereo)
         return molecule
 
     def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):

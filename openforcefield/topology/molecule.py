@@ -1834,7 +1834,10 @@ class FrozenMolecule(Serializable):
         return smiles
 
     @staticmethod
-    def from_smiles(smiles, hydrogens_are_explicit=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def from_smiles(smiles,
+                    hydrogens_are_explicit=False,
+                    toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+                    allow_undefined_stereo=False):
         """
         Construct a Molecule from a SMILES representation
 
@@ -1846,6 +1849,10 @@ class FrozenMolecule(Serializable):
             If False, the cheminformatics toolkit will perform hydrogen addition
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+        allow_undefined_stereo : bool, default=False
+            Whether to accept SMILES with undefined stereochemistry. If False,
+            an exception will be raised if a SMILES with undefined stereochemistry
+            is passed into this function.
 
         Returns
         -------
@@ -1858,10 +1865,16 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('from_smiles', smiles)
+            return toolkit_registry.call('from_smiles',
+                                         smiles,
+                                         hydrogens_are_explicit=hydrogens_are_explicit,
+                                         allow_undefined_stereo=allow_undefined_stereo)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.from_smiles(smiles, hydrogens_are_explicit=hydrogens_are_explicit)
+            return toolkit.from_smiles(smiles,
+                                       hydrogens_are_explicit=hydrogens_are_explicit,
+                                       allow_undefined_stereo=allow_undefined_stereo
+                                       )
         else:
             raise Exception(
                 'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
