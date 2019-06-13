@@ -1514,7 +1514,7 @@ class FrozenMolecule(Serializable):
             # Check through the toolkit registry to find a compatible wrapper for loading
             if not loaded:
                 try:
-                    result = toolkit_registry.call('from_object', other)
+                    result = toolkit_registry.call('from_object', other, allow_undefined_stereo=allow_undefined_stereo)
                 except NotImplementedError:
                     pass
                 else:

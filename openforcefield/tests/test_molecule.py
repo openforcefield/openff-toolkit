@@ -313,31 +313,57 @@ class TestMolecule:
         check for equality only for the from_rdkit() molecule.
 
         """
-        import pickle
+        # import pickle
         from openforcefield.utils.toolkits import UndefinedStereochemistryError
 
+        # DrugBank test set known failures. Note that this list is different from that for OEMol,
+        # since the toolkits have different definitions of "stereogenic"
+        # Stereogenic in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
+        # 'DrugBank_4162', 'DrugBank_6531', 'DrugBank_1700',
+        undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1962', 'DrugBank_2519',
+                                 'DrugBank_3930', 'DrugBank_5043', 'DrugBank_5418'}
+        undefined_stereo = molecule.name in undefined_stereo_mols
+
+        toolkit_wrapper = RDKitToolkitWrapper()
+
         rdmol = molecule.to_rdkit()
+        molecule_smiles = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
 
-        # The constructor should not change the molecule.
-        rdmol_pickle = pickle.dumps(rdmol)
+        # First test making a molecule using the Molecule(oemol) method
 
-        # Check if this is a molecule with undefined stereo.
-        molecule_copies = []
-        try:
-            molecule_copies.append(Molecule(rdmol))
-        except UndefinedStereochemistryError:
-            allow_undefined_stereo = True
+        # If this is a known failure, check that it raises UndefinedStereochemistryError
+        # and proceed with the test ignoring it.
+        test_mol =  None
+        if undefined_stereo:
+            with pytest.raises(UndefinedStereochemistryError):
+                Molecule(rdmol)
+            test_mol = Molecule(rdmol, allow_undefined_stereo=True)
         else:
-            allow_undefined_stereo = False
-        molecule_copies.append(Molecule.from_rdkit(
-            rdmol, allow_undefined_stereo=allow_undefined_stereo))
+            test_mol = Molecule(rdmol)
 
-        # Check that the roundtrip did not change anything in the OpenFF Molecule.
-        for molecule_copy in molecule_copies:
-            assert molecule == molecule_copy
+        test_mol_smiles = test_mol.to_smiles(toolkit_registry=toolkit_wrapper)
+        assert molecule_smiles == test_mol_smiles
 
-        # Check that the constructor didn't modify rdmol.
-        assert rdmol_pickle == pickle.dumps(rdmol)
+        # Check that the two topologies are isomorphic.
+        assert_molecule_is_equal(molecule, test_mol, 'Molecule.to_rdkit()/Molecule(rdmol) round trip failed')
+
+        # Second, test making a molecule using the Molecule.from_openeye(oemol) method
+
+        # If this is a known failure, check that it raises UndefinedStereochemistryError
+        # and proceed with the test.
+        if undefined_stereo:
+            with pytest.raises(UndefinedStereochemistryError):
+                Molecule.from_rdkit(rdmol)
+            test_mol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=True)
+        else:
+            test_mol = Molecule.from_rdkit(rdmol)
+
+        test_mol_smiles = test_mol.to_smiles(toolkit_registry=toolkit_wrapper)
+        assert molecule_smiles == test_mol_smiles
+
+        # Check that the two topologies are isomorphic.
+        assert_molecule_is_equal(molecule, test_mol, 'Molecule.to_rdkit()/from_rdkit() round trip failed')
+
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @requires_openeye
@@ -450,33 +476,46 @@ class TestMolecule:
                                  'DrugBank_5043', 'DrugBank_5418', 'DrugBank_6531'}
         undefined_stereo = molecule.name in undefined_stereo_mols
 
-        error_messages = [
-            "Molecule(oemol) constructor failed",
-            "Molecule.to_openeye()/from_openeye() round trip failed"
-        ]
-
         toolkit_wrapper = OpenEyeToolkitWrapper()
 
         oemol = molecule.to_openeye()
-        molecule_copies = []
+        molecule_smiles = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+
+        # First test making a molecule using the Molecule(oemol) method
 
         # If this is a known failure, check that it raises UndefinedStereochemistryError
         # and proceed with the test ignoring it.
+        test_mol =  None
         if undefined_stereo:
             with pytest.raises(UndefinedStereochemistryError):
                 Molecule(oemol)
+            test_mol = Molecule(oemol, allow_undefined_stereo=True)
         else:
-            molecule_copies.append(Molecule(oemol))
-        molecule_copies.append(Molecule.from_openeye(oemol, allow_undefined_stereo=undefined_stereo))
+            test_mol = Molecule(oemol)
 
-        molecule_smiles = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-        for molecule_copy, error_msg in zip(molecule_copies, error_messages):
-            # Check that the original and the copied molecules have the same SMILES representation.
-            molecule_copy_smiles = molecule_copy.to_smiles(toolkit_registry=toolkit_wrapper)
-            assert molecule_smiles == molecule_copy_smiles
+        test_mol_smiles = test_mol.to_smiles(toolkit_registry=toolkit_wrapper)
+        assert molecule_smiles == test_mol_smiles
 
-            # Check that the two topologies are isomorphic.
-            assert_molecule_is_equal(molecule, molecule_copy, error_msg)
+        # Check that the two topologies are isomorphic.
+        assert_molecule_is_equal(molecule, test_mol, 'Molecule.to_openeye()/Molecule(oemol) round trip failed')
+
+        # Second, test making a molecule using the Molecule.from_openeye(oemol) method
+
+        # If this is a known failure, check that it raises UndefinedStereochemistryError
+        # and proceed with the test.
+        if undefined_stereo:
+            with pytest.raises(UndefinedStereochemistryError):
+                Molecule.from_openeye(oemol)
+            test_mol = Molecule.from_openeye(oemol, allow_undefined_stereo=True)
+        else:
+            test_mol = Molecule.from_openeye(oemol)
+
+        test_mol_smiles = test_mol.to_smiles(toolkit_registry=toolkit_wrapper)
+        assert molecule_smiles == test_mol_smiles
+
+        # Check that the two topologies are isomorphic.
+        assert_molecule_is_equal(molecule, test_mol, 'Molecule.to_openeye()/from_openeye() round trip failed')
+
 
     # ----------------------------------------------------
     # Test properties.

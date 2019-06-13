@@ -338,7 +338,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 all_licensed &= getattr(module, license_function_names[tool])()
         return all_licensed
 
-    def from_object(self, object):
+    def from_object(self, object, allow_undefined_stereo=False):
         """
         If given an OEMol (or OEMol-derived object), this function will load it into an openforcefield.topology.molecule
         Otherwise, it will return False.
@@ -347,6 +347,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         object : A molecule-like object
             An object to by type-checked.
+        allow_undefined_stereo : bool, default=False
+            Whether to accept molecules with undefined stereocenters. If False,
+            an exception will be raised if a molecule with undefined stereochemistry
+            is passed into this function.
 
         Returns
         -------
@@ -361,7 +365,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # TODO: Add tests for the from_object functions
         from openeye import oechem
         if isinstance(object, oechem.OEMolBase):
-            return self.from_openeye(object)
+            return self.from_openeye(object, allow_undefined_stereo=allow_undefined_stereo)
         raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_file(self,
@@ -1026,7 +1030,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             | oechem.OESMILESFlag_AtomStereo)
         return smiles
 
-    def from_smiles(self, smiles, hydrogens_are_explicit=False):
+    def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
         """
         Create a Molecule from a SMILES string using the OpenEye toolkit.
 
@@ -1038,6 +1042,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The SMILES string to turn into a molecule
         hydrogens_are_explicit : bool, default = False
             If False, OE will perform hydrogen addition using OEAddExplicitHydrogens
+        allow_undefined_stereo : bool, default=False
+            Whether to accept SMILES with undefined stereochemistry. If False,
+            an exception will be raised if a SMILES with undefined stereochemistry
+            is passed into this function.
 
         Returns
         -------
@@ -1447,7 +1455,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         except ImportError:
             return False
 
-    def from_object(self, object):
+    def from_object(self, object, allow_undefined_stereo=False):
         """
         If given an rdchem.Mol (or rdchem.Mol-derived object), this function will load it into an
         openforcefield.topology.molecule. Otherwise, it will return False.
@@ -1456,6 +1464,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         ----------
         object : A rdchem.Mol-derived object
             An object to be type-checked and converted into a Molecule, if possible.
+        allow_undefined_stereo : bool, default=False
+            Whether to accept molecules with undefined stereocenters. If False,
+            an exception will be raised if a molecule with undefined stereochemistry
+            is passed into this function.
 
         Returns
         -------
@@ -1470,7 +1482,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # TODO: Add tests for the from_object functions
         from rdkit import Chem
         if isinstance(object, Chem.rdchem.Mol):
-            return self.from_rdkit(object)
+            return self.from_rdkit(object,
+                                   allow_undefined_stereo=allow_undefined_stereo)
         raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_file(self,
@@ -1682,7 +1695,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol = cls.to_rdkit(molecule)
         return Chem.MolToSmiles(rdmol, isomericSmiles=True, allHsExplicit=True)
 
-    def from_smiles(self, smiles, hydrogens_are_explicit=False):
+    def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
         """
         Create a Molecule from a SMILES string using the RDKit toolkit.
 
@@ -1694,6 +1707,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             The SMILES string to turn into a molecule
         hydrogens_are_explicit : bool, default=False
             If False, RDKit will perform hydrogen addition using Chem.AddHs
+        allow_undefined_stereo : bool, default=False
+            Whether to accept SMILES with undefined stereochemistry. If False,
+            an exception will be raised if a SMILES with undefined stereochemistry
+            is passed into this function.
 
         Returns
         -------
@@ -1714,14 +1731,15 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Chem.AssignStereochemistry(rdmol)
 
         # Throw an exception/warning if there is unspecified stereochemistry.
-        self._detect_undefined_stereo(rdmol, err_msg_prefix='Unable to make OFFMol from SMILES: ')
+        if allow_undefined_stereo==False:
+            self._detect_undefined_stereo(rdmol, err_msg_prefix='Unable to make OFFMol from SMILES: ')
 
         # Add explicit hydrogens if they aren't there already
         if not hydrogens_are_explicit:
             rdmol = Chem.AddHs(rdmol)
 
-        # TODO: Add allow_undefined_stereo to this function, and pass to from_rdkit?
-        molecule = Molecule.from_rdkit(rdmol)
+        molecule = Molecule.from_rdkit(rdmol,
+                                       allow_undefined_stereo=allow_undefined_stereo)
 
         return molecule
 
