@@ -1835,7 +1835,7 @@ class FrozenMolecule(Serializable):
         func_qualname = to_smiles_method.__qualname__
 
         # Check to see if a SMILES for this molecule was already cached using this method
-        if func_qualname in self._cached_smiles.keys():
+        if func_qualname in self._cached_smiles:
             return self._cached_smiles[func_qualname]
         else:
             smiles = to_smiles_method(self)
