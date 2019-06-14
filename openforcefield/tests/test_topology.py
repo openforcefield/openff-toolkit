@@ -420,6 +420,25 @@ class TestTopology(TestCase):
         with pytest.raises(ValueError, match='No match found for molecule C6H12') as excinfo:
             topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
+    def test_from_openmm_missing_conect(self):
+        """
+        Test creation of an openforcefield Topology object from an OpenMM Topology
+        when the origin PDB lacks CONECT records
+        """
+        from simtk.openmm import app
+        pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol_no_conect.pdb'))
+
+        molecules = []
+        molecules.append(Molecule.from_smiles('CCO'))
+        with pytest.raises(ValueError, match='No match found for molecule C1. This would be a '
+                                             'very unusual molecule to try and parameterize, '
+                                             'and it is likely that the data source it was '
+                                             'read from does not contain connectivity '
+                                             'information. If this molecule is coming from '
+                                             'PDB, please ensure that the file contains CONECT '
+                                             'lines.') as excinfo:
+            topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
     def test_to_from_openmm(self):
         """Test a round-trip OpenFF -> OpenMM -> OpenFF Topology."""
         from simtk.openmm.app import Aromatic
