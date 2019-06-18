@@ -436,7 +436,7 @@ class TestTopology(TestCase):
                                              'read from does not contain connectivity '
                                              'information. If this molecule is coming from '
                                              'PDB, please ensure that the file contains CONECT '
-                                             'lines.') as excinfo:
+                                             'records.') as excinfo:
             topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
     def test_to_from_openmm(self):

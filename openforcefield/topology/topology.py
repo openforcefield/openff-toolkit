@@ -1663,10 +1663,14 @@ class Topology(Serializable):
                 msg = f'No match found for molecule {hill_formula}. '
                 probably_missing_conect = ['C1', 'H1', 'O1', 'N1', 'P1', 'S1', 'F1', 'Cl1', 'Br1']
                 if hill_formula in probably_missing_conect:
-                    msg += 'This would be a very unusual molecule to try and parameterize, ' \
-                           'and it is likely that the data source it was read from does not ' \
-                           'contain connectivity information. If this molecule is coming from ' \
-                           'PDB, please ensure that the file contains CONECT lines.'
+                    msg += ('This would be a very unusual molecule to try and parameterize, '
+                            'and it is likely that the data source it was read from does not '
+                            'contain connectivity information. If this molecule is coming from '
+                            'PDB, please ensure that the file contains CONECT records. The PDB '
+                            'format documentation (https://www.wwpdb.org/documentation/'
+                            'file-format-content/format33/sect10.html) states "CONECT records '
+                            'are mandatory for HET groups (excluding water) and for other bonds '
+                            'not specified in the standard residue connectivity table."')
                 raise ValueError(msg)
 
         # The connected_component_subgraph function above may have scrambled the molecule order, so sort molecules
