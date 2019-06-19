@@ -842,7 +842,6 @@ class TestForceField():
             with pytest.raises(exception, match=exception_match) as excinfo:
                 omm_system = forcefield.create_openmm_system(topology)
 
-
 #======================================================================
 # TEST CONSTRAINTS
 #======================================================================
