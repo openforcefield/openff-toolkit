@@ -2760,6 +2760,8 @@ class GBSAParameterHandler(ParameterHandler):
     _TAGNAME = 'GBSA'
     _INFOTYPE = GBSAType
     _OPENMMTYPE = openmm.GBSAOBCForce
+    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
+
     _ATTRIBS_TO_TYPE = {
         'solvent_dielectric': float,
         'solute_dielectric' :float
@@ -2918,13 +2920,16 @@ class GBSAParameterHandler(ParameterHandler):
                     "(handler value: {}, incompatible value: {}".format(
                         unit_attr, unit_tol, this_val, other_val))
 
-    def create_force(self, system, topology, **args):
+    def create_force(self, system, topology, **kwargs):
         # TODO: Rework this
 
         # No previous GBSAForce should exist, so we're safe just making one here.
+        # TODO: This will call GBSAOBCForce(). Is this appropriate for HCT as well?
         force = self._OPENMMTYPE()
         system.addForce(force)
 
+        # TODO: Go through existing particles in the system (which have already had charges
+        #  assigned) and copy the charges into here
         # Add all GBSA terms to the system.
         expected_parameters = GBSAParameterHandler.GB_expected_parameters[
             self.gb_model]
