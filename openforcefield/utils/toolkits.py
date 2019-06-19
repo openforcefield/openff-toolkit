@@ -660,7 +660,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     @staticmethod
     def from_openeye(oemol, allow_undefined_stereo=False):
         """
-        Create a Molecule from an OpenEye molecule.
+        Create a Molecule from an OpenEye molecule. If the OpenEye molecule has
+        implicit hydrogens, this function will make them explicit.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -692,6 +693,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
         from openforcefield.topology.molecule import Molecule
+
+
+        # Add explicit hydrogens if they're implicit
+        if oechem.OEHasImplicitHydrogens(oemol):
+            oechem.OEAddExplicitHydrogens(oemol)
 
         # TODO: Is there any risk to perceiving aromaticity here instead of later?
         oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)

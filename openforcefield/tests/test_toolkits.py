@@ -214,9 +214,34 @@ class TestOpenEyeToolkitWrapper:
             assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_from_openeye_implicit_hydrogen(self):
+        """
+        Test OpenEyeToolkitWrapper for loading a molecule with implicit
+        hydrogens (correct behavior is to add them explicitly)
+        """
+        from openeye import oechem
+
+        smiles_impl = "C#C"
+        oemol_impl = oechem.OEMol()
+        oechem.OESmilesToMol(oemol_impl, smiles_impl)
+        molecule_from_impl = Molecule.from_openeye(oemol_impl)
+
+        assert molecule_from_impl.n_atoms == 4
+
+        smiles_expl = "HC#CH"
+        oemol_expl = oechem.OEMol()
+        oechem.OESmilesToMol(oemol_expl, smiles_expl)
+        molecule_from_expl = Molecule.from_openeye(oemol_expl)
+        assert molecule_from_expl.to_smiles() == molecule_from_impl.to_smiles()
+
+
+
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
+
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_file_path('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
