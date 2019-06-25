@@ -82,13 +82,13 @@ class TestCallbackable:
         def __iadd__(self, other):
             CallHistory.add_history_entry('__iadd__', other)
 
-        @callback_method(event_groups=['group_name1'])
-        def group_method1(self, *args, **kwargs):
-            CallHistory.add_history_entry('group_method1', *args, **kwargs)
+        @callback_method(events=['event1'])
+        def event_method1(self, *args, **kwargs):
+            CallHistory.add_history_entry('event_method1', *args, **kwargs)
 
-        @callback_method(event_groups=['group_name1', 'group_name2'])
-        def group_method2(self, *args, **kwargs):
-            CallHistory.add_history_entry('group_method2', *args, **kwargs)
+        @callback_method(events=['event1', 'event2'])
+        def event_method2(self, *args, **kwargs):
+            CallHistory.add_history_entry('event_method2', *args, **kwargs)
 
     def check_method_call_order(self, callbackable, event_name, event_sequence, *args, **kwargs):
         """Check that callback and methods/attributes are invoked in the correct order.
@@ -145,22 +145,22 @@ class TestCallbackable:
         callbackable += extension
         assert call_history.history == [['__iadd__', (extension,)], ['callback___iadd__', (extension,)]]
 
-    def test_register_group_callback(self):
-        """Callbacks registered to a group are handled corectly."""
+    def test_register_event_callback(self):
+        """Callbacks registered to a event are handled corectly."""
         callbackable = TestCallbackable.MyCallbackable()
 
-        # Register the callbacks to group1 (group_method1 and group_method2).
-        callbackable.register_callback('group_name1', call_history.instance_callback)
-        callbackable.register_callback('group_name1', CallHistory.class_callback)
-        # Register one callback to group2 (only group_method2).
-        callbackable.register_callback('group_name2', CallHistory.static_callback)
+        # Register the callbacks to event1 (event_method1 and event_method2).
+        callbackable.register_callback('event1', call_history.instance_callback)
+        callbackable.register_callback('event1', CallHistory.class_callback)
+        # Register one callback to event2 (only event_method2).
+        callbackable.register_callback('event2', CallHistory.static_callback)
 
-        # Check the event sequence for both methods belong to the two groups.
-        event_sequence = ['group_method1', 'callback_group_method1', 'callback_group_method1']
-        self.check_method_call_order(callbackable, 'group_method1', event_sequence)
+        # Check the event sequence for both methods belong to the two events.
+        event_sequence = ['event_method1', 'callback_event_method1', 'callback_event_method1']
+        self.check_method_call_order(callbackable, 'event_method1', event_sequence)
 
-        event_sequence = ['group_method2', 'callback_group_method2', 'callback_group_method2', 'callback_group_method2']
-        self.check_method_call_order(callbackable, 'group_method2', event_sequence)
+        event_sequence = ['event_method2', 'callback_event_method2', 'callback_event_method2', 'callback_event_method2']
+        self.check_method_call_order(callbackable, 'event_method2', event_sequence)
 
     def test_not_callback_method_raise_exception(self):
         """An exception is raised if a callback is registered for a method not tagged with callback_method."""
@@ -172,8 +172,8 @@ class TestCallbackable:
         with pytest.raises(CallbackRegistrationError, match='is not tagged with the @callback_method decorator'):
             callbackable.register_callback('not_callback_method', call_history.instance_callback)
 
-    def test_unknown_group_raise_exception(self):
-        """An exception is raised if a callback is registered for an unknown callback group."""
+    def test_unknown_event_raise_exception(self):
+        """An exception is raised if a callback is registered for an unknown callback event."""
         callbackable = TestCallbackable.MyCallbackable()
-        with pytest.raises(CallbackRegistrationError, match='is associated to the callback event group "unknown"'):
+        with pytest.raises(CallbackRegistrationError, match='is associated to the callback event "unknown"'):
             callbackable.register_callback('unknown', call_history.instance_callback)

@@ -53,7 +53,7 @@ class ValidatedList(list):
 
     Multiple converters that are run before the validators can be specified.
 
-    >>> vl = ValidatedList([-1, '2', 3.0], converter=[abs, float],
+    >>> vl = ValidatedList([-1, '2', 3.0], converter=[float, abs],
     ...                    validator=is_positive_validator)
     >>> vl
     [1.0, 2.0, 3.0]
@@ -124,3 +124,8 @@ class ValidatedList(list):
                 for element in seq:
                     validator(element)
         return seq
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.run_docstring_examples(ValidatedList, globals())
