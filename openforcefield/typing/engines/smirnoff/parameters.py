@@ -677,17 +677,7 @@ class ParameterType:
     ...     k2=6 * unit.kilocalorie_per_mole,
     ... )
     >>> my_par.periodicity
-    (2, 3)
-
-    Single values can be also passed normally.
-
-    >>> my_par = MyTorsionType(
-    ...     smirks='[*:1]-[*:2]-[*:3]-[*:4]',
-    ...     periodicity=2,
-    ...     k=5 * unit.kilocalorie_per_mole,
-    ... )
-    >>> my_par.periodicity
-    2
+    [2, 3]
 
     """
 
