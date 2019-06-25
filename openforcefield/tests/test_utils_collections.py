@@ -124,3 +124,8 @@ class TestValidatedList:
         assert l[1] == 3
         with pytest.raises(TypeError, match='value is not positive'):
             l.insert(1, 0)
+
+    def test_multiple_converters(self):
+        """Multiple converters of ValidatedList are called in order."""
+        l = ValidatedList([1, 2, -3], converter=[abs, str])
+        assert l == ['1', '2', '3']

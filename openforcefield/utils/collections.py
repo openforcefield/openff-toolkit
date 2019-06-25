@@ -24,7 +24,10 @@ from collections import abc
 class ValidatedList(list):
 
     def __init__(self, seq=(), converter=None, validator=None):
-        self._converter = converter
+        # Make sure converter is always an iterable.
+        if not (converter is None or isinstance(converter, abc.Iterable)):
+            converter = [converter]
+        self._converters = converter
         self._validator = validator
 
         # Validate and convert the whole sequence.
@@ -55,8 +58,9 @@ class ValidatedList(list):
         super().__setitem__(key, value)
 
     def _convert_and_validate(self, seq):
-        if self._converter is not None:
-            seq = [self._converter(element) for element in seq]
+        if self._converters is not None:
+            for converter in self._converters:
+                seq = [converter(element) for element in seq]
         if self._validator is not None:
             for element in seq:
                 self._validator(element)
