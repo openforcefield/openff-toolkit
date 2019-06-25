@@ -24,6 +24,7 @@ from openforcefield.typing.engines.smirnoff.parameters import (
 )
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.utils import detach_units, IncompatibleUnitError
+from openforcefield.utils.collections import ValidatedList
 
 
 #======================================================================
@@ -133,22 +134,27 @@ class TestParameterAttribute:
             attr = ParameterAttribute()
         assert isinstance(MyParameter.attr, ParameterAttribute)
 
+
 class TestIndexedParameterAttribute:
     """Tests for the IndexedParameterAttribute descriptor."""
 
     def test_tuple_conversion(self):
-        """IndexedParameterAttribute converts internally sequences to tuples."""
+        """IndexedParameterAttribute converts internally sequences to ValidatedList."""
         class MyParameter:
             attr_indexed = IndexedParameterAttribute()
         my_par = MyParameter()
         my_par.attr_indexed = [1, 2, 3]
-        assert isinstance(my_par.attr_indexed, tuple)
+        assert isinstance(my_par.attr_indexed, ValidatedList)
 
     def test_indexed_default(self):
         """IndexedParameterAttribute handles default values correctly."""
         class MyParameter:
             attr_indexed_optional = IndexedParameterAttribute(default=None)
         my_par = MyParameter()
+        assert my_par.attr_indexed_optional is None
+
+        # Assigning the default is allowed.
+        my_par.attr_indexed_optional = None
         assert my_par.attr_indexed_optional is None
 
     def test_units_on_all_elements(self):
@@ -159,7 +165,7 @@ class TestIndexedParameterAttribute:
 
         # Strings are correctly converted.
         my_par.attr_indexed_unit = ['1.0*gram', 2*unit.gram]
-        assert my_par.attr_indexed_unit == (1.0*unit.gram, 2*unit.gram)
+        assert my_par.attr_indexed_unit == [1.0*unit.gram, 2*unit.gram]
 
         # Incompatible units on a single elements are correctly caught.
         with pytest.raises(IncompatibleUnitError, match='should have units of'):
@@ -174,20 +180,34 @@ class TestIndexedParameterAttribute:
         my_par = MyParameter()
 
         my_par.attr_indexed_converter = [1, '2.0', '1e-3', 4.0]
-        assert my_par.attr_indexed_converter == (1.0, 2.0, 1e-3, 4.0)
+        assert my_par.attr_indexed_converter == [1.0, 2.0, 1e-3, 4.0]
 
-    def test_handle_single_value(self):
-        """IndexedParameterAttribute handle also single values instead of sequences."""
+    def test_validate_new_elements(self):
+        """New elements set in the list are correctly validated."""
         class MyParameter:
-            attr_indexed_converter = IndexedParameterAttribute(converter=str)
-            attr_indexed_unit = IndexedParameterAttribute(unit=unit.meter)
+            attr_indexed = IndexedParameterAttribute(converter=int)
         my_par = MyParameter()
+        my_par.attr_indexed = (1, 2, 3)
 
-        my_par.attr_indexed_converter = 3.0
-        assert my_par.attr_indexed_converter == '3.0'
-        my_par.attr_indexed_unit = '1.0*nanometer'
-        assert my_par.attr_indexed_unit == 1.0 * unit.nanometer
-        assert my_par.attr_indexed_unit.unit == unit.nanometer
+        # Modifying one or more elements of the list should validate them.
+        my_par.attr_indexed[2] = '4'
+        assert my_par.attr_indexed[2] == 4
+        my_par.attr_indexed[0:3] = ['2', '3', 4]
+        assert my_par.attr_indexed == [2, 3, 4]
+
+        # Same for append().
+        my_par.attr_indexed.append('5')
+        assert my_par.attr_indexed[3] == 5
+
+        # And extend.
+        my_par.attr_indexed.extend([6, '7'])
+        assert my_par.attr_indexed[5] == 7
+        my_par.attr_indexed += ['8', 9]
+        assert my_par.attr_indexed[6] == 8
+
+        # And insert.
+        my_par.attr_indexed.insert(5, '10')
+        assert my_par.attr_indexed[5] == 10
 
 
 #======================================================================
@@ -529,15 +549,15 @@ class TestParameterType:
             a = IndexedParameterAttribute()
             b = IndexedParameterAttribute()
         my_par = MyParameter(smirks='[*:1]', a1=1, a3=3, a2=2, b1=4, b2=5, b3=6)
-        assert my_par.a == (1, 2, 3)
-        assert my_par.b == (4, 5, 6)
+        assert my_par.a == [1, 2, 3]
+        assert my_par.b == [4, 5, 6]
 
-    def test_single_value_indexed_attr(self):
-        """ParameterType handle single-value indexed attributes correctly."""
+    def test_sequence_init_indexed_attr(self):
+        """ParameterType handle indexed attributes initialized with sequences correctly."""
         class MyParameter(ParameterType):
             a = IndexedParameterAttribute()
-        my_par = MyParameter(smirks='[*:1]', a=1)
-        assert my_par.a == 1
+        my_par = MyParameter(smirks='[*:1]', a=(1, 2))
+        assert my_par.a == [1, 2]
 
     def test_same_length_indexed_attrs(self):
         """ParameterType raises TypeError if indexed attributes of different lengths are given."""
@@ -552,7 +572,7 @@ class TestParameterType:
         class MyParameter(ParameterType):
             a = IndexedParameterAttribute()
         with pytest.raises(TypeError, match="'a' has been specified with and without index"):
-            MyParameter(smirks='[*:1]', a=1, a1=2)
+            MyParameter(smirks='[*:1]', a=[1], a1=2)
 
     def test_find_all_defined_parameter_attrs(self):
         """ParameterType._get_defined_attributes() discards None default-value attributes."""
@@ -563,7 +583,7 @@ class TestParameterType:
             optional3 = ParameterAttribute(default=5)
             required2 = IndexedParameterAttribute()
             optional3 = ParameterAttribute(default=2)
-        my_par = MyParameter(smirks='[*:1]', required1=0, optional1=10, required2=0)
+        my_par = MyParameter(smirks='[*:1]', required1=0, optional1=10, required2=[0])
 
         # _get_defined_parameter_attributes discards only the attribute
         # that are set to None as a default value.
@@ -773,12 +793,12 @@ class TestProperTorsionType:
                                                     k2=6 * unit.kilocalorie_per_mole,
                                                     )
         param_dict = p1.to_dict()
-        assert ('k1', 5 * unit.kilocalorie_per_mole) in param_dict.items()
-        assert ('phase1', 30 * unit.degree) in param_dict.items()
-        assert ('periodicity1', 2) in param_dict.items()
-        assert ('k2', 6 * unit.kilocalorie_per_mole) in param_dict.items()
-        assert ('phase2', 31 * unit.degree) in param_dict.items()
-        assert ('periodicity2', 3) in param_dict.items()
+        assert param_dict['k1'] == 5 * unit.kilocalorie_per_mole
+        assert param_dict['phase1'] == 30 * unit.degree
+        assert param_dict['periodicity1'] == 2
+        assert param_dict['k2'] == 6 * unit.kilocalorie_per_mole
+        assert param_dict['phase2'] == 31 * unit.degree
+        assert param_dict['periodicity2'] == 3
 
     def test_multi_term_proper_torsion_skip_index(self):
         """

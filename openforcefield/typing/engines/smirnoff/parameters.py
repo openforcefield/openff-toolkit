@@ -36,8 +36,9 @@ __all__ = [
 #=============================================================================================
 
 import copy
-from collections import OrderedDict, abc
+from collections import OrderedDict
 from enum import Enum
+import functools
 import inspect
 import logging
 
@@ -49,6 +50,7 @@ from openforcefield.utils import attach_units,  \
 from openforcefield.topology import ValenceDict, ImproperDict
 from openforcefield.typing.chemistry import ChemicalEnvironment
 from openforcefield.utils import IncompatibleUnitError
+from openforcefield.utils.collections import ValidatedList
 
 
 #=============================================================================================
@@ -263,13 +265,17 @@ class ParameterAttribute:
     def _convert_and_validate(self, instance, value):
         """Convert to Quantity, validate units, and call custom converter."""
         # The default value is always allowed.
-        if self.default is not ParameterAttribute.UNDEFINED and value == self.default:
+        if self._is_valid_default(value):
             return value
         # Convert and validate units.
         value = self._validate_units(value)
         # Call the custom converter before setting the value.
         value = self._call_converter(value, instance)
         return value
+
+    def _is_valid_default(self, value):
+        """Return True if this is a defined default value."""
+        return self.default is not ParameterAttribute.UNDEFINED and value == self.default
 
     def _validate_units(self, value):
         """Convert strings expressions to Quantity and validate the units if requested."""
@@ -345,13 +351,6 @@ class IndexedParameterAttribute(ParameterAttribute):
     >>> my_par.length[0]
     Quantity(value=1, unit=angstrom)
 
-    Note that ``IndexedParameterAttribute``s are immutable right now. This
-    may change in the future
-    >>> my_par.length[0] = 3.0 * unit.angstrom
-    Traceback (most recent call last):
-    ...
-    TypeError: 'tuple' object does not support item assignment
-
     Similarly, custom converters work as with ``ParameterAttribute``, but
     they are used to validate each value in the sequence.
 
@@ -361,49 +360,26 @@ class IndexedParameterAttribute(ParameterAttribute):
     >>> my_par = MyParameter()
     >>> my_par.attr_indexed = [1, '1.0', '1e-2', 4.0]
     >>> my_par.attr_indexed
-    (1.0, 1.0, 0.01, 4.0)
-
-    Single values are still supported as usual.
-
-    >>> my_par.attr_indexed = '1.0'
-    >>> my_par.attr_indexed
-    1.0
+    [1.0, 1.0, 0.01, 4.0]
 
     """
 
-    def _validate_units(self, value):
-        """Overwrite ParameterAttribute._validate_units to validate each element of the sequence."""
-        if self._unit is not None:
-            try:
-                # Try treating this as single value.
-                value = super()._validate_units(value)
-            except Exception:
-                # Note that this is a generator. The tuple memory will be allocated in _call_converter.
-                value = (super(IndexedParameterAttribute, self)._validate_units(element)
-                            for element in value)
+    def _convert_and_validate(self, instance, value):
+        """Overwrite ParameterAttribute._convert_and_validate to make the value a ValidatedList."""
+        # The default value is always allowed.
+        if self._is_valid_default(value):
+            return value
+
+        # We push the converters into a ValidatedList so that we can make
+        # sure that elements are validated correctly when they are modified
+        # after their initialization.
+        # ValidatedList expects converters that take the value as a single
+        # argument so we create a partial function with the instance assigned.
+        static_converter = functools.partial(self._call_converter, instance=instance)
+        value = ValidatedList(value, converter=[self._validate_units, static_converter])
+
         return value
 
-    def _call_converter(self, value, instance):
-        """Overwrite ParameterAttribute._call_converter to convert each
-        element of the sequence and make it immutable."""
-        if self._converter is not None:
-            try:
-                # Try treating this as a single value.
-                value = super()._call_converter(value, instance)
-            except Exception:
-                # Note that this is a generator. The tuple memory will be allocated below.
-                value = (super(IndexedParameterAttribute, self)._call_converter(element, instance)
-                         for element in value)
-
-        # Make the sequence immutable.
-        # TODO: Instead of making the sequence immutable, we could just
-        #       wrap it around a list extension that enables callbacks
-        #       similar to this: https://stackoverflow.com/questions/13259179/list-callbacks
-        #       and validate the elements in the callback function. This
-        #       shouldn't break the API but only extend it.
-        if isinstance(value, abc.MutableSequence) or isinstance(value, abc.Generator):
-            value = tuple(value)
-        return value
 
 #======================================================================
 # PARAMETER TYPE/LIST
@@ -871,7 +847,7 @@ class ParameterType:
         for attrib_name in attribs_to_return:
             attrib_value = getattr(self, attrib_name)
 
-            if attrib_name in indexed_attribs and isinstance(attrib_value, tuple):
+            if attrib_name in indexed_attribs:
                 for idx, val in enumerate(attrib_value):
                     smirnoff_dict[attrib_name + str(idx+1)] = val
             else:
