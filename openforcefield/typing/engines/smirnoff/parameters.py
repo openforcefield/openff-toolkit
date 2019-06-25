@@ -1655,7 +1655,7 @@ class BondHandler(ParameterHandler):
         _ELEMENT_NAME = 'Bond'
 
         # These attributes may be indexed (by integer bond order) if fractional bond orders are used.
-        length = IndexedParameterAttribute(unit=unit.angstrom)
+        length = ParameterAttribute(unit=unit.angstrom)
         k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
 
 
