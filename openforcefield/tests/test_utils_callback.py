@@ -118,10 +118,9 @@ class TestCallbackable:
 
     @pytest.mark.parametrize('event_name', ['instance_method'])
     @pytest.mark.parametrize('callback', [call_history.instance_callback, CallHistory.class_callback, CallHistory.static_callback])
-    @pytest.mark.parametrize('before', [True, False])
     @pytest.mark.parametrize('args,kwargs', [([], {}),
                                              ([1, 2.0], {'kwarg1': 0, 'kwarg2': None})])
-    def test_register_method_callback(self, event_name, callback, before, args, kwargs):
+    def test_register_method_callback(self, event_name, callback, args, kwargs):
         """Methods' callbacks are invoked in the correct order and with the correct arguments."""
         callbackable = TestCallbackable.MyCallbackable()
 
@@ -130,13 +129,10 @@ class TestCallbackable:
         self.check_method_call_order(callbackable, event_name, event_sequence, *args, **kwargs)
 
         # Register the callback.
-        callbackable.register_callback(event_name, callback, before=before)
+        callbackable.register_callback(event_name, callback)
 
         # After the registration, the callback is invoked correctly.
-        if before:
-            event_sequence = ['callback_'+event_name, event_name]
-        else:
-            event_sequence = [event_name, 'callback_'+event_name]
+        event_sequence = [event_name, 'callback_'+event_name]
         self.check_method_call_order(callbackable, event_name, event_sequence, *args, **kwargs)
 
     def test_register_magic_method_callback(self):
@@ -154,16 +150,16 @@ class TestCallbackable:
         callbackable = TestCallbackable.MyCallbackable()
 
         # Register the callbacks to group1 (group_method1 and group_method2).
-        callbackable.register_callback('group_name1', call_history.instance_callback, before=True)
-        callbackable.register_callback('group_name1', CallHistory.class_callback, before=False)
+        callbackable.register_callback('group_name1', call_history.instance_callback)
+        callbackable.register_callback('group_name1', CallHistory.class_callback)
         # Register one callback to group2 (only group_method2).
-        callbackable.register_callback('group_name2', CallHistory.static_callback, before=False)
+        callbackable.register_callback('group_name2', CallHistory.static_callback)
 
         # Check the event sequence for both methods belong to the two groups.
-        event_sequence = ['callback_group_method1', 'group_method1', 'callback_group_method1']
+        event_sequence = ['group_method1', 'callback_group_method1', 'callback_group_method1']
         self.check_method_call_order(callbackable, 'group_method1', event_sequence)
 
-        event_sequence = ['callback_group_method2', 'group_method2', 'callback_group_method2', 'callback_group_method2']
+        event_sequence = ['group_method2', 'callback_group_method2', 'callback_group_method2', 'callback_group_method2']
         self.check_method_call_order(callbackable, 'group_method2', event_sequence)
 
     def test_not_callback_method_raise_exception(self):
