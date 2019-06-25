@@ -210,9 +210,9 @@
 		<Proper smirks="[*:1]-[#7X3+1:2]=,:[#6X3:3]-,:[*:4]" periodicity1="2" phase1="180.0 * degree" k1="2.4 * mole**-1 * kilocalorie" id="t78" idivf1="1.0"></Proper>
 		<Proper smirks="[#16X4,#16X3+0:1]-[#7X2:2]=[#6X3:3]-[#7X3:4]" periodicity1="2" phase1="180.0 * degree" k1="7.5 * mole**-1 * kilocalorie" id="t79" idivf1="1.0"></Proper>
 		<Proper smirks="[#16X4,#16X3+0:1]-[#7X2:2]=[#6X3:3]-[#16X2,#16X3+1:4]" periodicity1="2" phase1="180.0 * degree" k1="7.5 * mole**-1 * kilocalorie" id="t80" idivf1="1.0"></Proper>
-		<Proper smirks="[#7X1:1]~[#7X2:2]-[#6X3:3]~[#6X3:4]" periodicity1="2" phase1="180.0 * degree" k1="0.5 * mole**-1 * kilocalorie" id="t81" idivf1="1.0"></Proper>
-		<Proper smirks="[#7X1:1]~[#7X2:2]-[#6X4:3]-[#6X3:4]" periodicity1="2" phase1="0.0 * degree" k1="0.0 * mole**-1 * kilocalorie" id="t82" idivf1="1.0"></Proper>
-		<Proper smirks="[#7X1:1]~[#7X2:2]-[#6X4:3]~[#1:4]" periodicity1="2" phase1="0.0 * degree" k1="0.0 * mole**-1 * kilocalorie" id="t83" idivf1="1.0"></Proper>
+		<Proper smirks="[#7X2:1]~[#7X2:2]-[#6X3:3]~[#6X3:4]" periodicity1="2" phase1="180.0 * degree" k1="0.5 * mole**-1 * kilocalorie" id="t81" idivf1="1.0"></Proper>
+		<Proper smirks="[#7X2:1]~[#7X2:2]-[#6X4:3]-[#6X3:4]" periodicity1="2" phase1="0.0 * degree" k1="0.0 * mole**-1 * kilocalorie" id="t82" idivf1="1.0"></Proper>
+		<Proper smirks="[#7X2:1]~[#7X2:2]-[#6X4:3]~[#1:4]" periodicity1="2" phase1="0.0 * degree" k1="0.0 * mole**-1 * kilocalorie" id="t83" idivf1="1.0"></Proper>
 		<Proper smirks="[*:1]-[#6X4:2]-[#8X2:3]-[#1:4]" periodicity1="3" phase1="0.0 * degree" k1="0.5 * mole**-1 * kilocalorie" id="t84" idivf1="3.0"></Proper>
 		<Proper smirks="[#6X4:1]-[#6X4:2]-[#8X2H1:3]-[#1:4]" periodicity1="3" periodicity2="1" phase1="0.0 * degree" phase2="0.0 * degree" k1="0.16 * mole**-1 * kilocalorie" k2="0.25 * mole**-1 * kilocalorie" id="t85" idivf1="1.0" idivf2="1.0"></Proper>
 		<Proper smirks="[*:1]-[#6X4:2]-[#8X2H0:3]-[*:4]" periodicity1="3" phase1="0.0 * degree" k1="1.15 * mole**-1 * kilocalorie" id="t86" idivf1="3.0"></Proper>
