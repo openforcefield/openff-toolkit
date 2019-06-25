@@ -129,3 +129,19 @@ class TestValidatedList:
         """Multiple converters of ValidatedList are called in order."""
         l = ValidatedList([1, 2, -3], converter=[abs, str])
         assert l == ['1', '2', '3']
+
+    def test_multiple_validators(self):
+        """Multiple converters of ValidatedList are called in order."""
+        def is_positive(value):
+            if value <= 0:
+                raise TypeError('value must be positive')
+
+        def is_odd(value):
+            if value % 2 == 0:
+                raise TypeError('value must be odd')
+
+        with pytest.raises(TypeError, match='value must be positive'):
+            ValidatedList([-1, -3], validator=[is_positive, is_odd])
+
+        with pytest.raises(TypeError, match='value must be odd'):
+            ValidatedList([2, 4], validator=[is_positive, is_odd])

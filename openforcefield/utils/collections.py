@@ -22,13 +22,67 @@ from collections import abc
 # =====================================================================
 
 class ValidatedList(list):
+    """A list that runs custom converter and validators when new elements are added.
+
+    Multiple converters and validators can be assigned to the list. These
+    are executed in the given order with converters run before validators.
+
+    Validators must take the new element as the first argument and raise
+    an exception if validation fails.
+
+        validator(new_element) -> None
+
+    Converters must also take the new element as the first argument, but
+    they have to return the converted value.
+
+        converter(new_element) -> converted_value
+
+    Examples
+    --------
+    We can define validator and converter functions that are run on each
+    element of the list.
+
+    >>> def is_positive_validator(value):
+    ...     if value <= 0:
+    ...         raise TypeError('value must be positive')
+    ...
+    >>> vl = ValidatedList([1, -1], validator=is_positive_validator)
+    Traceback (most recent call last):
+    ...
+    TypeError: value must be positive
+
+    Multiple converters that are run before the validators can be specified.
+
+    >>> vl = ValidatedList([-1, '2', 3.0], converter=[abs, float],
+    ...                    validator=is_positive_validator)
+    >>> vl
+    [1.0, 2.0, 3.0]
+
+    """
 
     def __init__(self, seq=(), converter=None, validator=None):
-        # Make sure converter is always an iterable.
+        """
+        Initialize the list.
+
+        Parameters
+        ----------
+        seq : Iterable
+            A sequence of elements.
+        converter : callable or List[callable]
+            Functions that will be used to convert each new element of
+            the list.
+        validator : callable or List[callable]
+            Functions that will be used to convert each new element of
+            the list.
+
+        """
+        # Make sure converter and validator are always iterables.
         if not (converter is None or isinstance(converter, abc.Iterable)):
             converter = [converter]
+        if not (validator is None or isinstance(validator, abc.Iterable)):
+            validator = [validator]
         self._converters = converter
-        self._validator = validator
+        self._validators = validator
 
         # Validate and convert the whole sequence.
         seq = self._convert_and_validate(seq)
@@ -58,10 +112,15 @@ class ValidatedList(list):
         super().__setitem__(key, value)
 
     def _convert_and_validate(self, seq):
+        """Run all converters and the validator on the given sequence."""
+        # Run all element converters.
         if self._converters is not None:
             for converter in self._converters:
                 seq = [converter(element) for element in seq]
-        if self._validator is not None:
-            for element in seq:
-                self._validator(element)
+
+        # Run all element validators.
+        if self._validators is not None:
+            for validator in self._validators:
+                for element in seq:
+                    validator(element)
         return seq
