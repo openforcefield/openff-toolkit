@@ -64,9 +64,12 @@ class TestOpenEyeToolkitWrapper:
                                                 ]:
             if raises_exception:
                 with pytest.raises(UndefinedStereochemistryError) as context:
-                    molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+                    Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+                Molecule.from_smiles(smiles,
+                                     toolkit_registry=toolkit_wrapper,
+                                     allow_undefined_stereo=True)
             else:
-                molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+                Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
 
     # TODO: test_smiles_round_trip
 
@@ -450,6 +453,9 @@ class TestRDKitToolkitWrapper:
         if exception_regex is not None:
             with pytest.raises(UndefinedStereochemistryError, match=exception_regex):
                 Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+            Molecule.from_smiles(smiles,
+                                 toolkit_registry=toolkit_wrapper,
+                                 allow_undefined_stereo=True)
         else:
             Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
 
