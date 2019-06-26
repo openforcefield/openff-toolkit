@@ -281,7 +281,6 @@
 		<Proper smirks="[*:1]-[#8X2:2]-[#15:3]~[*:4]" periodicity1="3" phase1="0.0 * degree" k1="0.75 * mole**-1 * kilocalorie" id="t150" idivf1="1.0"></Proper>
 		<Proper smirks="[#8X2:1]-[#15:2]-[#8X2:3]-[#6X4:4]" periodicity1="3" periodicity2="2" phase1="0.0 * degree" phase2="0.0 * degree" k1="0.25 * mole**-1 * kilocalorie" k2="1.2 * mole**-1 * kilocalorie" id="t151" idivf1="1.0" idivf2="1.0"></Proper>
 		<Proper smirks="[*:1]~[#7X3:2]-[#15:3]~[*:4]" periodicity1="2" phase1="180.0 * degree" k1="2.5 * mole**-1 * kilocalorie" id="t152" idivf1="1.0"></Proper>
-		<Proper smirks="[*:1]~[#7X4:2]-[#15:3]~[*:4]" periodicity1="3" phase1="0.0 * degree" k1="0.1 * mole**-1 * kilocalorie" id="t153" idivf1="1.0"></Proper>
 		<Proper smirks="[*:1]-[#7:2]-[#15:3]=[*:4]" periodicity1="2" periodicity2="3" phase1="180.0 * degree" phase2="0.0 * degree" k1="3.0 * mole**-1 * kilocalorie" k2="2.3 * mole**-1 * kilocalorie" id="t154" idivf1="1.0" idivf2="1.0"></Proper>
 		<Proper smirks="[#6X3:1]-[#7:2]-[#15:3]=[*:4]" periodicity1="1" phase1="0.0 * degree" k1="2.3 * mole**-1 * kilocalorie" id="t155" idivf1="1.0"></Proper>
 		<Proper smirks="[*:1]-[*:2]#[*:3]-[*:4]" periodicity1="1" phase1="0.0 * degree" k1="0.0 * mole**-1 * kilocalorie" id="t156" idivf1="1.0"></Proper>
