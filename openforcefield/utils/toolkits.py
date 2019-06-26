@@ -1067,14 +1067,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if result == False:
                 raise ValueError(
                     "Addition of explicit hydrogens failed in from_openeye")
-        elif hydrogens_are_explicit:
-            if oechem.OEHasImplicitHydrogens(oemol):
-                raise ValueError(
-                    f"'hydrogens_are_explicit' was specified as True, but OpenEye Toolkit interpreted "
-                    f"SMILES '{smiles}' as having implicit hydrogen. If this SMILES is intended to "
-                    f"express all explicit hydrogens in the molecule, then you should construct the "
-                    f"desired molecule as an OEMol (where oechem.OEHasImplicitHydrogens(oemol) returns "
-                    f"False), and then use Molecule.from_openeye() to create the desired OFFMol.")
+        elif hydrogens_are_explicit and oechem.OEHasImplicitHydrogens(oemol):
+            raise ValueError(
+                f"'hydrogens_are_explicit' was specified as True, but OpenEye Toolkit interpreted "
+                f"SMILES '{smiles}' as having implicit hydrogen. If this SMILES is intended to "
+                f"express all explicit hydrogens in the molecule, then you should construct the "
+                f"desired molecule as an OEMol (where oechem.OEHasImplicitHydrogens(oemol) returns "
+                f"False), and then use Molecule.from_openeye() to create the desired OFFMol.")
         molecule = self.from_openeye(oemol,
                                      allow_undefined_stereo=allow_undefined_stereo)
         return molecule
