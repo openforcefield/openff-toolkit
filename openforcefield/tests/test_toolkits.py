@@ -527,7 +527,7 @@ class TestRDKitToolkitWrapper:
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles2 == expected_output_smiles
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_rdkit_from_smiles_hydrogens_are_explicit(self):
         """
         Test to ensure that RDKitToolkitWrapper.from_smiles has the proper behavior with
