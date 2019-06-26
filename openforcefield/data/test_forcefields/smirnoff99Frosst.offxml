@@ -31,7 +31,7 @@
 		<Bond smirks="[#6X2:1]-[#8X2:2]" length="1.326 * angstrom" k="700.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b28"></Bond>
 		<Bond smirks="[#6X2:1]-[#7:2]" length="1.38 * angstrom" k="854.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b29"></Bond>
 		<Bond smirks="[#6X2:1]=[#7:2]" length="1.17 * angstrom" k="854.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b30"></Bond>
-		<Bond smirks="[#16:1]=[#6:2]" length="1.7 * angstrom" k="600.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b57"></Bond>
+		<Bond smirks="[#16:1]=[#6:2]" length="1.7 * angstrom" k="600.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b31a"></Bond>
 		<Bond smirks="[#6X2:1]=[#16:2]" length="1.54 * angstrom" k="854.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b31"></Bond>
 		<Bond smirks="[#7:1]-[#7:2]" length="1.4 * angstrom" k="760.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b32"></Bond>
 		<Bond smirks="[#7X3:1]-[#7X2:2]" length="1.33 * angstrom" k="680.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b33"></Bond>
