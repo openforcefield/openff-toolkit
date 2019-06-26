@@ -111,6 +111,16 @@ class ValidatedList(list):
             value = self._convert_and_validate([value])[0]
         super().__setitem__(key, value)
 
+    def copy(self):
+        # Make sure a shallow copy still returns a ValidatedList.
+        return self.__class__(self)
+
+    def __getitem__(self, item):
+        # Make sure a slice returns a ValidatedList.
+        if isinstance(item, slice):
+            return self.__class__(super().__getitem__(item))
+        return super().__getitem__(item)
+
     def _convert_and_validate(self, seq):
         """Run all converters and the validator on the given sequence."""
         # Run all element converters.

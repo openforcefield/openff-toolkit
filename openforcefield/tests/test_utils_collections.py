@@ -13,6 +13,8 @@ Tests for custom collections classes.
 # GLOBAL IMPORTS
 # =====================================================================
 
+import copy
+
 import pytest
 
 from openforcefield.utils.collections import ValidatedList
@@ -145,3 +147,15 @@ class TestValidatedList:
 
         with pytest.raises(TypeError, match='value must be odd'):
             ValidatedList([2, 4], validator=[is_positive, is_odd])
+
+    def test_copy(self):
+        """A copy of a ValidatedList returns another ValidatedList."""
+        l = ValidatedList([1, 2, 3])
+        assert isinstance(l.copy(), ValidatedList)
+        assert isinstance(copy.copy(l), ValidatedList)
+        assert isinstance(copy.deepcopy(l), ValidatedList)
+
+    def test_slice(self):
+        """A slice of a ValidatedList returns another ValidatedList."""
+        l = ValidatedList([1, 2, 3])
+        assert isinstance(l[:2], ValidatedList)
