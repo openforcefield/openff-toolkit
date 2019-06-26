@@ -252,11 +252,13 @@ class TestOpenEyeToolkitWrapper:
         offmol = Molecule.from_smiles(smiles_impl,
                                       toolkit_registry=toolkit_wrapper,
                                       hydrogens_are_explicit=False)
+        assert offmol.n_atoms == 4
 
         smiles_expl = "HC#CH"
         offmol = Molecule.from_smiles(smiles_expl,
                                       toolkit_registry=toolkit_wrapper,
                                       hydrogens_are_explicit=True)
+        assert offmol.n_atoms == 4
         # It's debatable whether this next function should pass. Strictly speaking, the hydrogens in this SMILES
         # _are_ explicit, so allowing "hydrogens_are_explicit=False" through here is allowing a contradiction.
         # We might rethink the name of this kwarg.
@@ -264,6 +266,7 @@ class TestOpenEyeToolkitWrapper:
         offmol = Molecule.from_smiles(smiles_expl,
                                       toolkit_registry=toolkit_wrapper,
                                       hydrogens_are_explicit=False)
+        assert offmol.n_atoms == 4
 
 
 
@@ -543,12 +546,13 @@ class TestRDKitToolkitWrapper:
         offmol = Molecule.from_smiles(smiles_impl,
                                       toolkit_registry=toolkit_wrapper,
                                       hydrogens_are_explicit=False)
+        assert offmol.n_atoms == 4
 
         smiles_expl = "[H][C]#[C][H]"
         offmol = Molecule.from_smiles(smiles_expl,
                                       toolkit_registry=toolkit_wrapper,
                                       hydrogens_are_explicit=True)
-
+        assert offmol.n_atoms == 4
         # It's debatable whether this next function should pass. Strictly speaking, the hydrogens in this SMILES
         # _are_ explicit, so allowing "hydrogens_are_explicit=False" through here is allowing a contradiction.
         # We might rethink the name of this kwarg.
@@ -556,6 +560,7 @@ class TestRDKitToolkitWrapper:
         offmol = Molecule.from_smiles(smiles_expl,
                                       toolkit_registry=toolkit_wrapper,
                                       hydrogens_are_explicit=False)
+        assert offmol.n_atoms == 4
 
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
