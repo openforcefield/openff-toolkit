@@ -78,7 +78,7 @@
 		<Bond smirks="[#7:1]-[#17:2]" length="1.8 * angstrom" k="300.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b76"></Bond>
 		<Bond smirks="[#7:1]-[#35:2]" length="2.0 * angstrom" k="220.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b77"></Bond>
 		<Bond smirks="[#7:1]-[#53:2]" length="2.1 * angstrom" k="160.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b78"></Bond>
-		<Bond smirks="[#15:1]-[#9:2]" length="1.6 * angstrom" k="880.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b79"></Bond>
+		<Bond smirks="[#15:1]-[#9:2]" length="1.64 * angstrom" k="880.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b79"></Bond>
 		<Bond smirks="[#15:1]-[#17:2]" length="2.0 * angstrom" k="340.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b80"></Bond>
 		<Bond smirks="[#15:1]-[#35:2]" length="2.2 * angstrom" k="270.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b81"></Bond>
 		<Bond smirks="[#15:1]-[#53:2]" length="2.6 * angstrom" k="140.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b82"></Bond>
