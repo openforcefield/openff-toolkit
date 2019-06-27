@@ -35,21 +35,23 @@ __all__ = [
 # GLOBAL IMPORTS
 #=============================================================================================
 
-
+import copy
+from collections import OrderedDict
 from enum import Enum
+import functools
+import inspect
 import logging
 
-from collections import OrderedDict
-
-
 from simtk import openmm, unit
-
 
 from openforcefield.utils import attach_units,  \
     extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
     check_units_are_compatible, object_to_quantity
 from openforcefield.topology import ValenceDict, ImproperDict
 from openforcefield.typing.chemistry import ChemicalEnvironment
+from openforcefield.utils import IncompatibleUnitError
+from openforcefield.utils.collections import ValidatedList
+
 
 #=============================================================================================
 # CONFIGURE LOGGER
@@ -95,15 +97,9 @@ class UnassignedProperTorsionParameterException(UnassignedValenceParameterExcept
     """Exception raised when there are proper torsion terms for which a ParameterHandler can't find parameters."""
     pass
 
-#======================================================================
-# UTILITY FUNCTIONS
-#======================================================================
-
-
-
 
 #======================================================================
-# PARAMETER TYPE/LIST
+# ENUM TYPES
 #======================================================================
 
 class NonbondedMethod(Enum):
@@ -116,6 +112,278 @@ class NonbondedMethod(Enum):
     Ewald = 3
     PME = 4
 
+
+#======================================================================
+# PARAMETER ATTRIBUTES
+#======================================================================
+
+# TODO: Think about adding attrs to the dependencies and inherit from attr.ib
+class ParameterAttribute:
+    """A descriptor for ``ParameterType`` attributes.
+
+    The descriptors allows associating to the parameter a default value,
+    which makes the attribute optional, a unit, and a custom converter.
+
+    Because we may want to have ``None`` as a default value, required
+    attributes have the ``default`` set to the special type ``UNDEFINED``.
+
+    Converters can be both static or instance functions/methods with
+    respective signatures
+
+    converter(value): -> converted_value
+    converter(instance, parameter_attribute, value): -> converted_value
+
+    A decorator syntax is available (see example below).
+
+    Parameters
+    ----------
+    default : object, optional
+        When specified, the descriptor makes this attribute optional by
+        attaching a default value to it.
+    unit : simtk.unit.Quantity, optional
+        When specified, only quantities with compatible units are allowed
+        to be set, and string expressions are automatically parsed into a
+        ``Quantity``.
+    converter : callable, optional
+        An optional function that can be used to convert values before
+        setting the attribute.
+
+    Examples
+    -------
+
+    Create a parameter type with an optional and a required attribute.
+
+    >>> class MyParameter:
+    ...     attr_required = ParameterAttribute()
+    ...     attr_optional = ParameterAttribute(default=2)
+    ...
+    >>> my_par = MyParameter()
+
+    Even without explicit assignment, the default value is returned.
+
+    >>> my_par.attr_optional
+    2
+
+    If you try to access an attribute without setting it first, an
+    exception is raised.
+
+    >>> my_par.attr_required
+    Traceback (most recent call last):
+    ...
+    AttributeError: 'MyParameter' object has no attribute '_attr_required'
+
+    The attribute allow automatic conversion and validation of units.
+
+    >>> from simtk import unit
+    >>> class MyParameter:
+    ...     attr_quantity = ParameterAttribute(unit=unit.angstrom)
+    ...
+    >>> my_par = MyParameter()
+    >>> my_par.attr_quantity = '1.0 * nanometer'
+    >>> my_par.attr_quantity
+    Quantity(value=1.0, unit=nanometer)
+    >>> my_par.attr_quantity = 3.0
+    Traceback (most recent call last):
+    ...
+    openforcefield.utils.utils.IncompatibleUnitError: attr_quantity=3.0 dimensionless should have units of angstrom
+
+    You can attach a custom converter to an attribute.
+
+    >>> class MyParameter:
+    ...     # Both strings and integers convert nicely to floats with float().
+    ...     attr_all_to_float = ParameterAttribute(converter=float)
+    ...     attr_int_to_float = ParameterAttribute()
+    ...     @attr_int_to_float.converter
+    ...     def attr_int_to_float(self, attr, value):
+    ...         # This converter converts only integers to float
+    ...         # and raise an exception for the other types.
+    ...         if isinstance(value, int):
+    ...             return float(value)
+    ...         elif not isinstance(value, float):
+    ...             raise TypeError(f"Cannot convert '{value}' to float")
+    ...         return value
+    ...
+    >>> my_par = MyParameter()
+
+    attr_all_to_float accepts and convert to float both strings and integers
+
+    >>> my_par.attr_all_to_float = 1
+    >>> my_par.attr_all_to_float
+    1.0
+    >>> my_par.attr_all_to_float = '2.0'
+    >>> my_par.attr_all_to_float
+    2.0
+
+    The custom converter associated to attr_int_to_float converts only integers instead.
+    >>> my_par.attr_int_to_float = 3
+    >>> my_par.attr_int_to_float
+    3.0
+    >>> my_par.attr_int_to_float = '4.0'
+    Traceback (most recent call last):
+    ...
+    TypeError: Cannot convert '4.0' to float
+
+    """
+
+    class UNDEFINED:
+        """Custom type used by ``ParameterAttribute`` to differentiate between ``None`` and undeclared default."""
+        pass
+
+    def __init__(self, default=UNDEFINED, unit=None, converter=None):
+        self.default = default
+        self._unit = unit
+        self._converter = converter
+
+    def __set_name__(self, owner, name):
+        self._name = '_' + name
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            # This is called from the class. Return the descriptor object.
+            return self
+
+        try:
+            return getattr(instance, self._name)
+        except AttributeError:
+            # The attribute has not initialized. Check if there's a default.
+            if self.default is ParameterAttribute.UNDEFINED:
+                raise
+            return self.default
+
+    def __set__(self, instance, value):
+        # Convert and validate the value.
+        value = self._convert_and_validate(instance, value)
+        setattr(instance, self._name, value)
+
+    def converter(self, converter):
+        """Create a new ParameterAttribute with an associated converter.
+
+        This is meant to be used as a decorator (see main examples).
+        """
+        return self.__class__(default=self.default, converter=converter)
+
+    def _convert_and_validate(self, instance, value):
+        """Convert to Quantity, validate units, and call custom converter."""
+        # The default value is always allowed.
+        if self._is_valid_default(value):
+            return value
+        # Convert and validate units.
+        value = self._validate_units(value)
+        # Call the custom converter before setting the value.
+        value = self._call_converter(value, instance)
+        return value
+
+    def _is_valid_default(self, value):
+        """Return True if this is a defined default value."""
+        return self.default is not ParameterAttribute.UNDEFINED and value == self.default
+
+    def _validate_units(self, value):
+        """Convert strings expressions to Quantity and validate the units if requested."""
+        if self._unit is not None:
+            # Convert eventual strings to Quantity objects.
+            value = object_to_quantity(value)
+
+            # Check if units are compatible.
+            try:
+                if not self._unit.is_compatible(value.unit):
+                    raise IncompatibleUnitError(f'{self._name[1:]}={value} should have units of {self._unit}')
+            except AttributeError:
+                # This is not a Quantity object.
+                raise IncompatibleUnitError(f'{self._name[1:]}={value} should have units of {self._unit}')
+        return value
+
+    def _call_converter(self, value, instance):
+        """Correctly calls static and instance converters."""
+        if self._converter is not None:
+            try:
+                # Static function.
+                return self._converter(value)
+            except TypeError:
+                # Instance method.
+                return self._converter(instance, self, value)
+        return value
+
+
+class IndexedParameterAttribute(ParameterAttribute):
+    """The attribute of a parameter with an unspecified number of terms.
+
+    Some parameters can be associated to multiple terms, For example,
+    torsions have parameters such as k1, k2, ..., and ``IndexedParameterAttribute``
+    can be used to encapsulate the sequence of terms.
+
+    The only substantial difference with ``ParameterAttribute`` is that
+    only sequences are supported as values and converters and units are
+    checked on each element of the sequence.
+
+    Currently, the descriptor makes the sequence immutable. This is to
+    avoid that an element of the sequence could be set without being
+    properly validated. In the future, the data could be wrapped in a
+    safe list that would safely allow mutability.
+
+    Parameters
+    ----------
+    default : object, optional
+        When specified, the descriptor makes this attribute optional by
+        attaching a default value to it.
+    unit : simtk.unit.Quantity, optional
+        When specified, only sequences of quantities with compatible units
+        are allowed to be set.
+    converter : callable, optional
+        An optional function that can be used to validate and cast each
+        element of the sequence before setting the attribute.
+
+    Examples
+    --------
+
+    Create an optional indexed attribute with unit of angstrom.
+
+    >>> from simtk import unit
+    >>> class MyParameter:
+    ...     length = IndexedParameterAttribute(default=None, unit=unit.angstrom)
+    ...
+    >>> my_par = MyParameter()
+    >>> my_par.length is None
+    True
+
+    Strings are parsed into Quantity objects.
+
+    >>> my_par.length = ['1 * angstrom', 0.5 * unit.nanometer]
+    >>> my_par.length[0]
+    Quantity(value=1, unit=angstrom)
+
+    Similarly, custom converters work as with ``ParameterAttribute``, but
+    they are used to validate each value in the sequence.
+
+    >>> class MyParameter:
+    ...     attr_indexed = IndexedParameterAttribute(converter=float)
+    ...
+    >>> my_par = MyParameter()
+    >>> my_par.attr_indexed = [1, '1.0', '1e-2', 4.0]
+    >>> my_par.attr_indexed
+    [1.0, 1.0, 0.01, 4.0]
+
+    """
+
+    def _convert_and_validate(self, instance, value):
+        """Overwrite ParameterAttribute._convert_and_validate to make the value a ValidatedList."""
+        # The default value is always allowed.
+        if self._is_valid_default(value):
+            return value
+
+        # We push the converters into a ValidatedList so that we can make
+        # sure that elements are validated correctly when they are modified
+        # after their initialization.
+        # ValidatedList expects converters that take the value as a single
+        # argument so we create a partial function with the instance assigned.
+        static_converter = functools.partial(self._call_converter, instance=instance)
+        value = ValidatedList(value, converter=[self._validate_units, static_converter])
+
+        return value
+
+
+#======================================================================
+# PARAMETER TYPE/LIST
+#======================================================================
 
 # We can't actually make this derive from dict, because it's possible for the user to change SMIRKS
 # of parameters already in the list, which would cause the ParameterType object's SMIRKS and
@@ -293,29 +561,161 @@ class ParameterList(list):
         return parameter_list
 
 
-
 # TODO: Rename to better reflect role as parameter base class?
 class ParameterType:
     """
     Base class for SMIRNOFF parameter types.
 
+    This class provides a constructor that can handle the initialization
+    of ``ParameterAttribute``s and the general interface for cosmetic
+    attributes.
+
     .. warning :: This API is experimental and subject to change.
 
+    Attributes
+    ----------
+    smirks : str
+        The SMIRKS pattern that this parameter matches.
+    id : str or None
+        An optional identifier for the parameter.
+    parent_id : str or None
+        Optionally, the identifier of the parameter of which this parameter
+        is a specialization.
+
+    See Also
+    --------
+    ParameterAttribute
+    IndexedParameterAttribute
+
+    Examples
+    --------
+
+    This class allows to define new parameter types by just listing its
+    attributes. In the example below, ``_VALENCE_TYPE`` AND ``_ELEMENT_NAME``
+    are used for the validation of the SMIRKS pattern associated to the
+    parameter and the automatic serialization/deserialization into a ``dict``.
+
+    >>> class MyBondParameter(ParameterType):
+    ...     _VALENCE_TYPE = 'Bond'
+    ...     _ELEMENT_NAME = 'Bond'
+    ...     length = ParameterAttribute(unit=unit.angstrom)
+    ...     k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
+    ...
+
+    The parameter automatically inherits the required smirks attribute
+    from ``ParameterType``. Associating a ``unit`` to a ``ParameterAttribute``
+    cause the attribute to accept only values in compatible units and to
+    parse string expressions.
+
+    >>> my_par = MyBondParameter(
+    ...     smirks='[*:1]-[*:2]',
+    ...     length='1.01 * angstrom',
+    ...     k=5 * unit.kilocalorie_per_mole / unit.angstrom**2
+    ... )
+    >>> my_par.length
+    Quantity(value=1.01, unit=angstrom)
+    >>> my_par.k = 3.0 * unit.gram
+    Traceback (most recent call last):
+    ...
+    openforcefield.utils.utils.IncompatibleUnitError: k=3.0 g should have units of kilocalorie/(angstrom**2*mole)
+
+    Each attribute can be made optional by specifying a default value,
+    and you can attach a converter function by passing a callable as an
+    argument or through the decorator syntax.
+
+    >>> class MyParameterType(ParameterType):
+    ...     _VALENCE_TYPE = 'Atom'
+    ...     _ELEMENT_NAME = 'Atom'
+    ...
+    ...     attr_optional = ParameterAttribute(default=2)
+    ...     attr_all_to_float = ParameterAttribute(converter=float)
+    ...     attr_int_to_float = ParameterAttribute()
+    ...
+    ...     @attr_int_to_float.converter
+    ...     def attr_int_to_float(self, attr, value):
+    ...         # This converter converts only integers to floats
+    ...         # and raise an exception for the other types.
+    ...         if isinstance(value, int):
+    ...             return float(value)
+    ...         elif not isinstance(value, float):
+    ...             raise TypeError(f"Cannot convert '{value}' to float")
+    ...         return value
+    ...
+    >>> my_par = MyParameterType(smirks='[*:1]', attr_all_to_float='3.0', attr_int_to_float=1)
+    >>> my_par.attr_optional
+    2
+    >>> my_par.attr_all_to_float
+    3.0
+    >>> my_par.attr_int_to_float
+    1.0
+
+    The float() function can convert strings to integers, but our custom
+    converter forbids it
+
+    >>> my_par.attr_all_to_float = '2.0'
+    >>> my_par.attr_int_to_float = '4.0'
+    Traceback (most recent call last):
+    ...
+    TypeError: Cannot convert '4.0' to float
+
+    Parameter attributes that can be indexed can be handled with the
+    ``IndexedParameterAttribute``. These support unit validation and
+    converters exactly as ``ParameterAttribute``s, but the validation/conversion
+    is performed for each indexed attribute.
+
+    >>> class MyTorsionType(ParameterType):
+    ...     _VALENCE_TYPE = 'ProperTorsion'
+    ...     _ELEMENT_NAME = 'Proper'
+    ...     periodicity = IndexedParameterAttribute(converter=int)
+    ...     k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+    ...
+    >>> my_par = MyTorsionType(
+    ...     smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+    ...     periodicity1=2,
+    ...     k1=5 * unit.kilocalorie_per_mole,
+    ...     periodicity2='3',
+    ...     k2=6 * unit.kilocalorie_per_mole,
+    ... )
+    >>> my_par.periodicity
+    [2, 3]
+
     """
-    # These lists and dicts will be used for validating input and detecting cosmetic attributes.
-    _VALENCE_TYPE = None  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
-    _ELEMENT_NAME = None # The string mapping to this ParameterType in a SMIRNOFF data source
-    _REQUIRED_SPEC_ATTRIBS = ['smirks'] # Attributes expected per the SMIRNOFF spec.
-    _DEFAULT_SPEC_ATTRIBS = {}  # dict of parameter-level attributes and their default values
-    _OPTIONAL_SPEC_ATTRIBS = ['id', 'parent_id'] # Attributes in the SMIRNOFF spec that may
-                                                 # be present but have no impact on performance
-    _INDEXED_ATTRIBS = []  # list of attribs that will have consecutive numerical suffixes starting at 1
-    _REQUIRE_UNITS = {} # A dict of attribs which will be checked for unit compatibility
-    _ATTRIBS_TO_TYPE = {}  # dict of attributes that need to be cast to a type (like int or float) to be interpreted
 
-    # TODO: Can we provide some shared tools for returning settable/gettable attributes, and checking unit-bearing attributes?
+    # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+    _VALENCE_TYPE = None
+    # The string mapping to this ParameterType in a SMIRNOFF data source
+    _ELEMENT_NAME = None
 
-    def __init__(self, smirks=None, allow_cosmetic_attributes=False, **kwargs):
+    # Parameter attributes shared among all parameter types.
+    smirks = ParameterAttribute()
+    id = ParameterAttribute(default=None)
+    parent_id = ParameterAttribute(default=None)
+
+    @smirks.converter
+    def smirks(self, attr, smirks):
+        # Validate the SMIRKS string to ensure it matches the expected
+        # parameter type, raising an exception if it is invalid or doesn't
+        # tag a valid set of atoms.
+
+        # TODO: Make better switch using toolkit registry after refactoring ChemicalEnvironment module.
+        from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
+        toolkit = None
+        if OPENEYE_AVAILABLE:
+            toolkit = 'openeye'
+        elif RDKIT_AVAILABLE:
+            toolkit = 'rdkit'
+        if toolkit is None:
+            raise ToolkitUnavailableException(
+                "Validating SMIRKS required either the OpenEye Toolkit or the RDKit."
+                " Unable to find either.")
+
+        # TODO: Add check to make sure we can't make tree non-hierarchical
+        #       This would require parameter type knows which ParameterList it belongs to
+        ChemicalEnvironment.validate(
+            smirks, ensure_valence_type=self._VALENCE_TYPE, toolkit=toolkit)
+        return smirks
+
+    def __init__(self, smirks, allow_cosmetic_attributes=False, **kwargs):
         """
         Create a ParameterType
 
@@ -329,125 +729,79 @@ class ParameterType:
             be raised.
 
         """
-        from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
+        # A list that may be populated to record the cosmetic attributes
+        # read from a SMIRNOFF data source.
+        self._cosmetic_attribs = []
 
-        self._COSMETIC_ATTRIBS = []  # A list that may be populated to record the cosmetic
-                                     # attributes read from a SMIRNOFF data source
+        # Do not modify the original data.
+        smirnoff_data = copy.deepcopy(kwargs)
+        smirnoff_data['smirks'] = smirks
 
-        if smirks is None:
-            raise ValueError("'smirks' must be specified")
-
-        # TODO: Make better switch using toolkit registry
-        toolkit = None
-        if OPENEYE_AVAILABLE:
-            toolkit = 'openeye'
-        elif RDKIT_AVAILABLE:
-            toolkit = 'rdkit'
-        if toolkit is None:
-            raise ToolkitUnavailableException("Validating SMIRKS required either the OpenEye Toolkit or the RDKit."
-                                              " Unable to find either.")
-        ChemicalEnvironment.validate(
-            smirks, ensure_valence_type=self._VALENCE_TYPE, toolkit=toolkit)
-
-        self._smirks = smirks
-
-
-        # Handle all the unknown kwargs as cosmetic so we can write them back out
-        allowed_attribs = self._REQUIRED_SPEC_ATTRIBS + \
-                          list(self._DEFAULT_SPEC_ATTRIBS.keys()) + \
-                          self._OPTIONAL_SPEC_ATTRIBS
-
-
-        # Make a copy of input kwargs as we will be modifying them by attaching units
-        smirnoff_data = kwargs.copy()
-
-
-        # Check for indexed attribs and stack them into list
-        for attrib_basename in self._INDEXED_ATTRIBS:
-            # attrib_unit_key = attrib_basename + '_unit'
+        # Check for indexed attributes and stack them into a list.
+        # Keep track of how many indexed attribute we find to make sure they all have the same length.
+        indexed_attr_lengths = {}
+        for attrib_basename in self._get_indexed_parameter_attributes().keys():
             index = 1
-            attrib_w_index = '{}{}'.format(attrib_basename, index)
-            if attrib_w_index in smirnoff_data:
-                smirnoff_data[attrib_basename] = list()
-
-            while attrib_w_index in smirnoff_data:
-                # Keep iterating as long as we keep finding higher-indexed entries for
-                # this attrib
-                smirnoff_data[attrib_basename].append(smirnoff_data[attrib_w_index])
-                del smirnoff_data[attrib_w_index]
-                index += 1
+            while True:
                 attrib_w_index = '{}{}'.format(attrib_basename, index)
 
-        # Check for attribs that need to be casted to specific types
-        for attrib, type_to_cast in self._ATTRIBS_TO_TYPE.items():
-            if attrib in smirnoff_data:
-                # Handle indexed attributes separately, since they'll be lists
-                if attrib in self._INDEXED_ATTRIBS:
-                    smirnoff_data[attrib] = [type_to_cast(obj) for obj in smirnoff_data[attrib]]
-                else:
-                    smirnoff_data[attrib] = type_to_cast(smirnoff_data[attrib])
+                # Exit the while loop if the indexed attribute is not given.
+                try:
+                    attrib_w_index_value = smirnoff_data[attrib_w_index]
+                except KeyError:
+                    break
 
+                # Check if this is the first iteration.
+                if index == 1:
+                    # Check if this attribute has been specified with and without index.
+                    if attrib_basename in smirnoff_data:
+                        err_msg = (f"The attribute '{attrib_basename}' has been specified "
+                                   f"with and without index: '{attrib_w_index}'")
+                        raise TypeError(err_msg)
 
-        # Add default values to smirnoff_data if they're not already there
-        for default_key, default_val in self._DEFAULT_SPEC_ATTRIBS.items():
-            if not (default_key in smirnoff_data):
-                smirnoff_data[default_key] = default_val
+                    # Otherwise create the list object.
+                    smirnoff_data[attrib_basename] = list()
 
+                # Append the new value to the list.
+                smirnoff_data[attrib_basename].append(attrib_w_index_value)
 
+                # Remove the indexed attribute from the kwargs as it will
+                # be exposed only as an element of the list.
+                del smirnoff_data[attrib_w_index]
+                index += 1
 
-        # Perform unit conversion (if string) and unit compatibility checks
-        for key in smirnoff_data.keys():
-            if key in self._REQUIRE_UNITS:
+            # Update the lengths with this attribute (if it was found).
+            if index > 1:
+                indexed_attr_lengths[attrib_basename] = len(smirnoff_data[attrib_basename])
 
-                # Handle any necessary conversion to Quantity here
-                smirnoff_data[key] = object_to_quantity(smirnoff_data[key])
+        # Raise an error if we there are different indexed
+        # attributes with a different number of terms.
+        if len(set(indexed_attr_lengths.values())) > 1:
+            raise TypeError('The following indexed attributes have '
+                            f'different lengths: {indexed_attr_lengths}')
 
-                # Check for unit compatibility
-                context = f"In {self.__class__}'s __init__ function. "
-                check_units_are_compatible(key, smirnoff_data[key], self._REQUIRE_UNITS[key], context=context)
+        # Check for missing required arguments.
+        given_attributes = set(smirnoff_data.keys())
+        required_attributes = set(self._get_required_parameter_attributes().keys())
+        missing_attributes = required_attributes.difference(given_attributes)
+        if len(missing_attributes) != 0:
+            msg = (f"{self.__class__} require the following missing parameters: {sorted(missing_attributes)}."
+                   f" Defined kwargs are {sorted(smirnoff_data.keys())}")
+            raise SMIRNOFFSpecError(msg)
 
-
-        # Ensure that all required attribs are present
-        for reqd_attrib in self._REQUIRED_SPEC_ATTRIBS:
-            # SMIRKS are a special case which is handled above
-            if reqd_attrib == 'smirks':
-                continue
-            if not reqd_attrib in smirnoff_data:
-                msg = "{} requires {} as a parameter during initialization, however this is not " \
-                      "provided. Defined kwargs are {}".format(self.__class__,
-                                                               reqd_attrib,
-                                                               list(smirnoff_data.keys()))
-                raise SMIRNOFFSpecError(msg)
-
-
-        # Finally, set attributes of this ParameterType
+        # Finally, set attributes of this ParameterType and handle cosmetic attributes.
+        allowed_attributes = set(self._get_parameter_attributes().keys())
         for key, val in smirnoff_data.items():
-            if key in allowed_attribs:
-                # TODO: create @property.setter here if attrib requires unit
+            if key in allowed_attributes:
                 setattr(self, key, val)
             # Handle all unknown kwargs as cosmetic so we can write them back out
             elif allow_cosmetic_attributes:
                 self.add_cosmetic_attribute(key, val)
-                # self._COSMETIC_ATTRIBS.append(key)
-                # setattr(self, key, val)
             else:
-                raise SMIRNOFFSpecError(f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. " 
-                                        "If this is a desired cosmetic attribute, consider setting " 
-                                        "'allow_cosmetic_attributes=True'")
-
-    @property
-    def smirks(self):
-        return self._smirks
-
-    @smirks.setter
-    def smirks(self, smirks):
-        # Validate the SMIRKS string to ensure it matches the expected parameter type,
-        # raising an exception if it is invalid or doesn't tag a valid set of atoms
-        # TODO: Add check to make sure we can't make tree non-hierarchical
-        #       This would require parameter type knows which ParameterList it belongs to
-        ChemicalEnvironment.validate(
-            smirks, ensure_valence_type=self._VALENCE_TYPE)
-        self._smirks = smirks
+                msg = (f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. "
+                        "If this is a desired cosmetic attribute, consider setting "
+                        "'allow_cosmetic_attributes=True'")
+                raise SMIRNOFFSpecError(msg)
 
     def to_dict(self, discard_cosmetic_attributes=False):
         """
@@ -460,7 +814,6 @@ class ParameterType:
         discard_cosmetic_attributes : bool, optional. Default = False
             Whether to discard non-spec attributes of this ParameterType
 
-
         Returns
         -------
         smirnoff_dict : dict
@@ -471,19 +824,20 @@ class ParameterType:
 
         """
         # Make a list of all attribs that should be included in the
-        # returned dict (call list() to make a copy)
-        attribs_to_return = list(self._REQUIRED_SPEC_ATTRIBS)
-        attribs_to_return += [opt_attrib for opt_attrib in self._OPTIONAL_SPEC_ATTRIBS if hasattr(self, opt_attrib)]
+        # returned dict (call list() to make a copy). We discard
+        # optional attributes that are set to None defaults.
+        attribs_to_return = list(self._get_defined_parameter_attributes().keys())
         if not(discard_cosmetic_attributes):
-            attribs_to_return += self._COSMETIC_ATTRIBS
+            attribs_to_return += self._cosmetic_attribs
 
-        # Start populating a dict of the attribs
+        # Start populating a dict of the attribs.
+        indexed_attribs = set(self._get_indexed_parameter_attributes().keys())
         smirnoff_dict = OrderedDict()
         # If attribs_to_return is ordered here, that will effectively be an informal output ordering
         for attrib_name in attribs_to_return:
-            attrib_value = self.__getattribute__(attrib_name)
+            attrib_value = getattr(self, attrib_name)
 
-            if type(attrib_value) is list:
+            if attrib_name in indexed_attribs:
                 for idx, val in enumerate(attrib_value):
                     smirnoff_dict[attrib_name + str(idx+1)] = val
             else:
@@ -506,7 +860,7 @@ class ParameterType:
             The value of the attribute to define for this ParameterType object.
         """
         setattr(self, attr_name, attr_value)
-        self._COSMETIC_ATTRIBS.append(attr_name)
+        self._cosmetic_attribs.append(attr_name)
 
     def delete_cosmetic_attribute(self, attr_name):
         """
@@ -520,7 +874,7 @@ class ParameterType:
         # TODO: Can we handle this by overriding __delattr__ instead?
         #  Would we also need to override __del__ as well to cover both deletation methods?
         delattr(self, attr_name)
-        self._COSMETIC_ATTRIBS.remove(attr_name)
+        self._cosmetic_attribs.remove(attr_name)
 
 
     def __repr__(self):
@@ -530,8 +884,82 @@ class ParameterType:
         ret_str += '>'
         return ret_str
 
+    @classmethod
+    def _get_parameter_attributes(cls, filter=None):
+        """Return all the attributes of the parameters.
 
+        This is constructed dynamically by introspection gathering all
+        the descriptors that are instances of the ParameterAttribute class.
+        Parent classes of the parameter types are inspected as well.
 
+        Note that since Python 3.6 the order of the class attribute definition
+        is preserved (see PEP 520) so this function will return the attribute
+        in their declaration order.
+
+        Parameters
+        ----------
+        filter : Callable, optional
+            An optional function with signature filter(ParameterAttribute) -> bool.
+            If specified, only attributes for which this functions returns
+            True are returned.
+
+        Returns
+        -------
+        parameter_attributes : Dict[str, ParameterAttribute]
+            A map from the name of the controlled parameter to the
+            ParameterAttribute descriptor handling it.
+
+        Examples
+        --------
+        >>> parameter_attributes = ParameterType._get_parameter_attributes()
+        >>> sorted(parameter_attributes.keys())
+        ['id', 'parent_id', 'smirks']
+        >>> isinstance(parameter_attributes['id'], ParameterAttribute)
+        True
+
+        """
+        # If no filter is specified, get all the parameters.
+        if filter is None:
+            filter = lambda x: True
+
+        # Go through MRO and retrieve also parents descriptors. The function
+        # inspect.getmembers() automatically resolves the MRO, but it also
+        # sorts the attribute alphabetically by name. Here we want the order
+        # to be the same as the declaration order, which is guaranteed by PEP 520,
+        # starting from the parent class.
+        parameter_attributes = OrderedDict((name, descriptor) for c in reversed(inspect.getmro(cls))
+                                           for name, descriptor in c.__dict__.items()
+                                           if isinstance(descriptor, ParameterAttribute) and filter(descriptor))
+        return parameter_attributes
+
+    @classmethod
+    def _get_indexed_parameter_attributes(cls):
+        """Shortcut to retrieve only IndexedParameterAttributes."""
+        return cls._get_parameter_attributes(filter=lambda x: isinstance(x, IndexedParameterAttribute))
+
+    @classmethod
+    def _get_required_parameter_attributes(cls):
+        """Shortcut to retrieve only required ParameterAttributes."""
+        return cls._get_parameter_attributes(filter=lambda x: x.default is x.UNDEFINED)
+
+    @classmethod
+    def _get_optional_parameter_attributes(cls):
+        """Shortcut to retrieve only required ParameterAttributes."""
+        return cls._get_parameter_attributes(filter=lambda x: x.default is not x.UNDEFINED)
+
+    def _get_defined_parameter_attributes(self):
+        """Returns all the attributes except for the optional attributes that have None default value.
+
+        This returns first the required attributes and then the defined optional
+        attribute in their respective declaration order.
+        """
+        required = self._get_required_parameter_attributes()
+        optional = self._get_optional_parameter_attributes()
+        # Filter the optional parameters that are set to their default.
+        optional = OrderedDict((name, descriptor) for name, descriptor in optional.items()
+                               if not(descriptor.default is None and getattr(self, name) == descriptor.default))
+        required.update(optional)
+        return required
 
 #======================================================================
 # PARAMETER HANDLERS
@@ -610,7 +1038,7 @@ class ParameterHandler:
             version = kwargs['version']
             self._check_section_version_compatibility(version)
 
-        self._COSMETIC_ATTRIBS = []  # list of cosmetic header attributes to remember and optionally write out
+        self._cosmetic_attribs = []  # list of cosmetic header attributes to remember and optionally write out
 
         # Ensure that all required attribs are present
         for reqd_attrib in self._REQUIRED_SPEC_ATTRIBS:
@@ -680,7 +1108,7 @@ class ParameterHandler:
                 setattr(self, attr_name, val)
             elif allow_cosmetic_attributes:
                 self.add_cosmetic_attribute(key, val)
-                #self._COSMETIC_ATTRIBS.append(key)
+                #self._cosmetic_attribs.append(key)
                 #attr_name = '_' + key
                 #setattr(self, attr_name, val)
 
@@ -778,7 +1206,7 @@ class ParameterHandler:
             The value of the attribute to define for this ParameterType object.
         """
         setattr(self, '_'+attr_name, attr_value)
-        self._COSMETIC_ATTRIBS.append(attr_name)
+        self._cosmetic_attribs.append(attr_name)
 
     def delete_cosmetic_attribute(self, attr_name):
         """
@@ -792,7 +1220,7 @@ class ParameterHandler:
         # TODO: Can we handle this by overriding __delattr__ instead?
         #  Would we also need to override __del__ as well to cover both deletation methods?
         delattr(self, '_'+attr_name)
-        self._COSMETIC_ATTRIBS.remove(attr_name)
+        self._cosmetic_attribs.remove(attr_name)
 
 
 
@@ -1068,7 +1496,7 @@ class ParameterHandler:
                 header_attribs_to_return.append(key)
         # Add the cosmetic attributes if requested
         if not(discard_cosmetic_attributes):
-            header_attribs_to_return += self._COSMETIC_ATTRIBS
+            header_attribs_to_return += self._cosmetic_attribs
 
 
         # Go through the attribs of this ParameterHandler and collect the appropriate values to return
@@ -1172,23 +1600,13 @@ class ConstraintHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Bond'
         _ELEMENT_NAME = 'Constraint'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks']  # Attributes expected per the SMIRNOFF spec.
-        _OPTIONAL_SPEC_ATTRIBS = ['distance', 'id', 'parent_id']
-        _REQUIRE_UNITS = {'distance': unit.angstrom}
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
-            # TODO: Re-implement ability to set 'distance = True'
-            # if 'distance' in node.attrib:
-            #     self.distance = _extract_quantity_from_xml_element(
-            #         node, parent, 'distance'
-            #     )  # Constraint with specified distance will be added by ConstraintHandler
-            # else:
-            #     self.distance = True  # Constraint to equilibrium bond length will be added by HarmonicBondHandler
+
+        distance = ParameterAttribute(default=None, unit=unit.angstrom)
+
 
     _TAGNAME = 'Constraints'
     _INFOTYPE = ConstraintType
     _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
-
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1202,12 +1620,11 @@ class ConstraintHandler(ParameterHandler):
             # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondHandler
             constraint = constraint_match.parameter_type
 
-            if hasattr(constraint, 'distance'):# is not True:
+            if constraint.distance is None:
+                topology.add_constraint(*atoms, True)
+            else:
                 system.addConstraint(*atoms, constraint.distance)
                 topology.add_constraint(*atoms, constraint.distance)
-            else:
-                topology.add_constraint(*atoms, True)
-
 
 #=============================================================================================
 
@@ -1218,21 +1635,18 @@ class BondHandler(ParameterHandler):
     .. warning :: This API is experimental and subject to change.
     """
 
-
     class BondType(ParameterType):
         """A SMIRNOFF bond type
 
         .. warning :: This API is experimental and subject to change.
         """
-        _VALENCE_TYPE = 'Bond' # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+        # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+        _VALENCE_TYPE = 'Bond'
         _ELEMENT_NAME = 'Bond'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'length', 'k']  # Attributes expected per the SMIRNOFF spec.
-        _REQUIRE_UNITS = {'length' : unit.angstrom,
-                          'k' : unit.kilocalorie_per_mole / unit.angstrom**2}
-        _INDEXED_ATTRIBS = ['length', 'k']  # May be indexed (by integer bond order) if fractional bond orders are used
 
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
+        # These attributes may be indexed (by integer bond order) if fractional bond orders are used.
+        length = ParameterAttribute(unit=unit.angstrom)
+        k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
 
 
     _TAGNAME = 'Bonds'  # SMIRNOFF tag name to process
@@ -1361,13 +1775,9 @@ class AngleHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Angle'  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
         _ELEMENT_NAME = 'Angle'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'angle', 'k']  # Attributes expected per the SMIRNOFF spec.
-        _REQUIRE_UNITS = {'angle': unit.degree,
-                          'k': unit.kilocalorie_per_mole / unit.degree**2}
 
-
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
+        angle = ParameterAttribute(unit=unit.degree)
+        k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.degree**2)
 
 
     _TAGNAME = 'Angles'  # SMIRNOFF tag name to process
@@ -1465,17 +1875,11 @@ class ProperTorsionHandler(ParameterHandler):
 
         _VALENCE_TYPE = 'ProperTorsion'
         _ELEMENT_NAME = 'Proper'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
-        _REQUIRE_UNITS = {'k': unit.kilocalorie_per_mole,
-                          'phase': unit.degree}
-        _OPTIONAL_SPEC_ATTRIBS = ['id', 'parent_id', 'idivf']
-        _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
-        # Note that we don't need to type k or phase, since those will be interpreted as Quantity
-        _ATTRIBS_TO_TYPE = {'periodicity': int,
-                            'idivf': float}
 
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
+        periodicity = IndexedParameterAttribute(converter=int)
+        phase = IndexedParameterAttribute(unit=unit.degree)
+        k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+        idivf = IndexedParameterAttribute(default=None, converter=float)
 
 
     _TAGNAME = 'ProperTorsions'  # SMIRNOFF tag name to process
@@ -1603,17 +2007,11 @@ class ImproperTorsionHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'ImproperTorsion'
         _ELEMENT_NAME = 'Improper'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'periodicity', 'phase', 'k']  # Attributes expected per the SMIRNOFF spec.
-        _REQUIRE_UNITS = {'k': unit.kilocalorie_per_mole,
-                          'phase': unit.degree}
-        _OPTIONAL_SPEC_ATTRIBS = ['id', 'parent_id', 'idivf']
-        _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
-        # Note that we don't need to type k or phase, since those will be interpreted as Quantity
-        _ATTRIBS_TO_TYPE = {'periodicity': int,
-                            'idivf': float}
 
-        def __init__(self, **kwargs):
-            super().__init__( **kwargs)
+        periodicity = IndexedParameterAttribute(converter=int)
+        phase = IndexedParameterAttribute(unit=unit.degree)
+        k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+        idivf = IndexedParameterAttribute(default=None, converter=float)
 
 
     _TAGNAME = 'ImproperTorsions'  # SMIRNOFF tag name to process
@@ -1721,7 +2119,7 @@ class ImproperTorsionHandler(ParameterHandler):
             improper = improper_match.parameter_type
 
             # TODO: This is a lazy hack. idivf should be set according to the ParameterHandler's default_idivf attrib
-            if not hasattr(improper, 'idivf'):
+            if improper.idivf is None:
                 improper.idivf = [3 for item in improper.k]
             # Impropers are applied in three paths around the trefoil having the same handedness
             for (improper_periodicity, improper_phase, improper_k, improper_idivf) in zip(improper.periodicity,
@@ -1757,13 +2155,10 @@ class vdWHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Atom'  # ChemicalEnvironment valence type expected for SMARTS
         _ELEMENT_NAME = 'Atom'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'epsilon'] # Attributes expected per the SMIRNOFF spec.
-        _OPTIONAL_SPEC_ATTRIBS = ['id', 'parent_id', 'sigma', 'rmin_half']
-        _REQUIRE_UNITS = {
-            'epsilon': unit.kilocalorie_per_mole,
-            'sigma': unit.angstrom,
-            'rmin_half': unit.angstrom
-        }
+
+        epsilon = ParameterAttribute(unit=unit.kilocalorie_per_mole)
+        sigma = ParameterAttribute(default=None, unit=unit.angstrom)
+        rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
 
         def __init__(self, **kwargs):
             sigma = kwargs.get('sigma', None)
@@ -1775,19 +2170,8 @@ class vdWHandler(ParameterHandler):
                     "BOTH sigma and rmin_half cannot be specified simultaneously."
                 )
 
-
             super().__init__(**kwargs)
 
-
-        # @property
-        # def attrib(self):
-        #     """Return all storable attributes as a dict.
-        #     """
-        #     names = ['smirks', 'sigma', 'epsilon']
-        #     return {
-        #         name: getattr(self, name)
-        #         for name in names if hasattr(self, name)
-        #     }
 
     _TAGNAME = 'vdW'  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
@@ -2035,7 +2419,7 @@ class vdWHandler(ParameterHandler):
         for atom_key, atom_match in atom_matches.items():
             atom_idx = atom_key[0]
             ljtype = atom_match.parameter_type
-            if not(hasattr(ljtype, 'sigma')):
+            if ljtype.sigma is None:
                 sigma = 2. * ljtype.rmin_half / (2.**(1. / 6.))
             else:
                 sigma = ljtype.sigma
@@ -2378,7 +2762,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
 
         from networkx.algorithms.isomorphism import GraphMatcher
         import simtk.unit
-        import copy
+
         # Define the node/edge attributes that we will use to match the atoms/bonds during molecule comparison
         node_match_func = lambda x, y: ((x['atomic_number'] == y['atomic_number']) and
                                         (x['stereochemistry'] == y['stereochemistry']) and
@@ -2519,14 +2903,9 @@ class ChargeIncrementModelHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS
         _ELEMENT_NAME = 'ChargeIncrement'
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'chargeIncrement']
-        _REQUIRE_UNITS = {
-            'chargeIncrement': unit.elementary_charge
-        }
-        _INDEXED_ATTRIBS = ['chargeIncrement']
 
-        def __init__(self, node, parent):
-            super().__init__(**kwargs)
+        chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
+
 
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
     _INFOTYPE = ChargeIncrementType  # info type to store
@@ -2764,9 +3143,9 @@ class GBSAParameterHandler(ParameterHandler):
         """
         _VALENCE_TYPE = 'Atom'
         _ELEMENT_NAME = 'Atom' # TODO: This isn't actually in the spec
-        _REQUIRED_SPEC_ATTRIBS = ['smirks', 'radius', 'scale']
-        _REQUIRE_UNITS = {'radius': unit.angstrom}
-        _ATTRIBS_TO_TYPE = {'scale': float}
+
+        radius = ParameterAttribute(unit=unit.angstrom)
+        scale = ParameterAttribute(converter=float)
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -2868,3 +3247,8 @@ class GBSAParameterHandler(ParameterHandler):
                 getattr(gbsa_type, name) for name in expected_parameters
             ]
             force.setParticleParameters(atom.particle_index, params)
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.run_docstring_examples(ParameterAttribute, globals())
