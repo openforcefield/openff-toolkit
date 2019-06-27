@@ -582,7 +582,7 @@ class TestParameterType:
             optional2 = IndexedParameterAttribute(default=None)
             optional3 = ParameterAttribute(default=5)
             required2 = IndexedParameterAttribute()
-            optional3 = ParameterAttribute(default=2)
+            optional4 = ParameterAttribute(default=2)
         my_par = MyParameter(smirks='[*:1]', required1=0, optional1=10, required2=[0])
 
         # _get_defined_parameter_attributes discards only the attribute

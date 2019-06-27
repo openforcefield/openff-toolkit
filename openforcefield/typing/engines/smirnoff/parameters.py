@@ -148,6 +148,11 @@ class ParameterAttribute:
         An optional function that can be used to convert values before
         setting the attribute.
 
+    See Also
+    --------
+    IndexedParameterAttribute
+        A parameter attribute with multiple terms.
+
     Examples
     -------
 
@@ -332,6 +337,11 @@ class IndexedParameterAttribute(ParameterAttribute):
         An optional function that can be used to validate and cast each
         element of the sequence before setting the attribute.
 
+    See Also
+    --------
+    ParameterAttribute
+        A simple parameter attribute.
+
     Examples
     --------
 
@@ -379,6 +389,227 @@ class IndexedParameterAttribute(ParameterAttribute):
         value = ValidatedList(value, converter=[self._validate_units, static_converter])
 
         return value
+
+
+class _ParameterAttributeInitializer:
+    """A base class for ``ParameterType`` and ``ParameterHandler`` objects.
+
+    Encapsulate shared code of ``ParameterType`` and ``ParameterHandler``.
+    In particular, this base class provides an ``__init__`` method that
+    automatically initialize the attributes defined through the ``ParameterAttribute``
+    and ``IndexedParameterAttribute`` descriptors, as well as handling
+    cosmetic attributes.
+
+    See Also
+    --------
+    ParameterAttribute
+        A simple parameter attribute.
+    IndexedParameterAttribute
+        A parameter attribute with multiple terms.
+
+    """
+
+    def __init__(self, allow_cosmetic_attributes=False, **kwargs):
+        """
+        Initialize parameter and cosmetic attributes.
+
+        Parameters
+        ----------
+        allow_cosmetic_attributes : bool optional. Default = False
+            Whether to permit non-spec kwargs ("cosmetic attributes").
+            If True, non-spec kwargs will be stored as an attribute of
+            this parameter which can be accessed and written out. Otherwise,
+            an exception will be raised.
+
+        """
+        # A list that may be populated to record the cosmetic attributes
+        # read from a SMIRNOFF data source.
+        self._cosmetic_attribs = []
+
+        # Do not modify the original data.
+        smirnoff_data = copy.deepcopy(kwargs)
+
+        # Check for indexed attributes and stack them into a list.
+        # Keep track of how many indexed attribute we find to make sure they all have the same length.
+        indexed_attr_lengths = {}
+        for attrib_basename in self._get_indexed_parameter_attributes().keys():
+            index = 1
+            while True:
+                attrib_w_index = '{}{}'.format(attrib_basename, index)
+
+                # Exit the while loop if the indexed attribute is not given.
+                try:
+                    attrib_w_index_value = smirnoff_data[attrib_w_index]
+                except KeyError:
+                    break
+
+                # Check if this is the first iteration.
+                if index == 1:
+                    # Check if this attribute has been specified with and without index.
+                    if attrib_basename in smirnoff_data:
+                        err_msg = (f"The attribute '{attrib_basename}' has been specified "
+                                   f"with and without index: '{attrib_w_index}'")
+                        raise TypeError(err_msg)
+
+                    # Otherwise create the list object.
+                    smirnoff_data[attrib_basename] = list()
+
+                # Append the new value to the list.
+                smirnoff_data[attrib_basename].append(attrib_w_index_value)
+
+                # Remove the indexed attribute from the kwargs as it will
+                # be exposed only as an element of the list.
+                del smirnoff_data[attrib_w_index]
+                index += 1
+
+            # Update the lengths with this attribute (if it was found).
+            if index > 1:
+                indexed_attr_lengths[attrib_basename] = len(smirnoff_data[attrib_basename])
+
+        # Raise an error if we there are different indexed
+        # attributes with a different number of terms.
+        if len(set(indexed_attr_lengths.values())) > 1:
+            raise TypeError('The following indexed attributes have '
+                            f'different lengths: {indexed_attr_lengths}')
+
+        # Check for missing required arguments.
+        given_attributes = set(smirnoff_data.keys())
+        required_attributes = set(self._get_required_parameter_attributes().keys())
+        missing_attributes = required_attributes.difference(given_attributes)
+        if len(missing_attributes) != 0:
+            msg = (f"{self.__class__} require the following missing parameters: {sorted(missing_attributes)}."
+                   f" Defined kwargs are {sorted(smirnoff_data.keys())}")
+            raise SMIRNOFFSpecError(msg)
+
+        # Finally, set attributes of this ParameterType and handle cosmetic attributes.
+        allowed_attributes = set(self._get_parameter_attributes().keys())
+        for key, val in smirnoff_data.items():
+            if key in allowed_attributes:
+                setattr(self, key, val)
+            # Handle all unknown kwargs as cosmetic so we can write them back out
+            elif allow_cosmetic_attributes:
+                self.add_cosmetic_attribute(key, val)
+            else:
+                msg = (f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. "
+                        "If this is a desired cosmetic attribute, consider setting "
+                        "'allow_cosmetic_attributes=True'")
+                raise SMIRNOFFSpecError(msg)
+
+    def add_cosmetic_attribute(self, attr_name, attr_value):
+        """
+        Add a cosmetic attribute to this object.
+
+        This attribute will not have a functional effect on the object
+        in the Open Force Field toolkit, but can be written out during
+        output.
+
+        .. warning :: The API for modifying cosmetic attributes is experimental
+        and may change in the future (see issue #338).
+
+        Parameters
+        ----------
+        attr_name : str
+            Name of the attribute to define for this object.
+        attr_value : str
+            The value of the attribute to define for this object.
+
+        """
+        setattr(self, '_'+attr_name, attr_value)
+        self._cosmetic_attribs.append(attr_name)
+
+    def delete_cosmetic_attribute(self, attr_name):
+        """
+        Delete a cosmetic attribute from this object.
+
+        .. warning :: The API for modifying cosmetic attributes is experimental
+        and may change in the future (see issue #338).
+
+        Parameters
+        ----------
+        attr_name : str
+            Name of the cosmetic attribute to delete.
+        """
+        # TODO: Can we handle this by overriding __delattr__ instead?
+        #  Would we also need to override __del__ as well to cover both deletation methods?
+        delattr(self, '_'+attr_name)
+        self._cosmetic_attribs.remove(attr_name)
+
+    @classmethod
+    def _get_parameter_attributes(cls, filter=None):
+        """Return all the attributes of the parameters.
+
+        This is constructed dynamically by introspection gathering all
+        the descriptors that are instances of the ParameterAttribute class.
+        Parent classes of the parameter types are inspected as well.
+
+        Note that since Python 3.6 the order of the class attribute definition
+        is preserved (see PEP 520) so this function will return the attribute
+        in their declaration order.
+
+        Parameters
+        ----------
+        filter : Callable, optional
+            An optional function with signature filter(ParameterAttribute) -> bool.
+            If specified, only attributes for which this functions returns
+            True are returned.
+
+        Returns
+        -------
+        parameter_attributes : Dict[str, ParameterAttribute]
+            A map from the name of the controlled parameter to the
+            ParameterAttribute descriptor handling it.
+
+        Examples
+        --------
+        >>> parameter_attributes = ParameterType._get_parameter_attributes()
+        >>> sorted(parameter_attributes.keys())
+        ['id', 'parent_id', 'smirks']
+        >>> isinstance(parameter_attributes['id'], ParameterAttribute)
+        True
+
+        """
+        # If no filter is specified, get all the parameters.
+        if filter is None:
+            filter = lambda x: True
+
+        # Go through MRO and retrieve also parents descriptors. The function
+        # inspect.getmembers() automatically resolves the MRO, but it also
+        # sorts the attribute alphabetically by name. Here we want the order
+        # to be the same as the declaration order, which is guaranteed by PEP 520,
+        # starting from the parent class.
+        parameter_attributes = OrderedDict((name, descriptor) for c in reversed(inspect.getmro(cls))
+                                           for name, descriptor in c.__dict__.items()
+                                           if isinstance(descriptor, ParameterAttribute) and filter(descriptor))
+        return parameter_attributes
+
+    @classmethod
+    def _get_indexed_parameter_attributes(cls):
+        """Shortcut to retrieve only IndexedParameterAttributes."""
+        return cls._get_parameter_attributes(filter=lambda x: isinstance(x, IndexedParameterAttribute))
+
+    @classmethod
+    def _get_required_parameter_attributes(cls):
+        """Shortcut to retrieve only required ParameterAttributes."""
+        return cls._get_parameter_attributes(filter=lambda x: x.default is x.UNDEFINED)
+
+    @classmethod
+    def _get_optional_parameter_attributes(cls):
+        """Shortcut to retrieve only required ParameterAttributes."""
+        return cls._get_parameter_attributes(filter=lambda x: x.default is not x.UNDEFINED)
+
+    def _get_defined_parameter_attributes(self):
+        """Returns all the attributes except for the optional attributes that have None default value.
+
+        This returns first the required attributes and then the defined optional
+        attribute in their respective declaration order.
+        """
+        required = self._get_required_parameter_attributes()
+        optional = self._get_optional_parameter_attributes()
+        # Filter the optional parameters that are set to their default.
+        optional = OrderedDict((name, descriptor) for name, descriptor in optional.items()
+                               if not(descriptor.default is None and getattr(self, name) == descriptor.default))
+        required.update(optional)
+        return required
 
 
 #======================================================================
@@ -562,15 +793,12 @@ class ParameterList(list):
 
 
 # TODO: Rename to better reflect role as parameter base class?
-class ParameterType:
+class ParameterType(_ParameterAttributeInitializer):
     """
     Base class for SMIRNOFF parameter types.
 
-    This class provides a constructor that can handle the initialization
-    of ``ParameterAttribute``s and the general interface for cosmetic
-    attributes.
-
-    .. warning :: This API is experimental and subject to change.
+    This base class provides utilities to create new parameter types. See
+    the below for examples of how to do this.
 
     Attributes
     ----------
@@ -717,7 +945,7 @@ class ParameterType:
 
     def __init__(self, smirks, allow_cosmetic_attributes=False, **kwargs):
         """
-        Create a ParameterType
+        Create a ParameterType.
 
         Parameters
         ----------
@@ -729,79 +957,9 @@ class ParameterType:
             be raised.
 
         """
-        # A list that may be populated to record the cosmetic attributes
-        # read from a SMIRNOFF data source.
-        self._cosmetic_attribs = []
-
-        # Do not modify the original data.
-        smirnoff_data = copy.deepcopy(kwargs)
-        smirnoff_data['smirks'] = smirks
-
-        # Check for indexed attributes and stack them into a list.
-        # Keep track of how many indexed attribute we find to make sure they all have the same length.
-        indexed_attr_lengths = {}
-        for attrib_basename in self._get_indexed_parameter_attributes().keys():
-            index = 1
-            while True:
-                attrib_w_index = '{}{}'.format(attrib_basename, index)
-
-                # Exit the while loop if the indexed attribute is not given.
-                try:
-                    attrib_w_index_value = smirnoff_data[attrib_w_index]
-                except KeyError:
-                    break
-
-                # Check if this is the first iteration.
-                if index == 1:
-                    # Check if this attribute has been specified with and without index.
-                    if attrib_basename in smirnoff_data:
-                        err_msg = (f"The attribute '{attrib_basename}' has been specified "
-                                   f"with and without index: '{attrib_w_index}'")
-                        raise TypeError(err_msg)
-
-                    # Otherwise create the list object.
-                    smirnoff_data[attrib_basename] = list()
-
-                # Append the new value to the list.
-                smirnoff_data[attrib_basename].append(attrib_w_index_value)
-
-                # Remove the indexed attribute from the kwargs as it will
-                # be exposed only as an element of the list.
-                del smirnoff_data[attrib_w_index]
-                index += 1
-
-            # Update the lengths with this attribute (if it was found).
-            if index > 1:
-                indexed_attr_lengths[attrib_basename] = len(smirnoff_data[attrib_basename])
-
-        # Raise an error if we there are different indexed
-        # attributes with a different number of terms.
-        if len(set(indexed_attr_lengths.values())) > 1:
-            raise TypeError('The following indexed attributes have '
-                            f'different lengths: {indexed_attr_lengths}')
-
-        # Check for missing required arguments.
-        given_attributes = set(smirnoff_data.keys())
-        required_attributes = set(self._get_required_parameter_attributes().keys())
-        missing_attributes = required_attributes.difference(given_attributes)
-        if len(missing_attributes) != 0:
-            msg = (f"{self.__class__} require the following missing parameters: {sorted(missing_attributes)}."
-                   f" Defined kwargs are {sorted(smirnoff_data.keys())}")
-            raise SMIRNOFFSpecError(msg)
-
-        # Finally, set attributes of this ParameterType and handle cosmetic attributes.
-        allowed_attributes = set(self._get_parameter_attributes().keys())
-        for key, val in smirnoff_data.items():
-            if key in allowed_attributes:
-                setattr(self, key, val)
-            # Handle all unknown kwargs as cosmetic so we can write them back out
-            elif allow_cosmetic_attributes:
-                self.add_cosmetic_attribute(key, val)
-            else:
-                msg = (f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. "
-                        "If this is a desired cosmetic attribute, consider setting "
-                        "'allow_cosmetic_attributes=True'")
-                raise SMIRNOFFSpecError(msg)
+        # This is just to make smirks a required positional argument.
+        kwargs['smirks']  = smirks
+        super().__init__(allow_cosmetic_attributes=allow_cosmetic_attributes, **kwargs)
 
     def to_dict(self, discard_cosmetic_attributes=False):
         """
@@ -847,36 +1005,6 @@ class ParameterType:
 
         return smirnoff_dict
 
-    def add_cosmetic_attribute(self, attr_name, attr_value):
-        """
-        Add a cosmetic attribute to this ParameterType object. This attribute will not have a functional effect
-        on the object in the Open Force Field toolkit, but can be written out during output.
-
-        Parameters
-        ----------
-        attr_name : str
-            Name of the attribute to define for this ParameterType object.
-        attr_value : str
-            The value of the attribute to define for this ParameterType object.
-        """
-        setattr(self, attr_name, attr_value)
-        self._cosmetic_attribs.append(attr_name)
-
-    def delete_cosmetic_attribute(self, attr_name):
-        """
-        Delete a cosmetic attribute from this ParameterType object.
-
-        Parameters
-        ----------
-        attr_name : str
-            Name of the attribute to delete.
-        """
-        # TODO: Can we handle this by overriding __delattr__ instead?
-        #  Would we also need to override __del__ as well to cover both deletation methods?
-        delattr(self, attr_name)
-        self._cosmetic_attribs.remove(attr_name)
-
-
     def __repr__(self):
         ret_str = '<{} with '.format(self.__class__.__name__)
         for attr, val in self.to_dict().items():
@@ -884,82 +1012,6 @@ class ParameterType:
         ret_str += '>'
         return ret_str
 
-    @classmethod
-    def _get_parameter_attributes(cls, filter=None):
-        """Return all the attributes of the parameters.
-
-        This is constructed dynamically by introspection gathering all
-        the descriptors that are instances of the ParameterAttribute class.
-        Parent classes of the parameter types are inspected as well.
-
-        Note that since Python 3.6 the order of the class attribute definition
-        is preserved (see PEP 520) so this function will return the attribute
-        in their declaration order.
-
-        Parameters
-        ----------
-        filter : Callable, optional
-            An optional function with signature filter(ParameterAttribute) -> bool.
-            If specified, only attributes for which this functions returns
-            True are returned.
-
-        Returns
-        -------
-        parameter_attributes : Dict[str, ParameterAttribute]
-            A map from the name of the controlled parameter to the
-            ParameterAttribute descriptor handling it.
-
-        Examples
-        --------
-        >>> parameter_attributes = ParameterType._get_parameter_attributes()
-        >>> sorted(parameter_attributes.keys())
-        ['id', 'parent_id', 'smirks']
-        >>> isinstance(parameter_attributes['id'], ParameterAttribute)
-        True
-
-        """
-        # If no filter is specified, get all the parameters.
-        if filter is None:
-            filter = lambda x: True
-
-        # Go through MRO and retrieve also parents descriptors. The function
-        # inspect.getmembers() automatically resolves the MRO, but it also
-        # sorts the attribute alphabetically by name. Here we want the order
-        # to be the same as the declaration order, which is guaranteed by PEP 520,
-        # starting from the parent class.
-        parameter_attributes = OrderedDict((name, descriptor) for c in reversed(inspect.getmro(cls))
-                                           for name, descriptor in c.__dict__.items()
-                                           if isinstance(descriptor, ParameterAttribute) and filter(descriptor))
-        return parameter_attributes
-
-    @classmethod
-    def _get_indexed_parameter_attributes(cls):
-        """Shortcut to retrieve only IndexedParameterAttributes."""
-        return cls._get_parameter_attributes(filter=lambda x: isinstance(x, IndexedParameterAttribute))
-
-    @classmethod
-    def _get_required_parameter_attributes(cls):
-        """Shortcut to retrieve only required ParameterAttributes."""
-        return cls._get_parameter_attributes(filter=lambda x: x.default is x.UNDEFINED)
-
-    @classmethod
-    def _get_optional_parameter_attributes(cls):
-        """Shortcut to retrieve only required ParameterAttributes."""
-        return cls._get_parameter_attributes(filter=lambda x: x.default is not x.UNDEFINED)
-
-    def _get_defined_parameter_attributes(self):
-        """Returns all the attributes except for the optional attributes that have None default value.
-
-        This returns first the required attributes and then the defined optional
-        attribute in their respective declaration order.
-        """
-        required = self._get_required_parameter_attributes()
-        optional = self._get_optional_parameter_attributes()
-        # Filter the optional parameters that are set to their default.
-        optional = OrderedDict((name, descriptor) for name, descriptor in optional.items()
-                               if not(descriptor.default is None and getattr(self, name) == descriptor.default))
-        required.update(optional)
-        return required
 
 #======================================================================
 # PARAMETER HANDLERS
