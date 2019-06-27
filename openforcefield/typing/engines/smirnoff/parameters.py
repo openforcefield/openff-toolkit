@@ -296,10 +296,10 @@ class ParameterAttribute:
             # Check if units are compatible.
             try:
                 if not self._unit.is_compatible(value.unit):
-                    raise IncompatibleUnitError(f'{self.name[1:]}={value} should have units of {self._unit}')
+                    raise IncompatibleUnitError(f'{self.name}={value} should have units of {self._unit}')
             except AttributeError:
                 # This is not a Quantity object.
-                raise IncompatibleUnitError(f'{self.name[1:]}={value} should have units of {self._unit}')
+                raise IncompatibleUnitError(f'{self.name}={value} should have units of {self._unit}')
         return value
 
     def _call_converter(self, value, instance):
@@ -2851,4 +2851,4 @@ class GBSAParameterHandler(ParameterHandler):
 
 if __name__ == '__main__':
     import doctest
-    doctest.run_docstring_examples(ParameterAttribute, globals())
+    doctest.run_docstring_examples(ParameterType, globals())
