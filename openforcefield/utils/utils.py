@@ -34,6 +34,8 @@ __all__ = [
 #=============================================================================================
 
 import contextlib
+import functools
+
 from simtk import unit
 import logging
 
@@ -49,12 +51,15 @@ logger = logging.getLogger(__name__)
 # COMMON EXCEPTION TYPES
 #=============================================================================================
 
-
 class MessageException(Exception):
     """A base class for exceptions that print out a string given in their constructor"""
     def __init__(self, msg):
         super().__init__(self, msg)
         self.msg = msg
+
+    def __str__(self):
+        return self.msg
+
 
 class IncompatibleUnitError(MessageException):
     """
@@ -62,10 +67,10 @@ class IncompatibleUnitError(MessageException):
     """
     pass
 
+
 # =============================================================================================
 # UTILITY SUBROUTINES
 # =============================================================================================
-
 
 def inherit_docstrings(cls):
     """Inherit docstrings from parent class"""
@@ -299,6 +304,9 @@ def convert_all_strings_to_quantity(smirnoff_data):
     Traverses a SMIRNOFF data structure, attempting to convert all
     quantity-defining strings into simtk.unit.Quantity objects.
 
+    Integers and floats are ignored and not converted into a dimensionless
+    ``simtk.unit.Quantity`` object.
+
     Parameters
     ----------
     smirnoff_data : dict
@@ -319,14 +327,14 @@ def convert_all_strings_to_quantity(smirnoff_data):
         for index, item in enumerate(smirnoff_data):
             smirnoff_data[index] = convert_all_strings_to_quantity(item)
         obj_to_return = smirnoff_data
+
+    elif isinstance(smirnoff_data, int) or isinstance(smirnoff_data, float):
+        obj_to_return = smirnoff_data
+
     else:
         try:
             obj_to_return = object_to_quantity(smirnoff_data)
-        except AttributeError:
-            obj_to_return = smirnoff_data
-        except TypeError:
-            obj_to_return = smirnoff_data
-        except SyntaxError:
+        except (AttributeError, TypeError, SyntaxError):
             obj_to_return = smirnoff_data
 
     return obj_to_return
@@ -365,27 +373,40 @@ def convert_all_quantities_to_string(smirnoff_data):
     return obj_to_return
 
 
+@functools.singledispatch
 def object_to_quantity(object):
     """
-    Attempts to turn the provided object into simtk.unit.Quantity(s). Can handle strings, quantities, or iterators over
-    the same. Raises an exception if unable to convert all inputs
+    Attempts to turn the provided object into simtk.unit.Quantity(s).
+
+    Can handle float, int, strings, quantities, or iterators over
+    the same. Raises an exception if unable to convert all inputs.
 
     Parameters
     ----------
-    object : string, quantity, or iterator of strings of quantities
+    object : int, float, string, quantity, or iterator of strings of quantities
+        The object to convert to a ``simtk.unit.Quantity`` object.
 
     Returns
     -------
-    converted_object : simtk.unit.Quantity or list of simtk.unit.Quantity
+    converted_object : simtk.unit.Quantity or List[simtk.unit.Quantity]
 
     """
-    from simtk import unit
-    if isinstance(object, unit.Quantity):
-        return object
-    elif isinstance(object, str):
-        return string_to_quantity(object)
-    else:
-        return [object_to_quantity(sub_obj) for sub_obj in object]
+    # If we can't find a custom type, we treat this as a generic iterator.
+    return [object_to_quantity(sub_obj) for sub_obj in object]
+
+@object_to_quantity.register(unit.Quantity)
+def _(obj):
+    return obj
+
+@object_to_quantity.register(str)
+def _(obj):
+    return string_to_quantity(obj)
+
+@object_to_quantity.register(int)
+@object_to_quantity.register(float)
+def _(obj):
+    return unit.Quantity(obj)
+
 
 def check_units_are_compatible(object_name, object, unit_to_check, context=None):
     """
