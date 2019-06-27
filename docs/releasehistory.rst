@@ -24,6 +24,10 @@ Code enhancements
   extensibility. It is now possible to create new parameter types by using the new descriptors ``ParameterAttribute`` and
   ``IndexedParameterAttribute``.
 
+Force field changes
+"""""""""""""""""""
+- `PR #368 <https://github.com/openforcefield/openforcefield/pull/368>`_: Makes various changes to the `smirnoff99frosst.offxml` in `test_forcefields` to address hierarchy problems, redundancies, SMIRKS pattern typos etc., as documented in `issue #367 <https://github.com/openforcefield/openforcefield/issues/367>`_. Will ultimately be propagated to an updated forcefield in the `smirnoff99frosst` repo.
+
 
 0.4.0 - Performance optimizations and support for SMIRNOFF 0.3 specification
 ----------------------------------------------------------------------------
