@@ -1716,7 +1716,6 @@ class BondHandler(ParameterHandler):
     _DEFAULT_SPEC_ATTRIBS = {'potential': 'harmonic',
                              'fractional_bondorder_method': None,
                              'fractional_bondorder_interpolation': 'linear'}
-    _INDEXED_ATTRIBS = ['k'] # May be indexed (by integer bond order) if fractional bond orders are used
 
     def __init__(self, **kwargs):
         # TODO: Do we want a docstring here? If not, check that docstring get inherited from ParameterHandler.
@@ -1947,7 +1946,6 @@ class ProperTorsionHandler(ParameterHandler):
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
     _DEFAULT_SPEC_ATTRIBS = {'potential': 'k*(1+cos(periodicity*theta-phase))',
                              'default_idivf': 'auto'}
-    _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
 
 
     def __init__(self, **kwargs):
@@ -2080,8 +2078,6 @@ class ImproperTorsionHandler(ParameterHandler):
     _OPTIONAL_SPEC_ATTRIBS = ['potential', 'default_idivf']
     _DEFAULT_SPEC_ATTRIBS = {'potential': 'k*(1+cos(periodicity*theta-phase))',
                              'default_idivf': 'auto'}
-    _INDEXED_ATTRIBS = ['k', 'phase', 'periodicity', 'idivf']
-
 
 
     def __init__(self, **kwargs):
