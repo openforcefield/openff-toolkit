@@ -1125,7 +1125,7 @@ class ParameterHandler(_ParameterAttributeInitializer):
         self._parameters = ParameterList()
 
         # Initialize ParameterAttributes and cosmetic attributes.
-        super().__init__(**kwargs)
+        super().__init__(allow_cosmetic_attributes=allow_cosmetic_attributes, **kwargs)
 
     def _add_parameters(self, section_dict, allow_cosmetic_attributes=False):
         """
@@ -1566,8 +1566,8 @@ class BondHandler(ParameterHandler):
         string_attrs_to_compare = ['potential', 'fractional_bondorder_method', 'fractional_bondorder_interpolation']
 
         for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, '_' + string_attr)
-            other_val = getattr(other_handler, '_' + string_attr)
+            this_val = getattr(self, string_attr)
+            other_val = getattr(other_handler, string_attr)
             if this_val != other_val:
                 raise IncompatibleParameterError(
                     "{} values are not identical. "
@@ -1690,8 +1690,8 @@ class AngleHandler(ParameterHandler):
         string_attrs_to_compare = ['potential']
 
         for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, '_' + string_attr)
-            other_val = getattr(other_handler, '_' + string_attr)
+            this_val = getattr(self, string_attr)
+            other_val = getattr(other_handler, string_attr)
             if this_val != other_val:
                 raise IncompatibleParameterError(
                     "{} values are not identical. "
@@ -1805,14 +1805,14 @@ class ProperTorsionHandler(ParameterHandler):
         float_attrs_to_compare = []
         string_attrs_to_compare = ['potential']
 
-        if self._default_idivf == 'auto':
+        if self.default_idivf == 'auto':
             string_attrs_to_compare.append('default_idivf')
         else:
             float_attrs_to_compare.append('default_idivf')
 
         for float_attr in float_attrs_to_compare:
-            this_val = getattr(self, '_' + float_attr)
-            other_val = getattr(other_handler, '_' + float_attr)
+            this_val = getattr(self, float_attr)
+            other_val = getattr(other_handler, float_attr)
             if abs(this_val - other_val) > 1.e-6:
                 raise IncompatibleParameterError(
                     "Difference between '{}' values is beyond allowed tolerance {}. "
@@ -1820,8 +1820,8 @@ class ProperTorsionHandler(ParameterHandler):
                         float_attr, self._SCALETOL, this_val, other_val))
 
         for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, '_' + string_attr)
-            other_val = getattr(other_handler, '_' + string_attr)
+            this_val = getattr(self, string_attr)
+            other_val = getattr(other_handler, string_attr)
             if this_val != other_val:
                 raise IncompatibleParameterError(
                     "{} values are not identical. "
@@ -1922,14 +1922,14 @@ class ImproperTorsionHandler(ParameterHandler):
         float_attrs_to_compare = []
         string_attrs_to_compare = ['potential']
 
-        if self._default_idivf == 'auto':
+        if self.default_idivf == 'auto':
             string_attrs_to_compare.append('default_idivf')
         else:
             float_attrs_to_compare.append('default_idivf')
 
         for float_attr in float_attrs_to_compare:
-            this_val = getattr(self, '_' + float_attr)
-            other_val = getattr(other_handler, '_' + float_attr)
+            this_val = getattr(self, float_attr)
+            other_val = getattr(other_handler, float_attr)
             if abs(this_val - other_val) > 1.e-6:
                 raise IncompatibleParameterError(
                     "Difference between '{}' values is beyond allowed tolerance {}. "
@@ -1937,8 +1937,8 @@ class ImproperTorsionHandler(ParameterHandler):
                         float_attr, self._SCALETOL, this_val, other_val))
 
         for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, '_' + string_attr)
-            other_val = getattr(other_handler, '_' + string_attr)
+            this_val = getattr(self, string_attr)
+            other_val = getattr(other_handler, string_attr)
             if this_val != other_val:
                 raise IncompatibleParameterError(
                     "{} values are not identical. "
@@ -2113,8 +2113,8 @@ class vdWHandler(ParameterHandler):
         unit_attrs_to_compare = ['cutoff']
 
         for float_attr in float_attrs_to_compare:
-            this_val = getattr(self, '_' + float_attr)
-            other_val = getattr(other_handler, '_' + float_attr)
+            this_val = getattr(self, float_attr)
+            other_val = getattr(other_handler, float_attr)
             if abs(this_val - other_val) > self._SCALETOL:
                 raise IncompatibleParameterError(
                     "Difference between '{}' values is beyond allowed tolerance {}. "
@@ -2122,8 +2122,8 @@ class vdWHandler(ParameterHandler):
                         float_attr, self._SCALETOL, this_val, other_val))
 
         for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, '_' + string_attr)
-            other_val = getattr(other_handler, '_' + string_attr)
+            this_val = getattr(self, string_attr)
+            other_val = getattr(other_handler, string_attr)
             if this_val != other_val:
                 raise IncompatibleParameterError(
                     "{} values are not identical. "
@@ -2131,8 +2131,8 @@ class vdWHandler(ParameterHandler):
                         string_attr, this_val, other_val))
 
         for unit_attr in unit_attrs_to_compare:
-            this_val = getattr(self, '_' + unit_attr)
-            other_val = getattr(other_handler, '_' + unit_attr)
+            this_val = getattr(self, unit_attr)
+            other_val = getattr(other_handler, unit_attr)
             unit_tol = (self._SCALETOL * this_val.unit) # TODO: do we want a different quantity_tol here?
             if abs(this_val - other_val) > unit_tol:
                 raise IncompatibleParameterError(
@@ -2141,8 +2141,6 @@ class vdWHandler(ParameterHandler):
                         unit_attr, unit_tol, this_val, other_val))
 
     def create_force(self, system, topology, **kwargs):
-
-        self._validate_parameters()
 
         force = openmm.NonbondedForce()
 
@@ -2246,7 +2244,7 @@ class ElectrostaticsHandler(ParameterHandler):
     switch_width = ParameterAttribute(default=0.0 * unit.angstrom, unit=unit.angstrom)
     method = ParameterAttribute(
         default='PME',
-        converter=_allow_only(['cutoff', 'PME'])
+        converter=_allow_only(['Coulomb', 'PME'])
     )
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
@@ -2303,8 +2301,8 @@ class ElectrostaticsHandler(ParameterHandler):
         unit_attrs_to_compare = ['cutoff', 'switch_width']
 
         for float_attr in float_attrs_to_compare:
-            this_val = getattr(self, '_' + float_attr)
-            other_val = getattr(other_handler, '_' + float_attr)
+            this_val = getattr(self, float_attr)
+            other_val = getattr(other_handler, float_attr)
             if abs(this_val - other_val) > self._SCALETOL:
                 raise IncompatibleParameterError(
                     "Difference between '{}' values is beyond allowed tolerance {}. "
@@ -2312,8 +2310,8 @@ class ElectrostaticsHandler(ParameterHandler):
                         float_attr, self._SCALETOL, this_val, other_val))
 
         for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, '_' + string_attr)
-            other_val = getattr(other_handler, '_' + string_attr)
+            this_val = getattr(self, string_attr)
+            other_val = getattr(other_handler, string_attr)
             if this_val != other_val:
                 raise IncompatibleParameterError(
                     "{} values are not identical. "
@@ -2321,8 +2319,8 @@ class ElectrostaticsHandler(ParameterHandler):
                         string_attr, this_val, other_val))
 
         for unit_attr in unit_attrs_to_compare:
-            this_val = getattr(self, '_' + unit_attr)
-            other_val = getattr(other_handler, '_' + unit_attr)
+            this_val = getattr(self, unit_attr)
+            other_val = getattr(other_handler, unit_attr)
             unit_tol = (self._SCALETOL * this_val.unit) # TODO: do we want a different quantity_tol here?
             if abs(this_val - other_val) > unit_tol:
                 raise IncompatibleParameterError(
@@ -2337,9 +2335,6 @@ class ElectrostaticsHandler(ParameterHandler):
             f for f in existing if type(f) == openmm.NonbondedForce
         ]
         force = existing[0]
-
-        # Among other sanity checks, this ensures that the switch value is 0.
-        self._validate_parameters()
 
         # Set the nonbonded method
         settings_matched = False
@@ -2640,8 +2635,8 @@ class ChargeIncrementModelHandler(ParameterHandler):
         string_attrs_to_compare = ['quantum_chemical_method', 'partial_charge_method']
 
         for int_attr in int_attrs_to_compare:
-            this_val = getattr(self, '_' + int_attr)
-            other_val = getattr(other_handler, '_' + int_attr)
+            this_val = getattr(self, int_attr)
+            other_val = getattr(other_handler, int_attr)
             if this_val != other_val:
                 raise IncompatibleParameterError(
                     "{} values are not identical. "
@@ -2649,8 +2644,8 @@ class ChargeIncrementModelHandler(ParameterHandler):
                         int_attr, this_val, other_val))
 
         for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, '_' + string_attr)
-            other_val = getattr(other_handler, '_' + string_attr)
+            this_val = getattr(self, string_attr)
+            other_val = getattr(other_handler, string_attr)
             if this_val != other_val:
                 raise IncompatibleParameterError(
                     "{} values are not identical. "
