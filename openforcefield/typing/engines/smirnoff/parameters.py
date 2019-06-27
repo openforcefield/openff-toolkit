@@ -242,6 +242,11 @@ class ParameterAttribute:
     def __set_name__(self, owner, name):
         self._name = '_' + name
 
+    @property
+    def name(self):
+        # Get rid of the initial underscore.
+        return self._name[1:]
+
     def __get__(self, instance, owner):
         if instance is None:
             # This is called from the class. Return the descriptor object.
@@ -291,10 +296,10 @@ class ParameterAttribute:
             # Check if units are compatible.
             try:
                 if not self._unit.is_compatible(value.unit):
-                    raise IncompatibleUnitError(f'{self._name[1:]}={value} should have units of {self._unit}')
+                    raise IncompatibleUnitError(f'{self.name[1:]}={value} should have units of {self._unit}')
             except AttributeError:
                 # This is not a Quantity object.
-                raise IncompatibleUnitError(f'{self._name[1:]}={value} should have units of {self._unit}')
+                raise IncompatibleUnitError(f'{self.name[1:]}={value} should have units of {self._unit}')
         return value
 
     def _call_converter(self, value, instance):
