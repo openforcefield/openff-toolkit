@@ -495,6 +495,51 @@ class _ParameterAttributeInitializer:
                         "'allow_cosmetic_attributes=True'")
                 raise SMIRNOFFSpecError(msg)
 
+    def to_dict(self, discard_cosmetic_attributes=False):
+        """
+        Convert this object to dict format.
+
+        The returning dictionary contains all the ``ParameterAttribute``
+        and ``IndexedParameterAttribute`` as well as cosmetic attributes
+        if ``discard_cosmetic_attributes`` is ``False``.
+
+        Parameters
+        ----------
+        discard_cosmetic_attributes : bool, optional. Default = False
+            Whether to discard non-spec attributes of this object
+
+        Returns
+        -------
+        smirnoff_dict : dict
+            The SMIRNOFF-compliant dict representation of this object.
+
+        """
+        # Make a list of all attribs that should be included in the
+        # returned dict (call list() to make a copy). We discard
+        # optional attributes that are set to None defaults.
+        attribs_to_return = list(self._get_defined_parameter_attributes().keys())
+
+        # Start populating a dict of the attribs.
+        indexed_attribs = set(self._get_indexed_parameter_attributes().keys())
+        smirnoff_dict = OrderedDict()
+
+        # If attribs_to_return is ordered here, that will effectively be an informal output ordering
+        for attrib_name in attribs_to_return:
+            attrib_value = getattr(self, attrib_name)
+
+            if attrib_name in indexed_attribs:
+                for idx, val in enumerate(attrib_value):
+                    smirnoff_dict[attrib_name + str(idx+1)] = val
+            else:
+                smirnoff_dict[attrib_name] = attrib_value
+
+        # Serialize cosmetic attributes.
+        if not(discard_cosmetic_attributes):
+            for cosmetic_attrib in self._cosmetic_attribs:
+                smirnoff_dict[cosmetic_attrib] = getattr(self, '_' + cosmetic_attrib)
+
+        return smirnoff_dict
+
     def add_cosmetic_attribute(self, attr_name, attr_value):
         """
         Add a cosmetic attribute to this object.
@@ -800,6 +845,8 @@ class ParameterType(_ParameterAttributeInitializer):
     This base class provides utilities to create new parameter types. See
     the below for examples of how to do this.
 
+    .. warning :: This API is experimental and subject to change.
+
     Attributes
     ----------
     smirks : str
@@ -960,50 +1007,6 @@ class ParameterType(_ParameterAttributeInitializer):
         # This is just to make smirks a required positional argument.
         kwargs['smirks']  = smirks
         super().__init__(allow_cosmetic_attributes=allow_cosmetic_attributes, **kwargs)
-
-    def to_dict(self, discard_cosmetic_attributes=False):
-        """
-        Convert this ParameterType object to dict. A unit-bearing attribute ('X') will be converted to two dict
-        entries, one (['X'] containing the unitless value, and another (['X_unit']) containing a string representation
-        of its unit.
-
-        Parameters
-        ----------
-        discard_cosmetic_attributes : bool, optional. Default = False
-            Whether to discard non-spec attributes of this ParameterType
-
-        Returns
-        -------
-        smirnoff_dict : dict
-            The SMIRNOFF-compliant dict representation of this ParameterType object.
-        output_units : dict[str: simtk.unit.Unit]
-            A mapping from each simtk.unit.Quanitity-valued ParameterType attribute
-            to the unit it was converted to during serialization.
-
-        """
-        # Make a list of all attribs that should be included in the
-        # returned dict (call list() to make a copy). We discard
-        # optional attributes that are set to None defaults.
-        attribs_to_return = list(self._get_defined_parameter_attributes().keys())
-        if not(discard_cosmetic_attributes):
-            attribs_to_return += self._cosmetic_attribs
-
-        # Start populating a dict of the attribs.
-        indexed_attribs = set(self._get_indexed_parameter_attributes().keys())
-        smirnoff_dict = OrderedDict()
-        # If attribs_to_return is ordered here, that will effectively be an informal output ordering
-        for attrib_name in attribs_to_return:
-            attrib_value = getattr(self, attrib_name)
-
-            if attrib_name in indexed_attribs:
-                for idx, val in enumerate(attrib_value):
-                    smirnoff_dict[attrib_name + str(idx+1)] = val
-            else:
-                smirnoff_dict[attrib_name] = attrib_value
-            if attrib_name == 'smirks':
-                pass
-
-        return smirnoff_dict
 
     def __repr__(self):
         ret_str = '<{} with '.format(self.__class__.__name__)
