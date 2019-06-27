@@ -1037,8 +1037,7 @@ class ParameterType(_ParameterAttributeInitializer):
 
 # TODO: Should we have a parameter handler registry?
 
-
-class ParameterHandler:
+class ParameterHandler(_ParameterAttributeInitializer):
     """Base class for parameter handlers.
 
     Parameter handlers are configured with some global parameters for a given section. They may also contain a
@@ -1058,17 +1057,42 @@ class ParameterHandler:
     _INFOTYPE = None  # container class with type information that will be stored in self._parameters
     _OPENMMTYPE = None  # OpenMM Force class (or None if no equivalent)
     _DEPENDENCIES = None  # list of ParameterHandler classes that must precede this, or None
-    _REQUIRED_SPEC_ATTRIBS = ['version'] # list of kwargs that must be present during handler initialization
-    _DEFAULT_SPEC_ATTRIBS = {}  # dict of tag-level attributes and their default values
-    _OPTIONAL_SPEC_ATTRIBS = []  # list of non-required attributes that can be defined on initialization
-    _INDEXED_ATTRIBS = []  # list of parameter attribs that will have consecutive numerical suffixes starting at 1
-    _REQUIRE_UNITS = {}  # dict of {header attrib : unit } for input checking
-    _ATTRIBS_TO_TYPE = {} # dict of attribs that must be cast to a specific type to be interpreted correctly
+
     _KWARGS = [] # Kwargs to catch when create_force is called
     _SMIRNOFF_VERSION_INTRODUCED = 0.0  # the earliest version of SMIRNOFF spec that supports this ParameterHandler
     _SMIRNOFF_VERSION_DEPRECATED = None  # if deprecated, the first SMIRNOFF version number it is no longer used
     _MIN_SUPPORTED_SECTION_VERSION = 0.3
     _MAX_SUPPORTED_SECTION_VERSION = 0.3
+
+
+    version = ParameterAttribute()
+
+    @version.converter
+    def version(self, attr, new_version):
+        """
+        Raise a parsing exception if the given section version is unsupported.
+
+        Raises
+        ------
+        SMIRNOFFVersionError if an incompatible version is passed in.
+
+        """
+        import packaging.version
+        from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
+        # Use PEP-440 compliant version number comparison, if requested
+        if (
+                packaging.version.parse(str(new_version)) >
+                packaging.version.parse(str(self._MAX_SUPPORTED_SECTION_VERSION))
+                ) or (
+                packaging.version.parse(str(new_version)) <
+                packaging.version.parse(str(self._MIN_SUPPORTED_SECTION_VERSION))
+        ):
+            raise SMIRNOFFVersionError(
+                f'SMIRNOFF offxml file was written with version {new_version}, but this version '
+                f'of ForceField only supports version {self._MIN_SUPPORTED_SECTION_VERSION} '
+                f'to version {self._MAX_SUPPORTED_SECTION_VERSION}'
+            )
+        return new_version
 
 
     def __init__(self, allow_cosmetic_attributes=False, skip_version_check=False, **kwargs):
@@ -1087,131 +1111,21 @@ class ParameterHandler:
             The dict representation of the SMIRNOFF data source
 
         """
-        if 'version' in self._REQUIRED_SPEC_ATTRIBS:
-            if not 'version' in kwargs:
-                if skip_version_check:
-                    kwargs['version'] = self._MAX_SUPPORTED_SECTION_VERSION
-                else:
-                    raise SMIRNOFFSpecError(f"Missing version while trying to construct {self.__class__}. "
-                                            f"0.3 SMIRNOFF spec requires each parameter section to have its own "
-                                            f"version.")
-            version = kwargs['version']
-            self._check_section_version_compatibility(version)
+        # Skip version check if requested.
+        if 'version' not in kwargs:
+            if skip_version_check:
+                kwargs['version'] = self._MAX_SUPPORTED_SECTION_VERSION
+            else:
+                raise SMIRNOFFSpecError(
+                    f"Missing version while trying to construct {self.__class__}. "
+                    f"0.3 SMIRNOFF spec requires each parameter section to have its own version."
+                )
 
-        self._cosmetic_attribs = []  # list of cosmetic header attributes to remember and optionally write out
-
-        # Ensure that all required attribs are present
-        for reqd_attrib in self._REQUIRED_SPEC_ATTRIBS:
-            if not reqd_attrib in kwargs:
-                msg = "{} requires {} as a parameter during initialization, however this is not " \
-                      "provided. Defined kwargs are {}".format(self.__class__,
-                                                               reqd_attrib,
-                                                               list(kwargs.keys()))
-                raise SMIRNOFFSpecError(msg)
-
-        # list of ParameterType objects (also behaves like an OrderedDict where keys are SMARTS)
+        # List of ParameterType objects (also behaves like an OrderedDict where keys are SMARTS).
         self._parameters = ParameterList()
 
-        # Handle all the unknown kwargs as cosmetic so we can write them back out
-        allowed_header_attribs = self._REQUIRED_SPEC_ATTRIBS + \
-                                 list(self._DEFAULT_SPEC_ATTRIBS.keys()) + \
-                                 self._OPTIONAL_SPEC_ATTRIBS
-
-
-        # Check for indexed attribs
-        for attrib_basename in self._INDEXED_ATTRIBS:
-            # attrib_unit_key = attrib_basename + '_unit'
-
-            index = 1
-            attrib_w_index = '{}{}'.format(attrib_basename, index)
-            while attrib_w_index in kwargs:
-                # As long as we keep finding higher-indexed entries for
-                # this attrib, add them to the expected arguments
-                allowed_header_attribs.append(attrib_w_index)
-
-                if attrib_basename in self._REQUIRE_UNITS:
-                    self._REQUIRE_UNITS[attrib_w_index] = self._REQUIRE_UNITS[attrib_basename]
-                if attrib_basename in self._ATTRIBS_TO_TYPE:
-                    self._ATTRIBS_TO_TYPE[attrib_w_index] = self._ATTRIBS_TO_TYPE[attrib_basename]
-
-
-        # Check for attribs that need to be casted to specific types
-        for attrib, type_to_cast in self._ATTRIBS_TO_TYPE.items():
-            if attrib in kwargs:
-                kwargs[attrib] = type_to_cast(kwargs[attrib])
-
-        smirnoff_data = kwargs
-
-
-        # Add default values to smirnoff_data if they're not already there
-        for default_key, default_val in self._DEFAULT_SPEC_ATTRIBS.items():
-            if not (default_key in kwargs):
-                smirnoff_data[default_key] = default_val
-
-        # Perform unit compatibility checks
-        for key in smirnoff_data.keys():
-            if key in self._REQUIRE_UNITS:
-                context = f"In {self.__class__}'s __init__ function. "
-                check_units_are_compatible(key, smirnoff_data[key], self._REQUIRE_UNITS[key], context=context)
-
-        element_name = None
-        if self._INFOTYPE is not None:
-            element_name = self._INFOTYPE._ELEMENT_NAME
-
-        for key, val in smirnoff_data.items():
-            # We don't initialize parameters here, only ParameterHandler attributes
-            if key == element_name:
-                continue
-            elif key in allowed_header_attribs:
-                attr_name = '_' + key
-                # TODO: create @property.setter here if attrib requires unit
-                setattr(self, attr_name, val)
-            elif allow_cosmetic_attributes:
-                self.add_cosmetic_attribute(key, val)
-                #self._cosmetic_attribs.append(key)
-                #attr_name = '_' + key
-                #setattr(self, attr_name, val)
-
-
-            else:
-                raise SMIRNOFFSpecError("Unexpected kwarg {} passed to {} constructor. If this is "
-                                        "a desired cosmetic attribute, consider setting "
-                                        "'allow_cosmetic_attributes=True'".format(key, self.__class__))
-
-
-
-    def _check_section_version_compatibility(self, version):
-        """
-        Raise a parsing exception if the given section version is incompatible with this ParameterHandler class.
-
-        Parameters
-        ----------
-        version : str
-            The SMIRNOFF section version being read.
-
-        Raises
-        ------
-        SMIRNOFFVersionError if an incompatible version is passed in.
-
-        """
-        import packaging.version
-        from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
-        # Use PEP-440 compliant version number comparison, if requested
-        if (
-                packaging.version.parse(str(version)) >
-                packaging.version.parse(str(self._MAX_SUPPORTED_SECTION_VERSION))
-
-                ) or (
-                packaging.version.parse(str(version)) <
-                packaging.version.parse(str(self._MIN_SUPPORTED_SECTION_VERSION))
-                ):
-
-            raise SMIRNOFFVersionError(
-                'SMIRNOFF offxml file was written with version {}, but this version of ForceField only supports '
-                'version {} to version {}'.format(version,
-                                                  self._MIN_SUPPORTED_SECTION_VERSION,
-                                                  self._MAX_SUPPORTED_SECTION_VERSION))
-
+        # Initialize ParameterAttributes and cosmetic attributes.
+        super().__init__(**kwargs)
 
     def _add_parameters(self, section_dict, allow_cosmetic_attributes=False):
         """
@@ -1253,37 +1167,6 @@ class ParameterHandler:
         """The ParameterList that holds this ParameterHandler's parameter objects"""
         return self._parameters
 
-    def add_cosmetic_attribute(self, attr_name, attr_value):
-        """
-        Add a cosmetic attribute to this ParameterHandler object. This attribute will not have a functional effect
-        on the object in the Open Force Field toolkit, but can be written out during output.
-
-        Parameters
-        ----------
-        attr_name : str
-            Name of the attribute to define for this ParameterType object.
-        attr_value : str
-            The value of the attribute to define for this ParameterType object.
-        """
-        setattr(self, '_'+attr_name, attr_value)
-        self._cosmetic_attribs.append(attr_name)
-
-    def delete_cosmetic_attribute(self, attr_name):
-        """
-        Delete a cosmetic attribute from this ParameterHandler object.
-
-        Parameters
-        ----------
-        attr_name : str
-            Name of the attribute to delete.
-        """
-        # TODO: Can we handle this by overriding __delattr__ instead?
-        #  Would we also need to override __del__ as well to cover both deletation methods?
-        delattr(self, '_'+attr_name)
-        self._cosmetic_attribs.remove(attr_name)
-
-
-
     # TODO: Do we need to return these, or can we handle this internally
     @property
     def known_kwargs(self):
@@ -1291,30 +1174,6 @@ class ParameterHandler:
         """
         # TODO: Should we use introspection to inspect the function signature instead?
         return set(self._KWARGS)
-
-
-    #@classmethod
-    def check_parameter_compatibility(self, parameter_kwargs):
-        """
-        Check to make sure that the fields requiring defined units are compatible with the required units for the
-        Parameters handled by this ParameterHandler
-
-        Parameters
-        ----------
-        parameter_kwargs: dict
-            The dict that will be used to construct the ParameterType
-
-        Raises
-        ------
-        Raises a ValueError if the parameters are incompatible.
-        """
-        for key in parameter_kwargs:
-            if key in self._REQUIRE_UNITS:
-                reqd_unit = self._REQUIRE_UNITS[key]
-                val = parameter_kwargs[key]
-                context = f"In {self.__class__}'s check_parameter_compatibility. "
-                check_units_are_compatible(key, val, reqd_unit, context=context)
-
 
     def check_handler_compatibility(self, handler_kwargs):
         """
@@ -1341,13 +1200,7 @@ class ParameterHandler:
         parameter_kwargs : dict
             The kwargs to pass to the ParameterHandler.INFOTYPE (a ParameterType) constructor
         """
-
         # TODO: Do we need to check for incompatibility with existing parameters?
-
-        # Perform unit compatibility checks
-        self.check_parameter_compatibility(parameter_kwargs)
-        # Check for correct SMIRKS valence
-
         new_parameter = self._INFOTYPE(**parameter_kwargs)
         self._parameters.append(new_parameter)
 
@@ -1445,7 +1298,7 @@ class ParameterHandler:
 
             for environment_match in entity.chemical_environment_matches(parameter_type.smirks):
                 # Update the matches for this parameter type.
-                handler_match = ParameterHandler._Match(parameter_type, environment_match)
+                handler_match = self._Match(parameter_type, environment_match)
                 matches_for_this_type[environment_match.topology_atom_indices] = handler_match
 
             # Update matches of all parameter types.
@@ -1533,9 +1386,9 @@ class ParameterHandler:
         -------
         smirnoff_data : OrderedDict
             SMIRNOFF-spec compliant representation of this ParameterHandler and its internal ParameterList.
+
         """
         smirnoff_data = OrderedDict()
-
 
         # Populate parameter list
         parameter_list = self._parameters.to_list(discard_cosmetic_attributes=discard_cosmetic_attributes)
@@ -1545,29 +1398,10 @@ class ParameterHandler:
             #smirnoff_data[self._INFOTYPE._ELEMENT_NAME] = unitless_parameter_list
             smirnoff_data[self._INFOTYPE._ELEMENT_NAME] = parameter_list
 
-
-        # Collect the names of handler attributes to return
-        header_attribs_to_return = self._REQUIRED_SPEC_ATTRIBS + list(self._DEFAULT_SPEC_ATTRIBS.keys())
-
-        # Check whether the optional attribs are defined, and add them if so
-        for key in self._OPTIONAL_SPEC_ATTRIBS:
-            attr_key = '_' + key
-            if hasattr(self, attr_key):
-                header_attribs_to_return.append(key)
-        # Add the cosmetic attributes if requested
-        if not(discard_cosmetic_attributes):
-            header_attribs_to_return += self._cosmetic_attribs
-
-
-        # Go through the attribs of this ParameterHandler and collect the appropriate values to return
-        header_attribute_dict = {}
-        for header_attribute in header_attribs_to_return:
-            value = getattr(self, '_' + header_attribute)
-            header_attribute_dict[header_attribute] = value
-
-
+        # Collect parameter and cosmetic attributes.
+        header_attribute_dict = super().to_dict(discard_cosmetic_attributes=discard_cosmetic_attributes)
         smirnoff_data.update(header_attribute_dict)
-        # smirnoff_data.update(output_units)
+
         return smirnoff_data
 
     # -------------------------------
@@ -1668,9 +1502,6 @@ class ConstraintHandler(ParameterHandler):
     _INFOTYPE = ConstraintType
     _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def create_force(self, system, topology, **kwargs):
         constraint_matches = self.find_matches(topology)
         for (atoms, constraint_match) in constraint_matches.items():
@@ -1708,18 +1539,14 @@ class BondHandler(ParameterHandler):
         length = ParameterAttribute(unit=unit.angstrom)
         k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
 
-
     _TAGNAME = 'Bonds'  # SMIRNOFF tag name to process
     _INFOTYPE = BondType  # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicBondForce  # OpenMM force class to create
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
-    _DEFAULT_SPEC_ATTRIBS = {'potential': 'harmonic',
-                             'fractional_bondorder_method': None,
-                             'fractional_bondorder_interpolation': 'linear'}
 
-    def __init__(self, **kwargs):
-        # TODO: Do we want a docstring here? If not, check that docstring get inherited from ParameterHandler.
-        super().__init__(**kwargs)
+    potential = ParameterAttribute(default='harmonic')
+    fractional_bondorder_method = ParameterAttribute(default=None)
+    fractional_bondorder_interpolation = ParameterAttribute(default='linear')
 
     def check_handler_compatibility(self,
                                     other_handler):
@@ -1768,7 +1595,7 @@ class BondHandler(ParameterHandler):
             #particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
             # Ensure atoms are actually bonded correct pattern in Topology
-            ParameterHandler._assert_correct_connectivity(bond_match)
+            self._assert_correct_connectivity(bond_match)
             # topology.assert_bonded(atoms[0], atoms[1])
             bond_params = bond_match.parameter_type
             match = bond_match.environment_match
@@ -1838,15 +1665,12 @@ class AngleHandler(ParameterHandler):
         angle = ParameterAttribute(unit=unit.degree)
         k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.degree**2)
 
-
     _TAGNAME = 'Angles'  # SMIRNOFF tag name to process
     _INFOTYPE = AngleType  # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicAngleForce  # OpenMM force class to create
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
-    _DEFAULT_SPEC_ATTRIBS = {'potential': 'harmonic'}
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    potential = ParameterAttribute(default='harmonic')
 
     def check_handler_compatibility(self,
                                     other_handler):
@@ -1874,9 +1698,6 @@ class AngleHandler(ParameterHandler):
                     "(handler value: {}, incompatible value: {}".format(
                         string_attr, this_val, other_val))
 
-
-
-
     def create_force(self, system, topology, **kwargs):
         #force = super(AngleHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -1894,7 +1715,7 @@ class AngleHandler(ParameterHandler):
             # Ensure atoms are actually bonded correct pattern in Topology
             # for (i, j) in [(0, 1), (1, 2)]:
             #     topology.assert_bonded(atoms[i], atoms[j])
-            ParameterHandler._assert_correct_connectivity(angle_match)
+            self._assert_correct_connectivity(angle_match)
 
             if topology.is_constrained(
                     atoms[0], atoms[1]) and topology.is_constrained(
@@ -1919,7 +1740,23 @@ class AngleHandler(ParameterHandler):
 
 #=============================================================================================
 
+# TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet (it'll be easy if we switch to use the attrs library).
+def _allow_only(allowed_values):
+    """A converter that checks the new value is only in a set.
+    """
+    allowed_values = frozenset(allowed_values)
+    def _value_checker(instance, attr, new_value):
+        if new_value not in allowed_values:
 
+            err_msg = (f'Attempted to set {instance.__class__.__name__}.{attr.name} '
+                       f'to {new_value}. Currently, only the following values '
+                       f'are supported: {sorted(allowed_values)}.')
+            raise SMIRNOFFSpecError(err_msg)
+        return new_value
+    return _value_checker
+
+
+# TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
 class ProperTorsionHandler(ParameterHandler):
     """Handle SMIRNOFF ``<ProperTorsionForce>`` tags
 
@@ -1940,24 +1777,15 @@ class ProperTorsionHandler(ParameterHandler):
         k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
         idivf = IndexedParameterAttribute(default=None, converter=float)
 
-
     _TAGNAME = 'ProperTorsions'  # SMIRNOFF tag name to process
     _INFOTYPE = ProperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
-    _DEFAULT_SPEC_ATTRIBS = {'potential': 'k*(1+cos(periodicity*theta-phase))',
-                             'default_idivf': 'auto'}
 
-
-    def __init__(self, **kwargs):
-
-        # NOTE: We do not want to overwrite idivf values here! If they're missing from the ParameterType
-        # dictionary, that means they should be set to defualt _AT SYSTEM CREATION TIME_. The user may
-        # change that default to a different value than it is now. The solution here will be to leave
-        # those idivfX values uninitialized and deal with it during system creation
-
-        super().__init__(**kwargs)
-        self.validate_parameters()
-
+    potential = ParameterAttribute(
+        default='k*(1+cos(periodicity*theta-phase))',
+        converter=_allow_only(['k*(1+cos(periodicity*theta-phase))'])
+    )
+    default_idivf = ParameterAttribute(default='auto')
 
     def check_handler_compatibility(self,
                                     other_handler):
@@ -2000,14 +1828,7 @@ class ProperTorsionHandler(ParameterHandler):
                     "(handler value: {}, incompatible value: {}".format(
                         string_attr, this_val, other_val))
 
-    def validate_parameters(self):
-        supported_torsion_potentials = ['k*(1+cos(periodicity*theta-phase))']
-        if self._potential not in supported_torsion_potentials:
-            raise SMIRNOFFSpecError(f"ProperTorsionHandler given 'potential' value of "
-                                    f"'{self._potential}'. Supported options are {supported_torsion_potentials}.")
-
     def create_force(self, system, topology, **kwargs):
-        self.validate_parameters()
         #force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [f for f in existing if type(f) == self._OPENMMTYPE]
@@ -2021,7 +1842,7 @@ class ProperTorsionHandler(ParameterHandler):
 
         for (atom_indices, torsion_match) in torsion_matches.items():
             # Ensure atoms are actually bonded correct pattern in Topology
-            ParameterHandler._assert_correct_connectivity(torsion_match)
+            self._assert_correct_connectivity(torsion_match)
 
             torsion = torsion_match.parameter_type
 
@@ -2052,6 +1873,7 @@ class ProperTorsionHandler(ParameterHandler):
                                                exception_cls=UnassignedProperTorsionParameterException)
 
 
+# TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
 class ImproperTorsionHandler(ParameterHandler):
     """Handle SMIRNOFF ``<ImproperTorsionForce>`` tags
 
@@ -2075,14 +1897,12 @@ class ImproperTorsionHandler(ParameterHandler):
     _TAGNAME = 'ImproperTorsions'  # SMIRNOFF tag name to process
     _INFOTYPE = ImproperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
-    _OPTIONAL_SPEC_ATTRIBS = ['potential', 'default_idivf']
-    _DEFAULT_SPEC_ATTRIBS = {'potential': 'k*(1+cos(periodicity*theta-phase))',
-                             'default_idivf': 'auto'}
 
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.validate_parameters()
+    potential = ParameterAttribute(
+        default='k*(1+cos(periodicity*theta-phase))',
+        converter=_allow_only(['k*(1+cos(periodicity*theta-phase))'])
+    )
+    default_idivf = ParameterAttribute(default='auto')
 
     def check_handler_compatibility(self,
                                     other_handler):
@@ -2125,13 +1945,6 @@ class ImproperTorsionHandler(ParameterHandler):
                     "(handler value: {}, incompatible value: {}".format(
                         string_attr, this_val, other_val))
 
-
-    def validate_parameters(self):
-        supported_torsion_potentials = ['k*(1+cos(periodicity*theta-phase))']
-        if self._potential not in supported_torsion_potentials:
-            raise SMIRNOFFSpecError(f"ImproperTorsionHandler given 'potential' value of "
-                                    f"'{self._potential}'. Supported options are {supported_torsion_potentials}.")
-
     def find_matches(self, entity):
         """Find the improper torsions in the topology/molecule matched by a parameter type.
 
@@ -2152,7 +1965,6 @@ class ImproperTorsionHandler(ParameterHandler):
     def create_force(self, system, topology, **kwargs):
         #force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
         #force = super().create_force(system, topology, **kwargs)
-        self.validate_parameters()
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [
             f for f in existing if type(f) == openmm.PeriodicTorsionForce
@@ -2170,7 +1982,7 @@ class ImproperTorsionHandler(ParameterHandler):
             # For impropers, central atom is atom 1
             # for (i, j) in [(0, 1), (1, 2), (1, 3)]:
             #     topology.assert_bonded(atom_indices[i], atom_indices[j])
-            ParameterHandler._assert_correct_connectivity(improper_match, [(0, 1), (1, 2), (1, 3)])
+            self._assert_correct_connectivity(improper_match, [(0, 1), (1, 2), (1, 3)])
 
             improper = improper_match.parameter_type
 
@@ -2228,162 +2040,58 @@ class vdWHandler(ParameterHandler):
 
             super().__init__(**kwargs)
 
-
     _TAGNAME = 'vdW'  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create
     # _KWARGS = ['ewaldErrorTolerance',
     #            'useDispersionCorrection',
     #            'usePbc'] # Kwargs to catch when create_force is called
-    _REQUIRE_UNITS = {'switch_width': unit.angstrom,
-                      'cutoff': unit.angstrom}
-    _DEFAULT_SPEC_ATTRIBS = {
-        'potential': 'Lennard-Jones-12-6',
-        'combining_rules': 'Lorentz-Berthelot',
-        'scale12': 0.0,
-        'scale13': 0.0,
-        'scale14': 0.5,
-        'scale15': 1.0,
-        #'pme_tolerance': 1.e-5,
-        'switch_width': 1.0 * unit.angstroms,
-        'cutoff': 9.0 * unit.angstroms,
-        'method': 'cutoff',
-    }
 
-    _ATTRIBS_TO_TYPE = {'scale12': float,
-                        'scale13': float,
-                        'scale14': float,
-                        'scale15': float
-                        }
+    potential = ParameterAttribute(
+        default='Lennard-Jones-12-6',
+        converter=_allow_only(['Lennard-Jones-12-6'])
+    )
+    combining_rules = ParameterAttribute(
+        default='Lorentz-Berthelot',
+        converter=_allow_only(['Lorentz-Berthelot'])
+    )
 
-    # TODO: Is this necessary? It's used in check_compatibility but could be hard-coded.
-    _SCALETOL = 1e-5
+    scale12 = ParameterAttribute(default=0.0, converter=float)
+    scale13 = ParameterAttribute(default=0.0, converter=float)
+    scale14 = ParameterAttribute(default=0.5, converter=float)
+    scale15 = ParameterAttribute(default=1.0, converter=float)
 
+    cutoff = ParameterAttribute(default=9.0 * unit.angstroms, unit=unit.angstrom)
+    switch_width = ParameterAttribute(default=1.0 * unit.angstroms, unit=unit.angstrom)
+    method = ParameterAttribute(
+        default='cutoff',
+        converter=_allow_only(['cutoff', 'PME'])
+    )
 
-    def __init__(self, **kwargs):
-
-        super().__init__(**kwargs)
-        self._validate_parameters()
-
-    # TODO: These properties are a fast hack and should be replaced by something better
-    @property
-    def potential(self):
-        """The potential used to model van der Waals interactions"""
-        return self._potential
-
-    @potential.setter
-    def potential(self, other):
-        """The potential used to model van der Waals interactions"""
-        valid_potentials = ['Lennard-Jones-12-6']
-        if other not in valid_potentials:
-            raise IncompatibleParameterError(f"Attempted to set vdW potential to {other}. Expected "
-                                             f"one of {valid_potentials}")
-        self._potential = other
-
-    @property
-    def combining_rules(self):
-        """The combining_rules used to model van der Waals interactions"""
-        return self._combining_rules
-
-    @combining_rules.setter
-    def combining_rules(self, other):
-        """The combining_rules used to model van der Waals interactions"""
-        valid_combining_ruless = ['Lorentz-Berthelot']
-        if other not in valid_combining_ruless:
-            raise IncompatibleParameterError(f"Attempted to set vdW combining_rules to {other}. Expected "
-                                             f"one of {valid_combining_ruless}")
-        self._method = other
-
-    @property
-    def method(self):
-        """The method used to handle long-range van der Waals interactions"""
-        return self._method
-
-    @method.setter
-    def method(self, other):
-        """The method used to handle long-range van der Waals interactions"""
-        valid_methods = ['cutoff', 'PME']
-        if other not in valid_methods:
-            raise IncompatibleParameterError(f"Attempted to set vdW method to {other}. Expected "
-                                             f"one of {valid_methods}")
-        self._method = other
-
-    @property
-    def cutoff(self):
-        """The cutoff used for long-range van der Waals interactions"""
-        return self._cutoff
-
-    @cutoff.setter
-    def cutoff(self, other):
-        """The cutoff used for long-range van der Waals interactions"""
-        unit_to_check = self._REQUIRE_UNITS['cutoff']
-        if not unit_to_check.unit_is_compatible(other.unit):
-            raise IncompatibleParameterError(
-                f"Attempted to set vdW cutoff to {other}, which is not compatible with "
-                f"expected unit {unit_to_check}")
-        self._cutoff = other
-
-    @property
-    def switch_width(self):
-        """The switching width used for long-range van der Waals interactions"""
-        return self._switch_width
-
-    @switch_width.setter
-    def switch_width(self, other):
-        """The switching width used for long-range van der Waals interactions"""
-        unit_to_check = self._REQUIRE_UNITS['switch_width']
-        if not unit_to_check.unit_is_compatible(other.unit):
-            raise IncompatibleParameterError(
-                f"Attempted to set vdW switch_width to {other}, which is not compatible with "
-                f"expected unit {unit_to_check}")
-        self._switch_width = other
-
-    def _validate_parameters(self):
-        """
-        Checks internal attributes, raising an exception if they are configured in an invalid way.
-        """
-        if self._scale12 != 0.0:
+    # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
+    @scale12.converter
+    def scale12(self, attrs, new_scale12):
+        if new_scale12 != 0.0:
             raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
                                     "Specified 1-2 scaling was {}".format(self._scale12))
-        if self._scale13 != 0.0:
+        return new_scale12
+
+    @scale13.converter
+    def scale13(self, attrs, new_scale13):
+        if new_scale13 != 0.0:
             raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
                                     "Specified 1-3 scaling was {}".format(self._scale13))
-        if self._scale15 != 1.0:
+        return new_scale13
+
+    @scale15.converter
+    def scale15(self, attrs, new_scale15):
+        if new_scale15 != 1.0:
             raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
                                     "Specified 1-5 scaling was {}".format(self._scale15))
+        return new_scale15
 
-
-        supported_methods = ['cutoff', 'PME']
-        if self._method not in supported_methods:
-            raise SMIRNOFFSpecError("The Open Force Field toolkit currently only supports vdW method "
-                                    "values of {}. Received unsupported value "
-                                    "{}".format(supported_methods, self._method))
-
-        elif self._method == 'cutoff':
-            if self._cutoff is None:
-                raise SMIRNOFFSpecError("If vdW method is cutoff, a cutoff distance "
-                                        "must be provided")
-
-        elif self._method == 'PME':
-            if self._cutoff is None:
-                raise SMIRNOFFSpecError("If vdW method is PME, a cutoff distance "
-                                        "must be provided")
-
-            # if self._pme_tolerance is None:
-            #     raise SMIRNOFFSpecError("If PME vdW method is selected, a pme_tolerance value must "
-            #                             "be specified.")
-
-        if self._potential != "Lennard-Jones-12-6":
-            raise SMIRNOFFSpecError("vdW potential set to {}. Only 'Lennard-Jones-12-6' is currently "
-                                    "supported".format(self._potential))
-
-
-        if self._combining_rules != "Lorentz-Berthelot":
-            raise SMIRNOFFSpecError("vdW combining_rules set to {}. Only 'Lorentz-Berthelot' is currently "
-                                    "supported".format(self._combining_rules))
-        # TODO: Find a better way to set defaults
-        # TODO: Validate these values against the supported output types (openMM force kwargs?)
-        # TODO: Add conditional logic to assign NonbondedMethod and check compatibility
+    # Tolerance when comparing float attributes for handler compatibility.
+    _SCALETOL = 1e-5
 
     def check_handler_compatibility(self,
                                     other_handler):
@@ -2528,111 +2236,53 @@ class ElectrostaticsHandler(ParameterHandler):
     _TAGNAME = 'Electrostatics'
     _OPENMMTYPE = openmm.NonbondedForce
     _DEPENDENCIES = [vdWHandler]
-    _DEFAULT_SPEC_ATTRIBS = {
-        'method': 'PME',
-        'scale12': 0.0,
-        'scale13': 0.0,
-        'scale14': 0.833333,
-        'scale15': 1.0,
-        #'pme_tolerance': 1.e-5,
-        #'switch_width': 8.0 * unit.angstrom, # OpenMM can't support an electrostatics switch
-        'switch_width': 0.0 * unit.angstrom,
-        'cutoff': 9.0 * unit.angstrom
-    }
-    _ATTRIBS_TO_TYPE = {'scale12': float,
-                        'scale13': float,
-                        'scale14': float,
-                        'scale15': float
-                        }
 
-    _OPTIONAL_SPEC_ATTRIBS = ['cutoff', 'switch_width']
 
+    scale12 = ParameterAttribute(default=0.0, converter=float)
+    scale13 = ParameterAttribute(default=0.0, converter=float)
+    scale14 = ParameterAttribute(default=0.833333, converter=float)
+    scale15 = ParameterAttribute(default=1.0, converter=float)
+    cutoff = ParameterAttribute(default=9.0 * unit.angstrom, unit=unit.angstrom)
+    switch_width = ParameterAttribute(default=0.0 * unit.angstrom, unit=unit.angstrom)
+    method = ParameterAttribute(
+        default='PME',
+        converter=_allow_only(['cutoff', 'PME'])
+    )
+
+    # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
+    @scale12.converter
+    def scale12(self, attrs, new_scale12):
+        if new_scale12 != 0.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
+                                    "Specified 1-2 scaling was {}".format(self._scale12))
+        return new_scale12
+
+    @scale13.converter
+    def scale13(self, attrs, new_scale13):
+        if new_scale13 != 0.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
+                                    "Specified 1-3 scaling was {}".format(self._scale13))
+        return new_scale13
+
+    @scale15.converter
+    def scale15(self, attrs, new_scale15):
+        if new_scale15 != 1.0:
+            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
+                                    "Specified 1-5 scaling was {}".format(self._scale15))
+        return new_scale15
+
+    @switch_width.converter
+    def switch_width(self, attr, new_switch_width):
+        if self._switch_width != 0.0 * unit.angstrom:
+            raise IncompatibleParameterError(
+                "The current implementation of the Open Force Field toolkit can not "
+                "support an electrostatic switching width. Currently only `0.0 angstroms` "
+                f"is supported (SMIRNOFF data specified {new_switch_width})"
+            )
+
+    # Tolerance when comparing float attributes for handler compatibility.
     _SCALETOL = 1e-5
 
-    def __init__(self, **kwargs):
-
-        super().__init__(**kwargs)
-        self._validate_parameters()
-
-
-    @property
-    def method(self):
-        """The method used to model long-range electrostatic interactions"""
-        return self._method
-
-    @method.setter
-    def method(self, other):
-        """The method used to model long-range electrostatic interactions"""
-        valid_methods = ['PME', 'Coulomb', 'reaction-field']
-        if other not in valid_methods:
-            raise IncompatibleParameterError(f"Attempted to set electrostatics method to {other}. Expected "
-                                             f"one of {valid_methods}")
-        self._method = other
-
-
-    @property
-    def cutoff(self):
-        """The cutoff used for long-range van der Waals interactions"""
-        return self._cutoff
-
-    @cutoff.setter
-    def cutoff(self, other):
-        """The cutoff used for long-range van der Waals interactions"""
-        unit_to_check = self._REQUIRE_UNITS['cutoff']
-        if not unit_to_check.unit_is_compatible(other.unit):
-            raise IncompatibleParameterError(
-                f"Attempted to set vdW cutoff to {other}, which is not compatible with "
-                f"expected unit {unit_to_check}")
-        self._cutoff = other
-
-    @property
-    def switch_width(self):
-        """The switching width used for long-range electrostatics interactions"""
-        return self._switch_width
-
-    @switch_width.setter
-    def switch_width(self, other):
-        """The switching width used for long-range van der Waals interactions"""
-        unit_to_check = self._REQUIRE_UNITS['switch_width']
-        if not unit_to_check.unit_is_compatible(other.unit):
-            raise IncompatibleParameterError(
-                f"Attempted to set vdW switch_width to {other}, which is not compatible with "
-                f"expected unit {unit_to_check}")
-        self._switch_width = other
-
-
-    def _validate_parameters(self):
-        """
-        Checks internal attributes, raising an exception if they are configured in an invalid way.
-        """
-        if self._scale12 != 0.0:
-            raise IncompatibleParameterError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
-                                             "Specified 1-2 scaling was {}".format(self._scale12))
-        if self._scale13 != 0.0:
-            raise IncompatibleParameterError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
-                                             "Specified 1-3 scaling was {}".format(self._scale13))
-        if self._scale15 != 1.0:
-            raise IncompatibleParameterError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
-                                    "Specified 1-5 scaling was {}".format(self._scale15))
-
-        supported_methods = ['PME', 'Coulomb'] # 'reaction-field'
-        if self._method == 'reaction-field':
-            raise IncompatibleParameterError('The Open Force Field toolkit does not currently support reaction-field '
-                                             'electrostatics.')
-
-        if not self._method in supported_methods:
-            raise IncompatibleParameterError("'method' parameter in Electrostatics tag {} is not a supported "
-                                    "option. Valid methods are {}".format(self._method, supported_methods))
-
-        if self._method == 'reaction-field' or self._method == 'PME':
-            if self._cutoff is None:
-                raise SMIRNOFFSpecError("If Electrostatics method is 'reaction-field' or 'PME', then 'cutoff' must "
-                                        "also be specified")
-
-        if self._switch_width != 0.0 * unit.angstrom:
-            raise IncompatibleParameterError("The current implementation of the Open Force Field toolkit can not "
-                                             "support an electrostatic switching width. Currently only `0.0 angstroms` "
-                                             "is supported (SMIRNOFF data specified {})".format(self._switch_width))
     def check_handler_compatibility(self,
                                     other_handler):
         """
@@ -2691,11 +2341,9 @@ class ElectrostaticsHandler(ParameterHandler):
         # Among other sanity checks, this ensures that the switch value is 0.
         self._validate_parameters()
 
-
         # Set the nonbonded method
         settings_matched = False
         current_nb_method = force.getNonbondedMethod()
-
 
         # First, check whether the vdWHandler set the nonbonded method to LJPME, because that means
         # that electrostatics also has to be PME
@@ -2703,11 +2351,6 @@ class ElectrostaticsHandler(ParameterHandler):
             raise IncompatibleParameterError("In current Open Force Field toolkit implementation, if vdW "
                                              "treatment is set to LJPME, electrostatics must also be PME "
                                              "(electrostatics treatment currently set to {}".format(self._method))
-
-
-
-
-
 
         # Then, set nonbonded methods based on method keyword
         if self._method == 'PME':
@@ -2772,13 +2415,6 @@ class ToolkitAM1BCCHandler(ParameterHandler):
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create or utilize
     _DEPENDENCIES = [vdWHandler] # vdWHandler must first run NonBondedForce.addParticle for each particle in the topology
     _KWARGS = ['charge_from_molecules', 'toolkit_registry'] # Kwargs to catch when create_force is called
-
-
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-
 
     def check_handler_compatibility(self,
                                     other_handler,
@@ -2968,37 +2604,20 @@ class ChargeIncrementModelHandler(ParameterHandler):
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create or utilize
     # TODO: The structure of this is still undecided
     _KWARGS = ['charge_from_molecules']
-    _DEFAULTS = {'number_of_conformers': 10,
-                 'quantum_chemical_method': 'AM1',
-                 'partial_charge_method': 'CM2'}
-    _ALLOWED_VALUES = {'quantum_chemical_method': ['AM1'],
-                       'partial_charge_method': ['CM2']}
 
-
+    number_of_conformers = ParameterAttribute(default=10, converter=int)
+    quantum_chemical_method = ParameterAttribute(
+        default='AM1',
+        converter=_allow_only(['AM1'])
+    )
+    partial_charge_method = ParameterAttribute(
+        default='CM2',
+        converter=_allow_only(['CM2'])
+    )
 
     def __init__(self, **kwargs):
         raise NotImplementedError("ChangeIncrementHandler is not yet implemented, pending finalization of the "
                                   "SMIRNOFF spec")
-        # super().__init__(**kwargs)
-        #
-        # if number_of_conformers is None:
-        #     self._number_of_conformers = self._DEFAULTS['number_of_conformers']
-        # elif type(number_of_conformers) is str:
-        #     self._number_of_conformers = int(number_of_conformers)
-        # else:
-        #     self._number_of_conformers = number_of_conformers
-        #
-        # if quantum_chemical_method is None:
-        #     self._quantum_chemical_method = self._DEFAULTS['quantum_chemical_method']
-        # elif number_of_conformers in self._ALLOWED_VALUES['quantum_chemical_method']:
-        #     self._number_of_conformers = number_of_conformers
-        #
-        # if partial_charge_method is None:
-        #     self._partial_charge_method = self._DEFAULTS['partial_charge_method']
-        # elif partial_charge_method in self._ALLOWED_VALUES['partial_charge_method']:
-        #     self._partial_charge_method = partial_charge_method
-
-
 
     def check_handler_compatibility(self,
                                     other_handler,

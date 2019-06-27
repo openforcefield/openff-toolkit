@@ -14,15 +14,15 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 # GLOBAL IMPORTS
 #======================================================================
 
-from simtk import unit
 import pytest
+from simtk import unit
 
+from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterAttribute, IndexedParameterAttribute, ParameterList,
     ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
-    ImproperTorsionHandler, ToolkitAM1BCCHandler, SMIRNOFFSpecError
+    ImproperTorsionHandler, SMIRNOFFSpecError
 )
-from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.utils import detach_units, IncompatibleUnitError
 from openforcefield.utils.collections import ValidatedList
 
@@ -297,13 +297,12 @@ class TestParameterHandler:
 
         # Ensure the cosmetic attribute isn't present if we request that it be discarded
         param_dict = bh.to_dict(discard_cosmetic_attributes=True)
-        assert ('pilot', 'alice') not in param_dict.items()
+        assert 'pilot' not in param_dict
 
         # Manually delete the cosmetic attribute and ensure it doesn't get written out
         bh.delete_cosmetic_attribute('pilot')
         param_dict = bh.to_dict()
-        assert ('pilot', 'alice') not in param_dict.items()
-
+        assert 'pilot' not in param_dict
 
 
 class TestParameterList:
@@ -587,7 +586,7 @@ class TestParameterType:
 
         # _get_defined_parameter_attributes discards only the attribute
         # that are set to None as a default value.
-        expected_names = ['smirks', 'required1', 'required2', 'optional1', 'optional3']
+        expected_names = ['smirks', 'required1', 'required2', 'optional1', 'optional3', 'optional4']
         parameter_attributes = my_par._get_defined_parameter_attributes()
         assert list(parameter_attributes.keys()) == expected_names
 
@@ -840,19 +839,19 @@ def test_torsion_handler_charmm_potential():
     Test creation of TorsionHandlers with the deprecated 0.2 potential value "charmm" instead of the current
     supported potential value "fourier".
     """
+    import re
+
     # Test creating ProperTorsionHandlers
-    with pytest.raises(SMIRNOFFSpecError, match="ProperTorsionHandler given 'potential' value of 'charmm'. "
-                                                "Supported options are "
-                                                "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
-            as context:
+    err_msg = re.escape("Attempted to set ProperTorsionHandler.potential to charmm. Currently, "
+                        "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))'].")
+    with pytest.raises(SMIRNOFFSpecError, match=err_msg):
         ph1 = ProperTorsionHandler(potential='charmm', skip_version_check=True)
     ph1 = ProperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
     # Same test, but with ImproperTorsionHandler
-    with pytest.raises(SMIRNOFFSpecError, match="ImproperTorsionHandler given 'potential' value of 'charmm'. "
-                                                "Supported options are "
-                                                "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
-            as context:
+    err_msg = re.escape("Attempted to set ImproperTorsionHandler.potential to charmm. Currently, "
+                        "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))'].")
+    with pytest.raises(SMIRNOFFSpecError, match=err_msg):
         ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
     ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
