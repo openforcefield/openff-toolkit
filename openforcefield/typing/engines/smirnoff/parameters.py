@@ -1040,14 +1040,16 @@ class ParameterType(_ParameterAttributeInitializer):
 class ParameterHandler(_ParameterAttributeInitializer):
     """Base class for parameter handlers.
 
-    Parameter handlers are configured with some global parameters for a given section. They may also contain a
-    :class:`ParameterList` populated with :class:`ParameterType` objects if they are responsile for assigning
+    Parameter handlers are configured with some global parameters for a
+    given section. They may also contain a :class:`ParameterList` populated
+    with :class:`ParameterType` objects if they are responsible for assigning
     SMIRKS-based parameters.
 
     .. warning
 
        Parameter handler objects can only belong to a single :class:`ForceField` object.
-       If you need to create a copy to attach to a different :class:`ForceField` object, use ``create_copy()``.
+       If you need to create a copy to attach to a different :class:`ForceField` object,
+       use ``create_copy()``.
 
     .. warning :: This API is experimental and subject to change.
 
@@ -1474,6 +1476,45 @@ class ParameterHandler(_ParameterAttributeInitializer):
             err_msg += '\n'
             raise exception_cls(err_msg)
 
+    def _check_attributes_are_equal(self, other, identical_attrs=(),
+                                    tolerance_attrs=(), tolerance=1e-6):
+        """Utility function to check that the given attributes of the two handlers are equal.
+
+        Parameters
+        ----------
+        identical_attrs : List[str]
+            Names of the parameters that must be checked with the equality operator.
+        tolerance_attrs : List[str]
+            Names of the parameters that must be equal up to a tolerance.
+        tolerance : float
+            The absolute tolerance used to compare the parameters.
+        """
+        def get_unitless_values(attr):
+            this_val = getattr(self, attr)
+            other_val = getattr(other, attr)
+            # Strip quantities of their units before comparison.
+            try:
+                u = this_val.unit
+            except AttributeError:
+                return this_val, other_val
+            return this_val / u, other_val / u
+
+        for attr in identical_attrs:
+            this_val, other_val = get_unitless_values(attr)
+            if this_val != other_val:
+                raise IncompatibleParameterError(
+                    "{} values are not identical. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        attr, this_val, other_val))
+
+        for attr in tolerance_attrs:
+            this_val, other_val = get_unitless_values(attr)
+            if abs(this_val - other_val) > tolerance:
+                raise IncompatibleParameterError(
+                    "Difference between '{}' values is beyond allowed tolerance {}. "
+                    "(handler value: {}, incompatible value: {}".format(
+                        attr, tolerance, this_val, other_val))
+
 
 #=============================================================================================
 
@@ -1564,15 +1605,7 @@ class BondHandler(ParameterHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
         string_attrs_to_compare = ['potential', 'fractional_bondorder_method', 'fractional_bondorder_interpolation']
-
-        for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, string_attr)
-            other_val = getattr(other_handler, string_attr)
-            if this_val != other_val:
-                raise IncompatibleParameterError(
-                    "{} values are not identical. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        string_attr, this_val, other_val))
+        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare)
 
     def create_force(self, system, topology, **kwargs):
         # Create or retrieve existing OpenMM Force object
@@ -1688,15 +1721,7 @@ class AngleHandler(ParameterHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
         string_attrs_to_compare = ['potential']
-
-        for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, string_attr)
-            other_val = getattr(other_handler, string_attr)
-            if this_val != other_val:
-                raise IncompatibleParameterError(
-                    "{} values are not identical. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        string_attr, this_val, other_val))
+        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare)
 
     def create_force(self, system, topology, **kwargs):
         #force = super(AngleHandler, self).create_force(system, topology, **kwargs)
@@ -1810,23 +1835,8 @@ class ProperTorsionHandler(ParameterHandler):
         else:
             float_attrs_to_compare.append('default_idivf')
 
-        for float_attr in float_attrs_to_compare:
-            this_val = getattr(self, float_attr)
-            other_val = getattr(other_handler, float_attr)
-            if abs(this_val - other_val) > 1.e-6:
-                raise IncompatibleParameterError(
-                    "Difference between '{}' values is beyond allowed tolerance {}. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        float_attr, self._SCALETOL, this_val, other_val))
-
-        for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, string_attr)
-            other_val = getattr(other_handler, string_attr)
-            if this_val != other_val:
-                raise IncompatibleParameterError(
-                    "{} values are not identical. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        string_attr, this_val, other_val))
+        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare,
+                                         tolerance_attrs=float_attrs_to_compare)
 
     def create_force(self, system, topology, **kwargs):
         #force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
@@ -1927,23 +1937,8 @@ class ImproperTorsionHandler(ParameterHandler):
         else:
             float_attrs_to_compare.append('default_idivf')
 
-        for float_attr in float_attrs_to_compare:
-            this_val = getattr(self, float_attr)
-            other_val = getattr(other_handler, float_attr)
-            if abs(this_val - other_val) > 1.e-6:
-                raise IncompatibleParameterError(
-                    "Difference between '{}' values is beyond allowed tolerance {}. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        float_attr, self._SCALETOL, this_val, other_val))
-
-        for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, string_attr)
-            other_val = getattr(other_handler, string_attr)
-            if this_val != other_val:
-                raise IncompatibleParameterError(
-                    "{} values are not identical. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        string_attr, this_val, other_val))
+        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare,
+                                         tolerance_attrs=float_attrs_to_compare)
 
     def find_matches(self, entity):
         """Find the improper torsions in the topology/molecule matched by a parameter type.
@@ -2112,33 +2107,9 @@ class vdWHandler(ParameterHandler):
         string_attrs_to_compare = ['potential', 'combining_rules', 'method']
         unit_attrs_to_compare = ['cutoff']
 
-        for float_attr in float_attrs_to_compare:
-            this_val = getattr(self, float_attr)
-            other_val = getattr(other_handler, float_attr)
-            if abs(this_val - other_val) > self._SCALETOL:
-                raise IncompatibleParameterError(
-                    "Difference between '{}' values is beyond allowed tolerance {}. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        float_attr, self._SCALETOL, this_val, other_val))
-
-        for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, string_attr)
-            other_val = getattr(other_handler, string_attr)
-            if this_val != other_val:
-                raise IncompatibleParameterError(
-                    "{} values are not identical. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        string_attr, this_val, other_val))
-
-        for unit_attr in unit_attrs_to_compare:
-            this_val = getattr(self, unit_attr)
-            other_val = getattr(other_handler, unit_attr)
-            unit_tol = (self._SCALETOL * this_val.unit) # TODO: do we want a different quantity_tol here?
-            if abs(this_val - other_val) > unit_tol:
-                raise IncompatibleParameterError(
-                    "Difference between '{}' values is beyond allowed tolerance {}. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        unit_attr, unit_tol, this_val, other_val))
+        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare,
+                                         tolerance_attrs=float_attrs_to_compare+unit_attrs_to_compare,
+                                         tolerance=self._SCALETOL)
 
     def create_force(self, system, topology, **kwargs):
 
@@ -2300,34 +2271,9 @@ class ElectrostaticsHandler(ParameterHandler):
         string_attrs_to_compare = ['method']
         unit_attrs_to_compare = ['cutoff', 'switch_width']
 
-        for float_attr in float_attrs_to_compare:
-            this_val = getattr(self, float_attr)
-            other_val = getattr(other_handler, float_attr)
-            if abs(this_val - other_val) > self._SCALETOL:
-                raise IncompatibleParameterError(
-                    "Difference between '{}' values is beyond allowed tolerance {}. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        float_attr, self._SCALETOL, this_val, other_val))
-
-        for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, string_attr)
-            other_val = getattr(other_handler, string_attr)
-            if this_val != other_val:
-                raise IncompatibleParameterError(
-                    "{} values are not identical. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        string_attr, this_val, other_val))
-
-        for unit_attr in unit_attrs_to_compare:
-            this_val = getattr(self, unit_attr)
-            other_val = getattr(other_handler, unit_attr)
-            unit_tol = (self._SCALETOL * this_val.unit) # TODO: do we want a different quantity_tol here?
-            if abs(this_val - other_val) > unit_tol:
-                raise IncompatibleParameterError(
-                    "Difference between '{}' values is beyond allowed tolerance {}. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        unit_attr, unit_tol, this_val, other_val))
-
+        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare,
+                                         tolerance_attrs=float_attrs_to_compare+unit_attrs_to_compare,
+                                         tolerance=self._SCALETOL)
 
     def create_force(self, system, topology, **kwargs):
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -2634,24 +2580,8 @@ class ChargeIncrementModelHandler(ParameterHandler):
         int_attrs_to_compare = ['number_of_conformers']
         string_attrs_to_compare = ['quantum_chemical_method', 'partial_charge_method']
 
-        for int_attr in int_attrs_to_compare:
-            this_val = getattr(self, int_attr)
-            other_val = getattr(other_handler, int_attr)
-            if this_val != other_val:
-                raise IncompatibleParameterError(
-                    "{} values are not identical. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        int_attr, this_val, other_val))
-
-        for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, string_attr)
-            other_val = getattr(other_handler, string_attr)
-            if this_val != other_val:
-                raise IncompatibleParameterError(
-                    "{} values are not identical. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        string_attr, this_val, other_val))
-
+        self._check_attributes_are_equal(other_handler,
+                                         identical_attrs=string_attrs_to_compare+int_attrs_to_compare)
 
     def assign_charge_from_molecules(self, molecule, charge_mols):
         """
