@@ -46,7 +46,7 @@ from simtk import openmm, unit
 
 from openforcefield.utils import attach_units,  \
     extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
-    check_units_are_compatible, object_to_quantity
+    object_to_quantity
 from openforcefield.topology import ValenceDict, ImproperDict
 from openforcefield.typing.chemistry import ChemicalEnvironment
 from openforcefield.utils import IncompatibleUnitError
