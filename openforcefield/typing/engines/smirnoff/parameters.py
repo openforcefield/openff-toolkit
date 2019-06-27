@@ -2922,29 +2922,56 @@ class GBSAParameterHandler(ParameterHandler):
 
     def create_force(self, system, topology, **kwargs):
         # TODO: Rework this
+        import simtk
 
         # No previous GBSAForce should exist, so we're safe just making one here.
-        # TODO: This will call GBSAOBCForce(). Is this appropriate for HCT as well?
-        force = self._OPENMMTYPE()
-        system.addForce(force)
+        force_map = {
+            'OBC1': simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
+            'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
+            'HCT': simtk.openmm.app.internal.customgbforces.GBSAHCTForce,
+        }
+        openmm_force_type = force_map[self.gb_model]
+
+        gbsa_force = openmm_force_type()
 
         # TODO: Go through existing particles in the system (which have already had charges
         #  assigned) and copy the charges into here
+        # Grab the existing nonbonded force (which will have particle charges)
+        existing = [system.getForce(i) for i in range(system.getNumForces())]
+        existing = [
+            f for f in existing if type(f) == openmm.NonbondedForce
+        ]
+        nonbonded_force = existing[0]
         # Add all GBSA terms to the system.
-        expected_parameters = GBSAParameterHandler.GB_expected_parameters[
-            self.gb_model]
+        # expected_parameters = GBSAParameterHandler.GB_expected_parameters[
+        #     self.gb_model]
 
-        # Create all particles with parameters set to zero
-        atoms = self.getMatches(topology)
-        nparams = 1 + len(expected_parameters)  # charge + GBSA parameters
-        params = [0.0 for i in range(nparams)]
-        for _ in topology.topology_particles():
-            force.addParticle(params)
-        # Set the GBSA parameters (keeping charges at zero for now)
-        for (atoms, gbsa_type) in atoms.items():
-            atom = atoms[0]
-            # Set per-particle parameters for assigned parameters
-            params = [atom.charge] + [
-                getattr(gbsa_type, name) for name in expected_parameters
-            ]
-            force.setParticleParameters(atom.particle_index, params)
+        # Iterate over all defined GBSA types, allowing later matches to override earlier ones.
+        atom_matches = self.find_matches(topology)
+
+        # Create all particles.
+        #for topology_particle in topology.topology_particles:
+            #gbsa_force.addParticle([0.0, 1.0, 0.0])
+
+        params_to_add = [[] for particle in topology.topology_particles]
+        for atom_key, atom_match in atom_matches.items():
+            atom_idx = atom_key[0]
+            gbsatype = atom_match.parameter_type
+            charge, _, _2 = nonbonded_force.getParticleParameters(atom_idx)
+            #gbsa_force.setParticleParameters(atom_idx,
+            # TODO: This is likely wrong. The particle params that are expected in the
+            #       AMBER GBSA-derived classes are different from those provided in the
+            #       SMIRNOFF spec, and undergo a transformation before they are passed
+            #       into the OMM system's GBSAForce
+            params_to_add[atom_idx] = [charge, gbsatype.radius, gbsatype.scale * gbsatype.radius]
+
+        for particle_param in params_to_add:
+            gbsa_force.addParticle(particle_param)
+        # We have to call finalize() because the internal pre-made
+        # customgb forces are a bit different than the base one
+        gbsa_force.finalize()
+
+        system.addForce(gbsa_force)
+
+
+

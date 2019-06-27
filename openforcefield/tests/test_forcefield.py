@@ -153,6 +153,24 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 '''
 
+xml_gbsa_ff = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <GBSA version="0.3" gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
+      <Atom smirks="[#1:1]" radius="0.12*nanometer" scale="0.85"/>
+      <Atom smirks="[#1:1]~[#6]" radius="0.13*nanometer" scale="0.85"/>
+      <Atom smirks="[#1:1]~[#8]" radius="0.08*nanometer" scale="0.85"/>
+      <Atom smirks="[#1:1]~[#16]" radius="0.08*nanometer" scale="0.85"/>
+      <Atom smirks="[#6:1]" radius="0.22*nanometer" scale="0.72"/>
+      <Atom smirks="[#7:1]" radius="0.155*nanometer" scale="0.79"/>
+      <Atom smirks="[#8:1]" radius="0.15*nanometer" scale="0.85"/>
+      <Atom smirks="[#9:1]" radius="0.15*nanometer" scale="0.88"/>
+      <Atom smirks="[#14:1]" radius="0.21*nanometer" scale="0.8"/>
+      <Atom smirks="[#15:1]" radius="0.185*nanometer" scale="0.86"/>
+      <Atom smirks="[#16:1]" radius="0.18*nanometer" scale="0.96"/>
+      <Atom smirks="[#17:1]" radius="0.17*nanometer" scale="0.8"/>
+    </GBSA>
+</SMIRNOFF>
+'''
 
 #======================================================================
 # TEST UTILITY FUNCTIONS
@@ -559,6 +577,23 @@ class TestForceField():
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
+
+
+
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    def test_parameterize_ethanol_gbsa(self, toolkit_registry, registry_description):
+        from simtk.openmm import app
+
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_gbsa_ff)
+        pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
+        molecules = []
+        molecules.append(Molecule.from_smiles('CCO'))
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
+        omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
+        from openforcefield.utils.structure import check_energy_is_finite
+
+        assert 0
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_1_cyclohexane_1_ethanol(self, toolkit_registry, registry_description):
