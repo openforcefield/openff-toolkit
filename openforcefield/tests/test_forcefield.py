@@ -428,6 +428,11 @@ class TestForceField():
         ff = ForceField('test_forcefields/smirnoff99Frosst_reference_0_1_spec.offxml')
 
 
+    def test_read_0_1_smirff(self):
+        """Test reading an 0.1 spec OFFXML file"""
+        ff = ForceField('test_forcefields/smirff99Frosst_reference_0_1_spec.offxml')
+
+
     def test_read_0_2_smirnoff(self):
         """Test reading an 0.2 spec OFFXML file"""
         ff = ForceField('test_forcefields/smirnoff99Frosst_reference_0_2_spec.offxml')

@@ -817,10 +817,32 @@ class ForceField:
             Whether to permit non-spec kwargs in smirnoff_data.
         """
         import packaging.version
+
+        # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation
+
+        if "SMIRNOFF" in smirnoff_data.keys():
+            version = smirnoff_data['SMIRNOFF']['version']
+        elif "SMIRFF" in smirnoff_data.keys():
+            version = smirnoff_data['SMIRFF']['version']
+        else:
+            raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
+
+        self._check_smirnoff_version_compatibility(str(version))
+        # Convert 0.1 spec files to 0.3 SMIRNOFF data format by converting
+        # from 0.1 spec to 0.2, then 0.2 to 0.3
+        if packaging.version.parse(str(version)) == packaging.version.parse("0.1"):
+            # NOTE: This will convert the top-level "SMIRFF" tag to "SMIRNOFF"
+            smirnoff_data = convert_0_1_smirnoff_to_0_2(smirnoff_data)
+            smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
+
+        # Convert 0.2 spec files to 0.3 SMIRNOFF data format by removing units
+        # from section headers and adding them to quantity strings at all levels.
+        elif packaging.version.parse(str(version)) == packaging.version.parse("0.2"):
+            smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
+
         # Ensure that SMIRNOFF is a top-level key of the dict
         if not('SMIRNOFF' in smirnoff_data):
             raise ParseError("'SMIRNOFF' must be a top-level key in the SMIRNOFF object model")
-
 
         # Check that the aromaticity model required by this parameter set is compatible with
         # others loaded by this ForceField
@@ -832,31 +854,11 @@ class ForceField:
             raise ParseError("'aromaticity_model' attribute must be specified in SMIRNOFF "
                              "tag, or contained in a previously-loaded SMIRNOFF data source")
 
-        # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation
-        if 'version' in smirnoff_data['SMIRNOFF']:
-            version = smirnoff_data['SMIRNOFF']['version']
-        else:
-            raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
-        self._check_smirnoff_version_compatibility(str(version))
-
         if 'Author' in smirnoff_data['SMIRNOFF']:
             self._add_author(smirnoff_data['SMIRNOFF']['Author'])
 
         if 'Date' in smirnoff_data['SMIRNOFF']:
             self._add_date(smirnoff_data['SMIRNOFF']['Date'])
-
-
-        # Convert 0.1 spec files to 0.3 SMIRNOFF data format by converting
-        # from 0.1 spec to 0.2, then 0.2 to 0.3
-        if packaging.version.parse(str(version)) == packaging.version.parse("0.1"):
-            smirnoff_data = convert_0_1_smirnoff_to_0_2(smirnoff_data)
-            smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
-
-
-        # Convert 0.2 spec files to 0.3 SMIRNOFF data format by removing units
-        # from section headers and adding them to quantity strings at all levels.
-        elif packaging.version.parse(str(version)) == packaging.version.parse("0.2"):
-            smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
 
         # Go through the whole SMIRNOFF data structure, trying to convert all strings to Quantity
         smirnoff_data = convert_all_strings_to_quantity(smirnoff_data)
