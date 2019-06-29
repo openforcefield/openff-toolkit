@@ -660,7 +660,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     @staticmethod
     def from_openeye(oemol, allow_undefined_stereo=False):
         """
-        Create a Molecule from an OpenEye molecule.
+        Create a Molecule from an OpenEye molecule. If the OpenEye molecule has
+        implicit hydrogens, this function will make them explicit.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -692,6 +693,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
         from openforcefield.topology.molecule import Molecule
+
+
+        # Add explicit hydrogens if they're implicit
+        if oechem.OEHasImplicitHydrogens(oemol):
+            oechem.OEAddExplicitHydrogens(oemol)
 
         # TODO: Is there any risk to perceiving aromaticity here instead of later?
         oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
@@ -1059,9 +1065,15 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if not (hydrogens_are_explicit):
             result = oechem.OEAddExplicitHydrogens(oemol)
             if result == False:
-                raise Exception(
+                raise ValueError(
                     "Addition of explicit hydrogens failed in from_openeye")
-        # TODO: Add allow_undefined_stereo to this function, and pass to from_openeye?
+        elif hydrogens_are_explicit and oechem.OEHasImplicitHydrogens(oemol):
+            raise ValueError(
+                f"'hydrogens_are_explicit' was specified as True, but OpenEye Toolkit interpreted "
+                f"SMILES '{smiles}' as having implicit hydrogen. If this SMILES is intended to "
+                f"express all explicit hydrogens in the molecule, then you should construct the "
+                f"desired molecule as an OEMol (where oechem.OEHasImplicitHydrogens(oemol) returns "
+                f"False), and then use Molecule.from_openeye() to create the desired OFFMol.")
         molecule = self.from_openeye(oemol,
                                      allow_undefined_stereo=allow_undefined_stereo)
         return molecule
@@ -1738,6 +1750,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Add explicit hydrogens if they aren't there already
         if not hydrogens_are_explicit:
             rdmol = Chem.AddHs(rdmol)
+        elif hydrogens_are_explicit:
+            for atom_idx in range(rdmol.GetNumAtoms()):
+                atom = rdmol.GetAtomWithIdx(atom_idx)
+                if atom.GetNumImplicitHs() != 0:
+                    raise ValueError(
+                        f"'hydrogens_are_explicit' was specified as True, but RDKit toolkit interpreted "
+                        f"SMILES '{smiles}' as having implicit hydrogen. If this SMILES is intended to "
+                        f"express all explicit hydrogens in the molecule, then you should construct the "
+                        f"desired molecule as an RDMol with no implicit hydrogens, and then use "
+                        f"Molecule.from_rdkit() to create the desired OFFMol.")
 
         molecule = Molecule.from_rdkit(rdmol,
                                        allow_undefined_stereo=allow_undefined_stereo)

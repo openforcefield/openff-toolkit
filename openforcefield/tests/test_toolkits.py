@@ -214,9 +214,66 @@ class TestOpenEyeToolkitWrapper:
             assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_from_openeye_implicit_hydrogen(self):
+        """
+        Test OpenEyeToolkitWrapper for loading a molecule with implicit
+        hydrogens (correct behavior is to add them explicitly)
+        """
+        from openeye import oechem
+
+        smiles_impl = "C#C"
+        oemol_impl = oechem.OEMol()
+        oechem.OESmilesToMol(oemol_impl, smiles_impl)
+        molecule_from_impl = Molecule.from_openeye(oemol_impl)
+
+        assert molecule_from_impl.n_atoms == 4
+
+        smiles_expl = "HC#CH"
+        oemol_expl = oechem.OEMol()
+        oechem.OESmilesToMol(oemol_expl, smiles_expl)
+        molecule_from_expl = Molecule.from_openeye(oemol_expl)
+        assert molecule_from_expl.to_smiles() == molecule_from_impl.to_smiles()
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_openeye_from_smiles_hydrogens_are_explicit(self):
+        """
+        Test to ensure that OpenEyeToolkitWrapper.from_smiles has the proper behavior with
+        respect to its hydrogens_are_explicit kwarg
+        """
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        smiles_impl = "C#C"
+        with pytest.raises(ValueError,
+                           match="but OpenEye Toolkit interpreted SMILES 'C#C' as having implicit hydrogen") as excinfo:
+            offmol = Molecule.from_smiles(smiles_impl,
+                                          toolkit_registry=toolkit_wrapper,
+                                          hydrogens_are_explicit=True)
+        offmol = Molecule.from_smiles(smiles_impl,
+                                      toolkit_registry=toolkit_wrapper,
+                                      hydrogens_are_explicit=False)
+        assert offmol.n_atoms == 4
+
+        smiles_expl = "HC#CH"
+        offmol = Molecule.from_smiles(smiles_expl,
+                                      toolkit_registry=toolkit_wrapper,
+                                      hydrogens_are_explicit=True)
+        assert offmol.n_atoms == 4
+        # It's debatable whether this next function should pass. Strictly speaking, the hydrogens in this SMILES
+        # _are_ explicit, so allowing "hydrogens_are_explicit=False" through here is allowing a contradiction.
+        # We might rethink the name of this kwarg.
+
+        offmol = Molecule.from_smiles(smiles_expl,
+                                      toolkit_registry=toolkit_wrapper,
+                                      hydrogens_are_explicit=False)
+        assert offmol.n_atoms == 4
+
+
+
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
+
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_file_path('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
@@ -472,6 +529,38 @@ class TestRDKitToolkitWrapper:
                                         toolkit_registry=toolkit_wrapper)
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles2 == expected_output_smiles
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_rdkit_from_smiles_hydrogens_are_explicit(self):
+        """
+        Test to ensure that RDKitToolkitWrapper.from_smiles has the proper behavior with
+        respect to its hydrogens_are_explicit kwarg
+        """
+        toolkit_wrapper = RDKitToolkitWrapper()
+        smiles_impl = "C#C"
+        with pytest.raises(ValueError,
+                           match="but RDKit toolkit interpreted SMILES 'C#C' as having implicit hydrogen") as excinfo:
+            offmol = Molecule.from_smiles(smiles_impl,
+                                          toolkit_registry=toolkit_wrapper,
+                                          hydrogens_are_explicit=True)
+        offmol = Molecule.from_smiles(smiles_impl,
+                                      toolkit_registry=toolkit_wrapper,
+                                      hydrogens_are_explicit=False)
+        assert offmol.n_atoms == 4
+
+        smiles_expl = "[H][C]#[C][H]"
+        offmol = Molecule.from_smiles(smiles_expl,
+                                      toolkit_registry=toolkit_wrapper,
+                                      hydrogens_are_explicit=True)
+        assert offmol.n_atoms == 4
+        # It's debatable whether this next function should pass. Strictly speaking, the hydrogens in this SMILES
+        # _are_ explicit, so allowing "hydrogens_are_explicit=False" through here is allowing a contradiction.
+        # We might rethink the name of this kwarg.
+
+        offmol = Molecule.from_smiles(smiles_expl,
+                                      toolkit_registry=toolkit_wrapper,
+                                      hydrogens_are_explicit=False)
+        assert offmol.n_atoms == 4
 
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
