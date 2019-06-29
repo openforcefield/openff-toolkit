@@ -8,6 +8,26 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
+Current development
+-------------------
+
+API-breaking changes
+""""""""""""""""""""
+- `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Fixed a bug in the API where the two ``BondType``
+  parameter attributes ``k`` and ``length`` were interpreted as indexed attributes.
+- `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Fixed a bug in the API that allowed setting indexed
+  attributes to single values instead of always lists.
+
+Code enhancements
+"""""""""""""""""
+- `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: ``ParameterType`` was refactored to improve its
+  extensibility. It is now possible to create new parameter types by using the new descriptors ``ParameterAttribute`` and
+  ``IndexedParameterAttribute``.
+
+Force field added
+"""""""""""""""""
+- `PR #368 <https://github.com/openforcefield/openforcefield/pull/368>`_: Temporarily adds `smirnoff99frosst_experimental.offxml` in `test_forcefields` to address hierarchy problems, redundancies, SMIRKS pattern typos etc., as documented in `issue #367 <https://github.com/openforcefield/openforcefield/issues/367>`_. Will ultimately be propagated to an updated forcefield in the `smirnoff99frosst` repo.
+
 
 0.4.0 - Performance optimizations and support for SMIRNOFF 0.3 specification
 ----------------------------------------------------------------------------

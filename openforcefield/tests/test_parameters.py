@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-#=============================================================================================
+#======================================================================
 # MODULE DOCSTRING
-#=============================================================================================
+#======================================================================
 
 """
 Test classes and function in module openforcefield.typing.engines.smirnoff.parameters.
@@ -10,20 +10,209 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 """
 
 
-#=============================================================================================
+#======================================================================
 # GLOBAL IMPORTS
-#=============================================================================================
+#======================================================================
 
-
-from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterType, BondHandler, \
-    ParameterHandler, AngleHandler, ConstraintHandler, ProperTorsionHandler, ImproperTorsionHandler, \
-    ToolkitAM1BCCHandler, vdWHandler, SMIRNOFFSpecError
-from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
-from openforcefield.utils import detach_units, IncompatibleUnitError
-
+from simtk import unit
 import pytest
 
+from openforcefield.typing.engines.smirnoff.parameters import (
+    ParameterAttribute, IndexedParameterAttribute, ParameterList,
+    ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
+    ImproperTorsionHandler, ToolkitAM1BCCHandler, SMIRNOFFSpecError
+)
+from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
+from openforcefield.utils import detach_units, IncompatibleUnitError
+from openforcefield.utils.collections import ValidatedList
 
+
+#======================================================================
+# Test ParameterAttribute descriptor
+#======================================================================
+
+class TestParameterAttribute:
+    """Test cases for the descriptor ParameterAttribute."""
+
+    def test_default_value(self):
+        """Default values are assigned correctly on initialization."""
+        class MyParameter:
+            attr_optional = ParameterAttribute(default=2)
+        my_par = MyParameter()
+        assert my_par.attr_optional == 2
+
+    def test_none_default_value(self):
+        """None is a valid default value for ParameterAttribute."""
+        class MyParameter:
+            attr_optional = ParameterAttribute(default=None)
+        my_par = MyParameter()
+        assert my_par.attr_optional is None
+
+    def test_required_value(self):
+        """AttributeError is raised if a required attribute is accessed before being initialized."""
+        class MyParameter:
+            attr_required = ParameterAttribute()
+        my_par = MyParameter()
+        with pytest.raises(AttributeError):
+            my_par.attr_required
+
+    def test_unit_validation(self):
+        """ParameterAttributes attached to a unit are validated correctly."""
+        class MyParameter:
+            attr_unit = ParameterAttribute(unit=unit.kilocalories_per_mole/unit.angstrom**2)
+        my_par = MyParameter()
+
+        # TypeError is raised when setting a unit-less value.
+        with pytest.raises(IncompatibleUnitError, match='should have units of'):
+            my_par.attr_unit = 3.0
+        # TypeError is raised when setting a value with incorrect units.
+        with pytest.raises(IncompatibleUnitError, match='should have units of'):
+            my_par.attr_unit = 3.0 * unit.kilocalories_per_mole
+
+        # Otherwise the attribute is assigned correctly.
+        value = 3.0 * unit.kilocalories_per_mole/unit.angstrom**2
+        my_par.attr_unit = value
+        assert my_par.attr_unit == value
+        assert my_par.attr_unit.unit == value.unit
+
+    def test_quantity_string_parsing(self):
+        """ParameterAttributes attached to units convert strings into Quantity objects."""
+        class MyParameter:
+            attr_unit = ParameterAttribute(unit=unit.meter/unit.second**2)
+        my_par = MyParameter()
+
+        my_par.attr_unit = '3.0*meter/second**2'
+        assert my_par.attr_unit == 3.0 * unit.meter/unit.second**2
+        assert my_par.attr_unit.unit == unit.meter/unit.second**2
+
+        # Assigning incorrect units still raises an error.
+        with pytest.raises(IncompatibleUnitError, match='should have units of'):
+            my_par.attr_unit = '3.0'
+        with pytest.raises(IncompatibleUnitError, match='should have units of'):
+            my_par.attr_unit = '3.0*meter/second'
+
+    def test_custom_converter(self):
+        """Custom converters of ParameterAttributes are executed correctly."""
+        class MyParameter:
+            attr_all_to_float = ParameterAttribute(converter=float)
+            attr_int_to_float = ParameterAttribute()
+            @attr_int_to_float.converter
+            def attr_int_to_float(self, attr, value):
+                """Convert only integers to float"""
+                if isinstance(value, int):
+                    return float(value)
+                elif not isinstance(value, float):
+                    raise TypeError()
+                return value
+
+        my_par = MyParameter()
+
+        # Both strings and integers are converted to floats when casted with float().
+        my_par.attr_all_to_float = '1.0'
+        assert isinstance(my_par.attr_all_to_float, float) and my_par.attr_all_to_float == 1.0
+        my_par.attr_all_to_float = 2
+        assert isinstance(my_par.attr_all_to_float, float) and my_par.attr_all_to_float == 2.0
+
+        # Only integers are converted with the custom converter function.
+        with pytest.raises(TypeError):
+            my_par.attr_int_to_float = '1.0'
+        my_par.attr_int_to_float = 2
+        assert isinstance(my_par.attr_int_to_float, float) and my_par.attr_int_to_float == 2.0
+
+    def test_default_pass_validation(self):
+        """The default value of ParameterAttribute is always allowed regardless of the validator/converter."""
+        class MyParameter:
+            attr = ParameterAttribute(default=None, unit=unit.angstrom, converter=unit.Quantity)
+        my_par = MyParameter()
+        my_par.attr = 3.0 * unit.nanometer
+        my_par.attr = None
+        assert my_par.attr is None
+
+    def test_get_descriptor_object(self):
+        """When the descriptor is called from the class, the ParameterAttribute descriptor is returned."""
+        class MyParameter:
+            attr = ParameterAttribute()
+        assert isinstance(MyParameter.attr, ParameterAttribute)
+
+
+class TestIndexedParameterAttribute:
+    """Tests for the IndexedParameterAttribute descriptor."""
+
+    def test_tuple_conversion(self):
+        """IndexedParameterAttribute converts internally sequences to ValidatedList."""
+        class MyParameter:
+            attr_indexed = IndexedParameterAttribute()
+        my_par = MyParameter()
+        my_par.attr_indexed = [1, 2, 3]
+        assert isinstance(my_par.attr_indexed, ValidatedList)
+
+    def test_indexed_default(self):
+        """IndexedParameterAttribute handles default values correctly."""
+        class MyParameter:
+            attr_indexed_optional = IndexedParameterAttribute(default=None)
+        my_par = MyParameter()
+        assert my_par.attr_indexed_optional is None
+
+        # Assigning the default is allowed.
+        my_par.attr_indexed_optional = None
+        assert my_par.attr_indexed_optional is None
+
+    def test_units_on_all_elements(self):
+        """IndexedParameterAttribute validates every single element of the sequence."""
+        class MyParameter:
+            attr_indexed_unit = IndexedParameterAttribute(unit=unit.gram)
+        my_par = MyParameter()
+
+        # Strings are correctly converted.
+        my_par.attr_indexed_unit = ['1.0*gram', 2*unit.gram]
+        assert my_par.attr_indexed_unit == [1.0*unit.gram, 2*unit.gram]
+
+        # Incompatible units on a single elements are correctly caught.
+        with pytest.raises(IncompatibleUnitError, match='should have units of'):
+            my_par.attr_indexed_unit = [3.0, 2*unit.gram]
+        with pytest.raises(IncompatibleUnitError, match='should have units of'):
+            my_par.attr_indexed_unit = [2*unit.gram, 4.0*unit.meter]
+
+    def test_converter_on_all_elements(self):
+        """IndexedParameterAttribute calls custom converters on every single element of the sequence."""
+        class MyParameter:
+            attr_indexed_converter = IndexedParameterAttribute(converter=float)
+        my_par = MyParameter()
+
+        my_par.attr_indexed_converter = [1, '2.0', '1e-3', 4.0]
+        assert my_par.attr_indexed_converter == [1.0, 2.0, 1e-3, 4.0]
+
+    def test_validate_new_elements(self):
+        """New elements set in the list are correctly validated."""
+        class MyParameter:
+            attr_indexed = IndexedParameterAttribute(converter=int)
+        my_par = MyParameter()
+        my_par.attr_indexed = (1, 2, 3)
+
+        # Modifying one or more elements of the list should validate them.
+        my_par.attr_indexed[2] = '4'
+        assert my_par.attr_indexed[2] == 4
+        my_par.attr_indexed[0:3] = ['2', '3', 4]
+        assert my_par.attr_indexed == [2, 3, 4]
+
+        # Same for append().
+        my_par.attr_indexed.append('5')
+        assert my_par.attr_indexed[3] == 5
+
+        # And extend.
+        my_par.attr_indexed.extend([6, '7'])
+        assert my_par.attr_indexed[5] == 7
+        my_par.attr_indexed += ['8', 9]
+        assert my_par.attr_indexed[6] == 8
+
+        # And insert.
+        my_par.attr_indexed.insert(5, '10')
+        assert my_par.attr_indexed[5] == 10
+
+
+#======================================================================
+# Test ParameterHandler
+#======================================================================
 
 class TestParameterHandler:
 
@@ -300,6 +489,108 @@ class TestParameterList:
 
 class TestParameterType:
 
+    def test_find_all_parameter_attrs(self):
+        """ParameterType find all ParameterAttributes in the declared order."""
+        class MyParameter(ParameterType):
+            attr = ParameterAttribute()
+            indexed = IndexedParameterAttribute()
+
+        parameter_attributes = MyParameter._get_parameter_attributes()
+
+        # The function should find also the parent's attributes and in the correct order.
+        expected_attributes = ['smirks', 'id', 'parent_id', 'attr', 'indexed']
+        assert list(parameter_attributes.keys()) == expected_attributes
+
+        # The keys map to the descriptor instances.
+        assert type(parameter_attributes['attr']) is ParameterAttribute
+        assert type(parameter_attributes['indexed']) is IndexedParameterAttribute
+
+    def test_find_all_indexed_parameter_attrs(self):
+        """ParameterType find all IndexedParameterAttributes."""
+        class MyParameter(ParameterType):
+            attr = ParameterAttribute()
+            indexed = IndexedParameterAttribute()
+            attr2 = ParameterAttribute()
+            indexed2 = IndexedParameterAttribute(default=None)
+
+        expected_names = ['indexed', 'indexed2']
+        parameter_attributes = MyParameter._get_indexed_parameter_attributes()
+        assert list(parameter_attributes.keys()) == expected_names
+        assert all(isinstance(parameter_attributes[name], IndexedParameterAttribute)
+                   for name in expected_names)
+
+    def test_find_all_required_and_optional_parameter_attrs(self):
+        """ParameterType distinguish between required and optional ParameterAttributes."""
+        class MyParameter(ParameterType):
+            required = ParameterAttribute()
+            optional = ParameterAttribute(default=1)
+            required_indexed = IndexedParameterAttribute()
+            optional_indexed2 = IndexedParameterAttribute(default=None)
+
+        expected_names = ['smirks', 'required', 'required_indexed']
+        parameter_attributes = MyParameter._get_required_parameter_attributes()
+        assert list(parameter_attributes.keys()) == expected_names
+
+        expected_names = ['id', 'parent_id', 'optional', 'optional_indexed2']
+        parameter_attributes = MyParameter._get_optional_parameter_attributes()
+        assert list(parameter_attributes.keys()) == expected_names
+
+    def test_required_attribute_on_init(self):
+        """ParameterType raises TypeError if a required attribute is not specified on construction."""
+        class MyParameter(ParameterType):
+            required = ParameterAttribute()
+            optional = ParameterAttribute(default=None)
+        with pytest.raises(SMIRNOFFSpecError, match="require the following missing parameters"):
+            MyParameter(smirks='[*:1]', optional=1)
+
+    def test_indexed_attrs(self):
+        """ParameterType handles indexed attributes correctly."""
+        class MyParameter(ParameterType):
+            a = IndexedParameterAttribute()
+            b = IndexedParameterAttribute()
+        my_par = MyParameter(smirks='[*:1]', a1=1, a3=3, a2=2, b1=4, b2=5, b3=6)
+        assert my_par.a == [1, 2, 3]
+        assert my_par.b == [4, 5, 6]
+
+    def test_sequence_init_indexed_attr(self):
+        """ParameterType handle indexed attributes initialized with sequences correctly."""
+        class MyParameter(ParameterType):
+            a = IndexedParameterAttribute()
+        my_par = MyParameter(smirks='[*:1]', a=(1, 2))
+        assert my_par.a == [1, 2]
+
+    def test_same_length_indexed_attrs(self):
+        """ParameterType raises TypeError if indexed attributes of different lengths are given."""
+        class MyParameter(ParameterType):
+            a = IndexedParameterAttribute()
+            b = IndexedParameterAttribute()
+        with pytest.raises(TypeError, match="indexed attributes have different lengths"):
+            MyParameter(smirks='[*:1]', a1=1, a2=2, a3=3, b1=1, b2=2)
+
+    def test_error_single_value_plus_index(self):
+        """ParameterType raises an error if an indexed attribute is specified with and without index."""
+        class MyParameter(ParameterType):
+            a = IndexedParameterAttribute()
+        with pytest.raises(TypeError, match="'a' has been specified with and without index"):
+            MyParameter(smirks='[*:1]', a=[1], a1=2)
+
+    def test_find_all_defined_parameter_attrs(self):
+        """ParameterType._get_defined_attributes() discards None default-value attributes."""
+        class MyParameter(ParameterType):
+            required1 = ParameterAttribute()
+            optional1 = ParameterAttribute(default=None)
+            optional2 = IndexedParameterAttribute(default=None)
+            optional3 = ParameterAttribute(default=5)
+            required2 = IndexedParameterAttribute()
+            optional3 = ParameterAttribute(default=2)
+        my_par = MyParameter(smirks='[*:1]', required1=0, optional1=10, required2=[0])
+
+        # _get_defined_parameter_attributes discards only the attribute
+        # that are set to None as a default value.
+        expected_names = ['smirks', 'required1', 'required2', 'optional1', 'optional3']
+        parameter_attributes = my_par._get_defined_parameter_attributes()
+        assert list(parameter_attributes.keys()) == expected_names
+
     def test_base_parametertype_to_dict(self):
         """
         Test ParameterType to_dict.
@@ -308,6 +599,10 @@ class TestParameterType:
         param_dict = p1.to_dict()
         assert param_dict['smirks'] == '[*:1]'
         assert len(param_dict.keys()) == 1
+
+
+class TestBondType:
+    """Tests for the BondType class."""
 
     def test_bondtype_to_dict(self):
         """
@@ -328,7 +623,6 @@ class TestParameterType:
                                   'k_unit': (unit.angstrom ** -2) * (unit.mole ** -1) * (unit.kilocalorie ** 1)
                                   }
 
-
     def test_bondtype_to_dict_custom_output_units(self):
         """
         Test BondType to_dict with custom output units.
@@ -343,7 +637,6 @@ class TestParameterType:
                                                                                        unit.nanometer})
         assert attached_units['length_unit'] == unit.nanometer
         assert abs(param_dict_unitless['length'] - 0.102) < 1e-10
-
 
     def test_bondtype_to_dict_invalid_output_units(self):
         """
@@ -446,7 +739,8 @@ class TestParameterType:
         assert ('pilot', 'alice') not in param_dict.items()
 
 
-
+class TestProperTorsionType:
+    """Tests for the ProperTorsionType class."""
 
     def test_single_term_proper_torsion(self):
         """
@@ -484,7 +778,6 @@ class TestParameterType:
         assert ('periodicity1', 2) in param_dict.items()
         assert ('idivf1', 4) in param_dict.items()
 
-
     def test_multi_term_proper_torsion(self):
         """
         Test creation and serialization of a multi-term proper torsion
@@ -500,12 +793,12 @@ class TestParameterType:
                                                     k2=6 * unit.kilocalorie_per_mole,
                                                     )
         param_dict = p1.to_dict()
-        assert ('k1', 5 * unit.kilocalorie_per_mole) in param_dict.items()
-        assert ('phase1', 30 * unit.degree) in param_dict.items()
-        assert ('periodicity1', 2) in param_dict.items()
-        assert ('k2', 6 * unit.kilocalorie_per_mole) in param_dict.items()
-        assert ('phase2', 31 * unit.degree) in param_dict.items()
-        assert ('periodicity2', 3) in param_dict.items()
+        assert param_dict['k1'] == 5 * unit.kilocalorie_per_mole
+        assert param_dict['phase1'] == 30 * unit.degree
+        assert param_dict['periodicity1'] == 2
+        assert param_dict['k2'] == 6 * unit.kilocalorie_per_mole
+        assert param_dict['phase2'] == 31 * unit.degree
+        assert param_dict['periodicity2'] == 3
 
     def test_multi_term_proper_torsion_skip_index(self):
         """
@@ -531,7 +824,7 @@ class TestParameterType:
         """
         from simtk import unit
 
-        with pytest.raises(IncompatibleUnitError, match="__init__ function.  phase with value 31 A, is incompatible")\
+        with pytest.raises(IncompatibleUnitError, match="should have units of")\
                 as context:
             p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                         phase1=30 * unit.degree,
@@ -542,37 +835,37 @@ class TestParameterType:
                                                         k2=6 * unit.kilocalorie_per_mole,
                                                         )
 
+def test_torsion_handler_charmm_potential():
+    """
+    Test creation of TorsionHandlers with the deprecated 0.2 potential value "charmm" instead of the current
+    supported potential value "fourier".
+    """
+    # Test creating ProperTorsionHandlers
+    with pytest.raises(SMIRNOFFSpecError, match="ProperTorsionHandler given 'potential' value of 'charmm'. "
+                                                "Supported options are "
+                                                "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
+            as context:
+        ph1 = ProperTorsionHandler(potential='charmm', skip_version_check=True)
+    ph1 = ProperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
-    def test_torsion_handler_potential_setting(self):
-        """
-        Test creation of TorsionHandlers with the deprecated 0.2 potential value "charmm" instead of the current
-        supported potential value "fourier".
-        """
-        # Test creating ProperTorsionHandlers
-        with pytest.raises(SMIRNOFFSpecError, match="ProperTorsionHandler given 'potential' value of 'charmm'. "
-                                                    "Supported options are "
-                                                    "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
-                as context:
-            ph1 = ProperTorsionHandler(potential='charmm', skip_version_check=True)
-        ph1 = ProperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
-
-        # Same test, but with ImproperTorsionHandler
-        with pytest.raises(SMIRNOFFSpecError, match="ImproperTorsionHandler given 'potential' value of 'charmm'. "
-                                                    "Supported options are "
-                                                    "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
-                as context:
-            ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
-        ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
+    # Same test, but with ImproperTorsionHandler
+    with pytest.raises(SMIRNOFFSpecError, match="ImproperTorsionHandler given 'potential' value of 'charmm'. "
+                                                "Supported options are "
+                                                "[[]'k[*][(]1[+]cos[(]periodicity[*]theta[-]phase[)][)]'[]].")\
+            as context:
+        ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
+    ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
 
-        #     p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
-        #                                                 phase1=30 * unit.degree,
-        #                                                 periodicity1=2,
-        #                                                 k1=5 * unit.kilocalorie_per_mole,
-        #                                                 phase2=31 * unit.angstrom, # This should be caught
-        #                                                 periodicity2=3,
-        #                                                 k2=6 * unit.kilocalorie_per_mole,
-        #                                                 )
+    #     p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+    #                                                 phase1=30 * unit.degree,
+    #                                                 periodicity1=2,
+    #                                                 k1=5 * unit.kilocalorie_per_mole,
+    #                                                 phase2=31 * unit.angstrom, # This should be caught
+    #                                                 periodicity2=3,
+    #                                                 k2=6 * unit.kilocalorie_per_mole,
+    #                                                 )
+
 
 # TODO: test_nonbonded_settings (ensure that choices in Electrostatics and vdW tags resolve
 #                                to correct openmm.NonbondedForce subtypes, that setting different cutoffs raises
