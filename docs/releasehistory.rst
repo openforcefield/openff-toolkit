@@ -22,8 +22,8 @@ Bug fixes
 """""""""
 - `PR #351 <https://github.com/openforcefield/openforcefield/pull/351>`_: Fixes
   `Issue #344 <https://github.com/openforcefield/openforcefield/issues/344>`_,
-  in which :py:meth:`the main Molecule initializer <openforcefield.topology.molecule.FrozenMolecule.__init__>`
-  and several other Molecule-construction functions ignored or did not
+  in which the main :py:class:`Molecule() <openforcefield.topology.molecule.FrozenMolecule.__init__>`
+  constructor and several other Molecule-construction functions ignored or did not
   expose the ``allow_undefined_stereo`` keyword argument.
 - `PR #351 <https://github.com/openforcefield/openforcefield/pull/351>`_: Fixes
   a bug where a molecule which previously generated a SMILES using one cheminformatics toolkit
@@ -53,9 +53,13 @@ Bug fixes
 
 Code enhancements
 """""""""""""""""
-- `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: ``ParameterType`` was refactored to improve its
-  extensibility. It is now possible to create new parameter types by using the new descriptors ``ParameterAttribute`` and
-  ``IndexedParameterAttribute``.
+- `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_:
+  :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+  was refactored to improve its extensibility. It is now possible to create new parameter
+  types by using the new descriptors
+  :py:class:`ParameterAttribute <openforcefield.typing.engines.smirnoff.parameters.ParameterAttribute>`
+  and
+  :py:class:`IndexedParameterAttribute <openforcefield.typing.engines.smirnoff.parameters.IndexedParameterAttribute>`.
 - `PR #357 <https://github.com/openforcefield/openforcefield/pull/357>`_: Addresses
   `Issue #356 <https://github.com/openforcefield/openforcefield/issues/356>`_ by raising
   an informative error message if a user attempts to load an OpenMM topology which
@@ -67,7 +71,7 @@ Force fields added
 - `PR #368 <https://github.com/openforcefield/openforcefield/pull/368>`_: Temporarily adds
   ``test_forcefields/smirnoff99frosst_experimental.offxml`` to address hierarchy problems, redundancies, SMIRKS
   pattern typos etc., as documented in `issue #367 <https://github.com/openforcefield/openforcefield/issues/367>`_.
-  Will ultimately be propagated to an updated forcefield in the `smirnoff99frosst` repo.
+  Will ultimately be propagated to an updated forcefield in the ``openforcefield/smirnoff99frosst`` repo.
 - `PR #371 <https://github.com/openforcefield/openforcefield/pull/371>`_: Adds
   ``test_forcefields/smirff99Frosst_reference_0_1_spec.offxml``, a SMIRNOFF 0.1 spec file enclosed by the legacy
   ``SMIRFF`` tag. This file is used in backwards-compatibility testing.
