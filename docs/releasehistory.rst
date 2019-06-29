@@ -13,15 +13,38 @@ Current development
 
 API-breaking changes
 """"""""""""""""""""
-- `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Fixed a bug in the API where the two ``BondType``
+- `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Fixed a bug in the API where the two :py:class:`BondType <openforcefield.typing.engines.smirnoff.parameters.BondHandler.BondType>`
   parameter attributes ``k`` and ``length`` were interpreted as indexed attributes.
 - `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Fixed a bug in the API that allowed setting indexed
   attributes to single values instead of always lists.
 
 Bug fixes
 """""""""
-- `PR #371 <https://github.com/openforcefield/openforcefield/pull/371>`_: Fixes error when reading early SMIRNOFF 0.1
-  spec files enclosed by a top-level ``SMIRFF`` tag.
+- `PR #351 <https://github.com/openforcefield/openforcefield/pull/351>`_: Fixes
+  `Issue #344 <https://github.com/openforcefield/openforcefield/issues/344>`_,
+  in which :py:meth:`the main Molecule initializer <openforcefield.topology.molecule.FrozenMolecule.__init__>`
+  and several other Molecule-construction functions ignored or did not
+  expose the ``allow_undefined_stereo`` keyword argument.
+- `PR #351 <https://github.com/openforcefield/openforcefield/pull/351>`_: Fixes
+  a bug where a molecule which previously generated a SMILES using one cheminformatics toolkit
+  returns the same SMILES, even though a different toolkit (which would generate
+  a different SMILES for the molecule) is explicitly called.
+- `PR #354 <https://github.com/openforcefield/openforcefield/pull/354>`_: Fixes
+  the error message that is printed if an unexpected parameter attribute is found while loading
+  data into a :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  (now instructs users to specify ``allow_cosmetic_attributes`` instead of ``permit_cosmetic_attributes``)
+- `PR #364 <https://github.com/openforcefield/openforcefield/pull/364>`_: Fixes
+  `Issue #362 <https://github.com/openforcefield/openforcefield/issues/362>`_ by
+  modifying
+  :py:meth:`OpenEyeToolkitWrapper.from_smiles <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.from_smiles>`
+  and
+  :py:meth:`RDKitToolkitWrapper.from_smiles <openforcefield.utils.toolkits.RDKitToolkitWrapper.from_smiles>`
+  to make implicit hydrogens explicit before molecule creation. These functions also
+  now raise an error if the optional keyword ``hydrogens_are_explicit=True`` but the
+  SMILES are interpreted by the backend cheminformatic toolkit as having implicit
+  hydrogens.
+- `PR #371 <https://github.com/openforcefield/openforcefield/pull/371>`_: Fixes
+  error when reading early SMIRNOFF 0.1 spec files enclosed by a top-level ``SMIRFF`` tag.
 
 .. note ::
   The enclosing ``SMIRFF`` tag is present only in legacy files.
@@ -33,6 +56,11 @@ Code enhancements
 - `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: ``ParameterType`` was refactored to improve its
   extensibility. It is now possible to create new parameter types by using the new descriptors ``ParameterAttribute`` and
   ``IndexedParameterAttribute``.
+- `PR #357 <https://github.com/openforcefield/openforcefield/pull/357>`_: Addresses
+  `Issue #356 <https://github.com/openforcefield/openforcefield/issues/356>`_ by raising
+  an informative error message if a user attempts to load an OpenMM topology which
+  is probably missing connectivity information.
+
 
 Force fields added
 """"""""""""""""""
