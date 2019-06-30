@@ -149,7 +149,7 @@ class ParameterAttribute:
         setting the attribute.
 
     Examples
-    -------
+    --------
 
     Create a parameter type with an optional and a required attribute.
 
