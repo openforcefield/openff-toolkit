@@ -583,17 +583,35 @@ class TestForceField():
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_ethanol_gbsa(self, toolkit_registry, registry_description):
         from simtk.openmm import app
+        #from openforcefield.utils.structure import check_energy_is_finite
 
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_gbsa_ff)
         pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        off_topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
-        omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
-        from openforcefield.utils.structure import check_energy_is_finite
+        omm_system = forcefield.create_openmm_system(off_topology, toolkit_registry=toolkit_registry)
 
-        assert 0
+        integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+        context = openmm.Context(omm_system, integrator)
+        context.setPositions(pdbfile.positions)
+        state = context.getState(getEnergy=True)
+        energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
+        if np.isnan(energy):
+            raise Exception('Potential energy is NaN')
+        # time_step = 2 * unit.femtoseconds  # simulation timestep
+        # ##### CHANGED BELOW #####
+        # temperature = 0 * unit.kelvin  # simulation temperature
+        # friction = 1 / unit.picosecond  # collision rate
+        # integrator = openmm.LangevinIntegrator(temperature, friction, time_step)
+        #
+        #
+        # simulation = openmm.app.Simulation(omm_topology, omm_system, integrator)
+        #
+        # simulation.context.setPositions(offmol.conformers[0])
+
+        raise Exception(energy)
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_1_cyclohexane_1_ethanol(self, toolkit_registry, registry_description):

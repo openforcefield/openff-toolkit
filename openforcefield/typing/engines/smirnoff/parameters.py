@@ -2924,6 +2924,7 @@ class GBSAParameterHandler(ParameterHandler):
         # TODO: Rework this
         import simtk
 
+
         # No previous GBSAForce should exist, so we're safe just making one here.
         force_map = {
             'OBC1': simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
@@ -2941,7 +2942,15 @@ class GBSAParameterHandler(ParameterHandler):
         existing = [
             f for f in existing if type(f) == openmm.NonbondedForce
         ]
+
         nonbonded_force = existing[0]
+
+        # Set the GBSAForce to have the same nonbonded method as vdW/coulomb
+        gbsa_force.setCutoffDistance(nonbonded_force.getCutoffDistance())
+        if nonbonded_force.usesPeriodicBoundaryConditions():
+            gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.CutoffPeriodic)
+        else:
+            gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.NoCutoff)
         # Add all GBSA terms to the system.
         # expected_parameters = GBSAParameterHandler.GB_expected_parameters[
         #     self.gb_model]
@@ -2963,7 +2972,7 @@ class GBSAParameterHandler(ParameterHandler):
             #       AMBER GBSA-derived classes are different from those provided in the
             #       SMIRNOFF spec, and undergo a transformation before they are passed
             #       into the OMM system's GBSAForce
-            params_to_add[atom_idx] = [charge, gbsatype.radius, gbsatype.scale * gbsatype.radius]
+            params_to_add[atom_idx] = [charge, gbsatype.radius, gbsatype.scale]# * gbsatype.radius]
 
         for particle_param in params_to_add:
             gbsa_force.addParticle(particle_param)
