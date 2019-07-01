@@ -11,17 +11,14 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 Current development
 -------------------
 
-API-breaking changes
-""""""""""""""""""""
+Bug fixes
+"""""""""
 - `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Fixed a
-  bug in the API where the two
+  bug where the two
   :py:class:`BondType <openforcefield.typing.engines.smirnoff.parameters.BondHandler.BondType>`
   parameter attributes ``k`` and ``length`` were interpreted as indexed attributes.
 - `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Fixed a
-  bug in the API that allowed setting indexed attributes to single values instead of always lists.
-
-Bug fixes
-"""""""""
+  bug that allowed setting indexed attributes to single values instead of always lists.
 - `PR #351 <https://github.com/openforcefield/openforcefield/pull/351>`_: Fixes
   `Issue #344 <https://github.com/openforcefield/openforcefield/issues/344>`_,
   in which the main :py:class:`FrozenMolecule <openforcefield.topology.FrozenMolecule>`
