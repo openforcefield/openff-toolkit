@@ -19,6 +19,9 @@ Bug fixes
   parameter attributes ``k`` and ``length`` were interpreted as indexed attributes.
 - `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Fixed a
   bug that allowed setting indexed attributes to single values instead of always lists.
+- `PR #370 <https://github.com/openforcefield/openforcefield/pull/370>`_: Fixed a bug in the API where ``BondHandler``,
+  ``ProperTorsionHandler``, and ``ImroperTorsionHandler`` exposed indexed parameters that were removed from the spec in
+  0.4.0.
 - `PR #351 <https://github.com/openforcefield/openforcefield/pull/351>`_: Fixes
   `Issue #344 <https://github.com/openforcefield/openforcefield/issues/344>`_,
   in which the main :py:class:`FrozenMolecule <openforcefield.topology.FrozenMolecule>`
@@ -74,6 +77,7 @@ Force fields added
 - `PR #371 <https://github.com/openforcefield/openforcefield/pull/371>`_: Adds
   ``test_forcefields/smirff99Frosst_reference_0_1_spec.offxml``, a SMIRNOFF 0.1 spec file enclosed by the legacy
   ``SMIRFF`` tag. This file is used in backwards-compatibility testing.
+
 
 0.4.0 - Performance optimizations and support for SMIRNOFF 0.3 specification
 ----------------------------------------------------------------------------
