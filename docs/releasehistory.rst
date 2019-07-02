@@ -21,16 +21,31 @@ API-breaking changes
   ``ProperTorsionHandler``, and ``ImroperTorsionHandler`` exposed indexed parameters that were removed from the spec in
   0.4.0.
 
+Bug fixes
+"""""""""
+- `PR #371 <https://github.com/openforcefield/openforcefield/pull/371>`_: Fixes error when reading early SMIRNOFF 0.1
+  spec files enclosed by a top-level ``SMIRFF`` tag.
+
+.. note ::
+  The enclosing ``SMIRFF`` tag is present only in legacy files.
+  Since developing a formal specification, the only acceptable top-level tag value in a SMIRNOFF data structure is
+  ``SMIRNOFF``.
+
 Code enhancements
 """""""""""""""""
 - `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_-`#370 <https://github.com/openforcefield/openforcefield/pull/370>`_: ``ParameterType``
   and ``ParameterHandler`` were refactored to improve their extensibility. It is now possible to create new parameter types
   and handlers by using the new descriptors ``ParameterAttribute`` and ``IndexedParameterAttribute``.
 
-Force field added
-"""""""""""""""""
-- `PR #368 <https://github.com/openforcefield/openforcefield/pull/368>`_: Temporarily adds `smirnoff99frosst_experimental.offxml` in `test_forcefields` to address hierarchy problems, redundancies, SMIRKS pattern typos etc., as documented in `issue #367 <https://github.com/openforcefield/openforcefield/issues/367>`_. Will ultimately be propagated to an updated forcefield in the `smirnoff99frosst` repo.
-
+Force fields added
+""""""""""""""""""
+- `PR #368 <https://github.com/openforcefield/openforcefield/pull/368>`_: Temporarily adds
+  ``test_forcefields/smirnoff99frosst_experimental.offxml`` to address hierarchy problems, redundancies, SMIRKS
+  pattern typos etc., as documented in `issue #367 <https://github.com/openforcefield/openforcefield/issues/367>`_.
+  Will ultimately be propagated to an updated forcefield in the `smirnoff99frosst` repo.
+- `PR #371 <https://github.com/openforcefield/openforcefield/pull/371>`_: Adds
+  ``test_forcefields/smirff99Frosst_reference_0_1_spec.offxml``, a SMIRNOFF 0.1 spec file enclosed by the legacy
+  ``SMIRFF`` tag. This file is used in backwards-compatibility testing.
 
 0.4.0 - Performance optimizations and support for SMIRNOFF 0.3 specification
 ----------------------------------------------------------------------------
