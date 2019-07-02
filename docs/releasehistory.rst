@@ -73,6 +73,16 @@ Bug fixes
   Since developing a formal specification, the only acceptable top-level tag value in a SMIRNOFF data structure is
   ``SMIRNOFF``.
 
+Bug fixes
+"""""""""
+- `PR #371 <https://github.com/openforcefield/openforcefield/pull/371>`_: Fixes error when reading early SMIRNOFF 0.1
+  spec files enclosed by a top-level ``SMIRFF`` tag.
+
+.. note ::
+  The enclosing ``SMIRFF`` tag is present only in legacy files.
+  Since developing a formal specification, the only acceptable top-level tag value in a SMIRNOFF data structure is
+  ``SMIRNOFF``.
+
 Code enhancements
 """""""""""""""""
 - `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_:
@@ -88,6 +98,7 @@ Code enhancements
   is probably missing connectivity information.
 
 
+
 Force fields added
 """"""""""""""""""
 - `PR #368 <https://github.com/openforcefield/openforcefield/pull/368>`_: Temporarily adds
@@ -97,6 +108,7 @@ Force fields added
 - `PR #371 <https://github.com/openforcefield/openforcefield/pull/371>`_: Adds
   ``test_forcefields/smirff99Frosst_reference_0_1_spec.offxml``, a SMIRNOFF 0.1 spec file enclosed by the legacy
   ``SMIRFF`` tag. This file is used in backwards-compatibility testing.
+
 
 
 0.4.0 - Performance optimizations and support for SMIRNOFF 0.3 specification
