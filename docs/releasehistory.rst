@@ -73,16 +73,6 @@ Bug fixes
   Since developing a formal specification, the only acceptable top-level tag value in a SMIRNOFF data structure is
   ``SMIRNOFF``.
 
-Bug fixes
-"""""""""
-- `PR #371 <https://github.com/openforcefield/openforcefield/pull/371>`_: Fixes error when reading early SMIRNOFF 0.1
-  spec files enclosed by a top-level ``SMIRFF`` tag.
-
-.. note ::
-  The enclosing ``SMIRFF`` tag is present only in legacy files.
-  Since developing a formal specification, the only acceptable top-level tag value in a SMIRNOFF data structure is
-  ``SMIRNOFF``.
-
 Code enhancements
 """""""""""""""""
 - `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_:
