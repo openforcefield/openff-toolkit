@@ -22,6 +22,8 @@ __all__ = [
     'ParameterList',
     'ParameterType',
     'ParameterHandler',
+    'ParameterAttribute',
+    'IndexedParameterAttribute',
     'ConstraintHandler',
     'BondHandler',
     'AngleHandler',
