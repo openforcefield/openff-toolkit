@@ -41,7 +41,7 @@ Bug fixes
   :py:class:`ProperTorsionHandler <openforcefield.typing.engines.smirnoff.parameters.ProperTorsionHandler>`
   , and
   :py:class:`ImproperTorsionHandler <openforcefield.typing.engines.smirnoff.parameters.ImproperTorsionHandler>`
-  exposed non-functional indexed parameters that were removed from the SMIRNOFF 0.3 spec.
+  exposed non-functional indexed parameters.
 - `PR #351 <https://github.com/openforcefield/openforcefield/pull/351>`_: Fixes
   `Issue #344 <https://github.com/openforcefield/openforcefield/issues/344>`_,
   in which the main :py:class:`FrozenMolecule <openforcefield.topology.FrozenMolecule>`
