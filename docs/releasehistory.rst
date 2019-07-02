@@ -16,12 +16,18 @@ Bug fixes
 - `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Fixed a
   bug where the two
   :py:class:`BondType <openforcefield.typing.engines.smirnoff.parameters.BondHandler.BondType>`
-  parameter attributes ``k`` and ``length`` were interpreted as indexed attributes.
+  parameter attributes ``k`` and ``length`` were treated as indexed attributes. (``k`` and
+  ``length`` values that correspond to specific bond orders will be indexed under
+  ``k_bondorder1``, ``k_bondorder2``, etc when implemented in the future)
 - `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Fixed a
-  bug that allowed setting indexed attributes to single values instead of always lists.
-- `PR #370 <https://github.com/openforcefield/openforcefield/pull/370>`_: Fixed a bug in the API where ``BondHandler``,
-  ``ProperTorsionHandler``, and ``ImroperTorsionHandler`` exposed indexed parameters that were removed from the spec in
-  0.4.0.
+  bug that allowed setting indexed attributes to single values instead of strictly lists.
+- `PR #370 <https://github.com/openforcefield/openforcefield/pull/370>`_: Fixed a
+  bug in the API where
+  :py:class:`BondHandler <openforcefield.typing.engines.smirnoff.parameters.BondHandler>`,
+  :py:class:`ProperTorsionHandler <openforcefield.typing.engines.smirnoff.parameters.ProperTorsionHandler>`
+  , and
+  :py:class:`ImproperTorsionHandler <openforcefield.typing.engines.smirnoff.parameters.ImproperTorsionHandler>`
+  exposed non-functional indexed parameters that were removed from the spec in 0.4.0.
 - `PR #351 <https://github.com/openforcefield/openforcefield/pull/351>`_: Fixes
   `Issue #344 <https://github.com/openforcefield/openforcefield/issues/344>`_,
   in which the main :py:class:`FrozenMolecule <openforcefield.topology.FrozenMolecule>`
