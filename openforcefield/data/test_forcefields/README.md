@@ -8,7 +8,7 @@
 - `benzene_minimal.offxml`: Minimal offxml file for benzene constructed from smirnoff99Frosst 9/22/16 (dx.doi.org/10.5281/zenodo.154235), intended for use in testing impropers.
 - `smirnoff99Frosst.offxml`: (DEPRECATED) SMIRNOFF99Frosst force field as generated in `utilities/convert_frosst` from `smirnoffishFrcmod.parm99Frosst.txt` as per the README.md there. 
   Also maintained as a separate package on GitHub at https://github.com/openforcefield/smirnoff99frosst. 
-  *NOTE:* There are many versions of the smirnoff99Frosst force field, and this file *SHOULD NOT* be assumed to correspond to *ANY* released version.
+  **NOTE:** There are many versions of the smirnoff99Frosst force field, and this file **SHOULD NOT** be assumed to correspond to **ANY** released version.
   This file exists only as a basis for automated testing and may be updated at any time.
 - `smirnoff99frosst_experimental.offxml`: Temporarily added to address hierarchy problems, redundancies, SMIRKS pattern typos etc., as documented in issue #367. 
   Will ultimately be propagated to an updated forcefield in the openforcefield/smirnoff99frosst repo.`
