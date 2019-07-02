@@ -22,6 +22,8 @@ __all__ = [
     'ParameterList',
     'ParameterType',
     'ParameterHandler',
+    'ParameterAttribute',
+    'IndexedParameterAttribute',
     'ConstraintHandler',
     'BondHandler',
     'AngleHandler',
@@ -154,7 +156,7 @@ class ParameterAttribute:
         A parameter attribute with multiple terms.
 
     Examples
-    -------
+    --------
 
     Create a parameter type with an optional and a required attribute.
 

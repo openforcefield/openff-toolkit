@@ -812,6 +812,7 @@ class ForceField:
 
         # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation
 
+
         if "SMIRNOFF" in smirnoff_data:
             version = smirnoff_data['SMIRNOFF']['version']
         elif "SMIRFF" in smirnoff_data:
