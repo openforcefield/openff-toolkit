@@ -17,6 +17,9 @@ API-breaking changes
   parameter attributes ``k`` and ``length`` were interpreted as indexed attributes.
 - `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Fixed a bug in the API that allowed setting indexed
   attributes to single values instead of always lists.
+- `PR #370 <https://github.com/openforcefield/openforcefield/pull/370>`_: Fixed a bug in the API where ``BondHandler``,
+  ``ProperTorsionHandler``, and ``ImroperTorsionHandler`` exposed indexed parameters that were removed from the spec in
+  0.4.0.
 
 Bug fixes
 """""""""
@@ -30,9 +33,9 @@ Bug fixes
 
 Code enhancements
 """""""""""""""""
-- `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: ``ParameterType`` was refactored to improve its
-  extensibility. It is now possible to create new parameter types by using the new descriptors ``ParameterAttribute`` and
-  ``IndexedParameterAttribute``.
+- `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_-`#370 <https://github.com/openforcefield/openforcefield/pull/370>`_: ``ParameterType``
+  and ``ParameterHandler`` were refactored to improve their extensibility. It is now possible to create new parameter types
+  and handlers by using the new descriptors ``ParameterAttribute`` and ``IndexedParameterAttribute``.
 
 Force fields added
 """"""""""""""""""
