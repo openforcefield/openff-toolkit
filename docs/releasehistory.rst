@@ -8,8 +8,22 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
-Current development
--------------------
+0.4.1 - Bugfix Release
+----------------------
+
+This update fixes several toolkit bugs that have been reported by the community.
+Details of these bugfixes are provided below.
+
+It also refactors how
+:py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+and
+:py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
+store their attributes, by introducing
+:py:class:`ParameterAttribute <openforcefield.typing.engines.smirnoff.parameters.ParameterAttribute>`
+and
+:py:class:`IndexedParameterAttribute <openforcefield.typing.engines.smirnoff.parameters.IndexedParameterAttribute>`.
+These new attribute-handling classes provide a consistent backend which should simplify manipulation of parameters
+and implementation of new handlers.
 
 Bug fixes
 """""""""
@@ -27,7 +41,7 @@ Bug fixes
   :py:class:`ProperTorsionHandler <openforcefield.typing.engines.smirnoff.parameters.ProperTorsionHandler>`
   , and
   :py:class:`ImproperTorsionHandler <openforcefield.typing.engines.smirnoff.parameters.ImproperTorsionHandler>`
-  exposed non-functional indexed parameters that were removed from the spec in 0.4.0.
+  exposed non-functional indexed parameters that were removed from the SMIRNOFF 0.3 spec.
 - `PR #351 <https://github.com/openforcefield/openforcefield/pull/351>`_: Fixes
   `Issue #344 <https://github.com/openforcefield/openforcefield/issues/344>`_,
   in which the main :py:class:`FrozenMolecule <openforcefield.topology.FrozenMolecule>`
