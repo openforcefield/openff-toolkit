@@ -398,7 +398,7 @@ class IndexedParameterAttribute(ParameterAttribute):
         return value
 
 
-class _ParameterAttributeInitializer:
+class _ParameterAttributeHandler:
     """A base class for ``ParameterType`` and ``ParameterHandler`` objects.
 
     Encapsulate shared code of ``ParameterType`` and ``ParameterHandler``.
@@ -845,7 +845,7 @@ class ParameterList(list):
 
 
 # TODO: Rename to better reflect role as parameter base class?
-class ParameterType(_ParameterAttributeInitializer):
+class ParameterType(_ParameterAttributeHandler):
     """
     Base class for SMIRNOFF parameter types.
 
@@ -1039,7 +1039,7 @@ class ParameterType(_ParameterAttributeInitializer):
 
 # TODO: Should we have a parameter handler registry?
 
-class ParameterHandler(_ParameterAttributeInitializer):
+class ParameterHandler(_ParameterAttributeHandler):
     """Base class for parameter handlers.
 
     Parameter handlers are configured with some global parameters for a
