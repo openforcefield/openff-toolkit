@@ -8,6 +8,18 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
+Current Development
+-------------------
+
+New features
+""""""""""""
+
+- `PR #377 <https://github.com/openforcefield/openforcefield/pull/377>`_: Single indexed parameters in
+  :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
+  and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+  can now be get/set through normal attribute syntax on top of the list syntax.
+
+
 0.4.1 - Bugfix Release
 ----------------------
 
