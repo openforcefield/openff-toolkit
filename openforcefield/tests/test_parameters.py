@@ -283,8 +283,6 @@ class TestParameterAttributeHandler:
         my_parameter.a1
         my_parameter.assert_getattr()
 
-        # TODO: Update docs of ParameterHandler and ParameterType
-
 
 #======================================================================
 # Test ParameterHandler

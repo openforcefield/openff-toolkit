@@ -415,6 +415,113 @@ class _ParameterAttributeHandler:
     IndexedParameterAttribute
         A parameter attribute with multiple terms.
 
+    Examples
+    --------
+
+    This base class was design to encapsulate shared code between ``ParameterType``
+    and ``ParameterHandler``, which both need to deal with parameter and cosmetic
+    attributes.
+
+    To create a new type/handler, you can use the ``ParameterAttribute`` descriptors.
+
+    >>> class ParameterTypeOrHandler(_ParameterAttributeHandler):
+    ...     length = ParameterAttribute(unit=unit.angstrom)
+    ...     k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
+    ...
+
+    ``_ParameterAttributeHandler`` and the descriptors take care of performing
+    sanity checks on initialization and assignment of the single attributes. Because
+    we attached units to the parameters, we need to pass them with compatible units.
+
+    >>> my_par = ParameterTypeOrHandler(
+    ...     length='1.01 * angstrom',
+    ...     k=5 * unit.kilocalorie_per_mole / unit.angstrom**2
+    ... )
+
+    Note that ``_ParameterAttributeHandler`` took care of implementing
+    a constructor, and that unit parameters support string assignments.
+    These are automatically converted to ``Quantity`` objects.
+
+    >>> my_par.length
+    Quantity(value=1.01, unit=angstrom)
+
+    While assigning incompatible units is forbidden.
+
+    >>> my_par.k = 3.0 * unit.gram
+    Traceback (most recent call last):
+    ...
+    openforcefield.utils.utils.IncompatibleUnitError: k=3.0 g should have units of kilocalorie/(angstrom**2*mole)
+
+    On top of type checking, the constructor implemented in ``_ParameterAttributeHandler``
+    checks if some required parameters are not given.
+
+    >>> ParameterTypeOrHandler(length=3.0*unit.nanometer)
+    Traceback (most recent call last):
+    ...
+    SMIRNOFFSpecError: <class '__main__.ParameterTypeOrHandler'> require the following missing parameters: ['k']. Defined kwargs are ['length']
+
+    Each attribute can be made optional by specifying a default value,
+    and you can attach a converter function by passing a callable as an
+    argument or through the decorator syntax.
+
+    >>> class ParameterTypeOrHandler(_ParameterAttributeHandler):
+    ...     attr_optional = ParameterAttribute(default=2)
+    ...     attr_all_to_float = ParameterAttribute(converter=float)
+    ...     attr_int_to_float = ParameterAttribute()
+    ...
+    ...     @attr_int_to_float.converter
+    ...     def attr_int_to_float(self, attr, value):
+    ...         # This converter converts only integers to floats
+    ...         # and raise an exception for the other types.
+    ...         if isinstance(value, int):
+    ...             return float(value)
+    ...         elif not isinstance(value, float):
+    ...             raise TypeError(f"Cannot convert '{value}' to float")
+    ...         return value
+    ...
+    >>> my_par = ParameterTypeOrHandler(attr_all_to_float='3.0', attr_int_to_float=1)
+    >>> my_par.attr_optional
+    2
+    >>> my_par.attr_all_to_float
+    3.0
+    >>> my_par.attr_int_to_float
+    1.0
+
+    The float() function can convert strings to integers, but our custom
+    converter forbids it
+
+    >>> my_par.attr_all_to_float = '2.0'
+    >>> my_par.attr_int_to_float = '4.0'
+    Traceback (most recent call last):
+    ...
+    TypeError: Cannot convert '4.0' to float
+
+    Parameter attributes that can be indexed can be handled with the
+    ``IndexedParameterAttribute``. These support unit validation and
+    converters exactly as ``ParameterAttribute``s, but the validation/conversion
+    is performed for each indexed attribute.
+
+    >>> class MyTorsionType(_ParameterAttributeHandler):
+    ...     periodicity = IndexedParameterAttribute(converter=int)
+    ...     k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+    ...
+    >>> my_par = MyTorsionType(
+    ...     periodicity1=2,
+    ...     k1=5 * unit.kilocalorie_per_mole,
+    ...     periodicity2='3',
+    ...     k2=6 * unit.kilocalorie_per_mole,
+    ... )
+    >>> my_par.periodicity
+    [2, 3]
+
+    Indexed attributes, can be accessed both as a list or as their indexed
+    parameter name.
+
+    >>> my_par.periodicity2 = 6
+    >>> my_par.periodicity[0] = 1
+    >>> my_par.periodicity
+    [1, 6]
+
     """
 
     def __init__(self, allow_cosmetic_attributes=False, **kwargs):
@@ -1019,6 +1126,14 @@ class ParameterType(_ParameterAttributeHandler):
     ... )
     >>> my_par.periodicity
     [2, 3]
+
+    Indexed attributes, can be accessed both as a list or as their indexed
+    parameter name.
+
+    >>> my_par.periodicity2 = 6
+    >>> my_par.periodicity[0] = 1
+    >>> my_par.periodicity
+    [1, 6]
 
     """
 
