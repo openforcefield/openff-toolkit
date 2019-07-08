@@ -43,6 +43,7 @@ from enum import Enum
 import functools
 import inspect
 import logging
+import re
 
 from simtk import openmm, unit
 
@@ -547,6 +548,47 @@ class _ParameterAttributeHandler:
 
         return smirnoff_dict
 
+    def __getattr__(self, item):
+        """Take care of mapping indexed attributes to their respective list elements."""
+        # Separate the indexed attribute name from the list index.
+        attr_name, index = self._split_attribute_index(item)
+
+        # Check if this is an indexed attribute.
+        if (index is not None) and attr_name in self._get_indexed_parameter_attributes():
+            indexed_attr_value = getattr(self, attr_name)
+            try:
+                return indexed_attr_value[index]
+            except IndexError:
+                raise IndexError(f"'{item}' is out of bound for indexed attribute '{attr_name}'")
+
+        # Otherwise, forward the search to the next class in the MRO.
+        try:
+            return super().__getattr__(item)
+        except AttributeError as e:
+            # If this fails because the next classes in the MRO do not
+            # implement __getattr__(), then raise the standard Attribute error.
+            if '__getattr__' in str(e):
+                raise AttributeError(f"{self.__class__} object has no attribute '{item}'")
+            # Otherwise, re-raise the error from the class in the MRO.
+            raise
+
+    def __setattr__(self, key, value):
+        """Take care of mapping indexed attributes to their respective list elements."""
+        # Separate the indexed attribute name from the list index.
+        attr_name, index = self._split_attribute_index(key)
+
+        # Check if this is an indexed attribute. avoiding an infinite
+        # recursion by calling getattr() with non-existing keys.
+        if (index is not None) and (attr_name in self._get_indexed_parameter_attributes()):
+            indexed_attr_value = getattr(self, attr_name)
+            try:
+                indexed_attr_value[index] = value
+            except IndexError:
+                raise IndexError(f"'{key}' is out of bound for indexed attribute '{attr_name}'")
+        else:
+            # Forward the request to the next class in the MRO.
+            super().__setattr__(key, value)
+
     def add_cosmetic_attribute(self, attr_name, attr_value):
         """
         Add a cosmetic attribute to this object.
@@ -585,6 +627,23 @@ class _ParameterAttributeHandler:
         #  Would we also need to override __del__ as well to cover both deletation methods?
         delattr(self, '_'+attr_name)
         self._cosmetic_attribs.remove(attr_name)
+
+    @staticmethod
+    def _split_attribute_index(item):
+        """Split the attribute name from the final index.
+
+        For example, the method takes 'k2' and returns the tuple ('k', 1).
+        If attribute_name doesn't end with an integer, it returns (item, None).
+        """
+        # Match any number (\d+) at the end of the string ($).
+        match = re.search(r'\d+$', item)
+        if match is None:
+            return item, None
+
+        index = match.group()  # This is a str.
+        attr_name = item[:-len(index)]
+        index = int(match.group()) - 1
+        return attr_name, index
 
     @classmethod
     def _get_parameter_attributes(cls, filter=None):

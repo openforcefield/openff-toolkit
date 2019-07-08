@@ -19,8 +19,8 @@ from simtk import unit
 
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
-    ParameterAttribute, IndexedParameterAttribute, ParameterList,
-    ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
+    ParameterAttribute, IndexedParameterAttribute, _ParameterAttributeHandler,
+    ParameterList, ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
     ImproperTorsionHandler, SMIRNOFFSpecError
 )
 from openforcefield.utils import detach_units, IncompatibleUnitError
@@ -208,6 +208,82 @@ class TestIndexedParameterAttribute:
         # And insert.
         my_par.attr_indexed.insert(5, '10')
         assert my_par.attr_indexed[5] == 10
+
+
+class TestParameterAttributeHandler:
+    """Test suite for the base class _ParameterAttributeHandler."""
+
+    def test_access_get_set_single_indexed_attribute(self):
+        """Single indexed attributes such as k1 can be accessed through normal attribute syntax."""
+        class MyParameterType(_ParameterAttributeHandler):
+            k = IndexedParameterAttribute()
+        my_parameter = MyParameterType(k=[1, 2, 3])
+
+        # Getting the attribute works.
+        assert my_parameter.k1 == 1
+        assert my_parameter.k2 == 2
+        assert my_parameter.k3 == 3
+
+        # So does setting it.
+        my_parameter.k2 = 5
+        assert my_parameter.k2 == 5
+        assert my_parameter.k == [1, 5, 3]
+
+        # Accessing k4 raises an index error.
+        with pytest.raises(IndexError, match="'k4' is out of bound for indexed attribute 'k'"):
+            my_parameter.k4
+        with pytest.raises(IndexError, match="'k4' is out of bound for indexed attribute 'k'"):
+            my_parameter.k4 = 2
+
+        # For other attributes, the behavior is normal.
+        with pytest.raises(AttributeError, match="has no attribute 'x'"):
+            my_parameter.x
+        # Monkey-patching.
+        my_parameter.x = 3
+
+    def test_mro_access_get_set_single_indexed_attribute(self):
+        """Attribute access is forwarded correctly to the next MRO classes."""
+        class MixIn:
+            """Utility class to keep track of whether __get/setattr__ are called."""
+
+            data = {}
+
+            def __getattr__(self, item):
+                self.getattr_flag = True
+                try:
+                    return self.data[item]
+                except KeyError:
+                    raise AttributeError()
+
+            def __setattr__(self, key, value):
+                self.data[key] = value
+                super().__setattr__('setattr_flag', True)
+
+            def assert_getattr(self):
+                assert self.getattr_flag is True
+                self.getattr_flag = False
+
+            def assert_setattr(self):
+                assert self.setattr_flag is True
+                super().__setattr__('setattr_flag', False)
+
+        class MyParameterType(_ParameterAttributeHandler, MixIn):
+            k = IndexedParameterAttribute()
+
+        my_parameter = MyParameterType(k=[1, 2, 3])
+
+        # Non-existing parameters.
+        my_parameter.a = 2
+        my_parameter.assert_setattr()
+        my_parameter.a1 = 4
+        my_parameter.assert_setattr()
+
+        my_parameter.a
+        my_parameter.assert_getattr()
+        my_parameter.a1
+        my_parameter.assert_getattr()
+
+        # TODO: Update docs of ParameterHandler and ParameterType
 
 
 #======================================================================
