@@ -458,7 +458,7 @@ class _ParameterAttributeHandler:
     >>> ParameterTypeOrHandler(length=3.0*unit.nanometer)
     Traceback (most recent call last):
     ...
-    SMIRNOFFSpecError: <class '__main__.ParameterTypeOrHandler'> require the following missing parameters: ['k']. Defined kwargs are ['length']
+    openforcefield.typing.engines.smirnoff.parameters.SMIRNOFFSpecError: <class 'openforcefield.typing.engines.smirnoff.parameters.ParameterTypeOrHandler'> require the following missing parameters: ['k']. Defined kwargs are ['length']
 
     Each attribute can be made optional by specifying a default value,
     and you can attach a converter function by passing a callable as an
@@ -3027,4 +3027,5 @@ class GBSAParameterHandler(ParameterHandler):
 
 if __name__ == '__main__':
     import doctest
-    doctest.run_docstring_examples(ParameterType, globals())
+    doctest.testmod()
+    # doctest.run_docstring_examples(_ParameterAttributeHandler, globals())
