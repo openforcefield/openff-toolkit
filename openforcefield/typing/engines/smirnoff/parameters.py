@@ -2924,6 +2924,7 @@ class GBSAParameterHandler(ParameterHandler):
         # TODO: Rework this
         import simtk
 
+        self._validate_parameters()
 
         # No previous GBSAForce should exist, so we're safe just making one here.
         force_map = {
@@ -2933,7 +2934,9 @@ class GBSAParameterHandler(ParameterHandler):
         }
         openmm_force_type = force_map[self.gb_model]
 
-        gbsa_force = openmm_force_type()
+        gbsa_force = openmm_force_type(solventDielectric=self.solvent_dielectric,
+                                       soluteDielectric=self.solute_dielectric,
+                                       SA=self.sa_model)
 
         # TODO: Go through existing particles in the system (which have already had charges
         #  assigned) and copy the charges into here
@@ -2954,6 +2957,13 @@ class GBSAParameterHandler(ParameterHandler):
         # Add all GBSA terms to the system.
         # expected_parameters = GBSAParameterHandler.GB_expected_parameters[
         #     self.gb_model]
+        #gbsa_force.setSolventDielectric(self.solvent_dielectric)
+        #gbsa_force.setSoluteDielectric(self.solute_dielectric)
+        if self.sa_model is None:
+            gbsa_force.setSurfaceAreaEnergy(0)
+        else:
+            gbsa_force.setSurfaceAreaEnergy(self.surface_area_penalty)
+
 
         # Iterate over all defined GBSA types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)

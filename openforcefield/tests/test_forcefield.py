@@ -581,39 +581,6 @@ class TestForceField():
 
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
-    def test_parameterize_ethanol_gbsa(self, toolkit_registry, registry_description):
-        from simtk.openmm import app
-        #from openforcefield.utils.structure import check_energy_is_finite
-
-        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_gbsa_ff)
-        pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
-        molecules = []
-        molecules.append(Molecule.from_smiles('CCO'))
-        off_topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-
-        omm_system = forcefield.create_openmm_system(off_topology, toolkit_registry=toolkit_registry)
-
-        integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
-        context = openmm.Context(omm_system, integrator)
-        context.setPositions(pdbfile.positions)
-        state = context.getState(getEnergy=True)
-        energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
-        if np.isnan(energy):
-            raise Exception('Potential energy is NaN')
-        # time_step = 2 * unit.femtoseconds  # simulation timestep
-        # ##### CHANGED BELOW #####
-        # temperature = 0 * unit.kelvin  # simulation temperature
-        # friction = 1 / unit.picosecond  # collision rate
-        # integrator = openmm.LangevinIntegrator(temperature, friction, time_step)
-        #
-        #
-        # simulation = openmm.app.Simulation(omm_topology, omm_system, integrator)
-        #
-        # simulation.context.setPositions(offmol.conformers[0])
-
-        raise Exception(energy)
-
-    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_1_cyclohexane_1_ethanol(self, toolkit_registry, registry_description):
         from simtk.openmm import app
 
@@ -644,6 +611,45 @@ class TestForceField():
 
         omm_system = forcefield.create_openmm_system(topology)
 
+
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    def test_parameterize_1_cyclohexane_1_ethanol_gbsa(self, toolkit_registry, registry_description):
+        """
+        Perform a GBSA energy comparison between a SMIRNOFF-parameterized system and
+        an OpenMM-parameterized one
+        """
+        from simtk import unit, openmm
+        #from openforcefield.utils.structure import check_energy_is_finite
+
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_gbsa_ff)
+        pdbfile = openmm.app.PDBFile(get_data_file_path('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
+        molecules = []
+        molecules.append(Molecule.from_smiles('CCO'))
+        molecules.append(Molecule.from_smiles('C1CCCCC1'))
+        off_topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
+        omm_system = forcefield.create_openmm_system(off_topology, toolkit_registry=toolkit_registry)
+
+        integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+        context = openmm.Context(omm_system, integrator)
+        context.setPositions(pdbfile.positions)
+        state = context.getState(getEnergy=True)
+        energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
+        if np.isnan(energy):
+            raise Exception('Potential energy is NaN')
+
+        # Now, parameterize using OpenMM and compare GBSA term energy
+        forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+        system = forcefield.createSystem(pdbfile.topology, nonbondedMethod=openmm.app.PME, nonbondedCutoff=1 * unit.nanometer,
+                                         constraints=openmm.app.HBonds)
+        integrator = openmm.app.LangevinIntegrator(300 * kelvin, 1 / unit.picosecond, 0.002 * unit.picoseconds)
+        simulation = Simulation(pdb.topology, system, integrator)
+        simulation.context.setPositions(pdbfile.positions)
+        simulation.minimizeEnergy()
+        simulation.reporters.append(PDBReporter('output.pdb', 1000))
+        simulation.reporters.append(StateDataReporter(stdout, 1000, step=True, potentialEnergy=True, temperature=True))
+        simulation.step(10000)
+        raise Exception(energy)
 
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
