@@ -426,6 +426,18 @@ class TestOpenEyeToolkitWrapper:
             charge_sum += pc
         assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
 
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_compute_partial_charges_trans_cooh_am1bcc(self):
+        """Test OpenEyeToolkitWrapper for computing partial charges for problematic molecules, as exemplified by
+        Issue 346 (https://github.com/openforcefield/openforcefield/issues/346)"""
+
+        lysine = Molecule.from_smiles("C(CC[NH3+])C[C@@H](C(=O)O)N")
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        lysine.generate_conformers(toolkit_registry=toolkit_wrapper)
+        lysine.compute_partial_charges_am1bcc(toolkit_registry=toolkit_wrapper)
+
+
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders(self):
         """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders()"""
