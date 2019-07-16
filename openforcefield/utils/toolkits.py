@@ -1241,7 +1241,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The partial charges
 
         """
-        from openeye import oequacpac
+        from openeye import oequacpac, oechem
         import numpy as np
 
         if molecule.n_conformers == 0:
@@ -1252,9 +1252,19 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
         oemol = molecule.to_openeye()
 
-        result = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCELF10Charges())
+        errfs = oechem.oeosstream()
+        oechem.OEThrow.SetOutputStream(errfs)
+        oechem.OEThrow.Clear()
+        quacpac_status = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCELF10Charges())
+        oechem.OEThrow.SetOutputStream(oechem.oeerr)  # restoring to original state
+        # This logic handles errors encountered in #34
+        if not quacpac_status:
+            if "SelectElfPop: issue with removing trans COOH conformers" in (errfs.str().decode("UTF-8")):
+                logger.warning("OEAM1BCCELF10 charge assignment failed due to a known bug (toolkit issue #346). "
+                               "Downgrading to OEAM1BCC charge assignment for this molecule.")
+                quacpac_status = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
 
-        if result is False:
+        if quacpac_status is False:
             raise Exception('Unable to assign charges')
 
         # Extract and return charges
