@@ -1220,7 +1220,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def compute_partial_charges_am1bcc(self, molecule):
         """
-        Compute AM1BCC partial charges with OpenEye quacpac
+        Compute AM1BCC partial charges with OpenEye quacpac. This function will attempt to use
+        the OEAM1BCCELF10 charge generation method, but may print a warning and fall back to
+        normal OEAM1BCC if an error is encountered.
+
 
         .. warning :: This API is experimental and subject to change.
 
