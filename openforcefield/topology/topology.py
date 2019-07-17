@@ -23,7 +23,7 @@ Class definitions to represent a molecular system and its chemical components
 
 import itertools
 
-from collections import MutableMapping
+from collections.abc import MutableMapping
 from collections import OrderedDict
 
 from simtk import unit
