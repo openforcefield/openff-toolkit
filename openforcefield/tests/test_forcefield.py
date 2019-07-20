@@ -155,7 +155,7 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
 
 xml_gbsa_ff = '''
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-    <GBSA version="0.3" gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
+    <GBSA version="0.3" gb_model="OBC2" solvent_dielectric="78.5" solute_dielectric="1" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
       <Atom smirks="[#1:1]" radius="0.12*nanometer" scale="0.85"/>
       <Atom smirks="[#1:1]~[#6]" radius="0.13*nanometer" scale="0.85"/>
       <Atom smirks="[#1:1]~[#8]" radius="0.08*nanometer" scale="0.85"/>
@@ -171,6 +171,11 @@ xml_gbsa_ff = '''
     </GBSA>
 </SMIRNOFF>
 '''
+
+xml_toolkitam1bcc_ff = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <ToolkitAM1BCC version="0.3"/>
+</SMIRNOFF>'''
 
 #======================================================================
 # TEST UTILITY FUNCTIONS
@@ -613,46 +618,6 @@ class TestForceField():
 
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
-    def test_parameterize_1_cyclohexane_1_ethanol_gbsa(self, toolkit_registry, registry_description):
-        """
-        Perform a GBSA energy comparison between a SMIRNOFF-parameterized system and
-        an OpenMM-parameterized one
-        """
-        from simtk import unit, openmm
-        #from openforcefield.utils.structure import check_energy_is_finite
-
-        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_gbsa_ff)
-        pdbfile = openmm.app.PDBFile(get_data_file_path('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
-        molecules = []
-        molecules.append(Molecule.from_smiles('CCO'))
-        molecules.append(Molecule.from_smiles('C1CCCCC1'))
-        off_topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-
-        omm_system = forcefield.create_openmm_system(off_topology, toolkit_registry=toolkit_registry)
-
-        integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
-        context = openmm.Context(omm_system, integrator)
-        context.setPositions(pdbfile.positions)
-        state = context.getState(getEnergy=True)
-        energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
-        if np.isnan(energy):
-            raise Exception('Potential energy is NaN')
-
-        # Now, parameterize using OpenMM and compare GBSA term energy
-        forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
-        system = forcefield.createSystem(pdbfile.topology, nonbondedMethod=openmm.app.PME, nonbondedCutoff=1 * unit.nanometer,
-                                         constraints=openmm.app.HBonds)
-        integrator = openmm.app.LangevinIntegrator(300 * kelvin, 1 / unit.picosecond, 0.002 * unit.picoseconds)
-        simulation = Simulation(pdb.topology, system, integrator)
-        simulation.context.setPositions(pdbfile.positions)
-        simulation.minimizeEnergy()
-        simulation.reporters.append(PDBReporter('output.pdb', 1000))
-        simulation.reporters.append(StateDataReporter(stdout, 1000, step=True, potentialEnergy=True, temperature=True))
-        simulation.step(10000)
-        raise Exception(energy)
-
-
-    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_no_matching_reference(self, toolkit_registry, registry_description):
         from simtk.openmm import app
 
@@ -683,6 +648,7 @@ class TestForceField():
 
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
         # TODO: Add check to ensure system energy is finite
+
 
     @pytest.mark.skipif( not(OpenEyeToolkitWrapper.is_available()), reason='Test requires OE toolkit')
     def test_parameterize_ethanol_different_reference_ordering_openeye(self):
@@ -1063,6 +1029,76 @@ class TestForceFieldParameterAssignment:
         # TODO: Reactivate the charge check when we'll be able to load charges from files.
         compare_amber_smirnoff(top_filepath, crd_filepath, forcefield, molecule,
                                check_energies=False, ignore_charges=True)
+
+
+
+    @pytest.mark.parametrize('alkethoh_id', generate_alkethoh_parameters_assignment_cases())
+    #@pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    #def test_parameterize_1_cyclohexane_1_ethanol_gbsa(self, toolkit_registry, registry_description):
+    def test_parameterize_alkethoh_gbsa(self,
+                                        alkethoh_id,
+                                        #toolkit_registry,
+                                        #registry_description
+                                        ):
+        """
+        Perform a GBSA energy comparison between a SMIRNOFF-parameterized system and
+        an OpenMM-parameterized one
+        """
+        from simtk import unit, openmm
+        #from openforcefield.utils.structure import check_energy_is_finite
+
+        #forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_gbsa_ff)
+        # pdbfile = openmm.app.PDBFile(get_data_file_path('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
+        # molecules = []
+        # molecules.append(Molecule.from_smiles('CCO'))
+        # molecules.append(Molecule.from_smiles('C1CCCCC1'))
+        #off_topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
+        from openforcefield.tests.utils import get_alkethoh_file_path, compare_amber_smirnoff, create_system_from_amber
+
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml',
+                                'test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml',
+                                #xml_toolkitam1bcc_ff,
+                                xml_gbsa_ff)
+
+        # Obtain the path to the input files.
+        alkethoh_name = 'AlkEthOH_' + alkethoh_id
+        mol2_filepath, top_filepath, crd_filepath = get_alkethoh_file_path(alkethoh_name, get_amber=True)
+
+        # Load molecule.
+        molecule = Molecule.from_file(mol2_filepath)
+
+        off_topology = Topology.from_molecules([molecule])
+
+        omm_system = forcefield.create_openmm_system(off_topology, charge_from_molecules=[molecule])
+
+        integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+        context = openmm.Context(omm_system, integrator)
+        context.setPositions(pdbfile.positions)
+        state = context.getState(getEnergy=True)
+        off_energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
+        if np.isnan(off_energy):
+            raise Exception('Potential energy is NaN')
+
+        # Now, parameterize using OpenMM and compare GBSA term energy
+        omm_system, omm_topology, positions = create_system_from_amber(top_filepath,
+                                                                       crd_filepath,
+                                                                       implicitSolvent=openmm.app.OBC2)
+        # omm_forcefield = openmm.app.ForceField('amber14-all.xml', 'amber14/tip3pfb.xml', 'amber10_obc.xml')
+        # omm_system = omm_forcefield.createSystem(pdbfile.topology,
+        #                                          nonbondedMethod=openmm.app.PME,
+        #                                          nonbondedCutoff=1 * unit.nanometer,
+        #                                          constraints=openmm.app.HBonds)
+        integrator = openmm.app.LangevinIntegrator(300 * unit.kelvin, 1 / unit.picosecond, 0.002 * unit.picoseconds)
+        simulation = openmm.app.Simulation(omm_topology, omm_system, integrator)
+        simulation.context.setPositions(positions)
+        omm_energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
+        #simulation.minimizeEnergy()
+        #simulation.reporters.append(openmm.app.PDBReporter('output.pdb', 1000))
+        #simulation.reporters.append(openmm.app.StateDataReporter(openmm.stdout, 1000, step=True, potentialEnergy=True, temperature=True))
+        #simulation.step(10000)
+        #raise Exception(f"off_energy {off_energy}")
+        assert off_energy == omm_energy
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
                         reason='Test requires OE toolkit to read mol2 files')

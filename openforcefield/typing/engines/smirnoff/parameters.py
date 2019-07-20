@@ -1271,7 +1271,7 @@ class BondHandler(ParameterHandler):
             if this_val != other_val:
                 raise IncompatibleParameterError(
                     "{} values are not identical. "
-                    "(handler value: {}, incompatible value: {}".format(
+                    "(handler value: '{}', incompatible value: '{}'".format(
                         string_attr, this_val, other_val))
 
     def create_force(self, system, topology, **kwargs):
@@ -2928,15 +2928,18 @@ class GBSAParameterHandler(ParameterHandler):
 
         # No previous GBSAForce should exist, so we're safe just making one here.
         force_map = {
-            'OBC1': simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
-            'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
-            'HCT': simtk.openmm.app.internal.customgbforces.GBSAHCTForce,
+            #'OBC1': simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
+            'OBC2': simtk.openmm.GBSAOBCForce,
+            #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
+            #'HCT': simtk.openmm.app.internal.customgbforces.GBSAHCTForce,
         }
         openmm_force_type = force_map[self.gb_model]
 
-        gbsa_force = openmm_force_type(solventDielectric=self.solvent_dielectric,
-                                       soluteDielectric=self.solute_dielectric,
-                                       SA=self.sa_model)
+        gbsa_force = openmm_force_type()
+        # We set these values in the constructor if we use the internal AMBER GBSA type wrapper
+        #gbsa_force = openmm_force_type(solventDielectric=self.solvent_dielectric,
+        #                               soluteDielectric=self.solute_dielectric,
+        #                               SA=self.sa_model)
 
         # TODO: Go through existing particles in the system (which have already had charges
         #  assigned) and copy the charges into here
@@ -2957,8 +2960,8 @@ class GBSAParameterHandler(ParameterHandler):
         # Add all GBSA terms to the system.
         # expected_parameters = GBSAParameterHandler.GB_expected_parameters[
         #     self.gb_model]
-        #gbsa_force.setSolventDielectric(self.solvent_dielectric)
-        #gbsa_force.setSoluteDielectric(self.solute_dielectric)
+        gbsa_force.setSolventDielectric(self.solvent_dielectric)
+        gbsa_force.setSoluteDielectric(self.solute_dielectric)
         if self.sa_model is None:
             gbsa_force.setSurfaceAreaEnergy(0)
         else:
@@ -2985,10 +2988,10 @@ class GBSAParameterHandler(ParameterHandler):
             params_to_add[atom_idx] = [charge, gbsatype.radius, gbsatype.scale]# * gbsatype.radius]
 
         for particle_param in params_to_add:
-            gbsa_force.addParticle(particle_param)
+            gbsa_force.addParticle(*particle_param)
         # We have to call finalize() because the internal pre-made
         # customgb forces are a bit different than the base one
-        gbsa_force.finalize()
+        # gbsa_force.finalize()
 
         system.addForce(gbsa_force)
 
