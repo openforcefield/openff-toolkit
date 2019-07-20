@@ -275,9 +275,9 @@ nonbonded_resolution_matrix = [
     {'vdw_method': 'cutoff', 'electrostatics_method': 'Coulomb', 'has_periodic_box': False,
      'omm_force': openmm.NonbondedForce.NoCutoff, 'exception': None, 'exception_match': ''},
     {'vdw_method': 'cutoff', 'electrostatics_method': 'reaction-field', 'has_periodic_box': True,
-     'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
+     'omm_force': None, 'exception': SMIRNOFFSpecError, 'exception_match': 'reaction-field'},
     {'vdw_method': 'cutoff', 'electrostatics_method': 'reaction-field', 'has_periodic_box': False,
-     'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
+     'omm_force': None, 'exception': SMIRNOFFSpecError, 'exception_match': 'reaction-field'},
     {'vdw_method': 'cutoff', 'electrostatics_method': 'PME', 'has_periodic_box': True,
      'omm_force': openmm.NonbondedForce.PME, 'exception': None, 'exception_match': ''},
     {'vdw_method': 'cutoff', 'electrostatics_method': 'PME', 'has_periodic_box': False,
@@ -288,9 +288,9 @@ nonbonded_resolution_matrix = [
     {'vdw_method': 'PME', 'electrostatics_method': 'Coulomb', 'has_periodic_box': False,
      'omm_force': openmm.NonbondedForce.NoCutoff, 'exception': None, 'exception_match': ''},
     {'vdw_method': 'PME', 'electrostatics_method': 'reaction-field', 'has_periodic_box': True,
-     'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
+     'omm_force': None, 'exception': SMIRNOFFSpecError, 'exception_match': 'reaction-field'},
     {'vdw_method': 'PME', 'electrostatics_method': 'reaction-field', 'has_periodic_box': False,
-     'omm_force': None, 'exception': IncompatibleParameterError, 'exception_match': ''},
+     'omm_force': None, 'exception': SMIRNOFFSpecError, 'exception_match': 'reaction-field'},
     {'vdw_method': 'PME', 'electrostatics_method': 'PME', 'has_periodic_box': True,
      'omm_force': openmm.NonbondedForce.LJPME, 'exception': None, 'exception_match': ''},
     {'vdw_method': 'PME', 'electrostatics_method': 'PME', 'has_periodic_box': False,
@@ -449,6 +449,11 @@ class TestForceField():
     def test_read_0_1_smirnoff(self):
         """Test reading an 0.1 spec OFFXML file"""
         ff = ForceField('test_forcefields/smirnoff99Frosst_reference_0_1_spec.offxml')
+
+
+    def test_read_0_1_smirff(self):
+        """Test reading an 0.1 spec OFFXML file, enclosed by the legacy "SMIRFF" tag"""
+        ff = ForceField('test_forcefields/smirff99Frosst_reference_0_1_spec.offxml')
 
 
     def test_read_0_2_smirnoff(self):
@@ -845,8 +850,6 @@ class TestForceField():
 
         molecules = [create_ethanol()]
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
-        forcefield.get_parameter_handler('vdW', {})._method = vdw_method
-        forcefield.get_parameter_handler('Electrostatics', {})._method = electrostatics_method
 
         pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
@@ -855,6 +858,9 @@ class TestForceField():
             topology.box_vectors = None
 
         if exception is None:
+            # The method is validated and may raise an exception if it's not supported.
+            forcefield.get_parameter_handler('vdW', {}).method = vdw_method
+            forcefield.get_parameter_handler('Electrostatics', {}).method = electrostatics_method
             omm_system = forcefield.create_openmm_system(topology)
             nonbond_method_matched = False
             for f_idx in range(omm_system.getNumForces()):
@@ -865,6 +871,9 @@ class TestForceField():
             assert nonbond_method_matched
         else:
             with pytest.raises(exception, match=exception_match) as excinfo:
+                # The method is validated and may raise an exception if it's not supported.
+                forcefield.get_parameter_handler('vdW', {}).method = vdw_method
+                forcefield.get_parameter_handler('Electrostatics', {}).method = electrostatics_method
                 omm_system = forcefield.create_openmm_system(topology)
 
 #======================================================================

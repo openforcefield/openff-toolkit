@@ -96,3 +96,18 @@ Parameter I/O Handlers
 
     ParameterIOHandler
     XMLParameterIOHandler
+
+
+
+Parameter Attributes
+~~~~~~~~~~~~~~~~~~~~
+
+``ParameterAttribute`` and ``IndexedParameterAttribute`` provide a standard backend for ParameterHandler and Parameter attributes, while also enforcing validation of types and units.
+
+.. currentmodule:: openforcefield.typing.engines.smirnoff.parameters
+.. autosummary::
+    :nosignatures:
+    :toctree: api/generated/
+
+    ParameterAttribute
+    IndexedParameterAttribute

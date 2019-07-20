@@ -657,15 +657,7 @@ class ForceField:
             skip_version_check = True
 
         # Ensure that the ForceField has a ParameterHandler class registered that can handle this tag
-        if tagname in self._parameter_handler_classes:
-            ph_class = self._parameter_handler_classes[tagname]
-        else:
-            msg = "Cannot find a registered parameter handler class for tag '{}'\n".format(
-                tagname)
-            msg += "Known parameter handler class tags are {}".format(self._parameter_handler_classes.keys())
-            raise KeyError(msg)
-
-
+        ph_class = self._get_parameter_handler_class(tagname)
 
         if tagname in self._parameter_handlers:
             # If a handler of this class already exists, ensure that the two handlers encode compatible science
@@ -817,10 +809,33 @@ class ForceField:
             Whether to permit non-spec kwargs in smirnoff_data.
         """
         import packaging.version
+
+        # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation
+
+
+        if "SMIRNOFF" in smirnoff_data:
+            version = smirnoff_data['SMIRNOFF']['version']
+        elif "SMIRFF" in smirnoff_data:
+            version = smirnoff_data['SMIRFF']['version']
+        else:
+            raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
+
+        self._check_smirnoff_version_compatibility(str(version))
+        # Convert 0.1 spec files to 0.3 SMIRNOFF data format by converting
+        # from 0.1 spec to 0.2, then 0.2 to 0.3
+        if packaging.version.parse(str(version)) == packaging.version.parse("0.1"):
+            # NOTE: This will convert the top-level "SMIRFF" tag to "SMIRNOFF"
+            smirnoff_data = convert_0_1_smirnoff_to_0_2(smirnoff_data)
+            smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
+
+        # Convert 0.2 spec files to 0.3 SMIRNOFF data format by removing units
+        # from section headers and adding them to quantity strings at all levels.
+        elif packaging.version.parse(str(version)) == packaging.version.parse("0.2"):
+            smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
+
         # Ensure that SMIRNOFF is a top-level key of the dict
         if not('SMIRNOFF' in smirnoff_data):
             raise ParseError("'SMIRNOFF' must be a top-level key in the SMIRNOFF object model")
-
 
         # Check that the aromaticity model required by this parameter set is compatible with
         # others loaded by this ForceField
@@ -832,31 +847,11 @@ class ForceField:
             raise ParseError("'aromaticity_model' attribute must be specified in SMIRNOFF "
                              "tag, or contained in a previously-loaded SMIRNOFF data source")
 
-        # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation
-        if 'version' in smirnoff_data['SMIRNOFF']:
-            version = smirnoff_data['SMIRNOFF']['version']
-        else:
-            raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
-        self._check_smirnoff_version_compatibility(str(version))
-
         if 'Author' in smirnoff_data['SMIRNOFF']:
             self._add_author(smirnoff_data['SMIRNOFF']['Author'])
 
         if 'Date' in smirnoff_data['SMIRNOFF']:
             self._add_date(smirnoff_data['SMIRNOFF']['Date'])
-
-
-        # Convert 0.1 spec files to 0.3 SMIRNOFF data format by converting
-        # from 0.1 spec to 0.2, then 0.2 to 0.3
-        if packaging.version.parse(str(version)) == packaging.version.parse("0.1"):
-            smirnoff_data = convert_0_1_smirnoff_to_0_2(smirnoff_data)
-            smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
-
-
-        # Convert 0.2 spec files to 0.3 SMIRNOFF data format by removing units
-        # from section headers and adding them to quantity strings at all levels.
-        elif packaging.version.parse(str(version)) == packaging.version.parse("0.2"):
-            smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
 
         # Go through the whole SMIRNOFF data structure, trying to convert all strings to Quantity
         smirnoff_data = convert_all_strings_to_quantity(smirnoff_data)
@@ -880,12 +875,28 @@ class ForceField:
             # Otherwise, we expect this l1_key to correspond to a ParameterHandler
             section_dict = smirnoff_data['SMIRNOFF'][parameter_name]
 
+            # TODO: Implement a ParameterHandler.from_dict() that knows how to deserialize itself for extensibility.
+            #       We could let it load the ParameterTypes from the dict and append them to the existing handler
+            #       after verifying that they are compatible.
+
+            # Get the parameter types serialization that is not passed to the ParameterHandler constructor.
+            ph_class = self._get_parameter_handler_class(parameter_name)
+            try:
+                parameter_list_tagname = ph_class._INFOTYPE._ELEMENT_NAME
+            except AttributeError:
+                # The ParameterHandler doesn't have ParameterTypes (e.g. ToolkitAM1BCCHandler).
+                parameter_list_dict = {}
+            else:
+                parameter_list_dict = section_dict.pop(parameter_list_tagname, {})
+                # Must be wrapped into its own tag.
+                parameter_list_dict = {parameter_list_tagname: parameter_list_dict}
+
             # Retrieve or create parameter handler, passing in section_dict to check for
             # compatibility if a handler for this parameter name already exists
             handler = self.get_parameter_handler(parameter_name,
                                                  section_dict,
                                                  allow_cosmetic_attributes=allow_cosmetic_attributes)
-            handler._add_parameters(section_dict,
+            handler._add_parameters(parameter_list_dict,
                                     allow_cosmetic_attributes=allow_cosmetic_attributes)
 
     def parse_smirnoff_from_source(self, source):
@@ -1225,3 +1236,14 @@ class ForceField:
 
             molecule_labels.append(current_molecule_labels)
         return molecule_labels
+
+    def _get_parameter_handler_class(self, tagname):
+        """Retrieve the ParameterHandler class associated to the tagname and throw a custom error if not found."""
+        try:
+            ph_class = self._parameter_handler_classes[tagname]
+        except KeyError:
+            msg = "Cannot find a registered parameter handler class for tag '{}'\n".format(
+                tagname)
+            msg += "Known parameter handler class tags are {}".format(self._parameter_handler_classes.keys())
+            raise KeyError(msg)
+        return ph_class
