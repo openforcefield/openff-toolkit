@@ -1503,6 +1503,13 @@ class ParameterHandler(_ParameterAttributeInitializer):
 
         for attr in identical_attrs:
             this_val, other_val = get_unitless_values(attr)
+
+            # Convert None values to str, so "==" comparison will work
+            if this_val is None:
+                this_val = "None"
+            if other_val is None:
+                other_val = "None"
+
             if this_val != other_val:
                 raise IncompatibleParameterError(
                     "{} values are not identical. "
@@ -2743,174 +2750,187 @@ class GBSAParameterHandler(ParameterHandler):
     _OPENMMTYPE = openmm.GBSAOBCForce
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
 
-    _ATTRIBS_TO_TYPE = {
-        'solvent_dielectric': float,
-        'solute_dielectric' :float
-    }
-    _REQUIRE_UNITS = {
-        'surface_area_penalty': unit.calorie / unit.mole / unit.angstrom ** 2,
-        'solvent_radius': unit.angstrom
-    }
-    _DEFAULT_SPEC_ATTRIBS = {
-        'gb_model': 'OBC1',
-        'solvent_dielectric': 78.5,
-        'solute_dielectric': 1,
-        'sa_model': 'ACE',
-        'surface_area_penalty': 5.4 * unit.calorie / unit.mole / unit.angstrom ** 2,
-        'solvent_radius': 1.4 * unit.angstrom
-    }
+    gb_model = ParameterAttribute(
+        default='OBC1',
+        converter=_allow_only(['HCT', 'OBC1', 'OBC2'])
+    )
+    solvent_dielectric = ParameterAttribute(default=78.5, converter=float)
+    solute_dielectric = ParameterAttribute(default=1, converter=float)
+    sa_model = ParameterAttribute(default='ACE', converter=_allow_only(['ACE', None])
+    )
+    surface_area_penalty = ParameterAttribute(default=5.4*unit.calorie / unit.mole / unit.angstrom**2,
+                                              unit=unit.calorie / unit.mole / unit.angstrom**2)
+    solvent_radius = ParameterAttribute(default=1.4*unit.angstrom, unit=unit.angstrom)
 
-    def __init__(self, **kwargs):
-        self._supported_gb_models = ['HCT', 'OBC1', 'OBC2']
-        self._supported_sa_models = ['ACE']
-        super().__init__(**kwargs)
+    # _ATTRIBS_TO_TYPE = {
+    #     'solvent_dielectric': float,
+    #     'solute_dielectric' :float
+    # }
+    # _REQUIRE_UNITS = {
+    #     'surface_area_penalty': unit.calorie / unit.mole / unit.angstrom ** 2,
+    #     'solvent_radius': unit.angstrom
+    # }
+    # _DEFAULT_SPEC_ATTRIBS = {
+    #     'gb_model': 'OBC1',
+    #     'solvent_dielectric': 78.5,
+    #     'solute_dielectric': 1,
+    #     'sa_model': 'ACE',
+    #     'surface_area_penalty': 5.4 * unit.calorie / unit.mole / unit.angstrom ** 2,
+    #     'solvent_radius': 1.4 * unit.angstrom
+    # }
 
-    @property
-    def solvent_dielectric(self):
-        """Return this object's solvent_dielectric attribute"""
-        return self._solvent_dielectric
+    # def __init__(self, **kwargs):
+    #     self._supported_gb_models = ['HCT', 'OBC1', 'OBC2']
+    #     self._supported_sa_models = ['ACE']
+    #     super().__init__(**kwargs)
 
-    @solvent_dielectric.setter
-    def solvent_dielectric(self, other):
-        """Set this object's solvent_dielectric attribute"""
-        self._solvent_dielectric = self._ATTRIBS_TO_TYPE['solvent_dielectric'](other)
+    # @property
+    # def solvent_dielectric(self):
+    #     """Return this object's solvent_dielectric attribute"""
+    #     return self._solvent_dielectric
+    #
+    # @solvent_dielectric.setter
+    # def solvent_dielectric(self, other):
+    #     """Set this object's solvent_dielectric attribute"""
+    #     self._solvent_dielectric = self._ATTRIBS_TO_TYPE['solvent_dielectric'](other)
+    #
+    # @property
+    # def solute_dielectric(self):
+    #     """Return this object's solute_dielectric attribute"""
+    #     return self._solute_dielectric
+    #
+    # @solute_dielectric.setter
+    # def solute_dielectric(self, other):
+    #     """Set this object's solute_dielectric attribute"""
+    #     self._solute_dielectric = self._ATTRIBS_TO_TYPE['solute_dielectric'](other)
+    #
+    # @property
+    # def surface_area_penalty(self):
+    #     """Returns the surface area penalty for this SA model"""
+    #     return self._surface_area_penalty
+    #
+    # @surface_area_penalty.setter
+    # def surface_area_penalty(self, other):
+    #     """Set the surface area penalty for this SA model"""
+    #     unit_to_check = self._REQUIRE_UNITS['surface_area_penalty']
+    #     if not unit_to_check.is_compatible(other.unit):
+    #         raise IncompatibleUnitError(
+    #             f"Attempted to set GBSA surface_area_penalty to {other}, which is not compatible with "
+    #             f"expected unit {unit_to_check}")
+    #     self._surface_area_penalty = other
+    #
+    # @property
+    # def solvent_radius(self):
+    #     """Returns the solvent radius for this SA model"""
+    #     return self._solvent_radius
+    #
+    # @solvent_radius.setter
+    # def solvent_radius(self, other):
+    #     """Set the solvent radius for this SA model"""
+    #     unit_to_check = self._REQUIRE_UNITS['solvent_radius']
+    #     if not unit_to_check.is_compatible(other.unit):
+    #         raise IncompatibleUnitError(
+    #             f"Attempted to set GBSA solvent_radius to {other}, which is not compatible with "
+    #             f"expected unit {unit_to_check}")
+    #     self._surface_area_penalty = other
+    #
+    # @property
+    # def gb_model(self):
+    #     """Return this object's gb_model attribute"""
+    #     return self._gb_model
+    #
+    # @gb_model.setter
+    # def gb_model(self, other):
+    #     """Set this object's gb_model attribute"""
+    #     if other not in self._supported_gb_models:
+    #         raise IncompatibleParameterError(f"Attempted to set GBSA gb_model to {other}. Expected "
+    #                                          f"one of {self._supported_gb_models}")
+    #     self._gb_model = other
+    #
+    # @property
+    # def sa_model(self):
+    #     """Return this object's sa_model attribute"""
+    #     return self._sa_model
+    #
+    # @sa_model.setter
+    # def sa_model(self, other):
+    #     """Set this object's sa_model attribute"""
+    #     if other not in self._supported_sa_models:
+    #         raise IncompatibleParameterError(f"Attempted to set GBSA sa_model to {other}. Expected "
+    #                                          f"one of {self._supported_sa_models}")
+    #     self._sa_model = other
 
-    @property
-    def solute_dielectric(self):
-        """Return this object's solute_dielectric attribute"""
-        return self._solute_dielectric
-
-    @solute_dielectric.setter
-    def solute_dielectric(self, other):
-        """Set this object's solute_dielectric attribute"""
-        self._solute_dielectric = self._ATTRIBS_TO_TYPE['solute_dielectric'](other)
-
-    @property
-    def surface_area_penalty(self):
-        """Returns the surface area penalty for this SA model"""
-        return self._surface_area_penalty
-
-    @surface_area_penalty.setter
-    def surface_area_penalty(self, other):
-        """Set the surface area penalty for this SA model"""
-        unit_to_check = self._REQUIRE_UNITS['surface_area_penalty']
-        if not unit_to_check.is_compatible(other.unit):
-            raise IncompatibleUnitError(
-                f"Attempted to set GBSA surface_area_penalty to {other}, which is not compatible with "
-                f"expected unit {unit_to_check}")
-        self._surface_area_penalty = other
-
-    @property
-    def solvent_radius(self):
-        """Returns the solvent radius for this SA model"""
-        return self._solvent_radius
-
-    @solvent_radius.setter
-    def solvent_radius(self, other):
-        """Set the solvent radius for this SA model"""
-        unit_to_check = self._REQUIRE_UNITS['solvent_radius']
-        if not unit_to_check.is_compatible(other.unit):
-            raise IncompatibleUnitError(
-                f"Attempted to set GBSA solvent_radius to {other}, which is not compatible with "
-                f"expected unit {unit_to_check}")
-        self._surface_area_penalty = other
-
-    @property
-    def gb_model(self):
-        """Return this object's gb_model attribute"""
-        return self._gb_model
-
-    @gb_model.setter
-    def gb_model(self, other):
-        """Set this object's gb_model attribute"""
-        if other not in self._supported_gb_models:
-            raise IncompatibleParameterError(f"Attempted to set GBSA gb_model to {other}. Expected "
-                                             f"one of {self._supported_gb_models}")
-        self._gb_model = other
-
-    @property
-    def sa_model(self):
-        """Return this object's sa_model attribute"""
-        return self._sa_model
-
-    @sa_model.setter
-    def sa_model(self, other):
-        """Set this object's sa_model attribute"""
-        if other not in self._supported_sa_models:
-            raise IncompatibleParameterError(f"Attempted to set GBSA sa_model to {other}. Expected "
-                                             f"one of {self._supported_sa_models}")
-        self._sa_model = other
-
-    def _validate_parameters(self):
-        """
-        Checks internal attributes, raising an exception if they are configured in an invalid way.
-        """
-        # Leverage the value-checking logic in the setters to validate each item
-        self.gb_model = self.gb_model
-        self.solvent_dielectric = self.solvent_dielectric
-        self.solute_dielectric = self.solute_dielectric
-        self.sa_model = self.sa_model
-        self.surface_area_penalty = self.surface_area_penalty
-        self.solvent_radius = self.solvent_radius
+    # def _validate_parameters(self):
+    #     """
+    #     Checks internal attributes, raising an exception if they are configured in an invalid way.
+    #     """
+    #     # Leverage the value-checking logic in the setters to validate each item
+    #     self.gb_model = self.gb_model
+    #     self.solvent_dielectric = self.solvent_dielectric
+    #     self.solute_dielectric = self.solute_dielectric
+    #     self.sa_model = self.sa_model
+    #     self.surface_area_penalty = self.surface_area_penalty
+    #     self.solvent_radius = self.solvent_radius
 
     # TODO: Generalize this to allow forces to know when their OpenMM Force objects can be combined
-    def check_handler_compatibility(self, other_handler):
-        """
-        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag.
-
-        Parameters
-        ----------
-        other_handler : a ParameterHandler object
-            The handler to compare to.
-
-        Raises
-        ------
-        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
-        """
-        float_attrs_to_compare = ['solvent_dielectric', 'solute_dielectric']
-        string_attrs_to_compare = ['sa_model', 'gb_model']
-        unit_attrs_to_compare = ['surface_area_penalty', 'solvent_radius']
-        tolerance = 1.e-5
-
-        for float_attr in float_attrs_to_compare:
-            this_val = getattr(self, '_' + float_attr)
-            other_val = getattr(other_handler, '_' + float_attr)
-            if abs(this_val - other_val) > tolerance:
-                raise IncompatibleParameterError(
-                    "Difference between '{}' values is beyond allowed tolerance {}. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        float_attr, tolerance, this_val, other_val))
-
-        for string_attr in string_attrs_to_compare:
-            this_val = getattr(self, '_' + string_attr)
-            other_val = getattr(other_handler, '_' + string_attr)
-            if this_val != other_val:
-                raise IncompatibleParameterError(
-                    "{} values are not identical. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        string_attr, this_val, other_val))
-
-        for unit_attr in unit_attrs_to_compare:
-            this_val = getattr(self, '_' + unit_attr)
-            other_val = getattr(other_handler, '_' + unit_attr)
-            unit_tol = (tolerance * this_val.unit) # TODO: do we want a different quantity_tol here?
-            if abs(this_val - other_val) > unit_tol:
-                raise IncompatibleParameterError(
-                    "Difference between '{}' values is beyond allowed tolerance {}. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        unit_attr, unit_tol, this_val, other_val))
+    # def check_handler_compatibility(self, other_handler):
+    #     """
+    #     Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+    #     called if a second handler is attempted to be initialized for the same tag.
+    #
+    #     Parameters
+    #     ----------
+    #     other_handler : a ParameterHandler object
+    #         The handler to compare to.
+    #
+    #     Raises
+    #     ------
+    #     IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+    #     """
+    #     float_attrs_to_compare = ['solvent_dielectric', 'solute_dielectric']
+    #     string_attrs_to_compare = ['sa_model', 'gb_model']
+    #     unit_attrs_to_compare = ['surface_area_penalty', 'solvent_radius']
+    #     tolerance = 1.e-5
+    #
+    #     for float_attr in float_attrs_to_compare:
+    #         this_val = getattr(self, '_' + float_attr)
+    #         other_val = getattr(other_handler, '_' + float_attr)
+    #         if abs(this_val - other_val) > tolerance:
+    #             raise IncompatibleParameterError(
+    #                 "Difference between '{}' values is beyond allowed tolerance {}. "
+    #                 "(handler value: {}, incompatible value: {}".format(
+    #                     float_attr, tolerance, this_val, other_val))
+    #
+    #     for string_attr in string_attrs_to_compare:
+    #         this_val = getattr(self, '_' + string_attr)
+    #         other_val = getattr(other_handler, '_' + string_attr)
+    #         if this_val != other_val:
+    #             raise IncompatibleParameterError(
+    #                 "{} values are not identical. "
+    #                 "(handler value: {}, incompatible value: {}".format(
+    #                     string_attr, this_val, other_val))
+    #
+    #     for unit_attr in unit_attrs_to_compare:
+    #         this_val = getattr(self, '_' + unit_attr)
+    #         other_val = getattr(other_handler, '_' + unit_attr)
+    #         unit_tol = (tolerance * this_val.unit) # TODO: do we want a different quantity_tol here?
+    #         if abs(this_val - other_val) > unit_tol:
+    #             raise IncompatibleParameterError(
+    #                 "Difference between '{}' values is beyond allowed tolerance {}. "
+    #                 "(handler value: {}, incompatible value: {}".format(
+    #                     unit_attr, unit_tol, this_val, other_val))
 
     def create_force(self, system, topology, **kwargs):
         # TODO: Rework this
         import simtk
 
-        self._validate_parameters()
+        #self._validate_parameters()
 
         # No previous GBSAForce should exist, so we're safe just making one here.
         force_map = {
             #'OBC1': simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
-            'OBC2': simtk.openmm.GBSAOBCForce,
+            #'OBC2': simtk.openmm.GBSAOBCForce,
+            'HCT': simtk.openmm.GBSAOBCForce,
             #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
             #'HCT': simtk.openmm.app.internal.customgbforces.GBSAHCTForce,
         }
