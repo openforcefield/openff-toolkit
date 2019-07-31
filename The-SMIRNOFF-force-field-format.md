@@ -534,7 +534,6 @@ If the `gb_model` attribute is omitted, it defaults to `OBC1`.
 
 The attributes `solvent_dielectric` and `solute_dielectric` specify solvent and solute dielectric constants used by the GB model.
 In this example, `radius` and `scale` are per-particle parameters of the `OBC1` GB model supported by OpenMM.
-Units are for these per-particle parameters (such as `radius_units`) specified in the `<GBSA>` tag.
 
 #### Surface area (SA) penalty model
 
