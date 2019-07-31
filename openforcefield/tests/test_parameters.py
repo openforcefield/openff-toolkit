@@ -876,7 +876,8 @@ class TestGBSAHandler:
 
         gbsa_handler.gb_model = 'OBC2'
         gbsa_handler.gb_model = 'HCT'
-        with pytest.raises(IncompatibleParameterError) as excinfo:
+        gbsa_handler.gb_model = 'OBC1'
+        with pytest.raises(SMIRNOFFSpecError) as excinfo:
             gbsa_handler.gb_model = 'Something invalid'
 
         gbsa_handler.solvent_dielectric = 50.0
@@ -890,7 +891,8 @@ class TestGBSAHandler:
             gbsa_handler.solute_dielectric = 'string that can not be cast to float'
 
         gbsa_handler.sa_model = 'ACE'
-        with pytest.raises(IncompatibleParameterError) as excinfo:
+        gbsa_handler.sa_model = None
+        with pytest.raises(TypeError) as excinfo:
             gbsa_handler.sa_model = 'Invalid SA option'
 
         gbsa_handler.surface_area_penalty = 1.23 * unit.kilocalorie / unit.mole / unit.nanometer**2
@@ -905,6 +907,7 @@ class TestGBSAHandler:
         """
         Test the check_handler_compatibility function of GBSAParameterHandler
         """
+        from openforcefield.typing.engines.smirnoff import IncompatibleParameterError
         from simtk import unit
         gbsa_handler_1 = GBSAParameterHandler(skip_version_check=True)
         gbsa_handler_2 = GBSAParameterHandler(skip_version_check=True)
