@@ -2929,8 +2929,8 @@ class GBSAParameterHandler(ParameterHandler):
         # No previous GBSAForce should exist, so we're safe just making one here.
         force_map = {
             #'OBC1': simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
-            #'OBC2': simtk.openmm.GBSAOBCForce,
             'HCT': simtk.openmm.GBSAOBCForce,
+            'OBC2': simtk.openmm.GBSAOBCForce,
             #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
             #'HCT': simtk.openmm.app.internal.customgbforces.GBSAHCTForce,
         }
@@ -2952,6 +2952,7 @@ class GBSAParameterHandler(ParameterHandler):
 
         nonbonded_force = existing[0]
 
+        gbsa_force.setNonbondedMethod(nonbonded_force.getNonbondedMethod())
         # Set the GBSAForce to have the same nonbonded method as vdW/coulomb
         gbsa_force.setCutoffDistance(nonbonded_force.getCutoffDistance())
         if nonbonded_force.usesPeriodicBoundaryConditions():
@@ -2994,7 +2995,12 @@ class GBSAParameterHandler(ParameterHandler):
         # customgb forces are a bit different than the base one
         # gbsa_force.finalize()
 
+        # Check that no atoms (n.b. not particles) are missing force parameters.
+        self._check_all_valence_terms_assigned(assigned_terms=atom_matches,
+                                               valence_terms=list(topology.topology_atoms))
+
         system.addForce(gbsa_force)
+
 
 
 

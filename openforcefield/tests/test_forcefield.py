@@ -153,13 +153,53 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 '''
 
-xml_gbsa_ff = '''
+xml_gbsa_ff_hct = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <GBSA version="0.3" gb_model="HCT" solvent_dielectric="78.5" solute_dielectric="1" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
+      <Atom smirks="[*:1]" radius="0.15*nanometer" scale="0.8"/>
+      <Atom smirks="[#1:1]" radius="0.12*nanometer" scale="0.85"/>
+      <Atom smirks="[#1:1]~[#6]" radius="0.13*nanometer" scale="0.85"/>
+      <Atom smirks="[#1:1]~[#7]" radius="0.13*nanometer" scale="0.85"/>
+      <Atom smirks="[#1:1]~[#8]" radius="0.08*nanometer" scale="0.85"/>
+      <Atom smirks="[#1:1]~[#16]" radius="0.08*nanometer" scale="0.85"/>
+      <Atom smirks="[#6:1]" radius="0.17*nanometer" scale="0.72"/>
+      <Atom smirks="[#7:1]" radius="0.155*nanometer" scale="0.79"/>
+      <Atom smirks="[#8:1]" radius="0.15*nanometer" scale="0.85"/>
+      <Atom smirks="[#9:1]" radius="0.15*nanometer" scale="0.88"/>
+      <Atom smirks="[#14:1]" radius="0.21*nanometer" scale="0.8"/>
+      <Atom smirks="[#15:1]" radius="0.185*nanometer" scale="0.86"/>
+      <Atom smirks="[#16:1]" radius="0.18*nanometer" scale="0.96"/>
+      <Atom smirks="[#17:1]" radius="0.15*nanometer" scale="0.8"/>
+    </GBSA>
+</SMIRNOFF>
+'''
+
+xml_gbsa_ff_notsure = '''
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
     <GBSA version="0.3" gb_model="HCT" solvent_dielectric="78.5" solute_dielectric="1" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
       <Atom smirks="[#1:1]" radius="0.12*nanometer" scale="0.85"/>
       <Atom smirks="[#1:1]~[#6]" radius="0.13*nanometer" scale="0.85"/>
       <Atom smirks="[#1:1]~[#8]" radius="0.08*nanometer" scale="0.85"/>
       <Atom smirks="[#1:1]~[#16]" radius="0.08*nanometer" scale="0.85"/>
+      <Atom smirks="[#6:1]" radius="0.17*nanometer" scale="0.72"/>
+      <Atom smirks="[#7:1]" radius="0.155*nanometer" scale="0.79"/>
+      <Atom smirks="[#8:1]" radius="0.15*nanometer" scale="0.85"/>
+      <Atom smirks="[#9:1]" radius="0.15*nanometer" scale="0.88"/>
+      <Atom smirks="[#14:1]" radius="0.21*nanometer" scale="0.8"/>
+      <Atom smirks="[#15:1]" radius="0.185*nanometer" scale="0.86"/>
+      <Atom smirks="[#16:1]" radius="0.18*nanometer" scale="0.96"/>
+      <Atom smirks="[#17:1]" radius="0.15*nanometer" scale="0.8"/>
+    </GBSA>
+</SMIRNOFF>
+'''
+
+
+xml_gbsa_ff_obc2 = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <GBSA version="0.3" gb_model="OBC2" solvent_dielectric="78.5" solute_dielectric="1" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
+      <Atom smirks="[*:1]" radius="0.15*nanometer" scale="0.8"/>
+      <Atom smirks="[#1:1]" radius="0.12*nanometer" scale="0.85"/>
+      <Atom smirks="[#1:1]~[#7]" radius="0.13*nanometer" scale="0.85"/>
       <Atom smirks="[#6:1]" radius="0.17*nanometer" scale="0.72"/>
       <Atom smirks="[#7:1]" radius="0.155*nanometer" scale="0.79"/>
       <Atom smirks="[#8:1]" radius="0.15*nanometer" scale="0.85"/>
@@ -972,6 +1012,8 @@ def generate_freesolv_parameters_assignment_cases():
         ('1723043', '0_0_2', False),
         ('2501588', '0_0_2', True),  # Test impropers and undefined stereochemistry.
         ('3323117', '0_0_2', False),  # The XML was regenerated after fixing the issue described in #179.
+        ('1107178', '0_0_2', False),  # Molecule with iodine
+        ('1036761', '0_0_2', False),  # Molecule with primary amine
     ]
 
     def extract_id(file_path):
@@ -1041,6 +1083,9 @@ class TestForceFieldParameterAssignment:
 
 
 
+
+
+    @pytest.mark.skip
     @pytest.mark.parametrize('alkethoh_id', generate_alkethoh_parameters_assignment_cases())
     #@pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     #def test_parameterize_1_cyclohexane_1_ethanol_gbsa(self, toolkit_registry, registry_description):
@@ -1063,7 +1108,10 @@ class TestForceFieldParameterAssignment:
         # molecules.append(Molecule.from_smiles('C1CCCCC1'))
         #off_topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
-        from openforcefield.tests.utils import get_alkethoh_file_path, create_system_from_amber, get_context_potential_energy, compare_system_energies
+        from openforcefield.tests.utils import (get_alkethoh_file_path, create_system_from_amber,
+                                                get_context_potential_energy, compare_system_energies,
+                                                FailedEnergyComparisonError,
+                                                )
 
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml',
                                 'test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml',
@@ -1103,9 +1151,22 @@ class TestForceFieldParameterAssignment:
         # Note -- This only works if atom indexing is identical between mol2 and top/crd files
         amber_nonbond_force = [force for force in amber_omm_system.getForces() if type(force) is openmm.NonbondedForce][0]
         off_nonbond_force = [force for force in omm_system.getForces() if type(force) is openmm.NonbondedForce][0]
-        for particle_idx, off_pc in enumerate(molecule.partial_charges):
-            amber_nonbond_force.setParticleParameters(particle_idx, off_pc, 0, 0)
-            off_nonbond_force.setParticleParameters(particle_idx, off_pc, 0, 0)
+        #for particle_idx, off_pc in enumerate(molecule.partial_charges):
+        for particle_idx in range(off_nonbond_force.getNumParticles()):
+            q, sig, eps = off_nonbond_force.getParticleParameters(particle_idx)
+            amber_nonbond_force.setParticleParameters(particle_idx, q, sig, eps)
+
+        # Update the exceptions with the new q, sig, and eps values
+        # bonds = []
+        # for bond in off_topology.topology_bonds:
+        #     bonds.append([at.topology_atom_index for at in bond.atoms])
+        # # bonds = [[bond.atoms[0].topology_atom_index,
+        # #           bond.atoms[1].topology_atom_index] for bond in off_topology.topology_bonds]
+        # amber_nonbond_force.createExceptionsFromBonds(bonds,
+        #                                               forcefield.get_parameter_handler('Electrostatics').scale14,
+        #                                               forcefield.get_parameter_handler('vdW').scale14
+        #                                               )
+            #off_nonbond_force.setParticleParameters(particle_idx, off_pc, 0, 0)
         amber_nonbond_force.setCutoffDistance(off_nonbond_force.getCutoffDistance())
         amber_nonbond_force.setSwitchingDistance(off_nonbond_force.getSwitchingDistance())
         amber_nonbond_force.setUseSwitchingFunction(off_nonbond_force.getUseSwitchingFunction())
@@ -1146,7 +1207,13 @@ class TestForceFieldParameterAssignment:
         #simulation.step(10000)
         #raise Exception(f"off_energy {off_energy}")
         #assert off_pes == amber_pes
-        compare_system_energies(omm_system, amber_omm_system, positions, atol=1e-5)
+        #try:
+        # We're only interested in the GBSA energies, so set the tolerances very
+        # high to ensure we get energies back instead of an exception
+        off_pe, amber_pe = compare_system_energies(omm_system, amber_omm_system, positions, atol=10, rtol=10)
+        assert off_pe['GBSAOBCForce'] - amber_pe['GBSAOBCForce'] < 1.e-5 * unit.md_kilojoule / unit.mole
+        #except FailedEnergyComparisonError:
+        #    raise Exception(off_pe)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
                         reason='Test requires OE toolkit to read mol2 files')
@@ -1210,6 +1277,7 @@ class TestForceFieldParameterAssignment:
         compare_system_energies(amber_system, off_system, positions,
                                 ignore_charges=True)
 
+
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
                         reason='Test requires OE toolkit to read mol2 files')
     @pytest.mark.parametrize(('freesolv_id', 'forcefield_version', 'allow_undefined_stereo'),
@@ -1244,6 +1312,101 @@ class TestForceFieldParameterAssignment:
                                   systems_labels=('current OpenFF', 'SMIRNOFF 0.0.4'),
                                   ignore_charges=True, ignore_improper_folds=True)
 
+
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
+                        reason='Test requires OE toolkit to read mol2 files')
+    @pytest.mark.parametrize(('freesolv_id', 'forcefield_version', 'allow_undefined_stereo'),
+                             generate_freesolv_parameters_assignment_cases())
+    def test_freesolv_gbsa_energies(self, freesolv_id, forcefield_version, allow_undefined_stereo):
+        """
+        Regression test on HCT, OBC1, and OBC2 GBSA models. This test ensures that the
+        SMIRNOFF-based GBSA models match the equivalent OpenMM implementations.
+        """
+
+        from openforcefield.tests.utils import (get_freesolv_file_path, compare_system_parameters,
+                                                compare_system_energies, create_system_from_amber,
+                                                get_context_potential_energy
+                                                )
+        import parmed as pmd
+        import simtk
+        mol2_file_path, _ = get_freesolv_file_path(freesolv_id, forcefield_version)
+
+        # Load molecules.
+        molecule = Molecule.from_file(mol2_file_path, allow_undefined_stereo=allow_undefined_stereo)
+        for idx, atom in enumerate(molecule.atoms):
+            atom.name = f'{atom.element.symbol}{idx}'
+        positions = molecule.conformers[0]
+
+        # Create OpenFF System with the current toolkit.
+        #forcefield_file_path = 'test_forcefields/old/test_ff_' + forcefield_version + '_spec_0_2.offxml'
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml',
+                        xml_gbsa_ff_obc2)
+        off_top = molecule.to_topology()
+        off_omm_system = ff.create_openmm_system(off_top, charge_from_molecules=[molecule])
+
+        omm_top = off_top.to_openmm()
+        pmd_struct = pmd.openmm.load_topology(omm_top, off_omm_system, positions)
+        #pmd_struct = pmd.structure.load_openmm(off_top.to_openmm(), off_omm_system)
+        prmtop_file = NamedTemporaryFile(suffix='.prmtop')
+        inpcrd_file = NamedTemporaryFile(suffix='.inpcrd')
+        pmd_struct.save(prmtop_file.name, overwrite=True)
+        pmd_struct.save(inpcrd_file.name, overwrite=True)
+
+        amber_structure = pmd.load_file(prmtop_file.name, inpcrd_file.name)
+        from simtk import openmm
+        amber_omm_system, amber_omm_topology, amber_positions = create_system_from_amber(prmtop_file.name,
+                                                                                 inpcrd_file.name,
+                                                                                 implicitSolvent=openmm.app.OBC2
+                                                                                 )
+        # amber_system = amber_structure.createSystem(nonbondedMethod=openmm.PME,
+        #                                             nonbondedCutoff=9.0 * unit.angstrom,
+        #                                             switchDistance=0.0 * unit.angstrom,
+        #                                             constraints=openmm.HBonds,
+        #                                             removeCMMotion=False,
+        #                                             )
+
+        amber_gbsa_force = [force for force in amber_omm_system.getForces() if (isinstance(force, openmm.GBSAOBCForce) or isinstance(force, openmm.openmm.CustomGBForce))][0]
+        #gb_params = simtk.openmm.app.internal.customgbforces.GBSAHCTForce.getStandardParameters(omm_top)
+        if isinstance(amber_gbsa_force, openmm.CustomGBForce):
+            gb_params = amber_gbsa_force.__class__.getStandardParameters(omm_top)
+            #gb_params = amber_gbsa_force.getStandardParameters(omm_top)
+        elif isinstance(amber_gbsa_force, openmm.GBSAOBCForce):
+            gb_params = simtk.openmm.app.internal.customgbforces.GBSAOBC2Force.getStandardParameters(omm_top)
+        #gb_params = simtk.openmm.app.internal.customgbforces.GBSAHCTForce.getStandardParameters(omm_top)
+        for idx, (radius, screen) in enumerate(gb_params):
+            q, _, _2 = amber_gbsa_force.getParticleParameters(idx)
+            print(q, radius, screen, _, _2)
+            if isinstance(amber_gbsa_force, openmm.GBSAOBCForce):
+                amber_gbsa_force.setParticleParameters(idx, q, radius, screen)
+            #else:
+            elif isinstance(amber_gbsa_force, openmm.CustomGBForce):
+                amber_gbsa_force.setParticleParameters(idx, (q, radius - 0.009, screen * (radius - 0.009)))
+                #offset_radius = radius
+                #scaled_offset_radius = screen
+                #amber_gbsa_force.setParticleParameters(idx, (q, offset_radius, scaled_offset_radius))
+                #amber_gbsa_force.setParticleParameters(idx, (q, radius, screen * (radius)))
+            q, rad, scr = amber_gbsa_force.getParticleParameters(idx)
+            print(q, rad, scr)
+            print()
+        #amber_gbsa_force.finalize()
+        off_gbsa_force = [force for force in off_omm_system.getForces() if type(force) is openmm.GBSAOBCForce][0]
+
+        amber_gbsa_force.setForceGroup(1)
+        off_gbsa_force.setForceGroup(1)
+        # Create Contexts and compare the energies.
+        integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+        amber_context = openmm.Context(amber_omm_system, integrator)
+        off_context = openmm.Context(off_omm_system, copy.deepcopy(integrator))
+
+
+        amber_energy = get_context_potential_energy(amber_context, positions)
+        off_energy = get_context_potential_energy(off_context, positions)
+        assert amber_energy[1] == off_energy[1]
+        #1/0
+        #amber_gbsa_energy = amber_gbsa_force.
+
+        compare_system_energies(off_omm_system, amber_omm_system, positions, by_force_type=False)
 
 class TestSmirnoffVersionConverter:
 

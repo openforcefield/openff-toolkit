@@ -834,29 +834,29 @@ class TestProperTorsionType:
                                                         k2=6 * unit.kilocalorie_per_mole,
                                                         )
 
-def test_torsion_handler_charmm_potential():
-    """
-    Test creation of TorsionHandlers with the deprecated 0.2 potential value "charmm" instead of the current
-    supported potential value "fourier".
-    """
-    import re
+    def test_torsion_handler_charmm_potential():
+        """
+        Test creation of TorsionHandlers with the deprecated 0.2 potential value "charmm" instead of the current
+        supported potential value "fourier".
+        """
+        import re
 
-    # Test creating ProperTorsionHandlers
-    err_msg = re.escape("Attempted to set ProperTorsionHandler.potential to charmm. Currently, "
-                        "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))'].")
-    with pytest.raises(SMIRNOFFSpecError, match=err_msg):
-        ph1 = ProperTorsionHandler(potential='charmm', skip_version_check=True)
-    ph1 = ProperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
+        # Test creating ProperTorsionHandlers
+        err_msg = re.escape("Attempted to set ProperTorsionHandler.potential to charmm. Currently, "
+                            "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))'].")
+        with pytest.raises(SMIRNOFFSpecError, match=err_msg):
+            ph1 = ProperTorsionHandler(potential='charmm', skip_version_check=True)
+        ph1 = ProperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
-    # Same test, but with ImproperTorsionHandler
-    err_msg = re.escape("Attempted to set ImproperTorsionHandler.potential to charmm. Currently, "
-                        "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))'].")
-    with pytest.raises(SMIRNOFFSpecError, match=err_msg):
-        ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
-    ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
+        # Same test, but with ImproperTorsionHandler
+        err_msg = re.escape("Attempted to set ImproperTorsionHandler.potential to charmm. Currently, "
+                            "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))'].")
+        with pytest.raises(SMIRNOFFSpecError, match=err_msg):
+            ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
+        ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
 
-
+class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
         """Test creation of an empty GBSAHandler, with all default attributes"""
         from simtk import unit
@@ -871,7 +871,7 @@ def test_torsion_handler_charmm_potential():
 
     def test_gbsahandler_setters(self):
         """Test creation of an empty GBSAHandler, with all default attributes"""
-    from simtk import unit
+        from simtk import unit
         gbsa_handler = GBSAParameterHandler(skip_version_check=True)
 
         gbsa_handler.gb_model = 'OBC2'
@@ -885,7 +885,7 @@ def test_torsion_handler_charmm_potential():
             gbsa_handler.solvent_dielectric = 'string that can not be cast to float'
 
         gbsa_handler.solute_dielectric = 2.5
-    gbsa_handler.solute_dielectric = "3.5"
+        gbsa_handler.solute_dielectric = "3.5"
         with pytest.raises(ValueError) as excinfo:
             gbsa_handler.solute_dielectric = 'string that can not be cast to float'
 
@@ -913,8 +913,8 @@ def test_torsion_handler_charmm_potential():
         gbsa_handler_1.check_handler_compatibility(gbsa_handler_2)
 
         # Perform a check which should fail
-    gbsa_handler_3 = GBSAParameterHandler(skip_version_check=True, solvent_radius=1.3*unit.angstrom)
-    with pytest.raises(IncompatibleParameterError, match="Difference between 'solvent_radius' ") as excinfo:
+        gbsa_handler_3 = GBSAParameterHandler(skip_version_check=True, solvent_radius=1.3*unit.angstrom)
+        with pytest.raises(IncompatibleParameterError, match="Difference between 'solvent_radius' ") as excinfo:
             gbsa_handler_1.check_handler_compatibility(gbsa_handler_3)
 
 
