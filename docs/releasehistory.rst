@@ -8,6 +8,11 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
+Current Development
+-------------------
+
+Periodic box vectors are now transferred in `Topology.to_openmm()`
+
 0.4.1 - Bugfix Release
 ----------------------
 
