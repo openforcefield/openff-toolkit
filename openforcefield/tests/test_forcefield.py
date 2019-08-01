@@ -1197,7 +1197,6 @@ class TestForceFieldParameterAssignment:
                                                 get_context_potential_energy
                                                 )
         import parmed as pmd
-        #import simtk
         from simtk import openmm
 
         mol2_file_path, _ = get_freesolv_file_path(freesolv_id, forcefield_version)
@@ -1220,7 +1219,7 @@ class TestForceFieldParameterAssignment:
         off_top = molecule.to_topology()
         if is_periodic:
             off_top.box_vectors = ((30., 0, 0), (0, 30., 0), (0, 0, 30.)) * unit.angstrom
-            #off_top.box_vectors = ((3., 0, 0), (0, 3., 0), (0, 0, 3.)) * unit.nanometer
+
         else:
             off_top.box_vectors = None
 
@@ -1251,14 +1250,11 @@ class TestForceFieldParameterAssignment:
 
         if is_periodic:
             amber_nb_method = openmm.app.forcefield.CutoffPeriodic
-            #amber_nb_method = openmm.CustomGBForce.CutoffPeriodic # Don't use this (see above)
             amber_cutoff = off_nonbonded_force.getCutoffDistance()
         else:
             amber_nb_method = openmm.app.forcefield.NoCutoff
-            #amber_nb_method = openmm.CustomGBForce.NoCutoff # Don't use this (see above)
             amber_cutoff = None
 
-        # The GBSA per-particle parameterization should happen upon loading the files here
         (amber_omm_system,
          amber_omm_topology,
          amber_positions) = create_system_from_amber(prmtop_file.name,
@@ -1269,12 +1265,6 @@ class TestForceFieldParameterAssignment:
                                                      gbsaModel='ACE',
                                                      implicitSolventKappa=0.,
                                                      )
-        # amber_system = amber_structure.createSystem(nonbondedMethod=openmm.PME,
-        #                                             nonbondedCutoff=9.0 * unit.angstrom,
-        #                                             switchDistance=0.0 * unit.angstrom,
-        #                                             constraints=openmm.HBonds,
-        #                                             removeCMMotion=False,
-        #                                             )
 
         off_gbsa_force = [force for force in off_omm_system.getForces() if
                               (isinstance(force, openmm.GBSAOBCForce) or
@@ -1283,6 +1273,7 @@ class TestForceFieldParameterAssignment:
                                 (isinstance(force, openmm.GBSAOBCForce) or
                                  isinstance(force, openmm.openmm.CustomGBForce))][0]
 
+        # We get radius and screen values from each model's getStandardParameters method
         if gbsa_model == 'HCT':
             gb_params = openmm.app.internal.customgbforces.GBSAHCTForce.getStandardParameters(omm_top)
         elif gbsa_model == 'OBC1':
@@ -1290,6 +1281,7 @@ class TestForceFieldParameterAssignment:
         elif gbsa_model == 'OBC2':
             gb_params = openmm.app.internal.customgbforces.GBSAOBC2Force.getStandardParameters(omm_top)
 
+        # Use GB params from OpenMM GBSA classes to populate parameters
         for idx, (radius, screen) in enumerate(gb_params):
             q, _, _2 = amber_gbsa_force.getParticleParameters(idx)
             print(q, radius, screen, _, _2)
@@ -1297,7 +1289,7 @@ class TestForceFieldParameterAssignment:
                 # Note that in GBSAOBCForce, the per-particle parameters are separate
                 # arguments, while in CustomGBForce they're a single iterable
                 amber_gbsa_force.setParticleParameters(idx, q, radius, screen)
-            #else:
+
             elif isinstance(amber_gbsa_force, openmm.CustomGBForce):
                 # !!! WARNING: CustomAmberGBForceBase expects different per-particle parameters
                 # depending on whether you use addParticle or setParticleParameters. In
@@ -1318,6 +1310,7 @@ class TestForceFieldParameterAssignment:
             off_nonbonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
 
         off_nonbonded_force.setReactionFieldDielectric(1.0)
+
         # Not sure if zeroing the switching width is essential -- This might only make a difference
         # in the energy if we tested on a molecule larger than the 9A cutoff
         #off_nonbonded_force.setSwitchingDistance(0)
