@@ -2842,7 +2842,6 @@ class GBSAParameterHandler(ParameterHandler):
 
 
     def create_force(self, system, topology, **kwargs):
-        # TODO: Rework this
         import simtk
 
         self._validate_parameters()
@@ -2854,7 +2853,6 @@ class GBSAParameterHandler(ParameterHandler):
         ]
 
         nonbonded_force = existing[0]
-
 
         # No previous GBSAForce should exist, so we're safe just making one here.
         force_map = {
@@ -2874,7 +2872,6 @@ class GBSAParameterHandler(ParameterHandler):
 
         if self.gb_model == 'OBC2':
             gbsa_force = openmm_force_type()
-
 
         else:
             # We set these values in the constructor if we use the internal AMBER GBSA type wrapper
@@ -2896,6 +2893,13 @@ class GBSAParameterHandler(ParameterHandler):
         #gbsa_force.setNonbondedMethod(nonbonded_force.getNonbondedMethod())
 
         if nonbonded_force.usesPeriodicBoundaryConditions():
+            # WARNING: The lines below aren't equivalent. The NonbondedForce and
+            # CustomGBForce NonbondedMethod enums have different meanings.
+            # More details:
+            # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.NonbondedForce.html
+            # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.GBSAOBCForce.html
+            # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomGBForce.html
+
             #gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.CutoffPeriodic)
             gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.CutoffPeriodic)
         else:
@@ -2941,7 +2945,8 @@ class GBSAParameterHandler(ParameterHandler):
         else:
             for particle_param in params_to_add:
                 gbsa_force.addParticle(particle_param)
-            # We have to call finalize() for models that inherit from CustomAmberGBForceBase
+            # We have to call finalize() for models that inherit from CustomAmberGBForceBase,
+            # otherwise the added particles aren't actually passed to the underlying CustomGBForce
             gbsa_force.finalize()
 
         # Check that no atoms (n.b. not particles) are missing force parameters.

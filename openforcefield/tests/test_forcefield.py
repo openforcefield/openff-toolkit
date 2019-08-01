@@ -1363,12 +1363,6 @@ class TestForceFieldParameterAssignment:
                                isinstance(force, openmm.NonbondedForce)][0]
 
 
-        # off_nonbonded_force.setSwitchingDistance(0)
-        # if is_periodic:
-        #     off_nonbonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
-        # else:
-        #     off_nonbonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffNonPeriodic)
-
         omm_top = off_top.to_openmm()
         pmd_struct = pmd.openmm.load_topology(omm_top, off_omm_system, positions)
         prmtop_file = NamedTemporaryFile(suffix='.prmtop')
@@ -1376,25 +1370,33 @@ class TestForceFieldParameterAssignment:
         pmd_struct.save(prmtop_file.name, overwrite=True)
         pmd_struct.save(inpcrd_file.name, overwrite=True)
 
-        #amber_structure = pmd.load_file(prmtop_file.name, inpcrd_file.name)
         openmm_gbsas = {'HCT': openmm.app.HCT,
                         'OBC1': openmm.app.OBC1,
                         'OBC2': openmm.app.OBC2,
                         }
-        # The GBSA per-particle parameterization should happen upon loading the files here
+
+        # The functional form of the nonbonded force will change depending on whether the cutoff
+        # is None during initialization. Therefore, we need to figure that out here.
+
+        # WARNING: The NonbondedMethod enums at openmm.app.forcefield and openmm.CustomGBForce
+        # aren't necessarily the same, and could be misinterpreted if the wrong one is used. For
+        # create_system_from_amber, we must provide the app.forcefield version.
+
         if is_periodic:
             amber_nb_method = openmm.app.forcefield.CutoffPeriodic
+            #amber_nb_method = openmm.CustomGBForce.CutoffPeriodic # Don't use this (see above)
             amber_cutoff = off_nonbonded_force.getCutoffDistance()
         else:
             amber_nb_method = openmm.app.forcefield.NoCutoff
+            #amber_nb_method = openmm.CustomGBForce.NoCutoff # Don't use this (see above)
             amber_cutoff = None
 
+        # The GBSA per-particle parameterization should happen upon loading the files here
         (amber_omm_system,
          amber_omm_topology,
          amber_positions) = create_system_from_amber(prmtop_file.name,
                                                      inpcrd_file.name,
                                                      implicitSolvent=openmm_gbsas[gbsa_model],
-                                                     #nonbondedMethod=off_nonbonded_force.getNonbondedMethod(),
                                                      nonbondedMethod = amber_nb_method,
                                                      nonbondedCutoff=amber_cutoff,
                                                      gbsaModel='ACE',
@@ -1438,25 +1440,39 @@ class TestForceFieldParameterAssignment:
                 amber_gbsa_force.setParticleParameters(idx, (q, radius - 0.009, screen * (radius - 0.009)))
 
 
+        # Put the GBSA force into a separate group so we can specifically compare GBSA energies
         amber_gbsa_force.setForceGroup(1)
         off_gbsa_force.setForceGroup(1)
 
-        #off_nonbonded_force.setReactionFieldDielectric(1.0)
+        # Some manual overrides to get the OFF system's NonbondedForce matched up with the AMBER system
+        if is_periodic:
+            off_nonbonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
+        else:
+            off_nonbonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
 
+        off_nonbonded_force.setReactionFieldDielectric(1.0)
+        # Not sure if zeroing the switching width is essential -- This might only make a difference
+        # in the energy if we tested on a molecule larger than the 9A cutoff
+        #off_nonbonded_force.setSwitchingDistance(0)
 
-        # Create Contexts and compare the energies.
+        # Create Contexts
         integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
         amber_context = openmm.Context(amber_omm_system, integrator)
         off_context = openmm.Context(off_omm_system, copy.deepcopy(integrator))
 
-
+        # Get context energies
         amber_energy = get_context_potential_energy(amber_context, positions)
         off_energy = get_context_potential_energy(off_context, positions)
-        print(openmm.XmlSerializer.serialize(off_gbsa_force))
-        print(openmm.XmlSerializer.serialize(amber_gbsa_force))
+
+        # Very handy for debugging
+        # print(openmm.XmlSerializer.serialize(off_gbsa_force))
+        # print(openmm.XmlSerializer.serialize(amber_gbsa_force))
+
+        # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
         assert amber_energy[1] == off_energy[1]
 
-        #compare_system_energies(off_omm_system, amber_omm_system, positions, by_force_type=False)
+        # Ensure that all system energies are the same
+        compare_system_energies(off_omm_system, amber_omm_system, positions, by_force_type=False)
 
 class TestSmirnoffVersionConverter:
 
