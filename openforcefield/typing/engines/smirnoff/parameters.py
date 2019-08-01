@@ -43,6 +43,7 @@ from enum import Enum
 import functools
 import inspect
 import logging
+import re
 
 from simtk import openmm, unit
 
@@ -398,7 +399,7 @@ class IndexedParameterAttribute(ParameterAttribute):
         return value
 
 
-class _ParameterAttributeInitializer:
+class _ParameterAttributeHandler:
     """A base class for ``ParameterType`` and ``ParameterHandler`` objects.
 
     Encapsulate shared code of ``ParameterType`` and ``ParameterHandler``.
@@ -413,6 +414,113 @@ class _ParameterAttributeInitializer:
         A simple parameter attribute.
     IndexedParameterAttribute
         A parameter attribute with multiple terms.
+
+    Examples
+    --------
+
+    This base class was design to encapsulate shared code between ``ParameterType``
+    and ``ParameterHandler``, which both need to deal with parameter and cosmetic
+    attributes.
+
+    To create a new type/handler, you can use the ``ParameterAttribute`` descriptors.
+
+    >>> class ParameterTypeOrHandler(_ParameterAttributeHandler):
+    ...     length = ParameterAttribute(unit=unit.angstrom)
+    ...     k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
+    ...
+
+    ``_ParameterAttributeHandler`` and the descriptors take care of performing
+    sanity checks on initialization and assignment of the single attributes. Because
+    we attached units to the parameters, we need to pass them with compatible units.
+
+    >>> my_par = ParameterTypeOrHandler(
+    ...     length='1.01 * angstrom',
+    ...     k=5 * unit.kilocalorie_per_mole / unit.angstrom**2
+    ... )
+
+    Note that ``_ParameterAttributeHandler`` took care of implementing
+    a constructor, and that unit parameters support string assignments.
+    These are automatically converted to ``Quantity`` objects.
+
+    >>> my_par.length
+    Quantity(value=1.01, unit=angstrom)
+
+    While assigning incompatible units is forbidden.
+
+    >>> my_par.k = 3.0 * unit.gram
+    Traceback (most recent call last):
+    ...
+    openforcefield.utils.utils.IncompatibleUnitError: k=3.0 g should have units of kilocalorie/(angstrom**2*mole)
+
+    On top of type checking, the constructor implemented in ``_ParameterAttributeHandler``
+    checks if some required parameters are not given.
+
+    >>> ParameterTypeOrHandler(length=3.0*unit.nanometer)
+    Traceback (most recent call last):
+    ...
+    openforcefield.typing.engines.smirnoff.parameters.SMIRNOFFSpecError: <class 'openforcefield.typing.engines.smirnoff.parameters.ParameterTypeOrHandler'> require the following missing parameters: ['k']. Defined kwargs are ['length']
+
+    Each attribute can be made optional by specifying a default value,
+    and you can attach a converter function by passing a callable as an
+    argument or through the decorator syntax.
+
+    >>> class ParameterTypeOrHandler(_ParameterAttributeHandler):
+    ...     attr_optional = ParameterAttribute(default=2)
+    ...     attr_all_to_float = ParameterAttribute(converter=float)
+    ...     attr_int_to_float = ParameterAttribute()
+    ...
+    ...     @attr_int_to_float.converter
+    ...     def attr_int_to_float(self, attr, value):
+    ...         # This converter converts only integers to floats
+    ...         # and raise an exception for the other types.
+    ...         if isinstance(value, int):
+    ...             return float(value)
+    ...         elif not isinstance(value, float):
+    ...             raise TypeError(f"Cannot convert '{value}' to float")
+    ...         return value
+    ...
+    >>> my_par = ParameterTypeOrHandler(attr_all_to_float='3.0', attr_int_to_float=1)
+    >>> my_par.attr_optional
+    2
+    >>> my_par.attr_all_to_float
+    3.0
+    >>> my_par.attr_int_to_float
+    1.0
+
+    The float() function can convert strings to integers, but our custom
+    converter forbids it
+
+    >>> my_par.attr_all_to_float = '2.0'
+    >>> my_par.attr_int_to_float = '4.0'
+    Traceback (most recent call last):
+    ...
+    TypeError: Cannot convert '4.0' to float
+
+    Parameter attributes that can be indexed can be handled with the
+    ``IndexedParameterAttribute``. These support unit validation and
+    converters exactly as ``ParameterAttribute``s, but the validation/conversion
+    is performed for each indexed attribute.
+
+    >>> class MyTorsionType(_ParameterAttributeHandler):
+    ...     periodicity = IndexedParameterAttribute(converter=int)
+    ...     k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+    ...
+    >>> my_par = MyTorsionType(
+    ...     periodicity1=2,
+    ...     k1=5 * unit.kilocalorie_per_mole,
+    ...     periodicity2='3',
+    ...     k2=6 * unit.kilocalorie_per_mole,
+    ... )
+    >>> my_par.periodicity
+    [2, 3]
+
+    Indexed attributes, can be accessed both as a list or as their indexed
+    parameter name.
+
+    >>> my_par.periodicity2 = 6
+    >>> my_par.periodicity[0] = 1
+    >>> my_par.periodicity
+    [1, 6]
 
     """
 
@@ -547,6 +655,47 @@ class _ParameterAttributeInitializer:
 
         return smirnoff_dict
 
+    def __getattr__(self, item):
+        """Take care of mapping indexed attributes to their respective list elements."""
+        # Separate the indexed attribute name from the list index.
+        attr_name, index = self._split_attribute_index(item)
+
+        # Check if this is an indexed attribute.
+        if (index is not None) and attr_name in self._get_indexed_parameter_attributes():
+            indexed_attr_value = getattr(self, attr_name)
+            try:
+                return indexed_attr_value[index]
+            except IndexError:
+                raise IndexError(f"'{item}' is out of bound for indexed attribute '{attr_name}'")
+
+        # Otherwise, forward the search to the next class in the MRO.
+        try:
+            return super().__getattr__(item)
+        except AttributeError as e:
+            # If this fails because the next classes in the MRO do not
+            # implement __getattr__(), then raise the standard Attribute error.
+            if '__getattr__' in str(e):
+                raise AttributeError(f"{self.__class__} object has no attribute '{item}'")
+            # Otherwise, re-raise the error from the class in the MRO.
+            raise
+
+    def __setattr__(self, key, value):
+        """Take care of mapping indexed attributes to their respective list elements."""
+        # Separate the indexed attribute name from the list index.
+        attr_name, index = self._split_attribute_index(key)
+
+        # Check if this is an indexed attribute. avoiding an infinite
+        # recursion by calling getattr() with non-existing keys.
+        if (index is not None) and (attr_name in self._get_indexed_parameter_attributes()):
+            indexed_attr_value = getattr(self, attr_name)
+            try:
+                indexed_attr_value[index] = value
+            except IndexError:
+                raise IndexError(f"'{key}' is out of bound for indexed attribute '{attr_name}'")
+        else:
+            # Forward the request to the next class in the MRO.
+            super().__setattr__(key, value)
+
     def add_cosmetic_attribute(self, attr_name, attr_value):
         """
         Add a cosmetic attribute to this object.
@@ -585,6 +734,23 @@ class _ParameterAttributeInitializer:
         #  Would we also need to override __del__ as well to cover both deletation methods?
         delattr(self, '_'+attr_name)
         self._cosmetic_attribs.remove(attr_name)
+
+    @staticmethod
+    def _split_attribute_index(item):
+        """Split the attribute name from the final index.
+
+        For example, the method takes 'k2' and returns the tuple ('k', 1).
+        If attribute_name doesn't end with an integer, it returns (item, None).
+        """
+        # Match any number (\d+) at the end of the string ($).
+        match = re.search(r'\d+$', item)
+        if match is None:
+            return item, None
+
+        index = match.group()  # This is a str.
+        attr_name = item[:-len(index)]
+        index = int(match.group()) - 1
+        return attr_name, index
 
     @classmethod
     def _get_parameter_attributes(cls, filter=None):
@@ -845,7 +1011,7 @@ class ParameterList(list):
 
 
 # TODO: Rename to better reflect role as parameter base class?
-class ParameterType(_ParameterAttributeInitializer):
+class ParameterType(_ParameterAttributeHandler):
     """
     Base class for SMIRNOFF parameter types.
 
@@ -961,6 +1127,14 @@ class ParameterType(_ParameterAttributeInitializer):
     >>> my_par.periodicity
     [2, 3]
 
+    Indexed attributes, can be accessed both as a list or as their indexed
+    parameter name.
+
+    >>> my_par.periodicity2 = 6
+    >>> my_par.periodicity[0] = 1
+    >>> my_par.periodicity
+    [1, 6]
+
     """
 
     # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
@@ -1039,7 +1213,7 @@ class ParameterType(_ParameterAttributeInitializer):
 
 # TODO: Should we have a parameter handler registry?
 
-class ParameterHandler(_ParameterAttributeInitializer):
+class ParameterHandler(_ParameterAttributeHandler):
     """Base class for parameter handlers.
 
     Parameter handlers are configured with some global parameters for a
@@ -2958,4 +3132,5 @@ class GBSAParameterHandler(ParameterHandler):
 
 if __name__ == '__main__':
     import doctest
-    doctest.run_docstring_examples(ParameterType, globals())
+    doctest.testmod()
+    # doctest.run_docstring_examples(_ParameterAttributeHandler, globals())
