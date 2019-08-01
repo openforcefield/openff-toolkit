@@ -2847,26 +2847,6 @@ class GBSAParameterHandler(ParameterHandler):
 
         self._validate_parameters()
 
-        # No previous GBSAForce should exist, so we're safe just making one here.
-        force_map = {
-            'OBC1': simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
-            #'HCT': simtk.openmm.GBSAOBCForce,
-            'OBC2': simtk.openmm.GBSAOBCForce,
-            #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
-            'HCT': simtk.openmm.app.internal.customgbforces.GBSAHCTForce,
-        }
-        openmm_force_type = force_map[self.gb_model]
-
-        if self.gb_model == 'OBC2':
-            gbsa_force = openmm_force_type()
-        else:
-            # We set these values in the constructor if we use the internal AMBER GBSA type wrapper
-            gbsa_force = openmm_force_type(solventDielectric=self.solvent_dielectric,
-                                           soluteDielectric=self.solute_dielectric,
-                                           SA=self.sa_model)
-
-        # TODO: Go through existing particles in the system (which have already had charges
-        #  assigned) and copy the charges into here
         # Grab the existing nonbonded force (which will have particle charges)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [
@@ -2875,16 +2855,54 @@ class GBSAParameterHandler(ParameterHandler):
 
         nonbonded_force = existing[0]
 
-        gbsa_force.setNonbondedMethod(nonbonded_force.getNonbondedMethod())
-        # Set the GBSAForce to have the same nonbonded method as vdW/coulomb
-        gbsa_force.setCutoffDistance(nonbonded_force.getCutoffDistance())
-        if nonbonded_force.usesPeriodicBoundaryConditions():
-            gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.CutoffPeriodic)
+
+        # No previous GBSAForce should exist, so we're safe just making one here.
+        force_map = {
+            'HCT': simtk.openmm.app.internal.customgbforces.GBSAHCTForce,
+            'OBC1': simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
+            'OBC2': simtk.openmm.GBSAOBCForce,
+            # It's tempting to do use the class below, but the customgbforce
+            # version of OBC2 doesn't provide setSolventRadius()
+            #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
+        }
+        openmm_force_type = force_map[self.gb_model]
+
+        if nonbonded_force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff:
+            amber_cutoff = None
         else:
-            gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.NoCutoff)
-        # Add all GBSA terms to the system.
-        # expected_parameters = GBSAParameterHandler.GB_expected_parameters[
-        #     self.gb_model]
+            amber_cutoff = nonbonded_force.getCutoffDistance().value_in_unit(unit.nanometer)
+
+        if self.gb_model == 'OBC2':
+            gbsa_force = openmm_force_type()
+
+
+        else:
+            # We set these values in the constructor if we use the internal AMBER GBSA type wrapper
+            gbsa_force = openmm_force_type(solventDielectric=self.solvent_dielectric,
+                                           soluteDielectric=self.solute_dielectric,
+                                           SA=self.sa_model,
+                                           cutoff=amber_cutoff,
+                                           kappa=0,
+                                           )
+            # WARNING: If using a CustomAmberGBForce, the functional form is affected by whether
+            # the cutoff kwarg is None *during initialization*. So, if you initialize it with a
+            # non-None value, and then try to change it to None, you'll basically break things.
+
+        # Set the GBSAForce to have the same cutoff as NonbondedForce
+        #gbsa_force.setCutoffDistance(nonbonded_force.getCutoffDistance())
+        if amber_cutoff is not None:
+            gbsa_force.setCutoffDistance(amber_cutoff)
+
+        #gbsa_force.setNonbondedMethod(nonbonded_force.getNonbondedMethod())
+
+        if nonbonded_force.usesPeriodicBoundaryConditions():
+            #gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.CutoffPeriodic)
+            gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.CutoffPeriodic)
+        else:
+            #gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.NoCutoff)
+            gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.NoCutoff)
+
+        # Add all GBSA terms to the system. Note that this will have been done above
         if self.gb_model == 'OBC2':
             gbsa_force.setSolventDielectric(self.solvent_dielectric)
             gbsa_force.setSoluteDielectric(self.solute_dielectric)
@@ -2898,6 +2916,15 @@ class GBSAParameterHandler(ParameterHandler):
         atom_matches = self.find_matches(topology)
 
         # Create all particles.
+
+        # !!! WARNING: CustomAmberGBForceBase expects different per-particle parameters
+        # depending on whether you use addParticle or setParticleParameters. In
+        # setParticleParameters, we have to apply the offset and scale BEFORE setting
+        # parameters, whereas in addParticle, the offset is applied automatically, and the particle
+        # parameters are not set until an auxillary finalize() method is called. !!!
+
+        # To keep it simple, we DO NOT pre-populate the particles in the GBSA force here.
+        # We call addParticle further below instead.
         #for topology_particle in topology.topology_particles:
             #gbsa_force.addParticle([0.0, 1.0, 0.0])
 
@@ -2906,12 +2933,7 @@ class GBSAParameterHandler(ParameterHandler):
             atom_idx = atom_key[0]
             gbsatype = atom_match.parameter_type
             charge, _, _2 = nonbonded_force.getParticleParameters(atom_idx)
-            #gbsa_force.setParticleParameters(atom_idx,
-            # TODO: This is likely wrong. The particle params that are expected in the
-            #       AMBER GBSA-derived classes are different from those provided in the
-            #       SMIRNOFF spec, and undergo a transformation before they are passed
-            #       into the OMM system's GBSAForce
-            params_to_add[atom_idx] = [charge, gbsatype.radius, gbsatype.scale]# * gbsatype.radius]
+            params_to_add[atom_idx] = [charge, gbsatype.radius, gbsatype.scale]
 
         if self.gb_model == 'OBC2':
             for particle_param in params_to_add:
@@ -2919,9 +2941,7 @@ class GBSAParameterHandler(ParameterHandler):
         else:
             for particle_param in params_to_add:
                 gbsa_force.addParticle(particle_param)
-
-            # We have to call finalize() because the internal pre-made
-            # customgb forces are a bit different than the base one
+            # We have to call finalize() for models that inherit from CustomAmberGBForceBase
             gbsa_force.finalize()
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
@@ -2929,10 +2949,6 @@ class GBSAParameterHandler(ParameterHandler):
                                                valence_terms=list(topology.topology_atoms))
 
         system.addForce(gbsa_force)
-
-
-
-
 
 
 if __name__ == '__main__':
