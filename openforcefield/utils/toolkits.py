@@ -1222,7 +1222,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         Compute AM1BCC partial charges with OpenEye quacpac. This function will attempt to use
         the OEAM1BCCELF10 charge generation method, but may print a warning and fall back to
-        normal OEAM1BCC if an error is encountered.
+        normal OEAM1BCC if an error is encountered. This error is known to occur with some 
+        carboxylic acids, and is under investigation by OpenEye.
 
 
         .. warning :: This API is experimental and subject to change.
