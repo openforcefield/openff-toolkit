@@ -3028,6 +3028,7 @@ class GBSAParameterHandler(ParameterHandler):
         existing = [
             f for f in existing if type(f) == openmm.NonbondedForce
         ]
+        assert len(existing) == 1
 
         nonbonded_force = existing[0]
 
@@ -3060,14 +3061,12 @@ class GBSAParameterHandler(ParameterHandler):
                                            )
             # WARNING: If using a CustomAmberGBForce, the functional form is affected by whether
             # the cutoff kwarg is None *during initialization*. So, if you initialize it with a
-            # non-None value, and then try to change it to None, you'll basically break things.
+            # non-None value, and then try to change it to None, you're likely to get unphysical results.
 
         # Set the GBSAForce to have the same cutoff as NonbondedForce
         #gbsa_force.setCutoffDistance(nonbonded_force.getCutoffDistance())
         if amber_cutoff is not None:
             gbsa_force.setCutoffDistance(amber_cutoff)
-
-        #gbsa_force.setNonbondedMethod(nonbonded_force.getNonbondedMethod())
 
         if nonbonded_force.usesPeriodicBoundaryConditions():
             # WARNING: The lines below aren't equivalent. The NonbondedForce and
@@ -3106,6 +3105,7 @@ class GBSAParameterHandler(ParameterHandler):
 
         # To keep it simple, we DO NOT pre-populate the particles in the GBSA force here.
         # We call addParticle further below instead.
+        # These lines are commented out intentionally as an example of what NOT to do.
         #for topology_particle in topology.topology_particles:
             #gbsa_force.addParticle([0.0, 1.0, 0.0])
 

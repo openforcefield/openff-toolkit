@@ -1266,12 +1266,17 @@ class TestForceFieldParameterAssignment:
                                                      implicitSolventKappa=0.,
                                                      )
 
-        off_gbsa_force = [force for force in off_omm_system.getForces() if
+        # Retrieve the GBSAForce from both the AMBER and OpenForceField systems
+        off_gbsa_forces = [force for force in off_omm_system.getForces() if
                               (isinstance(force, openmm.GBSAOBCForce) or
-                               isinstance(force, openmm.openmm.CustomGBForce))][0]
-        amber_gbsa_force = [force for force in amber_omm_system.getForces() if
-                                (isinstance(force, openmm.GBSAOBCForce) or
-                                 isinstance(force, openmm.openmm.CustomGBForce))][0]
+                               isinstance(force, openmm.openmm.CustomGBForce))]
+        assert len(off_gbsa_forces) == 1
+        off_gbsa_force = off_gbsa_forces[0]
+        amber_gbsa_forces = [force for force in amber_omm_system.getForces() if
+                                 (isinstance(force, openmm.GBSAOBCForce) or
+                                  isinstance(force, openmm.openmm.CustomGBForce))]
+        assert len(amber_gbsa_forces) == 1
+        amber_gbsa_force = amber_gbsa_forces[0]
 
         # We get radius and screen values from each model's getStandardParameters method
         if gbsa_model == 'HCT':
@@ -1283,8 +1288,8 @@ class TestForceFieldParameterAssignment:
 
         # Use GB params from OpenMM GBSA classes to populate parameters
         for idx, (radius, screen) in enumerate(gb_params):
-            q, _, _2 = amber_gbsa_force.getParticleParameters(idx)
-            print(q, radius, screen, _, _2)
+            # Keep the charge, but throw out the old radius and screen values
+            q, old_radius, old_screen = amber_gbsa_force.getParticleParameters(idx)
             if isinstance(amber_gbsa_force, openmm.GBSAOBCForce):
                 # Note that in GBSAOBCForce, the per-particle parameters are separate
                 # arguments, while in CustomGBForce they're a single iterable
