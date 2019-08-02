@@ -153,64 +153,6 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 '''
 
-xml_gbsa_ff_hct = '''
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-    <GBSA version="0.3" gb_model="HCT" solvent_dielectric="78.5" solute_dielectric="1" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
-      <Atom smirks="[*:1]" radius="0.15*nanometer" scale="0.8"/>
-      <Atom smirks="[#1:1]" radius="0.12*nanometer" scale="0.85"/>
-      <Atom smirks="[#1:1]~[#6]" radius="0.13*nanometer" scale="0.85"/>
-      <Atom smirks="[#1:1]~[#7]" radius="0.13*nanometer" scale="0.85"/>
-      <Atom smirks="[#1:1]~[#8]" radius="0.08*nanometer" scale="0.85"/>
-      <Atom smirks="[#1:1]~[#16]" radius="0.08*nanometer" scale="0.85"/>
-      <Atom smirks="[#6:1]" radius="0.17*nanometer" scale="0.72"/>
-      <Atom smirks="[#7:1]" radius="0.155*nanometer" scale="0.79"/>
-      <Atom smirks="[#8:1]" radius="0.15*nanometer" scale="0.85"/>
-      <Atom smirks="[#9:1]" radius="0.15*nanometer" scale="0.88"/>
-      <Atom smirks="[#14:1]" radius="0.21*nanometer" scale="0.8"/>
-      <Atom smirks="[#15:1]" radius="0.185*nanometer" scale="0.86"/>
-      <Atom smirks="[#16:1]" radius="0.18*nanometer" scale="0.96"/>
-      <Atom smirks="[#17:1]" radius="0.15*nanometer" scale="0.8"/>
-    </GBSA>
-</SMIRNOFF>
-'''
-
-
-xml_gbsa_ff_obc1 = '''
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-    <GBSA version="0.3" gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
-      <Atom smirks="[*:1]" radius="0.15*nanometer" scale="0.8"/>
-      <Atom smirks="[#1:1]" radius="0.12*nanometer" scale="0.85"/>
-      <Atom smirks="[#1:1]~[#7]" radius="0.13*nanometer" scale="0.85"/>
-      <Atom smirks="[#6:1]" radius="0.17*nanometer" scale="0.72"/>
-      <Atom smirks="[#7:1]" radius="0.155*nanometer" scale="0.79"/>
-      <Atom smirks="[#8:1]" radius="0.15*nanometer" scale="0.85"/>
-      <Atom smirks="[#9:1]" radius="0.15*nanometer" scale="0.88"/>
-      <Atom smirks="[#14:1]" radius="0.21*nanometer" scale="0.8"/>
-      <Atom smirks="[#15:1]" radius="0.185*nanometer" scale="0.86"/>
-      <Atom smirks="[#16:1]" radius="0.18*nanometer" scale="0.96"/>
-      <Atom smirks="[#17:1]" radius="0.15*nanometer" scale="0.8"/>
-    </GBSA>
-</SMIRNOFF>
-'''
-
-xml_gbsa_ff_obc2 = '''
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-    <GBSA version="0.3" gb_model="OBC2" solvent_dielectric="78.5" solute_dielectric="1" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
-      <Atom smirks="[*:1]" radius="0.15*nanometer" scale="0.8"/>
-      <Atom smirks="[#1:1]" radius="0.12*nanometer" scale="0.85"/>
-      <Atom smirks="[#1:1]~[#7]" radius="0.13*nanometer" scale="0.85"/>
-      <Atom smirks="[#6:1]" radius="0.17*nanometer" scale="0.72"/>
-      <Atom smirks="[#7:1]" radius="0.155*nanometer" scale="0.79"/>
-      <Atom smirks="[#8:1]" radius="0.15*nanometer" scale="0.85"/>
-      <Atom smirks="[#9:1]" radius="0.15*nanometer" scale="0.88"/>
-      <Atom smirks="[#14:1]" radius="0.21*nanometer" scale="0.8"/>
-      <Atom smirks="[#15:1]" radius="0.185*nanometer" scale="0.86"/>
-      <Atom smirks="[#16:1]" radius="0.18*nanometer" scale="0.96"/>
-      <Atom smirks="[#17:1]" radius="0.15*nanometer" scale="0.8"/>
-    </GBSA>
-</SMIRNOFF>
-'''
-
 xml_toolkitam1bcc_ff = '''
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
   <ToolkitAM1BCC version="0.3"/>
@@ -1209,10 +1151,10 @@ class TestForceFieldParameterAssignment:
             atom.name = f'{atom.element.symbol}{idx}'
         positions = molecule.conformers[0]
 
-        off_gbsas = {'HCT': xml_gbsa_ff_hct,
-                     'OBC1': xml_gbsa_ff_obc1,
-                     'OBC2': xml_gbsa_ff_obc2,
-                     }
+        off_gbsas  = {'HCT': 'test_forcefields/GBSA_HCT-1.0.offxml',
+                      'OBC1': 'test_forcefields/GBSA_OBC1-1.0.offxml',
+                      'OBC2': 'test_forcefields/GBSA_OBC2-1.0.offxml'
+                      }
         # Create OpenFF System with the current toolkit.
         ff = ForceField('test_forcefields/smirnoff99Frosst.offxml',
                         off_gbsas[gbsa_model])
@@ -1338,6 +1280,7 @@ class TestForceFieldParameterAssignment:
 
         # Ensure that all system energies are the same
         compare_system_energies(off_omm_system, amber_omm_system, positions, by_force_type=False)
+
 
 class TestSmirnoffVersionConverter:
 

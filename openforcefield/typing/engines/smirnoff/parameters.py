@@ -2944,7 +2944,7 @@ class GBSAParameterHandler(ParameterHandler):
         # If we're using HCT via GBSAHCTForce(CustomAmberGBForceBase):, then we need to ensure that:
         #   surface_area_energy is 5.4 cal/mol/A^2
         #   solvent_radius is 1.4 A
-        # Justification at https://github.com/openforcefield/openforcefield/pull/363)
+        # Justification at https://github.com/openforcefield/openforcefield/pull/363
         if self.gb_model == 'HCT':
             if self.surface_area_penalty != 5.4 * unit.calorie / unit.mole / unit.angstrom**2:
                 raise IncompatibleParameterError(f"The current implementation of HCT GBSA does not "
@@ -2962,7 +2962,7 @@ class GBSAParameterHandler(ParameterHandler):
         # If we're using OBC1 via GBSAOBC1Force(CustomAmberGBForceBase), then we need to ensure that:
         #   surface_area_energy is 5.4 cal/mol/A^2
         #   solvent_radius is 1.4 A
-        # Justification at https://github.com/openforcefield/openforcefield/pull/363)
+        # Justification at https://github.com/openforcefield/openforcefield/pull/363
         if self.gb_model == 'OBC1':
             if self.surface_area_penalty != 5.4 * unit.calorie / unit.mole / unit.angstrom**2:
                 raise IncompatibleParameterError(f"The current implementation of OBC1 GBSA does not "
@@ -2979,7 +2979,7 @@ class GBSAParameterHandler(ParameterHandler):
 
         # If we're using OBC2 via GBSAOBCForce, then we need to ensure that
         #   solvent_radius is 1.4 A
-        # Justification at https://github.com/openforcefield/openforcefield/pull/363)
+        # Justification at https://github.com/openforcefield/openforcefield/pull/363
         if self.gb_model == 'OBC2':
 
             if self.solvent_radius != 1.4 * unit.angstrom:
