@@ -1637,9 +1637,22 @@ class ParameterHandler(_ParameterAttributeHandler):
         err_msg = ""
 
         if len(unassigned_terms) > 0:
-            unassigned_str = '\n- '.join([str(x) for x in unassigned_terms])
+            unassigned_str = ''
+            for x in unassigned_terms:
+                unassigned_str += '\n- ' + str(x)
+                unassigned_str += ': names and elements '
+
+                # Pull and add additional helpful info on missing terms
+                for atom_idx in x:
+                    matched = False
+                    for atoms in valence_terms:
+                        for a in atoms:
+                            if a.topology_atom_index == atom_idx:
+                                unassigned_str += '(%s %s), ' % (a.atom.name, a.atom.element.symbol)
+                                matched = True
+                        if matched: break
             err_msg += ("{parameter_handler} was not able to find parameters for the following valence terms:\n"
-                        "- {unassigned_str}").format(parameter_handler=cls.__name__,
+                        "{unassigned_str}").format(parameter_handler=cls.__name__,
                                                      unassigned_str=unassigned_str)
         if len(not_found_terms) > 0:
             if err_msg != "":
