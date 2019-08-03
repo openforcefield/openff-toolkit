@@ -19,6 +19,14 @@ New features
   and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
   can now be get/set through normal attribute syntax on top of the list syntax.
 
+Bugfixes
+""""""""
+- `PR #385 <https://github.com/openforcefield/openforcefield/pull/385>`_: Fixes
+  `Issue #346 <https://github.com/openforcefield/openforcefield/issues/346>`_ by
+  having :py:meth:`OpenEyeToolkitWrapper.compute_partial_charges_am1bcc <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.compute_partial_charges_am1bcc>`
+  fall back to using standard AM1-BCC if AM1-BCC ELF10 charge generation raises
+  an error about "trans COOH conformers"
+
 
 0.4.1 - Bugfix Release
 ----------------------
