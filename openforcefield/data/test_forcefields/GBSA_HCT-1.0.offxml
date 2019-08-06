@@ -13,6 +13,6 @@
       <Atom smirks="[#14:1]" radius="0.21*nanometer" scale="0.8"/>
       <Atom smirks="[#15:1]" radius="0.185*nanometer" scale="0.86"/>
       <Atom smirks="[#16:1]" radius="0.18*nanometer" scale="0.96"/>
-      <Atom smirks="[#17:1]" radius="0.15*nanometer" scale="0.8"/>
+      <Atom smirks="[#17:1]" radius="0.17*nanometer" scale="0.8"/>
     </GBSA>
 </SMIRNOFF>
