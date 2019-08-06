@@ -21,7 +21,8 @@ from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterAttribute, IndexedParameterAttribute, ParameterList,
     ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
-    ImproperTorsionHandler, GBSAParameterHandler, SMIRNOFFSpecError
+    ImproperTorsionHandler, GBSAParameterHandler, SMIRNOFFSpecError,
+    _ParameterAttributeHandler
     )
 from openforcefield.utils import detach_units, IncompatibleUnitError
 from openforcefield.utils.collections import ValidatedList
@@ -908,7 +909,8 @@ class TestProperTorsionType:
                                                         k2=6 * unit.kilocalorie_per_mole,
                                                         )
 
-    def test_torsion_handler_charmm_potential():
+class TestProperTorsionHandler:
+    def test_torsion_handler_charmm_potential(self):
         """
         Test creation of TorsionHandlers with the deprecated 0.2 potential value "charmm" instead of the current
         supported potential value "fourier".
@@ -928,7 +930,6 @@ class TestProperTorsionType:
         with pytest.raises(SMIRNOFFSpecError, match=err_msg):
             ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
         ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
-
 
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
