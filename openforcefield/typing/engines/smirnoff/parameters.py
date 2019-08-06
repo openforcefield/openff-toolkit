@@ -2946,13 +2946,15 @@ class GBSAParameterHandler(ParameterHandler):
         #   solvent_radius is 1.4 A
         # Justification at https://github.com/openforcefield/openforcefield/pull/363
         if self.gb_model == 'HCT':
-            if self.surface_area_penalty != 5.4 * unit.calorie / unit.mole / unit.angstrom**2:
+            if ((self.surface_area_penalty != 5.4 * unit.calorie / unit.mole / unit.angstrom**2) and
+                (self.sa_model is not None)):
                 raise IncompatibleParameterError(f"The current implementation of HCT GBSA does not "
                                                  f"support surface_area_penalty values other than 5.4 "
                                                  f"cal/mol A^2 (data source specified value of "
                                                  f"{self.surface_area_penalty})")
 
-            if self.solvent_radius != 1.4 * unit.angstrom:
+            if ((self.solvent_radius != 1.4 * unit.angstrom) and
+                (self.sa_model is not None)):
                 raise IncompatibleParameterError(f"The current implementation of HCT GBSA does not "
                                                  f"support solvent_radius values other than 1.4 "
                                                  f"A (data source specified value of "
@@ -2964,13 +2966,15 @@ class GBSAParameterHandler(ParameterHandler):
         #   solvent_radius is 1.4 A
         # Justification at https://github.com/openforcefield/openforcefield/pull/363
         if self.gb_model == 'OBC1':
-            if self.surface_area_penalty != 5.4 * unit.calorie / unit.mole / unit.angstrom**2:
+            if ((self.surface_area_penalty != 5.4 * unit.calorie / unit.mole / unit.angstrom**2) and
+                (self.sa_model is not None)):
                 raise IncompatibleParameterError(f"The current implementation of OBC1 GBSA does not "
                                                  f"support surface_area_penalty values other than 5.4 "
                                                  f"cal/mol A^2 (data source specified value of "
                                                  f"{self.surface_area_penalty})")
 
-            if self.solvent_radius != 1.4 * unit.angstrom:
+            if ((self.solvent_radius != 1.4 * unit.angstrom) and
+                (self.sa_model is not None)):
                 raise IncompatibleParameterError(f"The current implementation of OBC1 GBSA does not "
                                                  f"support solvent_radius values other than 1.4 "
                                                  f"A (data source specified value of "
@@ -2982,7 +2986,8 @@ class GBSAParameterHandler(ParameterHandler):
         # Justification at https://github.com/openforcefield/openforcefield/pull/363
         if self.gb_model == 'OBC2':
 
-            if self.solvent_radius != 1.4 * unit.angstrom:
+            if ((self.solvent_radius != 1.4 * unit.angstrom) and
+                (self.sa_model is not None)):
                 raise IncompatibleParameterError(f"The current implementation of OBC1 GBSA does not "
                                                  f"support solvent_radius values other than 1.4 "
                                                  f"A (data source specified value of "
