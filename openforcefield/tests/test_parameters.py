@@ -21,7 +21,7 @@ from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterAttribute, IndexedParameterAttribute, ParameterList,
     ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
-    ImproperTorsionHandler, GBSAParameterHandler, SMIRNOFFSpecError,
+    ImproperTorsionHandler, GBSAHandler, SMIRNOFFSpecError,
     _ParameterAttributeHandler
     )
 from openforcefield.utils import detach_units, IncompatibleUnitError
@@ -935,7 +935,7 @@ class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
         """Test creation of an empty GBSAHandler, with all default attributes"""
         from simtk import unit
-        gbsa_handler = GBSAParameterHandler(skip_version_check=True)
+        gbsa_handler = GBSAHandler(skip_version_check=True)
         assert gbsa_handler.gb_model == 'OBC1'
         assert gbsa_handler.solvent_dielectric == 78.5
         assert gbsa_handler.solute_dielectric == 1
@@ -947,7 +947,7 @@ class TestGBSAHandler:
     def test_gbsahandler_setters(self):
         """Test creation of an empty GBSAHandler, with all default attributes"""
         from simtk import unit
-        gbsa_handler = GBSAParameterHandler(skip_version_check=True)
+        gbsa_handler = GBSAHandler(skip_version_check=True)
 
         gbsa_handler.gb_model = 'OBC2'
         gbsa_handler.gb_model = 'HCT'
@@ -983,18 +983,18 @@ class TestGBSAHandler:
 
     def test_gbsahandlers_are_compatible(self):
         """
-        Test the check_handler_compatibility function of GBSAParameterHandler
+        Test the check_handler_compatibility function of GBSAHandler
         """
         from openforcefield.typing.engines.smirnoff import IncompatibleParameterError
         from simtk import unit
-        gbsa_handler_1 = GBSAParameterHandler(skip_version_check=True)
-        gbsa_handler_2 = GBSAParameterHandler(skip_version_check=True)
+        gbsa_handler_1 = GBSAHandler(skip_version_check=True)
+        gbsa_handler_2 = GBSAHandler(skip_version_check=True)
 
         # Perform a check which should pass
         gbsa_handler_1.check_handler_compatibility(gbsa_handler_2)
 
         # Perform a check which should fail
-        gbsa_handler_3 = GBSAParameterHandler(skip_version_check=True, solvent_radius=1.3*unit.angstrom)
+        gbsa_handler_3 = GBSAHandler(skip_version_check=True, solvent_radius=1.3 * unit.angstrom)
         with pytest.raises(IncompatibleParameterError, match="Difference between 'solvent_radius' ") as excinfo:
             gbsa_handler_1.check_handler_compatibility(gbsa_handler_3)
 

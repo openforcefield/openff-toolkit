@@ -8,10 +8,16 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
-=======
 New features
 """"""""""""
-- Periodic box vectors are now transferred in `Topology.to_openmm()`
+- `PR #363 <https://github.com/openforcefield/openforcefield/pull/363>`_: Implements
+  :py:class:`GBSAHandler <openforcefield.typing.engines.smirnoff.parameters.GBSAHandler>`,
+  which supports the
+  `GBSA tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#gbsa>`_.
+  Currently, only GBSAHandlers with ``gb_model="OBC2"`` support
+  setting non-default values for the ``surface_area_penalty`` term (default ``5.4*calories/mole/angstroms**2``).
+  No model currently supports setting ``solvent_radius`` to any value other than ``1.4*angstroms``.
+- Periodic box vectors are now transferred in ``Topology.to_openmm()``
 - `PR #377 <https://github.com/openforcefield/openforcefield/pull/377>`_: Single indexed parameters in
   :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
   and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
@@ -24,6 +30,15 @@ Bugfixes
   having :py:meth:`OpenEyeToolkitWrapper.compute_partial_charges_am1bcc <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.compute_partial_charges_am1bcc>`
   fall back to using standard AM1-BCC if AM1-BCC ELF10 charge generation raises
   an error about "trans COOH conformers"
+
+
+Force fields added
+""""""""""""""""""
+- `PR #363 <https://github.com/openforcefield/openforcefield/pull/363>`_: Adds
+  ``test_forcefields/GBSA_HCT-1.0.offxml``, ``test_forcefields/GBSA_OBC1-1.0.offxml``,
+  and ``test_forcefields/GBSA_OBC2-1.0.offxml``, which are experimental implementations
+  of GBSA models. These are primarily used in validation tests against OpenMM's models, and
+  their versions are intended to track bugfixes if discrepancies are found.
 
 0.4.1 - Bugfix Release
 ----------------------

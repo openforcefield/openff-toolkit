@@ -29,7 +29,8 @@ __all__ = [
     'AngleHandler',
     'ProperTorsionHandler',
     'ImproperTorsionHandler',
-    'vdWHandler'
+    'vdWHandler',
+    'GBSAHandler'
 ]
 
 
@@ -2893,8 +2894,8 @@ class ChargeIncrementModelHandler(ParameterHandler):
                     # TODO: Calculate exceptions
 
 
-class GBSAParameterHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<GBSAParameterHandler>`` tags
+class GBSAHandler(ParameterHandler):
+    """Handle SMIRNOFF ``<GBSAHandler>`` tags
 
     .. warning :: This API is experimental and subject to change.
     """

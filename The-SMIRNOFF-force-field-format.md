@@ -503,8 +503,6 @@ The *second* atom in an improper (in the example above, the trivalent carbon) is
 
 ### `<GBSA>`
 
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit.
-
 Generalized-Born surface area (GBSA) implicit solvent parameters are optionally specified via a `<GBSA>...</GBSA>` using `<Atom>` tags with GBSA model specific attributes:
 ```XML
  <GBSA version="0.3" gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
