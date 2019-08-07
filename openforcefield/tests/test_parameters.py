@@ -967,6 +967,9 @@ class TestGBSAHandler:
 
         gbsa_handler.sa_model = 'ACE'
         gbsa_handler.sa_model = None
+
+        with pytest.raises(TypeError) as excinfo:
+            gbsa_handler.sa_model = 'None'
         with pytest.raises(TypeError) as excinfo:
             gbsa_handler.sa_model = 'Invalid SA option'
 

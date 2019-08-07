@@ -1678,12 +1678,6 @@ class ParameterHandler(_ParameterAttributeHandler):
         for attr in identical_attrs:
             this_val, other_val = get_unitless_values(attr)
 
-            # Convert None values to str, so "==" comparison will work
-            if this_val is None:
-                this_val = "None"
-            if other_val is None:
-                other_val = "None"
-
             if this_val != other_val:
                 raise IncompatibleParameterError(
                     "{} values are not identical. "
