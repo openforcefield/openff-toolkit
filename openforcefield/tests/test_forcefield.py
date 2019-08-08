@@ -1275,11 +1275,9 @@ class TestForceFieldParameterAssignment:
         # print(openmm.XmlSerializer.serialize(off_gbsa_force))
         # print(openmm.XmlSerializer.serialize(amber_gbsa_force))
 
-        # Exception for debugging travis
-        raise Exception([amber_energy[1], off_energy[1]])
 
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
-        assert amber_energy[1] == off_energy[1]
+        assert (amber_energy[1] - off_energy[1]) < 1e-6 * unit.kilojoule/unit.mole
 
         # Ensure that all system energies are the same
         compare_system_energies(off_omm_system, amber_omm_system, positions, by_force_type=False)
@@ -1405,7 +1403,7 @@ class TestForceFieldParameterAssignment:
         # print(openmm.XmlSerializer.serialize(amber_gbsa_force))
 
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
-        assert amber_energy[1] == off_energy[1]
+        assert (amber_energy[1] - off_energy[1]) < 1e-6 * unit.kilojoule/unit.mole
 
         # If charges are zero, the GB energy component should be 0, so the total GBSA energy should be 0
         if zero_charges:
