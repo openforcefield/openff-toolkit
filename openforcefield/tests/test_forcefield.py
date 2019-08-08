@@ -1279,8 +1279,9 @@ class TestForceFieldParameterAssignment:
 
 
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
-        #assert abs(amber_energy[1] - off_energy[1]) < 1e-4 * unit.kilojoule/unit.mole
-        assert amber_energy[1] == off_energy[1]
+        # For Platform=OpenCL, we do get "=="-level identical numbers, but for "Reference", we don't.
+        #assert amber_energy[1] == off_energy[1]
+        assert abs(amber_energy[1] - off_energy[1]) < 1e-6 * unit.kilojoule/unit.mole
 
         # Ensure that all system energies are the same
         compare_system_energies(off_omm_system, amber_omm_system, positions, by_force_type=False)
@@ -1408,15 +1409,15 @@ class TestForceFieldParameterAssignment:
         # print(openmm.XmlSerializer.serialize(amber_gbsa_force))
 
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
-        #assert abs(amber_energy[1] - off_energy[1]) < 1e-4 * unit.kilojoule/unit.mole
-        assert amber_energy[1] == off_energy[1]
+        # For Platform=OpenCL, we do get "=="-level identical numbers, but for "Reference", we don't.
+        #assert amber_energy[1] == off_energy[1]
+        assert abs(amber_energy[1] - off_energy[1]) < 1e-6 * unit.kilojoule/unit.mole
 
         # If charges are zero, the GB energy component should be 0, so the total GBSA energy should be 0
         if zero_charges:
             assert amber_energy[1] == 0. * unit.kilojoule / unit.mole
         else:
             assert amber_energy[1] != 0. * unit.kilojoule / unit.mole
-        #assert off_energy_no_gbsa[0] != off_energy[0]
 
         # Ensure that all system energies are the same
         compare_system_energies(off_omm_system, amber_omm_system, positions, by_force_type=False)
