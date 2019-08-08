@@ -1275,6 +1275,9 @@ class TestForceFieldParameterAssignment:
         # print(openmm.XmlSerializer.serialize(off_gbsa_force))
         # print(openmm.XmlSerializer.serialize(amber_gbsa_force))
 
+        # Exception for debugging travis
+        raise Exception([amber_energy[1], off_energy[1]])
+
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
         assert amber_energy[1] == off_energy[1]
 
