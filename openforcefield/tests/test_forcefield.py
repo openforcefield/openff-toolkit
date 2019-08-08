@@ -1285,7 +1285,7 @@ class TestForceFieldParameterAssignment:
                         reason='Test requires OE toolkit to read mol2 files')
     @pytest.mark.parametrize('zero_charges', [True, False])
     @pytest.mark.parametrize(('gbsa_model'), ['HCT', 'OBC1', 'OBC2'])
-    def test_ethanol_energy_gb_no_sa(self, zero_charges, gbsa_model):
+    def test_molecule_energy_gb_no_sa(self, zero_charges, gbsa_model):
         """Test creating a GBSA system without a surface energy term, and validate its energy
         against the same system made using OpenMM's AMBER GBSA functionality"""
         from openforcefield.tests.utils import (compare_system_energies, create_system_from_amber,

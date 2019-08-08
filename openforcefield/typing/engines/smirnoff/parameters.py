@@ -2895,7 +2895,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
 
 class GBSAHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<GBSAHandler>`` tags
+    """Handle SMIRNOFF ``<GBSA>`` tags
 
     .. warning :: This API is experimental and subject to change.
     """
