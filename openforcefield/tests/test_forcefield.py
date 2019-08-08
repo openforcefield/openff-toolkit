@@ -1140,6 +1140,7 @@ class TestForceFieldParameterAssignment:
                                                 )
         import parmed as pmd
         from simtk import openmm
+        from simtk.openmm import Platform
 
         mol2_file_path, _ = get_freesolv_file_path(freesolv_id, forcefield_version)
 
@@ -1264,8 +1265,9 @@ class TestForceFieldParameterAssignment:
 
         # Create Contexts
         integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
-        amber_context = openmm.Context(amber_omm_system, integrator)
-        off_context = openmm.Context(off_omm_system, copy.deepcopy(integrator))
+        platform = Platform.getPlatformByName('Reference')
+        amber_context = openmm.Context(amber_omm_system, integrator, platform)
+        off_context = openmm.Context(off_omm_system, copy.deepcopy(integrator), platform)
 
         # Get context energies
         amber_energy = get_context_potential_energy(amber_context, positions)
@@ -1277,7 +1279,8 @@ class TestForceFieldParameterAssignment:
 
 
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
-        assert (amber_energy[1] - off_energy[1]) < 1e-4 * unit.kilojoule/unit.mole
+        #assert abs(amber_energy[1] - off_energy[1]) < 1e-4 * unit.kilojoule/unit.mole
+        assert amber_energy[1] == off_energy[1]
 
         # Ensure that all system energies are the same
         compare_system_energies(off_omm_system, amber_omm_system, positions, by_force_type=False)
@@ -1294,6 +1297,7 @@ class TestForceFieldParameterAssignment:
                                                 )
         import parmed as pmd
         from simtk import openmm
+        from simtk.openmm import Platform
         import numpy as np
 
         # Load an arbitrary molecule from the freesolv set
@@ -1391,8 +1395,9 @@ class TestForceFieldParameterAssignment:
 
         # Create Contexts
         integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
-        amber_context = openmm.Context(amber_omm_system, copy.deepcopy(integrator))
-        off_context = openmm.Context(off_omm_system, copy.deepcopy(integrator))
+        platform = Platform.getPlatformByName('Reference')
+        amber_context = openmm.Context(amber_omm_system, integrator, platform)
+        off_context = openmm.Context(off_omm_system, copy.deepcopy(integrator), platform)
 
         # Get context energies
         amber_energy = get_context_potential_energy(amber_context, positions)
@@ -1403,7 +1408,8 @@ class TestForceFieldParameterAssignment:
         # print(openmm.XmlSerializer.serialize(amber_gbsa_force))
 
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
-        assert (amber_energy[1] - off_energy[1]) < 1e-4 * unit.kilojoule/unit.mole
+        #assert abs(amber_energy[1] - off_energy[1]) < 1e-4 * unit.kilojoule/unit.mole
+        assert amber_energy[1] == off_energy[1]
 
         # If charges are zero, the GB energy component should be 0, so the total GBSA energy should be 0
         if zero_charges:
