@@ -1638,12 +1638,12 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         if len(unassigned_terms) > 0:
             unassigned_str = ''
-            for x in unassigned_terms:
-                unassigned_str += '\n- ' + str(x)
+            for unassigned_tuple in unassigned_terms:
+                unassigned_str += '\n- Topology indices ' + str(unassigned_tuple)
                 unassigned_str += ': names and elements '
 
                 # Pull and add additional helpful info on missing terms
-                for atom_idx in x:
+                for atom_idx in unassigned_tuple:
                     matched = False
                     for atoms in valence_terms:
                         for a in atoms:
