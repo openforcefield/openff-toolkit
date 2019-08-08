@@ -18,6 +18,8 @@ New features
   :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
   and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
   can now be get/set through normal attribute syntax on top of the list syntax.
+- `PR #394 <https://github.com/openforcefield/openforcefield/pull/394>`_: Include element and atom name
+  in error output when there are missing valence parameters during molecule parameterization.
 
 
 0.4.1 - Bugfix Release
