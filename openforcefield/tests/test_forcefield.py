@@ -565,6 +565,27 @@ class TestForceField():
 
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
+    def test_parameterize_ethanol_missing_torsion(self):
+        from simtk.openmm import app
+        from openforcefield.typing.engines.smirnoff.parameters import UnassignedProperTorsionParameterException
+
+        forcefield = ForceField('''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
+    <Proper smirks="[#99:1]-[#99X4:2]-[#99:3]-[#99:4]" id="t1" idivf1="1" k1="0.156 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree"/>
+  </ProperTorsions>
+</SMIRNOFF>
+''')
+        pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
+        molecules = []
+        molecules.append(Molecule.from_smiles('CCO'))
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        with pytest.raises(UnassignedProperTorsionParameterException,
+                           match='- Topology indices [(]5, 0, 1, 6[)]: '
+                                 'names and elements [(] H[)], [(] C[)], [(] C[)], [(] H[)],') \
+                as excinfo:
+            omm_system = forcefield.create_openmm_system(topology)
+
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_1_cyclohexane_1_ethanol(self, toolkit_registry, registry_description):
         from simtk.openmm import app
