@@ -19,8 +19,12 @@ New features
   No model currently supports setting ``solvent_radius`` to any value other than ``1.4*angstroms``.
   Experimental SMIRNOFF-format implementations of ``HCT``, ``OBC1``, and ``OBC2`` are included for testing
   purposes (see below).
-- `PR #363 <https://github.com/openforcefield/openforcefield/pull/363>`_: Periodic box vectors are
-  now transferred in :py:meth:`Topology.to_openmm() <openforcefield.topology.Topology.to_openmm>`
+  .. warning:: OpenMM Systems created using these GBSA tags are not yet transferrable
+               to other simulation formats via ParmEd.
+- `PR #363 <https://github.com/openforcefield/openforcefield/pull/363>`_: When using
+  :py:meth:`Topology.to_openmm() <openforcefield.topology.Topology.to_openmm>`, periodic
+  box vectors are now transferred from the Open Force Field Toolkit Topology
+  into the newly-created OpenMM Topology.
 - `PR #377 <https://github.com/openforcefield/openforcefield/pull/377>`_: Single indexed parameters in
   :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
   and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
