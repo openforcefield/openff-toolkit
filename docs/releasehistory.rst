@@ -21,6 +21,14 @@ New features
 - `PR #394 <https://github.com/openforcefield/openforcefield/pull/394>`_: Include element and atom name
   in error output when there are missing valence parameters during molecule parameterization.
 
+Bugfixes
+""""""""
+- `PR #385 <https://github.com/openforcefield/openforcefield/pull/385>`_: Fixes
+  `Issue #346 <https://github.com/openforcefield/openforcefield/issues/346>`_ by
+  having :py:meth:`OpenEyeToolkitWrapper.compute_partial_charges_am1bcc <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.compute_partial_charges_am1bcc>`
+  fall back to using standard AM1-BCC if AM1-BCC ELF10 charge generation raises
+  an error about "trans COOH conformers"
+
 
 0.4.1 - Bugfix Release
 ----------------------
