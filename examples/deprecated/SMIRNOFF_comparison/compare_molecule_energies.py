@@ -21,8 +21,8 @@ inpcrd_filepath = os.path.join(datapath, molname + '.crd')
 if not os.path.isdir(datapath):
     print("Extracting archived molecule files.")
     # Extract the AlkEthOH dataset shipped with the toolkit in data/molecules/ in the working directory.
-    from openforcefield.tests.utils import get_data_filename
-    tarfile_path = os.path.join(get_data_filename('molecules'), 'AlkEthOH_tripos.tar.gz')
+    from openforcefield.tests.utils import get_data_file_path
+    tarfile_path = os.path.join(get_data_file_path('molecules'), 'AlkEthOH_tripos.tar.gz')
     import tarfile
     with tarfile.open(tarfile_path, 'r:gz') as tar:
         tar.extractall()
@@ -33,7 +33,7 @@ molecule = Molecule.from_file(mol_filepath)
 
 # Load forcefield
 from openforcefield.typing.engines.smirnoff import ForceField
-forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
+forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 
 # Compare energies
 from openforcefield.tests.utils import compare_amber_smirnoff

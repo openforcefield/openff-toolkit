@@ -153,7 +153,7 @@ class ToolkitWrapper:
         def decorator(func):
             @wraps(func)
             def wrapped_function(*args, **kwargs):
-                if not cls.toolkit_is_available():
+                if not cls.is_available():
                     msg = 'This function requires the {} toolkit'.format(
                         cls._toolkit_name)
                     raise LicenseError(msg)
@@ -197,11 +197,9 @@ class ToolkitWrapper:
         return self._toolkit_file_write_formats
 
     @staticmethod
-    def toolkit_is_available():
+    def is_available():
         """
         Check whether the corresponding toolkit can be imported
-
-        .. note :: This method call may be expensive.
 
         Returns
         -------
@@ -211,23 +209,8 @@ class ToolkitWrapper:
         """
         return NotImplementedError
 
-    @classmethod
-    def is_available(cls):
-        """
-        Check whether this toolkit wrapper is available for use because the underlying toolkit can be found.
-
-        .. note :: This method caches the result of any costly checks for file paths or module imports.
-
-        Parameters
-        ----------
-        is_available : bool
-            True if toolkit is available for use, False otherwise
-
-        """
-        return NotImplementedError
-
     def from_file(self,
-                  filename,
+                  file_path,
                   file_format,
                   allow_undefined_stereo=False):
         """
@@ -235,7 +218,7 @@ class ToolkitWrapper:
         
         Parameters
         ----------
-        filename : str
+        file_path : str
             The file to read the molecule from
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
@@ -299,9 +282,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         'SLN', 'SMI', 'USM', 'XYC'
     ]
 
-    # TODO: AR - Do we need both toolkit_is_available() and is_available()?
     @staticmethod
-    def toolkit_is_available(
+    def is_available(
             oetools=('oechem', 'oequacpac', 'oeiupac', 'oeomega')):
         """
         Check if the given OpenEye toolkit components are available.
@@ -356,25 +338,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 all_licensed &= getattr(module, license_function_names[tool])()
         return all_licensed
 
-    @classmethod
-    def is_available(cls):
-        """
-        Check whether this toolkit wrapper is available for use because the underlying toolkit can be found.
-
-        .. note :: This method caches the result of any costly checks for file paths or module imports.
-
-        Parameters
-        ----------
-        is_available : bool
-            True if toolkit wrapper is available for use, False otherwise
-
-        """
-        if cls._is_available is None:
-            cls._is_available = cls.toolkit_is_available()
-                #oetools=('oechem', 'oequacpac')
-        return cls._is_available
-
-    def from_object(self, object):
+    def from_object(self, object, allow_undefined_stereo=False):
         """
         If given an OEMol (or OEMol-derived object), this function will load it into an openforcefield.topology.molecule
         Otherwise, it will return False.
@@ -383,6 +347,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         object : A molecule-like object
             An object to by type-checked.
+        allow_undefined_stereo : bool, default=False
+            Whether to accept molecules with undefined stereocenters. If False,
+            an exception will be raised if a molecule with undefined stereochemistry
+            is passed into this function.
 
         Returns
         -------
@@ -397,11 +365,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # TODO: Add tests for the from_object functions
         from openeye import oechem
         if isinstance(object, oechem.OEMolBase):
-            return self.from_openeye(object)
+            return self.from_openeye(object, allow_undefined_stereo=allow_undefined_stereo)
         raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_file(self,
-                  filename,
+                  file_path,
                   file_format,
                   allow_undefined_stereo=False):
         """
@@ -409,7 +377,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Parameters
         ----------
-        filename : str
+        file_path : str
             The file to read the molecule from
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
@@ -433,15 +401,15 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Load a mol2 file into an OpenFF ``Molecule`` object.
 
-        >>> from openforcefield.utils import get_data_filename
-        >>> mol2_file_path = get_data_filename('molecules/cyclohexane.mol2')
+        >>> from openforcefield.utils import get_data_file_path
+        >>> mol2_file_path = get_data_file_path('molecules/cyclohexane.mol2')
         >>> toolkit = OpenEyeToolkitWrapper()
         >>> molecule = toolkit.from_file(mol2_file_path, file_format='mol2')
 
         """
         from openeye import oechem
-        ifs = oechem.oemolistream(filename)
-        return self._read_oemolistream_molecules(ifs, allow_undefined_stereo, file_path=filename)
+        ifs = oechem.oemolistream(file_path)
+        return self._read_oemolistream_molecules(ifs, allow_undefined_stereo, file_path=file_path)
 
     def from_file_obj(self,
                       file_obj,
@@ -483,7 +451,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return self._read_oemolistream_molecules(ifs, allow_undefined_stereo)
 
-    def to_file_obj(self, molecule, file_obj, outfile_format):
+    def to_file_obj(self, molecule, file_obj, file_format):
         """
         Writes an OpenFF Molecule to a file-like object
 
@@ -493,7 +461,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The molecule to write
         file_obj
             The file-like object to write to
-        outfile_format
+        file_format
             The format for writing the molecule data
 
         """
@@ -505,16 +473,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # TODO: This is inefficiently implemented. Is there any way to attach a file-like object to an oemolstream?
         with temporary_directory() as tmpdir:
             with temporary_cd(tmpdir):
-                outfile = 'temp_molecule.' + outfile_format
+                outfile = 'temp_molecule.' + file_format
                 ofs = oechem.oemolostream(outfile)
-                openeye_format = getattr(oechem, 'OEFormat_' + outfile_format)
+                openeye_format = getattr(oechem, 'OEFormat_' + file_format)
                 ofs.SetFormat(openeye_format)
                 oechem.OEWriteMolecule(ofs, oemol)
                 ofs.close()
                 file_data = open(outfile).read()
         file_obj.write(file_data)
 
-    def to_file(self, molecule, outfile, outfile_format):
+    def to_file(self, molecule, file_path, file_format):
         """
         Writes an OpenFF Molecule to a file-like object
 
@@ -522,16 +490,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : an OpenFF Molecule
             The molecule to write
-        outfile
-            The filename to write to
-        outfile_format
+        file_path
+            The file path to write to.
+        file_format
             The format for writing the molecule data
 
         """
         from openeye import oechem
         oemol = self.to_openeye(molecule)
-        ofs = oechem.oemolostream(outfile)
-        openeye_format = getattr(oechem, 'OEFormat_' + outfile_format)
+        ofs = oechem.oemolostream(file_path)
+        openeye_format = getattr(oechem, 'OEFormat_' + file_format)
         ofs.SetFormat(openeye_format)
         oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
@@ -692,7 +660,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     @staticmethod
     def from_openeye(oemol, allow_undefined_stereo=False):
         """
-        Create a Molecule from an OpenEye molecule.
+        Create a Molecule from an OpenEye molecule. If the OpenEye molecule has
+        implicit hydrogens, this function will make them explicit.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -714,8 +683,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         Create a Molecule from an OpenEye OEMol
 
         >>> from openeye import oechem
-        >>> from openforcefield.tests.utils import get_data_filename
-        >>> ifs = oechem.oemolistream(get_data_filename('systems/monomers/ethanol.mol2'))
+        >>> from openforcefield.tests.utils import get_data_file_path
+        >>> ifs = oechem.oemolistream(get_data_file_path('systems/monomers/ethanol.mol2'))
         >>> oemols = list(ifs.GetOEGraphMols())
 
         >>> toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -724,6 +693,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
         from openforcefield.topology.molecule import Molecule
+
+
+        # Add explicit hydrogens if they're implicit
+        if oechem.OEHasImplicitHydrogens(oemol):
+            oechem.OEAddExplicitHydrogens(oemol)
 
         # TODO: Is there any risk to perceiving aromaticity here instead of later?
         oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
@@ -769,7 +743,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                         oeatom_to_str(oebond.GetNbr(oeatom)))
                 return description
 
-            msg = "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry. " \
+            msg = "OEMol has unspecified stereochemistry. " \
                   "oemol.GetTitle(): {}\n".format(oemol.GetTitle())
             if len(problematic_atoms) != 0:
                 msg += "Problematic atoms are:\n"
@@ -778,8 +752,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if len(problematic_bonds) != 0:
                 msg += "Problematic bonds are: {}\n".format(problematic_bonds)
             if allow_undefined_stereo:
+                msg = 'Warning (not error because allow_undefined_stereo=True): ' + msg
                 logger.warning(msg)
             else:
+                msg = 'Unable to make OFFMol from OEMol: ' + msg
                 raise UndefinedStereochemistryError(msg)
 
         # TODO: What other information should we preserve besides name?
@@ -850,7 +826,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                                                     unit.angstrom)
                     off_atom_index = map_atoms[oe_id]
                     positions[off_atom_index, :] = off_atom_coords
-                if (positions == 0 * unit.angstrom).all():
+                if (positions == 0 * unit.angstrom).all() and n_atoms > 1:
                     continue
                 molecule.add_conformer(positions)
 
@@ -1060,7 +1036,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             | oechem.OESMILESFlag_AtomStereo)
         return smiles
 
-    def from_smiles(self, smiles, hydrogens_are_explicit=False):
+    def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
         """
         Create a Molecule from a SMILES string using the OpenEye toolkit.
 
@@ -1072,6 +1048,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The SMILES string to turn into a molecule
         hydrogens_are_explicit : bool, default = False
             If False, OE will perform hydrogen addition using OEAddExplicitHydrogens
+        allow_undefined_stereo : bool, default=False
+            Whether to accept SMILES with undefined stereochemistry. If False,
+            an exception will be raised if a SMILES with undefined stereochemistry
+            is passed into this function.
 
         Returns
         -------
@@ -1085,13 +1065,20 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if not (hydrogens_are_explicit):
             result = oechem.OEAddExplicitHydrogens(oemol)
             if result == False:
-                raise Exception(
+                raise ValueError(
                     "Addition of explicit hydrogens failed in from_openeye")
-        # TODO: Add allow_undefined_stereo to this function, and pass to from_openeye?
-        molecule = self.from_openeye(oemol)
+        elif hydrogens_are_explicit and oechem.OEHasImplicitHydrogens(oemol):
+            raise ValueError(
+                f"'hydrogens_are_explicit' was specified as True, but OpenEye Toolkit interpreted "
+                f"SMILES '{smiles}' as having implicit hydrogen. If this SMILES is intended to "
+                f"express all explicit hydrogens in the molecule, then you should construct the "
+                f"desired molecule as an OEMol (where oechem.OEHasImplicitHydrogens(oemol) returns "
+                f"False), and then use Molecule.from_openeye() to create the desired OFFMol.")
+        molecule = self.from_openeye(oemol,
+                                     allow_undefined_stereo=allow_undefined_stereo)
         return molecule
 
-    def generate_conformers(self, molecule, num_conformers=1, clear_existing=True):
+    def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):
         """
         Generate molecule conformers using OpenEye Omega. 
 
@@ -1107,7 +1094,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ---------
         molecule : a :class:`Molecule` 
             The molecule to generate conformers for.
-        num_conformers : int, default=1
+        n_conformers : int, default=1
             The maximum number of conformers to generate.
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
@@ -1116,7 +1103,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openeye import oeomega
         oemol = self.to_openeye(molecule)
         omega = oeomega.OEOmega()
-        omega.SetMaxConfs(num_conformers)
+        omega.SetMaxConfs(n_conformers)
         omega.SetCanonOrder(False)
         omega.SetSampleHydrogens(True)
         omega.SetEnergyWindow(15.0)  #unit?
@@ -1128,7 +1115,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if status is False:
             raise Exception("OpenEye Omega conformer generation failed")
 
-        molecule2 = self.from_openeye(oemol)
+        molecule2 = self.from_openeye(oemol, allow_undefined_stereo=True)
 
         if clear_existing:
             molecule._conformers = list()
@@ -1233,7 +1220,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def compute_partial_charges_am1bcc(self, molecule):
         """
-        Compute AM1BCC partial charges with OpenEye quacpac
+        Compute AM1BCC partial charges with OpenEye quacpac. This function will attempt to use
+        the OEAM1BCCELF10 charge generation method, but may print a warning and fall back to
+        normal OEAM1BCC if an error is encountered. This error is known to occur with some 
+        carboxylic acids, and is under investigation by OpenEye.
+
 
         .. warning :: This API is experimental and subject to change.
 
@@ -1254,7 +1245,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The partial charges
 
         """
-        from openeye import oequacpac
+        from openeye import oequacpac, oechem
         import numpy as np
 
         if molecule.n_conformers == 0:
@@ -1265,9 +1256,19 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
         oemol = molecule.to_openeye()
 
-        result = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCELF10Charges())
+        errfs = oechem.oeosstream()
+        oechem.OEThrow.SetOutputStream(errfs)
+        oechem.OEThrow.Clear()
+        quacpac_status = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCELF10Charges())
+        oechem.OEThrow.SetOutputStream(oechem.oeerr)  # restoring to original state
+        # This logic handles errors encountered in #34
+        if not quacpac_status:
+            if "SelectElfPop: issue with removing trans COOH conformers" in (errfs.str().decode("UTF-8")):
+                logger.warning("OEAM1BCCELF10 charge assignment failed due to a known bug (toolkit issue #346). "
+                               "Downgrading to OEAM1BCC charge assignment for this molecule.")
+                quacpac_status = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
 
-        if result is False:
+        if quacpac_status is False:
             raise Exception('Unable to assign charges')
 
         # Extract and return charges
@@ -1465,7 +1466,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     _toolkit_file_write_formats = ['SDF', 'MOL', 'SMI', 'PDB']
 
     @staticmethod
-    def toolkit_is_available():
+    def is_available():
         """
         Check whether the RDKit toolkit can be imported
 
@@ -1481,22 +1482,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         except ImportError:
             return False
 
-    @classmethod
-    def is_available(cls):
-        """
-        Check whether toolkit is available for use.
-
-        Parameters
-        ----------
-        is_available : bool
-            True if toolkit is available for use, False otherwise
-
-        """
-        if cls._is_available is None:
-            cls._is_available = cls.toolkit_is_available()
-        return cls._is_available
-
-    def from_object(self, object):
+    def from_object(self, object, allow_undefined_stereo=False):
         """
         If given an rdchem.Mol (or rdchem.Mol-derived object), this function will load it into an
         openforcefield.topology.molecule. Otherwise, it will return False.
@@ -1505,6 +1491,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         ----------
         object : A rdchem.Mol-derived object
             An object to be type-checked and converted into a Molecule, if possible.
+        allow_undefined_stereo : bool, default=False
+            Whether to accept molecules with undefined stereocenters. If False,
+            an exception will be raised if a molecule with undefined stereochemistry
+            is passed into this function.
 
         Returns
         -------
@@ -1519,11 +1509,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # TODO: Add tests for the from_object functions
         from rdkit import Chem
         if isinstance(object, Chem.rdchem.Mol):
-            return self.from_rdkit(object)
+            return self.from_rdkit(object,
+                                   allow_undefined_stereo=allow_undefined_stereo)
         raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_file(self,
-                  filename,
+                  file_path,
                   file_format,
                   allow_undefined_stereo=False):
         """
@@ -1533,7 +1524,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         Parameters
         ----------
-        filename : str
+        file_path : str
             The file to read the molecule from
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
@@ -1551,7 +1542,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         mols = list()
         if (file_format == 'MOL') or (file_format == 'SDF'):
-            for rdmol in Chem.SupplierFromFilename(filename, removeHs=False, sanitize=False, strictParsing=True):
+            for rdmol in Chem.SupplierFromFilename(file_path, removeHs=False, sanitize=False, strictParsing=True):
                 if rdmol is None:
                     continue
 
@@ -1574,7 +1565,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # just adding H's, but could get fancier in the future). It might be
             # worthwhile to parse the SMILES file ourselves and pass each SMILES
             # through the from_smiles function instead
-            for rdmol in Chem.SmilesMolSupplier(filename):
+            for rdmol in Chem.SmilesMolSupplier(file_path):
                 rdmol = Chem.AddHs(rdmol)
                 mol = Molecule.from_rdkit(rdmol)
                 mols.append(mol)
@@ -1585,7 +1576,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 "is likely to be lost.")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
             # https://github.com/openforcefield/openforcefield/issues/121
-            # rdmol = Chem.MolFromPDBFile(filename, removeHs=False)
+            # rdmol = Chem.MolFromPDBFile(file_path, removeHs=False)
             # mol = Molecule.from_rdkit(rdmol)
             # mols.append(mol)
             # TODO: Add SMI, TDT(?) support
@@ -1651,7 +1642,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # TODO: TDT file support
         return mols
 
-    def to_file_obj(self, molecule, file_obj, outfile_format):
+    def to_file_obj(self, molecule, file_obj, file_format):
         """
         Writes an OpenFF Molecule to a file-like object
 
@@ -1661,7 +1652,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             The molecule to write
         file_obj
             The file-like object to write to
-        outfile_format
+        file_format
             The format for writing the molecule data
 
         Returns
@@ -1669,7 +1660,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
-        outfile_format = outfile_format.upper()
+        file_format = file_format.upper()
         rdmol = self.to_rdkit(molecule)
         rdkit_writers = {
             'SDF': Chem.SDWriter,
@@ -1677,11 +1668,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             'SMI': Chem.SmilesWriter,
             'TDT': Chem.TDTWriter
         }
-        writer = rdkit_writers[outfile_format](file_obj)
+        writer = rdkit_writers[file_format](file_obj)
         writer.write(rdmol)
         writer.close()
 
-    def to_file(self, molecule, outfile, outfile_format):
+    def to_file(self, molecule, file_path, file_format):
         """
         Writes an OpenFF Molecule to a file-like object
 
@@ -1689,9 +1680,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : an OpenFF Molecule
             The molecule to write
-        outfile
-            The filename to write to
-        outfile_format
+        file_path
+            The file path to write to
+        file_format
             The format for writing the molecule data
 
         Returns
@@ -1699,8 +1690,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
-        outfile_format = outfile_format.upper()
-        with open(outfile, 'w') as file_obj:
+        file_format = file_format.upper()
+        with open(file_path, 'w') as file_obj:
             rdmol = self.to_rdkit(molecule)
             rdkit_writers = {
                 'SDF': Chem.SDWriter,
@@ -1708,7 +1699,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 'SMI': Chem.SmilesWriter,
                 'TDT': Chem.TDTWriter
             }
-            writer = rdkit_writers[outfile_format](file_obj)
+            writer = rdkit_writers[file_format](file_obj)
             writer.write(rdmol)
             writer.close()
 
@@ -1731,7 +1722,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol = cls.to_rdkit(molecule)
         return Chem.MolToSmiles(rdmol, isomericSmiles=True, allHsExplicit=True)
 
-    def from_smiles(self, smiles, hydrogens_are_explicit=False):
+    def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
         """
         Create a Molecule from a SMILES string using the RDKit toolkit.
 
@@ -1743,6 +1734,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             The SMILES string to turn into a molecule
         hydrogens_are_explicit : bool, default=False
             If False, RDKit will perform hydrogen addition using Chem.AddHs
+        allow_undefined_stereo : bool, default=False
+            Whether to accept SMILES with undefined stereochemistry. If False,
+            an exception will be raised if a SMILES with undefined stereochemistry
+            is passed into this function.
 
         Returns
         -------
@@ -1763,18 +1758,29 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Chem.AssignStereochemistry(rdmol)
 
         # Throw an exception/warning if there is unspecified stereochemistry.
-        self._detect_undefined_stereo(rdmol, err_msg_prefix='Unable to make OFFMol from SMILES: ')
+        if allow_undefined_stereo==False:
+            self._detect_undefined_stereo(rdmol, err_msg_prefix='Unable to make OFFMol from SMILES: ')
 
         # Add explicit hydrogens if they aren't there already
         if not hydrogens_are_explicit:
             rdmol = Chem.AddHs(rdmol)
+        elif hydrogens_are_explicit:
+            for atom_idx in range(rdmol.GetNumAtoms()):
+                atom = rdmol.GetAtomWithIdx(atom_idx)
+                if atom.GetNumImplicitHs() != 0:
+                    raise ValueError(
+                        f"'hydrogens_are_explicit' was specified as True, but RDKit toolkit interpreted "
+                        f"SMILES '{smiles}' as having implicit hydrogen. If this SMILES is intended to "
+                        f"express all explicit hydrogens in the molecule, then you should construct the "
+                        f"desired molecule as an RDMol with no implicit hydrogens, and then use "
+                        f"Molecule.from_rdkit() to create the desired OFFMol.")
 
-        # TODO: Add allow_undefined_stereo to this function, and pass to from_rdkit?
-        molecule = Molecule.from_rdkit(rdmol)
+        molecule = Molecule.from_rdkit(rdmol,
+                                       allow_undefined_stereo=allow_undefined_stereo)
 
         return molecule
 
-    def generate_conformers(self, molecule, num_conformers=1, clear_existing=True):
+    def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):
         """
         Generate molecule conformers using RDKit. 
 
@@ -1789,7 +1795,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         ---------
         molecule : a :class:`Molecule` 
             The molecule to generate conformers for.
-        num_conformers : int, default=1
+        n_conformers : int, default=1
             Maximum number of conformers to generate.
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule.
@@ -1801,12 +1807,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # TODO: This generates way more conformations than omega, given the same nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
         AllChem.EmbedMultipleConfs(
             rdmol,
-            numConfs=num_conformers,
+            numConfs=n_conformers,
             pruneRmsThresh=1.0,
             randomSeed=1,
             #params=AllChem.ETKDG()
         )
-        molecule2 = self.from_rdkit(rdmol)
+        molecule2 = self.from_rdkit(rdmol, allow_undefined_stereo=True)
 
         if clear_existing:
             molecule._conformers = list()
@@ -1840,8 +1846,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Create a molecule from an RDKit molecule
 
         >>> from rdkit import Chem
-        >>> from openforcefield.tests.utils import get_data_filename
-        >>> rdmol = Chem.MolFromMolFile(get_data_filename('systems/monomers/ethanol.sdf'))
+        >>> from openforcefield.tests.utils import get_data_file_path
+        >>> rdmol = Chem.MolFromMolFile(get_data_file_path('systems/monomers/ethanol.sdf'))
 
         >>> toolkit_wrapper = RDKitToolkitWrapper()
         >>> molecule = toolkit_wrapper.from_rdkit(rdmol)
@@ -1853,10 +1859,17 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
         rdmol = Chem.Mol(rdmol)
 
-        # Sanitize the molecule. We handle aromaticity and chirality manually.
+        # Sanitizing the molecule. We handle aromaticity and chirality manually.
+        # This SanitizeMol(...) calls cleanUp, updatePropertyCache, symmetrizeSSSR,
+        # assignRadicals, setConjugation, and setHybridization.
         Chem.SanitizeMol(rdmol, (Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^
-                                 Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_CLEANUPCHIRALITY))
+                                 Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_CLEANUPCHIRALITY ^
+                                 Chem.SANITIZE_KEKULIZE))
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+        # SetAromaticity set aromatic bonds to 1.5, but Molecule.bond_order is an
+        # integer (contrarily to fractional_bond_order) so we need the Kekule order.
+        Chem.Kekulize(rdmol)
+
         # Make sure the bond stereo tags are set before checking for
         # undefined stereo. RDKit can figure out bond stereo from other
         # information in the Mol object like bond direction properties.
@@ -1929,13 +1942,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             a2 = rdb.GetEndAtomIdx()
 
             # Determine bond aromaticity and Kekulized bond order
-            is_aromatic = False
+            is_aromatic = rdb.GetIsAromatic()
             order = rdb.GetBondTypeAsDouble()
-            if order == 1.5:
-                # get the bond order for this bond in the kekulized molecule
-                order = rdmol.GetBondWithIdx(
-                    rdb.GetIdx()).GetBondTypeAsDouble()
-                is_aromatic = True
             # Convert floating-point bond order to integral bond order
             order = int(order)
 
@@ -2418,8 +2426,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         if msg is not None:
             if raise_warning:
+                msg = 'Warning (not error because allow_undefined_stereo=True): '
                 logger.warning(msg)
             else:
+                msg = 'Unable to make OFFMol from RDMol: ' + msg
                 raise UndefinedStereochemistryError(msg)
 
     @staticmethod
@@ -2557,7 +2567,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
     _toolkit_file_write_formats = []
 
     @staticmethod
-    def toolkit_is_available():
+    def is_available():
         """
         Check whether the AmberTools toolkit is installed
 
@@ -2574,23 +2584,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             return False
         else:
             return True
-
-    @classmethod
-    def is_available(cls):
-        """
-        Check whether this toolkit wrapper is available for use because the underlying toolkit can be found.
-
-        .. note :: This method caches the result of any costly checks for file paths or module imports.
-
-        Parameters
-        ----------
-        is_available : bool
-            True if toolkit wrapper is available for use, False otherwise
-
-        """
-        if cls._is_available is None:
-            cls._is_available = cls.toolkit_is_available()
-        return cls._is_available
 
     def __init__(self):
         # TODO: Find AMBERHOME or executable home, checking miniconda if needed
@@ -2665,7 +2658,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         #         # Write out molecule in SDF format
         #         ## TODO: How should we handle multiple conformers?
         #         self._rdkit_toolkit_wrapper.to_file(
-        #             molecule, 'molecule.sdf', outfile_format='sdf')
+        #             molecule, 'molecule.sdf', file_format='sdf')
         #         #os.system('ls')
         #         #os.system('cat molecule.sdf')
         #         # Compute desired charges
@@ -2751,7 +2744,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # Write out molecule in SDF format
                 ## TODO: How should we handle multiple conformers?
                 self._rdkit_toolkit_wrapper.to_file(
-                    molecule, 'molecule.sdf', outfile_format='sdf')
+                    molecule, 'molecule.sdf', file_format='sdf')
                 #os.system('ls')
                 #os.system('cat molecule.sdf')
                 # Compute desired charges
@@ -2949,7 +2942,8 @@ class ToolkitRegistry:
 
     def resolve(self, method_name):
         """
-        Resolve the requested method name by checking all registered toolkits in order of precedence for one that provides the requested method.
+        Resolve the requested method name by checking all registered toolkits in
+        order of precedence for one that provides the requested method.
 
         Parameters
         ----------
@@ -3081,7 +3075,7 @@ BASIC_CHEMINFORMATICS_TOOLKITS = [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
 
 # Ensure we have at least one basic toolkit
 if sum([
-        tk.toolkit_is_available()
+        tk.is_available()
         for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
         if type(tk) in BASIC_CHEMINFORMATICS_TOOLKITS
 ]) == 0:

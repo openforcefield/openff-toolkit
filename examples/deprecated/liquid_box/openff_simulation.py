@@ -13,7 +13,7 @@ from mdtraj.reporters import NetCDFReporter
 from openforcefield.typing.engines.smirnoff import ForceField
 # LPW: openforcefield's PME is different from openmm's PME
 from openforcefield.typing.engines.smirnoff.forcefield import PME
-from openforcefield.utils import get_data_filename
+from openforcefield.utils import get_data_file_path
 
 # Import the OpenEye toolkit
 from openeye import oechem
@@ -33,7 +33,7 @@ data_freq = 1000 # number of steps per written simulation statistics
 pdb = PDBFile(pdb_filename)
 
 # Load a SMIRNOFF forcefield
-forcefield = ForceField(get_data_filename('forcefield/Frosst_AlkEthOH_parmAtFrosst.offxml'))
+forcefield = ForceField(get_data_file_path('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml'))
 
 # Load molecule using OpenEye tools
 mol = oechem.OEGraphMol()

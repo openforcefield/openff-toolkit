@@ -1364,8 +1364,8 @@ class FrozenMolecule(Serializable):
 
     Create a molecule from a sdf file
 
-    >>> from openforcefield.utils import get_data_filename
-    >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+    >>> from openforcefield.utils import get_data_file_path
+    >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
     >>> molecule = FrozenMolecule.from_file(sdf_filepath)
 
     Convert to OpenEye OEMol object
@@ -1444,13 +1444,13 @@ class FrozenMolecule(Serializable):
         Create a molecule from a file that can be used to construct a molecule,
         using either a filename or file-like object:
 
-        >>> from openforcefield.utils import get_data_filename
-        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> from openforcefield.utils import get_data_file_path
+        >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
         >>> molecule = FrozenMolecule(sdf_filepath)
         >>> molecule = FrozenMolecule(open(sdf_filepath, 'r'), file_format='sdf')
 
         >>> import gzip
-        >>> mol2_gz_filepath = get_data_filename('molecules/toluene.mol2.gz')
+        >>> mol2_gz_filepath = get_data_file_path('molecules/toluene.mol2.gz')
         >>> molecule = FrozenMolecule(gzip.GzipFile(mol2_gz_filepath, 'r'), file_format='mol2')
 
         Create a molecule from another molecule:
@@ -1479,6 +1479,8 @@ class FrozenMolecule(Serializable):
         >>> molecule_copy = Molecule(serialized_molecule)
 
         """
+
+        self._cached_smiles = None
 
         # Figure out if toolkit_registry is a whole registry, or just a single wrapper
         if isinstance(toolkit_registry, ToolkitRegistry):
@@ -1512,7 +1514,7 @@ class FrozenMolecule(Serializable):
             # Check through the toolkit registry to find a compatible wrapper for loading
             if not loaded:
                 try:
-                    result = toolkit_registry.call('from_object', other)
+                    result = toolkit_registry.call('from_object', other, allow_undefined_stereo=allow_undefined_stereo)
                 except NotImplementedError:
                     pass
                 else:
@@ -1807,24 +1809,45 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
-        >>> from openforcefield.utils import get_data_filename
-        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> from openforcefield.utils import get_data_file_path
+        >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
         >>> molecule = Molecule(sdf_filepath)
         >>> smiles = molecule.to_smiles()
 
         """
+        # Initialize cached_smiles dict for this molecule if none exists
+        if self._cached_smiles is None:
+            self._cached_smiles = {}
+
+        # Figure out which toolkit should be used to create the SMILES
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('to_smiles', self)
+            to_smiles_method = toolkit_registry.resolve('to_smiles')
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            return toolkit.to_smiles(self)
+            to_smiles_method = toolkit_registry.to_smiles
         else:
             raise Exception(
                 'Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
+        # Get a string representation of the function containing the toolkit name so we can check
+        # if a SMILES was already cached for this molecule. This will return, for example
+        # "RDKitToolkitWrapper.to_smiles"
+        func_qualname = to_smiles_method.__qualname__
+
+        # Check to see if a SMILES for this molecule was already cached using this method
+        if func_qualname in self._cached_smiles:
+            return self._cached_smiles[func_qualname]
+        else:
+            smiles = to_smiles_method(self)
+            self._cached_smiles[func_qualname] = smiles
+            return smiles
+
+
     @staticmethod
-    def from_smiles(smiles, hydrogens_are_explicit=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def from_smiles(smiles,
+                    hydrogens_are_explicit=False,
+                    toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+                    allow_undefined_stereo=False):
         """
         Construct a Molecule from a SMILES representation
 
@@ -1836,6 +1859,10 @@ class FrozenMolecule(Serializable):
             If False, the cheminformatics toolkit will perform hydrogen addition
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+        allow_undefined_stereo : bool, default=False
+            Whether to accept SMILES with undefined stereochemistry. If False,
+            an exception will be raised if a SMILES with undefined stereochemistry
+            is passed into this function.
 
         Returns
         -------
@@ -1848,10 +1875,16 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('from_smiles', smiles)
+            return toolkit_registry.call('from_smiles',
+                                         smiles,
+                                         hydrogens_are_explicit=hydrogens_are_explicit,
+                                         allow_undefined_stereo=allow_undefined_stereo)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.from_smiles(smiles, hydrogens_are_explicit=hydrogens_are_explicit)
+            return toolkit.from_smiles(smiles,
+                                       hydrogens_are_explicit=hydrogens_are_explicit,
+                                       allow_undefined_stereo=allow_undefined_stereo
+                                       )
         else:
             raise Exception(
                 'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
@@ -1916,7 +1949,7 @@ class FrozenMolecule(Serializable):
 
     def generate_conformers(self,
                             toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-                            num_conformers=10,
+                            n_conformers=10,
                             clear_existing=True):
         """
         Generate conformers for this molecule using an underlying toolkit
@@ -1925,7 +1958,7 @@ class FrozenMolecule(Serializable):
         ----------
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
-        num_conformers : int, default=1
+        n_conformers : int, default=1
             The maximum number of conformers to produce
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
@@ -1943,11 +1976,11 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('generate_conformers', self, num_conformers=num_conformers,
+            return toolkit_registry.call('generate_conformers', self, n_conformers=n_conformers,
                                          clear_existing=clear_existing)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.generate_conformers(self, num_conformers=num_conformers, clear_existing=clear_existing)
+            return toolkit.generate_conformers(self, n_conformers=n_conformers, clear_existing=clear_existing)
         else:
             raise InvalidToolkitError(
                 'Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
@@ -2086,6 +2119,8 @@ class FrozenMolecule(Serializable):
         self._partial_charges = None
         self._propers = None
         self._impropers = None
+
+        self._cached_smiles = None
         # TODO: Clear fractional bond orders
 
     def to_networkx(self):
@@ -2514,14 +2549,14 @@ class FrozenMolecule(Serializable):
         """
         The number of Particle objects, which corresponds to how many positions must be used.
         """
-        return sum([1 for particle in self.particles])
+        return len(self._atoms) + len(self._virtual_sites)
 
     @property
     def n_atoms(self):
         """
         The number of Atom objects.
         """
-        return sum([1 for atom in self.atoms])
+        return len(self._atoms)
 
     @property
     def n_virtual_sites(self):
@@ -2694,8 +2729,8 @@ class FrozenMolecule(Serializable):
 
         Returns
         -------
-        matches : list of Atom tuples
-            A list of all matching Atom tuples
+        matches : list of atom index tuples
+            A list of tuples, containing the indices of the matching atoms.
 
         Examples
         --------
@@ -2792,8 +2827,8 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
-        >>> from openforcefield.utils import get_data_filename
-        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> from openforcefield.utils import get_data_file_path
+        >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
         >>> molecule = Molecule(sdf_filepath)
         >>> iupac_name = molecule.to_iupac()
 
@@ -2855,7 +2890,7 @@ class FrozenMolecule(Serializable):
         return Topology.from_molecules(self)
 
     @staticmethod
-    def from_file(filename,
+    def from_file(file_path,
                   file_format=None,
                   toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
                   allow_undefined_stereo=False):
@@ -2869,8 +2904,8 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        filename : str or file-like object
-            The name of the file or file-like object to stream one or more molecules from.
+        file_path : str or file-like object
+            The path to the file or file-like object to stream one or more molecules from.
         file_format : str, optional, default=None
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for your
@@ -2890,23 +2925,23 @@ class FrozenMolecule(Serializable):
 
         Examples
         --------
-        >>> from openforcefield.tests.utils import get_monomer_mol2file
-        >>> mol2_filename = get_monomer_mol2file('cyclohexane')
-        >>> molecule = Molecule.from_file(mol2_filename)
+        >>> from openforcefield.tests.utils import get_monomer_mol2_file_path
+        >>> mol2_file_path = get_monomer_mol2_file_path('cyclohexane')
+        >>> molecule = Molecule.from_file(mol2_file_path)
 
         """
 
         if file_format is None:
-            if not (isinstance(filename, str)):
+            if not (isinstance(file_path, str)):
                 raise Exception(
                     "If providing a file-like object for reading molecules, the format must be specified"
                 )
             # Assume that files ending in ".gz" should use their second-to-last suffix for compatibility check
             # TODO: Will all cheminformatics packages be OK with gzipped files?
-            if filename[-3:] == '.gz':
-                file_format = filename.split('.')[-2]
+            if file_path[-3:] == '.gz':
+                file_format = file_path.split('.')[-2]
             else:
-                file_format = filename.split('.')[-1]
+                file_format = file_path.split('.')[-1]
         file_format = file_format.upper()
 
         # Determine which toolkit to use (highest priority that's compatible with input type)
@@ -2925,7 +2960,7 @@ class FrozenMolecule(Serializable):
                 raise NotImplementedError(
                     "No toolkits in registry can read file {} (format {}). Supported formats in the "
                     "provided ToolkitRegistry are {}".format(
-                        filename, file_format, supported_read_formats))
+                        file_path, file_format, supported_read_formats))
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
             # TODO: Encapsulate this logic in ToolkitWrapper?
@@ -2933,7 +2968,7 @@ class FrozenMolecule(Serializable):
             if file_format not in toolkit.toolkit_file_read_formats:
                 raise NotImplementedError(
                     "Toolkit {} can not read file {} (format {}). Supported formats for this toolkit "
-                    "are {}".format(toolkit.toolkit_name, filename,
+                    "are {}".format(toolkit.toolkit_name, file_path,
                                     file_format,
                                     toolkit.toolkit_file_read_formats))
         else:
@@ -2943,13 +2978,13 @@ class FrozenMolecule(Serializable):
 
         mols = list()
 
-        if isinstance(filename, str):
+        if isinstance(file_path, str):
             mols = toolkit.from_file(
-                filename,
+                file_path,
                 file_format=file_format,
                 allow_undefined_stereo=allow_undefined_stereo)
-        elif hasattr(filename, 'read'):
-            file_obj = filename
+        elif hasattr(file_path, 'read'):
+            file_obj = file_path
             mols = toolkit.from_file_obj(
                 file_obj,
                 file_format=file_format,
@@ -2957,22 +2992,22 @@ class FrozenMolecule(Serializable):
 
         if len(mols) == 0:
             raise Exception(
-                'Unable to read molecule from file: {}'.format(filename))
+                'Unable to read molecule from file: {}'.format(file_path))
         elif len(mols) == 1:
             return mols[0]
         return mols
 
     def to_file(self,
-                outfile,
-                outfile_format,
+                file_path,
+                file_format,
                 toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Write the current molecule to a file or file-like object
 
         Parameters
         ----------
-        outfile : str or file-like object
-            A file-like object or the filename of the file to be written to
-        outfile_format : str
+        file_path : str or file-like object
+            A file-like object or the path to the file to be written.
+        file_format : str
             Format specifier, one of ['MOL2', 'MOL2H', 'SDF', 'PDB', 'SMI', 'CAN', 'TDT']
             Note that not all toolkits support all formats
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper,
@@ -2983,15 +3018,15 @@ class FrozenMolecule(Serializable):
         Raises
         ------
         ValueError
-            If the requested outfile_format is not supported by one of the installed cheminformatics toolkits
+            If the requested file_format is not supported by one of the installed cheminformatics toolkits
 
         Examples
         --------
 
         >>> molecule = Molecule.from_iupac('imatinib')
-        >>> molecule.to_file('imatinib.mol2', outfile_format='mol2')  # doctest: +SKIP
-        >>> molecule.to_file('imatinib.sdf', outfile_format='sdf')  # doctest: +SKIP
-        >>> molecule.to_file('imatinib.pdb', outfile_format='pdb')  # doctest: +SKIP
+        >>> molecule.to_file('imatinib.mol2', file_format='mol2')  # doctest: +SKIP
+        >>> molecule.to_file('imatinib.sdf', file_format='sdf')  # doctest: +SKIP
+        >>> molecule.to_file('imatinib.pdb', file_format='pdb')  # doctest: +SKIP
 
         """
 
@@ -3006,16 +3041,16 @@ class FrozenMolecule(Serializable):
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
-        outfile_format = outfile_format.upper()
+        file_format = file_format.upper()
 
         # Take the first toolkit that can write the desired output format
         toolkit = None
         for query_toolkit in toolkit_registry.registered_toolkits:
-            if outfile_format in query_toolkit.toolkit_file_write_formats:
+            if file_format in query_toolkit.toolkit_file_write_formats:
                 toolkit = query_toolkit
                 break
 
-        # Raise an exception if no toolkit was found to provide the requested outfile_format
+        # Raise an exception if no toolkit was found to provide the requested file_format
         if toolkit is None:
             supported_formats = {}
             for toolkit in toolkit_registry.registered_toolkits:
@@ -3023,15 +3058,15 @@ class FrozenMolecule(Serializable):
                     toolkit.toolkit_name] = toolkit.toolkit_file_write_formats
             raise ValueError(
                 'The requested file format ({}) is not available from any of the installed toolkits '
-                '(supported formats: {})'.format(outfile_format,
+                '(supported formats: {})'.format(file_format,
                                                  supported_formats))
 
         # Write file
-        if type(outfile) == str:
+        if type(file_path) == str:
             # Open file for writing
-            toolkit.to_file(self, outfile, outfile_format)
+            toolkit.to_file(self, file_path, file_format)
         else:
-            toolkit.to_file_obj(self, outfile, outfile_format)
+            toolkit.to_file_obj(self, file_path, file_format)
 
     @staticmethod
     @RDKitToolkitWrapper.requires_toolkit()
@@ -3059,8 +3094,8 @@ class FrozenMolecule(Serializable):
         Create a molecule from an RDKit molecule
 
         >>> from rdkit import Chem
-        >>> from openforcefield.tests.utils import get_data_filename
-        >>> rdmol = Chem.MolFromMolFile(get_data_filename('systems/monomers/ethanol.sdf'))
+        >>> from openforcefield.tests.utils import get_data_file_path
+        >>> rdmol = Chem.MolFromMolFile(get_data_file_path('systems/monomers/ethanol.sdf'))
         >>> molecule = Molecule.from_rdkit(rdmol)
 
         """
@@ -3090,8 +3125,8 @@ class FrozenMolecule(Serializable):
 
         Convert a molecule to RDKit
 
-        >>> from openforcefield.utils import get_data_filename
-        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> from openforcefield.utils import get_data_file_path
+        >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
         >>> molecule = Molecule(sdf_filepath)
         >>> rdmol = molecule.to_rdkit()
 
@@ -3125,8 +3160,8 @@ class FrozenMolecule(Serializable):
         Create a Molecule from an OpenEye OEMol
 
         >>> from openeye import oechem
-        >>> from openforcefield.tests.utils import get_data_filename
-        >>> ifs = oechem.oemolistream(get_data_filename('systems/monomers/ethanol.mol2'))
+        >>> from openforcefield.tests.utils import get_data_file_path
+        >>> ifs = oechem.oemolistream(get_data_file_path('systems/monomers/ethanol.mol2'))
         >>> oemols = list(ifs.GetOEGraphMols())
         >>> molecule = Molecule.from_openeye(oemols[0])
 
@@ -3309,6 +3344,44 @@ class FrozenMolecule(Serializable):
         atom2 = self._atoms[atom_index_2]
         return atom2 in self._bondedAtoms[atom1]
 
+    def get_bond_between(self, i, j):
+        """Returns the bond between two atoms
+
+        Parameters
+        ----------
+        i, j : int or Atom
+            Atoms or atom indices to check
+
+        Returns
+        -------
+        bond : Bond
+            The bond between i and j.
+
+        """
+        if isinstance(i, int) and isinstance(j, int):
+            atom_i = self._atoms[i]
+            atom_j = self._atoms[j]
+        elif isinstance(i, Atom) and isinstance(j, Atom):
+            atom_i = i
+            atom_j = j
+        else:
+            raise TypeError(
+                "Invalid input passed to is_bonded(). Expected ints or Atoms, "
+                "got {} and {}".format(i, j))
+
+        for bond in atom_i.bonds:
+
+            for atom in bond.atoms:
+
+                if atom == atom_i:
+                    continue
+
+                if atom == atom_j:
+                    return bond
+
+        from openforcefield.topology import NotBondedError
+        raise NotBondedError('No bond between atom {} and {}'.format(i, j))
+
 
 class Molecule(FrozenMolecule):
     """
@@ -3321,8 +3394,8 @@ class Molecule(FrozenMolecule):
 
     Create a molecule from an sdf file
 
-    >>> from openforcefield.utils import get_data_filename
-    >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+    >>> from openforcefield.utils import get_data_file_path
+    >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
     >>> molecule = Molecule(sdf_filepath)
 
     Convert to OpenEye OEMol object
@@ -3379,13 +3452,13 @@ class Molecule(FrozenMolecule):
         Create a molecule from a file that can be used to construct a molecule,
         using either a filename or file-like object:
 
-        >>> from openforcefield.utils import get_data_filename
-        >>> sdf_filepath = get_data_filename('molecules/ethanol.sdf')
+        >>> from openforcefield.utils import get_data_file_path
+        >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
         >>> molecule = Molecule(sdf_filepath)
         >>> molecule = Molecule(open(sdf_filepath, 'r'), file_format='sdf')
 
         >>> import gzip
-        >>> mol2_gz_filepath = get_data_filename('molecules/toluene.mol2.gz')
+        >>> mol2_gz_filepath = get_data_file_path('molecules/toluene.mol2.gz')
         >>> molecule = Molecule(gzip.GzipFile(mol2_gz_filepath, 'r'), file_format='mol2')
 
         Create a molecule from another molecule:

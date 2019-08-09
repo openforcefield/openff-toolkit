@@ -108,7 +108,7 @@ def find_readme_links():
     readme_file_path = os.path.join(ROOT_DIR_PATH, 'README.md')
     with open(readme_file_path, 'r') as f:
         readme_content = f.read()
-    return re.findall('http[s]?://(?:[0-9a-zA-Z]|[-/.%:])+', readme_content)
+    return re.findall('http[s]?://(?:[0-9a-zA-Z]|[-/.%:_])+', readme_content)
 
 
 #======================================================================

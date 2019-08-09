@@ -39,7 +39,9 @@ from collections import OrderedDict
 
 from simtk import openmm, unit
 
-from openforcefield.utils import all_subclasses, MessageException
+from openforcefield.utils import all_subclasses, MessageException, \
+    convert_all_quantities_to_string, convert_all_strings_to_quantity, \
+    convert_0_1_smirnoff_to_0_2, convert_0_2_smirnoff_to_0_3
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
@@ -54,6 +56,34 @@ logger = logging.getLogger(__name__)
 #=============================================================================================
 # PRIVATE METHODS
 #=============================================================================================
+
+# Directory paths used by ForceField to discover offxml files.
+_installed_offxml_dir_paths = []
+
+def _get_installed_offxml_dir_paths():
+    """Return the list of directory paths where to search for offxml files.
+
+    This function load the information by calling all the entry points
+    registered in the "openff.forcefielddirs" group. Each entry point
+    (i.e. a function) should return a list of paths to directories
+    containing the offxml files.
+
+    Returns
+    -------
+    installed_offxml_dir_paths : List[str]
+        All the installed directory paths where ``ForceField`` will
+        look for offxml files.
+
+    """
+    global _installed_offxml_dir_paths
+    if len(_installed_offxml_dir_paths) == 0:
+        from pkg_resources import iter_entry_points
+        # Find all registered entry points that should return a list of
+        # paths to directories where to search for offxml files.
+        for entry_point in iter_entry_points(group='openforcefield.smirnoff_forcefield_directory'):
+            _installed_offxml_dir_paths.extend(entry_point.load()())
+    return _installed_offxml_dir_paths
+
 
 # TODO: Instead of having a global version number, alow each Force to have a separate version number
 MAX_SUPPORTED_VERSION = '1.0'  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF forcefield
@@ -137,7 +167,7 @@ class ForceField:
     Create a new ForceField containing the smirnoff99Frosst parameter set:
 
     >>> from openforcefield.typing.engines.smirnoff import ForceField
-    >>> forcefield = ForceField('smirnoff99Frosst.offxml')
+    >>> forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
 
     Create an OpenMM system from a :class:`openforcefield.topology.Topology` object:
 
@@ -148,21 +178,21 @@ class ForceField:
 
     Modify the long-range electrostatics method:
 
-    >>> forcefield.get_handler('Electrostatics').method = 'PME'
+    >>> forcefield.get_parameter_handler('Electrostatics').method = 'PME'
 
     Inspect the first few vdW parameters:
 
-    >>> low_precedence_parameters = forcefield.get_handler('vdW').parameters[0:3]
+    >>> low_precedence_parameters = forcefield.get_parameter_handler('vdW').parameters[0:3]
 
     Retrieve the vdW parameters by SMIRKS string and manipulate it:
 
-    >>> parameter = forcefield.get_handler('vdW').parameters['[#1:1]-[#7]']
-    >>> parameter.sigma += 0.1 * unit.angstroms
+    >>> parameter = forcefield.get_parameter_handler('vdW').parameters['[#1:1]-[#7]']
+    >>> parameter.rmin_half += 0.1 * unit.angstroms
     >>> parameter.epsilon *= 1.02
 
     Make a child vdW type more specific (checking modified SMIRKS for validity):
 
-    >>> forcefield.get_handler('vdW').parameters[-1].smirks += '~[#53]'
+    >>> forcefield.get_parameter_handler('vdW').parameters[-1].smirks += '~[#53]'
 
     .. warning ::
 
@@ -172,13 +202,13 @@ class ForceField:
 
     Delete a parameter:
 
-    >>> del forcefield.get_handler('vdW').parameters['[#1:1]-[#6X4]']
+    >>> del forcefield.get_parameter_handler('vdW').parameters['[#1:1]-[#6X4]']
 
     Insert a parameter at a specific point in the parameter tree:
 
     >>> from openforcefield.typing.engines.smirnoff import vdWHandler
     >>> new_parameter = vdWHandler.vdWType(smirks='[*:1]', epsilon=0.0157*unit.kilocalories_per_mole, rmin_half=0.6000*unit.angstroms)
-    >>> forcefield.get_handler('vdW').parameters.insert(0, new_parameter)
+    >>> forcefield.get_parameter_handler('vdW').parameters.insert(0, new_parameter)
 
     .. warning ::
 
@@ -190,7 +220,8 @@ class ForceField:
                  *sources,
                  parameter_handler_classes=None,
                  parameter_io_handler_classes=None,
-                 disable_version_check=False):
+                 disable_version_check=False,
+                 allow_cosmetic_attributes=False):
         """Create a new :class:`ForceField` object from one or more SMIRNOFF parameter definition files.
 
         Parameters
@@ -212,17 +243,19 @@ class ForceField:
         disable_version_check : bool, optional, default=False
             If True, will disable checks against the current highest supported forcefield version.
             This option is primarily intended for forcefield development.
+        allow_cosmetic_attributes : bool, optional. Default = False
+            Whether to retain non-spec kwargs from data sources.
 
         Examples
         --------
 
         Load one SMIRNOFF parameter set in XML format (searching the package data directory by default, which includes some standard parameter sets):
 
-        >>> forcefield = ForceField('smirnoff99Frosst.offxml')
+        >>> forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
 
         Load multiple SMIRNOFF parameter sets:
 
-        forcefield = ForceField('smirnoff99Frosst.offxml', 'tip3p.offxml')
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml', 'test_forcefields/tip3p.offxml')
 
         Load a parameter set from a string:
 
@@ -252,13 +285,14 @@ class ForceField:
             parameter_io_handler_classes)
 
         # Parse all sources containing SMIRNOFF parameter definitions
-        self.parse_sources(sources)
+        self.parse_sources(sources, allow_cosmetic_attributes=allow_cosmetic_attributes)
 
     def _initialize(self):
         """
         Initialize all object fields.
         """
-        self._MAX_SUPPORTED_SMIRNOFF_VERSION = 0.2
+        self._MIN_SUPPORTED_SMIRNOFF_VERSION = 0.1
+        self._MAX_SUPPORTED_SMIRNOFF_VERSION = 0.3
         self._disable_version_check = False  # if True, will disable checking compatibility version
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL  # aromaticity model
         self._parameter_handler_classes = OrderedDict()  # Parameter handler classes that _can_ be initialized if needed
@@ -267,6 +301,8 @@ class ForceField:
         self._parameter_io_handlers = OrderedDict()  # ParameterIO classes to be used for each file type
         self._parameters = ParameterList()  # ParameterHandler objects instantiated for each parameter type
         self._aromaticity_model = None
+        self._author = None
+        self._date = None
 
 
     def _check_smirnoff_version_compatibility(self, version):
@@ -286,11 +322,20 @@ class ForceField:
         import packaging.version
         # Use PEP-440 compliant version number comparison, if requested
         if (not self.disable_version_check) and (
-                packaging.version.parse(str(version)) >
-                packaging.version.parse(str(self._MAX_SUPPORTED_SMIRNOFF_VERSION))):
+                (
+                        packaging.version.parse(str(version)) >
+                packaging.version.parse(str(self._MAX_SUPPORTED_SMIRNOFF_VERSION))
+
+                ) or (
+                packaging.version.parse(str(version)) <
+                packaging.version.parse(str(self._MIN_SUPPORTED_SMIRNOFF_VERSION))
+                )
+              ):
             raise SMIRNOFFVersionError(
                 'SMIRNOFF offxml file was written with version {}, but this version of ForceField only supports '
-                'up to version {}'.format(version, self._MAX_SUPPORTED_SMIRNOFF_VERSION))
+                'version {} to version {}'.format(version,
+                                                  self._MIN_SUPPORTED_SMIRNOFF_VERSION,
+                                                  self._MAX_SUPPORTED_SMIRNOFF_VERSION))
 
 
     def _set_aromaticity_model(self, aromaticity_model):
@@ -315,6 +360,83 @@ class ForceField:
 
         self._aromaticity_model = aromaticity_model
 
+    def _add_author(self, author):
+        """
+        Add an author to this forcefield. If this functional is called multiple times, all provided authors
+        will be concatenated with the string " AND ". No redundancy checking is performed by this function.
+
+        Parameters
+        ----------
+        author : str
+            The author to add to this ForceField object
+        """
+        if self._author is None:
+            self._author = author
+        else:
+            self._author += ' AND ' + author
+
+
+    def _add_date(self, date):
+        """
+        Add an date to this forcefield. If this functional is called multiple times, all provided dates
+        will be concatenated with the string " AND ". No redundancy checking is performed by this function.
+
+        Parameters
+        ----------
+        date : str
+            The author to add to this ForceField object
+        """
+        if self._date is None:
+            self._date = date
+        else:
+            self._date += ' AND ' + date
+
+    @property
+    def author(self):
+        """Returns the author data for this ForceField object. If not defined in any loaded files, this will be None.
+
+        Returns
+        -------
+        author : str
+            The author data for this forcefield.
+        """
+        return self._author
+
+
+    @author.setter
+    def author(self, author):
+        """Set the author data for this ForceField object. If not defined in any loaded files, this will be None.
+
+        Parameters
+        ----------
+        author : str
+            The author data to set for this forcefield.
+        """
+        self._author = author
+
+
+    @property
+    def date(self):
+        """Returns the date data for this ForceField object. If not defined in any loaded files, this will be None.
+
+        Returns
+        -------
+        date : str
+            The date data for this forcefield.
+        """
+        return self._date
+
+
+    @date.setter
+    def date(self, date):
+        """Set the author data for this ForceField object. If not defined in any loaded files, this will be None.
+
+        Parameters
+        ----------
+        date : str
+            The date data to set for this forcefield.
+        """
+        self._date = date
 
     def _register_parameter_handler_classes(self, parameter_handler_classes):
         """
@@ -372,60 +494,52 @@ class ForceField:
                 self._parameter_io_handler_classes[
                     serialization_format] = parameter_io_handler_class
 
-    def register_parameter_handler(self, parameter_handler_class,
-                                   parameter_handler_kwargs):
+    def register_parameter_handler(self, parameter_handler):
         """
-        Register a new ParameterHandler from a specified class, instantiating the ParameterHandler object and making it
+        Register a new ParameterHandler for a specific tag, making it
         available for lookup in the ForceField.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        parameter_handler_class : A ParameterHandler-derived object
-            The ParameterHandler to register
+        parameter_handler : A ParameterHandler object
+            The ParameterHandler to register. The TAGNAME attribute of this object will be used as the key for
+            registration.
 
-        Returns
-        -------
-        new_handler : an openforcefield.engines.typing.smirnoff.ParameterHandler-derived object.
-            The newly-created ParameterHandler
         """
-        tagname = parameter_handler_class._TAGNAME
+        tagname = parameter_handler._TAGNAME
         if tagname in self._parameter_handlers.keys():
             raise ParameterHandlerRegistrationError(
                 "Tried to register parameter handler '{}' for tag '{}', but "
                 "tag is already registered to {}".format(
-                    parameter_handler_class, tagname,
+                    parameter_handler, tagname,
                     self._parameter_handlers[tagname]))
 
-        new_handler = parameter_handler_class(**parameter_handler_kwargs)
+        self._parameter_handlers[parameter_handler._TAGNAME] = parameter_handler
 
-        self._parameter_handlers[new_handler._TAGNAME] = new_handler
-        return new_handler
-
-    def register_parameter_io_handler(self, parameter_io_handler_class):
+    def register_parameter_io_handler(self, parameter_io_handler):
         """
-        Register a new ParameterIOHandler from a specified class, instantiating the ParameterIOHandler object and making
-        it available for lookup in the ForceField.
+        Register a new ParameterIOHandler, making it available for lookup in the ForceField.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        parameter_io_handler_class : A subclass of ParameterIOHandler
+        parameter_io_handler :  A ParameterIOHandler object
+            The ParameterIOHandler to register. The FORMAT attribute of this object will be used
+            to associate it to a file format/suffix.
 
         """
-        io_format = parameter_io_handler_class._FORMAT
+        io_format = parameter_io_handler._FORMAT
         if io_format in self._parameter_io_handlers.keys():
             raise ParameterHandlerRegistrationError(
                 "Tried to register parameter IO handler '{}' for tag '{}', but "
                 "tag is already registered to {}".format(
-                    parameter_io_handler_class, io_format,
+                    parameter_io_handler, io_format,
                     self._parameter_io_handlers[io_format]))
-        new_io_handler = parameter_io_handler_class()
+        self._parameter_io_handlers[io_format] = parameter_io_handler
 
-        self._parameter_io_handlers[io_format] = new_io_handler
-        return new_io_handler
 
     # TODO: Do we want to make this optional?
 
@@ -433,7 +547,8 @@ class ForceField:
     def _check_for_missing_valence_terms(name, topology, assigned_terms,
                                          topological_terms):
         """
-        Check to ensure there are no missing valence terms in the given topology, identifying potential gaps in parameter coverage.
+        Check to ensure there are no missing valence terms in the given topology, identifying potential gaps in
+        parameter coverage.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -507,20 +622,25 @@ class ForceField:
             raise Exception(
                 msg)  # TODO: Should we raise a more specific exception here?
 
-    def get_handler(self, tagname, handler_kwargs=None):
+    def get_parameter_handler(self, tagname, handler_kwargs=None, allow_cosmetic_attributes=False):
         """Retrieve the parameter handlers associated with the provided tagname.
 
-        If the parameter handler has not yet been instantiated, it will be created.
+        If the parameter handler has not yet been instantiated, it will be created and returned.
         If a parameter handler object already exists, it will be checked for compatibility
-        and an Exception raised if it is incompatible with the provided kwargs.
+        and an Exception raised if it is incompatible with the provided kwargs. If compatible, the
+        existing ParameterHandler will be returned.
 
         Parameters
         ----------
-        tagame : str
+        tagname : str
             The name of the parameter to be handled.
-        handler_kwargs : dict, optional. Default=None
-            Dict to be passed to the handler for construction or checking compatibility. If None, will be assumed
-            to represent handler defaults.
+        handler_kwargs : dict, optional. Default = None
+            Dict to be passed to the handler for construction or checking compatibility. If this is None and no
+            existing ParameterHandler exists for the desired tag, a handler will be initialized with all default
+            values. If this is None and a handler for the desired tag exists, the existing ParameterHandler will
+            be returned.
+        allow_cosmetic_attributes : bool, optional. Default = False
+            Whether to permit non-spec kwargs in smirnoff_data.
 
         Returns
         -------
@@ -530,35 +650,40 @@ class ForceField:
         ------
         KeyError if there is no ParameterHandler for the given tagname
         """
-
+        # If there are no kwargs for the handler, initialize handler_kwargs as an empty dict
+        skip_version_check = False
         if handler_kwargs is None:
             handler_kwargs = dict()
+            skip_version_check = True
 
-        handler = None
+        # Ensure that the ForceField has a ParameterHandler class registered that can handle this tag
+        ph_class = self._get_parameter_handler_class(tagname)
+
         if tagname in self._parameter_handlers:
-            # If handler already exists, make sure it is compatible
-            handler = self._parameter_handlers[tagname]
-            handler.check_handler_compatibility(handler_kwargs)
+            # If a handler of this class already exists, ensure that the two handlers encode compatible science
+            old_handler = self._parameter_handlers[tagname]
+            # If no handler kwargs were provided, skip the compatibility check
+            if handler_kwargs != {}:
+                # Initialize a new instance of this parameter handler class with the given kwargs
+                new_handler = ph_class(**handler_kwargs,
+                                       allow_cosmetic_attributes=allow_cosmetic_attributes,
+                                       skip_version_check=skip_version_check)
+                old_handler.check_handler_compatibility(new_handler)
+            return_handler = old_handler
         elif tagname in self._parameter_handler_classes:
-            new_ph_class = self._parameter_handler_classes[tagname]
-            handler = self.register_parameter_handler(new_ph_class,
-                                                      handler_kwargs)
+            # Otherwise, register this handler in the forcefield
+            # Initialize a new instance of this parameter handler class with the given kwargs
+            new_handler = ph_class(**handler_kwargs,
+                                   allow_cosmetic_attributes=allow_cosmetic_attributes,
+                                   skip_version_check=skip_version_check)
+            self.register_parameter_handler(new_handler)
+            return_handler = new_handler
 
-        if handler is None:
-            msg = "Cannot find a registered parameter handler for tag '{}'\n".format(
-                tagname)
-            msg += "Registered parameter handlers: {}\n".format(
-                self._parameter_handlers.keys())
-            raise KeyError(msg)
+        return return_handler
 
-        return handler
-
-    def get_io_handler(self, io_format):
+    def get_parameter_io_handler(self, io_format):
         """Retrieve the parameter handlers associated with the provided tagname.
-
-        If the parameter handler has not yet been instantiated, it will be created.
-        If a parameter handler object already exists, it will be checked for compatibility
-        and an Exception raised if it is incompatible with the provided kwargs.
+        If the parameter IO handler has not yet been instantiated, it will be created.
 
         Parameters
         ----------
@@ -573,12 +698,20 @@ class ForceField:
         ------
         KeyError if there is no ParameterIOHandler for the given tagname
         """
+        # Uppercase the format string to avoid case mismatches
+        io_format = io_format.upper()
+
+        # Remove "." (ParameterIOHandler tags do not include it)
+        io_format = io_format.strip('.')
+
+        # Find or initialize ParameterIOHandler for this format
         io_handler = None
         if io_format in self._parameter_io_handlers.keys():
             io_handler = self._parameter_io_handlers[io_format]
         elif io_format in self._parameter_io_handler_classes.keys():
-            new_ph_class = self._parameter_io_handler_classes[io_format]
-            io_handler = self.register_parameter_io_handler(new_ph_class)
+            new_handler_class = self._parameter_io_handler_classes[io_format]
+            io_handler = new_handler_class()
+            self.register_parameter_io_handler(io_handler)
         if io_handler is None:
             msg = "Cannot find a registered parameter IO handler for format '{}'\n".format(
                 io_format)
@@ -589,7 +722,7 @@ class ForceField:
         return io_handler
 
 
-    def parse_sources(self, sources):
+    def parse_sources(self, sources, allow_cosmetic_attributes=True):
         """Parse a SMIRNOFF force field definition.
 
         Parameters
@@ -602,9 +735,10 @@ class ForceField:
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
             with files appearing later in the sequence resulting in parameters that have higher precedence.
             Support for multiple files is primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
+        allow_cosmetic_attributes : bool, optional. Default = False
+            Whether to permit non-spec kwargs present in the source.
 
         .. notes ::
-
            * New SMIRNOFF sections are handled independently, as if they were specified in the same file.
            * If a SMIRNOFF section that has already been read appears again, its definitions are appended to the end of the previously-read
              definitions if the sections are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
@@ -620,10 +754,11 @@ class ForceField:
         # TODO: If a non-first source fails here, the forcefield might be partially modified
         for source in sources:
             smirnoff_data = self.parse_smirnoff_from_source(source)
-            self.load_smirnoff_data(smirnoff_data)
+            self._load_smirnoff_data(smirnoff_data,
+                                     allow_cosmetic_attributes=allow_cosmetic_attributes)
 
 
-    def to_smirnoff_data(self):
+    def _to_smirnoff_data(self, discard_cosmetic_attributes=False):
         """
         Convert this ForceField and all related ParameterHandlers to an OrderedDict representing a SMIRNOFF
         data object.
@@ -632,6 +767,9 @@ class ForceField:
         -------
         smirnoff_dict : OrderedDict
             A nested OrderedDict representing this ForceField as a SMIRNOFF data object.
+        discard_cosmetic_attributes : bool, optional. Default=False
+            Whether to discard any non-spec attributes stored in the ForceField.
+
         """
         l1_dict = OrderedDict()
 
@@ -641,16 +779,25 @@ class ForceField:
         # Write out the aromaticity model used
         l1_dict['aromaticity_model'] = self._aromaticity_model
 
+        # Write out author and date (if they have been set)
+        if not (self._author is None):
+            l1_dict['Author'] = self._author
+
+        # Write out author and date (if they have been set)
+        if not (self._date is None):
+            l1_dict['Date'] = self._date
+
         for handler_format, parameter_handler in self._parameter_handlers.items():
             handler_tag = parameter_handler._TAGNAME
-            l1_dict[handler_tag] = parameter_handler.to_dict()
+            l1_dict[handler_tag] = parameter_handler.to_dict(discard_cosmetic_attributes=discard_cosmetic_attributes)
 
         smirnoff_dict = OrderedDict()
         smirnoff_dict['SMIRNOFF'] = l1_dict
+        smirnoff_dict = convert_all_quantities_to_string(smirnoff_dict)
         return smirnoff_dict
 
     # TODO: Should we call this "from_dict"?
-    def load_smirnoff_data(self, smirnoff_data):
+    def _load_smirnoff_data(self, smirnoff_data, allow_cosmetic_attributes=False):
         """
         Add parameters from a SMIRNOFF-format data structure to this ForceField.
 
@@ -658,56 +805,99 @@ class ForceField:
         ----------
         smirnoff_data : OrderedDict
             A representation of a SMIRNOFF-format data structure. Begins at top-level 'SMIRNOFF' key.
-
+        allow_cosmetic_attributes : bool, optional. Default = False
+            Whether to permit non-spec kwargs in smirnoff_data.
         """
+        import packaging.version
+
+        # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation
+
+
+        if "SMIRNOFF" in smirnoff_data:
+            version = smirnoff_data['SMIRNOFF']['version']
+        elif "SMIRFF" in smirnoff_data:
+            version = smirnoff_data['SMIRFF']['version']
+        else:
+            raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
+
+        self._check_smirnoff_version_compatibility(str(version))
+        # Convert 0.1 spec files to 0.3 SMIRNOFF data format by converting
+        # from 0.1 spec to 0.2, then 0.2 to 0.3
+        if packaging.version.parse(str(version)) == packaging.version.parse("0.1"):
+            # NOTE: This will convert the top-level "SMIRFF" tag to "SMIRNOFF"
+            smirnoff_data = convert_0_1_smirnoff_to_0_2(smirnoff_data)
+            smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
+
+        # Convert 0.2 spec files to 0.3 SMIRNOFF data format by removing units
+        # from section headers and adding them to quantity strings at all levels.
+        elif packaging.version.parse(str(version)) == packaging.version.parse("0.2"):
+            smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
 
         # Ensure that SMIRNOFF is a top-level key of the dict
         if not('SMIRNOFF' in smirnoff_data):
             raise ParseError("'SMIRNOFF' must be a top-level key in the SMIRNOFF object model")
 
-        l1_dict = smirnoff_data['SMIRNOFF']
         # Check that the aromaticity model required by this parameter set is compatible with
         # others loaded by this ForceField
-        if 'aromaticity_model' in l1_dict:
-            aromaticity_model = l1_dict['aromaticity_model']
+        if 'aromaticity_model' in smirnoff_data['SMIRNOFF']:
+            aromaticity_model = smirnoff_data['SMIRNOFF']['aromaticity_model']
             self._set_aromaticity_model(aromaticity_model)
 
         elif self._aromaticity_model is None:
             raise ParseError("'aromaticity_model' attribute must be specified in SMIRNOFF "
                              "tag, or contained in a previously-loaded SMIRNOFF data source")
 
-        # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation
-        if 'version' in l1_dict:
-            version = l1_dict['version']
-        else:
-            raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
-        self._check_smirnoff_version_compatibility(str(version))
+        if 'Author' in smirnoff_data['SMIRNOFF']:
+            self._add_author(smirnoff_data['SMIRNOFF']['Author'])
 
+        if 'Date' in smirnoff_data['SMIRNOFF']:
+            self._add_date(smirnoff_data['SMIRNOFF']['Date'])
+
+        # Go through the whole SMIRNOFF data structure, trying to convert all strings to Quantity
+        smirnoff_data = convert_all_strings_to_quantity(smirnoff_data)
 
         # Go through the subsections, delegating each to the proper ParameterHandler
 
         # Define keys which are expected from the spec, but are not parameter sections
         l1_spec_keys = ['Author', 'Date', 'version', 'aromaticity_model']
+        # TODO: Throw SMIRNOFFSpecError for unrecognized keywords
 
-        for parameter_name in l1_dict:
-            # Skip (for now) cosmetic l1 items
+        for parameter_name in smirnoff_data['SMIRNOFF']:
+            # Skip (for now) cosmetic l1 items. They're handled above
             if parameter_name in l1_spec_keys:
                 continue
             # Handle cases where a parameter name has no info (eg. ToolkitAM1BCC)
-            if l1_dict[parameter_name] is None:
-                handler = self.get_handler(parameter_name, {})
+            if smirnoff_data['SMIRNOFF'][parameter_name] is None:
+                # "get"ting the parameter handler here will also initialize it.
+                _ = self.get_parameter_handler(parameter_name, {})
                 continue
 
             # Otherwise, we expect this l1_key to correspond to a ParameterHandler
-            section_dict = l1_dict[parameter_name]
-            # In the OFFXML format, attributes and sub-elements are distinguished by whether they're a list
+            section_dict = smirnoff_data['SMIRNOFF'][parameter_name]
 
-            # Retrieve or create parameter handler
-            handler = self.get_handler(parameter_name,
-                                       # handler_kwargs)
-                                       section_dict)
+            # TODO: Implement a ParameterHandler.from_dict() that knows how to deserialize itself for extensibility.
+            #       We could let it load the ParameterTypes from the dict and append them to the existing handler
+            #       after verifying that they are compatible.
 
+            # Get the parameter types serialization that is not passed to the ParameterHandler constructor.
+            ph_class = self._get_parameter_handler_class(parameter_name)
+            try:
+                parameter_list_tagname = ph_class._INFOTYPE._ELEMENT_NAME
+            except AttributeError:
+                # The ParameterHandler doesn't have ParameterTypes (e.g. ToolkitAM1BCCHandler).
+                parameter_list_dict = {}
+            else:
+                parameter_list_dict = section_dict.pop(parameter_list_tagname, {})
+                # Must be wrapped into its own tag.
+                parameter_list_dict = {parameter_list_tagname: parameter_list_dict}
 
+            # Retrieve or create parameter handler, passing in section_dict to check for
+            # compatibility if a handler for this parameter name already exists
+            handler = self.get_parameter_handler(parameter_name,
+                                                 section_dict,
+                                                 allow_cosmetic_attributes=allow_cosmetic_attributes)
+            handler._add_parameters(parameter_list_dict,
+                                    allow_cosmetic_attributes=allow_cosmetic_attributes)
 
     def parse_smirnoff_from_source(self, source):
         """
@@ -728,6 +918,26 @@ class ForceField:
             A representation of a SMIRNOFF-format data structure. Begins at top-level 'SMIRNOFF' key.
 
         """
+        from openforcefield.utils import get_data_file_path
+
+        # Check whether this could be a file path. It could also be a
+        # file handler or a simple XML string.
+        if isinstance(source, str):
+            # Try first the simple path.
+            searched_dirs_paths = ['']
+            # Then try a relative file path w.r.t. an installed directory.
+            searched_dirs_paths.extend( _get_installed_offxml_dir_paths())
+            # Finally, search in openforcefield/data/.
+            # TODO: Remove this when smirnoff99Frosst 1.0.9 will be released.
+            searched_dirs_paths.append(get_data_file_path(''))
+
+            # Determine the actual path of the file.
+            # TODO: What is desired toolkit behavior if two files with the desired name are available?
+            for dir_path in searched_dirs_paths:
+                file_path = os.path.join(dir_path, source)
+                if os.path.isfile(file_path):
+                    source = file_path
+                    break
 
         # Process all SMIRNOFF definition files or objects
         # QUESTION: Allow users to specify forcefield URLs so they can pull forcefield definitions from the web too?
@@ -735,7 +945,7 @@ class ForceField:
 
         # Parse content depending on type
         for parameter_io_format in io_formats_to_try:
-            parameter_io_handler = self.get_io_handler(parameter_io_format)
+            parameter_io_handler = self.get_parameter_io_handler(parameter_io_format)
 
             # Try parsing as a forcefield file or file-like object
             try:
@@ -743,28 +953,93 @@ class ForceField:
                 return smirnoff_data
             except ParseError as e:
                 exception_msg = str(e)
-                # TODO: Have parse_file() raise a different error type for file not found.
-                # If the file exists but there are syntax errors, don't
-                # parse as string to avoid overwriting the errors.
-                if os.path.exists(source):
-                    break
-
-            # Try parsing as a forcefield string
-            try:
-                smirnoff_data = parameter_io_handler.parse_string(source)
-                return smirnoff_data
-            except ParseError as e:
-                exception_msg = str(e)
+            except (FileNotFoundError, OSError):
+                # If this is not a file path or a file handle, attempt parsing as a string.
+                try:
+                    smirnoff_data = parameter_io_handler.parse_string(source)
+                    return smirnoff_data
+                except ParseError as e:
+                    exception_msg = str(e)
 
         # If we haven't returned by now, the parsing was unsuccessful
         valid_formats = [
             input_format
             for input_format in self._parameter_io_handlers.keys()
         ]
-        msg = f"Source {source} does not appear to be in a known SMIRNOFF encoding.\n"
+        msg = f"Source {source} could not be read. If this is a file, ensure that the path is correct.\n"
+        msg += "If the file is present, ensure it is in a known SMIRNOFF encoding.\n"
         msg += f"Valid formats are: {valid_formats}\n"
-        msg += f"Parsing vailed with the following error:\n{exception_msg}\n"
+        msg += f"Parsing failed with the following error:\n{exception_msg}\n"
         raise IOError(msg)
+
+
+    def to_string(self, io_format='XML', discard_cosmetic_attributes=False):
+        """
+        Write this Forcefield and all its associated parameters to a string in a given format which
+        complies with the SMIRNOFF spec.
+
+
+        Parameters
+        ----------
+        io_format : str or ParameterIOHandler, optional. Default='XML'
+            The serialization format to write to
+        discard_cosmetic_attributes : bool, default=False
+            Whether to discard any non-spec attributes stored in the ForceField.
+
+        Returns
+        -------
+        forcefield_string : str
+            The string representation of the serialized forcefield
+        """
+        # Resolve which IO handler to use
+        if isinstance(io_format, ParameterIOHandler):
+            io_handler = io_format
+        else:
+            io_handler = self.get_parameter_io_handler(io_format)
+
+        smirnoff_data = self._to_smirnoff_data(discard_cosmetic_attributes=discard_cosmetic_attributes)
+        string_data = io_handler.to_string(smirnoff_data)
+        return string_data
+
+    def to_file(self, filename, io_format=None, discard_cosmetic_attributes=False):
+        """
+        Write this Forcefield and all its associated parameters to a string in a given format which
+        complies with the SMIRNOFF spec.
+
+
+        Parameters
+        ----------
+        filename : str
+            The filename to write to
+        io_format : str or ParameterIOHandler, optional. Default=None
+            The serialization format to write out. If None, will attempt to be inferred from the filename.
+        discard_cosmetic_attributes : bool, default=False
+            Whether to discard any non-spec attributes stored in the ForceField.
+
+        Returns
+        -------
+        forcefield_string : str
+            The string representation of the serialized forcefield
+        """
+
+        if io_format is None:
+            basename, io_format = os.path.splitext(filename)
+
+
+
+        # Resolve which IO handler to use
+        if isinstance(io_format, ParameterIOHandler):
+            io_handler = io_format
+        else:
+            # Handle the fact that .offxml is the same as .xml
+            if io_format.lower() == 'offxml' or io_format.lower() == '.offxml':
+                io_format = 'xml'
+            io_handler = self.get_parameter_io_handler(io_format)
+
+
+        # Write out the SMIRNOFF data to the IOHandler
+        smirnoff_data = self._to_smirnoff_data(discard_cosmetic_attributes=discard_cosmetic_attributes)
+        io_handler.to_file(filename, smirnoff_data)
 
 
     def _resolve_parameter_handler_order(self):
@@ -792,10 +1067,8 @@ class ForceField:
                 ordered_parameter_handlers.append(
                     self._parameter_handlers[tagname])
             else:
-                # TODO: Is it safe to pass "{}" as the handler_kwargs? If the handler doesn't exist, do we want to assume default values?
                 ordered_parameter_handlers.append(
-                    self.get_handler(tagname, {}))
-        #ordered_parameter_handlers = [ self.get_handler(tagname, {}) for tagname in nx.topological_sort(G) ]
+                    self.get_parameter_handler(tagname))
         return ordered_parameter_handlers
 
     # TODO: Should we add convenience methods to parameterize a Topology and export directly to AMBER, gromacs, CHARMM, etc.?
@@ -818,6 +1091,9 @@ class ForceField:
         ----------
         topology : openforcefield.topology.Topology
             The ``Topology`` corresponding to the system to be parameterized
+        charge_from_molecules : List[openforcefield.molecule.Molecule], optional
+            If specified, partial charges will be taken from the given molecules
+            instead of being determined by the force field.
 
         Returns
         -------
@@ -937,8 +1213,37 @@ class ForceField:
             top_mol = Topology.from_molecules([molecule])
             current_molecule_labels = dict()
             for tag, parameter_handler in self._parameter_handlers.items():
+
                 matches = parameter_handler.find_matches(top_mol)
-                current_molecule_labels[tag] = matches
+
+                # Remove the chemical environment matches from the
+                # matched results.
+
+                # Because we sometimes need to enforce atom ordering,
+                # `matches` here is not a normal `dict`, but rather
+                # one that transforms keys in arbitrary ways. Thus,
+                # we need to make a copy of its specific class here.
+
+                parameter_matches = matches.__class__()
+
+                # Now make parameter_matches into a dict mapping
+                # match objects to ParameterTypes
+
+                for match in matches:
+                    parameter_matches[match] = matches[match].parameter_type
+
+                current_molecule_labels[tag] = parameter_matches
 
             molecule_labels.append(current_molecule_labels)
         return molecule_labels
+
+    def _get_parameter_handler_class(self, tagname):
+        """Retrieve the ParameterHandler class associated to the tagname and throw a custom error if not found."""
+        try:
+            ph_class = self._parameter_handler_classes[tagname]
+        except KeyError:
+            msg = "Cannot find a registered parameter handler class for tag '{}'\n".format(
+                tagname)
+            msg += "Known parameter handler class tags are {}".format(self._parameter_handler_classes.keys())
+            raise KeyError(msg)
+        return ph_class

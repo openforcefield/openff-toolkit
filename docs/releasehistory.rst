@@ -7,6 +7,230 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+
+Current Development
+-------------------
+
+New features
+""""""""""""
+
+- `PR #377 <https://github.com/openforcefield/openforcefield/pull/377>`_: Single indexed parameters in
+  :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
+  and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+  can now be get/set through normal attribute syntax on top of the list syntax.
+
+Bugfixes
+""""""""
+- `PR #385 <https://github.com/openforcefield/openforcefield/pull/385>`_: Fixes
+  `Issue #346 <https://github.com/openforcefield/openforcefield/issues/346>`_ by
+  having :py:meth:`OpenEyeToolkitWrapper.compute_partial_charges_am1bcc <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.compute_partial_charges_am1bcc>`
+  fall back to using standard AM1-BCC if AM1-BCC ELF10 charge generation raises
+  an error about "trans COOH conformers"
+
+
+0.4.1 - Bugfix Release
+----------------------
+
+This update fixes several toolkit bugs that have been reported by the community.
+Details of these bugfixes are provided below.
+
+It also refactors how
+:py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+and
+:py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
+store their attributes, by introducing
+:py:class:`ParameterAttribute <openforcefield.typing.engines.smirnoff.parameters.ParameterAttribute>`
+and
+:py:class:`IndexedParameterAttribute <openforcefield.typing.engines.smirnoff.parameters.IndexedParameterAttribute>`.
+These new attribute-handling classes provide a consistent backend which should simplify manipulation of parameters
+and implementation of new handlers.
+
+Bug fixes
+"""""""""
+- `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Fixed a
+  bug where the two
+  :py:class:`BondType <openforcefield.typing.engines.smirnoff.parameters.BondHandler.BondType>`
+  parameter attributes ``k`` and ``length`` were treated as indexed attributes. (``k`` and
+  ``length`` values that correspond to specific bond orders will be indexed under
+  ``k_bondorder1``, ``k_bondorder2``, etc when implemented in the future)
+- `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Fixed a
+  bug that allowed setting indexed attributes to single values instead of strictly lists.
+- `PR #370 <https://github.com/openforcefield/openforcefield/pull/370>`_: Fixed a
+  bug in the API where
+  :py:class:`BondHandler <openforcefield.typing.engines.smirnoff.parameters.BondHandler>`,
+  :py:class:`ProperTorsionHandler <openforcefield.typing.engines.smirnoff.parameters.ProperTorsionHandler>`
+  , and
+  :py:class:`ImproperTorsionHandler <openforcefield.typing.engines.smirnoff.parameters.ImproperTorsionHandler>`
+  exposed non-functional indexed parameters.
+- `PR #351 <https://github.com/openforcefield/openforcefield/pull/351>`_: Fixes
+  `Issue #344 <https://github.com/openforcefield/openforcefield/issues/344>`_,
+  in which the main :py:class:`FrozenMolecule <openforcefield.topology.FrozenMolecule>`
+  constructor and several other Molecule-construction functions ignored or did not
+  expose the ``allow_undefined_stereo`` keyword argument.
+- `PR #351 <https://github.com/openforcefield/openforcefield/pull/351>`_: Fixes
+  a bug where a molecule which previously generated a SMILES using one cheminformatics toolkit
+  returns the same SMILES, even though a different toolkit (which would generate
+  a different SMILES for the molecule) is explicitly called.
+- `PR #354 <https://github.com/openforcefield/openforcefield/pull/354>`_: Fixes
+  the error message that is printed if an unexpected parameter attribute is found while loading
+  data into a :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  (now instructs users to specify ``allow_cosmetic_attributes`` instead of ``permit_cosmetic_attributes``)
+- `PR #364 <https://github.com/openforcefield/openforcefield/pull/364>`_: Fixes
+  `Issue #362 <https://github.com/openforcefield/openforcefield/issues/362>`_ by
+  modifying
+  :py:meth:`OpenEyeToolkitWrapper.from_smiles <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.from_smiles>`
+  and
+  :py:meth:`RDKitToolkitWrapper.from_smiles <openforcefield.utils.toolkits.RDKitToolkitWrapper.from_smiles>`
+  to make implicit hydrogens explicit before molecule creation. These functions also
+  now raise an error if the optional keyword ``hydrogens_are_explicit=True`` but the
+  SMILES are interpreted by the backend cheminformatic toolkit as having implicit
+  hydrogens.
+- `PR #371 <https://github.com/openforcefield/openforcefield/pull/371>`_: Fixes
+  error when reading early SMIRNOFF 0.1 spec files enclosed by a top-level ``SMIRFF`` tag.
+
+.. note ::
+  The enclosing ``SMIRFF`` tag is present only in legacy files.
+  Since developing a formal specification, the only acceptable top-level tag value in a SMIRNOFF data structure is
+  ``SMIRNOFF``.
+
+Code enhancements
+"""""""""""""""""
+- `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_:
+  :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+  was refactored to improve its extensibility. It is now possible to create new parameter
+  types by using the new descriptors
+  :py:class:`ParameterAttribute <openforcefield.typing.engines.smirnoff.parameters.ParameterAttribute>`
+  and
+  :py:class:`IndexedParameterAttribute <openforcefield.typing.engines.smirnoff.parameters.IndexedParameterAttribute>`.
+- `PR #357 <https://github.com/openforcefield/openforcefield/pull/357>`_: Addresses
+  `Issue #356 <https://github.com/openforcefield/openforcefield/issues/356>`_ by raising
+  an informative error message if a user attempts to load an OpenMM topology which
+  is probably missing connectivity information.
+
+
+
+Force fields added
+""""""""""""""""""
+- `PR #368 <https://github.com/openforcefield/openforcefield/pull/368>`_: Temporarily adds
+  ``test_forcefields/smirnoff99frosst_experimental.offxml`` to address hierarchy problems, redundancies, SMIRKS
+  pattern typos etc., as documented in `issue #367 <https://github.com/openforcefield/openforcefield/issues/367>`_.
+  Will ultimately be propagated to an updated forcefield in the ``openforcefield/smirnoff99frosst`` repo.
+- `PR #371 <https://github.com/openforcefield/openforcefield/pull/371>`_: Adds
+  ``test_forcefields/smirff99Frosst_reference_0_1_spec.offxml``, a SMIRNOFF 0.1 spec file enclosed by the legacy
+  ``SMIRFF`` tag. This file is used in backwards-compatibility testing.
+
+
+
+0.4.0 - Performance optimizations and support for SMIRNOFF 0.3 specification
+----------------------------------------------------------------------------
+
+This update contains performance enhancements that significantly reduce the time to create OpenMM systems for topologies containing many molecules via :py:meth:`ForceField.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`.
+
+This update also introduces the `SMIRNOFF 0.3 specification <https://open-forcefield-toolkit.readthedocs.io/en/0.4.0/smirnoff.html>`_.
+The spec update is the result of discussions about how to handle the evolution of data and parameter types as further functional forms are added to the SMIRNOFF spec.
+
+
+We provide methods to convert SMIRNOFF 0.1 and 0.2 forcefields written with the XML serialization (``.offxml``) to the SMIRNOFF 0.3 specification.
+These methods are called automatically when loading a serialized SMIRNOFF data representation written in the 0.1 or 0.2 specification.
+This functionality allows the toolkit to continue to read files containing SMIRNOFF 0.2 spec force fields, and also implements backwards-compatibility for SMIRNOFF 0.1 spec force fields.
+
+
+.. warning :: The SMIRNOFF 0.1 spec did not contain fields for several energy-determining parameters that are exposed in later SMIRNOFF specs.
+  Thus, when reading SMIRNOFF 0.1 spec data, the toolkit must make assumptions about the values that should be added for the newly-required fields.
+  The values that are added include 1-2, 1-3 and 1-5 scaling factors, cutoffs, and long-range treatments for nonbonded interactions.
+  Each assumption is printed as a warning during the conversion process.
+  Please carefully review the warning messages to ensure that the conversion is providing your desired behavior.
+
+
+
+`SMIRNOFF 0.3 specification updates <https://open-forcefield-toolkit.readthedocs.io/en/0.4.0/smirnoff.html>`_
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+* The SMIRNOFF 0.3 spec introduces versioning for each individual parameter section, allowing asynchronous updates to the features of each parameter class.
+  The top-level ``SMIRNOFF`` tag, containing information like ``aromaticity_model``, ``Author``, and ``Date``, still has a version (currently 0.3).
+  But, to allow for independent development of individual parameter types, each section (such as ``Bonds``, ``Angles``, etc) now has its own version as well (currently all 0.3).
+* All units are now stored in expressions with their corresponding values. For example, distances are now stored as ``1.526*angstrom``, instead of storing the unit separately in the section header.
+* The current allowed value of the ``potential`` field for ``ProperTorsions`` and ``ImproperTorsions`` tags is no longer ``charmm``, but is rather ``k*(1+cos(periodicity*theta-phase))``.
+  It was pointed out to us that CHARMM-style torsions deviate from this formula when the periodicity of a torsion term is 0, and we do not intend to reproduce that behavior.
+* SMIRNOFF spec documentation has been updated with tables of keywords and their defaults for each parameter section and parameter type.
+  These tables will track the allowed keywords and default behavior as updated versions of individual parameter sections are released.
+
+Performance improvements and bugfixes
+"""""""""""""""""""""""""""""""""""""
+
+* `PR #329 <https://github.com/openforcefield/openforcefield/pull/329>`_: Performance improvements when creating systems for topologies with many atoms.
+* `PR #347 <https://github.com/openforcefield/openforcefield/pull/347>`_: Fixes bug in charge assignment that occurs when charges are read from file, and reference and charge molecules have different atom orderings.
+
+
+New features
+""""""""""""
+
+* `PR #311 <https://github.com/openforcefield/openforcefield/pull/311>`_: Several new experimental functions.
+
+  * Adds :py:meth:`convert_0_2_smirnoff_to_0_3 <openforcefield.utils.utils.convert_0_2_smirnoff_to_0_3>`, which takes a SMIRNOFF 0.2-spec data dict, and updates it to 0.3.
+    This function is called automatically when creating a ``ForceField`` from a SMIRNOFF 0.2 spec OFFXML file.
+  * Adds :py:meth:`convert_0_1_smirnoff_to_0_2 <openforcefield.utils.utils.convert_0_1_smirnoff_to_0_2>`, which takes a SMIRNOFF 0.1-spec data dict, and updates it to 0.2.
+    This function is called automatically when creating a ``ForceField`` from a SMIRNOFF 0.1 spec OFFXML file.
+  * NOTE: The format of the "SMIRNOFF data dict" above is likely to change significantly in the future.
+    Users that require a stable serialized ForceField object should use the output of :py:meth:`ForceField.to_string('XML') <openforcefield.typing.engines.smirnoff.forcefield.ForceField.to_string>` instead.
+  * Adds :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` :py:meth:`add_cosmetic_attribute <openforcefield.typing.engines.smirnoff.parameters.ParameterType.add_cosmetic_attribute>` and :py:meth:`delete_cosmetic_attribute <openforcefield.typing.engines.smirnoff.parameters.ParameterType.delete_cosmetic_attribute>` functions.
+    Once created, cosmetic attributes can be accessed and modified as attributes of the underlying object (eg. ``ParameterType.my_cosmetic_attrib = 'blue'``)
+    These functions are experimental, and we are interested in feedback on how cosmetic attribute handling could be improved. (`See Issue #338 <https://github.com/openforcefield/openforcefield/issues/338>`_)
+    Note that if a new cosmetic attribute is added to an object without using these functions, it will not be recognized by the toolkit and will not be written out during serialization.
+  * Values for the top-level ``Author`` and ``Date`` tags are now kept during SMIRNOFF data I/O.
+    If multiple data sources containing these fields are read, the values are concatenated using "AND" as a separator.
+
+
+API-breaking changes
+""""""""""""""""""""
+* :py:meth:`ForceField.to_string <openforcefield.typing.engines.smirnoff.forcefield.ForceField.to_string>` and :py:meth:`ForceField.to_file <openforcefield.typing.engines.smirnoff.forcefield.ForceField.to_file>` have had the default value of their ``discard_cosmetic_attributes`` kwarg set to False.
+* :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` constructors now expect the ``version`` kwarg (per the SMIRNOFF spec change above)
+  This requirement can be skipped by providing the kwarg ``skip_version_check=True``
+* :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` functions no longer handle ``X_unit`` attributes in SMIRNOFF data (per the SMIRNOFF spec change above).
+* The scripts in ``utilities/convert_frosst`` are now deprecated.
+  This functionality is important for provenance and will be migrated to the ``openforcefield/smirnoff99Frosst`` repository in the coming weeks.
+* :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` ``._SMIRNOFF_ATTRIBS`` is now :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` ``._REQUIRED_SPEC_ATTRIBS``, to better parallel the structure of the ``ParameterHandler`` class.
+* :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` ``._OPTIONAL_ATTRIBS`` is now :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` ``._OPTIONAL_SPEC_ATTRIBS``, to better parallel the structure of the ``ParameterHandler`` class.
+* Added class-level dictionaries :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` ``._DEFAULT_SPEC_ATTRIBS`` and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` ``._DEFAULT_SPEC_ATTRIBS``.
+
+0.3.0 - API Improvements
+------------------------
+
+Several improvements and changes to public API.
+
+New features
+""""""""""""
+
+* `PR #292 <https://github.com/openforcefield/openforcefield/pull/292>`_: Implement ``Topology.to_openmm`` and remove ``ToolkitRegistry.toolkit_is_available``
+* `PR #322 <https://github.com/openforcefield/openforcefield/pull/322>`_: Install directories for the lookup of OFFXML files through the entry point group ``openforcefield.smirnoff_forcefield_directory``. The ``ForceField`` class doesn't search in the ``data/forcefield/`` folder anymore (now renamed ``data/test_forcefields/``), but only in ``data/``.
+
+API-breaking Changes
+""""""""""""""""""""
+* `PR #278 <https://github.com/openforcefield/openforcefield/pull/278>`_: Standardize variable/method names
+* `PR #291 <https://github.com/openforcefield/openforcefield/pull/291>`_: Remove ``ForceField.load/to_smirnoff_data``, add ``ForceField.to_file/string`` and ``ParameterHandler.add_parameters``. Change behavior of ``ForceField.register_X_handler`` functions.
+
+Bugfixes
+"""""""" 
+* `PR #327 <https://github.com/openforcefield/openforcefield/pull/327>`_: Fix units in tip3p.offxml (note that this file is still not loadable by current toolkit)
+* `PR #325 <https://github.com/openforcefield/openforcefield/pull/325>`_: Fix solvent box for provided test system to resolve periodic clashes.
+* `PR #325 <https://github.com/openforcefield/openforcefield/pull/325>`_: Add informative message containing Hill formula when a molecule can't be matched in ``Topology.from_openmm``.
+* `PR #325 <https://github.com/openforcefield/openforcefield/pull/325>`_: Provide warning or error message as appropriate when a molecule is missing stereochemistry.
+* `PR #316 <https://github.com/openforcefield/openforcefield/pull/316>`_: Fix formatting issues in GBSA section of SMIRNOFF spec
+* `PR #308 <https://github.com/openforcefield/openforcefield/pull/308>`_: Cache molecule SMILES to improve system creation speed
+* `PR #306 <https://github.com/openforcefield/openforcefield/pull/306>`_: Allow single-atom molecules with all zero coordinates to be converted to OE/RDK mols
+* `PR #313 <https://github.com/openforcefield/openforcefield/pull/313>`_: Fix issue where constraints are applied twice to constrained bonds
+
+0.2.2 - Bugfix release
+----------------------
+
+This release modifies an example to show how to parameterize a solvated system, cleans up backend code, and makes several improvements to the README.
+
+Bugfixes
+""""""""
+* `PR #279 <https://github.com/openforcefield/openforcefield/pull/279>`_: Cleanup of unused code/warnings in main package ``__init__``
+* `PR #259 <https://github.com/openforcefield/openforcefield/pull/259>`_: Update T4 Lysozyme + toluene example to show how to set up solvated systems
+* `PR #256 <https://github.com/openforcefield/openforcefield/pull/256>`_ and `PR #274 <https://github.com/openforcefield/openforcefield/pull/274>`_: Add functionality to ensure that links in READMEs resolve successfully
+
+
 0.2.1 - Bugfix release
 ----------------------
 

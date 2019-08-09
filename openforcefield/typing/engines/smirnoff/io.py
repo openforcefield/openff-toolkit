@@ -23,12 +23,9 @@ __all__ = [
 #=============================================================================================
 
 import logging
-import os
 
 import xmltodict
-
 from simtk import unit
-from openforcefield.utils.utils import get_data_filename
 
 
 #=============================================================================================
@@ -89,14 +86,13 @@ class ParameterIOHandler:
 
         """
         pass
-        #self._forcefield = forcefield
 
-    def parse_file(self, filename):
+    def parse_file(self, file_path):
         """
 
         Parameters
         ----------
-        filename
+        file_path
 
         Returns
         -------
@@ -118,14 +114,14 @@ class ParameterIOHandler:
         """
         pass
 
-    def to_file(self, filename, smirnoff_data):
+    def to_file(self, file_path, smirnoff_data):
         """
         Write the current forcefield parameter set to a file.
 
         Parameters
         ----------
-        filename : str
-            The filename to write to.
+        file_path : str
+            The path to the file to write to.
         smirnoff_data : dict
             A dictionary structured in compliance with the SMIRNOFF spec
 
@@ -155,8 +151,6 @@ class ParameterIOHandler:
 # XML I/O
 #=============================================================================================
 
-
-
 class XMLParameterIOHandler(ParameterIOHandler):
     """
     Handles serialization/deserialization of SMIRNOFF ForceField objects from OFFXML format.
@@ -164,65 +158,32 @@ class XMLParameterIOHandler(ParameterIOHandler):
     # TODO: Come up with a better keyword for format
     _FORMAT = 'XML'
 
-
-
-    # TODO: Fix this
     def parse_file(self, source):
         """Parse a SMIRNOFF force field definition in XML format, read from a file.
 
-        A ``ParseError`` is raised if the XML cannot be processed.
-
         Parameters
         ----------
-        source : str or file-like obj
-            File path of file-like obj specifying a SMIRNOFF force field definition in `the SMIRNOFF XML format <https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md>`_.
+        source : str or io.RawIOBase
+            File path of file-like object implementing a ``read()`` method
+            specifying a SMIRNOFF force field definition in `the SMIRNOFF XML format <https://github.com/openforcefield/openforcefield/blob/master/The-SMIRNOFF-force-field-format.md>`_.
 
-        .. notes ::
+        Raises
+        ------
+        ParseError
+            If the XML cannot be processed.
+        FileNotFoundError
+            If the file could not found.
 
-           * New SMIRNOFF sections are handled independently, as if they were specified in the same file.
-           * If a SMIRNOFF section that has already been read appears again, its definitions are appended to the end of the previously-read
-             definitions if the sections are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
         """
-        from pyexpat import ExpatError
-        from openforcefield.typing.engines.smirnoff.forcefield import ParseError
-
-        # this handles open file-like objects (and strings)
+        # If this is a file-like object, we should be able to read it.
         try:
-            smirnoff_data = self.parse_string(source)
-            return smirnoff_data
-        except ParseError:
-            pass
+            raw_data = source.read()
+        except AttributeError:
+            # This raises FileNotFoundError if the file doesn't exist.
+            raw_data = open(source).read()
 
-        # This handles complete/local filenames
-        try:
-            # Check if the file exists in the data/forcefield directory
-            data = open(source).read()
-            smirnoff_data = xmltodict.parse(data, attr_prefix='')
-            return smirnoff_data
-        except ExpatError:
-            pass
-        except FileNotFoundError:
-            pass
-
-        # This handles nonlocal filenames
-        try:
-            # Check if the file exists in the data/forcefield directory
-            temp_file = get_data_filename(os.path.join('forcefield', source))
-            data = open(temp_file).read()
-            smirnoff_data = self.parse_string(data)
-            return smirnoff_data
-
-        except Exception as e:
-            # Fail with an error message about which file could not be read.
-            # TODO: Also handle case where fallback to 'data' directory encounters problems,
-            # but this is much less worrisome because we control those files.
-            msg = str(e) + '\n'
-            if hasattr(source, 'name'):
-                filename = source.name
-            else:
-                filename = str(source)
-            msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
-            raise ParseError(msg)
+        # Parse the data in string format.
+        return self.parse_string(raw_data)
 
     def parse_string(self, data):
         """Parse a SMIRNOFF force field definition in XML format.
@@ -245,30 +206,21 @@ class XMLParameterIOHandler(ParameterIOHandler):
         except ExpatError as e:
             raise ParseError(e)
 
-    def to_file(self, filename, smirnoff_data):
-        """Write the current forcefield parameter set to a file, autodetecting the type from the extension.
+    def to_file(self, file_path, smirnoff_data):
+        """Write the current forcefield parameter set to a file.
 
         Parameters
         ----------
-        filename : str
-            The name of the file to be written.
-            The `.offxml` file extension must be present.
+        file_path : str
+            The path to the file to be written.
+            The `.offxml` or `.xml` file extension must be present.
         smirnoff_data : dict
             A dict structured in compliance with the SMIRNOFF data spec.
 
         """
         xml_string = self.to_string(smirnoff_data)
-        (basename, extension) = os.path.splitext(filename)
-        if extension == '.offxml':
-            with open(filename, 'wb') as of:
-                of.write(xml_string)
-        else:
-            msg = "Cannot export forcefield parameters to file '{}'\n".format(
-                filename)
-            msg += 'Export to extension {} not implemented yet.\n'.format(
-                extension)
-            msg += "Supported choices are: ['.offxml']"
-            raise NotImplementedError(msg)
+        with open(file_path, 'w') as of:
+            of.write(xml_string)
 
     def to_string(self, smirnoff_data):
         """
@@ -285,7 +237,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
             XML String representation of this forcefield.
 
         """
-        def prepend_all_keys(d, char='@'):
+        def prepend_all_keys(d, char='@', ignore_keys=frozenset()):
             """
             Modify a dictionary in-place, prepending a specified string to each key
             that doesn't refer to a value that is list or dict.
@@ -296,45 +248,37 @@ class XMLParameterIOHandler(ParameterIOHandler):
                 Hierarchical dictionary to traverse and modify keys
             char : string, optional. Default='@'
                 String to prepend onto each applicable dictionary key
+            ignore_keys : iterable of str
+                A set or list of strings, indicating keys not to prepend in the data structure
 
             """
             if isinstance(d, dict):
                 for key in list(d.keys()):
+                    if key in ignore_keys:
+                        continue
                     if isinstance(d[key], list) or isinstance(d[key], dict):
-                        prepend_all_keys(d[key])
+                        prepend_all_keys(d[key], char=char, ignore_keys=ignore_keys)
                     else:
                         new_key = char + key
                         d[new_key] = d[key]
                         del d[key]
-                        prepend_all_keys(d[new_key])
+                        prepend_all_keys(d[new_key], char=char, ignore_keys=ignore_keys)
             elif isinstance(d, list):
                 for item in d:
-                    prepend_all_keys(item)
+                    prepend_all_keys(item, char=char, ignore_keys=ignore_keys)
 
-        prepend_all_keys(smirnoff_data['SMIRNOFF'])
-        print(smirnoff_data)
-        print()
+        # the "xmltodict" library defaults to print out all element attributes on separate lines
+        # unless they're prepended by "@"
+        prepend_all_keys(smirnoff_data['SMIRNOFF'], ignore_keys=['Author', 'Date'])
+
+        # Reorder parameter sections to put Author and Date at the top (this is the only
+        # way to change the order of items in a dict, as far as I can tell)
+        for key, value in list(smirnoff_data['SMIRNOFF'].items()):
+            if key in ['Author', 'Date']:
+                continue
+            del smirnoff_data['SMIRNOFF'][key]
+            smirnoff_data['SMIRNOFF'][key] = value
+
         return xmltodict.unparse(smirnoff_data, pretty=True)
 
-    def to_xml(self, smirnoff_data):
-        """Render the forcefield parameter set to XML.
 
-        Returns
-        -------
-        smirnoff_data : dict
-            A dictionary structures in comliance with the SMIRNOFF data spec.
-        """
-        return self.to_string(smirnoff_data)
-
-    # # TODO: Do we need this? Should we use built-in dict-based serialization?
-    # def __getstate__(self):
-    #     """Serialize to XML.
-    #     """
-    #     return self.to_xml()
-    #
-    # # TODO: Do we need this? Should we use built-in dict-based serialization?
-    # def __setstate__(self, state):
-    #     """Deserialize from XML.
-    #     """
-    #     self._initialize()
-    #     self.parse_xml(state)

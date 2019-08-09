@@ -65,7 +65,9 @@ Miscellaneous utility functions.
     all_subclasses
     temporary_cd
     temporary_directory
-    get_data_filename
+    get_data_file_path
+    convert_0_1_smirnoff_to_0_2
+    convert_0_2_smirnoff_to_0_3
 
 Structure tools
 ---------------

@@ -138,8 +138,8 @@ class TestUtilsSMIRNOFFSerialization(TestUtilsSerialization):
         cls.thing = Thing('blorb', [1, 2, 3])
         # Create an example object holding the SMIRNOFF xmltodict dictionary representation
         import xmltodict
-        from openforcefield.utils import get_data_filename
-        filename = get_data_filename('forcefield/smirnoff99Frosst.offxml')
+        from openforcefield.utils import get_data_file_path
+        filename = get_data_file_path('test_forcefields/smirnoff99Frosst.offxml')
         with open(filename, 'r') as f:
             xml = f.read()
             dictionary = xmltodict.parse(xml)

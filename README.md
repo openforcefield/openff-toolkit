@@ -1,12 +1,9 @@
-[![Build Status](https://travis-ci.org/openforcefield/openforcefield.svg?branch=master)](https://travis-ci.org/openforcefield/openforcefield?branch=master)
-[![Documentation](https://readthedocs.org/projects/open-forcefield-toolkit/badge/?version=latest)](http://open-forcefield-toolkit.readthedocs.io/en/latest/?badge=latest)
-[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/openforcefield/openforcefield.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/openforcefield/openforcefield/context:python)
-[![codecov](https://codecov.io/gh/openforcefield/openforcefield/branch/master/graph/badge.svg)](https://codecov.io/gh/openforcefield/openforcefield)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Install with Conda](https://anaconda.org/omnia/openforcefield/badges/installer/conda.svg)](https://anaconda.org/omnia/openforcefield)
-[![Anaconda Cloud platforms](https://anaconda.org/omnia/openforcefield/badges/platforms.svg)](https://anaconda.org/omnia/openforcefield)
-[![Anaconda Cloud downloads](https://anaconda.org/omnia/openforcefield/badges/downloads.svg)](https://anaconda.org/omnia/openforcefield)
-[![Funding](https://img.shields.io/badge/Funding-Open%20Force%20Field%20Consortium-brightgreen.svg)](http://openforcefield.org)
+| **Status** | [![Travis build](https://img.shields.io/travis/openforcefield/openforcefield/master.svg?logo=linux&logoColor=white)](https://travis-ci.org/openforcefield/openforcefield) [![Codecov coverage](https://img.shields.io/codecov/c/github/openforcefield/openforcefield.svg?logo=Codecov&logoColor=white)](https://codecov.io/gh/openforcefield/openforcefield) [![LGTM analysis](https://img.shields.io/lgtm/grade/python/g/openforcefield/openforcefield.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/openforcefield/openforcefield/context:python) |
+| :------ | :------- |
+| **Latest Release** | [![Last release tag](https://img.shields.io/github/release-pre/openforcefield/openforcefield.svg)](https://github.com/openforcefield/openforcefield/releases)  [![Commits since release](https://img.shields.io/github/commits-since/openforcefield/openforcefield/0.2.1.svg)](https://github.com/openforcefield/openforcefield/releases/tag/0.2.1)  [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597754.svg)](https://doi.org/10.5281/zenodo.597754) |
+| **Communication** | [![docs latest](https://img.shields.io/badge/docs-latest-5077AB.svg?logo=read%20the%20docs)](https://open-forcefield-toolkit.readthedocs.io/en/latest/) [![dev chat on slack](https://img.shields.io/badge/dev_chat-on_slack-808493.svg?logo=slack)](https://join.slack.com/t/openforcefieldgroup/shared_invite/enQtNjA4MTMxMDg0MDAxLWY3Y2Q5NDY4MmU1OTIzMDhiYzFjOWFkZGFjN2Y4N2Q4OTRkOWNjODVhMDMxMzkwMDcxNDA5MjYyNjJjYjE2NTM) |
+| **Foundation** | [![license](https://img.shields.io/github/license/openforcefield/openforcefield.svg)](https://opensource.org/licenses/MIT) [![platforms](https://img.shields.io/badge/Platforms-Linux%2C%20MacOS-orange.svg)](https://open-forcefield-toolkit.readthedocs.io/en/latest/installation.html) [![python](https://img.shields.io/badge/python-3.6%2C%203.7-blue.svg)](https://open-forcefield-toolkit.readthedocs.io/en/latest/installation.html) [![Funding](https://img.shields.io/badge/Funding-Open%20Force%20Field%20Consortium-brightgreen.svg)](http://openforcefield.org) |
+| **Installation** | [![Releases](https://img.shields.io/badge/obtain-latest-green.svg)](https://github.com/openforcefield/openforcefield/releases) [![Conda](https://img.shields.io/conda/v/omnia/openforcefield.svg)](https://anaconda.org/omnia/openforcefield) [![Last updated](https://anaconda.org/omnia/openforcefield/badges/latest_release_relative_date.svg)](https://anaconda.org/omnia/openforcefield) [![Anaconda Cloud downloads](https://anaconda.org/omnia/openforcefield/badges/downloads.svg)](https://anaconda.org/omnia/openforcefield) |
 
 # The Open Force Field toolkit
 
@@ -40,7 +37,7 @@ This repository provides tools for using the [SMIRKS Native Open Force Field (SM
 
 By convention, files containing [XML representations](https://en.wikipedia.org/wiki/XML) of SMIRNOFF force fields carry `.offxml` extensions.
 
-Example SMIRNOFF `.offxml` force field definitions can be found in [`openforcefield/data/forcefield`](https://github.com/openforcefield/openforcefield/tree/master/openforcefield/data/forcefield).
+Example SMIRNOFF `.offxml` force field definitions can be found in [`openforcefield/data/test_forcefields/`](https://github.com/openforcefield/openforcefield/tree/master/openforcefield/data/test_forcefields). These force fields are for testing only, and we neither record versions of these files, nor do we guarantee their correctness or completeness.
 
 ### Working with SMIRNOFF parameter sets
 
@@ -49,8 +46,8 @@ The SMIRNOFF `ForceField` class is essentially a drop-in replacement for the [Op
 ```python
 # Load a molecule into the openforcefield Molecule object
 from openforcefield.topology import Molecule
-from openforcefield.utils import get_data_filename
-sdf_file_path = get_data_filename('molecules/ethanol.sdf')
+from openforcefield.utils import get_data_file_path
+sdf_file_path = get_data_file_path('molecules/ethanol.sdf')
 molecule = Molecule.from_file(sdf_file_path)
 
 # Create an openforcefield Topology object from the molecule
@@ -59,13 +56,13 @@ topology = Topology.from_molecules(molecule)
 
 # Load the smirnoff99Frosst SMIRNOFF force field definition
 from openforcefield.typing.engines.smirnoff import ForceField
-forcefield = ForceField('smirnoff99Frosst.offxml')
+forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
 
 # Create an OpenMM system representing the molecule with SMIRNOFF-applied parameters
 openmm_system = forcefield.create_openmm_system(topology)
 
 # Load a SMIRNOFF small molecule forcefield for alkanes, ethers, and alcohols
-forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
+forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 ```
 Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/latest/examples.html).
 
@@ -79,7 +76,7 @@ The `ChemicalEnvironments` class can be used to parse and manipulate [tagged SMA
 from openforcefield.typing.chemistry import environment
 
 smirks = "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
-angle = environment.AngleChemicalEnvironment(smirks=smirks)
+angle = environment.AngleChemicalEnvironment(smirks=smirks, toolkit='rdkit')
 print(angle.asSMIRKS())
 # "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
 

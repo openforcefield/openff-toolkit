@@ -16,8 +16,8 @@ datapath = './AlkEthOH_tripos/AlkEthOH_test_filt1'
 if not os.path.isdir(datapath):
     print("Extracting archived molecule files.")
     # Extract the AlkEthOH dataset shipped with the toolkit in data/molecules/ in the working directory.
-    from openforcefield.tests.utils import get_data_filename
-    tarfile_path = os.path.join(get_data_filename('molecules'), 'AlkEthOH_tripos.tar.gz')
+    from openforcefield.tests.utils import get_data_file_path
+    tarfile_path = os.path.join(get_data_file_path('molecules'), 'AlkEthOH_tripos.tar.gz')
     import tarfile
     with tarfile.open(tarfile_path, 'r:gz') as tar:
         tar.extractall()
@@ -30,7 +30,7 @@ print('Found {} files to test'.format(len(mol_filepaths)))
 
 # Load forcefield
 from openforcefield.typing.engines.smirnoff import ForceField
-forcefield = ForceField('Frosst_AlkEthOH_parmAtFrosst.offxml')
+forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 
 from openforcefield.topology import Molecule
 for mol_idx, mol_filepath in enumerate(mol_filepaths):
