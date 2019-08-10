@@ -292,8 +292,32 @@ if RDKitToolkitWrapper.is_available() and AmberToolsToolkitWrapper.is_available(
 class TestForceField():
     """Test the ForceField class"""
 
-    def test_create_forcefield_from_file(self):
+    def test_create_forcefield_no_args(self):
         """Test empty constructor"""
+        forcefield = ForceField()
+
+        # Should find BondHandler and AngleHandler, since they're default classes
+        forcefield.get_parameter_handler('Bonds')
+        forcefield.get_parameter_handler('Angles')
+
+        # Shouldn't find InvalidKey handler, since it doesn't exist
+        with pytest.raises(KeyError) as excinfo:
+            forcefield.get_parameter_handler('InvalidKey')
+
+    def test_create_forcefield_custom_handler_classes(self):
+        """Test constructor given specific classes to register"""
+        from openforcefield.typing.engines.smirnoff import BondHandler
+        forcefield = ForceField(parameter_handler_classes=[BondHandler])
+
+        # Should find BondHandler, since it's a default class
+        forcefield.get_parameter_handler('Bonds')
+
+        # Shouldn't find AngleHandler, since we didn't allow that to be registered
+        with pytest.raises(KeyError) as excinfo:
+            forcefield.get_parameter_handler('Angles')
+
+    def test_create_forcefield_from_file(self):
+        """Test basic file loading in constructor"""
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
         assert len(forcefield._parameter_handlers['Bonds']._parameters) == 87
         assert len(forcefield._parameter_handlers['Angles']._parameters) == 38
