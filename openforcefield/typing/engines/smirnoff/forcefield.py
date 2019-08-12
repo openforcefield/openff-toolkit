@@ -275,8 +275,8 @@ class ForceField:
         # otherwise, we can't define two different ParameterHandler subclasses to compare for a new type of energy term
         # since both will try to register themselves for the same XML tag and an Exception will be raised.
         if parameter_handler_classes is None:
-            parameter_handlers = all_subclasses(ParameterHandler)
-        self._register_parameter_handler_classes(parameter_handlers)
+            parameter_handler_classes = all_subclasses(ParameterHandler)
+        self._register_parameter_handler_classes(parameter_handler_classes)
 
         # Register all ParameterIOHandler objects that will process serialized parameter representations
         if parameter_io_handler_classes is None:
