@@ -309,7 +309,7 @@ class TestForceField():
         from openforcefield.typing.engines.smirnoff import BondHandler
         forcefield = ForceField(parameter_handler_classes=[BondHandler])
 
-        # Should find BondHandler, since it's a default class
+        # Should find BondHandler, since we registered it
         forcefield.get_parameter_handler('Bonds')
 
         # Shouldn't find AngleHandler, since we didn't allow that to be registered
