@@ -1,4 +1,7 @@
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Date>2019-08-08</Date>
+    <Author>J. Chodera, (MSKCC); J. Wagner (Open Force Field)</Author>
+    <!-- This file is intended to replicate the settings and per-particle parameters provided by OpenMM's customgbforces.GBSAOBC1Force class -->
     <GBSA version="0.3" gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
       <Atom smirks="[*:1]" radius="0.15*nanometer" scale="0.8"/>
       <Atom smirks="[#1:1]" radius="0.12*nanometer" scale="0.85"/>
