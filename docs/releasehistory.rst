@@ -41,6 +41,10 @@ Bugfixes
   having :py:meth:`OpenEyeToolkitWrapper.compute_partial_charges_am1bcc <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.compute_partial_charges_am1bcc>`
   fall back to using standard AM1-BCC if AM1-BCC ELF10 charge generation raises
   an error about "trans COOH conformers"
+- `PR #399 <https://github.com/openforcefield/openforcefield/pull/399>`_: Fixes
+  issue where
+  :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  constructor would ignore ``parameter_handler_classes`` kwarg.
 
 
 Force fields added
