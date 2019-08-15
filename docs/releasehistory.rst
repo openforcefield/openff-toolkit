@@ -51,6 +51,9 @@ Bugfixes
   issue where
   :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   constructor would ignore ``parameter_handler_classes`` kwarg.
+- `PR #400 <https://github.com/openforcefield/openforcefield/pull/400>`_: Makes
+  link-checking tests retry three times before failing.
+
 
 
 Force fields added
