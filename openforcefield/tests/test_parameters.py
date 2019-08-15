@@ -966,10 +966,11 @@ class TestGBSAHandler:
             gbsa_handler.solute_dielectric = 'string that can not be cast to float'
 
         gbsa_handler.sa_model = 'ACE'
-        gbsa_handler.sa_model = None
 
-        with pytest.raises(TypeError) as excinfo:
-            gbsa_handler.sa_model = 'None'
+        # NOTE -- Right now, the SMIRNOFF spec will implicitly assume these are the same.
+        gbsa_handler.sa_model = None
+        gbsa_handler.sa_model = 'None'
+
         with pytest.raises(TypeError) as excinfo:
             gbsa_handler.sa_model = 'Invalid SA option'
 

@@ -1962,6 +1962,12 @@ def _allow_only(allowed_values):
     """
     allowed_values = frozenset(allowed_values)
     def _value_checker(instance, attr, new_value):
+        # This statement means that, in the "SMIRNOFF Data Dict" format, the string "None"
+        # and the Python None are the same thing
+        if new_value == "None":
+            new_value = None
+
+        # Ensure that the new value is in the list of allowed values
         if new_value not in allowed_values:
 
             err_msg = (f'Attempted to set {instance.__class__.__name__}.{attr.name} '

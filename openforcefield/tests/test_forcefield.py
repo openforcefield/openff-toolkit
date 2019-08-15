@@ -581,6 +581,22 @@ class TestForceField():
         with pytest.raises(IncompatibleParameterError, match="handler value: 0.5, incompatible value: 1.0") as excinfo:
             ff = ForceField(simple_xml_ff, nonstandard_xml_ff)
 
+
+    def test_gbsahandler_sa_model_none(self):
+        """
+        Ensure that string values of "None" are correctly interpreted in the GBSAHandler's sa_model field
+        """
+        gbsa_ff_xml = '''<?xml version='1.0' encoding='ASCII'?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <GBSA version="0.3" gb_model="HCT" solvent_dielectric="78.5" solute_dielectric="1" sa_model="None" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
+          <Atom smirks="[*:1]" radius="0.15*nanometer" scale="0.8"/>
+    </GBSA>
+</SMIRNOFF>
+'''
+        from openforcefield.typing.engines.smirnoff import ForceField
+        ff = ForceField(gbsa_ff_xml)
+
+
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_ethanol(self, toolkit_registry, registry_description):
         from simtk.openmm import app
