@@ -62,6 +62,7 @@ For more information, see ``examples/forcefield_modification``.
     ProperTorsionHandler.ProperTorsionType
     ImproperTorsionHandler.ImproperTorsionType
     vdWHandler.vdWType
+    GBSAHandler.GBSAType
 
 Parameter Handlers
 ~~~~~~~~~~~~~~~~~~
@@ -83,6 +84,7 @@ During system creation, each ``ParameterHandler`` registered to a ``ForceField``
     vdWHandler
     ElectrostaticsHandler
     ToolkitAM1BCCHandler
+    GBSAHandler
 
 Parameter I/O Handlers
 ~~~~~~~~~~~~~~~~~~~~~~

@@ -153,6 +153,10 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 '''
 
+xml_toolkitam1bcc_ff = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <ToolkitAM1BCC version="0.3"/>
+</SMIRNOFF>'''
 
 #======================================================================
 # TEST UTILITY FUNCTIONS
@@ -577,6 +581,22 @@ class TestForceField():
         with pytest.raises(IncompatibleParameterError, match="handler value: 0.5, incompatible value: 1.0") as excinfo:
             ff = ForceField(simple_xml_ff, nonstandard_xml_ff)
 
+
+    def test_gbsahandler_sa_model_none(self):
+        """
+        Ensure that string values of "None" are correctly interpreted in the GBSAHandler's sa_model field
+        """
+        gbsa_ff_xml = '''<?xml version='1.0' encoding='ASCII'?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <GBSA version="0.3" gb_model="HCT" solvent_dielectric="78.5" solute_dielectric="1" sa_model="None" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
+          <Atom smirks="[*:1]" radius="0.15*nanometer" scale="0.8"/>
+    </GBSA>
+</SMIRNOFF>
+'''
+        from openforcefield.typing.engines.smirnoff import ForceField
+        ff = ForceField(gbsa_ff_xml)
+
+
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_ethanol(self, toolkit_registry, registry_description):
         from simtk.openmm import app
@@ -642,7 +662,6 @@ class TestForceField():
         omm_system = forcefield.create_openmm_system(topology)
 
 
-
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_no_matching_reference(self, toolkit_registry, registry_description):
         from simtk.openmm import app
@@ -674,6 +693,7 @@ class TestForceField():
 
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
         # TODO: Add check to ensure system energy is finite
+
 
     @pytest.mark.skipif( not(OpenEyeToolkitWrapper.is_available()), reason='Test requires OE toolkit')
     def test_parameterize_ethanol_different_reference_ordering_openeye(self):
@@ -896,7 +916,6 @@ class TestForceField():
                 forcefield.get_parameter_handler('Electrostatics', {}).method = electrostatics_method
                 omm_system = forcefield.create_openmm_system(topology)
 
-
 #======================================================================
 # TEST CONSTRAINTS
 #======================================================================
@@ -993,6 +1012,8 @@ def generate_freesolv_parameters_assignment_cases():
         ('1723043', '0_0_2', False),
         ('2501588', '0_0_2', True),  # Test impropers and undefined stereochemistry.
         ('3323117', '0_0_2', False),  # The XML was regenerated after fixing the issue described in #179.
+        ('1107178', '0_0_2', False),  # Molecule with iodine
+        ('1036761', '0_0_2', False),  # Molecule with primary amine
     ]
 
     def extract_id(file_path):
@@ -1060,6 +1081,7 @@ class TestForceFieldParameterAssignment:
         compare_amber_smirnoff(top_filepath, crd_filepath, forcefield, molecule,
                                check_energies=False, ignore_charges=True)
 
+
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
                         reason='Test requires OE toolkit to read mol2 files')
     def test_multi_alkethoh_parameters_assignment(self):
@@ -1122,6 +1144,7 @@ class TestForceFieldParameterAssignment:
         compare_system_energies(amber_system, off_system, positions,
                                 ignore_charges=True)
 
+
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
                         reason='Test requires OE toolkit to read mol2 files')
     @pytest.mark.parametrize(('freesolv_id', 'forcefield_version', 'allow_undefined_stereo'),
@@ -1155,6 +1178,308 @@ class TestForceFieldParameterAssignment:
         compare_system_parameters(ff_system, xml_system,
                                   systems_labels=('current OpenFF', 'SMIRNOFF 0.0.4'),
                                   ignore_charges=True, ignore_improper_folds=True)
+
+
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
+                        reason='Test requires OE toolkit to read mol2 files')
+    @pytest.mark.parametrize(('is_periodic'), (False, True))
+    @pytest.mark.parametrize(('gbsa_model'), ['HCT', 'OBC1', 'OBC2'])
+    @pytest.mark.parametrize(('freesolv_id', 'forcefield_version', 'allow_undefined_stereo'),
+                             generate_freesolv_parameters_assignment_cases())
+    def test_freesolv_gbsa_energies(self, gbsa_model, is_periodic, freesolv_id, forcefield_version, allow_undefined_stereo):
+        """
+        Regression test on HCT, OBC1, and OBC2 GBSA models. This test ensures that the
+        SMIRNOFF-based GBSA models match the equivalent OpenMM implementations.
+        """
+
+        from openforcefield.tests.utils import (get_freesolv_file_path,
+                                                compare_system_energies, create_system_from_amber,
+                                                get_context_potential_energy
+                                                )
+        import parmed as pmd
+        from simtk import openmm
+        from simtk.openmm import Platform
+
+        mol2_file_path, _ = get_freesolv_file_path(freesolv_id, forcefield_version)
+
+        # Load molecules.
+        molecule = Molecule.from_file(mol2_file_path, allow_undefined_stereo=allow_undefined_stereo)
+
+        # Give each atom a unique name, otherwise OpenMM will complain
+        for idx, atom in enumerate(molecule.atoms):
+            atom.name = f'{atom.element.symbol}{idx}'
+        positions = molecule.conformers[0]
+
+        off_gbsas  = {'HCT': 'test_forcefields/GBSA_HCT-1.0.offxml',
+                      'OBC1': 'test_forcefields/GBSA_OBC1-1.0.offxml',
+                      'OBC2': 'test_forcefields/GBSA_OBC2-1.0.offxml'
+                      }
+        # Create OpenFF System with the current toolkit.
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml',
+                        off_gbsas[gbsa_model])
+        off_top = molecule.to_topology()
+        if is_periodic:
+            off_top.box_vectors = ((30., 0, 0), (0, 30., 0), (0, 0, 30.)) * unit.angstrom
+
+        else:
+            off_top.box_vectors = None
+
+        off_omm_system = ff.create_openmm_system(off_top, charge_from_molecules=[molecule])
+
+        off_nonbonded_force = [force for force in off_omm_system.getForces() if
+                               isinstance(force, openmm.NonbondedForce)][0]
+
+
+        omm_top = off_top.to_openmm()
+        pmd_struct = pmd.openmm.load_topology(omm_top, off_omm_system, positions)
+        prmtop_file = NamedTemporaryFile(suffix='.prmtop')
+        inpcrd_file = NamedTemporaryFile(suffix='.inpcrd')
+        pmd_struct.save(prmtop_file.name, overwrite=True)
+        pmd_struct.save(inpcrd_file.name, overwrite=True)
+
+        openmm_gbsas = {'HCT': openmm.app.HCT,
+                        'OBC1': openmm.app.OBC1,
+                        'OBC2': openmm.app.OBC2,
+                        }
+
+        # The functional form of the nonbonded force will change depending on whether the cutoff
+        # is None during initialization. Therefore, we need to figure that out here.
+
+        # WARNING: The NonbondedMethod enums at openmm.app.forcefield and openmm.CustomGBForce
+        # aren't necessarily the same, and could be misinterpreted if the wrong one is used. For
+        # create_system_from_amber, we must provide the app.forcefield version.
+
+        if is_periodic:
+            amber_nb_method = openmm.app.forcefield.CutoffPeriodic
+            amber_cutoff = off_nonbonded_force.getCutoffDistance()
+        else:
+            amber_nb_method = openmm.app.forcefield.NoCutoff
+            amber_cutoff = None
+
+        (amber_omm_system,
+         amber_omm_topology,
+         amber_positions) = create_system_from_amber(prmtop_file.name,
+                                                     inpcrd_file.name,
+                                                     implicitSolvent=openmm_gbsas[gbsa_model],
+                                                     nonbondedMethod=amber_nb_method,
+                                                     nonbondedCutoff=amber_cutoff,
+                                                     gbsaModel='ACE',
+                                                     implicitSolventKappa=0.,
+                                                     )
+
+        # Retrieve the GBSAForce from both the AMBER and OpenForceField systems
+        off_gbsa_forces = [force for force in off_omm_system.getForces() if
+                              (isinstance(force, openmm.GBSAOBCForce) or
+                               isinstance(force, openmm.openmm.CustomGBForce))]
+        assert len(off_gbsa_forces) == 1
+        off_gbsa_force = off_gbsa_forces[0]
+        amber_gbsa_forces = [force for force in amber_omm_system.getForces() if
+                                 (isinstance(force, openmm.GBSAOBCForce) or
+                                  isinstance(force, openmm.openmm.CustomGBForce))]
+        assert len(amber_gbsa_forces) == 1
+        amber_gbsa_force = amber_gbsa_forces[0]
+
+        # We get radius and screen values from each model's getStandardParameters method
+        if gbsa_model == 'HCT':
+            gb_params = openmm.app.internal.customgbforces.GBSAHCTForce.getStandardParameters(omm_top)
+        elif gbsa_model == 'OBC1':
+            gb_params = openmm.app.internal.customgbforces.GBSAOBC1Force.getStandardParameters(omm_top)
+        elif gbsa_model == 'OBC2':
+            gb_params = openmm.app.internal.customgbforces.GBSAOBC2Force.getStandardParameters(omm_top)
+
+        # Use GB params from OpenMM GBSA classes to populate parameters
+        for idx, (radius, screen) in enumerate(gb_params):
+            # Keep the charge, but throw out the old radius and screen values
+            q, old_radius, old_screen = amber_gbsa_force.getParticleParameters(idx)
+            if isinstance(amber_gbsa_force, openmm.GBSAOBCForce):
+                # Note that in GBSAOBCForce, the per-particle parameters are separate
+                # arguments, while in CustomGBForce they're a single iterable
+                amber_gbsa_force.setParticleParameters(idx, q, radius, screen)
+
+            elif isinstance(amber_gbsa_force, openmm.CustomGBForce):
+                # !!! WARNING: CustomAmberGBForceBase expects different per-particle parameters
+                # depending on whether you use addParticle or setParticleParameters. In
+                # setParticleParameters, we have to apply the offset and scale BEFORE setting
+                # parameters, whereas in addParticle, it is applied afterwards, and the particle
+                # parameters are not set until an auxillary finalize() method is called. !!!
+                amber_gbsa_force.setParticleParameters(idx, (q, radius - 0.009, screen * (radius - 0.009)))
+
+
+        # Put the GBSA force into a separate group so we can specifically compare GBSA energies
+        amber_gbsa_force.setForceGroup(1)
+        off_gbsa_force.setForceGroup(1)
+
+        # Some manual overrides to get the OFF system's NonbondedForce matched up with the AMBER system
+        if is_periodic:
+            off_nonbonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
+        else:
+            off_nonbonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+
+        off_nonbonded_force.setReactionFieldDielectric(1.0)
+
+        # Not sure if zeroing the switching width is essential -- This might only make a difference
+        # in the energy if we tested on a molecule larger than the 9A cutoff
+        #off_nonbonded_force.setSwitchingDistance(0)
+
+        # Create Contexts
+        integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+        platform = Platform.getPlatformByName('Reference')
+        amber_context = openmm.Context(amber_omm_system, integrator, platform)
+        off_context = openmm.Context(off_omm_system, copy.deepcopy(integrator), platform)
+
+        # Get context energies
+        amber_energy = get_context_potential_energy(amber_context, positions)
+        off_energy = get_context_potential_energy(off_context, positions)
+
+        # Very handy for debugging
+        # print(openmm.XmlSerializer.serialize(off_gbsa_force))
+        # print(openmm.XmlSerializer.serialize(amber_gbsa_force))
+
+
+        # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
+        # For Platform=OpenCL, we do get "=="-level identical numbers, but for "Reference", we don't.
+        #assert amber_energy[1] == off_energy[1]
+        assert abs(amber_energy[1] - off_energy[1]) < 1e-5 * unit.kilojoule/unit.mole
+
+        # Ensure that all system energies are the same
+        compare_system_energies(off_omm_system, amber_omm_system, positions, by_force_type=False)
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
+                        reason='Test requires OE toolkit to read mol2 files')
+    @pytest.mark.parametrize('zero_charges', [True, False])
+    @pytest.mark.parametrize(('gbsa_model'), ['HCT', 'OBC1', 'OBC2'])
+    def test_molecule_energy_gb_no_sa(self, zero_charges, gbsa_model):
+        """Test creating a GBSA system without a surface energy term, and validate its energy
+        against the same system made using OpenMM's AMBER GBSA functionality"""
+        from openforcefield.tests.utils import (compare_system_energies, create_system_from_amber,
+                                                get_context_potential_energy
+                                                )
+        import parmed as pmd
+        from simtk import openmm
+        from simtk.openmm import Platform
+        import numpy as np
+
+        # Load an arbitrary molecule from the freesolv set
+        molecule = Molecule.from_file(get_data_file_path('molecules/FreeSolv/mol2files_sybyl/mobley_1036761.mol2'))
+
+        molecule.name = 'mobley_1036761' # Name the molecule, otherwise OpenMM will complain
+        if zero_charges:
+            molecule.partial_charges = np.zeros(molecule.n_atoms) * unit.elementary_charge
+
+        # Give each atom a unique name, otherwise OpenMM will complain
+        for idx, atom in enumerate(molecule.atoms):
+            atom.name = f'{atom.element.symbol}{idx}'
+
+        positions = np.concatenate((molecule.conformers[0], molecule.conformers[0] + (10 * unit.angstrom)))
+        # Create OpenFF System with the current toolkit.
+
+        off_gbsas  = {'HCT': 'test_forcefields/GBSA_HCT-1.0.offxml',
+                      'OBC1': 'test_forcefields/GBSA_OBC1-1.0.offxml',
+                      'OBC2': 'test_forcefields/GBSA_OBC2-1.0.offxml'
+                      }
+
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml',
+                        off_gbsas[gbsa_model])
+        ff.get_parameter_handler('GBSA').sa_model = None
+        off_top = Topology.from_molecules([molecule, molecule])
+        off_omm_system = ff.create_openmm_system(off_top, charge_from_molecules=[molecule])
+
+        omm_top = off_top.to_openmm()
+        pmd_struct = pmd.openmm.load_topology(omm_top, off_omm_system, positions)
+        prmtop_file = NamedTemporaryFile(suffix='.prmtop')
+        inpcrd_file = NamedTemporaryFile(suffix='.inpcrd')
+        pmd_struct.save(prmtop_file.name, overwrite=True)
+        pmd_struct.save(inpcrd_file.name, overwrite=True)
+
+        openmm_gbsas = {'HCT': openmm.app.HCT,
+                        'OBC1': openmm.app.OBC1,
+                        'OBC2': openmm.app.OBC2,
+                        }
+
+        (amber_omm_system,
+         amber_omm_topology,
+         amber_positions) = create_system_from_amber(prmtop_file.name,
+                                                     inpcrd_file.name,
+                                                     implicitSolvent=openmm_gbsas[gbsa_model],
+                                                     nonbondedMethod = openmm.app.forcefield.NoCutoff,
+                                                     nonbondedCutoff=None,
+                                                     gbsaModel=None,
+                                                     implicitSolventKappa=0.,
+                                                     )
+
+        # Retrieve the GBSAForce from both the AMBER and OpenForceField systems
+        off_gbsa_forces = [force for force in off_omm_system.getForces() if
+                              (isinstance(force, openmm.GBSAOBCForce) or
+                               isinstance(force, openmm.openmm.CustomGBForce))]
+        assert len(off_gbsa_forces) == 1
+        off_gbsa_force = off_gbsa_forces[0]
+        amber_gbsa_forces = [force for force in amber_omm_system.getForces() if
+                                 (isinstance(force, openmm.GBSAOBCForce) or
+                                  isinstance(force, openmm.openmm.CustomGBForce))]
+        assert len(amber_gbsa_forces) == 1
+        amber_gbsa_force = amber_gbsa_forces[0]
+
+        # We get radius and screen values from each model's getStandardParameters method
+        if gbsa_model == 'HCT':
+            gb_params = openmm.app.internal.customgbforces.GBSAHCTForce.getStandardParameters(omm_top)
+        elif gbsa_model == 'OBC1':
+            gb_params = openmm.app.internal.customgbforces.GBSAOBC1Force.getStandardParameters(omm_top)
+        elif gbsa_model == 'OBC2':
+            gb_params = openmm.app.internal.customgbforces.GBSAOBC2Force.getStandardParameters(omm_top)
+            # This is only necessary until https://github.com/openmm/openmm/pull/2362 is bundled into a conda release
+            amber_gbsa_force.setSurfaceAreaEnergy(0)
+
+        # Use GB params from OpenMM GBSA classes to populate parameters
+        for idx, (radius, screen) in enumerate(gb_params):
+            # Keep the charge, but throw out the old radius and screen values
+            q, old_radius, old_screen = amber_gbsa_force.getParticleParameters(idx)
+
+            if isinstance(amber_gbsa_force, openmm.GBSAOBCForce):
+                # Note that in GBSAOBCForce, the per-particle parameters are separate
+                # arguments, while in CustomGBForce they're a single iterable
+                amber_gbsa_force.setParticleParameters(idx, q, radius, screen)
+
+            elif isinstance(amber_gbsa_force, openmm.CustomGBForce):
+                # !!! WARNING: CustomAmberGBForceBase expects different per-particle parameters
+                # depending on whether you use addParticle or setParticleParameters. In
+                # setParticleParameters, we have to apply the offset and scale BEFORE setting
+                # parameters, whereas in addParticle, it is applied afterwards, and the particle
+                # parameters are not set until an auxillary finalize() method is called. !!!
+                amber_gbsa_force.setParticleParameters(idx, (q, radius - 0.009, screen * (radius - 0.009)))
+
+        # Put the GBSA force into a separate group so we can specifically compare GBSA energies
+        amber_gbsa_force.setForceGroup(1)
+        off_gbsa_force.setForceGroup(1)
+
+
+        # Create Contexts
+        integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+        platform = Platform.getPlatformByName('Reference')
+        amber_context = openmm.Context(amber_omm_system, integrator, platform)
+        off_context = openmm.Context(off_omm_system, copy.deepcopy(integrator), platform)
+
+        # Get context energies
+        amber_energy = get_context_potential_energy(amber_context, positions)
+        off_energy = get_context_potential_energy(off_context, positions)
+
+        # Very handy for debugging
+        # print(openmm.XmlSerializer.serialize(off_gbsa_force))
+        # print(openmm.XmlSerializer.serialize(amber_gbsa_force))
+
+        # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
+        # For Platform=OpenCL, we do get "=="-level identical numbers, but for "Reference", we don't.
+        #assert amber_energy[1] == off_energy[1]
+        assert abs(amber_energy[1] - off_energy[1]) < 1e-5 * unit.kilojoule/unit.mole
+
+        # If charges are zero, the GB energy component should be 0, so the total GBSA energy should be 0
+        if zero_charges:
+            assert amber_energy[1] == 0. * unit.kilojoule / unit.mole
+        else:
+            assert amber_energy[1] != 0. * unit.kilojoule / unit.mole
+
+        # Ensure that all system energies are the same
+        compare_system_energies(off_omm_system, amber_omm_system, positions, by_force_type=False)
 
 
 class TestSmirnoffVersionConverter:
