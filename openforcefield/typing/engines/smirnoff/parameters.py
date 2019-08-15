@@ -29,7 +29,8 @@ __all__ = [
     'AngleHandler',
     'ProperTorsionHandler',
     'ImproperTorsionHandler',
-    'vdWHandler'
+    'vdWHandler',
+    'GBSAHandler'
 ]
 
 
@@ -1690,6 +1691,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         for attr in identical_attrs:
             this_val, other_val = get_unitless_values(attr)
+
             if this_val != other_val:
                 raise IncompatibleParameterError(
                     "{} values are not identical. "
@@ -1960,6 +1962,12 @@ def _allow_only(allowed_values):
     """
     allowed_values = frozenset(allowed_values)
     def _value_checker(instance, attr, new_value):
+        # This statement means that, in the "SMIRNOFF Data Dict" format, the string "None"
+        # and the Python None are the same thing
+        if new_value == "None":
+            new_value = None
+
+        # Ensure that the new value is in the list of allowed values
         if new_value not in allowed_values:
 
             err_msg = (f'Attempted to set {instance.__class__.__name__}.{attr.name} '
@@ -2905,25 +2913,11 @@ class ChargeIncrementModelHandler(ParameterHandler):
                     # TODO: Calculate exceptions
 
 
-class GBSAParameterHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<GBSAParameterHandler>`` tags
+class GBSAHandler(ParameterHandler):
+    """Handle SMIRNOFF ``<GBSA>`` tags
 
     .. warning :: This API is experimental and subject to change.
     """
-    # TODO: Differentiate between global and per-particle parameters for each model.
-
-    # Global parameters for surface area (SA) component of model
-    SA_expected_parameters = {
-        'ACE': ['surface_area_penalty', 'solvent_radius'],
-        None: [],
-    }
-
-    # Per-particle parameters for generalized Born (GB) model
-    GB_expected_parameters = {
-        'HCT': ['radius', 'scale'],
-        'OBC1': ['radius', 'scale'],
-        'OBC2': ['radius', 'scale'],
-    }
 
     class GBSAType(ParameterType):
         """A SMIRNOFF GBSA type.
@@ -2931,7 +2925,7 @@ class GBSAParameterHandler(ParameterHandler):
         .. warning :: This API is experimental and subject to change.
         """
         _VALENCE_TYPE = 'Atom'
-        _ELEMENT_NAME = 'Atom' # TODO: This isn't actually in the spec
+        _ELEMENT_NAME = 'Atom'
 
         radius = ParameterAttribute(unit=unit.angstrom)
         scale = ParameterAttribute(converter=float)
@@ -2939,103 +2933,223 @@ class GBSAParameterHandler(ParameterHandler):
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
 
-            # # Store model parameters.
-            # gb_model = parent.attrib['gb_model']
-            # expected_parameters = GBSAParameterHandler.GB_expected_parameters[
-            #     gb_model]
-            # provided_parameters = list()
-            # missing_parameters = list()
-            # for name in expected_parameters:
-            #     if name in node.attrib:
-            #         provided_parameters.append(name)
-            #         value = _extract_quantity_from_xml_element(
-            #             node, parent, name)
-            #         setattr(self, name, value)
-            #     else:
-            #         missing_parameters.append(name)
-            # if len(missing_parameters) > 0:
-            #     msg = 'GBSAForce: missing per-atom parameters for tag %s' % str(
-            #         node)
-            #     msg += 'model "%s" requires specification of per-atom parameters %s\n' % (
-            #         gb_model, str(expected_parameters))
-            #     msg += 'provided parameters : %s\n' % str(provided_parameters)
-            #     msg += 'missing parameters: %s' % str(missing_parameters)
-            #     raise Exception(msg)
-
-    # TODO: Finish this
     _TAGNAME = 'GBSA'
     _INFOTYPE = GBSAType
-    #_OPENMMTYPE =
+    _OPENMMTYPE = openmm.GBSAOBCForce
+    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
 
-    def __init__(self, **kwargs):
+    gb_model = ParameterAttribute(
+        default='OBC1',
+        converter=_allow_only(['HCT', 'OBC1', 'OBC2'])
+    )
+    solvent_dielectric = ParameterAttribute(default=78.5, converter=float)
+    solute_dielectric = ParameterAttribute(default=1, converter=float)
+    sa_model = ParameterAttribute(default='ACE', converter=_allow_only(['ACE', None])
+    )
+    surface_area_penalty = ParameterAttribute(default=5.4*unit.calorie / unit.mole / unit.angstrom**2,
+                                              unit=unit.calorie / unit.mole / unit.angstrom**2)
+    solvent_radius = ParameterAttribute(default=1.4*unit.angstrom, unit=unit.angstrom)
 
-        super().__init__(**kwargs)
 
-    # TODO: Fix this
-    def parseElement(self):
-        # Initialize GB model
-        gb_model = element.attrib['gb_model']
-        valid_GB_models = GBSAParameterHandler.GB_expected_parameters.keys()
-        if not gb_model in valid_GB_models:
-            raise Exception(
-                'Specified GBSAForce model "%s" not one of valid models: %s' %
-                (gb_model, valid_GB_models))
-        self.gb_model = gb_model
-
-        # Initialize SA model
-        sa_model = element.attrib['sa_model']
-        valid_SA_models = GBSAParameterHandler.SA_expected_parameters.keys()
-        if not sa_model in valid_SA_models:
-            raise Exception(
-                'Specified GBSAForce SA_model "%s" not one of valid models: %s'
-                % (sa_model, valid_SA_models))
-        self.sa_model = sa_model
-
-        # Store parameters for GB and SA models
-        # TODO: Deep copy?
-        self.parameters = element.attrib
-
-    # TODO: Generalize this to allow forces to know when their OpenMM Force objects can be combined
-    def checkCompatibility(self, Handler):
+    def _validate_parameters(self):
         """
-        Check compatibility of this Handler with another Handlers.
+        Checks internal attributes, raising an exception if they are configured in an invalid way.
         """
-        Handler = existing[0]
-        if (Handler.gb_model != self.gb_model):
-            raise ValueError(
-                'Found multiple GBSAForce tags with different GB model specifications'
-            )
-        if (Handler.sa_model != self.sa_model):
-            raise ValueError(
-                'Found multiple GBSAForce tags with different SA model specifications'
-            )
-        # TODO: Check other attributes (parameters of GB and SA models) automatically?
+        # If we're using HCT via GBSAHCTForce(CustomAmberGBForceBase):, then we need to ensure that:
+        #   surface_area_energy is 5.4 cal/mol/A^2
+        #   solvent_radius is 1.4 A
+        # Justification at https://github.com/openforcefield/openforcefield/pull/363
+        if self.gb_model == 'HCT':
+            if ((self.surface_area_penalty != 5.4 * unit.calorie / unit.mole / unit.angstrom**2) and
+                (self.sa_model is not None)):
+                raise IncompatibleParameterError(f"The current implementation of HCT GBSA does not "
+                                                 f"support surface_area_penalty values other than 5.4 "
+                                                 f"cal/mol A^2 (data source specified value of "
+                                                 f"{self.surface_area_penalty})")
 
-    def create_force(self, system, topology, **args):
-        # TODO: Rework this
-        from openforcefield.typing.engines.smirnoff import gbsaforces
-        force_class = getattr(gbsaforces, self.gb_model)
-        force = force_class(**self.parameters)
-        system.addForce(force)
+            if ((self.solvent_radius != 1.4 * unit.angstrom) and
+                (self.sa_model is not None)):
+                raise IncompatibleParameterError(f"The current implementation of HCT GBSA does not "
+                                                 f"support solvent_radius values other than 1.4 "
+                                                 f"A (data source specified value of "
+                                                 f"{self.solvent_radius})")
 
-        # Add all GBSA terms to the system.
-        expected_parameters = GBSAParameterHandler.GB_expected_parameters[
-            self.gb_model]
 
-        # Create all particles with parameters set to zero
-        atoms = self.getMatches(topology)
-        nparams = 1 + len(expected_parameters)  # charge + GBSA parameters
-        params = [0.0 for i in range(nparams)]
-        for _ in topology.topology_particles():
-            force.addParticle(params)
-        # Set the GBSA parameters (keeping charges at zero for now)
-        for (atoms, gbsa_type) in atoms.items():
-            atom = atoms[0]
-            # Set per-particle parameters for assigned parameters
-            params = [atom.charge] + [
-                getattr(gbsa_type, name) for name in expected_parameters
-            ]
-            force.setParticleParameters(atom.particle_index, params)
+        # If we're using OBC1 via GBSAOBC1Force(CustomAmberGBForceBase), then we need to ensure that:
+        #   surface_area_energy is 5.4 cal/mol/A^2
+        #   solvent_radius is 1.4 A
+        # Justification at https://github.com/openforcefield/openforcefield/pull/363
+        if self.gb_model == 'OBC1':
+            if ((self.surface_area_penalty != 5.4 * unit.calorie / unit.mole / unit.angstrom**2) and
+                (self.sa_model is not None)):
+                raise IncompatibleParameterError(f"The current implementation of OBC1 GBSA does not "
+                                                 f"support surface_area_penalty values other than 5.4 "
+                                                 f"cal/mol A^2 (data source specified value of "
+                                                 f"{self.surface_area_penalty})")
+
+            if ((self.solvent_radius != 1.4 * unit.angstrom) and
+                (self.sa_model is not None)):
+                raise IncompatibleParameterError(f"The current implementation of OBC1 GBSA does not "
+                                                 f"support solvent_radius values other than 1.4 "
+                                                 f"A (data source specified value of "
+                                                 f"{self.solvent_radius})")
+
+
+        # If we're using OBC2 via GBSAOBCForce, then we need to ensure that
+        #   solvent_radius is 1.4 A
+        # Justification at https://github.com/openforcefield/openforcefield/pull/363
+        if self.gb_model == 'OBC2':
+
+            if ((self.solvent_radius != 1.4 * unit.angstrom) and
+                (self.sa_model is not None)):
+                raise IncompatibleParameterError(f"The current implementation of OBC1 GBSA does not "
+                                                 f"support solvent_radius values other than 1.4 "
+                                                 f"A (data source specified value of "
+                                                 f"{self.solvent_radius})")
+
+
+
+    # Tolerance when comparing float attributes for handler compatibility.
+    _SCALETOL = 1e-5
+
+    def check_handler_compatibility(self,
+                                    other_handler):
+        """
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        float_attrs_to_compare = ['solvent_dielectric', 'solute_dielectric']
+        string_attrs_to_compare = ['gb_model', 'sa_model']
+        unit_attrs_to_compare = ['surface_area_penalty', 'solvent_radius']
+
+        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare,
+                                         tolerance_attrs=float_attrs_to_compare+unit_attrs_to_compare,
+                                         tolerance=self._SCALETOL)
+
+
+
+    def create_force(self, system, topology, **kwargs):
+        import simtk
+
+        self._validate_parameters()
+
+        # Grab the existing nonbonded force (which will have particle charges)
+        existing = [system.getForce(i) for i in range(system.getNumForces())]
+        existing = [
+            f for f in existing if type(f) == openmm.NonbondedForce
+        ]
+        assert len(existing) == 1
+
+        nonbonded_force = existing[0]
+
+        # No previous GBSAForce should exist, so we're safe just making one here.
+        force_map = {
+            'HCT': simtk.openmm.app.internal.customgbforces.GBSAHCTForce,
+            'OBC1': simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
+            'OBC2': simtk.openmm.GBSAOBCForce,
+            # It's tempting to do use the class below, but the customgbforce
+            # version of OBC2 doesn't provide setSolventRadius()
+            #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
+        }
+        openmm_force_type = force_map[self.gb_model]
+
+        if nonbonded_force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff:
+            amber_cutoff = None
+        else:
+            amber_cutoff = nonbonded_force.getCutoffDistance().value_in_unit(unit.nanometer)
+
+        if self.gb_model == 'OBC2':
+            gbsa_force = openmm_force_type()
+
+        else:
+            # We set these values in the constructor if we use the internal AMBER GBSA type wrapper
+            gbsa_force = openmm_force_type(solventDielectric=self.solvent_dielectric,
+                                           soluteDielectric=self.solute_dielectric,
+                                           SA=self.sa_model,
+                                           cutoff=amber_cutoff,
+                                           kappa=0,
+                                           )
+            # WARNING: If using a CustomAmberGBForce, the functional form is affected by whether
+            # the cutoff kwarg is None *during initialization*. So, if you initialize it with a
+            # non-None value, and then try to change it to None, you're likely to get unphysical results.
+
+        # Set the GBSAForce to have the same cutoff as NonbondedForce
+        #gbsa_force.setCutoffDistance(nonbonded_force.getCutoffDistance())
+        if amber_cutoff is not None:
+            gbsa_force.setCutoffDistance(amber_cutoff)
+
+        if nonbonded_force.usesPeriodicBoundaryConditions():
+            # WARNING: The lines below aren't equivalent. The NonbondedForce and
+            # CustomGBForce NonbondedMethod enums have different meanings.
+            # More details:
+            # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.NonbondedForce.html
+            # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.GBSAOBCForce.html
+            # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomGBForce.html
+
+            #gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.CutoffPeriodic)
+            gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.CutoffPeriodic)
+        else:
+            #gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.NoCutoff)
+            gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.NoCutoff)
+
+        # Add all GBSA terms to the system. Note that this will have been done above
+        if self.gb_model == 'OBC2':
+            gbsa_force.setSolventDielectric(self.solvent_dielectric)
+            gbsa_force.setSoluteDielectric(self.solute_dielectric)
+            if self.sa_model is None:
+                gbsa_force.setSurfaceAreaEnergy(0)
+            else:
+                gbsa_force.setSurfaceAreaEnergy(self.surface_area_penalty)
+
+
+        # Iterate over all defined GBSA types, allowing later matches to override earlier ones.
+        atom_matches = self.find_matches(topology)
+
+        # Create all particles.
+
+        # !!! WARNING: CustomAmberGBForceBase expects different per-particle parameters
+        # depending on whether you use addParticle or setParticleParameters. In
+        # setParticleParameters, we have to apply the offset and scale BEFORE setting
+        # parameters, whereas in addParticle, the offset is applied automatically, and the particle
+        # parameters are not set until an auxillary finalize() method is called. !!!
+
+        # To keep it simple, we DO NOT pre-populate the particles in the GBSA force here.
+        # We call addParticle further below instead.
+        # These lines are commented out intentionally as an example of what NOT to do.
+        #for topology_particle in topology.topology_particles:
+            #gbsa_force.addParticle([0.0, 1.0, 0.0])
+
+        params_to_add = [[] for particle in topology.topology_particles]
+        for atom_key, atom_match in atom_matches.items():
+            atom_idx = atom_key[0]
+            gbsatype = atom_match.parameter_type
+            charge, _, _2 = nonbonded_force.getParticleParameters(atom_idx)
+            params_to_add[atom_idx] = [charge, gbsatype.radius, gbsatype.scale]
+
+        if self.gb_model == 'OBC2':
+            for particle_param in params_to_add:
+                gbsa_force.addParticle(*particle_param)
+        else:
+            for particle_param in params_to_add:
+                gbsa_force.addParticle(particle_param)
+            # We have to call finalize() for models that inherit from CustomAmberGBForceBase,
+            # otherwise the added particles aren't actually passed to the underlying CustomGBForce
+            gbsa_force.finalize()
+
+        # Check that no atoms (n.b. not particles) are missing force parameters.
+        self._check_all_valence_terms_assigned(assigned_terms=atom_matches,
+                                               valence_terms=list(topology.topology_atoms))
+
+        system.addForce(gbsa_force)
 
 
 if __name__ == '__main__':

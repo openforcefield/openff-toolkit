@@ -1767,6 +1767,9 @@ class Topology(Serializable):
             bond_type = Aromatic if bond.bond.is_aromatic else bond_types[bond.bond_order]
             omm_topology.addBond(omm_atoms[atom1_idx], omm_atoms[atom2_idx],
                                  type=bond_type, order=bond.bond_order)
+
+        if self.box_vectors is not None:
+            omm_topology.setPeriodicBoxVectors(self.box_vectors)
         return omm_topology
 
     @staticmethod

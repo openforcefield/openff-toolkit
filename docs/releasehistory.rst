@@ -8,12 +8,31 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
-Current Development
--------------------
-
 New features
 """"""""""""
+- `PR #363 <https://github.com/openforcefield/openforcefield/pull/363>`_: Implements
+  :py:class:`GBSAHandler <openforcefield.typing.engines.smirnoff.parameters.GBSAHandler>`,
+  which supports the
+  `GBSA tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#gbsa>`_.
+  Currently, only GBSAHandlers with ``gb_model="OBC2"`` support
+  setting non-default values for the ``surface_area_penalty`` term (default ``5.4*calories/mole/angstroms**2``),
+  though users can zero the SA term for ``OBC1`` and ``HCT`` models by setting ``sa_model="None"``.
+  No model currently supports setting ``solvent_radius`` to any value other than ``1.4*angstroms``.
+  Files containing experimental SMIRNOFF-format implementations of ``HCT``, ``OBC1``, and ``OBC2`` are
+  included with this release (see below). Additional details of these models, including literature references,
+  are available on the
+  `SMIRNOFF specification page <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#supported-generalized-born-gb-models>`_.
 
+    .. warning :: The current release of ParmEd
+      `can not transfer GBSA models produced by the Open Force Field Toolkit
+      to other simulation packages
+      <https://github.com/ParmEd/ParmEd/blob/3.2.0/parmed/openmm/topsystem.py#L148-L150>`_.
+      These GBSA forces are currently only computable using OpenMM.
+
+- `PR #363 <https://github.com/openforcefield/openforcefield/pull/363>`_: When using
+  :py:meth:`Topology.to_openmm() <openforcefield.topology.Topology.to_openmm>`, periodic
+  box vectors are now transferred from the Open Force Field Toolkit Topology
+  into the newly-created OpenMM Topology.
 - `PR #377 <https://github.com/openforcefield/openforcefield/pull/377>`_: Single indexed parameters in
   :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
   and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
@@ -33,6 +52,14 @@ Bugfixes
   :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   constructor would ignore ``parameter_handler_classes`` kwarg.
 
+
+Force fields added
+""""""""""""""""""
+- `PR #363 <https://github.com/openforcefield/openforcefield/pull/363>`_: Adds
+  ``test_forcefields/GBSA_HCT-1.0.offxml``, ``test_forcefields/GBSA_OBC1-1.0.offxml``,
+  and ``test_forcefields/GBSA_OBC2-1.0.offxml``, which are experimental implementations
+  of GBSA models. These are primarily used in validation tests against OpenMM's models, and
+  their versions are intended to track bugfixes if discrepancies are found.
 
 0.4.1 - Bugfix Release
 ----------------------
