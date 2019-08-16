@@ -8,6 +8,27 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
+0.5.0 - GBSA support and quality-of-life improvements
+-----------------------------------------------------
+
+This release adds support for the
+`GBSA tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#gbsa>`_.
+Currently, the ``HCT``, ``OBC1``, and ``OBC2`` models (corresponding to AMBER keywords
+``igb=1``, ``2``, and ``5``, respectively) are supported, with the ``OBC2`` implementation being
+the most flexible. Unfortunately, systems produced
+using these keywords are not yet transferable to other simulation packages via ParmEd, so users are restricted
+to using OpenMM to simulate systems with GBSA.
+
+OFFXML files containing GBSA parameter definitions are available,
+and can be loaded in addition to existing parameter sets (for example, with the command
+``ForceField('test_forcefields/smirnoff99Frosst.offxml', 'test_forcefields/GBSA_OBC1-1.0.offxml')``).
+A manifest of new SMIRNOFF-format GBSA files is below.
+
+
+Several other user-facing improvements have been added, including easier access to indexed attributes,
+which are now accessible as ``torsion.k1``, ``torsion.k2``, etc. (the previous access method
+``torsion.k`` still works as well). More details of the new features and several bugfixes are listed below.
+
 New features
 """"""""""""
 - `PR #363 <https://github.com/openforcefield/openforcefield/pull/363>`_: Implements
@@ -36,7 +57,7 @@ New features
 - `PR #377 <https://github.com/openforcefield/openforcefield/pull/377>`_: Single indexed parameters in
   :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
   and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
-  can now be get/set through normal attribute syntax on top of the list syntax.
+  can now be get/set through normal attribute syntax in addition to the list syntax.
 - `PR #394 <https://github.com/openforcefield/openforcefield/pull/394>`_: Include element and atom name
   in error output when there are missing valence parameters during molecule parameterization.
 
@@ -62,7 +83,7 @@ Force fields added
   ``test_forcefields/GBSA_HCT-1.0.offxml``, ``test_forcefields/GBSA_OBC1-1.0.offxml``,
   and ``test_forcefields/GBSA_OBC2-1.0.offxml``, which are experimental implementations
   of GBSA models. These are primarily used in validation tests against OpenMM's models, and
-  their versions are intended to track bugfixes if discrepancies are found.
+  their version numbers will increment if bugfixes are necessary.
 
 0.4.1 - Bugfix Release
 ----------------------
