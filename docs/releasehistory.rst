@@ -12,7 +12,7 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 -----------------------------------------------------
 
 This release adds support for the
-`GBSA tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#gbsa>`_.
+`GBSA tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/0.5.0/smirnoff.html#gbsa>`_.
 Currently, the ``HCT``, ``OBC1``, and ``OBC2`` models (corresponding to AMBER keywords
 ``igb=1``, ``2``, and ``5``, respectively) are supported, with the ``OBC2`` implementation being
 the most flexible. Unfortunately, systems produced
@@ -34,7 +34,7 @@ New features
 - `PR #363 <https://github.com/openforcefield/openforcefield/pull/363>`_: Implements
   :py:class:`GBSAHandler <openforcefield.typing.engines.smirnoff.parameters.GBSAHandler>`,
   which supports the
-  `GBSA tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#gbsa>`_.
+  `GBSA tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/0.5.0/smirnoff.html#gbsa>`_.
   Currently, only GBSAHandlers with ``gb_model="OBC2"`` support
   setting non-default values for the ``surface_area_penalty`` term (default ``5.4*calories/mole/angstroms**2``),
   though users can zero the SA term for ``OBC1`` and ``HCT`` models by setting ``sa_model="None"``.
@@ -77,8 +77,8 @@ Bugfixes
 
 
 
-Force fields added
-""""""""""""""""""
+Files added
+"""""""""""
 - `PR #363 <https://github.com/openforcefield/openforcefield/pull/363>`_: Adds
   ``test_forcefields/GBSA_HCT-1.0.offxml``, ``test_forcefields/GBSA_OBC1-1.0.offxml``,
   and ``test_forcefields/GBSA_OBC2-1.0.offxml``, which are experimental implementations
