@@ -1,0 +1,52 @@
+
+ATOM      1  N   LYS A   1       1.422   1.796   0.198  1.00 10.00           N
+ATOM      2  CA  LYS A   1       1.394   0.355   0.484  1.00 10.00           C
+ATOM      3  C   LYS A   1       2.657  -0.284  -0.032  1.00 10.00           C
+ATOM      4  O   LYS A   1       3.316   0.275  -0.876  1.00 10.00           O
+ATOM      5  CB  LYS A   1       0.184  -0.278  -0.206  1.00 10.00           C
+ATOM      6  CG  LYS A   1      -1.102   0.282   0.407  1.00 10.00           C
+ATOM      7  CD  LYS A   1      -2.313  -0.351  -0.283  1.00 10.00           C
+ATOM      8  CE  LYS A   1      -3.598   0.208   0.329  1.00 10.00           C
+ATOM      9  NZ  LYS A   1      -4.761  -0.400  -0.332  1.00 10.00           N
+ATOM     10  OXT LYS A   1       3.050  -1.476   0.446  1.00 10.00           O
+ATOM     11  H   LYS A   1       1.489   1.891  -0.804  1.00 10.00           H
+ATOM     12  H2  LYS A   1       0.521   2.162   0.464  1.00 10.00           H
+ATOM     13  HA  LYS A   1       1.322   0.200   1.560  1.00 10.00           H
+ATOM     14  HB2 LYS A   1       0.210  -0.047  -1.270  1.00 10.00           H
+ATOM     15  HB3 LYS A   1       0.211  -1.359  -0.068  1.00 10.00           H
+ATOM     16  HG2 LYS A   1      -1.128   0.050   1.471  1.00 10.00           H
+ATOM     17  HG3 LYS A   1      -1.130   1.363   0.269  1.00 10.00           H
+ATOM     18  HD2 LYS A   1      -2.287  -0.120  -1.348  1.00 10.00           H
+ATOM     19  HD3 LYS A   1      -2.285  -1.432  -0.145  1.00 10.00           H
+ATOM     20  HE2 LYS A   1      -3.625  -0.023   1.394  1.00 10.00           H
+ATOM     21  HE3 LYS A   1      -3.626   1.289   0.192  1.00 10.00           H
+ATOM     22  HZ1 LYS A   1      -4.736  -0.185  -1.318  1.00 10.00           H
+ATOM     23  HZ2 LYS A   1      -4.735  -1.400  -0.205  1.00 10.00           H
+ATOM     24  HZ3 LYS A   1      -5.609  -0.031   0.071  1.00 10.00           H
+ATOM     25  HXT LYS A   1       3.861  -1.886   0.115  1.00 10.00           H
+CONECT    1    2   11   12
+CONECT    2    1    3    5   13
+CONECT    3    2    4   10
+CONECT    4    3
+CONECT    5    2    6   14   15
+CONECT    6    5    7   16   17
+CONECT    7    6    8   18   19
+CONECT    8    7    9   20   21
+CONECT    9    8   22   23   24
+CONECT   10    3   25
+CONECT   11    1
+CONECT   12    1
+CONECT   13    2
+CONECT   14    5
+CONECT   15    5
+CONECT   16    6
+CONECT   17    6
+CONECT   18    7
+CONECT   19    7
+CONECT   20    8
+CONECT   21    8
+CONECT   22    9
+CONECT   23    9
+CONECT   24    9
+CONECT   25   10
+END   
