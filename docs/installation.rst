@@ -44,7 +44,7 @@ Note that ``openforcefield`` will be installed into this local Python installati
 |
 
 Required dependencies
-=======================
+=====================
 
 The ``openforcefield`` toolkit makes use of the `Omnia <http://www.omnia.md>`_ and `Conda Forge <https://conda-forge.org/>`_ free and open source community package repositories:
 
@@ -104,4 +104,63 @@ To install the OpenEye toolkits (provided you have a valid license file):
 No essential ``openforcefield`` release capabilities *require* the OpenEye toolkit, but the Open Force Field developers make use of it in parameterizing new open source force fields.
 It is known that there are certain differences in toolkit behavior between RDKit and OpenEye when reading a small fraction of molecules, and we encourage you to report any unexpected behavior that may be caused by toolkit differences to our `issue tracker <https://github.com/openforcefield/openforcefield/issues>`_.
 
+|
 
+Alternative method: Single-file installer
+*****************************************
+
+As of release 0.4.1, single-file installers are available for each Open Force Field Toolkit release.
+These are provided primarily for users who do not have access to the Anaconda cloud for installing packages.
+These installers have few requirements beyond a Linux or OSX operating system and will, in one command, produce a functional Python executable containing the Open Force Field Toolkit, as well as all required dependencies.
+The installers are very similar to the widely-used Miniconda ``*.sh`` installers.
+Accordingly, installation using the "single-file installer" does not require root access.
+
+The installers are between 200 and 300 MB each, and can be downloaded from the "Assets" section of the Toolkit's `GitHub Releases page <https://github.com/openforcefield/openforcefield/releases/>`_
+
+Please report any installer difficulties to the `OFF Toolkit Issue tracker <https://github.com/openforcefield/openforcefield/issues>`_, as we hope to make this a major distribution channel for the toolkit moving forward.
+
+|
+
+Installation
+============
+
+Download the appropriate installer (``openforcefield-<X.Y.Z>-py37-<your platform>-x86_64.sh``) from the `Releases page <https://github.com/openforcefield/openforcefield/releases/>`_.
+Then, install the toolkit with the following command:
+
+.. code-block:: bash
+
+   $ bash openforcefield-<X.Y.Z>-py37-<your platform>-x86_64.sh
+
+and follow the prompts.
+
+.. note:: You must have write access to the installation directory.
+          This is generally somewhere in the user's home directory.
+          When prompted, we recommend NOT making modifications to your ``bash_profile``.
+
+|
+
+Usage
+=====
+
+Any time you want to use this conda environment in a terminal, run
+
+.. code-block:: bash
+
+   $ source <install_directory>/etc/profile.d/conda.sh
+   $ conda activate base
+
+Once the ``base`` environment is activated, your system will default to use python (and other executables) from the newly installed conda environment.
+
+|
+
+Installing optional OpenEye toolkits
+====================================
+
+We're waiting on permission to redistribute the OpenEye toolkits inside the single-file installer, so for now the installers only ship with the open-source backend (RDKit+AmberTools).
+With this in mind, the conda environment created by the installer *contains the conda package manager itself*, which can be used to install the OpenEye toolkits if you have access to the Anaconda cloud
+
+.. code-block:: bash
+
+   $ conda install -c openeye openeye-toolkits
+
+.. note:: The OpenEye Toolkits conda package still requires a valid OpenEye license file to run.
