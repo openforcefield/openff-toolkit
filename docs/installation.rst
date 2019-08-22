@@ -112,7 +112,7 @@ Alternative method: Single-file installer
 As of release 0.4.1, single-file installers are available for each Open Force Field Toolkit release.
 These are provided primarily for users who do not have access to the Anaconda cloud for installing packages.
 These installers have few requirements beyond a Linux or OSX operating system and will, in one command, produce a functional Python executable containing the Open Force Field Toolkit, as well as all required dependencies.
-The installers are very similar to the widely-used Miniconda ``*.sh`` installers.
+The installers are very similar to the widely-used Miniconda ``*.sh`` files.
 Accordingly, installation using the "single-file installer" does not require root access.
 
 The installers are between 200 and 300 MB each, and can be downloaded from the "Assets" section of the Toolkit's `GitHub Releases page <https://github.com/openforcefield/openforcefield/releases/>`_.
@@ -125,7 +125,7 @@ Please report any installer difficulties to the `OFF Toolkit Issue tracker <http
 Installation
 ------------
 
-Download the appropriate installer (``openforcefield-<X.Y.Z>-py37-<your platform>-x86_64.sh``) from the `Releases page <https://github.com/openforcefield/openforcefield/releases/>`_.
+Download the appropriate installer (``openforcefield-<X.Y.Z>-py37-<your platform>-x86_64.sh``) from `the "Assets" section at the bottom of the desired release <https://github.com/openforcefield/openforcefield/releases/>`_.
 Then, install the toolkit with the following command:
 
 .. code-block:: bash
