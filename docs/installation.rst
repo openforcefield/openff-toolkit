@@ -107,7 +107,7 @@ It is known that there are certain differences in toolkit behavior between RDKit
 |
 
 Alternative method: Single-file installer
-*****************************************
+=========================================
 
 As of release 0.4.1, single-file installers are available for each Open Force Field Toolkit release.
 These are provided primarily for users who do not have access to the Anaconda cloud for installing packages.
@@ -115,14 +115,15 @@ These installers have few requirements beyond a Linux or OSX operating system an
 The installers are very similar to the widely-used Miniconda ``*.sh`` installers.
 Accordingly, installation using the "single-file installer" does not require root access.
 
-The installers are between 200 and 300 MB each, and can be downloaded from the "Assets" section of the Toolkit's `GitHub Releases page <https://github.com/openforcefield/openforcefield/releases/>`_
+The installers are between 200 and 300 MB each, and can be downloaded from the "Assets" section of the Toolkit's `GitHub Releases page <https://github.com/openforcefield/openforcefield/releases/>`_.
+They are generated using a `workflow leveraging the "conda constructor" utility <https://github.com/openforcefield/toolkit-installer-constructor>`_.
 
 Please report any installer difficulties to the `OFF Toolkit Issue tracker <https://github.com/openforcefield/openforcefield/issues>`_, as we hope to make this a major distribution channel for the toolkit moving forward.
 
 |
 
 Installation
-============
+------------
 
 Download the appropriate installer (``openforcefield-<X.Y.Z>-py37-<your platform>-x86_64.sh``) from the `Releases page <https://github.com/openforcefield/openforcefield/releases/>`_.
 Then, install the toolkit with the following command:
@@ -137,10 +138,13 @@ and follow the prompts.
           This is generally somewhere in the user's home directory.
           When prompted, we recommend NOT making modifications to your ``bash_profile``.
 
+.. warning:: We recommend that you do not install this package as root.
+             Conda is intended to support on-the-fly creation of several independent environments, and `managing a multi-user conda installation is somewhat involved. <https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/admin-multi-user-install.html>`_
+
 |
 
 Usage
-=====
+-----
 
 Any time you want to use this conda environment in a terminal, run
 
@@ -154,13 +158,14 @@ Once the ``base`` environment is activated, your system will default to use pyth
 |
 
 Installing optional OpenEye toolkits
-====================================
+------------------------------------
 
 We're waiting on permission to redistribute the OpenEye toolkits inside the single-file installer, so for now the installers only ship with the open-source backend (RDKit+AmberTools).
-With this in mind, the conda environment created by the installer *contains the conda package manager itself*, which can be used to install the OpenEye toolkits if you have access to the Anaconda cloud
+With this in mind, the conda environment created by the installer *contains the conda package manager itself*, which can be used to install the OpenEye toolkits if you have access to the Anaconda cloud.
 
 .. code-block:: bash
 
    $ conda install -c openeye openeye-toolkits
 
 .. note:: The OpenEye Toolkits conda package still requires a valid OpenEye license file to run.
+
