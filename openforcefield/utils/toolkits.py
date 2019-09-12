@@ -1565,7 +1565,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # just adding H's, but could get fancier in the future). It might be
             # worthwhile to parse the SMILES file ourselves and pass each SMILES
             # through the from_smiles function instead
-            for rdmol in Chem.SmilesMolSupplier(file_path):
+            for rdmol in Chem.SmilesMolSupplier(file_path, titleLine=False):
                 rdmol = Chem.AddHs(rdmol)
                 mol = Molecule.from_rdkit(rdmol)
                 mols.append(mol)
