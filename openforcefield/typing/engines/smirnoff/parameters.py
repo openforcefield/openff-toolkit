@@ -1603,7 +1603,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             types of errors.
 
         """
-
+        from openforcefield.topology import TopologyAtom
         # Provided there are no duplicates in either list,
         # or something weird like a bond has been added to
         # a torsions list - this should work just fine I think.
@@ -1638,20 +1638,27 @@ class ParameterHandler(_ParameterAttributeHandler):
         err_msg = ""
 
         if len(unassigned_terms) > 0:
+
+            unassigned_topology_atom_tuples = []
+
+            # Gain access to the relevant topology
+            if type(valence_terms[0]) is TopologyAtom:
+                topology = valence_terms[0].topology_molecule.topology
+            else:
+                topology = valence_terms[0][0].topology_molecule.topology
             unassigned_str = ''
             for unassigned_tuple in unassigned_terms:
                 unassigned_str += '\n- Topology indices ' + str(unassigned_tuple)
                 unassigned_str += ': names and elements '
 
+                unassigned_topology_atoms = []
+
                 # Pull and add additional helpful info on missing terms
                 for atom_idx in unassigned_tuple:
-                    matched = False
-                    for atoms in valence_terms:
-                        for a in atoms:
-                            if a.topology_atom_index == atom_idx:
-                                unassigned_str += '(%s %s), ' % (a.atom.name, a.atom.element.symbol)
-                                matched = True
-                        if matched: break
+                    topology_atom = topology.atom(atom_idx)
+                    unassigned_topology_atoms.append(topology_atom)
+                    unassigned_str += '(%s %s), ' % (topology_atom.atom.name, topology_atom.atom.element.symbol)
+                unassigned_topology_atom_tuples.append(tuple(unassigned_topology_atoms))
             err_msg += ("{parameter_handler} was not able to find parameters for the following valence terms:\n"
                         "{unassigned_str}").format(parameter_handler=cls.__name__,
                                                      unassigned_str=unassigned_str)
@@ -1664,7 +1671,11 @@ class ParameterHandler(_ParameterAttributeHandler):
                                                     not_found_str=not_found_str)
         if err_msg != "":
             err_msg += '\n'
-            raise exception_cls(err_msg)
+            exception = exception_cls(err_msg)
+            exception.unassigned_topology_atom_tuples = unassigned_topology_atom_tuples
+            exception.handler_class = cls
+            raise exception
+
 
     def _check_attributes_are_equal(self, other, identical_attrs=(),
                                     tolerance_attrs=(), tolerance=1e-6):
