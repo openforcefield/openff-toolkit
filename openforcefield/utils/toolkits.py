@@ -1554,10 +1554,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     print(rdmol.GetProp('_Name'), e)
                     continue
                 Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-                mol = Molecule.from_rdkit(
-                    rdmol,
-                    allow_undefined_stereo=allow_undefined_stereo
-                )
+                mol = Molecule.from_rdkit(rdmol,allow_undefined_stereo=allow_undefined_stereo)
 
                 mols.append(mol)
         elif (file_format == 'SMI'):
@@ -1567,7 +1564,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # through the from_smiles function instead
             for rdmol in Chem.SmilesMolSupplier(file_path, titleLine=False):
                 rdmol = Chem.AddHs(rdmol)
-                mol = Molecule.from_rdkit(rdmol)
+                mol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
                 mols.append(mol)
 
         elif (file_format == 'PDB'):
