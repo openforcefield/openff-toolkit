@@ -210,7 +210,7 @@ class TestChemicalEnvironments(TestCase):
         Check that an imparseable SMIRKS raises errors
         """
         smirks = "[*;X:1]"
-        msg = "SMIRKS (%s) should not be parseable, but an environment was successfully created"
+        msg = f"SMIRKS ({smirks}) should not be parseable, but an environment was successfully created"
         with self.assertRaises(SMIRKSParsingError, msg = msg):
             env = ChemicalEnvironment(smirks)
 

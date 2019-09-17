@@ -11,14 +11,14 @@ def check_valence(mol):
         valence = atom.GetValence()
         if atomNum <= 10:
             if valence > 4:
-                #print("Found a #%i atom with valence %i in molecule %s" % (atomNum, valence, oechem.OECreateIsoSmiString(mol)))
+                #print(f"Found a #{atomNum} atom with valence {valence} in molecule {oechem.OECreateIsoSmiString(mol)}")
                 return False
     return True
 
 def check_element(mol, elements):
     for atom in mol.GetAtoms():
         if str(atom.GetAtomicNum()) in elements:
-            #print("Found a #%i atom in molecule %s" % (atom.GetAtomicNum(), oechem.OECreateIsoSmiString(mol)))
+            #print(f"Found a #{atom.GetAtomicNum()} atom in molecule {oechem.OECreateIsoSmiString(mol)}")
             return False
     return True
 
