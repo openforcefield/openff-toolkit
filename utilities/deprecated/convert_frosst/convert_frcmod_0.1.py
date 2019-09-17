@@ -78,9 +78,9 @@ def add_date_and_author(inxml, date, author):
     for l in input_lines:
         start = l.strip().split('>')[0]
         if start == '<Date':
-            output_lines.append("<Date>%s</Date>\n" % date.strip())
+            output_lines.append(f"<Date>{date.strip()}</Date>\n")
         elif start == '<Author':
-            output_lines.append("<Author>%s</Author>\n" % author.strip())
+            output_lines.append(f"<Author>{author.strip()}</Author>\n")
         else:
             output_lines.append(l)
 

@@ -138,7 +138,7 @@ class TestChemicalEnvironments(TestCase):
             for (descriptor, amount) in desList:
                 compList = angle.getComponentList(component, descriptor)
                 ncomps = len(compList)
-                assert ncomps == amount, "Found %i %s %ss instead of %i in angle %s" % (ncomps, descriptor, component, amount, angle_smirks)
+                assert ncomps == amount, f"Found {ncomps} {descriptor} {component}s instead of {amount} in angle {angle_smirks}"
 
         # Check is__ descriptors
         atom2 = angle.selectAtom(2)
@@ -175,16 +175,16 @@ class TestChemicalEnvironments(TestCase):
 
         # Check valence: should be 3 for atom2
         val = angle.getValence(atom2)
-        self.assertEqual(val, 3, "Atom 2 in angle %s should have a valence of 3, but a valence of %i was found" % (angle_smirks, val))
+        self.assertEqual(val, 3, f"Atom 2 in angle {angle_smirks} should have a valence of 3, but a valence of {val} was found")
 
         # Check bond order
         # For bond1 =,:;@ it should be 1.5 because order returns lowest possible
         order = bond1.getOrder()
-        self.assertEqual(order, 1.5, "Bond 1 (%s) should have a minimum order of 1.5, but %.1f was assigned" % (bond1.asSMIRKS(), order))
+        self.assertEqual(order, 1.5, f"Bond 1 ({bond1.asSMIRKS()}) should have a minimum order of 1.5, but {order:.1f} was assigned")
 
         # For atom
         order = angle.getBondOrder(atom2)
-        self.assertEqual(order, 3.5, "Atom 2 in angle (%s) should have a minimum bond order of 3.5, but %.1f was assigned" % (angle_smirks, order))
+        self.assertEqual(order, 3.5, f"Atom 2 in angle ({angle_smirks}) should have a minimum bond order of 3.5, but {order:.1f} was assigned")
 
     def test_creating_wrong_environments(self):
         """

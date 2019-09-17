@@ -171,7 +171,7 @@ def round_charge(xml):
         if index == 0:
             continue
         chunksp = chunk.split('" sig')
-        chunksp[0] = str('%.2d' % (float(chunksp[0])))
+        chunksp[0] = f"{float(chunksp[0]):.2f}"
         chunk = '" sig'.join(chunksp)
         xmlsp[index] = chunk
     return ' q="'.join(xmlsp)
@@ -534,7 +534,7 @@ class TestForceField():
         with pytest.raises(SMIRNOFFSpecError, match="Missing version while trying to construct "
                                                     "<class 'openforcefield.typing.engines."
                                                     "smirnoff.parameters.ToolkitAM1BCCHandler'>.") as excinfo:
-            ff = ForceField('<?xml version="1.0" encoding="ASCII"?>' 
+            ff = ForceField('<?xml version="1.0" encoding="ASCII"?>'
                             '<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">'
                             '  <ToolkitAM1BCC/>'
                             '</SMIRNOFF>')
@@ -748,7 +748,7 @@ class TestForceField():
         molecules1 = [Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))]
         topology1 = Topology.from_openmm(pdbfile.topology,
                                          unique_molecules=molecules1,
-                                         
+
                                          )
         omm_system1 = forcefield.create_openmm_system(topology1,
                                                       toolkit_registry=toolkit_registry)
@@ -1504,7 +1504,7 @@ class TestSmirnoffVersionConverter:
         does the job.
         """
         from openforcefield.tests.utils import get_freesolv_file_path, compare_system_parameters
-        
+
         mol2_file_path, xml_file_path = get_freesolv_file_path(freesolv_id, forcefield_version)
 
         # Load molecules.

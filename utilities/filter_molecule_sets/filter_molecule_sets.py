@@ -103,10 +103,10 @@ def filter_molecules(input_molstream, output_molstream, allow_repeats = False,
                 saved += 1
         errs.clear()
 
-    print("%i molecules in input stream" % (count))
-    print("%i molecules resulted in warnings when parsing" % warnings)
-    print("%i molecules were had repeated isomeric SMILES" % smile_count)
-    print("%i molecules saved" % (saved))
+    print(f"{count} molecules in input stream")
+    print(f"{warnings} molecules resulted in warnings when parsing")
+    print(f"{smile_count} molecules were had repeated isomeric SMILES")
+    print(f"{saved} molecules saved")
 
 
 if __name__=="__main__":
@@ -176,7 +176,7 @@ if __name__=="__main__":
     smirks = smarty.utils.parse_odds_file(opt.smirks_file, False)
     smirks = smirks[0]
 
-    print opt.atoms
+    print(opt.atoms)
     repeats = opt.repeats == 'True'
     warnings = opt.warnings == 'True'
     hydrogens = opt.hydrogens == 'True'

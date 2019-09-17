@@ -519,30 +519,30 @@ class ChemicalEnvironment:
         if smirks is not None:
             # Check that it is a valid SMIRKS
             if not self.isValid(smirks):
-                raise SMIRKSParsingError("Error Provided SMIRKS ('%s') was \
-not parseable with %s tools" % (smirks, self.toolkit))
+                raise SMIRKSParsingError(f"Error Provided SMIRKS ('{smirks}') was \
+not parseable with {self.toolkit} tools")
 
             # Check for SMIRKS not supported by Chemical Environments
             if smirks.find('.') != -1:
-                raise SMIRKSParsingError("Error: Provided SMIRKS ('%s') \
+                raise SMIRKSParsingError(f"Error: Provided SMIRKS ('{smirks}') \
 contains a '.' indicating multiple molecules in the same pattern. This type \
-of pattern is not parseable into ChemicalEnvironments" % smirks)
+of pattern is not parseable into ChemicalEnvironments")
             if smirks.find('>') != -1:
-                raise SMIRKSParsingError("Error: Provided SMIRKS ('%s') \
+                raise SMIRKSParsingError(f"Error: Provided SMIRKS ('{smirks}') \
 contains a '>' indicating a reaction. This type of pattern is not parseable \
-into ChemicalEnvironments." % smirks)
+into ChemicalEnvironments.")
 
             # try parsing into environment object
             try:
                 self._parse_smirks(smirks)
             except:
-                raise SMIRKSParsingError("Error SMIRKS (%s) was not parseable\
-                        into a ChemicalEnvironment" % smirks)
+                raise SMIRKSParsingError(f"Error SMIRKS ({smirks}) was not parseable\
+                        into a ChemicalEnvironment")
 
         # Check that the created Environment is valid
         if not self.isValid():
-            raise SMIRKSParsingError("Input SMIRKS (%s), converted to %s \
-                    is now invalid" % (smirks, self.asSMIRKS()))
+            raise SMIRKSParsingError(f"Input SMIRKS ({smirks}), converted to {self.asSMIRKS()} \
+                    is now invalid")
 
         return
 
