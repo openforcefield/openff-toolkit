@@ -74,10 +74,6 @@ install:
   # TODO: Reactivate conda install instead of pip install once OpenEye is released for python 3.7 on conda-forge, but I don't think we need oemmtools anymore.
   # - if [[ "$OPENEYE" == true ]]; then conda install --yes -c openeye/label/Orion openeye-toolkits oeommtools && python -c "import openeye; print(openeye.__version__)"; fi
 
-  # Install force field repositories
-  - conda install --yes -c omnia smirnoff99Frosst
-  - conda install --yes -c omnia/label/dev openforcefields
-
   # Install RDKit
   - if [[ "$RDKIT" == true ]]; then conda install --yes -c rdkit rdkit; fi
   - if [[ "$RDKIT" == true ]]; then conda install --yes -c omnia ambertools; fi
@@ -91,6 +87,10 @@ install:
   # Build and install package
   - conda build --python=$PYTHON_VER devtools/conda-recipe
   - conda install --use-local openforcefield
+
+  # Install force field repositories
+  - conda install --yes -c omnia smirnoff99Frosst
+  - conda install --yes -c omnia/label/dev openforcefields
 
 script:
   # Run doctests only if both RDKit and OpenEye are installed.
