@@ -171,7 +171,7 @@ class CustomAmberGBForceBase(CustomGBForce):
             self.addEnergyTerm(energy_expression, CustomGBForce.SingleParticle)
 
         elif sa_model is not None:
-            raise ValueError("Unknown surface area method '%s'. Must be one of ['ACE', None]" % (sa_model))
+            raise ValueError(f"Unknown surface area method '{sa_model}'. Must be one of ['ACE', None]")
 
 class HCT(CustomAmberGBForceBase):
     """This class is equivalent to Amber ``igb=1``

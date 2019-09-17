@@ -25,7 +25,7 @@ def check_element(mol, elements):
 def check_atomtype(mol, types):
     for atom in mol.GetAtoms():
         if atom.GetType() in types:
-            print("Found type %s atom in molecule %s" % (atom.GetType(), oechem.OECreateIsoSmiString(mol)))
+            print(f"Found type {atom.GetType()} atom in molecule {oechem.OECreateIsoSmiString(mol)}")
             return False
     return True
 
@@ -162,7 +162,7 @@ if __name__=="__main__":
     ifs = oechem.oemolistream(opt.input_file)
     if not ifs.IsValid():
         parser.print_help()
-        parser.error("Error: input_file (%s) was not valid" % opt.input_file)
+        parser.error(f"Error: input_file ({opt.input_file}) was not valid")
 
     # Load and check output file
     ofs = oechem.oemolostream(opt.output_file)
@@ -171,7 +171,7 @@ if __name__=="__main__":
         ofs.SetFlavor(oechem.OEFormat_MOL2, flavor)
     if not ofs.IsValid():
         parser.print_help()
-        parser.error("Error: output_file (%s) was not valid" % opt.output_file)
+        parser.error(f"Error: output_file ({opt.output_file}) was not valid")
 
     smirks = smarty.utils.parse_odds_file(opt.smirks_file, False)
     smirks = smirks[0]

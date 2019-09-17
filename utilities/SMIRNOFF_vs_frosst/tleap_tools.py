@@ -33,9 +33,9 @@ def run_tleap(molecule_name, mol2_filename, frcmod_filename, prmtop_filename=Non
         Amber inpcrd file produced by tleap
     """
     if prmtop_filename is None:
-        prmtop_filename = "%s.prmtop" % molecule_name
+        prmtop_filename = f"{molecule_name}.prmtop"
     if inpcrd_filename is None:
-        inpcrd_filename = "%s.inpcrd" % molecule_name
+        inpcrd_filename = f"{molecule_name}.inpcrd"
 
     #Get absolute paths for input/output
     mol2_filename = os.path.abspath( mol2_filename )
@@ -61,7 +61,7 @@ def run_tleap(molecule_name, mol2_filename, frcmod_filename, prmtop_filename=Non
         file_handle.writelines(tleap_input)
         file_handle.close()
 
-        cmd = "tleap -f %s " % file_handle.name
+        cmd = f"tleap -f {file_handle.name} "
         if log_debug_output: logger.debug(cmd)
         if verbose: print(cmd)
 

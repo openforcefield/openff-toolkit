@@ -145,9 +145,7 @@ def get_data_file_path(relative_path):
         'data', relative_path))
 
     if not os.path.exists(fn):
-        raise ValueError(
-            "Sorry! %s does not exist. If you just added it, you'll have to re-install"
-            % fn)
+        raise ValueError(f"Sorry! {fn} does not exist. If you just added it, you'll have to re-install")
 
     return fn
 

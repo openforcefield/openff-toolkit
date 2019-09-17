@@ -293,12 +293,12 @@ def read_molecules(file_path, verbose=True):
     from openforcefield.utils import get_data_file_path
 
     if not os.path.exists(file_path):
-        built_in = get_data_file_path('molecules/%s' % file_path)
+        built_in = get_data_file_path(f"molecules/{file_path}")
         if not os.path.exists(built_in):
-            raise Exception("File '%s' not found." % file_path)
+            raise Exception(f"File '{file_path}' not found.")
         file_path = built_in
 
-    if verbose: print("Loading molecules from '%s'..." % file_path)
+    if verbose:print(f"Loading molecules from '{file_path}'...")
     start_time = time.time()
     molecules = list()
     input_molstream = oechem.oemolistream(file_path)
@@ -392,7 +392,7 @@ def read_typelist(file_path):
     if not os.path.exists(file_path):
         built_in = get_data_file_path(file_path)
         if not os.path.exists(built_in):
-            raise Exception("File '%s' not found." % file_path)
+            raise Exception(f"File '{file_path}' not found.")
         file_path = built_in
 
     typelist = list()
@@ -416,8 +416,7 @@ def read_typelist(file_path):
                 typelist.append([smarts,typename])
                 used_typenames.append(typename)
             else:
-                raise Exception("Error in file '%s' -- each entry must "
-                        "have a unique name." % file_path )
+                raise Exception(f"Error in file '{file_path}' -- each entry must have a unique name.")
 
     ifs.close()
 

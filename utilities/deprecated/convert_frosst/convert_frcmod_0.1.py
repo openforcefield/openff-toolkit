@@ -188,7 +188,7 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
             if not (name=='IMPR' or name=='DIHE'):
                 # Check for duplicates first
                 if ff.getParameter( smirks, force_type = force_section[idx] ):
-                    raise ValueError("Error: parameter for %s is already present in forcefield." % smirks )
+                    raise ValueError(f"Error: parameter for {smirks} is already present in forcefield.")
                 else:
                     ff.addParameter( params, smirks, force_section[idx], tag[idx] )
 
@@ -202,11 +202,11 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
                 if oldparams:
                     # Find what number to use
                     idnr = 1
-                    paramtag = 'k%s' % idnr
+                    paramtag = f"k{idnr}"
                     # This was "while paramtag in params" so it was overwriting k2 etc.
                     while paramtag in oldparams:
                         idnr+=1
-                        paramtag = 'k%s' % idnr
+                        paramtag = f"k{idnr}"
                     # Construct new param object with updated numbers
                     for paramtag in ('periodicity1', 'phase1', 'idivf1', 'k1'):
                         if paramtag in params:

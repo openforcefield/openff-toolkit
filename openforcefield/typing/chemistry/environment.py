@@ -455,7 +455,7 @@ class ChemicalEnvironment:
         if ensure_valence_type:
             valence_type = chemenv.getType()
             if valence_type != ensure_valence_type:
-                raise SMIRKSParsingError("Tagged atoms in SMARTS string '%s' specifies valence type '%s', expected '%s'." % (smirks, valence_type, ensure_valence_type))
+                raise SMIRKSParsingError(f"Tagged atoms in SMARTS string '{smirks}' specifies valence type '{valence_type}', expected '{ensure_valence_type}'.")
 
     def __init__(self, smirks = None, label = None, replacements = None, toolkit='openeye'):
         """Initialize a chemical environment abstract base class.
@@ -1356,7 +1356,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
         correct, expected = self._checkType()
         if not correct:
             assigned = self.getType()
-            raise SMIRKSMismatchError("The SMIRKS (%s) was assigned the type %s when %s was expected" % (smirks, assigned, expected))
+            raise SMIRKSMismatchError(f"The SMIRKS ({smirks}) was assigned the type {assigned} when {expected} was expected")
         self.atom1 = self.selectAtom(1)
 
     def _checkType(self):
@@ -1421,7 +1421,7 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
         # Add initial atom
         self.atom2 = self.selectAtom(2)
         if self.atom2 is None:
-            raise Exception("Error: Bonds need 2 indexed atoms, there were not enough in %s" % smirks)
+            raise Exception(f"Error: Bonds need 2 indexed atoms, there were not enough in {smirks}")
 
         self.bond2 = self._graph_get_edge_data(self.atom1, self.atom2)['bond']
 

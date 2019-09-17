@@ -91,7 +91,7 @@ def GenerateBox(pdbin, pdbout, box, nmol, tries):
     fout.close()
     ferr.close()
     t0 = time.time()
-    print("Running %s to create a solvent box..." % gmxcmd)
+    print(f"Running {gmxcmd} to create a solvent box...")
     print("Time elapsed: % .3f seconds" % (time.time() - t0))
     nmol_out = 0
     for line in open('genbox.err').readlines():
@@ -128,7 +128,7 @@ def run_create_mol2_pdb(**kwargs):
     os.environ['GMX_MAXBACKUP']="-1"
     
     smiles_string = open(input_txt).readlines()[0].strip()
-    print("The following SMILES string will be converted: %s" % smiles_string)
+    print(f"The following SMILES string will be converted: {smiles_string}")
     
     # create a new molecule
     oemol = oechem.OEGraphMol()
@@ -153,17 +153,17 @@ def run_create_mol2_pdb(**kwargs):
     
     # Write output files
     ofs = oechem.oemolostream()
-    output_fnms = ['%s.mol2' % resname, '%s.pdb' % resname]
+    output_fnms = [f"{resname}.mol2", f'{resname}.pdb']
     for output_fnm in output_fnms:
         if not ofs.open(output_fnm):
-            oechem.OEThrow.Fatal("Unable to create %s" % output_fnm)
+            oechem.OEThrow.Fatal(f"Unable to create {output_fnm}")
         oechem.OEWriteMolecule(ofs, oemol)
-        print("-=# Output #=- Created %s containing single molecule" % output_fnm)
+        print(f"-=# Output #=- Created {output_fnm} containing single molecule")
     
     grams_per_mole = CalculateMolecularWeight(oemol)
     
     boxlen = CalculateBoxSize(nmol, grams_per_mole, density)
-    GenerateBox('%s.pdb' % resname, '%s-box.pdb' % resname, boxlen, nmol, tries)
+    GenerateBox(f"{resname}.pdb", f'{resname}-box.pdb', boxlen, nmol, tries)
 
 def main():
     """
@@ -183,7 +183,7 @@ def main():
     parser.add_argument('--tries', type=int, default=10, help='Pass number of tries per molecule to be passed to genbox. Higher = longer runtime but may achieve higher density.')
     parser.add_argument('input', type=str, help='Input file containing a single SMILES string')
     parser.add_argument('resname', type=str, help='Specify a custom residue name for the molecule.')
-    print('%s called with the following command line:' % __file__)
+    print(f"{__file__} called with the following command line:")
     print(' '.join(sys.argv))
     args = parser.parse_args(sys.argv[1:])
     # Create the desired files (.mol2 file containing a single conformation and .pdb file containing solvent box).
