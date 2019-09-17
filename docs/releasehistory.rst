@@ -8,6 +8,38 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
+Current Development
+-------------------
+
+New features
+""""""""""""
+- `PR #419 <https://github.com/openforcefield/openforcefield/pull/419>`_: Unassigned
+  valence parameter exceptions now include a list of tuples of
+  :py:class:`TopologyAtom <openforcefield.topology.TopologyAtom>`
+  which were unable to be parameterized (``exception.unassigned_topology_atom_tuples``)
+  and the class of the
+  :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
+  that raised the exception (``exception.handler_class``).
+
+
+Example added
+"""""""""""""
+- `PR #419 <https://github.com/openforcefield/openforcefield/pull/419>`_: Adds
+  an example notebook
+  `check_dataset_parameter_coverage/check_parameter_coverage.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/check_dataset_parameter_coverage/check_parameter_coverage.ipynb>`_
+  which shows how to use the toolkit to analyze a molecule
+  dataset for missing parameter coverage, and provides functionality to output
+  tagged SMILES and 2D drawings of the unparameterizable chemistry.
+
+Bugfixes
+""""""""
+- `PR #419 <https://github.com/openforcefield/openforcefield/pull/419>`_: Fixes
+  `Issue #417 <https://github.com/openforcefield/openforcefield/issues/417>`_ and
+  `Issue #418 <https://github.com/openforcefield/openforcefield/issues/418>`_, where
+  :py:meth:`RDKitToolkitWrapper.from_file <openforcefield.utils.toolkits.RDKitToolkitWrapper.from_file>`
+  would disregard the ``allow_undefined_stereo`` kwarg and skip the first molecule
+  when reading a SMILES file.
+
 0.5.0 - GBSA support and quality-of-life improvements
 -----------------------------------------------------
 
