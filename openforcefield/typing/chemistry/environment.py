@@ -473,18 +473,21 @@ class ChemicalEnvironment:
             this function will use OpenEye if possible, otherwise will use RDKit.
         """
         # TODO: Refactor all this class to use the ToolkitRegistry API.
-        if toolkit.lower() == 'openeye' and openforcefield.utils.OpenEyeToolkitWrapper.is_available():
-            self.toolkit = 'openeye'
-        elif toolkit.lower() == 'rdkit' and openforcefield.utils.RDKitToolkitWrapper.is_available():
-            self.toolkit = 'rdkit'
         # If the user didn't specify a toolkit, try to use OE, otherwise use RDKit
-        elif toolkit is None and openforcefield.utils.OpenEyeToolkitWrapper.is_available():
+        if toolkit is None and openforcefield.utils.OpenEyeToolkitWrapper.is_available():
             self.toolkit = 'openeye'
         elif toolkit is None and openforcefield.utils.RDKitToolkitWrapper.is_available():
             self.toolkit = 'rdkit'
+        elif toolkit is None:
+            raise ValueError("Toolkit was not specified, and neither OpenEye nor RDKit is available. Please"
+                             "install either OpenEye or RDKit")
+        elif toolkit.lower() == 'openeye' and openforcefield.utils.OpenEyeToolkitWrapper.is_available():
+            self.toolkit = 'openeye'
+        elif toolkit.lower() == 'rdkit' and openforcefield.utils.RDKitToolkitWrapper.is_available():
+            self.toolkit = 'rdkit'
         else:
             raise ValueError("Could not find toolkit {}, please use/install "
-                             "openeye or rdkit.".format(toolkit))
+                             "OpenEye or RDKit.".format(toolkit))
 
         # Define the regular expressions used for all SMIRKS decorators
         # There are a limited number of descriptors for smirks string they are:
