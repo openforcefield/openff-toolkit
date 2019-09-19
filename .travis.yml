@@ -1,7 +1,7 @@
 language: python
 
 # Run jobs on container-based infrastructure, can be overridden per job
-dist: xenial
+# dist: xenial
 
 # Run builds for both master and feature releases
 branches:
