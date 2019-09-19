@@ -92,7 +92,7 @@ script:
   then
     pytest --ignore=utilities --ignore=examples/deprecated --ignore=docs
     --ignore=devtools --doctest-modules --nbval-lax --cov=openforcefield;
-  elif [["$RDKIT" == false && "$OPENEYE" == true ]];
+  elif [[ "$RDKIT" == false && "$OPENEYE" == true ]];
   then
     pytest --ignore=utilities --ignore=examples/deprecated --ignore=docs
     --ignore=devtools --ignore=examples/check_dataset_parameter_coverage
