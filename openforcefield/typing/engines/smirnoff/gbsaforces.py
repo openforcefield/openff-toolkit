@@ -111,13 +111,13 @@ class CustomAmberGBForceBase(CustomGBForce):
 
         self.offset_terms_single = ("sr=scale*or;"
                                     "or=(radius-OFFSET);"
-                                    "OFFSET=%.16f;" % OFFSET)
+                                    f"OFFSET={OFFSET:.16f};")
 
         self.offset_terms_pair = ("sr1=scale1*or1;"
                                   "or1=(radius1-OFFSET);"
                                   "sr2=scale2*or2;"
                                   "or2=(radius2-OFFSET);"
-                                  "OFFSET=%.16f;" % OFFSET)
+                                  f"OFFSET={OFFSET:.16f};")
 
     def _createGBEnergyTerms(self, **kwargs):
         """Add energy terms for the GB model to the CustomGBForce.
@@ -137,19 +137,19 @@ class CustomAmberGBForceBase(CustomGBForce):
         # Add dielectric constants
         solvent_dielectric = _get_option_stripped(kwargs, 'solvent_dielectric', 78.5, dtype=float)
         solute_dielectric = _get_option_stripped(kwargs, 'solute_dielectric', 1.0, dtype=float)
-        energy_expression += "; solventDielectric=%.16g; soluteDielectric=%.16g" % (solvent_dielectric, solute_dielectric)
+        energy_expression += f"; solventDielectric={solvent_dielectric:.16g}; soluteDielectric={solute_dielectric:.16g}"
 
         # Salt screening term
         kappa = _get_option_stripped(kwargs, 'kappa', None, dtype=unit.Quantity, compatible_units=1.0/unit.nanometers)
         if kappa is not None:
             if (kappa < 0):
                 raise ValueError('kappa/ionic strength must be >= 0')
-            energy_expression += "; kappa_coeff = exp(-kappa*B); kappa=%.16f" % (kappa)
+            energy_expression += f"; kappa_coeff = exp(-kappa*B); kappa={kappa:.16f}"
         else:
             energy_expression += "; kappa_coeff = 1"
 
         # Add constants
-        energy_expression += "; ONE_4PI_EPS0=%.16g" % (ONE_4PI_EPS0)
+        energy_expression += f"; ONE_4PI_EPS0={ONE_4PI_EPS0:.16g}"
 
         # Add force term
         self.addEnergyTerm(energy_expression, CustomGBForce.SingleParticle)
@@ -165,13 +165,13 @@ class CustomAmberGBForceBase(CustomGBForce):
             solvent_radius = _get_option_stripped(kwargs, 'solvent_radius', 0.14 * unit.nanometers,
                 dtype=unit.Quantity, compatible_units=unit.nanometers)
             energy_expression  = 'surface_area_penalty*4*pi*(radius+solvent_radius)^2*(radius/B)^6'
-            energy_expression += '; pi=%.16g;' % pi
-            energy_expression += '; surface_area_penalty=%.16g;' % surface_area_penalty
-            energy_expression += '; solvent_radius=%.16f' % solvent_radius
+            energy_expression += f'; pi={pi:.16g};'
+            energy_expression += f'; surface_area_penalty={surface_area_penalty:.16g};'
+            energy_expression += f'; solvent_radius={solvent_radius:.16f}'
             self.addEnergyTerm(energy_expression, CustomGBForce.SingleParticle)
 
         elif sa_model is not None:
-            raise ValueError("Unknown surface area method '%s'. Must be one of ['ACE', None]" % (sa_model))
+            raise ValueError(f"Unknown surface area method '{sa_model}'. Must be one of ['ACE', None]")
 
 class HCT(CustomAmberGBForceBase):
     """This class is equivalent to Amber ``igb=1``

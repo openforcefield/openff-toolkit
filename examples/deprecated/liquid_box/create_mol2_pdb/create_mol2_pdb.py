@@ -3,17 +3,17 @@
 from forcebalance.molecule import Molecule
 from forcebalance.nifty import which
 from openeye import oechem
-import openmoltools 
+import openmoltools
 import os, sys, time, argparse, subprocess
 
 def CalculateMolecularWeight(mol):
     """
     Calculate the molecular weight for an OpenEye molecule.
-    
+
     Parameters
     ----------
     mol : OEGraphMol
-    
+
     Returns
     -------
     float
@@ -32,7 +32,7 @@ def CalculateMolecularWeight(mol):
 def CalculateBoxSize(nmol, molwt, density):
     """
     Calculate the size of a solvent box.
-    
+
     Parameters
     ----------
     nmol : int
@@ -41,7 +41,7 @@ def CalculateBoxSize(nmol, molwt, density):
         Molecular weight in g/mol
     density : float
         Estimated density in kg/m3 (this should be about 40-50% lower than the real liquid density)
-    
+
     Returns
     -------
     float
@@ -57,7 +57,7 @@ def GenerateBox(pdbin, pdbout, box, nmol, tries):
     """
     Call genbox. (Confirmed working with Gromacs version 4.6.7 and 5.1.4).
     Mainly checks whether genbox ran correctly.
-    
+
     Parameters
     ----------
     pdbin : str
@@ -85,14 +85,13 @@ def GenerateBox(pdbin, pdbout, box, nmol, tries):
 
     fout=open('genbox.out', 'w')
     ferr=open('genbox.err', 'w')
-    subprocess.Popen('%s -ci %s -o genbox.pdb -box %.3f %.3f %.3f -nmol %i -try %i'
-                     % (gmxcmd, pdbin, box, box, box, nmol, tries),
+    subprocess.Popen(f'{gmxcmd} -ci {pdbin} -o genbox.pdb -box {box:.3f} {box:.3f} {box:.3f} -nmol {nmol} -try {tries}',
                      shell=True, stdout=fout, stderr=ferr)
     fout.close()
     ferr.close()
     t0 = time.time()
-    print("Running %s to create a solvent box..." % gmxcmd)
-    print("Time elapsed: % .3f seconds" % (time.time() - t0))
+    print(f"Running {gmxcmd} to create a solvent box...")
+    print(f"Time elapsed: {(time.time() - t0): .3f} seconds")
     nmol_out = 0
     for line in open('genbox.err').readlines():
         if 'Output configuration contains' in line:
@@ -100,8 +99,8 @@ def GenerateBox(pdbin, pdbout, box, nmol, tries):
     if nmol_out == 0:
         raise RuntimeError('genbox failed to produce an output configuration')
     elif nmol_out != nmol:
-        raise RuntimeError('genbox failed to create a box with %i molecules (actual %i); '
-                           'please retry with increased box size or number of tries'  % (nmol, nmol_out))
+        raise RuntimeError(f'genbox failed to create a box with {nmol} molecules (actual {nmol_out}); '
+                           'please retry with increased box size or number of tries')
     else:
         # genbox throws away the CONECT records in the PDB, this operation adds them back.
         M1 = Molecule(pdbin, build_topology=False)
@@ -114,7 +113,7 @@ def GenerateBox(pdbin, pdbout, box, nmol, tries):
                 solventbox_bonds.append((j[0]+i*M1.na, j[1]+i*M1.na))
         M.bonds = solventbox_bonds
         M.write(pdbout)
-        print("-=# Output #=- Created %s containing solvent box with %i molecules and length %.3f" % (pdbout, nmol, box))
+        print(f"-=# Output #=- Created {pdbout} containing solvent box with {nmol} molecules and length {box:.3f}")
 
 def run_create_mol2_pdb(**kwargs):
 
@@ -126,10 +125,10 @@ def run_create_mol2_pdb(**kwargs):
 
     # Disable Gromacs backup file creation
     os.environ['GMX_MAXBACKUP']="-1"
-    
+
     smiles_string = open(input_txt).readlines()[0].strip()
-    print("The following SMILES string will be converted: %s" % smiles_string)
-    
+    print(f"The following SMILES string will be converted: {smiles_string}")
+
     # create a new molecule
     oemol = oechem.OEGraphMol()
     # convert the SMILES string into a molecule
@@ -138,36 +137,36 @@ def run_create_mol2_pdb(**kwargs):
         pass
     else:
         print("SMILES string was invalid!")
-    
+
     # Add explicit
     oechem.OEAddExplicitHydrogens(oemol)
-    
+
     # Generate a single conformer
     oemol = openmoltools.openeye.generate_conformers(oemol, max_confs=1)
-    
+
     # Modify residue names
     oechem.OEPerceiveResidues(oemol, oechem.OEPreserveResInfo_All)
     for atom in oemol.GetAtoms():
         thisRes = oechem.OEAtomGetResidue(atom)
         thisRes.SetName(resname)
-    
+
     # Write output files
     ofs = oechem.oemolostream()
-    output_fnms = ['%s.mol2' % resname, '%s.pdb' % resname]
+    output_fnms = [f"{resname}.mol2", f'{resname}.pdb']
     for output_fnm in output_fnms:
         if not ofs.open(output_fnm):
-            oechem.OEThrow.Fatal("Unable to create %s" % output_fnm)
+            oechem.OEThrow.Fatal(f"Unable to create {output_fnm}")
         oechem.OEWriteMolecule(ofs, oemol)
-        print("-=# Output #=- Created %s containing single molecule" % output_fnm)
-    
+        print(f"-=# Output #=- Created {output_fnm} containing single molecule")
+
     grams_per_mole = CalculateMolecularWeight(oemol)
-    
+
     boxlen = CalculateBoxSize(nmol, grams_per_mole, density)
-    GenerateBox('%s.pdb' % resname, '%s-box.pdb' % resname, boxlen, nmol, tries)
+    GenerateBox(f"{resname}.pdb", f'{resname}-box.pdb', boxlen, nmol, tries)
 
 def main():
     """
-    Provide a text file containing a single SMILES string and three-letter residue name. 
+    Provide a text file containing a single SMILES string and three-letter residue name.
     Receive (res).pdb and (res).mol2 files containing a single molecule with conformation.
     Receive (res)-box.pdb containing a box with specified number
 
@@ -183,12 +182,12 @@ def main():
     parser.add_argument('--tries', type=int, default=10, help='Pass number of tries per molecule to be passed to genbox. Higher = longer runtime but may achieve higher density.')
     parser.add_argument('input', type=str, help='Input file containing a single SMILES string')
     parser.add_argument('resname', type=str, help='Specify a custom residue name for the molecule.')
-    print('%s called with the following command line:' % __file__)
+    print(f"{__file__} called with the following command line:")
     print(' '.join(sys.argv))
     args = parser.parse_args(sys.argv[1:])
     # Create the desired files (.mol2 file containing a single conformation and .pdb file containing solvent box).
     run_create_mol2_pdb(**vars(args))
-    
+
 if __name__ == "__main__":
     main()
-    
+

@@ -1384,7 +1384,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Set up query
         qmol = oechem.OEQMol()
         if not oechem.OEParseSmarts(qmol, smarts):
-            raise ValueError("Error parsing SMARTS '%s'" % smarts)
+            raise ValueError(f"Error parsing SMARTS '{smarts}'")
 
         # Determine aromaticity model
         if aromaticity_model:

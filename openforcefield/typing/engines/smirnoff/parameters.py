@@ -1649,7 +1649,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                     for atoms in valence_terms:
                         for a in atoms:
                             if a.topology_atom_index == atom_idx:
-                                unassigned_str += '(%s %s), ' % (a.atom.name, a.atom.element.symbol)
+                                unassigned_str += f"({a.atom.name} {a.atom.element.symbol}), "
                                 matched = True
                         if matched: break
             err_msg += ("{parameter_handler} was not able to find parameters for the following valence terms:\n"

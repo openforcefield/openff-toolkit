@@ -13,21 +13,21 @@ import openeye.oechem as oechem
 
 def main(argv=sys.argv):
     if len(argv) != 2:
-        oechem.OEThrow.Usage("%s <infile (oeb file prefix)>" % argv[0])
+        oechem.OEThrow.Usage(f"{argv[0]} <infile (oeb file prefix)>")
 
     ifs = oechem.oemolistream()
-    if not ifs.open(argv[1]+'.oeb'):
-        oechem.OEThrow.Fatal("Unable to open %s for reading" % argv[1]+'.oeb' )
+    if not ifs.open(f"{argv[1]}.oeb"):
+        oechem.OEThrow.Fatal(f"Unable to open {argv[1]}.oeb for reading")
 
     ofsff = oechem.oemolostream()
     ofsff.SetFlavor( oechem.OEFormat_MOL2, oechem.OEOFlavor_MOL2_Forcefield )
-    if not ofsff.open(argv[1]+'_ff.mol2'):
-        oechem.OEThrow.Fatal("Unable to open %s for writing" % argv[1]+'_ff.mol2')
+    if not ofsff.open(f"{argv[1]}_ff.mol2"):
+        oechem.OEThrow.Fatal(f"Unable to open {argv[1]}_ff.mol2 for writing")
 
     ofsTri = oechem.oemolostream()
     ofsTri.SetFlavor( oechem.OEFormat_MOL2, oechem.OEOFlavor_MOL2_Forcefield )
-    if not ofsTri.open(argv[1]+'_tripos.mol2'):
-        oechem.OEThrow.Fatal("Unable to open %s for writing" % argv[1]+'_tripos.mol2')
+    if not ofsTri.open(f"{argv[1]}_tripos.mol2"):
+        oechem.OEThrow.Fatal(f"Unable to open {argv[1]}_tripos.mol2 for writing")
 
     for mol in ifs.GetOEMols():
         oechem.OETriposAtomNames(mol)
@@ -42,4 +42,4 @@ def main(argv=sys.argv):
     return 0
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))#!/usr/bin/env python
+    sys.exit(main(sys.argv))
