@@ -13,7 +13,7 @@ dependencies:
   - pytest-cov
   - nbval
   - codecov
-  - coverage=4.4
+  - coverage
   - numpy
   - networkx
   - parmed
