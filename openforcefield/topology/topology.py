@@ -1469,7 +1469,7 @@ class Topology(Serializable):
         elif type(query) is ChemicalEnvironment:
             smarts = query.as_smarts()
         else:
-            raise ValueError("Don't know how to convert query '%s' into SMARTS string" %query)
+            raise ValueError(f"Don't know how to convert query '{query}' into SMARTS string")
 
         # Perform matching on each unique molecule, unrolling the matches to all matching copies
         # of that molecule in the Topology object.
@@ -2349,13 +2349,9 @@ class Topology(Serializable):
         if (iatom, jatom) in self._constrained_atom_pairs:
             existing_distance = self._constrained_atom_pairs[(iatom, jatom)]
             if unit.is_quantity(existing_distance) and (distance is True):
-                raise Exception(
-                    'Atoms (%d,%d) already constrained with distance %s but attempting to override with unspecified distance'
-                    % (iatom, jatom, existing_distance))
+                raise Exception(f"Atoms ({iatom},{jatom}) already constrained with distance {existing_distance} but attempting to override with unspecified distance")
             if (existing_distance is True) and (distance is True):
-                raise Exception(
-                    'Atoms (%d,%d) already constrained with unspecified distance but attempting to override with unspecified distance'
-                    % (iatom, jatom))
+                raise Exception(f"Atoms ({iatom},{jatom}) already constrained with unspecified distance but attempting to override with unspecified distance")
             if distance is False:
                 del self._constrained_atom_pairs[(iatom, jatom)]
                 del self._constrained_atom_pairs[(jatom, iatom)]

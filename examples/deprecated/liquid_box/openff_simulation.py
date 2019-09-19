@@ -49,7 +49,7 @@ system = forcefield.createSystem(pdb.topology, [mol], nonbondedMethod=PME, nonbo
 
 # Set up an OpenMM simulation
 integrator = openmm.LangevinIntegrator(temperature, friction, time_step)
-platform = openmm.Platform.getPlatformByName('CUDA') 
+platform = openmm.Platform.getPlatformByName('CUDA')
 simulation = Simulation(pdb.topology, system, integrator)
 simulation.context.setPositions(pdb.positions)
 simulation.context.setVelocitiesToTemperature(temperature)
@@ -67,6 +67,6 @@ start = time.clock()
 simulation.step(num_steps)
 end = time.clock()
 
-print("Elapsed time %.2f seconds" % (end-start))
+print(f"Elapsed time {end-start:.2f} seconds")
 netcdf_reporter.close()
 print("Done!")

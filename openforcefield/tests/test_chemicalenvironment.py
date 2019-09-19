@@ -65,16 +65,16 @@ class TestChemicalEnvironments(TestCase):
         smirks = torsion.asSMIRKS()
         qmol = OEQMol()
         if not OEParseSmarts(qmol, smirks):
-            raise Exception("could not parse created SMIRKS %s" % smirks)
+            raise Exception(f"could not parse created SMIRKS {smirks}")
 
         # Try removing atoms
         # if it was labeled:
         removed = torsion.removeAtom(atom1)
-        self.assertFalse(removed,"removed labeled atom (%s) in %s" % (atom1.asSMIRKS(), torsion.asSMIRKS()))
+        self.assertFalse(removed, f"removed labeled atom ({atom1.asSMIRKS()}) in {torsion.asSMIRKS()}")
         removed = torsion.removeAtom(atom3alpha1)
-        self.assertFalse(removed, "removed bridging atom (%s) in %s" % (atom3alpha1.asSMIRKS(), torsion.asSMIRKS()))
+        self.assertFalse(removed, f"removed bridging atom ({atom3alpha1.asSMIRKS()}) in {torsion.asSMIRKS()}")
         removed = torsion.removeAtom(atom3beta1)
-        self.assertTrue(removed, "failed to remove atom (%s) in %s which is removeable" % (atom3beta1.asSMIRKS(), torsion.asSMIRKS()))
+        self.assertTrue(removed, f"failed to remove atom ({atom3beta1.asSMIRKS()}) in {torsion.asSMIRKS()} which is removeable")
 
     def test_parseSMIRKS(self):
         """
@@ -106,8 +106,7 @@ class TestChemicalEnvironments(TestCase):
             for [smirks, checkType, chemEnv] in smirksList:
                 env = chemEnv(smirks = smirks, replacements = replacements, toolkit=toolkit)
                 Type = env.getType()
-                self.assertEqual(Type,checkType,
-                        "SMIRKS (%s) clasified as %s instead of %s using %s toolkit" % (smirks, Type, checkType, toolkit))
+                self.assertEqual(Type, checkType, f"SMIRKS ({smirks}) clasified as {Type} instead of {checkType} using {toolkit} toolkit")
 
     def test_environment_functions(self):
         """
@@ -124,12 +123,12 @@ class TestChemicalEnvironments(TestCase):
             atom = angle.selectAtom(descriptor)
             bond = angle.selectBond(descriptor)
             if isNone:
-                self.assertIsNone(atom, "Found atom with descriptor %s in angle %s" % (descriptor, angle_smirks))
-                self.assertIsNone(bond, "Found bond with descriptor %s in angle %s" % (descriptor, angle_smirks))
+                self.assertIsNone(atom, f"Found atom with descriptor {descriptor} in angle {angle_smirks}")
+                self.assertIsNone(bond, f"Found bond with descriptor {descriptor} in angle {angle_smirks}")
 
             else:
-                self.assertIsNotNone(atom, "Could not find a %s atom in angle %s" % (descriptor, angle_smirks))
-                self.assertIsNotNone(bond, "Could not find a %s bond in angle %s" % (descriptor, angle_smirks))
+                self.assertIsNotNone(atom, f"Could not find a {descriptor} atom in angle {angle_smirks}")
+                self.assertIsNotNone(bond, f"Could not find a {descriptor} bond in angle {angle_smirks}")
 
         # Check function getComponentList which uses all functions of the form
         # get_Atoms and get_Bonds
@@ -139,7 +138,7 @@ class TestChemicalEnvironments(TestCase):
             for (descriptor, amount) in desList:
                 compList = angle.getComponentList(component, descriptor)
                 ncomps = len(compList)
-                assert ncomps == amount, "Found %i %s %ss instead of %i in angle %s" % (ncomps, descriptor, component, amount, angle_smirks)
+                assert ncomps == amount, f"Found {ncomps} {descriptor} {component}s instead of {amount} in angle {angle_smirks}"
 
         # Check is__ descriptors
         atom2 = angle.selectAtom(2)
@@ -163,8 +162,7 @@ class TestChemicalEnvironments(TestCase):
                 for (method, expected) in methodList:
                     # same message
                     classify = method(comp)
-                    msg = "%s wrongly returned %s for %s in angle %s" % (
-                            method, classify, comp.asSMIRKS(), angle.asSMIRKS())
+                    msg = (f"{method} wrongly returned {classify} for {comp.asSMIRKS()} in angle {angle.asSMIRKS()}")
                     if expected:
                         self.assertTrue(classify, msg)
                     else:
@@ -173,20 +171,20 @@ class TestChemicalEnvironments(TestCase):
         # Check getBond when atoms aren't bonded
         atom1 = angle.selectAtom(1)
         beta_to_atom1 = angle.getBond(beta_atom, atom1)
-        self.assertIsNone( beta_to_atom1, "Incorrect bond was returned connecting the beta atom (%s) and atom 1 (%s) in angle %s" % (beta_atom.asSMIRKS(), atom1.asSMIRKS(), angle_smirks))
+        self.assertIsNone(beta_to_atom1, f"Incorrect bond was returned connecting the beta atom ({beta_atom.asSMIRKS()}) and atom 1 ({atom1.asSMIRKS()}) in angle {angle_smirks}")
 
         # Check valence: should be 3 for atom2
         val = angle.getValence(atom2)
-        self.assertEqual(val, 3, "Atom 2 in angle %s should have a valence of 3, but a valence of %i was found" % (angle_smirks, val))
+        self.assertEqual(val, 3, f"Atom 2 in angle {angle_smirks} should have a valence of 3, but a valence of {val} was found")
 
         # Check bond order
         # For bond1 =,:;@ it should be 1.5 because order returns lowest possible
         order = bond1.getOrder()
-        self.assertEqual(order, 1.5, "Bond 1 (%s) should have a minimum order of 1.5, but %.1f was assigned" % (bond1.asSMIRKS(), order))
+        self.assertEqual(order, 1.5, f"Bond 1 ({bond1.asSMIRKS()}) should have a minimum order of 1.5, but {order:.1f} was assigned")
 
         # For atom
         order = angle.getBondOrder(atom2)
-        self.assertEqual(order, 3.5, "Atom 2 in angle (%s) should have a minimum bond order of 3.5, but %.1f was assigned" % (angle_smirks, order))
+        self.assertEqual(order, 3.5, f"Atom 2 in angle ({angle_smirks}) should have a minimum bond order of 3.5, but {order:.1f} was assigned")
 
     def test_creating_wrong_environments(self):
         """
@@ -203,7 +201,7 @@ class TestChemicalEnvironments(TestCase):
 
         for smirks, Environments in wrongDict.items():
             for Environment in Environments:
-                msg = "SMIRKS (%s) is in appropriate input for %s, but no error was raised" % (smirks, str(Environment))
+                msg = (f"SMIRKS ({smirks}) is in appropriate input for {str(Environment)}, but no error was raised")
                 with self.assertRaises(SMIRKSMismatchError, msg = msg):
                     env = Environment(smirks)
 
@@ -212,7 +210,7 @@ class TestChemicalEnvironments(TestCase):
         Check that an imparseable SMIRKS raises errors
         """
         smirks = "[*;X:1]"
-        msg = "SMIRKS (%s) should not be parseable, but an environment was successfully created"
+        msg = f"SMIRKS ({smirks}) should not be parseable, but an environment was successfully created"
         with self.assertRaises(SMIRKSParsingError, msg = msg):
             env = ChemicalEnvironment(smirks)
 

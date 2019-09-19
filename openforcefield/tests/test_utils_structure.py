@@ -148,4 +148,4 @@ def test_component_combination():
     for resnr in range(len(structure.residues)):
         abscharges = [ abs(structure.residues[resnr].atoms[idx].charge) for idx in range(len(structure.residues[resnr].atoms))]
         if sum(abscharges)==0:
-            raise Exception('Error: Residue %s in cyclohexane-ethanol test system has a charge of zero, which is incorrect.' % resnr)
+            raise Exception(f"Error: Residue {resnr} in cyclohexane-ethanol test system has a charge of zero, which is incorrect.")

@@ -229,7 +229,7 @@ def normalize_molecules(molecules):
         omega(molecule)
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print("%.3f s elapsed" % elapsed_time)
+    print(f"{elapsed_time:.3f} s elapsed")
 
     # Regularize all molecules through writing as mol2.
     print("Regularizing all molecules...")
@@ -245,7 +245,7 @@ def normalize_molecules(molecules):
     omolstream.close()
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print("%.3f s elapsed" % elapsed_time)
+    print(f"{elapsed_time:.3f} s elapsed")
 
     # Assign AM1-BCC charges.
     print("Assigning AM1-BCC charges...")
@@ -260,16 +260,16 @@ def normalize_molecules(molecules):
             OEAssignPartialCharges(molecule, OECharges_AM1BCC, False) # use explicit hydrogens
         # Check to make sure we ended up with partial charges.
         if OEHasPartialCharges(molecule) == False:
-            print("No charges on molecule: '%s'" % molecule.GetTitle())
-            print("IUPAC name: %s" % OECreateIUPACName(molecule))
+            print(f"No charges on molecule: '{molecule.GetTitle()}'")
+            print(f"IUPAC name: {OECreateIUPACName(molecule)}")
             # TODO: Write molecule out
             # Delete themolecule.
             molecules.remove(molecule)
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print("%.3f s elapsed" % elapsed_time)
-    print("%d molecules remaining" % len(molecules))
+    print(f"{elapsed_time:.3f} s elapsed")
+    print(f"{len(molecules)} molecules remaining")
 
     return
 
@@ -293,12 +293,12 @@ def read_molecules(file_path, verbose=True):
     from openforcefield.utils import get_data_file_path
 
     if not os.path.exists(file_path):
-        built_in = get_data_file_path('molecules/%s' % file_path)
+        built_in = get_data_file_path(f"molecules/{file_path}")
         if not os.path.exists(built_in):
-            raise Exception("File '%s' not found." % file_path)
+            raise Exception(f"File '{file_path}' not found.")
         file_path = built_in
 
-    if verbose: print("Loading molecules from '%s'..." % file_path)
+    if verbose:print(f"Loading molecules from '{file_path}'...")
     start_time = time.time()
     molecules = list()
     input_molstream = oechem.oemolistream(file_path)
@@ -316,10 +316,10 @@ def read_molecules(file_path, verbose=True):
         molecule_copy = oechem.OEMol(molecule)
         molecules.append(molecule_copy)
     input_molstream.close()
-    if verbose: print("%d molecules read" % len(molecules))
+    if verbose: print(f"{len(molecules)} molecules read")
     end_time = time.time()
     elapsed_time = end_time - start_time
-    if verbose: print("%.3f s elapsed" % elapsed_time)
+    if verbose: print(f"{elapsed_time:.3f} s elapsed")
 
     return molecules
 
@@ -392,7 +392,7 @@ def read_typelist(file_path):
     if not os.path.exists(file_path):
         built_in = get_data_file_path(file_path)
         if not os.path.exists(built_in):
-            raise Exception("File '%s' not found." % file_path)
+            raise Exception(f"File '{file_path}' not found.")
         file_path = built_in
 
     typelist = list()
@@ -416,8 +416,7 @@ def read_typelist(file_path):
                 typelist.append([smarts,typename])
                 used_typenames.append(typename)
             else:
-                raise Exception("Error in file '%s' -- each entry must "
-                        "have a unique name." % file_path )
+                raise Exception(f"Error in file '{file_path}' -- each entry must have a unique name.")
 
     ifs.close()
 

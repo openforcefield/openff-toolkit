@@ -591,23 +591,21 @@ class ForceField:
         def render_atoms(atomsets):
             msg = ""
             for atomset in atomsets:
-                msg += '%30s :' % str(atomset)
+                msg += f'{atomset:30} :'
                 try:
                     for atom_index in atomset:
                         atom = atoms[atom_index]
-                        msg += ' %5s %3s %3s' % (atom.residue.index,
-                                                 atom.residue.name, atom.name)
+                        msg += f' {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}'
                 except TypeError as te:
                     atom = atoms[atomset]
-                    msg += ' %5s %3s %3s' % (atom.residue.index,
-                                             atom.residue.name, atom.name)
+                    msg += f' {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}'
 
                 msg += '\n'
             return msg
 
         if set(assigned_set) != set(topology_set):
             # Form informative error message
-            msg = '%s: Mismatch between valence terms added and topological terms expected.\n' % name
+            msg = f'{name}: Mismatch between valence terms added and topological terms expected.\n'
             atoms = [atom for atom in topology.topology_atoms]
             if len(assigned_set.difference(topology_set)) > 0:
                 msg += 'Valence terms created that are not present in Topology:\n'
