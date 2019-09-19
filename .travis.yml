@@ -69,7 +69,7 @@ install:
 
   # Install RDKit
   - if [[ "$RDKIT" == true ]]; then conda install --yes -c rdkit rdkit; fi
-  - if [[ "$RDKIT" == true ]]; then conda install --yes -c omnia ambertools; fi
+  - if [[ "$RDKIT" == true ]]; then conda install --yes -c omnia ambermini; fi
 
   # Install pip only modules
   - if [[ "$OPENEYE" == true ]]; then conda install -c openeye openeye-toolkits; fi

@@ -16,8 +16,6 @@ dependencies:
   - numpy
   - networkx
   - parmed
-  - rdkit
-  - ambermini
   - packaging
   - openmmtools
   - pyyaml
