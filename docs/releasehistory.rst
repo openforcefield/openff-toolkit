@@ -11,6 +11,16 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 Current Development
 -------------------
 
+Example added
+"""""""""""""
+- `PR #419 <https://github.com/openforcefield/openforcefield/pull/419>`_: Adds
+  an example notebook
+  `check_dataset_parameter_coverage/check_parameter_coverage.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/check_dataset_parameter_coverage/check_parameter_coverage.ipynb>`_
+  which shows how to use the toolkit to analyze a molecule
+  dataset for missing parameter coverage, and provides functionality to output
+  tagged SMILES and 2D drawings of the unparameterizable chemistry.
+
+
 New features
 """"""""""""
 - `PR #419 <https://github.com/openforcefield/openforcefield/pull/419>`_: Unassigned
@@ -21,15 +31,6 @@ New features
   :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
   that raised the exception (``exception.handler_class``).
 
-
-Example added
-"""""""""""""
-- `PR #419 <https://github.com/openforcefield/openforcefield/pull/419>`_: Adds
-  an example notebook
-  `check_dataset_parameter_coverage/check_parameter_coverage.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/check_dataset_parameter_coverage/check_parameter_coverage.ipynb>`_
-  which shows how to use the toolkit to analyze a molecule
-  dataset for missing parameter coverage, and provides functionality to output
-  tagged SMILES and 2D drawings of the unparameterizable chemistry.
 
 Bugfixes
 """"""""
