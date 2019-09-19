@@ -13,6 +13,7 @@ dependencies:
   - pytest-cov
   - nbval
   - codecov
+  - coverage=4.4
   - numpy
   - networkx
   - parmed
@@ -25,6 +26,5 @@ dependencies:
   - xmltodict
 
     # Pip-only installs
-  - pip:
-    - coverage==4.4
+  #- pip:
 
