@@ -60,8 +60,6 @@ before_install:
 - python -V
 
 # Unpack encrypted OpenEye license file
-#- if [ "$TRAVIS_SECURE_ENV_VARS" == true ]; then openssl aes-256-cbc -K $encrypted_a4fdffb2b55a_key
-#  -iv $encrypted_a4fdffb2b55a_iv -in oe_license.txt.enc -out $OE_LICENSE -d; fi
 - if [ "$TRAVIS_SECURE_ENV_VARS" == true ]; then openssl aes-256-cbc -K $encrypted_4ea8671dd0e3_key
   -iv $encrypted_4ea8671dd0e3_iv -in oe_license.txt.enc -out $OE_LICENSE -d; fi
 
