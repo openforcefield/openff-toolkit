@@ -68,11 +68,6 @@ install:
   #- conda create -n test python=$PYTHON_VER pip pytest pytest-cov nbval
   - conda activate test
 
-  # TODO: Do we still need the beta version or can we do simply -c openeye openeye-toolkits?
-  # Use beta version for partial bond orders
-  # TODO: Reactivate conda install instead of pip install once OpenEye is released for python 3.7 on conda-forge, but I don't think we need oemmtools anymore.
-  # - if [[ "$OPENEYE" == true ]]; then conda install --yes -c openeye/label/Orion openeye-toolkits oeommtools && python -c "import openeye; print(openeye.__version__)"; fi
-
   # Install RDKit
   - if [[ "$RDKIT" == true ]]; then conda install --yes -c rdkit rdkit; fi
   - if [[ "$RDKIT" == true ]]; then conda install --yes -c omnia ambertools; fi

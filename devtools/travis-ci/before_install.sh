@@ -1,6 +1,10 @@
 # Temporarily change directory to $HOME to install software
 pushd .
 cd $HOME
+
+# Make sure some level of pip is installed
+python -m ensurepip
+
 # Install Miniconda
 if [ "$TRAVIS_OS_NAME" == "osx" ]; then
     # Make OSX md5 mimic md5sum from linux, alias does not work
