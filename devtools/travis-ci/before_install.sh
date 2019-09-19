@@ -23,7 +23,10 @@ bash $MINICONDA -b -p $MINICONDA_HOME
 
 # Configure miniconda
 export PIP_ARGS="-U"
-export PATH=$MINICONDA_HOME/bin:$PATH
+# New to conda >=4.4
+conda config --add channels openeye		echo ". $MINICONDA_HOME/etc/profile.d/conda.sh" >> ~/.bashrc  # Source the profile.d file
+conda config --add channels omnia		echo "conda activate" >> ~/.bashrc  # Activate conda
+source ~/.bashrc  # source file to get new commands
 conda config --add channels openeye
 conda config --add channels omnia
 conda config --add channels conda-forge

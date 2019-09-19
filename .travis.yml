@@ -3,7 +3,7 @@ language: python
 # Run jobs on container-based infrastructure, can be overridden per job
 dist: xenial
 
-# Run builds for both master and topology (and PRs to each)
+# Run builds for both master and feature releases
 branches:
   only:
   - master
@@ -26,7 +26,6 @@ matrix:
       env: PYTHON_VER=3.6 RDKIT=true
     - os: linux
       python: 3.7
-      sudo: required
       env: PYTHON_VER=3.7 RDKIT=true
 
     # Test OpenEye compatibility
@@ -34,7 +33,6 @@ matrix:
       python: 3.6
       env: PYTHON_VER=3.6 OPENEYE=true
     - os: linux
-      sudo: required
       python: 3.7
       env: PYTHON_VER=3.7 OPENEYE=true
 
@@ -57,7 +55,7 @@ before_install:
   - df -h
   - ulimit -a
 
-    # Install the Python environemt
+    # Install the Python environment
   - source devtools/travis-ci/before_install.sh
   - python -V
   # Unpack encrypted OpenEye license file
@@ -66,8 +64,9 @@ before_install:
 
 install:
   # Create test environment for package
-  - conda create -n test python=$PYTHON_VER pip pytest pytest-cov nbval
-  - source activate test
+  - python devtools/scripts/create_conda_env.py -n=test -p=$PYTHON_VER devtools/conda-envs/test_env.yaml
+  #- conda create -n test python=$PYTHON_VER pip pytest pytest-cov nbval
+  - conda activate test
 
   # TODO: Do we still need the beta version or can we do simply -c openeye openeye-toolkits?
   # Use beta version for partial bond orders
@@ -79,14 +78,16 @@ install:
   - if [[ "$RDKIT" == true ]]; then conda install --yes -c omnia ambertools; fi
 
   # Install pip only modules
-  - pip install codecov
-  - pip install coverage==4.4
+  #- pip install codecov
+  #- pip install coverage==4.4
   # TODO: Go back to conda install once OpenEye is released for python 3.7 on conda-forge.
-  - if [[ "$OPENEYE" == true ]]; then pip install -i https://pypi.anaconda.org/openeye/simple openeye-toolkits; fi
+  # - if [[ "$OPENEYE" == true ]]; then pip install -i https://pypi.anaconda.org/openeye/simple openeye-toolkits; fi
+  - if [[ "$OPENEYE" == true ]]; then conda install -c openeye openeye-toolkits; fi
 
   # Build and install package
-  - conda build --python=$PYTHON_VER devtools/conda-recipe
-  - conda install --use-local openforcefield
+  #- conda build --python=$PYTHON_VER devtools/conda-recipe
+  #- conda install --use-local openforcefield
+  - python setup.py develop --no-deps
 
 script:
   # Run doctests only if both RDKit and OpenEye are installed.

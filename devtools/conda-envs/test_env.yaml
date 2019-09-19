@@ -1,0 +1,33 @@
+name: test
+channels:
+  - conda-forge
+  - omnia
+
+dependencies:
+    # Base depends
+  - python
+  - pip
+
+    # Testing
+  - pytest
+  - pytest-cov
+  - codecov
+  - numpy
+  - networkx
+  - parmed
+  - rdkit
+  - ambermini
+  - packaging
+  # Should we require this? It's useful for tests and examples, but not strictly required
+  - openmmtools
+  # Serialization: Should these be optional?
+  - pyyaml
+  - toml
+  - bson
+  - msgpack-python
+  - xmltodict
+
+    # Pip-only installs
+  - pip:
+    - coverage==4.4
+
