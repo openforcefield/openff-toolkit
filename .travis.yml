@@ -1,102 +1,95 @@
+# Run jobs on container-based infrastructure, can be overridden per job
+
+# Run builds for both master and feature releases
+
 language: python
 
-# Run jobs on container-based infrastructure, can be overridden per job
-dist: xenial
-
-# Run builds for both master and topology (and PRs to each)
 branches:
   only:
   - master
   # Regex for feature release branches
-  - /.*[.]0-branch$/
+  - "maintenance/.+"
 
 matrix:
   include:
-    # Test osx with RDKit
-    - os: osx
-      language: generic
-      env: PYTHON_VER=3.6 RDKIT=true
-    - os: osx
-      language: generic
-      env: PYTHON_VER=3.7 RDKIT=true
+  # Test osx with RDKit
+  - os: osx
+    language: generic
+    env: PYTHON_VER=3.6 RDKIT=true
+  - os: osx
+    language: generic
+    env: PYTHON_VER=3.7 RDKIT=true
 
-    # Test RDKit compatibility
-    - os: linux
-      python: 3.6
-      env: PYTHON_VER=3.6 RDKIT=true
-    - os: linux
-      python: 3.7
-      sudo: required
-      env: PYTHON_VER=3.7 RDKIT=true
+  # Test Linux RDKit compatibility
+  - os: linux
+    python: 3.6
+    env: PYTHON_VER=3.6 RDKIT=true
+  - os: linux
+    python: 3.7
+    env: PYTHON_VER=3.7 RDKIT=true
 
-    # Test OpenEye compatibility
-    - os: linux
-      python: 3.6
-      env: PYTHON_VER=3.6 OPENEYE=true
-    - os: linux
-      sudo: required
-      python: 3.7
-      env: PYTHON_VER=3.7 OPENEYE=true
+  # Test Linux OpenEye compatibility
+  - os: linux
+    python: 3.6
+    env: PYTHON_VER=3.6 OPENEYE=true
+  - os: linux
+    python: 3.7
+    env: PYTHON_VER=3.7 OPENEYE=true
 
-    # Test case where both OpenEye and RDKit are installed
-    - os: linux
-      python: 3.6
-      env: PYTHON_VER=3.6 OPENEYE=true RDKIT=true
-    - os: linux
-      sudo: required
-      python: 3.7
-      env: PYTHON_VER=3.7 OPENEYE=true RDKIT=true
+  # Test case where both OpenEye and RDKit are installed
+  - os: linux
+    python: 3.6
+    env: PYTHON_VER=3.6 OPENEYE=true RDKIT=true
+  - os: linux
+    sudo: required
+    python: 3.7
+    env: PYTHON_VER=3.7 OPENEYE=true RDKIT=true
 
 env:
   global:
-    - OE_LICENSE="$HOME/oe_license.txt"
+  - OE_LICENSE="$HOME/oe_license.txt"
 
 before_install:
-    # Additional info about the build
-  - uname -a
-  - df -h
-  - ulimit -a
+# Additional info about the build
+- uname -a
+- df -h
+- ulimit -a
 
-    # Install the Python environemt
-  - source devtools/travis-ci/before_install.sh
-  - python -V
-  # Unpack encrypted OpenEye license file
-  - if [ "$TRAVIS_SECURE_ENV_VARS" == true ]; then openssl aes-256-cbc -K $encrypted_a4fdffb2b55a_key -iv $encrypted_a4fdffb2b55a_iv -in oe_license.txt.enc -out $OE_LICENSE -d; fi
-  - if [[ "$OPENEYE" == true && "$TRAVIS_SECURE_ENV_VARS" == false ]]; then echo "OpenEye license will not be installed in forks."; fi
+# Install conda and some package management tools
+- source devtools/travis-ci/before_install.sh
+- python -V
+
+# Unpack encrypted OpenEye license file
+- if [ "$TRAVIS_SECURE_ENV_VARS" == true ]; then openssl aes-256-cbc -K $encrypted_4ea8671dd0e3_key
+  -iv $encrypted_4ea8671dd0e3_iv -in oe_license.txt.enc -out $OE_LICENSE -d; fi
+
+- if [[ "$OPENEYE" == true && "$TRAVIS_SECURE_ENV_VARS" == false ]]; then echo "OpenEye
+  license will not be installed in forks."; fi
 
 install:
-  # Create test environment for package
-  - conda create -n test python=$PYTHON_VER pip pytest pytest-cov nbval
-  - source activate test
+# Install the Python environment
+- python devtools/scripts/create_conda_env.py -n=test -p=$PYTHON_VER devtools/conda-envs/test_env.yaml
+- conda activate test
 
-  # TODO: Do we still need the beta version or can we do simply -c openeye openeye-toolkits?
-  # Use beta version for partial bond orders
-  # TODO: Reactivate conda install instead of pip install once OpenEye is released for python 3.7 on conda-forge, but I don't think we need oemmtools anymore.
-  # - if [[ "$OPENEYE" == true ]]; then conda install --yes -c openeye/label/Orion openeye-toolkits oeommtools && python -c "import openeye; print(openeye.__version__)"; fi
+# Install RDKit
+- if [[ "$RDKIT" == true ]]; then conda install --yes -c rdkit rdkit; fi
+- if [[ "$RDKIT" == true ]]; then conda install --yes -c omnia ambermini; fi
 
-  # Install RDKit
-  - if [[ "$RDKIT" == true ]]; then conda install --yes -c rdkit rdkit; fi
-  - if [[ "$RDKIT" == true ]]; then conda install --yes -c omnia ambertools; fi
+# Install OpenEye
+- if [[ "$OPENEYE" == true ]]; then conda install -c openeye openeye-toolkits; fi
 
-  # Install pip only modules
-  - pip install codecov
-  - pip install coverage==4.4
-  # TODO: Go back to conda install once OpenEye is released for python 3.7 on conda-forge.
-  - if [[ "$OPENEYE" == true ]]; then pip install -i https://pypi.anaconda.org/openeye/simple openeye-toolkits; fi
-
-  # Build and install package
-  - conda build --python=$PYTHON_VER devtools/conda-recipe
-  - conda install --use-local openforcefield
+# Build and install package
+- python setup.py develop --no-deps
 
 script:
-  # Run doctests only if both RDKit and OpenEye are installed.
-  - if [[ "$RDKIT" == true && "$OPENEYE" == true ]];
-    then pytest --ignore=utilities --ignore=examples/deprecated --ignore=docs --doctest-modules --nbval-lax --cov=openforcefield;
-    else pytest --ignore=utilities --ignore=examples/deprecated --nbval-lax --cov=openforcefield;
-    fi
+# Run doctests only if both RDKit and OpenEye are installed.
+- if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then pytest --ignore=utilities
+  --ignore=examples/deprecated --ignore=docs --ignore=devtools --doctest-modules --nbval-lax
+  --cov=openforcefield; else pytest --ignore=utilities --ignore=examples/deprecated
+  --nbval-lax --cov=openforcefield; fi
 
 notifications:
-    email: false
+  email: false
 
 after_success:
-  - codecov
+- codecov
