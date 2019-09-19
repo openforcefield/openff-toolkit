@@ -81,9 +81,9 @@ install:
 # Build and install package
 - python setup.py develop --no-deps
 
-  # Install force field repositories
-  - conda install --yes -c omnia smirnoff99Frosst
-  - conda install --yes -c omnia/label/dev openforcefields
+# Install force field repositories
+- conda install --yes -c omnia smirnoff99Frosst
+- conda install --yes -c omnia/label/dev openforcefields
 
 script:
 # Run doctests only if both RDKit and OpenEye are installed.
