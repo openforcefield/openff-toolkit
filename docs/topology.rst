@@ -19,6 +19,7 @@ Primary objects
     FrozenMolecule
     Molecule
     Topology
+    TopologyMolecule
 
 Secondary objects
 -----------------
@@ -32,3 +33,7 @@ Secondary objects
     Atom
     Bond
     VirtualSite
+    TopologyAtom
+    TopologyBond
+    TopologyVirtualSite
+
