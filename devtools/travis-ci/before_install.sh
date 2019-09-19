@@ -1,6 +1,10 @@
 # Temporarily change directory to $HOME to install software
 pushd .
 cd $HOME
+
+# Make sure some level of pip is installed
+python -m ensurepip
+
 # Install Miniconda
 if [ "$TRAVIS_OS_NAME" == "osx" ]; then
     # Make OSX md5 mimic md5sum from linux, alias does not work
@@ -23,7 +27,10 @@ bash $MINICONDA -b -p $MINICONDA_HOME
 
 # Configure miniconda
 export PIP_ARGS="-U"
-export PATH=$MINICONDA_HOME/bin:$PATH
+# New to conda >=4.4
+echo ". $MINICONDA_HOME/etc/profile.d/conda.sh" >> ~/.bashrc  # Source the profile.d file
+echo "conda activate" >> ~/.bashrc  # Activate conda
+source ~/.bashrc  # source file to get new commands
 conda config --add channels openeye
 conda config --add channels omnia
 conda config --add channels conda-forge
