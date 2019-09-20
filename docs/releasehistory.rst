@@ -39,6 +39,10 @@ New features
   :py:class:`ForceFields <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   and
   :py:class:`ParameterHandlers <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`.
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #410 <https://github.com/openforcefield/openforcefield/issues/410>`_, by explicitly
+  having toolkit warnings print ``Warning:`` at the beginning of each message, and adding
+  clearer language to the warning produced when the OpenEye Toolkits can not be loaded.
 
 Bugfixes
 """"""""

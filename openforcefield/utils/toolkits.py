@@ -1264,8 +1264,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # This logic handles errors encountered in #34
         if not quacpac_status:
             if "SelectElfPop: issue with removing trans COOH conformers" in (errfs.str().decode("UTF-8")):
-                logger.warning("OEAM1BCCELF10 charge assignment failed due to a known bug (toolkit issue #346). "
-                               "Downgrading to OEAM1BCC charge assignment for this molecule.")
+                logger.warning("Warning: OEAM1BCCELF10 charge assignment failed due to a known bug (toolkit issue "
+                               "#346). Downgrading to OEAM1BCC charge assignment for this molecule.")
                 quacpac_status = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
 
         if quacpac_status is False:
@@ -2724,7 +2724,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 "molecule.generate_conformers() before calling molecule.compute_partial_charges"
             )
         if len(molecule._conformers) > 1:
-            logger.warning("In AmberToolsToolkitwrapper.computer_partial_charges_am1bcc: "
+            logger.warning("Warning: In AmberToolsToolkitwrapper.compute_partial_charges_am1bcc: "
                            "Molecule '{}' has more than one conformer, but this function "
                            "will only generate charges for the first one.".format(molecule.name))
 
@@ -2902,11 +2902,16 @@ class ToolkitRegistry:
 
         # Raise exception if not available.
         if not toolkit_wrapper.is_available():
-            msg = "Unable to load toolkit {}.".format(toolkit_wrapper)
+            msg = "Unable to load toolkit '{}'. ".format(toolkit_wrapper._toolkit_name)
             if exception_if_unavailable:
                 raise ToolkitUnavailableException(msg)
             else:
-                logger.warning(msg)
+                if 'OpenEye' in msg:
+                    msg += "Versions of the Open Force Field Toolkit past 0.2.0 (April 2019) do not require the " \
+                           "OpenEye Toolkits and will use RDKit and AmberTools as a backend instead. However, if " \
+                           "you have an OpenEye license available, consider installing the OpenEye toolkits for " \
+                           "faster performance and I/O of additional file formats."
+                logger.warning(f"Warning: {msg}")
             return
 
         # Add toolkit to the registry.
