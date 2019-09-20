@@ -272,7 +272,7 @@ class Atom(Particle):
 
         Returns
         -------
-        float or None
+        simtk.unit.Quantity-wrapped float or None
         """
         if self._molecule._partial_charges is None:
             return None
@@ -2479,8 +2479,9 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        coordinates: A simtk vector wrapped unit quantity
-            The coordinates of the conformer to add.
+        coordinates: simtk.unit.Quantity(np.array) with shape (n_atoms, 3)
+            Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
+            the Molecule's indexing system.
 
         Returns
         -------
@@ -2604,14 +2605,15 @@ class FrozenMolecule(Serializable):
     @property
     def conformers(self):
         """
-        Iterate over all conformers in this molecule.
+        Returns the list of conformers for this molecule. This returns a list of simtk.unit.Quantity-wrapped numpy
+        arrays, of shape 3 x n_atoms.
         """
         return self._conformers
 
     @property
     def n_conformers(self):
         """
-        Iterate over all Atom objects.
+        Returns the number of conformers for this molecule.
         """
         if self._conformers is None:
             return 0
@@ -3766,7 +3768,5 @@ class Molecule(FrozenMolecule):
         -------
         index: int
             Index of the conformer in the Molecule
-
-
-"""
+        """
         return self._add_conformer(coordinates)
