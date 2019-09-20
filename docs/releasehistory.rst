@@ -45,6 +45,16 @@ Bugfixes
   when reading a SMILES file.
 
 
+Files removed
+"""""""""""""
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #424 <https://github.com/openforcefield/openforcefield/issues/424>`_ by
+  deleting the unused files ``openforcefield/typing/engines/smirnoff/gbsaforces.py``
+  and ``openforcefield/tests/test_smirnoff.py``.
+
+
+
+
 0.5.0 - GBSA support and quality-of-life improvements
 -----------------------------------------------------
 
