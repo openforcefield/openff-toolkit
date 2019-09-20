@@ -30,6 +30,9 @@ New features
   and the class of the
   :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
   that raised the exception (``exception.handler_class``).
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #421 <https://github.com/openforcefield/openforcefield/issues/421>`_ by
+  adding type/shape information to all Molecule partial charge and conformer docstrings.
 
 
 Bugfixes
@@ -40,6 +43,7 @@ Bugfixes
   :py:meth:`RDKitToolkitWrapper.from_file <openforcefield.utils.toolkits.RDKitToolkitWrapper.from_file>`
   would disregard the ``allow_undefined_stereo`` kwarg and skip the first molecule
   when reading a SMILES file.
+
 
 0.5.0 - GBSA support and quality-of-life improvements
 -----------------------------------------------------
