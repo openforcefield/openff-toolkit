@@ -970,10 +970,16 @@ class ParameterList(list):
 
 
     # TODO: Override __setitem__ and __del__ to ensure we can slice by SMIRKS as well
+    # This is needed for pickling. See https://github.com/openforcefield/openforcefield/issues/411
+    # for more details.
+    # TODO: Is there a cleaner way (getstate/setstate perhaps?) to allow FFs to be
+    #       pickled?
+    def __reduce__(self):
+        return (__class__, ( list( self),), self.__dict__)
+
 
     def __contains__(self, item):
         """Check to see if either Parameter or SMIRKS is contained in parameter list.
-
 
         Parameters
         ----------

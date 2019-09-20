@@ -405,6 +405,28 @@ class TestForceField():
         assert_forcefields_equal(cls.forcefield, forcefield2,
                                  "Deserialized serialized ForceField does not match original ForceField")
 
+    def test_pickle(self):
+        """
+        Test pickling and unpickling a forcefield
+        """
+        import pickle
+        forcefield_1 = ForceField(simple_xml_ff)
+        pickled = pickle.dumps(forcefield_1)
+        forcefield_2 = pickle.loads(pickled)
+        assert forcefield_1.to_string() == forcefield_2.to_string()
+
+    def test_pickle_with_cosmetic_attributes(self):
+        """
+        Test pickling and unpickling a forcefield with cosmetic attributes
+        """
+        import pickle
+        forcefield_1 = ForceField(xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True)
+        pickled = pickle.dumps(forcefield_1)
+        forcefield_2 = pickle.loads(pickled)
+        assert forcefield_1.to_string() == forcefield_2.to_string()
+        # Ensure that the cosmetic attributes stuck around
+        assert 'blah=blah2' in forcefield_2.to_string()
+
     def test_xml_string_roundtrip(self):
         """
         Test writing a ForceField to an XML string

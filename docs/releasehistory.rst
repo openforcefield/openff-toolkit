@@ -33,7 +33,12 @@ New features
 - `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
   `Issue #421 <https://github.com/openforcefield/openforcefield/issues/421>`_ by
   adding type/shape information to all Molecule partial charge and conformer docstrings.
-
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #411 <https://github.com/openforcefield/openforcefield/issues/411>`_, thereby
+  enabling pickling of
+  :py:class:`ForceFields <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  and
+  :py:class:`ParameterHandlers <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`.
 
 Bugfixes
 """"""""
