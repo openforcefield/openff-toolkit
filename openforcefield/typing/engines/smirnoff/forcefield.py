@@ -299,7 +299,6 @@ class ForceField:
         self._parameter_handlers = OrderedDict()  # ParameterHandler classes to be instantiated for each parameter type
         self._parameter_io_handler_classes = OrderedDict()  # ParameterIOHandler classes that _can_ be initialiazed if needed
         self._parameter_io_handlers = OrderedDict()  # ParameterIO classes to be used for each file type
-        #self._parameters = ParameterList()  # ParameterHandler objects instantiated for each parameter type
         self._aromaticity_model = None
         self._author = None
         self._date = None
