@@ -2955,10 +2955,19 @@ class FrozenMolecule(Serializable):
                     query_toolkit.
                     toolkit_name] = query_toolkit.toolkit_file_read_formats
             if toolkit is None:
-                raise NotImplementedError(
-                    "No toolkits in registry can read file {} (format {}). Supported formats in the "
-                    "provided ToolkitRegistry are {}".format(
-                        file_path, file_format, supported_read_formats))
+                msg = f"No toolkits in registry can read file {file_path} (format {file_format}). Supported "\
+                      f"formats in the provided ToolkitRegistry are {supported_read_formats}. "
+                # Per issue #407, not allowing RDKit to read mol2 has confused a lot of people. Here we add text
+                # to the error message that will hopefully reduce this confusion.
+                if file_format == 'MOL2' and RDKitToolkitWrapper.is_available():
+                    msg += f"RDKit does not fully support input of molecules from mol2 format unless they " \
+                        f"have Corina atom types, and this is not common in the simulation community. For this " \
+                        f"reason, the Open Force Field Toolkit does not use " \
+                        f"RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt " \
+                        f"to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit " \
+                        f"molecule and use openforcefield.topology.Molecule.from_rdkit, but we do not recommend this."
+                raise NotImplementedError(msg)
+
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
             # TODO: Encapsulate this logic in ToolkitWrapper?

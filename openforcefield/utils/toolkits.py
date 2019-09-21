@@ -1554,9 +1554,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     print(rdmol.GetProp('_Name'), e)
                     continue
                 Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-                mol = Molecule.from_rdkit(rdmol,allow_undefined_stereo=allow_undefined_stereo)
-
+                mol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
                 mols.append(mol)
+
         elif (file_format == 'SMI'):
             # TODO: We have to do some special stuff when we import SMILES (currently
             # just adding H's, but could get fancier in the future). It might be
