@@ -43,7 +43,7 @@ from openforcefield.utils import all_subclasses, MessageException, \
     convert_all_quantities_to_string, convert_all_strings_to_quantity, \
     convert_0_1_smirnoff_to_0_2, convert_0_2_smirnoff_to_0_3
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
-from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
+from openforcefield.typing.engines.smirnoff.parameters import ParameterHandler
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
 
 
