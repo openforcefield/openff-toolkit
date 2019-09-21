@@ -30,19 +30,27 @@ New features
   and the class of the
   :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
   that raised the exception (``exception.handler_class``).
-- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
-  `Issue #421 <https://github.com/openforcefield/openforcefield/issues/421>`_ by
-  adding type/shape information to all Molecule partial charge and conformer docstrings.
-- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
-  `Issue #411 <https://github.com/openforcefield/openforcefield/issues/411>`_, thereby
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Implements
+  Trevor Gokey's suggestion from
+  `Issue #411 <https://github.com/openforcefield/openforcefield/issues/411>`_, which
   enabling pickling of
   :py:class:`ForceFields <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   and
   :py:class:`ParameterHandlers <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`.
+
+Improved documentation and messaging
+""""""""""""""""""""""""""""""""""""
 - `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
   `Issue #410 <https://github.com/openforcefield/openforcefield/issues/410>`_, by explicitly
-  having toolkit warnings print ``Warning:`` at the beginning of each message, and adding
+  having toolkit warnings print ``Warning:`` at the beginning of each warning, and adding
   clearer language to the warning produced when the OpenEye Toolkits can not be loaded.
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #421 <https://github.com/openforcefield/openforcefield/issues/421>`_ by
+  adding type/shape information to all Molecule partial charge and conformer docstrings.
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #407 <https://github.com/openforcefield/openforcefield/issues/421>`_ by
+  providing a more extensive explanation of why we don't use RDKit's mol2 parser
+  for molecule input.
 
 Bugfixes
 """"""""
