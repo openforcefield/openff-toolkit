@@ -1265,7 +1265,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if not quacpac_status:
             if "SelectElfPop: issue with removing trans COOH conformers" in (errfs.str().decode("UTF-8")):
                 logger.warning("Warning: OEAM1BCCELF10 charge assignment failed due to a known bug (toolkit issue "
-                               "#346). Downgrading to OEAM1BCC charge assignment for this molecule.")
+                               "#346). Downgrading to OEAM1BCC charge assignment for this molecule. More information"
+                               "is available at https://github.com/openforcefield/openforcefield/issues/346")
                 quacpac_status = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
 
         if quacpac_status is False:
@@ -2907,10 +2908,13 @@ class ToolkitRegistry:
                 raise ToolkitUnavailableException(msg)
             else:
                 if 'OpenEye' in msg:
-                    msg += "Versions of the Open Force Field Toolkit past 0.2.0 (April 2019) do not require the " \
-                           "OpenEye Toolkits and will use RDKit and AmberTools as a backend instead. However, if " \
-                           "you have an OpenEye license available, consider installing the OpenEye toolkits for " \
-                           "faster performance and I/O of additional file formats."
+                    msg += "The Open Force Field Toolkit does not require the OpenEye Toolkits, and can " \
+                           "use RDKit/AmberTools instead. However, if you have a valid license for the " \
+                           "OpenEye Toolkits, consider installing them for faster performance and additional " \
+                           "file format support: " \
+                           "https://docs.eyesopen.com/toolkits/python/quickstart-python/linuxosx.html " \
+                           "OpenEye offers free Toolkit licenses for academics: " \
+                           "https://www.eyesopen.com/academic-licensing"
                 logger.warning(f"Warning: {msg}")
             return
 
