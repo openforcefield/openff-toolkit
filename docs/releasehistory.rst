@@ -8,8 +8,42 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
-Current Development
--------------------
+0.5.1 - Adding the parameter coverage example notebook
+------------------------------------------------------
+
+This release contains a new notebook example,
+`check_parameter_coverage.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/check_dataset_parameter_coverage/check_parameter_coverage.ipynb>`_
+which loads sets of molecules, checks whether they are parameterizable,
+and generates reports of chemical motifs that are not.
+It also fixes several simple issues, improves warnings and docstring text,
+and removes unused files.
+
+The parameter coverage example notebook goes hand-in-hand with the
+release candidate of our initial force field,
+`openff-1.0.0-RC1.offxml <https://github.com/openforcefield/openforcefields>`_
+, which will be temporarily available until the official force
+field release is made in October.
+Our goal in publishing this notebook alongside our first major refitting is to allow interested
+users to try applying the parameters to their molecules of interest.
+If the force field is unable to parameterize the molecules, this notebook is designed to facilitate
+reporting the parameterization failures back to us. We understand that many organizations in our field
+have restrictions about sharing specific molecules, and hope that the outputs from this
+notebook can be tailored/cropped to communicate the relevant motifs without revealing the entire
+molecule.
+
+The force field release candidate is in our new refit force field package,
+`openforcefields <https://github.com/openforcefield/openforcefields>`_.
+This package is now a part of the Open Force Field Toolkit conda recipe, along with the original
+`smirnoff99Frosst <https://github.com/openforcefield/smirnoff99Frosst>`_ line of force fields.
+
+Once the ``openforcefields`` conda package is installed, you can load the release candidate using:
+
+``ff = ForceField('openff-1.0.0-RC1.offxml')``
+
+The release candidate will be removed when the official force field release,
+``openff-1.0.0.offxml`` is published.
+
+More details about this release are below.
 
 Example added
 """""""""""""
