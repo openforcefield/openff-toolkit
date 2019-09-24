@@ -8,15 +8,49 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
-Current Development
--------------------
+0.5.1 - Adding the parameter coverage example notebook
+------------------------------------------------------
+
+This release contains a new notebook example,
+`check_parameter_coverage.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/check_dataset_parameter_coverage/check_parameter_coverage.ipynb>`_,
+which loads sets of molecules, checks whether they are parameterizable,
+and generates reports of chemical motifs that are not.
+It also fixes several simple issues, improves warnings and docstring text,
+and removes unused files.
+
+The parameter coverage example notebook goes hand-in-hand with the
+release candidate of our initial force field,
+`openff-1.0.0-RC1.offxml <https://github.com/openforcefield/openforcefields>`_
+, which will be temporarily available until the official force
+field release is made in October.
+Our goal in publishing this notebook alongside our first major refitting is to allow interested
+users to check whether there is parameter coverage for their molecules of interest.
+If the force field is unable to parameterize a molecule, this notebook will generate
+reports of the specific chemistry that is not covered. We understand that many organizations
+in our field have restrictions about sharing specific molecules, and the outputs from this
+notebook can easily be cropped to communicate unparameterizable chemistry without revealing
+the full structure.
+
+The force field release candidate is in our new refit force field package,
+`openforcefields <https://github.com/openforcefield/openforcefields>`_.
+This package is now a part of the Open Force Field Toolkit conda recipe, along with the original
+`smirnoff99Frosst <https://github.com/openforcefield/smirnoff99Frosst>`_ line of force fields.
+
+Once the ``openforcefields`` conda package is installed, you can load the release candidate using:
+
+``ff = ForceField('openff-1.0.0-RC1.offxml')``
+
+The release candidate will be removed when the official force field,
+``openff-1.0.0.offxml``, is released in early October.
+
+Complete details about this release are below.
 
 Example added
 """""""""""""
 - `PR #419 <https://github.com/openforcefield/openforcefield/pull/419>`_: Adds
   an example notebook
-  `check_dataset_parameter_coverage/check_parameter_coverage.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/check_dataset_parameter_coverage/check_parameter_coverage.ipynb>`_
-  which shows how to use the toolkit to analyze a molecule
+  `check_parameter_coverage.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/check_dataset_parameter_coverage/check_parameter_coverage.ipynb>`_
+  which shows how to use the toolkit to check a molecule
   dataset for missing parameter coverage, and provides functionality to output
   tagged SMILES and 2D drawings of the unparameterizable chemistry.
 
