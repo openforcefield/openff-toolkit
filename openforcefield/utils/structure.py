@@ -14,6 +14,15 @@ import time
 import numpy as np
 
 from simtk import openmm, unit
+import warnings
+
+
+DEPRECATION_WARNING_TEXT = "Deprecation warning: Functionality in openforcefield.utils.structure was not updated " \
+                           "for the 0.2.0 Open Force Field Toolkit transition, and is no longer maintained. "\
+                           "This code is being considered for deprecation in the near future. Please leave " \
+                           "feedback on our GitHub issue #333 "\
+                           "if you would like us to maintain this functionality. "\
+                           "https://github.com/openforcefield/openforcefield/issues/333"
 
 #=============================================================================================
 # PARMED UTILITIES
@@ -36,6 +45,7 @@ def generateSMIRNOFFStructure(oemol):
         The resulting Structure
 
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
     from openforcefield.topology import Molecule, Topology
     from openforcefield.typing.engines.smirnoff import ForceField
 
@@ -78,6 +88,8 @@ def generateProteinStructure(proteinpdb, protein_forcefield='amber99sbildn.xml',
         The parameterized Structure of the protein with solvent molecules. (No ligand).
 
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
+
     # Generate protein Structure object using OpenMM ForceField
     from simtk.openmm import app
     import parmed
@@ -106,6 +118,7 @@ def combinePositions(proteinPositions, molPositions):
         ex. unit.Quantity(positions, positions_unit)
         Combined positions of the protein and molecule Structures.
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
     positions_unit = unit.angstroms
     positions0_dimensionless = np.array(proteinPositions / positions_unit)
@@ -141,6 +154,8 @@ def mergeStructure(proteinStructure, molStructure):
     structure : parmed.structure.Structure
         The parametrized structure of the protein:ligand complex.
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
+
     structure = proteinStructure + molStructure
     positions = combinePostions(proteinStructure.positions, molStructure.positions)
     # Concatenate positions arrays (ensures same units)
@@ -165,6 +180,8 @@ def generateTopologyFromOEMol(molecule):
         The Topology object generated from `molecule`.
 
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
+
     from openeye import oechem
 
     # Avoid manipulating the molecule
@@ -212,6 +229,8 @@ def normalize_molecules(molecules):
     molecules (list of OEMol) - molecules to be normalized (in place)
 
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
+
     from openeye import oechem
 
     # Add explicit hydrogens.
@@ -289,6 +308,8 @@ def read_molecules(file_path, verbose=True):
         List of molecules read from file
 
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
+
     from openeye import oechem
     from openforcefield.utils import get_data_file_path
 
@@ -334,6 +355,8 @@ def setPositionsInOEMol(oemol, positions):
     positions : Nx3 array
         Unit-bearing via simtk.unit Nx3 array of coordinates
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
+
     from openeye import oechem
 
     if oemol.NumAtoms() != len(positions): raise ValueError("Number of atoms in molecule does not match length of position array.")
@@ -360,6 +383,8 @@ def extractPositionsFromOEMol(oemol):
     positions : Nx3 array
         Unit-bearing via simtk.unit Nx3 array of coordinates
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
+
     positions = unit.Quantity(np.zeros([oemol.NumAtoms(), 3], np.float32), unit.angstroms)
     coords = oemol.GetCoords()
     for index in range(oemol.NumAtoms()):
@@ -384,6 +409,8 @@ def read_typelist(file_path):
     typelist : list of tuples
         Typelist[i] is element i of the typelist in format (smarts, shorthand)
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
+
     from openforcefield.utils import get_data_file_path
 
     if file_path is None:
@@ -437,6 +464,8 @@ def positions_from_oemol(mol):
     positions : simtk.unit.Quantity of dimension (nparticles,3)
 
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
+
     from openeye import oechem, oeomega
     if mol.GetDimension() != 3:
         # Assign coordinates
@@ -470,6 +499,8 @@ def check_energy_is_finite(system, positions):
         The positions to use
 
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
+
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context = openmm.Context(system, integrator)
     context.setPositions(positions)
@@ -492,6 +523,7 @@ def get_energy(system, positions):
     ---------
     energy
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context = openmm.Context(system, integrator)
@@ -531,6 +563,8 @@ def get_molecule_parameterIDs(molecules, forcefield):
         in which that parameter occurs. No frequency information is stored.
 
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
+
     from openforcefield.topology import Topology
     # Create storage
     parameters_by_molecule = dict()
@@ -591,6 +625,7 @@ def getMolParamIDToAtomIndex(molecule, forcefield):
         Dictionary, keyed by parameter ID, where each entry is a tuple of ( smirks, [[atom1, ... atomN], [atom1, ... atomN]) giving the SMIRKS corresponding to that parameter ID and a list of the atom groups in that molecule that parameter is applied to.
 
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
     topology = Topology()
     topology.add_molecule(molecule)
@@ -637,6 +672,7 @@ def merge_system(topology0, topology1, system0, system1, positions0, positions1,
     system : OpenMM System
     positions: unit.Quantity position array
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
     #Load OpenMM Systems to ParmEd Structures
     import parmed
@@ -688,6 +724,7 @@ def save_system_to_amber(openmm_topology, system, positions, prmtop, inpcrd):
         AMBER coordinate file name (ASCII crd format) to write
 
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
     import parmed
     structure = parmed.openmm.topsystem.load_topology(openmm_topology, system, positions)
@@ -711,6 +748,7 @@ def save_system_to_gromacs(openmm_topology, system, positions, top, gro):
         GROMACS coordinate file name (.gro format) to write
 
     """
+    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
     import parmed
     structure = parmed.openmm.topsystem.load_topology(openmm_topology, system, positions )

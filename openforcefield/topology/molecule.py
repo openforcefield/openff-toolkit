@@ -272,7 +272,7 @@ class Atom(Particle):
 
         Returns
         -------
-        float or None
+        simtk.unit.Quantity with dimension of atomic charge, or None if no charge has been specified
         """
         if self._molecule._partial_charges is None:
             return None
@@ -2479,15 +2479,14 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        coordinates: A simtk vector wrapped unit quantity
-            The coordinates of the conformer to add.
+        coordinates: simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
+            Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
+            the Molecule's indexing system.
 
         Returns
         -------
         index: int
             The index of this conformer
-
-
         """
         new_conf = unit.Quantity(
             np.zeros((self.n_atoms, 3), np.float), unit.angstrom)
@@ -2513,25 +2512,24 @@ class FrozenMolecule(Serializable):
     @property
     def partial_charges(self):
         """
-        Returns the partial charges (if present) on the molecule
+        Returns the partial charges (if present) on the molecule.
 
         Returns
         -------
-        partial_charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
-            The partial charges on this Molecule's atoms.
+        partial_charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms] or None
+            The partial charges on this Molecule's atoms. Returns None if no charges have been specified.
         """
         return self._partial_charges
 
     @partial_charges.setter
     def partial_charges(self, charges):
         """
-        Set the atomic partial charges for this molecule
+        Set the atomic partial charges for this molecule.
 
         Parameters
         ----------
         charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
             The partial charges to assign to the molecule. Must be in units compatible with simtk.unit.elementary_charge
-
         """
         assert hasattr(charges, 'unit')
         assert unit.elementary_charge.is_compatible(charges.unit)
@@ -2604,14 +2602,17 @@ class FrozenMolecule(Serializable):
     @property
     def conformers(self):
         """
-        Iterate over all conformers in this molecule.
+        Returns the list of conformers for this molecule. This returns a list of simtk.unit.Quantity-wrapped numpy
+        arrays, of shape (3 x n_atoms) and with dimensions of distance. The return value is the actual list of
+        conformers, and changes to the contents affect the original FrozenMolecule.
+
         """
         return self._conformers
 
     @property
     def n_conformers(self):
         """
-        Iterate over all Atom objects.
+        Returns the number of conformers for this molecule.
         """
         if self._conformers is None:
             return 0
@@ -2953,10 +2954,19 @@ class FrozenMolecule(Serializable):
                     query_toolkit.
                     toolkit_name] = query_toolkit.toolkit_file_read_formats
             if toolkit is None:
-                raise NotImplementedError(
-                    "No toolkits in registry can read file {} (format {}). Supported formats in the "
-                    "provided ToolkitRegistry are {}".format(
-                        file_path, file_format, supported_read_formats))
+                msg = f"No toolkits in registry can read file {file_path} (format {file_format}). Supported "\
+                      f"formats in the provided ToolkitRegistry are {supported_read_formats}. "
+                # Per issue #407, not allowing RDKit to read mol2 has confused a lot of people. Here we add text
+                # to the error message that will hopefully reduce this confusion.
+                if file_format == 'MOL2' and RDKitToolkitWrapper.is_available():
+                    msg += f"RDKit does not fully support input of molecules from mol2 format unless they " \
+                        f"have Corina atom types, and this is not common in the simulation community. For this " \
+                        f"reason, the Open Force Field Toolkit does not use " \
+                        f"RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt " \
+                        f"to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit " \
+                        f"molecule and use openforcefield.topology.Molecule.from_rdkit, but we do not recommend this."
+                raise NotImplementedError(msg)
+
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
             # TODO: Encapsulate this logic in ToolkitWrapper?
@@ -3754,19 +3764,17 @@ class Molecule(FrozenMolecule):
 
     def add_conformer(self, coordinates):
         """
-        # TODO: Should this not be public?
-        Adds a conformer of the molecule
+        Add a conformation of the molecule
 
         Parameters
         ----------
-        coordinates: simtk.unit.Quantity(np.array) with shape (n_atoms, 3)
+        coordinates: simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
             Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
             the Molecule's indexing system.
+
         Returns
         -------
         index: int
-            Index of the conformer in the Molecule
-
-
-"""
+            The index of this conformer
+        """
         return self._add_conformer(coordinates)

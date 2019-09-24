@@ -30,7 +30,30 @@ New features
   and the class of the
   :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
   that raised the exception (``exception.handler_class``).
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Implements
+  Trevor Gokey's suggestion from
+  `Issue #411 <https://github.com/openforcefield/openforcefield/issues/411>`_, which
+  enabling pickling of
+  :py:class:`ForceFields <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  and
+  :py:class:`ParameterHandlers <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`.
+  Note that, while XML representations of ``ForceField``s are stable and conform to the SMIRNOFF
+  specification, the pickled ``ForceField``s that this functionality enables are not guaranteed
+  to be compatible with future toolkit versions.
 
+Improved documentation and warnings
+"""""""""""""""""""""""""""""""""""
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #410 <https://github.com/openforcefield/openforcefield/issues/410>`_, by explicitly
+  having toolkit warnings print ``Warning:`` at the beginning of each warning, and adding
+  clearer language to the warning produced when the OpenEye Toolkits can not be loaded.
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #421 <https://github.com/openforcefield/openforcefield/issues/421>`_ by
+  adding type/shape information to all Molecule partial charge and conformer docstrings.
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #407 <https://github.com/openforcefield/openforcefield/issues/421>`_ by
+  providing a more extensive explanation of why we don't use RDKit's mol2 parser
+  for molecule input.
 
 Bugfixes
 """"""""
@@ -40,6 +63,18 @@ Bugfixes
   :py:meth:`RDKitToolkitWrapper.from_file <openforcefield.utils.toolkits.RDKitToolkitWrapper.from_file>`
   would disregard the ``allow_undefined_stereo`` kwarg and skip the first molecule
   when reading a SMILES file.
+
+
+Files removed
+"""""""""""""
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #424 <https://github.com/openforcefield/openforcefield/issues/424>`_ by
+  deleting the unused files ``openforcefield/typing/engines/smirnoff/gbsaforces.py``
+  and ``openforcefield/tests/test_smirnoff.py``. ``gbsaforces.py`` was only used internally
+  and ``test_smirnoff.py`` tested unsupported functionality from before the 0.2.0 release.
+
+
+
 
 0.5.0 - GBSA support and quality-of-life improvements
 -----------------------------------------------------

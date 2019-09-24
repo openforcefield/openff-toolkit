@@ -1264,8 +1264,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # This logic handles errors encountered in #34
         if not quacpac_status:
             if "SelectElfPop: issue with removing trans COOH conformers" in (errfs.str().decode("UTF-8")):
-                logger.warning("OEAM1BCCELF10 charge assignment failed due to a known bug (toolkit issue #346). "
-                               "Downgrading to OEAM1BCC charge assignment for this molecule.")
+                logger.warning("Warning: OEAM1BCCELF10 charge assignment failed due to a known bug (toolkit issue "
+                               "#346). Downgrading to OEAM1BCC charge assignment for this molecule. More information"
+                               "is available at https://github.com/openforcefield/openforcefield/issues/346")
                 quacpac_status = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
 
         if quacpac_status is False:
@@ -1554,9 +1555,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     print(rdmol.GetProp('_Name'), e)
                     continue
                 Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-                mol = Molecule.from_rdkit(rdmol,allow_undefined_stereo=allow_undefined_stereo)
-
+                mol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
                 mols.append(mol)
+
         elif (file_format == 'SMI'):
             # TODO: We have to do some special stuff when we import SMILES (currently
             # just adding H's, but could get fancier in the future). It might be
@@ -2724,7 +2725,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 "molecule.generate_conformers() before calling molecule.compute_partial_charges"
             )
         if len(molecule._conformers) > 1:
-            logger.warning("In AmberToolsToolkitwrapper.computer_partial_charges_am1bcc: "
+            logger.warning("Warning: In AmberToolsToolkitwrapper.compute_partial_charges_am1bcc: "
                            "Molecule '{}' has more than one conformer, but this function "
                            "will only generate charges for the first one.".format(molecule.name))
 
@@ -2902,11 +2903,19 @@ class ToolkitRegistry:
 
         # Raise exception if not available.
         if not toolkit_wrapper.is_available():
-            msg = "Unable to load toolkit {}.".format(toolkit_wrapper)
+            msg = "Unable to load toolkit '{}'. ".format(toolkit_wrapper._toolkit_name)
             if exception_if_unavailable:
                 raise ToolkitUnavailableException(msg)
             else:
-                logger.warning(msg)
+                if 'OpenEye' in msg:
+                    msg += "The Open Force Field Toolkit does not require the OpenEye Toolkits, and can " \
+                           "use RDKit/AmberTools instead. However, if you have a valid license for the " \
+                           "OpenEye Toolkits, consider installing them for faster performance and additional " \
+                           "file format support: " \
+                           "https://docs.eyesopen.com/toolkits/python/quickstart-python/linuxosx.html " \
+                           "OpenEye offers free Toolkit licenses for academics: " \
+                           "https://www.eyesopen.com/academic-licensing"
+                logger.warning(f"Warning: {msg}")
             return
 
         # Add toolkit to the registry.
