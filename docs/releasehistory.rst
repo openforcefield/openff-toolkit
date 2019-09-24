@@ -37,9 +37,12 @@ New features
   :py:class:`ForceFields <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   and
   :py:class:`ParameterHandlers <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`.
+  Note that, while XML representations of ``ForceField``s are stable and conform to the SMIRNOFF
+  specification, the pickled ``ForceField``s that this functionality enables are not guaranteed
+  to be compatible with future toolkit versions.
 
-Improved documentation and messaging
-""""""""""""""""""""""""""""""""""""
+Improved documentation and warnings
+"""""""""""""""""""""""""""""""""""
 - `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
   `Issue #410 <https://github.com/openforcefield/openforcefield/issues/410>`_, by explicitly
   having toolkit warnings print ``Warning:`` at the beginning of each warning, and adding
