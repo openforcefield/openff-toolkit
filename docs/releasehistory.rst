@@ -24,12 +24,12 @@ release candidate of our initial force field,
 , which will be temporarily available until the official force
 field release is made in October.
 Our goal in publishing this notebook alongside our first major refitting is to allow interested
-users to try applying the parameters to their molecules of interest.
+users to check whether there is parameter coverage for their molecules of interest.
 If the force field is unable to parameterize the molecules, this notebook is designed to facilitate
 reporting the parameterization failures back to us. We understand that many organizations in our field
 have restrictions about sharing specific molecules, and hope that the outputs from this
-notebook can be tailored/cropped to communicate the relevant motifs without revealing the entire
-molecule.
+notebook can be tailored/cropped to communicate the unparameterizable motifs without revealing the
+entire molecule.
 
 The force field release candidate is in our new refit force field package,
 `openforcefields <https://github.com/openforcefield/openforcefields>`_.
@@ -41,7 +41,7 @@ Once the ``openforcefields`` conda package is installed, you can load the releas
 ``ff = ForceField('openff-1.0.0-RC1.offxml')``
 
 The release candidate will be removed when the official force field release,
-``openff-1.0.0.offxml`` is published.
+``openff-1.0.0.offxml`` is published. This is planned to occur in early October.
 
 More details about this release are below.
 
@@ -49,8 +49,8 @@ Example added
 """""""""""""
 - `PR #419 <https://github.com/openforcefield/openforcefield/pull/419>`_: Adds
   an example notebook
-  `check_dataset_parameter_coverage/check_parameter_coverage.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/check_dataset_parameter_coverage/check_parameter_coverage.ipynb>`_
-  which shows how to use the toolkit to analyze a molecule
+  `check_parameter_coverage.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/check_dataset_parameter_coverage/check_parameter_coverage.ipynb>`_
+  which shows how to use the toolkit to check a molecule
   dataset for missing parameter coverage, and provides functionality to output
   tagged SMILES and 2D drawings of the unparameterizable chemistry.
 
