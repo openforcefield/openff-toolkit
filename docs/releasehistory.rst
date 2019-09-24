@@ -67,7 +67,7 @@ New features
 - `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Implements
   Trevor Gokey's suggestion from
   `Issue #411 <https://github.com/openforcefield/openforcefield/issues/411>`_, which
-  enabling pickling of
+  enables pickling of
   :py:class:`ForceFields <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   and
   :py:class:`ParameterHandlers <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`.
