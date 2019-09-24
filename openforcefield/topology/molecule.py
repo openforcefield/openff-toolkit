@@ -272,7 +272,7 @@ class Atom(Particle):
 
         Returns
         -------
-        simtk.unit.Quantity-wrapped float or None
+        simtk.unit.Quantity with dimension of atomic charge, or None if no charge has been specified
         """
         if self._molecule._partial_charges is None:
             return None
@@ -2479,7 +2479,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        coordinates: simtk.unit.Quantity(np.array) with shape (n_atoms, 3)
+        coordinates: simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
             Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
             the Molecule's indexing system.
 
@@ -2487,8 +2487,6 @@ class FrozenMolecule(Serializable):
         -------
         index: int
             The index of this conformer
-
-
         """
         new_conf = unit.Quantity(
             np.zeros((self.n_atoms, 3), np.float), unit.angstrom)
@@ -2514,25 +2512,24 @@ class FrozenMolecule(Serializable):
     @property
     def partial_charges(self):
         """
-        Returns the partial charges (if present) on the molecule
+        Returns the partial charges (if present) on the molecule.
 
         Returns
         -------
-        partial_charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
-            The partial charges on this Molecule's atoms.
+        partial_charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms] or None
+            The partial charges on this Molecule's atoms. Returns None if no charges have been specified.
         """
         return self._partial_charges
 
     @partial_charges.setter
     def partial_charges(self, charges):
         """
-        Set the atomic partial charges for this molecule
+        Set the atomic partial charges for this molecule.
 
         Parameters
         ----------
         charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
             The partial charges to assign to the molecule. Must be in units compatible with simtk.unit.elementary_charge
-
         """
         assert hasattr(charges, 'unit')
         assert unit.elementary_charge.is_compatible(charges.unit)
@@ -2606,7 +2603,9 @@ class FrozenMolecule(Serializable):
     def conformers(self):
         """
         Returns the list of conformers for this molecule. This returns a list of simtk.unit.Quantity-wrapped numpy
-        arrays, of shape 3 x n_atoms.
+        arrays, of shape (3 x n_atoms) and with dimensions of distance. The return value is the actual list of
+        conformers, and changes to the contents affect the original FrozenMolecule.
+
         """
         return self._conformers
 
@@ -3765,17 +3764,17 @@ class Molecule(FrozenMolecule):
 
     def add_conformer(self, coordinates):
         """
-        # TODO: Should this not be public?
-        Adds a conformer of the molecule
+        Add a conformation of the molecule
 
         Parameters
         ----------
-        coordinates: simtk.unit.Quantity(np.array) with shape (n_atoms, 3)
+        coordinates: simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
             Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
             the Molecule's indexing system.
+
         Returns
         -------
         index: int
-            Index of the conformer in the Molecule
+            The index of this conformer
         """
         return self._add_conformer(coordinates)
