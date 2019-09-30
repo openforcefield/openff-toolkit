@@ -535,7 +535,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oechem.OEPerceiveChiral(oemol)
             oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
             oechem.OE3DToInternalStereo(oemol)
-            mol = self.from_openeye(
+            mol = cls.from_openeye(
                 oemol,
                 allow_undefined_stereo=allow_undefined_stereo)
             mols.append(mol)
@@ -2706,7 +2706,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ValueError if the requested charge method could not be handled
 
         """
-
         import os
         from simtk import unit
 
