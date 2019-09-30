@@ -2676,7 +2676,9 @@ class ToolkitAM1BCCHandler(ParameterHandler):
                 #temp_mol.compute_partial_charges(quantum_chemical_method=self._quantum_chemical_method,
                 #                                 partial_charge_method=self._partial_charge_method)
                 temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
-
+                temp_mol.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry)
+                print("line 2679 typing smiroff compute partial charges")
+                print("test1")_
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
 
