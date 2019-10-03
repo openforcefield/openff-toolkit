@@ -91,15 +91,16 @@ script:
 - if [[ "$RDKIT" == true && "$OPENEYE" == true ]];
   then
     pytest --ignore=utilities --ignore=examples/deprecated --ignore=docs
-    --ignore=devtools --doctest-modules --nbval-lax --cov=openforcefield;
+    --ignore=devtools --doctest-modules --nbval-lax --cov=openforcefield
+    --cov-config=setup.cfg;
   elif [[ "$OPENEYE" == true ]];
   then
     pytest --ignore=utilities --ignore=examples/deprecated --ignore=docs
     --ignore=devtools --ignore=examples/check_dataset_parameter_coverage
-    --nbval-lax --cov=openforcefield;
+    --nbval-lax --cov=openforcefield --cov-config=setup.cfg;
   else
     pytest --ignore=utilities --ignore=examples/deprecated
-    --nbval-lax --cov=openforcefield;
+    --nbval-lax --cov=openforcefield --cov-config=setup.cfg;
   fi
 
 notifications:
