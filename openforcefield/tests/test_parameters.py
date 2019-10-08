@@ -21,7 +21,7 @@ from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterAttribute, IndexedParameterAttribute, ParameterList,
     ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
-    ImproperTorsionHandler, GBSAHandler, SMIRNOFFSpecError,
+    ImproperTorsionHandler, LibraryChargeHandler, GBSAHandler, SMIRNOFFSpecError,
     _ParameterAttributeHandler
     )
 from openforcefield.utils import detach_units, IncompatibleUnitError
@@ -930,6 +930,13 @@ class TestProperTorsionHandler:
         with pytest.raises(SMIRNOFFSpecError, match=err_msg):
             ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
         ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
+
+class TestLibraryChargeHandler:
+    def test_create_library_charge_handler(self):
+        """Test creation of an empty LibraryChargeHandler"""
+        handler = LibraryChargeHandler()
+
+
 
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):

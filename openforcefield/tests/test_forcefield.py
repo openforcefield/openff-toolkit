@@ -156,8 +156,17 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
 xml_toolkitam1bcc_ff = '''
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
   <ToolkitAM1BCC version="0.3"/>
-</SMIRNOFF>'''
+</SMIRNOFF>
+'''
 
+xml_tip3p_library_charges_ff = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+       <!-- TIP3P water oxygen with charge override -->
+       <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="+0.417*elementary_charge" charge2="-0.834*elementary_charge" charge3="+0.417*elementary_charge"/>
+    </LibraryCharges>
+</SMIRNOFF>
+'''
 #======================================================================
 # TEST UTILITY FUNCTIONS
 #======================================================================
@@ -806,6 +815,70 @@ class TestForceField():
 
         parmed_system = forcefield.create_parmed_structure(topology, positions=pdbfile.getPositions())
 
+
+
+
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    def test_pass_invalid_kwarg_to_create_openmm_system(self, toolkit_registry, registry_description):
+        """Test to ensure an exception is raised when an unrecognized kwarg is passed """
+        from simtk.openmm import app
+
+        file_path = get_data_file_path('test_forcefields/smirnoff99Frosst.offxml')
+        forcefield = ForceField(file_path)
+        pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
+        molecules = []
+        molecules.append(Molecule.from_smiles('CCO'))
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
+        with pytest.raises(ValueError, match=".* not used by any registered force Handler: {'invalid_kwarg'}.*") as e:
+            omm_system = forcefield.create_openmm_system(topology, invalid_kwarg='aaa', toolkit_registry=toolkit_registry)
+
+
+    @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
+    def test_nonbonded_method_resolution(self,
+                                         inputs
+                                         ):
+        """Test predefined permutations of input options to ensure nonbonded handling is correctly resolved"""
+        from simtk.openmm import app
+
+        vdw_method = inputs['vdw_method']
+        electrostatics_method = inputs['electrostatics_method']
+        has_periodic_box = inputs['has_periodic_box']
+        omm_force = inputs['omm_force']
+        exception = inputs['exception']
+        exception_match= inputs['exception_match']
+
+        molecules = [create_ethanol()]
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+
+        pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
+        if not(has_periodic_box):
+            topology.box_vectors = None
+
+        if exception is None:
+            # The method is validated and may raise an exception if it's not supported.
+            forcefield.get_parameter_handler('vdW', {}).method = vdw_method
+            forcefield.get_parameter_handler('Electrostatics', {}).method = electrostatics_method
+            omm_system = forcefield.create_openmm_system(topology)
+            nonbond_method_matched = False
+            for f_idx in range(omm_system.getNumForces()):
+                force = omm_system.getForce(f_idx)
+                if isinstance(force, openmm.NonbondedForce):
+                    if force.getNonbondedMethod() == omm_force:
+                        nonbond_method_matched = True
+            assert nonbond_method_matched
+        else:
+            with pytest.raises(exception, match=exception_match) as excinfo:
+                # The method is validated and may raise an exception if it's not supported.
+                forcefield.get_parameter_handler('vdW', {}).method = vdw_method
+                forcefield.get_parameter_handler('Electrostatics', {}).method = electrostatics_method
+                omm_system = forcefield.create_openmm_system(topology)
+
+
+
+class TestForceFieldChargeAssignment:
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_charges_from_molecule(self, toolkit_registry, registry_description):
         """Test skipping charge generation and instead getting charges from the original Molecule"""
@@ -878,65 +951,49 @@ class TestForceField():
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != (0. * unit.elementary_charge)
 
+    def test_library_charges_to_single_water(self):
+        """Test assigning charges to one water molecule using library charges"""
+        from simtk.openmm import NonbondedForce
 
+        ff = ForceField(simple_xml_ff, xml_tip3p_library_charges_ff)
+        mol = Molecule.from_smiles('O')
+        omm_system = ff.create_openmm_system(mol.to_topology())
+        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        expected_charges = [-0.834, 0.417, 0.417] * unit.elementary_charge
+        for particle_index, expected_charge in expected_charges:
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            assert q == expected_charge
 
-    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
-    def test_pass_invalid_kwarg_to_create_openmm_system(self, toolkit_registry, registry_description):
-        """Test to ensure an exception is raised when an unrecognized kwarg is passed """
-        from simtk.openmm import app
+    def test_library_charges_to_two_waters(self):
+        """Test assigning charges to two water molecules using library charges"""
+        pass
 
-        file_path = get_data_file_path('test_forcefields/smirnoff99Frosst.offxml')
-        forcefield = ForceField(file_path)
-        pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
-        molecules = []
-        molecules.append(Molecule.from_smiles('CCO'))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+    def test_library_charges_to_two_ethanols_different_atom_ordering(self):
+        """Test assigning charges to two ethanols with different atom orderings"""
+        pass
 
-        with pytest.raises(ValueError, match=".* not used by any registered force Handler: {'invalid_kwarg'}.*") as e:
-            omm_system = forcefield.create_openmm_system(topology, invalid_kwarg='aaa', toolkit_registry=toolkit_registry)
+    def test_library_charges_to_only_some_molecules(self):
+        """Test assigning charges to a topology in which some molecules are covered by library charges
+         but other aren't"""
+        pass
 
+    def test_assign_charges_to_molecule_in_parts_using_multiple_library_charges(self):
+        """Test assigning charges to parts of a molecule using two library charge lines"""
+        pass
 
-    @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
-    def test_nonbonded_method_resolution(self,
-                                         inputs
-                                         ):
-        """Test predefined permutations of input options to ensure nonbonded handling is correctly resolved"""
-        from simtk.openmm import app
+    def test_assign_charges_using_library_charges_by_single_atoms(self):
+        """Test assigning charges to parts of a molecule using per-atom library charges"""
+        pass
 
-        vdw_method = inputs['vdw_method']
-        electrostatics_method = inputs['electrostatics_method']
-        has_periodic_box = inputs['has_periodic_box']
-        omm_force = inputs['omm_force']
-        exception = inputs['exception']
-        exception_match= inputs['exception_match']
+    def test_library_charges_dont_parameterize_molecule_because_of_incomplete_coverage(self):
+        """Fail to assign charges to a molecule becau\se not all atoms can be assigned"""
+        pass
 
-        molecules = [create_ethanol()]
-        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+    def library_charges_overridden_by_charge_from_molecules(self):
+        """Skip assigning charges to a molecule because it has already had charges assigned
+        using charge_from_molecules"""
+        pass
 
-        pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-
-        if not(has_periodic_box):
-            topology.box_vectors = None
-
-        if exception is None:
-            # The method is validated and may raise an exception if it's not supported.
-            forcefield.get_parameter_handler('vdW', {}).method = vdw_method
-            forcefield.get_parameter_handler('Electrostatics', {}).method = electrostatics_method
-            omm_system = forcefield.create_openmm_system(topology)
-            nonbond_method_matched = False
-            for f_idx in range(omm_system.getNumForces()):
-                force = omm_system.getForce(f_idx)
-                if isinstance(force, openmm.NonbondedForce):
-                    if force.getNonbondedMethod() == omm_force:
-                        nonbond_method_matched = True
-            assert nonbond_method_matched
-        else:
-            with pytest.raises(exception, match=exception_match) as excinfo:
-                # The method is validated and may raise an exception if it's not supported.
-                forcefield.get_parameter_handler('vdW', {}).method = vdw_method
-                forcefield.get_parameter_handler('Electrostatics', {}).method = electrostatics_method
-                omm_system = forcefield.create_openmm_system(topology)
 
 #======================================================================
 # TEST CONSTRAINTS
