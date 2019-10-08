@@ -8,6 +8,18 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
+Current Development
+-------------------
+
+Bugfixes
+""""""""
+- `PR #431 <https://github.com/openforcefield/openforcefield/pull/431>`_: Fixes an issue
+  where ``ToolkitWrapper``s would improperly search for functionality in the
+  ``GLOBAL_TOOLKIT_REGISTRY``, even though a specific ``ToolkitRegistry`` was requested for an
+  operation.
+
+
+
 0.5.1 - Adding the parameter coverage example notebook
 ------------------------------------------------------
 
