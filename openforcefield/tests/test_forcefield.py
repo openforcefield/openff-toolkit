@@ -163,7 +163,7 @@ xml_tip3p_library_charges_ff = '''
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
     <LibraryCharges version="0.3">
        <!-- TIP3P water oxygen with charge override -->
-       <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="+0.417*elementary_charge" charge2="-0.834*elementary_charge" charge3="+0.417*elementary_charge"/>
+       <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="0.417*elementary_charge" charge2="-0.834*elementary_charge" charge3="0.417*elementary_charge"/>
     </LibraryCharges>
 </SMIRNOFF>
 '''
@@ -955,22 +955,56 @@ class TestForceFieldChargeAssignment:
         """Test assigning charges to one water molecule using library charges"""
         from simtk.openmm import NonbondedForce
 
-        ff = ForceField(simple_xml_ff, xml_tip3p_library_charges_ff)
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_tip3p_library_charges_ff)
         mol = Molecule.from_smiles('O')
         omm_system = ff.create_openmm_system(mol.to_topology())
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
         expected_charges = [-0.834, 0.417, 0.417] * unit.elementary_charge
-        for particle_index, expected_charge in expected_charges:
+        for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
 
     def test_library_charges_to_two_waters(self):
         """Test assigning charges to two water molecules using library charges"""
-        pass
+        from simtk.openmm import NonbondedForce
+
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_tip3p_library_charges_ff)
+        mol = Molecule.from_smiles('O')
+        top = Topology.from_molecules([mol, mol])
+        omm_system = ff.create_openmm_system(top)
+        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        expected_charges = [-0.834, 0.417, 0.417, -0.834, 0.417, 0.417] * unit.elementary_charge
+        for particle_index, expected_charge in enumerate(expected_charges):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            assert q == expected_charge
 
     def test_library_charges_to_two_ethanols_different_atom_ordering(self):
         """Test assigning charges to two ethanols with different atom orderings"""
-        pass
+        from simtk.openmm import NonbondedForce
+
+        xml_ethanol_library_charges_ff = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+       <!-- TIP3P water oxygen with charge override -->
+       <LibraryCharge smirks="[#1:1]-[#6:2](-[#1:3])(-[#1:4])-[#6:5](-[#1:6])(-[#1:7])-[#8:8]-[#1:9]" charge1="-0.4*elementary_charge" charge2="-0.3*elementary_charge" charge3="-0.2*elementary_charge" charge4="-0.1*elementary_charge" charge5="0.*elementary_charge" charge6="0.1*elementary_charge" charge7="0.2*elementary_charge" charge8="0.3*elementary_charge" charge9="0.4*elementary_charge" />
+    </LibraryCharges>
+</SMIRNOFF>
+        '''
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_ethanol_library_charges_ff)
+
+        molecules = [Molecule.from_file(get_data_file_path('molecules/ethanol.sdf')),
+                     Molecule.from_file(get_data_file_path('molecules/ethanol_reordered.sdf'))]
+        top = Topology.from_molecules(molecules)
+        omm_system = ff.create_openmm_system(top)
+        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        #expected_charges = [-0.834, 0.417, 0.417, -0.834, 0.417, 0.417] * unit.elementary_charge
+        charges = []
+        for particle_index, expected_charge in enumerate(range(18)):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            charges.append(q / unit.elementary_charge)
+
+            #assert q == expected_charge
+        raise Exception(charges)
 
     def test_library_charges_to_only_some_molecules(self):
         """Test assigning charges to a topology in which some molecules are covered by library charges
@@ -989,9 +1023,8 @@ class TestForceFieldChargeAssignment:
         """Fail to assign charges to a molecule becau\se not all atoms can be assigned"""
         pass
 
-    def library_charges_overridden_by_charge_from_molecules(self):
-        """Skip assigning charges to a molecule because it has already had charges assigned
-        using charge_from_molecules"""
+    def test_charge_method_hierarchy(self):
+        """Ensure that molecules are parameterized by charge_from_molecules first, then library charges if not applicable, then """
         pass
 
 
