@@ -2631,6 +2631,26 @@ class LibraryChargeHandler(ParameterHandler):
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler] # vdWHandler must first run NonBondedForce.addParticle for each particle in the topology
 
 
+    def find_matches(self, entity):
+        """Find the elements of the topology/molecule matched by a parameter type.
+
+        Parameters
+        ----------
+        entity : openforcefield.topology.Topology
+            Topology to search.
+
+        Returns
+        ---------
+        matches : ValenceDict[Tuple[int], ParameterHandler._Match]
+            ``matches[particle_indices]`` is the ``ParameterType`` object
+            matching the tuple of particle indices in ``entity``.
+        """
+
+        # TODO: Right now, this method is only ever called with an entity that is a Topoogy.
+        #  Should we reduce its scope and have a check here to make sure entity is a Topology?
+        return self._find_matches(entity, transformed_dict_cls=dict)
+
+
     def assign_charge_from_molecules(self, molecule, charge_mols):
         """
         Given an input molecule, checks against a list of molecules for an isomorphic match. If found, assigns
@@ -2703,11 +2723,10 @@ class LibraryChargeHandler(ParameterHandler):
         # Iterate over all defined library charge parameters, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
 
-        raise Exception([(i,j) for i,j in atom_matches.items()])
+        #raise Exception([(i,j) for i,j in atom_matches.items()])
         # Create a set of all the topology atom indices for which library charges can be applied
         assignable_atoms = set()
         atom_assignments = dict()
-
         # TODO: This assumes that later matches should always override earlier ones. This may require more
         #       thought, since matches can be partially overlapping
         for topology_indices, library_charge in atom_matches.items():
@@ -2718,7 +2737,6 @@ class LibraryChargeHandler(ParameterHandler):
                 atom_assignments[top_idx] = library_charge.parameter_type.charge[charge_idx]
         #assignable_atoms = {top_idx for top_idx in top_idx_tuple for top_idx_tuple in atom_matches.keys()}
         #atom_assignments =
-
         # TODO: Should header include a residue separator delimiter? Maybe not, since it's not clear how having
         #       multiple LibraryChargeHandlers could return a single set of matches, while respecting different
         #       separators.
@@ -2751,7 +2769,7 @@ class LibraryChargeHandler(ParameterHandler):
 
             # If we pass both tests above, go ahead and assign charges
             # TODO: We could probably save a little time by looking up this TopologyMolecule's _reference molecule_
-            #       and assigning charges to all other instances of it in this topoligy
+            #       and assigning charges to all other instances of it in this topology
             for top_particle_idx in top_particle_idxs:
                 _, sigma, epsilon = force.getParticleParameters(top_particle_idx)
                 force.setParticleParameters(top_particle_idx,

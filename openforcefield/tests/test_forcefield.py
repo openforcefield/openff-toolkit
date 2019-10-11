@@ -986,7 +986,7 @@ class TestForceFieldChargeAssignment:
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
     <LibraryCharges version="0.3">
        <!-- TIP3P water oxygen with charge override -->
-       <LibraryCharge smirks="[#1:1]-[#6:2](-[#1:3])(-[#1:4])-[#6:5](-[#1:6])(-[#1:7])-[#8:8]-[#1:9]" charge1="-0.4*elementary_charge" charge2="-0.3*elementary_charge" charge3="-0.2*elementary_charge" charge4="-0.1*elementary_charge" charge5="0.*elementary_charge" charge6="0.1*elementary_charge" charge7="0.2*elementary_charge" charge8="0.3*elementary_charge" charge9="0.4*elementary_charge" />
+       <LibraryCharge smirks="[#1:1]-[#6:2](-[#1:3])(-[#1:4])-[#6:5](-[#1:6])(-[#1:7])-[#8:8]-[#1:9]" charge1="-0.02*elementary_charge" charge2="-0.2*elementary_charge" charge3="-0.02*elementary_charge" charge4="-0.02*elementary_charge" charge5="-0.1*elementary_charge" charge6="-0.01*elementary_charge" charge7="-0.01*elementary_charge" charge8="0.3*elementary_charge" charge9="0.03*elementary_charge" />
     </LibraryCharges>
 </SMIRNOFF>
         '''
