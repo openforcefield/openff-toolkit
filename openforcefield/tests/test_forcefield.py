@@ -167,6 +167,37 @@ xml_tip3p_library_charges_ff = '''
     </LibraryCharges>
 </SMIRNOFF>
 '''
+
+xml_ethanol_library_charges_ff = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+       <LibraryCharge smirks="[#1:1]-[#6:2](-[#1:3])(-[#1:4])-[#6:5](-[#1:6])(-[#1:7])-[#8:8]-[#1:9]" charge1="-0.02*elementary_charge" charge2="-0.2*elementary_charge" charge3="-0.02*elementary_charge" charge4="-0.02*elementary_charge" charge5="-0.1*elementary_charge" charge6="-0.01*elementary_charge" charge7="-0.01*elementary_charge" charge8="0.3*elementary_charge" charge9="0.03*elementary_charge" />
+    </LibraryCharges>
+</SMIRNOFF>
+'''
+
+xml_ethanol_library_charges_in_parts_ff = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+       <LibraryCharge smirks="[#1:1]-[#6:2](-[#1:3])(-[#1:4])-[#6:5](-[#1:6])(-[#1:7])" charge1="-0.02*elementary_charge" charge2="-0.2*elementary_charge" charge3="-0.02*elementary_charge" charge4="-0.02*elementary_charge" charge5="-0.1*elementary_charge" charge6="-0.01*elementary_charge" charge7="-0.01*elementary_charge" />
+       <LibraryCharge smirks="[#8:1]-[#1:2]" charge1="0.3*elementary_charge" charge2="0.03*elementary_charge" />
+    </LibraryCharges>
+</SMIRNOFF>
+'''
+
+xml_ethanol_library_charges_by_atom_ff = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+       <LibraryCharge smirks="[#1:1]-[#6]" charge1="-0.02*elementary_charge" />
+       <LibraryCharge smirks="[#6:1]" charge1="-0.2*elementary_charge" />
+       <LibraryCharge smirks="[#1:1]-[#6]-[#8]" charge1="-0.01*elementary_charge" />
+       <LibraryCharge smirks="[#6:1]-[#8]" charge1="-0.1*elementary_charge" />
+       <LibraryCharge smirks="[#8:1]" charge1="0.3*elementary_charge" />
+       <LibraryCharge smirks="[#1:1]-[#8]" charge1="0.03*elementary_charge" />
+    </LibraryCharges>
+</SMIRNOFF>
+'''
+
 #======================================================================
 # TEST UTILITY FUNCTIONS
 #======================================================================
@@ -982,50 +1013,105 @@ class TestForceFieldChargeAssignment:
         """Test assigning charges to two ethanols with different atom orderings"""
         from simtk.openmm import NonbondedForce
 
-        xml_ethanol_library_charges_ff = '''
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-    <LibraryCharges version="0.3">
-       <!-- TIP3P water oxygen with charge override -->
-       <LibraryCharge smirks="[#1:1]-[#6:2](-[#1:3])(-[#1:4])-[#6:5](-[#1:6])(-[#1:7])-[#8:8]-[#1:9]" charge1="-0.02*elementary_charge" charge2="-0.2*elementary_charge" charge3="-0.02*elementary_charge" charge4="-0.02*elementary_charge" charge5="-0.1*elementary_charge" charge6="-0.01*elementary_charge" charge7="-0.01*elementary_charge" charge8="0.3*elementary_charge" charge9="0.03*elementary_charge" />
-    </LibraryCharges>
-</SMIRNOFF>
-        '''
+        # Define a library charge parameter for ethanol (C1-C2-O3) where C1 has charge -0.2, and its Hs have -0.02,
+        # C2 has charge -0.1 and its Hs have -0.01, and O3 has charge 0.3, and its H has charge 0.03
+
         ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_ethanol_library_charges_ff)
+
+        # ethanol.sdf
+        #      H5   H8
+        #      |    |
+        # H6 - C1 - C2 - O3 - H4
+        #      |    |
+        #      H7   H9
+        #
+        # ethanol_reordered.sdf (The middle C and O switch indices)
+        #      H5   H8
+        #      |    |
+        # H6 - C1 - C3 - O2 - H4
+        #      |    |
+        #      H7   H9
 
         molecules = [Molecule.from_file(get_data_file_path('molecules/ethanol.sdf')),
                      Molecule.from_file(get_data_file_path('molecules/ethanol_reordered.sdf'))]
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
-        #expected_charges = [-0.834, 0.417, 0.417, -0.834, 0.417, 0.417] * unit.elementary_charge
-        charges = []
-        for particle_index, expected_charge in enumerate(range(18)):
+        expected_charges = [-0.2, -0.1, 0.3, 0.03, -0.02, -0.02, -0.02, -0.01, -0.01, -0.2,
+                            0.3, -0.1, 0.03, -0.02, -0.02, -0.02, -0.01, -0.01] * unit.elementary_charge
+        for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
-            charges.append(q / unit.elementary_charge)
+            assert q == expected_charge
 
-            #assert q == expected_charge
-        raise Exception(charges)
+    def test_charge_method_hierarchy(self):
+        """Ensure that molecules are parameterized by charge_from_molecules first, then library charges
+        if not applicable, then AM1BCC otherwise"""
+        from simtk.openmm import NonbondedForce
 
-    def test_library_charges_to_only_some_molecules(self):
-        """Test assigning charges to a topology in which some molecules are covered by library charges
-         but other aren't"""
-        pass
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_tip3p_library_charges_ff)
+
+        benzene = Molecule.from_smiles('c1ccccc1')
+        benzene.partial_charges = np.array([-0.1, -0.1, -0.1, -0.1, -0.1, -0.1,
+                                             0.1,  0.1,  0.1,  0.1,  0.1,  0.1]) * unit.elementary_charge
+        water = Molecule.from_smiles('O')
+        molecules = [benzene,
+                     water,
+                     Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))]
+        top = Topology.from_molecules(molecules)
+        omm_system = ff.create_openmm_system(top, charge_from_molecules=[benzene])
+        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        expected_charges = [-0.1, -0.1, -0.1, -0.1, -0.1, -0.1,
+                             0.1,  0.1,  0.1,  0.1,  0.1,  0.1,
+                            -0.834, 0.417, 0.417] * unit.elementary_charge
+
+        # Ensure that the first two molecules have exactly the charges we intended
+        for particle_index, expected_charge in enumerate(expected_charges):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            assert q == expected_charge
+
+        # Ensure the last molecule had _some_ nonzero charge assigned by an AM1BCC implementation
+        for particle_index in range(len(expected_charges), top.n_topology_atoms):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            assert q != 0 * unit.elementary_charge
 
     def test_assign_charges_to_molecule_in_parts_using_multiple_library_charges(self):
         """Test assigning charges to parts of a molecule using two library charge lines"""
-        pass
+        from simtk.openmm import NonbondedForce
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_ethanol_library_charges_in_parts_ff)
+
+
+        molecules = [Molecule.from_file(get_data_file_path('molecules/ethanol.sdf')),
+                     Molecule.from_file(get_data_file_path('molecules/ethanol_reordered.sdf'))]
+        top = Topology.from_molecules(molecules)
+        omm_system = ff.create_openmm_system(top)
+        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        expected_charges = [-0.2, -0.1, 0.3, 0.03, -0.02, -0.02, -0.02, -0.01, -0.01, -0.2,
+                            0.3, -0.1, 0.03, -0.02, -0.02, -0.02, -0.01, -0.01] * unit.elementary_charge
+        for particle_index, expected_charge in enumerate(expected_charges):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            assert q == expected_charge
 
     def test_assign_charges_using_library_charges_by_single_atoms(self):
         """Test assigning charges to parts of a molecule using per-atom library charges"""
-        pass
+        from simtk.openmm import NonbondedForce
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_ethanol_library_charges_by_atom_ff)
+
+        molecules = [Molecule.from_file(get_data_file_path('molecules/ethanol.sdf')),
+                     Molecule.from_file(get_data_file_path('molecules/ethanol_reordered.sdf'))]
+        top = Topology.from_molecules(molecules)
+        omm_system = ff.create_openmm_system(top)
+        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        expected_charges = [-0.2, -0.1, 0.3, 0.03, -0.02, -0.02, -0.02, -0.01, -0.01, -0.2,
+                            0.3, -0.1, 0.03, -0.02, -0.02, -0.02, -0.01, -0.01] * unit.elementary_charge
+        for particle_index, expected_charge in enumerate(expected_charges):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            assert q == expected_charge
 
     def test_library_charges_dont_parameterize_molecule_because_of_incomplete_coverage(self):
         """Fail to assign charges to a molecule becau\se not all atoms can be assigned"""
         pass
 
-    def test_charge_method_hierarchy(self):
-        """Ensure that molecules are parameterized by charge_from_molecules first, then library charges if not applicable, then """
-        pass
+
 
 
 #======================================================================
