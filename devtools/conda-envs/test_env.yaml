@@ -19,6 +19,8 @@ dependencies:
   - parmed
   - packaging
   - openmmtools
+  - openforcefields
+  - smirnoff99Frosst
   - pyyaml
   - toml
   - bson
