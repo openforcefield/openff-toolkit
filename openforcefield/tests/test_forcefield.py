@@ -179,7 +179,8 @@ xml_ethanol_library_charges_ff = '''
 xml_ethanol_library_charges_in_parts_ff = '''
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
     <LibraryCharges version="0.3">
-       <LibraryCharge smirks="[#1:1]-[#6:2](-[#1:3])(-[#1:4])-[#6:5](-[#1:6])(-[#1:7])" charge1="-0.02*elementary_charge" charge2="-0.2*elementary_charge" charge3="-0.02*elementary_charge" charge4="-0.02*elementary_charge" charge5="-0.1*elementary_charge" charge6="-0.01*elementary_charge" charge7="-0.01*elementary_charge" />
+       <!-- Note that the oxygen is covered twice here. The correct behavior should be to take the charge from the SECOND LibraryCharge, as it should overwrite the first -->
+       <LibraryCharge smirks="[#1:1]-[#6:2](-[#1:3])(-[#1:4])-[#6:5](-[#1:6])(-[#1:7])-[#8:8]" charge1="-0.02*elementary_charge" charge2="-0.2*elementary_charge" charge3="-0.02*elementary_charge" charge4="-0.02*elementary_charge" charge5="-0.1*elementary_charge" charge6="-0.01*elementary_charge" charge7="-0.01*elementary_charge" charge8="-999*elementary_charge" />
        <LibraryCharge smirks="[#8:1]-[#1:2]" charge1="0.3*elementary_charge" charge2="0.03*elementary_charge" />
     </LibraryCharges>
 </SMIRNOFF>
@@ -189,10 +190,10 @@ xml_ethanol_library_charges_by_atom_ff = '''
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
     <LibraryCharges version="0.3">
        <LibraryCharge smirks="[#1:1]-[#6]" charge1="-0.02*elementary_charge" />
-       <LibraryCharge smirks="[#6:1]" charge1="-0.2*elementary_charge" />
+       <LibraryCharge smirks="[#6X4:1]" charge1="-0.2*elementary_charge" />
        <LibraryCharge smirks="[#1:1]-[#6]-[#8]" charge1="-0.01*elementary_charge" />
-       <LibraryCharge smirks="[#6:1]-[#8]" charge1="-0.1*elementary_charge" />
-       <LibraryCharge smirks="[#8:1]" charge1="0.3*elementary_charge" />
+       <LibraryCharge smirks="[#6X4:1]-[#8]" charge1="-0.1*elementary_charge" />
+       <LibraryCharge smirks="[#8X2:1]" charge1="0.3*elementary_charge" />
        <LibraryCharge smirks="[#1:1]-[#8]" charge1="0.03*elementary_charge" />
     </LibraryCharges>
 </SMIRNOFF>
@@ -1043,7 +1044,7 @@ class TestForceFieldChargeAssignment:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
 
-    def test_charge_method_hierarchy(self):
+    def test_library_charges_charge_method_hierarchy(self):
         """Ensure that molecules are parameterized by charge_from_molecules first, then library charges
         if not applicable, then AM1BCC otherwise"""
         from simtk.openmm import NonbondedForce
@@ -1075,7 +1076,8 @@ class TestForceFieldChargeAssignment:
             assert q != 0 * unit.elementary_charge
 
     def test_assign_charges_to_molecule_in_parts_using_multiple_library_charges(self):
-        """Test assigning charges to parts of a molecule using two library charge lines"""
+        """Test assigning charges to parts of a molecule using two library charge lines. Note that these LibraryCharge
+        SMIRKS have partial overlap, so this also tests that the hierarchy is correctly obeyed."""
         from simtk.openmm import NonbondedForce
         ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_ethanol_library_charges_in_parts_ff)
 
@@ -1092,7 +1094,8 @@ class TestForceFieldChargeAssignment:
             assert q == expected_charge
 
     def test_assign_charges_using_library_charges_by_single_atoms(self):
-        """Test assigning charges to parts of a molecule using per-atom library charges"""
+        """Test assigning charges to parts of a molecule using per-atom library charges. Note that these LibraryCharge
+        SMIRKS will match multiple atoms, so this is also a test of correct usage of the parameter hierarchy.."""
         from simtk.openmm import NonbondedForce
         ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_ethanol_library_charges_by_atom_ff)
 
@@ -1109,7 +1112,30 @@ class TestForceFieldChargeAssignment:
 
     def test_library_charges_dont_parameterize_molecule_because_of_incomplete_coverage(self):
         """Fail to assign charges to a molecule becau\se not all atoms can be assigned"""
-        pass
+        from simtk.openmm import NonbondedForce
+        molecules = [Molecule.from_file(get_data_file_path('molecules/toluene.sdf'))]
+        top = Topology.from_molecules(molecules)
+
+        # The library charges in the FF should not be able to fully cover toluene
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_ethanol_library_charges_by_atom_ff)
+        # Delete the ToolkitAM1BCCHandler so the molecule won't get charges from anywhere
+        del ff._parameter_handlers['ToolkitAM1BCC']
+        omm_system = ff.create_openmm_system(top)
+        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        expected_charges = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0] * unit.elementary_charge
+        for particle_index, expected_charge in enumerate(expected_charges):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            assert q == expected_charge
+
+        # If we do NOT delete the ToolkiAM1BCCHandler, then toluene should be assigned some nonzero partial charges.
+        # The exact value will vary by toolkit, so we don't test that here.
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_ethanol_library_charges_by_atom_ff)
+        omm_system = ff.create_openmm_system(top)
+        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        for particle_index in range(top.n_topology_atoms):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            assert q != 0 * unit.elementary_charge
 
 
 
