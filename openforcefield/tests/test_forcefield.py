@@ -672,6 +672,24 @@ class TestForceField():
 
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
+    def test_parameterize_ethanol_handler_dependency_loop(self, toolkit_registry, registry_description):
+        """Test parameterizing ethanol, but failing because custom handler classes can not resolve
+         which order to run in"""
+        from simtk.openmm import app
+        from openforcefield.typing.engines.smirnoff.parameters import BondHandler, AngleHandler
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+        bond_handler = forcefield.get_parameter_handler("Bonds")
+        angle_handler = forcefield.get_parameter_handler("Angles")
+        bond_handler._DEPENDENCIES += [AngleHandler]
+        angle_handler._DEPENDENCIES += [BondHandler]
+        pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
+        molecules = []
+        molecules.append(Molecule.from_smiles('CCO'))
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        with pytest.raises(RuntimeError, match="Unable to resolve order in which to run ParameterHandlers. "
+                                               "Dependencies do not form a directed acyclic graph") as excinfo:
+            omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
+
     def test_parameterize_ethanol_missing_torsion(self):
         from simtk.openmm import app
         from openforcefield.typing.engines.smirnoff.parameters import UnassignedProperTorsionParameterException
