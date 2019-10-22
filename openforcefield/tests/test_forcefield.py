@@ -672,6 +672,7 @@ class TestForceField():
 
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_ethanol_handler_dependency_loop(self, toolkit_registry, registry_description):
         """Test parameterizing ethanol, but failing because custom handler classes can not resolve
          which order to run in"""
@@ -1078,7 +1079,11 @@ class TestForceFieldChargeAssignment:
                      Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))]
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top, charge_from_molecules=[benzene])
-        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        existing = [f for f in omm_system.getForces() if type(f) == NonbondedForce]
+
+        # Ensure that the handlers do not make multiple NonbondedForce objects
+        assert len(existing) == 1
+        nonbondedForce = existing[0]
         expected_charges = [-0.1, -0.1, -0.1, -0.1, -0.1, -0.1,
                              0.1,  0.1,  0.1,  0.1,  0.1,  0.1,
                             -0.834, 0.417, 0.417] * unit.elementary_charge

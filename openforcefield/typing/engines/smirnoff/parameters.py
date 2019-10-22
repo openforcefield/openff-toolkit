@@ -2327,9 +2327,8 @@ class vdWHandler(ParameterHandler):
                                          tolerance=self._SCALETOL)
 
     def create_force(self, system, topology, **kwargs):
-
+        # The vdWHandler is the only handler which should make a NonbondedForce
         force = openmm.NonbondedForce()
-
 
         # If we're using PME, then the only possible openMM Nonbonded type is LJPME
         if self._method == 'PME':
@@ -2419,7 +2418,7 @@ class ElectrostaticsHandler(ParameterHandler):
     """
     _TAGNAME = 'Electrostatics'
     _OPENMMTYPE = openmm.NonbondedForce
-    _DEPENDENCIES = [vdWHandler]
+    _DEPENDENCIES = [vdWHandler] # vdWHandler is the only handler that we allow to create NonbondedForce particles
 
 
     scale12 = ParameterAttribute(default=0.0, converter=float)
@@ -2688,7 +2687,6 @@ class LibraryChargeHandler(ParameterHandler):
     _INFOTYPE = LibraryChargeType  # info type to store
     _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler] # vdWHandler must first run NonBondedForce.addParticle for each particle in the topology
-
 
     def find_matches(self, entity):
         """Find the elements of the topology/molecule matched by a parameter type.
