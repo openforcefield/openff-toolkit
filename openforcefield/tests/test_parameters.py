@@ -340,13 +340,13 @@ class TestParameterHandler:
         # Successfully create ParameterHandler by providing min supported version
         ph = ParameterHandler(version=ParameterHandler._MIN_SUPPORTED_SECTION_VERSION)
 
-        # Generate a SMIRNOFFSpecError ParameterHandler by providing a value higher than the max supported
+        # Generate a SMIRNOFFSpecError by providing a value higher than the max supported
         with pytest.raises(SMIRNOFFVersionError, match='SMIRNOFF offxml file was written with version 1000.0, '
                                                     'but this version of ForceField only supports version') as excinfo:
             ph = ParameterHandler(version='1000.0')
 
 
-        # Generate a SMIRNOFFSpecError ParameterHandler by providing a value lower than the min supported
+        # Generate a SMIRNOFFSpecError by providing a value lower than the min supported
         with pytest.raises(SMIRNOFFVersionError, match='SMIRNOFF offxml file was written with version 0.1, '
                                                     'but this version of ForceField only supports version') as excinfo:
             ph = ParameterHandler(version='0.1')
@@ -934,9 +934,7 @@ class TestProperTorsionHandler:
 class TestLibraryChargeHandler:
     def test_create_library_charge_handler(self):
         """Test creation of an empty LibraryChargeHandler"""
-        handler = LibraryChargeHandler()
-
-
+        handler = LibraryChargeHandler(skip_version_check=True)
 
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
