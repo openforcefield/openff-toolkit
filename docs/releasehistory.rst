@@ -8,6 +8,21 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
+Current Development
+-------------------
+
+Bugfixes
+""""""""
+- `PR #431 <https://github.com/openforcefield/openforcefield/pull/431>`_: Fixes an issue
+  where ``ToolkitWrapper``s would improperly search for functionality in the
+  ``GLOBAL_TOOLKIT_REGISTRY``, even though a specific ``ToolkitRegistry`` was requested for an
+  operation.
+- `PR #439 <https://github.com/openforcefield/openforcefield/pull/439>`_: Fixes
+ `Issue #438 <https://github.com/openforcefield/openforcefield/issues/438>`_, by replacing
+  call to NetworkX ``Graph.node`` with call to ``Graph.nodes``, per
+  `2.4 migration guide <https://networkx.github.io/documentation/stable/release/release_2.4.html>`_.
+
+
 0.5.1 - Adding the parameter coverage example notebook
 ------------------------------------------------------
 
