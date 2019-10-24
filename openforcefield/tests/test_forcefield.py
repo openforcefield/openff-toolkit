@@ -672,17 +672,34 @@ class TestForceField():
 
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
+    @pytest.fixture()
+    def create_circular_handler_dependencies(self):
+        from openforcefield.typing.engines.smirnoff.parameters import BondHandler, AngleHandler, ConstraintHandler
+
+        # Modify the BondHandler and AngleHandler classes to depend on the other one running first during
+        # system parameterization. Unfortunately, I can't figure out how to do this just to these _instances_
+        # of the Handlers, so I modify them at the class level, and then un-modify them at the end of the test.
+        orig_bh_depends = copy.deepcopy(BondHandler._DEPENDENCIES)
+        orig_ah_depends = copy.deepcopy(AngleHandler._DEPENDENCIES)
+        BondHandler._DEPENDENCIES = [ConstraintHandler, AngleHandler]
+        AngleHandler._DEPENDENCIES = [ConstraintHandler, BondHandler]
+
+        # The tests run here. Regardless of outcome, the code after `yield` runs after the test completes
+        yield
+
+        # Return handler dependencies to their original states
+        BondHandler._DEPENDENCIES = orig_bh_depends
+        AngleHandler._DEPENDENCIES = orig_ah_depends
+
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
-    def test_parameterize_ethanol_handler_dependency_loop(self, toolkit_registry, registry_description):
+    def test_parameterize_ethanol_handler_dependency_loop(self, create_circular_handler_dependencies, toolkit_registry, registry_description):
         """Test parameterizing ethanol, but failing because custom handler classes can not resolve
          which order to run in"""
         from simtk.openmm import app
-        from openforcefield.typing.engines.smirnoff.parameters import BondHandler, AngleHandler, ConstraintHandler
+        # from openforcefield.typing.engines.smirnoff.parameters import BondHandler, AngleHandler, ConstraintHandler
+
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
-        bond_handler = forcefield.get_parameter_handler("Bonds")
-        angle_handler = forcefield.get_parameter_handler("Angles")
-        bond_handler._DEPENDENCIES = [ConstraintHandler, AngleHandler]
-        angle_handler._DEPENDENCIES = [ConstraintHandler, BondHandler]
+
         pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
@@ -690,10 +707,6 @@ class TestForceField():
         with pytest.raises(RuntimeError, match="Unable to resolve order in which to run ParameterHandlers. "
                                                "Dependencies do not form a directed acyclic graph") as excinfo:
             omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
-
-        # Return handler dependencies to their original states
-        bond_handler._DEPENDENCIES = [ConstraintHandler]
-        angle_handler._DEPENDENCIES = [ConstraintHandler]
 
 
     def test_parameterize_ethanol_missing_torsion(self):
