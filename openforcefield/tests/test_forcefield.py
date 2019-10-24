@@ -666,8 +666,7 @@ class TestForceField():
 
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
         pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
-        molecules = []
-        molecules.append(Molecule.from_smiles('CCO'))
+        molecules = [create_ethanol()]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         omm_system = forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
@@ -701,8 +700,7 @@ class TestForceField():
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
 
         pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
-        molecules = []
-        molecules.append(Molecule.from_smiles('CCO'))
+        molecules = [create_ethanol()]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         with pytest.raises(RuntimeError, match="Unable to resolve order in which to run ParameterHandlers. "
                                                "Dependencies do not form a directed acyclic graph") as excinfo:
@@ -721,8 +719,7 @@ class TestForceField():
 </SMIRNOFF>
 ''')
         pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
-        molecules = []
-        molecules.append(Molecule.from_smiles('CCO'))
+        molecules = [create_ethanol()]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         with pytest.raises(UnassignedProperTorsionParameterException,
                            match='- Topology indices [(]5, 0, 1, 6[)]: '
@@ -732,14 +729,13 @@ class TestForceField():
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_1_cyclohexane_1_ethanol(self, toolkit_registry, registry_description):
+        """Test parameterizing a periodic system of two distinct molecules"""
         from simtk.openmm import app
 
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
         pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
         # toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = []
-        molecules.append(Molecule.from_smiles('CCO'))
-        molecules.append(Molecule.from_smiles('C1CCCCC1'))
+        molecules = [create_ethanol(), create_cyclohexane()]
         # molecules = [Molecule.from_file(get_data_file_path(name)) for name in ('molecules/ethanol.mol2',
         #                                                                      'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
@@ -748,14 +744,12 @@ class TestForceField():
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_1_cyclohexane_1_ethanol_vacuum(self, toolkit_registry, registry_description):
+        """Test parametrizing a nonperiodic system of two distinct molecules"""
         from simtk.openmm import app
 
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
         pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_cyclohexane_1_ethanol.pdb'))
-        # toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = []
-        molecules.append(Molecule.from_smiles('CCO'))
-        molecules.append(Molecule.from_smiles('C1CCCCC1'))
+        molecules = [create_ethanol(), create_cyclohexane()]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         topology.box_vectors = None
 
@@ -781,6 +775,9 @@ class TestForceField():
                                      'cyclohexane_ethanol_0.4_0.6.pdb',
                                      'propane_methane_butanol_0.2_0.3_0.5.pdb'])
     def test_parameterize_large_system(self, toolkit_registry, registry_description, box):
+        """Test parameterizing a large system of several distinct molecules.
+        This test is very slow, so it is only run if the --runslow option is provided to pytest.
+        """
         from simtk.openmm import app
 
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
@@ -1025,7 +1022,7 @@ class TestForceFieldChargeAssignment:
         from simtk.openmm import NonbondedForce
 
         ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_tip3p_library_charges_ff)
-        mol = Molecule.from_smiles('O')
+        mol = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers','water.sdf')))
         omm_system = ff.create_openmm_system(mol.to_topology())
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
         expected_charges = [-0.834, 0.417, 0.417] * unit.elementary_charge
@@ -1038,7 +1035,7 @@ class TestForceFieldChargeAssignment:
         from simtk.openmm import NonbondedForce
 
         ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_tip3p_library_charges_ff)
-        mol = Molecule.from_smiles('O')
+        mol = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers','water.sdf')))
         top = Topology.from_molecules([mol, mol])
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
@@ -1087,23 +1084,24 @@ class TestForceFieldChargeAssignment:
         from simtk.openmm import NonbondedForce
 
         ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_tip3p_library_charges_ff)
-
-        benzene = Molecule.from_smiles('c1ccccc1')
-        benzene.partial_charges = np.array([-0.1, -0.1, -0.1, -0.1, -0.1, -0.1,
-                                             0.1,  0.1,  0.1,  0.1,  0.1,  0.1]) * unit.elementary_charge
+        cyclohexane = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers','cyclohexane.sdf')))
+        cyclohexane.partial_charges = np.array([-0.2, -0.2, -0.2, -0.2, -0.2, -0.2,
+                                             0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+                                             0.1, 0.1, 0.1, 0.1, 0.1, 0.1]) * unit.elementary_charge
         water = Molecule.from_smiles('O')
-        molecules = [benzene,
+        molecules = [cyclohexane,
                      water,
                      Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))]
         top = Topology.from_molecules(molecules)
-        omm_system = ff.create_openmm_system(top, charge_from_molecules=[benzene])
+        omm_system = ff.create_openmm_system(top, charge_from_molecules=[cyclohexane])
         existing = [f for f in omm_system.getForces() if type(f) == NonbondedForce]
 
         # Ensure that the handlers do not make multiple NonbondedForce objects
         assert len(existing) == 1
         nonbondedForce = existing[0]
-        expected_charges = [-0.1, -0.1, -0.1, -0.1, -0.1, -0.1,
-                             0.1,  0.1,  0.1,  0.1,  0.1,  0.1,
+        expected_charges = [-0.2, -0.2, -0.2, -0.2, -0.2, -0.2,
+                             0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+                             0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
                             -0.834, 0.417, 0.417] * unit.elementary_charge
 
         # Ensure that the first two molecules have exactly the charges we intended
