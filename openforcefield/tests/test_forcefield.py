@@ -159,15 +159,6 @@ xml_toolkitam1bcc_ff = '''
 </SMIRNOFF>
 '''
 
-xml_tip3p_library_charges_ff = '''
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-    <LibraryCharges version="0.3">
-       <!-- TIP3P water oxygen with charge override -->
-       <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="0.417*elementary_charge" charge2="-0.834*elementary_charge" charge3="0.417*elementary_charge"/>
-    </LibraryCharges>
-</SMIRNOFF>
-'''
-
 xml_ethanol_library_charges_ff = '''
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
     <LibraryCharges version="0.3">
@@ -1010,7 +1001,7 @@ class TestForceFieldChargeAssignment:
         """Test assigning charges to one water molecule using library charges"""
         from simtk.openmm import NonbondedForce
 
-        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_tip3p_library_charges_ff)
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', 'test_forcefields/tip3p.offxml')
         mol = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers','water.sdf')))
         omm_system = ff.create_openmm_system(mol.to_topology())
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
@@ -1023,7 +1014,7 @@ class TestForceFieldChargeAssignment:
         """Test assigning charges to two water molecules using library charges"""
         from simtk.openmm import NonbondedForce
 
-        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_tip3p_library_charges_ff)
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', 'test_forcefields/tip3p.offxml')
         mol = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers','water.sdf')))
         top = Topology.from_molecules([mol, mol])
         omm_system = ff.create_openmm_system(top)
@@ -1072,7 +1063,7 @@ class TestForceFieldChargeAssignment:
         if not applicable, then AM1BCC otherwise"""
         from simtk.openmm import NonbondedForce
 
-        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_tip3p_library_charges_ff)
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', 'test_forcefields/tip3p.offxml')
         cyclohexane = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers','cyclohexane.sdf')))
         cyclohexane.partial_charges = np.array([-0.2, -0.2, -0.2, -0.2, -0.2, -0.2,
                                              0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
