@@ -190,8 +190,6 @@ Currently, only classical fixed point charge models are supported, but future ex
 
 ### `<LibraryCharges>`: Library charges for polymeric residues and special solvent models
 
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit. Please see `Issue 25 on the Open Force Field Toolkit issue tracker <https://github.com/openforcefield/openforcefield/issues/25>`_.
-
 A mechanism is provided for specifying library charges that can be applied to molecules or residues that match provided templates.
 Library charges are applied first, and atoms for which library charges are applied will be excluded from alternative charging schemes listed below.
 
@@ -217,6 +215,13 @@ For example, to ensure water molecules are assigned partial charges for [TIP3P](
    <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="+0.417*elementary_charge" charge2="-0.834*elementary_charge" charge3="+0.417*elementary_charge"/>
 </LibraryCharges>
 ```
+
+
+| LibraryCharges section tag version | Tag attributes and default values    | Required parameter attributes   | Optional parameter attributes |
+|------------------------------------|--------------------------------------|---------------------------------|-------------------------------|
+| 0.3                                |                                      | `smirks`, `charges` (indexed)   | `name`, `id`, `parent_id`     |
+
+
 
 ### `<ChargeIncrementModel>`: Small molecule and fragment charges
 
