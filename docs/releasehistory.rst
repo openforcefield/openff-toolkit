@@ -11,16 +11,38 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 Current Development
 -------------------
 
+New features
+""""""""""""
+- `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: Closes
+  `Issue #25 <https://github.com/openforcefield/openforcefield/issues/25>`_ by adding
+  initial support for the
+  `LibraryCharges tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#librarycharges-library-charges-for-polymeric-residues-and-special-solvent-models>`_
+  using
+  :py:class:`LibraryChargeHandler <openforcefield.typing.engines.smirnoff.parameters.LibraryChargeHandler>`.
+  For a molecule to have charges assigned using LibraryCharges, all of its atoms must be covered by
+  at least one LibraryCharge. If an atom is covered by multiple LibraryCharges, then the last
+  one read will be applied. At this time, there is no concept of "residues" during parametrization,
+  so it is not possible to parametrize some atoms in a molecule using LibraryCharges and
+  others using another method. Further, no effort is made to ensure that the net charge
+  applied using LibraryCharges is the total formal charge on the molecule.
+
 Bugfixes
 """"""""
 - `PR #431 <https://github.com/openforcefield/openforcefield/pull/431>`_: Fixes an issue
-  where ``ToolkitWrapper``s would improperly search for functionality in the
+  where ``ToolkitWrapper`` objects would improperly search for functionality in the
   ``GLOBAL_TOOLKIT_REGISTRY``, even though a specific ``ToolkitRegistry`` was requested for an
   operation.
 - `PR #439 <https://github.com/openforcefield/openforcefield/pull/439>`_: Fixes
- `Issue #438 <https://github.com/openforcefield/openforcefield/issues/438>`_, by replacing
+  `Issue #438 <https://github.com/openforcefield/openforcefield/issues/438>`_, by replacing
   call to NetworkX ``Graph.node`` with call to ``Graph.nodes``, per
   `2.4 migration guide <https://networkx.github.io/documentation/stable/release/release_2.4.html>`_.
+
+Files modified
+""""""""""""""
+- `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: Updates
+  the previously-nonfunctional ``test_forcefields/tip3p.offxml`` to a functional state
+  by updating it to the SMIRNOFF
+  0.3 specification, and specifying atomic charges using the ``LibraryCharges`` tag.
 
 
 0.5.1 - Adding the parameter coverage example notebook
