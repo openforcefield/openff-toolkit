@@ -1033,7 +1033,7 @@ class TestForceFieldChargeAssignment:
         assignment is determined by order they are added to the force field"""
         from simtk.openmm import NonbondedForce
 
-        # Test with xml_OF_library_charges_xml loaded last, which should assign dummy partial charges
+        # Test with xml_OH_library_charges_xml loaded last, which should assign dummy partial charges
         ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', 'test_forcefields/tip3p.offxml', xml_OH_library_charges_xml)
         mol = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers','water.sdf')))
         omm_system = ff.create_openmm_system(mol.to_topology())
