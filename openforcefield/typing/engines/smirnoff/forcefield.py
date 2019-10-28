@@ -1068,11 +1068,6 @@ class ForceField:
             if tagname in self._parameter_handlers:
                 ordered_parameter_handlers.append(
                     self._parameter_handlers[tagname])
-            # Do not create Handler for dependency if it doesn't already exist
-            #else:
-            #    ordered_parameter_handlers.append(
-            #        self.get_parameter_handler(tagname))
-        #raise Exception()
         return ordered_parameter_handlers
 
     # TODO: Should we add convenience methods to parameterize a Topology and export directly to AMBER, gromacs, CHARMM, etc.?
