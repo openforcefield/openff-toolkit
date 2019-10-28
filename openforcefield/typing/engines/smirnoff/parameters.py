@@ -2869,7 +2869,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             # Make a temporary copy of ref_mol to assign charges
             temp_mol = FrozenMolecule(ref_mol)
 
-            # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
+            # If the molecule wasn't already assigned charge values, calculate them here
             toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
             temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
             temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
