@@ -3060,7 +3060,8 @@ class GBSAHandler(ParameterHandler):
     _TAGNAME = 'GBSA'
     _INFOTYPE = GBSAType
     _OPENMMTYPE = openmm.GBSAOBCForce
-    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
+    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler,
+                     ToolkitAM1BCCHandler, ChargeIncrementModelHandler, LibraryChargeHandler]
 
     gb_model = ParameterAttribute(
         default='OBC1',
