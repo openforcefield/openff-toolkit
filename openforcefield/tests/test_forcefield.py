@@ -190,6 +190,24 @@ xml_ethanol_library_charges_by_atom_ff = '''
 </SMIRNOFF>
 '''
 
+xml_OH_library_charges_xml = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+       <LibraryCharge smirks="[#1:1]" charge1="1.*elementary_charge" />
+       <LibraryCharge smirks="[#8:1]" charge1="-2.*elementary_charge" />
+    </LibraryCharges>
+</SMIRNOFF>
+'''
+
+xml_CH_zeroes_library_charges_xml = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+       <LibraryCharge smirks="[#1:1]" charge1="0.*elementary_charge" />
+       <LibraryCharge smirks="[#6:1]" charge1="0.*elementary_charge" />
+    </LibraryCharges>
+</SMIRNOFF>
+'''
+
 #======================================================================
 # TEST UTILITY FUNCTIONS
 #======================================================================
@@ -1058,38 +1076,70 @@ class TestForceFieldChargeAssignment:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
 
-    def test_library_charges_charge_method_hierarchy(self):
+    def test_charge_method_hierarchy(self):
         """Ensure that molecules are parameterized by charge_from_molecules first, then library charges
         if not applicable, then AM1BCC otherwise"""
         from simtk.openmm import NonbondedForce
 
-        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', 'test_forcefields/tip3p.offxml')
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml',
+                        xml_CH_zeroes_library_charges_xml,
+                        'test_forcefields/tip3p.offxml'
+                        )
         cyclohexane = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers','cyclohexane.sdf')))
+        butanol = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers', 'butanol.sdf')))
+        propane = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers', 'propane.sdf')))
+        water = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers', 'water.sdf')))
+        ethanol = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers', 'ethanol.sdf')))
+        # Assign dummy partial charges to cyclohexane, which we expect to find in the final system since it
+        # is included in the charge_from_molecules kwarg to create_openmm_system
         cyclohexane.partial_charges = np.array([-0.2, -0.2, -0.2, -0.2, -0.2, -0.2,
                                              0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
                                              0.1, 0.1, 0.1, 0.1, 0.1, 0.1]) * unit.elementary_charge
-        water = Molecule.from_smiles('O')
-        molecules = [cyclohexane,
-                     water,
-                     Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))]
+
+        # There were previously known issues when parameterizing molecules with all zero charges,
+        # so test this explicitly with butanol. Since butanol will be in the charge_from_molecules kwarg,
+        # we expect to find these charges in the final system.
+        butanol.partial_charges = np.array([0.0] * 15) * unit.elementary_charge
+
+        # Add dummy partial charges to propane, which should be IGNORED since it
+        # isn't in the charge_from_molecules kwarg
+        propane.partial_charges = np.array([99.] * 11) * unit.elementary_charge
+
+        # Add dummy partial charges to water, which should be IGNORED since it isn't in the charge_from_molecules kwarg
+        water.partial_charges = np.array([99.] * 3) * unit.elementary_charge
+
+        molecules = [cyclohexane, # charge_from_molecules kwarg
+                     butanol,     # charge_from_molecules kwarg
+                     propane,     # library charges
+                     water,       # library charges
+                     ethanol]     # AM1-BCC
         top = Topology.from_molecules(molecules)
-        omm_system = ff.create_openmm_system(top, charge_from_molecules=[cyclohexane])
+        omm_system = ff.create_openmm_system(top, charge_from_molecules=[cyclohexane, butanol])
         existing = [f for f in omm_system.getForces() if type(f) == NonbondedForce]
 
         # Ensure that the handlers do not make multiple NonbondedForce objects
         assert len(existing) == 1
         nonbondedForce = existing[0]
-        expected_charges = [-0.2, -0.2, -0.2, -0.2, -0.2, -0.2,
+        expected_charges = [# cyclohexane (18 atoms) should have the following values from charge_from_mols
+                            -0.2, -0.2, -0.2, -0.2, -0.2, -0.2,
                              0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
                              0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+                            # butanol (15 atoms) should have the following values from charge_from_mols
+                             0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                             0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                             0.0, 0.0, 0.0,
+                            # propane (11 atoms) should have the following values from xml_CH_zeroes_library_charges_xml
+                             0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                             0.0, 0.0, 0.0, 0.0, 0.0,
+                            # water (3 atoms) should have the following charges from tip3p.offxml
                             -0.834, 0.417, 0.417] * unit.elementary_charge
 
-        # Ensure that the first two molecules have exactly the charges we intended
+        # Ensure that the first three molecules have exactly the charges we intended
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
 
-        # Ensure the last molecule had _some_ nonzero charge assigned by an AM1BCC implementation
+        # Ensure the last molecule (ethanol) had _some_ nonzero charge assigned by an AM1BCC implementation
         for particle_index in range(len(expected_charges), top.n_topology_atoms):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != 0 * unit.elementary_charge
