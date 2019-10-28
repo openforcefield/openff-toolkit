@@ -1028,6 +1028,30 @@ class TestForceFieldChargeAssignment:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
 
+    def test_library_charge_hierarchy(self):
+        """Test assigning charges to one water molecule using library charges, where two LCs match and the
+        assignment is determined by order they are added to the force field"""
+        from simtk.openmm import NonbondedForce
+
+        # Test with xml_OF_library_charges_xml loaded last, which should assign dummy partial charges
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', 'test_forcefields/tip3p.offxml', xml_OH_library_charges_xml)
+        mol = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers','water.sdf')))
+        omm_system = ff.create_openmm_system(mol.to_topology())
+        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        expected_charges = [-2., 1., 1.] * unit.elementary_charge
+        for particle_index, expected_charge in enumerate(expected_charges):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            assert q == expected_charge
+
+        # Test again, but with tip3p.offxml loaded last (loading the correct partial charges)
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_OH_library_charges_xml, 'test_forcefields/tip3p.offxml', )
+        omm_system = ff.create_openmm_system(mol.to_topology())
+        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        expected_charges = [-0.834, 0.417, 0.417] * unit.elementary_charge
+        for particle_index, expected_charge in enumerate(expected_charges):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            assert q == expected_charge
+
     def test_library_charges_to_two_waters(self):
         """Test assigning charges to two water molecules using library charges"""
         from simtk.openmm import NonbondedForce
