@@ -2866,23 +2866,8 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             if self.check_charges_assigned(ref_mol, topology):
                 continue
 
-            # Make a temporary copy of ref_mol to assign charges from charge_mol
+            # Make a temporary copy of ref_mol to assign charges
             temp_mol = FrozenMolecule(ref_mol)
-
-
-            molecule_already_charged = False
-            for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
-                # Check whether any atom in the molecule already has a charge. If so, skip it
-                for top_atom in topology_molecule.atoms:
-                    q, _, _2 = force.getParticleParameters(top_atom.topology_particle_index)
-
-                    if q != 0 * unit.elementary_charge:
-                        logger.debug('Original molecule has at least one atom with existing charge. Skipping library '
-                                     'charge assignment')
-                        molecule_already_charged = True
-                        break
-            if molecule_already_charged:
-                continue
 
             # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
             toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
