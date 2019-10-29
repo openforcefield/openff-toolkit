@@ -139,6 +139,9 @@ html_logo = "_static/openforcefield.png"
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.
 html_theme_options = {
+    # Disable the sidebar, since it takes up too much space
+    'nosidebar': True,
+
     # Navigation bar title. (Default: ``project`` value)
     'navbar_title': "Open Force Field Toolkit",
 
