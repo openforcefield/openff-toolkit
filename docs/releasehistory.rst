@@ -26,6 +26,19 @@ New features
   others using another method. Further, no effort is made to ensure that the net charge
   applied using LibraryCharges is the total formal charge on the molecule.
 
+Behavior changed
+""""""""""""""""
+- `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: If a molecule
+  can not be assigned charges by any charge-generation method, an
+  ``openforcefield.typing.engines.smirnoff.parameters.UnassignedChargeParameterException``
+  will be raised. Previously, creating a system without either ``ToolkitAM1BCCHandler`` or
+  the ``charge_from_molecules`` keyword argument to ``ForceField.create_openmm_system`` would
+  produce a system where the molecule has zero charge on all atoms. However, given that we
+  will soon be adding more options for charge generation, it is important that charge generation
+  failures not be silent. Molecules with zero charge can still be produced by setting the
+  ``Molecule.partial_charges`` array to be all zeroes, and including the molecule in the
+  ``charge_from_molecules`` keyword argument to ``create_openmm_system``.
+
 Bugfixes
 """"""""
 - `PR #431 <https://github.com/openforcefield/openforcefield/pull/431>`_: Fixes an issue
