@@ -1034,7 +1034,9 @@ class TestForceFieldChargeAssignment:
         from simtk.openmm import NonbondedForce
 
         # Test with xml_OH_library_charges_xml loaded last, which should assign dummy partial charges
-        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', 'test_forcefields/tip3p.offxml', xml_OH_library_charges_xml)
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml',
+                        'test_forcefields/tip3p.offxml',
+                        xml_OH_library_charges_xml)
         mol = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers','water.sdf')))
         omm_system = ff.create_openmm_system(mol.to_topology())
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
@@ -1129,9 +1131,11 @@ class TestForceFieldChargeAssignment:
         # isn't in the charge_from_molecules kwarg
         propane.partial_charges = np.array([99.] * 11) * unit.elementary_charge
 
-        # Add dummy partial charges to water, which should be IGNORED since it isn't in the charge_from_molecules kwarg
+        # Add dummy partial charges to water, which should be IGNORED since it
+        # isn't in the charge_from_molecules kwarg
         water.partial_charges = np.array([99.] * 3) * unit.elementary_charge
 
+        #            molecule       correct charge method
         molecules = [cyclohexane, # charge_from_molecules kwarg
                      butanol,     # charge_from_molecules kwarg
                      propane,     # library charges
@@ -1204,8 +1208,10 @@ class TestForceFieldChargeAssignment:
             assert q == expected_charge
 
     def test_library_charges_dont_parameterize_molecule_because_of_incomplete_coverage(self):
-        """Fail to assign charges to a molecule becau\se not all atoms can be assigned"""
+        """Fail to assign charges to a molecule because not all atoms can be assigned"""
         from simtk.openmm import NonbondedForce
+        from openforcefield.typing.engines.smirnoff.parameters import UnassignedChargeParameterException
+
         molecules = [Molecule.from_file(get_data_file_path('molecules/toluene.sdf'))]
         top = Topology.from_molecules(molecules)
 
@@ -1213,13 +1219,9 @@ class TestForceFieldChargeAssignment:
         ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_ethanol_library_charges_by_atom_ff)
         # Delete the ToolkitAM1BCCHandler so the molecule won't get charges from anywhere
         del ff._parameter_handlers['ToolkitAM1BCC']
-        omm_system = ff.create_openmm_system(top)
-        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
-        expected_charges = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0] * unit.elementary_charge
-        for particle_index, expected_charge in enumerate(expected_charges):
-            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
-            assert q == expected_charge
+        with pytest.raises(UnassignedChargeParameterException,
+                           match="did not have charges assigned by any ParameterHandler") as excinfo:
+            omm_system = ff.create_openmm_system(top)
 
         # If we do NOT delete the ToolkiAM1BCCHandler, then toluene should be assigned some nonzero partial charges.
         # The exact value will vary by toolkit, so we don't test that here.

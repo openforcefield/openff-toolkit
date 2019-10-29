@@ -102,6 +102,11 @@ class UnassignedProperTorsionParameterException(UnassignedValenceParameterExcept
     pass
 
 
+class UnassignedChargeParameterException(Exception):
+    """Exception raised when no charge method is able to assign charges to a molecule."""
+    pass
+
+
 #======================================================================
 # ENUM TYPES
 #======================================================================
@@ -2721,7 +2726,19 @@ class ElectrostaticsHandler(_NonbondedHandler):
                                              "of the Open Force Field toolkit.".format(self._method,
                                                                                 topology.box_vectors is not None))
 
+    def postprocess_system(self, system, topology, **kwargs):
 
+        # Check to ensure all molecules have had charges assigned
+        uncharged_mols = []
+        for ref_mol in topology.reference_molecules:
+            if not self.check_charges_assigned(ref_mol, topology):
+                uncharged_mols.append(ref_mol)
+
+        if len(uncharged_mols) != 0:
+            msg = "The following molecules did not have charges assigned by any ParameterHandler in the ForceField:\n"
+            for ref_mol in uncharged_mols:
+                msg += f"{ref_mol.to_smiles()}\n"
+            raise UnassignedChargeParameterException(msg)
 
 class LibraryChargeHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<LibraryCharges>`` tags
