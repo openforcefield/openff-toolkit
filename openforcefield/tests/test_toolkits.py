@@ -459,10 +459,10 @@ class TestOpenEyeToolkitWrapper:
    
         toolkit_wrapper = OpenEyeToolkitWrapper()
         # Reading neutral molecule from file
-        filename = get_data_file_path('molecules/molecule_neutral.sdf')
+        filename = get_data_file_path('molecules/CID20742535_neutral.sdf')
         molecule1 = Molecule.from_file(filename)
         # Reading negative molecule from file
-        filename = get_data_file_path('molecules/molecule_anion.sdf')
+        filename = get_data_file_path('molecules/CID20742535_anion.sdf')
         molecule2 = Molecule.from_file(filename) 
    
         # Checking that only one additional bond is present ihe neutral molecule
