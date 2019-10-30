@@ -1542,7 +1542,7 @@ class Topology(Serializable):
         # Make a flat list of all atomic numbers in the molecule
         atom_nums = []
         for idx in mol_graph.nodes:
-            atom_nums.append(mol_graph.node[idx]['atomic_number'])
+            atom_nums.append(mol_graph.nodes[idx]['atomic_number'])
 
         # Count the number of instances of each atomic number
         at_num_to_counts = dict([(unq, atom_nums.count(unq)) for unq in atom_nums])

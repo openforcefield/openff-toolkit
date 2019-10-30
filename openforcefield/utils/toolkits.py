@@ -535,7 +535,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oechem.OEPerceiveChiral(oemol)
             oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
             oechem.OE3DToInternalStereo(oemol)
-            mol = Molecule.from_openeye(
+            mol = cls.from_openeye(
                 oemol,
                 allow_undefined_stereo=allow_undefined_stereo)
             mols.append(mol)
@@ -1254,7 +1254,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 "loading the molecule from a file with geometry already present or running "
                 "molecule.generate_conformers() before calling molecule.compute_partial_charges"
             )
-        oemol = molecule.to_openeye()
+        oemol = self.to_openeye(molecule)
 
         errfs = oechem.oeosstream()
         oechem.OEThrow.SetOutputStream(errfs)
@@ -1450,7 +1450,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        oemol = molecule.to_openeye()
+        oemol = self.to_openeye(molecule)
         return self._find_smarts_matches(oemol, smarts)
 
 
@@ -1555,7 +1555,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     print(rdmol.GetProp('_Name'), e)
                     continue
                 Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-                mol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
+                mol = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
                 mols.append(mol)
 
         elif (file_format == 'SMI'):
@@ -1565,7 +1565,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # through the from_smiles function instead
             for rdmol in Chem.SmilesMolSupplier(file_path, titleLine=False):
                 rdmol = Chem.AddHs(rdmol)
-                mol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
+                mol = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
                 mols.append(mol)
 
         elif (file_format == 'PDB'):
@@ -1615,7 +1615,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         if (file_format == "MOL") or (file_format == "SDF"):
             # TODO: Iterate over all mols in file_data
             for rdmol in Chem.ForwardSDMolSupplier(file_obj):
-                mol = Molecule.from_rdkit(rdmol)
+                mol = self.from_rdkit(rdmol)
                 mols.append(mol)
 
         if (file_format == 'SMI'):
@@ -1773,8 +1773,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                         f"desired molecule as an RDMol with no implicit hydrogens, and then use "
                         f"Molecule.from_rdkit() to create the desired OFFMol.")
 
-        molecule = Molecule.from_rdkit(rdmol,
-                                       allow_undefined_stereo=allow_undefined_stereo)
+        molecule = self.from_rdkit(rdmol,
+                                   allow_undefined_stereo=allow_undefined_stereo)
 
         return molecule
 
@@ -2706,7 +2706,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ValueError if the requested charge method could not be handled
 
         """
-
         import os
         from simtk import unit
 
