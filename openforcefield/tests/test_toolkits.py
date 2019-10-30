@@ -465,7 +465,7 @@ class TestOpenEyeToolkitWrapper:
         filename = get_data_file_path('molecules/CID20742535_anion.sdf')
         molecule2 = Molecule.from_file(filename) 
    
-        # Checking that only one additional bond is present ihe neutral molecule
+        # Checking that only one additional bond is present in the neutral molecule
         assert (len(molecule1.bonds)==len(molecule2.bonds)+1)
  
         for charge_model in ['am1', 'pm3']:
