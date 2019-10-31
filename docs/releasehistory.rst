@@ -39,6 +39,13 @@ Behavior changed
   ``Molecule.partial_charges`` array to be all zeroes, and including the molecule in the
   ``charge_from_molecules`` keyword argument to ``create_openmm_system``.
 
+Tests added
+"""""""""""
+- `PR #430 <https://github.com/openforcefield/openforcefield/pull/430>`_: Added test for 
+  Wiberg Bond Order implemented in OpenEye Toolkits. Molecules taken from 
+  DOI:10.5281/zenodo.3405489 . Added by Sukanya Sasmal.
+ 
+
 Bugfixes
 """"""""
 - `PR #431 <https://github.com/openforcefield/openforcefield/pull/431>`_: Fixes an issue
