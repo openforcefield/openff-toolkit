@@ -89,6 +89,8 @@
 		<Bond smirks="[#7:1]-[#1:2]" length="1.01 * angstrom" k="868.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b86"></Bond>
 		<Bond smirks="[#8:1]-[#1:2]" length="0.96 * angstrom" k="1106.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b87"></Bond>
 	</Bonds>
+	<Bonds version="0.3" potential="harmonic" fractional_bondorder_method="Wiberg" fractional_bondorder_interpolation="linear">
+		<Bond smirks="[#6X3:1]!#[#6X3:2]" k_bondorder1="820.0" k_bondorder2="1098" length_bondorder1="1.45" length_bondorder2="1.35"/>
 	<Angles version="0.3" potential="harmonic">
 		<Angle smirks="[*:1]~[#6X4:2]-[*:3]" angle="109.5 * degree" k="100.0 * mole**-1 * radian**-2 * kilocalorie" id="a1"></Angle>
 		<Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.5 * degree" k="70.0 * mole**-1 * radian**-2 * kilocalorie" id="a2"></Angle>
