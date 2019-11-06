@@ -72,7 +72,7 @@ install:
 - conda activate test
 
 # Install RDKit
-- if [[ "$RDKIT" == true ]]; then conda install --yes -c rdkit rdkit; fi
+- if [[ "$RDKIT" == true ]]; then conda install --yes -c conda-forge rdkit; fi
 - if [[ "$RDKIT" == true ]]; then conda install --yes -c omnia ambermini; fi
 
 # Install OpenEye
