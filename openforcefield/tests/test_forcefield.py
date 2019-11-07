@@ -208,6 +208,21 @@ xml_CH_zeroes_library_charges_xml = '''
 </SMIRNOFF>
 '''
 
+xml_spec_docs_ala_library_charges_xml = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+       <LibraryCharge name="ALA" smirks="[NX3:1]([#1:2])([#6])[#6H1:3]([#1:4])([#6:5]([#1:6])([#1:7])[#1:8])[#6:9](=[#8:10])[#7]" charge1="-0.4157*elementary_charge" charge2="0.2719*elementary_charge" charge3="0.0337*elementary_charge" charge4="0.0823*elementary_charge" charge5="-0.1825*elementary_charge" charge6="0.0603*elementary_charge" charge7="0.0603*elementary_charge" charge8="0.0603*elementary_charge" charge9="0.5973*elementary_charge" charge10="-0.5679*elementary_charge"/>
+    </LibraryCharges>
+</SMIRNOFF>
+'''
+
+xml_spec_docs_tip3p_library_charges_xml = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+       <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="0.417*elementary_charge" charge2="-0.834*elementary_charge" charge3="0.417*elementary_charge"/>
+    </LibraryCharges>
+</SMIRNOFF>
+'''
 #======================================================================
 # TEST UTILITY FUNCTIONS
 #======================================================================
@@ -1058,6 +1073,13 @@ class TestForceFieldChargeAssignment:
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
+
+    def test_parse_library_charges_from_spec_docs(self):
+        """Ensure that the examples for librarycharges in the SMIRNOFF spec page are still valid"""
+        # TODO: This test is practically useless while the XML strings are hard-coded at the top of this file.
+        #       We should implement something like doctests for the XML snippets on the SMIRNOFF spec page.
+        ff = ForceField(xml_spec_docs_ala_library_charges_xml)
+        ff = ForceField(xml_spec_docs_tip3p_library_charges_xml)
 
     def test_library_charge_hierarchy(self):
         """Test assigning charges to one water molecule using library charges, where two LCs match and the
