@@ -1053,19 +1053,21 @@ class ForceField:
         G = nx.DiGraph()
         for tagname, parameter_handler in self._parameter_handlers.items():
             G.add_node(tagname)
+        for tagname, parameter_handler in self._parameter_handlers.items():
             if parameter_handler._DEPENDENCIES is not None:
                 for dependency in parameter_handler._DEPENDENCIES:
                     G.add_edge(dependency._TAGNAME, parameter_handler._TAGNAME)
-        # TODO: Check to make sure DAG isn't cyclic
+
+        # Ensure there are no loops in handler order
+        if not(nx.is_directed_acyclic_graph(G)):
+            raise RuntimeError("Unable to resolve order in which to run ParameterHandlers. Dependencies do not form "
+                               "a directed acyclic graph.")
         # Resolve order
         ordered_parameter_handlers = list()
         for tagname in nx.topological_sort(G):
             if tagname in self._parameter_handlers:
                 ordered_parameter_handlers.append(
                     self._parameter_handlers[tagname])
-            else:
-                ordered_parameter_handlers.append(
-                    self.get_parameter_handler(tagname))
         return ordered_parameter_handlers
 
     # TODO: Should we add convenience methods to parameterize a Topology and export directly to AMBER, gromacs, CHARMM, etc.?

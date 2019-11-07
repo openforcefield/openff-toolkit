@@ -21,7 +21,7 @@ from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterAttribute, IndexedParameterAttribute, ParameterList,
     ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
-    ImproperTorsionHandler, GBSAHandler, SMIRNOFFSpecError,
+    ImproperTorsionHandler, LibraryChargeHandler, GBSAHandler, SMIRNOFFSpecError,
     _ParameterAttributeHandler
     )
 from openforcefield.utils import detach_units, IncompatibleUnitError
@@ -340,13 +340,13 @@ class TestParameterHandler:
         # Successfully create ParameterHandler by providing min supported version
         ph = ParameterHandler(version=ParameterHandler._MIN_SUPPORTED_SECTION_VERSION)
 
-        # Generate a SMIRNOFFSpecError ParameterHandler by providing a value higher than the max supported
+        # Generate a SMIRNOFFSpecError by providing a value higher than the max supported
         with pytest.raises(SMIRNOFFVersionError, match='SMIRNOFF offxml file was written with version 1000.0, '
                                                     'but this version of ForceField only supports version') as excinfo:
             ph = ParameterHandler(version='1000.0')
 
 
-        # Generate a SMIRNOFFSpecError ParameterHandler by providing a value lower than the min supported
+        # Generate a SMIRNOFFSpecError by providing a value lower than the min supported
         with pytest.raises(SMIRNOFFVersionError, match='SMIRNOFF offxml file was written with version 0.1, '
                                                     'but this version of ForceField only supports version') as excinfo:
             ph = ParameterHandler(version='0.1')
@@ -930,6 +930,11 @@ class TestProperTorsionHandler:
         with pytest.raises(SMIRNOFFSpecError, match=err_msg):
             ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
         ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
+
+class TestLibraryChargeHandler:
+    def test_create_library_charge_handler(self):
+        """Test creation of an empty LibraryChargeHandler"""
+        handler = LibraryChargeHandler(skip_version_check=True)
 
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):

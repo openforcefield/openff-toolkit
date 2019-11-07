@@ -190,16 +190,14 @@ Currently, only classical fixed point charge models are supported, but future ex
 
 ### `<LibraryCharges>`: Library charges for polymeric residues and special solvent models
 
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit. Please see `Issue 25 on the Open Force Field Toolkit issue tracker <https://github.com/openforcefield/openforcefield/issues/25>`_.
-
 A mechanism is provided for specifying library charges that can be applied to molecules or residues that match provided templates.
 Library charges are applied first, and atoms for which library charges are applied will be excluded from alternative charging schemes listed below.
 
 For example, to assign partial charges for a non-terminal ALA residue from the [AMBER ff14SB](http://doi.org/10.1021/acs.jctc.5b00255) parameter set:
 ```XML
 <LibraryCharges version="0.3">
-   <!-- match a non-terminal alanine residue with AMBER ff14SB partial charges-->
-   <LibraryCharge name="ALA" smirks="[NX3:1]([#1:2])([#6])[#6H1:3]([#1:4])([#6:5]([#1:6])([#1:7])[#1:8])[#6:9](=[#8:10])[#7]" charge1="-0.4157*elementary_charge" charge2="0.2719*elementary_charge" charge3="0.0337*elementary_charge" charge4="0.0823*elementary_charge" charge5="-0.1825*elementary_charge" charge6="0.0603*elementary_charge" charge7="0.0603*elementary_charge" charge8="0.0603*elementary_charge" charge9="0.5973*elementary_charge" charge10="-0.5679*elementary_charge">
+   <!-- match a non-terminal alanine residue with AMBER ff14SB partial charges -->
+   <LibraryCharge name="ALA" smirks="[NX3:1]([#1:2])([#6])[#6H1:3]([#1:4])([#6:5]([#1:6])([#1:7])[#1:8])[#6:9](=[#8:10])[#7]" charge1="-0.4157*elementary_charge" charge2="0.2719*elementary_charge" charge3="0.0337*elementary_charge" charge4="0.0823*elementary_charge" charge5="-0.1825*elementary_charge" charge6="0.0603*elementary_charge" charge7="0.0603*elementary_charge" charge8="0.0603*elementary_charge" charge9="0.5973*elementary_charge" charge10="-0.5679*elementary_charge"/>
    ...
 </LibraryCharges>
 ```
@@ -214,9 +212,16 @@ For example, to ensure water molecules are assigned partial charges for [TIP3P](
 ```XML
 <LibraryCharges version="0.3">
    <!-- TIP3P water oxygen with charge override -->
-   <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="+0.417*elementary_charge" charge2="-0.834*elementary_charge" charge3="+0.417*elementary_charge"/>
+   <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="0.417*elementary_charge" charge2="-0.834*elementary_charge" charge3="0.417*elementary_charge"/>
 </LibraryCharges>
 ```
+
+
+| LibraryCharges section tag version | Tag attributes and default values    | Required parameter attributes   | Optional parameter attributes |
+|------------------------------------|--------------------------------------|---------------------------------|-------------------------------|
+| 0.3                                |                                      | `smirks`, `charges` (indexed)   | `name`, `id`, `parent_id`     |
+
+
 
 ### `<ChargeIncrementModel>`: Small molecule and fragment charges
 

@@ -11,6 +11,49 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 Current Development
 -------------------
 
+New features
+""""""""""""
+- `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: Closes
+  `Issue #25 <https://github.com/openforcefield/openforcefield/issues/25>`_ by adding
+  initial support for the
+  `LibraryCharges tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#librarycharges-library-charges-for-polymeric-residues-and-special-solvent-models>`_
+  using
+  :py:class:`LibraryChargeHandler <openforcefield.typing.engines.smirnoff.parameters.LibraryChargeHandler>`.
+  For a molecule to have charges assigned using LibraryCharges, all of its atoms must be covered by
+  at least one LibraryCharge. If an atom is covered by multiple LibraryCharges, then the last
+  one read will be applied (per the hierarchy rules in the SMIRNOFF format).
+
+  This functionality is thus able to apply per-residue charges similar to those in traditional
+  protein force fields. At this time, there is no concept of "residues" or "fragments" during
+  parametrization, so it is not possible to assign charges to `some` atoms in a molecule using
+  LibraryCharges, but calculate charges for other atoms in the same molecule using a different
+  method. To assign charges to a protein, LibraryCharges SMARTS must be provided for
+  the standard residues, as well as for any capping groups and post-translational modifications
+  that are present.
+
+Behavior changed
+""""""""""""""""
+- `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: If a molecule
+  can not be assigned charges by any charge-assignment method, an
+  ``openforcefield.typing.engines.smirnoff.parameters.UnassignedMoleculeChargeException``
+  will be raised. Previously, creating a system without either ``ToolkitAM1BCCHandler`` or
+  the ``charge_from_molecules`` keyword argument to ``ForceField.create_openmm_system`` would
+  produce a system where the molecule has zero charge on all atoms. However, given that we
+  will soon be adding more options for charge assignment, it is important that
+  failures not be silent. Molecules with zero charge can still be produced by setting the
+  ``Molecule.partial_charges`` array to be all zeroes, and including the molecule in the
+  ``charge_from_molecules`` keyword argument to ``create_openmm_system``.
+- `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: Due to risks
+  introduced by permitting charge assignment using partially-overlapping ``LibraryCharge``s,
+  the toolkit will now raise a
+  ``openforcefield.typing.engines.smirnoff.parameters.NonIntegralMoleculeChargeException``
+  if the sum of partial charges on a molecule are found to be more than 0.001 elementary charge units
+  different than the molecule's formal charge. This exception can be overridden by providing
+  the ``allow_nonintegral_charges=True`` keyword argument to ``ForceField.create_openmm_system``.
+
+
+
+
 Tests added
 """""""""""
 - `PR #430 <https://github.com/openforcefield/openforcefield/pull/430>`_: Added test for 
@@ -21,13 +64,20 @@ Tests added
 Bugfixes
 """"""""
 - `PR #431 <https://github.com/openforcefield/openforcefield/pull/431>`_: Fixes an issue
-  where ``ToolkitWrapper``s would improperly search for functionality in the
+  where ``ToolkitWrapper`` objects would improperly search for functionality in the
   ``GLOBAL_TOOLKIT_REGISTRY``, even though a specific ``ToolkitRegistry`` was requested for an
   operation.
 - `PR #439 <https://github.com/openforcefield/openforcefield/pull/439>`_: Fixes
- `Issue #438 <https://github.com/openforcefield/openforcefield/issues/438>`_, by replacing
+  `Issue #438 <https://github.com/openforcefield/openforcefield/issues/438>`_, by replacing
   call to NetworkX ``Graph.node`` with call to ``Graph.nodes``, per
   `2.4 migration guide <https://networkx.github.io/documentation/stable/release/release_2.4.html>`_.
+
+Files modified
+""""""""""""""
+- `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: Updates
+  the previously-nonfunctional ``test_forcefields/tip3p.offxml`` to a functional state
+  by updating it to the SMIRNOFF
+  0.3 specification, and specifying atomic charges using the ``LibraryCharges`` tag.
 
 
 0.5.1 - Adding the parameter coverage example notebook
