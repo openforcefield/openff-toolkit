@@ -162,7 +162,7 @@ xml_toolkitam1bcc_ff = '''
 xml_ethanol_library_charges_ff = '''
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
     <LibraryCharges version="0.3">
-       <LibraryCharge smirks="[#1:1]-[#6:2](-[#1:3])(-[#1:4])-[#6:5](-[#1:6])(-[#1:7])-[#8:8]-[#1:9]" charge1="-0.02*elementary_charge" charge2="-0.2*elementary_charge" charge3="-0.02*elementary_charge" charge4="-0.02*elementary_charge" charge5="-0.1*elementary_charge" charge6="-0.01*elementary_charge" charge7="-0.01*elementary_charge" charge8="0.3*elementary_charge" charge9="0.03*elementary_charge" />
+       <LibraryCharge smirks="[#1:1]-[#6:2](-[#1:3])(-[#1:4])-[#6:5](-[#1:6])(-[#1:7])-[#8:8]-[#1:9]" charge1="-0.02*elementary_charge" charge2="-0.2*elementary_charge" charge3="-0.02*elementary_charge" charge4="-0.02*elementary_charge" charge5="-0.1*elementary_charge" charge6="-0.01*elementary_charge" charge7="-0.01*elementary_charge" charge8="0.3*elementary_charge" charge9="0.08*elementary_charge" />
     </LibraryCharges>
 </SMIRNOFF>
 '''
@@ -172,7 +172,7 @@ xml_ethanol_library_charges_in_parts_ff = '''
     <LibraryCharges version="0.3">
        <!-- Note that the oxygen is covered twice here. The correct behavior should be to take the charge from the SECOND LibraryCharge, as it should overwrite the first -->
        <LibraryCharge smirks="[#1:1]-[#6:2](-[#1:3])(-[#1:4])-[#6:5](-[#1:6])(-[#1:7])-[#8:8]" charge1="-0.02*elementary_charge" charge2="-0.2*elementary_charge" charge3="-0.02*elementary_charge" charge4="-0.02*elementary_charge" charge5="-0.1*elementary_charge" charge6="-0.01*elementary_charge" charge7="-0.01*elementary_charge" charge8="-999*elementary_charge" />
-       <LibraryCharge smirks="[#8:1]-[#1:2]" charge1="0.3*elementary_charge" charge2="0.03*elementary_charge" />
+       <LibraryCharge smirks="[#8:1]-[#1:2]" charge1="0.3*elementary_charge" charge2="0.08*elementary_charge" />
     </LibraryCharges>
 </SMIRNOFF>
 '''
@@ -185,7 +185,7 @@ xml_ethanol_library_charges_by_atom_ff = '''
        <LibraryCharge smirks="[#1:1]-[#6]-[#8]" charge1="-0.01*elementary_charge" />
        <LibraryCharge smirks="[#6X4:1]-[#8]" charge1="-0.1*elementary_charge" />
        <LibraryCharge smirks="[#8X2:1]" charge1="0.3*elementary_charge" />
-       <LibraryCharge smirks="[#1:1]-[#8]" charge1="0.03*elementary_charge" />
+       <LibraryCharge smirks="[#1:1]-[#8]" charge1="0.08*elementary_charge" />
     </LibraryCharges>
 </SMIRNOFF>
 '''
@@ -250,7 +250,7 @@ def create_ethanol():
     ethanol.add_bond(1, 6, 1, False)  # C1 - H6
     ethanol.add_bond(1, 7, 1, False)  # C1 - H7
     ethanol.add_bond(2, 8, 1, False)  # O2 - H8
-    charges = unit.Quantity(np.array([-0.4, -0.3, -0.2, -0.1, 0.01, 0.1, 0.2, 0.3, 0.4]), unit.elementary_charge)
+    charges = unit.Quantity(np.array([-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4]), unit.elementary_charge)
     ethanol.partial_charges = charges
     return ethanol
 
@@ -336,7 +336,6 @@ nonbonded_resolution_matrix = [
 
 toolkit_registries = []
 if OpenEyeToolkitWrapper.is_available():
-
     toolkit_registries.append((ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper]), "OE"))
 if RDKitToolkitWrapper.is_available() and AmberToolsToolkitWrapper.is_available():
     toolkit_registries.append((ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]),
@@ -954,8 +953,10 @@ class TestForceFieldChargeAssignment:
         file_path = get_data_file_path('test_forcefields/smirnoff99Frosst.offxml')
         forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-        omm_system = forcefield.create_openmm_system(topology, charge_from_molecules=molecules,
+        topology = Topology.from_openmm(pdbfile.topology,
+                                        unique_molecules=molecules)
+        omm_system = forcefield.create_openmm_system(topology,
+                                                     charge_from_molecules=molecules,
                                                      toolkit_registry=toolkit_registry)
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
         expected_charges = ((0, -0.4 * unit.elementary_charge),
@@ -969,9 +970,10 @@ class TestForceFieldChargeAssignment:
         # In 1_ethanol_reordered.pdb, the first three atoms go O-C-C instead of C-C-O. This part of the test ensures
         # that the charges are correctly mapped according to this PDB in the resulting system.
         pdbfile2 = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol_reordered.pdb'))
-        topology2 = Topology.from_openmm(pdbfile2.topology, unique_molecules=molecules)
-
-        omm_system2 = forcefield.create_openmm_system(topology2, charge_from_molecules=molecules,
+        topology2 = Topology.from_openmm(pdbfile2.topology,
+                                         unique_molecules=molecules)
+        omm_system2 = forcefield.create_openmm_system(topology2,
+                                                      charge_from_molecules=molecules,
                                                       toolkit_registry=toolkit_registry)
         nonbondedForce2 = [f for f in omm_system2.getForces() if type(f) == NonbondedForce][0]
         expected_charges2 = ((0, -0.2*unit.elementary_charge),
@@ -981,6 +983,35 @@ class TestForceFieldChargeAssignment:
         for particle_index, expected_charge in expected_charges2:
             q, sigma, epsilon = nonbondedForce2.getParticleParameters(particle_index)
             assert q == expected_charge
+
+
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    def test_nonintegral_charge_exception(self, toolkit_registry, registry_description):
+        """Test skipping charge generation and instead getting charges from the original Molecule"""
+        from simtk.openmm import app
+        from openforcefield.typing.engines.smirnoff.parameters import NonintegralMoleculeChargeException
+        # Create an ethanol molecule without using a toolkit
+        ethanol = create_ethanol()
+        ethanol.partial_charges[0] = 1. * unit.elementary_charge
+
+
+        file_path = get_data_file_path('test_forcefields/smirnoff99Frosst.offxml')
+        forcefield = ForceField(file_path)
+        pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol.pdb'))
+        topology = Topology.from_openmm(pdbfile.topology,
+                                        unique_molecules=[ethanol])
+
+        # Fail because nonintegral charges aren't allowed
+        with pytest.raises(NonintegralMoleculeChargeException,
+                           match="Partial charge sum [(]1.40001 e[)] for molecule"):
+            omm_system = forcefield.create_openmm_system(topology,
+                                                         charge_from_molecules=[ethanol],
+                                                         toolkit_registry=toolkit_registry)
+        # Pass when the `allow_nonintegral_charges` keyword is included
+        omm_system = forcefield.create_openmm_system(topology,
+                                                     charge_from_molecules=[ethanol],
+                                                     toolkit_registry=toolkit_registry,
+                                                     allow_nonintegral_charges=True)
 
 
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
@@ -1073,7 +1104,7 @@ class TestForceFieldChargeAssignment:
         from simtk.openmm import NonbondedForce
 
         # Define a library charge parameter for ethanol (C1-C2-O3) where C1 has charge -0.2, and its Hs have -0.02,
-        # C2 has charge -0.1 and its Hs have -0.01, and O3 has charge 0.3, and its H has charge 0.03
+        # C2 has charge -0.1 and its Hs have -0.01, and O3 has charge 0.3, and its H has charge 0.08
 
         ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_ethanol_library_charges_ff)
 
@@ -1096,8 +1127,8 @@ class TestForceFieldChargeAssignment:
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
-        expected_charges = [-0.2, -0.1, 0.3, 0.03, -0.02, -0.02, -0.02, -0.01, -0.01, -0.2,
-                            0.3, -0.1, 0.03, -0.02, -0.02, -0.02, -0.01, -0.01] * unit.elementary_charge
+        expected_charges = [-0.2, -0.1, 0.3, 0.08, -0.02, -0.02, -0.02, -0.01, -0.01, -0.2,
+                            0.3, -0.1, 0.08, -0.02, -0.02, -0.02, -0.01, -0.01] * unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
@@ -1184,8 +1215,8 @@ class TestForceFieldChargeAssignment:
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
-        expected_charges = [-0.2, -0.1, 0.3, 0.03, -0.02, -0.02, -0.02, -0.01, -0.01, -0.2,
-                            0.3, -0.1, 0.03, -0.02, -0.02, -0.02, -0.01, -0.01] * unit.elementary_charge
+        expected_charges = [-0.2, -0.1, 0.3, 0.08, -0.02, -0.02, -0.02, -0.01, -0.01, -0.2,
+                            0.3, -0.1, 0.08, -0.02, -0.02, -0.02, -0.01, -0.01] * unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
@@ -1201,8 +1232,8 @@ class TestForceFieldChargeAssignment:
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
-        expected_charges = [-0.2, -0.1, 0.3, 0.03, -0.02, -0.02, -0.02, -0.01, -0.01, -0.2,
-                            0.3, -0.1, 0.03, -0.02, -0.02, -0.02, -0.01, -0.01] * unit.elementary_charge
+        expected_charges = [-0.2, -0.1, 0.3, 0.08, -0.02, -0.02, -0.02, -0.01, -0.01, -0.2,
+                            0.3, -0.1, 0.08, -0.02, -0.02, -0.02, -0.01, -0.01] * unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
@@ -1210,7 +1241,7 @@ class TestForceFieldChargeAssignment:
     def test_library_charges_dont_parameterize_molecule_because_of_incomplete_coverage(self):
         """Fail to assign charges to a molecule because not all atoms can be assigned"""
         from simtk.openmm import NonbondedForce
-        from openforcefield.typing.engines.smirnoff.parameters import UnassignedChargeParameterException
+        from openforcefield.typing.engines.smirnoff.parameters import UnassignedMoleculeChargeException
 
         molecules = [Molecule.from_file(get_data_file_path('molecules/toluene.sdf'))]
         top = Topology.from_molecules(molecules)
@@ -1219,7 +1250,7 @@ class TestForceFieldChargeAssignment:
         ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_ethanol_library_charges_by_atom_ff)
         # Delete the ToolkitAM1BCCHandler so the molecule won't get charges from anywhere
         del ff._parameter_handlers['ToolkitAM1BCC']
-        with pytest.raises(UnassignedChargeParameterException,
+        with pytest.raises(UnassignedMoleculeChargeException,
                            match="did not have charges assigned by any ParameterHandler") as excinfo:
             omm_system = ff.create_openmm_system(top)
 

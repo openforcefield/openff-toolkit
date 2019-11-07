@@ -102,8 +102,12 @@ class UnassignedProperTorsionParameterException(UnassignedValenceParameterExcept
     pass
 
 
-class UnassignedChargeParameterException(Exception):
+class UnassignedMoleculeChargeException(Exception):
     """Exception raised when no charge method is able to assign charges to a molecule."""
+    pass
+
+class NonintegralMoleculeChargeException(Exception):
+    """Exception raised when the partial charges on a molecule do not sum up to its formal charge."""
     pass
 
 
@@ -2481,6 +2485,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
     """
     _TAGNAME = 'Electrostatics'
     _DEPENDENCIES = [vdWHandler]
+    _KWARGS = ['charge_from_molecules', 'allow_nonintegral_charges']
 
 
     scale12 = ParameterAttribute(default=0.0, converter=float)
@@ -2727,7 +2732,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                                                                                 topology.box_vectors is not None))
 
     def postprocess_system(self, system, topology, **kwargs):
-
+        force = super().create_force(system, topology, **kwargs)
         # Check to ensure all molecules have had charges assigned
         uncharged_mols = []
         for ref_mol in topology.reference_molecules:
@@ -2738,7 +2743,29 @@ class ElectrostaticsHandler(_NonbondedHandler):
             msg = "The following molecules did not have charges assigned by any ParameterHandler in the ForceField:\n"
             for ref_mol in uncharged_mols:
                 msg += f"{ref_mol.to_smiles()}\n"
-            raise UnassignedChargeParameterException(msg)
+            raise UnassignedMoleculeChargeException(msg)
+
+
+        # Unless check is disabled, ensure that the sum of partial charges on a molecule
+        # add up to approximately its formal charge
+        allow_nonintegral_charges = kwargs.get('allow_nonintegral_charges', False)
+        for top_mol in topology.topology_molecules:
+            # Skip check if user manually disables it.
+            if allow_nonintegral_charges:
+                continue
+            formal_charge_sum = top_mol.reference_molecule.total_charge
+            partial_charge_sum = 0. * unit.elementary_charge
+            for top_particle in top_mol.particles:
+                q, _, _ = force.getParticleParameters(top_particle.topology_particle_index)
+                partial_charge_sum += q
+            if abs(float(formal_charge_sum) - (partial_charge_sum/unit.elementary_charge)) > 0.001:
+                msg = f"Partial charge sum ({partial_charge_sum}) " \
+                      f"for molecule '{top_mol.reference_molecule.name}' (SMILES " \
+                      f"{top_mol.reference_molecule.to_smiles()} does not equal formal charge sum " \
+                      f"({formal_charge_sum}). To override this error, provide the " \
+                      f"'allow_nonintegral_charges=True' keyword to ForceField.create_openmm_system"
+                raise NonintegralMoleculeChargeException(msg)
+
 
 class LibraryChargeHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<LibraryCharges>`` tags
@@ -2841,6 +2868,7 @@ class LibraryChargeHandler(_NonbondedHandler):
             self.mark_charges_assigned(assigned_mol, topology)
 
 
+
 class ToolkitAM1BCCHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags
 
@@ -2849,7 +2877,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
 
     _TAGNAME = 'ToolkitAM1BCC'  # SMIRNOFF tag name to process
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler]
-    _KWARGS = ['charge_from_molecules', 'toolkit_registry'] # Kwargs to catch when create_force is called
+    _KWARGS = ['toolkit_registry'] # Kwargs to catch when create_force is called
 
     def check_handler_compatibility(self,
                                     other_handler,
@@ -2975,7 +3003,6 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
     _INFOTYPE = ChargeIncrementType  # info type to store
     # TODO: The structure of this is still undecided
-    _KWARGS = ['charge_from_molecules']
 
     number_of_conformers = ParameterAttribute(default=10, converter=int)
     quantum_chemical_method = ParameterAttribute(
