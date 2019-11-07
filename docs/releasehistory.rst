@@ -21,23 +21,38 @@ New features
   :py:class:`LibraryChargeHandler <openforcefield.typing.engines.smirnoff.parameters.LibraryChargeHandler>`.
   For a molecule to have charges assigned using LibraryCharges, all of its atoms must be covered by
   at least one LibraryCharge. If an atom is covered by multiple LibraryCharges, then the last
-  one read will be applied. At this time, there is no concept of "residues" during parametrization,
-  so it is not possible to parametrize some atoms in a molecule using LibraryCharges and
-  others using another method. Further, no effort is made to ensure that the net charge
-  applied using LibraryCharges is the total formal charge on the molecule.
+  one read will be applied (per the hierarchy rules in the SMIRNOFF format).
+
+  This functionality is thus able to apply per-residue charges similar to those in traditional
+  protein force fields. At this time, there is no concept of "residues" or "fragments" during
+  parametrization, so it is not possible to assign charges to `some` atoms in a molecule using
+  LibraryCharges, but calculate charges for other atoms in the same molecule using a different
+  method. To assign charges to a protein, LibraryCharges SMARTS must be provided for
+  the standard residues, as well as for any capping groups and post-translational modifications
+  that are present.
 
 Behavior changed
 """"""""""""""""
 - `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: If a molecule
-  can not be assigned charges by any charge-generation method, an
-  ``openforcefield.typing.engines.smirnoff.parameters.UnassignedChargeParameterException``
+  can not be assigned charges by any charge-assignment method, an
+  ``openforcefield.typing.engines.smirnoff.parameters.UnassignedMoleculeChargeException``
   will be raised. Previously, creating a system without either ``ToolkitAM1BCCHandler`` or
   the ``charge_from_molecules`` keyword argument to ``ForceField.create_openmm_system`` would
   produce a system where the molecule has zero charge on all atoms. However, given that we
-  will soon be adding more options for charge generation, it is important that charge generation
+  will soon be adding more options for charge assignment, it is important that
   failures not be silent. Molecules with zero charge can still be produced by setting the
   ``Molecule.partial_charges`` array to be all zeroes, and including the molecule in the
   ``charge_from_molecules`` keyword argument to ``create_openmm_system``.
+- `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: Due to risks
+  introduced by permitting charge assignment using partially-overlapping ``LibraryCharge``s,
+  the toolkit will now raise a
+  ``openforcefield.typing.engines.smirnoff.parameters.NonIntegralMoleculeChargeException``
+  if the sum of partial charges on a molecule are found to be more than 0.001 elementary charge units
+  different than the molecule's formal charge. This exception can be overridden by providing
+  the ``allow_nonintegral_charges=True`` keyword argument to ``ForceField.create_openmm_system``.
+
+
+
 
 Tests added
 """""""""""
