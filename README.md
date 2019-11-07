@@ -15,7 +15,7 @@ The toolkit currently covers two main areas we have committed to stably maintain
 
 ## Force Fields
 
-Two major force field development efforts have been undertaken by the Initiative, with results hosted in separate ropositories. 
+Two major force field development efforts have been undertaken by the Initiative, with results hosted in separate repositories. 
 
 * The [Open Force Fields repository](https://github.com/openforcefield/openforcefields/), which features the [Parsley force field line](https://openforcefield.org/news/introducing-openforcefield-1.0/). This is the Open Force Field Initiative's first effort toward building a _new_ force field. The initial parameters are taken from smirnoff99Frosst, but software and data produced by the Initiative's efforts are being used to refit parameter values and add new SMIRKS-based parameters. 
 * The [smirnoff99Frosst repository](https://github.com/openforcefield/smirnoff99Frosst/), which is descended from AMBER's parm99 forcefield as well as Merck-Frosst's parm@frosst. This line of force fields does not aim to alter parameter values, but is instead a test of accurately converting an atom type-based force field to the SMIRNOFF format. 
