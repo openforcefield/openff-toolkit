@@ -8,8 +8,19 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
-Current Development
--------------------
+0.6.0 - Library Charges
+-----------------------
+
+This release adds support for a new SMIRKS-based charge assignment method,
+`Library Charges <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#librarycharges-library-charges-for-polymeric-residues-and-special-solvent-models>`_.
+The addition of more charge assignment methods opens the door for new types of
+experimentation, but also introduces several complex behaviors and failure modes.
+Accordingly, we have made changes
+to the charge assignment infrastructure to thoroughly check for cases when partial charges do
+not sum to the formal charge of the molecule, or when no charge-assignment method is able
+to generate charges for a molecule. More explanation of the new errors that may be raised and
+keywords for overriding them are in the "Behavior Changed" section below.
+
 
 New features
 """"""""""""
@@ -47,7 +58,7 @@ Behavior changed
   introduced by permitting charge assignment using partially-overlapping ``LibraryCharge``s,
   the toolkit will now raise a
   ``openforcefield.typing.engines.smirnoff.parameters.NonIntegralMoleculeChargeException``
-  if the sum of partial charges on a molecule are found to be more than 0.001 elementary charge units
+  if the sum of partial charges on a molecule are found to be more than 0.01 elementary charge units
   different than the molecule's formal charge. This exception can be overridden by providing
   the ``allow_nonintegral_charges=True`` keyword argument to ``ForceField.create_openmm_system``.
 
