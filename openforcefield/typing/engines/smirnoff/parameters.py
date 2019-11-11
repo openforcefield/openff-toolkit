@@ -102,6 +102,15 @@ class UnassignedProperTorsionParameterException(UnassignedValenceParameterExcept
     pass
 
 
+class UnassignedMoleculeChargeException(Exception):
+    """Exception raised when no charge method is able to assign charges to a molecule."""
+    pass
+
+class NonintegralMoleculeChargeException(Exception):
+    """Exception raised when the partial charges on a molecule do not sum up to its formal charge."""
+    pass
+
+
 #======================================================================
 # ENUM TYPES
 #======================================================================
@@ -1520,7 +1529,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         # the same checks as the more costly assert_bonded method in the
         # ParameterHandler.create_force methods.
         if expected_connectivity is None:
-            expected_connectivity = [(i, i + 1) for i in range(len(match.environment_match.topology_atom_indices) - 1)]
+            return
 
         reference_molecule = match.environment_match.reference_molecule
 
@@ -2219,11 +2228,77 @@ class ImproperTorsionHandler(ParameterHandler):
                 len(improper_matches)))
 
 
-class vdWHandler(ParameterHandler):
+class _NonbondedHandler(ParameterHandler):
+    """Base class for ParameterHandlers that deal with OpenMM NonbondedForce objects."""
+    _OPENMMTYPE = openmm.NonbondedForce
+
+    def create_force(self, system, topology, **kwargs):
+        # If we aren't yet keeping track of which molecules' charges have been assigned by which charge methods,
+        # initialize a dict for that here.
+        # TODO: This should be an attribute of the _system_, not the _topology_. However, since we're still using
+        #  OpenMM's System class, I am storing this data on the OFF Topology until we make an OFF System class.
+        if not hasattr(topology, "_ref_mol_to_charge_method"):
+            topology._ref_mol_to_charge_method = {ref_mol: None for ref_mol in topology.reference_molecules}
+
+        # Retrieve the system's OpenMM NonbondedForce
+        existing = [system.getForce(i) for i in range(system.getNumForces())]
+        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+
+        # If there isn't yet one, initialize it and populate it with particles
+        if len(existing) == 0:
+            force = self._OPENMMTYPE()
+            system.addForce(force)
+            # Create all particles.
+            for _ in topology.topology_particles:
+                force.addParticle(0.0, 1.0, 0.0)
+        else:
+            force = existing[0]
+
+        return force
+
+    def mark_charges_assigned(self, ref_mol, topology):
+        """
+        Record that charges have been assigned for a reference molecule.
+
+        Parameters
+        ----------
+        ref_mol : openforcefield.topology.Molecule
+            The molecule to mark as having charges assigned
+        topology : openforcefield.topology.Topology
+            The topology to record this information on.
+
+        """
+        # TODO: Change this to interface with system object instead of topology once we move away from OMM's System
+        topology._ref_mol_to_charge_method[ref_mol] = self.__class__
+
+    @staticmethod
+    def check_charges_assigned(ref_mol, topology):
+        """
+        Check whether charges have been assigned for a reference molecule.
+
+        Parameters
+        ----------
+        ref_mol : openforcefield.topology.Molecule
+            The molecule to check for having charges assigned
+        topology : openforcefield.topology.Topology
+            The topology to query for this information
+
+        Returns
+        -------
+        charges_assigned : bool
+            Whether charges have already been assigned to this molecule
+
+        """
+        # TODO: Change this to interface with system object instead of topology once we move away from OMM's System
+        return topology._ref_mol_to_charge_method[ref_mol] is not None
+
+
+class vdWHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<vdW>`` tags
 
     .. warning :: This API is experimental and subject to change.
     """
+
 
     class vdWType(ParameterType):
         """A SMIRNOFF vdWForce type.
@@ -2251,7 +2326,6 @@ class vdWHandler(ParameterHandler):
 
     _TAGNAME = 'vdW'  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
-    _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create
     # _KWARGS = ['ewaldErrorTolerance',
     #            'useDispersionCorrection',
     #            'usePbc'] # Kwargs to catch when create_force is called
@@ -2326,9 +2400,7 @@ class vdWHandler(ParameterHandler):
                                          tolerance=self._SCALETOL)
 
     def create_force(self, system, topology, **kwargs):
-
-        force = openmm.NonbondedForce()
-
+        force = super().create_force(system, topology, **kwargs)
 
         # If we're using PME, then the only possible openMM Nonbonded type is LJPME
         if self._method == 'PME':
@@ -2353,14 +2425,9 @@ class vdWHandler(ParameterHandler):
                 force.setUseDispersionCorrection(True)
                 force.setCutoffDistance(self._cutoff)
 
-        system.addForce(force)
-
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
 
-        # Create all particles.
-        for _ in topology.topology_particles:
-            force.addParticle(0.0, 1.0, 0.0)
 
         # Set the particle Lennard-Jones terms.
         for atom_key, atom_match in atom_matches.items():
@@ -2411,14 +2478,14 @@ class vdWHandler(ParameterHandler):
                 #force.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self._scale14)
 
 
-class ElectrostaticsHandler(ParameterHandler):
+class ElectrostaticsHandler(_NonbondedHandler):
     """Handles SMIRNOFF ``<Electrostatics>`` tags.
 
     .. warning :: This API is experimental and subject to change.
     """
     _TAGNAME = 'Electrostatics'
-    _OPENMMTYPE = openmm.NonbondedForce
     _DEPENDENCIES = [vdWHandler]
+    _KWARGS = ['charge_from_molecules', 'allow_nonintegral_charges']
 
 
     scale12 = ParameterAttribute(default=0.0, converter=float)
@@ -2489,12 +2556,117 @@ class ElectrostaticsHandler(ParameterHandler):
                                          tolerance_attrs=float_attrs_to_compare+unit_attrs_to_compare,
                                          tolerance=self._SCALETOL)
 
+
+    def assign_charge_from_molecules(self, molecule, charge_mols):
+        """
+        Given an input molecule, checks against a list of molecules for an isomorphic match. If found, assigns
+        partial charges from the match to the input molecule.
+
+        Parameters
+        ----------
+        molecule : an openforcefield.topology.FrozenMolecule
+            The molecule to have partial charges assigned if a match is found.
+        charge_mols : list of [openforcefield.topology.FrozenMolecule]
+            A list of molecules with charges already assigned.
+
+        Returns
+        -------
+        match_found : bool
+            Whether a match was found. If True, the input molecule will have been modified in-place.
+        """
+
+        from networkx.algorithms.isomorphism import GraphMatcher
+        import simtk.unit
+
+        # Define the node/edge attributes that we will use to match the atoms/bonds during molecule comparison
+        node_match_func = lambda x, y: ((x['atomic_number'] == y['atomic_number']) and
+                                        (x['stereochemistry'] == y['stereochemistry']) and
+                                        (x['is_aromatic'] == y['is_aromatic'])
+                                        )
+        edge_match_func = lambda x, y: ((x['bond_order'] == y['bond_order']) and
+                                        (x['stereochemistry'] == y['stereochemistry']) and
+                                        (x['is_aromatic'] == y['is_aromatic'])
+                                        )
+        # Check each charge_mol for whether it's isomorphic to the input molecule
+        for charge_mol in charge_mols:
+            if molecule.is_isomorphic(charge_mol):
+                # Take the first valid atom indexing map
+                ref_mol_G = molecule.to_networkx()
+                charge_mol_G = charge_mol.to_networkx()
+                GM = GraphMatcher(
+                    charge_mol_G,
+                    ref_mol_G,
+                    node_match=node_match_func,
+                    edge_match=edge_match_func)
+                for mapping in GM.isomorphisms_iter():
+                    topology_atom_map = mapping
+                    break
+                # Set the partial charges
+                # Make a copy of the charge molecule's charges array (this way it's the right shape)
+                temp_mol_charges = copy.deepcopy(simtk.unit.Quantity(charge_mol.partial_charges))
+                for charge_idx, ref_idx in topology_atom_map.items():
+                    temp_mol_charges[ref_idx] = charge_mol.partial_charges[charge_idx]
+                molecule.partial_charges = temp_mol_charges
+                return True
+
+        # If no match was found, return False
+        return False
+
+
     def create_force(self, system, topology, **kwargs):
-        existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [
-            f for f in existing if type(f) == openmm.NonbondedForce
-        ]
-        force = existing[0]
+        from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
+
+        force = super().create_force(system, topology, **kwargs)
+
+        # See if each molecule should have charges assigned by the charge_from_molecules kwarg
+        for ref_mol in topology.reference_molecules:
+
+            # If charges were already assigned, skip this molecule
+            if self.check_charges_assigned(ref_mol, topology):
+                continue
+
+            # Make a temporary copy of ref_mol to assign charges from charge_mol
+            temp_mol = FrozenMolecule(ref_mol)
+
+            # First, check whether any of the reference molecules in the topology are in the charge_from_mol list
+            charges_from_charge_mol = False
+            if 'charge_from_molecules' in kwargs:
+                charges_from_charge_mol = self.assign_charge_from_molecules(temp_mol, kwargs['charge_from_molecules'])
+
+            # If this reference molecule wasn't in the charge_from_molecules list, end this iteration
+            if not(charges_from_charge_mol):
+                continue
+
+            # Otherwise, the molecule is in the charge_from_molecules list, and we should assign charges to all
+            # instances of it in this topology.
+            for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
+
+                top_mol_particle_start_index = topology_molecule.particle_start_topology_index
+
+                for topology_particle in topology_molecule.particles:
+
+                    if type(topology_particle) is TopologyAtom:
+                        ref_mol_particle_index = topology_particle.atom.molecule_particle_index
+                        top_mol_particle_index = topology_molecule._ref_to_top_index[ref_mol_particle_index]
+                    elif type(topology_particle) is TopologyVirtualSite:
+                        ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
+                        top_mol_particle_index = ref_mol_particle_index
+                    else:
+                        raise ValueError(f'Particles of type {type(topology_particle)} are not supported')
+
+                    topology_particle_index = top_mol_particle_start_index + top_mol_particle_index
+
+                    particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
+
+                    # Retrieve nonbonded parameters for reference atom (charge not set yet)
+                    _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
+                    # Set the nonbonded force with the partial charge
+                    force.setParticleParameters(topology_particle_index,
+                                                particle_charge, sigma,
+                                                epsilon)
+
+            # Finally, mark that charges were assigned for this reference molecule
+            self.mark_charges_assigned(ref_mol, topology)
 
         # Set the nonbonded method
         settings_matched = False
@@ -2559,17 +2731,153 @@ class ElectrostaticsHandler(ParameterHandler):
                                              "of the Open Force Field toolkit.".format(self._method,
                                                                                 topology.box_vectors is not None))
 
+    def postprocess_system(self, system, topology, **kwargs):
+        force = super().create_force(system, topology, **kwargs)
+        # Check to ensure all molecules have had charges assigned
+        uncharged_mols = []
+        for ref_mol in topology.reference_molecules:
+            if not self.check_charges_assigned(ref_mol, topology):
+                uncharged_mols.append(ref_mol)
 
-class ToolkitAM1BCCHandler(ParameterHandler):
+        if len(uncharged_mols) != 0:
+            msg = "The following molecules did not have charges assigned by any ParameterHandler in the ForceField:\n"
+            for ref_mol in uncharged_mols:
+                msg += f"{ref_mol.to_smiles()}\n"
+            raise UnassignedMoleculeChargeException(msg)
+
+
+        # Unless check is disabled, ensure that the sum of partial charges on a molecule
+        # add up to approximately its formal charge
+        allow_nonintegral_charges = kwargs.get('allow_nonintegral_charges', False)
+        for top_mol in topology.topology_molecules:
+            # Skip check if user manually disables it.
+            if allow_nonintegral_charges:
+                continue
+            formal_charge_sum = top_mol.reference_molecule.total_charge
+            partial_charge_sum = 0. * unit.elementary_charge
+            for top_particle in top_mol.particles:
+                q, _, _ = force.getParticleParameters(top_particle.topology_particle_index)
+                partial_charge_sum += q
+            if abs(float(formal_charge_sum) - (partial_charge_sum/unit.elementary_charge)) > 0.01:
+                msg = f"Partial charge sum ({partial_charge_sum}) " \
+                      f"for molecule '{top_mol.reference_molecule.name}' (SMILES " \
+                      f"{top_mol.reference_molecule.to_smiles()} does not equal formal charge sum " \
+                      f"({formal_charge_sum}). To override this error, provide the " \
+                      f"'allow_nonintegral_charges=True' keyword to ForceField.create_openmm_system"
+                raise NonintegralMoleculeChargeException(msg)
+
+
+class LibraryChargeHandler(_NonbondedHandler):
+    """Handle SMIRNOFF ``<LibraryCharges>`` tags
+
+    .. warning :: This API is experimental and subject to change.
+    """
+
+    class LibraryChargeType(ParameterType):
+        """A SMIRNOFF Library Charge type.
+
+        .. warning :: This API is experimental and subject to change.
+        """
+        _VALENCE_TYPE = None  # This disables the connectivity check when parsing LibraryChargeType objects
+        _ELEMENT_NAME = 'LibraryCharge'
+
+        name = ParameterAttribute(default=None)
+        charge = IndexedParameterAttribute(unit=unit.elementary_charge)
+
+
+    _TAGNAME = 'LibraryCharges'  # SMIRNOFF tag name to process
+    _INFOTYPE = LibraryChargeType  # info type to store
+    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
+
+    def find_matches(self, entity):
+        """Find the elements of the topology/molecule matched by a parameter type.
+
+        Parameters
+        ----------
+        entity : openforcefield.topology.Topology
+            Topology to search.
+
+        Returns
+        ---------
+        matches : ValenceDict[Tuple[int], ParameterHandler._Match]
+            ``matches[particle_indices]`` is the ``ParameterType`` object
+            matching the tuple of particle indices in ``entity``.
+        """
+
+        # TODO: Right now, this method is only ever called with an entity that is a Topoogy.
+        #  Should we reduce its scope and have a check here to make sure entity is a Topology?
+        return self._find_matches(entity, transformed_dict_cls=dict)
+
+    def create_force(self, system, topology, **kwargs):
+        from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
+
+        force = super().create_force(system, topology, **kwargs)
+
+        # Iterate over all defined library charge parameters, allowing later matches to override earlier ones.
+        atom_matches = self.find_matches(topology)
+
+        # Create a set of all the topology atom indices for which library charges can be applied
+        assignable_atoms = set()
+        atom_assignments = dict()
+        # TODO: This assumes that later matches should always override earlier ones. This may require more
+        #       thought, since matches can be partially overlapping
+        for topology_indices, library_charge in atom_matches.items():
+            for charge_idx, top_idx in enumerate(topology_indices):
+                if top_idx in assignable_atoms:
+                    logger.debug(f'Multiple library charge assignments found for atom {top_idx}')
+                assignable_atoms.add(top_idx)
+                atom_assignments[top_idx] = library_charge.parameter_type.charge[charge_idx]
+        # TODO: Should header include a residue separator delimiter? Maybe not, since it's not clear how having
+        #       multiple LibraryChargeHandlers could return a single set of matches while respecting different
+        #       separators.
+
+        # Keep track of the reference molecules that this successfully assigns charges to, so we can
+        # mark them and subsequent charge generation handlers won't override the values
+        ref_mols_assigned = set()
+
+        # Check to see whether the set contains any complete molecules, and remove the matches if not.
+        for top_mol in topology.topology_molecules:
+
+            # Make a temporary copy of ref_mol to assign charges from charge_mol
+            temp_mol = FrozenMolecule(top_mol.reference_molecule)
+
+            # If charges were already assigned, skip this molecule
+            if self.check_charges_assigned(temp_mol, topology):
+                continue
+
+            # Ensure all of the atoms in this mol are covered, otherwise skip it
+            top_particle_idxs = [atom.topology_particle_index for atom in top_mol.atoms]
+            if len(set(top_particle_idxs).intersection(assignable_atoms)) != top_mol.n_atoms:
+                logger.debug('Entire molecule is not covered. Skipping library charge assignment.')
+                continue
+
+            # If we pass both tests above, go ahead and assign charges
+            # TODO: We could probably save a little time by looking up this TopologyMolecule's _reference molecule_
+            #       and assigning charges to all other instances of it in this topology
+            for top_particle_idx in top_particle_idxs:
+                _, sigma, epsilon = force.getParticleParameters(top_particle_idx)
+                force.setParticleParameters(top_particle_idx,
+                                            atom_assignments[top_particle_idx],
+                                            sigma,
+                                            epsilon)
+
+            ref_mols_assigned.add(temp_mol)
+
+        # Finally, mark that charges were assigned for this reference molecule
+        for assigned_mol in ref_mols_assigned:
+            self.mark_charges_assigned(assigned_mol, topology)
+
+
+
+class ToolkitAM1BCCHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags
 
     .. warning :: This API is experimental and subject to change.
     """
 
     _TAGNAME = 'ToolkitAM1BCC'  # SMIRNOFF tag name to process
-    _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create or utilize
-    _DEPENDENCIES = [vdWHandler] # vdWHandler must first run NonBondedForce.addParticle for each particle in the topology
-    _KWARGS = ['charge_from_molecules', 'toolkit_registry'] # Kwargs to catch when create_force is called
+    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler]
+    _KWARGS = ['toolkit_registry'] # Kwargs to catch when create_force is called
 
     def check_handler_compatibility(self,
                                     other_handler,
@@ -2589,96 +2897,31 @@ class ToolkitAM1BCCHandler(ParameterHandler):
         """
         pass
 
-    def assign_charge_from_molecules(self, molecule, charge_mols):
-        """
-        Given an input molecule, checks against a list of molecules for an isomorphic match. If found, assigns
-        partial charges from the match to the input molecule.
-
-        Parameters
-        ----------
-        molecule : an openforcefield.topology.FrozenMolecule
-            The molecule to have partial charges assigned if a match is found.
-        charge_mols : list of [openforcefield.topology.FrozenMolecule]
-            A list of molecules with charges already assigned.
-
-        Returns
-        -------
-        match_found : bool
-            Whether a match was found. If True, the input molecule will have been modified in-place.
-        """
-
-        from networkx.algorithms.isomorphism import GraphMatcher
-        import simtk.unit
-
-        # Define the node/edge attributes that we will use to match the atoms/bonds during molecule comparison
-        node_match_func = lambda x, y: ((x['atomic_number'] == y['atomic_number']) and
-                                        (x['stereochemistry'] == y['stereochemistry']) and
-                                        (x['is_aromatic'] == y['is_aromatic'])
-                                        )
-        edge_match_func = lambda x, y: ((x['bond_order'] == y['bond_order']) and
-                                        (x['stereochemistry'] == y['stereochemistry']) and
-                                        (x['is_aromatic'] == y['is_aromatic'])
-                                        )
-        # Check each charge_mol for whether it's isomorphic to the input molecule
-        for charge_mol in charge_mols:
-            if molecule.is_isomorphic(charge_mol):
-                # Take the first valid atom indexing map
-                ref_mol_G = molecule.to_networkx()
-                charge_mol_G = charge_mol.to_networkx()
-                GM = GraphMatcher(
-                    charge_mol_G,
-                    ref_mol_G,
-                    node_match=node_match_func,
-                    edge_match=edge_match_func)
-                for mapping in GM.isomorphisms_iter():
-                    topology_atom_map = mapping
-                    break
-                # Set the partial charges
-
-                # Get the partial charges
-                # Make a copy of the charge molecule's charges array (this way it's the right shape)
-                temp_mol_charges = copy.deepcopy(simtk.unit.Quantity(charge_mol.partial_charges))
-                for charge_idx, ref_idx in topology_atom_map.items():
-                    temp_mol_charges[ref_idx] = charge_mol.partial_charges[charge_idx]
-                molecule.partial_charges = temp_mol_charges
-                return True
-
-        # If no match was found, return False
-        return False
-
     def create_force(self, system, topology, **kwargs):
 
         from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
         from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
 
-        existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
-        if len(existing) == 0:
-            force = self._OPENMMTYPE()
-            system.addForce(force)
-        else:
-            force = existing[0]
+
+        force = super().create_force(system, topology, **kwargs)
 
         for ref_mol in topology.reference_molecules:
 
-            # Make a temporary copy of ref_mol to assign charges from charge_mol
+            # If charges were already assigned, skip this molecule
+            if self.check_charges_assigned(ref_mol, topology):
+                continue
+
+            # Make a temporary copy of ref_mol to assign charges
             temp_mol = FrozenMolecule(ref_mol)
 
-            # First, check whether any of the reference molecules in the topology are in the charge_from_mol list
-            charges_from_charge_mol = False
-            if 'charge_from_molecules' in kwargs:
-                charges_from_charge_mol = self.assign_charge_from_molecules(temp_mol, kwargs['charge_from_molecules'])
-
-            # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
-            if not(charges_from_charge_mol):
-                toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
-                temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
-                #temp_mol.compute_partial_charges(quantum_chemical_method=self._quantum_chemical_method,
-                #                                 partial_charge_method=self._partial_charge_method)
-                temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+            # If the molecule wasn't already assigned charge values, calculate them here
+            toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
+            temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
+            temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
 
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
+
 
                 top_mol_particle_start_index = topology_molecule.particle_start_topology_index
 
@@ -2703,6 +2946,9 @@ class ToolkitAM1BCCHandler(ParameterHandler):
                     force.setParticleParameters(topology_particle_index,
                                                 particle_charge, sigma,
                                                 epsilon)
+            # Finally, mark that charges were assigned for this reference molecule
+            self.mark_charges_assigned(ref_mol, topology)
+
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
     def postprocess_system(self, system, topology, **kwargs):
@@ -2737,7 +2983,7 @@ class ToolkitAM1BCCHandler(ParameterHandler):
                     # TODO: Calculate exceptions
 
 
-class ChargeIncrementModelHandler(ParameterHandler):
+class ChargeIncrementModelHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<ChargeIncrementModel>`` tags
 
     .. warning :: This API is experimental and subject to change.
@@ -2756,9 +3002,7 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
     _INFOTYPE = ChargeIncrementType  # info type to store
-    _OPENMMTYPE = openmm.NonbondedForce  # OpenMM force class to create or utilize
     # TODO: The structure of this is still undecided
-    _KWARGS = ['charge_from_molecules']
 
     number_of_conformers = ParameterAttribute(default=10, converter=int)
     quantum_chemical_method = ParameterAttribute(
@@ -2797,58 +3041,6 @@ class ChargeIncrementModelHandler(ParameterHandler):
         self._check_attributes_are_equal(other_handler,
                                          identical_attrs=string_attrs_to_compare+int_attrs_to_compare)
 
-    def assign_charge_from_molecules(self, molecule, charge_mols):
-        """
-        Given an input molecule, checks against a list of molecules for an isomorphic match. If found, assigns
-        partial charges from the match to the input molecule.
-
-        Parameters
-        ----------
-        molecule : an openforcefield.topology.FrozenMolecule
-            The molecule to have partial charges assigned if a match is found.
-        charge_mols : list of [openforcefield.topology.FrozenMolecule]
-            A list of molecules with charges already assigned.
-
-        Returns
-        -------
-        match_found : bool
-            Whether a match was found. If True, the input molecule will have been modified in-place.
-        """
-
-        from networkx.algorithms.isomorphism import GraphMatcher
-        # Define the node/edge attributes that we will use to match the atoms/bonds during molecule comparison
-        node_match_func = lambda x, y: ((x['atomic_number'] == y['atomic_number']) and
-                                        (x['stereochemistry'] == y['stereochemistry']) and
-                                        (x['is_aromatic'] == y['is_aromatic'])
-                                        )
-        edge_match_func = lambda x, y: ((x['order'] == y['order']) and
-                                        (x['stereochemistry'] == y['stereochemistry']) and
-                                        (x['is_aromatic'] == y['is_aromatic'])
-                                        )
-        # Check each charge_mol for whether it's isomorphic to the input molecule
-        for charge_mol in charge_mols:
-            if molecule.is_isomorphic(charge_mol):
-                # Take the first valid atom indexing map
-                ref_mol_G = molecule.to_networkx()
-                charge_mol_G = charge_mol.to_networkX()
-                GM = GraphMatcher(
-                    charge_mol_G,
-                    ref_mol_G,
-                    node_match=node_match_func,
-                    edge_match=edge_match_func)
-                for mapping in GM.isomorphisms_iter():
-                    topology_atom_map = mapping
-                    break
-                # Set the partial charges
-                charge_mol_charges = charge_mol.get_partial_charges()
-                temp_mol_charges = charge_mol_charges.copy()
-                for charge_idx, ref_idx in topology_atom_map:
-                    temp_mol_charges[ref_idx] = charge_mol_charges[charge_idx]
-                molecule.set_partial_charges(temp_mol_charges)
-                return True
-
-        # If no match was found, return False
-        return False
 
     def create_force(self, system, topology, **kwargs):
 
@@ -2865,19 +3057,17 @@ class ChargeIncrementModelHandler(ParameterHandler):
 
         for ref_mol in topology.reference_molecules:
 
+            # If charges were already assigned, skip this molecule
+            if self.check_charges_assigned(ref_mol, topology):
+                continue
+
             # Make a temporary copy of ref_mol to assign charges from charge_mol
             temp_mol = FrozenMolecule(ref_mol)
 
-            # First, check whether any of the reference molecules in the topology are in the charge_from_mol list
-            charges_from_charge_mol = False
-            if 'charge_from_mol' in kwargs:
-                charges_from_charge_mol = self.assign_charge_from_molecules(temp_mol, kwargs['charge_from_mol'])
-
             # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
-            if not(charges_from_charge_mol):
-                temp_mol.generate_conformers(n_conformers=10)
-                temp_mol.compute_partial_charges(quantum_chemical_method=self._quantum_chemical_method,
-                                                 partial_charge_method=self._partial_charge_method)
+            temp_mol.generate_conformers(n_conformers=10)
+            temp_mol.compute_partial_charges(quantum_chemical_method=self._quantum_chemical_method,
+                                             partial_charge_method=self._partial_charge_method)
 
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
@@ -2895,6 +3085,10 @@ class ChargeIncrementModelHandler(ParameterHandler):
                     force.setParticleParameters(topology_particle_index,
                                                 particle_charge, sigma,
                                                 epsilon)
+
+            # Finally, mark that charges were assigned for this reference molecule
+            self.mark_charges_assigned(ref_mol, topology)
+
 
 
 
@@ -2953,7 +3147,8 @@ class GBSAHandler(ParameterHandler):
     _TAGNAME = 'GBSA'
     _INFOTYPE = GBSAType
     _OPENMMTYPE = openmm.GBSAOBCForce
-    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
+    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler,
+                     ToolkitAM1BCCHandler, ChargeIncrementModelHandler, LibraryChargeHandler]
 
     gb_model = ParameterAttribute(
         default='OBC1',

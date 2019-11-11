@@ -21,6 +21,7 @@ from simtk import unit
 from openforcefield.utils import (BASIC_CHEMINFORMATICS_TOOLKITS, RDKIT_AVAILABLE, OPENEYE_AVAILABLE,
                                   RDKitToolkitWrapper, OpenEyeToolkitWrapper)
 from openforcefield.tests.utils import get_data_file_path
+from openforcefield.tests.test_forcefield import create_cyclohexane, create_ethanol
 from openforcefield.topology import Topology, ValenceDict, ImproperDict, DuplicateUniqueMoleculeError
 from openforcefield.topology import Molecule
 
@@ -402,21 +403,19 @@ class TestTopology(TestCase):
         from simtk.openmm import app
         pdbfile = app.PDBFile(get_data_file_path('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
 
-        molecules = []
-        molecules.append(Molecule.from_smiles('CCO'))
-        molecules.append(Molecule.from_smiles('C1CCCCC1'))
+        molecules = [create_ethanol(), create_cyclohexane()]
 
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         assert topology.n_reference_molecules == 2
         assert topology.n_topology_molecules == 239
+
 
     def test_from_openmm_missing_reference(self):
         """Test creation of an openforcefield Topology object from an OpenMM Topology when missing a unique molecule"""
         from simtk.openmm import app
         pdbfile = app.PDBFile(get_data_file_path('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
 
-        molecules = []
-        molecules.append(Molecule.from_smiles('CCO'))
+        molecules = [create_ethanol()]
         with pytest.raises(ValueError, match='No match found for molecule C6H12') as excinfo:
             topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
