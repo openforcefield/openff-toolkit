@@ -749,6 +749,9 @@ class _ParameterAttributeHandler:
         """
         Determine whether an attribute of this object is cosmetic.
 
+        .. warning :: The API for modifying cosmetic attributes is experimental
+        and may change in the future (see issue #338).
+
         Parameters
         ----------
         attr_name : str
