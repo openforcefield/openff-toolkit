@@ -30,6 +30,13 @@ New features
   method. To assign charges to a protein, LibraryCharges SMARTS must be provided for
   the standard residues, as well as for any capping groups and post-translational modifications
   that are present.
+- `PR #455 <https://github.com/openforcefield/openforcefield/pull/455>`_: Addresses
+  `Issue #393 <https://github.com/openforcefield/openforcefield/issues/393>`_ by adding
+  :py:meth:`ParameterHandler.attribute_is_cosmetic <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.attribute_is_cosmetic>`
+  and
+  :py:meth:`ParameterType.attribute_is_cosmetic <openforcefield.typing.engines.smirnoff.parameters.ParameterType.attribute_is_cosmetic>`,
+  which return True if the provided attribute name is defined for the queried object
+  but does not correspond to an allowed value in the SMIRNOFF spec.
 
 Behavior changed
 """"""""""""""""
