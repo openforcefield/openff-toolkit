@@ -365,10 +365,13 @@ class TestParameterHandler:
                           'length': 0.2*unit.nanometer,
                           'k': 0.4*unit.kilojoule_per_mole/unit.nanometer**2})
 
+        assert not(bh.attribute_is_cosmetic('pilot'))
+
         # Ensure the cosmetic attribute is present by default during output
         bh.add_cosmetic_attribute('pilot', 'alice')
         param_dict = bh.to_dict()
         assert ('pilot', 'alice') in param_dict.items()
+        assert bh.attribute_is_cosmetic('pilot')
 
         # Ensure the cosmetic attribute isn't present if we request that it be discarded
         param_dict = bh.to_dict(discard_cosmetic_attributes=True)
@@ -378,6 +381,7 @@ class TestParameterHandler:
         bh.delete_cosmetic_attribute('pilot')
         param_dict = bh.to_dict()
         assert 'pilot' not in param_dict
+        assert not(bh.attribute_is_cosmetic('pilot'))
 
 
 class TestParameterList:
@@ -616,6 +620,33 @@ class TestParameterType:
             optional = ParameterAttribute(default=None)
         with pytest.raises(SMIRNOFFSpecError, match="require the following missing parameters"):
             MyParameter(smirks='[*:1]', optional=1)
+
+    def test_add_delete_cosmetic_attributes(self):
+        """
+        Test ParameterType.add_cosmetic_attribute, delete_cosmetic_attribute,
+        attribute_is_cosmetic, and to_dict() functions for proper behavior
+        """
+        class MyParameter(ParameterType):
+            required = ParameterAttribute()
+        my_par = MyParameter(smirks='[*:1]', required='aaa')
+        assert not(my_par.attribute_is_cosmetic('pilot'))
+
+        # Ensure the cosmetic attribute is present by default during output
+        my_par.add_cosmetic_attribute('pilot', 'alice')
+        param_dict = my_par.to_dict()
+        assert ('pilot', 'alice') in param_dict.items()
+        assert my_par.attribute_is_cosmetic('pilot')
+
+        # Ensure the cosmetic attribute isn't present if we request that it be discarded
+        param_dict = my_par.to_dict(discard_cosmetic_attributes=True)
+        assert 'pilot' not in param_dict
+
+
+        # Manually delete the cosmetic attribute and ensure it doesn't get written out
+        my_par.delete_cosmetic_attribute('pilot')
+        param_dict = my_par.to_dict()
+        assert 'pilot' not in param_dict
+        assert not(my_par.attribute_is_cosmetic('pilot'))
 
     def test_indexed_attrs(self):
         """ParameterType handles indexed attributes correctly."""

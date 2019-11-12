@@ -715,7 +715,7 @@ class _ParameterAttributeHandler:
         output.
 
         .. warning :: The API for modifying cosmetic attributes is experimental
-        and may change in the future (see issue #338).
+           and may change in the future (see issue #338).
 
         Parameters
         ----------
@@ -733,7 +733,7 @@ class _ParameterAttributeHandler:
         Delete a cosmetic attribute from this object.
 
         .. warning :: The API for modifying cosmetic attributes is experimental
-        and may change in the future (see issue #338).
+           and may change in the future (see issue #338).
 
         Parameters
         ----------
@@ -744,6 +744,25 @@ class _ParameterAttributeHandler:
         #  Would we also need to override __del__ as well to cover both deletation methods?
         delattr(self, '_'+attr_name)
         self._cosmetic_attribs.remove(attr_name)
+
+    def attribute_is_cosmetic(self, attr_name):
+        """
+        Determine whether an attribute of this object is cosmetic.
+
+        .. warning :: The API for modifying cosmetic attributes is experimental
+           and may change in the future (see issue #338).
+
+        Parameters
+        ----------
+        attr_name : str
+            The attribute name to check
+
+        Returns
+        -------
+        is_cosmetic : bool
+            Returns True if the attribute is defined and is cosmetic. Returns False otherwise.
+        """
+        return attr_name in self._cosmetic_attribs
 
     @staticmethod
     def _split_attribute_index(item):
@@ -2721,7 +2740,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             else:
                 raise IncompatibleParameterError("Electrostatics method set to reaction-field. In the future, "
                                                  "this will lead to use of OpenMM's CutoffPeriodic or CutoffNonPeriodic"
-                                                " Nonbonded force method, however this is not supported in the "
+                                                 " Nonbonded force method, however this is not supported in the "
                                                  "current Open Force Field toolkit")
 
         if not settings_matched:
