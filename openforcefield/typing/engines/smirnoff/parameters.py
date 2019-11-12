@@ -745,6 +745,22 @@ class _ParameterAttributeHandler:
         delattr(self, '_'+attr_name)
         self._cosmetic_attribs.remove(attr_name)
 
+    def attribute_is_cosmetic(self, attr_name):
+        """
+        Determine whether an attribute of this object is cosmetic.
+
+        Parameters
+        ----------
+        attr_name : str
+            The attribute name to check
+
+        Returns
+        -------
+        is_cosmetic : bool
+            Returns True if the attribute is defined and is cosmetic. Returns False otherwise.
+        """
+        return attr_name in self._cosmetic_attribs
+
     @staticmethod
     def _split_attribute_index(item):
         """Split the attribute name from the final index.
@@ -2721,7 +2737,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             else:
                 raise IncompatibleParameterError("Electrostatics method set to reaction-field. In the future, "
                                                  "this will lead to use of OpenMM's CutoffPeriodic or CutoffNonPeriodic"
-                                                " Nonbonded force method, however this is not supported in the "
+                                                 " Nonbonded force method, however this is not supported in the "
                                                  "current Open Force Field toolkit")
 
         if not settings_matched:
