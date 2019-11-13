@@ -22,6 +22,13 @@ to generate charges for a molecule. More detailed explanation of the new errors 
 keywords for overriding them are in the "Behavior Changed" section below.
 
 
+With this release, we update ``test_forcefields/tip3p.offxml`` to be a working example of assigning LibraryCharges.
+However, we do not provide any force field files to assign protein residue ``LibraryCharges``.
+If you are interested in translating an existing protein FF to SMIRNOFF format or developing a new one, please
+feel free to contact us on the `Issue tracker <https://github.com/openforcefield/openforcefield/issues>`_ or open a
+`Pull Request <https://github.com/openforcefield/openforcefield/pulls>`_.
+
+
 New features
 """"""""""""
 - `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: Closes
@@ -30,22 +37,22 @@ New features
   `LibraryCharges tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#librarycharges-library-charges-for-polymeric-residues-and-special-solvent-models>`_
   using
   :py:class:`LibraryChargeHandler <openforcefield.typing.engines.smirnoff.parameters.LibraryChargeHandler>`.
-  For a molecule to have charges assigned using LibraryCharges, all of its atoms must be covered by
-  at least one LibraryCharge. If an atom is covered by multiple LibraryCharges, then the last
-  LibraryCharge matched will be applied (per the hierarchy rules in the SMIRNOFF format).
+  For a molecule to have charges assigned using Library Charges, all of its atoms must be covered by
+  at least one ``LibraryCharge``. If an atom is covered by multiple ``LibraryCharge`` s, then the last
+  ``LibraryCharge`` matched will be applied (per the hierarchy rules in the SMIRNOFF format).
 
   This functionality is thus able to apply per-residue charges similar to those in traditional
   protein force fields. At this time, there is no concept of "residues" or "fragments" during
   parametrization, so it is not possible to assign charges to `some` atoms in a molecule using
-  LibraryCharges, but calculate charges for other atoms in the same molecule using a different
+  ``LibraryCharge`` s, but calculate charges for other atoms in the same molecule using a different
   method. To assign charges to a protein, LibraryCharges SMARTS must be provided for
   the residues and protonation states in the molecule, as well as for any capping groups
   and post-translational modifications that are present.
 
-  It is valid for LibraryCharge SMARTS to `partially` overlap one another. For example, a molecule
+  It is valid for ``LibraryCharge`` SMARTS to `partially` overlap one another. For example, a molecule
   consisting of atoms ``A-B-C`` connected by single bonds could be matched by a SMIRNOFF
   ``LibraryCharges`` section containing two ``LibraryCharge`` SMARTS: ``A-B`` and ``B-C``. If
-  listed in that order, the molecule would be assigned the ``A`` charge from the ``A-B`` LibraryCharge
+  listed in that order, the molecule would be assigned the ``A`` charge from the ``A-B`` ``LibraryCharge``
   element and the ``B`` and ``C`` charges from the ``B-C`` element. In testing, these types of
   partial overlaps were found to frequently be sources of undesired behavior, so it is recommended
   that users define whole-molecule ``LibraryCharge`` SMARTS whenever possible.
@@ -71,7 +78,7 @@ Behavior changed
   ``Molecule.partial_charges`` array to be all zeroes, and including the molecule in the
   ``charge_from_molecules`` keyword argument to ``create_openmm_system``.
 - `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: Due to risks
-  introduced by permitting charge assignment using partially-overlapping ``LibraryCharge``s,
+  introduced by permitting charge assignment using partially-overlapping ``LibraryCharge`` s,
   the toolkit will now raise a
   ``openforcefield.typing.engines.smirnoff.parameters.NonIntegralMoleculeChargeException``
   if the sum of partial charges on a molecule are found to be more than 0.01 elementary charge units
