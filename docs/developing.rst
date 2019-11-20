@@ -135,7 +135,7 @@ Development of new toolkit features generally proceeds in the following stages:
       An encrypted OpenEye license is present in the OFF Toolkit GitHub repository, as ``oe_license.txt.enc``.
       Only Travis has the decryption key for this file.
       However, this setup poses the risk that anyone who can run Travis builds could simply print the contents of the license after decryption, which would put us in violation of our academic contract with OpenEye.
-
+      For this reason, the OpenEye-dependent tests will be skipped on forks.
     * Note that creating a fork will prevent the OpenEye license from being decrypted on Travis, so a few options are possible:
         * If you aren't working on OpenEye-dependent functionality
 
