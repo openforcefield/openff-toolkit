@@ -12,21 +12,21 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 New features
 """"""""""""
-- The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/XXX>`_:
+  The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
   :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.has_unique_atom_names>`
   and :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.generate_unique_atom_names>`.
 
 Behavior changed
 """"""""""""""""
-- When constructing a :py:class:`Molecule <openforcefield.topology.Molecule>`, unique atom names
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/XXX>`_:
+  When constructing a :py:class:`Molecule <openforcefield.topology.Molecule>`, unique atom names
   are generated (overriding any existing atom names) if the provided atom names are not unique.
 
 Tests added
 """""""""""
-- `PR #XXX <https://github.com/openforcefield/openforcefield/pull/XXX>`_: Added round-trip test
-  for ``Molecule.from_smiles()`` and ``Molecule.to_smiles()``.
-- `PR #XXX <https://github.com/openforcefield/openforcefield/pull/XXX>`_: Added tests for
-  ``Molecule.has_unique_atom_names`` and ``Molecule.generate_unique_atom_names()``.
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/XXX>`_: Added round-trip SMILES test
+  to add coverage for :py:meth:`Molecule.from_smiles <openforcefield.topology.Molecule.from_smiles>`.
 
 Bugfixes
 """"""""
