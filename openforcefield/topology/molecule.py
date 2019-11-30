@@ -1542,6 +1542,38 @@ class FrozenMolecule(Serializable):
                     other)
                 raise Exception(msg)
 
+        # Validate the molecule
+        self._validate()
+
+    @property
+    def has_unique_atom_names(self):
+        """True if the molecule has unique atom names, False otherwise."""
+        unique_atom_names = set([atom.name for atom in self.atoms])
+        if len(unique_atom_names) < self.n_atoms:
+            return False
+        return True
+
+    def generate_unique_atom_names(self):
+        """
+        Generate unique atom names using element name and number of times that element has occurred
+        e.g. 'C1', 'H1', 'O1', 'C2', ...
+
+        """
+        from collections import defaultdict
+        element_counts = defaultdict(int)
+        for atom in self.atoms:
+            symbol = atom.element.symbol
+            element_counts[symbol] += 1
+            atom.name = symbol + str(element_counts[symbol])
+
+    def _validate(self):
+        """
+        Validate the molecule, ensuring it has unique atom names
+
+        """
+        if not self.has_unique_atom_names:
+            self.generate_unique_atom_names()
+
     ####################################################################################################
     # Safe serialization
     ####################################################################################################
@@ -1875,13 +1907,13 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('from_smiles',
+            molecule = toolkit_registry.call('from_smiles',
                                          smiles,
                                          hydrogens_are_explicit=hydrogens_are_explicit,
                                          allow_undefined_stereo=allow_undefined_stereo)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.from_smiles(smiles,
+            molecule = toolkit.from_smiles(smiles,
                                        hydrogens_are_explicit=hydrogens_are_explicit,
                                        allow_undefined_stereo=allow_undefined_stereo
                                        )
@@ -1889,6 +1921,9 @@ class FrozenMolecule(Serializable):
             raise Exception(
                 'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
+
+        molecule._validate()
+        return molecule
 
     def is_isomorphic(
             self, other,
@@ -2807,7 +2842,9 @@ class FrozenMolecule(Serializable):
         if result == False:
             raise Exception(
                 "Addition of explicit hydrogens failed in from_iupac")
-        return cls.from_openeye(oemol, **kwargs)
+        molecule = cls.from_openeye(oemol, **kwargs)
+        molecule._validate()
+        return molecule
 
     # TODO: Move OE-dependent parts of this to toolkits.py
     @OpenEyeToolkitWrapper.requires_toolkit()
@@ -2996,11 +3033,15 @@ class FrozenMolecule(Serializable):
                 file_format=file_format,
                 allow_undefined_stereo=allow_undefined_stereo)
 
+        for mol in mols:
+            mol._validate()
+
         if len(mols) == 0:
             raise Exception(
                 'Unable to read molecule from file: {}'.format(file_path))
         elif len(mols) == 1:
             return mols[0]
+
         return mols
 
     def to_file(self,
@@ -3106,8 +3147,10 @@ class FrozenMolecule(Serializable):
 
         """
         toolkit = RDKitToolkitWrapper()
-        return toolkit.from_rdkit(
+        molecule = toolkit.from_rdkit(
             rdmol, allow_undefined_stereo=allow_undefined_stereo)
+        molecule._validate()
+        return molecule
 
     @RDKitToolkitWrapper.requires_toolkit()
     def to_rdkit(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
@@ -3173,8 +3216,10 @@ class FrozenMolecule(Serializable):
 
         """
         toolkit = OpenEyeToolkitWrapper()
-        return toolkit.from_openeye(
+        molecule = toolkit.from_openeye(
             oemol, allow_undefined_stereo=allow_undefined_stereo)
+        molecule._validate()
+        return molecule
 
     @OpenEyeToolkitWrapper.requires_toolkit()
     def to_openeye(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):

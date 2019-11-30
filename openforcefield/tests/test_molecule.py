@@ -260,6 +260,26 @@ class TestMolecule:
         molecule_copy = Molecule(molecule)
         assert molecule_copy == molecule
 
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_from_smiles(self, molecule):
+        """Test round-trip creation from SMILES"""
+        smiles1 = molecule.to_smiles()
+        molecule2 = Molecule.from_smiles(smiles1)
+        smiles2 = molecule2.to_smiles()
+        assert (smiles1 == smiles2)
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_unique_atom_names(self, molecule):
+        """Test molecules have unique atom names"""
+        smiles1 = molecule.to_smiles()
+        molecule2 = Molecule.from_smiles(smiles1)
+        # Check that the molecule has unique atom names
+        assert (molecule2.has_unique_atom_names == True)
+        # Check molecule.has_unique_atom_names is working correctly
+        assert ((len(set([atom.name for atom in molecule2.atoms])) == molecule2.n_atoms) == molecule2.has_unique_atom_names)
+        molecule2.atoms[1].name = molecule2.atoms[0].name # no longer unique
+        assert ((len(set([atom.name for atom in molecule2.atoms])) == molecule2.n_atoms) == molecule2.has_unique_atom_names)
+
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @pytest.mark.slow
     def test_create_from_file(self):
@@ -730,9 +750,9 @@ class TestMolecule:
         """
         Tests the unit type checking of the VirtualSite base class
         """
-        
+
         # TODO: Should these be using BondChargeVirtualSite, or should we just call the base class (which does the unit checks) directly?
-        
+
         # Prepare values for unit checks
         distance_unitless = 0.4
         sigma_unitless = 0.1
@@ -786,7 +806,7 @@ class TestMolecule:
             molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, charge_increments=charge_increments)
 
         vsite3_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3, atom4], distance, charge_increments=charge_increments)
-            
+
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_add_bond_charge_virtual_site(self, molecule):
         """Test the addition of a BondChargeVirtualSite to a molecule.
