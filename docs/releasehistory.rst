@@ -7,6 +7,30 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+0.6.1 - Bugfixes
+----------------
+
+New features
+""""""""""""
+- The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
+  :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.has_unique_atom_names>`
+  and :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.generate_unique_atom_names>`.
+
+Behavior changed
+""""""""""""""""
+- When constructing a :py:class:`Molecule <openforcefield.topology.Molecule>`, unique atom names
+  are generated (overriding any existing atom names) if the provided atom names are not unique.
+
+Tests added
+"""""""""""
+- `PR #XXX <https://github.com/openforcefield/openforcefield/pull/XXX>`_: Added round-trip test
+  for ``Molecule.from_smiles()`` and ``Molecule.to_smiles()``.
+- `PR #XXX <https://github.com/openforcefield/openforcefield/pull/XXX>`_: Added tests for
+  ``Molecule.has_unique_atom_names`` and ``Molecule.generate_unique_atom_names()``.
+
+Bugfixes
+""""""""
+- `Issue #460 <https://github.com/openforcefield/openforcefield/issues/460>`_: Atom names are not unique
 
 0.6.0 - Library Charges
 -----------------------
@@ -90,10 +114,10 @@ Behavior changed
 
 Tests added
 """""""""""
-- `PR #430 <https://github.com/openforcefield/openforcefield/pull/430>`_: Added test for 
-  Wiberg Bond Order implemented in OpenEye Toolkits. Molecules taken from 
+- `PR #430 <https://github.com/openforcefield/openforcefield/pull/430>`_: Added test for
+  Wiberg Bond Order implemented in OpenEye Toolkits. Molecules taken from
   DOI:10.5281/zenodo.3405489 . Added by Sukanya Sasmal.
- 
+
 
 Bugfixes
 """"""""
@@ -474,7 +498,7 @@ API-breaking Changes
 * `PR #291 <https://github.com/openforcefield/openforcefield/pull/291>`_: Remove ``ForceField.load/to_smirnoff_data``, add ``ForceField.to_file/string`` and ``ParameterHandler.add_parameters``. Change behavior of ``ForceField.register_X_handler`` functions.
 
 Bugfixes
-"""""""" 
+""""""""
 * `PR #327 <https://github.com/openforcefield/openforcefield/pull/327>`_: Fix units in tip3p.offxml (note that this file is still not loadable by current toolkit)
 * `PR #325 <https://github.com/openforcefield/openforcefield/pull/325>`_: Fix solvent box for provided test system to resolve periodic clashes.
 * `PR #325 <https://github.com/openforcefield/openforcefield/pull/325>`_: Add informative message containing Hill formula when a molecule can't be matched in ``Topology.from_openmm``.
