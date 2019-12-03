@@ -34,53 +34,122 @@ Terminology
 
 Open Force Field Toolkit Concepts
 
-- ``OFF Molecule``: A graph representation of a molecule containing enough information to unambiguously parametrize it.
-   Required data fields for an ``OFF Molecule`` are:
-    - Atoms: element (integer), formal_charge (integer), is_aromatic (boolean), stereochemistry (R/S/None)
-    - Bonds: order (integer), is_aromatic (boolean), stereochemistry (E/Z/None),
-- ``OFF System``: An object that contains everything needed to calculate a molecular system's energy, except the atomic coordinates.
+
+``OFF Molecule``
+  A graph representation of a molecule containing enough information to unambiguously parametrize it.
+  Required data fields for an ``OFF Molecule`` are:
+
+  - Atoms: element (integer), formal_charge (integer), is_aromatic (boolean), stereochemistry (R/S/None)
+  - Bonds: order (integer), is_aromatic (boolean), stereochemistry (E/Z/None)
+
+``OFF System``
+  An object that contains everything needed to calculate a molecular system's energy, except the atomic coordinates.
   Note that this does not exist yet, and that OpenMM System objects are being used for this purpose right now.
-- ``OFF Topology``: An object that efficiently holds many OFF Molecules.
-- ``OFF ForceField``: An object generated from an OFFXML file (or other source of SMIRNOFF data).
+
+``OFF Topology``
+  An object that efficiently holds many OFF Molecules.
+
+``OFF TopologyMolecule``
+  The efficient data structures that make up an OFF Topology.
+  There is one TopologyMolecule for each instance of a chemical species in a Topology.
+  However, each unique chemical species has a single OFF Molecule representing it, which may be shared by multiple TopologyMolecules.
+  TopologyMolecules contain an atom index map, as several copies of the same chemical species in a Topology may be present with different atom orderings.
+  This data structure allows the OFF toolkit to only parametrize each unique Molecule once, and then write a copy of the assigned parameters out for each of the Molecule in the Topology (accounting for atom indexing differences in the process).
+
+
+``OFF ForceField``
+  An object generated from an OFFXML file (or other source of SMIRNOFF data).
   Most information from the SMIRNOFF data source is stored in an OFF ForceField's several ParameterHandlers, however some top-level SMIRNOFF data is stored in the ForceField itself.
-- ``SMIRNOFF data``: A hierarchical data structure that complies with the SMIRNOFF specification.
+
+``SMIRNOFF data``
+  A hierarchical data structure that complies with the SMIRNOFF specification.
   This can be serialized in many formats, including XML (OFFXML).
   The subsections in a SMIRNOFF data source generally correspond to one energy term in the functional form of a force field.
-- ``ParameterHandler``: An object that has the ability to produce one component of a System, corresponding to one subsection in a SMIRNOFF data source.
+
+``ParameterHandler``
+  An object that has the ability to produce one component of a System, corresponding to one subsection in a SMIRNOFF data source.
   Most ParameterHandlers contain a list of ``ParameterType`` objects.
-- ``ParameterType``: An object corresponding to a single SMARTS-based parameter.
+
+``ParameterType``
+  An object corresponding to a single SMARTS-based parameter.
+
+``Cosmetic attribute``
+  Data in a SMIRNOFF data source that does not correspond to a known attribute.
+  These have no functional effect, but several programs use the extensibility of the OFFXML format to define additional attributes for their own use, and their workflows require the OFF toolkit to process the files while retaining these keywords.
 
 Development Infrastructure
 
-- ``CI``: "Continuous integration" testing.
-  The process of testing that the codebase still installs and has the intended behavior.
-  Currently, we use a service called "Travis" for this.
-  Every time we change the ``master`` branch of the openforcefield Github repository, a set of virtual machines that mimic brand new Linux and Mac OSX computers are created, and follow build instructions specified in the repo's ``.travis.yml`` file to install the toolkit.
-  After installing the OFF toolkit and its dependencies, these virtual machines run our test suite.
-  If the tests all pass, the build returns a green chekc mark.
-  If all the tests for a specific change to the ``master`` branch return green, then we know that the change has not broken the toolkit's existing functionality.
-  When proposing code changes, we ask that contributors open a Pull Request (PR) on GitHub to merge their changes into the ``master`` branch.
-  When a pull request is open, Travis will test the proposed changes and indicate whether they are safe to merge.
-- ``CodeCov``: Code coverage.
+``CI``
+    "Continuous integration" testing.
+
+    Services that run frequently while the code is undergoing changes, ensuring that the codebase still installs and has the intended behavior.
+    Currently, we use a service called "Travis" for this.
+    Every time we make commits to the ``master`` branch of the openforcefield Github repository, a set of virtual machines that mimic brand new Linux and Mac OSX computers are created, and follow build instructions specified in the repo's ``.travis.yml`` file to install the toolkit.
+    After installing the OFF toolkit and its dependencies, these virtual machines run our test suite.
+    If the tests all pass, the build "passes" (returns a green check mark).
+    If all the tests for a specific change to the ``master`` branch return green, then we know that the change has not broken the toolkit's existing functionality.
+    When proposing code changes, we ask that contributors open a Pull Request (PR) on GitHub to merge their changes into the ``master`` branch.
+    When a pull request is open, CI will run on the latest set of proposed changes and indicate whether they are safe to merge.
+
+``CodeCov``
+  Code coverage.
+
   An extension to our testing framework that reports the fraction of our source code lines that were run during the tests.
   This functionality is actually the combination of several components -- Travis CI runs the tests using the ``pytest-cov`` package, and then uploads the results to the website codecov.io.
   This analysis is re-run with each change to the ``master`` branch, and a badge showing our coverage percentage is in the project README.
-- ``LGTM``: "Looks Good To Me".
+
+``LGTM``
+  "Looks Good To Me".
+
   A service that analyzes the code in our repository for simple style and formatting issues.
   This service assigns a letter grade to codebases, and a badge showing our LGTM report is in the project README.
-- ``RTD``: ReadTheDocs.
+
+``RTD``
+  ReadTheDocs.
+
   A service that compiles and renders the packages documentation (from the ``docs/`` folder).
   The documentation itself can be accessed from the ReadTheDocs badge in the README.
 
 Modular design features
 '''''''''''''''''''''''
 
-- ParameterHandler
+There are a few areas where we've designed the toolkit with extensibility in mind.
+Adding functionality at these interfaces should be considerably easier than in other parts of the toolkit, and we encourage experimentation and contribution on these fronts.
+
+ParameterHandler
+    A generic base class for objects that perform parametrization for one section in a SMIRNOFF data source.
+
+    Each ParameterHandler-derived class MUST implement:
+        - ``create_force(self, system, topology, **kwargs)``: takes a ``System`` and a ``Topology`` as input, as well as optional keyword arguments, and modifies the ``System`` to contain the appropriate parameters.
+        - Class-level ``ParameterAttributes`` and ``IndexedParameterAttributes``: These correspond to the header-level attributes in a SMIRNOFF data source.
+          For example,, the ``Bonds`` tag in the SMIRNOFF spec has an optional ``fractional_bondorder_method`` field, which corresponds to the line  ``fractional_bondorder_method = ParameterAttribute(default=None)`` in the ``BondHandler`` class definition.
+          The ``ParameterAttribute`` and ``IndexedParameterAttribute`` classes offer considerable flexibility for validating inputs.
+          Defining these attributes at the class level implements the corresponding behavior in the default ``__init__`` function.
+        - Class-level definitions ``_MAX_SUPPORTED_SECTION_VERSION`` and ``_MAX_SUPPORTED_SECTION_VERSION``.
+          ParameterHandler versions allow us to evolve ParameterHandler behavior in a controlled, recorded way.
+          Force field development is experimental by nature, and it is unlikely that the initial choice of header attributes is suitable for all use cases.
+          Recording the "versions" of a SMIRNOFF spec tag allows us to encode the default behavior and API of a specific generation of ParameterHandlers, while allowing the safe addition of new attributes and behaviors.
+    - Each ParameterHandler-derived class MAY implement:
+        - ``known_kwargs``: Keyword arguments passed to ``ForceField.create_openmm_system`` are validated against the ``known_kwargs`` lists of each ParameterHandler that the ForceField owns.
+          If present, these kwargs and their values will be passed on to the ParameterHandler.
+        - ``to_dict``: converts the ParameterHandler to a hierarchical dict compliant with the SMIRNOFF specification.
+          The default implementation of this function should suffice for most developers.
+        - ``check_handler_compatibility``: Checks whether this ParameterHandler is "compatible" with another.
+          This function is used when a ForceField is attempted to be constructed from *multiple* SMIRNOFF data sources, and it is necessary to check that two sections with the same tagname can be combined in a sane way.
+          For example, if the user instructed two ``vdW`` sections to be read, but the sections defined different vdW potentials, then this function should raise an Exception indicating that there is no safe way to combine the parameters.
+          The default implementation of this function should suffice for most developers.
+        - ``postprocess_system``: operates identically to ``create_force``, but is run after each ParameterHandlers' ``create_force`` has already been called.
+          The default implementation of this method simply does nothing, and should suffice for most developers.
 - ParameterType
 - ToolkitRegistry
 - Molecule.to/from_object
--
+- Force field directories
 
+Molecule definition
+'''''''''''''''''''
+
+Required stereochemistry
+''''''''''''''''''''''''
 
 Conformation dependence
 '''''''''''''''''''''''
@@ -94,6 +163,10 @@ Reliance on external dependencies
 
 ForceField file paths
 '''''''''''''''''''''
+
+Documentation
+'''''''''''''
+If you define a new class, add new files to autodoc
 
 User Experience
 '''''''''''''''
