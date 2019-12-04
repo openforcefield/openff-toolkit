@@ -22,7 +22,7 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterAttribute, IndexedParameterAttribute, ParameterList,
     ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
     ImproperTorsionHandler, LibraryChargeHandler, GBSAHandler, SMIRNOFFSpecError,
-    _ParameterAttributeHandler
+    _ParameterAttributeHandler, ChargeIncrementModelHandler, IncompatibleParameterError
     )
 from openforcefield.utils import detach_units, IncompatibleUnitError
 from openforcefield.utils.collections import ValidatedList
@@ -967,6 +967,54 @@ class TestLibraryChargeHandler:
         """Test creation of an empty LibraryChargeHandler"""
         handler = LibraryChargeHandler(skip_version_check=True)
 
+class TestChargeIncrementModelHandler:
+    def test_create_charge_increment_model_handler(self):
+        """Test creation of ChargeIncrementModelHandlers"""
+        handler = ChargeIncrementModelHandler(skip_version_check=True)
+        assert handler.number_of_conformers == 10
+        assert handler.partial_charge_method == 'CM2'
+        assert handler.quantum_chemical_method == 'AM1'
+        handler = ChargeIncrementModelHandler(skip_version_check=True, n_conformers=10)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, n_conformers=1)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, n_conformers="10")
+        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+            handler = ChargeIncrementModelHandler(skip_version_check=True, n_conformers=[10])
+        handler = ChargeIncrementModelHandler(skip_version_check=True, quantum_chemical_method="AM1")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method="CM2")
+        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+            handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method=None)
+
+    def test_charge_increment_model_handler_getters_setters(self):
+        """Test creation of ChargeIncrementModelHandlers"""
+        handler = ChargeIncrementModelHandler(skip_version_check=True)
+        assert handler.number_of_conformers == 10
+        assert handler.partial_charge_method == 'CM2'
+        assert handler.quantum_chemical_method == 'AM1'
+        handler.number_of_conformers = 2
+        assert handler.number_of_conformers == 2
+        handler.number_of_conformers = "3"
+        assert handler.number_of_conformers == 3
+        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+            handler.number_of_conformers = "string that can't be cast to int"
+
+        handler.quantum_chemical_method = 'any string'
+        assert handler.quantum_chemical_method == 'any string'
+
+        handler.partial_charge_method = 'any string'
+        assert handler.partial_charge_method == 'any string'
+
+    def test_charge_increment_model_handlers_are_compatible(self):
+        """Test creation of ChargeIncrementModelHandlers"""
+        handler1 = ChargeIncrementModelHandler(skip_version_check=True)
+        handler2 = ChargeIncrementModelHandler(skip_version_check=True)
+        handler1.check_handler_compatibility(handler2)
+
+        handler3 = ChargeIncrementModelHandler(skip_version_check=True, quantum_chemical_method='not AM1')
+        with pytest.raises(IncompatibleParameterError) as excinfo:
+            handler1.check_handler_compatibility(handler3)
+
+
+
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
         """Test creation of an empty GBSAHandler, with all default attributes"""
@@ -1022,7 +1070,6 @@ class TestGBSAHandler:
         """
         Test the check_handler_compatibility function of GBSAHandler
         """
-        from openforcefield.typing.engines.smirnoff import IncompatibleParameterError
         from simtk import unit
         gbsa_handler_1 = GBSAHandler(skip_version_check=True)
         gbsa_handler_2 = GBSAHandler(skip_version_check=True)

@@ -223,6 +223,18 @@ xml_spec_docs_tip3p_library_charges_xml = '''
     </LibraryCharges>
 </SMIRNOFF>
 '''
+
+xml_spec_docs_chargeincrementmodel_xml = '''
+<ChargeIncrementModel version="0.3" number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2">
+  <!-- A fractional charge can be moved along a single bond -->
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" chargeincrement1="-0.0073*elementary_charge" chargeincrement2="+0.0073*elementary_charge"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" chargeincrement1="+0.0943*elementary_charge" chargeincrement2="-0.0943*elementary_charge"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" chargeincrement1="-0.0718*elementary_charge" chargeincrement2="+0.0718*elementary_charge"/>
+  <!--- Alternatively, fractional charges can be redistributed among any number of bonded atoms -->
+  <ChargeIncrement smirks="[N:1](H:2)(H:3)" chargeincrement1="+0.02*elementary_charge" chargeincrement2="-0.01*elementary_charge" chargeincrement3="-0.01*elementary_charge"/>
+</ChargeIncrementModel>
+'''
+
 #======================================================================
 # TEST UTILITY FUNCTIONS
 #======================================================================
@@ -1080,6 +1092,12 @@ class TestForceFieldChargeAssignment:
         #       We should implement something like doctests for the XML snippets on the SMIRNOFF spec page.
         ff = ForceField(xml_spec_docs_ala_library_charges_xml)
         ff = ForceField(xml_spec_docs_tip3p_library_charges_xml)
+
+    def test_parse_chargeincrementmodel_from_spec_docs(self):
+        """Ensure that the examples for librarycharges in the SMIRNOFF spec page are still valid"""
+        # TODO: This test is practically useless while the XML strings are hard-coded at the top of this file.
+        #       We should implement something like doctests for the XML snippets on the SMIRNOFF spec page.
+        ff = ForceField(xml_spec_docs_chargeincrementmodel_xml)
 
     def test_library_charge_hierarchy(self):
         """Test assigning charges to one water molecule using library charges, where two LCs match and the
