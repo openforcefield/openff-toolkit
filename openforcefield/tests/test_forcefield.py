@@ -225,14 +225,16 @@ xml_spec_docs_tip3p_library_charges_xml = '''
 '''
 
 xml_spec_docs_chargeincrementmodel_xml = '''
-<ChargeIncrementModel version="0.3" number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2">
-  <!-- A fractional charge can be moved along a single bond -->
-  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" chargeincrement1="-0.0073*elementary_charge" chargeincrement2="+0.0073*elementary_charge"/>
-  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" chargeincrement1="+0.0943*elementary_charge" chargeincrement2="-0.0943*elementary_charge"/>
-  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" chargeincrement1="-0.0718*elementary_charge" chargeincrement2="+0.0718*elementary_charge"/>
-  <!--- Alternatively, fractional charges can be redistributed among any number of bonded atoms -->
-  <ChargeIncrement smirks="[N:1](H:2)(H:3)" chargeincrement1="+0.02*elementary_charge" chargeincrement2="-0.01*elementary_charge" chargeincrement3="-0.01*elementary_charge"/>
-</ChargeIncrementModel>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <ChargeIncrementModel version="0.3" number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2">
+    <!-- A fractional charge can be moved along a single bond -->
+    <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" chargeincrement1="-0.0073*elementary_charge" chargeincrement2="0.0073*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" chargeincrement1="0.0943*elementary_charge" chargeincrement2="-0.0943*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X4:1]-[#8:2]" chargeincrement1="-0.0718*elementary_charge" chargeincrement2="0.0718*elementary_charge"/>
+    <!--- Alternatively, fractional charges can be redistributed among any number of bonded atoms -->
+    <ChargeIncrement smirks="[N:1]([H:2])([H:3])" chargeincrement1="0.02*elementary_charge" chargeincrement2="-0.01*elementary_charge" chargeincrement3="-0.01*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>
 '''
 
 #======================================================================
