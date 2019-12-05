@@ -974,9 +974,9 @@ class TestChargeIncrementModelHandler:
         assert handler.number_of_conformers == 10
         assert handler.partial_charge_method == 'CM2'
         assert handler.quantum_chemical_method == 'AM1'
-        handler = ChargeIncrementModelHandler(skip_version_check=True, n_conformers=10)
-        handler = ChargeIncrementModelHandler(skip_version_check=True, n_conformers=1)
-        handler = ChargeIncrementModelHandler(skip_version_check=True, n_conformers="10")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=10)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=1)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers="10")
         with pytest.raises(SMIRNOFFSpecError) as excinfo:
             handler = ChargeIncrementModelHandler(skip_version_check=True, n_conformers=[10])
         handler = ChargeIncrementModelHandler(skip_version_check=True, quantum_chemical_method="AM1")
@@ -994,14 +994,14 @@ class TestChargeIncrementModelHandler:
         assert handler.number_of_conformers == 2
         handler.number_of_conformers = "3"
         assert handler.number_of_conformers == 3
-        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:
             handler.number_of_conformers = "string that can't be cast to int"
 
-        handler.quantum_chemical_method = 'any string'
-        assert handler.quantum_chemical_method == 'any string'
+            with pytest.raises(SMIRNOFFSpecError) as excinfo:
+                handler.quantum_chemical_method = 'unsupported method'
 
-        handler.partial_charge_method = 'any string'
-        assert handler.partial_charge_method == 'any string'
+        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+            handler.partial_charge_method = 'unsupported method'
 
     def test_charge_increment_model_handlers_are_compatible(self):
         """Test creation of ChargeIncrementModelHandlers"""
@@ -1009,10 +1009,9 @@ class TestChargeIncrementModelHandler:
         handler2 = ChargeIncrementModelHandler(skip_version_check=True)
         handler1.check_handler_compatibility(handler2)
 
-        handler3 = ChargeIncrementModelHandler(skip_version_check=True, quantum_chemical_method='not AM1')
+        handler3 = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers='9')
         with pytest.raises(IncompatibleParameterError) as excinfo:
             handler1.check_handler_compatibility(handler3)
-
 
 
 class TestGBSAHandler:
