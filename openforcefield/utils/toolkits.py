@@ -119,6 +119,10 @@ class GAFFAtomTypeWarning(RuntimeWarning):
     """A warning raised if a loaded mol2 file possibly uses GAFF atom types."""
     pass
 
+class ChargeMethodUnavailableError(MessageException):
+    """A toolkit does not support the requested quantum_chemical_method/partial_charge_method combination"""
+    pass
+
 
 #=============================================================================================
 # TOOLKIT UTILITY DECORATORS
@@ -2584,7 +2588,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         # Store an instance of an RDKitToolkitWrapper for file I/O
         self._rdkit_toolkit_wrapper = RDKitToolkitWrapper()
 
-    def compute_partial_charges(self, molecule, charge_model=None):
+    def compute_partial_charges(self, molecule, quantum_chemical_method=None, partial_charge_method=None):
         """
         Compute partial charges with AmberTools using antechamber/sqm
 
@@ -2598,95 +2602,107 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : Molecule
             Molecule for which partial charges are to be computed
-        charge_model : str, optional, default=None
-            The charge model to use. One of ['gas', 'mul', 'bcc']. If None, 'bcc' will be used.
+        partial_charge_method: str, optional, default=None
+            The charge model to use. One of ['gasteiger', 'mulliken', 'cm1', 'cm2]. If None, 'mulliken' will be used.
+            If using gasteiger charges, the quantum_chemical_method argument must be None.
+        quantum_chemical_method: str, optional, default=None
+            The quantum chemical method to apply to the molecule. One of ['AM1', None]
 
 
         Raises
         ------
-        ValueError if the requested charge method could not be handled
-
-        Notes
-        -----
-        Currently only sdf file supported as input and mol2 as output
-        https://github.com/choderalab/openmoltools/blob/master/openmoltools/packmol.py
+        ChargeMethodUnavailableError if the requested charge method can not be handled by this toolkit
 
         """
-        raise NotImplementedError
-        # TODO: Implement this in a way that's compliant with SMIRNOFF's <ChargeIncrementModel> tag when the spec gets finalized
 
-        # import os
-        # from simtk import unit
-        #
-        # if charge_model is None:
-        #     charge_model = 'bcc'
-        #
-        # # Check that the requested charge method is supported
-        # # Needs to be fixed: 'cm1', 'cm2',
-        # SUPPORTED_ANTECHAMBER_CHARGE_MODELS = ['gas', 'mul', 'bcc']
-        # if charge_model not in SUPPORTED_ANTECHAMBER_CHARGE_MODELS:
-        #     raise ValueError(
-        #         'Requested charge method {} not among supported charge '
-        #         'methods {}'.format(charge_model,
-        #                             SUPPORTED_ANTECHAMBER_CHARGE_MODELS))
-        #
-        # # Find the path to antechamber
-        # # TODO: How should we implement find_executable?
-        # ANTECHAMBER_PATH = find_executable("antechamber")
-        # if ANTECHAMBER_PATH is None:
-        #     raise (IOError("Antechamber not found, cannot run charge_mol()"))
-        #
-        # if len(molecule._conformers) == 0:
-        #     raise Exception(
-        #         "No conformers present in molecule submitted for partial charge calculation. Consider "
-        #         "loading the molecule from a file with geometry already present or running "
-        #         "molecule.generate_conformers() before calling molecule.compute_partial_charges"
-        #     )
-        #
-        #
-        # # Compute charges
-        # from openforcefield.utils import temporary_directory, temporary_cd
-        # with temporary_directory() as tmpdir:
-        #     with temporary_cd(tmpdir):
-        #         net_charge = molecule.total_charge
-        #         # Write out molecule in SDF format
-        #         ## TODO: How should we handle multiple conformers?
-        #         self._rdkit_toolkit_wrapper.to_file(
-        #             molecule, 'molecule.sdf', file_format='sdf')
-        #         #os.system('ls')
-        #         #os.system('cat molecule.sdf')
-        #         # Compute desired charges
-        #         # TODO: Add error handling if antechamber chokes
-        #         # TODO: Add something cleaner than os.system
-        #         os.system(
-        #             "antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf "
-        #             "yes -c {} -nc {}".format(charge_model, net_charge))
-        #         #os.system('cat charged.mol2')
-        #
-        #         # Write out just charges
-        #         os.system(
-        #             "antechamber -i charged.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc "
-        #             "-cf charges.txt -pf yes")
-        #         #os.system('cat charges.txt')
-        #         # Check to ensure charges were actually produced
-        #         if not os.path.exists('charges.txt'):
-        #             # TODO: copy files into local directory to aid debugging?
-        #             raise Exception(
-        #                 "Antechamber/sqm partial charge calculation failed on "
-        #                 "molecule {} (SMILES {})".format(
-        #                     molecule.name, molecule.to_smiles()))
-        #         # Read the charges
-        #         with open('charges.txt', 'r') as infile:
-        #             contents = infile.read()
-        #         text_charges = contents.split()
-        #         charges = np.zeros([molecule.n_atoms], np.float64)
-        #         for index, token in enumerate(text_charges):
-        #             charges[index] = float(token)
-        #         # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
-        #
-        # charges = unit.Quantity(charges, unit.elementary_charge)
-        #
-        # molecule.set_partial_charges(charges)
+        import os
+        from simtk import unit
+
+        if quantum_chemical_method is not None:
+            quantum_chemical_method = quantum_chemical_method.lower()
+
+
+        if partial_charge_method is None:
+            charge_model = 'mul'
+        else:
+            # Standardize method name for string comparisons
+            partial_charge_method = partial_charge_method.lower()
+
+        # Check that the requested charge method is supported
+        SUPPORTED_QUANTUM_AND_CHARGE_METHODS = {'AM1': ['mulliken, cm1, cm2'],
+                                                None: 'gasteiger'}
+        if quantum_chemical_method not in SUPPORTED_QUANTUM_AND_CHARGE_METHODS:
+            raise ChargeMethodUnavailableError(
+                f'Requested charge method {partial_charge_method} not among supported charge '
+                f'methods {list(SUPPORTED_QUANTUM_AND_CHARGE_METHODS.keys())}'
+                )
+
+        if partial_charge_method not in SUPPORTED_QUANTUM_AND_CHARGE_METHODS[quantum_chemical_method]:
+            raise ChargeMethodUnavailableError(
+                f"If the partial_charge_method='{quantum_chemical_method}', then quantum_chemical_method "
+                f"must be one of {SUPPORTED_QUANTUM_AND_CHARGE_METHODS[quantum_chemical_method]} "
+                f"(currently quantum_chemical_method='{quantum_chemical_method}')"
+            )
+
+
+
+        # Find the path to antechamber
+        # TODO: How should we implement find_executable?
+        ANTECHAMBER_PATH = find_executable("antechamber")
+        if ANTECHAMBER_PATH is None:
+            raise (IOError("Antechamber not found, cannot run charge_mol()"))
+
+        if len(molecule._conformers) == 0:
+            raise Exception(
+                "No conformers present in molecule submitted for partial charge calculation. Consider "
+                "loading the molecule from a file with geometry already present or running "
+                "molecule.generate_conformers() before calling molecule.compute_partial_charges"
+            )
+
+
+        # Compute charges
+        from openforcefield.utils import temporary_directory, temporary_cd
+        with temporary_directory() as tmpdir:
+            with temporary_cd(tmpdir):
+                net_charge = molecule.total_charge
+                # Write out molecule in SDF format
+                ## TODO: How should we handle multiple conformers?
+                self._rdkit_toolkit_wrapper.to_file(
+                    molecule, 'molecule.sdf', file_format='sdf')
+                #os.system('ls')
+                #os.system('cat molecule.sdf')
+                # Compute desired charges
+                # TODO: Add error handling if antechamber chokes
+                # TODO: Add something cleaner than os.system
+                os.system(
+                    "antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf "
+                    "yes -c {} -nc {}".format(charge_model, net_charge))
+                #os.system('cat charged.mol2')
+
+                # Write out just charges
+                os.system(
+                    "antechamber -i charged.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc "
+                    "-cf charges.txt -pf yes")
+                #os.system('cat charges.txt')
+                # Check to ensure charges were actually produced
+                if not os.path.exists('charges.txt'):
+                    # TODO: copy files into local directory to aid debugging?
+                    raise Exception(
+                        "Antechamber/sqm partial charge calculation failed on "
+                        "molecule {} (SMILES {})".format(
+                            molecule.name, molecule.to_smiles()))
+                # Read the charges
+                with open('charges.txt', 'r') as infile:
+                    contents = infile.read()
+                text_charges = contents.split()
+                charges = np.zeros([molecule.n_atoms], np.float64)
+                for index, token in enumerate(text_charges):
+                    charges[index] = float(token)
+                # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
+
+        charges = unit.Quantity(charges, unit.elementary_charge)
+
+        molecule.set_partial_charges(charges)
 
     def compute_partial_charges_am1bcc(self, molecule):
         """
