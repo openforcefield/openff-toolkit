@@ -23,11 +23,12 @@ import numpy as np
 import pytest
 from tempfile import NamedTemporaryFile
 
-from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
+from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, \
+    ToolkitRegistry, ChargeMethodUnavailableError
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology import Molecule, Topology
-from openforcefield.typing.engines.smirnoff import ForceField, IncompatibleParameterError, SMIRNOFFSpecError
-from openforcefield.typing.engines.smirnoff import XMLParameterIOHandler
+from openforcefield.typing.engines.smirnoff import ForceField, IncompatibleParameterError, SMIRNOFFSpecError, \
+    XMLParameterIOHandler
 
 
 #======================================================================
@@ -355,6 +356,59 @@ nonbonded_resolution_matrix = [
      'omm_force': openmm.NonbondedForce.LJPME, 'exception': None, 'exception_match': ''},
     {'vdw_method': 'PME', 'electrostatics_method': 'PME', 'has_periodic_box': False,
      'omm_force': openmm.NonbondedForce.NoCutoff, 'exception': None, 'exception_match': ''},
+     ]
+
+partial_charge_method_resolution_matrix = [
+    {'toolkit': AmberToolsToolkitWrapper,
+     'partial_charge_method': 'AM1-Mulliken',
+     'exception': None,
+     'exception_match': ''
+     },
+    {'toolkit': AmberToolsToolkitWrapper,
+     'partial_charge_method': 'Gasteiger',
+     'exception': None,
+     'exception_match': ''
+     },
+    {'toolkit': AmberToolsToolkitWrapper,
+     'partial_charge_method': 'Madeup-ChargeMethod',
+     'exception': ChargeMethodUnavailableError,
+     'exception_match': ''
+     },
+    {'toolkit': OpenEyeToolkitWrapper,
+     'partial_charge_method': 'AM1-Mulliken',
+     'exception': None,
+     'exception_match': ''
+     },
+    {'toolkit': OpenEyeToolkitWrapper,
+     'partial_charge_method': 'Gasteiger',
+     'exception': None,
+     'exception_match': ''
+     },
+    {'toolkit': OpenEyeToolkitWrapper,
+     'partial_charge_method': 'MMFF94',
+     'exception': None,
+     'exception_match': ''
+     },
+    {'toolkit': OpenEyeToolkitWrapper,
+     'partial_charge_method': 'am1bcc',
+     'exception': None,
+     'exception_match': ''
+     },
+    {'toolkit': OpenEyeToolkitWrapper,
+     'partial_charge_method': 'am1bccnosymspt',
+     'exception': None,
+     'exception_match': ''
+     },
+    {'toolkit': OpenEyeToolkitWrapper,
+     'partial_charge_method': 'am1bccelf10',
+     'exception': None,
+     'exception_match': ''
+     },
+    {'toolkit': OpenEyeToolkitWrapper,
+     'partial_charge_method': 'Madeup-ChargeMethod',
+     'exception': ChargeMethodUnavailableError,
+     'exception_match': ''
+     }
      ]
 
 
@@ -1100,6 +1154,34 @@ class TestForceFieldChargeAssignment:
         # TODO: This test is practically useless while the XML strings are hard-coded at the top of this file.
         #       We should implement something like doctests for the XML snippets on the SMIRNOFF spec page.
         ff = ForceField(xml_spec_docs_chargeincrementmodel_xml)
+
+    @pytest.mark.parametrize("inputs", partial_charge_method_resolution_matrix)
+    def test_partial_charge_resolution(self, inputs):
+        """Check that the proper partial charge methods are available, and that unavailable partial charge methods
+        raise an exception.
+        """
+        toolkit_wrapper = inputs['toolkit']()
+        if not(toolkit_wrapper.is_available()):
+            pytest.skip(f"{toolkit_wrapper} is not available.")
+        partial_charge_method = inputs['partial_charge_method']
+        expected_exception = inputs['exception']
+        expected_exception_match = inputs['exception_match']
+        ethanol = create_ethanol()
+        ethanol.generate_conformers()
+        if expected_exception is None:
+            ethanol.compute_partial_charges(partial_charge_method=partial_charge_method,
+                                            toolkit_registry=toolkit_wrapper)
+            abs_charge_sum = 0. * unit.elementary_charge
+
+            # Ensure that nonzero charges were assigned
+            for pc in ethanol.partial_charges:
+                abs_charge_sum += abs(pc)
+            assert abs_charge_sum > 0.5 * unit.elementary_charge
+
+        else:
+            with pytest.raises(expected_exception, match=expected_exception_match) as excinfo:
+                ethanol.compute_partial_charges(partial_charge_method=partial_charge_method,
+                                                toolkit_registry=toolkit_wrapper)
 
     def test_library_charge_hierarchy(self):
         """Test assigning charges to one water molecule using library charges, where two LCs match and the
