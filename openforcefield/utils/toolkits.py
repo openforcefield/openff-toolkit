@@ -2628,7 +2628,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         from simtk import unit
 
         if partial_charge_method is None:
-            charge_model = 'am1-mulliken'
+            partial_charge_method = 'am1-mulliken'
         else:
             # Standardize method name for string comparisons
             partial_charge_method = partial_charge_method.lower()
