@@ -1155,7 +1155,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         -------
         charges : numpy.array of shape (natoms) of type float
             The partial charges
+            
+        Raises
+        ------
+        ChargeMethodUnavailableError if the requested charge method can not be handled by this toolkit
 
+        ChargeCalculationError if the charge calculation is supported by this toolkit, but fails
         """
 
         from openeye import oequacpac
@@ -2616,6 +2621,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ------
         ChargeMethodUnavailableError if the requested charge method can not be handled by this toolkit
 
+        ChargeCalculationError if the charge calculation is supported by this toolkit, but fails
         """
 
         import os
