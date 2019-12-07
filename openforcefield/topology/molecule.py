@@ -2018,24 +2018,20 @@ class FrozenMolecule(Serializable):
             charges = toolkit.compute_partial_charges_am1bcc(self)
         else:
             raise InvalidToolkitError(
-                'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
-                .format(type(toolkit_registry)))
+                f'Invalid toolkit_registry passed to compute_partial_charges_am1bcc.'
+                f'Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}')
         self.partial_charges = charges
 
 
     def compute_partial_charges(self,
-                                #quantum_chemical_method='AM1-BCC',
-                                #partial_charge_method='None',
+                                partial_charge_method=None,
                                 toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
-        **Warning! Not Implemented!**
         Calculate partial atomic charges for this molecule using an underlying toolkit
 
         Parameters
         ----------
-        quantum_chemical_method : string, default='AM1-BCC'
-            The quantum chemical method to use for partial charge calculation.
-        partial_charge_method : string, default='None'
+        partial_charge_method : string, default='AM1-Mulliken'
             The partial charge calculation method to use for partial charge calculation.
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
@@ -2052,24 +2048,23 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
-        raise NotImplementedError
-        # TODO: Implement this in a way that's compliant with SMIRNOFF's <ChargeIncrementModel> tag when the spec gets finalized
-        # if isinstance(toolkit_registry, ToolkitRegistry):
-        #     charges = toolkit_registry.call(
-        #               'compute_partial_charges_am1bcc',
-        #               self,
-        #     )
-        # elif isinstance(toolkit_registry, ToolkitWrapper):
-        #     toolkit = toolkit_registry
-        #     charges = toolkit.compute_partial_charges_am1bcc(
-        #         self,
-        #         #quantum_chemical_method=quantum_chemical_method,
-        #         #partial_charge_method=partial_charge_method
-        #     )
-        # else:
-        #     raise InvalidToolkitError(
-        #         'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
-        #         .format(type(toolkit_registry)))
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            charges = toolkit_registry.call(
+                      'compute_partial_charges',
+                      self,
+            )
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            charges = toolkit.compute_partial_charges(
+                self,
+                partial_charge_method=partial_charge_method
+            )
+        else:
+            raise InvalidToolkitError(
+                f'Invalid toolkit_registry passed to compute_partial_charges.'
+                f'Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}')
+
+        self.partial_charges = charges
 
     def compute_wiberg_bond_orders(self,
                                    charge_model=None,

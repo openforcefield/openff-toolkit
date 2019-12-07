@@ -119,10 +119,13 @@ class GAFFAtomTypeWarning(RuntimeWarning):
     """A warning raised if a loaded mol2 file possibly uses GAFF atom types."""
     pass
 
-class ChargeMethodUnavailableError(MessageException):
+class ChargeMethodUnavailableError(ValueError):
     """A toolkit does not support the requested quantum_chemical_method/partial_charge_method combination"""
     pass
 
+class ChargeCalculationError(RuntimeError):
+    """An unhandled error occured in an external toolkit during charge calculation"""
+    pass
 
 #=============================================================================================
 # TOOLKIT UTILITY DECORATORS
@@ -1127,8 +1130,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
 
-    def compute_partial_charges(self, molecule, quantum_chemical_method="AM1-BCC", partial_charge_method='None'):
-        #charge_model="am1bcc"):
+    def compute_partial_charges(self, molecule,  partial_charge_method='None'):
         """
         Compute partial charges with OpenEye quacpac
 
@@ -1144,10 +1146,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : Molecule
             Molecule for which partial charges are to be computed
-        charge_model : str, optional, default=None
-            The charge model to use. One of ['noop', 'mmff', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'amber',
-            'amberff94', 'am1bccelf10']
-            If None, 'am1bcc' will be used.
+        partial_charge_method : str, optional, default=None
+            The charge model to use. One of ['amberff94', 'mmff', 'mmff94', `am1-mulliken`, 'am1bcc',
+            'am1bccnosymspt', 'am1bccelf10']
+            If None, 'am1-mulliken' will be used.
 
         Returns
         -------
@@ -1155,70 +1157,75 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The partial charges
 
         """
-        raise NotImplementedError
-        # TODO: Implement this in a way that's compliant with SMIRNOFF's <ChargeIncrementModel> tag when the spec gets finalized
 
-        # from openeye import oequacpac
-        # import numpy as np
-        #
-        # if molecule.n_conformers == 0:
-        #     raise Exception(
-        #         "No conformers present in molecule submitted for partial charge calculation. Consider "
-        #         "loading the molecule from a file with geometry already present or running "
-        #         "molecule.generate_conformers() before calling molecule.compute_partial_charges"
-        #     )
-        # oemol = molecule.to_openeye()
-        #
-        # ## This seems like a big decision. Implemented a simple solution here. Not to be considered final.
-        # ## Some discussion at https://github.com/openforcefield/openforcefield/pull/86#issuecomment-350111236
-        #
-        # if charge_model is None:
-        #     charge_model = "am1bcc"
-        #
-        # if charge_model == "noop":
-        #     result = oequacpac.OEAssignCharges(oemol,
-        #                                        oequacpac.OEChargeEngineNoOp())
-        # elif charge_model == "mmff" or charge_model == "mmff94":
-        #     result = oequacpac.OEAssignCharges(oemol,
-        #                                        oequacpac.OEMMFF94Charges())
-        # elif charge_model == "am1bcc":
-        #     result = oequacpac.OEAssignCharges(oemol,
-        #                                        oequacpac.OEAM1BCCCharges())
-        # elif charge_model == "am1bccnosymspt":
-        #     optimize = True
-        #     symmetrize = True
-        #     result = oequacpac.OEAssignCharges(
-        #         oemol, oequacpac.OEAM1BCCCharges(not optimize, not symmetrize))
-        # elif charge_model == "amber" or charge_model == "amberff94":
-        #     result = oequacpac.OEAssignCharges(oemol,
-        #                                        oequacpac.OEAmberFF94Charges())
-        # elif charge_model == "am1bccelf10":
-        #     result = oequacpac.OEAssignCharges(
-        #         oemol, oequacpac.OEAM1BCCELF10Charges())
-        # else:
-        #     raise ValueError('charge_model {} unknown'.format(charge_model))
-        #
-        # if result is False:
-        #     raise Exception('Unable to assign charges')
-        #
-        # # Extract and return charges
-        # ## TODO: Behavior when given multiple conformations?
-        # ## TODO: Make sure atom mapping remains constant
-        #
-        # charges = unit.Quantity(
-        #     np.zeros([oemol.NumAtoms()], np.float64), unit.elementary_charge)
-        # for index, atom in enumerate(oemol.GetAtoms()):
-        #     charge = atom.GetPartialCharge()
-        #     charge = charge * unit.elementary_charge
-        #     charges[index] = charge
-        #
-        # if ((charges / unit.elementary_charge) == 0.
-        #     ).all() and not (charge_model == 'noop'):
-        #     # TODO: These will be 0 if the charging failed. What behavior do we want in that case?
-        #     raise Exception(
-        #         "Partial charge calculation failed. Charges from compute_partial_charges() are all 0."
-        #     )
-        # molecule.set_partial_charges(charges)
+        from openeye import oequacpac
+        import numpy as np
+
+        if molecule.n_conformers == 0:
+            raise Exception(
+                "No conformers present in molecule submitted for partial charge calculation. Consider "
+                "loading the molecule from a file with geometry already present or running "
+                "molecule.generate_conformers() before calling molecule.compute_partial_charges"
+            )
+        oemol = molecule.to_openeye()
+
+        ## This seems like a big decision. Implemented a simple solution here. Not to be considered final.
+        ## Some discussion at https://github.com/openforcefield/openforcefield/pull/86#issuecomment-350111236
+
+        if partial_charge_method is None:
+            partial_charge_method = "am1-mulliken"
+
+        partial_charge_method = partial_charge_method.lower()
+
+        AVAILABLE_CHARGE_METHODS = ['am1-mulliken', 'gasteiger', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']
+
+        if partial_charge_method not in AVAILABLE_CHARGE_METHODS:
+            raise ChargeMethodUnavailableError(f'Partial charge method {partial_charge_method} unknown. '
+                                               f'Available charge methods are {AVAILABLE_CHARGE_METHODS}')
+
+
+        if partial_charge_method == 'am1-mulliken':
+            result = oequacpac.OEAssignCharges(oemol,
+                                               oequacpac.OEAM1Charges())
+        elif partial_charge_method == "gasteiger":
+            result = oequacpac.OEAssignCharges(oemol,
+                                               oequacpac.OEGasteigerCharges())
+        elif partial_charge_method == "mmff94":
+            result = oequacpac.OEAssignCharges(oemol,
+                                               oequacpac.OEMMFF94Charges())
+        elif partial_charge_method == "am1bcc":
+            result = oequacpac.OEAssignCharges(oemol,
+                                               oequacpac.OEAM1BCCCharges())
+        elif partial_charge_method == "am1bccnosymspt":
+            optimize = True
+            symmetrize = True
+            result = oequacpac.OEAssignCharges(
+                oemol, oequacpac.OEAM1BCCCharges(not optimize, not symmetrize))
+        elif partial_charge_method == "am1bccelf10":
+            result = oequacpac.OEAssignCharges(
+                oemol, oequacpac.OEAM1BCCELF10Charges())
+
+        if result is False:
+            raise Exception('Unable to assign charges')
+
+        # Extract and return charges
+        ## TODO: Behavior when given multiple conformations?
+        ## TODO: Make sure atom mapping remains constant
+
+        charges = unit.Quantity(
+            np.zeros([oemol.NumAtoms()], np.float64), unit.elementary_charge)
+        for index, atom in enumerate(oemol.GetAtoms()):
+            charge = atom.GetPartialCharge()
+            charge = charge * unit.elementary_charge
+            charges[index] = charge
+
+        if ((charges / unit.elementary_charge) == 0.
+            ).all():
+            # TODO: These will be 0 if the charging failed. What behavior do we want in that case?
+            raise ChargeCalculationError(
+                "Partial charge calculation failed. Charges from compute_partial_charges() are all 0."
+            )
+        return charges
 
 
 
@@ -2588,7 +2595,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         # Store an instance of an RDKitToolkitWrapper for file I/O
         self._rdkit_toolkit_wrapper = RDKitToolkitWrapper()
 
-    def compute_partial_charges(self, molecule, quantum_chemical_method=None, partial_charge_method=None):
+    def compute_partial_charges(self, molecule, partial_charge_method=None):
         """
         Compute partial charges with AmberTools using antechamber/sqm
 
@@ -2603,11 +2610,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         molecule : Molecule
             Molecule for which partial charges are to be computed
         partial_charge_method: str, optional, default=None
-            The charge model to use. One of ['gasteiger', 'mulliken', 'cm1', 'cm2]. If None, 'mulliken' will be used.
-            If using gasteiger charges, the quantum_chemical_method argument must be None.
-        quantum_chemical_method: str, optional, default=None
-            The quantum chemical method to apply to the molecule. One of ['AM1', None]
-
+            The charge model to use. One of ['gasteiger', 'mulliken']. If None, 'mulliken' will be used.
 
         Raises
         ------
@@ -2618,33 +2621,21 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         import os
         from simtk import unit
 
-        if quantum_chemical_method is not None:
-            quantum_chemical_method = quantum_chemical_method.lower()
-
-
         if partial_charge_method is None:
-            charge_model = 'mul'
+            charge_model = 'am1-mulliken'
         else:
             # Standardize method name for string comparisons
             partial_charge_method = partial_charge_method.lower()
 
-        # Check that the requested charge method is supported
-        SUPPORTED_QUANTUM_AND_CHARGE_METHODS = {'AM1': ['mulliken, cm1, cm2'],
-                                                None: 'gasteiger'}
-        if quantum_chemical_method not in SUPPORTED_QUANTUM_AND_CHARGE_METHODS:
-            raise ChargeMethodUnavailableError(
-                f'Requested charge method {partial_charge_method} not among supported charge '
-                f'methods {list(SUPPORTED_QUANTUM_AND_CHARGE_METHODS.keys())}'
-                )
+        CHARGE_METHOD_TO_ANTECHAMBER_KEYWORD = {'am1-mulliken': 'mul',
+                                                'gasteiger': 'gas'}
 
-        if partial_charge_method not in SUPPORTED_QUANTUM_AND_CHARGE_METHODS[quantum_chemical_method]:
+
+        if partial_charge_method not in CHARGE_METHOD_TO_ANTECHAMBER_KEYWORD:
             raise ChargeMethodUnavailableError(
-                f"If the partial_charge_method='{quantum_chemical_method}', then quantum_chemical_method "
-                f"must be one of {SUPPORTED_QUANTUM_AND_CHARGE_METHODS[quantum_chemical_method]} "
-                f"(currently quantum_chemical_method='{quantum_chemical_method}')"
+                f"partial_charge_method '{partial_charge_method}' is not available from AmberToolsToolkitWrapper. "
+                f"The only supported methods are {list(CHARGE_METHOD_TO_ANTECHAMBER_KEYWORD.keys())} "
             )
-
-
 
         # Find the path to antechamber
         # TODO: How should we implement find_executable?
@@ -2659,6 +2650,10 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 "molecule.generate_conformers() before calling molecule.compute_partial_charges"
             )
 
+        if len(molecule._conformers) > 1:
+            logger.warning("Warning: In AmberToolsToolkitWrapper.compute_partial_charges: "
+                           "Molecule '{}' has more than one conformer, but this function "
+                           "will only generate charges for the first one.".format(molecule.name))
 
         # Compute charges
         from openforcefield.utils import temporary_directory, temporary_cd
@@ -2674,9 +2669,11 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
                 # TODO: Add something cleaner than os.system
+                short_charge_method = CHARGE_METHOD_TO_ANTECHAMBER_KEYWORD[partial_charge_method]
                 os.system(
-                    "antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf "
-                    "yes -c {} -nc {}".format(charge_model, net_charge))
+                    f"antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf "
+                    f"yes -c {short_charge_method} -nc {net_charge}"
+                )
                 #os.system('cat charged.mol2')
 
                 # Write out just charges
@@ -2687,7 +2684,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # Check to ensure charges were actually produced
                 if not os.path.exists('charges.txt'):
                     # TODO: copy files into local directory to aid debugging?
-                    raise Exception(
+                    raise ChargeCalculationError(
                         "Antechamber/sqm partial charge calculation failed on "
                         "molecule {} (SMILES {})".format(
                             molecule.name, molecule.to_smiles()))
@@ -2701,8 +2698,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
 
         charges = unit.Quantity(charges, unit.elementary_charge)
+        return charges
 
-        molecule.set_partial_charges(charges)
 
     def compute_partial_charges_am1bcc(self, molecule):
         """
@@ -2740,7 +2737,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 "molecule.generate_conformers() before calling molecule.compute_partial_charges"
             )
         if len(molecule._conformers) > 1:
-            logger.warning("Warning: In AmberToolsToolkitwrapper.compute_partial_charges_am1bcc: "
+            logger.warning("Warning: In AmberToolsToolkitWrapper.compute_partial_charges_am1bcc: "
                            "Molecule '{}' has more than one conformer, but this function "
                            "will only generate charges for the first one.".format(molecule.name))
 
@@ -2772,7 +2769,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # Check to ensure charges were actually produced
                 if not os.path.exists('charges.txt'):
                     # TODO: copy files into local directory to aid debugging?
-                    raise Exception(
+                    raise ChargeCalculationError(
                         "Antechamber/sqm partial charge calculation failed on "
                         "molecule {} (SMILES {})".format(
                             molecule.name, molecule.to_smiles()))
