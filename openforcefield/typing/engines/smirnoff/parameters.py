@@ -3023,14 +3023,10 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
     _INFOTYPE = ChargeIncrementType  # info type to store
     # TODO: The structure of this is still undecided
 
-    number_of_conformers = ParameterAttribute(default=10, converter=int)
-    quantum_chemical_method = ParameterAttribute(
-        default='AM1',
-        converter=_allow_only(['AM1'])
-    )
+    number_of_conformers = ParameterAttribute(default=1, converter=int)
+
     partial_charge_method = ParameterAttribute(
-        default='CM2',
-        converter=_allow_only(['CM2'])
+        default='AM1-Mulliken'
     )
 
     def check_handler_compatibility(self,
@@ -3080,9 +3076,17 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             temp_mol = FrozenMolecule(ref_mol)
 
             # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
-            temp_mol.generate_conformers(n_conformers=10)
-            temp_mol.compute_partial_charges(quantum_chemical_method=self._quantum_chemical_method,
-                                             partial_charge_method=self._partial_charge_method)
+            temp_mol.generate_conformers(n_conformers=self.number_of_conformers)
+            temp_mol.compute_partial_charges(partial_charge_method=self.partial_charge_method)
+
+            bond_matches = self.find_matches(temp_mol)
+
+            for (atoms, charge_increment_match) in bond_matches.items():
+                charge_increment = charge_increment_match.parameter_type
+
+                for ref_mol_atom_idx, charge_increment in zip(atoms, charge_increment.charge_increment):
+                    temp_mol.partial_charges[ref_mol_atom_idx] += charge_increment
+
 
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
