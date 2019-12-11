@@ -268,6 +268,61 @@ class ToolkitWrapper:
 
 
 @inherit_docstrings
+class BuiltInToolkitWrapper(ToolkitWrapper):
+    """
+    Built-in ToolkitWrapper for very basic functionality.
+
+    .. warning :: This API is experimental and subject to change.
+    """
+    _toolkit_name = 'Built-in Toolkit'
+    _toolkit_installation_instructions = 'This toolkit is installed with the Open Force Field Toolkit and does' \
+                                         'not require additional dependencies.'
+    _toolkit_file_read_formats = []
+    _toolkit_file_write_formats = []
+
+
+    def compute_partial_charges(self, molecule, partial_charge_method=None):
+        """
+        Compute partial charges with the built-in toolkit using simple arithmetic operations
+
+        .. warning :: This API experimental and subject to change.
+
+        Parameters
+        ----------
+        molecule : Molecule
+            Molecule for which partial charges are to be computed
+        partial_charge_method: str, optional, default=None
+            The charge model to use. One of ['zeros', 'formal_charge']. If None, 'formal_charge' will be used.
+
+        Raises
+        ------
+        ChargeMethodUnavailableError if the requested charge method can not be handled by this toolkit
+
+        ChargeCalculationError if the charge calculation is supported by this toolkit, but fails
+        """
+        SUPPORTED_PARTIAL_CHARGE_METHODS = ['zeros', 'formal_charge']
+
+        if partial_charge_method is None:
+            partial_charge_method = 'formal_charge'
+
+        partial_charge_method = partial_charge_method.lower()
+        if partial_charge_method not in SUPPORTED_PARTIAL_CHARGE_METHODS:
+            raise ChargeMethodUnavailableError(f'Partial charge method "{partial_charge_method}"" is not supported by '
+                                               f'the Built-in toolkit. Available charge methods are '
+                                               f'{SUPPORTED_PARTIAL_CHARGE_METHODS}')
+
+        partial_charges = unit.Quantity(np.zeros((molecule.n_particles)), unit.elementary_charge)
+        if partial_charge_method == 'zeroes':
+            return partial_charges
+        elif partial_charge_method == 'formal_charge':
+            for part_idx, particle in enumerate(molecule.particles):
+                partial_charges[part_idx] = particle.formal_charge
+
+        return partial_charges
+
+
+
+@inherit_docstrings
 class OpenEyeToolkitWrapper(ToolkitWrapper):
     """
     OpenEye toolkit wrapper

@@ -19,7 +19,7 @@ from numpy.testing import assert_almost_equal
 
 import pytest
 from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWrapper,
-                                           AmberToolsToolkitWrapper, ToolkitRegistry,
+                                           AmberToolsToolkitWrapper, BuiltInToolkitWrapper, ToolkitRegistry,
                                            GAFFAtomTypeWarning, UndefinedStereochemistryError)
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology.molecule import Molecule
@@ -901,6 +901,58 @@ class TestAmberToolsToolkitWrapper:
         for pc in molecule._partial_charges:
             charge_sum += pc
         assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
+
+
+class TestBuiltInToolkitWrapper:
+    """Test the BuiltInToolkitWrapper"""
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(),
+                        reason='RDKitToolkit is not available')
+    def test_compute_partial_charges(self):
+        """Test OpenEyeToolkitWrapper compute_partial_charges()"""
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[BuiltInToolkitWrapper, RDKitToolkitWrapper])
+
+        smiles = '[H]C([H])([H])C([H])([H])[H]'
+        molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_registry)
+
+        # TODO: Implementation of these tests is pending a decision on the API for our charge model
+        with pytest.raises(ValueError) as excinfo:
+            partial_charge_method = 'notARealChargeModel'
+            molecule.compute_partial_charges(toolkit_registry=toolkit_registry,
+                                             partial_charge_method=partial_charge_method)
+
+        for partial_charge_method in ['zeros', 'formal_charge']:
+                molecule.compute_partial_charges(toolkit_registry=toolkit_registry,
+                                                 partial_charge_method=partial_charge_method)
+
+                charge_sum = 0. * unit.elementary_charge
+                for pc in molecule.partial_charges:
+                    charge_sum += pc
+                assert -1.e-6 < charge_sum.value_in_unit(unit.elementary_charge) < 1.e-6
+
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() ,
+                        reason='RDKitToolkit is not available')
+    def test_compute_partial_charges_net_charge(self):
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[BuiltInToolkitWrapper, RDKitToolkitWrapper])
+        smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
+        molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_registry)
+
+        with pytest.raises(ValueError) as excinfo:
+            partial_charge_method = 'notARealChargeModel'
+            molecule.compute_partial_charges(toolkit_registry=toolkit_registry,
+                                             partial_charge_method=partial_charge_method)
+
+        # We don't check "zeros", since it obviously won't add up to +1
+        for partial_charge_method in ['formal_charge']: # 'zeros',
+                molecule.compute_partial_charges(toolkit_registry=toolkit_registry,
+                                                 partial_charge_method=partial_charge_method)
+
+                charge_sum = 0. * unit.elementary_charge
+                for pc in molecule.partial_charges:
+                    charge_sum += pc
+                assert -1.e-6 < charge_sum.value_in_unit(unit.elementary_charge) - 1. < 1.e-6
+
+
 
 
 class TestToolkitRegistry:
