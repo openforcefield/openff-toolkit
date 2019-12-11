@@ -8,6 +8,17 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
+Current Development
+-------------------
+
+- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Closes
+  `Issue #465 <https://github.com/openforcefield/openforcefield/issues/465>`_
+  ``atom.formal_charge`` and ``molecule.total_charge`` now return ``simtk.unit.Quantity`` objects
+  instead of integers.
+- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Corrects uses of
+  ValueError, TypeError, and NotImplementedError in ``compute_partial_charges`` and other
+  toolkit functions
+
 0.6.0 - Library Charges
 -----------------------
 
