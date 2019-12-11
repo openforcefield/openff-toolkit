@@ -2056,6 +2056,7 @@ class FrozenMolecule(Serializable):
             charges = toolkit_registry.call(
                       'compute_partial_charges',
                       self,
+                      partial_charge_method=partial_charge_method
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
