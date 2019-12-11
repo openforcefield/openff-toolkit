@@ -2777,7 +2777,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             for top_particle in top_mol.particles:
                 q, _, _ = force.getParticleParameters(top_particle.topology_particle_index)
                 partial_charge_sum += q
-            if abs(float(formal_charge_sum) - (partial_charge_sum/unit.elementary_charge)) > 0.01:
+            if abs(formal_charge_sum - partial_charge_sum) > 0.01 * unit.elementary_charge:
                 msg = f"Partial charge sum ({partial_charge_sum}) " \
                       f"for molecule '{top_mol.reference_molecule.name}' (SMILES " \
                       f"{top_mol.reference_molecule.to_smiles()} does not equal formal charge sum " \

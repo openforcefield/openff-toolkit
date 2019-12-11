@@ -263,7 +263,7 @@ class Atom(Particle):
         """
         The atom's formal charge
         """
-        return self._formal_charge
+        return self._formal_charge * unit.elementary_charge
 
     @property
     def partial_charge(self):
@@ -1515,7 +1515,11 @@ class FrozenMolecule(Serializable):
             if not loaded:
                 try:
                     result = toolkit_registry.call('from_object', other, allow_undefined_stereo=allow_undefined_stereo)
-                except NotImplementedError:
+                except NotImplementedError as e:
+                    raise e
+                except ValueError as e:
+                    raise e
+                except TypeError:
                     pass
                 else:
                     self._copy_initializer(result)
@@ -2677,7 +2681,10 @@ class FrozenMolecule(Serializable):
         """
         Return the total charge on the molecule
         """
-        return sum([atom.formal_charge for atom in self.atoms])
+        charge_sum = 0. * unit.elementary_charge
+        for atom in self.atoms:
+            charge_sum += atom.formal_charge
+        return charge_sum
 
     @property
     def name(self):

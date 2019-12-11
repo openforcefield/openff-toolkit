@@ -894,7 +894,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oemol_atoms = list()  # list of corresponding oemol atoms
         for atom in molecule.atoms:
             oeatom = oemol.NewAtom(atom.atomic_number)
-            oeatom.SetFormalCharge(atom.formal_charge)
+            oeatom.SetFormalCharge(atom.formal_charge.value_in_unit(unit.elementary_charge)) # simtk.unit.Quantity(1, unit.elementary_charge)
             oeatom.SetAromatic(atom.is_aromatic)
             oeatom.SetData('name', atom.name)
             oemol_atoms.append(oeatom)
@@ -2090,7 +2090,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         for index, atom in enumerate(molecule.atoms):
             rdatom = Chem.Atom(atom.atomic_number)
-            rdatom.SetFormalCharge(atom.formal_charge)
+            rdatom.SetFormalCharge(atom.formal_charge.value_in_unit(unit.elementary_charge))
             rdatom.SetIsAromatic(atom.is_aromatic)
             rdatom.SetProp('_Name', atom.name)
 
