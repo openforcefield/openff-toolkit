@@ -225,15 +225,15 @@ xml_spec_docs_tip3p_library_charges_xml = '''
 </SMIRNOFF>
 '''
 
-xml_spec_docs_chargeincrementmodel_xml = '''
+xml_spec_docs_charge_increment_model_xml = '''
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
   <ChargeIncrementModel version="0.3" number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2">
     <!-- A fractional charge can be moved along a single bond -->
-    <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" chargeincrement1="-0.0073*elementary_charge" chargeincrement2="0.0073*elementary_charge"/>
-    <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" chargeincrement1="0.0943*elementary_charge" chargeincrement2="-0.0943*elementary_charge"/>
-    <ChargeIncrement smirks="[#6X4:1]-[#8:2]" chargeincrement1="-0.0718*elementary_charge" chargeincrement2="0.0718*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" charge_increment1="-0.0073*elementary_charge" charge_increment2="0.0073*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" charge_increment1="0.0943*elementary_charge" charge_increment2="-0.0943*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.0718*elementary_charge" charge_increment2="0.0718*elementary_charge"/>
     <!--- Alternatively, fractional charges can be redistributed among any number of bonded atoms -->
-    <ChargeIncrement smirks="[N:1]([H:2])([H:3])" chargeincrement1="0.02*elementary_charge" chargeincrement2="-0.01*elementary_charge" chargeincrement3="-0.01*elementary_charge"/>
+    <ChargeIncrement smirks="[N:1]([H:2])([H:3])" charge_increment1="0.02*elementary_charge" charge_increment2="-0.01*elementary_charge" charge_increment3="-0.01*elementary_charge"/>
   </ChargeIncrementModel>
 </SMIRNOFF>
 '''
@@ -1149,11 +1149,11 @@ class TestForceFieldChargeAssignment:
         ff = ForceField(xml_spec_docs_ala_library_charges_xml)
         ff = ForceField(xml_spec_docs_tip3p_library_charges_xml)
 
-    def test_parse_chargeincrementmodel_from_spec_docs(self):
+    def test_parse_charge_increment_model_from_spec_docs(self):
         """Ensure that the examples for librarycharges in the SMIRNOFF spec page are still valid"""
         # TODO: This test is practically useless while the XML strings are hard-coded at the top of this file.
         #       We should implement something like doctests for the XML snippets on the SMIRNOFF spec page.
-        ff = ForceField(xml_spec_docs_chargeincrementmodel_xml)
+        ff = ForceField(xml_spec_docs_charge_increment_model_xml)
 
     @pytest.mark.parametrize("inputs", partial_charge_method_resolution_matrix)
     def test_partial_charge_resolution(self, inputs):
@@ -2011,7 +2011,7 @@ def test_electrostatics_options(self):
     """
     molecules_file_path = get_data_file_path('molecules/laromustine_tripos.mol2')
     molecule = openforcefield.topology.Molecule.from_file(molecules_file_path)
-    forcefield = ForceField([smirnoff99Frosst_offxml_file_path, chargeincrement_offxml_file_path])
+    forcefield = ForceField([smirnoff99Frosst_offxml_file_path, charge_increment_offxml_file_path])
     for method in ['PME', 'reaction-field', 'Coulomb']:
         # Change electrostatics method
         forcefield.forces['Electrostatics'].method = method
@@ -2022,12 +2022,12 @@ def test_electrostatics_options(self):
     #       AMBER-parameterized system to OFF-parameterized systems
 
 @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
-def test_chargeincrement(self):
+def test_charge_increment(self):
     """Test parameter assignment using smirnoff99Frosst on laromustine with ChargeIncrementModel.
     """
     molecules_file_path = get_data_file_path('molecules/laromustine_tripos.mol2')
     molecule = openforcefield.topology.Molecule.from_file(molecules_file_path)
-    forcefield = ForceField(['test_forcefields/smirnoff99Frosst.offxml', 'chargeincrement-test'])
+    forcefield = ForceField(['test_forcefields/smirnoff99Frosst.offxml', 'charge_increment-test'])
     check_system_creation_from_molecule(forcefield, molecule)
     # TODO: We can't implement a test for chargeincrement yet because we
     #       haven't settled on a SMIRNOFF spec for chargeincrementmodel
