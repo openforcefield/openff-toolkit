@@ -3176,6 +3176,14 @@ class FrozenMolecule(Serializable):
         return toolkit.from_openeye(
             oemol, allow_undefined_stereo=allow_undefined_stereo)
 
+    @staticmethod
+    def from_qcarchive(qca_mol, allow_undefined_stereo=False):
+        """
+        
+
+        """
+        raise NotImplementedError
+
     @OpenEyeToolkitWrapper.requires_toolkit()
     def to_openeye(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
