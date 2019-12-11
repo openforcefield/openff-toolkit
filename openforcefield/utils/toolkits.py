@@ -348,7 +348,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     def from_object(self, object, allow_undefined_stereo=False):
         """
         If given an OEMol (or OEMol-derived object), this function will load it into an openforcefield.topology.molecule
-        Otherwise, it will return False.
 
         Parameters
         ----------
@@ -366,14 +365,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Raises
         ------
-        NotImplementedError
+        ValueError
             If the object could not be converted into a Molecule.
         """
         # TODO: Add tests for the from_object functions
         from openeye import oechem
         if isinstance(object, oechem.OEMolBase):
             return self.from_openeye(object, allow_undefined_stereo=allow_undefined_stereo)
-        raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
+        raise TypeError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_file(self,
                   file_path,
@@ -1174,9 +1173,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
         oemol = molecule.to_openeye()
 
-        ## This seems like a big decision. Implemented a simple solution here. Not to be considered final.
-        ## Some discussion at https://github.com/openforcefield/openforcefield/pull/86#issuecomment-350111236
-
         if partial_charge_method is None:
             partial_charge_method = "am1-mulliken"
 
@@ -1528,7 +1524,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         if isinstance(object, Chem.rdchem.Mol):
             return self.from_rdkit(object,
                                    allow_undefined_stereo=allow_undefined_stereo)
-        raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
+        raise TypeError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_file(self,
                   file_path,
@@ -2622,7 +2618,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ChargeMethodUnavailableError if the requested charge method can not be handled by this toolkit
 
         ChargeCalculationError if the charge calculation is supported by this toolkit, but fails
-        """
+    """
 
         import os
         from simtk import unit
@@ -3049,13 +3045,14 @@ class ToolkitRegistry:
 
         # No toolkit was found to provide the requested capability
         # TODO: Can we help developers by providing a check for typos in expected method names?
-        msg = 'No registered toolkits can provide the capability "{}".\n'.format(
-            method_name)
+        msg = f'No registered toolkits can provide the capability "{method_name}" ' \
+              f'for args "{args}" and kwargs "{kwargs}"\n'
+
         msg += 'Available toolkits are: {}\n'.format(self.registered_toolkits)
         # Append information about toolkits that implemented the method, but could not handle the provided parameters
         for toolkit, value_error in value_errors:
             msg += ' {} : {}\n'.format(toolkit, value_error)
-        raise NotImplementedError(msg)
+        raise ValueError(msg)
 
 
 #=============================================================================================
