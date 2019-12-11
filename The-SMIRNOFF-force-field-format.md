@@ -233,11 +233,11 @@ Here is an example:
 ```XML
 <ChargeIncrementModel version="0.3" number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2">
   <!-- A fractional charge can be moved along a single bond -->
-  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" chargeincrement1="-0.0073*elementary_charge" chargeincrement2="0.0073*elementary_charge"/>
-  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" chargeincrement1=+0.0943*elementary_charge" chargeincrement2="-0.0943*elementary_charge"/>
-  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" chargeincrement1="-0.0718*elementary_charge" chargeincrement2="0.0718*elementary_charge"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" charge_increment1="-0.0073*elementary_charge" charge_increment2="0.0073*elementary_charge"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" charge_increment1=+0.0943*elementary_charge" charge_increment2="-0.0943*elementary_charge"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.0718*elementary_charge" charge_increment2="0.0718*elementary_charge"/>
   <!--- Alternatively, fractional charges can be redistributed among any number of bonded atoms -->
-  <ChargeIncrement smirks="[N:1](H:2)(H:3)" chargeincrement1="0.02*elementary_charge" chargeincrement2="-0.01*elementary_charge" chargeincrement3="-0.01*elementary_charge"/>
+  <ChargeIncrement smirks="[N:1](H:2)(H:3)" charge_increment1="0.02*elementary_charge" charge_increment2="-0.01*elementary_charge" charge_increment3="-0.01*elementary_charge"/>
 </ChargeIncrementModel>
 ```
 The sum of formal charges for the molecule or fragment will be used to determine the total charge the molecule or fragment will possess.
@@ -248,7 +248,7 @@ The sum of formal charges for the molecule or fragment will be used to determine
 * The `partial_charge_method` attribute (default: `"Mulliken"`) is used to specify how uncorrected partial charges are to be generated from the quantum chemical wavefunction. Later additions will add restrained electrostatic potential fitting (RESP) capabilities.   
 
 The `<ChargeIncrement>` tags specify how the quantum chemical derived charges are to be corrected to produce the final charges.
-The `chargeincrement#` attributes specify how much the charge on the associated tagged atom index (replacing `#`) should be modified.
+The `charge_increment#` attributes specify how much the charge on the associated tagged atom index (replacing `#`) should be modified.
 The sum of charge increments should equal zero.
 
 Note that atoms for which library charges have already been applied are excluded from charging via `<ChargeIncrementModel>`.
@@ -617,7 +617,7 @@ We will support the following different types or geometries of off-center charge
 - `TrivalentLonePair`: This is suitable for planar or tetrahedral nitrogen lone pairs; a charge site `S` lies above  the central atom (e.g. nitrogen, blue) a distance `d` along the vector perpendicular to the plane of the three connected atoms (2,3,4). With positive values of `d` the site lies above the nitrogen and with negative values it lies below the nitrogen.
 ![Trivalent lone pair virtual site](figures/vsite_trivalent.jpg)
 
-Each virtual site receives charge which is transferred from the desired atoms specified in the SMIRKS pattern via a `chargeincrement#` parameter, e.g., if `chargeincrement1=+0.1*elementary_charge` then the virtual site will receive a charge of -0.1 and the atom labeled `1` will have its charge adjusted upwards by +0.1.
+Each virtual site receives charge which is transferred from the desired atoms specified in the SMIRKS pattern via a `charge_increment#` parameter, e.g., if `charge_increment1=+0.1*elementary_charge` then the virtual site will receive a charge of -0.1 and the atom labeled `1` will have its charge adjusted upwards by +0.1.
 N may index any indexed atom.
 Increments which are left unspecified default to zero.
 Additionally, each virtual site can bear Lennard-Jones parameters, specified by `sigma` and `epsilon` or `rmin_half` and `epsilon`.
@@ -628,23 +628,23 @@ In the SMIRNOFF format, these are encoded as:
 <VirtualSites version="0.3">
     <!-- sigma hole for halogens: "distance" denotes distance along the 2->1 bond vector, measured from atom 2 -->
     <!-- Specify that 0.2 charge from atom 1 and 0.1 charge units from atom 2 are to be moved to the virtual site, and a small Lennard-Jones site is to be added (sigma = 0.1*angstroms, epsilon=0.05*kcal/mol) -->
-    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]" distance="0.30*angstrom" chargeincrement1="+0.2*elementary_charge" chargeincrement2="+0.1*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
+    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]" distance="0.30*angstrom" charge_increment1="+0.2*elementary_charge" charge_increment2="+0.1*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
     <!-- Charge increments can extend out to as many atoms as are labeled, e.g. with a third atom: -->
-    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]~[*:3]" distance="0.30*angstrom" chargeincrement1="+0.1*elementary_charge" chargeincrement2="+0.1*elementary_charge" chargeincrement3="+0.05*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
+    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]~[*:3]" distance="0.30*angstrom" charge_increment1="+0.1*elementary_charge" charge_increment2="+0.1*elementary_charge" charge_increment3="+0.05*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
     <!-- monovalent lone pairs: carbonyl -->
     <!-- X denotes the charge site, and P denotes the projection of the charge site into the plane of 1 and 2. -->
     <!-- inPlaneAngle is angle point P makes with 1 and 2, i.e. P-1-2 -->
     <!-- outOfPlaneAngle is angle charge site (X) makes out of the plane of 2-1-3 (and P) measured from 1 -->
     <!-- Since unspecified here, sigma and epsilon for the virtual site default to zero -->
-    <VirtualSite type="MonovalentLonePair" smirks="[O:1]=[C:2]-[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0*degree" inPlaneAngle="120*degree" chargeincrement1="+0.2*elementary_charge" />
+    <VirtualSite type="MonovalentLonePair" smirks="[O:1]=[C:2]-[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0*degree" inPlaneAngle="120*degree" charge_increment1="+0.2*elementary_charge" />
     <!-- divalent lone pair: pyrimidine, TIP4P, TIP5P -->
     <!-- The atoms 2-1-3 define the X-Y plane, with Z perpendicular. If outOfPlaneAngle is 0, the charge site is a specified distance along the in-plane vector which bisects the angle left by taking 360 degrees minus angle(2,1,3). If outOfPlaneAngle is nonzero, the charge sites lie out of the plane by the specified angle (at the specified distance) and their in-plane projection lines along the angle's bisector. -->
-    <VirtualSite type="DivalentLonePair" smirks="[*:2]~[#7X2:1]~[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0.0*degree" chargeincrement1="+0.1*elementary_charge" />
+    <VirtualSite type="DivalentLonePair" smirks="[*:2]~[#7X2:1]~[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0.0*degree" charge_increment1="+0.1*elementary_charge" />
     <!-- trivalent nitrogen lone pair -->
     <!-- charge sites lie above and below the nitrogen at specified distances from the nitrogen, along the vector perpendicular to the plane of (2,3,4) that passes through the nitrogen. If the nitrogen is co-planar with the connected atom, charge sites are simply above and below the plane-->
     <!-- Positive and negative values refer to above or below the nitrogen as measured relative to the plane of (2,3,4), i.e. below the nitrogen means nearer the 2,3,4 plane unless they are co-planar -->
-    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="0.30*angstrom" chargeincrement1="+0.1*elementary_charge"/>
-    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="-0.30*angstrom" chargeincrement1="+0.1*elementary_charge"/>
+    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="0.30*angstrom" charge_increment1="+0.1*elementary_charge"/>
+    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="-0.30*angstrom" charge_increment1="+0.1*elementary_charge"/>
 </VirtualSites>
 ```
 

@@ -3013,10 +3013,10 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
-        _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS
+        _VALENCE_TYPE = None  # ChemicalEnvironment valence type expected for SMARTS
         _ELEMENT_NAME = 'ChargeIncrement'
 
-        chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
+        charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
 
 
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
@@ -3032,10 +3032,6 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         default='CM2',
         converter=_allow_only(['CM2'])
     )
-
-    def __init__(self, **kwargs):
-        raise NotImplementedError("ChangeIncrementHandler is not yet implemented, pending finalization of the "
-                                  "SMIRNOFF spec")
 
     def check_handler_compatibility(self,
                                     other_handler,
@@ -3105,42 +3101,23 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                                                 particle_charge, sigma,
                                                 epsilon)
 
+
+
             # Finally, mark that charges were assigned for this reference molecule
             self.mark_charges_assigned(ref_mol, topology)
 
 
 
 
-    # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
-    def postprocess_system(self, system, topology, **kwargs):
-        bond_matches = self.find_matches(topology)
-
-        # Apply bond charge increments to all appropriate force groups
-        # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?
-        for force in system.getForces():
-            if force.__class__.__name__ in [
-                    'NonbondedForce'
-            ]:  # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and CustomNonbondedForce
-                for (atoms, bond_match) in bond_matches.items():
-                    bond = bond_match.parameter_type
-
-                    # Get corresponding particle indices in Topology
-                    particle_indices = tuple(
-                        [atom.particle_index for atom in atoms])
-                    # Retrieve parameters
-                    [charge0, sigma0, epsilon0] = force.getParticleParameters(
-                        particle_indices[0])
-                    [charge1, sigma1, epsilon1] = force.getParticleParameters(
-                        particle_indices[1])
-                    # Apply bond charge increment
-                    charge0 -= bond.increment
-                    charge1 += bond.increment
-                    # Update charges
-                    force.setParticleParameters(particle_indices[0], charge0,
-                                                sigma0, epsilon0)
-                    force.setParticleParameters(particle_indices[1], charge1,
-                                                sigma1, epsilon1)
-                    # TODO: Calculate exceptions
+    # # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
+    # def postprocess_system(self, system, topology, **kwargs):
+    #
+    #     # Apply bond charge increments to all appropriate force groups
+    #     # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?
+    #     for force in system.getForces():
+    #         if force.__class__.__name__ in [
+    #                 'NonbondedForce'
+    #         ]:  # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and CustomNonbondedForce
 
 
 class GBSAHandler(ParameterHandler):
