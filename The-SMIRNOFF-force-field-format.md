@@ -231,7 +231,7 @@ In keeping with the AMBER force field philosophy, especially as implemented in s
 
 Here is an example:
 ```XML
-<ChargeIncrementModel version="0.3" number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2">
+<ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="AM1-Mulliken">
   <!-- A fractional charge can be moved along a single bond -->
   <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" charge_increment1="-0.0073*elementary_charge" charge_increment2="0.0073*elementary_charge"/>
   <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" charge_increment1=+0.0943*elementary_charge" charge_increment2="-0.0943*elementary_charge"/>
@@ -243,9 +243,8 @@ Here is an example:
 The sum of formal charges for the molecule or fragment will be used to determine the total charge the molecule or fragment will possess.
 
 `<ChargeIncrementModel>` provides several optional attributes to control its behavior:
-* The `number_of_conformers` attribute (default: `"10"`) is used to specify how many conformers will be generated for the molecule (or capped fragment) prior to charging.
-* The `quantum_chemical_method` attribute (default: `"AM1"`) is used to specify the quantum chemical method applied to the molecule or capped fragment.
-* The `partial_charge_method` attribute (default: `"Mulliken"`) is used to specify how uncorrected partial charges are to be generated from the quantum chemical wavefunction. Later additions will add restrained electrostatic potential fitting (RESP) capabilities.   
+* The `number_of_conformers` attribute (default: `"1"`) is used to specify how many conformers will be generated for the molecule (or capped fragment) prior to charging.
+* The `partial_charge_method` attribute (default: `"AM1-Mulliken"`) is used to specify how uncorrected partial charges are to be generated. Later additions will add restrained electrostatic potential fitting (RESP) capabilities.   
 
 The `<ChargeIncrement>` tags specify how the quantum chemical derived charges are to be corrected to produce the final charges.
 The `charge_increment#` attributes specify how much the charge on the associated tagged atom index (replacing `#`) should be modified.
