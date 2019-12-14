@@ -3052,6 +3052,27 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         self._check_attributes_are_equal(other_handler,
                                          identical_attrs=string_attrs_to_compare+int_attrs_to_compare)
 
+    def find_matches(self, entity):
+        """Find the elements of the topology/molecule matched by a parameter type.
+
+        Parameters
+        ----------
+        entity : openforcefield.topology.Topology
+            Topology to search.
+
+        Returns
+        ---------
+        matches : ValenceDict[Tuple[int], ParameterHandler._Match]
+            ``matches[particle_indices]`` is the ``ParameterType`` object
+            matching the tuple of particle indices in ``entity``.
+        """
+        # It's necessary to overwrite the default behavior of this method to prevent it
+        # from using transformed_dict_class=ValenceDict, which could change the order
+        # in which chargeincrements match topology particles
+
+        return self._find_matches(entity, transformed_dict_cls=dict)
+
+
 
     def create_force(self, system, topology, **kwargs):
 
