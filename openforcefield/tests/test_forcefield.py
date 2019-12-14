@@ -284,6 +284,36 @@ def create_ethanol():
     ethanol.partial_charges = charges
     return ethanol
 
+
+def create_reversed_ethanol():
+    """
+    Creates an openforcefield.topology.Molecule representation of
+    ethanol without the use of a cheminformatics toolkit. This function
+    reverses the atom indexing of create_ethanol
+    """
+    # Create an ethanol molecule without using a toolkit
+    ethanol = Molecule()
+    ethanol.add_atom(1, 0, False)  # H0
+    ethanol.add_atom(1, 0, False)  # H1
+    ethanol.add_atom(1, 0, False)  # H2
+    ethanol.add_atom(1, 0, False)  # H3
+    ethanol.add_atom(1, 0, False)  # H4
+    ethanol.add_atom(1, 0, False)  # H5
+    ethanol.add_atom(8, 0, False)  # O6
+    ethanol.add_atom(6, 0, False)  # C7
+    ethanol.add_atom(6, 0, False)  # C8
+    ethanol.add_bond(8, 7, 1, False)  # C8 - C7
+    ethanol.add_bond(7, 6, 1, False)  # C7 - O6
+    ethanol.add_bond(8, 5, 1, False)  # C8 - H5
+    ethanol.add_bond(8, 4, 1, False)  # C8 - H4
+    ethanol.add_bond(8, 3, 1, False)  # C8 - H3
+    ethanol.add_bond(7, 2, 1, False)  # C7 - H2
+    ethanol.add_bond(7, 1, 1, False)  # C7 - H1
+    ethanol.add_bond(6, 0, 1, False)  # O6 - H0
+    charges = unit.Quantity(np.array([0.4, 0.3, 0.2, 0.1, 0.00001, -0.1, -0.2, -0.3, -0.4]), unit.elementary_charge)
+    ethanol.partial_charges = charges
+    return ethanol
+
 def create_cyclohexane():
     """
     Creates an openforcefield.topology.Molecule representation of
@@ -1155,6 +1185,30 @@ class TestForceFieldChargeAssignment:
         #       We should implement something like doctests for the XML snippets on the SMIRNOFF spec page.
         ff = ForceField(xml_spec_docs_charge_increment_model_xml)
 
+    def test_charge_increment_model_zero_net_charge(self):
+        """Test application of ChargeIncrements"""
+        test_charge_increment_model_ff = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.05*elementary_charge" charge_increment2="0.05*elementary_charge"/>
+    <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>
+        '''
+        file_path = get_data_file_path('test_forcefields/smirnoff99Frosst.offxml')
+
+        ff = ForceField(file_path, test_charge_increment_model_ff)
+        del ff._parameter_handlers['ToolkitAM1BCC']
+        top = Topology.from_molecules([create_ethanol(), create_reversed_ethanol()])
+        sys = ff.create_openmm_system(top)
+        nonbonded_force = [force for force in sys.getForces() if isinstance(force, openmm.NonbondedForce)][0]
+        expected_charges = [0.2, -0.15, -0.05, 0., 0., 0., 0., 0., 0.,
+                            0., 0., 0., 0., 0., 0., -0.05, -0.15, 0.2] * unit.elementary_charge
+        for idx, expected_charge in enumerate(expected_charges):
+            charge, _, _ = nonbonded_force.getParticleParameters(idx)
+            assert abs(charge - expected_charge) < 1.e-6 * unit.elementary_charge
+
     @pytest.mark.parametrize("inputs", partial_charge_method_resolution_matrix)
     def test_partial_charge_resolution(self, inputs):
         """Check that the proper partial charge methods are available, and that unavailable partial charge methods
@@ -1223,8 +1277,8 @@ class TestForceFieldChargeAssignment:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
 
-    def test_library_charges_to_two_ethanols_different_atom_ordering(self):
-        """Test assigning charges to two ethanols with different atom orderings"""
+    def test_library_charges_to_three_ethanols_different_atom_ordering(self):
+        """Test assigning charges to three ethanols with different atom orderings"""
         from simtk.openmm import NonbondedForce
 
         # Define a library charge parameter for ethanol (C1-C2-O3) where C1 has charge -0.2, and its Hs have -0.02,
@@ -1245,17 +1299,28 @@ class TestForceFieldChargeAssignment:
         # H6 - C1 - C3 - O2 - H4
         #      |    |
         #      H7   H9
+        #
+        # create_reversed_ethanol()
+        #      H5   H2
+        #      |    |
+        # H4 - C8 - C7 - O6 - H0
+        #      |    |
+        #      H3   H1
+
 
         molecules = [Molecule.from_file(get_data_file_path('molecules/ethanol.sdf')),
-                     Molecule.from_file(get_data_file_path('molecules/ethanol_reordered.sdf'))]
+                     Molecule.from_file(get_data_file_path('molecules/ethanol_reordered.sdf')),
+                     create_reversed_ethanol()]
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
-        expected_charges = [-0.2, -0.1, 0.3, 0.08, -0.02, -0.02, -0.02, -0.01, -0.01, -0.2,
-                            0.3, -0.1, 0.08, -0.02, -0.02, -0.02, -0.01, -0.01] * unit.elementary_charge
+        expected_charges = [-0.2, -0.1, 0.3, 0.08, -0.02, -0.02, -0.02, -0.01, -0.01,
+                            -0.2, 0.3, -0.1, 0.08, -0.02, -0.02, -0.02, -0.01, -0.01,
+                            0.08, -0.01, -0.01, -0.02, -0.02, -0.02, 0.3, -0.1, -0.2] * unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
+
 
     def test_charge_method_hierarchy(self):
         """Ensure that molecules are parameterized by charge_from_molecules first, then library charges
