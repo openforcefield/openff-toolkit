@@ -2823,8 +2823,6 @@ class LibraryChargeHandler(_NonbondedHandler):
             matching the tuple of particle indices in ``entity``.
         """
 
-        # TODO: Right now, this method is only ever called with an entity that is a Topoogy.
-        #  Should we reduce its scope and have a check here to make sure entity is a Topology?
         return self._find_matches(entity, transformed_dict_cls=dict)
 
     def create_force(self, system, topology, **kwargs):
@@ -3021,12 +3019,12 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
     _INFOTYPE = ChargeIncrementType  # info type to store
-    # TODO: The structure of this is still undecided
+    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler]
 
     number_of_conformers = ParameterAttribute(default=1, converter=int)
 
     partial_charge_method = ParameterAttribute(
-        default='AM1-Mulliken'
+        default='AM1-Mulliken', converter=str
     )
 
     def check_handler_compatibility(self,
@@ -3047,7 +3045,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         """
 
         int_attrs_to_compare = ['number_of_conformers']
-        string_attrs_to_compare = ['quantum_chemical_method', 'partial_charge_method']
+        string_attrs_to_compare = ['partial_charge_method']
 
         self._check_attributes_are_equal(other_handler,
                                          identical_attrs=string_attrs_to_compare+int_attrs_to_compare)
@@ -3087,6 +3085,8 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         else:
             force = existing[0]
 
+
+
         for ref_mol in topology.reference_molecules:
 
             # If charges were already assigned, skip this molecule
@@ -3100,14 +3100,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             temp_mol.generate_conformers(n_conformers=self.number_of_conformers)
             temp_mol.compute_partial_charges(partial_charge_method=self.partial_charge_method)
 
-            bond_matches = self.find_matches(temp_mol)
-
-            for (atoms, charge_increment_match) in bond_matches.items():
-                charge_increment = charge_increment_match.parameter_type
-
-                for ref_mol_atom_idx, charge_increment in zip(atoms, charge_increment.charge_increment):
-                    temp_mol.partial_charges[ref_mol_atom_idx] += charge_increment
-
+            charges_to_assign = {}
 
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
@@ -3119,14 +3112,30 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                         ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
                     particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
 
-                    # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                    _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
-                    # Set the nonbonded force with the partial charge
-                    force.setParticleParameters(topology_particle_index,
-                                                particle_charge, sigma,
-                                                epsilon)
+                    charges_to_assign[topology_particle_index] = particle_charge
+                    # # Retrieve nonbonded parameters for reference atom (charge not set yet)
+                    # _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
+                    # # Set the nonbonded force with the partial charge
+                    # force.setParticleParameters(topology_particle_index,
+                    #                     #                             particle_charge, sigma,
+                    #                     #                             epsilon)
 
 
+            charge_increment_matches = self.find_matches(topology)
+
+            for (atoms, charge_increment_match) in charge_increment_matches.items():
+                charge_increment = charge_increment_match.parameter_type
+
+                for top_particle_idx, charge_increment in zip(atoms, charge_increment.charge_increment):
+                    #print(top_particle_idx, charge_increment)
+                    if top_particle_idx in charges_to_assign:
+                        charges_to_assign[top_particle_idx] += charge_increment
+            #1/0
+            for topology_particle_index, charge_to_assign in charges_to_assign.items():
+                _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
+                force.setParticleParameters(topology_particle_index,
+                                            charge_to_assign, sigma,
+                                            epsilon)
 
             # Finally, mark that charges were assigned for this reference molecule
             self.mark_charges_assigned(ref_mol, topology)
