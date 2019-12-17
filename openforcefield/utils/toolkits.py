@@ -1569,14 +1569,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 mols.append(mol)
 
         elif (file_format == 'PDB'):
-            raise Exception(
-                "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
-                "is likely to be lost.")
+            # raise Exception(
+            #     "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
+            #     "is likely to be lost.")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
+            #  testing to see if we can make a molecule from smiles and then use the PDB conformer as the geometry
+            #  and just reorder the molecule
             # https://github.com/openforcefield/openforcefield/issues/121
-            # rdmol = Chem.MolFromPDBFile(file_path, removeHs=False)
-            # mol = Molecule.from_rdkit(rdmol)
-            # mols.append(mol)
+            rdmol = Chem.MolFromPDBFile(file_path, removeHs=False)
+            mol = Molecule.from_rdkit(rdmol)
+            mols.append(mol)
             # TODO: Add SMI, TDT(?) support
 
         return mols
@@ -1634,9 +1636,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 "is likely to be lost.")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
             # https://github.com/openforcefield/openforcefield/issues/121
-            # rdmol = Chem.MolFromPDBBlock(file_data)
-            # mol = Molecule.from_rdkit(rdmol)
-            # mols.append(mol)
+            rdmol = Chem.MolFromPDBBlock(file_data)
+            mol = Molecule.from_rdkit(rdmol)
+            mols.append(mol)
         # TODO: TDT file support
         return mols
 
@@ -1908,7 +1910,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             if rda.HasProp('_Name'):
                 name = rda.GetProp('_Name')
             else:
-                name = ''
+                # check for PDB names
+                try:
+                    name = rda.GetMonomerInfo().GetName().strip()
+                except AttributeError:
+                    name = ''
 
             # If chiral, store the chirality to be set later
             stereochemistry = None
