@@ -38,7 +38,7 @@ from collections import OrderedDict
 from copy import deepcopy
 
 from simtk import unit
-from simtk.openmm.app import element
+from simtk.openmm.app import element, Element
 
 import networkx as nx
 from networkx.algorithms.isomorphism import GraphMatcher
@@ -49,6 +49,7 @@ from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKit
     InvalidToolkitError, GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
 from openforcefield.utils.serialization import Serializable
+from openforcefield.topology.topology import TopologyMolecule
 
 
 
@@ -2778,6 +2779,62 @@ class FrozenMolecule(Serializable):
         """
         return self._properties
 
+    @property
+    def hill_formula(self):
+        """
+        Get the Hill formula of the molecule
+        """
+        return FrozenMolecule.to_hill_formula(self)
+
+    @staticmethod
+    def to_hill_formula(molecule):
+        """
+        Generate the Hill formula from either a FrozenMolecule, TopologyMolecule or
+        nx.Graph() of the molecule
+        molecule : FrozenMolecule, TopologyMolecule or nx.Graph()
+        :return: the Hill formula
+        """
+
+        if isinstance(molecule, FrozenMolecule):
+            atom_nums = [atom.atomic_number for atom in molecule._atoms]
+
+        elif isinstance(molecule, nx.Graph):
+            atom_nums = list(dict(molecule.nodes(data='atomic_number', default=1)).values())
+
+        elif isinstance(molecule, TopologyMolecule):
+            atom_nums = [atom.atomic_number for atom in molecule.atoms]
+
+        else:
+            raise NotImplementedError(f'The input type {type(molecule)} is not supported,'
+                                      f'please supply an openforcefield.topology.molecule.Molecule,'
+                                      f'openforcefield.topology.topology.TopologyMolecule or networkx representaion'
+                                      f'of the molecule.')
+
+        # Now sort the elements, method taken from topology._networkx_to_hill_formula
+        # Count the number of instances of each atomic number
+        at_num_to_counts = dict([(unq, atom_nums.count(unq)) for unq in atom_nums])
+
+        symbol_to_counts = {}
+        # Check for C and H first, to make a correct hill formula (remember dicts in python 3.6+ are ordered)
+        if 6 in at_num_to_counts:
+            symbol_to_counts['C'] = at_num_to_counts[6]
+            del at_num_to_counts[6]
+
+        if 1 in at_num_to_counts:
+            symbol_to_counts['H'] = at_num_to_counts[1]
+            del at_num_to_counts[1]
+
+        # Now count instances of all elements other than C and H, in order of ascending atomic number
+        sorted_atom_nums = sorted(at_num_to_counts.keys())
+        for atom_num in sorted_atom_nums:
+            symbol_to_counts[Element.getByAtomicNumber(atom_num).symbol] = at_num_to_counts[atom_num]
+
+        # Finally format the formula as string
+        formula = ''
+        for ele, count in symbol_to_counts.items():
+            formula += f'{ele}{count}'
+        return formula
+
     def chemical_environment_matches(self,
                                      query,
                                      toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
@@ -3250,20 +3307,21 @@ class FrozenMolecule(Serializable):
 
     def to_qcshema(self):
         """
+        Generate the qschema input format would require elemental to be able to generate the full schema
 
         :return:
         """
         raise NotImplementedError
 
     @classmethod
-    def from_qcarchive(cls, qca_mol, smiles=None, allow_undefined_stereo=False):
+    def from_qcarchive(cls, qca_mol, allow_undefined_stereo=False):
         """
         Create a Molecule from  a QCArchive entry based on the cmiles implementation
 
         Here there are two possible cases when the molecule has the bond order info in the connectivity data
         and when it doesn't
 
-        Info always supplied, SMILES/InChi, elements, general connectivity and geometry.
+        Info in every record, SMILES/InChi, elements, connectivity from the input molecule and current geometry.
 
         Solution make a molecule from SMILES, then add the geometry as a conformer?
         As the ordering is different we can use networkx to map the indices and rearange
