@@ -1512,6 +1512,10 @@ class FrozenMolecule(Serializable):
             self._initialize()
         else:
             loaded = False
+            # Start a list of the ValueErrors the following logic encounters, so we can print it out
+            # if there turned out to be no way to load this input
+            value_errors = list()
+
             if isinstance(
                     other,
                     openforcefield.topology.FrozenMolecule) and not (loaded):
@@ -1525,14 +1529,22 @@ class FrozenMolecule(Serializable):
             if isinstance(other, OrderedDict) and not (loaded):
                 self.__setstate__(other)
                 loaded = True
+
+
             # Check through the toolkit registry to find a compatible wrapper for loading
             if not loaded:
                 try:
                     result = toolkit_registry.call('from_object', other, allow_undefined_stereo=allow_undefined_stereo)
-                except NotImplementedError as e:
-                    raise e
+                # NotImplementedError should never be raised... Only from_file and from_file_obj are provided
+                # in the base class and require overwriting, so from_object should be excluded
+                # except NotImplementedError as e:
+                #     raise e
+                # A ValueError will be raised if "other" is of the correct type to be handled by this function,
+                # but there's something wrong with the information inside it.
                 except ValueError as e:
-                    raise e
+                    value_errors.append(e)
+                # A TypeError will be raised if simple type-checking shows that "other" is not of the correct type
+                # to be handled here
                 except TypeError:
                     pass
                 else:
@@ -1555,10 +1567,16 @@ class FrozenMolecule(Serializable):
 
                 self._copy_initializer(mol)
                 loaded = True
+
+            # If none of the above methods worked, raise a ValueError summarizing the
+            # errors from the different loading attempts
+
             if not (loaded):
                 msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(
                     other)
-                raise Exception(msg)
+                for value_error in value_errors:
+                    msg += str(value_error)
+                raise ValueError(msg)
 
     ####################################################################################################
     # Safe serialization
