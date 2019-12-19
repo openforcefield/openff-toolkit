@@ -41,11 +41,13 @@ from simtk import unit
 from simtk.openmm.app import element
 
 import openforcefield
-from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, string_to_quantity
+from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, \
+    string_to_quantity, check_units_are_compatible
 from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper,\
     InvalidToolkitError, GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
 from openforcefield.utils.serialization import Serializable
+
 
 
 
@@ -192,7 +194,8 @@ class Atom(Particle):
 
         """
         self._atomic_number = atomic_number
-        self._formal_charge = formal_charge
+        # Use the setter here, since it will check the type of formal_charge
+        self.formal_charge = formal_charge
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
         if name is None:
@@ -263,7 +266,18 @@ class Atom(Particle):
         """
         The atom's formal charge
         """
-        return self._formal_charge * unit.elementary_charge
+        return self._formal_charge
+
+    @formal_charge.setter
+    def formal_charge(self, other):
+        """
+        Set the atom's formal charge
+        """
+        if isinstance(other, int):
+            self._formal_charge = other * unit.elementary_charge
+        else:
+            check_units_are_compatible("formal charge", other, unit.elementary_charge)
+            self._formal_charge = other
 
     @property
     def partial_charge(self):

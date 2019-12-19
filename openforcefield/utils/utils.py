@@ -424,17 +424,25 @@ def check_units_are_compatible(object_name, object, unit_to_check, context=None)
     IncompatibleUnitError
     """
     from simtk import unit
+
+    # If context is not provided, explicitly make it a blank string
+    if context is None:
+        context = ''
+    # Otherwise add a space after the end of it to correct message printing
+    else:
+        context += ' '
+
     if isinstance(object, list):
         for sub_object in object:
             check_units_are_compatible(object_name, sub_object, unit_to_check, context=context)
     elif isinstance(object, unit.Quantity):
         if not object.unit.is_compatible(unit_to_check):
-            msg = f"{context} {object_name} with " \
-                  f"value {object}, is incompatible with expected unit {unit_to_check}"
+            msg = f"{context}{object_name} with " \
+                  f"value {object} is incompatible with expected unit {unit_to_check}"
             raise IncompatibleUnitError(msg)
     else:
-        msg = f"{context} {object_name} with " \
-              f"value {object}, is incompatible with expected unit {unit_to_check}"
+        msg = f"{context}{object_name} with " \
+              f"value {object} is incompatible with expected unit {unit_to_check}"
         raise IncompatibleUnitError(msg)
 
 

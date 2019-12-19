@@ -835,7 +835,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         for oeatom in oemol.GetAtoms():
             oe_idx = oeatom.GetIdx()
             atomic_number = oeatom.GetAtomicNum()
-            formal_charge = oeatom.GetFormalCharge()
+            formal_charge = oeatom.GetFormalCharge() * unit.elementary_charge
             is_aromatic = oeatom.IsAromatic()
             stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
                 oemol, oeatom)
@@ -1970,7 +1970,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # create a new atom
             #atomic_number = oemol.NewAtom(rda.GetAtomicNum())
             atomic_number = rda.GetAtomicNum()
-            formal_charge = rda.GetFormalCharge()
+            formal_charge = rda.GetFormalCharge() * unit.elementary_charge
             is_aromatic = rda.GetIsAromatic()
             if rda.HasProp('_Name'):
                 name = rda.GetProp('_Name')
@@ -2068,7 +2068,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             else:
                 # If some other atoms had partial charges but this one doesn't, raise an Exception
                 if any_atom_has_partial_charge:
-                    raise Exception(
+                    raise ValueError(
                         "Some atoms in rdmol have partial charges, but others do not."
                     )
 
@@ -3087,7 +3087,7 @@ class ToolkitRegistry:
         """
         # TODO: catch ValueError and compile list of methods that exist but rejected the specific parameters because they did not implement the requested methods
 
-        value_errors = list()
+        errors = list()
         for toolkit in self._toolkits:
             if hasattr(toolkit, method_name):
                 method = getattr(toolkit, method_name)
@@ -3095,8 +3095,10 @@ class ToolkitRegistry:
                     return method(*args, **kwargs)
                 except NotImplementedError:
                     pass
+                except TypeError as type_error:
+                    errors.append((toolkit, type_error))
                 except ValueError as value_error:
-                    value_errors.append((toolkit, value_error))
+                    errors.append((toolkit, value_error))
 
         # No toolkit was found to provide the requested capability
         # TODO: Can we help developers by providing a check for typos in expected method names?
@@ -3105,8 +3107,10 @@ class ToolkitRegistry:
 
         msg += 'Available toolkits are: {}\n'.format(self.registered_toolkits)
         # Append information about toolkits that implemented the method, but could not handle the provided parameters
-        for toolkit, value_error in value_errors:
-            msg += ' {} : {}\n'.format(toolkit, value_error)
+        for toolkit, error in errors:
+            msg += ' {} : {}\n'.format(toolkit, error)
+        # for toolkit, value_error in value_errors:
+        #     msg += ' {} : {}\n'.format(toolkit, value_error)
         raise ValueError(msg)
 
 

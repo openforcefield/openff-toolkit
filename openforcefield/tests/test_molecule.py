@@ -205,7 +205,7 @@ class TestAtom:
         # Create a non-aromatic carbon atom
         atom1 = Atom(6, 0, False)
         assert atom1.atomic_number == 6
-        assert atom1.formal_charge == 0
+        assert atom1.formal_charge == 0 * unit.elementary_charge
 
         # Create a chiral carbon atom
         atom2 = Atom(6, 0, False, stereochemistry='R', name='CT')
@@ -214,7 +214,7 @@ class TestAtom:
     def test_atom_properties(self):
         """Test that atom properties are correctly populated and gettable"""
         from simtk.openmm.app import element
-        formal_charge = 0
+        formal_charge = 0 * unit.elementary_charge
         is_aromatic = False
         # Attempt to create all elements supported by OpenMM
         elements = [getattr(element, name) for name in dir(element) if (type(getattr(element, name)) == element.Element)]
@@ -608,8 +608,10 @@ class TestMolecule:
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_total_charge(self, molecule):
         """Test total charge"""
-        total_charge = sum([atom.formal_charge for atom in molecule.atoms])
-        assert total_charge == molecule.total_charge
+        charge_sum = 0 * unit.elementary_charge
+        for atom in molecule.atoms:
+            charge_sum += atom.formal_charge
+        assert charge_sum == molecule.total_charge
 
     # ----------------------------------------------------
     # Test magic methods.

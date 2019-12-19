@@ -997,11 +997,6 @@ class TestChargeIncrementModelHandler:
         with pytest.raises(ValueError) as excinfo:
             handler.number_of_conformers = "string that can't be cast to int"
 
-            with pytest.raises(SMIRNOFFSpecError) as excinfo:
-                handler.quantum_chemical_method = 'unsupported method'
-
-        with pytest.raises(SMIRNOFFSpecError) as excinfo:
-            handler.partial_charge_method = 'unsupported method'
 
     def test_charge_increment_model_handlers_are_compatible(self):
         """Test creation of ChargeIncrementModelHandlers"""
