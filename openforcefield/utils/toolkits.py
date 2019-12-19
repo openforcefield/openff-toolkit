@@ -109,7 +109,6 @@ class InvalidToolkitError(MessageException):
     """A non-toolkit object was received when a toolkit object was expected"""
 
 
-
 class UndefinedStereochemistryError(MessageException):
     """A molecule was attempted to be loaded with undefined stereochemistry"""
     pass
