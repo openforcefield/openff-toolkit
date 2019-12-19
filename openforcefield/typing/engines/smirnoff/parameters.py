@@ -3064,9 +3064,10 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
-        # It's necessary to overwrite the default behavior of this method to prevent it
+        # It's necessary to overwrite the inherited behavior of this method to prevent it
         # from using transformed_dict_class=ValenceDict, which could change the order
-        # in which chargeincrements match topology particles
+        # in which chargeincrements match topology particles (ValenceDict reverses the order
+        # of the matched particle indices to ensure the lowest index comes first)
 
         return self._find_matches(entity, transformed_dict_cls=dict)
 
