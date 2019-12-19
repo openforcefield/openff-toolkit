@@ -971,25 +971,22 @@ class TestChargeIncrementModelHandler:
     def test_create_charge_increment_model_handler(self):
         """Test creation of ChargeIncrementModelHandlers"""
         handler = ChargeIncrementModelHandler(skip_version_check=True)
-        assert handler.number_of_conformers == 10
-        assert handler.partial_charge_method == 'CM2'
-        assert handler.quantum_chemical_method == 'AM1'
+        assert handler.number_of_conformers == 1
+        assert handler.partial_charge_method == 'AM1-Mulliken'
         handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=10)
         handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=1)
         handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers="10")
         with pytest.raises(SMIRNOFFSpecError) as excinfo:
             handler = ChargeIncrementModelHandler(skip_version_check=True, n_conformers=[10])
-        handler = ChargeIncrementModelHandler(skip_version_check=True, quantum_chemical_method="AM1")
-        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method="CM2")
-        with pytest.raises(SMIRNOFFSpecError) as excinfo:
-            handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method=None)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method="AM1-Mulliken")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method="Gasteiger")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method=None)
 
     def test_charge_increment_model_handler_getters_setters(self):
         """Test creation of ChargeIncrementModelHandlers"""
         handler = ChargeIncrementModelHandler(skip_version_check=True)
-        assert handler.number_of_conformers == 10
-        assert handler.partial_charge_method == 'CM2'
-        assert handler.quantum_chemical_method == 'AM1'
+        assert handler.number_of_conformers == 1
+        assert handler.partial_charge_method == 'AM1-Mulliken'
         handler.number_of_conformers = 2
         assert handler.number_of_conformers == 2
         handler.number_of_conformers = "3"
