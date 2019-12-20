@@ -2,7 +2,7 @@
 ;   File tmp.top  was generated
 ;   By user: jwagner (501)
 ;   On host: Jeffreys-MacBook-Pro-4.local
-;   At date: Thu. December  4 16:20:27 2019
+;   At date: Thu. December  4 16:37:03 2019
 ;
 ;   This is a standalone topology file
 ;
@@ -35,32 +35,32 @@ BRD4, Ligand 1          3
 [ atoms ]
 ;   nr       type  resnr residue  atom   cgnr    charge       mass  typeB    chargeB      massB
 ; residue    1 BRD4, Ligand 1 rtp BRD4, Ligand 1 q 0.0
-    1         N1      1 BRD4, Ligand 1             1 0.00691000  14.006720   ; qtot 0.006910
-    2         N1      1 BRD4, Ligand 1             2 -0.60405999  14.006720   ; qtot -0.597150
-    3         N1      1 BRD4, Ligand 1             3 -0.53819001  14.006720   ; qtot -1.135340
-    4         N1      1 BRD4, Ligand 1             4 -0.66334999  14.006720   ; qtot -1.798690
-    5         C1      1 BRD4, Ligand 1             5 0.12082001  12.010780   ; qtot -1.677870
-    6         C1      1 BRD4, Ligand 1             6 -0.32433999  12.010780   ; qtot -2.002210
-    7         C1      1 BRD4, Ligand 1             7 0.61238003  12.010780   ; qtot -1.389830
-    8         C1      1 BRD4, Ligand 1             8 0.49120000  12.010780   ; qtot -0.898630
-    9         C2      1 BRD4, Ligand 1             9 -0.13874999  12.010780   ; qtot -1.037380
-   10         C1      1 BRD4, Ligand 1            10 0.54521996  12.010780   ; qtot -0.492160
-   11         C1      1 BRD4, Ligand 1            11 -0.08120000  12.010780   ; qtot -0.573360
-   12         C1      1 BRD4, Ligand 1            12 -0.08989000  12.010780   ; qtot -0.663250
-   13         C1      1 BRD4, Ligand 1            13 -0.13443001  12.010780   ; qtot -0.797680
-   14         C1      1 BRD4, Ligand 1            14 -0.10764000  12.010780   ; qtot -0.905320
-   15         C1      1 BRD4, Ligand 1            15 -0.13443001  12.010780   ; qtot -1.039750
-   16         C1      1 BRD4, Ligand 1            16 -0.08989000  12.010780   ; qtot -1.129640
-   17         H1      1 BRD4, Ligand 1            17 0.16586000   1.007947   ; qtot -0.963780
-   18         H2      1 BRD4, Ligand 1            18 0.06371000   1.007947   ; qtot -0.900070
-   19         H2      1 BRD4, Ligand 1            19 0.06371000   1.007947   ; qtot -0.836360
-   20         H2      1 BRD4, Ligand 1            20 0.06371000   1.007947   ; qtot -0.772650
-   21         H3      1 BRD4, Ligand 1            21 0.07411000   1.007947   ; qtot -0.698540
-   22         H1      1 BRD4, Ligand 1            22 0.14200000   1.007947   ; qtot -0.556540
-   23         H1      1 BRD4, Ligand 1            23 0.13860001   1.007947   ; qtot -0.417940
-   24         H1      1 BRD4, Ligand 1            24 0.13733999   1.007947   ; qtot -0.280600
-   25         H1      1 BRD4, Ligand 1            25 0.13860001   1.007947   ; qtot -0.142000
-   26         H1      1 BRD4, Ligand 1            26 0.14200000   1.007947   ; qtot 0.000000
+    1         N1      1 BRD4, Ligand 1     N6      1 0.00691000  14.006720   ; qtot 0.006910
+    2         N1      1 BRD4, Ligand 1     N7      2 -0.60405999  14.006720   ; qtot -0.597150
+    3         N1      1 BRD4, Ligand 1     N8      3 -0.53819001  14.006720   ; qtot -1.135340
+    4         N1      1 BRD4, Ligand 1     N9      4 -0.66334999  14.006720   ; qtot -1.798690
+    5         C1      1 BRD4, Ligand 1    C10      5 0.12082001  12.010780   ; qtot -1.677870
+    6         C1      1 BRD4, Ligand 1    C11      6 -0.32433999  12.010780   ; qtot -2.002210
+    7         C1      1 BRD4, Ligand 1    C12      7 0.61238003  12.010780   ; qtot -1.389830
+    8         C1      1 BRD4, Ligand 1    C13      8 0.49120000  12.010780   ; qtot -0.898630
+    9         C2      1 BRD4, Ligand 1    C14      9 -0.13874999  12.010780   ; qtot -1.037380
+   10         C1      1 BRD4, Ligand 1    C15     10 0.54521996  12.010780   ; qtot -0.492160
+   11         C1      1 BRD4, Ligand 1    C16     11 -0.08120000  12.010780   ; qtot -0.573360
+   12         C1      1 BRD4, Ligand 1    C17     12 -0.08989000  12.010780   ; qtot -0.663250
+   13         C1      1 BRD4, Ligand 1    C18     13 -0.13443001  12.010780   ; qtot -0.797680
+   14         C1      1 BRD4, Ligand 1    C19     14 -0.10764000  12.010780   ; qtot -0.905320
+   15         C1      1 BRD4, Ligand 1    C20     15 -0.13443001  12.010780   ; qtot -1.039750
+   16         C1      1 BRD4, Ligand 1    C21     16 -0.08989000  12.010780   ; qtot -1.129640
+   17         H1      1 BRD4, Ligand 1    H22     17 0.16586000   1.007947   ; qtot -0.963780
+   18         H2      1 BRD4, Ligand 1    H23     18 0.06371000   1.007947   ; qtot -0.900070
+   19         H2      1 BRD4, Ligand 1    H24     19 0.06371000   1.007947   ; qtot -0.836360
+   20         H2      1 BRD4, Ligand 1    H25     20 0.06371000   1.007947   ; qtot -0.772650
+   21         H3      1 BRD4, Ligand 1    H26     21 0.07411000   1.007947   ; qtot -0.698540
+   22         H1      1 BRD4, Ligand 1    H27     22 0.14200000   1.007947   ; qtot -0.556540
+   23         H1      1 BRD4, Ligand 1    H28     23 0.13860001   1.007947   ; qtot -0.417940
+   24         H1      1 BRD4, Ligand 1    H29     24 0.13733999   1.007947   ; qtot -0.280600
+   25         H1      1 BRD4, Ligand 1    H30     25 0.13860001   1.007947   ; qtot -0.142000
+   26         H1      1 BRD4, Ligand 1    H31     26 0.14200000   1.007947   ; qtot 0.000000
 
 [ bonds ]
 ;    ai     aj funct         c0         c1         c2         c3
