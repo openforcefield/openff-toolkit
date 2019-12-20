@@ -1,8 +1,8 @@
 ;
 ;   File tmp.top  was generated
 ;   By user: jwagner (501)
-;   On host: Jeffreys-MacBook-Pro-4.local
-;   At date: Thu. December  4 19:27:49 2019
+;   On host: dhcp-v110-232.mobile.uci.edu
+;   At date: Fri. December  5 15:31:12 2019
 ;
 ;   This is a standalone topology file
 ;
@@ -11,7 +11,7 @@
 ;   Executable:   ipykernel_launcher.py
 ;   Library dir:  /usr/local/gromacs/share/gromacs/top
 ;   Command line:
-;     /Users/jwagner/miniconda3/envs/off-dev/lib/python3.7/site-packages/ipykernel_launcher.py -f /Users/jwagner/Library/Jupyter/runtime/kernel-e42756bb-0026-4705-9b9c-b80abb1a0a12.json
+;     /Users/jwagner/miniconda3/envs/off-dev/lib/python3.7/site-packages/ipykernel_launcher.py -f /Users/jwagner/Library/Jupyter/runtime/kernel-3788bc0f-dbd6-4cce-be3e-c03108a7eedb.json
 ;
 
 [ defaults ]
