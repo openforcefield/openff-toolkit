@@ -858,8 +858,8 @@ class TestAmberToolsToolkitWrapper:
             for pc in molecule._partial_charges:
                 charge_sum += pc
                 abs_charge_sum += abs(pc)
-            assert charge_sum < 0.001 * unit.elementary_charge
-            assert abs_charge_sum > 0.3 * unit.elementary_charge
+            assert abs(charge_sum) < 0.005 * unit.elementary_charge
+            assert abs_charge_sum > 0.25 * unit.elementary_charge
 
         # For now, just test AM1-BCC while the SMIRNOFF spec for other charge models gets worked out
         molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)  # , charge_model=charge_model)
@@ -868,8 +868,8 @@ class TestAmberToolsToolkitWrapper:
         for pc in molecule._partial_charges:
             charge_sum += pc
             abs_charge_sum += abs(pc)
-        assert charge_sum < 0.001 * unit.elementary_charge
-        assert abs_charge_sum > 0.3 * unit.elementary_charge
+        assert abs(charge_sum) < 0.005 * unit.elementary_charge
+        assert abs_charge_sum > 0.25 * unit.elementary_charge
 
 
 
