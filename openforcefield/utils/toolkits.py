@@ -770,8 +770,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             molecule._properties[dp.GetTag()] = dp.GetValue()
 
         map_atoms = dict()  # {oemol_idx: molecule_idx}
+        atom_mapping = {}
         for oeatom in oemol.GetAtoms():
             oe_idx = oeatom.GetIdx()
+            map_id = oeatom.GetMapIdx()
             atomic_number = oeatom.GetAtomicNum()
             formal_charge = oeatom.GetFormalCharge()
             is_aromatic = oeatom.IsAromatic()
@@ -789,6 +791,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 name=name)
             map_atoms[
                 oe_idx] = atom_index  # store for mapping oeatom to molecule atom indices below
+            atom_mapping[atom_index] = map_id
+        molecule._properties['atom_map'] = atom_mapping
 
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
@@ -1630,11 +1634,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 mols.append(mol)
 
         elif file_format == 'PDB':
-            raise Exception(
-                "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
-                "is likely to be lost.")
+            # raise Exception(
+            #     "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
+            #     "is likely to be lost.")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
             # https://github.com/openforcefield/openforcefield/issues/121
+            file_data = file_obj.read()
             rdmol = Chem.MolFromPDBBlock(file_data)
             mol = Molecule.from_rdkit(rdmol)
             mols.append(mol)
@@ -1898,8 +1903,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # therefore we can't do it until after the atoms and bonds are all added
         map_atoms = {}
         map_bonds = {}
+        # if we are loading from a mapped smiles extract the mapping
+        atom_mapping = {}
         for rda in rdmol.GetAtoms():
             rd_idx = rda.GetIdx()
+            map_id = rda.GetAtomMapNum()
 
             # create a new atom
             #atomic_number = oemol.NewAtom(rda.GetAtomicNum())
@@ -1937,6 +1945,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 name=name,
                 stereochemistry=stereochemistry)
             map_atoms[rd_idx] = atom_index
+            atom_mapping[atom_index] = map_id
+
+        # if we have a full atom map add it to the molecule, 0 indecates a missing mapping or no mapping
+        if 0 not in atom_mapping.values():
+            offmol._properties['atom_map'] = atom_mapping
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
         for rdb in rdmol.GetBonds():

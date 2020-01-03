@@ -58,7 +58,7 @@ def assert_molecule_is_equal(molecule1, molecule2, msg):
         Message to include if molecules fail to match.
 
     """
-    if not(molecule1.is_isomorphic(molecule2)):
+    if not(molecule1.is_isomorphic_with(molecule2)):
         raise AssertionError(msg)
 
 
@@ -409,7 +409,7 @@ class TestMolecule:
                 Molecule.from_iupac(iupac)
 
         molecule_copy = Molecule.from_iupac(iupac, allow_undefined_stereo=undefined_stereo)
-        assert molecule.is_isomorphic(molecule_copy, compare_atom_stereochemistry=not undefined_stereo)
+        assert molecule.is_isomorphic_with(molecule_copy)
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_to_from_topology(self, molecule):
@@ -528,6 +528,109 @@ class TestMolecule:
         molecule = Molecule()
         molecule.name = name
         assert molecule.name == name
+
+    def test_hill_formula(self):
+        """Test that making the hill formula is consistent between input methods and ordering"""
+        # make sure smiles match reference
+        molecule_smiles = Molecule.from_smiles('CCO')
+        assert molecule_smiles.hill_formula == 'C2H6O1'
+        # make sure is not order dependent
+        molecule_smiles_reverse = Molecule.from_smiles('OCC')
+        assert molecule_smiles.hill_formula == molecule_smiles_reverse.hill_formula
+        # make sure files and smiles match
+        molecule_file = Molecule.from_file(get_data_file_path('molecules/ethanol.mol2'))
+        assert molecule_smiles.hill_formula == molecule_file.hill_formula
+        # make sure the topology molecule gives the same formula
+        from openforcefield.topology.topology import TopologyMolecule, Topology
+        topology = Topology.from_molecules(molecule_smiles)
+        topmol = TopologyMolecule(molecule_smiles, topology)
+        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(topmol)
+        # make sure the networkx matches
+        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(molecule_smiles.to_networkx())
+
+    def test_isomorphic(self):
+        """Test the different levels of isomorphic matching"""
+        # check that hill formula fails are caught
+        ethanol = Molecule.from_smiles('CCO')
+        acetaldehyde = Molecule.from_smiles('CC=O')
+        assert ethanol.is_isomorphic_with(acetaldehyde) is False
+        assert acetaldehyde.is_isomorphic_with(ethanol) is False
+        # check that different orderings work with full matching
+        ethanol_reverse = Molecule.from_smiles('OCC')
+        assert ethanol.is_isomorphic_with(ethanol_reverse) is True
+        # check a reference mapping between ethanol and ethanol_reverse matches that calculated
+        ref_mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 3}
+        assert Molecule.are_isomorphic(ethanol, ethanol_reverse, return_atom_map=True)[1] == ref_mapping
+        # check matching with nx.Graph atomic numbers and connectivity only
+        assert Molecule.are_isomorphic(ethanol, ethanol_reverse.to_networkx(), aromatic_matching=False,
+                                       formal_charge_matching=False, bond_order_matching=False,
+                                       atom_stereochemistry_matching=False,
+                                       bond_stereochemistry_matching=False)[0] is True
+        # check matching with nx.Graph with full matching
+        assert ethanol.is_isomorphic_with(ethanol_reverse.to_networkx()) is True
+        # check matching with a TopologyMolecule class
+        from openforcefield.topology.topology import TopologyMolecule, Topology
+        topology = Topology.from_molecules(ethanol)
+        topmol = TopologyMolecule(ethanol, topology)
+        assert Molecule.are_isomorphic(ethanol, topmol, aromatic_matching=False, formal_charge_matching=False,
+                                       bond_order_matching=False, atom_stereochemistry_matching=False,
+                                       bond_stereochemistry_matching=False)[0] is True
+        # test hill formula passes but isomorphic fails
+        mol1 = Molecule.from_smiles('Fc1ccc(F)cc1')
+        mol2 = Molecule.from_smiles('Fc1ccccc1F')
+        assert mol1.is_isomorphic_with(mol2) is False
+        assert mol2.is_isomorphic_with(mol1) is False
+
+    def test_remap(self):
+        """Test the remap function which should return a new molecule in the requested ordering"""
+        # the order here is CCO
+        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.mol2'))
+        # get ethanol in reverse order OCC
+        ethanol_reverse = Molecule.from_smiles('OCC')
+        # get the mapping between the molecules
+        mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
+        ethanol.add_bond_charge_virtual_site([0, 1], 0.3 * unit.angstrom)
+        # make sure that molecules with virtual sites raises an error
+        with pytest.raises(Exception):
+            remapped = ethanol.remap(mapping, current_to_new=True)
+
+        # remake with no virtual site and remap to match the reversed ordering
+        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.mol2'))
+
+        new_ethanol = ethanol.remap(mapping, current_to_new=True)
+
+        def assert_molecules_match_after_remap(mol1, mol2):
+            """Check all of the attributes in a molecule match after being remapped"""
+            for atoms in zip(mol1.atoms, mol2.atoms):
+                assert atoms[0].to_dict() == atoms[1].to_dict()
+            # bonds will not be in the same order in the molecule and the atom1 and atom2 indecies could be out of order
+            remaped_bonds = [bond.to_dict() for bond in mol2.bonds]
+            for bond in mol1.bonds:
+                assert bond.to_dict() in remaped_bonds
+            assert mol1.n_bonds == mol2.n_bonds
+            assert mol1.n_angles == mol2.n_angles
+            assert mol1.n_propers == mol2.n_propers
+            assert mol1.n_impropers == mol2.n_impropers
+            assert mol1.total_charge == mol2.total_charge
+
+        # check all of the properties match as well, torsions and impropers will be in a different order
+        # due to the bonds being out of order
+        assert_molecules_match_after_remap(new_ethanol, ethanol_reverse)
+
+        # catch mappings that are the wrong size
+        too_small_mapping = {0: 1}
+        with pytest.raises(Exception):
+            new_ethanol = ethanol.remap(too_small_mapping, current_to_new=True)
+
+        wrong_index_mapping = {(i + 10, new_id) for i, new_id in enumerate(mapping.values())}
+        with pytest.raises(Exception):
+            new_ethanol = ethanol.remap(wrong_index_mapping, current_to_new=True)
+
+        # test round trip (double remapping a molecule)
+        new_ethanol = ethanol.remap(mapping, current_to_new=True)
+        round_trip_mapping = Molecule.are_isomorphic(new_ethanol, ethanol, return_atom_map=True)[1]
+        round_trip_ethanol = new_ethanol.remap(round_trip_mapping, current_to_new=True)
+        assert_molecules_match_after_remap(round_trip_ethanol, ethanol)
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_n_particles(self, molecule):

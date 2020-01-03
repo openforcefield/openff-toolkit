@@ -1789,7 +1789,7 @@ class FrozenMolecule(Serializable):
            No effort is made to ensure that the atoms are in the same order or that any annotated properties are preserved.
 
         """
-        return FrozenMolecule.are_isomorphic(self, other, return_atom_map=False)
+        return FrozenMolecule.are_isomorphic(self, other, return_atom_map=False)[0]
 
     def to_smiles(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
@@ -1900,7 +1900,6 @@ class FrozenMolecule(Serializable):
             bond_stereochemistry_matching=True,
     ):
         """
-        #TODO write tests for imorphic checks and mapping.
         Determines whether the two molecules are isomorphic by comparing their graphs.
 
         Parameters
@@ -1932,8 +1931,6 @@ class FrozenMolecule(Serializable):
         # Do a quick hill formula check first
         if FrozenMolecule.to_hill_formula(mol1) != FrozenMolecule.to_hill_formula(mol2):
             return False, None
-        else:
-            print(FrozenMolecule.to_hill_formula(mol1), FrozenMolecule.to_hill_formula(mol2))
 
         # Build the user defined matching functions
         def node_match_func(x, y):
@@ -1976,10 +1973,15 @@ class FrozenMolecule(Serializable):
             """Find the data type and return the networkx graph"""
 
             try:
+                # Molecule class instance
                 return data.to_networkx()
             except AttributeError:
-                if isinstance(data, nx.Graph):
-                    return data
+                try:
+                    # TopologyMolecule class instance
+                    return data.reference_molecule.to_networkx()
+                except AttributeError:
+                    if isinstance(data, nx.Graph):
+                        return data
 
         mol1_netx = find_data_type(mol1)
         mol2_netx = find_data_type(mol2)
@@ -2033,7 +2035,7 @@ class FrozenMolecule(Serializable):
 
         # what level of matching do we want here?
         # should we expose some options as well?
-        return FrozenMolecule.are_isomorphic(self, other, return_atom_map=False)
+        return FrozenMolecule.are_isomorphic(self, other, return_atom_map=False)[0]
 
     def generate_conformers(self,
                             toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
@@ -3374,44 +3376,37 @@ class FrozenMolecule(Serializable):
         :return: openforcefield.topology.molecule.Molecule
         """
 
-        # extract the atomic mapping
-        mapping = []
-        for atom in mapped_smiles.split(':'):
-            try:
-                mapping.append(int(atom[:2]))
-            except ValueError:
-                try:
-                    mapping.append(int(atom[:1]))
-                except ValueError:
-                    pass
-
-        # check we found some mapping
-        if len(mapping) == 0:
-            raise SmilesParsingError('The given SMILES has no indexing, please generate a valid explicit hydrogen '
-                                     'mapped SMILES using cmiles.')
         # create the molecule from the smiles and check we have the right number of indexes
         # in the mapped SMILES
         offmol = cls.from_smiles(mapped_smiles, hydrogens_are_explicit=True)
 
+        # check we found some mapping
+        try:
+            mapping = offmol._properties['atom_map']
+        except KeyError:
+            raise SmilesParsingError('The given SMILES has no indexing, please generate a valid explicit hydrogen '
+                                     'mapped SMILES using cmiles.')
+
         if len(mapping) != offmol.n_atoms:
             raise SmilesParsingError('The mapped smiles does not contain enough indexes to remap the molecule.')
 
-        # Make a valid atom map dict Dict[new_index: old_index] and remap
-        # use -1 here as the cmiles maps from 1 not 0
-        atom_mapping = dict((i, index - 1) for i, index in enumerate(mapping))
+        # remap the molecule using the atom map found in the smiles
+        # the order is mapping = Dict[current_index: new_index]
 
-        return offmol.remap(atom_mapping, new_to_old=False)
+        return offmol.remap(mapping, new_to_current=False)
 
     @classmethod
-    def from_qcarchive(cls, qca_json, client_instance=None, allow_undefined_stereo=False):
+    def from_qcschema(cls, qca_dict, client=None, allow_undefined_stereo=False):
         """
         Create a Molecule from  a QCArchive entry based on the cmiles information.
 
-        If we also have a client instance we can go and attach the starting geometry.
+        If we also have a client instance/address we can go and attach the starting geometry.
 
         Parameters
         ----------
-        qca_mol : a QCArchive json representation
+        qca_dict : a QCArchive dict with json encoding
+        #TODO should this also accept the entry record instance that we can type check?
+        client : a qcportal.FractalClient instance or addess of an archive that we can search for the geometry.
 
         Returns
         -------
@@ -3420,10 +3415,13 @@ class FrozenMolecule(Serializable):
 
         Examples
         --------
+        >>> import qcportal as ptl
+        >>> client = ptl.FractalClient()
+        >>>
 
         """
 
-        if 'canonical_isomeric_explicit_hydrogen_mapped_smiles' in qca_json['attributes'].keys():
+        if 'canonical_isomeric_explicit_hydrogen_mapped_smiles' in qca_dict['attributes'].keys():
             # make a new molecule that has been reordered to match the cmiles mapping
             offmol = cls.from_mapped_smiles(qca_json['attributes']['canonical_isomeric_explicit_hydrogen_mapped_smiles'])
             if client_instance is not None:
@@ -3492,44 +3490,54 @@ class FrozenMolecule(Serializable):
         else:
             raise InvalidConformerError('The PDB and SMILES structures do not match.')
 
-    def remap(self, mapping_dict, new_to_old=True):
+    def remap(self, mapping_dict, current_to_new=True):
         """
         Remap all of the indexes in the molecule to match the given mapping dict
-        :param mapping_dict: A dictionary of the mapping between in the indexes
-        :param new_to_old: The dict is {new_index: old_index} if True else {old_index: new_index}
-        :return:
+        :param mapping_dict: A dictionary of the mapping between in the indexes, this should start from 0.
+        :param current_to_new: The dict is {current_index: new_index} if True else {new_index: current_index}
+        :return: a new openforcefield.topology.molecule.Molecule instance with all attributes transferred
         """
 
         if self.n_virtual_sites != 0:
             raise NotImplementedError('We can not remap virtual sites yet!')
 
+        # make sure the size of the mapping matches the current molecule
+        if len(mapping_dict) != self.n_atoms:
+            raise ValueError(f'There are too many mapping indices({len(mapping_dict)}) for the amount of atoms in this '
+                             f'molecule({self.n_atoms})')
+
         # make two mapping dicts we need new to old for atoms
         # and old to new for bonds
-        if new_to_old:
-            n_to_o = mapping_dict
-            o_to_n = dict((v, u) for u, v in mapping_dict.items())
+        if current_to_new:
+            cur_to_new = mapping_dict
+            new_to_cur = dict((v, u) for u, v in mapping_dict.items())
         else:
-            o_to_n = mapping_dict
-            n_to_o = dict((v, u) for u, v in mapping_dict.items())
+            new_to_cur = mapping_dict
+            cur_to_new = dict((v, u) for u, v in mapping_dict.items())
 
         new_molecule = Molecule()
         new_molecule.name = self.name
 
-        # add the atoms list
-        for i in range(self.n_atoms):
-            # get the old atom info
-            old_atom = self._atoms[n_to_o[i]]
-            new_molecule.add_atom(atomic_number=old_atom.atomic_number,
-                                  formal_charge=old_atom.formal_charge,
-                                  is_aromatic=old_atom.is_aromatic,
-                                  stereochemistry=old_atom.stereochemistry,
-                                  name=old_atom.name)
-        # add the bonds
+        try:
+            # add the atoms list
+            for i in range(self.n_atoms):
+                # get the old atom info
+                old_atom = self._atoms[new_to_cur[i]]
+                new_molecule.add_atom(atomic_number=old_atom.atomic_number,
+                                      formal_charge=old_atom.formal_charge,
+                                      is_aromatic=old_atom.is_aromatic,
+                                      stereochemistry=old_atom.stereochemistry,
+                                      name=old_atom.name)
+        # this is the first time we access the mapping catch an index error here corresponding to mapping that starts
+        # from 0 or higher
+        except IndexError:
+            raise IndexError(f'The mapping supplied is missing a relation corresponding to atom({i})')
+
+            # add the bonds but with atom indexes in a sorted ascending order
         for bond in self._bonds:
-            a1 = o_to_n[bond.atom1_index]
-            a2 = o_to_n[bond.atom2_index]
-            new_molecule.add_bond(atom1=a1,
-                                  atom2=a2,
+            atoms = sorted([cur_to_new[bond.atom1_index], cur_to_new[bond.atom2_index]])
+            new_molecule.add_bond(atom1=atoms[0],
+                                  atom2=atoms[1],
                                   bond_order=bond.bond_order,
                                   is_aromatic=bond.is_aromatic,
                                   stereochemistry=bond.stereochemistry,
@@ -3538,7 +3546,7 @@ class FrozenMolecule(Serializable):
         # remap the charges
         new_charges = np.zeros(self.n_atoms)
         for i in range(self.n_atoms):
-            new_charges[i] = self.partial_charges[n_to_o[i]].value_in_unit(unit.elementary_charge)
+            new_charges[i] = self.partial_charges[new_to_cur[i]].value_in_unit(unit.elementary_charge)
         new_molecule.partial_charges = new_charges * unit.elementary_charge
 
         # remap the conformers there can be more than one
@@ -3546,7 +3554,7 @@ class FrozenMolecule(Serializable):
             for conformer in self.conformers:
                 new_conformer = np.zeros((self.n_atoms, 3))
                 for i in range(self.n_atoms):
-                    new_conformer[i] = conformer[n_to_o[i]].value_in_unit(unit.angstrom)
+                    new_conformer[i] = conformer[new_to_cur[i]].value_in_unit(unit.angstrom)
                 new_molecule.add_conformer(new_conformer * unit.angstrom)
 
         # move any properties across
