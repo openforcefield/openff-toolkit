@@ -1789,7 +1789,7 @@ class FrozenMolecule(Serializable):
            No effort is made to ensure that the atoms are in the same order or that any annotated properties are preserved.
 
         """
-        return FrozenMolecule.are_isomorphic(self, other)
+        return FrozenMolecule.are_isomorphic(self, other, return_atom_map=False)
 
     def to_smiles(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
@@ -2016,6 +2016,24 @@ class FrozenMolecule(Serializable):
         # self_smiles = self.to_smiles(toolkit_registry=toolkit_registry)
         # other_smiles = other_fm.to_smiles(toolkit_registry=toolkit_registry)
         # return self_smiles == other_smiles
+
+    def is_isomorphic_with(self, other):
+        """
+        Check if the molecule is isomorphic with the other molecule which can be an openforcefield.topology.Molecule,
+        or TopologyMolecule or nx.Graph()
+
+        Parameters
+        ----------
+        other: openforcefield.topology.Molecule or TopologyMolecule or nx.Graph()
+
+        Returns
+        -------
+        isomorphic : bool
+        """
+
+        # what level of matching do we want here?
+        # should we expose some options as well?
+        return FrozenMolecule.are_isomorphic(self, other, return_atom_map=False)
 
     def generate_conformers(self,
                             toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
@@ -3306,7 +3324,7 @@ class FrozenMolecule(Serializable):
         return toolkit.from_openeye(
             oemol, allow_undefined_stereo=allow_undefined_stereo)
 
-    def to_qcshema(self, multiplicity=1, conformer=0):
+    def to_qcschema(self, multiplicity=1, conformer=0):
         """
         Generate the qschema input format used to submit jobs to archive
         or run qcengine calculations locally
@@ -3323,21 +3341,29 @@ class FrozenMolecule(Serializable):
         >>> import qcelemental as qcel
         >>> mol = Molecule.from_smiles('CC')
         >>> mol.generate_conformers(n_conformers=1)
-        >>> qcel_mol = qcel.models.Molecule.from_data(mol.to_qcshema())
+        >>> qcschema = mol.to_qcshema()
         """
+
+        try:
+            import qcelemental as qcel
+        except ImportError:
+            raise ImportWarning('Please install QCElemental via conda install -c conda-forge qcelemental '
+                                'to validate the schema')
 
         try:
             geometry = self.conformers[conformer].in_units_of(unit.bohr)
         except TypeError:
-            raise InvalidConformerError('The molecule must have a conformation to produce a valid qcshema.')
+            raise InvalidConformerError('The molecule must have a conformation to produce a valid qcschema.')
 
         # Gather the required qschema data
         charge = sum([atom.formal_charge for atom in self.atoms])
         connectivity = [(bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds]
         symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms]
 
-        return {'symbols': symbols, 'geometry': geometry, 'connectivity': connectivity,
-                'molecular_charge': charge, 'molecular_multiplicity': multiplicity}
+        schema_dict = {'symbols': symbols, 'geometry': geometry, 'connectivity': connectivity,
+                       'molecular_charge': charge, 'molecular_multiplicity': multiplicity}
+
+        return qcel.models.Molecule.from_data(schema_dict, validate=True)
 
     @classmethod
     def from_mapped_smiles(cls, mapped_smiles):
@@ -3404,7 +3430,7 @@ class FrozenMolecule(Serializable):
                 # Now we should search for the input molecule geometry and attach it
                 input_mol = client_instance.query_molecules(id=int(qca_json['initial_molecules'][0]))[0]
                 print(input_mol.geometry)
-                #TODO the units must be converted at this point before being attached. 
+                #TODO the units must be converted at this point before being attached.
         else:
             raise SmilesParsingError('The json must contain the cmiles tags to build the molecule safley.')
 
@@ -3474,6 +3500,9 @@ class FrozenMolecule(Serializable):
         :return:
         """
 
+        if self.n_virtual_sites != 0:
+            raise NotImplementedError('We can not remap virtual sites yet!')
+
         # make two mapping dicts we need new to old for atoms
         # and old to new for bonds
         if new_to_old:
@@ -3519,6 +3548,9 @@ class FrozenMolecule(Serializable):
                 for i in range(self.n_atoms):
                     new_conformer[i] = conformer[n_to_o[i]].value_in_unit(unit.angstrom)
                 new_molecule.add_conformer(new_conformer * unit.angstrom)
+
+        # move any properties across
+        new_molecule._properties = self._properties
 
         return new_molecule
 
