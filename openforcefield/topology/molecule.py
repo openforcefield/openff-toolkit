@@ -3393,7 +3393,7 @@ class FrozenMolecule(Serializable):
         # remap the molecule using the atom map found in the smiles
         # the order is mapping = Dict[current_index: new_index]
 
-        return offmol.remap(mapping, new_to_current=False)
+        return offmol.remap(mapping, current_to_new=True)
 
     @classmethod
     def from_qcschema(cls, qca_dict, client=None, allow_undefined_stereo=False):

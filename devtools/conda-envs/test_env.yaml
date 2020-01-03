@@ -26,6 +26,7 @@ dependencies:
   - bson
   - msgpack-python
   - xmltodict
+  - qcelemental
 
     # Pip-only installs
   #- pip:
