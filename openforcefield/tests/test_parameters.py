@@ -976,6 +976,10 @@ class TestChargeIncrementModelHandler:
         handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=10)
         handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=1)
         handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers="10")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=0)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers="0")
+        with pytest.raises(TypeError) as excinfo:
+            handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=None)
         with pytest.raises(SMIRNOFFSpecError) as excinfo:
             handler = ChargeIncrementModelHandler(skip_version_check=True, n_conformers=[10])
         handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method="AM1-Mulliken")
