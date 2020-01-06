@@ -3093,8 +3093,8 @@ class ToolkitRegistry:
                 method = getattr(toolkit, method_name)
                 try:
                     return method(*args, **kwargs)
-                except NotImplementedError:
-                    pass
+                except NotImplementedError as not_implemented_error:
+                    errors.append((toolkit, not_implemented_error))
                 except TypeError as type_error:
                     errors.append((toolkit, type_error))
                 except ValueError as value_error:
