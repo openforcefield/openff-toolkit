@@ -51,7 +51,6 @@ from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKit
     InvalidToolkitError, GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
 from openforcefield.utils.serialization import Serializable
-from openforcefield.topology.topology import TopologyMolecule
 
 
 # =============================================================================================
@@ -1789,7 +1788,7 @@ class FrozenMolecule(Serializable):
            No effort is made to ensure that the atoms are in the same order or that any annotated properties are preserved.
 
         """
-        return FrozenMolecule.are_isomorphic(self, other, return_atom_map=False)[0]
+        return Molecule.are_isomorphic(self, other, return_atom_map=False)[0]
 
     def to_smiles(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
@@ -1929,7 +1928,7 @@ class FrozenMolecule(Serializable):
         """
 
         # Do a quick hill formula check first
-        if FrozenMolecule.to_hill_formula(mol1) != FrozenMolecule.to_hill_formula(mol2):
+        if Molecule.to_hill_formula(mol1) != Molecule.to_hill_formula(mol2):
             return False, None
 
         # Build the user defined matching functions
@@ -2003,7 +2002,7 @@ class FrozenMolecule(Serializable):
 
             # reorder the mapping by keys
             sorted_mapping = {}
-            for key in range(len(topology_atom_map.keys())):
+            for key in sorted(topology_atom_map.keys()):
                 sorted_mapping[key] = topology_atom_map[key]
 
             return isomorphic, sorted_mapping
@@ -2032,10 +2031,10 @@ class FrozenMolecule(Serializable):
         -------
         isomorphic : bool
         """
-
+        #TODO:
         # what level of matching do we want here?
         # should we expose some options as well?
-        return FrozenMolecule.are_isomorphic(self, other, return_atom_map=False)[0]
+        return Molecule.are_isomorphic(self, other, return_atom_map=False)[0]
 
     def generate_conformers(self,
                             toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
@@ -2804,32 +2803,30 @@ class FrozenMolecule(Serializable):
         """
         Get the Hill formula of the molecule
         """
-        return FrozenMolecule.to_hill_formula(self)
+        return Molecule.to_hill_formula(self)
 
     @staticmethod
     def to_hill_formula(molecule):
         """
-        #TODO write tests for different input formats?
         Generate the Hill formula from either a FrozenMolecule, TopologyMolecule or
         nx.Graph() of the molecule
         molecule : FrozenMolecule, TopologyMolecule or nx.Graph()
         :return: the Hill formula
         """
 
-        if isinstance(molecule, FrozenMolecule):
-            atom_nums = [atom.atomic_number for atom in molecule._atoms]
-
-        elif isinstance(molecule, nx.Graph):
+        # check for networkx then assuming we have a Molecule or TopologyMolecule instance just try and
+        # extract the info. Note we do not type check the TopologyMolecule due to cyclic dependencies
+        if isinstance(molecule, nx.Graph):
             atom_nums = list(dict(molecule.nodes(data='atomic_number', default=1)).values())
 
-        elif isinstance(molecule, TopologyMolecule):
-            atom_nums = [atom.atomic_number for atom in molecule.atoms]
-
         else:
-            raise NotImplementedError(f'The input type {type(molecule)} is not supported,'
-                                      f'please supply an openforcefield.topology.molecule.Molecule,'
-                                      f'openforcefield.topology.topology.TopologyMolecule or networkx representaion'
-                                      f'of the molecule.')
+            try:
+                atom_nums = [atom.atomic_number for atom in molecule.atoms]
+            except AttributeError:
+                raise NotImplementedError(f'The input type {type(molecule)} is not supported,'
+                                          f'please supply an openforcefield.topology.molecule.Molecule,'
+                                          f'openforcefield.topology.topology.TopologyMolecule or networkx representaion '
+                                          f'of the molecule.')
 
         # Now sort the elements, method taken from topology._networkx_to_hill_formula
         # Count the number of instances of each atomic number
@@ -3472,12 +3469,12 @@ class FrozenMolecule(Serializable):
 
         # check isomorphic and get the mapping if true the mapping will be
         # Dict[pdb_index: offmol_index] sorted by pdb_index
-        isomorphic, mapping = FrozenMolecule.are_isomorphic(pdbmol, offmol, return_atom_map=True,
-                                                            aromatic_matching=False,
-                                                            formal_charge_matching=False,
-                                                            bond_order_matching=False,
-                                                            atom_stereochemistry_matching=False,
-                                                            bond_stereochemistry_matching=False, )
+        isomorphic, mapping = Molecule.are_isomorphic(pdbmol, offmol, return_atom_map=True,
+                                                      aromatic_matching=False,
+                                                      formal_charge_matching=False,
+                                                      bond_order_matching=False,
+                                                      atom_stereochemistry_matching=False,
+                                                      bond_stereochemistry_matching=False, )
 
         if mapping is not None:
             new_mol = offmol.remap(mapping)
