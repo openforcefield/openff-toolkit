@@ -31,11 +31,11 @@ import numpy as np
 import pytest
 from simtk import unit
 
-from openforcefield.topology.molecule import Molecule, Atom
+from openforcefield.topology.molecule import Molecule, Atom, InvalidConformerError
 from openforcefield.utils import get_data_file_path
 # TODO: Will the ToolkitWrapper allow us to pare that down?
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
-
+from openforcefield.tests.test_forcefield import create_ethanol, create_reversed_ethanol, create_acetaldehyde, create_benzene_no_aromatic
 
 #=============================================================================================
 # TEST UTILITIES
@@ -532,13 +532,13 @@ class TestMolecule:
     def test_hill_formula(self):
         """Test that making the hill formula is consistent between input methods and ordering"""
         # make sure smiles match reference
-        molecule_smiles = Molecule.from_smiles('CCO')
+        molecule_smiles = create_ethanol()
         assert molecule_smiles.hill_formula == 'C2H6O1'
         # make sure is not order dependent
-        molecule_smiles_reverse = Molecule.from_smiles('OCC')
+        molecule_smiles_reverse = create_reversed_ethanol()
         assert molecule_smiles.hill_formula == molecule_smiles_reverse.hill_formula
         # make sure files and smiles match
-        molecule_file = Molecule.from_file(get_data_file_path('molecules/ethanol.mol2'))
+        molecule_file = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
         assert molecule_smiles.hill_formula == molecule_file.hill_formula
         # make sure the topology molecule gives the same formula
         from openforcefield.topology.topology import TopologyMolecule, Topology
@@ -548,18 +548,18 @@ class TestMolecule:
         # make sure the networkx matches
         assert molecule_smiles.hill_formula == Molecule.to_hill_formula(molecule_smiles.to_networkx())
 
-    def test_isomorphic(self):
-        """Test the different levels of isomorphic matching"""
+    def test_isomorphic_general(self):
+        """Test the matching using different input types"""
         # check that hill formula fails are caught
-        ethanol = Molecule.from_smiles('CCO')
-        acetaldehyde = Molecule.from_smiles('CC=O')
+        ethanol = create_ethanol()
+        acetaldehyde = create_acetaldehyde()
         assert ethanol.is_isomorphic_with(acetaldehyde) is False
         assert acetaldehyde.is_isomorphic_with(ethanol) is False
         # check that different orderings work with full matching
-        ethanol_reverse = Molecule.from_smiles('OCC')
+        ethanol_reverse = create_reversed_ethanol()
         assert ethanol.is_isomorphic_with(ethanol_reverse) is True
         # check a reference mapping between ethanol and ethanol_reverse matches that calculated
-        ref_mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 3}
+        ref_mapping = {0: 8, 1: 7, 2: 6, 3: 3, 4: 4, 5: 5, 6: 1, 7: 2, 8: 0}
         assert Molecule.are_isomorphic(ethanol, ethanol_reverse, return_atom_map=True)[1] == ref_mapping
         # check matching with nx.Graph atomic numbers and connectivity only
         assert Molecule.are_isomorphic(ethanol, ethanol_reverse.to_networkx(), aromatic_matching=False,
@@ -581,21 +581,65 @@ class TestMolecule:
         assert mol1.is_isomorphic_with(mol2) is False
         assert mol2.is_isomorphic_with(mol1) is False
 
+    isomorphic_permutations = [{'aromatic_matching': True, 'formal_charge_matching': True, 'bond_order_matching': True,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': True,
+                                'result': False},
+                               {'aromatic_matching': False, 'formal_charge_matching': True, 'bond_order_matching': True,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': True,
+                                'result': False},
+                               {'aromatic_matching': True, 'formal_charge_matching': False, 'bond_order_matching': True,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': True,
+                                'result': False},
+                               {'aromatic_matching': True, 'formal_charge_matching': True, 'bond_order_matching': False,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': True,
+                                'result': False},
+                               {'aromatic_matching': True, 'formal_charge_matching': True, 'bond_order_matching': True,
+                                'atom_stereochemistry_matching': False, 'bond_stereochemistry_matching': True,
+                                'result': False},
+                               {'aromatic_matching': True, 'formal_charge_matching': True, 'bond_order_matching': True,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': False,
+                                'result': False},
+                               {'aromatic_matching': False, 'formal_charge_matching': False, 'bond_order_matching': False,
+                                'atom_stereochemistry_matching': False, 'bond_stereochemistry_matching': False,
+                                'result': True},
+                               {'aromatic_matching': False, 'formal_charge_matching': True, 'bond_order_matching': False,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': True,
+                                'result': True},
+                               {'aromatic_matching': False, 'formal_charge_matching': False, 'bond_order_matching': False,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': True,
+                                'result': True},
+                               ]
+
+    @pytest.mark.parametrize('inputs', isomorphic_permutations)
+    def test_isomorphic_perumtations(self, inputs):
+        """Test all of the different combinations of matching levels between benzene with and without the aromatic bonds
+        defined"""
+        # get benzene with all aromatic atoms/bonds labeled
+        benzene = Molecule.from_smiles('c1ccccc1')
+        # get benzene with no aromatic labels
+        benzene_no_aromatic = create_benzene_no_aromatic()
+        # now test all of the variations
+        assert Molecule.are_isomorphic(benzene, benzene_no_aromatic, aromatic_matching=inputs['aromatic_matching'],
+                                       formal_charge_matching=inputs['formal_charge_matching'],
+                                       bond_order_matching=inputs['bond_order_matching'],
+                                       atom_stereochemistry_matching=inputs['atom_stereochemistry_matching'],
+                                       bond_stereochemistry_matching=inputs['bond_stereochemistry_matching'])[0] is inputs['result']
+
     def test_remap(self):
         """Test the remap function which should return a new molecule in the requested ordering"""
         # the order here is CCO
-        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.mol2'))
+        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
         # get ethanol in reverse order OCC
-        ethanol_reverse = Molecule.from_smiles('OCC')
+        ethanol_reverse = create_reversed_ethanol()
         # get the mapping between the molecules
         mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
         ethanol.add_bond_charge_virtual_site([0, 1], 0.3 * unit.angstrom)
         # make sure that molecules with virtual sites raises an error
-        with pytest.raises(Exception):
+        with pytest.raises(NotImplementedError):
             remapped = ethanol.remap(mapping, current_to_new=True)
 
         # remake with no virtual site and remap to match the reversed ordering
-        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.mol2'))
+        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
 
         new_ethanol = ethanol.remap(mapping, current_to_new=True)
 
@@ -604,9 +648,17 @@ class TestMolecule:
             for atoms in zip(mol1.atoms, mol2.atoms):
                 assert atoms[0].to_dict() == atoms[1].to_dict()
             # bonds will not be in the same order in the molecule and the atom1 and atom2 indecies could be out of order
-            remaped_bonds = [bond.to_dict() for bond in mol2.bonds]
+            # make a dict to compare them both
+            remaped_bonds = dict(((bond.atom1_index, bond.atom2_index), bond) for bond in mol2.bonds)
             for bond in mol1.bonds:
-                assert bond.to_dict() in remaped_bonds
+                key = (bond.atom1_index, bond.atom2_index)
+                if key not in remaped_bonds:
+                    key = tuple(reversed(key))
+                assert key in remaped_bonds
+                # now compare each attribute of the bond
+                assert bond.stereochemistry == remaped_bonds[key].stereochemistry
+                assert bond.is_aromatic == remaped_bonds[key].is_aromatic
+                assert bond.fractional_bond_order == remaped_bonds[key].fractional_bond_order
             assert mol1.n_bonds == mol2.n_bonds
             assert mol1.n_angles == mol2.n_angles
             assert mol1.n_propers == mol2.n_propers
@@ -617,20 +669,47 @@ class TestMolecule:
         # due to the bonds being out of order
         assert_molecules_match_after_remap(new_ethanol, ethanol_reverse)
 
-        # catch mappings that are the wrong size
-        too_small_mapping = {0: 1}
-        with pytest.raises(Exception):
-            new_ethanol = ethanol.remap(too_small_mapping, current_to_new=True)
-
-        wrong_index_mapping = {(i + 10, new_id) for i, new_id in enumerate(mapping.values())}
-        with pytest.raises(Exception):
-            new_ethanol = ethanol.remap(wrong_index_mapping, current_to_new=True)
-
         # test round trip (double remapping a molecule)
         new_ethanol = ethanol.remap(mapping, current_to_new=True)
-        round_trip_mapping = Molecule.are_isomorphic(new_ethanol, ethanol, return_atom_map=True)[1]
+        isomorphic, round_trip_mapping = Molecule.are_isomorphic(new_ethanol, ethanol, return_atom_map=True)
+        assert isomorphic is True
         round_trip_ethanol = new_ethanol.remap(round_trip_mapping, current_to_new=True)
         assert_molecules_match_after_remap(round_trip_ethanol, ethanol)
+
+    def test_too_small_remap(self):
+        """Make sure remap fails if we do not supply enough indexes"""
+        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
+        # catch mappings that are the wrong size
+        too_small_mapping = {0: 1}
+        with pytest.raises(ValueError):
+            new_ethanol = ethanol.remap(too_small_mapping, current_to_new=True)
+
+    def test_wrong_index_mapping(self):
+        """Make sure the remap fails when the indexing starts from the wrong value"""
+        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
+        mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 3}
+        wrong_index_mapping = dict((i + 10, new_id) for i, new_id in enumerate(mapping.values()))
+        with pytest.raises(IndexError):
+            new_ethanol = ethanol.remap(wrong_index_mapping, current_to_new=True)
+
+    def test_to_qcschema(self):
+        """Test the ability to make and validate qcschema"""
+        # the molecule has no coordinates so this should fail
+        ethanol = Molecule.from_smiles('CCO')
+        with pytest.raises(InvalidConformerError):
+            qcschema = ethanol.to_qcschema()
+
+        # now remake the molecule from the sdf
+        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
+        qcschema = ethanol.to_qcschema()
+        # make sure the properties match
+        charge = 0
+        connectivity = [(0, 1, 1.0), (0, 4, 1.0), (0, 5, 1.0), (0, 6, 1.0), (1, 2, 1.0), (1, 7, 1.0), (1, 8, 1.0), (2, 3, 1.0)]
+        symbols = ['C', 'C', 'O', 'H', 'H', 'H', 'H', 'H', 'H']
+        assert charge == qcschema.molecular_charge
+        assert connectivity == qcschema.connectivity
+        assert symbols == qcschema.symbols.tolist()
+        assert qcschema.geometry.all() == ethanol.conformers[0].in_units_of(unit.bohr).all()
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_n_particles(self, molecule):

@@ -3503,8 +3503,8 @@ class FrozenMolecule(Serializable):
 
         # make sure the size of the mapping matches the current molecule
         if len(mapping_dict) != self.n_atoms:
-            raise ValueError(f'There are too many mapping indices({len(mapping_dict)}) for the amount of atoms in this '
-                             f'molecule({self.n_atoms})')
+            raise ValueError(f'The number of mapping indices({len(mapping_dict)}) does not match the number of'
+                             f'atoms in this molecule({self.n_atoms})')
 
         # make two mapping dicts we need new to old for atoms
         # and old to new for bonds
@@ -3528,7 +3528,7 @@ class FrozenMolecule(Serializable):
                                       is_aromatic=old_atom.is_aromatic,
                                       stereochemistry=old_atom.stereochemistry,
                                       name=old_atom.name)
-        # this is the first time we access the mapping catch an index error here corresponding to mapping that starts
+        # this is the first time we access the mapping; catch an index error here corresponding to mapping that starts
         # from 0 or higher
         except IndexError:
             raise IndexError(f'The mapping supplied is missing a relation corresponding to atom({i})')
