@@ -101,11 +101,11 @@ script:
 
 notifications:
   email:
-    if: branch = master
+    if: branch = fix-notebook-tests
       recipients:
         - j5wagner@ucsd.edu
         - john.chodera@choderalab.org
-      on_success: never # default: change
+      on_success: always # default: change
       on_failure: always # default: always
 
 
