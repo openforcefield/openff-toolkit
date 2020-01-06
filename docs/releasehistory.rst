@@ -11,13 +11,56 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 Current Development
 -------------------
 
+During implementation, the proposed specification for ``ChargeIncrementModel`` changed substantially.
+While the draft spec proposed to define partial charge calculation schemes using the keywords
+``quantum_chemical_method="AM1"``, ``partial_charge_method="CM2"``, ``number_of_conformers="10"``, we
+recognized that these keywords would not not line up with graph-based partial charge methods or other
+methods on the roadmap. The fact that this tag would need to
+encapsulate a wide range of inputs would likely lead to several generations of spec changes, each one of which
+would inconvenience users. We ultimately realized that, while we may eventually support a concise set of keywords
+for this tag, there is currently too little known about the eventual scope of this section to develop a useful
+schema for it right now.
+
+For this reason, the initial implementation of ``ChargeIncrementModel`` only defines attributes for ``version``,
+``partial_charge_method``, and ``number_of_conformers``. ``partial_charge_method`` can be any string, and it is
+up to the ``ToolkitWrapper``'s ``compute_partial_charges`` methods to understand what they mean. For
+geometry-independent ``partial_charge_method`` choices, ``number_of_conformers`` wi2ll
+
+
+
 - `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Closes
-  `Issue #465 <https://github.com/openforcefield/openforcefield/issues/465>`_
+  ><>< SOME ISSUE ><><
+  by implementing support for the
+  ```ChargeIncrementModel`` tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_.
+  In order to support broad experimentation
+- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Closes
+  `Issue #465 <https://github.com/openforcefield/openforcefield/issues/465>`_.
   ``atom.formal_charge`` and ``molecule.total_charge`` now return ``simtk.unit.Quantity`` objects
-  instead of integers.
+  instead of integers. To preserve backward compatibility, the setter for ``atom.formal_charge``
+  can accept either a ``simtk.unit.Quantity`` or an integer.
 - `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Corrects uses of
-  ValueError, TypeError, and NotImplementedError in ``compute_partial_charges`` and other
-  toolkit functions
+  ``ValueError``, ``TypeError``, and ``NotImplementedError`` in
+  :py:meth:`AmberToolsToolkitWrapper.compute_partial_charges <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.compute_partial_charges>`
+  and other
+  toolkit functions. As more charging schemes (or other functions that could be performed
+  by different ToolkitWrappers) become supported, it is necessary to
+  distinguish between different types of failure. Roughly speaking, exceptions raised by
+  ToolkitWrappers now have the following meanings:
+    - ``TypeError``s indicate "The ToolkitWrapper can positively identify that it
+      shouldn't be able to handle this kind of input." For example,
+      ``RDKitToolkitWrapper.from_object`` will raise this if it is provided an OEMol as input.
+    - ``ValueError``s indicate "The ToolkitWrapper received an accepted TYPE of input, but it
+      couldn't handle it, and there is definitely something wrong with the input."
+      For example, ``RDKitToolkitWrapper.from_object`` will raise a ``ValueError`` if it is
+      given an ``rdkit.Chem.Mol`` that has no bonds as input.
+    - ``RuntimeError``s indicate "The ToolkitWrapper received an accepted TYPE of input, but it
+      couldn't handle it, however it's not clear that the input was wrong." For example,
+      ``AmberToolsToolkitWrapper.compute_partial_charges`` will raise ``XXError`` if it is
+      provided with the kwarg ``charge_model="am1bccelf10"``, which IS NOT a supported keyword for
+      ``AmberToolsToolkitWrapper.compute_partial_charges``, but IS supported by
+      ``OpenEyeToolkitWrapper.compute_partial_charges``. Other cases where this would be raised
+      include when a QM optimization is able to start, but fails to converge.
+
 
 0.6.0 - Library Charges
 -----------------------
