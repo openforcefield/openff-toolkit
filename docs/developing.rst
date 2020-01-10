@@ -42,12 +42,20 @@ Open Force Field Toolkit Concepts
   - Atoms: element (integer), formal_charge (integer), is_aromatic (boolean), stereochemistry (R/S/None)
   - Bonds: order (integer), is_aromatic (boolean), stereochemistry (E/Z/None)
 
+  There are several other optional attributes such as ``conformers`` and ``partial_charges`` that may be populated in the Molecule data structure.
+  These are considered "optional" because they are not required for system creation, however if those fields are populates, the user MAY use them to override values that would otherwise be generated during system creation.
+
+  A dictionary, ``Molecule.properties`` is exposed, which is a Python dict that can be populated with arbitrary data.
+  This data should be considered cosmetic and should not affect system creation.
+  Whenever possible, molecule serialization or format conversion should preserve this data.
+
 ``OFF System``
   An object that contains everything needed to calculate a molecular system's energy, except the atomic coordinates.
   Note that this does not exist yet, and that OpenMM System objects are being used for this purpose right now.
 
 ``OFF Topology``
   An object that efficiently holds many OFF Molecules.
+  The atom indexing in a Topology may differ from those of the underlying ``Molecule``s
 
 ``OFF TopologyMolecule``
   The efficient data structures that make up an OFF Topology.
