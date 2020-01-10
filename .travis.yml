@@ -99,8 +99,10 @@ script:
     --nbval-lax --cov=openforcefield --cov-config=setup.cfg;
   fi
 
+# Raise a fuss if cron jobs break
 notifications:
-  email: false
+  email:
+    if: type = cron
 
 after_success:
 - codecov
