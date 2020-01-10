@@ -658,7 +658,7 @@ class TestMolecule:
                 # now compare each attribute of the bond
                 assert bond.stereochemistry == remaped_bonds[key].stereochemistry
                 assert bond.is_aromatic == remaped_bonds[key].is_aromatic
-                assert bond.fractional_bond_order == remaped_bonds[key].fractional_bond_order
+                assert bond.bond_order == remaped_bonds[key].bond_order
             assert mol1.n_bonds == mol2.n_bonds
             assert mol1.n_angles == mol2.n_angles
             assert mol1.n_propers == mol2.n_propers
@@ -692,6 +692,34 @@ class TestMolecule:
         with pytest.raises(IndexError):
             new_ethanol = ethanol.remap(wrong_index_mapping, current_to_new=True)
 
+    def test_from_pdb_and_smiles(self):
+        """Test the ability to make a valid molecule using RDKit and SMILES together"""
+        # try and make a molecule from a pdb and smiles that don't match
+        with pytest.raises(InvalidConformerError):
+            mol = Molecule.from_pdb_and_smiles(get_data_file_path('molecules/toluene.pdb'), 'CC')
+
+        # make a molecule from the toluene pdb file and the correct smiles
+        mol = Molecule.from_pdb_and_smiles(get_data_file_path('molecules/toluene.pdb'), 'Cc1ccccc1')
+
+        # make toluene from the sdf file
+        mol_sdf = Molecule.from_file(get_data_file_path('molecules/toluene.sdf'))
+        # get the mapping between them and compare the properties
+        isomorphic, atom_map = Molecule.are_isomorphic(mol, mol_sdf, return_atom_map=True)
+        assert isomorphic is True
+        for pdb_atom, sdf_atom in atom_map.items():
+            assert mol.atoms[pdb_atom].to_dict() == mol_sdf.atoms[sdf_atom].to_dict()
+        # check bonds match, however there order might not
+        sdf_bonds = dict(((bond.atom1_index, bond.atom2_index), bond) for bond in mol_sdf.bonds)
+        for bond in mol.bonds:
+            key = (atom_map[bond.atom1_index], atom_map[bond.atom2_index])
+            if key not in sdf_bonds:
+                key = tuple(reversed(key))
+            assert key in sdf_bonds
+            # now compare the attributes
+            assert bond.is_aromatic == sdf_bonds[key].is_aromatic
+            assert bond.stereochemistry == sdf_bonds[key].stereochemistry
+            assert bond.bond_order == sdf_bonds[key].bond_order
+
     def test_to_qcschema(self):
         """Test the ability to make and validate qcschema"""
         # the molecule has no coordinates so this should fail
@@ -701,6 +729,10 @@ class TestMolecule:
 
         # now remake the molecule from the sdf
         ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
+        # make sure that requests to missing conformers are caught
+        with pytest.raises(InvalidConformerError):
+            qcschema = ethanol.to_qcschema(conformer=1)
+        # now make a valid qcschema and check its properties
         qcschema = ethanol.to_qcschema()
         # make sure the properties match
         charge = 0
@@ -710,6 +742,56 @@ class TestMolecule:
         assert connectivity == qcschema.connectivity
         assert symbols == qcschema.symbols.tolist()
         assert qcschema.geometry.all() == ethanol.conformers[0].in_units_of(unit.bohr).all()
+
+    def test_from_qcschema_no_client(self):
+        """Test the ability to make molecules from QCArchive record instances and dicts"""
+
+        # As the method can take a record instance or a dict with JSON encoding test both
+        # test incomplete dict
+        example_dict = {'name': 'CH4'}
+        with pytest.raises(KeyError):
+            mol = Molecule.from_qcschema(example_dict)
+
+        # test an object that is not a record
+        wrong_object = 'CH4'
+        with pytest.raises(AttributeError):
+            mol = Molecule.from_qcschema(wrong_object)
+
+    client_examples = [{'dataset': 'TorsionDriveDataset', 'name': 'Fragment Stability Benchmark', 'index':
+                        'CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F'},
+                       {'dataset': 'TorsionDriveDataset', 'name': 'OpenFF Fragmenter Phenyl Benchmark', 'index':
+                        'c1c[ch:1][c:2](cc1)[c:3](=[o:4])o'},
+                       {'dataset': 'TorsionDriveDataset', 'name': 'OpenFF Full TorsionDrive Benchmark 1', 'index':
+                        '0'},
+                       {'dataset': 'TorsionDriveDataset', 'name': 'OpenFF Group1 Torsions', 'index':
+                        'c1c[ch:1][c:2](cc1)[ch2:3][c:4]2ccccc2'},
+                       {'dataset': 'OptimizationDataset', 'name': 'Kinase Inhibitors: WBO Distributions', 'index':
+                        'cc1ccc(cc1nc2nccc(n2)c3cccnc3)nc(=o)c4ccc(cc4)cn5ccn(cc5)c-0'},
+                       {'dataset': 'OptimizationDataset', 'name': 'SMIRNOFF Coverage Set 1', 'index':
+                        'coc(o)oc-0'}]
+
+    @pytest.mark.parametrize('input_data', client_examples)
+    def test_from_qcschema_with_client(self, input_data):
+        """For each of the examples try and make a offmol using the instance and dict and check they match"""
+
+        import qcportal as ptl
+        client = ptl.FractalClient()
+        ds = client.get_collection(input_data['dataset'], input_data['name'])
+        entry = ds.get_entry(input_data['index'])
+        # now make the molecule from the record instance with and without the geometry
+        mol_from_dict = Molecule.from_qcschema(entry.dict(encoding='json'))
+        # make the molecule again with the geometries attached
+        mol_from_instance = Molecule.from_qcschema(entry, client)
+        if hasattr(entry, 'initial_molecules'):
+            assert mol_from_instance.n_conformers == len(entry.initial_molecules)
+        else:
+            # opt records have one initial molecule
+            assert mol_from_instance.n_conformers == 1
+
+        # now make a molecule from the smiles and make sure they are isomorphic
+        mol_from_smiles = Molecule.from_smiles(entry.attributes['canonical_explicit_hydrogen_smiles'], True)
+
+        assert mol_from_dict.is_isomorphic_with(mol_from_smiles) is True
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_n_particles(self, molecule):

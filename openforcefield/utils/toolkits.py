@@ -1572,16 +1572,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 mols.append(mol)
 
         elif (file_format == 'PDB'):
-            # raise Exception(
-            #     "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
-            #     "is likely to be lost.")
+            raise Exception(
+                "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
+                "is likely to be lost. To read a PDB using RDKit use Molecule.from_pdb_and_smiles()")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
             #  testing to see if we can make a molecule from smiles and then use the PDB conformer as the geometry
             #  and just reorder the molecule
             # https://github.com/openforcefield/openforcefield/issues/121
-            rdmol = Chem.MolFromPDBFile(file_path, removeHs=False)
-            mol = Molecule.from_rdkit(rdmol)
-            mols.append(mol)
+            # rdmol = Chem.MolFromPDBFile(file_path, removeHs=False)
+            # mol = Molecule.from_rdkit(rdmol)
+            # mols.append(mol)
             # TODO: Add SMI, TDT(?) support
 
         return mols
@@ -1634,15 +1634,15 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 mols.append(mol)
 
         elif file_format == 'PDB':
-            # raise Exception(
-            #     "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
-            #     "is likely to be lost.")
+            raise Exception(
+                "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
+                "is likely to be lost. To read a PDB using RDKit use Molecule.from_pdb_and_smiles()")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
             # https://github.com/openforcefield/openforcefield/issues/121
-            file_data = file_obj.read()
-            rdmol = Chem.MolFromPDBBlock(file_data)
-            mol = Molecule.from_rdkit(rdmol)
-            mols.append(mol)
+            # file_data = file_obj.read()
+            # rdmol = Chem.MolFromPDBBlock(file_data)
+            # mol = Molecule.from_rdkit(rdmol)
+            # mols.append(mol)
         # TODO: TDT file support
         return mols
 
@@ -1947,7 +1947,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             map_atoms[rd_idx] = atom_index
             atom_mapping[atom_index] = map_id
 
-        # if we have a full atom map add it to the molecule, 0 indecates a missing mapping or no mapping
+        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
         if 0 not in atom_mapping.values():
             offmol._properties['atom_map'] = atom_mapping
 

@@ -27,6 +27,7 @@ dependencies:
   - msgpack-python
   - xmltodict
   - qcelemental
+  - qcportal
 
     # Pip-only installs
   #- pip:
