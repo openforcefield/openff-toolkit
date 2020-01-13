@@ -2026,23 +2026,46 @@ class FrozenMolecule(Serializable):
         # other_smiles = other_fm.to_smiles(toolkit_registry=toolkit_registry)
         # return self_smiles == other_smiles
 
-    def is_isomorphic_with(self, other):
+    def is_isomorphic_with(self, other, **kwargs):
         """
         Check if the molecule is isomorphic with the other molecule which can be an openforcefield.topology.Molecule,
-        or TopologyMolecule or nx.Graph()
+        or TopologyMolecule or nx.Graph(). Full matching is done using the options described bellow.
 
         Parameters
         ----------
         other: openforcefield.topology.Molecule or TopologyMolecule or nx.Graph()
 
+        return_atom_map: bool, default=False, optional
+            will return an optional dict containing the atomic mapping.
+
+        aromatic_matching: bool, default=True, optional
+        compare the aromatic attributes of bonds and atoms.
+
+        formal_charge_matching: bool, default=True, optional
+        compare the formal charges attributes of the atoms.
+
+        bond_order_matching: bool, deafult=True, optional
+        compare the bond order on attributes of the bonds.
+
+        atom_stereochemistry_matching : bool, default=True, optional
+            If ``False``, atoms' stereochemistry is ignored for the
+            purpose of determining equality.
+
+        bond_stereochemistry_matching : bool, default=True, optional
+            If ``False``, bonds' stereochemistry is ignored for the
+            purpose of determining equality.
+
         Returns
         -------
         isomorphic : bool
         """
-        #TODO:
-        # what level of matching do we want here?
-        # should we expose some options as well?
-        return Molecule.are_isomorphic(self, other, return_atom_map=False)[0]
+
+        return Molecule.are_isomorphic(self, other, return_atom_map=False,
+                                       aromatic_matching=kwargs.get('aromatic_matching', True),
+                                       formal_charge_matching=kwargs.get('formal_charge_matching', True),
+                                       bond_order_matching=kwargs.get('bond_order_matching', True),
+                                       atom_stereochemistry_matching=kwargs.get('atom_stereochemistry_matching', True),
+                                       bond_stereochemistry_matching=kwargs.get('bond_stereochemistry_matching', True))[0]
 
     def generate_conformers(self,
                             toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,

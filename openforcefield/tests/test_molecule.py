@@ -692,6 +692,7 @@ class TestMolecule:
         with pytest.raises(IndexError):
             new_ethanol = ethanol.remap(wrong_index_mapping, current_to_new=True)
 
+    @requires_rdkit
     def test_from_pdb_and_smiles(self):
         """Test the ability to make a valid molecule using RDKit and SMILES together"""
         # try and make a molecule from a pdb and smiles that don't match
