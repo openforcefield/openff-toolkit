@@ -3388,7 +3388,7 @@ class FrozenMolecule(Serializable):
         >>> import qcelemental as qcel
         >>> mol = Molecule.from_smiles('CC')
         >>> mol.generate_conformers(n_conformers=1)
-        >>> qcschema = mol.to_qcshema()
+        >>> qcschema = mol.to_qcschema()
 
         Raises
         --------
