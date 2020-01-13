@@ -409,7 +409,8 @@ class TestMolecule:
                 Molecule.from_iupac(iupac)
 
         molecule_copy = Molecule.from_iupac(iupac, allow_undefined_stereo=undefined_stereo)
-        assert molecule.is_isomorphic_with(molecule_copy)
+        assert molecule.is_isomorphic_with(molecule_copy,
+                                           atom_stereochemistry_matching=not undefined_stereo)
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_to_from_topology(self, molecule):
