@@ -90,10 +90,10 @@ Behavior changed
 
 Tests added
 """""""""""
-- `PR #430 <https://github.com/openforcefield/openforcefield/pull/430>`_: Added test for 
-  Wiberg Bond Order implemented in OpenEye Toolkits. Molecules taken from 
+- `PR #430 <https://github.com/openforcefield/openforcefield/pull/430>`_: Added test for
+  Wiberg Bond Order implemented in OpenEye Toolkits. Molecules taken from
   DOI:10.5281/zenodo.3405489 . Added by Sukanya Sasmal.
- 
+
 
 Bugfixes
 """"""""
@@ -474,7 +474,7 @@ API-breaking Changes
 * `PR #291 <https://github.com/openforcefield/openforcefield/pull/291>`_: Remove ``ForceField.load/to_smirnoff_data``, add ``ForceField.to_file/string`` and ``ParameterHandler.add_parameters``. Change behavior of ``ForceField.register_X_handler`` functions.
 
 Bugfixes
-"""""""" 
+""""""""
 * `PR #327 <https://github.com/openforcefield/openforcefield/pull/327>`_: Fix units in tip3p.offxml (note that this file is still not loadable by current toolkit)
 * `PR #325 <https://github.com/openforcefield/openforcefield/pull/325>`_: Fix solvent box for provided test system to resolve periodic clashes.
 * `PR #325 <https://github.com/openforcefield/openforcefield/pull/325>`_: Add informative message containing Hill formula when a molecule can't be matched in ``Topology.from_openmm``.

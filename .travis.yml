@@ -81,6 +81,14 @@ install:
 # Build and install package
 - python setup.py develop --no-deps
 
+# Install openmm-forcefields via pip (until available via omnia)
+- conda install --yes tinydb "openforcefield>=0.6.0" "openforcefields>=1.0.0"
+- pip install git+https://github.com/openmm/openmm-forcefields.git
+# Workaround for https://github.com/openmm/openmm/pull/2511
+# TODO: Remove this when OpenMM builds including https://github.com/openmm/openmm/pull/2511 are released
+- echo "Overwriting OpenMM forcefield.py with fix from https://github.com/openmm/openmm/pull/2511"
+- wget -q https://raw.githubusercontent.com/openmm/openmm/4f48402f1be3e0f049ae0e8595db638d297b0d75/wrappers/python/simtk/openmm/app/forcefield.py -O `python -c "from simtk.openmm.app import forcefield; print(forcefield.__file__)"`
+
 script:
 # Run doctests only if both RDKit and OpenEye are installed.
 # examples/check_dataset_parameter_coverage REQURIES rdkit, so skip if it's not available
