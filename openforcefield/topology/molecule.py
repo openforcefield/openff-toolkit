@@ -2061,6 +2061,7 @@ class FrozenMolecule(Serializable):
 
     def compute_partial_charges(self,
                                 partial_charge_method=None,
+                                strict_n_conformers=False,
                                 toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Calculate partial atomic charges for this molecule using an underlying toolkit
@@ -2094,7 +2095,8 @@ class FrozenMolecule(Serializable):
             toolkit = toolkit_registry
             charges = toolkit.compute_partial_charges(
                 self,
-                partial_charge_method=partial_charge_method
+                partial_charge_method=partial_charge_method,
+                strict_n_conformers=strict_n_conformers
             )
         else:
             raise InvalidToolkitError(

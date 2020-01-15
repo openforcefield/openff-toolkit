@@ -1184,7 +1184,76 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
 
-    def compute_partial_charges(self, molecule,  partial_charge_method='None'):
+
+    @staticmethod
+    def _check_n_conformers(molecule,
+                            partial_charge_method,
+                            min_confs=None,
+                            max_confs=None,
+                            strict_n_conformers=False):
+            """
+            Private method for validating the number of conformers on a molecule prior to partial
+            charge calculation
+
+            Parameters
+            ----------
+            molecule : Molecule
+                Molecule for which partial charges are to be computed
+            partial_charge_method : str, optional, default=None
+                The name of the charge method being used
+            min_confs : int, optional, default=None
+                The minimum number of conformers required to use this charge method
+            max_confs : int, optional, default=None
+                The maximum number of conformers required to use this charge method
+            strict_n_conformers : bool, default=False
+                Whether to raise an exception if an invalid number of conformers is provided.
+                If this is False and an invalid number of conformers is found, a warning will be raised.
+
+            Raises
+            ------
+            ValueError
+                If the wrong number of conformers is attached to the input molecule, and strict_n_conformers is True.
+            """
+
+            n_confs = len(molecule.conformers)
+            wrong_confs_msg = f"Molecule '{molecule}' has {n_confs} conformers, " \
+                f"but charge method '{partial_charge_method}' expects "
+            exception_suffix = "You can disable this error by setting `strict_n_conformers=False' " \
+                               "when calling 'molecule.compute_partial_charges'."
+            # If there's no n_confs filter, then this molecule automatically passes
+            if min_confs is None and max_confs is None:
+                return
+            # If there's constraints on both ends, check both limits
+            elif min_confs is not None and max_confs is not None:
+                if not(min_confs < n_confs < max_confs):
+                    if min_confs == max_confs:
+                        wrong_confs_msg += f" exactly {min_confs}."
+                    else:
+                        wrong_confs_msg += f" between {min_confs} and {max_confs}."
+
+                else:
+                    return
+            # If there's only a max constraint, check that
+            elif min_confs is not None and max_confs is None:
+                if not(min_confs < n_confs):
+                    wrong_confs_msg += f" at least {min_confs}."
+                else:
+                    return
+            # If there's only a minimum constraint, check that
+            elif min_confs is None and max_confs is not None:
+                if not(min_confs < n_confs):
+                    wrong_confs_msg += f" at most {max_confs}."
+                else:
+                    return
+            # If we've made it this far, the molecule has the wrong number of conformers
+            if strict_n_conformers:
+                wrong_confs_msg += exception_suffix
+                raise ValueError(wrong_confs_msg)
+            else
+                logger.warning("Warning: " + wrong_confs_msg)
+
+
+    def compute_partial_charges(self, molecule,  partial_charge_method='None', strict_n_conformers=False):
         """
         Compute partial charges with OpenEye quacpac
 
@@ -1204,6 +1273,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The charge model to use. One of ['amberff94', 'mmff', 'mmff94', `am1-mulliken`, 'am1bcc',
             'am1bccnosymspt', 'am1bccelf10']
             If None, 'am1-mulliken' will be used.
+        strict_n_conformers : bool, default=False
+            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            If this is False and an invalid number of conformers is found, a warning will be raised.
 
         Returns
         -------
@@ -1221,11 +1293,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         import numpy as np
 
         if molecule.n_conformers == 0:
-            raise Exception(
+            raise ValueError(
                 "No conformers present in molecule submitted for partial charge calculation. Consider "
                 "loading the molecule from a file with geometry already present or running "
                 "molecule.generate_conformers() before calling molecule.compute_partial_charges"
             )
+
+
         oemol = molecule.to_openeye()
 
         if partial_charge_method is None:
@@ -1236,28 +1310,43 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         AVAILABLE_CHARGE_METHODS = ['am1-mulliken', 'gasteiger', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']
 
         if partial_charge_method not in AVAILABLE_CHARGE_METHODS:
-            raise ChargeMethodUnavailableError(f'Partial charge method {partial_charge_method} unknown. '
-                                               f'Available charge methods are {AVAILABLE_CHARGE_METHODS}')
-
+            raise ChargeMethodUnavailableError(
+                f"partial_charge_method '{partial_charge_method}' is not available from OpenEyeToolkitWrapper. "
+                f"Available charge methods are {AVAILABLE_CHARGE_METHODS} "
+            )
 
         if partial_charge_method == 'am1-mulliken':
+            _check_n_conformers(molecule, partial_charge_method, min_confs=1,
+                                max_confs=1, strict_n_conformers=strict_n_conformers)
             result = oequacpac.OEAssignCharges(oemol,
                                                oequacpac.OEAM1Charges())
         elif partial_charge_method == "gasteiger":
+            _check_n_conformers(molecule, partial_charge_method, min_confs=0,
+                                max_confs=0, strict_n_conformers=strict_n_conformers)
             result = oequacpac.OEAssignCharges(oemol,
                                                oequacpac.OEGasteigerCharges())
         elif partial_charge_method == "mmff94":
+            _check_n_conformers(molecule, partial_charge_method, min_confs=0,
+                                max_confs=0, strict_n_conformers=strict_n_conformers)
             result = oequacpac.OEAssignCharges(oemol,
                                                oequacpac.OEMMFF94Charges())
         elif partial_charge_method == "am1bcc":
+            _check_n_conformers(molecule, partial_charge_method, min_confs=1,
+                                max_confs=1, strict_n_conformers=strict_n_conformers)
+
             result = oequacpac.OEAssignCharges(oemol,
                                                oequacpac.OEAM1BCCCharges())
         elif partial_charge_method == "am1bccnosymspt":
+            _check_n_conformers(molecule, partial_charge_method, min_confs=1,
+                                max_confs=1, strict_n_conformers=strict_n_conformers)
+
             optimize = True
             symmetrize = True
             result = oequacpac.OEAssignCharges(
                 oemol, oequacpac.OEAM1BCCCharges(not optimize, not symmetrize))
         elif partial_charge_method == "am1bccelf10":
+            _check_n_conformers(molecule, partial_charge_method, min_confs=1,
+                                strict_n_conformers=strict_n_conformers)
             result = oequacpac.OEAssignCharges(
                 oemol, oequacpac.OEAM1BCCELF10Charges())
 
@@ -1267,6 +1356,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Extract and return charges
         ## TODO: Behavior when given multiple conformations?
         ## TODO: Make sure atom mapping remains constant
+
 
         charges = unit.Quantity(
             np.zeros([oemol.NumAtoms()], np.float64), unit.elementary_charge)
@@ -2651,7 +2741,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         # Store an instance of an RDKitToolkitWrapper for file I/O
         self._rdkit_toolkit_wrapper = RDKitToolkitWrapper()
 
-    def compute_partial_charges(self, molecule, partial_charge_method=None):
+    def compute_partial_charges(self, molecule, partial_charge_method=None, strict_n_conformers=False):
         """
         Compute partial charges with AmberTools using antechamber/sqm
 
@@ -2665,8 +2755,11 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : Molecule
             Molecule for which partial charges are to be computed
-        partial_charge_method: str, optional, default=None
+        partial_charge_method : str, optional, default=None
             The charge model to use. One of ['gasteiger', 'mulliken']. If None, 'mulliken' will be used.
+        strict_n_conformers : bool, default=False
+            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            If this is False and an invalid number of conformers is found, a warning will be raised.
 
         Raises
         ------
@@ -2691,26 +2784,31 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         if partial_charge_method not in CHARGE_METHOD_TO_ANTECHAMBER_KEYWORD:
             raise ChargeMethodUnavailableError(
                 f"partial_charge_method '{partial_charge_method}' is not available from AmberToolsToolkitWrapper. "
-                f"The only supported methods are {list(CHARGE_METHOD_TO_ANTECHAMBER_KEYWORD.keys())} "
+                f"Available charge methods are {list(CHARGE_METHOD_TO_ANTECHAMBER_KEYWORD.keys())} "
             )
 
         # Find the path to antechamber
         # TODO: How should we implement find_executable?
         ANTECHAMBER_PATH = find_executable("antechamber")
         if ANTECHAMBER_PATH is None:
-            raise (IOError("Antechamber not found, cannot run charge_mol()"))
+            raise IOError("Antechamber not found, cannot run charge_mol()")
 
         if len(molecule._conformers) == 0:
-            raise Exception(
+            raise ValueError(
                 "No conformers present in molecule submitted for partial charge calculation. Consider "
                 "loading the molecule from a file with geometry already present or running "
                 "molecule.generate_conformers() before calling molecule.compute_partial_charges"
             )
 
         if len(molecule._conformers) > 1:
-            logger.warning("Warning: In AmberToolsToolkitWrapper.compute_partial_charges: "
-                           "Molecule '{}' has more than one conformer, but this function "
-                           "will only generate charges for the first one.".format(molecule.name))
+            if strict_n_conformers:
+                raise ValueError(f"Molecule '{molecule}' has more than one conformer, but charge "
+                                 f"method '{partial_charge_method}' "
+                                 f"can only handle one. You can disable this error by setting "
+                                 f"'strict_n_conformers=False' when calling 'molecule.compute_partial_charges'.")
+            elif not(strict_n_conformers):
+                logger.warning("Warning: Molecule '{}' has more than one conformer, but this function "
+                               "will only generate charges for the first one.".format(molecule.name))
 
         # Compute charges
         from openforcefield.utils import temporary_directory, temporary_cd

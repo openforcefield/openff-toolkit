@@ -33,6 +33,16 @@ geometry-independent ``partial_charge_method`` choices, ``number_of_conformers``
   by implementing support for the
   ```ChargeIncrementModel`` tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_.
   In order to support broad experimentation
+- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Adds keyword
+  argument ``strict_n_conformers`` to ``Molecule.compute_partial_charges``,
+  ``OpenEyeToolkitWrapper.compute_partial_charges``, and
+  ``AmberToolsToolkitWrapper.compute_partial_charges``. ``strict_n_conformers`` is a
+  boolean argument indicating whether an ``ValueError`` should be raised if an invalid number of
+  conformers is supplied during partial charge calculation. For example, if two conformers are
+  supplied, but ``partial_charge_method="AM1BCC"`` is also set, then there is no clear use for
+  the second conformer. The previous behavior in this case was to raise a warning, and to preserve that
+  behavior, ``strict_n_conformers`` defaults to a value of ``False``.
+
 - `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Closes
   `Issue #465 <https://github.com/openforcefield/openforcefield/issues/465>`_.
   ``atom.formal_charge`` and ``molecule.total_charge`` now return ``simtk.unit.Quantity`` objects
