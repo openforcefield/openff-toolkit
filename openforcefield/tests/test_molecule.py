@@ -192,6 +192,26 @@ def mini_drug_bank(xfail_mols=None, wip_mols=None):
 # used inside pytest.mark.parametrize (see issue #349 in pytest).
 mini_drug_bank.molecules = None
 
+# All the molecules that raise UndefinedStereochemistryError when read by OETK()
+openeye_drugbank_undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1700', 'DrugBank_1962',
+                                          'DrugBank_2519', 'DrugBank_2987', 'DrugBank_3502',
+                                          'DrugBank_3930', 'DrugBank_4161', 'DrugBank_4162',
+                                          'DrugBank_5043', 'DrugBank_5418', 'DrugBank_6531'}
+
+# All the molecules that raise UndefinedStereochemistryError when read by OETK().
+# Note that this list is different from that for OEMol,
+# since the toolkits have different definitions of "stereogenic"
+rdkit_drugbank_undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1962', 'DrugBank_2519',
+                                        'DrugBank_3930', 'DrugBank_5043', 'DrugBank_5418'}
+
+
+# Missing stereo in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
+# 'DrugBank_4162', 'DrugBank_6531', 'DrugBank_1700',
+
+# Some molecules are _valid_ in both OETK and RDKit, but will fail if you try
+# to convert from one to the other, since OE adds stereo that RDKit doesn't
+drugbank_stereogenic_in_oe_but_not_rdkit = {'DrugBank_1598', 'DrugBank_4346', 'DrugBank_1849',
+                                            'DrugBank_2141'}
 
 #=============================================================================================
 # TESTS
@@ -260,12 +280,36 @@ class TestMolecule:
         molecule_copy = Molecule(molecule)
         assert molecule_copy == molecule
 
+    @pytest.mark.parametrize('toolkit', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_from_smiles(self, molecule):
+    def test_to_from_smiles(self, molecule, toolkit):
         """Test round-trip creation from SMILES"""
-        smiles1 = molecule.to_smiles()
-        molecule2 = Molecule.from_smiles(smiles1)
-        smiles2 = molecule2.to_smiles()
+        if not toolkit.is_available():
+            pytest.skip('Required toolkit is unavailable')
+
+        if toolkit == RDKitToolkitWrapper:
+            # Skip the test if OpenEye assigns stereochemistry but RDKit doesn't (since then, the
+            # OFF molecule will be loaded, but fail to convert in to_rdkit)
+            if molecule.name in drugbank_stereogenic_in_oe_but_not_rdkit:
+                pytest.skip('Molecle is stereogenic in OpenEye (which loaded this dataset), but not RDKit, so it '
+                            'is impossible to make a valid RDMol in this test')
+            undefined_stereo_mols = rdkit_drugbank_undefined_stereo_mols
+        elif toolkit == OpenEyeToolkitWrapper:
+            undefined_stereo_mols = openeye_drugbank_undefined_stereo_mols
+
+        toolkit_wrapper = toolkit()
+
+        undefined_stereo = molecule.name in undefined_stereo_mols
+
+        smiles1 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+        if undefined_stereo:
+            molecule2 = Molecule.from_smiles(smiles1,
+                                             allow_undefined_stereo=True,
+                                             toolkit_registry=toolkit_wrapper)
+        else:
+            molecule2 = Molecule.from_smiles(smiles1,
+                                             toolkit_registry=toolkit_wrapper)
+        smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
         assert (smiles1 == smiles2)
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
@@ -330,13 +374,7 @@ class TestMolecule:
         # import pickle
         from openforcefield.utils.toolkits import UndefinedStereochemistryError
 
-        # DrugBank test set known failures. Note that this list is different from that for OEMol,
-        # since the toolkits have different definitions of "stereogenic"
-        # Stereogenic in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
-        # 'DrugBank_4162', 'DrugBank_6531', 'DrugBank_1700',
-        undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1962', 'DrugBank_2519',
-                                 'DrugBank_3930', 'DrugBank_5043', 'DrugBank_5418'}
-        undefined_stereo = molecule.name in undefined_stereo_mols
+        undefined_stereo = molecule.name in rdkit_drugbank_undefined_stereo_mols
 
         toolkit_wrapper = RDKitToolkitWrapper()
 
@@ -405,22 +443,24 @@ class TestMolecule:
         from openforcefield.utils.toolkits import UndefinedStereochemistryError
 
         # All the molecules that raise UndefinedStereochemistryError in Molecule.from_iupac()
-        undefined_stereo_mols = {'DrugBank_977', 'DrugBank_1634', 'DrugBank_1700', 'DrugBank_1962',
-                                 'DrugBank_2148', 'DrugBank_2178', 'DrugBank_2186', 'DrugBank_2208',
-                                 'DrugBank_2519', 'DrugBank_2538', 'DrugBank_2592', 'DrugBank_2651',
-                                 'DrugBank_2987', 'DrugBank_3332', 'DrugBank_3502', 'DrugBank_3622',
-                                 'DrugBank_3726', 'DrugBank_3844', 'DrugBank_3930', 'DrugBank_4161',
-                                 'DrugBank_4162', 'DrugBank_4778', 'DrugBank_4593', 'DrugBank_4959',
-                                 'DrugBank_5043', 'DrugBank_5076', 'DrugBank_5176', 'DrugBank_5418',
-                                 'DrugBank_5737', 'DrugBank_5902', 'DrugBank_6304', 'DrugBank_6305',
-                                 'DrugBank_6329', 'DrugBank_6355', 'DrugBank_6401', 'DrugBank_6509',
-                                 'DrugBank_6531', 'DrugBank_6647',
+        # (This is a larger list than the normal group of undefined stereo mols, probably has
+        # something to do with IUPAC information content)
+        iupac_problem_mols = {'DrugBank_977', 'DrugBank_1634', 'DrugBank_1700', 'DrugBank_1962',
+                              'DrugBank_2148', 'DrugBank_2178', 'DrugBank_2186', 'DrugBank_2208',
+                              'DrugBank_2519', 'DrugBank_2538', 'DrugBank_2592', 'DrugBank_2651',
+                              'DrugBank_2987', 'DrugBank_3332', 'DrugBank_3502', 'DrugBank_3622',
+                              'DrugBank_3726', 'DrugBank_3844', 'DrugBank_3930', 'DrugBank_4161',
+                              'DrugBank_4162', 'DrugBank_4778', 'DrugBank_4593', 'DrugBank_4959',
+                              'DrugBank_5043', 'DrugBank_5076', 'DrugBank_5176', 'DrugBank_5418',
+                              'DrugBank_5737', 'DrugBank_5902', 'DrugBank_6304', 'DrugBank_6305',
+                              'DrugBank_6329', 'DrugBank_6355', 'DrugBank_6401', 'DrugBank_6509',
+                              'DrugBank_6531', 'DrugBank_6647',
 
-                                 # These test cases are allowed to fail.
-                                 'DrugBank_390', 'DrugBank_810', 'DrugBank_4316', 'DrugBank_4346',
-                                 'DrugBank_7124'
-                                 }
-        undefined_stereo = molecule.name in undefined_stereo_mols
+                              # These test cases are allowed to fail.
+                              'DrugBank_390', 'DrugBank_810', 'DrugBank_4316', 'DrugBank_4346',
+                              'DrugBank_7124'
+                              }
+        undefined_stereo = molecule.name in iupac_problem_mols
 
         iupac = molecule.to_iupac()
 
@@ -443,7 +483,7 @@ class TestMolecule:
     @pytest.mark.parametrize('format', [
         'mol2',
         'sdf',
-        pytest.param('pdb', marks=pytest.mark.wip(reason='Read from pdb has not bee implemented properly yet'))
+        pytest.param('pdb', marks=pytest.mark.wip(reason='Read from pdb has not been implemented properly yet'))
     ])
     def test_to_from_file(self, molecule, format):
         """Test that conversion/creation of a molecule to and from a file is consistent."""
@@ -483,12 +523,7 @@ class TestMolecule:
         # known_failures = {'ZINC05964684', 'ZINC05885163', 'ZINC05543156', 'ZINC17211981',
         #                   'ZINC17312986', 'ZINC06424847', 'ZINC04963126'}
 
-        # DrugBank test set known failures.
-        undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1700', 'DrugBank_1962',
-                                 'DrugBank_2519', 'DrugBank_2987', 'DrugBank_3502',
-                                 'DrugBank_3930', 'DrugBank_4161', 'DrugBank_4162',
-                                 'DrugBank_5043', 'DrugBank_5418', 'DrugBank_6531'}
-        undefined_stereo = molecule.name in undefined_stereo_mols
+        undefined_stereo = molecule.name in openeye_drugbank_undefined_stereo_mols
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
 
