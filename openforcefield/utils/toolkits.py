@@ -1249,7 +1249,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if strict_n_conformers:
                 wrong_confs_msg += exception_suffix
                 raise ValueError(wrong_confs_msg)
-            else
+            else:
                 logger.warning("Warning: " + wrong_confs_msg)
 
 
@@ -1316,28 +1316,28 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
 
         if partial_charge_method == 'am1-mulliken':
-            _check_n_conformers(molecule, partial_charge_method, min_confs=1,
+            self._check_n_conformers(molecule, partial_charge_method, min_confs=1,
                                 max_confs=1, strict_n_conformers=strict_n_conformers)
             result = oequacpac.OEAssignCharges(oemol,
                                                oequacpac.OEAM1Charges())
         elif partial_charge_method == "gasteiger":
-            _check_n_conformers(molecule, partial_charge_method, min_confs=0,
+            self._check_n_conformers(molecule, partial_charge_method, min_confs=0,
                                 max_confs=0, strict_n_conformers=strict_n_conformers)
             result = oequacpac.OEAssignCharges(oemol,
                                                oequacpac.OEGasteigerCharges())
         elif partial_charge_method == "mmff94":
-            _check_n_conformers(molecule, partial_charge_method, min_confs=0,
+            self._check_n_conformers(molecule, partial_charge_method, min_confs=0,
                                 max_confs=0, strict_n_conformers=strict_n_conformers)
             result = oequacpac.OEAssignCharges(oemol,
                                                oequacpac.OEMMFF94Charges())
         elif partial_charge_method == "am1bcc":
-            _check_n_conformers(molecule, partial_charge_method, min_confs=1,
+            self._check_n_conformers(molecule, partial_charge_method, min_confs=1,
                                 max_confs=1, strict_n_conformers=strict_n_conformers)
 
             result = oequacpac.OEAssignCharges(oemol,
                                                oequacpac.OEAM1BCCCharges())
         elif partial_charge_method == "am1bccnosymspt":
-            _check_n_conformers(molecule, partial_charge_method, min_confs=1,
+            self._check_n_conformers(molecule, partial_charge_method, min_confs=1,
                                 max_confs=1, strict_n_conformers=strict_n_conformers)
 
             optimize = True
@@ -1345,7 +1345,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             result = oequacpac.OEAssignCharges(
                 oemol, oequacpac.OEAM1BCCCharges(not optimize, not symmetrize))
         elif partial_charge_method == "am1bccelf10":
-            _check_n_conformers(molecule, partial_charge_method, min_confs=1,
+            self._check_n_conformers(molecule, partial_charge_method, min_confs=1,
                                 strict_n_conformers=strict_n_conformers)
             result = oequacpac.OEAssignCharges(
                 oemol, oequacpac.OEAM1BCCELF10Charges())
