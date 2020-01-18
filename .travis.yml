@@ -65,7 +65,7 @@ before_install:
     gem install danger --version '~> 5.0' &&
     danger --version &&
     danger &&
-    exit 
+    exit ;
  fi
 
 # Install conda and some package management tools
