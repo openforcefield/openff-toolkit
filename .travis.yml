@@ -46,6 +46,7 @@ matrix:
     env: PYTHON_VER=3.7 OPENEYE=true RDKIT=true
     
   - os: linux
+    language: ruby
     env: DANGERBOT=true
 
 
