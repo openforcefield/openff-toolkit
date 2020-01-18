@@ -61,11 +61,11 @@ before_install:
 
 # If this is just a "Dangerbot" PR-checking build, install+run the bot, then exit
 - if [ "$DANGERBOT" == true ]; 
-    rbenv global 2.3.1 ;
-    gem install danger --version '~> 5.0' ;
-    danger --version ;
-    danger ;
-    exit ;
+    rbenv global 2.3.1 &&
+    gem install danger --version '~> 5.0' &&
+    danger --version &&
+    danger &&
+    exit 
  fi
 
 # Install conda and some package management tools
