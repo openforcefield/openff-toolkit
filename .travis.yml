@@ -62,7 +62,7 @@ before_install:
 
 # If this is just a "Dangerbot" PR-checking build, install+run the bot, then exit
 - if [ "$DANGERBOT" == true ]; then 
-    rbenv global 2.3.1 && 
+    rbenv global 2.5.3 && 
     gem install danger --version '~> 5.0' && 
     danger --version && 
     danger && 
