@@ -44,6 +44,10 @@ matrix:
     sudo: required
     python: 3.7
     env: PYTHON_VER=3.7 OPENEYE=true RDKIT=true
+    
+  - os: linux
+    env: DANGERBOT=true
+
 
 env:
   global:
@@ -94,9 +98,16 @@ script:
     pytest --ignore=utilities --ignore=examples/deprecated --ignore=docs
     --ignore=devtools --ignore=examples/check_dataset_parameter_coverage
     --nbval-lax --cov=openforcefield --cov-config=setup.cfg;
-  else
+  elif [[ "$RDKIT" == true ]];
+  then
     pytest --ignore=utilities --ignore=examples/deprecated
     --nbval-lax --cov=openforcefield --cov-config=setup.cfg;
+  elif [[ "$DANGERBOT" == true ]];
+  then
+    rbenv global 2.3.1
+    gem install danger --version '~> 5.0'
+    danger --version
+    danger
   fi
 
 # Raise a fuss if cron jobs break
