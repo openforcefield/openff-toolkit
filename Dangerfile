@@ -1,2 +1,2 @@
-# Run the shared Dangerfile with these settings
+# Run the shared OFF Dangerfile
 danger.import_dangerfile(github: "openforcefield/dangerbot")
