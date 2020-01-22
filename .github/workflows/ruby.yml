@@ -1,0 +1,23 @@
+name: off-dangerbot
+
+on:
+  issue_comment:
+    types: [created, deleted]
+    
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Ruby 2.6
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: 2.6.x
+    - name: Assign reviewer if prompted
+      run: |
+        gem install danger --version '~> 5.0'
+        danger --version 
+        danger 
+        
