@@ -1039,6 +1039,48 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             | oechem.OESMILESFlag_AtomStereo)
         return smiles
 
+    def canonical_order_atoms(self, molecule):
+        """
+        Canonical order the atoms in the molecule using the OpenEye toolkit.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The input molecule
+
+         Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+            An openforcefield-style molecule.
+        """
+
+        from openeye import oechem
+        oemol = self.to_openeye(molecule)
+
+        oechem.OECanonicalOrderAtoms(oemol)
+        oechem.OECanonicalOrderBonds(oemol)
+
+        # reorder the iterator
+        vatm = []
+        for atom in oemol.GetAtoms():
+            if atom.GetAtomicNum() != oechem.OEElemNo_H:
+                vatm.append(atom)
+        oemol.OrderAtoms(vatm)
+
+        vbnd = []
+        for bond in oemol.GetBonds():
+            if bond.GetBgn().GetAtomicNum() != oechem.OEElemNo_H and bond.GetEnd().GetAtomicNum() != oechem.OEElemNo_H:
+                vbnd.append(bond)
+        oemol.OrderBonds(vbnd)
+
+        oemol.Sweep()
+
+        for bond in oemol.GetBonds():
+            if bond.GetBgnIdx() > bond.GetEndIdx():
+                bond.SwapEnds()
+
+        return self.from_openeye(oemol)
+
     def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
         """
         Create a Molecule from a SMILES string using the OpenEye toolkit.
@@ -1706,6 +1748,44 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             writer = rdkit_writers[file_format](file_obj)
             writer.write(rdmol)
             writer.close()
+
+    def canonical_order_atoms(self, molecule):
+        """
+        Canonical order the atoms in the molecule using the RDKit.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The input molecule
+
+         Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+            An openforcefield-style molecule with atoms in canonical order.
+        """
+
+        from rdkit import Chem
+        rdmol = self.to_rdkit(molecule)
+
+        # get the canonical ordering with hydrogens first
+        # this is the default behaviour of RDKit
+        atom_order = list(Chem.CanonicalRankAtoms(rdmol, breakTies=True))
+
+        heavy_atoms = rdmol.GetNumHeavyAtoms()
+        hydrogens = rdmol.GetNumAtoms() - heavy_atoms
+
+        # now go through and change the rankings to get the heavy atoms first if hydrogens are present
+        if hydrogens != 0:
+            for i in range(len(atom_order)):
+                if rdmol.GetAtomWithIdx(i).GetAtomicNum() != 1:
+                    atom_order[i] -= hydrogens
+                else:
+                    atom_order[i] += heavy_atoms
+
+        # make an atom mapping from the atom_order and remap the molecule
+        atom_mapping = dict((i, rank) for i, rank in enumerate(atom_order))
+
+        return molecule.remap(atom_mapping, current_to_new=True)
 
     @classmethod
     def to_smiles(cls, molecule):

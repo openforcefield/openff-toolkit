@@ -656,10 +656,13 @@ class TestMolecule:
                 if key not in remaped_bonds:
                     key = tuple(reversed(key))
                 assert key in remaped_bonds
-                # now compare each attribute of the bond
-                assert bond.stereochemistry == remaped_bonds[key].stereochemistry
-                assert bond.is_aromatic == remaped_bonds[key].is_aromatic
-                assert bond.bond_order == remaped_bonds[key].bond_order
+                # now compare each attribute of the bond except the atom indexes
+                bond_dict = bond.to_dict()
+                del bond_dict['atom1']
+                del bond_dict['atom2']
+                remapped_bond_dict = remaped_bonds[key].to_dict()
+                del remapped_bond_dict['atom1']
+                del remapped_bond_dict['atom2']
             assert mol1.n_bonds == mol2.n_bonds
             assert mol1.n_angles == mol2.n_angles
             assert mol1.n_propers == mol2.n_propers
@@ -676,6 +679,44 @@ class TestMolecule:
         assert isomorphic is True
         round_trip_ethanol = new_ethanol.remap(round_trip_mapping, current_to_new=True)
         assert_molecules_match_after_remap(round_trip_ethanol, ethanol)
+
+    @requires_openeye
+    def test_canonical_ordering_openeye(self):
+        """Make sure molecules are returned in canonical ordering of openeye"""
+        from openforcefield.utils.toolkits import OpenEyeToolkitWrapper
+
+        openeye = OpenEyeToolkitWrapper()
+        # get ethanol in canonical order
+        ethanol = create_ethanol()
+        # get reversed non canonical ethanol
+        reversed_ethanol = create_reversed_ethanol()
+        # get the canonical ordering
+        canonical_ethanol = reversed_ethanol.canonical_order_atoms(openeye)
+
+        # now ensure the atom and bond ordering matches
+        for atoms in zip(canonical_ethanol.atoms, ethanol.atoms):
+            print(atoms)
+            assert atoms[0].to_dict() == atoms[1].to_dict()
+
+        for bonds in zip(canonical_ethanol.bonds, ethanol.bonds):
+            assert bonds[0].to_dict() == bonds[1].to_dict()
+
+    @requires_rdkit
+    def test_canonical_ordering_rdkit(self):
+        """Make sure molecules are returned in canonical ordering of the RDKit"""
+        from openforcefield.utils.toolkits import RDKitToolkitWrapper
+
+        rdkit = RDKitToolkitWrapper()
+        # get ethanol in canonical order
+        ethanol = create_ethanol()
+        # get reversed non canonical ethanol
+        reversed_ethanol = create_reversed_ethanol()
+        # get the canonical ordering
+        canonical_ethanol = reversed_ethanol.canonical_order_atoms(rdkit)
+        # make sure the mapping between the ethanol and the rdkit ref canonical form is the same
+        assert (True, {0: 2, 1: 0, 2: 1, 3: 8, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7}) == Molecule.are_isomorphic(canonical_ethanol,
+                                                                                                         ethanol,
+                                                                                                         True)
 
     def test_too_small_remap(self):
         """Make sure remap fails if we do not supply enough indexes"""
@@ -738,7 +779,7 @@ class TestMolecule:
         qcschema = ethanol.to_qcschema()
         # make sure the properties match
         charge = 0
-        connectivity = [(0, 1, 1.0), (0, 4, 1.0), (0, 5, 1.0), (0, 6, 1.0), (1, 2, 1.0), (1, 7, 1.0), (1, 8, 1.0), (2, 3, 1.0)]
+        connectivity = [(0, 1, 1.0), (0, 3, 1.0), (0, 4, 1.0), (0, 5, 1.0), (1, 2, 1.0), (1, 6, 1.0), (1, 7, 1.0), (2, 8, 1.0)]
         symbols = ['C', 'C', 'O', 'H', 'H', 'H', 'H', 'H', 'H']
         assert charge == qcschema.molecular_charge
         assert connectivity == qcschema.connectivity

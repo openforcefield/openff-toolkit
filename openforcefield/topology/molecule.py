@@ -36,6 +36,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
 import numpy as np
 from collections import OrderedDict
 from copy import deepcopy
+import operator
 
 from simtk import unit
 from simtk.openmm.app import element, Element
@@ -1899,7 +1900,12 @@ class FrozenMolecule(Serializable):
             bond_stereochemistry_matching=True,
     ):
         """
-        Determines whether the two molecules are isomorphic by comparing their graphs.
+        Determines whether the two molecules are isomorphic by comparing their graph representations and the chosen
+        node/edge attributes. Minimally connections and atomic_number are checked.
+
+        If nx.Graphs() are given they must at least have atomic_number attributes on nodes.
+        other optional attributes for nodes are: is_aromatic, formal_charge and stereochemistry.
+        optional attributes for edges are: is_aromatic, bond_order and stereochemistry.
 
         Parameters
         ----------
@@ -1976,8 +1982,8 @@ class FrozenMolecule(Serializable):
             edge_match_func = None
 
         # Here we should work out what data type we have, also deal with lists?
-        def find_data_type(data):
-            """Find the data type and return the networkx graph"""
+        def to_networkx(data):
+            """For the given data type, return the networkx graph"""
 
             try:
                 # Molecule class instance
@@ -1990,8 +1996,8 @@ class FrozenMolecule(Serializable):
                     if isinstance(data, nx.Graph):
                         return data
 
-        mol1_netx = find_data_type(mol1)
-        mol2_netx = find_data_type(mol2)
+        mol1_netx = to_networkx(mol1)
+        mol2_netx = to_networkx(mol2)
         isomorphic = nx.is_isomorphic(mol1_netx,
                                       mol2_netx,
                                       node_match=node_match_func,
@@ -2624,6 +2630,7 @@ class FrozenMolecule(Serializable):
                 'of type simtk.units.Quantity')
 
         if self._conformers is None:
+            #TODO should we checking that the exact same conformer is not in the list already?
             self._conformers = []
         self._conformers.append(new_conf)
         return len(self._conformers)
@@ -3367,7 +3374,7 @@ class FrozenMolecule(Serializable):
     def to_qcschema(self, multiplicity=1, conformer=0):
         """
         Generate the qschema input format used to submit jobs to archive
-        or run qcengine calculations locally
+        or run qcengine calculations locally, the molecule is placed in canonical order first.
         spec can be found here <https://molssi-qc-schema.readthedocs.io/en/latest/index.html>
 
         Parameters
@@ -3403,16 +3410,20 @@ class FrozenMolecule(Serializable):
             raise ImportError('Please install QCElemental via conda install -c conda-forge qcelemental '
                               'to validate the schema')
 
+        # get a canonical ordered version of the molecule
+        canonical_mol = self.canonical_order_atoms()
+
+        # get/ check the geometry
         try:
-            geometry = self.conformers[conformer].in_units_of(unit.bohr)
+            geometry = canonical_mol.conformers[conformer].in_units_of(unit.bohr)
         except (IndexError, TypeError):
             raise InvalidConformerError('The molecule must have a conformation to produce a valid qcschema; '
                                         f'no conformer was found at index {conformer}.')
 
         # Gather the required qschema data
-        charge = sum([atom.formal_charge for atom in self.atoms])
-        connectivity = [(bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds]
-        symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms]
+        charge = sum([atom.formal_charge for atom in canonical_mol.atoms])
+        connectivity = [(bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in canonical_mol.bonds]
+        symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in canonical_mol.atoms]
 
         schema_dict = {'symbols': symbols, 'geometry': geometry, 'connectivity': connectivity,
                        'molecular_charge': charge, 'molecular_multiplicity': multiplicity}
@@ -3596,6 +3607,35 @@ class FrozenMolecule(Serializable):
         else:
             raise InvalidConformerError('The PDB and SMILES structures do not match.')
 
+    def canonical_order_atoms(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Canonical order the atoms in a copy of the molecule using a toolkit, returns a new copy.
+
+        Parameters
+        ----------
+        hydrogens_last: bool, default True
+            If the canonical ordering should rank the hydrogens last.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+
+         Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+            An new openforcefield-style molecule with atoms in the canonical order.
+        """
+
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            return toolkit_registry.call('canonical_order_atoms',
+                                         self)
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            return toolkit.canonical_order_atoms(self)
+        else:
+            raise Exception(
+                'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
+                .format(type(toolkit_registry)))
+
     def remap(self, mapping_dict, current_to_new=True):
         """
         Remap all of the indexes in the molecule to match the given mapping dict
@@ -3625,10 +3665,10 @@ class FrozenMolecule(Serializable):
         # and old to new for bonds
         if current_to_new:
             cur_to_new = mapping_dict
-            new_to_cur = dict((v, u) for u, v in mapping_dict.items())
+            new_to_cur = dict(zip(mapping_dict.values(), mapping_dict.keys()))
         else:
             new_to_cur = mapping_dict
-            cur_to_new = dict((v, u) for u, v in mapping_dict.items())
+            cur_to_new = dict(zip(mapping_dict.values(), mapping_dict.keys()))
 
         new_molecule = Molecule()
         new_molecule.name = self.name
@@ -3638,25 +3678,23 @@ class FrozenMolecule(Serializable):
             for i in range(self.n_atoms):
                 # get the old atom info
                 old_atom = self._atoms[new_to_cur[i]]
-                new_molecule.add_atom(atomic_number=old_atom.atomic_number,
-                                      formal_charge=old_atom.formal_charge,
-                                      is_aromatic=old_atom.is_aromatic,
-                                      stereochemistry=old_atom.stereochemistry,
-                                      name=old_atom.name)
+                new_molecule.add_atom(**old_atom.to_dict())
         # this is the first time we access the mapping; catch an index error here corresponding to mapping that starts
         # from 0 or higher
         except (KeyError, IndexError):
             raise IndexError(f'The mapping supplied is missing a relation corresponding to atom({i})')
 
-            # add the bonds but with atom indexes in a sorted ascending order
+        # add the bonds but with atom indexes in a sorted ascending order
         for bond in self._bonds:
             atoms = sorted([cur_to_new[bond.atom1_index], cur_to_new[bond.atom2_index]])
-            new_molecule.add_bond(atom1=atoms[0],
-                                  atom2=atoms[1],
-                                  bond_order=bond.bond_order,
-                                  is_aromatic=bond.is_aromatic,
-                                  stereochemistry=bond.stereochemistry,
-                                  fractional_bond_order=bond.fractional_bond_order)
+            bond_dict = bond.to_dict()
+            bond_dict['atom1'] = atoms[0]
+            bond_dict['atom2'] = atoms[1]
+            new_molecule.add_bond(**bond_dict)
+
+        # we can now resort the bonds
+        sorted_bonds = sorted(new_molecule.bonds, key=operator.attrgetter('atom1_index', 'atom2_index'))
+        new_molecule._bonds = sorted_bonds
 
         # remap the charges
         new_charges = np.zeros(self.n_atoms)
