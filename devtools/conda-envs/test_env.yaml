@@ -16,7 +16,7 @@ dependencies:
   - coverage < 5.0
   - numpy
   - networkx
-  - parmed
+  - ambertools
   - packaging
   - openmmtools
   - openforcefields
