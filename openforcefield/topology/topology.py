@@ -36,7 +36,6 @@ from openforcefield.utils.toolkits import (
 )
 from openforcefield.utils.serialization import Serializable
 from openforcefield.utils import MessageException
-from openforcefield.topology.molecule import Molecule
 
 #=============================================================================================
 # Exceptions
@@ -1593,6 +1592,7 @@ class Topology(Serializable):
             An openforcefield Topology object
         """
         import networkx as nx
+        from openforcefield.topology.molecule import Molecule
 
         # Check to see if the openMM system has defined bond orders, by looping over all Bonds in the Topology.
         omm_has_bond_orders = True
@@ -2296,9 +2296,7 @@ class Topology(Serializable):
         index : int
             The index of this molecule in the topology
         """
-        from networkx.algorithms.isomorphism import GraphMatcher
-
-        from openforcefield.topology.molecule import FrozenMolecule
+        from openforcefield.topology.molecule import Molecule, FrozenMolecule
 
         if local_topology_to_reference_index is None:
             local_topology_to_reference_index = dict((i, i) for i in range(molecule.n_atoms))

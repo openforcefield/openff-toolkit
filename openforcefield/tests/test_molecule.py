@@ -761,7 +761,6 @@ class TestMolecule:
             # now compare the attributes
             assert bond.is_aromatic == sdf_bonds[key].is_aromatic
             assert bond.stereochemistry == sdf_bonds[key].stereochemistry
-            assert bond.bond_order == sdf_bonds[key].bond_order
 
     def test_to_qcschema(self):
         """Test the ability to make and validate qcschema"""

@@ -1984,17 +1984,22 @@ class FrozenMolecule(Serializable):
         # Here we should work out what data type we have, also deal with lists?
         def to_networkx(data):
             """For the given data type, return the networkx graph"""
+            from openforcefield.topology import TopologyMolecule
 
-            try:
+            if isinstance(data, FrozenMolecule):
                 # Molecule class instance
                 return data.to_networkx()
-            except AttributeError:
-                try:
-                    # TopologyMolecule class instance
-                    return data.reference_molecule.to_networkx()
-                except AttributeError:
-                    if isinstance(data, nx.Graph):
-                        return data
+            elif isinstance(data, TopologyMolecule):
+                # TopologyMolecule class instance
+                return data.reference_molecule.to_networkx()
+            elif isinstance(data, nx.Graph):
+                return data
+
+            else:
+                raise NotImplementedError(f'The input type {type(data)} is not supported,'
+                                          f'please supply an openforcefield.topology.molecule.Molecule,'
+                                          f'openforcefield.topology.topology.TopologyMolecule or networkx representaion '
+                                          f'of the molecule.')
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
@@ -2023,14 +2028,6 @@ class FrozenMolecule(Serializable):
 
         else:
             return isomorphic, None
-
-        # if not (isinstance(other, FrozenMolecule)):
-        #    other_fm = FrozenMolecule(other)
-        # else:
-        #    other_fm = other
-        # self_smiles = self.to_smiles(toolkit_registry=toolkit_registry)
-        # other_smiles = other_fm.to_smiles(toolkit_registry=toolkit_registry)
-        # return self_smiles == other_smiles
 
     def is_isomorphic_with(self, other, **kwargs):
         """
@@ -2862,16 +2859,20 @@ class FrozenMolecule(Serializable):
         NotImplementedError : if the molecule is not of one of the specified types.
         """
 
+        from openforcefield.topology import TopologyMolecule
         # check for networkx then assuming we have a Molecule or TopologyMolecule instance just try and
         # extract the info. Note we do not type check the TopologyMolecule due to cyclic dependencies
         if isinstance(molecule, nx.Graph):
             atom_nums = list(dict(molecule.nodes(data='atomic_number', default=1)).values())
 
+        elif isinstance(molecule, TopologyMolecule):
+            atom_nums = [atom.atomic_number for atom in molecule.atoms]
+
+        elif isinstance(molecule, FrozenMolecule):
+            atom_nums = [atom.atomic_number for atom in molecule.atoms]
+
         else:
-            try:
-                atom_nums = [atom.atomic_number for atom in molecule.atoms]
-            except AttributeError:
-                raise NotImplementedError(f'The input type {type(molecule)} is not supported,'
+            raise NotImplementedError(f'The input type {type(molecule)} is not supported,'
                                           f'please supply an openforcefield.topology.molecule.Molecule,'
                                           f'openforcefield.topology.topology.TopologyMolecule or networkx representaion '
                                           f'of the molecule.')
@@ -3431,7 +3432,7 @@ class FrozenMolecule(Serializable):
         return qcel.models.Molecule.from_data(schema_dict, validate=True)
 
     @classmethod
-    def from_mapped_smiles(cls, mapped_smiles, allow_undefined_stereo=False):
+    def from_mapped_smiles(cls, mapped_smiles, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY, allow_undefined_stereo=False):
         """
         Create an openforcefield.topology.molecule.Molecule from a mapped SMILES made with cmiles.
         The molecule will be in the order of the indexing in the mapped smiles string.
@@ -3439,6 +3440,9 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         mapped_smiles: str, a cmiles style mapped smiles string with explicit hydrogens.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if oemol contains undefined stereochemistry.
@@ -3455,7 +3459,7 @@ class FrozenMolecule(Serializable):
 
         # create the molecule from the smiles and check we have the right number of indexes
         # in the mapped SMILES
-        offmol = cls.from_smiles(mapped_smiles, hydrogens_are_explicit=True,
+        offmol = cls.from_smiles(mapped_smiles, hydrogens_are_explicit=True, toolkit_registry=toolkit_registry,
                                  allow_undefined_stereo=allow_undefined_stereo)
 
         # check we found some mapping
@@ -3476,7 +3480,7 @@ class FrozenMolecule(Serializable):
         return offmol.remap(adjusted_mapping, current_to_new=True)
 
     @classmethod
-    def from_qcschema(cls, qca_record, client=None, allow_undefined_stereo=False):
+    def from_qcschema(cls, qca_record, client=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY, allow_undefined_stereo=False):
         """
         Create a Molecule from  a QCArchive entry based on the cmiles information.
 
@@ -3487,6 +3491,9 @@ class FrozenMolecule(Serializable):
         qca_record : dict, a QCArchive dict with json encoding or record instance
 
         client : optional, default=None, a qcportal.FractalClient instance so we can pull the initial molecule geometry.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if oemol contains undefined stereochemistry.
@@ -3520,7 +3527,8 @@ class FrozenMolecule(Serializable):
             raise KeyError('The record must contain the hydrogen mapped smiles to be safley made from the archive.')
 
         # make a new molecule that has been reordered to match the cmiles mapping
-        offmol = cls.from_mapped_smiles(mapped_smiles, allow_undefined_stereo=allow_undefined_stereo)
+        offmol = cls.from_mapped_smiles(mapped_smiles, toolkit_registry=toolkit_registry,
+                                        allow_undefined_stereo=allow_undefined_stereo)
 
         if client is not None:
             # try and find the initial molecule conformations and attach them
@@ -3566,6 +3574,7 @@ class FrozenMolecule(Serializable):
             PDB file path
         smiles : str
             a valid smiles string for the pdb, used for seterochemistry and bond order
+
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if oemol contains undefined stereochemistry.
 
@@ -3579,33 +3588,8 @@ class FrozenMolecule(Serializable):
         InvalidConformerError : if the SMILES and PDB molecules are not isomorphic.
         """
 
-        from rdkit import Chem
-
-        # Make the molecule from smiles
-        offmol = cls.from_smiles(smiles, allow_undefined_stereo=allow_undefined_stereo)
-
-        # Make another molecule from the PDB, allow stero errors here they are expected
-        pdbmol = cls.from_rdkit(Chem.MolFromPDBFile(file_path, removeHs=False), allow_undefined_stereo=True)
-
-        # check isomorphic and get the mapping if true the mapping will be
-        # Dict[pdb_index: offmol_index] sorted by pdb_index
-        isomorphic, mapping = Molecule.are_isomorphic(pdbmol, offmol, return_atom_map=True,
-                                                      aromatic_matching=False,
-                                                      formal_charge_matching=False,
-                                                      bond_order_matching=False,
-                                                      atom_stereochemistry_matching=False,
-                                                      bond_stereochemistry_matching=False)
-
-        if mapping is not None:
-            new_mol = offmol.remap(mapping)
-
-            # the pdb conformer is in the correct order so just attach it here
-            new_mol.add_conformer(pdbmol.conformers[0])
-
-            return new_mol
-
-        else:
-            raise InvalidConformerError('The PDB and SMILES structures do not match.')
+        toolkit = RDKitToolkitWrapper()
+        return toolkit.from_pdb_and_smiles(file_path, smiles, allow_undefined_stereo)
 
     def canonical_order_atoms(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """

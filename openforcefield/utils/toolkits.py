@@ -1559,6 +1559,67 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                                    allow_undefined_stereo=allow_undefined_stereo)
         raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
+    def from_pdb_and_smiles(self, file_path, smiles, allow_undefined_stereo=False):
+        """
+        Create a Molecule from a pdb file and a SMILES string using RDKit.
+
+        Requires RDKit to be installed.
+
+        The molecule is created and sanitised based on the SMILES string, we then find a mapping
+        between this molecule and one from the PDB based only on atomic number and connections.
+        The SMILES molecule is then reindex to match the PDB, the conformer is attached and the
+        molecule returned.
+
+        Parameters
+        ----------
+        file_path: str
+            PDB file path
+        smiles : str
+            a valid smiles string for the pdb, used for seterochemistry and bond order
+
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
+
+        Returns
+        --------
+        molecule : openforcefield.Molecule
+            An OFFMol instance with ordering the same as used in the PDB file.
+
+        Raises
+        ------
+        InvalidConformerError : if the SMILES and PDB molecules are not isomorphic.
+        """
+
+        from rdkit import Chem
+        from openforcefield.topology.molecule import Molecule, InvalidConformerError
+
+        # Make the molecule from smiles
+        offmol = self.from_smiles(smiles,
+                                  allow_undefined_stereo=allow_undefined_stereo)
+
+        # Make another molecule from the PDB, allow stero errors here they are expected
+        pdbmol = self.from_rdkit(Chem.MolFromPDBFile(file_path, removeHs=False), allow_undefined_stereo=True)
+
+        # check isomorphic and get the mapping if true the mapping will be
+        # Dict[pdb_index: offmol_index] sorted by pdb_index
+        isomorphic, mapping = Molecule.are_isomorphic(pdbmol, offmol, return_atom_map=True,
+                                                      aromatic_matching=False,
+                                                      formal_charge_matching=False,
+                                                      bond_order_matching=False,
+                                                      atom_stereochemistry_matching=False,
+                                                      bond_stereochemistry_matching=False)
+
+        if mapping is not None:
+            new_mol = offmol.remap(mapping)
+
+            # the pdb conformer is in the correct order so just attach it here
+            new_mol.add_conformer(pdbmol.conformers[0])
+
+            return new_mol
+
+        else:
+            raise InvalidConformerError('The PDB and SMILES structures do not match.')
+
     def from_file(self,
                   file_path,
                   file_format,
