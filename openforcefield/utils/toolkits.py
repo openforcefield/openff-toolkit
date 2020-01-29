@@ -535,7 +535,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oechem.OEPerceiveChiral(oemol)
             oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
             oechem.OE3DToInternalStereo(oemol)
-            mol = Molecule.from_openeye(
+            mol = cls.from_openeye(
                 oemol,
                 allow_undefined_stereo=allow_undefined_stereo)
             mols.append(mol)
@@ -1254,7 +1254,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 "loading the molecule from a file with geometry already present or running "
                 "molecule.generate_conformers() before calling molecule.compute_partial_charges"
             )
-        oemol = molecule.to_openeye()
+        oemol = self.to_openeye(molecule)
 
         errfs = oechem.oeosstream()
         oechem.OEThrow.SetOutputStream(errfs)
@@ -1264,8 +1264,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # This logic handles errors encountered in #34
         if not quacpac_status:
             if "SelectElfPop: issue with removing trans COOH conformers" in (errfs.str().decode("UTF-8")):
-                logger.warning("OEAM1BCCELF10 charge assignment failed due to a known bug (toolkit issue #346). "
-                               "Downgrading to OEAM1BCC charge assignment for this molecule.")
+                logger.warning("Warning: OEAM1BCCELF10 charge assignment failed due to a known bug (toolkit issue "
+                               "#346). Downgrading to OEAM1BCC charge assignment for this molecule. More information"
+                               "is available at https://github.com/openforcefield/openforcefield/issues/346")
                 quacpac_status = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
 
         if quacpac_status is False:
@@ -1384,7 +1385,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Set up query
         qmol = oechem.OEQMol()
         if not oechem.OEParseSmarts(qmol, smarts):
-            raise ValueError("Error parsing SMARTS '%s'" % smarts)
+            raise ValueError(f"Error parsing SMARTS '{smarts}'")
 
         # Determine aromaticity model
         if aromaticity_model:
@@ -1449,7 +1450,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        oemol = molecule.to_openeye()
+        oemol = self.to_openeye(molecule)
         return self._find_smarts_matches(oemol, smarts)
 
 
@@ -1554,20 +1555,17 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     logger.warn(rdmol.GetProp('_Name') + e)
                     continue
                 Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-                mol = Molecule.from_rdkit(
-                    rdmol,
-                    allow_undefined_stereo=allow_undefined_stereo
-                )
-
+                mol = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
                 mols.append(mol)
+
         elif (file_format == 'SMI'):
             # TODO: We have to do some special stuff when we import SMILES (currently
             # just adding H's, but could get fancier in the future). It might be
             # worthwhile to parse the SMILES file ourselves and pass each SMILES
             # through the from_smiles function instead
-            for rdmol in Chem.SmilesMolSupplier(file_path):
+            for rdmol in Chem.SmilesMolSupplier(file_path, titleLine=False):
                 rdmol = Chem.AddHs(rdmol)
-                mol = Molecule.from_rdkit(rdmol)
+                mol = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
                 mols.append(mol)
 
         elif (file_format == 'PDB'):
@@ -1616,8 +1614,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         if (file_format == "MOL") or (file_format == "SDF"):
             # TODO: Iterate over all mols in file_data
-            for rdmol in Chem.ForwardSDMolSupplier(file_obj, removeHs=False, sanitize=False, strictParsing=True):
-                mol = Molecule.from_rdkit(rdmol)
+            for rdmol in Chem.ForwardSDMolSupplier(file_obj):
+                mol = self.from_rdkit(rdmol)
                 mols.append(mol)
 
         if (file_format == 'SMI'):
@@ -1775,8 +1773,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                         f"desired molecule as an RDMol with no implicit hydrogens, and then use "
                         f"Molecule.from_rdkit() to create the desired OFFMol.")
 
-        molecule = Molecule.from_rdkit(rdmol,
-                                       allow_undefined_stereo=allow_undefined_stereo)
+        molecule = self.from_rdkit(rdmol,
+                                   allow_undefined_stereo=allow_undefined_stereo)
 
         return molecule
 
@@ -2712,7 +2710,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ValueError if the requested charge method could not be handled
 
         """
-
         import os
         from simtk import unit
 
@@ -2731,7 +2728,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 "molecule.generate_conformers() before calling molecule.compute_partial_charges"
             )
         if len(molecule._conformers) > 1:
-            logger.warning("In AmberToolsToolkitwrapper.computer_partial_charges_am1bcc: "
+            logger.warning("Warning: In AmberToolsToolkitwrapper.compute_partial_charges_am1bcc: "
                            "Molecule '{}' has more than one conformer, but this function "
                            "will only generate charges for the first one.".format(molecule.name))
 
@@ -2909,11 +2906,19 @@ class ToolkitRegistry:
 
         # Raise exception if not available.
         if not toolkit_wrapper.is_available():
-            msg = "Unable to load toolkit {}.".format(toolkit_wrapper)
+            msg = "Unable to load toolkit '{}'. ".format(toolkit_wrapper._toolkit_name)
             if exception_if_unavailable:
                 raise ToolkitUnavailableException(msg)
             else:
-                logger.warning(msg)
+                if 'OpenEye' in msg:
+                    msg += "The Open Force Field Toolkit does not require the OpenEye Toolkits, and can " \
+                           "use RDKit/AmberTools instead. However, if you have a valid license for the " \
+                           "OpenEye Toolkits, consider installing them for faster performance and additional " \
+                           "file format support: " \
+                           "https://docs.eyesopen.com/toolkits/python/quickstart-python/linuxosx.html " \
+                           "OpenEye offers free Toolkit licenses for academics: " \
+                           "https://www.eyesopen.com/academic-licensing"
+                logger.warning(f"Warning: {msg}")
             return
 
         # Add toolkit to the registry.

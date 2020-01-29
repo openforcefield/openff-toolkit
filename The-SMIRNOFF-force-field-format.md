@@ -190,16 +190,14 @@ Currently, only classical fixed point charge models are supported, but future ex
 
 ### `<LibraryCharges>`: Library charges for polymeric residues and special solvent models
 
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit. Please see [Issue 25 on the Open Force Field Toolkit issue tracker](https://github.com/openforcefield/openforcefield/issues/25).
-
 A mechanism is provided for specifying library charges that can be applied to molecules or residues that match provided templates.
 Library charges are applied first, and atoms for which library charges are applied will be excluded from alternative charging schemes listed below.
 
 For example, to assign partial charges for a non-terminal ALA residue from the [AMBER ff14SB](http://doi.org/10.1021/acs.jctc.5b00255) parameter set:
 ```XML
 <LibraryCharges version="0.3">
-   <!-- match a non-terminal alanine residue with AMBER ff14SB partial charges-->
-   <LibraryCharge name="ALA" smirks="[NX3:1]([#1:2])([#6])[#6H1:3]([#1:4])([#6:5]([#1:6])([#1:7])[#1:8])[#6:9](=[#8:10])[#7]" charge1="-0.4157*elementary_charge" charge2="0.2719*elementary_charge" charge3="0.0337*elementary_charge" charge4="0.0823*elementary_charge" charge5="-0.1825*elementary_charge" charge6="0.0603*elementary_charge" charge7="0.0603*elementary_charge" charge8="0.0603*elementary_charge" charge9="0.5973*elementary_charge" charge10="-0.5679*elementary_charge">
+   <!-- match a non-terminal alanine residue with AMBER ff14SB partial charges -->
+   <LibraryCharge name="ALA" smirks="[NX3:1]([#1:2])([#6])[#6H1:3]([#1:4])([#6:5]([#1:6])([#1:7])[#1:8])[#6:9](=[#8:10])[#7]" charge1="-0.4157*elementary_charge" charge2="0.2719*elementary_charge" charge3="0.0337*elementary_charge" charge4="0.0823*elementary_charge" charge5="-0.1825*elementary_charge" charge6="0.0603*elementary_charge" charge7="0.0603*elementary_charge" charge8="0.0603*elementary_charge" charge9="0.5973*elementary_charge" charge10="-0.5679*elementary_charge"/>
    ...
 </LibraryCharges>
 ```
@@ -214,13 +212,20 @@ For example, to ensure water molecules are assigned partial charges for [TIP3P](
 ```XML
 <LibraryCharges version="0.3">
    <!-- TIP3P water oxygen with charge override -->
-   <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="+0.417*elementary_charge" charge2="-0.834*elementary_charge" charge3="+0.417*elementary_charge"/>
+   <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="0.417*elementary_charge" charge2="-0.834*elementary_charge" charge3="0.417*elementary_charge"/>
 </LibraryCharges>
 ```
 
+
+| LibraryCharges section tag version | Tag attributes and default values    | Required parameter attributes   | Optional parameter attributes |
+|------------------------------------|--------------------------------------|---------------------------------|-------------------------------|
+| 0.3                                |                                      | `smirks`, `charge` (indexed)    | `name`, `id`, `parent_id`     |
+
+
+
 ### `<ChargeIncrementModel>`: Small molecule and fragment charges
 
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit. This area of the SMIRNOFF spec is under further consideration. Please see [Issue 208 on the Open Force Field Toolkit issue tracker](https://github.com/openforcefield/openforcefield/issues/208).
+.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit. This area of the SMIRNOFF spec is under further consideration. Please see `Issue 208 on the Open Force Field Toolkit issue tracker <https://github.com/openforcefield/openforcefield/issues/208>`_.
 
 In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), partial charges for small molecules are usually assigned using a quantum chemical method (usually a semiempirical method such as [AM1](https://en.wikipedia.org/wiki/Austin_Model_1)) and a [partial charge determination scheme](https://en.wikipedia.org/wiki/Partial_charge) (such as [CM2](http://doi.org/10.1021/jp972682r) or [RESP](http://doi.org/10.1021/ja00074a030)), then subsequently corrected via charge increment rules, as in the highly successful [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach.
 
@@ -503,24 +508,27 @@ The *second* atom in an improper (in the example above, the trivalent carbon) is
 
 ### `<GBSA>`
 
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit.
+  .. warning :: The current release of ParmEd
+    `can not transfer GBSA models produced by the Open Force Field Toolkit
+    to other simulation packages
+    <https://github.com/ParmEd/ParmEd/blob/3.2.0/parmed/openmm/topsystem.py#L148-L150>`_.
+    These GBSA forces are currently only computable using OpenMM.
 
 Generalized-Born surface area (GBSA) implicit solvent parameters are optionally specified via a `<GBSA>...</GBSA>` using `<Atom>` tags with GBSA model specific attributes:
 ```XML
- <GBSA version="0.3" gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
-   <Atom smirks="[#1:1]" radius="0.12*nanometer" scale="0.85"/>
-   <Atom smirks="[#1:1]~[#6]" radius="0.13*nanometer" scale="0.85"/>
-   <Atom smirks="[#1:1]~[#8]" radius="0.08*nanometer" scale="0.85"/>
-   <Atom smirks="[#1:1]~[#16]" radius="0.08*nanometer" scale="0.85"/>
-   <Atom smirks="[#6:1]" radius="0.22*nanometer" scale="0.72"/>
-   <Atom smirks="[#7:1]" radius="0.155*nanometer" scale="0.79"/>
-   <Atom smirks="[#8:1]" radius="0.15*nanometer" scale="0.85"/>
-   <Atom smirks="[#9:1]" radius="0.15*nanometer" scale="0.88"/>
-   <Atom smirks="[#14:1]" radius="0.21*nanometer" scale="0.8"/>
-   <Atom smirks="[#15:1]" radius="0.185*nanometer" scale="0.86"/>
-   <Atom smirks="[#16:1]" radius="0.18*nanometer" scale="0.96"/>
-   <Atom smirks="[#17:1]" radius="0.17*nanometer" scale="0.8"/>
- </GBSA>
+<GBSA version="0.3" gb_model="OBC1" solvent_dielectric="78.5" solute_dielectric="1" sa_model="ACE" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
+  <Atom smirks="[*:1]" radius="0.15*nanometer" scale="0.8"/>
+  <Atom smirks="[#1:1]" radius="0.12*nanometer" scale="0.85"/>
+  <Atom smirks="[#1:1]~[#7]" radius="0.13*nanometer" scale="0.85"/>
+  <Atom smirks="[#6:1]" radius="0.17*nanometer" scale="0.72"/>
+  <Atom smirks="[#7:1]" radius="0.155*nanometer" scale="0.79"/>
+  <Atom smirks="[#8:1]" radius="0.15*nanometer" scale="0.85"/>
+  <Atom smirks="[#9:1]" radius="0.15*nanometer" scale="0.88"/>
+  <Atom smirks="[#14:1]" radius="0.21*nanometer" scale="0.8"/>
+  <Atom smirks="[#15:1]" radius="0.185*nanometer" scale="0.86"/>
+  <Atom smirks="[#16:1]" radius="0.18*nanometer" scale="0.96"/>
+  <Atom smirks="[#17:1]" radius="0.17*nanometer" scale="0.8"/>
+</GBSA>
 ```
 
 #### Supported Generalized Born (GB) models
@@ -534,7 +542,6 @@ If the `gb_model` attribute is omitted, it defaults to `OBC1`.
 
 The attributes `solvent_dielectric` and `solute_dielectric` specify solvent and solute dielectric constants used by the GB model.
 In this example, `radius` and `scale` are per-particle parameters of the `OBC1` GB model supported by OpenMM.
-Units are for these per-particle parameters (such as `radius_units`) specified in the `<GBSA>` tag.
 
 #### Surface area (SA) penalty model
 

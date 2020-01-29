@@ -43,7 +43,7 @@ from openforcefield.utils import all_subclasses, MessageException, \
     convert_all_quantities_to_string, convert_all_strings_to_quantity, \
     convert_0_1_smirnoff_to_0_2, convert_0_2_smirnoff_to_0_3
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
-from openforcefield.typing.engines.smirnoff.parameters import ParameterList, ParameterHandler
+from openforcefield.typing.engines.smirnoff.parameters import ParameterHandler
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
 
 
@@ -275,8 +275,8 @@ class ForceField:
         # otherwise, we can't define two different ParameterHandler subclasses to compare for a new type of energy term
         # since both will try to register themselves for the same XML tag and an Exception will be raised.
         if parameter_handler_classes is None:
-            parameter_handlers = all_subclasses(ParameterHandler)
-        self._register_parameter_handler_classes(parameter_handlers)
+            parameter_handler_classes = all_subclasses(ParameterHandler)
+        self._register_parameter_handler_classes(parameter_handler_classes)
 
         # Register all ParameterIOHandler objects that will process serialized parameter representations
         if parameter_io_handler_classes is None:
@@ -299,7 +299,6 @@ class ForceField:
         self._parameter_handlers = OrderedDict()  # ParameterHandler classes to be instantiated for each parameter type
         self._parameter_io_handler_classes = OrderedDict()  # ParameterIOHandler classes that _can_ be initialiazed if needed
         self._parameter_io_handlers = OrderedDict()  # ParameterIO classes to be used for each file type
-        self._parameters = ParameterList()  # ParameterHandler objects instantiated for each parameter type
         self._aromaticity_model = None
         self._author = None
         self._date = None
@@ -591,23 +590,21 @@ class ForceField:
         def render_atoms(atomsets):
             msg = ""
             for atomset in atomsets:
-                msg += '%30s :' % str(atomset)
+                msg += f'{atomset:30} :'
                 try:
                     for atom_index in atomset:
                         atom = atoms[atom_index]
-                        msg += ' %5s %3s %3s' % (atom.residue.index,
-                                                 atom.residue.name, atom.name)
+                        msg += f' {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}'
                 except TypeError as te:
                     atom = atoms[atomset]
-                    msg += ' %5s %3s %3s' % (atom.residue.index,
-                                             atom.residue.name, atom.name)
+                    msg += f' {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}'
 
                 msg += '\n'
             return msg
 
         if set(assigned_set) != set(topology_set):
             # Form informative error message
-            msg = '%s: Mismatch between valence terms added and topological terms expected.\n' % name
+            msg = f'{name}: Mismatch between valence terms added and topological terms expected.\n'
             atoms = [atom for atom in topology.topology_atoms]
             if len(assigned_set.difference(topology_set)) > 0:
                 msg += 'Valence terms created that are not present in Topology:\n'
@@ -1056,19 +1053,21 @@ class ForceField:
         G = nx.DiGraph()
         for tagname, parameter_handler in self._parameter_handlers.items():
             G.add_node(tagname)
+        for tagname, parameter_handler in self._parameter_handlers.items():
             if parameter_handler._DEPENDENCIES is not None:
                 for dependency in parameter_handler._DEPENDENCIES:
                     G.add_edge(dependency._TAGNAME, parameter_handler._TAGNAME)
-        # TODO: Check to make sure DAG isn't cyclic
+
+        # Ensure there are no loops in handler order
+        if not(nx.is_directed_acyclic_graph(G)):
+            raise RuntimeError("Unable to resolve order in which to run ParameterHandlers. Dependencies do not form "
+                               "a directed acyclic graph.")
         # Resolve order
         ordered_parameter_handlers = list()
         for tagname in nx.topological_sort(G):
             if tagname in self._parameter_handlers:
                 ordered_parameter_handlers.append(
                     self._parameter_handlers[tagname])
-            else:
-                ordered_parameter_handlers.append(
-                    self.get_parameter_handler(tagname))
         return ordered_parameter_handlers
 
     # TODO: Should we add convenience methods to parameterize a Topology and export directly to AMBER, gromacs, CHARMM, etc.?

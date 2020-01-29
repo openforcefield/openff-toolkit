@@ -8,16 +8,266 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
 
-Current Development
--------------------
+0.6.0 - Library Charges
+-----------------------
+
+This release adds support for a new SMIRKS-based charge assignment method,
+`Library Charges <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#librarycharges-library-charges-for-polymeric-residues-and-special-solvent-models>`_.
+The addition of more charge assignment methods opens the door for new types of
+experimentation, but also introduces several complex behaviors and failure modes.
+Accordingly, we have made changes
+to the charge assignment infrastructure to check for cases when partial charges do
+not sum to the formal charge of the molecule, or when no charge assignment method is able
+to generate charges for a molecule. More detailed explanation of the new errors that may be raised and
+keywords for overriding them are in the "Behavior Changed" section below.
+
+
+With this release, we update ``test_forcefields/tip3p.offxml`` to be a working example of assigning LibraryCharges.
+However, we do not provide any force field files to assign protein residue ``LibraryCharges``.
+If you are interested in translating an existing protein FF to SMIRNOFF format or developing a new one, please
+feel free to contact us on the `Issue tracker <https://github.com/openforcefield/openforcefield/issues>`_ or open a
+`Pull Request <https://github.com/openforcefield/openforcefield/pulls>`_.
+
 
 New features
 """"""""""""
+- `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: Closes
+  `Issue #25 <https://github.com/openforcefield/openforcefield/issues/25>`_ by adding
+  initial support for the
+  `LibraryCharges tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#librarycharges-library-charges-for-polymeric-residues-and-special-solvent-models>`_
+  using
+  :py:class:`LibraryChargeHandler <openforcefield.typing.engines.smirnoff.parameters.LibraryChargeHandler>`.
+  For a molecule to have charges assigned using Library Charges, all of its atoms must be covered by
+  at least one ``LibraryCharge``. If an atom is covered by multiple ``LibraryCharge`` s, then the last
+  ``LibraryCharge`` matched will be applied (per the hierarchy rules in the SMIRNOFF format).
 
+  This functionality is thus able to apply per-residue charges similar to those in traditional
+  protein force fields. At this time, there is no concept of "residues" or "fragments" during
+  parametrization, so it is not possible to assign charges to `some` atoms in a molecule using
+  ``LibraryCharge`` s, but calculate charges for other atoms in the same molecule using a different
+  method. To assign charges to a protein, LibraryCharges SMARTS must be provided for
+  the residues and protonation states in the molecule, as well as for any capping groups
+  and post-translational modifications that are present.
+
+  It is valid for ``LibraryCharge`` SMARTS to `partially` overlap one another. For example, a molecule
+  consisting of atoms ``A-B-C`` connected by single bonds could be matched by a SMIRNOFF
+  ``LibraryCharges`` section containing two ``LibraryCharge`` SMARTS: ``A-B`` and ``B-C``. If
+  listed in that order, the molecule would be assigned the ``A`` charge from the ``A-B`` ``LibraryCharge``
+  element and the ``B`` and ``C`` charges from the ``B-C`` element. In testing, these types of
+  partial overlaps were found to frequently be sources of undesired behavior, so it is recommended
+  that users define whole-molecule ``LibraryCharge`` SMARTS whenever possible.
+
+- `PR #455 <https://github.com/openforcefield/openforcefield/pull/455>`_: Addresses
+  `Issue #393 <https://github.com/openforcefield/openforcefield/issues/393>`_ by adding
+  :py:meth:`ParameterHandler.attribute_is_cosmetic <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.attribute_is_cosmetic>`
+  and
+  :py:meth:`ParameterType.attribute_is_cosmetic <openforcefield.typing.engines.smirnoff.parameters.ParameterType.attribute_is_cosmetic>`,
+  which return True if the provided attribute name is defined for the queried object
+  but does not correspond to an allowed value in the SMIRNOFF spec.
+
+Behavior changed
+""""""""""""""""
+- `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: If a molecule
+  can not be assigned charges by any charge-assignment method, an
+  ``openforcefield.typing.engines.smirnoff.parameters.UnassignedMoleculeChargeException``
+  will be raised. Previously, creating a system without either ``ToolkitAM1BCCHandler`` or
+  the ``charge_from_molecules`` keyword argument to ``ForceField.create_openmm_system`` would
+  produce a system where the molecule has zero charge on all atoms. However, given that we
+  will soon be adding more options for charge assignment, it is important that
+  failures not be silent. Molecules with zero charge can still be produced by setting the
+  ``Molecule.partial_charges`` array to be all zeroes, and including the molecule in the
+  ``charge_from_molecules`` keyword argument to ``create_openmm_system``.
+- `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: Due to risks
+  introduced by permitting charge assignment using partially-overlapping ``LibraryCharge`` s,
+  the toolkit will now raise a
+  ``openforcefield.typing.engines.smirnoff.parameters.NonIntegralMoleculeChargeException``
+  if the sum of partial charges on a molecule are found to be more than 0.01 elementary charge units
+  different than the molecule's formal charge. This exception can be overridden by providing
+  the ``allow_nonintegral_charges=True`` keyword argument to ``ForceField.create_openmm_system``.
+
+
+
+
+Tests added
+"""""""""""
+- `PR #430 <https://github.com/openforcefield/openforcefield/pull/430>`_: Added test for 
+  Wiberg Bond Order implemented in OpenEye Toolkits. Molecules taken from 
+  DOI:10.5281/zenodo.3405489 . Added by Sukanya Sasmal.
+ 
+
+Bugfixes
+""""""""
+- `PR #431 <https://github.com/openforcefield/openforcefield/pull/431>`_: Fixes an issue
+  where ``ToolkitWrapper`` objects would improperly search for functionality in the
+  ``GLOBAL_TOOLKIT_REGISTRY``, even though a specific ``ToolkitRegistry`` was requested for an
+  operation.
+- `PR #439 <https://github.com/openforcefield/openforcefield/pull/439>`_: Fixes
+  `Issue #438 <https://github.com/openforcefield/openforcefield/issues/438>`_, by replacing
+  call to NetworkX ``Graph.node`` with call to ``Graph.nodes``, per
+  `2.4 migration guide <https://networkx.github.io/documentation/stable/release/release_2.4.html>`_.
+
+Files modified
+""""""""""""""
+- `PR #433 <https://github.com/openforcefield/openforcefield/pull/433>`_: Updates
+  the previously-nonfunctional ``test_forcefields/tip3p.offxml`` to a functional state
+  by updating it to the SMIRNOFF
+  0.3 specification, and specifying atomic charges using the ``LibraryCharges`` tag.
+
+
+0.5.1 - Adding the parameter coverage example notebook
+------------------------------------------------------
+
+This release contains a new notebook example,
+`check_parameter_coverage.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/check_dataset_parameter_coverage/check_parameter_coverage.ipynb>`_,
+which loads sets of molecules, checks whether they are parameterizable,
+and generates reports of chemical motifs that are not.
+It also fixes several simple issues, improves warnings and docstring text,
+and removes unused files.
+
+The parameter coverage example notebook goes hand-in-hand with the
+release candidate of our initial force field,
+`openff-1.0.0-RC1.offxml <https://github.com/openforcefield/openforcefields>`_
+, which will be temporarily available until the official force
+field release is made in October.
+Our goal in publishing this notebook alongside our first major refitting is to allow interested
+users to check whether there is parameter coverage for their molecules of interest.
+If the force field is unable to parameterize a molecule, this notebook will generate
+reports of the specific chemistry that is not covered. We understand that many organizations
+in our field have restrictions about sharing specific molecules, and the outputs from this
+notebook can easily be cropped to communicate unparameterizable chemistry without revealing
+the full structure.
+
+The force field release candidate is in our new refit force field package,
+`openforcefields <https://github.com/openforcefield/openforcefields>`_.
+This package is now a part of the Open Force Field Toolkit conda recipe, along with the original
+`smirnoff99Frosst <https://github.com/openforcefield/smirnoff99Frosst>`_ line of force fields.
+
+Once the ``openforcefields`` conda package is installed, you can load the release candidate using:
+
+``ff = ForceField('openff-1.0.0-RC1.offxml')``
+
+The release candidate will be removed when the official force field,
+``openff-1.0.0.offxml``, is released in early October.
+
+Complete details about this release are below.
+
+Example added
+"""""""""""""
+- `PR #419 <https://github.com/openforcefield/openforcefield/pull/419>`_: Adds
+  an example notebook
+  `check_parameter_coverage.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/check_dataset_parameter_coverage/check_parameter_coverage.ipynb>`_
+  which shows how to use the toolkit to check a molecule
+  dataset for missing parameter coverage, and provides functionality to output
+  tagged SMILES and 2D drawings of the unparameterizable chemistry.
+
+
+New features
+""""""""""""
+- `PR #419 <https://github.com/openforcefield/openforcefield/pull/419>`_: Unassigned
+  valence parameter exceptions now include a list of tuples of
+  :py:class:`TopologyAtom <openforcefield.topology.TopologyAtom>`
+  which were unable to be parameterized (``exception.unassigned_topology_atom_tuples``)
+  and the class of the
+  :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
+  that raised the exception (``exception.handler_class``).
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Implements
+  Trevor Gokey's suggestion from
+  `Issue #411 <https://github.com/openforcefield/openforcefield/issues/411>`_, which
+  enables pickling of
+  :py:class:`ForceFields <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  and
+  :py:class:`ParameterHandlers <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`.
+  Note that, while XML representations of ``ForceField``s are stable and conform to the SMIRNOFF
+  specification, the pickled ``ForceField``s that this functionality enables are not guaranteed
+  to be compatible with future toolkit versions.
+
+Improved documentation and warnings
+"""""""""""""""""""""""""""""""""""
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #410 <https://github.com/openforcefield/openforcefield/issues/410>`_, by explicitly
+  having toolkit warnings print ``Warning:`` at the beginning of each warning, and adding
+  clearer language to the warning produced when the OpenEye Toolkits can not be loaded.
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #421 <https://github.com/openforcefield/openforcefield/issues/421>`_ by
+  adding type/shape information to all Molecule partial charge and conformer docstrings.
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #407 <https://github.com/openforcefield/openforcefield/issues/421>`_ by
+  providing a more extensive explanation of why we don't use RDKit's mol2 parser
+  for molecule input.
+
+Bugfixes
+""""""""
+- `PR #419 <https://github.com/openforcefield/openforcefield/pull/419>`_: Fixes
+  `Issue #417 <https://github.com/openforcefield/openforcefield/issues/417>`_ and
+  `Issue #418 <https://github.com/openforcefield/openforcefield/issues/418>`_, where
+  :py:meth:`RDKitToolkitWrapper.from_file <openforcefield.utils.toolkits.RDKitToolkitWrapper.from_file>`
+  would disregard the ``allow_undefined_stereo`` kwarg and skip the first molecule
+  when reading a SMILES file.
+
+
+Files removed
+"""""""""""""
+- `PR #425 <https://github.com/openforcefield/openforcefield/pull/425>`_: Addresses
+  `Issue #424 <https://github.com/openforcefield/openforcefield/issues/424>`_ by
+  deleting the unused files ``openforcefield/typing/engines/smirnoff/gbsaforces.py``
+  and ``openforcefield/tests/test_smirnoff.py``. ``gbsaforces.py`` was only used internally
+  and ``test_smirnoff.py`` tested unsupported functionality from before the 0.2.0 release.
+
+
+
+
+0.5.0 - GBSA support and quality-of-life improvements
+-----------------------------------------------------
+
+This release adds support for the
+`GBSA tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/0.5.0/smirnoff.html#gbsa>`_.
+Currently, the ``HCT``, ``OBC1``, and ``OBC2`` models (corresponding to AMBER keywords
+``igb=1``, ``2``, and ``5``, respectively) are supported, with the ``OBC2`` implementation being
+the most flexible. Unfortunately, systems produced
+using these keywords are not yet transferable to other simulation packages via ParmEd, so users are restricted
+to using OpenMM to simulate systems with GBSA.
+
+OFFXML files containing GBSA parameter definitions are available,
+and can be loaded in addition to existing parameter sets (for example, with the command
+``ForceField('test_forcefields/smirnoff99Frosst.offxml', 'test_forcefields/GBSA_OBC1-1.0.offxml')``).
+A manifest of new SMIRNOFF-format GBSA files is below.
+
+
+Several other user-facing improvements have been added, including easier access to indexed attributes,
+which are now accessible as ``torsion.k1``, ``torsion.k2``, etc. (the previous access method
+``torsion.k`` still works as well). More details of the new features and several bugfixes are listed below.
+
+New features
+""""""""""""
+- `PR #363 <https://github.com/openforcefield/openforcefield/pull/363>`_: Implements
+  :py:class:`GBSAHandler <openforcefield.typing.engines.smirnoff.parameters.GBSAHandler>`,
+  which supports the
+  `GBSA tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/0.5.0/smirnoff.html#gbsa>`_.
+  Currently, only GBSAHandlers with ``gb_model="OBC2"`` support
+  setting non-default values for the ``surface_area_penalty`` term (default ``5.4*calories/mole/angstroms**2``),
+  though users can zero the SA term for ``OBC1`` and ``HCT`` models by setting ``sa_model="None"``.
+  No model currently supports setting ``solvent_radius`` to any value other than ``1.4*angstroms``.
+  Files containing experimental SMIRNOFF-format implementations of ``HCT``, ``OBC1``, and ``OBC2`` are
+  included with this release (see below). Additional details of these models, including literature references,
+  are available on the
+  `SMIRNOFF specification page <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#supported-generalized-born-gb-models>`_.
+
+    .. warning :: The current release of ParmEd
+      `can not transfer GBSA models produced by the Open Force Field Toolkit
+      to other simulation packages
+      <https://github.com/ParmEd/ParmEd/blob/3.2.0/parmed/openmm/topsystem.py#L148-L150>`_.
+      These GBSA forces are currently only computable using OpenMM.
+
+- `PR #363 <https://github.com/openforcefield/openforcefield/pull/363>`_: When using
+  :py:meth:`Topology.to_openmm() <openforcefield.topology.Topology.to_openmm>`, periodic
+  box vectors are now transferred from the Open Force Field Toolkit Topology
+  into the newly-created OpenMM Topology.
 - `PR #377 <https://github.com/openforcefield/openforcefield/pull/377>`_: Single indexed parameters in
   :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
   and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
-  can now be get/set through normal attribute syntax on top of the list syntax.
+  can now be get/set through normal attribute syntax in addition to the list syntax.
+- `PR #394 <https://github.com/openforcefield/openforcefield/pull/394>`_: Include element and atom name
+  in error output when there are missing valence parameters during molecule parameterization.
 
 Bugfixes
 """"""""
@@ -26,7 +276,22 @@ Bugfixes
   having :py:meth:`OpenEyeToolkitWrapper.compute_partial_charges_am1bcc <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.compute_partial_charges_am1bcc>`
   fall back to using standard AM1-BCC if AM1-BCC ELF10 charge generation raises
   an error about "trans COOH conformers"
+- `PR #399 <https://github.com/openforcefield/openforcefield/pull/399>`_: Fixes
+  issue where
+  :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  constructor would ignore ``parameter_handler_classes`` kwarg.
+- `PR #400 <https://github.com/openforcefield/openforcefield/pull/400>`_: Makes
+  link-checking tests retry three times before failing.
 
+
+
+Files added
+"""""""""""
+- `PR #363 <https://github.com/openforcefield/openforcefield/pull/363>`_: Adds
+  ``test_forcefields/GBSA_HCT-1.0.offxml``, ``test_forcefields/GBSA_OBC1-1.0.offxml``,
+  and ``test_forcefields/GBSA_OBC2-1.0.offxml``, which are experimental implementations
+  of GBSA models. These are primarily used in validation tests against OpenMM's models, and
+  their version numbers will increment if bugfixes are necessary.
 
 0.4.1 - Bugfix Release
 ----------------------

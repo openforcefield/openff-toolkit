@@ -131,8 +131,19 @@ def test_readme_links(readme_link):
     headers = {'User-Agent':'Mozilla/5.0',
                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',}
     request = Request(readme_link, headers=headers)
-    urlopen(request)
 
+    # Try to connect 3 times, keeping track of exceptions so useful feedback can be provided.
+    success = False
+    exception= None
+    for retry in range(3):
+        try:
+            urlopen(request)
+            success = True
+            break
+        except Exception as e:
+            exception = e
+    if not(success):
+        raise exception
 
 @pytest.mark.parametrize('example_file_path', find_examples())
 def test_examples(example_file_path):

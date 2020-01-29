@@ -19,10 +19,11 @@ from simtk import unit
 
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
-    ParameterAttribute, IndexedParameterAttribute, _ParameterAttributeHandler,
-    ParameterList, ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
-    ImproperTorsionHandler, SMIRNOFFSpecError
-)
+    ParameterAttribute, IndexedParameterAttribute, ParameterList,
+    ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
+    ImproperTorsionHandler, LibraryChargeHandler, GBSAHandler, SMIRNOFFSpecError,
+    _ParameterAttributeHandler
+    )
 from openforcefield.utils import detach_units, IncompatibleUnitError
 from openforcefield.utils.collections import ValidatedList
 
@@ -339,13 +340,13 @@ class TestParameterHandler:
         # Successfully create ParameterHandler by providing min supported version
         ph = ParameterHandler(version=ParameterHandler._MIN_SUPPORTED_SECTION_VERSION)
 
-        # Generate a SMIRNOFFSpecError ParameterHandler by providing a value higher than the max supported
+        # Generate a SMIRNOFFSpecError by providing a value higher than the max supported
         with pytest.raises(SMIRNOFFVersionError, match='SMIRNOFF offxml file was written with version 1000.0, '
                                                     'but this version of ForceField only supports version') as excinfo:
             ph = ParameterHandler(version='1000.0')
 
 
-        # Generate a SMIRNOFFSpecError ParameterHandler by providing a value lower than the min supported
+        # Generate a SMIRNOFFSpecError by providing a value lower than the min supported
         with pytest.raises(SMIRNOFFVersionError, match='SMIRNOFF offxml file was written with version 0.1, '
                                                     'but this version of ForceField only supports version') as excinfo:
             ph = ParameterHandler(version='0.1')
@@ -364,10 +365,13 @@ class TestParameterHandler:
                           'length': 0.2*unit.nanometer,
                           'k': 0.4*unit.kilojoule_per_mole/unit.nanometer**2})
 
+        assert not(bh.attribute_is_cosmetic('pilot'))
+
         # Ensure the cosmetic attribute is present by default during output
         bh.add_cosmetic_attribute('pilot', 'alice')
         param_dict = bh.to_dict()
         assert ('pilot', 'alice') in param_dict.items()
+        assert bh.attribute_is_cosmetic('pilot')
 
         # Ensure the cosmetic attribute isn't present if we request that it be discarded
         param_dict = bh.to_dict(discard_cosmetic_attributes=True)
@@ -377,6 +381,7 @@ class TestParameterHandler:
         bh.delete_cosmetic_attribute('pilot')
         param_dict = bh.to_dict()
         assert 'pilot' not in param_dict
+        assert not(bh.attribute_is_cosmetic('pilot'))
 
 
 class TestParameterList:
@@ -615,6 +620,33 @@ class TestParameterType:
             optional = ParameterAttribute(default=None)
         with pytest.raises(SMIRNOFFSpecError, match="require the following missing parameters"):
             MyParameter(smirks='[*:1]', optional=1)
+
+    def test_add_delete_cosmetic_attributes(self):
+        """
+        Test ParameterType.add_cosmetic_attribute, delete_cosmetic_attribute,
+        attribute_is_cosmetic, and to_dict() functions for proper behavior
+        """
+        class MyParameter(ParameterType):
+            required = ParameterAttribute()
+        my_par = MyParameter(smirks='[*:1]', required='aaa')
+        assert not(my_par.attribute_is_cosmetic('pilot'))
+
+        # Ensure the cosmetic attribute is present by default during output
+        my_par.add_cosmetic_attribute('pilot', 'alice')
+        param_dict = my_par.to_dict()
+        assert ('pilot', 'alice') in param_dict.items()
+        assert my_par.attribute_is_cosmetic('pilot')
+
+        # Ensure the cosmetic attribute isn't present if we request that it be discarded
+        param_dict = my_par.to_dict(discard_cosmetic_attributes=True)
+        assert 'pilot' not in param_dict
+
+
+        # Manually delete the cosmetic attribute and ensure it doesn't get written out
+        my_par.delete_cosmetic_attribute('pilot')
+        param_dict = my_par.to_dict()
+        assert 'pilot' not in param_dict
+        assert not(my_par.attribute_is_cosmetic('pilot'))
 
     def test_indexed_attrs(self):
         """ParameterType handles indexed attributes correctly."""
@@ -908,36 +940,100 @@ class TestProperTorsionType:
                                                         k2=6 * unit.kilocalorie_per_mole,
                                                         )
 
-def test_torsion_handler_charmm_potential():
-    """
-    Test creation of TorsionHandlers with the deprecated 0.2 potential value "charmm" instead of the current
-    supported potential value "fourier".
-    """
-    import re
+class TestProperTorsionHandler:
+    def test_torsion_handler_charmm_potential(self):
+        """
+        Test creation of TorsionHandlers with the deprecated 0.2 potential value "charmm" instead of the current
+        supported potential value "fourier".
+        """
+        import re
 
-    # Test creating ProperTorsionHandlers
-    err_msg = re.escape("Attempted to set ProperTorsionHandler.potential to charmm. Currently, "
-                        "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))'].")
-    with pytest.raises(SMIRNOFFSpecError, match=err_msg):
-        ph1 = ProperTorsionHandler(potential='charmm', skip_version_check=True)
-    ph1 = ProperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
+        # Test creating ProperTorsionHandlers
+        err_msg = re.escape("Attempted to set ProperTorsionHandler.potential to charmm. Currently, "
+                            "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))'].")
+        with pytest.raises(SMIRNOFFSpecError, match=err_msg):
+            ph1 = ProperTorsionHandler(potential='charmm', skip_version_check=True)
+        ph1 = ProperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
-    # Same test, but with ImproperTorsionHandler
-    err_msg = re.escape("Attempted to set ImproperTorsionHandler.potential to charmm. Currently, "
-                        "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))'].")
-    with pytest.raises(SMIRNOFFSpecError, match=err_msg):
-        ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
-    ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
+        # Same test, but with ImproperTorsionHandler
+        err_msg = re.escape("Attempted to set ImproperTorsionHandler.potential to charmm. Currently, "
+                            "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))'].")
+        with pytest.raises(SMIRNOFFSpecError, match=err_msg):
+            ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
+        ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
+
+class TestLibraryChargeHandler:
+    def test_create_library_charge_handler(self):
+        """Test creation of an empty LibraryChargeHandler"""
+        handler = LibraryChargeHandler(skip_version_check=True)
+
+class TestGBSAHandler:
+    def test_create_default_gbsahandler(self):
+        """Test creation of an empty GBSAHandler, with all default attributes"""
+        from simtk import unit
+        gbsa_handler = GBSAHandler(skip_version_check=True)
+        assert gbsa_handler.gb_model == 'OBC1'
+        assert gbsa_handler.solvent_dielectric == 78.5
+        assert gbsa_handler.solute_dielectric == 1
+        assert gbsa_handler.sa_model == 'ACE'
+        assert gbsa_handler.surface_area_penalty == 5.4 * unit.calorie / unit.mole / unit.angstrom**2
+        assert gbsa_handler.solvent_radius == 1.4 * unit.angstrom
 
 
-    #     p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
-    #                                                 phase1=30 * unit.degree,
-    #                                                 periodicity1=2,
-    #                                                 k1=5 * unit.kilocalorie_per_mole,
-    #                                                 phase2=31 * unit.angstrom, # This should be caught
-    #                                                 periodicity2=3,
-    #                                                 k2=6 * unit.kilocalorie_per_mole,
-    #                                                 )
+    def test_gbsahandler_setters(self):
+        """Test creation of an empty GBSAHandler, with all default attributes"""
+        from simtk import unit
+        gbsa_handler = GBSAHandler(skip_version_check=True)
+
+        gbsa_handler.gb_model = 'OBC2'
+        gbsa_handler.gb_model = 'HCT'
+        gbsa_handler.gb_model = 'OBC1'
+        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+            gbsa_handler.gb_model = 'Something invalid'
+
+        gbsa_handler.solvent_dielectric = 50.0
+        gbsa_handler.solvent_dielectric = "50.0"
+        with pytest.raises(ValueError) as excinfo:
+            gbsa_handler.solvent_dielectric = 'string that can not be cast to float'
+
+        gbsa_handler.solute_dielectric = 2.5
+        gbsa_handler.solute_dielectric = "3.5"
+        with pytest.raises(ValueError) as excinfo:
+            gbsa_handler.solute_dielectric = 'string that can not be cast to float'
+
+        gbsa_handler.sa_model = 'ACE'
+
+        # NOTE -- Right now, the SMIRNOFF spec will implicitly assume these are the same.
+        gbsa_handler.sa_model = None
+        gbsa_handler.sa_model = 'None'
+
+        with pytest.raises(TypeError) as excinfo:
+            gbsa_handler.sa_model = 'Invalid SA option'
+
+        gbsa_handler.surface_area_penalty = 1.23 * unit.kilocalorie / unit.mole / unit.nanometer**2
+        with pytest.raises(IncompatibleUnitError) as excinfo:
+            gbsa_handler.surface_area_penalty = 1.23 * unit.degree / unit.mole / unit.nanometer**2
+
+        gbsa_handler.solvent_radius = 300 * unit.femtometer
+        with pytest.raises(IncompatibleUnitError) as excinfo:
+            gbsa_handler.solvent_radius = 3000 * unit.radian
+
+    def test_gbsahandlers_are_compatible(self):
+        """
+        Test the check_handler_compatibility function of GBSAHandler
+        """
+        from openforcefield.typing.engines.smirnoff import IncompatibleParameterError
+        from simtk import unit
+        gbsa_handler_1 = GBSAHandler(skip_version_check=True)
+        gbsa_handler_2 = GBSAHandler(skip_version_check=True)
+
+        # Perform a check which should pass
+        gbsa_handler_1.check_handler_compatibility(gbsa_handler_2)
+
+        # Perform a check which should fail
+        gbsa_handler_3 = GBSAHandler(skip_version_check=True, solvent_radius=1.3 * unit.angstrom)
+        with pytest.raises(IncompatibleParameterError, match="Difference between 'solvent_radius' ") as excinfo:
+            gbsa_handler_1.check_handler_compatibility(gbsa_handler_3)
 
 
 # TODO: test_nonbonded_settings (ensure that choices in Electrostatics and vdW tags resolve

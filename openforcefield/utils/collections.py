@@ -121,6 +121,14 @@ class ValidatedList(list):
             return self.__class__(super().__getitem__(item))
         return super().__getitem__(item)
 
+    # This is needed for pickling. See https://github.com/openforcefield/openforcefield/issues/411
+    # for more details.
+    # TODO: Is there a cleaner way (getstate/setstate perhaps?) to allow FFs to be
+    #       pickled?
+    def __reduce__(self):
+        return (__class__, ( list( self),), self.__dict__)
+
+
     def _convert_and_validate(self, seq):
         """Run all converters and the validator on the given sequence."""
         # Run all element converters.

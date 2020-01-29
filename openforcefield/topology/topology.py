@@ -1469,7 +1469,7 @@ class Topology(Serializable):
         elif type(query) is ChemicalEnvironment:
             smarts = query.as_smarts()
         else:
-            raise ValueError("Don't know how to convert query '%s' into SMARTS string" %query)
+            raise ValueError(f"Don't know how to convert query '{query}' into SMARTS string")
 
         # Perform matching on each unique molecule, unrolling the matches to all matching copies
         # of that molecule in the Topology object.
@@ -1506,7 +1506,6 @@ class Topology(Serializable):
                         tuple(topology_atom_indices))
 
                     matches.append(environment_match)
-
         return matches
 
     def to_dict(self):
@@ -1542,7 +1541,7 @@ class Topology(Serializable):
         # Make a flat list of all atomic numbers in the molecule
         atom_nums = []
         for idx in mol_graph.nodes:
-            atom_nums.append(mol_graph.node[idx]['atomic_number'])
+            atom_nums.append(mol_graph.nodes[idx]['atomic_number'])
 
         # Count the number of instances of each atomic number
         at_num_to_counts = dict([(unq, atom_nums.count(unq)) for unq in atom_nums])
@@ -1767,6 +1766,9 @@ class Topology(Serializable):
             bond_type = Aromatic if bond.bond.is_aromatic else bond_types[bond.bond_order]
             omm_topology.addBond(omm_atoms[atom1_idx], omm_atoms[atom2_idx],
                                  type=bond_type, order=bond.bond_order)
+
+        if self.box_vectors is not None:
+            omm_topology.setPeriodicBoxVectors(self.box_vectors)
         return omm_topology
 
     @staticmethod
@@ -2284,31 +2286,68 @@ class Topology(Serializable):
         pass
 
     def add_molecule(self, molecule, local_topology_to_reference_index=None):
-        """Add a Molecule to the Topology.
+        """Add a Molecule to the Topology. You can optionally request that the atoms be added to the Topology in
+        a different order than they appear in the Molecule.
 
         Parameters
         ----------
         molecule : Molecule
             The Molecule to be added.
         local_topology_to_reference_index: dict, optional, default = None
-            Dictionary of {TopologyMolecule_atom_index : Molecule_atom_index} for the TopologyMolecule that will be built
+            Dictionary of {TopologyMolecule_atom_index : Molecule_atom_index} for the TopologyMolecule that will be
+            built. If None, this function will add the atoms to the Topology in the order that they appear in the
+            reference molecule.
 
         Returns
         -------
         index : int
             The index of this molecule in the topology
         """
+        from networkx.algorithms.isomorphism import GraphMatcher
+
         from openforcefield.topology.molecule import FrozenMolecule
-        #molecule.set_aromaticity_model(self._aromaticity_model)
+
+        if local_topology_to_reference_index is None:
+            local_topology_to_reference_index = dict((i, i) for i in range(molecule.n_atoms))
 
         mol_smiles = molecule.to_smiles()
         reference_molecule = None
-        for potential_ref_mol in self._reference_molecule_to_topology_molecules.keys(
-        ):
+        for potential_ref_mol in self._reference_molecule_to_topology_molecules.keys():
             if mol_smiles == potential_ref_mol.to_smiles():
                 # If the molecule is already in the Topology.reference_molecules, add another reference to it in
                 # Topology.molecules
                 reference_molecule = potential_ref_mol
+
+                # Graph-match this molecule to see if it's in the same order
+
+                # Set functions for determining equality between nodes and edges
+                node_match_func = lambda x, y: ((x['atomic_number'] == y['atomic_number']) &
+                                                (x['stereochemistry'] == y['stereochemistry']) &
+                                                (x['formal_charge'] == y['formal_charge']) &
+                                                (x['is_aromatic'] == y['is_aromatic']) )
+                edge_match_func = lambda x, y: ((x['bond_order'] == y['bond_order']) &
+                                                (x['stereochemistry'] == y['stereochemistry']) &
+                                                (x['is_aromatic'] == y['is_aromatic']) )
+
+                mol_nx = molecule.to_networkx()
+                ref_mol_nx = reference_molecule.to_networkx()
+                # Take the first valid atom indexing map
+                GM = GraphMatcher(
+                     mol_nx,
+                     ref_mol_nx,
+                     node_match=node_match_func,
+                     edge_match=edge_match_func)
+                atom_map = None
+                for mapping in GM.isomorphisms_iter():
+                    atom_map = mapping
+                    break
+                if atom_map is None:
+                    raise Exception(1)
+                new_mapping = {}
+                for local_top_idx, ref_idx in local_topology_to_reference_index.items():
+                    new_mapping[local_top_idx] = atom_map[ref_idx]
+                local_topology_to_reference_index = new_mapping
+                #raise Exception(local_topology_to_reference_index)
                 break
         if reference_molecule is None:
             # If it's a new unique molecule, make and store an immutable copy of it
@@ -2346,13 +2385,9 @@ class Topology(Serializable):
         if (iatom, jatom) in self._constrained_atom_pairs:
             existing_distance = self._constrained_atom_pairs[(iatom, jatom)]
             if unit.is_quantity(existing_distance) and (distance is True):
-                raise Exception(
-                    'Atoms (%d,%d) already constrained with distance %s but attempting to override with unspecified distance'
-                    % (iatom, jatom, existing_distance))
+                raise Exception(f"Atoms ({iatom},{jatom}) already constrained with distance {existing_distance} but attempting to override with unspecified distance")
             if (existing_distance is True) and (distance is True):
-                raise Exception(
-                    'Atoms (%d,%d) already constrained with unspecified distance but attempting to override with unspecified distance'
-                    % (iatom, jatom))
+                raise Exception(f"Atoms ({iatom},{jatom}) already constrained with unspecified distance but attempting to override with unspecified distance")
             if distance is False:
                 del self._constrained_atom_pairs[(iatom, jatom)]
                 del self._constrained_atom_pairs[(jatom, iatom)]
