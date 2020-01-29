@@ -303,24 +303,23 @@ class TestOpenEyeToolkitWrapper:
         ethanol.to_file(sio, 'SDF', toolkit_registry=toolkit_wrapper)
         sdf_text = sio.getvalue()
         # The output lines of interest here will look like
-        # >  <atom.dprop.PartialCharge>  (1)
-        # -0.40000000000000002 -0.29999999999999999 -0.20000000000000001 -0.10000000000000001 0.01 0.10000000000000001 0.20000000000000001 0.29999999999999999 0.40000000000000002
-
+        # > <atom.dprop.PartialCharge>
+        # -0.400000 -0.300000 -0.200000 -0.100000 0.000010 0.100000 0.200000 0.300000 0.400000
         # Parse the SDF text, grabbing the numeric line above
         sdf_split = sdf_text.split('\n')
-        is_charge_line = False
+        charge_line_found = False
         for line in sdf_split:
-            if is_charge_line:
+            if charge_line_found:
                 charges = [float(i) for i in line.split()]
                 break
-            if '>  <atom.dprop.PartialCharge>  (1)' in line:
-                is_charge_line = True
+            if '> <atom.dprop.PartialCharge>' in line:
+                charge_line_found = True
 
         # Make sure that a charge line was ever found
-        assert is_charge_line == True
+        assert charge_line_found == True
 
         # Make sure that the charges found were correct
-        assert_almost_equal(charges, [-0.4, -0.3, -0.2, -0.1, 0.01, 0.1, 0.2, 0.3, 0.4])
+        assert_almost_equal(charges, [-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4])
 
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
@@ -337,9 +336,20 @@ class TestOpenEyeToolkitWrapper:
         # In our current configuration, if the OFFMol doesn't have partial charges, we DO NOT want a partial charge
         # block to be written. For reference, it's possible to indicate that a partial charge is not known by writing
         # out "n/a" (or another placeholder) in the partial charge block atoms without charges.
-        assert '>  <atom.dprop.PartialCharge>  (1)' not in sdf_text
+        assert '>  <atom.dprop.PartialCharge>' not in sdf_text
 
-
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_sdf_charges_roundtrip(self):
+        """Test OpenEyeToolkitWrapper for performing a round trip of a molecule with partial charge to and from
+        a sdf file"""
+        from openforcefield.tests.test_forcefield import create_ethanol
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        ethanol = create_ethanol()
+        # The file is automatically deleted outside the with-clause.
+        with NamedTemporaryFile(suffix='.sdf') as iofile:
+            ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
+            ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
+        assert (ethanol.partial_charges == ethanol2.partial_charges).all()
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_coordinates(self):
@@ -817,17 +827,17 @@ class TestRDKitToolkitWrapper:
         assert molecule._conformers[0].shape == (15, 3)
         assert_almost_equal(molecule.conformers[0][5][1] / unit.angstrom, 2.0104, decimal=4)
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
-    def test_get_sdf_charges(self):
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_read_sdf_charges(self):
         """Test RDKitToolkitWrapper for importing a charges from a sdf file"""
         toolkit_wrapper = RDKitToolkitWrapper()
-        filename = get_data_filename('molecules/ethanol_partial_charges.sdf')
+        filename = get_data_file_path('molecules/ethanol_partial_charges.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert molecule.partial_charges is not None
         assert molecule.partial_charges[0] == -0.4 * unit.elementary_charge
         assert molecule.partial_charges[-1] == 0.4 * unit.elementary_charge
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_write_sdf_charges(self):
         """Test RDKitToolkitWrapper for writing partial charges to a sdf file"""
         from openforcefield.tests.test_forcefield import create_ethanol
@@ -843,22 +853,22 @@ class TestRDKitToolkitWrapper:
 
         # Parse the SDF text, grabbing the numeric line above
         sdf_split = sdf_text.split('\n')
-        is_charge_line = False
+        charge_line_found = False
         for line in sdf_split:
-            if is_charge_line:
+            if charge_line_found:
                 charges = [float(i) for i in line.split()]
                 break
-            if '>  <atom.dprop.PartialCharge>  (1)' in line:
-                is_charge_line = True
+            if '>  <atom.dprop.PartialCharge>' in line:
+                charge_line_found = True
 
         # Make sure that a charge line was ever found
-        assert is_charge_line == True
+        assert charge_line_found
 
         # Make sure that the charges found were correct
-        assert_almost_equal(charges, [-0.4, -0.3, -0.2, -0.1, 0.01, 0.1, 0.2, 0.3, 0.4])
+        assert_almost_equal(charges, [-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4])
 
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_sdf_charges_roundtrip(self):
         """Test RDKitToolkitWrapper for performing a round trip of a molecule with partial charge to and from
         a sdf file"""
@@ -867,11 +877,11 @@ class TestRDKitToolkitWrapper:
         ethanol = create_ethanol()
         # The file is automatically deleted outside the with-clause.
         with NamedTemporaryFile(suffix='.sdf') as iofile:
-            ethanol.to_file(iofile.name, outfile_format='SDF', toolkit_registry=toolkit_wrapper)
+            ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
         assert (ethanol.partial_charges == ethanol2.partial_charges).all()
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.toolkit_is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_write_sdf_no_charges(self):
         """Test RDKitToolkitWrapper for importing a charges from a sdf file"""
         from openforcefield.tests.test_forcefield import create_ethanol
@@ -885,7 +895,7 @@ class TestRDKitToolkitWrapper:
         # In our current configuration, if the OFFMol doesn't have partial charges, we DO NOT want a partial charge
         # block to be written. For reference, it's possible to indicate that a partial charge is not known by writing
         # out "n/a" (or another placeholder) in the partial charge block atoms without charges.
-        assert '>  <atom.dprop.PartialCharge>  (1)' not in sdf_text
+        assert '>  <atom.dprop.PartialCharge>' not in sdf_text
 
 
     # Find a multiconformer SDF file

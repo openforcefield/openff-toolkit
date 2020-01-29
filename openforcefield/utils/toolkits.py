@@ -477,6 +477,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 ofs = oechem.oemolostream(outfile)
                 openeye_format = getattr(oechem, 'OEFormat_' + file_format)
                 ofs.SetFormat(openeye_format)
+                if (file_format.lower() == "sdf") and (molecule.partial_charges is not None):
+                    partial_charges_list = []
+                    for pc in molecule.partial_charges:
+                        unitless_pc = pc / unit.elementary_charge
+                        partial_charges_list.append(f'{unitless_pc:f}')
+                    partial_charges_str = ' '.join(partial_charges_list)
+                    # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
+                    #  describe/infer the proper data type?
+                    oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
+
                 oechem.OEWriteMolecule(ofs, oemol)
                 ofs.close()
                 file_data = open(outfile).read()
@@ -501,6 +511,15 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ofs = oechem.oemolostream(file_path)
         openeye_format = getattr(oechem, 'OEFormat_' + file_format)
         ofs.SetFormat(openeye_format)
+        if (file_format.lower() == "sdf") and (molecule.partial_charges is not None):
+            partial_charges_list = []
+            for pc in molecule.partial_charges:
+                unitless_pc = pc / unit.elementary_charge
+                partial_charges_list.append(f'{unitless_pc:f}')
+            partial_charges_str = ' '.join(partial_charges_list)
+            # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
+            #  describe/infer the proper data type?
+        oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
         oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
 
@@ -535,6 +554,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oechem.OEPerceiveChiral(oemol)
             oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
             oechem.OE3DToInternalStereo(oemol)
+
+            # If this is an SD file, check to see if there are partial charges
+            raise Exception([i.GetTag() for i in oechem.OEGetSDDataPairs(oemol)])
+            if ((oemolistream.GetFormat() == oechem.OEFormat_SDF) and
+                (oechem.OEHasSDData(oemol, 'atom.dprop.PartialCharge'))):
+                charges_str = oechem.OEGetSDData(oemol, "atom.dprop.PartialCharge")
+                raise Exception(charges_str)
+                charges_unitless = [float(i)for i in charges_str.split()]
+                for charge, oeatom in zip(charges_unitless, oemol.GetAtoms()):
+                    oeatom.SetPartialCharge(charge)
+
+
             mol = cls.from_openeye(
                 oemol,
                 allow_undefined_stereo=allow_undefined_stereo)
