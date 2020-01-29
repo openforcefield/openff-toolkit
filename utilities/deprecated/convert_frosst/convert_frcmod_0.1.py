@@ -78,9 +78,9 @@ def add_date_and_author(inxml, date, author):
     for l in input_lines:
         start = l.strip().split('>')[0]
         if start == '<Date':
-            output_lines.append("<Date>%s</Date>\n" % date.strip())
+            output_lines.append(f"<Date>{date.strip()}</Date>\n")
         elif start == '<Author':
-            output_lines.append("<Author>%s</Author>\n" % author.strip())
+            output_lines.append(f"<Author>{author.strip()}</Author>\n")
         else:
             output_lines.append(l)
 
@@ -188,7 +188,7 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
             if not (name=='IMPR' or name=='DIHE'):
                 # Check for duplicates first
                 if ff.getParameter( smirks, force_type = force_section[idx] ):
-                    raise ValueError("Error: parameter for %s is already present in forcefield." % smirks )
+                    raise ValueError(f"Error: parameter for {smirks} is already present in forcefield.")
                 else:
                     ff.addParameter( params, smirks, force_section[idx], tag[idx] )
 
@@ -202,11 +202,11 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
                 if oldparams:
                     # Find what number to use
                     idnr = 1
-                    paramtag = 'k%s' % idnr
+                    paramtag = f"k{idnr}"
                     # This was "while paramtag in params" so it was overwriting k2 etc.
                     while paramtag in oldparams:
                         idnr+=1
-                        paramtag = 'k%s' % idnr
+                        paramtag = f"k{idnr}"
                     # Construct new param object with updated numbers
                     for paramtag in ('periodicity1', 'phase1', 'idivf1', 'k1'):
                         if paramtag in params:
@@ -234,7 +234,7 @@ if __name__=="__main__":
     usage_string="""\
     Convert specified SMIRKS-ified AMBER frcmod file into SMIRNOFF FFXML format, inserting converted parameters into a template FFXML file and writing to a new output file.
 
-    usage: convert_frcmod.py --frcmod test.frcmod --template template.offxml --xml test.offxml
+    usage: convert_frcmod_0.1.py --frcmod test.frcmod --template template.offxml --xml test.offxml
     """
     parser = OptionParser(usage=usage_string)
 

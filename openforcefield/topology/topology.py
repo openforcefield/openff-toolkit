@@ -23,7 +23,7 @@ Class definitions to represent a molecular system and its chemical components
 
 import itertools
 
-from collections import MutableMapping
+from collections.abc import MutableMapping
 from collections import OrderedDict
 
 from simtk import unit
@@ -219,8 +219,7 @@ class TopologyAtom(Serializable):
         int
             The index of this atom in its parent topology.
         """
-        mapped_molecule_atom_index = self._topology_molecule._ref_to_top_index[
-            self._atom.molecule_atom_index]
+        mapped_molecule_atom_index = self._topology_molecule._ref_to_top_index[self._atom.molecule_atom_index]
         return self._topology_molecule.atom_start_topology_index + mapped_molecule_atom_index
 
     @property
@@ -234,8 +233,7 @@ class TopologyAtom(Serializable):
             The index of this atom in its parent topology.
         """
         # This assumes that particles in a molecule are ordered with all the Atoms first and VirtualSites last.
-        mapped_molecule_particle_index = self._topology_molecule._ref_to_top_index[
-            self._atom.molecule_atom_index]
+        mapped_molecule_particle_index = self._topology_molecule._ref_to_top_index[self._atom.molecule_atom_index]
         return self._topology_molecule.particle_start_topology_index + mapped_molecule_particle_index
 
     @property
@@ -590,6 +588,21 @@ class TopologyMolecule:
         self._ref_to_top_index = dict(
             (k, j) for j, k in local_topology_to_reference_index.items())
 
+        # Initialize cached data
+        self._atom_start_topology_index = None
+        self._particle_start_topology_index = None
+        self._bond_start_topology_index = None
+        self._virtual_site_start_topology_index = None
+
+
+    def _invalidate_cached_data(self):
+        """Unset all cached data, in response to an appropriate change"""
+        self._atom_start_topology_index = None
+        self._particle_start_topology_index = None
+        self._bond_start_topology_index = None
+        self._virtual_site_start_topology_index = None
+
+
     @property
     def topology(self):
         """
@@ -625,7 +638,7 @@ class TopologyMolecule:
 
     def atom(self, index):
         """
-        Get the TopologyAtom with a given topology molecule index in this TopologyMolecule.
+        Get the TopologyAtom with a given topology atom index in this TopologyMolecule.
 
         Parameters
         ----------
@@ -662,11 +675,17 @@ class TopologyMolecule:
         Get the topology index of the first atom in this TopologyMolecule
 
         """
-        atom_start_topology_index = 0
-        for topology_molecule in self._topology.topology_molecules:
-            if self == topology_molecule:
-                return atom_start_topology_index
-            atom_start_topology_index += topology_molecule.n_atoms
+        # If cached value is not available, generate it.
+        if self._atom_start_topology_index is None:
+            atom_start_topology_index = 0
+            for topology_molecule in self._topology.topology_molecules:
+                if self == topology_molecule:
+                    self._atom_start_topology_index = atom_start_topology_index
+                    break
+                atom_start_topology_index += topology_molecule.n_atoms
+
+        # Return cached value
+        return self._atom_start_topology_index
 
     def bond(self, index):
         """
@@ -710,11 +729,17 @@ class TopologyMolecule:
         """Get the topology index of the first bond in this TopologyMolecule
 
         """
-        bond_start_topology_index = 0
-        for topology_molecule in self._topology.topology_molecules:
-            if self == topology_molecule:
-                return bond_start_topology_index
-            bond_start_topology_index += topology_molecule.n_bonds
+        # If cached value is not available, generate it.
+        if self._bond_start_topology_index is None:
+            bond_start_topology_index = 0
+            for topology_molecule in self._topology.topology_molecules:
+                if self == topology_molecule:
+                    self._bond_start_topology_index = bond_start_topology_index
+                    break
+                bond_start_topology_index += topology_molecule.n_bonds
+
+        # Return cached value
+        return self._bond_start_topology_index
 
     def particle(self, index):
         """
@@ -772,11 +797,17 @@ class TopologyMolecule:
     def particle_start_topology_index(self):
         """Get the topology index of the first particle in this TopologyMolecule.
         """
-        particle_start_topology_index = 0
-        for topology_molecule in self._topology.topology_molecules:
-            if self == topology_molecule:
-                return particle_start_topology_index
-            particle_start_topology_index += topology_molecule.n_particles
+        # If cached value is not available, generate it.
+        if self._particle_start_topology_index is None:
+            particle_start_topology_index = 0
+            for topology_molecule in self._topology.topology_molecules:
+                if self == topology_molecule:
+                    self._particle_start_topology_index = particle_start_topology_index
+                    break
+                particle_start_topology_index += topology_molecule.n_particles
+
+        # Return the cached value
+        return self._particle_start_topology_index
 
     def virtual_site(self, index):
         """
@@ -850,11 +881,15 @@ class TopologyMolecule:
     def virtual_site_start_topology_index(self):
         """Get the topology index of the first virtual site in this TopologyMolecule
         """
-        virtual_site_start_topology_index = 0
-        for topology_molecule in self._topology.topology_molecules:
-            if self == topology_molecule:
-                return virtual_site_start_topology_index
-            virtual_site_start_topology_index += topology_molecule.n_virtual_sites
+        # If the cached value is not available, generate it
+        if self._virtual_site_start_topology_index is None:
+            virtual_site_start_topology_index = 0
+            for topology_molecule in self._topology.topology_molecules:
+                if self == topology_molecule:
+                    self._virtual_site_start_topology_index = virtual_site_start_topology_index
+                virtual_site_start_topology_index += topology_molecule.n_virtual_sites
+        # Return cached value
+        return self._virtual_site_start_topology_index
 
     def to_dict(self):
         """Convert to dictionary representation."""
@@ -1360,6 +1395,47 @@ class Topology(Serializable):
             for improper in topology_molecule.impropers:
                 yield improper
 
+    class _ChemicalEnvironmentMatch:
+        """Represents the match of a given chemical environment query, storing
+        both the matched topology atom indices and the indices of the corresponding
+        reference molecule atoms, as well as a reference to the reference molecule.
+        """
+
+        @property
+        def reference_atom_indices(self):
+            """tuple of int: The indices of the corresponding reference molecule atoms."""
+            return self._reference_atom_indices
+
+        @property
+        def reference_molecule(self):
+            """topology.molecule.Molecule: The corresponding reference molecule."""
+            return self._reference_molecule
+
+        @property
+        def topology_atom_indices(self):
+            """tuple of int: The matched topology atom indices."""
+            return self._topology_atom_indices
+
+        def __init__(self, reference_atom_indices, reference_molecule, topology_atom_indices):
+            """Constructs a new _ChemicalEnvironmentMatch object
+
+            Parameters
+            ----------
+            reference_atom_indices: tuple of int
+                The indices of the corresponding reference molecule atoms.
+            reference_molecule: topology.molecule.Molecule
+                The corresponding reference molecule.
+            topology_atom_indices: tuple of int
+                The matched topology atom indices.
+            """
+
+            assert len(reference_atom_indices) == len(topology_atom_indices)
+
+            self._reference_atom_indices = reference_atom_indices
+            self._reference_molecule = reference_molecule
+
+            self._topology_atom_indices = topology_atom_indices
+
     def chemical_environment_matches(self,
                                      query,
                                      aromaticity_model='MDL',
@@ -1382,49 +1458,54 @@ class Topology(Serializable):
 
         Returns
         -------
-        matches : list of TopologyAtom tuples
-            A list of all matching Atom tuples
+        matches : list of Topology._ChemicalEnvironmentMatch
+            A list of tuples, containing the topology indices of the matching atoms.
 
         """
+
         # Render the query to a SMARTS string
         if type(query) is str:
             smarts = query
         elif type(query) is ChemicalEnvironment:
             smarts = query.as_smarts()
         else:
-            raise ValueError(
-                "Don't know how to convert query '%s' into SMARTS string" %
-                query)
+            raise ValueError(f"Don't know how to convert query '{query}' into SMARTS string")
 
-        # Perform matching on each unique molecule, unrolling the matches to all matching copies of that molecule in the Topology object.
+        # Perform matching on each unique molecule, unrolling the matches to all matching copies
+        # of that molecule in the Topology object.
         matches = list()
+
         for ref_mol in self.reference_molecules:
+
             # Find all atomsets that match this definition in the reference molecule
-            # This will automatically attempt to match chemically identical atoms in a canonical order within the Topology
-            refmol_matches = ref_mol.chemical_environment_matches(
-                smarts, toolkit_registry=toolkit_registry)
+            # This will automatically attempt to match chemically identical atoms in
+            # a canonical order within the Topology
+            ref_mol_matches = ref_mol.chemical_environment_matches(smarts, toolkit_registry=toolkit_registry)
 
-            # Loop over matches
-            for reference_match in refmol_matches:
-                #mol_dict = molecule.to_dict
-                # Unroll corresponding atom indices over all instances of this molecule
-                for topology_molecule in self._reference_molecule_to_topology_molecules[
-                        ref_mol]:
-                    match = list()
-                    # Create match TopologyAtoms.
+            if len(ref_mol_matches) == 0:
+                continue
+
+            # Unroll corresponding atom indices over all instances of this molecule.
+            for topology_molecule in self._reference_molecule_to_topology_molecules[ref_mol]:
+
+                # topology_molecule_start_index = topology_molecule.atom_start_topology_index
+
+                # Loop over matches
+                for reference_match in ref_mol_matches:
+
+                    # Collect indices of matching TopologyAtoms.
+                    topology_atom_indices = []
                     for reference_molecule_atom_index in reference_match:
-                        reference_atom = topology_molecule._reference_molecule.atoms[
-                            reference_molecule_atom_index]
-                        topology_atom = TopologyAtom(reference_atom,
-                                                     topology_molecule)
-                        match.append(topology_atom)
-                        #topology_molecule_atom_index = topology_molecule._ref_to_top_index[reference_molecule_atom_index]
-                        #atom_topology_index = topology_molecule.atom_start_topology_index+topology_molecule_atom_index
-                        #match.append(self.atom(atom_topology_index))
-                    match = tuple(match)
-                    #match = tuple([topology_molecule.atom_start_topology_index+ref_mol_atom_index for ref_mol_atom_index in reference_match])
-                    matches.append(match)
+                        reference_atom = topology_molecule.reference_molecule.atoms[reference_molecule_atom_index]
+                        topology_atom = TopologyAtom(reference_atom, topology_molecule)
+                        topology_atom_indices.append(topology_atom.topology_particle_index)
 
+                    environment_match = Topology._ChemicalEnvironmentMatch(
+                        tuple(reference_match),
+                        ref_mol,
+                        tuple(topology_atom_indices))
+
+                    matches.append(environment_match)
         return matches
 
     def to_dict(self):
@@ -1460,7 +1541,7 @@ class Topology(Serializable):
         # Make a flat list of all atomic numbers in the molecule
         atom_nums = []
         for idx in mol_graph.nodes:
-            atom_nums.append(mol_graph.node[idx]['atomic_number'])
+            atom_nums.append(mol_graph.nodes[idx]['atomic_number'])
 
         # Count the number of instances of each atomic number
         at_num_to_counts = dict([(unq, atom_nums.count(unq)) for unq in atom_nums])
@@ -1578,7 +1659,18 @@ class Topology(Serializable):
                     break
             if not (match_found):
                 hill_formula = Topology._networkx_to_hill_formula(omm_mol_G)
-                raise ValueError(f'No match found for molecule {hill_formula}')
+                msg = f'No match found for molecule {hill_formula}. '
+                probably_missing_conect = ['C1', 'H1', 'O1', 'N1', 'P1', 'S1', 'F1', 'Cl1', 'Br1']
+                if hill_formula in probably_missing_conect:
+                    msg += ('This would be a very unusual molecule to try and parameterize, '
+                            'and it is likely that the data source it was read from does not '
+                            'contain connectivity information. If this molecule is coming from '
+                            'PDB, please ensure that the file contains CONECT records. The PDB '
+                            'format documentation (https://www.wwpdb.org/documentation/'
+                            'file-format-content/format33/sect10.html) states "CONECT records '
+                            'are mandatory for HET groups (excluding water) and for other bonds '
+                            'not specified in the standard residue connectivity table."')
+                raise ValueError(msg)
 
         # The connected_component_subgraph function above may have scrambled the molecule order, so sort molecules
         # by their first atom's topology index
@@ -1674,6 +1766,9 @@ class Topology(Serializable):
             bond_type = Aromatic if bond.bond.is_aromatic else bond_types[bond.bond_order]
             omm_topology.addBond(omm_atoms[atom1_idx], omm_atoms[atom2_idx],
                                  type=bond_type, order=bond.bond_order)
+
+        if self.box_vectors is not None:
+            omm_topology.setPeriodicBoxVectors(self.box_vectors)
         return omm_topology
 
     @staticmethod
@@ -2191,31 +2286,68 @@ class Topology(Serializable):
         pass
 
     def add_molecule(self, molecule, local_topology_to_reference_index=None):
-        """Add a Molecule to the Topology.
+        """Add a Molecule to the Topology. You can optionally request that the atoms be added to the Topology in
+        a different order than they appear in the Molecule.
 
         Parameters
         ----------
         molecule : Molecule
             The Molecule to be added.
         local_topology_to_reference_index: dict, optional, default = None
-            Dictionary of {TopologyMolecule_atom_index : Molecule_atom_index} for the TopologyMolecule that will be built
+            Dictionary of {TopologyMolecule_atom_index : Molecule_atom_index} for the TopologyMolecule that will be
+            built. If None, this function will add the atoms to the Topology in the order that they appear in the
+            reference molecule.
 
         Returns
         -------
         index : int
             The index of this molecule in the topology
         """
+        from networkx.algorithms.isomorphism import GraphMatcher
+
         from openforcefield.topology.molecule import FrozenMolecule
-        #molecule.set_aromaticity_model(self._aromaticity_model)
+
+        if local_topology_to_reference_index is None:
+            local_topology_to_reference_index = dict((i, i) for i in range(molecule.n_atoms))
 
         mol_smiles = molecule.to_smiles()
         reference_molecule = None
-        for potential_ref_mol in self._reference_molecule_to_topology_molecules.keys(
-        ):
+        for potential_ref_mol in self._reference_molecule_to_topology_molecules.keys():
             if mol_smiles == potential_ref_mol.to_smiles():
                 # If the molecule is already in the Topology.reference_molecules, add another reference to it in
                 # Topology.molecules
                 reference_molecule = potential_ref_mol
+
+                # Graph-match this molecule to see if it's in the same order
+
+                # Set functions for determining equality between nodes and edges
+                node_match_func = lambda x, y: ((x['atomic_number'] == y['atomic_number']) &
+                                                (x['stereochemistry'] == y['stereochemistry']) &
+                                                (x['formal_charge'] == y['formal_charge']) &
+                                                (x['is_aromatic'] == y['is_aromatic']) )
+                edge_match_func = lambda x, y: ((x['bond_order'] == y['bond_order']) &
+                                                (x['stereochemistry'] == y['stereochemistry']) &
+                                                (x['is_aromatic'] == y['is_aromatic']) )
+
+                mol_nx = molecule.to_networkx()
+                ref_mol_nx = reference_molecule.to_networkx()
+                # Take the first valid atom indexing map
+                GM = GraphMatcher(
+                     mol_nx,
+                     ref_mol_nx,
+                     node_match=node_match_func,
+                     edge_match=edge_match_func)
+                atom_map = None
+                for mapping in GM.isomorphisms_iter():
+                    atom_map = mapping
+                    break
+                if atom_map is None:
+                    raise Exception(1)
+                new_mapping = {}
+                for local_top_idx, ref_idx in local_topology_to_reference_index.items():
+                    new_mapping[local_top_idx] = atom_map[ref_idx]
+                local_topology_to_reference_index = new_mapping
+                #raise Exception(local_topology_to_reference_index)
                 break
         if reference_molecule is None:
             # If it's a new unique molecule, make and store an immutable copy of it
@@ -2253,13 +2385,9 @@ class Topology(Serializable):
         if (iatom, jatom) in self._constrained_atom_pairs:
             existing_distance = self._constrained_atom_pairs[(iatom, jatom)]
             if unit.is_quantity(existing_distance) and (distance is True):
-                raise Exception(
-                    'Atoms (%d,%d) already constrained with distance %s but attempting to override with unspecified distance'
-                    % (iatom, jatom, existing_distance))
+                raise Exception(f"Atoms ({iatom},{jatom}) already constrained with distance {existing_distance} but attempting to override with unspecified distance")
             if (existing_distance is True) and (distance is True):
-                raise Exception(
-                    'Atoms (%d,%d) already constrained with unspecified distance but attempting to override with unspecified distance'
-                    % (iatom, jatom))
+                raise Exception(f"Atoms ({iatom},{jatom}) already constrained with unspecified distance but attempting to override with unspecified distance")
             if distance is False:
                 del self._constrained_atom_pairs[(iatom, jatom)]
                 del self._constrained_atom_pairs[(jatom, iatom)]

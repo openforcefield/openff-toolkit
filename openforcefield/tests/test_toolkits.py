@@ -64,9 +64,12 @@ class TestOpenEyeToolkitWrapper:
                                                 ]:
             if raises_exception:
                 with pytest.raises(UndefinedStereochemistryError) as context:
-                    molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+                    Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+                Molecule.from_smiles(smiles,
+                                     toolkit_registry=toolkit_wrapper,
+                                     allow_undefined_stereo=True)
             else:
-                molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+                Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
 
     # TODO: test_smiles_round_trip
 
@@ -211,9 +214,66 @@ class TestOpenEyeToolkitWrapper:
             assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_from_openeye_implicit_hydrogen(self):
+        """
+        Test OpenEyeToolkitWrapper for loading a molecule with implicit
+        hydrogens (correct behavior is to add them explicitly)
+        """
+        from openeye import oechem
+
+        smiles_impl = "C#C"
+        oemol_impl = oechem.OEMol()
+        oechem.OESmilesToMol(oemol_impl, smiles_impl)
+        molecule_from_impl = Molecule.from_openeye(oemol_impl)
+
+        assert molecule_from_impl.n_atoms == 4
+
+        smiles_expl = "HC#CH"
+        oemol_expl = oechem.OEMol()
+        oechem.OESmilesToMol(oemol_expl, smiles_expl)
+        molecule_from_expl = Molecule.from_openeye(oemol_expl)
+        assert molecule_from_expl.to_smiles() == molecule_from_impl.to_smiles()
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_openeye_from_smiles_hydrogens_are_explicit(self):
+        """
+        Test to ensure that OpenEyeToolkitWrapper.from_smiles has the proper behavior with
+        respect to its hydrogens_are_explicit kwarg
+        """
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        smiles_impl = "C#C"
+        with pytest.raises(ValueError,
+                           match="but OpenEye Toolkit interpreted SMILES 'C#C' as having implicit hydrogen") as excinfo:
+            offmol = Molecule.from_smiles(smiles_impl,
+                                          toolkit_registry=toolkit_wrapper,
+                                          hydrogens_are_explicit=True)
+        offmol = Molecule.from_smiles(smiles_impl,
+                                      toolkit_registry=toolkit_wrapper,
+                                      hydrogens_are_explicit=False)
+        assert offmol.n_atoms == 4
+
+        smiles_expl = "HC#CH"
+        offmol = Molecule.from_smiles(smiles_expl,
+                                      toolkit_registry=toolkit_wrapper,
+                                      hydrogens_are_explicit=True)
+        assert offmol.n_atoms == 4
+        # It's debatable whether this next function should pass. Strictly speaking, the hydrogens in this SMILES
+        # _are_ explicit, so allowing "hydrogens_are_explicit=False" through here is allowing a contradiction.
+        # We might rethink the name of this kwarg.
+
+        offmol = Molecule.from_smiles(smiles_expl,
+                                      toolkit_registry=toolkit_wrapper,
+                                      hydrogens_are_explicit=False)
+        assert offmol.n_atoms == 4
+
+
+
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
+
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_file_path('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
@@ -366,6 +426,18 @@ class TestOpenEyeToolkitWrapper:
             charge_sum += pc
         assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
 
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_compute_partial_charges_trans_cooh_am1bcc(self):
+        """Test OpenEyeToolkitWrapper for computing partial charges for problematic molecules, as exemplified by
+        Issue 346 (https://github.com/openforcefield/openforcefield/issues/346)"""
+
+        lysine = Molecule.from_smiles("C(CC[NH3+])C[C@@H](C(=O)O)N")
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        lysine.generate_conformers(toolkit_registry=toolkit_wrapper)
+        lysine.compute_partial_charges_am1bcc(toolkit_registry=toolkit_wrapper)
+
+
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders(self):
         """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders()"""
@@ -379,6 +451,68 @@ class TestOpenEyeToolkitWrapper:
             print([bond.fractional_bond_order for bond in molecule.bonds])
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
+
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_compute_wiberg_bond_orders_neutral_charge_mol(self):
+        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() for neutral and charged molecule"""
+   
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        # Reading neutral molecule from file
+        filename = get_data_file_path('molecules/CID20742535_neutral.sdf')
+        molecule1 = Molecule.from_file(filename)
+        # Reading negative molecule from file
+        filename = get_data_file_path('molecules/CID20742535_anion.sdf')
+        molecule2 = Molecule.from_file(filename) 
+   
+        # Checking that only one additional bond is present in the neutral molecule
+        assert (len(molecule1.bonds)==len(molecule2.bonds)+1)
+ 
+        for charge_model in ['am1', 'pm3']:
+            molecule1.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+
+            for i in molecule1.bonds:
+                if i.is_aromatic:
+                    # Checking aromatic bonds
+                    assert (1.15 < i.fractional_bond_order < 1.60)
+                elif (i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1): 
+                    # Checking bond order of C-H or O-H bonds are around 1
+                    assert (0.85 < i.fractional_bond_order < 1.05)
+                elif (i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8):
+                    # Checking C-O single bond
+                    wbo_C_O_neutral = i.fractional_bond_order
+                    assert (1.0 < wbo_C_O_neutral < 1.5)
+                else:
+                    # Should be C-C single bond
+                    assert (i.atom1_index == 4 and i.atom2_index == 6) or (i.atom1_index == 6 and i.atom2_index == 4)
+                    wbo_C_C_neutral = i.fractional_bond_order 
+                    assert (1.0 < wbo_C_C_neutral < 1.3)
+                    
+            molecule2.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+            for i in molecule2.bonds:
+                if i.is_aromatic:
+                    # Checking aromatic bonds
+                    assert (1.0 < i.fractional_bond_order < 1.6)
+                elif (i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1):
+                    # Checking bond order of C-H or O-H bonds are around 1
+                    assert (0.85 < i.fractional_bond_order < 1.05)
+                elif (i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8):
+                    # Checking C-O single bond
+                    wbo_C_O_anion = i.fractional_bond_order
+                    assert (1.3 < wbo_C_O_anion < 1.8)
+                else:
+                    # Should be C-C single bond
+                    assert(i.atom1_index == 4 and i.atom2_index == 6) or (i.atom1_index == 6 and i.atom2_index == 4)
+                    wbo_C_C_anion = i.fractional_bond_order
+                    assert (1.0 < wbo_C_C_anion < 1.3)
+
+            # Wiberg bond order of C-C single bond is higher in the anion
+            assert (wbo_C_C_anion > wbo_C_C_neutral)
+            # Wiberg bond order of C-O bond is higher in the anion
+            assert (wbo_C_O_anion > wbo_C_O_neutral)
+
+
+
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders_charged(self):
         """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with net charge +1"""
@@ -391,8 +525,7 @@ class TestOpenEyeToolkitWrapper:
             molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
-    reason='OpenEye Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders_double_bond(self):
         """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with a double bond"""
 
@@ -450,6 +583,9 @@ class TestRDKitToolkitWrapper:
         if exception_regex is not None:
             with pytest.raises(UndefinedStereochemistryError, match=exception_regex):
                 Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+            Molecule.from_smiles(smiles,
+                                 toolkit_registry=toolkit_wrapper,
+                                 allow_undefined_stereo=True)
         else:
             Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
 
@@ -466,6 +602,38 @@ class TestRDKitToolkitWrapper:
                                         toolkit_registry=toolkit_wrapper)
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles2 == expected_output_smiles
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_rdkit_from_smiles_hydrogens_are_explicit(self):
+        """
+        Test to ensure that RDKitToolkitWrapper.from_smiles has the proper behavior with
+        respect to its hydrogens_are_explicit kwarg
+        """
+        toolkit_wrapper = RDKitToolkitWrapper()
+        smiles_impl = "C#C"
+        with pytest.raises(ValueError,
+                           match="but RDKit toolkit interpreted SMILES 'C#C' as having implicit hydrogen") as excinfo:
+            offmol = Molecule.from_smiles(smiles_impl,
+                                          toolkit_registry=toolkit_wrapper,
+                                          hydrogens_are_explicit=True)
+        offmol = Molecule.from_smiles(smiles_impl,
+                                      toolkit_registry=toolkit_wrapper,
+                                      hydrogens_are_explicit=False)
+        assert offmol.n_atoms == 4
+
+        smiles_expl = "[H][C]#[C][H]"
+        offmol = Molecule.from_smiles(smiles_expl,
+                                      toolkit_registry=toolkit_wrapper,
+                                      hydrogens_are_explicit=True)
+        assert offmol.n_atoms == 4
+        # It's debatable whether this next function should pass. Strictly speaking, the hydrogens in this SMILES
+        # _are_ explicit, so allowing "hydrogens_are_explicit=False" through here is allowing a contradiction.
+        # We might rethink the name of this kwarg.
+
+        offmol = Molecule.from_smiles(smiles_expl,
+                                      toolkit_registry=toolkit_wrapper,
+                                      hydrogens_are_explicit=False)
+        assert offmol.n_atoms == 4
 
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')

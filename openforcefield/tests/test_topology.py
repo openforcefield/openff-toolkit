@@ -21,6 +21,7 @@ from simtk import unit
 from openforcefield.utils import (BASIC_CHEMINFORMATICS_TOOLKITS, RDKIT_AVAILABLE, OPENEYE_AVAILABLE,
                                   RDKitToolkitWrapper, OpenEyeToolkitWrapper)
 from openforcefield.tests.utils import get_data_file_path
+from openforcefield.tests.test_forcefield import create_cyclohexane, create_ethanol
 from openforcefield.topology import Topology, ValenceDict, ImproperDict, DuplicateUniqueMoleculeError
 from openforcefield.topology import Molecule
 
@@ -402,22 +403,39 @@ class TestTopology(TestCase):
         from simtk.openmm import app
         pdbfile = app.PDBFile(get_data_file_path('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
 
-        molecules = []
-        molecules.append(Molecule.from_smiles('CCO'))
-        molecules.append(Molecule.from_smiles('C1CCCCC1'))
+        molecules = [create_ethanol(), create_cyclohexane()]
 
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         assert topology.n_reference_molecules == 2
         assert topology.n_topology_molecules == 239
+
 
     def test_from_openmm_missing_reference(self):
         """Test creation of an openforcefield Topology object from an OpenMM Topology when missing a unique molecule"""
         from simtk.openmm import app
         pdbfile = app.PDBFile(get_data_file_path('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
 
+        molecules = [create_ethanol()]
+        with pytest.raises(ValueError, match='No match found for molecule C6H12') as excinfo:
+            topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
+    def test_from_openmm_missing_conect(self):
+        """
+        Test creation of an openforcefield Topology object from an OpenMM Topology
+        when the origin PDB lacks CONECT records
+        """
+        from simtk.openmm import app
+        pdbfile = app.PDBFile(get_data_file_path('systems/test_systems/1_ethanol_no_conect.pdb'))
+
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
-        with pytest.raises(ValueError, match='No match found for molecule C6H12') as excinfo:
+        with pytest.raises(ValueError, match='No match found for molecule C1. This would be a '
+                                             'very unusual molecule to try and parameterize, '
+                                             'and it is likely that the data source it was '
+                                             'read from does not contain connectivity '
+                                             'information. If this molecule is coming from '
+                                             'PDB, please ensure that the file contains CONECT '
+                                             'records.') as excinfo:
             topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
     def test_to_from_openmm(self):
@@ -502,11 +520,11 @@ class TestTopology(TestCase):
         # Test for substructure match
         matches = topology.chemical_environment_matches("[C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 143
-        assert tuple(i.topology_atom_index for i in matches[0]) == (1728, 1729, 1730)
+        assert matches[0].topology_atom_indices == (1728, 1729, 1730)
         # Test for whole-molecule match
         matches = topology.chemical_environment_matches("[H][C:1]([H])([H])-[C:2]([H])([H])-[O:3][H]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 1716 # 143 * 12 (there are 12 possible hydrogen mappings)
-        assert tuple(i.topology_atom_index for i in matches[0]) == (1728, 1729, 1730)
+        assert matches[0].topology_atom_indices == (1728, 1729, 1730)
         # Search for a substructure that isn't there
         matches = topology.chemical_environment_matches("[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 0
@@ -527,10 +545,10 @@ class TestTopology(TestCase):
         # Count CCO matches
         matches = topology.chemical_environment_matches("[C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 143
-        assert tuple(i.topology_atom_index for i in matches[0]) == (1728, 1729, 1730)
+        assert matches[0].topology_atom_indices == (1728, 1729, 1730)
         matches = topology.chemical_environment_matches("[H][C:1]([H])([H])-[C:2]([H])([H])-[O:3][H]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 1716 # 143 * 12 (there are 12 possible hydrogen mappings)
-        assert tuple(i.topology_atom_index for i in matches[0]) == (1728, 1729, 1730)
+        assert matches[0].topology_atom_indices == (1728, 1729, 1730)
         # Search for a substructure that isn't there
         matches = topology.chemical_environment_matches("[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 0

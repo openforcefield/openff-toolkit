@@ -455,9 +455,9 @@ class ChemicalEnvironment:
         if ensure_valence_type:
             valence_type = chemenv.getType()
             if valence_type != ensure_valence_type:
-                raise SMIRKSParsingError("Tagged atoms in SMARTS string '%s' specifies valence type '%s', expected '%s'." % (smirks, valence_type, ensure_valence_type))
+                raise SMIRKSParsingError(f"Tagged atoms in SMARTS string '{smirks}' specifies valence type '{valence_type}', expected '{ensure_valence_type}'.")
 
-    def __init__(self, smirks = None, label = None, replacements = None, toolkit='openeye'):
+    def __init__(self, smirks = None, label = None, replacements = None, toolkit=None):
         """Initialize a chemical environment abstract base class.
 
         smirks = string, optional
@@ -468,15 +468,26 @@ class ChemicalEnvironment:
             could be a string, int, or float, or anything
         replacements = list of lists, optional,
             [substitution, smarts] form for parsing SMIRKS
+        toolkit = string. Default = None
+            Either 'openeye' or 'rdkit', indicating the backend to use for chemical perception. If None,
+            this function will use OpenEye if possible, otherwise will use RDKit.
         """
         # TODO: Refactor all this class to use the ToolkitRegistry API.
-        if toolkit.lower() == 'openeye' and openforcefield.utils.OpenEyeToolkitWrapper.is_available():
+        # If the user didn't specify a toolkit, try to use OE, otherwise use RDKit
+        if toolkit is None and openforcefield.utils.OpenEyeToolkitWrapper.is_available():
+            self.toolkit = 'openeye'
+        elif toolkit is None and openforcefield.utils.RDKitToolkitWrapper.is_available():
+            self.toolkit = 'rdkit'
+        elif toolkit is None:
+            raise ValueError("Toolkit was not specified, and neither OpenEye nor RDKit is available. Please"
+                             "install either OpenEye or RDKit")
+        elif toolkit.lower() == 'openeye' and openforcefield.utils.OpenEyeToolkitWrapper.is_available():
             self.toolkit = 'openeye'
         elif toolkit.lower() == 'rdkit' and openforcefield.utils.RDKitToolkitWrapper.is_available():
             self.toolkit = 'rdkit'
         else:
             raise ValueError("Could not find toolkit {}, please use/install "
-                             "openeye or rdkit.".format(toolkit))
+                             "OpenEye or RDKit.".format(toolkit))
 
         # Define the regular expressions used for all SMIRKS decorators
         # There are a limited number of descriptors for smirks string they are:
@@ -519,30 +530,30 @@ class ChemicalEnvironment:
         if smirks is not None:
             # Check that it is a valid SMIRKS
             if not self.isValid(smirks):
-                raise SMIRKSParsingError("Error Provided SMIRKS ('%s') was \
-not parseable with %s tools" % (smirks, self.toolkit))
+                raise SMIRKSParsingError(f"Error Provided SMIRKS ('{smirks}') was \
+not parseable with {self.toolkit} tools")
 
             # Check for SMIRKS not supported by Chemical Environments
             if smirks.find('.') != -1:
-                raise SMIRKSParsingError("Error: Provided SMIRKS ('%s') \
+                raise SMIRKSParsingError(f"Error: Provided SMIRKS ('{smirks}') \
 contains a '.' indicating multiple molecules in the same pattern. This type \
-of pattern is not parseable into ChemicalEnvironments" % smirks)
+of pattern is not parseable into ChemicalEnvironments")
             if smirks.find('>') != -1:
-                raise SMIRKSParsingError("Error: Provided SMIRKS ('%s') \
+                raise SMIRKSParsingError(f"Error: Provided SMIRKS ('{smirks}') \
 contains a '>' indicating a reaction. This type of pattern is not parseable \
-into ChemicalEnvironments." % smirks)
+into ChemicalEnvironments.")
 
             # try parsing into environment object
             try:
                 self._parse_smirks(smirks)
             except:
-                raise SMIRKSParsingError("Error SMIRKS (%s) was not parseable\
-                        into a ChemicalEnvironment" % smirks)
+                raise SMIRKSParsingError(f"Error SMIRKS ({smirks}) was not parseable\
+                        into a ChemicalEnvironment")
 
         # Check that the created Environment is valid
         if not self.isValid():
-            raise SMIRKSParsingError("Input SMIRKS (%s), converted to %s \
-                    is now invalid" % (smirks, self.asSMIRKS()))
+            raise SMIRKSParsingError(f"Input SMIRKS ({smirks}), converted to {self.asSMIRKS()} \
+                    is now invalid")
 
         return
 
@@ -1332,7 +1343,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching one labeled atom.
 
     """
-    def __init__(self, smirks = "[*:1]", label = None, replacements = None, toolkit='openeye'):
+    def __init__(self, smirks = "[*:1]", label = None, replacements = None, toolkit=None):
         """Initialize a chemical environment corresponding to matching a single atom.
 
         Parameters
@@ -1344,6 +1355,10 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
             could be a string, int, or float, or anything
         replacements = list of lists, optional,
             [substitution, smarts] form for parsing SMIRKS
+        toolkit = string. Default = None
+            Either 'openeye' or 'rdkit', indicating the backend to use for chemical perception. If None,
+            this function will use OpenEye if possible, otherwise will use RDKit.
+
 
         For example:
             # create an atom that is carbon, nitrogen, or oxygen with no formal charge
@@ -1356,7 +1371,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
         correct, expected = self._checkType()
         if not correct:
             assigned = self.getType()
-            raise SMIRKSMismatchError("The SMIRKS (%s) was assigned the type %s when %s was expected" % (smirks, assigned, expected))
+            raise SMIRKSMismatchError(f"The SMIRKS ({smirks}) was assigned the type {assigned} when {expected} was expected")
         self.atom1 = self.selectAtom(1)
 
     def _checkType(self):
@@ -1401,7 +1416,7 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
 class BondChemicalEnvironment(AtomChemicalEnvironment):
     """Chemical environment matching two labeled atoms (or a bond).
     """
-    def __init__(self, smirks = "[*:1]~[*:2]", label = None, replacements = None, toolkit='openeye'):
+    def __init__(self, smirks = "[*:1]~[*:2]", label = None, replacements = None, toolkit=None):
         """Initialize a chemical environment corresponding to matching two atoms (bond).
 
         Parameters
@@ -1413,6 +1428,9 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
             could be a string, int, or float, or anything
         replacements = list of lists, optional,
             [substitution, smarts] form for parsing SMIRKS
+        toolkit = string. Default = None
+            Either 'openeye' or 'rdkit', indicating the backend to use for chemical perception. If None,
+            this function will use OpenEye if possible, otherwise will use RDKit.
 
         """
         # Initialize base class
@@ -1421,7 +1439,7 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
         # Add initial atom
         self.atom2 = self.selectAtom(2)
         if self.atom2 is None:
-            raise Exception("Error: Bonds need 2 indexed atoms, there were not enough in %s" % smirks)
+            raise Exception(f"Error: Bonds need 2 indexed atoms, there were not enough in {smirks}")
 
         self.bond2 = self._graph_get_edge_data(self.atom1, self.atom2)['bond']
 
@@ -1431,7 +1449,7 @@ class BondChemicalEnvironment(AtomChemicalEnvironment):
 class AngleChemicalEnvironment(BondChemicalEnvironment):
     """Chemical environment matching three marked atoms (angle).
     """
-    def __init__(self, smirks = "[*:1]~[*:2]~[*:3]", label = None, replacements = None, toolkit='openeye'):
+    def __init__(self, smirks = "[*:1]~[*:2]~[*:3]", label = None, replacements = None, toolkit=None):
 
         """Initialize a chemical environment corresponding to matching three atoms.
 
@@ -1444,6 +1462,10 @@ class AngleChemicalEnvironment(BondChemicalEnvironment):
             could be a string, int, or float, or anything
         replacements = list of lists, optional,
             [substitution, smarts] form for parsing SMIRKS
+        toolkit = string. Default = None
+            Either 'openeye' or 'rdkit', indicating the backend to use for chemical perception. If None,
+            this function will use OpenEye if possible, otherwise will use RDKit.
+
         """
         # Initialize base class
         super(AngleChemicalEnvironment,self).__init__(smirks, label, replacements, toolkit)
@@ -1458,7 +1480,7 @@ class AngleChemicalEnvironment(BondChemicalEnvironment):
 class TorsionChemicalEnvironment(AngleChemicalEnvironment):
     """Chemical environment matching four marked atoms (torsion).
     """
-    def __init__(self, smirks = "[*:1]~[*:2]~[*:3]~[*:4]", label = None, replacements = None, toolkit='openeye'):
+    def __init__(self, smirks = "[*:1]~[*:2]~[*:3]~[*:4]", label = None, replacements = None, toolkit=None):
         """Initialize a chemical environment corresponding to matching four atoms (torsion).
 
         Parameters
@@ -1471,6 +1493,10 @@ class TorsionChemicalEnvironment(AngleChemicalEnvironment):
             could be a string, int, or float, or anything
         replacements = list of lists, optional,
             [substitution, smarts] form for parsing SMIRKS
+        toolkit = string. Default = None
+            Either 'openeye' or 'rdkit', indicating the backend to use for chemical perception. If None,
+            this function will use OpenEye if possible, otherwise will use RDKit.
+
         """
         # Initialize base class
         super(TorsionChemicalEnvironment,self).__init__(smirks, label, replacements, toolkit)
@@ -1485,7 +1511,7 @@ class TorsionChemicalEnvironment(AngleChemicalEnvironment):
 class ImproperChemicalEnvironment(AngleChemicalEnvironment):
     """Chemical environment matching four marked atoms (improper).
     """
-    def __init__(self, smirks = "[*:1]~[*:2](~[*:3])~[*:4]", label = None, replacements = None, toolkit='openeye'):
+    def __init__(self, smirks = "[*:1]~[*:2](~[*:3])~[*:4]", label = None, replacements = None, toolkit=None):
         """Initialize a chemical environment corresponding four atoms (improper).
 
         Parameters
@@ -1496,6 +1522,10 @@ class ImproperChemicalEnvironment(AngleChemicalEnvironment):
         label = anything, optional
             intended to be used to label this chemical environment
             could be a string, int, or float, or anything
+        toolkit = string. Default = None
+            Either 'openeye' or 'rdkit', indicating the backend to use for chemical perception. If None,
+            this function will use OpenEye if possible, otherwise will use RDKit.
+
         """
         # Initialize base class
         super(ImproperChemicalEnvironment,self).__init__(smirks, label, replacements, toolkit)

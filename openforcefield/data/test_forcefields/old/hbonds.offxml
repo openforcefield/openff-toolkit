@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='ASCII'?>
-<SMIRNOFF version="0.1">
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRks Native Open Force Field (SMIRNOFF) file -->
   <Date>2017-05-01</Date>
   <Author>J. D. Chodera, MSKCC; A. Rizzi, Weill Cornell;</Author>

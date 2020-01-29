@@ -1,0 +1,32 @@
+name: test
+channels:
+  - conda-forge
+  - omnia
+
+dependencies:
+    # Base depends
+  - python
+  - pip
+
+    # Testing
+  - pytest
+  - pytest-cov
+  - nbval
+  - codecov
+  - coverage < 5.0
+  - numpy
+  - networkx
+  - ambertools
+  - packaging
+  - openmmtools
+  - openforcefields
+  - smirnoff99Frosst
+  - pyyaml
+  - toml
+  - bson
+  - msgpack-python
+  - xmltodict
+
+    # Pip-only installs
+  #- pip:
+

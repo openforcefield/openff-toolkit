@@ -272,7 +272,7 @@ class Atom(Particle):
 
         Returns
         -------
-        float or None
+        simtk.unit.Quantity with dimension of atomic charge, or None if no charge has been specified
         """
         if self._molecule._partial_charges is None:
             return None
@@ -1514,7 +1514,7 @@ class FrozenMolecule(Serializable):
             # Check through the toolkit registry to find a compatible wrapper for loading
             if not loaded:
                 try:
-                    result = toolkit_registry.call('from_object', other)
+                    result = toolkit_registry.call('from_object', other, allow_undefined_stereo=allow_undefined_stereo)
                 except NotImplementedError:
                     pass
                 else:
@@ -1815,26 +1815,39 @@ class FrozenMolecule(Serializable):
         >>> smiles = molecule.to_smiles()
 
         """
-        smiles = self._cached_smiles
+        # Initialize cached_smiles dict for this molecule if none exists
+        if self._cached_smiles is None:
+            self._cached_smiles = {}
 
-        if smiles is not None:
-            return smiles
-
+        # Figure out which toolkit should be used to create the SMILES
         if isinstance(toolkit_registry, ToolkitRegistry):
-            smiles = toolkit_registry.call('to_smiles', self)
+            to_smiles_method = toolkit_registry.resolve('to_smiles')
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            smiles = toolkit.to_smiles(self)
+            to_smiles_method = toolkit_registry.to_smiles
         else:
             raise Exception(
                 'Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
-        self._cached_smiles = smiles
-        return smiles
+        # Get a string representation of the function containing the toolkit name so we can check
+        # if a SMILES was already cached for this molecule. This will return, for example
+        # "RDKitToolkitWrapper.to_smiles"
+        func_qualname = to_smiles_method.__qualname__
+
+        # Check to see if a SMILES for this molecule was already cached using this method
+        if func_qualname in self._cached_smiles:
+            return self._cached_smiles[func_qualname]
+        else:
+            smiles = to_smiles_method(self)
+            self._cached_smiles[func_qualname] = smiles
+            return smiles
+
 
     @staticmethod
-    def from_smiles(smiles, hydrogens_are_explicit=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def from_smiles(smiles,
+                    hydrogens_are_explicit=False,
+                    toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+                    allow_undefined_stereo=False):
         """
         Construct a Molecule from a SMILES representation
 
@@ -1846,6 +1859,10 @@ class FrozenMolecule(Serializable):
             If False, the cheminformatics toolkit will perform hydrogen addition
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+        allow_undefined_stereo : bool, default=False
+            Whether to accept SMILES with undefined stereochemistry. If False,
+            an exception will be raised if a SMILES with undefined stereochemistry
+            is passed into this function.
 
         Returns
         -------
@@ -1858,10 +1875,16 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('from_smiles', smiles)
+            return toolkit_registry.call('from_smiles',
+                                         smiles,
+                                         hydrogens_are_explicit=hydrogens_are_explicit,
+                                         allow_undefined_stereo=allow_undefined_stereo)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.from_smiles(smiles, hydrogens_are_explicit=hydrogens_are_explicit)
+            return toolkit.from_smiles(smiles,
+                                       hydrogens_are_explicit=hydrogens_are_explicit,
+                                       allow_undefined_stereo=allow_undefined_stereo
+                                       )
         else:
             raise Exception(
                 'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
@@ -2456,15 +2479,14 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        coordinates: A simtk vector wrapped unit quantity
-            The coordinates of the conformer to add.
+        coordinates: simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
+            Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
+            the Molecule's indexing system.
 
         Returns
         -------
         index: int
             The index of this conformer
-
-
         """
         new_conf = unit.Quantity(
             np.zeros((self.n_atoms, 3), np.float), unit.angstrom)
@@ -2490,25 +2512,24 @@ class FrozenMolecule(Serializable):
     @property
     def partial_charges(self):
         """
-        Returns the partial charges (if present) on the molecule
+        Returns the partial charges (if present) on the molecule.
 
         Returns
         -------
-        partial_charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
-            The partial charges on this Molecule's atoms.
+        partial_charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms] or None
+            The partial charges on this Molecule's atoms. Returns None if no charges have been specified.
         """
         return self._partial_charges
 
     @partial_charges.setter
     def partial_charges(self, charges):
         """
-        Set the atomic partial charges for this molecule
+        Set the atomic partial charges for this molecule.
 
         Parameters
         ----------
         charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
             The partial charges to assign to the molecule. Must be in units compatible with simtk.unit.elementary_charge
-
         """
         assert hasattr(charges, 'unit')
         assert unit.elementary_charge.is_compatible(charges.unit)
@@ -2581,14 +2602,17 @@ class FrozenMolecule(Serializable):
     @property
     def conformers(self):
         """
-        Iterate over all conformers in this molecule.
+        Returns the list of conformers for this molecule. This returns a list of simtk.unit.Quantity-wrapped numpy
+        arrays, of shape (3 x n_atoms) and with dimensions of distance. The return value is the actual list of
+        conformers, and changes to the contents affect the original FrozenMolecule.
+
         """
         return self._conformers
 
     @property
     def n_conformers(self):
         """
-        Iterate over all Atom objects.
+        Returns the number of conformers for this molecule.
         """
         if self._conformers is None:
             return 0
@@ -2702,8 +2726,8 @@ class FrozenMolecule(Serializable):
 
         Returns
         -------
-        matches : list of Atom tuples
-            A list of all matching Atom tuples
+        matches : list of atom index tuples
+            A list of tuples, containing the indices of the matching atoms.
 
         Examples
         --------
@@ -2930,10 +2954,19 @@ class FrozenMolecule(Serializable):
                     query_toolkit.
                     toolkit_name] = query_toolkit.toolkit_file_read_formats
             if toolkit is None:
-                raise NotImplementedError(
-                    "No toolkits in registry can read file {} (format {}). Supported formats in the "
-                    "provided ToolkitRegistry are {}".format(
-                        file_path, file_format, supported_read_formats))
+                msg = f"No toolkits in registry can read file {file_path} (format {file_format}). Supported "\
+                      f"formats in the provided ToolkitRegistry are {supported_read_formats}. "
+                # Per issue #407, not allowing RDKit to read mol2 has confused a lot of people. Here we add text
+                # to the error message that will hopefully reduce this confusion.
+                if file_format == 'MOL2' and RDKitToolkitWrapper.is_available():
+                    msg += f"RDKit does not fully support input of molecules from mol2 format unless they " \
+                        f"have Corina atom types, and this is not common in the simulation community. For this " \
+                        f"reason, the Open Force Field Toolkit does not use " \
+                        f"RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt " \
+                        f"to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit " \
+                        f"molecule and use openforcefield.topology.Molecule.from_rdkit, but we do not recommend this."
+                raise NotImplementedError(msg)
+
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
             # TODO: Encapsulate this logic in ToolkitWrapper?
@@ -3317,6 +3350,44 @@ class FrozenMolecule(Serializable):
         atom2 = self._atoms[atom_index_2]
         return atom2 in self._bondedAtoms[atom1]
 
+    def get_bond_between(self, i, j):
+        """Returns the bond between two atoms
+
+        Parameters
+        ----------
+        i, j : int or Atom
+            Atoms or atom indices to check
+
+        Returns
+        -------
+        bond : Bond
+            The bond between i and j.
+
+        """
+        if isinstance(i, int) and isinstance(j, int):
+            atom_i = self._atoms[i]
+            atom_j = self._atoms[j]
+        elif isinstance(i, Atom) and isinstance(j, Atom):
+            atom_i = i
+            atom_j = j
+        else:
+            raise TypeError(
+                "Invalid input passed to is_bonded(). Expected ints or Atoms, "
+                "got {} and {}".format(i, j))
+
+        for bond in atom_i.bonds:
+
+            for atom in bond.atoms:
+
+                if atom == atom_i:
+                    continue
+
+                if atom == atom_j:
+                    return bond
+
+        from openforcefield.topology import NotBondedError
+        raise NotBondedError('No bond between atom {} and {}'.format(i, j))
+
 
 class Molecule(FrozenMolecule):
     """
@@ -3693,19 +3764,17 @@ class Molecule(FrozenMolecule):
 
     def add_conformer(self, coordinates):
         """
-        # TODO: Should this not be public?
-        Adds a conformer of the molecule
+        Add a conformation of the molecule
 
         Parameters
         ----------
-        coordinates: simtk.unit.Quantity(np.array) with shape (n_atoms, 3)
+        coordinates: simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
             Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
             the Molecule's indexing system.
+
         Returns
         -------
         index: int
-            Index of the conformer in the Molecule
-
-
-"""
+            The index of this conformer
+        """
         return self._add_conformer(coordinates)

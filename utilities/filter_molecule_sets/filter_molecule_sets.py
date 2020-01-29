@@ -11,21 +11,21 @@ def check_valence(mol):
         valence = atom.GetValence()
         if atomNum <= 10:
             if valence > 4:
-                #print("Found a #%i atom with valence %i in molecule %s" % (atomNum, valence, oechem.OECreateIsoSmiString(mol)))
+                #print(f"Found a #{atomNum} atom with valence {valence} in molecule {oechem.OECreateIsoSmiString(mol)}")
                 return False
     return True
 
 def check_element(mol, elements):
     for atom in mol.GetAtoms():
         if str(atom.GetAtomicNum()) in elements:
-            #print("Found a #%i atom in molecule %s" % (atom.GetAtomicNum(), oechem.OECreateIsoSmiString(mol)))
+            #print(f"Found a #{atom.GetAtomicNum()} atom in molecule {oechem.OECreateIsoSmiString(mol)}")
             return False
     return True
 
 def check_atomtype(mol, types):
     for atom in mol.GetAtoms():
         if atom.GetType() in types:
-            print("Found type %s atom in molecule %s" % (atom.GetType(), oechem.OECreateIsoSmiString(mol)))
+            print(f"Found type {atom.GetType()} atom in molecule {oechem.OECreateIsoSmiString(mol)}")
             return False
     return True
 
@@ -103,10 +103,10 @@ def filter_molecules(input_molstream, output_molstream, allow_repeats = False,
                 saved += 1
         errs.clear()
 
-    print("%i molecules in input stream" % (count))
-    print("%i molecules resulted in warnings when parsing" % warnings)
-    print("%i molecules were had repeated isomeric SMILES" % smile_count)
-    print("%i molecules saved" % (saved))
+    print(f"{count} molecules in input stream")
+    print(f"{warnings} molecules resulted in warnings when parsing")
+    print(f"{smile_count} molecules were had repeated isomeric SMILES")
+    print(f"{saved} molecules saved")
 
 
 if __name__=="__main__":
@@ -162,7 +162,7 @@ if __name__=="__main__":
     ifs = oechem.oemolistream(opt.input_file)
     if not ifs.IsValid():
         parser.print_help()
-        parser.error("Error: input_file (%s) was not valid" % opt.input_file)
+        parser.error(f"Error: input_file ({opt.input_file}) was not valid")
 
     # Load and check output file
     ofs = oechem.oemolostream(opt.output_file)
@@ -171,12 +171,12 @@ if __name__=="__main__":
         ofs.SetFlavor(oechem.OEFormat_MOL2, flavor)
     if not ofs.IsValid():
         parser.print_help()
-        parser.error("Error: output_file (%s) was not valid" % opt.output_file)
+        parser.error(f"Error: output_file ({opt.output_file}) was not valid")
 
     smirks = smarty.utils.parse_odds_file(opt.smirks_file, False)
     smirks = smirks[0]
 
-    print opt.atoms
+    print(opt.atoms)
     repeats = opt.repeats == 'True'
     warnings = opt.warnings == 'True'
     hydrogens = opt.hydrogens == 'True'

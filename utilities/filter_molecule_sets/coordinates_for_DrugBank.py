@@ -10,7 +10,7 @@ def genConfs(c_mol, ofsff, ofsTri, index):
     omega.SetMaxConfs(1)
     omega.SetIncludeInput(False)
     omega.SetEnergyWindow(15.0)
-    strict_stereo = True 
+    strict_stereo = True
     omega.SetStrictStereo(strict_stereo)
     omega.SetSampleHydrogens(True)
     omega.SetStrictAtomTypes(True)
@@ -20,7 +20,7 @@ def genConfs(c_mol, ofsff, ofsTri, index):
 
     if status:
         # change title
-        mol.SetTitle('DrugBank_%i' % index)
+        mol.SetTitle(f'DrugBank_{index}')
         # save forcefield type
         mol1 = oechem.OEMol(mol)
         oechem.OETriposAtomNames(mol1)
@@ -58,7 +58,7 @@ time_out = 0
 conf_fail = 0
 index = 0
 
-ifs = oechem.oemolistream(in_file) 
+ifs = oechem.oemolistream(in_file)
 ifs.SetFlavor(oechem.OEFormat_MOL2, flavor)
 
 c_mol = oechem.OECreateOEGraphMol()
@@ -69,7 +69,7 @@ while oechem.OEReadMolecule(ifs, c_mol):
     p.start()
     p.join(24)
     if p.is_alive():
-        print("TIMED OUT %s" % oechem.OECreateIsoSmiString(c_mol))
+        print(f"TIMED OUT {oechem.OECreateIsoSmiString(c_mol)}")
         oechem.OEWriteConstMolecule(ofsFail, oechem.OEMol(c_mol))
         time_out += 1
         p.terminate()
@@ -79,16 +79,16 @@ while oechem.OEReadMolecule(ifs, c_mol):
         p.terminate()
         p.join()
     else:
-        print("CONF FAIL %s" % oechem.OECreateIsoSmiString(c_mol))
+        print(f"CONF FAIL {oechem.OECreateIsoSmiString(c_mol)}")
         oechem.OEWriteConstMolecule(ofsFail, oechem.OEMol(c_mol))
         conf_fail += 1
         p.terminate()
         p.join()
 
 # Print data
-print("Success %i out of %i" % (success, index))
-print("%i timed out" % time_out)
-print("%i failed during conformation generation" % conf_fail)
+print(f"Success {success} out of {index}")
+print(f"{time_out} timed out")
+print(f"{conf_fail} failed during conformation generation")
 
 # close files
 ofsff.close()

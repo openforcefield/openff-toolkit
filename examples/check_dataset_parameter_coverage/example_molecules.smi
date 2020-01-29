@@ -1,0 +1,4 @@
+c1ccccc1 molecule_1 
+C[Hg]C(C)(C)P(=NC(=O)c1cc(cc(c1)Cl)Cl)(N(C)C)N(C)C molecule_2
+Cc1cc([n+]2c(n1)c(sc2SC)c3ccccc3)C molecule_3
+C(COP1(=NP(=NP(=N1)(OCCC(F)(F)F)OCCC(F)(F)F)(OCCC(F)(F)F)OCCC(F)(F)F)OCCC(F)(F)F)C(F)(F)F molecule_4

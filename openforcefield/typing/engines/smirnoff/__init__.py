@@ -3,4 +3,3 @@
 from .forcefield import *
 from .io import *
 from .parameters import *
-from .gbsaforces import *
