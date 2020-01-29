@@ -219,7 +219,7 @@ For example, to ensure water molecules are assigned partial charges for [TIP3P](
 
 | LibraryCharges section tag version | Tag attributes and default values    | Required parameter attributes   | Optional parameter attributes |
 |------------------------------------|--------------------------------------|---------------------------------|-------------------------------|
-| 0.3                                |                                      | `smirks`, `charges` (indexed)   | `name`, `id`, `parent_id`     |
+| 0.3                                |                                      | `smirks`, `charge` (indexed)    | `name`, `id`, `parent_id`     |
 
 
 
