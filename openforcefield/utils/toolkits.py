@@ -519,7 +519,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             partial_charges_str = ' '.join(partial_charges_list)
             # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
             #  describe/infer the proper data type?
-        oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
+            oechem.OESetSDData(oemol, "PartialCharge", partial_charges_str)
+        #oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
+        #oechem.OEAddSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
         oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
 
@@ -545,7 +547,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The list of Molecule objects in the stream.
 
         """
-        from openforcefield.topology import Molecule
         from openeye import oechem
 
         mols = list()
@@ -556,9 +557,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oechem.OE3DToInternalStereo(oemol)
 
             # If this is an SD file, check to see if there are partial charges
+            #raise Exception(str(oemolistream.GetFormat()) + ' ' + str(oechem.OEFormat_SDF))
+            #raise Exception(oechem.OEGetSDData(oemol, 'atom.dprop.PartialCharge'))
+            oechem.OESetSDData(oemol, "aaaa", "bbbb")
             raise Exception([i.GetTag() for i in oechem.OEGetSDDataPairs(oemol)])
             if ((oemolistream.GetFormat() == oechem.OEFormat_SDF) and
-                (oechem.OEHasSDData(oemol, 'atom.dprop.PartialCharge'))):
+                #(oechem.OEHasSDData(oemol, 'atom.dprop.PartialCharge'))):
+                (oechem.OEHasSDData(oemol, 'PartialCharge'))):
+                raise Exception([i.GetTag() for i in oechem.OEGetSDDataPairs(oemol)])
                 charges_str = oechem.OEGetSDData(oemol, "atom.dprop.PartialCharge")
                 raise Exception(charges_str)
                 charges_unitless = [float(i)for i in charges_str.split()]

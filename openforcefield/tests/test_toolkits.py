@@ -348,6 +348,7 @@ class TestOpenEyeToolkitWrapper:
         # The file is automatically deleted outside the with-clause.
         with NamedTemporaryFile(suffix='.sdf') as iofile:
             ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
+            #raise Exception(open(iofile.name).read())
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
         assert (ethanol.partial_charges == ethanol2.partial_charges).all()
 
@@ -878,6 +879,7 @@ class TestRDKitToolkitWrapper:
         # The file is automatically deleted outside the with-clause.
         with NamedTemporaryFile(suffix='.sdf') as iofile:
             ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
+            #raise Exception(open(iofile.name).read())
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
         assert (ethanol.partial_charges == ethanol2.partial_charges).all()
 
