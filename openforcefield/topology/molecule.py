@@ -1897,7 +1897,7 @@ class FrozenMolecule(Serializable):
             formal_charge_matching=True,
             bond_order_matching=True,
             atom_stereochemistry_matching=True,
-            bond_stereochemistry_matching=True,
+            bond_stereochemistry_matching=True
     ):
         """
         Determines whether the two molecules are isomorphic by comparing their graph representations and the chosen
@@ -1906,6 +1906,8 @@ class FrozenMolecule(Serializable):
         If nx.Graphs() are given they must at least have atomic_number attributes on nodes.
         other optional attributes for nodes are: is_aromatic, formal_charge and stereochemistry.
         optional attributes for edges are: is_aromatic, bond_order and stereochemistry.
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -1917,13 +1919,13 @@ class FrozenMolecule(Serializable):
             will return an optional dict containing the atomic mapping.
 
         aromatic_matching: bool, default=True, optional
-        compare the aromatic attributes of bonds and atoms.
+            compare the aromatic attributes of bonds and atoms.
 
         formal_charge_matching: bool, default=True, optional
-        compare the formal charges attributes of the atoms.
+            compare the formal charges attributes of the atoms.
 
         bond_order_matching: bool, deafult=True, optional
-        compare the bond order on attributes of the bonds.
+            compare the bond order on attributes of the bonds.
 
         atom_stereochemistry_matching : bool, default=True, optional
             If ``False``, atoms' stereochemistry is ignored for the
@@ -2033,6 +2035,8 @@ class FrozenMolecule(Serializable):
         """
         Check if the molecule is isomorphic with the other molecule which can be an openforcefield.topology.Molecule,
         or TopologyMolecule or nx.Graph(). Full matching is done using the options described bellow.
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -2899,6 +2903,8 @@ class FrozenMolecule(Serializable):
         # Finally format the formula as string
         formula = ''
         for ele, count in symbol_to_counts.items():
+            if count == 1:
+                count = ''
             formula += f'{ele}{count}'
         return formula
 
@@ -3378,6 +3384,8 @@ class FrozenMolecule(Serializable):
         or run qcengine calculations locally, the molecule is placed in canonical order first.
         spec can be found here <https://molssi-qc-schema.readthedocs.io/en/latest/index.html>
 
+        .. warning :: This API is experimental and subject to change.
+
         Parameters
         ----------
         multiplicity : int, default=1, the multiplicity of the molecule required for qcschema
@@ -3436,6 +3444,8 @@ class FrozenMolecule(Serializable):
         """
         Create an openforcefield.topology.molecule.Molecule from a mapped SMILES made with cmiles.
         The molecule will be in the order of the indexing in the mapped smiles string.
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -3563,6 +3573,8 @@ class FrozenMolecule(Serializable):
 
         Requires RDKit to be installed.
 
+        .. warning :: This API is experimental and subject to change.
+
         The molecule is created and sanitised based on the SMILES string, we then find a mapping
         between this molecule and one from the PDB based only on atomic number and connections.
         The SMILES molecule is then reindex to match the PDB, the conformer is attached and the
@@ -3595,6 +3607,8 @@ class FrozenMolecule(Serializable):
         """
         Canonical order the atoms in a copy of the molecule using a toolkit, returns a new copy.
 
+        .. warning :: This API is experimental and subject to change.
+
         Parameters
         ----------
         hydrogens_last: bool, default True
@@ -3623,6 +3637,8 @@ class FrozenMolecule(Serializable):
     def remap(self, mapping_dict, current_to_new=True):
         """
         Remap all of the indexes in the molecule to match the given mapping dict
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------

@@ -534,7 +534,7 @@ class TestMolecule:
         """Test that making the hill formula is consistent between input methods and ordering"""
         # make sure smiles match reference
         molecule_smiles = create_ethanol()
-        assert molecule_smiles.hill_formula == 'C2H6O1'
+        assert molecule_smiles.hill_formula == 'C2H6O'
         # make sure is not order dependent
         molecule_smiles_reverse = create_reversed_ethanol()
         assert molecule_smiles.hill_formula == molecule_smiles_reverse.hill_formula

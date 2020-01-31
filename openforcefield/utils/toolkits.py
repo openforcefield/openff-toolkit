@@ -1889,10 +1889,18 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         molecule : openforcefield.topology.Molecule
             An openforcefield-style molecule.
         """
-        from openforcefield.topology.molecule import Molecule
         from rdkit import Chem
 
         rdmol = Chem.MolFromSmiles(smiles, sanitize=False)
+        # strip the atom map from the molecule if it has one
+        # so we don't affect the sterochemistry tags
+        for atom in rdmol.GetAtoms():
+            if atom.GetAtomMapNum() != 0:
+                # set the map back to zero but hide the index in the atom prop data
+                atom.SetProp('_map_idx', str(atom.GetAtomMapNum()))
+                # set it back to zero
+                atom.SetAtomMapNum(0)
+
         # TODO: I think UpdatePropertyCache(strict=True) is called anyway in Chem.SanitizeMol().
         rdmol.UpdatePropertyCache(strict=False)
         Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
@@ -2048,7 +2056,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         atom_mapping = {}
         for rda in rdmol.GetAtoms():
             rd_idx = rda.GetIdx()
-            map_id = rda.GetAtomMapNum()
+            # if the molecule was made from a mapped smiles this has been hidden
+            # so that it does not affect the sterochemistry tags
+            try:
+                map_id = int(rda.GetProp('_map_idx'))
+            except KeyError:
+                map_id = rda.GetAtomMapNum()
 
             # create a new atom
             #atomic_number = oemol.NewAtom(rda.GetAtomicNum())
