@@ -429,7 +429,7 @@ class TestTopology(TestCase):
 
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
-        with pytest.raises(ValueError, match='No match found for molecule C1. This would be a '
+        with pytest.raises(ValueError, match='No match found for molecule C. This would be a '
                                              'very unusual molecule to try and parameterize, '
                                              'and it is likely that the data source it was '
                                              'read from does not contain connectivity '

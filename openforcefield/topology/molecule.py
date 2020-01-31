@@ -2864,6 +2864,7 @@ class FrozenMolecule(Serializable):
         """
 
         from openforcefield.topology import TopologyMolecule
+        import collections
         # check for networkx then assuming we have a Molecule or TopologyMolecule instance just try and
         # extract the info. Note we do not type check the TopologyMolecule due to cyclic dependencies
         if isinstance(molecule, nx.Graph):
@@ -2881,32 +2882,29 @@ class FrozenMolecule(Serializable):
                                           f'openforcefield.topology.topology.TopologyMolecule or networkx representaion '
                                           f'of the molecule.')
 
-        # Now sort the elements, method taken from topology._networkx_to_hill_formula
-        # Count the number of instances of each atomic number
-        at_num_to_counts = dict([(unq, atom_nums.count(unq)) for unq in atom_nums])
+        # make a correct hill formula representation following this guide
+        # https://en.wikipedia.org/wiki/Chemical_formula#Hill_system
 
-        symbol_to_counts = {}
-        # Check for C and H first, to make a correct hill formula (remember dicts in python 3.6+ are ordered)
-        if 6 in at_num_to_counts:
-            symbol_to_counts['C'] = at_num_to_counts[6]
-            del at_num_to_counts[6]
+        # create the counter dictionary using chemical symbols
+        atom_symbol_counts = collections.Counter(Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums)
 
-        if 1 in at_num_to_counts:
-            symbol_to_counts['H'] = at_num_to_counts[1]
-            del at_num_to_counts[1]
+        formula = []
+        # Check for C and H first, to make a correct hill formula
+        for el in ['C', 'H']:
+            if el in atom_symbol_counts:
+                count = atom_symbol_counts.pop(el)
+                formula.append(el)
+                if count > 1:
+                    formula.append(str(count))
 
-        # Now count instances of all elements other than C and H, in order of ascending atomic number
-        sorted_atom_nums = sorted(at_num_to_counts.keys())
-        for atom_num in sorted_atom_nums:
-            symbol_to_counts[Element.getByAtomicNumber(atom_num).symbol] = at_num_to_counts[atom_num]
+        # now get the rest of the elements in alphabetical ordering
+        for el in sorted(atom_symbol_counts.keys()):
+            count = atom_symbol_counts.pop(el)
+            formula.append(el)
+            if count > 1:
+                formula.append(str(count))
 
-        # Finally format the formula as string
-        formula = ''
-        for ele, count in symbol_to_counts.items():
-            if count == 1:
-                count = ''
-            formula += f'{ele}{count}'
-        return formula
+        return "".join(formula)
 
     def chemical_environment_matches(self,
                                      query,

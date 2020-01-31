@@ -538,6 +538,15 @@ class TestMolecule:
         # make sure is not order dependent
         molecule_smiles_reverse = create_reversed_ethanol()
         assert molecule_smiles.hill_formula == molecule_smiles_reverse.hill_formula
+        # make sure single element names are put first
+        order_mol = Molecule.from_smiles('C(Br)CB')
+        assert order_mol.hill_formula == 'C2H6BBr'
+        # test molecule with no carbon
+        no_carb_mol = Molecule.from_smiles('OS(=O)(=O)O')
+        assert no_carb_mol.hill_formula == 'H2O4S'
+        # test no carbon and hydrogen
+        br_i = Molecule.from_smiles('BrI')
+        assert br_i.hill_formula == 'BrI'
         # make sure files and smiles match
         molecule_file = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
         assert molecule_smiles.hill_formula == molecule_file.hill_formula
@@ -548,6 +557,7 @@ class TestMolecule:
         assert molecule_smiles.hill_formula == Molecule.to_hill_formula(topmol)
         # make sure the networkx matches
         assert molecule_smiles.hill_formula == Molecule.to_hill_formula(molecule_smiles.to_networkx())
+
 
     def test_isomorphic_general(self):
         """Test the matching using different input types"""

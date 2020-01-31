@@ -1653,7 +1653,7 @@ class Topology(Serializable):
             if match_found is False:
                 hill_formula = Molecule.to_hill_formula(omm_mol_G)
                 msg = f'No match found for molecule {hill_formula}. '
-                probably_missing_conect = ['C1', 'H1', 'O1', 'N1', 'P1', 'S1', 'F1', 'Cl1', 'Br1']
+                probably_missing_conect = ['C', 'H', 'O', 'N', 'P', 'S', 'F', 'Cl', 'Br']
                 if hill_formula in probably_missing_conect:
                     msg += ('This would be a very unusual molecule to try and parameterize, '
                             'and it is likely that the data source it was read from does not '
