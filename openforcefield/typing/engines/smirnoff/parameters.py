@@ -1875,7 +1875,7 @@ class BondHandler(ParameterHandler):
             if bond.fractional_bond_order is None:
                 [k, length] = [bond_params.k, bond_params.length]
             else:
-                # Interpolate using fractional bond orders
+                # TODO: Interpolate using fractional bond orders
                 # TODO: Do we really want to allow per-bond specification of interpolation schemes?
                 order = bond.fractional_bond_order
                 if self.fractional_bondorder_interpolation == 'interpolate-linear':
