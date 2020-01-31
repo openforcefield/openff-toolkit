@@ -810,7 +810,12 @@ class TestMolecule:
                        {'dataset': 'OptimizationDataset', 'name': 'Kinase Inhibitors: WBO Distributions', 'index':
                         'cc1ccc(cc1nc2nccc(n2)c3cccnc3)nc(=o)c4ccc(cc4)cn5ccn(cc5)c-0'},
                        {'dataset': 'OptimizationDataset', 'name': 'SMIRNOFF Coverage Set 1', 'index':
-                        'coc(o)oc-0'}]
+                        'coc(o)oc-0'},
+                       {'dataset': 'GridOptimizationDataset', 'name': 'OpenFF Trivalent Nitrogen Set 1', 'index':
+                        'b1(c2c(ccs2)-c3ccsc3n1)c4c(c(c(c(c4f)f)f)f)f'},
+                       {'dataset': 'GridOptimizationDataset', 'name': 'OpenFF Trivalent Nitrogen Set 1', 'index':
+                       'C(#N)N'}
+                       ]
 
     @pytest.mark.parametrize('input_data', client_examples)
     def test_from_qcschema_with_client(self, input_data):

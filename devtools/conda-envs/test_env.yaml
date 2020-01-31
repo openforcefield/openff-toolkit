@@ -28,6 +28,7 @@ dependencies:
   - xmltodict
   - qcelemental
   - qcportal
+  - qcengine
 
     # Pip-only installs
   #- pip:
