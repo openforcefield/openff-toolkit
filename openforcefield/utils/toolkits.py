@@ -519,8 +519,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             partial_charges_str = ' '.join(partial_charges_list)
             # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
             #  describe/infer the proper data type?
-            oechem.OESetSDData(oemol, "PartialCharge", partial_charges_str)
-        #oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
+            #oechem.OESetSDData(oemol, "PartialCharge", partial_charges_str)
+            oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
         #oechem.OEAddSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
         oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
@@ -551,6 +551,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         mols = list()
         oemol = oechem.OEMol()
+        #oemol = oechem.OEMolBase()
         while oechem.OEReadMolecule(oemolistream, oemol):
             oechem.OEPerceiveChiral(oemol)
             oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
@@ -559,23 +560,34 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             # If this is an SD file, check to see if there are partial charges
             #raise Exception(str(oemolistream.GetFormat()) + ' ' + str(oechem.OEFormat_SDF))
             #raise Exception(oechem.OEGetSDData(oemol, 'atom.dprop.PartialCharge'))
-            oechem.OESetSDData(oemol, "aaaa", "bbbb")
-            raise Exception([i.GetTag() for i in oechem.OEGetSDDataPairs(oemol)])
-            if ((oemolistream.GetFormat() == oechem.OEFormat_SDF) and
-                #(oechem.OEHasSDData(oemol, 'atom.dprop.PartialCharge'))):
-                (oechem.OEHasSDData(oemol, 'PartialCharge'))):
-                raise Exception([i.GetTag() for i in oechem.OEGetSDDataPairs(oemol)])
-                charges_str = oechem.OEGetSDData(oemol, "atom.dprop.PartialCharge")
-                raise Exception(charges_str)
-                charges_unitless = [float(i)for i in charges_str.split()]
-                for charge, oeatom in zip(charges_unitless, oemol.GetAtoms()):
-                    oeatom.SetPartialCharge(charge)
+            #oechem.OESetSDData(oemol, "aaaa", "bbbb")
+            #raise Exception([i.GetTag() for i in oechem.OEGetSDDataPairs(oemol)])
+            if ((oemolistream.GetFormat() == oechem.OEFormat_SDF)): # and
+                # (oechem.OEHasSDData(oemol, 'atom.dprop.PartialCharge'))):
+            #     (oechem.OEHasSDData(oemol, 'PartialCharge'))):
+            #     n_confs = oemol.NumConfs()
+                # if n_confs > 1:
+                #     raise MultiConformerSdfError("Attempted to read a multi-conformer SDF. This is not ")
+                for conf in oemol.GetConfIter():
+                    this_conf_oemol = oechem.OEMol(conf)
+                    charges_str = oechem.OEGetSDData(conf, "atom.dprop.PartialCharge")
+                    # raise Exception(charges_str)
+                    charges_unitless = [float(i) for i in charges_str.split()]
+                    for charge, oeatom in zip(charges_unitless, this_conf_oemol.GetAtoms()):
+                        oeatom.SetPartialCharge(charge)
+                    mol = cls.from_openeye(
+                        this_conf_oemol,
+                        allow_undefined_stereo=allow_undefined_stereo)
+                    mols.append(mol)
 
-
-            mol = cls.from_openeye(
-                oemol,
-                allow_undefined_stereo=allow_undefined_stereo)
-            mols.append(mol)
+            #         print(oechem.OEGetSDData(conf, "aaaa"))
+            #         print([i.GetTag() for i in oechem.OEGetSDDataPairs(conf)])
+            #     raise Exception([i.GetTag() for i in oechem.OEGetSDDataPairs(oemol)])
+            else:
+                mol = cls.from_openeye(
+                    oemol,
+                    allow_undefined_stereo=allow_undefined_stereo)
+                mols.append(mol)
 
             # Check if this file may be using GAFF atom types.
             if oemolistream.GetFormat() == oechem.OEFormat_MOL2:
@@ -871,12 +883,20 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         partial_charges = unit.Quantity(
             np.zeros(molecule.n_atoms, dtype=np.float),
             unit=unit.elementary_charge)
+
+        # If partial charges are all zero on the oemol, then this corresponds
+        # with offmol.partial_charges=None
+        partial_charges_all_zero = True
         for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
             off_idx = map_atoms[oe_idx]
-            charge = oe_atom.GetPartialCharge() * unit.elementary_charge
+            unitless_charge = oe_atom.GetPartialCharge()
+            if abs(unitless_charge) > 1.e-5:
+                partial_charges_all_zero = False
+            charge = unitless_charge * unit.elementary_charge
             partial_charges[off_idx] = charge
 
-        molecule.partial_charges = partial_charges
+        if not(partial_charges_all_zero):
+            molecule.partial_charges = partial_charges
 
         return molecule
 
