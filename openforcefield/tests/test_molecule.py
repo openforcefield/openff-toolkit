@@ -315,14 +315,19 @@ class TestMolecule:
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_unique_atom_names(self, molecule):
         """Test molecules have unique atom names"""
-        smiles1 = molecule.to_smiles()
-        molecule2 = Molecule.from_smiles(smiles1)
+        # The dataset we load in has atom names, so let's strip them first
+        # to ensure that we can fail the uniqueness check
+        for atom in molecule.atoms:
+            atom.name = ''
+        assert not(molecule.has_unique_atom_names)
+        # Then genreate unique atom names using the built in algorithm
+        molecule.generate_unique_atom_names()
         # Check that the molecule has unique atom names
-        assert (molecule2.has_unique_atom_names == True)
+        assert molecule.has_unique_atom_names
         # Check molecule.has_unique_atom_names is working correctly
-        assert ((len(set([atom.name for atom in molecule2.atoms])) == molecule2.n_atoms) == molecule2.has_unique_atom_names)
-        molecule2.atoms[1].name = molecule2.atoms[0].name # no longer unique
-        assert ((len(set([atom.name for atom in molecule2.atoms])) == molecule2.n_atoms) == molecule2.has_unique_atom_names)
+        assert ((len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms) == molecule.has_unique_atom_names)
+        molecule.atoms[1].name = molecule.atoms[0].name # no longer unique
+        assert ((len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms) == molecule.has_unique_atom_names)
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @pytest.mark.slow
