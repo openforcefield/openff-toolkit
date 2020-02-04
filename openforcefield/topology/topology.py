@@ -1687,7 +1687,7 @@ class Topology(Serializable):
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
 
-    def to_openmm(self):
+    def to_openmm(self, ensure_unique_atom_names=True):
         """
         Create an OpenMM Topology object.
 
@@ -1702,12 +1702,24 @@ class Topology(Serializable):
         ----------
         openmm_topology : simtk.openmm.app.Topology
             An OpenMM Topology object
+        ensure_unique_atom_names : bool, optional. Default=True
+            Whether to check that the molecules in each molecule have
+            unique atom names, and regenerate them if not. Note that this
+            looks only at molecules, and does not guarantee uniqueness in
+            the entire Topology.
         """
         from simtk.openmm.app import Topology as OMMTopology
         from simtk.openmm.app import Single, Double, Triple, Aromatic
         from simtk.openmm.app.element import Element as OMMElement
 
+
         omm_topology = OMMTopology()
+
+        # Create unique atom names
+        if ensure_unique_atom_names:
+            for ref_mol in self.reference_molecules:
+                if not ref_mol.has_unique_atom_names:
+                    ref_mol.generate_unique_atom_names()
 
         # Keep track of which chains and residues have been added.
         mol_to_chains = {}
