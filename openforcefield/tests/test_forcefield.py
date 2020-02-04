@@ -746,7 +746,7 @@ class TestForceField():
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         with pytest.raises(UnassignedProperTorsionParameterException,
                            match='- Topology indices [(]5, 0, 1, 6[)]: '
-                                 'names and elements [(] H[)], [(] C[)], [(] C[)], [(] H[)],') \
+                                 'names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],') \
                 as excinfo:
             omm_system = forcefield.create_openmm_system(topology)
 
