@@ -12,14 +12,14 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 New features
 """"""""""""
-- `PR #469 <https://github.com/openforcefield/openforcefield/pull/XXX>`_:
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
   The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
   :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.has_unique_atom_names>`
   and :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.generate_unique_atom_names>`.
 
 Behavior changed
 """"""""""""""""
-- `PR #469 <https://github.com/openforcefield/openforcefield/pull/XXX>`_:
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
   When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
   are generated (overriding any existing atom names) if the provided atom names are not unique. This
   uniqueness extends only to atoms in the same molecule. To disable this behavior, set the kwarg
@@ -27,9 +27,9 @@ Behavior changed
 
 Tests added
 """""""""""
-- `PR #469 <https://github.com/openforcefield/openforcefield/pull/XXX>`_: Added round-trip SMILES test
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: Added round-trip SMILES test
   to add coverage for :py:meth:`Molecule.from_smiles <openforcefield.topology.Molecule.from_smiles>`.
-- `PR #469 <https://github.com/openforcefield/openforcefield/pull/XXX>`_: Added tests for unique atom
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: Added tests for unique atom
   naming behavior in  :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, as
   well as tests of the ``ensure_unique_atom_names=False`` kwarg disabling this behavior.
 
