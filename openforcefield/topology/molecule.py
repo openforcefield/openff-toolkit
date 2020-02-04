@@ -1542,9 +1542,6 @@ class FrozenMolecule(Serializable):
                     other)
                 raise Exception(msg)
 
-        # Validate the molecule
-        self._validate()
-
     @property
     def has_unique_atom_names(self):
         """True if the molecule has unique atom names, False otherwise."""
@@ -1922,7 +1919,6 @@ class FrozenMolecule(Serializable):
                 'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
-        molecule._validate()
         return molecule
 
     def is_isomorphic(
@@ -2843,7 +2839,6 @@ class FrozenMolecule(Serializable):
             raise Exception(
                 "Addition of explicit hydrogens failed in from_iupac")
         molecule = cls.from_openeye(oemol, **kwargs)
-        molecule._validate()
         return molecule
 
     # TODO: Move OE-dependent parts of this to toolkits.py
@@ -3033,8 +3028,6 @@ class FrozenMolecule(Serializable):
                 file_format=file_format,
                 allow_undefined_stereo=allow_undefined_stereo)
 
-        for mol in mols:
-            mol._validate()
 
         if len(mols) == 0:
             raise Exception(
@@ -3149,7 +3142,6 @@ class FrozenMolecule(Serializable):
         toolkit = RDKitToolkitWrapper()
         molecule = toolkit.from_rdkit(
             rdmol, allow_undefined_stereo=allow_undefined_stereo)
-        molecule._validate()
         return molecule
 
     @RDKitToolkitWrapper.requires_toolkit()
@@ -3218,7 +3210,6 @@ class FrozenMolecule(Serializable):
         toolkit = OpenEyeToolkitWrapper()
         molecule = toolkit.from_openeye(
             oemol, allow_undefined_stereo=allow_undefined_stereo)
-        molecule._validate()
         return molecule
 
     @OpenEyeToolkitWrapper.requires_toolkit()
