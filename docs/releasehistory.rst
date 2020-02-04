@@ -20,17 +20,25 @@ New features
 Behavior changed
 """"""""""""""""
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/XXX>`_:
-  When constructing a :py:class:`Molecule <openforcefield.topology.Molecule>`, unique atom names
-  are generated (overriding any existing atom names) if the provided atom names are not unique.
+  When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
+  are generated (overriding any existing atom names) if the provided atom names are not unique. This
+  uniqueness extends only to atoms in the same molecule. To disable this behavior, set the kwarg
+  ``ensure_unique_atom_names=False``.
 
 Tests added
 """""""""""
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/XXX>`_: Added round-trip SMILES test
   to add coverage for :py:meth:`Molecule.from_smiles <openforcefield.topology.Molecule.from_smiles>`.
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/XXX>`_: Added tests for unique atom
+  naming behavior in  :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, as
+  well as tests of the ``ensure_unique_atom_names=False`` kwarg disabling this behavior.
 
 Bugfixes
 """"""""
-- `Issue #460 <https://github.com/openforcefield/openforcefield/issues/460>`_: Atom names are not unique
+- `Issue #460 <https://github.com/openforcefield/openforcefield/issues/460>`_: Creates unique atom
+  names in :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>` if the existing
+  ones are not unique. The lack of unique atom names caused problems in workflows involving
+  downstream tools that expect unique atom names.
 
 0.6.0 - Library Charges
 -----------------------
