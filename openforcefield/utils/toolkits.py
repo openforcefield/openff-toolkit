@@ -55,6 +55,7 @@ from distutils.spawn import find_executable
 from functools import wraps
 import importlib
 import logging
+import subprocess
 
 from simtk import unit
 import numpy as np
@@ -215,7 +216,7 @@ class ToolkitWrapper:
                   allow_undefined_stereo=False):
         """
         Return an openforcefield.topology.Molecule from a file using this toolkit.
-        
+
         Parameters
         ----------
         file_path : str
@@ -240,7 +241,7 @@ class ToolkitWrapper:
         """
         Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using this
          toolkit.
-        
+
         Parameters
         ----------
         file_obj : file-like object
@@ -1080,25 +1081,25 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):
         """
-        Generate molecule conformers using OpenEye Omega. 
+        Generate molecule conformers using OpenEye Omega.
 
         .. warning :: This API is experimental and subject to change.
 
         .. todo ::
-        
+
            * which parameters should we expose? (or can we implement a general system with **kwargs?)
            * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that
            they'll get reindexed when we convert the input into an OEmol?
-        
+
         Parameters
         ---------
-        molecule : a :class:`Molecule` 
+        molecule : a :class:`Molecule`
             The molecule to generate conformers for.
         n_conformers : int, default=1
             The maximum number of conformers to generate.
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
-        
+
         """
         from openeye import oeomega
         oemol = self.to_openeye(molecule)
@@ -1222,7 +1223,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         Compute AM1BCC partial charges with OpenEye quacpac. This function will attempt to use
         the OEAM1BCCELF10 charge generation method, but may print a warning and fall back to
-        normal OEAM1BCC if an error is encountered. This error is known to occur with some 
+        normal OEAM1BCC if an error is encountered. This error is known to occur with some
         carboxylic acids, and is under investigation by OpenEye.
 
 
@@ -1780,25 +1781,25 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
     def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):
         """
-        Generate molecule conformers using RDKit. 
+        Generate molecule conformers using RDKit.
 
         .. warning :: This API is experimental and subject to change.
 
         .. todo ::
-        
+
            * which parameters should we expose? (or can we implement a general system with **kwargs?)
            * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that they'll get reindexed when we convert the input into an RDMol?
-        
+
         Parameters
         ---------
-        molecule : a :class:`Molecule` 
+        molecule : a :class:`Molecule`
             The molecule to generate conformers for.
         n_conformers : int, default=1
             Maximum number of conformers to generate.
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule.
-        
-        
+
+
         """
         from rdkit.Chem import AllChem
         rdmol = self.to_rdkit(molecule)
@@ -2743,15 +2744,17 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
                 # TODO: Add something cleaner than os.system
-                os.system(
-                    "antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf "
-                    "yes -c bcc -nc {}".format(net_charge))
+                subprocess.check_output([
+                    "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o", "charged.mol2", "-fo", "mol2", "-pf", "yes", "-c", "bcc",
+                    "-nc", str(net_charge)
+                ])
                 #os.system('cat charged.mol2')
 
                 # Write out just charges
-                os.system(
-                    "antechamber -i charged.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc "
-                    "-cf charges.txt -pf yes")
+                subprocess.check_output([
+                    "antechamber", "-i", "charged.mol2", "-fi", "mol2", "-o", "charges2.mol2", "-fo", "mol2", "-c", "wc", "-cf",
+                    "charges.txt", "-pf", "yes"
+                ])
                 #os.system('cat charges.txt')
                 # Check to ensure charges were actually produced
                 if not os.path.exists('charges.txt'):
