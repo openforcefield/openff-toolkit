@@ -558,16 +558,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oechem.OE3DToInternalStereo(oemol)
 
             # If this is an SD file, check to see if there are partial charges
-            #raise Exception(str(oemolistream.GetFormat()) + ' ' + str(oechem.OEFormat_SDF))
-            #raise Exception(oechem.OEGetSDData(oemol, 'atom.dprop.PartialCharge'))
-            #oechem.OESetSDData(oemol, "aaaa", "bbbb")
-            #raise Exception([i.GetTag() for i in oechem.OEGetSDDataPairs(oemol)])
-            if ((oemolistream.GetFormat() == oechem.OEFormat_SDF)): # and
-                # (oechem.OEHasSDData(oemol, 'atom.dprop.PartialCharge'))):
-            #     (oechem.OEHasSDData(oemol, 'PartialCharge'))):
-            #     n_confs = oemol.NumConfs()
-                # if n_confs > 1:
-                #     raise MultiConformerSdfError("Attempted to read a multi-conformer SDF. This is not ")
+
+            if ((oemolistream.GetFormat() == oechem.OEFormat_SDF)):
+                # The openFF toolkit treats each conformer in a "multiconformer" SDF as
+                # a separate molecule.
+                # https://github.com/openforcefield/openforcefield/issues/202
+                # https://docs.eyesopen.com/toolkits/python/oechemtk/oemol.html#dude-where-s-my-sd-data
                 for conf in oemol.GetConfIter():
                     this_conf_oemol = oechem.OEMol(conf)
                     charges_str = oechem.OEGetSDData(conf, "atom.dprop.PartialCharge")
@@ -580,9 +576,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                         allow_undefined_stereo=allow_undefined_stereo)
                     mols.append(mol)
 
-            #         print(oechem.OEGetSDData(conf, "aaaa"))
-            #         print([i.GetTag() for i in oechem.OEGetSDDataPairs(conf)])
-            #     raise Exception([i.GetTag() for i in oechem.OEGetSDDataPairs(oemol)])
             else:
                 mol = cls.from_openeye(
                     oemol,

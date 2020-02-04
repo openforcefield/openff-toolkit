@@ -282,15 +282,32 @@ class TestOpenEyeToolkitWrapper:
         assert molecule._conformers[0].shape == (15,3)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    @pytest.mark.skip
-    def test_get_multiconformer_sdf_coordinates(self):
-        """Test OpenEyeToolkitWrapper for importing multiple sets of coordinates from a sdf file"""
-        raise NotImplementedError
+    def test_treat_multiconformer_sdf_as_separate_molecules(self):
+        """
+        Test OpenEyeToolkitWrapper for reading a "multiconformer" SDF, which the OFF
+        Toolkit should treat as separate molecules
+        """
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        filename = get_data_file_path('molecules/toluene.sdf')
-        molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        assert len(molecule._conformers) == 1
-        assert molecule._conformers[0].shape == (15,3)
+        filename = get_data_file_path('molecules/n-hexane_multiconf.sdf')
+        molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        assert len(molecules) == 2
+        assert len(molecules[0]._conformers) == 1
+        assert len(molecules[1]._conformers) == 1
+        assert molecules[0]._conformers[0].shape == (20, 3)
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_treat_multiconformer_sdf_as_separate_molecules_properties(self):
+        """
+        Test OpenEyeToolkitWrapper for reading a "multiconformer" SDF, which the OFF
+        Toolkit should treat as separate molecules
+        """
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        filename = get_data_file_path('molecules/n-hexane_multiconf.sdf')
+        molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        assert len(molecules) == 2
+        assert len(molecules[0]._conformers) == 1
+        assert len(molecules[1]._conformers) == 1
+        assert molecules[0]._conformers[0].shape == (20, 3)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_write_sdf_charges(self):
@@ -604,9 +621,6 @@ class TestOpenEyeToolkitWrapper:
                 if 1.75 < bond.fractional_bond_order < 2.25:
                     double_bond_has_wbo_near_2 = True
         assert double_bond_has_wbo_near_2
-
-
-
 
 
         # TODO: Check partial charge invariants (total charge, charge equivalence)
