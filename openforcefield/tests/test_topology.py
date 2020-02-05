@@ -506,6 +506,92 @@ class TestTopology(TestCase):
         # process doesn't encode stereochemistry.
         raise NotImplementedError
 
+    def test_to_openmm_assign_unique_atom_names(self):
+        """
+        Ensure that OFF topologies with no pre-existing atom names have unique
+        atom names applied when being converted to openmm
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles('CCO')
+        benzene = Molecule.from_smiles('c1ccccc1')
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+        omm_topology = off_topology.to_openmm()
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        # There should be 6 unique Cs, 6 unique Hs, and 1 unique O, for a total of 13 unique atom names
+        assert len(atom_names) == 13
+
+    def test_to_openmm_assign_some_unique_atom_names(self):
+        """
+        Ensure that OFF topologies with some pre-existing atom names have unique
+        atom names applied to the other atoms when being converted to openmm
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles('CCO')
+        for atom in ethanol.atoms:
+            atom.name = f'AT{atom.molecule_atom_index}'
+        benzene = Molecule.from_smiles('c1ccccc1')
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+        omm_topology = off_topology.to_openmm()
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        # There should be 9 "ATOM#"-labeled atoms, 6 unique Cs, and 6 unique Hs,
+        # for a total of 21 unique atom names
+        assert len(atom_names) == 21
+
+    def test_to_openmm_assign_unique_atom_names_some_duplicates(self):
+        """
+        Ensure that OFF topologies where some molecules have invalid/duplicate
+        atom names have unique atom names applied while the other molecules are unaffected.
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles('CCO')
+
+        # Assign duplicate atom names in ethanol (two AT0s)
+        ethanol_atom_names_with_duplicates = [f'AT{i}' for i in range(ethanol.n_atoms)]
+        ethanol_atom_names_with_duplicates[1] = 'AT0'
+        for atom, atom_name in zip(ethanol.atoms, ethanol_atom_names_with_duplicates):
+            atom.name = atom_name
+
+        # Assign unique atom names in benzene
+        benzene = Molecule.from_smiles('c1ccccc1')
+        benzene_atom_names = [f'AT{i}' for i in range(benzene.n_atoms)]
+        for atom, atom_name in zip(benzene.atoms, benzene_atom_names):
+            atom.name = atom_name
+
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+        omm_topology = off_topology.to_openmm()
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+
+        # There should be  12 "AT#"-labeled atoms (from benzene), 2 unique Cs,
+        # 1 unique O, and 6 unique Hs, for a total of 21 unique atom names
+        assert len(atom_names) == 21
+
+
+    def test_to_openmm_do_not_assign_unique_atom_names(self):
+        """
+        Test disabling unique atom name assignment in Topology.to_openmm
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles('CCO')
+        for atom in ethanol.atoms:
+            atom.name = 'eth_test'
+        benzene = Molecule.from_smiles('c1ccccc1')
+        benzene.atoms[0].name = 'bzn_test'
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+        omm_topology = off_topology.to_openmm(ensure_unique_atom_names=False)
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        # There should be 9 atom named "eth_test", 1 atom named "bzn_test",
+        # and 12 atoms named "", for a total of 3 unique atom names
+        assert len(atom_names) == 3
+
+
     @pytest.mark.skipif( not(OpenEyeToolkitWrapper.is_available()), reason='Test requires OE toolkit')
     def test_chemical_environments_matches_OE(self):
         """Test Topology.chemical_environment_matches"""

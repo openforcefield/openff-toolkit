@@ -7,6 +7,38 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+0.6.1 - Bugfixes
+----------------
+
+New features
+""""""""""""
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
+  The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
+  :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.has_unique_atom_names>`
+  and :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.generate_unique_atom_names>`.
+
+Behavior changed
+""""""""""""""""
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
+  When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
+  are generated (overriding any existing atom names) if the provided atom names are not unique. This
+  uniqueness extends only to atoms in the same molecule. To disable this behavior, set the kwarg
+  ``ensure_unique_atom_names=False``.
+
+Tests added
+"""""""""""
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: Added round-trip SMILES test
+  to add coverage for :py:meth:`Molecule.from_smiles <openforcefield.topology.Molecule.from_smiles>`.
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: Added tests for unique atom
+  naming behavior in  :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, as
+  well as tests of the ``ensure_unique_atom_names=False`` kwarg disabling this behavior.
+
+Bugfixes
+""""""""
+- `Issue #460 <https://github.com/openforcefield/openforcefield/issues/460>`_: Creates unique atom
+  names in :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>` if the existing
+  ones are not unique. The lack of unique atom names caused problems in workflows involving
+  downstream tools that expect unique atom names.
 
 0.6.0 - Library Charges
 -----------------------
@@ -90,10 +122,10 @@ Behavior changed
 
 Tests added
 """""""""""
-- `PR #430 <https://github.com/openforcefield/openforcefield/pull/430>`_: Added test for 
-  Wiberg Bond Order implemented in OpenEye Toolkits. Molecules taken from 
+- `PR #430 <https://github.com/openforcefield/openforcefield/pull/430>`_: Added test for
+  Wiberg Bond Order implemented in OpenEye Toolkits. Molecules taken from
   DOI:10.5281/zenodo.3405489 . Added by Sukanya Sasmal.
- 
+
 
 Bugfixes
 """"""""
@@ -474,7 +506,7 @@ API-breaking Changes
 * `PR #291 <https://github.com/openforcefield/openforcefield/pull/291>`_: Remove ``ForceField.load/to_smirnoff_data``, add ``ForceField.to_file/string`` and ``ParameterHandler.add_parameters``. Change behavior of ``ForceField.register_X_handler`` functions.
 
 Bugfixes
-"""""""" 
+""""""""
 * `PR #327 <https://github.com/openforcefield/openforcefield/pull/327>`_: Fix units in tip3p.offxml (note that this file is still not loadable by current toolkit)
 * `PR #325 <https://github.com/openforcefield/openforcefield/pull/325>`_: Fix solvent box for provided test system to resolve periodic clashes.
 * `PR #325 <https://github.com/openforcefield/openforcefield/pull/325>`_: Add informative message containing Hill formula when a molecule can't be matched in ``Topology.from_openmm``.
