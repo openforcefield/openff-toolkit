@@ -16,6 +16,18 @@ New features
   The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
   :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.has_unique_atom_names>`
   and :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.generate_unique_atom_names>`.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
+  The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
+  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>`
+  and :py:meth:`Molecule.is_isomorphic_with <openforcefield.topology.Molecule.is_isomorphic_with>`
+  and :py:meth:`Molecule.hill_formula <openforcefield.topology.Molecule.hill_formula>`
+  and :py:meth:`Molecule.to_hill_formula <openforcefield.topology.Molecule.to_hill_formula>`
+  and :py:meth:`Molecule.to_qcschema <openforcefield.topology.Molecule.to_qcschema>`
+  and :py:meth:`Molecule.from_qcschema <openforcefield.topology.Molecule.from_qcschema>`
+  and :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>`
+  and :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
+  and :py:meth:`Molecule.canonical_order_atoms <openforcefield.topology.Molecule.canonical_order_atoms>`
+  and :py:meth:`Molecule.remap <openforcefield.topology.Molecule.remap>`
 
 Behavior changed
 """"""""""""""""
@@ -24,6 +36,15 @@ Behavior changed
   are generated (overriding any existing atom names) if the provided atom names are not unique. This
   uniqueness extends only to atoms in the same molecule. To disable this behavior, set the kwarg
   ``ensure_unique_atom_names=False``.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
+  The :py:meth:`Molecule.__eq__ <openforcefield.topology.Molecule.__eq__>` now uses the new
+  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to perform the
+  similarity checking.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
+   The :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
+   :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` now use the
+   :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to match
+   molecules.
 
 Tests added
 """""""""""
@@ -32,6 +53,29 @@ Tests added
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: Added tests for unique atom
   naming behavior in  :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, as
   well as tests of the ``ensure_unique_atom_names=False`` kwarg disabling this behavior.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Added tests for
+  :py:meth:`Molecule.hill_formula <openforcefield.topology.Molecule.hill_formula>` and
+  :py:meth:`Molecule.to_hill_formula <openforcefield.topology.Molecule.to_hill_formula>` for the
+  various supported input types.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Added round-trip test for
+  :py:meth:`Molecule.from_qcschema <openforcefield.topology.Molecule.from_qcschema>` and
+  :py:meth:`Molecule.to_qcschema <openforcefield.topology.Molecule.to_qcschema>`.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Added tests for
+  :py:meth:`Molecule.is_isomorphic_with <openforcefield.topology.Molecule.is_isomorphic_with>` and
+  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>`
+  with various levels of isomorphic graph matching.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Added toolkit dependent tests
+  for :py:meth:`Molecule.canonical_order_atoms <openforcefield.topology.Molecule.canonical_order_atoms>`
+  due to differences in the algorithms used.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Added a test for
+  :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>` using
+  the molecule from issue #412 to ensure it is now fixed.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Added a test for
+  :py:meth:`Molecule.remap <openforcefield.topology.Molecule.remap>`, this also checks for expected
+  error when the mapping is not complete.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Added tests for
+  :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
+  to check for a correct combination of smiles and PDB and incorrect combinations.
 
 Bugfixes
 """"""""
@@ -39,6 +83,25 @@ Bugfixes
   names in :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>` if the existing
   ones are not unique. The lack of unique atom names caused problems in workflows involving
   downstream tools that expect unique atom names.
+- `Issue #448 <https://github.com/openforcefield/openforcefield/issues/448>`_: We can now make molecules
+  from mapped smiles using :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>`
+  where the order will correspond to the indeing used in the smiles.
+  Molecules can also be re-indexed at any time using the
+  :py:meth:`Molecule.remap <openforcefield.topology.Molecule.remap>`.
+- `Issue #462 <https://github.com/openforcefield/openforcefield/issues/462>`_: We can now instance the
+   :py:class:`Molecule <openforcefield.topology.Molecule>` from a QCArchive entry record instance or dictionary
+   representation.
+- `Issue #412 <https://github.com/openforcefield/openforcefield/issues/412>`_: We can now instance the
+  :py:class:`Molecule <openforcefield.topology.Molecule>` using
+  :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>` which allows
+  the creation of the problematic molecule in the issue with out the need to use the ``allow_undefined_stero`` kwarg.``
+
+Example added
+"""""""""""""
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Adds an example notebook
+  `QCarchive_interface.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/QCArchive_interface/QCarchive_interface.ipynb>`
+  which shows users how to instance the :py:class:`Molecule <openforcefield.topology.Molecule>` from
+  a QCArchive entry level record and calculate the energy using RDKit through QCEngine.
 
 0.6.0 - Library Charges
 -----------------------

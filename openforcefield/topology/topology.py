@@ -1032,7 +1032,7 @@ class Topology(Serializable):
             iter(molecules)
         except TypeError as te:
             # Make iterable object
-            molecules = [molecules, ]
+            molecules = [molecules]
 
         # Create Topology and populate it with specified molecules
         topology = cls()
