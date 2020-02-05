@@ -95,14 +95,17 @@ script:
     pytest --ignore=utilities --ignore=examples/deprecated --ignore=docs
     --ignore=devtools --doctest-modules --nbval-lax --cov=openforcefield
     --cov-config=setup.cfg;
-  elif [[ "$OPENEYE" == true ]];
+  elif [[ "$RDKIT" == false && "$OPENEYE" == true ]];
   then
     pytest --ignore=utilities --ignore=examples/deprecated --ignore=docs
     --ignore=devtools --ignore=examples/check_dataset_parameter_coverage
+    --ignore=examples/QCArchive_interface
     --nbval-lax --cov=openforcefield --cov-config=setup.cfg;
-  else
+  elif [[ "$RDKIT" == true && "$OPENEYE" == false ]];
+  then
     pytest --ignore=utilities --ignore=examples/deprecated
     --nbval-lax --cov=openforcefield --cov-config=setup.cfg;
+    
   fi
 
 # Raise a fuss if cron jobs break
