@@ -639,7 +639,7 @@ class TestMolecule:
     def test_remap(self):
         """Test the remap function which should return a new molecule in the requested ordering"""
         # the order here is CCO
-        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
+        ethanol = create_ethanol()
         # get ethanol in reverse order OCC
         ethanol_reverse = create_reversed_ethanol()
         # get the mapping between the molecules
@@ -650,7 +650,7 @@ class TestMolecule:
             remapped = ethanol.remap(mapping, current_to_new=True)
 
         # remake with no virtual site and remap to match the reversed ordering
-        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
+        ethanol = create_ethanol()
 
         new_ethanol = ethanol.remap(mapping, current_to_new=True)
 
@@ -660,17 +660,17 @@ class TestMolecule:
                 assert atoms[0].to_dict() == atoms[1].to_dict()
             # bonds will not be in the same order in the molecule and the atom1 and atom2 indecies could be out of order
             # make a dict to compare them both
-            remaped_bonds = dict(((bond.atom1_index, bond.atom2_index), bond) for bond in mol2.bonds)
+            remapped_bonds = dict(((bond.atom1_index, bond.atom2_index), bond) for bond in mol2.bonds)
             for bond in mol1.bonds:
                 key = (bond.atom1_index, bond.atom2_index)
-                if key not in remaped_bonds:
+                if key not in remapped_bonds:
                     key = tuple(reversed(key))
-                assert key in remaped_bonds
+                assert key in remapped_bonds
                 # now compare each attribute of the bond except the atom indexes
                 bond_dict = bond.to_dict()
                 del bond_dict['atom1']
                 del bond_dict['atom2']
-                remapped_bond_dict = remaped_bonds[key].to_dict()
+                remapped_bond_dict = remapped_bonds[key].to_dict()
                 del remapped_bond_dict['atom1']
                 del remapped_bond_dict['atom2']
             assert mol1.n_bonds == mol2.n_bonds
@@ -678,6 +678,7 @@ class TestMolecule:
             assert mol1.n_propers == mol2.n_propers
             assert mol1.n_impropers == mol2.n_impropers
             assert mol1.total_charge == mol2.total_charge
+            assert mol1.partial_charges.all() == mol2.partial_charges.all()
 
         # check all of the properties match as well, torsions and impropers will be in a different order
         # due to the bonds being out of order
@@ -702,14 +703,9 @@ class TestMolecule:
         reversed_ethanol = create_reversed_ethanol()
         # get the canonical ordering
         canonical_ethanol = reversed_ethanol.canonical_order_atoms(openeye)
-
-        # now ensure the atom and bond ordering matches
-        for atoms in zip(canonical_ethanol.atoms, ethanol.atoms):
-            print(atoms)
-            assert atoms[0].to_dict() == atoms[1].to_dict()
-
-        for bonds in zip(canonical_ethanol.bonds, ethanol.bonds):
-            assert bonds[0].to_dict() == bonds[1].to_dict()
+        # make sure the mapping between the ethanol and the openeye ref canonical form is the same
+        assert (True, {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8}) == Molecule.are_isomorphic(canonical_ethanol,
+                                                                                                         ethanol, True)
 
     @requires_rdkit
     def test_canonical_ordering_rdkit(self):
@@ -798,6 +794,8 @@ class TestMolecule:
     def test_from_qcschema_no_client(self):
         """Test the ability to make molecules from QCArchive record instances and dicts"""
 
+        import json
+
         # As the method can take a record instance or a dict with JSON encoding test both
         # test incomplete dict
         example_dict = {'name': 'CH4'}
@@ -808,6 +806,14 @@ class TestMolecule:
         wrong_object = 'CH4'
         with pytest.raises(AttributeError):
             mol = Molecule.from_qcschema(wrong_object)
+
+        with open(get_data_file_path('molecules/qcportal_molecules.json')) as json_file:
+            # test loading the dict representation from a json file
+            json_mol = json.load(json_file)
+            mol = Molecule.from_qcschema(json_mol)
+            # now make a molecule from the canonical smiles and make sure they are isomorphic
+            can_mol = Molecule.from_smiles(json_mol['attributes']['canonical_isomeric_smiles'])
+            assert mol.is_isomorphic_with(can_mol) is True
 
     client_examples = [{'dataset': 'TorsionDriveDataset', 'name': 'Fragment Stability Benchmark', 'index':
                         'CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F'},
@@ -849,6 +855,49 @@ class TestMolecule:
         mol_from_smiles = Molecule.from_smiles(entry.attributes['canonical_explicit_hydrogen_smiles'], True)
 
         assert mol_from_dict.is_isomorphic_with(mol_from_smiles) is True
+
+    def test_qcschema_round_trip(self):
+        """Test making a molecule from qcschema then converting back"""
+
+        # get a molecule qcschema
+        import qcportal as ptl
+        client = ptl.FractalClient()
+        ds = client.get_collection('OptimizationDataset', 'SMIRNOFF Coverage Set 1')
+        # grab an entry from the optimization data set
+        entry = ds.get_entry('coc(o)oc-0')
+        # now make the molecule from the record instance with the geometry
+        mol = Molecule.from_qcschema(entry, client)
+        # now grab the initial molecule record
+        qca_mol = client.query_molecules(id=entry.initial_molecule)[0]
+        # mow make sure the majority of the qcschema attributes are the same
+        # note we can not compare the full dict due to qcelemental differences
+        qcschema = mol.to_qcschema()
+        assert qcschema.atom_labels.tolist() == qca_mol.atom_labels.tolist()
+        assert qcschema.symbols.tolist() == qca_mol.symbols.tolist()
+        # due to conversion useing different programs there is a slight difference here
+        assert qcschema.geometry.flatten().tolist() == pytest.approx(qca_mol.geometry.flatten().tolist(), rel=1.0e-5)
+        assert qcschema.connectivity == qca_mol.connectivity
+        assert qcschema.atomic_numbers.tolist() == qca_mol.atomic_numbers.tolist()
+        assert qcschema.fragment_charges == qca_mol.fragment_charges
+        assert qcschema.fragment_multiplicities == qca_mol.fragment_multiplicities
+        assert qcschema.fragments[0].tolist() == qca_mol.fragments[0].tolist()
+        assert qcschema.mass_numbers.tolist() == qca_mol.mass_numbers.tolist()
+        assert qcschema.name == qca_mol.name
+        assert qcschema.masses.all() == qca_mol.masses.all()
+        assert qcschema.molecular_charge == qca_mol.molecular_charge
+        assert qcschema.molecular_multiplicity == qca_mol.molecular_multiplicity
+        assert qcschema.real.all() == qca_mol.real.all()
+
+    def test_from_mapped_smiles(self):
+        """Test making the molecule from issue #412 using both toolkits to ensure the issue
+        is fixed."""
+
+        # there should be no undefined sterochmeistry error when making the molecule
+        mol = Molecule.from_mapped_smiles('[H:14][c:1]1[c:3]([c:7]([c:11]([c:8]([c:4]1[H:17])[H:21])[C:13]([H:24])([H:25])[c:12]2[c:9]([c:5]([c:2]([c:6]([c:10]2[H:23])[H:19])[H:15])[H:18])[H:22])[H:20])[H:16]')
+        assert mol.n_atoms == 25
+        # make sure the atom map is not exposed
+        with pytest.raises(KeyError):
+            mapping = mol._properties['atom_map']
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_n_particles(self, molecule):

@@ -1051,7 +1051,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
          Returns
         -------
         molecule : openforcefield.topology.Molecule
-            An openforcefield-style molecule.
+            The input molecule, with canonically-indexed atoms and bonds.
         """
 
         from openeye import oechem
@@ -1822,7 +1822,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
          Returns
         -------
         molecule : openforcefield.topology.Molecule
-            An openforcefield-style molecule with atoms in canonical order.
+            The input molecule, with canonically-indexed atoms and bonds.
         """
 
         from rdkit import Chem

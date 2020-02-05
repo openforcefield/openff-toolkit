@@ -34,7 +34,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
 # =============================================================================================
 
 import numpy as np
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 from copy import deepcopy
 import operator
 
@@ -1941,6 +1941,7 @@ class FrozenMolecule(Serializable):
 
         atom_map : default=None, Optional,
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
+            If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
 
         # Do a quick hill formula check first
@@ -2864,7 +2865,7 @@ class FrozenMolecule(Serializable):
         """
 
         from openforcefield.topology import TopologyMolecule
-        import collections
+
         # check for networkx then assuming we have a Molecule or TopologyMolecule instance just try and
         # extract the info. Note we do not type check the TopologyMolecule due to cyclic dependencies
         if isinstance(molecule, nx.Graph):
@@ -2886,7 +2887,7 @@ class FrozenMolecule(Serializable):
         # https://en.wikipedia.org/wiki/Chemical_formula#Hill_system
 
         # create the counter dictionary using chemical symbols
-        atom_symbol_counts = collections.Counter(Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums)
+        atom_symbol_counts = Counter(Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums)
 
         formula = []
         # Check for C and H first, to make a correct hill formula
@@ -3175,7 +3176,7 @@ class FrozenMolecule(Serializable):
                       f"formats for this toolkit are {toolkit.toolkit_file_read_formats}."
                 if toolkit.toolkit_name == 'The RDKit' and file_format == 'PDB':
                     msg += "RDKit can however read PDBs with a valid smiles string using the " \
-                           "Molecule.from_pdb(file_path, smiles) constructor"
+                           "Molecule.from_pdb_and_smiles(file_path, smiles) constructor"
                 raise NotImplementedError(msg)
         else:
             raise ValueError(
@@ -3386,13 +3387,16 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        multiplicity : int, default=1, the multiplicity of the molecule required for qcschema
+        multiplicity : int, default=1,
+            The multiplicity of the molecule required for qcschema
 
-        conformer : int, default=0, the index of the conformer that should be used for qcschema
+        conformer : int, default=0,
+            The index of the conformer that should be used for qcschema
 
         Returns
         ---------
-        qcelemental.models.Molecule : a validated qcschema
+        qcelemental.models.Molecule :
+            A validated qcschema
 
         Example
         -------
@@ -3447,9 +3451,10 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        mapped_smiles: str, a cmiles style mapped smiles string with explicit hydrogens.
+        mapped_smiles: str,
+            A CMILES-style mapped smiles string with explicit hydrogens.
 
-        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
         allow_undefined_stereo : bool, default=False
@@ -3470,9 +3475,9 @@ class FrozenMolecule(Serializable):
         offmol = cls.from_smiles(mapped_smiles, hydrogens_are_explicit=True, toolkit_registry=toolkit_registry,
                                  allow_undefined_stereo=allow_undefined_stereo)
 
-        # check we found some mapping
+        # check we found some mapping and remove it as we do not want to expose atom maps
         try:
-            mapping = offmol._properties['atom_map']
+            mapping = offmol._properties.pop('atom_map')
         except KeyError:
             raise SmilesParsingError('The given SMILES has no indexing, please generate a valid explicit hydrogen '
                                      'mapped SMILES using cmiles.')
@@ -3496,9 +3501,11 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        qca_record : dict, a QCArchive dict with json encoding or record instance
+        qca_record : dict,
+            A QCArchive dict with json encoding or record instance
 
-        client : optional, default=None, a qcportal.FractalClient instance so we can pull the initial molecule geometry.
+        client : optional, default=None,
+            A qcportal.FractalClient instance so we can pull the initial molecule geometry.
 
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
@@ -3521,7 +3528,7 @@ class FrozenMolecule(Serializable):
         InvalidConformerError : silent error, if the conformer could not be attached.
         """
 
-        # We can accept the TDeEntry record or the dict with JSON encoding
+        # We can accept the Dataset entry record or the dict with JSON encoding
         # lets get it all in the dict rep
         if not isinstance(qca_record, dict):
             try:

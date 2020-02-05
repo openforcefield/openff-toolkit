@@ -1032,7 +1032,7 @@ class Topology(Serializable):
             iter(molecules)
         except TypeError as te:
             # Make iterable object
-            molecules = [molecules]
+            molecules = [molecules, ]
 
         # Create Topology and populate it with specified molecules
         topology = cls()
@@ -1803,7 +1803,7 @@ class Topology(Serializable):
         ----------
         mdtraj_topology : mdtraj.Topology
             An MDTraj Topology object
-        """
+        # """
         import mdtraj as md
         return md.Topology.from_openmm(self.to_openmm())
 

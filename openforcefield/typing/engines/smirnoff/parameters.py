@@ -3347,7 +3347,7 @@ class GBSAHandler(ParameterHandler):
         #for topology_particle in topology.topology_particles:
             #gbsa_force.addParticle([0.0, 1.0, 0.0])
 
-        params_to_add = [[] for particle in topology.topology_particles]
+        params_to_add = [[] for _ in topology.topology_particles]
         for atom_key, atom_match in atom_matches.items():
             atom_idx = atom_key[0]
             gbsatype = atom_match.parameter_type
