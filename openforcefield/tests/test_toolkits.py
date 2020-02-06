@@ -304,7 +304,7 @@ class TestOpenEyeToolkitWrapper:
         # Test loading from file-like object
         with open(filename, 'r') as infile:
             molecule2 = Molecule(infile, file_format='MOL2', toolkit_registry=toolkit_wrapper)
-        assert molecule1.is_isomorphic(molecule2)
+        assert molecule1.is_isomorphic_with(molecule2)
         assert len(molecule2._conformers) == 1
         assert molecule2._conformers[0].shape == (15, 3)
         assert_almost_equal(molecule2.conformers[0][5][1] / unit.angstrom, 22.98, decimal=2)
@@ -313,7 +313,7 @@ class TestOpenEyeToolkitWrapper:
         import gzip
         with gzip.GzipFile(filename + '.gz', 'r') as infile:
             molecule3 = Molecule(infile, file_format='MOL2', toolkit_registry=toolkit_wrapper)
-        assert molecule1.is_isomorphic(molecule3)
+        assert molecule1.is_isomorphic_with(molecule3)
         assert len(molecule3._conformers) == 1
         assert molecule3._conformers[0].shape == (15, 3)
         assert_almost_equal(molecule3.conformers[0][5][1] / unit.angstrom, 22.98, decimal=2)

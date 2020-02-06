@@ -429,7 +429,7 @@ class TestTopology(TestCase):
 
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
-        with pytest.raises(ValueError, match='No match found for molecule C1. This would be a '
+        with pytest.raises(ValueError, match='No match found for molecule C. This would be a '
                                              'very unusual molecule to try and parameterize, '
                                              'and it is likely that the data source it was '
                                              'read from does not contain connectivity '
@@ -493,8 +493,7 @@ class TestTopology(TestCase):
         """Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols"""
         from simtk.openmm import app
         pdbfile = app.PDBFile(get_data_file_path('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
-        #toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = [ Molecule.from_file(get_data_file_path(name)) for name in ('molecules/ethanol.mol2',
+        molecules = [Molecule.from_file(get_data_file_path(name)) for name in ('molecules/ethanol.mol2',
                                                                                'molecules/ethanol_reordered.mol2',
                                                                                'molecules/cyclohexane.mol2')]
         with self.assertRaises(DuplicateUniqueMoleculeError) as context:
