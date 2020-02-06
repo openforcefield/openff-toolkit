@@ -284,11 +284,11 @@ class TestOpenEyeToolkitWrapper:
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_treat_multiconformer_sdf_as_separate_molecules(self):
         """
-        Test OpenEyeToolkitWrapper for reading a "multiconformer" SDF, which the OFF
+        Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
         Toolkit should treat as separate molecules
         """
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        filename = get_data_file_path('molecules/n-hexane_multiconf.sdf')
+        filename = get_data_file_path('molecules/methane_multiconformer.sdf')
         molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecules) == 2
         assert len(molecules[0]._conformers) == 1
@@ -298,11 +298,12 @@ class TestOpenEyeToolkitWrapper:
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_treat_multiconformer_sdf_as_separate_molecules_properties(self):
         """
-        Test OpenEyeToolkitWrapper for reading a "multiconformer" SDF, which the OFF
+        Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
         Toolkit should treat as separate molecules
         """
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        filename = get_data_file_path('molecules/n-hexane_multiconf.sdf')
+        1/0
+        filename = get_data_file_path('molecules/methane_multiconformer_properties.sdf')
         molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecules) == 2
         assert len(molecules[0]._conformers) == 1
@@ -914,17 +915,35 @@ class TestRDKitToolkitWrapper:
         assert '>  <atom.dprop.PartialCharge>' not in sdf_text
 
 
-    # Find a multiconformer SDF file
-    @pytest.mark.skip
-    #@pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
-    def test_get_multiconformer_sdf_coordinates(self):
-        """Test RDKitToolkitWrapper for importing a single set of coordinates from a sdf file"""
-        raise NotImplementedError
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_treat_multiconformer_sdf_as_separate_molecules(self):
+        """
+        Test OpenEyeToolkitWrapper for reading a "multiconformer" SDF, which the OFF
+        Toolkit should treat as separate molecules
+        """
         toolkit_wrapper = RDKitToolkitWrapper()
-        filename = get_data_file_path('molecules/toluene.sdf')
-        molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        assert len(molecule._conformers) == 1
-        assert molecule._conformers[0].shape == (15,3)
+        filename = get_data_file_path('molecules/methane_multiconformer.sdf')
+        molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        assert len(molecules) == 2
+        assert len(molecules[0]._conformers) == 1
+        assert len(molecules[1]._conformers) == 1
+        assert molecules[0]._conformers[0].shape == (20, 3)
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_treat_multiconformer_sdf_as_separate_molecules_properties(self):
+        """
+        Test OpenEyeToolkitWrapper for reading a "multiconformer" SDF, which the OFF
+        Toolkit should treat as separate molecules
+        """
+        toolkit_wrapper = RDKitToolkitWrapper()
+        1/0
+        filename = get_data_file_path('molecules/methane_multiconformer_properties.sdf')
+        molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        assert len(molecules) == 2
+        assert len(molecules[0]._conformers) == 1
+        assert len(molecules[1]._conformers) == 1
+        assert molecules[0]._conformers[0].shape == (20, 3)
+
 
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip

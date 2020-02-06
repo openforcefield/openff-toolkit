@@ -511,6 +511,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ofs = oechem.oemolostream(file_path)
         openeye_format = getattr(oechem, 'OEFormat_' + file_format)
         ofs.SetFormat(openeye_format)
+
+        # OFFTK strictly treats SDF as a single-conformer format.
+        # Delete all but the first conformer if writing to SDF.
+        if (file_format.lower() == "sdf") and oemol.NumConfs() > 1:
+            conf1 = [conf for conf in oemol.GetConfs()][0]
+            flat_coords = np.zeros((oemol.NumAtoms() * 3),
+                                   dtype=np.float32)
+            for idx, coord in enumerate(conf1.GetCoords()):
+                flat_coords[idx] = coord
+            oemol.DeleteConfs()
+            oecoords = oechem.OEFloatArray(flat_coords)
+            oemol.NewConf(oecoords)
         if (file_format.lower() == "sdf") and (molecule.partial_charges is not None):
             partial_charges_list = []
             for pc in molecule.partial_charges:
@@ -800,15 +812,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 msg = 'Unable to make OFFMol from OEMol: ' + msg
                 raise UndefinedStereochemistryError(msg)
 
-        # TODO: What other information should we preserve besides name?
-        # TODO: How should we preserve the name?
-
         molecule = Molecule()
         molecule.name = oemol.GetTitle()
 
         # Copy any attached SD tag information
-        # TODO: Should we use an API for this?
-        molecule._properties = dict()
         for dp in oechem.OEGetSDDataPairs(oemol):
             molecule._properties[dp.GetTag()] = dp.GetValue()
 
@@ -1008,10 +1015,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             # Flip stereochemistry if incorrect
             oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
                 oemol, oebond)
-            #print('AAAA', oebond_stereochemistry, bond.stereochemistry)
             if oebond_stereochemistry != bond.stereochemistry:
                 # Flip the stereochemistry
-                #oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Trans)
                 oebond.SetStereo([oeatom1_neighbor, oeatom2_neighbor],
                                  oechem.OEBondStereo_CisTrans,
                                  oechem.OEBondStereo_Trans)
@@ -1036,17 +1041,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     flat_coords[(3 * oe_idx) + 1] = y
                     flat_coords[(3 * oe_idx) + 2] = z
 
-                # TODO: Do we need to do these internal unit checks?
-                # TODO: Is there any risk that the atom indexing systems will change?
-                #flat_coords = (conf.in_units_of(unit.angstrom) / unit.angstrom).flatten()
                 oecoords = oechem.OEFloatArray(flat_coords)
                 oemol.NewConf(oecoords)
 
         # Retain charges, if present
         if not (molecule._partial_charges is None):
-            # for off_atom, oe_atom in zip(molecule.atoms, oemol_atoms):
-            #    charge_unitless = molecule._partial_charges
-
             oe_indexed_charges = np.zeros((molecule.n_atoms), dtype=np.float)
             for off_idx, charge in enumerate(molecule._partial_charges):
                 oe_idx = map_atoms[off_idx]
@@ -1055,7 +1054,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
                 oe_atom.SetPartialCharge(oe_indexed_charges[oe_idx])
 
-        # TODO: Retain properties, if present
+        # Retain properties, if present
+        for key, value in molecule.properties.items():
+            oechem.OESetSDData(oemol, key, value)
+
         # Clean Up phase
         # The only feature of a molecule that wasn't perceived above seemed to be ring connectivity, better to run it
         # here then for someone to inquire about ring sizes and get 0 when it shouldn't be
