@@ -34,19 +34,22 @@ Molecular chemical entity representation and routines to interface with cheminfo
 #=============================================================================================
 
 import numpy as np
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 from copy import deepcopy
+import operator
 
 from simtk import unit
-from simtk.openmm.app import element
+from simtk.openmm.app import element, Element
+
+import networkx as nx
+from networkx.algorithms.isomorphism import GraphMatcher
 
 import openforcefield
 from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, string_to_quantity
-from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper,\
+from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper, \
     InvalidToolkitError, GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
 from openforcefield.utils.serialization import Serializable
-
 
 
 #=============================================================================================
@@ -106,7 +109,6 @@ class Particle(Serializable):
         Returns the index of this particle in its molecule
         """
         return self._molecule.particles.index(self)
-
 
     @property
     def name(self):
@@ -602,14 +604,11 @@ class VirtualSite(Particle):
             [i.molecule_atom_index for i in self.atoms])
         vsite_dict['charge_increments'] = quantity_to_string(self._charge_increments)
 
-
         vsite_dict['epsilon'] = quantity_to_string(self._epsilon)
-
 
         vsite_dict['sigma'] = quantity_to_string(self._sigma)
 
         return vsite_dict
-
 
     @classmethod
     def from_dict(cls, vsite_dict):
@@ -1823,7 +1822,9 @@ class FrozenMolecule(Serializable):
            No effort is made to ensure that the atoms are in the same order or that any annotated properties are preserved.
 
         """
-        return self.is_isomorphic(other)
+        # updated to use the new isomorphic checking method, with full matching
+        # TODO the doc string did not match the previous function what matching should this method do?
+        return Molecule.are_isomorphic(self, other, return_atom_map=False)[0]
 
     def to_smiles(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
@@ -1877,7 +1878,6 @@ class FrozenMolecule(Serializable):
             self._cached_smiles[func_qualname] = smiles
             return smiles
 
-
     @staticmethod
     def from_smiles(smiles,
                     hydrogens_are_explicit=False,
@@ -1911,15 +1911,15 @@ class FrozenMolecule(Serializable):
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
             molecule = toolkit_registry.call('from_smiles',
-                                         smiles,
-                                         hydrogens_are_explicit=hydrogens_are_explicit,
-                                         allow_undefined_stereo=allow_undefined_stereo)
+                                             smiles,
+                                             hydrogens_are_explicit=hydrogens_are_explicit,
+                                             allow_undefined_stereo=allow_undefined_stereo)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             molecule = toolkit.from_smiles(smiles,
-                                       hydrogens_are_explicit=hydrogens_are_explicit,
-                                       allow_undefined_stereo=allow_undefined_stereo
-                                       )
+                                           hydrogens_are_explicit=hydrogens_are_explicit,
+                                           allow_undefined_stereo=allow_undefined_stereo
+                                           )
         else:
             raise Exception(
                 'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
@@ -1927,62 +1927,190 @@ class FrozenMolecule(Serializable):
 
         return molecule
 
-    def is_isomorphic(
-            self, other,
-            compare_atom_stereochemistry=True,
-            compare_bond_stereochemistry=True,
+    @staticmethod
+    def are_isomorphic(
+            mol1, mol2, return_atom_map=False,
+            aromatic_matching=True,
+            formal_charge_matching=True,
+            bond_order_matching=True,
+            atom_stereochemistry_matching=True,
+            bond_stereochemistry_matching=True
     ):
         """
-        Determines whether the molecules are isomorphic by comparing their graphs.
+        Determines whether the two molecules are isomorphic by comparing their graph representations and the chosen
+        node/edge attributes. Minimally connections and atomic_number are checked.
+
+        If nx.Graphs() are given they must at least have atomic_number attributes on nodes.
+        other optional attributes for nodes are: is_aromatic, formal_charge and stereochemistry.
+        optional attributes for edges are: is_aromatic, bond_order and stereochemistry.
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        other : an openforcefield.topology.molecule.FrozenMolecule
+        mol1 : an openforcefield.topology.molecule.FrozenMolecule or TopologyMolecule or nx.Graph()
+        mol2 : an openforcefield.topology.molecule.FrozenMolecule or TopologyMolecule or nx.Graph()
             The molecule to test for isomorphism.
-        compare_atom_stereochemistry : bool, optional
+
+        return_atom_map: bool, default=False, optional
+            will return an optional dict containing the atomic mapping.
+
+        aromatic_matching: bool, default=True, optional
+            compare the aromatic attributes of bonds and atoms.
+
+        formal_charge_matching: bool, default=True, optional
+            compare the formal charges attributes of the atoms.
+
+        bond_order_matching: bool, deafult=True, optional
+            compare the bond order on attributes of the bonds.
+
+        atom_stereochemistry_matching : bool, default=True, optional
             If ``False``, atoms' stereochemistry is ignored for the
-            purpose of determining equality. Default is ``True``.
-        compare_bond_stereochemistry : bool, optional
+            purpose of determining equality.
+
+        bond_stereochemistry_matching : bool, default=True, optional
             If ``False``, bonds' stereochemistry is ignored for the
-            purpose of determining equality. Default is ``True``.
+            purpose of determining equality.
 
         Returns
         -------
         molecules_are_isomorphic : bool
+
+        atom_map : default=None, Optional,
+            [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
+            If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
-        import networkx as nx
 
+        # Do a quick hill formula check first
+        if Molecule.to_hill_formula(mol1) != Molecule.to_hill_formula(mol2):
+            return False, None
+
+        # Build the user defined matching functions
         def node_match_func(x, y):
-            is_equal = (
-                (x['atomic_number'] == y['atomic_number']) and
-                (x['is_aromatic'] == y['is_aromatic']) and
-                (x['formal_charge'] == y['formal_charge'])
-            )
-            if compare_atom_stereochemistry:
-                is_equal &= x['stereochemistry'] == y['stereochemistry']
+            # always match by atleast atomic number
+            is_equal = (x['atomic_number'] == y['atomic_number'])
+            if aromatic_matching:
+                is_equal &= (x['is_aromatic'] == y['is_aromatic'])
+            if formal_charge_matching:
+                is_equal &= (x['formal_charge'] == y['formal_charge'])
+            if atom_stereochemistry_matching:
+                is_equal &= (x['stereochemistry'] == y['stereochemistry'])
             return is_equal
 
-        def edge_match_func(x, y):
-            # We don't need to check the exact bond order (which is 1 or 2)
-            # if the bond is aromatic. This way we avoid missing a match only
-            # if the alternate bond orders 1 and 2 are assigned differently.
-            is_equal = x['is_aromatic'] == y['is_aromatic'] or x['bond_order'] == y['bond_order']
-            if compare_bond_stereochemistry:
-                is_equal &= x['stereochemistry'] == y['stereochemistry']
-            return is_equal
+        # check if we want to do any bond matching if not the function is None
+        if aromatic_matching or bond_order_matching or bond_stereochemistry_matching:
+            def edge_match_func(x, y):
+                # We don't need to check the exact bond order (which is 1 or 2)
+                # if the bond is aromatic. This way we avoid missing a match only
+                # if the alternate bond orders 1 and 2 are assigned differently.
+                if aromatic_matching and bond_order_matching:
+                    is_equal = (x['is_aromatic'] == y['is_aromatic']) or (x['bond_order'] == y['bond_order'])
+                elif aromatic_matching:
+                    is_equal = (x['is_aromatic'] == y['is_aromatic'])
+                elif bond_order_matching:
+                    is_equal = (x['bond_order'] == y['bond_order'])
+                else:
+                    is_equal = None
+                if bond_stereochemistry_matching:
+                    if is_equal is None:
+                        is_equal = (x['stereochemistry'] == y['stereochemistry'])
+                    else:
+                        is_equal &= (x['stereochemistry'] == y['stereochemistry'])
 
-        return nx.is_isomorphic(self.to_networkx(),
-                                other.to_networkx(),
-                                node_match=node_match_func,
-                                edge_match=edge_match_func
-                                )
-        #if not (isinstance(other, FrozenMolecule)):
-        #    other_fm = FrozenMolecule(other)
-        #else:
-        #    other_fm = other
-        #self_smiles = self.to_smiles(toolkit_registry=toolkit_registry)
-        #other_smiles = other_fm.to_smiles(toolkit_registry=toolkit_registry)
-        #return self_smiles == other_smiles
+                return is_equal
+        else:
+            edge_match_func = None
+
+        # Here we should work out what data type we have, also deal with lists?
+        def to_networkx(data):
+            """For the given data type, return the networkx graph"""
+            from openforcefield.topology import TopologyMolecule
+
+            if isinstance(data, FrozenMolecule):
+                # Molecule class instance
+                return data.to_networkx()
+            elif isinstance(data, TopologyMolecule):
+                # TopologyMolecule class instance
+                return data.reference_molecule.to_networkx()
+            elif isinstance(data, nx.Graph):
+                return data
+
+            else:
+                raise NotImplementedError(f'The input type {type(data)} is not supported,'
+                                          f'please supply an openforcefield.topology.molecule.Molecule,'
+                                          f'openforcefield.topology.topology.TopologyMolecule or networkx representaion '
+                                          f'of the molecule.')
+
+        mol1_netx = to_networkx(mol1)
+        mol2_netx = to_networkx(mol2)
+        isomorphic = nx.is_isomorphic(mol1_netx,
+                                      mol2_netx,
+                                      node_match=node_match_func,
+                                      edge_match=edge_match_func)
+
+        if isomorphic and return_atom_map:
+            # now generate the sorted mapping between the molecules
+            GM = GraphMatcher(
+                mol1_netx,
+                mol2_netx,
+                node_match=node_match_func,
+                edge_match=edge_match_func)
+            for mapping in GM.isomorphisms_iter():
+                topology_atom_map = mapping
+                break
+
+            # reorder the mapping by keys
+            sorted_mapping = {}
+            for key in sorted(topology_atom_map.keys()):
+                sorted_mapping[key] = topology_atom_map[key]
+
+            return isomorphic, sorted_mapping
+
+        else:
+            return isomorphic, None
+
+    def is_isomorphic_with(self, other, **kwargs):
+        """
+        Check if the molecule is isomorphic with the other molecule which can be an openforcefield.topology.Molecule,
+        or TopologyMolecule or nx.Graph(). Full matching is done using the options described bellow.
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        other: openforcefield.topology.Molecule or TopologyMolecule or nx.Graph()
+
+        return_atom_map: bool, default=False, optional
+            will return an optional dict containing the atomic mapping.
+
+        aromatic_matching: bool, default=True, optional
+        compare the aromatic attributes of bonds and atoms.
+
+        formal_charge_matching: bool, default=True, optional
+        compare the formal charges attributes of the atoms.
+
+        bond_order_matching: bool, deafult=True, optional
+        compare the bond order on attributes of the bonds.
+
+        atom_stereochemistry_matching : bool, default=True, optional
+            If ``False``, atoms' stereochemistry is ignored for the
+            purpose of determining equality.
+
+        bond_stereochemistry_matching : bool, default=True, optional
+            If ``False``, bonds' stereochemistry is ignored for the
+            purpose of determining equality.
+
+        Returns
+        -------
+        isomorphic : bool
+        """
+
+        return Molecule.are_isomorphic(self, other, return_atom_map=False,
+                                       aromatic_matching=kwargs.get('aromatic_matching', True),
+                                       formal_charge_matching=kwargs.get('formal_charge_matching', True),
+                                       bond_order_matching=kwargs.get('bond_order_matching', True),
+                                       atom_stereochemistry_matching=kwargs.get('atom_stereochemistry_matching', True),
+                                       bond_stereochemistry_matching=kwargs.get('bond_stereochemistry_matching', True))[0]
 
     def generate_conformers(self,
                             toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
@@ -2058,7 +2186,6 @@ class FrozenMolecule(Serializable):
                 'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
         self.partial_charges = charges
-
 
     def compute_partial_charges(self,
                                 #quantum_chemical_method='AM1-BCC',
@@ -2602,6 +2729,7 @@ class FrozenMolecule(Serializable):
                 'of type simtk.units.Quantity')
 
         if self._conformers is None:
+            #TODO should we checking that the exact same conformer is not in the list already?
             self._conformers = []
         self._conformers.append(new_conf)
         return len(self._conformers)
@@ -2806,6 +2934,75 @@ class FrozenMolecule(Serializable):
         The properties dictionary of the molecule
         """
         return self._properties
+
+    @property
+    def hill_formula(self):
+        """
+        Get the Hill formula of the molecule
+        """
+        return Molecule.to_hill_formula(self)
+
+    @staticmethod
+    def to_hill_formula(molecule):
+        """
+        Generate the Hill formula from either a FrozenMolecule, TopologyMolecule or
+        nx.Graph() of the molecule
+
+        Parameters
+        -----------
+        molecule : FrozenMolecule, TopologyMolecule or nx.Graph()
+
+        Returns
+        ----------
+        formula : the Hill formula of the molecule
+
+        Raises
+        -----------
+        NotImplementedError : if the molecule is not of one of the specified types.
+        """
+
+        from openforcefield.topology import TopologyMolecule
+
+        # check for networkx then assuming we have a Molecule or TopologyMolecule instance just try and
+        # extract the info. Note we do not type check the TopologyMolecule due to cyclic dependencies
+        if isinstance(molecule, nx.Graph):
+            atom_nums = list(dict(molecule.nodes(data='atomic_number', default=1)).values())
+
+        elif isinstance(molecule, TopologyMolecule):
+            atom_nums = [atom.atomic_number for atom in molecule.atoms]
+
+        elif isinstance(molecule, FrozenMolecule):
+            atom_nums = [atom.atomic_number for atom in molecule.atoms]
+
+        else:
+            raise NotImplementedError(f'The input type {type(molecule)} is not supported,'
+                                      f'please supply an openforcefield.topology.molecule.Molecule,'
+                                      f'openforcefield.topology.topology.TopologyMolecule or networkx representaion '
+                                      f'of the molecule.')
+
+        # make a correct hill formula representation following this guide
+        # https://en.wikipedia.org/wiki/Chemical_formula#Hill_system
+
+        # create the counter dictionary using chemical symbols
+        atom_symbol_counts = Counter(Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums)
+
+        formula = []
+        # Check for C and H first, to make a correct hill formula
+        for el in ['C', 'H']:
+            if el in atom_symbol_counts:
+                count = atom_symbol_counts.pop(el)
+                formula.append(el)
+                if count > 1:
+                    formula.append(str(count))
+
+        # now get the rest of the elements in alphabetical ordering
+        for el in sorted(atom_symbol_counts.keys()):
+            count = atom_symbol_counts.pop(el)
+            formula.append(el)
+            if count > 1:
+                formula.append(str(count))
+
+        return "".join(formula)
 
     def chemical_environment_matches(self,
                                      query,
@@ -3052,29 +3249,33 @@ class FrozenMolecule(Serializable):
                     query_toolkit.
                     toolkit_name] = query_toolkit.toolkit_file_read_formats
             if toolkit is None:
-                msg = f"No toolkits in registry can read file {file_path} (format {file_format}). Supported "\
+                msg = f"No toolkits in registry can read file {file_path} (format {file_format}). Supported " \
                       f"formats in the provided ToolkitRegistry are {supported_read_formats}. "
                 # Per issue #407, not allowing RDKit to read mol2 has confused a lot of people. Here we add text
                 # to the error message that will hopefully reduce this confusion.
                 if file_format == 'MOL2' and RDKitToolkitWrapper.is_available():
                     msg += f"RDKit does not fully support input of molecules from mol2 format unless they " \
-                        f"have Corina atom types, and this is not common in the simulation community. For this " \
-                        f"reason, the Open Force Field Toolkit does not use " \
-                        f"RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt " \
-                        f"to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit " \
-                        f"molecule and use openforcefield.topology.Molecule.from_rdkit, but we do not recommend this."
+                           f"have Corina atom types, and this is not common in the simulation community. For this " \
+                           f"reason, the Open Force Field Toolkit does not use " \
+                           f"RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt " \
+                           f"to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit " \
+                           f"molecule and use openforcefield.topology.Molecule.from_rdkit, but we do not recommend this."
+                elif file_format == 'PDB' and RDKitToolkitWrapper.is_available():
+                    msg += "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity " \
+                           "is likely to be lost. PDBs can be used along with a valid smiles string with RDKit using " \
+                           "the constructor Molecule.from_pdb_and_smiles(file_path, smiles)"
                 raise NotImplementedError(msg)
-
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
             # TODO: Encapsulate this logic in ToolkitWrapper?
             toolkit = toolkit_registry
             if file_format not in toolkit.toolkit_file_read_formats:
-                raise NotImplementedError(
-                    "Toolkit {} can not read file {} (format {}). Supported formats for this toolkit "
-                    "are {}".format(toolkit.toolkit_name, file_path,
-                                    file_format,
-                                    toolkit.toolkit_file_read_formats))
+                msg = f"Toolkit {toolkit.toolkit_name} can not read file {file_path} (format {file_format}). Supported " \
+                      f"formats for this toolkit are {toolkit.toolkit_file_read_formats}."
+                if toolkit.toolkit_name == 'The RDKit' and file_format == 'PDB':
+                    msg += "RDKit can however read PDBs with a valid smiles string using the " \
+                           "Molecule.from_pdb_and_smiles(file_path, smiles) constructor"
+                raise NotImplementedError(msg)
         else:
             raise ValueError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
@@ -3093,7 +3294,6 @@ class FrozenMolecule(Serializable):
                 file_obj,
                 file_format=file_format,
                 allow_undefined_stereo=allow_undefined_stereo)
-
 
         if len(mols) == 0:
             raise Exception(
@@ -3278,6 +3478,349 @@ class FrozenMolecule(Serializable):
             oemol, allow_undefined_stereo=allow_undefined_stereo)
         return molecule
 
+    def to_qcschema(self, multiplicity=1, conformer=0):
+        """
+        Generate the qschema input format used to submit jobs to archive
+        or run qcengine calculations locally, the molecule is placed in canonical order first.
+        spec can be found here <https://molssi-qc-schema.readthedocs.io/en/latest/index.html>
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        multiplicity : int, default=1,
+            The multiplicity of the molecule required for qcschema
+
+        conformer : int, default=0,
+            The index of the conformer that should be used for qcschema
+
+        Returns
+        ---------
+        qcelemental.models.Molecule :
+            A validated qcschema
+
+        Example
+        -------
+
+        Create and validate a qcelemental input
+
+        >>> import qcelemental as qcel
+        >>> mol = Molecule.from_smiles('CC')
+        >>> mol.generate_conformers(n_conformers=1)
+        >>> qcschema = mol.to_qcschema()
+
+        Raises
+        --------
+        ImportError : if qcelemental is not installed; the qcschema can not be validated.
+
+        InvalidConformerError : if there is no conformer found at the given index.
+        """
+
+        try:
+            import qcelemental as qcel
+        except ImportError:
+            raise ImportError('Please install QCElemental via conda install -c conda-forge qcelemental '
+                              'to validate the schema')
+
+        # get a canonical ordered version of the molecule
+        canonical_mol = self.canonical_order_atoms()
+
+        # get/ check the geometry
+        try:
+            geometry = canonical_mol.conformers[conformer].in_units_of(unit.bohr)
+        except (IndexError, TypeError):
+            raise InvalidConformerError('The molecule must have a conformation to produce a valid qcschema; '
+                                        f'no conformer was found at index {conformer}.')
+
+        # Gather the required qschema data
+        charge = sum([atom.formal_charge for atom in canonical_mol.atoms])
+        connectivity = [(bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in canonical_mol.bonds]
+        symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in canonical_mol.atoms]
+
+        schema_dict = {'symbols': symbols, 'geometry': geometry, 'connectivity': connectivity,
+                       'molecular_charge': charge, 'molecular_multiplicity': multiplicity}
+
+        return qcel.models.Molecule.from_data(schema_dict, validate=True)
+
+    @classmethod
+    def from_mapped_smiles(cls, mapped_smiles, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY, allow_undefined_stereo=False):
+        """
+        Create an openforcefield.topology.molecule.Molecule from a mapped SMILES made with cmiles.
+        The molecule will be in the order of the indexing in the mapped smiles string.
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        mapped_smiles: str,
+            A CMILES-style mapped smiles string with explicit hydrogens.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
+
+        Returns
+        ----------
+        offmol : openforcefield.topology.molecule.Molecule
+            An openforcefiled molecule instance.
+
+        Raises
+        --------
+        SmilesParsingError : if the given SMILES had no indexing picked up by the toolkits.
+        """
+
+        # create the molecule from the smiles and check we have the right number of indexes
+        # in the mapped SMILES
+        offmol = cls.from_smiles(mapped_smiles, hydrogens_are_explicit=True, toolkit_registry=toolkit_registry,
+                                 allow_undefined_stereo=allow_undefined_stereo)
+
+        # check we found some mapping and remove it as we do not want to expose atom maps
+        try:
+            mapping = offmol._properties.pop('atom_map')
+        except KeyError:
+            raise SmilesParsingError('The given SMILES has no indexing, please generate a valid explicit hydrogen '
+                                     'mapped SMILES using cmiles.')
+
+        if len(mapping) != offmol.n_atoms:
+            raise SmilesParsingError('The mapped smiles does not contain enough indexes to remap the molecule.')
+
+        # remap the molecule using the atom map found in the smiles
+        # the order is mapping = Dict[current_index: new_index]
+        # first renumber the mapping dict indexed from 0, currently from 1 as 0 indicates no mapping in toolkits
+        adjusted_mapping = dict((current, new - 1) for current, new in mapping.items())
+
+        return offmol.remap(adjusted_mapping, current_to_new=True)
+
+    @classmethod
+    def from_qcschema(cls, qca_record, client=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY, allow_undefined_stereo=False):
+        """
+        Create a Molecule from  a QCArchive entry based on the cmiles information.
+
+        If we also have a client instance/address we can go and attach the starting geometry.
+
+        Parameters
+        ----------
+        qca_record : dict,
+            A QCArchive dict with json encoding or record instance
+
+        client : optional, default=None,
+            A qcportal.FractalClient instance so we can pull the initial molecule geometry.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
+
+        Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+            An openforcefield molecule instance.
+
+        Raises
+        -------
+        AttributeError : if the record dict can not be made from a record instance.
+            if a client is passed, because the client could not retrive the initial molecule.
+
+        KeyError : if the dict does not contain the canonical_isomeric_explicit_hydrogen_mapped_smiles.
+
+        InvalidConformerError : silent error, if the conformer could not be attached.
+        """
+
+        # We can accept the Dataset entry record or the dict with JSON encoding
+        # lets get it all in the dict rep
+        if not isinstance(qca_record, dict):
+            try:
+                qca_record = qca_record.dict(encoding='json')
+            except AttributeError:
+                raise AttributeError('The object passed could not be converted to a dict with json encoding')
+
+        try:
+            mapped_smiles = qca_record['attributes']['canonical_isomeric_explicit_hydrogen_mapped_smiles']
+        except KeyError:
+            raise KeyError('The record must contain the hydrogen mapped smiles to be safley made from the archive.')
+
+        # make a new molecule that has been reordered to match the cmiles mapping
+        offmol = cls.from_mapped_smiles(mapped_smiles, toolkit_registry=toolkit_registry,
+                                        allow_undefined_stereo=allow_undefined_stereo)
+
+        if client is not None:
+            # try and find the initial molecule conformations and attach them
+            # collect the input molecules
+            try:
+                input_mols = client.query_molecules(id=qca_record['initial_molecules'])
+            except KeyError:
+                # this must be an optimisation record
+                input_mols = client.query_molecules(id=qca_record['initial_molecule'])
+            except AttributeError:
+                raise AttributeError('The provided client can not query molecules, make sure it is an instance of'
+                                     'qcportal.client.FractalClient() with the correct address.')
+            initial_ids = {}
+            # now for each molecule convert and attach the input geometry
+            for molecule in input_mols:
+                geometry = unit.Quantity(np.array(molecule.geometry, np.float), unit.bohr)
+                try:
+                    offmol.add_conformer(geometry.in_units_of(unit.angstrom))
+                    initial_ids[molecule.id] = offmol.n_conformers - 1
+                except InvalidConformerError:
+                    print('Invalid conformer for this molecule, the geometry could not be attached.')
+            # attach a dict that has the initial molecule ids and the number of the conformer it is stored in
+            offmol._properties['initial_molecules'] = initial_ids
+
+        return offmol
+
+    @classmethod
+    @RDKitToolkitWrapper.requires_toolkit()
+    def from_pdb_and_smiles(cls, file_path, smiles, allow_undefined_stereo=False):
+        """
+        Create a Molecule from a pdb file and a SMILES string using RDKit.
+
+        Requires RDKit to be installed.
+
+        .. warning :: This API is experimental and subject to change.
+
+        The molecule is created and sanitised based on the SMILES string, we then find a mapping
+        between this molecule and one from the PDB based only on atomic number and connections.
+        The SMILES molecule is then reindex to match the PDB, the conformer is attached and the
+        molecule returned.
+
+        Parameters
+        ----------
+        file_path: str
+            PDB file path
+        smiles : str
+            a valid smiles string for the pdb, used for seterochemistry and bond order
+
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
+
+        Returns
+        --------
+        molecule : openforcefield.Molecule
+            An OFFMol instance with ordering the same as used in the PDB file.
+
+        Raises
+        ------
+        InvalidConformerError : if the SMILES and PDB molecules are not isomorphic.
+        """
+
+        toolkit = RDKitToolkitWrapper()
+        return toolkit.from_pdb_and_smiles(file_path, smiles, allow_undefined_stereo)
+
+    def canonical_order_atoms(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Canonical order the atoms in a copy of the molecule using a toolkit, returns a new copy.
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        hydrogens_last: bool, default True
+            If the canonical ordering should rank the hydrogens last.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+
+         Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+            An new openforcefield-style molecule with atoms in the canonical order.
+        """
+
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            return toolkit_registry.call('canonical_order_atoms',
+                                         self)
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            return toolkit.canonical_order_atoms(self)
+        else:
+            raise Exception(
+                'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
+                .format(type(toolkit_registry)))
+
+    def remap(self, mapping_dict, current_to_new=True):
+        """
+        Remap all of the indexes in the molecule to match the given mapping dict
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        mapping_dict : dict,
+            A dictionary of the mapping between in the indexes, this should start from 0.
+        current_to_new : bool, default=True
+            The dict is {current_index: new_index} if True else {new_index: current_index}
+
+        Returns
+        -------
+        new_molecule :  openforcefield.topology.molecule.Molecule
+            An openforcefield.Molecule instance with all attributes transferred, in the PDB order.
+        """
+
+        if self.n_virtual_sites != 0:
+            raise NotImplementedError('We can not remap virtual sites yet!')
+
+        # make sure the size of the mapping matches the current molecule
+        if len(mapping_dict) != self.n_atoms:
+            raise ValueError(f'The number of mapping indices({len(mapping_dict)}) does not match the number of'
+                             f'atoms in this molecule({self.n_atoms})')
+
+        # make two mapping dicts we need new to old for atoms
+        # and old to new for bonds
+        if current_to_new:
+            cur_to_new = mapping_dict
+            new_to_cur = dict(zip(mapping_dict.values(), mapping_dict.keys()))
+        else:
+            new_to_cur = mapping_dict
+            cur_to_new = dict(zip(mapping_dict.values(), mapping_dict.keys()))
+
+        new_molecule = Molecule()
+        new_molecule.name = self.name
+
+        try:
+            # add the atoms list
+            for i in range(self.n_atoms):
+                # get the old atom info
+                old_atom = self._atoms[new_to_cur[i]]
+                new_molecule.add_atom(**old_atom.to_dict())
+        # this is the first time we access the mapping; catch an index error here corresponding to mapping that starts
+        # from 0 or higher
+        except (KeyError, IndexError):
+            raise IndexError(f'The mapping supplied is missing a relation corresponding to atom({i})')
+
+        # add the bonds but with atom indexes in a sorted ascending order
+        for bond in self._bonds:
+            atoms = sorted([cur_to_new[bond.atom1_index], cur_to_new[bond.atom2_index]])
+            bond_dict = bond.to_dict()
+            bond_dict['atom1'] = atoms[0]
+            bond_dict['atom2'] = atoms[1]
+            new_molecule.add_bond(**bond_dict)
+
+        # we can now resort the bonds
+        sorted_bonds = sorted(new_molecule.bonds, key=operator.attrgetter('atom1_index', 'atom2_index'))
+        new_molecule._bonds = sorted_bonds
+
+        # remap the charges
+        new_charges = np.zeros(self.n_atoms)
+        for i in range(self.n_atoms):
+            new_charges[i] = self.partial_charges[new_to_cur[i]].value_in_unit(unit.elementary_charge)
+        new_molecule.partial_charges = new_charges * unit.elementary_charge
+
+        # remap the conformers there can be more than one
+        if self.conformers is not None:
+            for conformer in self.conformers:
+                new_conformer = np.zeros((self.n_atoms, 3))
+                for i in range(self.n_atoms):
+                    new_conformer[i] = conformer[new_to_cur[i]].value_in_unit(unit.angstrom)
+                new_molecule.add_conformer(new_conformer * unit.angstrom)
+
+        # move any properties across
+        new_molecule._properties = self._properties
+
+        return new_molecule
+
     @OpenEyeToolkitWrapper.requires_toolkit()
     def to_openeye(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
@@ -3311,7 +3854,6 @@ class FrozenMolecule(Serializable):
         """
         toolkit = OpenEyeToolkitWrapper()
         return toolkit.to_openeye(self, aromaticity_model=aromaticity_model)
-
 
     def get_fractional_bond_orders(self,
                                    method='Wiberg',
@@ -3879,4 +4421,24 @@ class Molecule(FrozenMolecule):
         index: int
             The index of this conformer
         """
+
+        # TODO how can be check that a set of coords and no connections
+        #   is a conformation that does not change connectivity?
+
         return self._add_conformer(coordinates)
+
+
+class InvalidConformerError(Exception):
+    """
+    This error is raised when the conformer added to the molecule
+    has a different connectivity to that already defined.
+    or anyother conformer related issues.
+    """
+    pass
+
+
+class SmilesParsingError(Exception):
+    """
+    This error is rasied when parsing a smiles string results in an error.
+    """
+    pass

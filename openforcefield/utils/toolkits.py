@@ -110,7 +110,6 @@ class InvalidToolkitError(MessageException):
     """A non-toolkit object was received when a toolkit object was expected"""
 
 
-
 class UndefinedStereochemistryError(MessageException):
     """A molecule was attempted to be loaded with undefined stereochemistry"""
     pass
@@ -772,8 +771,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             molecule._properties[dp.GetTag()] = dp.GetValue()
 
         map_atoms = dict()  # {oemol_idx: molecule_idx}
+        atom_mapping = {}
         for oeatom in oemol.GetAtoms():
             oe_idx = oeatom.GetIdx()
+            map_id = oeatom.GetMapIdx()
             atomic_number = oeatom.GetAtomicNum()
             formal_charge = oeatom.GetFormalCharge()
             is_aromatic = oeatom.IsAromatic()
@@ -791,6 +792,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 name=name)
             map_atoms[
                 oe_idx] = atom_index  # store for mapping oeatom to molecule atom indices below
+            atom_mapping[atom_index] = map_id
+        molecule._properties['atom_map'] = atom_mapping
 
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
@@ -1036,6 +1039,48 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             | oechem.OESMILESFlag_Isotopes | oechem.OESMILESFlag_BondStereo
             | oechem.OESMILESFlag_AtomStereo)
         return smiles
+
+    def canonical_order_atoms(self, molecule):
+        """
+        Canonical order the atoms in the molecule using the OpenEye toolkit.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The input molecule
+
+         Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+            The input molecule, with canonically-indexed atoms and bonds.
+        """
+
+        from openeye import oechem
+        oemol = self.to_openeye(molecule)
+
+        oechem.OECanonicalOrderAtoms(oemol)
+        oechem.OECanonicalOrderBonds(oemol)
+
+        # reorder the iterator
+        vatm = []
+        for atom in oemol.GetAtoms():
+            if atom.GetAtomicNum() != oechem.OEElemNo_H:
+                vatm.append(atom)
+        oemol.OrderAtoms(vatm)
+
+        vbnd = []
+        for bond in oemol.GetBonds():
+            if bond.GetBgn().GetAtomicNum() != oechem.OEElemNo_H and bond.GetEnd().GetAtomicNum() != oechem.OEElemNo_H:
+                vbnd.append(bond)
+        oemol.OrderBonds(vbnd)
+
+        oemol.Sweep()
+
+        for bond in oemol.GetBonds():
+            if bond.GetBgnIdx() > bond.GetEndIdx():
+                bond.SwapEnds()
+
+        return self.from_openeye(oemol)
 
     def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
         """
@@ -1515,6 +1560,67 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                                    allow_undefined_stereo=allow_undefined_stereo)
         raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
+    def from_pdb_and_smiles(self, file_path, smiles, allow_undefined_stereo=False):
+        """
+        Create a Molecule from a pdb file and a SMILES string using RDKit.
+
+        Requires RDKit to be installed.
+
+        The molecule is created and sanitised based on the SMILES string, we then find a mapping
+        between this molecule and one from the PDB based only on atomic number and connections.
+        The SMILES molecule is then reindex to match the PDB, the conformer is attached and the
+        molecule returned.
+
+        Parameters
+        ----------
+        file_path: str
+            PDB file path
+        smiles : str
+            a valid smiles string for the pdb, used for seterochemistry and bond order
+
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
+
+        Returns
+        --------
+        molecule : openforcefield.Molecule
+            An OFFMol instance with ordering the same as used in the PDB file.
+
+        Raises
+        ------
+        InvalidConformerError : if the SMILES and PDB molecules are not isomorphic.
+        """
+
+        from rdkit import Chem
+        from openforcefield.topology.molecule import Molecule, InvalidConformerError
+
+        # Make the molecule from smiles
+        offmol = self.from_smiles(smiles,
+                                  allow_undefined_stereo=allow_undefined_stereo)
+
+        # Make another molecule from the PDB, allow stero errors here they are expected
+        pdbmol = self.from_rdkit(Chem.MolFromPDBFile(file_path, removeHs=False), allow_undefined_stereo=True)
+
+        # check isomorphic and get the mapping if true the mapping will be
+        # Dict[pdb_index: offmol_index] sorted by pdb_index
+        isomorphic, mapping = Molecule.are_isomorphic(pdbmol, offmol, return_atom_map=True,
+                                                      aromatic_matching=False,
+                                                      formal_charge_matching=False,
+                                                      bond_order_matching=False,
+                                                      atom_stereochemistry_matching=False,
+                                                      bond_stereochemistry_matching=False)
+
+        if mapping is not None:
+            new_mol = offmol.remap(mapping)
+
+            # the pdb conformer is in the correct order so just attach it here
+            new_mol.add_conformer(pdbmol.conformers[0])
+
+            return new_mol
+
+        else:
+            raise InvalidConformerError('The PDB and SMILES structures do not match.')
+
     def from_file(self,
                   file_path,
                   file_format,
@@ -1572,8 +1678,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         elif (file_format == 'PDB'):
             raise Exception(
                 "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
-                "is likely to be lost.")
+                "is likely to be lost. To read a PDB using RDKit use Molecule.from_pdb_and_smiles()")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
+            #  testing to see if we can make a molecule from smiles and then use the PDB conformer as the geometry
+            #  and just reorder the molecule
             # https://github.com/openforcefield/openforcefield/issues/121
             # rdmol = Chem.MolFromPDBFile(file_path, removeHs=False)
             # mol = Molecule.from_rdkit(rdmol)
@@ -1632,9 +1740,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         elif file_format == 'PDB':
             raise Exception(
                 "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
-                "is likely to be lost.")
+                "is likely to be lost. To read a PDB using RDKit use Molecule.from_pdb_and_smiles()")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
             # https://github.com/openforcefield/openforcefield/issues/121
+            # file_data = file_obj.read()
             # rdmol = Chem.MolFromPDBBlock(file_data)
             # mol = Molecule.from_rdkit(rdmol)
             # mols.append(mol)
@@ -1702,6 +1811,44 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             writer.write(rdmol)
             writer.close()
 
+    def canonical_order_atoms(self, molecule):
+        """
+        Canonical order the atoms in the molecule using the RDKit.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The input molecule
+
+         Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+            The input molecule, with canonically-indexed atoms and bonds.
+        """
+
+        from rdkit import Chem
+        rdmol = self.to_rdkit(molecule)
+
+        # get the canonical ordering with hydrogens first
+        # this is the default behaviour of RDKit
+        atom_order = list(Chem.CanonicalRankAtoms(rdmol, breakTies=True))
+
+        heavy_atoms = rdmol.GetNumHeavyAtoms()
+        hydrogens = rdmol.GetNumAtoms() - heavy_atoms
+
+        # now go through and change the rankings to get the heavy atoms first if hydrogens are present
+        if hydrogens != 0:
+            for i in range(len(atom_order)):
+                if rdmol.GetAtomWithIdx(i).GetAtomicNum() != 1:
+                    atom_order[i] -= hydrogens
+                else:
+                    atom_order[i] += heavy_atoms
+
+        # make an atom mapping from the atom_order and remap the molecule
+        atom_mapping = dict((i, rank) for i, rank in enumerate(atom_order))
+
+        return molecule.remap(atom_mapping, current_to_new=True)
+
     @classmethod
     def to_smiles(cls, molecule):
         """
@@ -1743,10 +1890,18 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         molecule : openforcefield.topology.Molecule
             An openforcefield-style molecule.
         """
-        from openforcefield.topology.molecule import Molecule
         from rdkit import Chem
 
         rdmol = Chem.MolFromSmiles(smiles, sanitize=False)
+        # strip the atom map from the molecule if it has one
+        # so we don't affect the sterochemistry tags
+        for atom in rdmol.GetAtoms():
+            if atom.GetAtomMapNum() != 0:
+                # set the map back to zero but hide the index in the atom prop data
+                atom.SetProp('_map_idx', str(atom.GetAtomMapNum()))
+                # set it back to zero
+                atom.SetAtomMapNum(0)
+
         # TODO: I think UpdatePropertyCache(strict=True) is called anyway in Chem.SanitizeMol().
         rdmol.UpdatePropertyCache(strict=False)
         Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
@@ -1898,8 +2053,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # therefore we can't do it until after the atoms and bonds are all added
         map_atoms = {}
         map_bonds = {}
+        # if we are loading from a mapped smiles extract the mapping
+        atom_mapping = {}
         for rda in rdmol.GetAtoms():
             rd_idx = rda.GetIdx()
+            # if the molecule was made from a mapped smiles this has been hidden
+            # so that it does not affect the sterochemistry tags
+            try:
+                map_id = int(rda.GetProp('_map_idx'))
+            except KeyError:
+                map_id = rda.GetAtomMapNum()
 
             # create a new atom
             #atomic_number = oemol.NewAtom(rda.GetAtomicNum())
@@ -1909,7 +2072,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             if rda.HasProp('_Name'):
                 name = rda.GetProp('_Name')
             else:
-                name = ''
+                # check for PDB names
+                try:
+                    name = rda.GetMonomerInfo().GetName().strip()
+                except AttributeError:
+                    name = ''
 
             # If chiral, store the chirality to be set later
             stereochemistry = None
@@ -1933,6 +2100,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 name=name,
                 stereochemistry=stereochemistry)
             map_atoms[rd_idx] = atom_index
+            atom_mapping[atom_index] = map_id
+
+        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
+        if 0 not in atom_mapping.values():
+            offmol._properties['atom_map'] = atom_mapping
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
         for rdb in rdmol.GetBonds():
