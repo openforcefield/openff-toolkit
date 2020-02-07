@@ -456,26 +456,26 @@ class TestOpenEyeToolkitWrapper:
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders_neutral_charge_mol(self):
         """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() for neutral and charged molecule"""
-   
+
         toolkit_wrapper = OpenEyeToolkitWrapper()
         # Reading neutral molecule from file
         filename = get_data_file_path('molecules/CID20742535_neutral.sdf')
         molecule1 = Molecule.from_file(filename)
         # Reading negative molecule from file
         filename = get_data_file_path('molecules/CID20742535_anion.sdf')
-        molecule2 = Molecule.from_file(filename) 
-   
+        molecule2 = Molecule.from_file(filename)
+
         # Checking that only one additional bond is present in the neutral molecule
         assert (len(molecule1.bonds)==len(molecule2.bonds)+1)
- 
+
         for charge_model in ['am1', 'pm3']:
             molecule1.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
 
             for i in molecule1.bonds:
                 if i.is_aromatic:
                     # Checking aromatic bonds
-                    assert (1.15 < i.fractional_bond_order < 1.60)
-                elif (i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1): 
+                    assert (1.05 < i.fractional_bond_order < 1.70)
+                elif (i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1):
                     # Checking bond order of C-H or O-H bonds are around 1
                     assert (0.85 < i.fractional_bond_order < 1.05)
                 elif (i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8):
@@ -485,14 +485,14 @@ class TestOpenEyeToolkitWrapper:
                 else:
                     # Should be C-C single bond
                     assert (i.atom1_index == 4 and i.atom2_index == 6) or (i.atom1_index == 6 and i.atom2_index == 4)
-                    wbo_C_C_neutral = i.fractional_bond_order 
+                    wbo_C_C_neutral = i.fractional_bond_order
                     assert (1.0 < wbo_C_C_neutral < 1.3)
-                    
+
             molecule2.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
             for i in molecule2.bonds:
                 if i.is_aromatic:
                     # Checking aromatic bonds
-                    assert (1.0 < i.fractional_bond_order < 1.6)
+                    assert (1.05 < i.fractional_bond_order < 1.70)
                 elif (i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1):
                     # Checking bond order of C-H or O-H bonds are around 1
                     assert (0.85 < i.fractional_bond_order < 1.05)
@@ -892,6 +892,112 @@ class TestAmberToolsToolkitWrapper:
         for pc in molecule._partial_charges:
             charge_sum += pc
         assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
+                        reason='RDKitToolkit and AmberToolsToolkit not available')
+    def test_compute_wiberg_bond_orders(self):
+        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders()"""
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
+        smiles = '[H]C([H])([H])C([H])([H])[H]'
+        molecule = toolkit_registry.call('from_smiles', smiles)
+        molecule.generate_conformers(toolkit_registry=toolkit_registry)
+        for charge_model in ['am1', 'pm3']:
+            molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
+            print([bond.fractional_bond_order for bond in molecule.bonds])
+            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
+                        reason='RDKitToolkit and AmberToolsToolkit not available')
+    def test_compute_wiberg_bond_orders_neutral_charge_mol(self):
+        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() for neutral and charged molecule"""
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
+        # Reading neutral molecule from file
+        filename = get_data_file_path('molecules/CID20742535_neutral.sdf')
+        molecule1 = Molecule.from_file(filename)
+        # Reading negative molecule from file
+        filename = get_data_file_path('molecules/CID20742535_anion.sdf')
+        molecule2 = Molecule.from_file(filename)
+
+        # Checking that only one additional bond is present in the neutral molecule
+        assert (len(molecule1.bonds) == len(molecule2.bonds) + 1)
+
+        for charge_model in ['am1', 'pm3']:
+            molecule1.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
+
+            for i in molecule1.bonds:
+                if i.is_aromatic:
+                    # Checking aromatic bonds
+                    assert (1.05 < i.fractional_bond_order < 1.70)
+                elif (i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1):
+                    # Checking bond order of C-H or O-H bonds are around 1
+                    assert (0.85 < i.fractional_bond_order < 1.05)
+                elif (i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8):
+                    # Checking C-O single bond
+                    wbo_C_O_neutral = i.fractional_bond_order
+                    assert (1.0 < wbo_C_O_neutral < 1.5)
+                else:
+                    # Should be C-C single bond
+                    assert (i.atom1_index == 4 and i.atom2_index == 6) or (i.atom1_index == 6 and i.atom2_index == 4)
+                    wbo_C_C_neutral = i.fractional_bond_order
+                    assert (1.0 < wbo_C_C_neutral < 1.3)
+
+            molecule2.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
+            for i in molecule2.bonds:
+                if i.is_aromatic:
+                    # Checking aromatic bonds
+                    assert (1.05 < i.fractional_bond_order < 1.70)
+                elif (i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1):
+                    # Checking bond order of C-H or O-H bonds are around 1
+                    assert (0.85 < i.fractional_bond_order < 1.05)
+                elif (i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8):
+                    # Checking C-O single bond
+                    wbo_C_O_anion = i.fractional_bond_order
+                    assert (1.3 < wbo_C_O_anion < 1.8)
+                else:
+                    # Should be C-C single bond
+                    assert (i.atom1_index == 4 and i.atom2_index == 6) or (i.atom1_index == 6 and i.atom2_index == 4)
+                    wbo_C_C_anion = i.fractional_bond_order
+                    assert (1.0 < wbo_C_C_anion < 1.3)
+
+            # Wiberg bond order of C-C single bond is higher in the anion
+            assert (wbo_C_C_anion > wbo_C_C_neutral)
+            # Wiberg bond order of C-O bond is higher in the anion
+            assert (wbo_C_O_anion > wbo_C_O_neutral)
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
+                        reason='RDKitToolkit and AmberToolsToolkit not available')
+    def test_compute_wiberg_bond_orders_charged(self):
+        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with net charge +1"""
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
+        smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
+        molecule = toolkit_registry.call('from_smiles', smiles)
+        molecule.generate_conformers(toolkit_registry=toolkit_registry)
+        for charge_model in ['am1', 'pm3']:
+            molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
+            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
+                        reason='RDKitToolkit and AmberToolsToolkit not available')
+    def test_compute_wiberg_bond_orders_double_bond(self):
+        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with a double bond"""
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
+        smiles = r'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
+        molecule = toolkit_registry.call('from_smiles', smiles)
+        molecule.generate_conformers(toolkit_registry=toolkit_registry)
+        for charge_model in ['am1', 'pm3']:
+            molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
+            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+        double_bond_has_wbo_near_2 = False
+        for bond in molecule.bonds:
+            if bond.bond_order == 2:
+                if 1.75 < bond.fractional_bond_order < 2.25:
+                    double_bond_has_wbo_near_2 = True
+        assert double_bond_has_wbo_near_2
 
 
 class TestToolkitRegistry:

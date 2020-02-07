@@ -2948,6 +2948,152 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         return charges
 
 
+    def _get_fractional_bond_orders_from_sqm_out(self, file_path):
+        """
+        Process a SQM output file containing bond orders, and return a dict of the form
+        dict[atom_1_index, atom_2_index] = fractional_bond_order
+
+        Parameters
+        ----------
+        file_path : str
+            File path for sqm output file
+
+        Returns
+        -------
+        bond_orders : dict[(int, int)]: float
+            A dictionary where the keys are tuples of two atom
+            indices and the values are floating-point bond orders
+        """
+
+        # Example sqm.out section with WBOs:
+        #  Bond Orders
+        #
+        #   QMMM:    NUM1 ELEM1 NUM2 ELEM2      BOND_ORDER
+        #   QMMM:       2   C      1   C        1.41107532
+        #   QMMM:       3   C      1   C        1.41047804
+        # ...
+        #   QMMM:      15   H     13   H        0.00000954
+        #   QMMM:      15   H     14   H        0.00000813
+        #
+        #            --------- Calculation Completed ----------
+
+        data = open(file_path).read()
+
+        begin_sep = ''' Bond Orders
+ 
+  QMMM:    NUM1 ELEM1 NUM2 ELEM2      BOND_ORDER
+'''
+        end_sep = '''
+
+           --------- Calculation Completed ----------
+'''
+        fbo_lines = data.split(begin_sep)[1].split(end_sep)[0].split('\n')
+        bond_orders = dict()
+        for line in fbo_lines:
+            linesp = line.split()
+            atom_index_1 = int(linesp[1])
+            atom_index_2 = int(linesp[3])
+            bond_order = float(linesp[5])
+            index_tuple = tuple(sorted([atom_index_1, atom_index_2]))
+            bond_orders[index_tuple] = bond_order
+        return bond_orders
+
+    def compute_wiberg_bond_orders(self, molecule, charge_model=None):
+        """
+        Update and store list of bond orders this molecule. Can be used for initialization of bondorders list, or
+        for updating bond orders in the list.
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        molecule : openforcefield.topology.molecule Molecule
+            The molecule to assign wiberg bond orders to
+        charge_model : str, optional, default=None
+            The charge model to use. Only allowed value is 'am1'. If None, 'am1' will be used.
+
+         """
+
+        # Find the path to antechamber
+        # TODO: How should we implement find_executable?
+        ANTECHAMBER_PATH = find_executable("antechamber")
+        if ANTECHAMBER_PATH is None:
+            raise (IOError("Antechamber not found, cannot run "
+                           "AmberToolsToolkitWrapper.compute_wiberg_bond_orders()"))
+
+        if len(molecule._conformers) == 0:
+            raise ValueError(
+                "No conformers present in molecule submitted for wiberg bond order calculation. Consider "
+                "loading the molecule from a file with geometry already present or running "
+                "molecule.generate_conformers() before calling molecule.compute_wiberg_bond_orders"
+            )
+        if len(molecule._conformers) > 1:
+            logger.warning(f"Warning: In AmberToolsToolkitWrapper.compute_wiberg_bond_orders: "
+                           f"Molecule '{molecule.name}' has more than one conformer, but this function "
+                           f"will only generate charges for the first one.")
+
+
+        # Compute charges
+        from openforcefield.utils import temporary_directory, temporary_cd
+        with temporary_directory() as tmpdir:
+            with temporary_cd(tmpdir):
+                net_charge = molecule.total_charge
+                # Write out molecule in SDF format
+                ## TODO: How should we handle multiple conformers?
+                self._rdkit_toolkit_wrapper.to_file(
+                    molecule, 'molecule.sdf', file_format='sdf')
+                #os.system('ls')
+                #os.system('cat molecule.sdf')
+                # Compute desired charges
+                # TODO: Add error handling if antechamber chokes
+                # TODO: Add something cleaner than os.system
+                subprocess.check_output([
+                    "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o", "sqm.in", "-fo", "sqmcrt", "-pf", "yes", "-c", "bcc",
+                    "-nc", str(net_charge)
+                ])
+                # Modify sqm input to request bond order calculation
+                data = open('sqm.in').read()
+
+                # Original sqm.in file looks like:
+
+                # Run semi-empirical minimization
+                #  &qmmm
+                #    qm_theory='AM1', grms_tol=0.0005,
+                #    scfconv=1.d-10, ndiis_attempts=700,   qmcharge=0,
+                #  /
+
+                # We want it to look like this:
+
+                # Find Bond Orders
+                #  &qmmm
+                #   scfconv=1.0000E-8,
+                #   qmmask=':1',
+                #   diag_routine=1,
+                #   qm_theory='AM1',
+                #   printcharges=1,
+                #   printbondorders=1,
+                #  /
+
+                datasp = data.split("/")
+                datasp.insert(1, 'printbondorders=1, \n /')
+                new_data = ''.join(datasp)
+                with open('sqm.in', 'w') as of:
+                    of.write(new_data)
+
+            #os.system('cat charged.mol2')
+
+                # Write out just charges
+                subprocess.check_output(["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"])
+
+                bond_orders = self._get_fractional_bond_orders_from_sqm_out('sqm.out')
+
+        for bond in molecule.bonds:
+            sorted_atom_indices = sorted(tuple([bond.atom1_index+1, bond.atom2_index+1]))
+            bond.fractional_bond_order = bond_orders[tuple(sorted_atom_indices)]
+        return bond_orders
+
+
+
 #=============================================================================================
 # Toolkit registry
 #=============================================================================================
