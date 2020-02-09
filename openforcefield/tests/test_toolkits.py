@@ -548,7 +548,7 @@ class TestOpenEyeToolkitWrapper:
     def test_substructure_search_on_large_molecule(self):
         """Test OpenEyeToolkitWrapper substructure search when a large number hits are found"""
 
-        toolkit_wrapper = RDKitToolkitWrapper()
+        toolkit_wrapper = OpenEyeToolkitWrapper()
         smiles = "C"*3000
         molecule = toolkit_wrapper.from_smiles(smiles)
         ret = molecule.chemical_environment_matches("[C:1]~[C:2]", toolkit_registry=toolkit_wrapper)
