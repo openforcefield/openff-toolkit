@@ -544,6 +544,17 @@ class TestOpenEyeToolkitWrapper:
                     double_bond_has_wbo_near_2 = True
         assert double_bond_has_wbo_near_2
 
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_substructure_search_on_large_molecule(self):
+        """Test OpenEyeToolkitWrapper substructure search when a large number hits are found"""
+
+        toolkit_wrapper = RDKitToolkitWrapper()
+        smiles = "C"*3000
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        ret = molecule.chemical_environment_matches("[C:1]~[C:2]", toolkit_registry=toolkit_wrapper)
+        assert len(ret) > 0
+        assert len(ret[0]) == 2
+        assert len(ret) == 5998 
 
 
 
@@ -957,3 +968,16 @@ class TestToolkitRegistry:
         molecule = registry.call('from_smiles', smiles)
         #partial_charges = registry.call('compute_partial_charges', molecule)
 
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_substructure_search_on_large_molecule(self):
+        """Test RDKitToolkitWrapper substructure search when a large number hits are found"""
+
+        toolkit_wrapper = RDKitToolkitWrapper()
+        smiles = "C"*3000
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        ret = molecule.chemical_environment_matches("[C:1]~[C:2]", toolkit_registry=toolkit_wrapper)
+        assert len(ret) > 0
+        assert len(ret[0]) == 2
+        assert len(ret) == 5998 
+
+        

@@ -1853,6 +1853,36 @@ class TestForceFieldParameterAssignment:
         # Ensure that all system energies are the same
         compare_system_energies(off_omm_system, amber_omm_system, positions, by_force_type=False)
 
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
+                        reason='Test requires OE toolkit to read mol2 files')
+    @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
+    def test_parameterize_protein(self, toolkit_registry, registry_description):
+        """Test that ForceField assign parameters correctly for a protein
+        """
+
+        #if not toolkit_registry.is_available():
+        #    pytest.xfail('Toolkit not available')
+
+        mol_path = get_data_file_path('proteins/T4-protein.mol2')
+        molecule = Molecule.from_file(mol_path, allow_undefined_stereo=True)
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+        topology = Topology.from_molecules(molecule)
+
+
+        labels = forcefield.label_molecules( topology)[0]
+        assert len(labels["Bonds"]) ==            2654
+        assert len(labels["Angles"]) ==           4789
+        assert len(labels["ProperTorsions"]) ==   6973
+        assert len(labels["ImproperTorsions"]) == 528
+
+        # Need to set allow_nonintegral_charges=True in create_openmm_system
+        # since it believes the formal charge is -55
+        # and the sum of partial charges is ~8.0
+        fn = forcefield.create_openmm_system
+        omm_system = fn(topology,
+                        charge_from_molecules=[molecule],
+                        toolkit_registry=toolkit_registry,
+                        allow_nonintegral_charges=True)
 
 class TestSmirnoffVersionConverter:
 
