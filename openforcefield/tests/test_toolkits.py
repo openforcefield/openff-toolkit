@@ -548,13 +548,13 @@ class TestOpenEyeToolkitWrapper:
     def test_substructure_search_on_large_molecule(self):
         """Test OpenEyeToolkitWrapper substructure search when a large number hits are found"""
 
-        toolkit_wrapper = OpenEyeToolkitWrapper()
+        tk = OpenEyeToolkitWrapper()
         smiles = "C"*3000
-        molecule = toolkit_wrapper.from_smiles(smiles)
-        ret = molecule.chemical_environment_matches("[C:1]~[C:2]", toolkit_registry=toolkit_wrapper)
-        assert len(ret) > 0
-        assert len(ret[0]) == 2
+        molecule = tk.from_smiles(smiles)
+        query = "[C:1]~[C:2]"
+        ret = molecule.chemical_environment_matches(query, toolkit_registry=tk)
         assert len(ret) == 5998 
+        assert len(ret[0]) == 2
 
 
 
@@ -972,12 +972,12 @@ class TestToolkitRegistry:
     def test_substructure_search_on_large_molecule(self):
         """Test RDKitToolkitWrapper substructure search when a large number hits are found"""
 
-        toolkit_wrapper = RDKitToolkitWrapper()
+        tk = RDKitToolkitWrapper()
         smiles = "C"*3000
-        molecule = toolkit_wrapper.from_smiles(smiles)
-        ret = molecule.chemical_environment_matches("[C:1]~[C:2]", toolkit_registry=toolkit_wrapper)
-        assert len(ret) > 0
-        assert len(ret[0]) == 2
+        molecule = tk.from_smiles(smiles)
+        query = "[C:1]~[C:2]"
+        ret = molecule.chemical_environment_matches(query, toolkit_registry=tk)
         assert len(ret) == 5998 
+        assert len(ret[0]) == 2
 
         

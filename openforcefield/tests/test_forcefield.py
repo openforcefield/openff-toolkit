@@ -1944,11 +1944,8 @@ class TestForceFieldParameterAssignment:
                         reason='Test requires OE toolkit to read mol2 files')
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_parameterize_protein(self, toolkit_registry, registry_description):
-        """Test that ForceField assign parameters correctly for a protein
+        """Test that ForceField assigns parameters correctly for a protein
         """
-
-        #if not toolkit_registry.is_available():
-        #    pytest.xfail('Toolkit not available')
 
         mol_path = get_data_file_path('proteins/T4-protein.mol2')
         molecule = Molecule.from_file(mol_path, allow_undefined_stereo=False)
@@ -1956,7 +1953,7 @@ class TestForceFieldParameterAssignment:
         topology = Topology.from_molecules(molecule)
 
 
-        labels = forcefield.label_molecules( topology)[0]
+        labels = forcefield.label_molecules(topology)[0]
         assert len(labels["Bonds"]) ==            2654
         assert len(labels["Angles"]) ==           4789
         assert len(labels["ProperTorsions"]) ==   6973
@@ -1966,8 +1963,8 @@ class TestForceFieldParameterAssignment:
         # since it believes the formal charge is -55
         # and the sum of partial charges is ~8.0
         # Happens because all bond orders in the mol2 file were 1 (made from tleap), 
-        # causing the errors in formal charge calculation
-        # Fixed using OE to made the mol2, and inserting ff14SB charges
+        # causing the errors in formal charge calculation (#512)
+        # Fixed using OE to make the mol2, and inserting ff14SB charges
 
         fn = forcefield.create_openmm_system
         omm_system = fn(topology,
