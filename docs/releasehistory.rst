@@ -12,6 +12,8 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 New features
 """"""""""""
+- `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
+  Adds :py:meth:`AmberToolsToolkitWrapper.compute_wiberg_bond_orders <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.compute_wiberg_bond_orders>`.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
   The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
   :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.has_unique_atom_names>`
@@ -33,7 +35,7 @@ Behavior changed
 """"""""""""""""
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
   When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
-  are generated (overriding any existing atom names) if the provided atom names are not unique. This
+  are generated if the provided atom names are not unique (overriding any existing atom names). This
   uniqueness extends only to atoms in the same molecule. To disable this behavior, set the kwarg
   ``ensure_unique_atom_names=False``.
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
@@ -41,10 +43,10 @@ Behavior changed
   :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to perform the
   similarity checking.
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
-   The :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
-   :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` now use the
-   :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to match
-   molecules.
+  The :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
+  :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` now use the
+  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to match
+  molecules.
 
 Tests added
 """""""""""
@@ -81,7 +83,7 @@ Bugfixes
 """"""""
 - `Issue #460 <https://github.com/openforcefield/openforcefield/issues/460>`_: Creates unique atom
   names in :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>` if the existing
-  ones are not unique. The lack of unique atom names caused problems in workflows involving
+  ones are not unique. The lack of unique atom names had been causing problems in workflows involving
   downstream tools that expect unique atom names.
 - `Issue #448 <https://github.com/openforcefield/openforcefield/issues/448>`_: We can now make molecules
   from mapped smiles using :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>`
@@ -89,12 +91,15 @@ Bugfixes
   Molecules can also be re-indexed at any time using the
   :py:meth:`Molecule.remap <openforcefield.topology.Molecule.remap>`.
 - `Issue #462 <https://github.com/openforcefield/openforcefield/issues/462>`_: We can now instance the
-   :py:class:`Molecule <openforcefield.topology.Molecule>` from a QCArchive entry record instance or dictionary
-   representation.
+  :py:class:`Molecule <openforcefield.topology.Molecule>` from a QCArchive entry record instance or dictionary
+  representation.
 - `Issue #412 <https://github.com/openforcefield/openforcefield/issues/412>`_: We can now instance the
   :py:class:`Molecule <openforcefield.topology.Molecule>` using
-  :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>` which allows
-  the creation of the problematic molecule in the issue with out the need to use the ``allow_undefined_stero`` kwarg.``
+  :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>`. This resolves
+  an issue caused by RDKit considering atom map indices to be a distinguishing feature of an atom, which led
+  to erroneous definition of chirality (as otherwise symmetric substituents would be seen as different).
+  We anticipate that this will reduce the number of times you need to
+  type ``allow_undefined_stereo=True`` when processing molecules that do not actually contain stereochemistrty.
 
 Example added
 """""""""""""
