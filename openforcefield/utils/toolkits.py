@@ -578,15 +578,17 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 # https://docs.eyesopen.com/toolkits/python/oechemtk/oemol.html#dude-where-s-my-sd-data
                 for conf in oemol.GetConfIter():
                     this_conf_oemol = oechem.OEMol(conf)
-                    charges_str = oechem.OEGetSDData(conf, "atom.dprop.PartialCharge")
-                    # raise Exception(charges_str)
-                    charges_unitless = [float(i) for i in charges_str.split()]
-                    for charge, oeatom in zip(charges_unitless, this_conf_oemol.GetAtoms()):
-                        oeatom.SetPartialCharge(charge)
-                    mol = cls.from_openeye(
-                        this_conf_oemol,
-                        allow_undefined_stereo=allow_undefined_stereo)
-                    mols.append(mol)
+                    for dp in oechem,OEGetSDDataPairs(conf):
+
+                        charges_str = oechem.OEGetSDData(conf, "atom.dprop.PartialCharge")
+                        # raise Exception(charges_str)
+                        charges_unitless = [float(i) for i in charges_str.split()]
+                        for charge, oeatom in zip(charges_unitless, this_conf_oemol.GetAtoms()):
+                            oeatom.SetPartialCharge(charge)
+                        mol = cls.from_openeye(
+                            this_conf_oemol,
+                            allow_undefined_stereo=allow_undefined_stereo)
+                        mols.append(mol)
 
             else:
                 mol = cls.from_openeye(

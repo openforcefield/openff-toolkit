@@ -293,7 +293,7 @@ class TestOpenEyeToolkitWrapper:
         assert len(molecules) == 2
         assert len(molecules[0]._conformers) == 1
         assert len(molecules[1]._conformers) == 1
-        assert molecules[0]._conformers[0].shape == (20, 3)
+        assert molecules[0]._conformers[0].shape == (5, 3)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_treat_multiconformer_sdf_as_separate_molecules_properties(self):
@@ -302,13 +302,19 @@ class TestOpenEyeToolkitWrapper:
         Toolkit should treat as separate molecules
         """
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        1/0
         filename = get_data_file_path('molecules/methane_multiconformer_properties.sdf')
         molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecules) == 2
         assert len(molecules[0]._conformers) == 1
         assert len(molecules[1]._conformers) == 1
-        assert molecules[0]._conformers[0].shape == (20, 3)
+        assert molecules[0]._conformers[0].shape == (5, 3)
+        assert molecules[0].properties['test_property_key'] == 'test_property_value'
+        np.testing.assert_allclose(molecules[0].partial_charges / unit.elementary_charge,
+                                          [-0.108680, 0.027170, 0.027170, 0.027170, 0.027170])
+        assert molecules[1].properties['test_property_key'] == 'test_property_value2'
+        assert molecules[1].properties['another_test_property_key'] == 'another_test_property_value'
+        np.testing.assert_allclose(molecules[1].partial_charges / unit.elementary_charge,
+                                   [0.027170, 0.027170, 0.027170, 0.027170, -0.108680])
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_write_sdf_charges(self):
@@ -927,7 +933,7 @@ class TestRDKitToolkitWrapper:
         assert len(molecules) == 2
         assert len(molecules[0]._conformers) == 1
         assert len(molecules[1]._conformers) == 1
-        assert molecules[0]._conformers[0].shape == (20, 3)
+        assert molecules[0]._conformers[0].shape == (5, 3)
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_treat_multiconformer_sdf_as_separate_molecules_properties(self):
@@ -936,14 +942,19 @@ class TestRDKitToolkitWrapper:
         Toolkit should treat as separate molecules
         """
         toolkit_wrapper = RDKitToolkitWrapper()
-        1/0
         filename = get_data_file_path('molecules/methane_multiconformer_properties.sdf')
         molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecules) == 2
         assert len(molecules[0]._conformers) == 1
         assert len(molecules[1]._conformers) == 1
-        assert molecules[0]._conformers[0].shape == (20, 3)
-
+        assert molecules[0]._conformers[0].shape == (5, 3)
+        assert molecules[0].properties['test_property_key'] == 'test_property_value'
+        np.testing.assert_allclose(molecules[0].partial_charges / unit.elementary_charge,
+                                          [-0.108680, 0.027170, 0.027170, 0.027170, 0.027170])
+        assert molecules[1].properties['test_property_key'] == 'test_property_value2'
+        assert molecules[1].properties['another_test_property_key'] == 'another_test_property_value'
+        np.testing.assert_allclose(molecules[1].partial_charges / unit.elementary_charge,
+                                   [0.027170, 0.027170, 0.027170, 0.027170, -0.108680])
 
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip
