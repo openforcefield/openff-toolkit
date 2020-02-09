@@ -1376,7 +1376,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             # TODO: Make sure that modifying am1options actually works
             am1options.SetSemiMethod(oequacpac.OEMethodType_PM3)
         else:
-            raise ValueError('charge_model {} unknown'.format(charge_model))
+            raise ValueError(f"Charge model '{charge_model}' is not supported by OpenEyeToolkitWrapper. "
+                             f"Supported models are ['am1', 'pm3']")
 
         #for conf in oemol.GetConfs():
         #TODO: How to handle multiple confs here?
@@ -3033,25 +3034,31 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                            f"will only generate charges for the first one.")
 
 
-        # Compute charges
+        # Compute bond orders
+        charge_model_to_antechamber_keyword = {'am1': 'mul'}
+        supported_charge_models = list(charge_model_to_antechamber_keyword.keys())
+        if charge_model is None:
+            charge_model = 'am1'
+        if charge_model not in supported_charge_models:
+            raise ValueError(f"Charge model '{charge_model}' is not supported by AmberToolsToolkitWrapper. "
+                             f"Supported models are {supported_charge_models}")
+        ac_charge_keyword = charge_model_to_antechamber_keyword[charge_model]
+
         from openforcefield.utils import temporary_directory, temporary_cd
         with temporary_directory() as tmpdir:
             with temporary_cd(tmpdir):
                 net_charge = molecule.total_charge
                 # Write out molecule in SDF format
-                ## TODO: How should we handle multiple conformers?
                 self._rdkit_toolkit_wrapper.to_file(
                     molecule, 'molecule.sdf', file_format='sdf')
-                #os.system('ls')
-                #os.system('cat molecule.sdf')
-                # Compute desired charges
+                # Prepare sqm.in file as if we were going to run charge calc
                 # TODO: Add error handling if antechamber chokes
-                # TODO: Add something cleaner than os.system
                 subprocess.check_output([
-                    "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o", "sqm.in", "-fo", "sqmcrt", "-pf", "yes", "-c", "bcc",
+                    "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o",
+                    "sqm.in", "-fo", "sqmcrt", "-pf", "yes", "-c", ac_charge_keyword,
                     "-nc", str(net_charge)
                 ])
-                # Modify sqm input to request bond order calculation
+                # Modify sqm.in to request bond order calculation
                 data = open('sqm.in').read()
 
                 # Original sqm.in file looks like:
@@ -3062,25 +3069,15 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 #    scfconv=1.d-10, ndiis_attempts=700,   qmcharge=0,
                 #  /
 
-                # We want it to look like this:
-
-                # Find Bond Orders
-                #  &qmmm
-                #   scfconv=1.0000E-8,
-                #   qmmask=':1',
-                #   diag_routine=1,
-                #   qm_theory='AM1',
-                #   printcharges=1,
-                #   printbondorders=1,
-                #  /
+                # We need to add "printbondorders=1" to the list of keywords
 
                 datasp = data.split("/")
+
                 datasp.insert(1, 'printbondorders=1, \n /')
                 new_data = ''.join(datasp)
                 with open('sqm.in', 'w') as of:
                     of.write(new_data)
 
-            #os.system('cat charged.mol2')
 
                 # Write out just charges
                 subprocess.check_output(["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"])

@@ -468,13 +468,13 @@ class TestOpenEyeToolkitWrapper:
         # Checking that only one additional bond is present in the neutral molecule
         assert (len(molecule1.bonds)==len(molecule2.bonds)+1)
 
-        for charge_model in ['am1', 'pm3']:
+        for charge_model in ['am1']:
             molecule1.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
 
             for i in molecule1.bonds:
                 if i.is_aromatic:
                     # Checking aromatic bonds
-                    assert (1.05 < i.fractional_bond_order < 1.70)
+                    assert (1.05 < i.fractional_bond_order < 1.65)
                 elif (i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1):
                     # Checking bond order of C-H or O-H bonds are around 1
                     assert (0.85 < i.fractional_bond_order < 1.05)
@@ -492,7 +492,7 @@ class TestOpenEyeToolkitWrapper:
             for i in molecule2.bonds:
                 if i.is_aromatic:
                     # Checking aromatic bonds
-                    assert (1.05 < i.fractional_bond_order < 1.70)
+                    assert (1.05 < i.fractional_bond_order < 1.65)
                 elif (i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1):
                     # Checking bond order of C-H or O-H bonds are around 1
                     assert (0.85 < i.fractional_bond_order < 1.05)
@@ -511,8 +511,6 @@ class TestOpenEyeToolkitWrapper:
             # Wiberg bond order of C-O bond is higher in the anion
             assert (wbo_C_O_anion > wbo_C_O_neutral)
 
-
-
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders_charged(self):
         """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with net charge +1"""
@@ -524,6 +522,22 @@ class TestOpenEyeToolkitWrapper:
         for charge_model in ['am1', 'pm3']:
             molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_compute_wiberg_bond_orders_invalid_method(self):
+        """
+        Test that OpenEyeToolkitWrapper compute_wiberg_bond_orders() raises the
+        correct error if an invalid charge model is provided
+        """
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
+        expected_error = "Charge model 'not a real charge model' is not supported by " \
+                         "OpenEyeToolkitWrapper. Supported models are ([[]'am1', 'pm3'[]])"
+        with pytest.raises(ValueError, match=expected_error) as excinfo:
+            molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model='not a real charge model')
+
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_wiberg_bond_orders_double_bond(self):
@@ -923,13 +937,13 @@ class TestAmberToolsToolkitWrapper:
         # Checking that only one additional bond is present in the neutral molecule
         assert (len(molecule1.bonds) == len(molecule2.bonds) + 1)
 
-        for charge_model in ['am1', 'pm3']:
+        for charge_model in ['am1']:
             molecule1.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
 
             for i in molecule1.bonds:
                 if i.is_aromatic:
                     # Checking aromatic bonds
-                    assert (1.05 < i.fractional_bond_order < 1.70)
+                    assert (1.05 < i.fractional_bond_order < 1.65)
                 elif (i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1):
                     # Checking bond order of C-H or O-H bonds are around 1
                     assert (0.85 < i.fractional_bond_order < 1.05)
@@ -947,7 +961,8 @@ class TestAmberToolsToolkitWrapper:
             for i in molecule2.bonds:
                 if i.is_aromatic:
                     # Checking aromatic bonds
-                    assert (1.05 < i.fractional_bond_order < 1.70)
+                    assert (1.05 < i.fractional_bond_order < 1.65)
+
                 elif (i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1):
                     # Checking bond order of C-H or O-H bonds are around 1
                     assert (0.85 < i.fractional_bond_order < 1.05)
@@ -978,6 +993,25 @@ class TestAmberToolsToolkitWrapper:
         for charge_model in ['am1', 'pm3']:
             molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
+                        reason='RDKitToolkit and AmberToolsToolkit not available')
+    def test_compute_wiberg_bond_orders_invalid_method(self):
+        """
+        Test that AmberToolsToolkitWrapper compute_wiberg_bond_orders() raises the
+        correct error if an invalid charge model is provided
+        """
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
+        smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
+        molecule = toolkit_registry.call('from_smiles', smiles)
+        molecule.generate_conformers(toolkit_registry=toolkit_registry)
+
+        expected_error = "Charge model 'not a real charge model' is not supported by " \
+                         "AmberToolsToolkitWrapper. Supported models are ([[]'am1'[]])"
+        with pytest.raises(ValueError, match=expected_error) as excinfo:
+            molecule.compute_wiberg_bond_orders(toolkit_registry=AmberToolsToolkitWrapper(),
+                                                charge_model='not a real charge model')
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
                         reason='RDKitToolkit and AmberToolsToolkit not available')
