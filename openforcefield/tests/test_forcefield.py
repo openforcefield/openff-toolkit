@@ -1951,7 +1951,7 @@ class TestForceFieldParameterAssignment:
         #    pytest.xfail('Toolkit not available')
 
         mol_path = get_data_file_path('proteins/T4-protein.mol2')
-        molecule = Molecule.from_file(mol_path, allow_undefined_stereo=True)
+        molecule = Molecule.from_file(mol_path, allow_undefined_stereo=False)
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
         topology = Topology.from_molecules(molecule)
 
@@ -1965,11 +1965,15 @@ class TestForceFieldParameterAssignment:
         # Need to set allow_nonintegral_charges=True in create_openmm_system
         # since it believes the formal charge is -55
         # and the sum of partial charges is ~8.0
+        # Happens because all bond orders in the mol2 file were 1 (made from tleap), 
+        # causing the errors in formal charge calculation
+        # Fixed using OE to made the mol2, and inserting ff14SB charges
+
         fn = forcefield.create_openmm_system
         omm_system = fn(topology,
                         charge_from_molecules=[molecule],
                         toolkit_registry=toolkit_registry,
-                        allow_nonintegral_charges=True)
+                        allow_nonintegral_charges=False)
 
 class TestSmirnoffVersionConverter:
 
