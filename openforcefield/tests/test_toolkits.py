@@ -916,7 +916,7 @@ class TestAmberToolsToolkitWrapper:
         smiles = '[H]C([H])([H])C([H])([H])[H]'
         molecule = toolkit_registry.call('from_smiles', smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
-        for charge_model in ['am1', 'pm3']:
+        for charge_model in ['am1']:
             molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
             print([bond.fractional_bond_order for bond in molecule.bonds])
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
@@ -990,7 +990,7 @@ class TestAmberToolsToolkitWrapper:
         smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
         molecule = toolkit_registry.call('from_smiles', smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
-        for charge_model in ['am1', 'pm3']:
+        for charge_model in ['am1']:
             molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
@@ -1022,7 +1022,7 @@ class TestAmberToolsToolkitWrapper:
         smiles = r'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
         molecule = toolkit_registry.call('from_smiles', smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
-        for charge_model in ['am1', 'pm3']:
+        for charge_model in ['am1']:
             molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
