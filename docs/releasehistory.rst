@@ -10,10 +10,22 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.6.1 - Bugfixes
 ----------------
 
+API-breaking changes
+""""""""""""""""""""
+- `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
+  ``OpenEyeToolkitWrapper.compute_wiberg_bond_orders`` is now
+  :py:meth:`OpenEyeToolkitWrapper.assign_fractional_bond_orders <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.assign_fractional_bond_orders>`.
+  The ``charge_model`` keyword is now ``bond_order_model``. The allowed values of this keyword have
+  changed from ``am1`` and ``pm3`` to ``am1-wiberg`` and ``pm3-wiberg``, respectively.
+- `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
+  ``Molecule.compute_wiberg_bond_orders`` is now
+  :py:meth:`Molecule.assign_fractional_bond_orders <openforcefield.topology.Molecule.assign_fractional_bond_orders>`.
+
+
 New features
 """"""""""""
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
-  Adds :py:meth:`AmberToolsToolkitWrapper.compute_wiberg_bond_orders <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.compute_wiberg_bond_orders>`.
+  Adds :py:meth:`AmberToolsToolkitWrapper.assign_fractional_bond_orders <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_wiberg_bond_orders>`.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
   The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
   :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.has_unique_atom_names>`

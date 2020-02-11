@@ -439,23 +439,24 @@ class TestOpenEyeToolkitWrapper:
 
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    def test_compute_wiberg_bond_orders(self):
-        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders()"""
+    def test_assign_fractional_bond_orders(self):
+        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders()"""
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
         smiles = '[H]C([H])([H])C([H])([H])[H]'
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
-        for charge_model in ['am1','pm3']:
-            molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+        for bond_order_model in ['am1-wiberg', 'pm3-wiberg']:
+            molecule.assign_fractional_bond_orders(toolkit_registry=toolkit_wrapper,
+                                                    bond_order_model=bond_order_model)
             print([bond.fractional_bond_order for bond in molecule.bonds])
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
 
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    def test_compute_wiberg_bond_orders_neutral_charge_mol(self):
-        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() for neutral and charged molecule"""
+    def test_assign_fractional_bond_orders_neutral_charge_mol(self):
+        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule"""
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
         # Reading neutral molecule from file
@@ -466,10 +467,11 @@ class TestOpenEyeToolkitWrapper:
         molecule2 = Molecule.from_file(filename)
 
         # Checking that only one additional bond is present in the neutral molecule
-        assert (len(molecule1.bonds)==len(molecule2.bonds)+1)
+        assert (len(molecule1.bonds) == len(molecule2.bonds)+1)
 
-        for charge_model in ['am1']:
-            molecule1.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+        for bond_order_model in ['am1-wiberg']:
+            molecule1.assign_fractional_bond_orders(toolkit_registry=toolkit_wrapper,
+                                                     bond_order_model=bond_order_model)
 
             for i in molecule1.bonds:
                 if i.is_aromatic:
@@ -488,7 +490,8 @@ class TestOpenEyeToolkitWrapper:
                     wbo_C_C_neutral = i.fractional_bond_order
                     assert (1.0 < wbo_C_C_neutral < 1.3)
 
-            molecule2.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+            molecule2.assign_fractional_bond_orders(toolkit_registry=toolkit_wrapper,
+                                                     bond_order_model=bond_order_model)
             for i in molecule2.bonds:
                 if i.is_aromatic:
                     # Checking aromatic bonds
@@ -512,43 +515,46 @@ class TestOpenEyeToolkitWrapper:
             assert (wbo_C_O_anion > wbo_C_O_neutral)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    def test_compute_wiberg_bond_orders_charged(self):
-        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with net charge +1"""
+    def test_assign_fractional_bond_orders_charged(self):
+        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with net charge +1"""
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
         smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
-        for charge_model in ['am1', 'pm3']:
-            molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+        for bond_order_model in ['am1-wiberg', 'pm3-wiberg']:
+            molecule.assign_fractional_bond_orders(toolkit_registry=toolkit_wrapper,
+                                                    bond_order_model=bond_order_model)
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    def test_compute_wiberg_bond_orders_invalid_method(self):
+    def test_assign_fractional_bond_orders_invalid_method(self):
         """
-        Test that OpenEyeToolkitWrapper compute_wiberg_bond_orders() raises the
+        Test that OpenEyeToolkitWrapper assign_fractional_bond_orders() raises the
         correct error if an invalid charge model is provided
         """
         toolkit_wrapper = OpenEyeToolkitWrapper()
         smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
-        expected_error = "Charge model 'not a real charge model' is not supported by " \
-                         "OpenEyeToolkitWrapper. Supported models are ([[]'am1', 'pm3'[]])"
+        expected_error = "Bond order model 'not a real bond order model' is not supported by " \
+                         "OpenEyeToolkitWrapper. Supported models are ([[]'am1-wiberg', 'pm3-wiberg'[]])"
         with pytest.raises(ValueError, match=expected_error) as excinfo:
-            molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model='not a real charge model')
+            molecule.assign_fractional_bond_orders(toolkit_registry=toolkit_wrapper,
+                                                    bond_order_model='not a real bond order model')
 
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    def test_compute_wiberg_bond_orders_double_bond(self):
-        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with a double bond"""
+    def test_assign_fractional_bond_orders_double_bond(self):
+        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with a double bond"""
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
         smiles = r'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
-        for charge_model in ['am1', 'pm3']:
-            molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+        for bond_order_model in ['am1-wiberg', 'pm3-wiberg']:
+            molecule.assign_fractional_bond_orders(toolkit_registry=toolkit_wrapper,
+                                                    bond_order_model=bond_order_model)
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
         double_bond_has_wbo_near_2 = False
@@ -909,22 +915,22 @@ class TestAmberToolsToolkitWrapper:
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
                         reason='RDKitToolkit and AmberToolsToolkit not available')
-    def test_compute_wiberg_bond_orders(self):
-        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders()"""
+    def test_assign_fractional_bond_orders(self):
+        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders()"""
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         smiles = '[H]C([H])([H])C([H])([H])[H]'
         molecule = toolkit_registry.call('from_smiles', smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
-        for charge_model in ['am1']:
-            molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
+        for bond_order_model in ['am1-wiberg']:
+            molecule.assign_fractional_bond_orders(toolkit_registry=toolkit_registry, bond_order_model=bond_order_model)
             print([bond.fractional_bond_order for bond in molecule.bonds])
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
                         reason='RDKitToolkit and AmberToolsToolkit not available')
-    def test_compute_wiberg_bond_orders_neutral_charge_mol(self):
-        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() for neutral and charged molecule"""
+    def test_assign_fractional_bond_orders_neutral_charge_mol(self):
+        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule"""
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         # Reading neutral molecule from file
@@ -937,8 +943,9 @@ class TestAmberToolsToolkitWrapper:
         # Checking that only one additional bond is present in the neutral molecule
         assert (len(molecule1.bonds) == len(molecule2.bonds) + 1)
 
-        for charge_model in ['am1']:
-            molecule1.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
+        for bond_order_model in ['am1-wiberg']:
+            molecule1.assign_fractional_bond_orders(toolkit_registry=toolkit_registry,
+                                                     bond_order_model=bond_order_model)
 
             for i in molecule1.bonds:
                 if i.is_aromatic:
@@ -957,7 +964,8 @@ class TestAmberToolsToolkitWrapper:
                     wbo_C_C_neutral = i.fractional_bond_order
                     assert (1.0 < wbo_C_C_neutral < 1.3)
 
-            molecule2.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
+            molecule2.assign_fractional_bond_orders(toolkit_registry=toolkit_registry,
+                                                     bond_order_model=bond_order_model)
             for i in molecule2.bonds:
                 if i.is_aromatic:
                     # Checking aromatic bonds
@@ -983,22 +991,23 @@ class TestAmberToolsToolkitWrapper:
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
                         reason='RDKitToolkit and AmberToolsToolkit not available')
-    def test_compute_wiberg_bond_orders_charged(self):
-        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with net charge +1"""
+    def test_assign_fractional_bond_orders_charged(self):
+        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with net charge +1"""
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
         molecule = toolkit_registry.call('from_smiles', smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
-        for charge_model in ['am1']:
-            molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
+        for bond_order_model in ['am1-wiberg']:
+            molecule.assign_fractional_bond_orders(toolkit_registry=toolkit_registry,
+                                                    bond_order_model=bond_order_model)
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
                         reason='RDKitToolkit and AmberToolsToolkit not available')
-    def test_compute_wiberg_bond_orders_invalid_method(self):
+    def test_assign_fractional_bond_orders_invalid_method(self):
         """
-        Test that AmberToolsToolkitWrapper compute_wiberg_bond_orders() raises the
+        Test that AmberToolsToolkitWrapper.assign_fractional_bond_orders() raises the
         correct error if an invalid charge model is provided
         """
 
@@ -1007,23 +1016,24 @@ class TestAmberToolsToolkitWrapper:
         molecule = toolkit_registry.call('from_smiles', smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
 
-        expected_error = "Charge model 'not a real charge model' is not supported by " \
-                         "AmberToolsToolkitWrapper. Supported models are ([[]'am1'[]])"
+        expected_error = "Bond order model 'not a real charge model' is not supported by " \
+                         "AmberToolsToolkitWrapper. Supported models are ([[]'am1-wiberg'[]])"
         with pytest.raises(ValueError, match=expected_error) as excinfo:
-            molecule.compute_wiberg_bond_orders(toolkit_registry=AmberToolsToolkitWrapper(),
-                                                charge_model='not a real charge model')
+            molecule.assign_fractional_bond_orders(toolkit_registry=AmberToolsToolkitWrapper(),
+                                                    bond_order_model='not a real charge model')
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
                         reason='RDKitToolkit and AmberToolsToolkit not available')
-    def test_compute_wiberg_bond_orders_double_bond(self):
-        """Test OpenEyeToolkitWrapper compute_wiberg_bond_orders() on a molecule with a double bond"""
+    def test_assign_fractional_bond_orders_double_bond(self):
+        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with a double bond"""
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         smiles = r'C\C(F)=C(/F)C[C@@](C)(Cl)Br'
         molecule = toolkit_registry.call('from_smiles', smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_registry)
-        for charge_model in ['am1']:
-            molecule.compute_wiberg_bond_orders(toolkit_registry=toolkit_registry, charge_model=charge_model)
+        for bond_order_model in ['am1-wiberg']:
+            molecule.assign_fractional_bond_orders(toolkit_registry=toolkit_registry,
+                                                    bond_order_model=bond_order_model)
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
         double_bond_has_wbo_near_2 = False

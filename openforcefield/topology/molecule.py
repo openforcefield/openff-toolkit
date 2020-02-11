@@ -2229,25 +2229,28 @@ class FrozenMolecule(Serializable):
         #         'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
         #         .format(type(toolkit_registry)))
 
-    def compute_wiberg_bond_orders(self,
-                                   charge_model=None,
+    def assign_fractional_bond_orders(self,
+                                   bond_order_model=None,
                                    toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
-        Calculate wiberg bond orders for this molecule using an underlying toolkit
+        Update and store list of bond orders this molecule. Bond orders are stored on each
+        bond, in the `bond.fractional_bond_order` attribute.
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
-        charge_model : string, optional
-            The charge model to use for partial charge calculation
+        bond_order_model : string, optional. Default=None
+            The bond order model to use for fractional bond order calculation. If None, "am1-wiberg" will be used.
 
         Examples
         --------
 
         >>> molecule = Molecule.from_smiles('CCCCCC')
         >>> molecule.generate_conformers()
-        >>> molecule.compute_wiberg_bond_orders()
+        >>> molecule.assign_fractional_bond_orders()
 
         Raises
         ------
@@ -2257,15 +2260,16 @@ class FrozenMolecule(Serializable):
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
             return toolkit_registry.call(
-                'compute_wiberg_bond_orders', self, charge_model=charge_model)
+                'assign_fractional_bond_orders', self, bond_order_model=bond_order_model)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.compute_wiberg_bond_orders(
-                self, charge_model=charge_model)
+            return toolkit.assign_fractional_bond_orders(
+                self, bond_order_model=bond_order_model)
         else:
             raise Exception(
-                'Invalid toolkit_registry passed to compute_wiberg_bond_orders. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
-                .format(type(toolkit_registry)))
+                f'Invalid toolkit_registry passed to assign_fractional_bond_orders. '
+                f'Expected ToolkitRegistry or ToolkitWrapper. Got {type(toolkit_registry)}.')
+
 
     def _invalidate_cached_properties(self):
         """
@@ -3821,7 +3825,7 @@ class FrozenMolecule(Serializable):
 
 
         """
-        # TODO: Let ToolkitRegistry handle this once compute_fractional_bond_orders will be added to the Wrappers API.
+        # TODO: Let ToolkitRegistry handle this once assign_fractional_bond_orders will be added to the Wrappers API.
         if method != 'Wiberg':
             raise NotImplementedError('Only Wiberg bond order is currently implemented')
         # TODO: Use memoization to speed up subsequent calls; use decorator?

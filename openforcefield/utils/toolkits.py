@@ -1335,10 +1335,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
         return charges
 
-    def compute_wiberg_bond_orders(self, molecule, charge_model=None):
+    def assign_fractional_bond_orders(self, molecule, bond_order_model=None):
         """
-        Update and store list of bond orders this molecule. Can be used for initialization of bondorders list, or
-        for updating bond orders in the list.
+        Update and store list of bond orders this molecule. Bond orders are stored on each
+        bond, in the `bond.fractional_bond_order` attribute.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -1346,8 +1346,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : openforcefield.topology.molecule Molecule
             The molecule to assign wiberg bond orders to
-        charge_model : str, optional, default=None
-            The charge model to use. One of ['am1', 'pm3']. If None, 'am1' will be used.
+        bond_order_model : str, optional, default=None
+            The charge model to use. One of ['am1-wiberg', 'pm3-wiberg']. If None, 'am1-wiberg' will be used.
 
          """
         # TODO: Cache charged molecule so we don't have to redo the computation (Can we do this given the different
@@ -1358,26 +1358,26 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oemol = self.to_openeye(molecule)
         if molecule.n_conformers == 0:
             raise Exception(
-                "No conformers present in molecule submitted for wiberg bond order calculation. Consider "
+                "No conformers present in molecule submitted for fractional bond order calculation. Consider "
                 "loading the molecule from a file with geometry already present or running "
                 "molecule.generate_conformers() before calling molecule.compute_wiberg_bond_orders()"
             )
 
-        if charge_model is None:
-            charge_model = 'am1'
+        if bond_order_model is None:
+            bond_order_model = 'am1-wiberg'
 
         # Based on example at https://docs.eyesopen.com/toolkits/python/quacpactk/examples_summary_wibergbondorders.html
         am1 = oequacpac.OEAM1()
         am1results = oequacpac.OEAM1Results()
         am1options = am1.GetOptions()
-        if charge_model == "am1":
+        if bond_order_model == "am1-wiberg":
             am1options.SetSemiMethod(oequacpac.OEMethodType_AM1)
-        elif charge_model == "pm3":
+        elif bond_order_model == "pm3-wiberg":
             # TODO: Make sure that modifying am1options actually works
             am1options.SetSemiMethod(oequacpac.OEMethodType_PM3)
         else:
-            raise ValueError(f"Charge model '{charge_model}' is not supported by OpenEyeToolkitWrapper. "
-                             f"Supported models are ['am1', 'pm3']")
+            raise ValueError(f"Bond order model '{bond_order_model}' is not supported by OpenEyeToolkitWrapper. "
+                             f"Supported models are ['am1-wiberg', 'pm3-wiberg']")
 
         #for conf in oemol.GetConfs():
         #TODO: How to handle multiple confs here?
@@ -1385,7 +1385,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         if status is False:
             raise Exception(
-                'Unable to assign charges (in the process of calculating Wiberg bond orders)'
+                'Unable to assign charges (in the process of calculating fractional bond orders)'
             )
 
         # TODO: Will bonds always map back to the same index? Consider doing a topology mapping.
@@ -2962,8 +2962,9 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         Returns
         -------
         bond_orders : dict[(int, int)]: float
-            A dictionary where the keys are tuples of two atom
-            indices and the values are floating-point bond orders
+            A dictionary where the keys are tuples of two atom indices and the values are
+            floating-point bond orders. The keys are sorted in ascending order, such that
+            the lower atom index is key[0] and the higher is key[1].
         """
 
         # Example sqm.out section with WBOs:
@@ -2995,14 +2996,16 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             atom_index_1 = int(linesp[1])
             atom_index_2 = int(linesp[3])
             bond_order = float(linesp[5])
+            # To make lookup easier, we identify bonds as integer tuples with the lowest atom index
+            # first and the highest second.
             index_tuple = tuple(sorted([atom_index_1, atom_index_2]))
             bond_orders[index_tuple] = bond_order
         return bond_orders
 
-    def compute_wiberg_bond_orders(self, molecule, charge_model=None):
+    def assign_fractional_bond_orders(self, molecule, bond_order_model=None):
         """
-        Update and store list of bond orders this molecule. Can be used for initialization of bondorders list, or
-        for updating bond orders in the list.
+        Update and store list of bond orders this molecule. Bond orders are stored on each
+        bond, in the `bond.fractional_bond_order` attribute.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -3010,8 +3013,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : openforcefield.topology.molecule Molecule
             The molecule to assign wiberg bond orders to
-        charge_model : str, optional, default=None
-            The charge model to use. Only allowed value is 'am1'. If None, 'am1' will be used.
+        bond_order_model : str, optional, default=None
+            The charge model to use. Only allowed value is 'am1-wiberg'. If None, 'am1-wiberg' will be used.
 
          """
 
@@ -3020,29 +3023,30 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ANTECHAMBER_PATH = find_executable("antechamber")
         if ANTECHAMBER_PATH is None:
             raise (IOError("Antechamber not found, cannot run "
-                           "AmberToolsToolkitWrapper.compute_wiberg_bond_orders()"))
+                           "AmberToolsToolkitWrapper.assign_fractional_bond_orders()"))
 
         if len(molecule._conformers) == 0:
             raise ValueError(
-                "No conformers present in molecule submitted for wiberg bond order calculation. Consider "
+                "No conformers present in molecule submitted for fractional bond order calculation. Consider "
                 "loading the molecule from a file with geometry already present or running "
-                "molecule.generate_conformers() before calling molecule.compute_wiberg_bond_orders"
+                "molecule.generate_conformers() before calling molecule.assign_fractional_bond_orders"
             )
         if len(molecule._conformers) > 1:
-            logger.warning(f"Warning: In AmberToolsToolkitWrapper.compute_wiberg_bond_orders: "
+            logger.warning(f"Warning: In AmberToolsToolkitWrapper.assign_fractional_bond_orders: "
                            f"Molecule '{molecule.name}' has more than one conformer, but this function "
-                           f"will only generate charges for the first one.")
+                           f"will only generate fractional bond orders for the first one.")
 
 
         # Compute bond orders
-        charge_model_to_antechamber_keyword = {'am1': 'mul'}
-        supported_charge_models = list(charge_model_to_antechamber_keyword.keys())
-        if charge_model is None:
-            charge_model = 'am1'
-        if charge_model not in supported_charge_models:
-            raise ValueError(f"Charge model '{charge_model}' is not supported by AmberToolsToolkitWrapper. "
-                             f"Supported models are {supported_charge_models}")
-        ac_charge_keyword = charge_model_to_antechamber_keyword[charge_model]
+        bond_order_model_to_antechamber_keyword = {'am1-wiberg': 'mul'}
+        supported_bond_order_models = list(bond_order_model_to_antechamber_keyword.keys())
+        bond_order_model = bond_order_model.lower()
+        if bond_order_model is None:
+            bond_order_model = 'am1-wiberg'
+        if bond_order_model not in supported_bond_order_models:
+            raise ValueError(f"Bond order model '{bond_order_model}' is not supported by AmberToolsToolkitWrapper. "
+                             f"Supported models are {supported_bond_order_models}")
+        ac_charge_keyword = bond_order_model_to_antechamber_keyword[bond_order_model]
 
         from openforcefield.utils import temporary_directory, temporary_cd
         with temporary_directory() as tmpdir:
@@ -3061,33 +3065,42 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # Modify sqm.in to request bond order calculation
                 data = open('sqm.in').read()
 
-                # Original sqm.in file looks like:
+                # Original sqm.in file headerlooks like:
 
                 # Run semi-empirical minimization
                 #  &qmmm
                 #    qm_theory='AM1', grms_tol=0.0005,
                 #    scfconv=1.d-10, ndiis_attempts=700,   qmcharge=0,
                 #  /
+                # ... (atom coordinates in something like XYZ format) ...
 
                 # We need to add "printbondorders=1" to the list of keywords
 
+                # First, split the sqm.in text at the "/" mark at the end of the header
                 datasp = data.split("/")
-
+                # Insert the "printbondorders" directive in a new line and re-add the "/"
                 datasp.insert(1, 'printbondorders=1, \n /')
+                # Reassemble the file text
                 new_data = ''.join(datasp)
+                # Write the new file contents, overwriting the original file.
                 with open('sqm.in', 'w') as of:
                     of.write(new_data)
 
-
-                # Write out just charges
+                # Run sqm to get bond orders
                 subprocess.check_output(["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"])
 
                 bond_orders = self._get_fractional_bond_orders_from_sqm_out('sqm.out')
 
+        # Note that sqm calculate WBOs for ALL PAIRS of atoms, not just those that have
+        # bonds defined in the original molecule. So here we iterate over the bonds in
+        # the original molecule and only nab the WBOs for those.
         for bond in molecule.bonds:
+            # The atom index tuples that act as bond indices are ordered from lowest to highest by
+            # _get_fractional_bond_orders_from_sqm_out, so here we make sure that we look them up in
+            # sorted order as well
             sorted_atom_indices = sorted(tuple([bond.atom1_index+1, bond.atom2_index+1]))
             bond.fractional_bond_order = bond_orders[tuple(sorted_atom_indices)]
-        return bond_orders
+
 
 
 
