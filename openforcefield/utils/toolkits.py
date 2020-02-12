@@ -904,19 +904,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             np.zeros(molecule.n_atoms, dtype=np.float),
             unit=unit.elementary_charge)
 
-        # If partial charges are all zero on the oemol, then this corresponds
-        # with offmol.partial_charges=None
-        partial_charges_all_zero = True
         for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
             off_idx = map_atoms[oe_idx]
             unitless_charge = oe_atom.GetPartialCharge()
-            if abs(unitless_charge) > 1.e-5:
-                partial_charges_all_zero = False
             charge = unitless_charge * unit.elementary_charge
             partial_charges[off_idx] = charge
 
-        if not(partial_charges_all_zero):
-            molecule.partial_charges = partial_charges
+        molecule.partial_charges = partial_charges
 
         return molecule
 
