@@ -537,6 +537,30 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
 
+    @staticmethod
+    def _turn_oemolbase_sd_charges_into_partial_charges(oemol):
+        """
+        Process an OEMolBase object and check to see whether it has an SD data pair
+        where the tag is "atom.dprop.PartialCharge", indicating that it has a list of
+        atomic partial charges. If so, apply those charges to the OEAtoms in the OEMolBase,
+        and delete the SD data pair.
+
+        Parameters
+        ----------
+        oemol : openeye.oechem.OEMolBase
+            The molecule to process
+        """
+        from openeye import oechem
+        for dp in oechem.OEGetSDDataPairs(oemol):
+            print(dp.GetTag(), dp.GetValue())
+            if dp.GetTag() == "atom.dprop.PartialCharge":
+                charges_str = oechem.OEGetSDData(oemol, "atom.dprop.PartialCharge")
+                charges_unitless = [float(i) for i in charges_str.split()]
+                assert len(charges_unitless) == oemol.NumAtoms()
+                for charge, oeatom in zip(charges_unitless, oemol.GetAtoms()):
+                    oeatom.SetPartialCharge(charge)
+                oechem.OEDeleteSDData(oemol, "atom.dprop.PartialCharge")
+
     @classmethod
     def _read_oemolistream_molecules(cls, oemolistream, allow_undefined_stereo, file_path=None):
         """
@@ -563,34 +587,48 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         mols = list()
         oemol = oechem.OEMol()
-        #oemol = oechem.OEMolBase()
         while oechem.OEReadMolecule(oemolistream, oemol):
             oechem.OEPerceiveChiral(oemol)
             oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
             oechem.OE3DToInternalStereo(oemol)
 
             # If this is an SD file, check to see if there are partial charges
-
-            if ((oemolistream.GetFormat() == oechem.OEFormat_SDF)):
+            if (oemolistream.GetFormat() == oechem.OEFormat_SDF) and hasattr(oemol, 'GetConfs'):
                 # The openFF toolkit treats each conformer in a "multiconformer" SDF as
                 # a separate molecule.
                 # https://github.com/openforcefield/openforcefield/issues/202
+                # Note that there is ambiguity about how SD data and "multiconformer" SD files should be stored.
+                # As a result, we have to do some weird stuff below, as discussed in
                 # https://docs.eyesopen.com/toolkits/python/oechemtk/oemol.html#dude-where-s-my-sd-data
-                for conf in oemol.GetConfIter():
-                    this_conf_oemol = oechem.OEMol(conf)
-                    for dp in oechem,OEGetSDDataPairs(conf):
 
-                        charges_str = oechem.OEGetSDData(conf, "atom.dprop.PartialCharge")
-                        # raise Exception(charges_str)
-                        charges_unitless = [float(i) for i in charges_str.split()]
-                        for charge, oeatom in zip(charges_unitless, this_conf_oemol.GetAtoms()):
-                            oeatom.SetPartialCharge(charge)
-                        mol = cls.from_openeye(
-                            this_conf_oemol,
-                            allow_undefined_stereo=allow_undefined_stereo)
-                        mols.append(mol)
+                # Jeff: I was unable to find a way to distinguish whether a SDF was multiconformer or not.
+                # The logic below should handle either single- or multi-conformer SDFs.
+                for conf in oemol.GetConfIter():
+                    # First, we turn "conf" into an OEMCMol (OE multiconformer mol), since OTHER file formats
+                    # really are multiconformer, and we will eventually feed this into the `from_openeye` function,
+                    # which is made to ingest multiconformer mols.
+                    this_conf_oemcmol = conf.GetMCMol()
+
+                    # Then, we take any SD data pairs that were on the oemol, and copy them on to "this_conf_oemcmol".
+                    # These SD pairs will be populated if we're dealing with a single-conformer SDF.
+                    for dp in oechem.OEGetSDDataPairs(oemol):
+                        oechem.OESetSDData(this_conf_oemcmol, dp.GetTag(), dp.GetValue())
+                    # On the other hand, these SD pairs will be populated if we're dealing with a MULTI-conformer SDF.
+                    for dp in oechem.OEGetSDDataPairs(conf):
+                        oechem.OESetSDData(this_conf_oemcmol, dp.GetTag(), dp.GetValue())
+                    # This function fishes out the special SD data tag we use for partial charge
+                    # ("atom.dprop.PartialCharge"), and applies those as API-supported partial charges on the OEAtoms
+                    cls._turn_oemolbase_sd_charges_into_partial_charges(this_conf_oemcmol)
+                    # Finally, we feed the molecule into `from_openeye`, where it converted into an OFFMol
+                    mol = cls.from_openeye(
+                        this_conf_oemcmol,
+                        allow_undefined_stereo=allow_undefined_stereo)
+                    mols.append(mol)
 
             else:
+                # In case this is being read from an SD file, convert the SD field where we stash partial charges
+                # into actual per-atom partial charges
+                cls._turn_oemolbase_sd_charges_into_partial_charges(oemol)
                 mol = cls.from_openeye(
                     oemol,
                     allow_undefined_stereo=allow_undefined_stereo)

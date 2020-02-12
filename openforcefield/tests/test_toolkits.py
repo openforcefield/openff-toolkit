@@ -296,6 +296,16 @@ class TestOpenEyeToolkitWrapper:
         assert molecules[0]._conformers[0].shape == (5, 3)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_multiconformer_sdf_roundtrip_properties(self):
+        """
+        Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
+        Toolkit should treat as separate molecules
+        """
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        filename = get_data_file_path('molecules/methane_multiconformer.sdf')
+        molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_treat_multiconformer_sdf_as_separate_molecules_properties(self):
         """
         Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
@@ -360,7 +370,7 @@ class TestOpenEyeToolkitWrapper:
         # In our current configuration, if the OFFMol doesn't have partial charges, we DO NOT want a partial charge
         # block to be written. For reference, it's possible to indicate that a partial charge is not known by writing
         # out "n/a" (or another placeholder) in the partial charge block atoms without charges.
-        assert '>  <atom.dprop.PartialCharge>' not in sdf_text
+        assert '<atom.dprop.PartialCharge>' not in sdf_text
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_sdf_charges_roundtrip(self):
@@ -374,7 +384,8 @@ class TestOpenEyeToolkitWrapper:
             ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
             #raise Exception(open(iofile.name).read())
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
-        assert (ethanol.partial_charges == ethanol2.partial_charges).all()
+        np.testing.assert_allclose(ethanol.partial_charges / unit.elementary_charge,
+                                   ethanol2.partial_charges / unit.elementary_charge)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_coordinates(self):
