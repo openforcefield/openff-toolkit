@@ -465,30 +465,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The format for writing the molecule data
 
         """
-        from openeye import oechem
         from openforcefield.utils import temporary_directory, temporary_cd
-
-        oemol = self.to_openeye(molecule)
-
         # TODO: This is inefficiently implemented. Is there any way to attach a file-like object to an oemolstream?
         with temporary_directory() as tmpdir:
             with temporary_cd(tmpdir):
                 outfile = 'temp_molecule.' + file_format
-                ofs = oechem.oemolostream(outfile)
-                openeye_format = getattr(oechem, 'OEFormat_' + file_format)
-                ofs.SetFormat(openeye_format)
-                if (file_format.lower() == "sdf") and (molecule.partial_charges is not None):
-                    partial_charges_list = []
-                    for pc in molecule.partial_charges:
-                        unitless_pc = pc / unit.elementary_charge
-                        partial_charges_list.append(f'{unitless_pc:f}')
-                    partial_charges_str = ' '.join(partial_charges_list)
-                    # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
-                    #  describe/infer the proper data type?
-                    oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
-
-                oechem.OEWriteMolecule(ofs, oemol)
-                ofs.close()
+                self.to_file(molecule, outfile, file_format)
                 file_data = open(outfile).read()
         file_obj.write(file_data)
 
@@ -531,9 +513,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             partial_charges_str = ' '.join(partial_charges_list)
             # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
             #  describe/infer the proper data type?
-            #oechem.OESetSDData(oemol, "PartialCharge", partial_charges_str)
             oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
-        #oechem.OEAddSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
         oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
 
