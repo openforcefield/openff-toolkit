@@ -282,7 +282,7 @@ class TestOpenEyeToolkitWrapper:
         assert molecule._conformers[0].shape == (15,3)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    def test_treat_multiconformer_sdf_as_separate_molecules(self):
+    def test_load_multiconformer_sdf_as_separate_molecules(self):
         """
         Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
         Toolkit should treat as separate molecules
@@ -306,7 +306,7 @@ class TestOpenEyeToolkitWrapper:
         molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    def test_treat_multiconformer_sdf_as_separate_molecules_properties(self):
+    def test_load_multiconformer_sdf_as_separate_molecules_properties(self):
         """
         Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
         Toolkit should treat as separate molecules
@@ -386,6 +386,21 @@ class TestOpenEyeToolkitWrapper:
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
         np.testing.assert_allclose(ethanol.partial_charges / unit.elementary_charge,
                                    ethanol2.partial_charges / unit.elementary_charge)
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_write_multiconformer_mol_as_sdf(self):
+        """
+        Test RDKitToolkitWrapper for writing a multiconformer molecule to SDF. The OFF toolkit should only
+        save the first conformer
+        """
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        filename = get_data_file_path('molecules/ethanol.sdf')
+        ethanol = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        ethanol.add_conformer(ethanol.conformers[0] + 1.*unit.angstrom)
+        ethanol.to_file('temp.sdf', 'sdf', toolkit_registry=toolkit_wrapper)
+        data = open('temp.sdf').read()
+        assert data.count('$$$$') == 1 # In SD format, each molecule/conformer ends with "$$$$"
+        assert len(data.split('\n')) < 20 # A valid SDF for methane would be a little under 20 lines
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_coordinates(self):
@@ -933,9 +948,9 @@ class TestRDKitToolkitWrapper:
 
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
-    def test_treat_multiconformer_sdf_as_separate_molecules(self):
+    def test_load_multiconformer_sdf_as_separate_molecules(self):
         """
-        Test OpenEyeToolkitWrapper for reading a "multiconformer" SDF, which the OFF
+        Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
         Toolkit should treat as separate molecules
         """
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -947,9 +962,9 @@ class TestRDKitToolkitWrapper:
         assert molecules[0]._conformers[0].shape == (5, 3)
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
-    def test_treat_multiconformer_sdf_as_separate_molecules_properties(self):
+    def test_load_multiconformer_sdf_as_separate_molecules_properties(self):
         """
-        Test OpenEyeToolkitWrapper for reading a "multiconformer" SDF, which the OFF
+        Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
         Toolkit should treat as separate molecules
         """
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -966,6 +981,22 @@ class TestRDKitToolkitWrapper:
         assert molecules[1].properties['another_test_property_key'] == 'another_test_property_value'
         np.testing.assert_allclose(molecules[1].partial_charges / unit.elementary_charge,
                                    [0.027170, 0.027170, 0.027170, 0.027170, -0.108680])
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_write_multiconformer_mol_as_sdf(self):
+        """
+        Test RDKitToolkitWrapper for writing a multiconformer molecule to SDF. The OFF toolkit should only
+        save the first conformer
+        """
+        toolkit_wrapper = RDKitToolkitWrapper()
+        filename = get_data_file_path('molecules/ethanol.sdf')
+        ethanol = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
+        ethanol.add_conformer(ethanol.conformers[0] + 1.*unit.angstrom)
+        ethanol.to_file('temp.sdf', 'sdf', toolkit_registry=toolkit_wrapper)
+        data = open('temp.sdf').read()
+        assert data.count('$$$$') == 1 # In SD format, each molecule/conformer ends with "$$$$"
+        assert len(data.split('\n')) < 20 # A valid SDF for methane would be a little under 20 lines
+
 
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip
