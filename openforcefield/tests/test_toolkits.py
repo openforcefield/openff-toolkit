@@ -191,8 +191,8 @@ class TestOpenEyeToolkitWrapper:
         assert central_carbon_stereo_specified
 
         # Do a first conversion to/from oemol
-        rdmol = molecule.to_openeye()
-        molecule2 = Molecule.from_openeye(rdmol)
+        oemol = molecule.to_openeye()
+        molecule2 = Molecule.from_openeye(oemol)
 
         # Test that properties survived first conversion
         assert molecule.name == molecule2.name
