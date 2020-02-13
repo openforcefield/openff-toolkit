@@ -1497,8 +1497,10 @@ class TestMolecule:
                                                            toolkit_registry=toolkit_registry,
                                                            use_conformers=molecule.conformers)
                     fbo1 = [bond.fractional_bond_order for bond in molecule.bonds]
-                    # Call should be faster the second time due to caching
-                    molecule.assign_fractional_bond_orders(bond_order_model=bond_order_model,
-                                                           toolkit_registry=toolkit_registry)
-                    fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
-                    np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
+                    # TODO: Now that the assign_fractional_bond_orders function takes more kwargs,
+                    #       how can we meaningfully cache its results?
+                    # # Call should be faster the second time due to caching
+                    # molecule.assign_fractional_bond_orders(bond_order_model=bond_order_model,
+                    #                                        toolkit_registry=toolkit_registry)
+                    # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
+                    # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
