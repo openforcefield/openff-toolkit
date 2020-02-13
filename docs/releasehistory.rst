@@ -10,6 +10,15 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.6.1 - Bugfixes
 ----------------
 
+Behavior changed
+""""""""""""""""
+- `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
+  In order to provide the same results for the same chemical species, regardless of input
+  conformation, fractional bond order calculation methods now default to ignore input conformers
+  and generate a new conformer of the molecule before running semiempirical calculations.
+  Users can override this behavior by specifying the keyword argument
+  ``use_conformers=molecule.conformers``
+
 API-breaking changes
 """"""""""""""""""""
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
