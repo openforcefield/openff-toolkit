@@ -1834,7 +1834,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES conversion
 
         Returns
@@ -1892,7 +1892,7 @@ class FrozenMolecule(Serializable):
             The SMILES representation of the molecule.
         hydrogens_are_explicit : bool, default = False
             If False, the cheminformatics toolkit will perform hydrogen addition
-        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         allow_undefined_stereo : bool, default=False
             Whether to accept SMILES with undefined stereochemistry. If False,
@@ -2121,7 +2121,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         n_conformers : int, default=1
             The maximum number of conformers to produce
@@ -2157,7 +2157,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation
 
         Examples
@@ -2201,7 +2201,7 @@ class FrozenMolecule(Serializable):
             The quantum chemical method to use for partial charge calculation.
         partial_charge_method : string, default='None'
             The partial charge calculation method to use for partial charge calculation.
-        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
         Examples
@@ -2235,25 +2235,31 @@ class FrozenMolecule(Serializable):
         #         'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
         #         .format(type(toolkit_registry)))
 
-    def compute_wiberg_bond_orders(self,
-                                   charge_model=None,
-                                   toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def assign_fractional_bond_orders(self,
+                                      bond_order_model=None,
+                                      toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+                                      use_conformers=None):
         """
-        Calculate wiberg bond orders for this molecule using an underlying toolkit
+        Update and store list of bond orders this molecule. Bond orders are stored on each
+        bond, in the `bond.fractional_bond_order` attribute.
+
+        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
-        charge_model : string, optional
-            The charge model to use for partial charge calculation
+        bond_order_model : string, optional. Default=None
+            The bond order model to use for fractional bond order calculation. If None, "am1-wiberg" will be used.
+        use_conformers : iterable of simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance, optional, default=None
+            The conformers to use for fractional bond order calculation. If None, an appropriate number
+            of conformers will be generated by an available ToolkitWrapper.
 
         Examples
         --------
 
         >>> molecule = Molecule.from_smiles('CCCCCC')
-        >>> molecule.generate_conformers()
-        >>> molecule.compute_wiberg_bond_orders()
+        >>> molecule.assign_fractional_bond_orders()
 
         Raises
         ------
@@ -2263,15 +2269,21 @@ class FrozenMolecule(Serializable):
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
             return toolkit_registry.call(
-                'compute_wiberg_bond_orders', self, charge_model=charge_model)
+                'assign_fractional_bond_orders',
+                self,
+                bond_order_model=bond_order_model,
+                use_conformers=use_conformers)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.compute_wiberg_bond_orders(
-                self, charge_model=charge_model)
+            return toolkit.assign_fractional_bond_orders(
+                self,
+                bond_order_model=bond_order_model,
+                use_conformers=use_conformers)
         else:
             raise Exception(
-                'Invalid toolkit_registry passed to compute_wiberg_bond_orders. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
-                .format(type(toolkit_registry)))
+                f'Invalid toolkit_registry passed to assign_fractional_bond_orders. '
+                f'Expected ToolkitRegistry or ToolkitWrapper. Got {type(toolkit_registry)}.')
+
 
     def _invalidate_cached_properties(self):
         """
@@ -2341,7 +2353,7 @@ class FrozenMolecule(Serializable):
         ignore_functional_groups: optional, List[str], default=None,
             A list of bond SMARTS patterns to be ignored when finding rotatable bonds.
 
-        toolkit_registry: openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry: openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMARTS matching
 
         Returns
@@ -3023,7 +3035,7 @@ class FrozenMolecule(Serializable):
         query : str or ChemicalEnvironment
             SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query
             Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
-        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
 
 
@@ -3211,7 +3223,7 @@ class FrozenMolecule(Serializable):
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for your
             loaded toolkits for details.
-        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper,
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper,
         optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file loading. If a Toolkit is passed, only
             the highest-precedence toolkit is used
@@ -3325,7 +3337,7 @@ class FrozenMolecule(Serializable):
         file_format : str
             Format specifier, one of ['MOL2', 'MOL2H', 'SDF', 'PDB', 'SMI', 'CAN', 'TDT']
             Note that not all toolkits support all formats
-        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper,
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper,
         optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file writing. If a Toolkit is passed, only
             the highest-precedence toolkit is used
@@ -3617,7 +3629,7 @@ class FrozenMolecule(Serializable):
         client : optional, default=None,
             A qcportal.FractalClient instance so we can pull the initial molecule geometry.
 
-        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
         allow_undefined_stereo : bool, default=False
@@ -3729,7 +3741,7 @@ class FrozenMolecule(Serializable):
         hydrogens_last: bool, default True
             If the canonical ordering should rank the hydrogens last.
 
-        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
          Returns
@@ -3863,46 +3875,6 @@ class FrozenMolecule(Serializable):
         """
         toolkit = OpenEyeToolkitWrapper()
         return toolkit.to_openeye(self, aromaticity_model=aromaticity_model)
-
-    def get_fractional_bond_orders(self,
-                                   method='Wiberg',
-                                   toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
-        """Get fractional bond orders.
-
-        method : str, optional, default='Wiberg'
-            The name of the charge method to use.
-            Options are:
-            * 'Wiberg' : Wiberg bond order
-        toolkit_registry : openforcefield.utils.toolkits ToolkitRegistry
-            The toolkit registry to use for molecule operations
-
-        Examples
-        --------
-
-        Get fractional Wiberg bond orders
-
-        >>> molecule = Molecule.from_iupac('imatinib')
-        >>> molecule.generate_conformers()
-        >>> fractional_bond_orders = molecule.get_fractional_bond_orders(method='Wiberg')
-
-
-        .. todo::
-            * Is it OK that the ``Molecule`` object does not store geometry, but will create it using ``openeye.omega`` or ``rdkit``?
-            * Should this method assign fractional bond orders to the ``Bond``s in the molecule, a separate ``bond_orders`` molecule property,
-              or just return the array of bond orders?
-            * How do we add enough flexibility to specify the toolkit and optional parameters, such as:
-              ``oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, 'OECharges_AM1BCCSym'), False, False)``
-            * Generalize to allow user to specify both QM method and bond order computation approach (e.g. ``AM1`` and ``Wiberg``)
-
-
-        """
-        # TODO: Let ToolkitRegistry handle this once compute_fractional_bond_orders will be added to the Wrappers API.
-        if method != 'Wiberg':
-            raise NotImplementedError('Only Wiberg bond order is currently implemented')
-        # TODO: Use memoization to speed up subsequent calls; use decorator?
-        fractional_bond_orders = toolkit_registry.call(
-            'compute_wiberg_bond_orders', molecule=self)
-        return fractional_bond_orders
 
     def _construct_angles(self):
         """
