@@ -2948,8 +2948,41 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         charges = unit.Quantity(charges, unit.elementary_charge)
         return charges
 
+    def _modify_sqm_in_to_request_bond_orders(self, file_path):
+        """
+        Modify a sqm.in file produced by antechamber to include the "printbondorders=1" directive
+        in the header. This method will overwrite the original file.
 
-    def _get_fractional_bond_orders_from_sqm_out(self, file_path):
+        Parameters
+        ----------
+        file_path : str
+            The path to sqm.in
+        """
+
+        data = open(file_path).read()
+
+        # Original sqm.in file headerlooks like:
+
+        # Run semi-empirical minimization
+        #  &qmmm
+        #    qm_theory='AM1', grms_tol=0.0005,
+        #    scfconv=1.d-10, ndiis_attempts=700,   qmcharge=0,
+        #  /
+        # ... (atom coordinates in something like XYZ format) ...
+
+        # To get WBOs, we need to add "printbondorders=1" to the list of keywords
+
+        # First, split the sqm.in text at the "/" mark at the end of the header
+        datasp = data.split("/")
+        # Insert the "printbondorders" directive in a new line and re-add the "/"
+        datasp.insert(1, 'printbondorders=1, \n /')
+        # Reassemble the file text
+        new_data = ''.join(datasp)
+        # Write the new file contents, overwriting the original file.
+        with open(file_path, 'w') as of:
+            of.write(new_data)
+
+    def _get_fractional_bond_orders_from_sqm_out(self, file_path, validate_elements=None):
         """
         Process a SQM output file containing bond orders, and return a dict of the form
         dict[atom_1_index, atom_2_index] = fractional_bond_order
@@ -2958,6 +2991,9 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ----------
         file_path : str
             File path for sqm output file
+        validate_elements : iterable of str
+            The element symbols expected in molecule index order. A ValueError will be raised
+            if the elements are not found in this order.
 
         Returns
         -------
@@ -2989,13 +3025,30 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
            --------- Calculation Completed ----------
 '''
+        # Extract the chunk of text between begin_sep and end_sep, and split it by newline
         fbo_lines = data.split(begin_sep)[1].split(end_sep)[0].split('\n')
+
+        # Iterate over the lines and populate the dict to return
         bond_orders = dict()
         for line in fbo_lines:
             linesp = line.split()
             atom_index_1 = int(linesp[1])
+            atom_element_1 = linesp[2]
             atom_index_2 = int(linesp[3])
+            atom_element_2 = linesp[4]
             bond_order = float(linesp[5])
+
+            # If validate_elements was provided, ensure that the ordering of element symbols is what we expected
+            if validate_elements is not None:
+                if ((atom_element_1 != validate_elements[atom_index_1-1]) or
+                    (atom_element_2 != validate_elements[atom_index_2-1])):
+                    #raise ValueError('\n'.join(fbo_lines))
+                    raise ValueError(f'Elements or indexing in sqm output differ from expectation. '
+                                     f'Expected {validate_elements[atom_index_1]} with index {atom_index_1} and '
+                                     f'{validate_elements[atom_index_2]} with index {atom_index_2}, '
+                                     f'but SQM output has {atom_element_1} and {atom_element_2} for the same atoms.')
+
+
             # To make lookup easier, we identify bonds as integer tuples with the lowest atom index
             # first and the highest second.
             index_tuple = tuple(sorted([atom_index_1, atom_index_2]))
@@ -3015,7 +3068,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             The molecule to assign wiberg bond orders to
         bond_order_model : str, optional, default=None
             The charge model to use. Only allowed value is 'am1-wiberg'. If None, 'am1-wiberg' will be used.
-
          """
 
         # Find the path to antechamber
@@ -3063,33 +3115,14 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                     "-nc", str(net_charge)
                 ])
                 # Modify sqm.in to request bond order calculation
-                data = open('sqm.in').read()
-
-                # Original sqm.in file headerlooks like:
-
-                # Run semi-empirical minimization
-                #  &qmmm
-                #    qm_theory='AM1', grms_tol=0.0005,
-                #    scfconv=1.d-10, ndiis_attempts=700,   qmcharge=0,
-                #  /
-                # ... (atom coordinates in something like XYZ format) ...
-
-                # We need to add "printbondorders=1" to the list of keywords
-
-                # First, split the sqm.in text at the "/" mark at the end of the header
-                datasp = data.split("/")
-                # Insert the "printbondorders" directive in a new line and re-add the "/"
-                datasp.insert(1, 'printbondorders=1, \n /')
-                # Reassemble the file text
-                new_data = ''.join(datasp)
-                # Write the new file contents, overwriting the original file.
-                with open('sqm.in', 'w') as of:
-                    of.write(new_data)
-
+                self._modify_sqm_in_to_request_bond_orders("sqm.in")
                 # Run sqm to get bond orders
                 subprocess.check_output(["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"])
-
-                bond_orders = self._get_fractional_bond_orders_from_sqm_out('sqm.out')
+                # Ensure that antechamber/sqm did not change the indexing by checking against
+                # an ordered list of element symbols for this molecule
+                expected_elements = [at.element.symbol for at in molecule.atoms]
+                bond_orders = self._get_fractional_bond_orders_from_sqm_out('sqm.out',
+                                                                            validate_elements=expected_elements)
 
         # Note that sqm calculate WBOs for ALL PAIRS of atoms, not just those that have
         # bonds defined in the original molecule. So here we iterate over the bonds in
@@ -3100,7 +3133,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             # sorted order as well
             sorted_atom_indices = sorted(tuple([bond.atom1_index+1, bond.atom2_index+1]))
             bond.fractional_bond_order = bond_orders[tuple(sorted_atom_indices)]
-
 
 
 
