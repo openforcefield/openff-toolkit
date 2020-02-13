@@ -1159,7 +1159,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         status = omega(oemol)
 
         if status is False:
-            raise Exception("OpenEye Omega conformer generation failed")
+            omega.SetStrictStereo(False)
+            new_status = omega(oemol)
+            if new_status is False:
+                raise Exception("OpenEye Omega conformer generation failed")
+
 
         molecule2 = self.from_openeye(oemol, allow_undefined_stereo=True)
 
