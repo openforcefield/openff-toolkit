@@ -1646,7 +1646,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             a list of Molecule objects is returned.
 
         """
-        from openforcefield.topology import Molecule
         from rdkit import Chem
         mols = list()
         if (file_format == 'MOL') or (file_format == 'SDF'):

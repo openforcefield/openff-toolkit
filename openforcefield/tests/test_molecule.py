@@ -1059,57 +1059,6 @@ class TestMolecule:
     # Test Molecule methods.
     # ----------------------
 
-    def test_find_rotatable_bonds(self):
-        """Test finding rotatable bonds while ignoring some groups"""
-
-        # test a simple molecule
-        ethanol = create_ethanol()
-        bonds = ethanol.find_rotatable_bonds()
-        assert len(bonds) == 2
-        for bond in bonds:
-            assert ethanol.atoms[bond.atom1_index].atomic_number != 1
-            assert ethanol.atoms[bond.atom2_index].atomic_number != 1
-
-        # now ignore the C-O bond
-        bonds = ethanol.find_rotatable_bonds('[#6:1]-[#8:2]')
-        assert len(bonds) == 1
-        assert ethanol.atoms[bonds[0].atom1_index].atomic_number == 6
-        assert ethanol.atoms[bonds[0].atom2_index].atomic_number == 6
-
-        # now ignore the C-C bond
-        bonds = ethanol.find_rotatable_bonds('[#6:1]-[#6:2]')
-        assert len(bonds) == 1
-        assert ethanol.atoms[bonds[0].atom1_index].atomic_number == 6
-        assert ethanol.atoms[bonds[0].atom2_index].atomic_number == 8
-
-        # ignore a list of searches
-        bonds = ethanol.find_rotatable_bonds(['[#6:1]-[#8:2]', '[#6:1]-[#6:2]'])
-        assert bonds == []
-
-        # test  molecules that should have no rotatable bonds
-        cyclohexane = create_cyclohexane()
-        bonds = cyclohexane.find_rotatable_bonds()
-        assert bonds == []
-
-        methane = Molecule.from_smiles('C')
-        bonds = methane.find_rotatable_bonds()
-        assert bonds == []
-
-        ethene = Molecule.from_smiles('C=C')
-        bonds = ethene.find_rotatable_bonds()
-        assert bonds == []
-
-        terminal = '[*]~[*:1]-[X2H1,X3H2,X4H3:2]-[#1]'
-        # test removing terminal rotors
-        toluene = Molecule.from_file(get_data_file_path('molecules/toluene.sdf'))
-        bonds = toluene.find_rotatable_bonds()
-        assert len(bonds) == 1
-        assert toluene.atoms[bonds[0].atom1_index].atomic_number == 6
-        assert toluene.atoms[bonds[0].atom2_index].atomic_number == 6
-
-        bonds = toluene.find_rotatable_bonds(terminal)
-        assert bonds == []
-
     def test_add_conformers(self):
         """Test addition of conformers to a molecule"""
         import numpy as np
