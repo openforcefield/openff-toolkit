@@ -2232,7 +2232,7 @@ class FrozenMolecule(Serializable):
     def assign_fractional_bond_orders(self,
                                       bond_order_model=None,
                                       toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-                                      conformers = None):
+                                      conformers=None):
         """
         Update and store list of bond orders this molecule. Bond orders are stored on each
         bond, in the `bond.fractional_bond_order` attribute.
@@ -3796,46 +3796,6 @@ class FrozenMolecule(Serializable):
         """
         toolkit = OpenEyeToolkitWrapper()
         return toolkit.to_openeye(self, aromaticity_model=aromaticity_model)
-
-    def get_fractional_bond_orders(self,
-                                   method='Wiberg',
-                                   toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
-        """Get fractional bond orders.
-
-        method : str, optional, default='Wiberg'
-            The name of the charge method to use.
-            Options are:
-            * 'Wiberg' : Wiberg bond order
-        toolkit_registry : openforcefield.utils.toolkits ToolkitRegistry
-            The toolkit registry to use for molecule operations
-
-        Examples
-        --------
-
-        Get fractional Wiberg bond orders
-
-        >>> molecule = Molecule.from_iupac('imatinib')
-        >>> molecule.generate_conformers()
-        >>> fractional_bond_orders = molecule.get_fractional_bond_orders(method='Wiberg')
-
-
-        .. todo::
-            * Is it OK that the ``Molecule`` object does not store geometry, but will create it using ``openeye.omega`` or ``rdkit``?
-            * Should this method assign fractional bond orders to the ``Bond``s in the molecule, a separate ``bond_orders`` molecule property,
-              or just return the array of bond orders?
-            * How do we add enough flexibility to specify the toolkit and optional parameters, such as:
-              ``oequacpac.OEAssignPartialCharges(charged_copy, getattr(oequacpac, 'OECharges_AM1BCCSym'), False, False)``
-            * Generalize to allow user to specify both QM method and bond order computation approach (e.g. ``AM1`` and ``Wiberg``)
-
-
-        """
-        # TODO: Let ToolkitRegistry handle this once assign_fractional_bond_orders will be added to the Wrappers API.
-        if method != 'Wiberg':
-            raise NotImplementedError('Only Wiberg bond order is currently implemented')
-        # TODO: Use memoization to speed up subsequent calls; use decorator?
-        fractional_bond_orders = toolkit_registry.call(
-            'compute_wiberg_bond_orders', molecule=self)
-        return fractional_bond_orders
 
     def _construct_angles(self):
         """
