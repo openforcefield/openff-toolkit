@@ -2238,7 +2238,7 @@ class FrozenMolecule(Serializable):
     def assign_fractional_bond_orders(self,
                                       bond_order_model=None,
                                       toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-                                      conformers=None):
+                                      use_conformers=None):
         """
         Update and store list of bond orders this molecule. Bond orders are stored on each
         bond, in the `bond.fractional_bond_order` attribute.
@@ -2269,11 +2269,16 @@ class FrozenMolecule(Serializable):
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
             return toolkit_registry.call(
-                'assign_fractional_bond_orders', self, bond_order_model=bond_order_model, conformers=conformers)
+                'assign_fractional_bond_orders',
+                self,
+                bond_order_model=bond_order_model,
+                use_conformers=use_conformers)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             return toolkit.assign_fractional_bond_orders(
-                self, bond_order_model=bond_order_model, conformers=conformers)
+                self,
+                bond_order_model=bond_order_model,
+                use_conformers=use_conformers)
         else:
             raise Exception(
                 f'Invalid toolkit_registry passed to assign_fractional_bond_orders. '

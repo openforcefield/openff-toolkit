@@ -1494,7 +1494,8 @@ class TestMolecule:
                 for molecule in molecules[:5]: # Just test first five molecules for speed
                     molecule.generate_conformers(toolkit_registry=toolkit_registry)
                     molecule.assign_fractional_bond_orders(bond_order_model=bond_order_model,
-                                                           toolkit_registry=toolkit_registry)
+                                                           toolkit_registry=toolkit_registry,
+                                                           use_conformers=molecule.conformers)
                     fbo1 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # Call should be faster the second time due to caching
                     molecule.assign_fractional_bond_orders(bond_order_model=bond_order_model,
