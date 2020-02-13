@@ -926,12 +926,12 @@ class TestForceField():
 
         assert serialized_1 == serialized_2
 
-        @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='Test requires RDKit toolkit')
-        def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
-            """
-            Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
-            The results of both should be identical.
-            """
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='Test requires RDKit toolkit')
+    def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
+        """
+        Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
+        The results of both should be identical.
+        """
 
         from simtk.openmm import app
         from simtk.openmm import XmlSerializer
@@ -969,8 +969,7 @@ class TestForceField():
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='Test requires RDKit toolkit')
     def test_parameterize_mol_missing_stereo_rdkit(self):
         """
-        Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
-        The results of both should be identical.
+        Test parameterizing a molecule with undefined stereochemsity using the RDKit/AmberTools backend.
         """
 
         from openforcefield.topology import Molecule, Topology
@@ -987,8 +986,7 @@ class TestForceField():
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='Test requires OpenEye toolkit')
     def test_parameterize_mol_missing_stereo_openeye(self):
         """
-        Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
-        The results of both should be identical.
+        Test parameterizing a molecule with undefined stereochemsity using the OpenEye backend.
         """
 
         from openforcefield.topology import Molecule, Topology
