@@ -1343,6 +1343,12 @@ class Bond(Serializable):
             raise ValueError('This Atom does not belong to a Molecule object')
         return self._molecule.bonds.index(self)
 
+    def __repr__(self):
+        return f"Bond(atom1 index={self.atom1_index}, atom2 index={self.atom2_index})"
+
+    def __str__(self):
+        return f"<Bond atom1 index='{self.atom1_index}', atom2 index='{self.atom2_index}'>"
+
 
 #=============================================================================================
 # Molecule
@@ -2321,10 +2327,79 @@ class FrozenMolecule(Serializable):
         for bond in self.bonds:
             G.add_edge(
                 bond.atom1_index, bond.atom2_index, bond_order=bond.bond_order, is_aromatic=bond.is_aromatic,
-                stereochemistry = bond.stereochemistry)
+                stereochemistry=bond.stereochemistry)
             #G.add_edge(bond.atom1_index, bond.atom2_index, attr_dict={'order':bond.bond_order})
 
         return G
+
+    def find_rotatable_bonds(self, ignore_functional_groups=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Find all bonds classed as rotatable ignoring any matched to the ``ignore_functional_groups`` list.
+
+        Parameters
+        ----------
+        ignore_functional_groups: optional, List[str], default=None,
+            A list of bond SMARTS patterns to be ignored when finding rotatable bonds.
+
+        toolkit_registry: openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMARTS matching
+
+        Returns
+        -------
+        bonds: List[openforcefield.topology.molecule.Bond]
+            The list of openforcefield.topology.molecule.Bond instances which are rotatable.
+        """
+
+        # general rotatable bond smarts taken from RDKit
+        # https://github.com/rdkit/rdkit/blob/1bf6ef3d65f5c7b06b56862b3fb9116a3839b229/rdkit/Chem/Lipinski.py#L47%3E
+        rotatable_bond_smarts = '[!$(*#*)&!D1:1]-&!@[!$(*#*)&!D1:2]'
+
+        # get all of the general matches
+        general_matches = self.chemical_environment_matches(query=rotatable_bond_smarts,
+                                                            toolkit_registry=toolkit_registry)
+
+        # this will give all forwards and backwards matches, so condense them down with this function
+        def condense_matches(matches):
+            condensed_matches = set()
+            for m in matches:
+                condensed_matches.add(tuple(sorted(m)))
+            return condensed_matches
+
+        general_bonds = condense_matches(general_matches)
+
+        # now refine the list using the ignore groups
+        if ignore_functional_groups is not None:
+            matches_to_ignore = set()
+
+            # make ignore_functional_groups an iterable object
+            if isinstance(ignore_functional_groups, str):
+                ignore_functional_groups = [ignore_functional_groups]
+            else:
+                try:
+                    iter(ignore_functional_groups)
+                except TypeError:
+                    ignore_functional_groups = [ignore_functional_groups]
+
+            # find the functional groups to remove
+            for functional_group in ignore_functional_groups:
+                # note I run the searches through this function so they have to be SMIRKS?
+                ignore_matches = self.chemical_environment_matches(query=functional_group,
+                                                                   toolkit_registry=toolkit_registry)
+                ignore_matches = condense_matches(ignore_matches)
+                # add the new matches to the matches to ignore
+                matches_to_ignore.update(ignore_matches)
+
+            # now remove all the matches
+            for match in matches_to_ignore:
+                try:
+                    general_bonds.remove(match)
+                # if the key is not in the list, the ignore pattern was not valid
+                except KeyError:
+                    continue
+
+        # gather a list of bond instances to return
+        rotatable_bonds = [self.get_bond_between(*bond) for bond in general_bonds]
+        return rotatable_bonds
 
     def _add_atom(self,
                   atomic_number,
