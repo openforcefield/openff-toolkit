@@ -35,7 +35,8 @@ from openforcefield.topology.molecule import Molecule, Atom, InvalidConformerErr
 from openforcefield.utils import get_data_file_path
 # TODO: Will the ToolkitWrapper allow us to pare that down?
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
-from openforcefield.tests.test_forcefield import create_ethanol, create_reversed_ethanol, create_acetaldehyde, create_benzene_no_aromatic
+from openforcefield.tests.test_forcefield import create_ethanol, create_reversed_ethanol, create_acetaldehyde, \
+    create_benzene_no_aromatic, create_cyclohexane
 
 #=============================================================================================
 # TEST UTILITIES

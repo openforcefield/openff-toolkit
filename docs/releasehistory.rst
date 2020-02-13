@@ -42,6 +42,9 @@ New features
   and :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
   and :py:meth:`Molecule.canonical_order_atoms <openforcefield.topology.Molecule.canonical_order_atoms>`
   and :py:meth:`Molecule.remap <openforcefield.topology.Molecule.remap>`
+- `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_:
+   The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
+  :py:meth:`Molecule.find_rotatable_bonds <openforcefield.topology.Molecule.find_rotatable_bonds>`
 
 Behavior changed
 """"""""""""""""
@@ -90,6 +93,10 @@ Tests added
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Added tests for
   :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
   to check for a correct combination of smiles and PDB and incorrect combinations.
+- `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_: Added a test for the molecule
+   identified in issue #513 as loosing aromaticity when converted to rdkit.
+- `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_: Added a verity of toolkit dependent tests
+   for identifying rotatable bonds while ignoring the user requested types.
 
 Bugfixes
 """"""""
@@ -112,6 +119,12 @@ Bugfixes
   to erroneous definition of chirality (as otherwise symmetric substituents would be seen as different).
   We anticipate that this will reduce the number of times you need to
   type ``allow_undefined_stereo=True`` when processing molecules that do not actually contain stereochemistrty.
+- `Issue #513 <https://github.com/openforcefield/openforcefield/issues/513>`_: The
+   :py:meth:`Molecule.to_rdkit <openforcefield.topology.Molecule.to_rdkit>` now re-sets the aromaticity model
+   after sanitizing the molecule.
+- `Issue #500 <https://github.com/openforcefield/openforcefield/issues/500>`_: The
+   :py:meth:`Molecule.find_rotatable_bonds <openforcefield.topology.Molecule.find_rotatable_bonds>` has been added
+   which returns a list of rotatable :py:class:`Bond <openforcefield.topology.Bond>` instances for the molecule.
 
 Example added
 """""""""""""
