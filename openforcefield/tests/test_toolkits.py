@@ -23,6 +23,7 @@ from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWr
                                            GAFFAtomTypeWarning, UndefinedStereochemistryError)
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology.molecule import Molecule
+from openforcefield.tests.test_forcefield import create_ethanol, create_cyclohexane
 
 
 #=============================================================================================
@@ -544,7 +545,73 @@ class TestOpenEyeToolkitWrapper:
                     double_bond_has_wbo_near_2 = True
         assert double_bond_has_wbo_near_2
 
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_find_rotatable_bonds(self):
+        """Test finding rotatable bonds while ignoring some groups"""
 
+        # test a simple molecule
+        ethanol = create_ethanol()
+        bonds = ethanol.find_rotatable_bonds()
+        assert len(bonds) == 2
+        for bond in bonds:
+            assert ethanol.atoms[bond.atom1_index].atomic_number != 1
+            assert ethanol.atoms[bond.atom2_index].atomic_number != 1
+
+        # now ignore the C-O bond, forwards
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups='[#6:1]-[#8:2]')
+        assert len(bonds) == 1
+        assert ethanol.atoms[bonds[0].atom1_index].atomic_number == 6
+        assert ethanol.atoms[bonds[0].atom2_index].atomic_number == 6
+
+        # now ignore the O-C bond, backwards
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups='[#8:1]-[#6:2]')
+        assert len(bonds) == 1
+        assert ethanol.atoms[bonds[0].atom1_index].atomic_number == 6
+        assert ethanol.atoms[bonds[0].atom2_index].atomic_number == 6
+
+        # now ignore the C-C bond
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups='[#6:1]-[#6:2]')
+        assert len(bonds) == 1
+        assert ethanol.atoms[bonds[0].atom1_index].atomic_number == 6
+        assert ethanol.atoms[bonds[0].atom2_index].atomic_number == 8
+
+        # ignore a list of searches, forward
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups=['[#6:1]-[#8:2]', '[#6:1]-[#6:2]'])
+        assert bonds == []
+
+        # ignore a list of searches, backwards
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups=['[#6:1]-[#6:2]', '[#8:1]-[#6:2]'])
+        assert bonds == []
+
+        # test  molecules that should have no rotatable bonds
+        cyclohexane = create_cyclohexane()
+        bonds = cyclohexane.find_rotatable_bonds()
+        assert bonds == []
+
+        methane = Molecule.from_smiles('C')
+        bonds = methane.find_rotatable_bonds()
+        assert bonds == []
+
+        ethene = Molecule.from_smiles('C=C')
+        bonds = ethene.find_rotatable_bonds()
+        assert bonds == []
+
+        terminal_forwards = '[*]~[*:1]-[X2H1,X3H2,X4H3:2]-[#1]'
+        terminal_backwards = '[#1]-[X2H1,X3H2,X4H3:1]-[*:2]~[*]'
+        # test removing terminal rotors
+        toluene = Molecule.from_file(get_data_file_path('molecules/toluene.sdf'))
+        bonds = toluene.find_rotatable_bonds()
+        assert len(bonds) == 1
+        assert toluene.atoms[bonds[0].atom1_index].atomic_number == 6
+        assert toluene.atoms[bonds[0].atom2_index].atomic_number == 6
+
+        # find terminal bonds forward
+        bonds = toluene.find_rotatable_bonds(ignore_functional_groups=terminal_forwards)
+        assert bonds == []
+
+        # find terminal bonds backwards
+        bonds = toluene.find_rotatable_bonds(ignore_functional_groups=terminal_backwards)
+        assert bonds == []
 
 
 
@@ -809,9 +876,87 @@ class TestRDKitToolkitWrapper:
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers()
         # TODO: Make this test more robust
-        
 
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_find_rotatable_bonds(self):
+        """Test finding rotatable bonds while ignoring some groups"""
 
+        # test a simple molecule
+        ethanol = create_ethanol()
+        bonds = ethanol.find_rotatable_bonds()
+        assert len(bonds) == 2
+        for bond in bonds:
+            assert ethanol.atoms[bond.atom1_index].atomic_number != 1
+            assert ethanol.atoms[bond.atom2_index].atomic_number != 1
+
+        # now ignore the C-O bond, forwards
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups='[#6:1]-[#8:2]')
+        assert len(bonds) == 1
+        assert ethanol.atoms[bonds[0].atom1_index].atomic_number == 6
+        assert ethanol.atoms[bonds[0].atom2_index].atomic_number == 6
+
+        # now ignore the O-C bond, backwards
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups='[#8:1]-[#6:2]')
+        assert len(bonds) == 1
+        assert ethanol.atoms[bonds[0].atom1_index].atomic_number == 6
+        assert ethanol.atoms[bonds[0].atom2_index].atomic_number == 6
+
+        # now ignore the C-C bond
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups='[#6:1]-[#6:2]')
+        assert len(bonds) == 1
+        assert ethanol.atoms[bonds[0].atom1_index].atomic_number == 6
+        assert ethanol.atoms[bonds[0].atom2_index].atomic_number == 8
+
+        # ignore a list of searches, forward
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups=['[#6:1]-[#8:2]', '[#6:1]-[#6:2]'])
+        assert bonds == []
+
+        # ignore a list of searches, backwards
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups=['[#6:1]-[#6:2]', '[#8:1]-[#6:2]'])
+        assert bonds == []
+
+        # test  molecules that should have no rotatable bonds
+        cyclohexane = create_cyclohexane()
+        bonds = cyclohexane.find_rotatable_bonds()
+        assert bonds == []
+
+        methane = Molecule.from_smiles('C')
+        bonds = methane.find_rotatable_bonds()
+        assert bonds == []
+
+        ethene = Molecule.from_smiles('C=C')
+        bonds = ethene.find_rotatable_bonds()
+        assert bonds == []
+
+        terminal_forwards = '[*]~[*:1]-[X2H1,X3H2,X4H3:2]-[#1]'
+        terminal_backwards = '[#1]-[X2H1,X3H2,X4H3:1]-[*:2]~[*]'
+        # test removing terminal rotors
+        toluene = Molecule.from_file(get_data_file_path('molecules/toluene.sdf'))
+        bonds = toluene.find_rotatable_bonds()
+        assert len(bonds) == 1
+        assert toluene.atoms[bonds[0].atom1_index].atomic_number == 6
+        assert toluene.atoms[bonds[0].atom2_index].atomic_number == 6
+
+        # find terminal bonds forward
+        bonds = toluene.find_rotatable_bonds(ignore_functional_groups=terminal_forwards)
+        assert bonds == []
+
+        # find terminal bonds backwards
+        bonds = toluene.find_rotatable_bonds(ignore_functional_groups=terminal_backwards)
+        assert bonds == []
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_to_rdkit_losing_aromaticity_(self):
+        # test the example given in issue #513
+        # <https://github.com/openforcefield/openforcefield/issues/513>
+        smiles = "[H]c1c(c(c(c(c1OC2=C(C(=C(N3C2=C(C(=C3[H])C#N)[H])[H])F)[H])OC([H])([H])C([H])([H])N4C(=C(C(=O)N(C4=O)[H])[H])[H])[H])F)[H]"
+
+        mol = Molecule.from_smiles(smiles)
+        rdmol = mol.to_rdkit()
+
+        # now make sure the aromaticity matches for each atom
+        for (offatom, rdatom) in zip(mol.atoms, rdmol.GetAtoms()):
+            assert offatom.is_aromatic is rdatom.GetIsAromatic()
 
 
         
