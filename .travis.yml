@@ -95,13 +95,13 @@ script:
     pytest --ignore=utilities --ignore=examples/deprecated --ignore=docs
     --ignore=devtools --doctest-modules --nbval-lax --cov=openforcefield
     --cov-config=setup.cfg;
-  elif [[ "$RDKIT" == false && "$OPENEYE" == true ]];
+  elif [[ "$OPENEYE" == true ]];
   then
     pytest --ignore=utilities --ignore=examples/deprecated --ignore=docs
     --ignore=devtools --ignore=examples/check_dataset_parameter_coverage
     --ignore=examples/QCArchive_interface
     --nbval-lax --cov=openforcefield --cov-config=setup.cfg;
-  elif [[ "$RDKIT" == true && "$OPENEYE" == false ]];
+  elif [[ "$RDKIT" == true ]];
   then
     pytest --ignore=utilities --ignore=examples/deprecated
     --nbval-lax --cov=openforcefield --cov-config=setup.cfg;
