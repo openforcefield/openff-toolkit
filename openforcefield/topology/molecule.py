@@ -2370,7 +2370,9 @@ class FrozenMolecule(Serializable):
         # now refine the list using the ignore groups
         if ignore_functional_groups is not None:
             matches_to_ignore = set()
-            if not isinstance(ignore_functional_groups, list):
+            try:
+                iter(ignore_functional_groups)
+            except TypeError:
                 ignore_functional_groups = [ignore_functional_groups]
             for functional_group in ignore_functional_groups:
                 # note I run the searches through this function so they have to be SMIRKS?

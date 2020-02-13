@@ -2281,6 +2281,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
 
+        # Fix for aromaticity being lost
+        if aromaticity_model == 'OEAroModel_MDL':
+            Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+        else:
+            raise ValueError(f"Aromaticity model {aromaticity_model} not recognized")
+
         # Assign atom stereochemsitry and collect atoms for which RDKit
         # can't figure out chirality. The _CIPCode property of these atoms
         # will be forcefully set to the stereo we want (see #196).
@@ -2418,7 +2424,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Perform matching
         matches = list()
-        for match in rdmol.GetSubstructMatches(qmol, uniquify=False):
+
+        max_matches = np.iinfo(np.uintc).max
+        for match in rdmol.GetSubstructMatches(qmol, uniquify=False, maxMatches=max_matches):
             mas = [match[x] for x in map_list]
             matches.append(tuple(mas))
 
