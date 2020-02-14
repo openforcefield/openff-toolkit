@@ -76,6 +76,12 @@ Tests added
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Added tests for
   :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
   to check for a correct combination of smiles and PDB and incorrect combinations.
+- `PR #509 <https://github.com/openforcefield/openforcefield/pull/509>`_: Added test for
+  :py:meth:`Molecule.chemical_environment_matches <openforcefield.topology.Molecule.chemical_environment_matches>`
+  to check that the complete set of matches is returned.
+- `PR #509 <https://github.com/openforcefield/openforcefield/pull/509>`_: Added test for
+  :py:meth:`Forcefield.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.create_openmm_system>`
+  to check that a protein system can be created.
 
 Bugfixes
 """"""""
@@ -95,6 +101,7 @@ Bugfixes
   :py:class:`Molecule <openforcefield.topology.Molecule>` using
   :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>` which allows
   the creation of the problematic molecule in the issue with out the need to use the ``allow_undefined_stero`` kwarg.``
+- `Issue #491 <https://github.com/openforcefield/openforcefield/issues/491>`_: We can now parse large molecules without hitting a match limit cap.
 
 Example added
 """""""""""""

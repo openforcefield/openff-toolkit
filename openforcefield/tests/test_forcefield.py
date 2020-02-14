@@ -1959,13 +1959,6 @@ class TestForceFieldParameterAssignment:
         assert len(labels["ProperTorsions"]) ==   6973
         assert len(labels["ImproperTorsions"]) == 528
 
-        # Need to set allow_nonintegral_charges=True in create_openmm_system
-        # since it believes the formal charge is -55
-        # and the sum of partial charges is ~8.0
-        # Happens because all bond orders in the mol2 file were 1 (made from tleap), 
-        # causing the errors in formal charge calculation (#512)
-        # Fixed using OE to make the mol2, and inserting ff14SB charges
-
         fn = forcefield.create_openmm_system
         omm_system = fn(topology,
                         charge_from_molecules=[molecule],
