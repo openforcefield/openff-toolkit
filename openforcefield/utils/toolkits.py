@@ -504,6 +504,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oemol.DeleteConfs()
             oecoords = oechem.OEFloatArray(flat_coords)
             oemol.NewConf(oecoords)
+        # We're standardizing on putting partial charges into SDFs under the `atom.dprop.PartialCharge` property
         if (file_format.lower() == "sdf") and (molecule.partial_charges is not None):
             partial_charges_list = []
             for pc in molecule.partial_charges:

@@ -18,6 +18,21 @@ Behavior changed
   and generate a new conformer of the molecule before running semiempirical calculations.
   Users can override this behavior by specifying the keyword argument
   ``use_conformers=molecule.conformers``
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: Closes
+  `Issue #250 <https://github.com/openforcefield/openforcefield/issues/250>`_
+  by adding support for partial charge I/O in SDF. The partial charges are stored as a property in the
+  SDF molecule block under the tag ``<atom.dprop.PartialCharge>``.
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_:
+  Enforce the behavior during SDF I/O that a SDF may contain multiple MOLECULES, but that the OFF Toolkit
+  will never assume that it contains multiple CONFORMERS of the same molecule. This is an
+  important distinction, since otherwise there is ambiguity around whether properties of one
+  entry in a SDF are shared among several molecule blocks or not (More info
+  `here <https://docs.eyesopen.com/toolkits/python/oechemtk/oemol.html#dude-where-s-my-sd-data>`_.
+  If the user requests the OFF
+  Toolkit to write a multi-conformer ``Molecule`` to SDF, only the first conformer will be written.
+  For more fine-grained control of writing properties, conformers, and partial charges, consider
+  using ``Molecule.to_rdkit`` or ``Molecule.to_openeye`` and using the functionality offered by
+  those packages.
 
 API-breaking changes
 """"""""""""""""""""
@@ -138,7 +153,7 @@ Bugfixes
 Example added
 """""""""""""
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Adds an example notebook
-  `QCarchive_interface.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/QCArchive_interface/QCarchive_interface.ipynb>`
+  `QCarchive_interface.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/QCArchive_interface/QCarchive_interface.ipynb>`_
   which shows users how to instance the :py:class:`Molecule <openforcefield.topology.Molecule>` from
   a QCArchive entry level record and calculate the energy using RDKit through QCEngine.
 
