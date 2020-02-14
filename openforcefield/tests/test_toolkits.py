@@ -374,10 +374,21 @@ class TestOpenEyeToolkitWrapper:
         # The file is automatically deleted outside the with-clause.
         with NamedTemporaryFile(suffix='.sdf') as iofile:
             ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
-            #raise Exception(open(iofile.name).read())
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
         np.testing.assert_allclose(ethanol.partial_charges / unit.elementary_charge,
                                    ethanol2.partial_charges / unit.elementary_charge)
+        assert ethanol2.properties['test_property'] == 'test_value'
+
+        # Now test with no properties or charges
+        ethanol = create_ethanol()
+        ethanol.partial_charges = None
+        with NamedTemporaryFile(suffix='.sdf') as iofile:
+            ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
+            ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
+        assert ethanol2.partial_charges is None
+        assert ethanol2.properties is None
+
+
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_write_multiconformer_mol_as_sdf(self):
