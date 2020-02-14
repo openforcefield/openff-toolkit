@@ -391,16 +391,28 @@ class TestOpenEyeToolkitWrapper:
     def test_write_multiconformer_mol_as_sdf(self):
         """
         Test RDKitToolkitWrapper for writing a multiconformer molecule to SDF. The OFF toolkit should only
-        save the first conformer
+        save the first conformer.
         """
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_file_path('molecules/ethanol.sdf')
         ethanol = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        ethanol.add_conformer(ethanol.conformers[0] + 1.*unit.angstrom)
+        ethanol.partial_charges = np.array([-4., -3., -2., -1., 0., 1., 2., 3., 4.]) * unit.elementary_charge
+        ethanol.properties['test_prop'] = 'test_value'
+        new_conf = ethanol.conformers[0] + (np.ones(ethanol.conformers[0].shape) * unit.angstrom)
+        ethanol.add_conformer(new_conf)
         ethanol.to_file('temp.sdf', 'sdf', toolkit_registry=toolkit_wrapper)
         data = open('temp.sdf').read()
-        assert data.count('$$$$') == 1 # In SD format, each molecule/conformer ends with "$$$$"
-        assert len(data.split('\n')) < 20 # A valid SDF for methane would be a little under 20 lines
+        # In SD format, each molecule (or "conformer", if you have a bone in your brain) ends with "$$$$"
+        assert data.count('$$$$') == 1
+        # A basic SDF for ethanol would be 27 lines, though the properties add three more
+        assert len(data.split('\n')) == 30
+        assert 'test_prop' in data
+        assert '<atom.dprop.PartialCharge>' in data
+        # Ensure the first conformer's first atom's X coordinate is in the file
+        assert str(ethanol.conformers[0][0][0].value_in_unit(unit.angstrom))[:5] in data
+        # Ensure the SECOND conformer's first atom's X coordinate is NOT in the file
+        assert str(ethanol.conformers[1][0][0].in_units_of(unit.angstrom))[:5] not in data
+
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_coordinates(self):
@@ -991,12 +1003,22 @@ class TestRDKitToolkitWrapper:
         toolkit_wrapper = RDKitToolkitWrapper()
         filename = get_data_file_path('molecules/ethanol.sdf')
         ethanol = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        ethanol.add_conformer(ethanol.conformers[0] + 1.*unit.angstrom)
+        ethanol.partial_charges = np.array([-4., -3., -2., -1., 0., 1., 2., 3., 4.]) * unit.elementary_charge
+        ethanol.properties['test_prop'] = 'test_value'
+        new_conf = ethanol.conformers[0] + (np.ones(ethanol.conformers[0].shape) * unit.angstrom)
+        ethanol.add_conformer(new_conf)
         ethanol.to_file('temp.sdf', 'sdf', toolkit_registry=toolkit_wrapper)
         data = open('temp.sdf').read()
-        assert data.count('$$$$') == 1 # In SD format, each molecule/conformer ends with "$$$$"
-        assert len(data.split('\n')) < 20 # A valid SDF for methane would be a little under 20 lines
-
+        # In SD format, each molecule (or "conformer", if you have a bone in your brain) ends with "$$$$"
+        assert data.count('$$$$') == 1
+        # A basic SDF for ethanol would be 27 lines, though the properties add three more
+        assert len(data.split('\n')) == 30
+        assert 'test_prop' in data
+        assert '<atom.dprop.PartialCharge>' in data
+        # Ensure the first conformer's first atom's X coordinate is in the file
+        assert str(ethanol.conformers[0][0][0].value_in_unit(unit.angstrom))[:5] in data
+        # Ensure the SECOND conformer's first atom's X coordinate is NOT in the file
+        assert str(ethanol.conformers[1][0][0].in_units_of(unit.angstrom))[:5] not in data
 
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip

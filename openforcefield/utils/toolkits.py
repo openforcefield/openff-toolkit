@@ -498,10 +498,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Delete all but the first conformer if writing to SDF.
         if (file_format.lower() == "sdf") and oemol.NumConfs() > 1:
             conf1 = [conf for conf in oemol.GetConfs()][0]
-            flat_coords = np.zeros((oemol.NumAtoms() * 3),
-                                   dtype=np.float32)
-            for idx, coord in enumerate(conf1.GetCoords()):
-                flat_coords[idx] = coord
+            flat_coords = list()
+            for idx, coord in conf1.GetCoords().items():
+                flat_coords.extend(coord)
             oemol.DeleteConfs()
             oecoords = oechem.OEFloatArray(flat_coords)
             oemol.NewConf(oecoords)
