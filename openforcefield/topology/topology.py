@@ -2399,25 +2399,3 @@ class Topology(Serializable):
             return self._constrained_atom_pairs[(iatom, jatom)]
         else:
             return False
-
-    def get_fractional_bond_order(self, iatom, jatom):
-        """
-        Retrieve the fractional bond order for a bond.
-
-        An Exception is raised if it cannot be determined.
-
-        Parameters
-        ----------
-        iatom, jatom : Atom
-            Atoms for which a fractional bond order is to be retrieved.
-
-        Returns
-        -------
-        order : float
-            Fractional bond order between the two specified atoms.
-
-        """
-        # TODO: Look up fractional bond order in corresponding list of unique molecules,
-        # computing it lazily if needed.
-
-        pass

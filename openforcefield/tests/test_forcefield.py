@@ -926,13 +926,13 @@ class TestForceField():
 
         assert serialized_1 == serialized_2
 
-
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='Test requires RDKit toolkit')
     def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
         The results of both should be identical.
         """
+
         from simtk.openmm import app
         from simtk.openmm import XmlSerializer
 
@@ -965,6 +965,39 @@ class TestForceField():
 
         assert serialized_1 == serialized_2
 
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='Test requires RDKit toolkit')
+    def test_parameterize_mol_missing_stereo_rdkit(self):
+        """
+        Test parameterizing a molecule with undefined stereochemsity using the RDKit/AmberTools backend.
+        """
+
+        from openforcefield.topology import Molecule, Topology
+        from openforcefield.typing.engines.smirnoff import ForceField
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper])
+
+        molecule = Molecule.from_smiles('CC1CCC(=O)O1', allow_undefined_stereo=True)
+        topology = Topology.from_molecules([molecule])
+
+        force_field = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+        force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
+
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='Test requires OpenEye toolkit')
+    def test_parameterize_mol_missing_stereo_openeye(self):
+        """
+        Test parameterizing a molecule with undefined stereochemsity using the OpenEye backend.
+        """
+
+        from openforcefield.topology import Molecule, Topology
+        from openforcefield.typing.engines.smirnoff import ForceField
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
+
+        molecule = Molecule.from_smiles('CC1CCC(=O)O1', allow_undefined_stereo=True)
+        topology = Topology.from_molecules([molecule])
+
+        force_field = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+        force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
     @pytest.mark.skip(reason="We will not support going directly to ParmEd for now."
                              "We will instead feed OpenMM System objects to ParmEd "
