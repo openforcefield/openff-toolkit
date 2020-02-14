@@ -269,6 +269,93 @@ def create_ethanol():
     ethanol.partial_charges = charges
     return ethanol
 
+
+def create_reversed_ethanol():
+    """
+    Creates an openforcefield.topology.Molecule representation of
+    ethanol without the use of a cheminformatics toolkit. This function
+    reverses the atom indexing of create_ethanol
+    """
+    # Create an ethanol molecule without using a toolkit
+    ethanol = Molecule()
+    ethanol.add_atom(1, 0, False)  # H0
+    ethanol.add_atom(1, 0, False)  # H1
+    ethanol.add_atom(1, 0, False)  # H2
+    ethanol.add_atom(1, 0, False)  # H3
+    ethanol.add_atom(1, 0, False)  # H4
+    ethanol.add_atom(1, 0, False)  # H5
+    ethanol.add_atom(8, 0, False)  # O6
+    ethanol.add_atom(6, 0, False)  # C7
+    ethanol.add_atom(6, 0, False)  # C8
+    ethanol.add_bond(8, 7, 1, False)  # C8 - C7
+    ethanol.add_bond(7, 6, 1, False)  # C7 - O6
+    ethanol.add_bond(8, 5, 1, False)  # C8 - H5
+    ethanol.add_bond(8, 4, 1, False)  # C8 - H4
+    ethanol.add_bond(8, 3, 1, False)  # C8 - H3
+    ethanol.add_bond(7, 2, 1, False)  # C7 - H2
+    ethanol.add_bond(7, 1, 1, False)  # C7 - H1
+    ethanol.add_bond(6, 0, 1, False)  # O6 - H0
+    charges = unit.Quantity(np.array([0.4, 0.3, 0.2, 0.1, 0.00001, -0.1, -0.2, -0.3, -0.4]), unit.elementary_charge)
+    ethanol.partial_charges = charges
+    return ethanol
+
+
+def create_benzene_no_aromatic():
+    """
+    Creates an openforcefield.topology.Molecule representation of benzene through the API with aromatic bonds
+    not defied, used to test the levels of isomorphic matching.
+    """
+    benzene = Molecule()
+    benzene.add_atom(6, 0, False)  # C0
+    benzene.add_atom(6, 0, False)  # C1
+    benzene.add_atom(6, 0, False)  # C2
+    benzene.add_atom(6, 0, False)  # C3
+    benzene.add_atom(6, 0, False)  # C4
+    benzene.add_atom(6, 0, False)  # C5
+    benzene.add_atom(1, 0, False)  # H6
+    benzene.add_atom(1, 0, False)  # H7
+    benzene.add_atom(1, 0, False)  # H8
+    benzene.add_atom(1, 0, False)  # H9
+    benzene.add_atom(1, 0, False)  # H10
+    benzene.add_atom(1, 0, False)  # H11
+    benzene.add_bond(0, 5, 1, False)  # C0 - C5
+    benzene.add_bond(0, 1, 1, False)  # C0 - C1
+    benzene.add_bond(1, 2, 1, False)  # C1 - C2
+    benzene.add_bond(2, 3, 1, False)  # C2 - C3
+    benzene.add_bond(3, 4, 1, False)  # C3 - C4
+    benzene.add_bond(4, 5, 1, False)  # C4 - C5
+    benzene.add_bond(0, 6, 1, False)  # C0 - H6
+    benzene.add_bond(1, 7, 1, False)  # C1 - C7
+    benzene.add_bond(2, 8, 1, False)  # C2 - C8
+    benzene.add_bond(3, 9, 1, False)  # C3 - C9
+    benzene.add_bond(4, 10, 1, False)  # C4 - C10
+    benzene.add_bond(5, 11, 1, False)  # C5 - C11
+    return benzene
+
+
+def create_acetaldehyde():
+    """
+    Creates an openforcefield.topology.Molecule representation of acetaldehyde through the API
+    """
+    acetaldehyde = Molecule()
+    acetaldehyde.add_atom(6, 0, False)  # C0
+    acetaldehyde.add_atom(6, 0, False)  # C1
+    acetaldehyde.add_atom(8, 0, False)  # O2
+    acetaldehyde.add_atom(1, 0, False)  # H3
+    acetaldehyde.add_atom(1, 0, False)  # H4
+    acetaldehyde.add_atom(1, 0, False)  # H5
+    acetaldehyde.add_atom(1, 0, False)  # H6
+    acetaldehyde.add_bond(0, 1, 1, False)  # C0 - C1
+    acetaldehyde.add_bond(1, 2, 2, False)  # C1 = O2
+    acetaldehyde.add_bond(0, 3, 1, False)  # C0 - H3
+    acetaldehyde.add_bond(0, 4, 1, False)  # C0 - H4
+    acetaldehyde.add_bond(0, 5, 1, False)  # C0 - H5
+    acetaldehyde.add_bond(1, 6, 1, False)  # C1 - H6
+    charges = unit.Quantity(np.array([0, 0, 0, 0, 0, 0, 0]), unit.elementary_charge)
+    acetaldehyde.partial_charges = charges
+    return acetaldehyde
+
+
 def create_cyclohexane():
     """
     Creates an openforcefield.topology.Molecule representation of
@@ -746,7 +833,7 @@ class TestForceField():
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         with pytest.raises(UnassignedProperTorsionParameterException,
                            match='- Topology indices [(]5, 0, 1, 6[)]: '
-                                 'names and elements [(] H[)], [(] C[)], [(] C[)], [(] H[)],') \
+                                 'names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],') \
                 as excinfo:
             omm_system = forcefield.create_openmm_system(topology)
 
@@ -839,13 +926,13 @@ class TestForceField():
 
         assert serialized_1 == serialized_2
 
-
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='Test requires RDKit toolkit')
     def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
         The results of both should be identical.
         """
+
         from simtk.openmm import app
         from simtk.openmm import XmlSerializer
 
@@ -878,6 +965,39 @@ class TestForceField():
 
         assert serialized_1 == serialized_2
 
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='Test requires RDKit toolkit')
+    def test_parameterize_mol_missing_stereo_rdkit(self):
+        """
+        Test parameterizing a molecule with undefined stereochemsity using the RDKit/AmberTools backend.
+        """
+
+        from openforcefield.topology import Molecule, Topology
+        from openforcefield.typing.engines.smirnoff import ForceField
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper])
+
+        molecule = Molecule.from_smiles('CC1CCC(=O)O1', allow_undefined_stereo=True)
+        topology = Topology.from_molecules([molecule])
+
+        force_field = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+        force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
+
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='Test requires OpenEye toolkit')
+    def test_parameterize_mol_missing_stereo_openeye(self):
+        """
+        Test parameterizing a molecule with undefined stereochemsity using the OpenEye backend.
+        """
+
+        from openforcefield.topology import Molecule, Topology
+        from openforcefield.typing.engines.smirnoff import ForceField
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
+
+        molecule = Molecule.from_smiles('CC1CCC(=O)O1', allow_undefined_stereo=True)
+        topology = Topology.from_molecules([molecule])
+
+        force_field = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+        force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
     @pytest.mark.skip(reason="We will not support going directly to ParmEd for now."
                              "We will instead feed OpenMM System objects to ParmEd "
