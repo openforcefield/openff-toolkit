@@ -102,6 +102,12 @@ Tests added
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Added tests for
   :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
   to check for a correct combination of smiles and PDB and incorrect combinations.
+- `PR #509 <https://github.com/openforcefield/openforcefield/pull/509>`_: Added test for
+  :py:meth:`Molecule.chemical_environment_matches <openforcefield.topology.Molecule.chemical_environment_matches>`
+  to check that the complete set of matches is returned.
+- `PR #509 <https://github.com/openforcefield/openforcefield/pull/509>`_: Added test for
+  :py:meth:`Forcefield.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.create_openmm_system>`
+  to check that a protein system can be created.
 - `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_: Added a test for the molecule
    identified in issue #513 as loosing aromaticity when converted to rdkit.
 - `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_: Added a verity of toolkit dependent tests
@@ -134,6 +140,8 @@ Bugfixes
 - `Issue #500 <https://github.com/openforcefield/openforcefield/issues/500>`_: The
    :py:meth:`Molecule.find_rotatable_bonds <openforcefield.topology.Molecule.find_rotatable_bonds>` has been added
    which returns a list of rotatable :py:class:`Bond <openforcefield.topology.Bond>` instances for the molecule.
+- `Issue #491 <https://github.com/openforcefield/openforcefield/issues/491>`_: We can now parse large molecules without hitting a match limit cap.
+
 
 Example added
 """""""""""""
