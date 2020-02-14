@@ -285,7 +285,7 @@ class TestOpenEyeToolkitWrapper:
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_load_multiconformer_sdf_as_separate_molecules(self):
         """
-        Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
+        Test OpenEyeToolkitWrapper for reading a "multiconformer" SDF, which the OFF
         Toolkit should treat as separate molecules
         """
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -297,19 +297,9 @@ class TestOpenEyeToolkitWrapper:
         assert molecules[0]._conformers[0].shape == (5, 3)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    def test_multiconformer_sdf_roundtrip_properties(self):
-        """
-        Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
-        Toolkit should treat as separate molecules
-        """
-        toolkit_wrapper = OpenEyeToolkitWrapper()
-        filename = get_data_file_path('molecules/methane_multiconformer.sdf')
-        molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_load_multiconformer_sdf_as_separate_molecules_properties(self):
         """
-        Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
+        Test OpenEyeToolkitWrapper for reading a "multiconformer" SDF, which the OFF
         Toolkit should treat as separate molecules
         """
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -374,12 +364,13 @@ class TestOpenEyeToolkitWrapper:
         assert '<atom.dprop.PartialCharge>' not in sdf_text
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    def test_sdf_charges_roundtrip(self):
+    def test_sdf_properties_roundtrip(self):
         """Test OpenEyeToolkitWrapper for performing a round trip of a molecule with partial charge to and from
         a sdf file"""
         from openforcefield.tests.test_forcefield import create_ethanol
         toolkit_wrapper = OpenEyeToolkitWrapper()
         ethanol = create_ethanol()
+        ethanol.properties['test_property'] = 'test_value'
         # The file is automatically deleted outside the with-clause.
         with NamedTemporaryFile(suffix='.sdf') as iofile:
             ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
@@ -391,7 +382,7 @@ class TestOpenEyeToolkitWrapper:
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_write_multiconformer_mol_as_sdf(self):
         """
-        Test RDKitToolkitWrapper for writing a multiconformer molecule to SDF. The OFF toolkit should only
+        Test OpenEyeToolkitWrapper for writing a multiconformer molecule to SDF. The OFF toolkit should only
         save the first conformer.
         """
         toolkit_wrapper = OpenEyeToolkitWrapper()
