@@ -529,6 +529,17 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         oemol : openeye.oechem.OEMolBase
             The molecule to process
+
+        Returns
+        -------
+        charges_are_present : bool
+            Whether charges are present in the SD file. This is necessary because OEAtoms
+            have a default partial charge of 0.0, which makes truly zero-charge molecules
+            (eg "N2", "Ar"...) indistinguishable from molecule for which partial charges
+            have not been assigned. The OFF Toolkit allows this distinction with
+            mol.partial_charges=None. In order to complete roundtrips within the OFFMol
+            spec, we must interpret the presence or absence of this tag as a proxy for
+            mol.partial_charges=None.
         """
         from openeye import oechem
         for dp in oechem.OEGetSDDataPairs(oemol):
@@ -540,6 +551,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 for charge, oeatom in zip(charges_unitless, oemol.GetAtoms()):
                     oeatom.SetPartialCharge(charge)
                 oechem.OEDeleteSDData(oemol, "atom.dprop.PartialCharge")
+                return True
+        return False
 
     @classmethod
     def _read_oemolistream_molecules(cls, oemolistream, allow_undefined_stereo, file_path=None):
@@ -597,12 +610,17 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     for dp in oechem.OEGetSDDataPairs(conf):
                         oechem.OESetSDData(this_conf_oemcmol, dp.GetTag(), dp.GetValue())
                     # This function fishes out the special SD data tag we use for partial charge
-                    # ("atom.dprop.PartialCharge"), and applies those as API-supported partial charges on the OEAtoms
-                    cls._turn_oemolbase_sd_charges_into_partial_charges(this_conf_oemcmol)
+                    # ("atom.dprop.PartialCharge"), and applies those as OETK-supported partial charges on the OEAtoms
+                    has_charges = cls._turn_oemolbase_sd_charges_into_partial_charges(this_conf_oemcmol)
+
                     # Finally, we feed the molecule into `from_openeye`, where it converted into an OFFMol
                     mol = cls.from_openeye(
                         this_conf_oemcmol,
                         allow_undefined_stereo=allow_undefined_stereo)
+
+                    # If the molecule didn't even have the `PartialCharges` tag, we set it from zeroes to None here.
+                    if not(has_charges):
+                        mol.partial_charges = None
                     mols.append(mol)
 
             else:
@@ -2257,8 +2275,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     raise Exception(
                         "Some atoms in rdmol have partial charges, but others do not."
                     )
-
+        if any_atom_has_partial_charge:
             offmol.partial_charges = partial_charges
+        else:
+            offmol.partial_charges = None
         return offmol
 
     @classmethod

@@ -384,6 +384,7 @@ class TestOpenEyeToolkitWrapper:
         ethanol.partial_charges = None
         with NamedTemporaryFile(suffix='.sdf') as iofile:
             ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
+            #raise Exception(open(iofile.name).read())
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
         assert ethanol2.partial_charges is None
         assert ethanol2.properties is None
@@ -1021,7 +1022,7 @@ class TestRDKitToolkitWrapper:
 
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
-    def test_sdf_charges_roundtrip(self):
+    def test_sdf_properties_roundtrip(self):
         """Test RDKitToolkitWrapper for performing a round trip of a molecule with partial charge to and from
         a sdf file"""
         from openforcefield.tests.test_forcefield import create_ethanol
@@ -1030,9 +1031,19 @@ class TestRDKitToolkitWrapper:
         # The file is automatically deleted outside the with-clause.
         with NamedTemporaryFile(suffix='.sdf') as iofile:
             ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
-            #raise Exception(open(iofile.name).read())
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
         assert (ethanol.partial_charges == ethanol2.partial_charges).all()
+
+        # Now test with no properties or charges
+        ethanol = create_ethanol()
+        ethanol.partial_charges = None
+        with NamedTemporaryFile(suffix='.sdf') as iofile:
+            ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
+            #raise Exception(open(iofile.name).read())
+            ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
+        assert ethanol2.partial_charges is None
+        assert ethanol2.properties is None
+
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_write_sdf_no_charges(self):
