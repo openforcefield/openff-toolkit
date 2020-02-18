@@ -35,7 +35,8 @@ from openforcefield.topology.molecule import Molecule, Atom, InvalidConformerErr
 from openforcefield.utils import get_data_file_path
 # TODO: Will the ToolkitWrapper allow us to pare that down?
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
-from openforcefield.tests.test_forcefield import create_ethanol, create_reversed_ethanol, create_acetaldehyde, create_benzene_no_aromatic, create_cyclohexane
+from openforcefield.tests.test_forcefield import create_ethanol, create_reversed_ethanol, create_acetaldehyde, \
+    create_benzene_no_aromatic, create_cyclohexane
 
 #=============================================================================================
 # TEST UTILITIES
@@ -1537,14 +1538,22 @@ class TestMolecule:
         # Do not modify the original molecules.
         molecules = copy.deepcopy(mini_drug_bank())
 
-        toolkit_to_bondorder_method = {OpenEyeToolkitWrapper:['am1','pm3']}
-        for toolkit in list(toolkit_to_bondorder_method.keys()):
-            toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit])
-            for charge_model in toolkit_to_bondorder_method[toolkit]:
+        toolkits_to_bondorder_method = {(OpenEyeToolkitWrapper,):['am1-wiberg','pm3-wiberg']}
+        # Don't test AmberTools here since it takes too long
+                                       #(AmberToolsToolkitWrapper, RDKitToolkitWrapper):['am1-wiberg']}
+        for toolkits in list(toolkits_to_bondorder_method.keys()):
+            toolkit_registry = ToolkitRegistry(toolkit_precedence=toolkits)
+            for bond_order_model in toolkits_to_bondorder_method[toolkits]:
                 for molecule in molecules[:5]: # Just test first five molecules for speed
-                    molecule.compute_wiberg_bond_orders(charge_model=charge_model, toolkit_registry=toolkit_registry)
+                    molecule.generate_conformers(toolkit_registry=toolkit_registry)
+                    molecule.assign_fractional_bond_orders(bond_order_model=bond_order_model,
+                                                           toolkit_registry=toolkit_registry,
+                                                           use_conformers=molecule.conformers)
                     fbo1 = [bond.fractional_bond_order for bond in molecule.bonds]
-                    # Call should be faster the second time due to caching
-                    molecule.compute_wiberg_bond_orders(charge_model=charge_model, toolkit_registry=toolkit_registry)
-                    fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
-                    assert fbo1 == fbo2
+                    # TODO: Now that the assign_fractional_bond_orders function takes more kwargs,
+                    #       how can we meaningfully cache its results?
+                    # # Call should be faster the second time due to caching
+                    # molecule.assign_fractional_bond_orders(bond_order_model=bond_order_model,
+                    #                                        toolkit_registry=toolkit_registry)
+                    # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
+                    # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
