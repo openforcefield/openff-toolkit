@@ -1222,6 +1222,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oemol = oechem.OEGraphMol()
         oechem.OEInChIToMol(oemol, inchi)
 
+        # try and catch InChI parsing fails
+        # if there are no atoms don't build the molecule
+        if oemol.NumAtoms() == 0:
+            raise RuntimeError('There was an issue parsing the InChI string, please check and try again.')
+
         molecule = self.from_openeye(oemol, allow_undefined_stereo=allow_undefined_stereo)
 
         return molecule
@@ -2058,6 +2063,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         # this seems to always remove the hydrogens
         rdmol = Chem.MolFromInchi(inchi, sanitize=False, removeHs=False)
+
+        # try and catch an InChI parsing error
+        if rdmol is None:
+            raise RuntimeError('There was an issue parsing the InChI string, please check and try again.')
 
         # process the molecule
         #TODO do we need this with inchi?
