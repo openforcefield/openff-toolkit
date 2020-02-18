@@ -571,11 +571,11 @@ class TestOpenEyeToolkitWrapper:
         """Test OpenEyeToolkitWrapper substructure search when a large number hits are found"""
 
         tk = OpenEyeToolkitWrapper()
-        smiles = "C"*3000
+        smiles = "C"*600
         molecule = tk.from_smiles(smiles)
         query = "[C:1]~[C:2]"
         ret = molecule.chemical_environment_matches(query, toolkit_registry=tk)
-        assert len(ret) == 5998 
+        assert len(ret) == 1198 
         assert len(ret[0]) == 2
 
     def test_find_rotatable_bonds(self):

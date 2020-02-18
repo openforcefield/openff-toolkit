@@ -1973,6 +1973,7 @@ class TestForceFieldParameterAssignment:
         # Ensure that all system energies are the same
         compare_system_energies(off_omm_system, amber_omm_system, positions, by_force_type=False)
 
+    @pytest.mark.slow
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
                         reason='Test requires OE toolkit to read mol2 files')
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
