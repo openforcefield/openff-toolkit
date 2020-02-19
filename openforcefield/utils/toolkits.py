@@ -793,7 +793,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             map_atoms[
                 oe_idx] = atom_index  # store for mapping oeatom to molecule atom indices below
             atom_mapping[atom_index] = map_id
-        molecule._properties['atom_map'] = atom_mapping
+
+        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
+        if 0 not in atom_mapping.values():
+            molecule._properties['atom_map'] = atom_mapping
 
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
