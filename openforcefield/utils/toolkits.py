@@ -843,7 +843,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         partial_charges = unit.Quantity(
             np.zeros(molecule.n_atoms, dtype=np.float),
             unit=unit.elementary_charge)
-        for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
+        for oe_atom in oemol.GetAtoms():
+            oe_idx = oe_atom.GetIdx()
             off_idx = map_atoms[oe_idx]
             charge = oe_atom.GetPartialCharge() * unit.elementary_charge
             partial_charges[off_idx] = charge
