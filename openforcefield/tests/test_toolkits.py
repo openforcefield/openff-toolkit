@@ -387,7 +387,7 @@ class TestOpenEyeToolkitWrapper:
             #raise Exception(open(iofile.name).read())
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
         assert ethanol2.partial_charges is None
-        assert ethanol2.properties is None
+        assert ethanol2.properties == {}
 
 
 
@@ -945,7 +945,7 @@ class TestRDKitToolkitWrapper:
                 central_carbon_stereo_specified = True
         assert central_carbon_stereo_specified
 
-        # Do a first conversion to/from oemol
+        # Do a first conversion to/from rdmol
         rdmol = molecule.to_rdkit()
         molecule2 = Molecule.from_rdkit(rdmol)
 
@@ -962,12 +962,13 @@ class TestRDKitToolkitWrapper:
             assert atom1.to_dict() == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
             assert bond1.to_dict() == bond2.to_dict()
-        assert (molecule._conformers == None)
-        assert (molecule2._conformers == None)
-        for pc1, pc2 in zip(molecule._partial_charges, molecule2._partial_charges):
-            pc1_ul = pc1 / unit.elementary_charge
-            pc2_ul = pc2 / unit.elementary_charge
-            assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
+        # The molecule was initialized from SMILES, so mol.conformers arrays should be None for both
+        assert (molecule.conformers is None)
+        assert (molecule2.conformers is None)
+        # The molecule was initialized from SMILES, so mol.partial_charges arrays should be None for both
+        assert molecule.partial_charges is None
+        assert molecule2.partial_charges is None
+
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
         
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
@@ -1042,7 +1043,7 @@ class TestRDKitToolkitWrapper:
             #raise Exception(open(iofile.name).read())
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
         assert ethanol2.partial_charges is None
-        assert ethanol2.properties is None
+        assert ethanol2.properties == {}
 
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
