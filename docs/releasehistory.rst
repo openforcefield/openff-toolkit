@@ -22,9 +22,22 @@ Behavior changed
   `Issue #250 <https://github.com/openforcefield/openforcefield/issues/250>`_
   by adding support for partial charge I/O in SDF. The partial charges are stored as a property in the
   SDF molecule block under the tag ``<atom.dprop.PartialCharge>``.
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: If an OFFMol's
+  ``partial_charges`` attribute is set to ``None`` (the default value), calling ``to_openeye`` will
+  now produce a OE molecule with partial charges set to ``nan``. This would previously produce an OE
+  molecule with partial charges of 0.0, which was a loss of information, since it wouldn't be clear
+  whether the original OFFMol's partial charges were all-zero or ``None``. OpenEye toolkit
+  wrapper methods such as ``from_smiles`` and ``from_file`` now produce OFFMols with
+  ``partial_charges = None`` when appropriate (previously these would produce OFFMols with
+  all-zero charges).
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: Per the new SDF
+  partial charge specification adopted by RDKit, ``Molecule.to_rdkit``
+  now sets partial charges on the RDAtom's ``PartialCharges`` property (this was previously set
+  on ``partial_charges``). If the OFFMol's partial_charges attribute is None, this property
+  will not be defined.
 - `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_:
   Enforce the behavior during SDF I/O that a SDF may contain multiple MOLECULES, but that the OFF Toolkit
-  will never assume that it contains multiple CONFORMERS of the same molecule. This is an
+  will NEVER assume that it contains multiple CONFORMERS of the same molecule. This is an
   important distinction, since otherwise there is ambiguity around whether properties of one
   entry in a SDF are shared among several molecule blocks or not (More info
   `here <https://docs.eyesopen.com/toolkits/python/oechemtk/oemol.html#dude-where-s-my-sd-data>`_.
