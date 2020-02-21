@@ -1539,6 +1539,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         from openeye import oechem
+        from openeye.oechem import OESubSearch
         # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
         mol = oechem.OEMol(oemol)
 
@@ -1572,7 +1573,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
         #       and speed matching for larger molecules.
         unique = False  # We require all matches, not just one of each kind
-        substructure_search = oechem.OESubSearch(qmol)
+        substructure_search = OESubSearch(qmol)
+        substructure_search.SetMaxMatches(0)
         matches = list()
         for match in substructure_search.Match(mol, unique):
             # Compile list of atom indices that match the pattern tags
@@ -2544,8 +2546,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Perform matching
         matches = list()
 
+        # choose the largest unsigned int without overflow
+        # since the C++ signature is a uint
         max_matches = np.iinfo(np.uintc).max
-        for match in rdmol.GetSubstructMatches(qmol, uniquify=False, maxMatches=max_matches):
+        for match in rdmol.GetSubstructMatches(qmol, uniquify=False,
+                maxMatches=max_matches):
             mas = [match[x] for x in map_list]
             matches.append(tuple(mas))
 
