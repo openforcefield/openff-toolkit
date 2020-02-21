@@ -3666,7 +3666,7 @@ class FrozenMolecule(Serializable):
         try:
             mapped_smiles = qca_record['attributes']['canonical_isomeric_explicit_hydrogen_mapped_smiles']
         except KeyError:
-            raise KeyError('The record must contain the hydrogen mapped smiles to be safley made from the archive.')
+            raise KeyError('The record must contain the hydrogen mapped smiles to be safely made from the archive.')
 
         # make a new molecule that has been reordered to match the cmiles mapping
         offmol = cls.from_mapped_smiles(mapped_smiles, toolkit_registry=toolkit_registry,
@@ -3829,10 +3829,11 @@ class FrozenMolecule(Serializable):
         new_molecule._bonds = sorted_bonds
 
         # remap the charges
-        new_charges = np.zeros(self.n_atoms)
-        for i in range(self.n_atoms):
-            new_charges[i] = self.partial_charges[new_to_cur[i]].value_in_unit(unit.elementary_charge)
-        new_molecule.partial_charges = new_charges * unit.elementary_charge
+        if self.partial_charges is not None:
+            new_charges = np.zeros(self.n_atoms)
+            for i in range(self.n_atoms):
+                new_charges[i] = self.partial_charges[new_to_cur[i]].value_in_unit(unit.elementary_charge)
+            new_molecule.partial_charges = new_charges * unit.elementary_charge
 
         # remap the conformers there can be more than one
         if self.conformers is not None:
