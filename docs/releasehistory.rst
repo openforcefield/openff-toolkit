@@ -46,6 +46,11 @@ Behavior changed
   For more fine-grained control of writing properties, conformers, and partial charges, consider
   using ``Molecule.to_rdkit`` or ``Molecule.to_openeye`` and using the functionality offered by
   those packages.
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: Due to different
+  constraints placed on the data types allowed by external toolkits, we make our best effort to
+  preserve ``offmol.properties`` when converting molecules to other packages, but users should be aware that
+  no guarantee of data integrity is made. The only data format for keys and values in the property dict that
+  we will try to support through a roundtrip to another toolkit's Molecule object is ``string``.
 
 API-breaking changes
 """"""""""""""""""""

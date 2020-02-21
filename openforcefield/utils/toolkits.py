@@ -1102,7 +1102,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # Retain properties, if present
         for key, value in molecule.properties.items():
-            oechem.OESetSDData(oemol, key, value)
+            oechem.OESetSDData(oemol, str(key), str(value))
 
         # Clean Up phase
         # The only feature of a molecule that wasn't perceived above seemed to be ring connectivity, better to run it
