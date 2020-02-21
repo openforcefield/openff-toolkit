@@ -495,6 +495,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ofs.SetFormat(openeye_format)
 
         # OFFTK strictly treats SDF as a single-conformer format.
+        # We need to override OETK's behavior here if the user is saving a multiconformer molecule.
         # Delete all but the first conformer if writing to SDF.
         if (file_format.lower() == "sdf") and oemol.NumConfs() > 1:
             conf1 = [conf for conf in oemol.GetConfs()][0]
@@ -507,9 +508,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # We're standardizing on putting partial charges into SDFs under the `atom.dprop.PartialCharge` property
         if (file_format.lower() == "sdf") and (molecule.partial_charges is not None):
             partial_charges_list = []
-            for pc in molecule.partial_charges:
-                unitless_pc = pc / unit.elementary_charge
-                partial_charges_list.append(f'{unitless_pc:f}')
+            for oeatom in oemol.GetAtoms():
+                partial_charges_list.append(f'{oeatom.GetPartialCharge():f}')
             partial_charges_str = ' '.join(partial_charges_list)
             # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
             #  describe/infer the proper data type?
@@ -543,7 +543,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
         for dp in oechem.OEGetSDDataPairs(oemol):
-            print(dp.GetTag(), dp.GetValue())
             if dp.GetTag() == "atom.dprop.PartialCharge":
                 charges_str = oechem.OEGetSDData(oemol, "atom.dprop.PartialCharge")
                 charges_unitless = [float(i) for i in charges_str.split()]
@@ -785,6 +784,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
         from openforcefield.topology.molecule import Molecule
+        import math
 
 
         # Add explicit hydrogens if they're implicit
@@ -880,9 +880,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             map_atoms[
                 oe_idx] = atom_index  # store for mapping oeatom to molecule atom indices below
             atom_mapping[atom_index] = map_id
-        if not 0 in atom_mapping.values():
-            molecule._properties['atom_map'] = atom_mapping
 
+        if 0 not in atom_mapping.values():
+            molecule._properties['atom_map'] = atom_mapping
 
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
@@ -928,13 +928,20 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             np.zeros(molecule.n_atoms, dtype=np.float),
             unit=unit.elementary_charge)
 
+        any_partial_charge_is_nan = False
         for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
             off_idx = map_atoms[oe_idx]
             unitless_charge = oe_atom.GetPartialCharge()
+            if math.isnan(unitless_charge):
+                any_partial_charge_is_nan = True
+                break
             charge = unitless_charge * unit.elementary_charge
             partial_charges[off_idx] = charge
 
-        molecule.partial_charges = partial_charges
+        if any_partial_charge_is_nan:
+            molecule.partial_charges = None
+        else:
+            molecule.partial_charges = partial_charges
 
         return molecule
 
@@ -985,6 +992,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oeatom.SetFormalCharge(atom.formal_charge)
             oeatom.SetAromatic(atom.is_aromatic)
             oeatom.SetData('name', atom.name)
+            oeatom.SetPartialCharge(float('nan'))
             oemol_atoms.append(oeatom)
             map_atoms[atom.molecule_atom_index] = oeatom.GetIdx()
 
@@ -1082,8 +1090,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 oecoords = oechem.OEFloatArray(flat_coords)
                 oemol.NewConf(oecoords)
 
-        # Retain charges, if present
-        if not (molecule._partial_charges is None):
+        # Retain charges, if present. All atoms are initialized above with a partial charge of NaN.
+        if molecule._partial_charges is not None:
             oe_indexed_charges = np.zeros((molecule.n_atoms), dtype=np.float)
             for off_idx, charge in enumerate(molecule._partial_charges):
                 oe_idx = map_atoms[off_idx]
@@ -1206,6 +1214,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 f"express all explicit hydrogens in the molecule, then you should construct the "
                 f"desired molecule as an OEMol (where oechem.OEHasImplicitHydrogens(oemol) returns "
                 f"False), and then use Molecule.from_openeye() to create the desired OFFMol.")
+
+        # Set partial charges to None, since they couldn't have been stored in a SMILES
+        for atom in oemol.GetAtoms():
+            atom.SetPartialCharge(float('nan'))
+
         molecule = self.from_openeye(oemol,
                                      allow_undefined_stereo=allow_undefined_stereo)
         return molecule
