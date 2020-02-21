@@ -208,12 +208,13 @@ class TestOpenEyeToolkitWrapper:
             assert atom1.to_dict() == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
             assert bond1.to_dict() == bond2.to_dict()
-        assert (molecule._conformers == None)
-        assert (molecule2._conformers == None)
-        for pc1, pc2 in zip(molecule._partial_charges, molecule2._partial_charges):
-            pc1_ul = pc1 / unit.elementary_charge
-            pc2_ul = pc2 / unit.elementary_charge
-            assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
+        # The molecule was initialized from SMILES, so mol.conformers arrays should be None for both
+        assert molecule.conformers is None
+        assert molecule2.conformers is None
+        # The molecule was initialized from SMILES, so mol.partial_charges arrays should be None for both
+        assert molecule.partial_charges is None
+        assert molecule2.partial_charges is None
+
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
 
@@ -371,7 +372,7 @@ class TestOpenEyeToolkitWrapper:
         toolkit_wrapper = OpenEyeToolkitWrapper()
         ethanol = create_ethanol()
         ethanol.properties['test_property'] = 'test_value'
-        # The file is automatically deleted outside the with-clause.
+        # Write ethanol to a temporary file, and then immediately read it.
         with NamedTemporaryFile(suffix='.sdf') as iofile:
             ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
@@ -382,9 +383,9 @@ class TestOpenEyeToolkitWrapper:
         # Now test with no properties or charges
         ethanol = create_ethanol()
         ethanol.partial_charges = None
+        # Write ethanol to a temporary file, and then immediately read it.
         with NamedTemporaryFile(suffix='.sdf') as iofile:
             ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
-            #raise Exception(open(iofile.name).read())
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
         assert ethanol2.partial_charges is None
         assert ethanol2.properties == {}
@@ -406,7 +407,7 @@ class TestOpenEyeToolkitWrapper:
         ethanol.add_conformer(new_conf)
         ethanol.to_file('temp.sdf', 'sdf', toolkit_registry=toolkit_wrapper)
         data = open('temp.sdf').read()
-        # In SD format, each molecule (or "conformer", if you have a bone in your brain) ends with "$$$$"
+        # In SD format, each molecule ends with "$$$$"
         assert data.count('$$$$') == 1
         # A basic SDF for ethanol would be 27 lines, though the properties add three more
         assert len(data.split('\n')) == 30
@@ -462,6 +463,36 @@ class TestOpenEyeToolkitWrapper:
             pc1_ul = pc1 / unit.elementary_charge
             pc2_ul = pc2 / unit.elementary_charge
             assert_almost_equal(pc1_ul, pc2_ul, decimal=4)
+
+
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_mol2_charges_roundtrip(self):
+        """Test OpenEyeToolkitWrapper for performing a round trip of a molecule with partial charge to and from
+        a mol2 file"""
+        from openforcefield.tests.test_forcefield import create_ethanol
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        ethanol = create_ethanol()
+        # The value of ethanol.partial_charges[4] is 1e-5, but mol2 is only written to 4 digits of precision, so we
+        # multiply by ten to make this test pass within the precision of the mol2 specification
+        ethanol.partial_charges[4] *= 10
+        # Write ethanol to a temporary file, and then immediately read it.
+        with NamedTemporaryFile(suffix='.mol2') as iofile:
+            ethanol.to_file(iofile.name, file_format='mol2', toolkit_registry=toolkit_wrapper)
+            ethanol2 = Molecule.from_file(iofile.name, file_format='mol2', toolkit_registry=toolkit_wrapper)
+        np.testing.assert_allclose(ethanol.partial_charges / unit.elementary_charge,
+                                   ethanol2.partial_charges / unit.elementary_charge)
+
+        # Now test with no properties or charges
+        ethanol = create_ethanol()
+        ethanol.partial_charges = None
+        # Write ethanol to a temporary file, and then immediately read it.
+        with NamedTemporaryFile(suffix='.mol2') as iofile:
+            ethanol.to_file(iofile.name, file_format='mol2', toolkit_registry=toolkit_wrapper)
+            ethanol2 = Molecule.from_file(iofile.name, file_format='mol2', toolkit_registry=toolkit_wrapper)
+        assert ethanol2.partial_charges is None
+        assert ethanol2.properties == {}
+
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_gaff_atom_types(self):
@@ -963,8 +994,8 @@ class TestRDKitToolkitWrapper:
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
             assert bond1.to_dict() == bond2.to_dict()
         # The molecule was initialized from SMILES, so mol.conformers arrays should be None for both
-        assert (molecule.conformers is None)
-        assert (molecule2.conformers is None)
+        assert molecule.conformers is None
+        assert molecule2.conformers is None
         # The molecule was initialized from SMILES, so mol.partial_charges arrays should be None for both
         assert molecule.partial_charges is None
         assert molecule2.partial_charges is None
@@ -1029,7 +1060,7 @@ class TestRDKitToolkitWrapper:
         from openforcefield.tests.test_forcefield import create_ethanol
         toolkit_wrapper = RDKitToolkitWrapper()
         ethanol = create_ethanol()
-        # The file is automatically deleted outside the with-clause.
+        # Write ethanol to a temporary file, and then immediately read it.
         with NamedTemporaryFile(suffix='.sdf') as iofile:
             ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
@@ -1038,9 +1069,9 @@ class TestRDKitToolkitWrapper:
         # Now test with no properties or charges
         ethanol = create_ethanol()
         ethanol.partial_charges = None
+        # Write ethanol to a temporary file, and then immediately read it.
         with NamedTemporaryFile(suffix='.sdf') as iofile:
             ethanol.to_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
-            #raise Exception(open(iofile.name).read())
             ethanol2 = Molecule.from_file(iofile.name, file_format='SDF', toolkit_registry=toolkit_wrapper)
         assert ethanol2.partial_charges is None
         assert ethanol2.properties == {}
@@ -1113,7 +1144,7 @@ class TestRDKitToolkitWrapper:
         ethanol.add_conformer(new_conf)
         ethanol.to_file('temp.sdf', 'sdf', toolkit_registry=toolkit_wrapper)
         data = open('temp.sdf').read()
-        # In SD format, each molecule (or "conformer", if you have a bone in your brain) ends with "$$$$"
+        # In SD format, each molecule ends with "$$$$"
         assert data.count('$$$$') == 1
         # A basic SDF for ethanol would be 27 lines, though the properties add three more
         assert len(data.split('\n')) == 30
