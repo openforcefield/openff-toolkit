@@ -33,7 +33,7 @@ Behavior changed
 - `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: Per the new SDF
   partial charge specification adopted by RDKit, ``Molecule.to_rdkit``
   now sets partial charges on the RDAtom's ``PartialCharges`` property (this was previously set
-  on ``partial_charges``). If the OFFMol's partial_charges attribute is None, this property
+  on the ``partial_charges`` property). If the OFFMol's partial_charges attribute is None, this property
   will not be defined.
 - `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_:
   Enforce the behavior during SDF I/O that a SDF may contain multiple MOLECULES, but that the OFF Toolkit
