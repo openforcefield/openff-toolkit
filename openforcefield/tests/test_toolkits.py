@@ -301,7 +301,8 @@ class TestOpenEyeToolkitWrapper:
     def test_load_multiconformer_sdf_as_separate_molecules_properties(self):
         """
         Test OpenEyeToolkitWrapper for reading a "multiconformer" SDF, which the OFF
-        Toolkit should treat as separate molecules
+        Toolkit should treat as separate molecules, and it should load their SD properties
+        and partial charges separately
         """
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_file_path('molecules/methane_multiconformer_properties.sdf')
@@ -310,9 +311,11 @@ class TestOpenEyeToolkitWrapper:
         assert len(molecules[0]._conformers) == 1
         assert len(molecules[1]._conformers) == 1
         assert molecules[0]._conformers[0].shape == (5, 3)
+        # The first molecule in the SDF has the following properties and charges:
         assert molecules[0].properties['test_property_key'] == 'test_property_value'
         np.testing.assert_allclose(molecules[0].partial_charges / unit.elementary_charge,
                                           [-0.108680, 0.027170, 0.027170, 0.027170, 0.027170])
+        # The second molecule in the SDF has the following properties and charges:
         assert molecules[1].properties['test_property_key'] == 'test_property_value2'
         assert molecules[1].properties['another_test_property_key'] == 'another_test_property_value'
         np.testing.assert_allclose(molecules[1].partial_charges / unit.elementary_charge,
@@ -1132,9 +1135,11 @@ class TestRDKitToolkitWrapper:
         assert len(molecules[0]._conformers) == 1
         assert len(molecules[1]._conformers) == 1
         assert molecules[0]._conformers[0].shape == (5, 3)
+        # The first molecule in the SDF has the following properties and charges:
         assert molecules[0].properties['test_property_key'] == 'test_property_value'
         np.testing.assert_allclose(molecules[0].partial_charges / unit.elementary_charge,
                                           [-0.108680, 0.027170, 0.027170, 0.027170, 0.027170])
+        # The second molecule in the SDF has the following properties and charges:
         assert molecules[1].properties['test_property_key'] == 'test_property_value2'
         assert molecules[1].properties['another_test_property_key'] == 'another_test_property_value'
         np.testing.assert_allclose(molecules[1].partial_charges / unit.elementary_charge,

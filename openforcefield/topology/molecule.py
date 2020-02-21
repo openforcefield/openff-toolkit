@@ -2780,7 +2780,6 @@ class FrozenMolecule(Serializable):
         """
         if charges is None:
             self._partial_charges = None
-            return
         else:
             assert hasattr(charges, 'unit')
             assert unit.elementary_charge.is_compatible(charges.unit)
@@ -3743,9 +3742,6 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        hydrogens_last: bool, default True
-            If the canonical ordering should rank the hydrogens last.
-
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 

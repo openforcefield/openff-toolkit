@@ -535,7 +535,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         charges_are_present : bool
             Whether charges are present in the SD file. This is necessary because OEAtoms
             have a default partial charge of 0.0, which makes truly zero-charge molecules
-            (eg "N2", "Ar"...) indistinguishable from molecule for which partial charges
+            (eg "N2", "Ar"...) indistinguishable from molecules for which partial charges
             have not been assigned. The OFF Toolkit allows this distinction with
             mol.partial_charges=None. In order to complete roundtrips within the OFFMol
             spec, we must interpret the presence or absence of this tag as a proxy for
@@ -584,7 +584,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
             oechem.OE3DToInternalStereo(oemol)
 
-            # If this is an SD file, check to see if there are partial charges
+            # If this is either a multi-conformer or multi-molecule SD file, check to see if there are partial charges
             if (oemolistream.GetFormat() == oechem.OEFormat_SDF) and hasattr(oemol, 'GetConfs'):
                 # The openFF toolkit treats each conformer in a "multiconformer" SDF as
                 # a separate molecule.
@@ -623,15 +623,15 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     mols.append(mol)
 
             else:
-                # In case this is being read from an SD file, convert the SD field where we stash partial charges
-                # into actual per-atom partial charges
+                # In case this is being read from a SINGLE-molecule SD file, convert the SD field where we
+                # stash partial charges into actual per-atom partial charges
                 cls._turn_oemolbase_sd_charges_into_partial_charges(oemol)
                 mol = cls.from_openeye(
                     oemol,
                     allow_undefined_stereo=allow_undefined_stereo)
                 mols.append(mol)
 
-            # Check if this file may be using GAFF atom types.
+            # Check if this is an AMBER-produced mol2 file, which we can not load because they use GAFF atom types.
             if oemolistream.GetFormat() == oechem.OEFormat_MOL2:
                 cls._check_mol2_gaff_atom_type(mol, file_path)
 
