@@ -3454,6 +3454,51 @@ class FrozenMolecule(Serializable):
 
         return mols
 
+    def _to_xyz_file(self, file_path):
+        """
+        Write the current molecule and its conformers to a multiframe xyz file, if the molecule
+        has no current coordinates all atoms will be set to 0,0,0 in keeping with the behaviour of the
+        backend toolkits.
+
+        Parameters
+        ----------
+        file_path : str or file-like object
+            A file-like object or the path to the file to be written.
+        """
+
+        # If we do not have a conformer make one with all zeros
+        if self.n_conformers == 0:
+            conformers = [unit.Quantity(np.zeros((self.n_atoms, self.n_atoms), np.float), unit.angstrom)]
+
+        else:
+            conformers = self._conformers
+
+        if len(conformers) == 1:
+            end = ''
+            title = lambda frame: f'{self.name if self.name is not "" else self.hill_formula}{frame}\n'
+        else:
+            end = 1
+            title = lambda frame: f'{self.name if self.name is not "" else self.hill_formula} Frame {frame}\n'
+
+        # check if we have a file path or an open file object
+        if isinstance(file_path, str):
+            xyz_data = open(file_path, 'w')
+        else:
+            xyz_data = file_path
+
+        # add the data to the xyz_data list
+        for i, geometry in enumerate(conformers, 1):
+            xyz_data.write(f'{self.n_atoms}\n'+title(end))
+            for j, atom_coords in enumerate(geometry.in_units_of(unit.angstrom)):
+                x, y, z = atom_coords._value
+                xyz_data.write(f'{self.atoms[j].element.symbol}       {x: .10f}   {y: .10f}   {z: .10f}\n')
+
+            # now we up the frame count
+            end = i + 1
+
+        # now close the file
+        xyz_data.close()
+
     def to_file(self,
                 file_path,
                 file_format,
@@ -3499,6 +3544,10 @@ class FrozenMolecule(Serializable):
             )
 
         file_format = file_format.upper()
+
+        # check if xyz, use the toolkit independent method.
+        if file_format == 'XYZ':
+            return self._to_xyz_file(file_path=file_path)
 
         # Take the first toolkit that can write the desired output format
         toolkit = None
