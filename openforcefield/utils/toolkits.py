@@ -1405,6 +1405,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openeye import oequacpac, oechem
         import numpy as np
 
+        import warnings
+        warnings.warn("compute_partial_charges_am1bcc will be deprecated in an upcoming release. "
+                      "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
+                      DeprecationWarning)
+
+
         if molecule.n_conformers == 0:
             raise Exception(
                 "No conformers present in molecule submitted for partial charge calculation. Consider "
@@ -2877,6 +2883,10 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         import os
         from simtk import unit
 
+        import warnings
+        warnings.warn("compute_partial_charges_am1bcc will be deprecated in an upcoming release. "
+                      "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
+                      DeprecationWarning)
 
         # Find the path to antechamber
         # TODO: How should we implement find_executable?
