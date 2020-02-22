@@ -2775,6 +2775,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
     """
 
         import os
+        import subprocess
         from simtk import unit
 
         if partial_charge_method is None:
@@ -2831,16 +2832,16 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # TODO: Add error handling if antechamber chokes
                 # TODO: Add something cleaner than os.system
                 short_charge_method = CHARGE_METHOD_TO_ANTECHAMBER_KEYWORD[partial_charge_method]
-                os.system(
-                    f"antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf "
-                    f"yes -c {short_charge_method} -nc {net_charge}"
+                subprocess.check_output([
+                    "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o", "charged.mol2", "-fo",
+                    "mol2", "-pf", "yes", "-c", short_charge_method, "-nc", str(net_charge)]
                 )
                 #os.system('cat charged.mol2')
 
                 # Write out just charges
-                os.system(
-                    "antechamber -i charged.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc "
-                    "-cf charges.txt -pf yes")
+                subprocess.check_output([
+                    "antechamber", "-i", "charged.mol2", "-fi", "mol2", "-o", "charges2.mol2", "-fo",
+                    "mol2", "-c", "wc", "-cf", "charges.txt", "-pf", "yes"])
                 #os.system('cat charges.txt')
                 # Check to ensure charges were actually produced
                 if not os.path.exists('charges.txt'):
@@ -2881,6 +2882,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
         """
         import os
+        import subprocess
         from simtk import unit
 
         import warnings
@@ -2921,15 +2923,15 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
                 # TODO: Add something cleaner than os.system
-                os.system(
-                    "antechamber -i molecule.sdf -fi sdf -o charged.mol2 -fo mol2 -pf "
-                    "yes -c bcc -nc {}".format(net_charge))
+                subprocess.check_output([
+                    "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o", "charged.mol2", "-fo", "mol2", "-pf",
+                    "yes", "-c", "bcc", "-nc", str(net_charge)])
                 #os.system('cat charged.mol2')
-
                 # Write out just charges
-                os.system(
-                    "antechamber -i charged.mol2 -fi mol2 -o charges2.mol2 -fo mol2 -c wc "
-                    "-cf charges.txt -pf yes")
+                subprocess.check_output([
+                    "antechamber", "-i", "charged.mol2", "-fi", "mol2", "-o", "charges2.mol2",
+                    "-fo", "mol2", "-c", "wc", "-cf", "charges.txt", "-pf", "yes"])
+
                 #os.system('cat charges.txt')
                 # Check to ensure charges were actually produced
                 if not os.path.exists('charges.txt'):
