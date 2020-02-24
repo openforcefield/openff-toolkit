@@ -55,6 +55,7 @@ from distutils.spawn import find_executable
 from functools import wraps
 import importlib
 import logging
+import subprocess
 
 from simtk import unit
 import numpy as np
@@ -107,7 +108,6 @@ class ToolkitUnavailableException(MessageException):
 
 class InvalidToolkitError(MessageException):
     """A non-toolkit object was received when a toolkit object was expected"""
-
 
 
 class UndefinedStereochemistryError(MessageException):
@@ -222,7 +222,7 @@ class ToolkitWrapper:
                   allow_undefined_stereo=False):
         """
         Return an openforcefield.topology.Molecule from a file using this toolkit.
-        
+
         Parameters
         ----------
         file_path : str
@@ -247,7 +247,7 @@ class ToolkitWrapper:
         """
         Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using this
          toolkit.
-        
+
         Parameters
         ----------
         file_obj : file-like object
@@ -832,8 +832,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             molecule._properties[dp.GetTag()] = dp.GetValue()
 
         map_atoms = dict()  # {oemol_idx: molecule_idx}
+        atom_mapping = {}
         for oeatom in oemol.GetAtoms():
             oe_idx = oeatom.GetIdx()
+            map_id = oeatom.GetMapIdx()
             atomic_number = oeatom.GetAtomicNum()
             formal_charge = oeatom.GetFormalCharge() * unit.elementary_charge
             is_aromatic = oeatom.IsAromatic()
@@ -851,6 +853,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 name=name)
             map_atoms[
                 oe_idx] = atom_index  # store for mapping oeatom to molecule atom indices below
+            atom_mapping[atom_index] = map_id
+        molecule._properties['atom_map'] = atom_mapping
 
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
@@ -1097,6 +1101,48 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             | oechem.OESMILESFlag_AtomStereo)
         return smiles
 
+    def canonical_order_atoms(self, molecule):
+        """
+        Canonical order the atoms in the molecule using the OpenEye toolkit.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The input molecule
+
+         Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+            The input molecule, with canonically-indexed atoms and bonds.
+        """
+
+        from openeye import oechem
+        oemol = self.to_openeye(molecule)
+
+        oechem.OECanonicalOrderAtoms(oemol)
+        oechem.OECanonicalOrderBonds(oemol)
+
+        # reorder the iterator
+        vatm = []
+        for atom in oemol.GetAtoms():
+            if atom.GetAtomicNum() != oechem.OEElemNo_H:
+                vatm.append(atom)
+        oemol.OrderAtoms(vatm)
+
+        vbnd = []
+        for bond in oemol.GetBonds():
+            if bond.GetBgn().GetAtomicNum() != oechem.OEElemNo_H and bond.GetEnd().GetAtomicNum() != oechem.OEElemNo_H:
+                vbnd.append(bond)
+        oemol.OrderBonds(vbnd)
+
+        oemol.Sweep()
+
+        for bond in oemol.GetBonds():
+            if bond.GetBgnIdx() > bond.GetEndIdx():
+                bond.SwapEnds()
+
+        return self.from_openeye(oemol)
+
     def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
         """
         Create a Molecule from a SMILES string using the OpenEye toolkit.
@@ -1141,25 +1187,25 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):
         """
-        Generate molecule conformers using OpenEye Omega. 
+        Generate molecule conformers using OpenEye Omega.
 
         .. warning :: This API is experimental and subject to change.
 
         .. todo ::
-        
+
            * which parameters should we expose? (or can we implement a general system with **kwargs?)
            * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that
            they'll get reindexed when we convert the input into an OEmol?
-        
+
         Parameters
         ---------
-        molecule : a :class:`Molecule` 
+        molecule : a :class:`Molecule`
             The molecule to generate conformers for.
         n_conformers : int, default=1
             The maximum number of conformers to generate.
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
-        
+
         """
         from openeye import oeomega
         oemol = self.to_openeye(molecule)
@@ -1174,7 +1220,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         status = omega(oemol)
 
         if status is False:
-            raise Exception("OpenEye Omega conformer generation failed")
+            omega.SetStrictStereo(False)
+            new_status = omega(oemol)
+            if new_status is False:
+                raise Exception("OpenEye Omega conformer generation failed")
+
 
         molecule2 = self.from_openeye(oemol, allow_undefined_stereo=True)
 
@@ -1379,7 +1429,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         Compute AM1BCC partial charges with OpenEye quacpac. This function will attempt to use
         the OEAM1BCCELF10 charge generation method, but may print a warning and fall back to
-        normal OEAM1BCC if an error is encountered. This error is known to occur with some 
+        normal OEAM1BCC if an error is encountered. This error is known to occur with some
         carboxylic acids, and is under investigation by OpenEye.
 
 
@@ -1452,10 +1502,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
         return charges
 
-    def compute_wiberg_bond_orders(self, molecule, charge_model=None):
+    def assign_fractional_bond_orders(self, molecule, bond_order_model=None, use_conformers=None):
         """
-        Update and store list of bond orders this molecule. Can be used for initialization of bondorders list, or
-        for updating bond orders in the list.
+        Update and store list of bond orders this molecule. Bond orders are stored on each
+        bond, in the `bond.fractional_bond_order` attribute.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -1463,37 +1513,48 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : openforcefield.topology.molecule Molecule
             The molecule to assign wiberg bond orders to
-        charge_model : str, optional, default=None
-            The charge model to use. One of ['am1', 'pm3']. If None, 'am1' will be used.
+        bond_order_model : str, optional, default=None
+            The charge model to use. One of ['am1-wiberg', 'pm3-wiberg']. If None, 'am1-wiberg' will be used.
+        use_conformers : iterable of simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance, optional, default=None
+            The conformers to use for fractional bond order calculation. If None, an appropriate number
+            of conformers will be generated by an available ToolkitWrapper.
 
          """
-        # TODO: Cache charged molecule so we don't have to redo the computation (Can we do this given the different
-        # AM1 interfaces?)
-
         from openeye import oequacpac
+        from openforcefield.topology import Molecule
+        # Make a copy since we'll be messing with this molecule's conformers
+        temp_mol = Molecule(molecule)
+        if use_conformers is None:
+            temp_mol.generate_conformers(n_conformers=1)
+        else:
+            temp_mol._conformers = None
+            for conformer in use_conformers:
+                temp_mol.add_conformer(conformer)
 
-        oemol = self.to_openeye(molecule)
-        if molecule.n_conformers == 0:
+
+        if temp_mol.n_conformers == 0:
             raise Exception(
-                "No conformers present in molecule submitted for wiberg bond order calculation. Consider "
+                "No conformers present in molecule submitted for fractional bond order calculation. Consider "
                 "loading the molecule from a file with geometry already present or running "
                 "molecule.generate_conformers() before calling molecule.compute_wiberg_bond_orders()"
             )
 
-        if charge_model is None:
-            charge_model = 'am1'
+        if bond_order_model is None:
+            bond_order_model = 'am1-wiberg'
 
         # Based on example at https://docs.eyesopen.com/toolkits/python/quacpactk/examples_summary_wibergbondorders.html
+        oemol = self.to_openeye(temp_mol)
         am1 = oequacpac.OEAM1()
         am1results = oequacpac.OEAM1Results()
         am1options = am1.GetOptions()
-        if charge_model == "am1":
+        if bond_order_model == "am1-wiberg":
             am1options.SetSemiMethod(oequacpac.OEMethodType_AM1)
-        elif charge_model == "pm3":
+        elif bond_order_model == "pm3-wiberg":
             # TODO: Make sure that modifying am1options actually works
             am1options.SetSemiMethod(oequacpac.OEMethodType_PM3)
         else:
-            raise ValueError('charge_model {} unknown'.format(charge_model))
+            raise ValueError(f"Bond order model '{bond_order_model}' is not supported by OpenEyeToolkitWrapper. "
+                             f"Supported models are ['am1-wiberg', 'pm3-wiberg']")
 
         #for conf in oemol.GetConfs():
         #TODO: How to handle multiple confs here?
@@ -1501,7 +1562,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         if status is False:
             raise Exception(
-                'Unable to assign charges (in the process of calculating Wiberg bond orders)'
+                'Unable to assign charges (in the process of calculating fractional bond orders)'
             )
 
         # TODO: Will bonds always map back to the same index? Consider doing a topology mapping.
@@ -1542,6 +1603,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         from openeye import oechem
+        from openeye.oechem import OESubSearch
         # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
         mol = oechem.OEMol(oemol)
 
@@ -1575,7 +1637,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
         #       and speed matching for larger molecules.
         unique = False  # We require all matches, not just one of each kind
-        substructure_search = oechem.OESubSearch(qmol)
+        substructure_search = OESubSearch(qmol)
+        substructure_search.SetMaxMatches(0)
         matches = list()
         for match in substructure_search.Match(mol, unique):
             # Compile list of atom indices that match the pattern tags
@@ -1677,6 +1740,67 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                                    allow_undefined_stereo=allow_undefined_stereo)
         raise TypeError('Cannot create Molecule from {} object'.format(type(object)))
 
+    def from_pdb_and_smiles(self, file_path, smiles, allow_undefined_stereo=False):
+        """
+        Create a Molecule from a pdb file and a SMILES string using RDKit.
+
+        Requires RDKit to be installed.
+
+        The molecule is created and sanitised based on the SMILES string, we then find a mapping
+        between this molecule and one from the PDB based only on atomic number and connections.
+        The SMILES molecule is then reindex to match the PDB, the conformer is attached and the
+        molecule returned.
+
+        Parameters
+        ----------
+        file_path: str
+            PDB file path
+        smiles : str
+            a valid smiles string for the pdb, used for seterochemistry and bond order
+
+        allow_undefined_stereo : bool, default=False
+            If false, raises an exception if oemol contains undefined stereochemistry.
+
+        Returns
+        --------
+        molecule : openforcefield.Molecule
+            An OFFMol instance with ordering the same as used in the PDB file.
+
+        Raises
+        ------
+        InvalidConformerError : if the SMILES and PDB molecules are not isomorphic.
+        """
+
+        from rdkit import Chem
+        from openforcefield.topology.molecule import Molecule, InvalidConformerError
+
+        # Make the molecule from smiles
+        offmol = self.from_smiles(smiles,
+                                  allow_undefined_stereo=allow_undefined_stereo)
+
+        # Make another molecule from the PDB, allow stero errors here they are expected
+        pdbmol = self.from_rdkit(Chem.MolFromPDBFile(file_path, removeHs=False), allow_undefined_stereo=True)
+
+        # check isomorphic and get the mapping if true the mapping will be
+        # Dict[pdb_index: offmol_index] sorted by pdb_index
+        isomorphic, mapping = Molecule.are_isomorphic(pdbmol, offmol, return_atom_map=True,
+                                                      aromatic_matching=False,
+                                                      formal_charge_matching=False,
+                                                      bond_order_matching=False,
+                                                      atom_stereochemistry_matching=False,
+                                                      bond_stereochemistry_matching=False)
+
+        if mapping is not None:
+            new_mol = offmol.remap(mapping)
+
+            # the pdb conformer is in the correct order so just attach it here
+            new_mol.add_conformer(pdbmol.conformers[0])
+
+            return new_mol
+
+        else:
+            raise InvalidConformerError('The PDB and SMILES structures do not match.')
+
     def from_file(self,
                   file_path,
                   file_format,
@@ -1702,7 +1826,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             a list of Molecule objects is returned.
 
         """
-        from openforcefield.topology import Molecule
         from rdkit import Chem
         mols = list()
         if (file_format == 'MOL') or (file_format == 'SDF'):
@@ -1734,8 +1857,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         elif (file_format == 'PDB'):
             raise Exception(
                 "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
-                "is likely to be lost.")
+                "is likely to be lost. To read a PDB using RDKit use Molecule.from_pdb_and_smiles()")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
+            #  testing to see if we can make a molecule from smiles and then use the PDB conformer as the geometry
+            #  and just reorder the molecule
             # https://github.com/openforcefield/openforcefield/issues/121
             # rdmol = Chem.MolFromPDBFile(file_path, removeHs=False)
             # mol = Molecule.from_rdkit(rdmol)
@@ -1794,9 +1919,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         elif file_format == 'PDB':
             raise Exception(
                 "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
-                "is likely to be lost.")
+                "is likely to be lost. To read a PDB using RDKit use Molecule.from_pdb_and_smiles()")
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
             # https://github.com/openforcefield/openforcefield/issues/121
+            # file_data = file_obj.read()
             # rdmol = Chem.MolFromPDBBlock(file_data)
             # mol = Molecule.from_rdkit(rdmol)
             # mols.append(mol)
@@ -1864,6 +1990,44 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             writer.write(rdmol)
             writer.close()
 
+    def canonical_order_atoms(self, molecule):
+        """
+        Canonical order the atoms in the molecule using the RDKit.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The input molecule
+
+         Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+            The input molecule, with canonically-indexed atoms and bonds.
+        """
+
+        from rdkit import Chem
+        rdmol = self.to_rdkit(molecule)
+
+        # get the canonical ordering with hydrogens first
+        # this is the default behaviour of RDKit
+        atom_order = list(Chem.CanonicalRankAtoms(rdmol, breakTies=True))
+
+        heavy_atoms = rdmol.GetNumHeavyAtoms()
+        hydrogens = rdmol.GetNumAtoms() - heavy_atoms
+
+        # now go through and change the rankings to get the heavy atoms first if hydrogens are present
+        if hydrogens != 0:
+            for i in range(len(atom_order)):
+                if rdmol.GetAtomWithIdx(i).GetAtomicNum() != 1:
+                    atom_order[i] -= hydrogens
+                else:
+                    atom_order[i] += heavy_atoms
+
+        # make an atom mapping from the atom_order and remap the molecule
+        atom_mapping = dict((i, rank) for i, rank in enumerate(atom_order))
+
+        return molecule.remap(atom_mapping, current_to_new=True)
+
     @classmethod
     def to_smiles(cls, molecule):
         """
@@ -1905,10 +2069,18 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         molecule : openforcefield.topology.Molecule
             An openforcefield-style molecule.
         """
-        from openforcefield.topology.molecule import Molecule
         from rdkit import Chem
 
         rdmol = Chem.MolFromSmiles(smiles, sanitize=False)
+        # strip the atom map from the molecule if it has one
+        # so we don't affect the sterochemistry tags
+        for atom in rdmol.GetAtoms():
+            if atom.GetAtomMapNum() != 0:
+                # set the map back to zero but hide the index in the atom prop data
+                atom.SetProp('_map_idx', str(atom.GetAtomMapNum()))
+                # set it back to zero
+                atom.SetAtomMapNum(0)
+
         # TODO: I think UpdatePropertyCache(strict=True) is called anyway in Chem.SanitizeMol().
         rdmol.UpdatePropertyCache(strict=False)
         Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
@@ -1943,25 +2115,25 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
     def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):
         """
-        Generate molecule conformers using RDKit. 
+        Generate molecule conformers using RDKit.
 
         .. warning :: This API is experimental and subject to change.
 
         .. todo ::
-        
+
            * which parameters should we expose? (or can we implement a general system with **kwargs?)
            * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that they'll get reindexed when we convert the input into an RDMol?
-        
+
         Parameters
         ---------
-        molecule : a :class:`Molecule` 
+        molecule : a :class:`Molecule`
             The molecule to generate conformers for.
         n_conformers : int, default=1
             Maximum number of conformers to generate.
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule.
-        
-        
+
+
         """
         from rdkit.Chem import AllChem
         rdmol = self.to_rdkit(molecule)
@@ -2060,8 +2232,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # therefore we can't do it until after the atoms and bonds are all added
         map_atoms = {}
         map_bonds = {}
+        # if we are loading from a mapped smiles extract the mapping
+        atom_mapping = {}
         for rda in rdmol.GetAtoms():
             rd_idx = rda.GetIdx()
+            # if the molecule was made from a mapped smiles this has been hidden
+            # so that it does not affect the sterochemistry tags
+            try:
+                map_id = int(rda.GetProp('_map_idx'))
+            except KeyError:
+                map_id = rda.GetAtomMapNum()
 
             # create a new atom
             #atomic_number = oemol.NewAtom(rda.GetAtomicNum())
@@ -2071,7 +2251,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             if rda.HasProp('_Name'):
                 name = rda.GetProp('_Name')
             else:
-                name = ''
+                # check for PDB names
+                try:
+                    name = rda.GetMonomerInfo().GetName().strip()
+                except AttributeError:
+                    name = ''
 
             # If chiral, store the chirality to be set later
             stereochemistry = None
@@ -2095,6 +2279,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 name=name,
                 stereochemistry=stereochemistry)
             map_atoms[rd_idx] = atom_index
+            atom_mapping[atom_index] = map_id
+
+        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
+        if 0 not in atom_mapping.values():
+            offmol._properties['atom_map'] = atom_mapping
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
         for rdb in rdmol.GetBonds():
@@ -2271,6 +2460,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
 
+        # Fix for aromaticity being lost
+        if aromaticity_model == 'OEAroModel_MDL':
+            Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+        else:
+            raise ValueError(f"Aromaticity model {aromaticity_model} not recognized")
+
         # Assign atom stereochemsitry and collect atoms for which RDKit
         # can't figure out chirality. The _CIPCode property of these atoms
         # will be forcefully set to the stereo we want (see #196).
@@ -2408,7 +2603,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Perform matching
         matches = list()
-        for match in rdmol.GetSubstructMatches(qmol, uniquify=False):
+
+        # choose the largest unsigned int without overflow
+        # since the C++ signature is a uint
+        max_matches = np.iinfo(np.uintc).max
+        for match in rdmol.GetSubstructMatches(qmol, uniquify=False,
+                maxMatches=max_matches):
             mas = [match[x] for x in map_list]
             matches.append(tuple(mas))
 
@@ -2931,7 +3131,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 subprocess.check_output([
                     "antechamber", "-i", "charged.mol2", "-fi", "mol2", "-o", "charges2.mol2",
                     "-fo", "mol2", "-c", "wc", "-cf", "charges.txt", "-pf", "yes"])
-
                 #os.system('cat charges.txt')
                 # Check to ensure charges were actually produced
                 if not os.path.exists('charges.txt'):
@@ -2951,6 +3150,206 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
         charges = unit.Quantity(charges, unit.elementary_charge)
         return charges
+
+    def _modify_sqm_in_to_request_bond_orders(self, file_path):
+        """
+        Modify a sqm.in file produced by antechamber to include the "printbondorders=1" directive
+        in the header. This method will overwrite the original file.
+
+        Parameters
+        ----------
+        file_path : str
+            The path to sqm.in
+        """
+
+        data = open(file_path).read()
+
+        # Original sqm.in file headerlooks like:
+
+        # Run semi-empirical minimization
+        #  &qmmm
+        #    qm_theory='AM1', grms_tol=0.0005,
+        #    scfconv=1.d-10, ndiis_attempts=700,   qmcharge=0,
+        #  /
+        # ... (atom coordinates in something like XYZ format) ...
+
+        # To get WBOs, we need to add "printbondorders=1" to the list of keywords
+
+        # First, split the sqm.in text at the "/" mark at the end of the header
+        datasp = data.split("/")
+        # Insert the "printbondorders" directive in a new line and re-add the "/"
+        datasp.insert(1, 'printbondorders=1, \n /')
+        # Reassemble the file text
+        new_data = ''.join(datasp)
+        # Write the new file contents, overwriting the original file.
+        with open(file_path, 'w') as of:
+            of.write(new_data)
+
+    def _get_fractional_bond_orders_from_sqm_out(self, file_path, validate_elements=None):
+        """
+        Process a SQM output file containing bond orders, and return a dict of the form
+        dict[atom_1_index, atom_2_index] = fractional_bond_order
+
+        Parameters
+        ----------
+        file_path : str
+            File path for sqm output file
+        validate_elements : iterable of str
+            The element symbols expected in molecule index order. A ValueError will be raised
+            if the elements are not found in this order.
+
+        Returns
+        -------
+        bond_orders : dict[(int, int)]: float
+            A dictionary where the keys are tuples of two atom indices and the values are
+            floating-point bond orders. The keys are sorted in ascending order, such that
+            the lower atom index is key[0] and the higher is key[1].
+        """
+
+        # Example sqm.out section with WBOs:
+        #  Bond Orders
+        #
+        #   QMMM:    NUM1 ELEM1 NUM2 ELEM2      BOND_ORDER
+        #   QMMM:       2   C      1   C        1.41107532
+        #   QMMM:       3   C      1   C        1.41047804
+        # ...
+        #   QMMM:      15   H     13   H        0.00000954
+        #   QMMM:      15   H     14   H        0.00000813
+        #
+        #            --------- Calculation Completed ----------
+
+        data = open(file_path).read()
+
+        begin_sep = ''' Bond Orders
+ 
+  QMMM:    NUM1 ELEM1 NUM2 ELEM2      BOND_ORDER
+'''
+        end_sep = '''
+
+           --------- Calculation Completed ----------
+'''
+        # Extract the chunk of text between begin_sep and end_sep, and split it by newline
+        fbo_lines = data.split(begin_sep)[1].split(end_sep)[0].split('\n')
+
+        # Iterate over the lines and populate the dict to return
+        bond_orders = dict()
+        for line in fbo_lines:
+            linesp = line.split()
+            atom_index_1 = int(linesp[1])
+            atom_element_1 = linesp[2]
+            atom_index_2 = int(linesp[3])
+            atom_element_2 = linesp[4]
+            bond_order = float(linesp[5])
+
+            # If validate_elements was provided, ensure that the ordering of element symbols is what we expected
+            if validate_elements is not None:
+                if ((atom_element_1 != validate_elements[atom_index_1-1]) or
+                    (atom_element_2 != validate_elements[atom_index_2-1])):
+                    #raise ValueError('\n'.join(fbo_lines))
+                    raise ValueError(f'Elements or indexing in sqm output differ from expectation. '
+                                     f'Expected {validate_elements[atom_index_1]} with index {atom_index_1} and '
+                                     f'{validate_elements[atom_index_2]} with index {atom_index_2}, '
+                                     f'but SQM output has {atom_element_1} and {atom_element_2} for the same atoms.')
+
+
+            # To make lookup easier, we identify bonds as integer tuples with the lowest atom index
+            # first and the highest second.
+            index_tuple = tuple(sorted([atom_index_1, atom_index_2]))
+            bond_orders[index_tuple] = bond_order
+        return bond_orders
+
+    def assign_fractional_bond_orders(self, molecule, bond_order_model=None, use_conformers=None):
+        """
+        Update and store list of bond orders this molecule. Bond orders are stored on each
+        bond, in the `bond.fractional_bond_order` attribute.
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        molecule : openforcefield.topology.molecule Molecule
+            The molecule to assign wiberg bond orders to
+        bond_order_model : str, optional, default=None
+            The charge model to use. Only allowed value is 'am1-wiberg'. If None, 'am1-wiberg' will be used.
+        use_conformers : iterable of simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance, optional, default=None
+            The conformers to use for fractional bond order calculation. If None, an appropriate number
+            of conformers will be generated by an available ToolkitWrapper.
+         """
+        from openforcefield.topology import Molecule
+        # Find the path to antechamber
+        # TODO: How should we implement find_executable?
+        ANTECHAMBER_PATH = find_executable("antechamber")
+        if ANTECHAMBER_PATH is None:
+            raise (IOError("Antechamber not found, cannot run "
+                           "AmberToolsToolkitWrapper.assign_fractional_bond_orders()"))
+
+        # Make a copy since we'll be messing with this molecule's conformers
+        temp_mol = Molecule(molecule)
+
+        if use_conformers is None:
+            temp_mol.generate_conformers(n_conformers=1)
+        else:
+            temp_mol._conformers = None
+            for conformer in use_conformers:
+                temp_mol.add_conformer(conformer)
+
+        if len(temp_mol.conformers) == 0:
+            raise ValueError(
+                "No conformers present in molecule submitted for fractional bond order calculation. Consider "
+                "loading the molecule from a file with geometry already present or running "
+                "molecule.generate_conformers() before calling molecule.assign_fractional_bond_orders"
+            )
+        if len(temp_mol.conformers) > 1:
+            logger.warning(f"Warning: In AmberToolsToolkitWrapper.assign_fractional_bond_orders: "
+                           f"Molecule '{molecule.name}' has more than one conformer, but this function "
+                           f"will only generate fractional bond orders for the first one.")
+
+
+        # Compute bond orders
+        bond_order_model_to_antechamber_keyword = {'am1-wiberg': 'mul'}
+        supported_bond_order_models = list(bond_order_model_to_antechamber_keyword.keys())
+        bond_order_model = bond_order_model.lower()
+        if bond_order_model is None:
+            bond_order_model = 'am1-wiberg'
+        if bond_order_model not in supported_bond_order_models:
+            raise ValueError(f"Bond order model '{bond_order_model}' is not supported by AmberToolsToolkitWrapper. "
+                             f"Supported models are {supported_bond_order_models}")
+        ac_charge_keyword = bond_order_model_to_antechamber_keyword[bond_order_model]
+
+        from openforcefield.utils import temporary_directory, temporary_cd
+        with temporary_directory() as tmpdir:
+            with temporary_cd(tmpdir):
+                net_charge = temp_mol.total_charge
+                # Write out molecule in SDF format
+                self._rdkit_toolkit_wrapper.to_file(
+                    temp_mol, 'molecule.sdf', file_format='sdf')
+                # Prepare sqm.in file as if we were going to run charge calc
+                # TODO: Add error handling if antechamber chokes
+                subprocess.check_output([
+                    "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o",
+                    "sqm.in", "-fo", "sqmcrt", "-pf", "yes", "-c", ac_charge_keyword,
+                    "-nc", str(net_charge)
+                ])
+                # Modify sqm.in to request bond order calculation
+                self._modify_sqm_in_to_request_bond_orders("sqm.in")
+                # Run sqm to get bond orders
+                subprocess.check_output(["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"])
+                # Ensure that antechamber/sqm did not change the indexing by checking against
+                # an ordered list of element symbols for this molecule
+                expected_elements = [at.element.symbol for at in molecule.atoms]
+                bond_orders = self._get_fractional_bond_orders_from_sqm_out('sqm.out',
+                                                                            validate_elements=expected_elements)
+
+        # Note that sqm calculate WBOs for ALL PAIRS of atoms, not just those that have
+        # bonds defined in the original molecule. So here we iterate over the bonds in
+        # the original molecule and only nab the WBOs for those.
+        for bond in molecule.bonds:
+            # The atom index tuples that act as bond indices are ordered from lowest to highest by
+            # _get_fractional_bond_orders_from_sqm_out, so here we make sure that we look them up in
+            # sorted order as well
+            sorted_atom_indices = sorted(tuple([bond.atom1_index+1, bond.atom2_index+1]))
+            bond.fractional_bond_order = bond_orders[tuple(sorted_atom_indices)]
+
 
 
 #=============================================================================================

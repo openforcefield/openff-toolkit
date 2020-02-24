@@ -16,7 +16,7 @@ dependencies:
   - coverage < 5.0
   - numpy
   - networkx
-  - parmed
+  - ambertools
   - packaging
   - openmmtools
   - openforcefields
@@ -26,6 +26,9 @@ dependencies:
   - bson
   - msgpack-python
   - xmltodict
+  - qcelemental
+  - qcportal
+  - qcengine
 
     # Pip-only installs
   #- pip:
