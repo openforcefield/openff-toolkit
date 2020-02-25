@@ -2151,6 +2151,7 @@ class FrozenMolecule(Serializable):
     def generate_conformers(self,
                             toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
                             n_conformers=10,
+                            rms_cutoff=None,
                             clear_existing=True):
         """
         Generate conformers for this molecule using an underlying toolkit
@@ -2161,6 +2162,10 @@ class FrozenMolecule(Serializable):
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         n_conformers : int, default=1
             The maximum number of conformers to produce
+        rms_cutoff : simtk.Quantity-wrapped float, in units of distance, optional, default=None
+            The minimum RMS value at which two conformers are considered redundant and one is deleted. Precise
+            implementation of this cutoff may be toolkit-dependent. If None, the cutoff is set to 1 Angstrom
+
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
 
@@ -2177,11 +2182,17 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('generate_conformers', self, n_conformers=n_conformers,
+            return toolkit_registry.call('generate_conformers',
+                                         self,
+                                         n_conformers=n_conformers,
+                                         rms_cutoff=rms_cutoff,
                                          clear_existing=clear_existing)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.generate_conformers(self, n_conformers=n_conformers, clear_existing=clear_existing)
+            return toolkit.generate_conformers(self,
+                                               n_conformers=n_conformers,
+                                               rms_cutoff = rms_cutoff,
+                                               clear_existing=clear_existing)
         else:
             raise InvalidToolkitError(
                 'Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'

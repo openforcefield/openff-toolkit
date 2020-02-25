@@ -1189,7 +1189,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                                      allow_undefined_stereo=allow_undefined_stereo)
         return molecule
 
-    def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):
+    def generate_conformers(self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True):
         """
         Generate molecule conformers using OpenEye Omega.
 
@@ -1207,6 +1207,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The molecule to generate conformers for.
         n_conformers : int, default=1
             The maximum number of conformers to generate.
+        rms_cutoff : simtk.Quantity-wrapped float, in units of distance, optional, default=None
+            The minimum RMS value at which two conformers are considered redundant and one is deleted.
+            If None, the cutoff is set to 1 Angstrom
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
 
@@ -1218,8 +1221,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         omega.SetCanonOrder(False)
         omega.SetSampleHydrogens(True)
         omega.SetEnergyWindow(15.0)  #unit?
-        omega.SetRMSThreshold(1.0)
-        #Don't generate random stereoisomer if not specified
+        if rms_cutoff is None:
+            omega.SetRMSThreshold(1.0)
+        else:
+            omega.SetRMSThreshold(rms_cutoff.value_in_unit(unit.angstrom))
+        # Don't generate random stereoisomer if not specified
         omega.SetStrictStereo(True)
         status = omega(oemol)
 
@@ -2118,7 +2124,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         return molecule
 
-    def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):
+    def generate_conformers(self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True):
         """
         Generate molecule conformers using RDKit.
 
@@ -2135,18 +2141,23 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             The molecule to generate conformers for.
         n_conformers : int, default=1
             Maximum number of conformers to generate.
+        rms_cutoff : simtk.Quantity-wrapped float, in units of distance, optional, default=None
+            The minimum RMS value at which two conformers are considered redundant and one is deleted. Precise
+            implementation of this cutoff may be toolkit-dependent.
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule.
 
 
         """
         from rdkit.Chem import AllChem
+        if rms_cutoff is None:
+            rms_cutoff = 1. * unit.angstrom
         rdmol = self.to_rdkit(molecule)
         # TODO: This generates way more conformations than omega, given the same nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
         AllChem.EmbedMultipleConfs(
             rdmol,
             numConfs=n_conformers,
-            pruneRmsThresh=1.0,
+            pruneRmsThresh=rms_cutoff / unit.angstrom,
             randomSeed=1,
             #params=AllChem.ETKDG()
         )
