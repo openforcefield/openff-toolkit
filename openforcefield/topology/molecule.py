@@ -3604,7 +3604,7 @@ class FrozenMolecule(Serializable):
                                         f'no conformer was found at index {conformer}.')
 
         # Gather the required qschema data
-        charge = sum([atom.formal_charge for atom in canonical_mol.atoms])
+        charge = sum([atom.formal_charge.value_in_unit(unit.elementary_charge) for atom in canonical_mol.atoms])
         connectivity = [(bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in canonical_mol.bonds]
         symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in canonical_mol.atoms]
 
