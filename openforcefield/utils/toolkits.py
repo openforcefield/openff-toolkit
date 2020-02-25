@@ -1046,8 +1046,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             | oechem.OESMILESFlag_AtomStereo)
         return smiles
 
-    @staticmethod
-    def to_inchi(molecule, fixed_hydrogens=False):
+    def to_inchi(self, molecule, fixed_hydrogens=False):
         """
         Create an InChI string for the molecule using the RDKit Toolkit.
         InChI is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
@@ -1071,7 +1070,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
 
         from openeye import oechem
-        oemol = OpenEyeToolkitWrapper.to_openeye(molecule)
+        oemol = self.to_openeye(molecule)
 
         if fixed_hydrogens:
             opts = oechem.OEInChIOptions()
@@ -1083,8 +1082,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return inchi
 
-    @staticmethod
-    def to_inchikey(molecule, fixed_hydrogens=False):
+    def to_inchikey(self, molecule, fixed_hydrogens=False):
         """
         Create an InChIKey for the molecule using the RDKit Toolkit.
         InChIKey is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
@@ -1108,7 +1106,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
 
         from openeye import oechem
-        oemol = OpenEyeToolkitWrapper.to_openeye(molecule)
+        oemol = self.to_openeye(molecule)
 
         if fixed_hydrogens:
             opts = oechem.OEInChIOptions()
@@ -2095,14 +2093,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             raise RuntimeError('There was an issue parsing the InChI string, please check and try again.')
 
         # process the molecule
-        #TODO do we need this with inchi?
+        # TODO do we need this with inchi?
         rdmol.UpdatePropertyCache(strict=False)
         Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-
-        # Throw an exception/warning if there is unspecified stereochemistry.
-        if allow_undefined_stereo == False:
-            self._detect_undefined_stereo(rdmol, err_msg_prefix='Unable to make OFFMol from InChI: ')
 
         # add hydrogens back here
         rdmol = Chem.AddHs(rdmol)
@@ -2542,8 +2536,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Return non-editable version
         return Chem.Mol(rdmol)
 
-    @classmethod
-    def to_inchi(cls, molecule, fixed_hydrogens=False):
+    def to_inchi(self, molecule, fixed_hydrogens=False):
         """
         Create an InChI string for the molecule using the RDKit Toolkit.
         InChI is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
@@ -2567,15 +2560,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
 
         from rdkit import Chem
-        rdmol = cls.to_rdkit(molecule)
+        rdmol = self.to_rdkit(molecule)
         if fixed_hydrogens:
             inchi = Chem.MolToInchi(rdmol, options='-FixedH')
         else:
             inchi = Chem.MolToInchi(rdmol)
         return inchi
 
-    @classmethod
-    def to_inchikey(cls, molecule, fixed_hydrogens=False):
+    def to_inchikey(self, molecule, fixed_hydrogens=False):
         """
         Create an InChIKey for the molecule using the RDKit Toolkit.
         InChIKey is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
@@ -2599,7 +2591,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
 
         from rdkit import Chem
-        rdmol = cls.to_rdkit(molecule)
+        rdmol = self.to_rdkit(molecule)
         if fixed_hydrogens:
             inchi_key = Chem.MolToInchiKey(rdmol, options='-FixedH')
         else:

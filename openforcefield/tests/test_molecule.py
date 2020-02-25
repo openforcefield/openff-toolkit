@@ -371,59 +371,6 @@ class TestMolecule:
         """Test conversion to NetworkX graph."""
         graph = molecule.to_networkx()
 
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_to_inchi(self, molecule):
-        """Test conversion to standard and non-standard InChI"""
-        inchi = molecule.to_inchi()
-        non_standard = molecule.to_inchi(True)
-
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_to_inchikey(self, molecule):
-        """Test the conversion to standard and non-standard InChIKey"""
-        inchikey = molecule.to_inchikey()
-        non_standard_key = molecule.to_inchikey(True)
-
-    def test_from_bad_inchi(self):
-        """Test building a molecule from a bad InChI string"""
-
-        inchi = 'InChI=1S/ksbfksfksfksbfks'
-        with pytest.raises(RuntimeError):
-            mol = Molecule.from_inchi(inchi)
-
-    inchi_data = [{'molecule': create_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
-                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
-                  {'molecule': create_reversed_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
-                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
-                  {'molecule': create_acetaldehyde(), 'standard_inchi': 'InChI=1S/C2H4O/c1-2-3/h2H,1H3',
-                   'fixed_hydrogen_inchi': 'InChI=1/C2H4O/c1-2-3/h2H,1H3'},
-                  {'molecule': create_cyclohexane(), 'standard_inchi': 'InChI=1S/C6H12/c1-2-4-6-5-3-1/h1-6H2',
-                   'fixed_hydrogen_inchi': 'InChI=1/C6H12/c1-2-4-6-5-3-1/h1-6H2'}
-                  ]
-
-    @pytest.mark.parametrize('data', inchi_data)
-    def test_from_inchi(self, data):
-        """Test building a molecule from standard and non-standard InChI strings."""
-
-        ref_mol = data['molecule']
-        # make a molecule from inchi
-        inchi_mol = Molecule.from_inchi(data['standard_inchi'])
-        assert inchi_mol.to_inchi() == data['standard_inchi']
-
-        def compare_mols(ref_mol, inchi_mol):
-            assert ref_mol.n_atoms == inchi_mol.n_atoms
-            assert ref_mol.n_bonds == inchi_mol.n_bonds
-            assert ref_mol.n_angles == inchi_mol.n_angles
-            assert ref_mol.n_propers == inchi_mol.n_propers
-            assert ref_mol.is_isomorphic_with(inchi_mol) is True
-
-        compare_mols(ref_mol, inchi_mol)
-
-        # now make the molecule from the non-standard inchi and compare
-        nonstandard_inchi_mol = Molecule.from_inchi(data['fixed_hydrogen_inchi'])
-        assert nonstandard_inchi_mol.to_inchi(fixed_hydrogens=True) == data['fixed_hydrogen_inchi']
-
-        compare_mols(ref_mol, nonstandard_inchi_mol)
-
     @requires_rdkit
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_to_from_rdkit(self, molecule):
