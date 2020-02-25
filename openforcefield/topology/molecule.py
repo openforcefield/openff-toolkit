@@ -2223,12 +2223,14 @@ class FrozenMolecule(Serializable):
                 f'Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}')
         self.partial_charges = charges
 
-    def compute_partial_charges(self,
+
+    def assign_partial_charges(self,
                                 partial_charge_method=None,
                                 strict_n_conformers=False,
                                 toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
-        Calculate partial atomic charges for this molecule using an underlying toolkit
+        Calculate partial atomic charges for this molecule using an underlying toolkit, and assign
+        the new values to the partial_charges attribute.
 
         Parameters
         ----------
@@ -2251,20 +2253,20 @@ class FrozenMolecule(Serializable):
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
             charges = toolkit_registry.call(
-                      'compute_partial_charges',
+                      'assign_partial_charges',
                       self,
                       partial_charge_method=partial_charge_method
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            charges = toolkit.compute_partial_charges(
+            charges = toolkit.assign_partial_charges(
                 self,
                 partial_charge_method=partial_charge_method,
                 strict_n_conformers=strict_n_conformers
             )
         else:
             raise InvalidToolkitError(
-                f'Invalid toolkit_registry passed to compute_partial_charges.'
+                f'Invalid toolkit_registry passed to assign_partial_charges.'
                 f'Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}')
 
         self.partial_charges = charges

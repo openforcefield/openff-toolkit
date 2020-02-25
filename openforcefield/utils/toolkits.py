@@ -281,9 +281,10 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
     _toolkit_file_write_formats = []
 
 
-    def compute_partial_charges(self, molecule, partial_charge_method=None):
+    def assign_partial_charges(self, molecule, partial_charge_method=None, strict_n_conformers=False):
         """
-        Compute partial charges with the built-in toolkit using simple arithmetic operations
+        Compute partial charges with the built-in toolkit using simple arithmetic operations, and assign
+        the new values to the partial_charges attribute.
 
         .. warning :: This API experimental and subject to change.
 
@@ -293,6 +294,9 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
             Molecule for which partial charges are to be computed
         partial_charge_method: str, optional, default=None
             The charge model to use. One of ['zeros', 'formal_charge']. If None, 'formal_charge' will be used.
+        strict_n_conformers : bool, default=False
+            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            If this is False and an invalid number of conformers is found, a warning will be raised.
 
         Raises
         ------
@@ -1269,7 +1273,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             wrong_confs_msg = f"Molecule '{molecule}' has {n_confs} conformers, " \
                 f"but charge method '{partial_charge_method}' expects "
             exception_suffix = "You can disable this error by setting `strict_n_conformers=False' " \
-                               "when calling 'molecule.compute_partial_charges'."
+                               "when calling 'molecule.assign_partial_charges'."
             # If there's no n_confs filter, then this molecule automatically passes
             if min_confs is None and max_confs is None:
                 return
@@ -1303,9 +1307,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 logger.warning("Warning: " + wrong_confs_msg)
 
 
-    def compute_partial_charges(self, molecule,  partial_charge_method='None', strict_n_conformers=False):
+    def assign_partial_charges(self, molecule,  partial_charge_method='None', strict_n_conformers=False):
         """
-        Compute partial charges with OpenEye quacpac
+        Compute partial charges with OpenEye quacpac, and assign
+        the new values to the partial_charges attribute.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -1346,7 +1351,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             raise ValueError(
                 "No conformers present in molecule submitted for partial charge calculation. Consider "
                 "loading the molecule from a file with geometry already present or running "
-                "molecule.generate_conformers() before calling molecule.compute_partial_charges"
+                "molecule.generate_conformers() before calling molecule.assign_partial_charges"
             )
 
 
@@ -1419,7 +1424,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             ).all():
             # TODO: These will be 0 if the charging failed. What behavior do we want in that case?
             raise ChargeCalculationError(
-                "Partial charge calculation failed. Charges from compute_partial_charges() are all 0."
+                "Partial charge calculation failed. Charges from assign_partial_charges() are all 0."
             )
         return charges
 
@@ -2947,9 +2952,10 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         # Store an instance of an RDKitToolkitWrapper for file I/O
         self._rdkit_toolkit_wrapper = RDKitToolkitWrapper()
 
-    def compute_partial_charges(self, molecule, partial_charge_method=None, strict_n_conformers=False):
+    def assign_partial_charges(self, molecule, partial_charge_method=None, strict_n_conformers=False):
         """
-        Compute partial charges with AmberTools using antechamber/sqm
+        Compute partial charges with AmberTools using antechamber/sqm, and assign
+        the new values to the partial_charges attribute.
 
         .. warning :: This API experimental and subject to change.
 
@@ -3004,7 +3010,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             raise ValueError(
                 "No conformers present in molecule submitted for partial charge calculation. Consider "
                 "loading the molecule from a file with geometry already present or running "
-                "molecule.generate_conformers() before calling molecule.compute_partial_charges"
+                "molecule.generate_conformers() before calling molecule.assign_partial_charges"
             )
 
         if len(molecule._conformers) > 1:
@@ -3012,7 +3018,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 raise ValueError(f"Molecule '{molecule}' has more than one conformer, but charge "
                                  f"method '{partial_charge_method}' "
                                  f"can only handle one. You can disable this error by setting "
-                                 f"'strict_n_conformers=False' when calling 'molecule.compute_partial_charges'.")
+                                 f"'strict_n_conformers=False' when calling 'molecule.assign_partial_charges'.")
             elif not(strict_n_conformers):
                 logger.warning("Warning: Molecule '{}' has more than one conformer, but this function "
                                "will only generate charges for the first one.".format(molecule.name))
