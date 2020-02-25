@@ -485,6 +485,18 @@ class TestMolecule:
         molecule_copy = Molecule.from_topology(topology)
         assert molecule == molecule_copy
 
+    def test_to_multiframe_xyz(self):
+        """Test writing out a molecule with multiple conformations to an xyz file"""
+        pass
+
+    def test_to_single_xyz(self):
+        """Test writing to a single frame xyz file"""
+        pass
+
+    def test_to_xyz_no_conformers(self):
+        """Test writing a molecule out when it has no conformers here all coords should be 0."""
+        pass
+
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     @pytest.mark.parametrize('format', [
