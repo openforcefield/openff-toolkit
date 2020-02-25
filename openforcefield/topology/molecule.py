@@ -3414,6 +3414,9 @@ class FrozenMolecule(Serializable):
             )
 
         file_format = file_format.upper()
+        # check if xyz, use the toolkit independent method.
+        if file_format == 'XYZ':
+            return self._to_xyz_file(file_path=file_path)
 
         # Take the first toolkit that can write the desired output format
         toolkit = None
