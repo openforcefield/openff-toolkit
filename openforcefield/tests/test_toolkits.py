@@ -18,7 +18,6 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 import pytest
-from functools import lru_cache
 
 from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWrapper,
                                            AmberToolsToolkitWrapper, ToolkitRegistry,
@@ -33,12 +32,17 @@ from openforcefield.tests.test_forcefield import create_ethanol, create_cyclohex
 #=============================================================================================
 
 
-@lru_cache(maxsize=None)
 def get_mini_drug_bank(toolkit):
     """Read the mini drug bank sdf file with the toolkit and return the molecules"""
 
-    molecules = Molecule.from_file(get_data_file_path('molecules/MiniDrugBank.sdf'), 'sdf', toolkit_registry=toolkit,
-                                   allow_undefined_stereo=True)
+    # This is a work around a weird error where even though the test is skipted due to a missing toolkit
+    #  we still try and read the file with the toolkit
+    try:
+        molecules = Molecule.from_file(get_data_file_path('molecules/MiniDrugBank.sdf'), 'sdf', toolkit_registry=toolkit,
+                                       allow_undefined_stereo=True)
+    except ModuleNotFoundError:
+        molecules = []
+
     return molecules
 
 
