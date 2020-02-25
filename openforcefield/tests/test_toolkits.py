@@ -18,14 +18,62 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 import pytest
+from functools import lru_cache
+
 from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWrapper,
                                            AmberToolsToolkitWrapper, ToolkitRegistry,
                                            GAFFAtomTypeWarning, UndefinedStereochemistryError)
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology.molecule import Molecule
-from openforcefield.tests.test_forcefield import create_ethanol, create_cyclohexane
+from openforcefield.tests.test_forcefield import create_ethanol, create_cyclohexane, create_acetaldehyde, \
+    create_reversed_ethanol
+
+#=============================================================================================
+# FIXTURES
+#=============================================================================================
 
 
+@lru_cache(maxsize=None)
+def get_mini_drug_bank(toolkit):
+    """Read the mini drug bank sdf file with the toolkit and return the molecules"""
+
+    molecules = Molecule.from_file(get_data_file_path('molecules/MiniDrugBank.sdf'), 'sdf', toolkit_registry=toolkit,
+                                   allow_undefined_stereo=True)
+    return molecules
+
+
+openeye_inchi_stereochemistry_lost = ['DrugBank_2799', 'DrugBank_5414', 'DrugBank_5415', 'DrugBank_5418',
+                                      'DrugBank_2955', 'DrugBank_2987', 'DrugBank_5555', 'DrugBank_472',
+                                      'DrugBank_5737', 'DrugBank_3332', 'DrugBank_3461', 'DrugBank_794',
+                                      'DrugBank_3502', 'DrugBank_6026', 'DrugBank_3622', 'DrugBank_977',
+                                      'DrugBank_3693', 'DrugBank_3726', 'DrugBank_3739', 'DrugBank_6222',
+                                      'DrugBank_6232', 'DrugBank_3844', 'DrugBank_6295', 'DrugBank_6304',
+                                      'DrugBank_6305', 'DrugBank_3930', 'DrugBank_6329', 'DrugBank_6353',
+                                      'DrugBank_6355', 'DrugBank_6401', 'DrugBank_4161', 'DrugBank_4162',
+                                      'DrugBank_6509', 'DrugBank_6531', 'DrugBank_1570', 'DrugBank_4249',
+                                      'DrugBank_1634', 'DrugBank_1659', 'DrugBank_6647', 'DrugBank_1700',
+                                      'DrugBank_1721', 'DrugBank_1742', 'DrugBank_1802', 'DrugBank_6775',
+                                      'DrugBank_1849', 'DrugBank_1864', 'DrugBank_6875', 'DrugBank_1897',
+                                      'DrugBank_4593', 'DrugBank_1962', 'DrugBank_4662', 'DrugBank_7049',
+                                      'DrugBank_4702', 'DrugBank_2095', 'DrugBank_4778', 'DrugBank_2141',
+                                      'DrugBank_2148', 'DrugBank_2178', 'DrugBank_4865', 'DrugBank_2208',
+                                      'DrugBank_2210', 'DrugBank_2276', 'DrugBank_4959', 'DrugBank_4964',
+                                      'DrugBank_5043', 'DrugBank_2429', 'DrugBank_5076', 'DrugBank_2465',
+                                      'DrugBank_2519', 'DrugBank_2538', 'DrugBank_5158', 'DrugBank_5176',
+                                      'DrugBank_2592']
+
+openeye_inchi_isomorphic_fails = ['DrugBank_1661', 'DrugBank_4346', 'DrugBank_2467']
+
+rdkit_inchi_stereochemistry_lost = ['DrugBank_5414', 'DrugBank_2955', 'DrugBank_5737', 'DrugBank_3332', 'DrugBank_3461',
+                                    'DrugBank_6026', 'DrugBank_3622', 'DrugBank_3726', 'DrugBank_6222', 'DrugBank_3844',
+                                    'DrugBank_6304', 'DrugBank_6305', 'DrugBank_6329', 'DrugBank_6509', 'DrugBank_6647',
+                                    'DrugBank_1897', 'DrugBank_4778', 'DrugBank_2148', 'DrugBank_2178', 'DrugBank_2538',
+                                    'DrugBank_2592', 'DrugBank_4249', 'DrugBank_5076', 'DrugBank_5418', 'DrugBank_3930',
+                                    'DrugBank_1634', 'DrugBank_1962', 'DrugBank_5043', 'DrugBank_2519']
+
+rdkit_inchi_isomorphic_fails = ['DrugBank_178', 'DrugBank_246', 'DrugBank_5847', 'DrugBank_700', 'DrugBank_1564',
+                                'DrugBank_1700', 'DrugBank_4662', 'DrugBank_2052', 'DrugBank_2077', 'DrugBank_2082',
+                                'DrugBank_2210', 'DrugBank_2642']
 #=============================================================================================
 # TESTS
 #=============================================================================================
@@ -269,7 +317,97 @@ class TestOpenEyeToolkitWrapper:
                                       hydrogens_are_explicit=False)
         assert offmol.n_atoms == 4
 
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.parametrize('molecule', get_mini_drug_bank(OpenEyeToolkitWrapper()))
+    def test_to_inchi(self, molecule):
+        """Test conversion to standard and non-standard InChI"""
 
+        toolkit = OpenEyeToolkitWrapper()
+        inchi = molecule.to_inchi(toolkit_registry=toolkit)
+        non_standard = molecule.to_inchi(True, toolkit_registry=toolkit)
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.parametrize('molecule', get_mini_drug_bank(OpenEyeToolkitWrapper()))
+    def test_to_inchikey(self, molecule):
+        """Test the conversion to standard and non-standard InChIKey"""
+
+        toolkit = OpenEyeToolkitWrapper()
+        inchikey = molecule.to_inchikey(toolkit_registry=toolkit)
+        non_standard_key = molecule.to_inchikey(True, toolkit_registry=toolkit)
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_from_bad_inchi(self):
+        """Test building a molecule from a bad InChI string"""
+
+        toolkit = OpenEyeToolkitWrapper()
+        inchi = 'InChI=1S/ksbfksfksfksbfks'
+        with pytest.raises(RuntimeError):
+            mol = Molecule.from_inchi(inchi, toolkit_registry=toolkit)
+
+    inchi_data = [{'molecule': create_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
+                  {'molecule': create_reversed_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
+                  {'molecule': create_acetaldehyde(), 'standard_inchi': 'InChI=1S/C2H4O/c1-2-3/h2H,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H4O/c1-2-3/h2H,1H3'},
+                  {'molecule': create_cyclohexane(), 'standard_inchi': 'InChI=1S/C6H12/c1-2-4-6-5-3-1/h1-6H2',
+                   'fixed_hydrogen_inchi': 'InChI=1/C6H12/c1-2-4-6-5-3-1/h1-6H2'}
+                  ]
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.parametrize('data', inchi_data)
+    def test_from_inchi(self, data):
+        """Test building a molecule from standard and non-standard InChI strings."""
+
+        toolkit = OpenEyeToolkitWrapper()
+        ref_mol = data['molecule']
+        # make a molecule from inchi
+        inchi_mol = Molecule.from_inchi(data['standard_inchi'], toolkit_registry=toolkit)
+        assert inchi_mol.to_inchi(toolkit_registry=toolkit) == data['standard_inchi']
+
+        def compare_mols(ref_mol, inchi_mol):
+            assert ref_mol.n_atoms == inchi_mol.n_atoms
+            assert ref_mol.n_bonds == inchi_mol.n_bonds
+            assert ref_mol.n_angles == inchi_mol.n_angles
+            assert ref_mol.n_propers == inchi_mol.n_propers
+            assert ref_mol.is_isomorphic_with(inchi_mol) is True
+
+        compare_mols(ref_mol, inchi_mol)
+
+        # now make the molecule from the non-standard inchi and compare
+        nonstandard_inchi_mol = Molecule.from_inchi(data['fixed_hydrogen_inchi'], toolkit_registry=toolkit)
+        assert nonstandard_inchi_mol.to_inchi(fixed_hydrogens=True, toolkit_registry=toolkit) == data['fixed_hydrogen_inchi']
+
+        compare_mols(ref_mol, nonstandard_inchi_mol)
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.parametrize('molecule', get_mini_drug_bank(OpenEyeToolkitWrapper()))
+    def test_non_standard_inchi_round_trip(self, molecule):
+        """Test if a molecule can survive an InChi round trip test in some cases the standard InChI
+        will not enough to ensure information is preserved so we test the non-standard inchi here."""
+
+        from openforcefield.utils.toolkits import UndefinedStereochemistryError
+
+        toolkit = OpenEyeToolkitWrapper()
+        inchi = molecule.to_inchi(fixed_hydrogens=True, toolkit_registry=toolkit)
+        # make a copy of the molecule from the inchi string
+        if molecule.name in openeye_inchi_stereochemistry_lost:
+            # some molecules lose sterorchemsitry so they are skipped
+            # if we fail here the molecule may of been fixed
+            with pytest.raises(UndefinedStereochemistryError):
+                mol2 = molecule.from_inchi(inchi, toolkit_registry=toolkit)
+
+        else:
+            mol2 = molecule.from_inchi(inchi, toolkit_registry=toolkit)
+            # compare the full molecule excluding the properties dictionary
+            # turn of the bond order matching as this could move in the aromatic rings
+            if molecule.name in openeye_inchi_isomorphic_fails:
+                # Some molecules graphs change during the round trip testing
+                # we test quite strict isomorphism here
+                with pytest.raises(AssertionError):
+                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+            else:
+                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_sdf_coordinates(self):
@@ -734,6 +872,99 @@ class TestRDKitToolkitWrapper:
                                       hydrogens_are_explicit=False)
         assert offmol.n_atoms == 4
 
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.parametrize('molecule', get_mini_drug_bank(RDKitToolkitWrapper()))
+    def test_to_inchi(self, molecule):
+        """Test conversion to standard and non-standard InChI"""
+
+        toolkit = RDKitToolkitWrapper()
+        inchi = molecule.to_inchi(toolkit_registry=toolkit)
+        non_standard = molecule.to_inchi(fixed_hydrogens=True,toolkit_registry=toolkit)
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.parametrize('molecule', get_mini_drug_bank(RDKitToolkitWrapper()))
+    def test_to_inchikey(self, molecule):
+        """Test the conversion to standard and non-standard InChIKey"""
+
+        toolkit = RDKitToolkitWrapper()
+        inchikey = molecule.to_inchikey(toolkit_registry=toolkit)
+        non_standard_key = molecule.to_inchikey(fixed_hydrogens=True, toolkit_registry=toolkit)
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_from_bad_inchi(self):
+        """Test building a molecule from a bad InChI string"""
+
+        toolkit = RDKitToolkitWrapper()
+        inchi = 'InChI=1S/ksbfksfksfksbfks'
+        with pytest.raises(RuntimeError):
+            mol = Molecule.from_inchi(inchi, toolkit_registry=toolkit)
+
+    inchi_data = [{'molecule': create_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
+                  {'molecule': create_reversed_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
+                  {'molecule': create_acetaldehyde(), 'standard_inchi': 'InChI=1S/C2H4O/c1-2-3/h2H,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H4O/c1-2-3/h2H,1H3'},
+                  {'molecule': create_cyclohexane(), 'standard_inchi': 'InChI=1S/C6H12/c1-2-4-6-5-3-1/h1-6H2',
+                   'fixed_hydrogen_inchi': 'InChI=1/C6H12/c1-2-4-6-5-3-1/h1-6H2'}
+                  ]
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.parametrize('data', inchi_data)
+    def test_from_inchi(self, data):
+        """Test building a molecule from standard and non-standard InChI strings."""
+
+        toolkit = RDKitToolkitWrapper()
+
+        ref_mol = data['molecule']
+        # make a molecule from inchi
+        inchi_mol = Molecule.from_inchi(data['standard_inchi'], toolkit_registry=toolkit)
+        assert inchi_mol.to_inchi(toolkit_registry=toolkit) == data['standard_inchi']
+
+        def compare_mols(ref_mol, inchi_mol):
+            assert ref_mol.n_atoms == inchi_mol.n_atoms
+            assert ref_mol.n_bonds == inchi_mol.n_bonds
+            assert ref_mol.n_angles == inchi_mol.n_angles
+            assert ref_mol.n_propers == inchi_mol.n_propers
+            assert ref_mol.is_isomorphic_with(inchi_mol) is True
+
+        compare_mols(ref_mol, inchi_mol)
+
+        # now make the molecule from the non-standard inchi and compare
+        nonstandard_inchi_mol = Molecule.from_inchi(data['fixed_hydrogen_inchi'])
+        assert nonstandard_inchi_mol.to_inchi(fixed_hydrogens=True, toolkit_registry=toolkit) == data['fixed_hydrogen_inchi']
+
+        compare_mols(ref_mol, nonstandard_inchi_mol)
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.parametrize('molecule', get_mini_drug_bank(RDKitToolkitWrapper()))
+    def test_non_standard_inchi_round_trip(self, molecule):
+        """Test if a molecule can survive an InChi round trip test in some cases the standard InChI
+        will not be enough to ensure information is preserved so we test the non-standard inchi here."""
+
+        from openforcefield.utils.toolkits import UndefinedStereochemistryError
+
+        toolkit = RDKitToolkitWrapper()
+        inchi = molecule.to_inchi(fixed_hydrogens=True, toolkit_registry=toolkit)
+        # make a copy of the molecule from the inchi string
+        if molecule.name in rdkit_inchi_stereochemistry_lost:
+            # some molecules lose stereochemsitry so they are skipped
+            # if we fail here the molecule may of been fixed
+            with pytest.raises(UndefinedStereochemistryError):
+                mol2 = molecule.from_inchi(inchi, toolkit_registry=toolkit)
+
+        else:
+            print(molecule.name)
+            mol2 = molecule.from_inchi(inchi, toolkit_registry=toolkit)
+            # compare the full molecule excluding the properties dictionary
+            # turn of the bond order matching as this could move in the aromatic rings
+            if molecule.name in rdkit_inchi_isomorphic_fails:
+                # Some molecules graphs change during the round trip testing
+                # we test quite strict isomorphism here
+                with pytest.raises(AssertionError):
+                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+            else:
+                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_smiles_charged(self):
