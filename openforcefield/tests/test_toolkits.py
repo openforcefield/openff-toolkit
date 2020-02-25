@@ -355,25 +355,44 @@ class TestOpenEyeToolkitWrapper:
         assert molecule.n_conformers != 0
         assert not(molecule.conformers[0] == (0.*unit.angstrom)).all()
 
-        # TODO: Make this test more robust
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_generate_multiple_conformers(self):
+        """Test OpenEyeToolkitWrapper generate_conformers() for generating multiple conformers"""
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        smiles = 'CCCCCCC'
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        molecule.generate_conformers(rms_cutoff=1*unit.angstrom, n_conformers=100)
+        assert molecule.n_conformers > 1
+        assert not(molecule.conformers[0] == (0.*unit.angstrom)).all()
+
+        # Ensure rms_cutoff kwarg is working
+        molecule2 = toolkit_wrapper.from_smiles(smiles)
+        molecule2.generate_conformers(rms_cutoff=0.1*unit.angstrom, n_conformers=100)
+        assert molecule2.n_conformers > molecule.n_conformers
+
+        # Ensure n_conformers kwarg is working
+        molecule2 = toolkit_wrapper.from_smiles(smiles)
+        molecule2.generate_conformers(rms_cutoff=0.1*unit.angstrom, n_conformers=10)
+        assert molecule2.n_conformers == 10
+
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    def test_compute_partial_charges(self):
-        """Test OpenEyeToolkitWrapper compute_partial_charges()"""
+    def test_assign_partial_charges(self):
+        """Test OpenEyeToolkitWrapper assign_partial_charges()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
         smiles = '[H]C([H])([H])C([H])([H])[H]'
         molecule = toolkit_wrapper.from_smiles(smiles)
         # Ensure that an exception is raised if no conformers are provided
         with pytest.raises(Exception) as excinfo:
-            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper)
+            molecule.assign_partial_charges(toolkit_registry=toolkit_wrapper)
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
         # Ensure that an exception is raised if an invalid charge model is passed in
         with pytest.raises(Exception) as excinfo:
             charge_model = 'notARealChargeModel'
-            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
+            molecule.assign_partial_charges(toolkit_registry=toolkit_wrapper, charge_model=charge_model)
 
         for partial_charge_method in ['am1bcc', 'am1bccnosymspt', 'am1bccelf10']:
-            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper,
+            molecule.assign_partial_charges(toolkit_registry=toolkit_wrapper,
                                              partial_charge_method=partial_charge_method)
             charge_sum = 0 * unit.elementary_charge
             abs_charge_sum = 0 * unit.elementary_charge
@@ -394,8 +413,8 @@ class TestOpenEyeToolkitWrapper:
         assert abs_charge_sum > 0.3 * unit.elementary_charge
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    def test_compute_partial_charges_net_charge(self):
-        """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule with a net +1 charge"""
+    def test_assign_partial_charges_net_charge(self):
+        """Test OpenEyeToolkitWrapper assign_partial_charges() on a molecule with a net +1 charge"""
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
         smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
@@ -405,12 +424,12 @@ class TestOpenEyeToolkitWrapper:
 
         with pytest.raises(ValueError) as excinfo:
             partial_charge_method = 'notARealChargeModel'
-            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper,
+            molecule.assign_partial_charges(toolkit_registry=toolkit_wrapper,
                                              partial_charge_method=partial_charge_method)
 
 
         for partial_charge_method in ['mmff94', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']:
-            molecule.compute_partial_charges(toolkit_registry=toolkit_wrapper,
+            molecule.assign_partial_charges(toolkit_registry=toolkit_wrapper,
                                              partial_charge_method=partial_charge_method)
         charge_sum = 0. * unit.elementary_charge
         abs_charge_sum = 0. * unit.elementary_charge
@@ -578,7 +597,7 @@ class TestOpenEyeToolkitWrapper:
         molecule = tk.from_smiles(smiles)
         query = "[C:1]~[C:2]"
         ret = molecule.chemical_environment_matches(query, toolkit_registry=tk)
-        assert len(ret) == 1198 
+        assert len(ret) == 1198
         assert len(ret[0]) == 2
 
     def test_find_rotatable_bonds(self):
@@ -913,6 +932,26 @@ class TestRDKitToolkitWrapper:
         # TODO: Make this test more robust
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_generate_multiple_conformers(self):
+        """Test RDKitToolkitWrapper generate_conformers() for generating multiple conformers"""
+        toolkit_wrapper = RDKitToolkitWrapper()
+        smiles = 'CCCCCCC'
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        molecule.generate_conformers(rms_cutoff=1 * unit.angstrom, n_conformers=100)
+        assert molecule.n_conformers > 1
+        assert not (molecule.conformers[0] == (0. * unit.angstrom)).all()
+
+        # Ensure rms_cutoff kwarg is working
+        molecule2 = toolkit_wrapper.from_smiles(smiles)
+        molecule2.generate_conformers(rms_cutoff=0.1 * unit.angstrom, n_conformers=100)
+        assert molecule2.n_conformers > molecule.n_conformers
+
+        # Ensure n_conformers kwarg is working
+        molecule2 = toolkit_wrapper.from_smiles(smiles)
+        molecule2.generate_conformers(rms_cutoff=0.1 * unit.angstrom, n_conformers=10)
+        assert molecule2.n_conformers == 10
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_find_rotatable_bonds(self):
         """Test finding rotatable bonds while ignoring some groups"""
 
@@ -994,7 +1033,6 @@ class TestRDKitToolkitWrapper:
             assert offatom.is_aromatic is rdatom.GetIsAromatic()
 
 
-        
         # TODO: Add test for higher bonds orders
         # TODO: Add test for aromaticity
         # TODO: Add test and molecule functionality for isotopes
@@ -1012,8 +1050,8 @@ class TestAmberToolsToolkitWrapper:
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
                     reason='RDKitToolkit and AmberToolsToolkit not available')
-    def test_compute_partial_charges(self):
-        """Test OpenEyeToolkitWrapper compute_partial_charges()"""
+    def test_assign_partial_charges(self):
+        """Test AmberToolsToolkitWrapper assign_partial_charges()"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
 
         smiles = '[H]C([H])([H])C([H])([H])[H]'
@@ -1022,13 +1060,13 @@ class TestAmberToolsToolkitWrapper:
 
         with pytest.raises(ValueError) as excinfo:
             partial_charge_method = 'notARealChargeModel'
-            molecule.compute_partial_charges(toolkit_registry=toolkit_registry,
+            molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
                                              partial_charge_method=partial_charge_method)
 
         # ['cm1', 'cm2']
         for partial_charge_method in ['gasteiger', 'AM1-Mulliken']:
             # with pytest.raises(NotImplementedError) as excinfo:
-            molecule.compute_partial_charges(toolkit_registry=toolkit_registry,
+            molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
                                              partial_charge_method=partial_charge_method)
             charge_sum = 0 * unit.elementary_charge
             abs_charge_sum = 0 * unit.elementary_charge
@@ -1053,7 +1091,7 @@ class TestAmberToolsToolkitWrapper:
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
                         reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_compute_partial_charges_net_charge(self):
-        """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule with a net +1 charge"""
+        """Test AmberToolsToolkitWrapper assign_partial_charges() on a molecule with a net +1 charge"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
         molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_registry)
@@ -1062,11 +1100,11 @@ class TestAmberToolsToolkitWrapper:
 
         with pytest.raises(ValueError) as excinfo:
             partial_charge_method = 'notARealChargeModel'
-            molecule.compute_partial_charges(toolkit_registry=toolkit_registry,
+            molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
                                              partial_charge_method=partial_charge_method)
 
         for partial_charge_method in ['gasteiger', 'AM1-Mulliken']:
-            molecule.compute_partial_charges(toolkit_registry=toolkit_registry,
+            molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
                                              partial_charge_method=partial_charge_method)
             charge_sum = 0 * unit.elementary_charge
             for pc in molecule._partial_charges:
@@ -1210,55 +1248,48 @@ class TestAmberToolsToolkitWrapper:
 
 class TestBuiltInToolkitWrapper:
     """Test the BuiltInToolkitWrapper"""
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(),
-                        reason='RDKitToolkit is not available')
-    def test_compute_partial_charges(self):
-        """Test OpenEyeToolkitWrapper compute_partial_charges()"""
-        toolkit_registry = ToolkitRegistry(toolkit_precedence=[BuiltInToolkitWrapper, RDKitToolkitWrapper])
+    def test_assign_partial_charges(self):
+        """Test BuiltInToolkitWrapper assign_partial_charges()"""
+        from openforcefield.tests.test_forcefield import create_ethanol
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[BuiltInToolkitWrapper]) #, RDKitToolkitWrapper])
 
-        smiles = '[H]C([H])([H])C([H])([H])[H]'
-        molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_registry)
+        molecule = create_ethanol()
 
         # TODO: Implementation of these tests is pending a decision on the API for our charge model
         with pytest.raises(ValueError) as excinfo:
             partial_charge_method = 'notARealChargeModel'
-            molecule.compute_partial_charges(toolkit_registry=toolkit_registry,
+            molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
                                              partial_charge_method=partial_charge_method)
 
         for partial_charge_method in ['zeros', 'formal_charge']:
-                molecule.compute_partial_charges(toolkit_registry=toolkit_registry,
-                                                 partial_charge_method=partial_charge_method)
+            molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
+                                             partial_charge_method=partial_charge_method)
 
-                charge_sum = 0. * unit.elementary_charge
-                for pc in molecule.partial_charges:
-                    charge_sum += pc
-                assert -1.e-6 < charge_sum.value_in_unit(unit.elementary_charge) < 1.e-6
+            charge_sum = 0. * unit.elementary_charge
+            for pc in molecule.partial_charges:
+                charge_sum += pc
+            assert -1.e-6 < charge_sum.value_in_unit(unit.elementary_charge) < 1.e-6
 
-
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() ,
-                        reason='RDKitToolkit is not available')
     def test_compute_partial_charges_net_charge(self):
-        toolkit_registry = ToolkitRegistry(toolkit_precedence=[BuiltInToolkitWrapper, RDKitToolkitWrapper])
-        smiles = '[H]C([H])([H])[N+]([H])([H])[H]'
-        molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_registry)
+        from openforcefield.tests.test_forcefield import create_acetate
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[BuiltInToolkitWrapper])
+
+        molecule = create_acetate()
 
         with pytest.raises(ValueError) as excinfo:
             partial_charge_method = 'notARealChargeModel'
-            molecule.compute_partial_charges(toolkit_registry=toolkit_registry,
+            molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
                                              partial_charge_method=partial_charge_method)
 
         # We don't check "zeros", since it obviously won't add up to +1
-        for partial_charge_method in ['formal_charge']: # 'zeros',
-                molecule.compute_partial_charges(toolkit_registry=toolkit_registry,
+        for partial_charge_method in ['formal_charge']: ,
+            molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
                                                  partial_charge_method=partial_charge_method)
 
-                charge_sum = 0. * unit.elementary_charge
-                for pc in molecule.partial_charges:
-                    charge_sum += pc
-                assert -1.e-6 < charge_sum.value_in_unit(unit.elementary_charge) - 1. < 1.e-6
-
-
-
+            charge_sum = 0. * unit.elementary_charge
+            for pc in molecule.partial_charges:
+                charge_sum += pc
+            assert -1.e-6 < charge_sum.value_in_unit(unit.elementary_charge) + 1. < 1.e-6
 
 class TestToolkitRegistry:
     """Test the ToolkitRegistry"""
@@ -1314,8 +1345,8 @@ class TestToolkitRegistry:
         assert set([ type(c) for c in registry.registered_toolkits]) == set([AmberToolsToolkitWrapper,RDKitToolkitWrapper])
 
         # Test ToolkitRegistry.resolve()
-        registry.resolve('compute_partial_charges')
-        assert registry.resolve('compute_partial_charges') == registry.registered_toolkits[0].compute_partial_charges
+        registry.resolve('assign_partial_charges')
+        assert registry.resolve('assign_partial_charges') == registry.registered_toolkits[0].assign_partial_charges
 
         # Test ToolkitRegistry.call()
         registry.register_toolkit(RDKitToolkitWrapper)
@@ -1332,7 +1363,6 @@ class TestToolkitRegistry:
         molecule = tk.from_smiles(smiles)
         query = "[C:1]~[C:2]"
         ret = molecule.chemical_environment_matches(query, toolkit_registry=tk)
-        assert len(ret) == 5998 
+        assert len(ret) == 5998
         assert len(ret[0]) == 2
 
-        

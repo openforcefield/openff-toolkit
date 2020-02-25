@@ -346,7 +346,6 @@ def create_benzene_no_aromatic():
     benzene.add_bond(5, 11, 1, False)  # C5 - C11
     return benzene
 
-
 def create_acetaldehyde():
     """
     Creates an openforcefield.topology.Molecule representation of acetaldehyde through the API
@@ -369,6 +368,27 @@ def create_acetaldehyde():
     acetaldehyde.partial_charges = charges
     return acetaldehyde
 
+def create_acetate():
+    """
+    Creates an openforcefield.topology.Molecule representation of
+    acetate without the use of a cheminformatics toolkit
+    """
+    # Create an acetate molecule without using a toolkit
+    acetate = Molecule()
+    acetate.add_atom(6, 0, False)  # C0
+    acetate.add_atom(6, 0, False)  # C1
+    acetate.add_atom(8, 0, False)  # O2
+    acetate.add_atom(8, -1, False) # O3
+    acetate.add_atom(1, 0, False)  # H4
+    acetate.add_atom(1, 0, False)  # H5
+    acetate.add_atom(1, 0, False)  # H6
+    acetate.add_bond(0, 1, 1, False)  # C0 - C1
+    acetate.add_bond(1, 2, 2, False)  # C1 = O2
+    acetate.add_bond(1, 3, 1, False)  # C1 - O3[-1]
+    acetate.add_bond(0, 4, 1, False)  # C0 - H4
+    acetate.add_bond(0, 5, 1, False)  # C0 - H5
+    acetate.add_bond(0, 6, 1, False)  # C0 - H6
+    return acetate
 
 def create_cyclohexane():
     """
