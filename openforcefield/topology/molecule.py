@@ -3338,7 +3338,7 @@ class FrozenMolecule(Serializable):
 
         # If we do not have a conformer make one with all zeros
         if self.n_conformers == 0:
-            conformers = [unit.Quantity(np.zeros((self.n_atoms, self.n_atoms), np.float), unit.angstrom)]
+            conformers = [unit.Quantity(np.zeros((self.n_atoms, 3), np.float), unit.angstrom)]
 
         else:
             conformers = self._conformers
