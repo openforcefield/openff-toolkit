@@ -793,7 +793,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             map_atoms[
                 oe_idx] = atom_index  # store for mapping oeatom to molecule atom indices below
             atom_mapping[atom_index] = map_id
-        molecule._properties['atom_map'] = atom_mapping
+
+        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
+        if 0 not in atom_mapping.values():
+            molecule._properties['atom_map'] = atom_mapping
 
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
@@ -1524,14 +1527,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     .. warning :: This API is experimental and subject to change.
     """
 
-    from rdkit import Chem
-
     _toolkit_name = 'The RDKit'
     _toolkit_installation_instructions = 'A conda-installable version of the free and open source RDKit cheminformatics ' \
                                          'toolkit can be found at: https://anaconda.org/rdkit/rdkit'
     _toolkit_file_read_formats = ['SDF', 'MOL', 'SMI']  #TODO: Add TDT support
-    _toolkit_file_write_formats = {'SDF': Chem.SDWriter, 'MOL': Chem.SDWriter,
-                                   'SMI': Chem.SmilesWriter, 'PDB': Chem.PDBWriter, 'TDT': Chem.TDTWriter}
+
+    # Note any new file write formats should be added here with a string of class/method used
+    _toolkit_file_write_formats = {'SDF': 'Chem.SDWriter', 'MOL': 'Chem.SDWriter', 'SMI': 'Chem.SmilesWriter',
+                                   'PDB': 'Chem.PDBWriter', 'TDT': 'Chem.TDTWriter'}
+
+
 
     @property
     def toolkit_file_write_formats(self):
@@ -1793,12 +1798,15 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         -------
 
         """
+        from rdkit import Chem
+
         file_format = file_format.upper()
         rdmol = self.to_rdkit(molecule)
         try:
-            writer = self._toolkit_file_write_formats[file_format](file_obj)
+            writer = eval(self._toolkit_file_write_formats[file_format])(file_obj)
             writer.write(rdmol)
             writer.close()
+        # if we can not write to that file type catch the error here
         except KeyError:
             raise ValueError(f'The requested file type ({file_format}) is not supported to be wrote to using RDKit.')
 
@@ -1819,16 +1827,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         ------
 
         """
-        file_format = file_format.upper()
+
+        # open a file object and pass to the object writer
         with open(file_path, 'w') as file_obj:
-            rdmol = self.to_rdkit(molecule)
-            try:
-                writer = self._toolkit_file_write_formats[file_format](file_obj)
-                writer.write(rdmol)
-                writer.close()
-            except KeyError:
-                raise ValueError(
-                    f'The requested file type ({file_format}) is not supported to be wrote to using RDKit.')
+            self.to_file_obj(molecule=molecule, file_obj=file_obj, file_format=file_format)
 
     def canonical_order_atoms(self, molecule):
         """
