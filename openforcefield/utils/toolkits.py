@@ -139,10 +139,12 @@ class ToolkitWrapper:
     .. warning :: This API is experimental and subject to change.
     """
     _is_available = None  # True if toolkit is available
-    _toolkit_name = None  # Name of the toolkit
-    _toolkit_installation_instructions = None  # Installation instructions for the toolkit
-    _toolkit_file_read_formats = None  # The file types that this toolkit can read
-    _toolkit_file_write_formats = None  # The file types that this toolkit can write
+
+    def __init__(self):
+        self._toolkit_name = None  # Name of the toolkit
+        self._toolkit_installation_instructions = None  # Installation instructions for the toolkit
+        self._toolkit_file_read_formats = None  # The file types that this toolkit can read
+        self._toolkit_file_write_formats = None  # The file types that this toolkit can write
 
     #@staticmethod
     # TODO: Right now, to access the class definition, I have to make this a classmethod
@@ -267,20 +269,23 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     .. warning :: This API is experimental and subject to change.
     """
-    _toolkit_name = 'OpenEye Toolkit'
-    _toolkit_installation_instructions = 'The OpenEye toolkit requires a (free for academics) license, and can be ' \
-                                         'found at: ' \
-                                         'https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html'
-    _toolkit_file_read_formats = [
-        'CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF',
-        'MMOD', 'MOL2', 'MOL2H', 'MOPAC', 'OEB', 'PDB', 'RDF', 'SDF', 'SKC',
-        'SLN', 'SMI', 'USM', 'XYC'
-    ]
-    _toolkit_file_write_formats = [
-        'CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF',
-        'MMOD', 'MOL2', 'MOL2H', 'MOPAC', 'OEB', 'PDB', 'RDF', 'SDF', 'SKC',
-        'SLN', 'SMI', 'USM', 'XYC'
-    ]
+
+    def __init__(self):
+        super().__init__()
+        self._toolkit_name = 'OpenEye Toolkit'
+        self._toolkit_installation_instructions = 'The OpenEye toolkit requires a (free for academics) license, and can be ' \
+                                             'found at: ' \
+                                             'https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html'
+        self._toolkit_file_read_formats = [
+            'CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF',
+            'MMOD', 'MOL2', 'MOL2H', 'MOPAC', 'OEB', 'PDB', 'RDF', 'SDF', 'SKC',
+            'SLN', 'SMI', 'USM', 'XYC'
+        ]
+        self._toolkit_file_write_formats = [
+            'CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF',
+            'MMOD', 'MOL2', 'MOL2H', 'MOPAC', 'OEB', 'PDB', 'RDF', 'SDF', 'SKC',
+            'SLN', 'SMI', 'USM', 'XYC'
+        ]
 
     @staticmethod
     def is_available(
@@ -1527,16 +1532,19 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     .. warning :: This API is experimental and subject to change.
     """
 
-    _toolkit_name = 'The RDKit'
-    _toolkit_installation_instructions = 'A conda-installable version of the free and open source RDKit cheminformatics ' \
-                                         'toolkit can be found at: https://anaconda.org/rdkit/rdkit'
-    _toolkit_file_read_formats = ['SDF', 'MOL', 'SMI']  #TODO: Add TDT support
+    def __init__(self):
+        super().__init__()
 
-    # Note any new file write formats should be added here with a string of class/method used
-    _toolkit_file_write_formats = {'SDF': 'Chem.SDWriter', 'MOL': 'Chem.SDWriter', 'SMI': 'Chem.SmilesWriter',
-                                   'PDB': 'Chem.PDBWriter', 'TDT': 'Chem.TDTWriter'}
+        from rdkit import Chem
+        self._toolkit_name = 'The RDKit'
+        self._toolkit_installation_instructions = 'A conda-installable version of the free and open source RDKit cheminformatics ' \
+                                             'toolkit can be found at: https://anaconda.org/rdkit/rdkit'
 
+        self._toolkit_file_read_formats = ['SDF', 'MOL', 'SMI']  # TODO: Add TDT support
 
+        # Note any new file write formats should be added here with a string of class/method used
+        self._toolkit_file_write_formats = {'SDF': Chem.SDWriter, 'MOL': Chem.SDWriter, 'SMI': Chem.SmilesWriter,
+                                            'PDB': Chem.PDBWriter, 'TDT': Chem.TDTWriter}
 
     @property
     def toolkit_file_write_formats(self):
@@ -1798,12 +1806,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         -------
 
         """
-        from rdkit import Chem
 
         file_format = file_format.upper()
         rdmol = self.to_rdkit(molecule)
         try:
-            writer = eval(self._toolkit_file_write_formats[file_format])(file_obj)
+            writer = self._toolkit_file_write_formats[file_format](file_obj)
             writer.write(rdmol)
             writer.close()
         # if we can not write to that file type catch the error here
