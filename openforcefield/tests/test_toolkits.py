@@ -37,10 +37,10 @@ def get_mini_drug_bank(toolkit):
 
     # This is a work around a weird error where even though the test is skipted due to a missing toolkit
     #  we still try and read the file with the toolkit
-    try:
+    if toolkit.is_available():
         molecules = Molecule.from_file(get_data_file_path('molecules/MiniDrugBank.sdf'), 'sdf', toolkit_registry=toolkit,
                                        allow_undefined_stereo=True)
-    except ModuleNotFoundError:
+    else:
         molecules = []
 
     return molecules
@@ -347,42 +347,6 @@ class TestOpenEyeToolkitWrapper:
         inchi = 'InChI=1S/ksbfksfksfksbfks'
         with pytest.raises(RuntimeError):
             mol = Molecule.from_inchi(inchi, toolkit_registry=toolkit)
-
-    inchi_data = [{'molecule': create_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
-                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
-                  {'molecule': create_reversed_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
-                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
-                  {'molecule': create_acetaldehyde(), 'standard_inchi': 'InChI=1S/C2H4O/c1-2-3/h2H,1H3',
-                   'fixed_hydrogen_inchi': 'InChI=1/C2H4O/c1-2-3/h2H,1H3'},
-                  {'molecule': create_cyclohexane(), 'standard_inchi': 'InChI=1S/C6H12/c1-2-4-6-5-3-1/h1-6H2',
-                   'fixed_hydrogen_inchi': 'InChI=1/C6H12/c1-2-4-6-5-3-1/h1-6H2'}
-                  ]
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    @pytest.mark.parametrize('data', inchi_data)
-    def test_from_inchi(self, data):
-        """Test building a molecule from standard and non-standard InChI strings."""
-
-        toolkit = OpenEyeToolkitWrapper()
-        ref_mol = data['molecule']
-        # make a molecule from inchi
-        inchi_mol = Molecule.from_inchi(data['standard_inchi'], toolkit_registry=toolkit)
-        assert inchi_mol.to_inchi(toolkit_registry=toolkit) == data['standard_inchi']
-
-        def compare_mols(ref_mol, inchi_mol):
-            assert ref_mol.n_atoms == inchi_mol.n_atoms
-            assert ref_mol.n_bonds == inchi_mol.n_bonds
-            assert ref_mol.n_angles == inchi_mol.n_angles
-            assert ref_mol.n_propers == inchi_mol.n_propers
-            assert ref_mol.is_isomorphic_with(inchi_mol) is True
-
-        compare_mols(ref_mol, inchi_mol)
-
-        # now make the molecule from the non-standard inchi and compare
-        nonstandard_inchi_mol = Molecule.from_inchi(data['fixed_hydrogen_inchi'], toolkit_registry=toolkit)
-        assert nonstandard_inchi_mol.to_inchi(fixed_hydrogens=True, toolkit_registry=toolkit) == data['fixed_hydrogen_inchi']
-
-        compare_mols(ref_mol, nonstandard_inchi_mol)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     @pytest.mark.parametrize('molecule', get_mini_drug_bank(OpenEyeToolkitWrapper()))
