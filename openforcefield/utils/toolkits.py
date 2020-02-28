@@ -267,12 +267,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     .. warning :: This API is experimental and subject to change.
     """
+
+    _toolkit_name = 'OpenEye Toolkit'
+    _toolkit_installation_instructions = 'The OpenEye toolkit requires a (free for academics) license, and can be ' \
+                                         'found at: ' \
+                                         'https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html'
+
     def __init__(self):
 
-        self._toolkit_name = 'OpenEye Toolkit'
-        self._toolkit_installation_instructions = 'The OpenEye toolkit requires a (free for academics) license, and can be ' \
-                                                  'found at: ' \
-                                                  'https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html'
         self._toolkit_file_read_formats = [
             'CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF',
             'MMOD', 'MOL2', 'MOL2H', 'MOPAC', 'OEB', 'PDB', 'RDF', 'SDF', 'SKC',
@@ -286,8 +288,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # check if the toolkit can be loaded
         if not self.is_available():
-            raise ToolkitUnavailableException(f'The required toolkit {self.toolkit_name} is not '
-                                              f'available. {self.toolkit_installation_instructions}')
+            raise ToolkitUnavailableException(f'The required toolkit {self._toolkit_name} is not '
+                                              f'available. {self._toolkit_installation_instructions}')
 
     @staticmethod
     def is_available(
@@ -1639,17 +1641,19 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
     .. warning :: This API is experimental and subject to change.
     """
+
+    _toolkit_name = 'The RDKit'
+    _toolkit_installation_instructions = 'A conda-installable version of the free and open source RDKit cheminformatics ' \
+                                         'toolkit can be found at: https://anaconda.org/rdkit/rdkit'
+
     def __init__(self):
         super().__init__()
 
-        self._toolkit_name = 'The RDKit'
-        self._toolkit_installation_instructions = 'A conda-installable version of the free and open source RDKit cheminformatics ' \
-                                             'toolkit can be found at: https://anaconda.org/rdkit/rdkit'
         self._toolkit_file_read_formats = ['SDF', 'MOL', 'SMI']  # TODO: Add TDT support
 
         if not self.is_available():
-            raise ToolkitUnavailableException(f'The required toolkit {self.toolkit_name} is not '
-                                              f'available. {self.toolkit_installation_instructions}')
+            raise ToolkitUnavailableException(f'The required toolkit {self._toolkit_name} is not '
+                                              f'available. {self._toolkit_installation_instructions}')
         else:
             from rdkit import Chem
             # we have to make sure the toolkit can be loaded before formatting this dict
@@ -2979,18 +2983,20 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
     .. warning :: This API is experimental and subject to change.
     """
+
+    _toolkit_name = 'AmberTools'
+    _toolkit_installation_instructions = 'The AmberTools toolkit (free and open source) can be found at ' \
+                                         'https://anaconda.org/omnia/ambertools'
+
     def __init__(self):
         super().__init__()
 
-        self._toolkit_name = 'AmberTools'
-        self._toolkit_installation_instructions = 'The AmberTools toolkit (free and open source) can be found at ' \
-                                             'https://anaconda.org/omnia/ambertools'
         self._toolkit_file_read_formats = []
         self._toolkit_file_write_formats = []
 
         if not self.is_available():
-            raise ToolkitUnavailableException(f'The required toolkit {self.toolkit_name} is not '
-                                              f'available. {self.toolkit_installation_instructions}')
+            raise ToolkitUnavailableException(f'The required toolkit {self._toolkit_name} is not '
+                                              f'available. {self._toolkit_installation_instructions}')
 
         # TODO: Find AMBERHOME or executable home, checking miniconda if needed
         # Store an instance of an RDKitToolkitWrapper for file I/O
@@ -3534,7 +3540,7 @@ class ToolkitRegistry:
             try:
                 toolkit_wrapper = toolkit_wrapper()
             except ToolkitUnavailableException:
-                msg = f"Unable to create toolkit wrapper'{toolkit_wrapper.__name__}. "
+                msg = f"Unable to load toolkit wrapper'{toolkit_wrapper._toolkit_name}. "
                 if exception_if_unavailable:
                     raise ToolkitUnavailableException(msg)
                 else:
