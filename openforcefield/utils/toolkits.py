@@ -843,7 +843,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         partial_charges = unit.Quantity(
             np.zeros(molecule.n_atoms, dtype=np.float),
             unit=unit.elementary_charge)
-        for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
+        for oe_atom in oemol.GetAtoms():
+            oe_idx = oe_atom.GetIdx()
             off_idx = map_atoms[oe_idx]
             charge = oe_atom.GetPartialCharge() * unit.elementary_charge
             partial_charges[off_idx] = charge
@@ -1045,6 +1046,78 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             | oechem.OESMILESFlag_AtomStereo)
         return smiles
 
+    def to_inchi(self, molecule, fixed_hydrogens=False):
+        """
+        Create an InChI string for the molecule using the RDKit Toolkit.
+        InChI is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
+        layer.
+
+        For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
+
+        Parameters
+        ----------
+        molecule : An openforcefield.topology.Molecule
+            The molecule to convert into a SMILES.
+
+        fixed_hydrogens: bool, default=False
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
+            InChI string of the molecule.
+
+        Returns
+        --------
+        inchi: str
+            The InChI string of the molecule.
+        """
+
+        from openeye import oechem
+        oemol = self.to_openeye(molecule)
+
+        if fixed_hydrogens:
+            opts = oechem.OEInChIOptions()
+            opts.SetFixedHLayer(True)
+            inchi = oechem.OEMolToInChI(oemol)
+
+        else:
+            inchi = oechem.OEMolToSTDInChI(oemol)
+
+        return inchi
+
+    def to_inchikey(self, molecule, fixed_hydrogens=False):
+        """
+        Create an InChIKey for the molecule using the RDKit Toolkit.
+        InChIKey is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
+        layer.
+
+        For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
+
+        Parameters
+        ----------
+        molecule : An openforcefield.topology.Molecule
+            The molecule to convert into a SMILES.
+
+        fixed_hydrogens: bool, default=False
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
+            InChI string of the molecule.
+
+        Returns
+        --------
+        inchi_key: str
+            The InChIKey representation of the molecule.
+        """
+
+        from openeye import oechem
+        oemol = self.to_openeye(molecule)
+
+        if fixed_hydrogens:
+            opts = oechem.OEInChIOptions()
+            opts.SetFixedHLayer(True)
+            inchi_key = oechem.OEMolToInChIKey(oemol)
+
+        else:
+            inchi_key = oechem.OEMolToSTDInChIKey(oemol)
+
+        return inchi_key
+
     def canonical_order_atoms(self, molecule):
         """
         Canonical order the atoms in the molecule using the OpenEye toolkit.
@@ -1127,6 +1200,39 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 f"False), and then use Molecule.from_openeye() to create the desired OFFMol.")
         molecule = self.from_openeye(oemol,
                                      allow_undefined_stereo=allow_undefined_stereo)
+        return molecule
+
+    def from_inchi(self, inchi, allow_undefined_stereo=False):
+        """
+        Construct a Molecule from a InChI representation
+
+        Parameters
+        ----------
+        inchi : str
+            The InChI representation of the molecule.
+
+        allow_undefined_stereo : bool, default=False
+            Whether to accept InChI with undefined stereochemistry. If False,
+            an exception will be raised if a InChI with undefined stereochemistry
+            is passed into this function.
+
+        Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+        """
+
+        from openeye import oechem
+        # This calls the same functions as OESmilesToMol
+        oemol = oechem.OEGraphMol()
+        oechem.OEInChIToMol(oemol, inchi)
+
+        # try and catch InChI parsing fails
+        # if there are no atoms don't build the molecule
+        if oemol.NumAtoms() == 0:
+            raise RuntimeError('There was an issue parsing the InChI string, please check and try again.')
+
+        molecule = self.from_openeye(oemol, allow_undefined_stereo=allow_undefined_stereo)
+
         return molecule
 
     def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):
@@ -1959,6 +2065,46 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         return molecule
 
+    def from_inchi(self, inchi, allow_undefined_stereo=False):
+        """
+        Construct a Molecule from a InChI representation
+
+        Parameters
+        ----------
+        inchi : str
+            The InChI representation of the molecule.
+
+        allow_undefined_stereo : bool, default=False
+            Whether to accept InChI with undefined stereochemistry. If False,
+            an exception will be raised if a InChI with undefined stereochemistry
+            is passed into this function.
+
+        Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+        """
+
+        from rdkit import Chem
+        # this seems to always remove the hydrogens
+        rdmol = Chem.MolFromInchi(inchi, sanitize=False, removeHs=False)
+
+        # try and catch an InChI parsing error
+        if rdmol is None:
+            raise RuntimeError('There was an issue parsing the InChI string, please check and try again.')
+
+        # process the molecule
+        # TODO do we need this with inchi?
+        rdmol.UpdatePropertyCache(strict=False)
+        Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
+        Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+
+        # add hydrogens back here
+        rdmol = Chem.AddHs(rdmol)
+
+        molecule = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
+
+        return molecule
+
     def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):
         """
         Generate molecule conformers using RDKit.
@@ -2389,6 +2535,68 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Return non-editable version
         return Chem.Mol(rdmol)
+
+    def to_inchi(self, molecule, fixed_hydrogens=False):
+        """
+        Create an InChI string for the molecule using the RDKit Toolkit.
+        InChI is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
+        layer.
+
+        For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
+
+        Parameters
+        ----------
+        molecule : An openforcefield.topology.Molecule
+            The molecule to convert into a SMILES.
+
+        fixed_hydrogens: bool, default=False
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
+            InChI string of the molecule.
+
+        Returns
+        --------
+        inchi: str
+            The InChI string of the molecule.
+        """
+
+        from rdkit import Chem
+        rdmol = self.to_rdkit(molecule)
+        if fixed_hydrogens:
+            inchi = Chem.MolToInchi(rdmol, options='-FixedH')
+        else:
+            inchi = Chem.MolToInchi(rdmol)
+        return inchi
+
+    def to_inchikey(self, molecule, fixed_hydrogens=False):
+        """
+        Create an InChIKey for the molecule using the RDKit Toolkit.
+        InChIKey is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
+        layer.
+
+        For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
+
+        Parameters
+        ----------
+        molecule : An openforcefield.topology.Molecule
+            The molecule to convert into a SMILES.
+
+        fixed_hydrogens: bool, default=False
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
+            InChI string of the molecule.
+
+        Returns
+        --------
+        inchi_key: str
+            The InChIKey representation of the molecule.
+        """
+
+        from rdkit import Chem
+        rdmol = self.to_rdkit(molecule)
+        if fixed_hydrogens:
+            inchi_key = Chem.MolToInchiKey(rdmol, options='-FixedH')
+        else:
+            inchi_key = Chem.MolToInchiKey(rdmol)
+        return inchi_key
 
     @staticmethod
     def _find_smarts_matches(rdmol, smirks,
