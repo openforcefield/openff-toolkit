@@ -2043,21 +2043,15 @@ class FrozenMolecule(Serializable):
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
-        isomorphic = nx.is_isomorphic(mol1_netx,
-                                      mol2_netx,
-                                      node_match=node_match_func,
-                                      edge_match=edge_match_func)
+        GM = GraphMatcher(
+            mol1_netx,
+            mol2_netx,
+            node_match=node_match_func,
+            edge_match=edge_match_func)
+        isomorphic = GM.is_isomorphic()
 
         if isomorphic and return_atom_map:
-            # now generate the sorted mapping between the molecules
-            GM = GraphMatcher(
-                mol1_netx,
-                mol2_netx,
-                node_match=node_match_func,
-                edge_match=edge_match_func)
-            for mapping in GM.isomorphisms_iter():
-                topology_atom_map = mapping
-                break
+            topology_atom_map = GM.mapping
 
             # reorder the mapping by keys
             sorted_mapping = {}
