@@ -10,15 +10,6 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.6.1 - Bugfixes
 ----------------
 
-Behavior changed
-""""""""""""""""
-- `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
-  In order to provide the same results for the same chemical species, regardless of input
-  conformation, fractional bond order calculation methods now default to ignore input conformers
-  and generate a new conformer of the molecule before running semiempirical calculations.
-  Users can override this behavior by specifying the keyword argument
-  ``use_conformers=molecule.conformers``
-
 API-breaking changes
 """"""""""""""""""""
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
@@ -54,6 +45,15 @@ New features
 - `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_:
    The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
   :py:meth:`Molecule.find_rotatable_bonds <openforcefield.topology.Molecule.find_rotatable_bonds>`
+- `PR #521 <https://github.com/openforcefield/openforcefield/pull/521>`_:
+  Adds :py:meth:`Molecule.to_inchi <openforcefield.topology.Molecule.to_inchi>`
+  and :py:meth:`Molecule.to_inchikey <openforcefield.topology.Molecule.to_inchikey>`
+  and :py:meth:`Molecule.from_inchi <openforcefield.topology.Molecule.from_inchi>`
+      .. warning::
+         InChI was not designed as an molecule interchange format and using it as one is not recommended. Many round trip
+         tests will fail when using this format due to a loss of information. We have also added support for fixed
+         hydrogen layer nonstandard InChI which can help in the case of tautomers, but overall creating molecules from InChI should be
+         avoided.
 
 Behavior changed
 """"""""""""""""
@@ -71,6 +71,12 @@ Behavior changed
   :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` now use the
   :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to match
   molecules.
+- `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
+  In order to provide the same results for the same chemical species, regardless of input
+  conformation, fractional bond order calculation methods now default to ignore input conformers
+  and generate a new conformer of the molecule before running semiempirical calculations.
+  Users can override this behavior by specifying the keyword argument
+  ``use_conformers=molecule.conformers``
 
 Tests added
 """""""""""
@@ -112,6 +118,11 @@ Tests added
    identified in issue #513 as loosing aromaticity when converted to rdkit.
 - `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_: Added a verity of toolkit dependent tests
    for identifying rotatable bonds while ignoring the user requested types.
+- `PR #521 <https://github.com/openforcefield/openforcefield/pull/521>`_: Added toolkit independent round-trip InChI
+  tests which add coverage for :py:meth:`Molecule.to_inchi <openforcefield.topology.Molecule.to_inchi>` and
+  :py:meth:`Molecule.from_inchi <openforcefield.topology.Molecule.from_inchi>`. Also added coverage for bad inputs and
+  :py:meth:`Molecule.to_inchikey <openforcefield.topology.Molecule.to_inchikey>`.
+
 
 Bugfixes
 """"""""
@@ -141,7 +152,8 @@ Bugfixes
    :py:meth:`Molecule.find_rotatable_bonds <openforcefield.topology.Molecule.find_rotatable_bonds>` has been added
    which returns a list of rotatable :py:class:`Bond <openforcefield.topology.Bond>` instances for the molecule.
 - `Issue #491 <https://github.com/openforcefield/openforcefield/issues/491>`_: We can now parse large molecules without hitting a match limit cap.
-
+- `Issue #474 <https://github.com/openforcefield/openforcefield/issues/474>`_: We can now  convert molecules to InChI and
+   InChIKey and from InChI.
 
 Example added
 """""""""""""
