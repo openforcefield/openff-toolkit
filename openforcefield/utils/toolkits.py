@@ -267,7 +267,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     .. warning :: This API is experimental and subject to change.
     """
-
     _toolkit_name = 'OpenEye Toolkit'
     _toolkit_installation_instructions = 'The OpenEye toolkit requires a (free for academics) license, and can be ' \
                                          'found at: ' \
@@ -2983,7 +2982,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
     .. warning :: This API is experimental and subject to change.
     """
-
     _toolkit_name = 'AmberTools'
     _toolkit_installation_instructions = 'The AmberTools toolkit (free and open source) can be found at ' \
                                          'https://anaconda.org/omnia/ambertools'
@@ -3540,7 +3538,7 @@ class ToolkitRegistry:
             try:
                 toolkit_wrapper = toolkit_wrapper()
             except ToolkitUnavailableException:
-                msg = f"Unable to load toolkit wrapper'{toolkit_wrapper._toolkit_name}. "
+                msg = "Unable to load toolkit '{}'. ".format(toolkit_wrapper._toolkit_name)
                 if exception_if_unavailable:
                     raise ToolkitUnavailableException(msg)
                 else:
