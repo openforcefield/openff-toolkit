@@ -2198,12 +2198,22 @@ class FrozenMolecule(Serializable):
                 'Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
-    def compute_partial_charges_am1bcc(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def compute_partial_charges_am1bcc(self,
+                                       use_conformers=None,
+                                       strict_n_conformers=False,
+                                       toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Calculate partial atomic charges for this molecule using AM1-BCC run by an underlying toolkit
+        and assign them to this molecule's partial_charges attribute.
 
         Parameters
         ----------
+        strict_n_conformers : bool, default=False
+            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            If this is False and an invalid number of conformers is found, a warning will be raised.
+        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
+            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
+
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation
 
@@ -2221,24 +2231,29 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            charges = toolkit_registry.call(
-                      'compute_partial_charges_am1bcc',
-                      self
+            toolkit_registry.call(
+                'compute_partial_charges_am1bcc',
+                self,
+                use_conformers=use_conformers,
+                strict_n_conformers=strict_n_conformers
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            charges = toolkit.compute_partial_charges_am1bcc(self)
+            toolkit.compute_partial_charges_am1bcc(self,
+                                                   use_conformers=use_conformers,
+                                                   strict_n_conformers=strict_n_conformers
+                                                   )
         else:
             raise InvalidToolkitError(
                 f'Invalid toolkit_registry passed to compute_partial_charges_am1bcc.'
                 f'Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}')
-        self.partial_charges = charges
 
 
     def assign_partial_charges(self,
-                                partial_charge_method=None,
-                                strict_n_conformers=False,
-                                toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+                               partial_charge_method=None,
+                               strict_n_conformers=False,
+                               use_conformers=None,
+                               toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Calculate partial atomic charges for this molecule using an underlying toolkit, and assign
         the new values to the partial_charges attribute.
@@ -2247,6 +2262,11 @@ class FrozenMolecule(Serializable):
         ----------
         partial_charge_method : string, default='AM1-Mulliken'
             The partial charge calculation method to use for partial charge calculation.
+        strict_n_conformers : bool, default=False
+            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            If this is False and an invalid number of conformers is found, a warning will be raised.
+        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
+            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
@@ -2254,7 +2274,7 @@ class FrozenMolecule(Serializable):
         --------
 
         >>> molecule = Molecule.from_smiles('CCCCCC')
-        >>> molecule.generate_conformers()
+        >>> molecule.assign_partial_charges()
 
         Raises
         ------
@@ -2263,24 +2283,24 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            charges = toolkit_registry.call(
-                      'assign_partial_charges',
-                      self,
-                      partial_charge_method=partial_charge_method
-            )
+            charges = toolkit_registry.call('assign_partial_charges',
+                                            self,
+                                            partial_charge_method=partial_charge_method,
+                                            use_conformers=use_conformers,
+                                            strict_n_conformers=strict_n_conformers
+                                            )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            charges = toolkit.assign_partial_charges(
-                self,
-                partial_charge_method=partial_charge_method,
-                strict_n_conformers=strict_n_conformers
-            )
+            charges = toolkit.assign_partial_charges(self,
+                                                     partial_charge_method=partial_charge_method,
+                                                     use_conformers=use_conformers,
+                                                     strict_n_conformers=strict_n_conformers
+                                                     )
         else:
             raise InvalidToolkitError(
                 f'Invalid toolkit_registry passed to assign_partial_charges.'
                 f'Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}')
 
-        self.partial_charges = charges
 
     def assign_fractional_bond_orders(self,
                                       bond_order_model=None,

@@ -18,6 +18,8 @@ Behavior changed
   and generate a new conformer of the molecule before running semiempirical calculations.
   Users can override this behavior by specifying the keyword argument
   ``use_conformers=molecule.conformers``
+compute_partial_charges_am1bcc no longer returns charges -- They're just attached to molecule
+More confs now used in compute_partial_charges_am1bcc -- True AM1BCC
 
 API-breaking changes
 """"""""""""""""""""
