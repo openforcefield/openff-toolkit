@@ -4,7 +4,7 @@ The following examples are available in [the openforcefield toolkit repository](
 
 ### Index of provided examples
 
-* [compute_small_molecule_energies](https://github.com/openforcefield/openforcefield/tree/master/examples/compute_small_molecule_energies) - compute small molecule single-conformation energies using a SMIRNOFF force field
+* [conformer_energies](https://github.com/openforcefield/openforcefield/tree/master/examples/conformer_energies) - compute conformer energies of one or more small molecules using a SMIRNOFF force field
 * [SMIRNOFF_simulation](https://github.com/openforcefield/openforcefield/tree/master/examples/SMIRNOFF_simulation) - simulation of a molecule in the gas phase with the SMIRNOFF force field format
 * [forcefield_modification](https://github.com/openforcefield/openforcefield/tree/master/examples/forcefield_modification) - modify forcefield parameters and evaluate how system energy changes
 * [using_smirnoff_in_amber_or_gromacs](https://github.com/openforcefield/openforcefield/tree/master/examples/using_smirnoff_in_amber_or_gromacs) - convert a System generated with the Open Force Field Toolkit, which can be simulated natively with OpenMM, into AMBER prmtop/inpcrd and GROMACS top/gro input files through the ParmEd library.

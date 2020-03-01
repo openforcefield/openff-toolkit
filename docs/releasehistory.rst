@@ -161,6 +161,7 @@ Example added
   `QCarchive_interface.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/QCArchive_interface/QCarchive_interface.ipynb>`
   which shows users how to instance the :py:class:`Molecule <openforcefield.topology.Molecule>` from
   a QCArchive entry level record and calculate the energy using RDKit through QCEngine.
+- `PR #533 <`https://github.com/openforcefield/openforcefield/pull/533>`_: Adds an example notebook which `conformer_energies.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/conformer_energies/conformer_energies.ipynb>`
 
 0.6.0 - Library Charges
 -----------------------
