@@ -1819,7 +1819,7 @@ class FrozenMolecule(Serializable):
         """
         return self.is_isomorphic(other)
 
-    def to_smiles(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def to_smiles(self, isomeric=True, explicit_hydrogens=True, mapped=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Return a canonical isomeric SMILES representation of the current molecule
 
@@ -1827,6 +1827,12 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
+        isomeric: bool optional, default= True
+            return an isometric smiles, requires all stereochemistry to be defined
+        explicit_hydrogens: bool optional, default=True
+            return a smiles string containing all hydrogens explicitly
+        mapped: bool optional, default=False
+            return a explicit hydrogen mapped smiles
         toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES conversion
 
@@ -1861,14 +1867,14 @@ class FrozenMolecule(Serializable):
         # Get a string representation of the function containing the toolkit name so we can check
         # if a SMILES was already cached for this molecule. This will return, for example
         # "RDKitToolkitWrapper.to_smiles"
-        func_qualname = to_smiles_method.__qualname__
+        smiles_hash = to_smiles_method.__qualname__ + isomeric + explicit_hydrogens + mapped
 
         # Check to see if a SMILES for this molecule was already cached using this method
-        if func_qualname in self._cached_smiles:
-            return self._cached_smiles[func_qualname]
+        if smiles_hash in self._cached_smiles:
+            return self._cached_smiles[smiles_hash]
         else:
-            smiles = to_smiles_method(self)
-            self._cached_smiles[func_qualname] = smiles
+            smiles = to_smiles_method(self, isomeric, explicit_hydrogens, mapped)
+            self._cached_smiles[smiles_hash] = smiles
             return smiles
 
 

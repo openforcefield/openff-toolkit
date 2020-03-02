@@ -1702,8 +1702,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             writer.write(rdmol)
             writer.close()
 
-    @classmethod
-    def to_smiles(cls, molecule):
+    def to_smiles(self, molecule, isomeric=True, explicit_hydrogens=True, mapped=False):
         """
         Uses the RDKit toolkit to convert a Molecule into a SMILES string.
 
@@ -1711,6 +1710,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         ----------
         molecule : An openforcefield.topology.Molecule
             The molecule to convert into a SMILES.
+        isomeric: bool optional, default= True
+            return an isometric smiles, requires all stereochemistry to be defined
+        explicit_hydrogens: bool optional, default=True
+            return a smiles string containing all hydrogens explicitly
+        mapped: bool optional, default=False
+            return a explicit hydrogen mapped smiles
 
         Returns
         -------
@@ -1718,7 +1723,21 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             The SMILES of the input molecule.
         """
         from rdkit import Chem
-        rdmol = cls.to_rdkit(molecule)
+        rdmol = self.to_rdkit(molecule)
+
+        # check if we want an isometric smiles
+        if isomeric:
+            # stereochemistry must be defined
+            self._detect_undefined_stereo(rdmol, err_msg_prefix="To produce a valid isomeric smiles all "
+                                                                "stereochemistry must be defined ")
+        if mapped:
+            assert isomeric is True and explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
+                                                                    "stereochemsitry to be defined in order to " \
+                                                                    "retain order"
+            # now we need to add the indexing to the rdmol to get it in the smiles
+            for atom in rdmol.GetAtoms():
+                atom.Set
+
         return Chem.MolToSmiles(rdmol, isomericSmiles=True, allHsExplicit=True)
 
     def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
