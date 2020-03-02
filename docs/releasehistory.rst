@@ -159,7 +159,7 @@ Bugfixes
    InChIKey and from InChI.
 - `Issue #523 <https://github.com/openforcefield/openforcefield/issues/523>`_: The
    :py:meth: `Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
-   line with the support file type list. 
+   line with the support file type list.
 
 Example added
 """""""""""""
