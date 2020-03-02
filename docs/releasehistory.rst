@@ -54,6 +54,9 @@ New features
          tests will fail when using this format due to a loss of information. We have also added support for fixed
          hydrogen layer nonstandard InChI which can help in the case of tautomers, but overall creating molecules from InChI should be
          avoided.
+- `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Adds the ability to write out to XYZ files via
+  :py:meth: `Molecule.to_file <openforcefield.topology.Molecule.to_file>` both single frame and multiframe files are supported.
+  Note reading from such files will not be included due to a loss of chemical information.
 
 Behavior changed
 """"""""""""""""
@@ -122,7 +125,7 @@ Tests added
   tests which add coverage for :py:meth:`Molecule.to_inchi <openforcefield.topology.Molecule.to_inchi>` and
   :py:meth:`Molecule.from_inchi <openforcefield.topology.Molecule.from_inchi>`. Also added coverage for bad inputs and
   :py:meth:`Molecule.to_inchikey <openforcefield.topology.Molecule.to_inchikey>`.
-
+- `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Added to XYZ file coverage tests.
 
 Bugfixes
 """"""""
@@ -154,6 +157,9 @@ Bugfixes
 - `Issue #491 <https://github.com/openforcefield/openforcefield/issues/491>`_: We can now parse large molecules without hitting a match limit cap.
 - `Issue #474 <https://github.com/openforcefield/openforcefield/issues/474>`_: We can now  convert molecules to InChI and
    InChIKey and from InChI.
+- `Issue #523 <https://github.com/openforcefield/openforcefield/issues/523>`_: The
+   :py:meth: `Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
+   line with the support file type list. 
 
 Example added
 """""""""""""
