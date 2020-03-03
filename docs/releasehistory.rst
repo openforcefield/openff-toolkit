@@ -55,8 +55,9 @@ New features
          hydrogen layer nonstandard InChI which can help in the case of tautomers, but overall creating molecules from InChI should be
          avoided.
 - `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Adds the ability to write out to XYZ files via
-  :py:meth: `Molecule.to_file <openforcefield.topology.Molecule.to_file>` both single frame and multiframe files are supported.
-  Note reading from such files will not be included due to a loss of chemical information.
+  :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` Both single frame and multiframe XYZ files are supported.
+  Note reading from XYZ files will not be supported due to the lack of connectivity information.
+
 
 Behavior changed
 """"""""""""""""
