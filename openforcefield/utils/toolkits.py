@@ -1021,13 +1021,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return oemol
 
-    @staticmethod
-    def to_smiles(molecule):
+    def to_smiles(self, molecule, isomeric=True, explicit_hydrogens=True, mapped=False):
         """
         Uses the OpenEye toolkit to convert a Molecule into a SMILES string.
 
         Parameters
         ----------
+        isomeric: bool optional, default= True
+            return an isometric smiles, requires all stereochemistry to be defined
+        explicit_hydrogens: bool optional, default=True
+            return a smiles string containing all hydrogens explicitly
+        mapped: bool optional, default=False
+            return a explicit hydrogen mapped smiles
         molecule : An openforcefield.topology.Molecule
             The molecule to convert into a SMILES.
 
@@ -1037,11 +1042,49 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The SMILES of the input molecule.
         """
         from openeye import oechem
-        oemol = OpenEyeToolkitWrapper.to_openeye(molecule)
-        smiles = oechem.OECreateSmiString(
-            oemol, oechem.OESMILESFlag_DEFAULT | oechem.OESMILESFlag_Hydrogens
-            | oechem.OESMILESFlag_Isotopes | oechem.OESMILESFlag_BondStereo
-            | oechem.OESMILESFlag_AtomStereo)
+        oemol = self.to_openeye(molecule)
+
+        # this sets up the default settings following the old DEFAULT flag
+        # more information on flags can be found here
+        # <https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemConstants/OESMILESFlag.html#OEChem::OESMILESFlag>
+        smiles_options = oechem.OESMILESFlag_Canonical | oechem.OESMILESFlag_Isotopes | oechem.OESMILESFlag_RGroups
+
+        # check if we want an isomeric smiles
+        if isomeric:
+            # tag potential stereo centers that might of been missed
+            oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
+            oechem.OEPerceiveChiral(oemol)
+            # stereochemsitry must be defined to generate isomeric smiles
+            # check each atom and bond has it defined
+            for oeatom in oemol.GetAtoms():
+                if oeatom.IsChiral():
+                    if not oeatom.HasStereoSpecified():
+                        raise UndefinedStereochemistryError('To produce a valid isomeric smiles all '
+                                                            'stereochemistry must be defined.')
+
+            for oebond in oemol.GetBonds():
+                if oebond.IsChiral():
+                    if not oebond.HasStereoSpecified():
+                        raise UndefinedStereochemistryError('To produce a valid isomeric smiles all '
+                                                            'stereochemistry must be defined.')
+            # add the atom and bond stereo flags
+            smiles_options |= oechem.OESMILESFlag_AtomStereo | oechem.OESMILESFlag_BondStereo
+
+        if explicit_hydrogens:
+            # add the hydrogen flag
+            smiles_options |= oechem.OESMILESFlag_Hydrogens
+
+        if mapped:
+            assert isomeric is True and explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
+                                                                    "stereochemsitry to be defined to " \
+                                                                    "retain order"
+            # now we need to add the atom map to the atoms
+            for oeatom in oemol.GetAtoms():
+                oeatom.SetMapIdx(oeatom.GetIdx() + 1)
+
+            smiles_options |= oechem.OESMILESFlag_AtomMaps
+
+        smiles = oechem.OECreateSmiString(oemol, smiles_options)
         return smiles
 
     def to_inchi(self, molecule, fixed_hydrogens=False):
@@ -2001,9 +2044,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         if isomeric:
             # stereochemistry must be defined
             self._detect_undefined_stereo(rdmol, err_msg_prefix="To produce a valid isomeric smiles all "
-                                                                "stereochemistry must be defined ")
+                                                                "stereochemistry must be defined.")
         if not explicit_hydrogens:
-            # remove them from the molecule
+            # remove the hydrogens from the molecule
             rdmol = Chem.RemoveHs(rdmol)
 
         if mapped:

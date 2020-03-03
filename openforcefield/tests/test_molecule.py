@@ -302,16 +302,106 @@ class TestMolecule:
 
         undefined_stereo = molecule.name in undefined_stereo_mols
 
-        smiles1 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-        if undefined_stereo:
-            molecule2 = Molecule.from_smiles(smiles1,
-                                             allow_undefined_stereo=True,
-                                             toolkit_registry=toolkit_wrapper)
-        else:
-            molecule2 = Molecule.from_smiles(smiles1,
-                                             toolkit_registry=toolkit_wrapper)
-        smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
+        smiles1 = molecule.to_smiles(isomeric=not undefined_stereo, toolkit_registry=toolkit_wrapper)
+        molecule2 = Molecule.from_smiles(smiles1,
+                                         allow_undefined_stereo=undefined_stereo,
+                                         toolkit_registry=toolkit_wrapper)
+        smiles2 = molecule2.to_smiles(isomeric=not undefined_stereo, toolkit_registry=toolkit_wrapper)
         assert (smiles1 == smiles2)
+
+    smiles_types = [{'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H:5]/[C:2](=[C:3](\\[H:6])/[Cl:4])/[Cl:1]',
+                     'rdkit_output': '[Cl:1]/[C:2](=[C:3](\\[Cl:4])[H:6])[H:5]',
+                     'isomeric': True, 'explicit_hydrogens': True, 'mapped': True, 'error': None},
+                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': None, 'rdkit_output': None,
+                     'isomeric': False, 'explicit_hydrogens': True, 'mapped': True, 'error': AssertionError},
+                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': None, 'rdkit_output': None,
+                     'isomeric': True, 'explicit_hydrogens': False, 'mapped': True, 'error': AssertionError},
+                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H]/C(=C(\\[H])/Cl)/Cl',
+                     'rdkit_output': '[H]/[C]([Cl])=[C](\\[H])[Cl]',
+                     'isomeric': True, 'explicit_hydrogens': True, 'mapped': False, 'error': None},
+                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': 'C(=C\\Cl)\\Cl',
+                     'rdkit_output': 'Cl/C=C\\Cl',
+                     'isomeric': True, 'explicit_hydrogens': False, 'mapped': False, 'error': None},
+                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H]C(=C([H])Cl)Cl',
+                     'rdkit_output': '[H][C]([Cl])=[C]([H])[Cl]',
+                     'isomeric': False, 'explicit_hydrogens': True, 'mapped': False, 'error': None},
+                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': None, 'rdkit_output': None,
+                     'isomeric': False, 'explicit_hydrogens': False, 'mapped': True, 'error': AssertionError},
+                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': 'C(=CCl)Cl',
+                     'rdkit_output': 'ClC=CCl',
+                     'isomeric': False, 'explicit_hydrogens': False, 'mapped': False, 'error': None},
+                    ]
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    @pytest.mark.parametrize('data', smiles_types)
+    def test_smiles_types(self, data, toolkit_class):
+        """Test that the toolkit is passing the correct args to the toolkit backends across different combinations."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles(data['molecule_input'], toolkit_registry=toolkit)
+            isomeric, explicit_hs, mapped = data['isomeric'], data['explicit_hydrogens'], data['mapped']
+            if data['error'] is not None:
+                with pytest.raises(data['error']):
+                    mol.to_smiles(isomeric=isomeric, explicit_hydrogens=explicit_hs,
+                                  mapped=mapped, toolkit_registry=toolkit)
+
+            else:
+                # gather the toolkit dependent output
+                if 'RDKit' in toolkit.__class__.__name__:
+                    output = data['rdkit_output']
+
+                elif 'OpenEye' in toolkit.__class__.__name__:
+                    output = data['openeye_output']
+
+                assert output == mol.to_smiles(isomeric=isomeric, explicit_hydrogens=explicit_hs,
+                                               mapped=mapped, toolkit_registry=toolkit)
+        else:
+            pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_smiles_isomeric(self, toolkit_class):
+        """Make sure that isomeric smiles requests are checked for missing stereochemistry."""
+        from openforcefield.utils.toolkits import UndefinedStereochemistryError
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles('ClC=CCl', allow_undefined_stereo=True,
+                                       toolkit_registry=toolkit)
+
+            with pytest.raises(UndefinedStereochemistryError):
+                smiles = mol.to_smiles(isomeric=True, toolkit_registry=toolkit)
+
+        else:
+            pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_smiles_chache(self, toolkit_class):
+        """Make sure that the smiles cache is being used correctly."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            # this uses no toolkit back end so no smiles should be saved
+            mol = create_ethanol()
+
+            # now lets populate the cache with a test result
+            # first we need to make the cache key for the default input
+            isomeric, explicit_hydrogens, mapped = True, True, False
+            cache_key = toolkit.to_smiles.__qualname__ + str(isomeric) + str(explicit_hydrogens) + str(mapped)
+            mol._cached_smiles = {cache_key: None}
+            assert mol.to_smiles(isomeric=isomeric, toolkit_registry=toolkit,
+                                 explicit_hydrogens=explicit_hydrogens, mapped=mapped) is None
+
+            # now make sure the cache is not used if we change an input arg
+            assert mol.to_smiles(isomeric=True, explicit_hydrogens=True,
+                                 mapped=True, toolkit_registry=toolkit) is not None
+
+            # now make sure the cache was updated
+            assert mol._cached_smiles != {cache_key: None}
+            assert len(mol._cached_smiles) == 2
+
+        else:
+            pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_unique_atom_names(self, molecule):
@@ -421,13 +511,13 @@ class TestMolecule:
         toolkit_wrapper = RDKitToolkitWrapper()
 
         rdmol = molecule.to_rdkit()
-        molecule_smiles = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+        molecule_smiles = molecule.to_smiles(isomeric=not undefined_stereo, toolkit_registry=toolkit_wrapper)
 
         # First test making a molecule using the Molecule(oemol) method
 
         # If this is a known failure, check that it raises UndefinedStereochemistryError
         # and proceed with the test ignoring it.
-        test_mol =  None
+        test_mol = None
         if undefined_stereo:
             with pytest.raises(UndefinedStereochemistryError):
                 Molecule(rdmol)
@@ -435,7 +525,7 @@ class TestMolecule:
         else:
             test_mol = Molecule(rdmol)
 
-        test_mol_smiles = test_mol.to_smiles(toolkit_registry=toolkit_wrapper)
+        test_mol_smiles = test_mol.to_smiles(isomeric=not undefined_stereo, toolkit_registry=toolkit_wrapper)
         assert molecule_smiles == test_mol_smiles
 
         # Check that the two topologies are isomorphic.
@@ -452,7 +542,7 @@ class TestMolecule:
         else:
             test_mol = Molecule.from_rdkit(rdmol)
 
-        test_mol_smiles = test_mol.to_smiles(toolkit_registry=toolkit_wrapper)
+        test_mol_smiles = test_mol.to_smiles(isomeric=not undefined_stereo, toolkit_registry=toolkit_wrapper)
         assert molecule_smiles == test_mol_smiles
 
         # Check that the two topologies are isomorphic.
@@ -571,13 +661,13 @@ class TestMolecule:
         toolkit_wrapper = OpenEyeToolkitWrapper()
 
         oemol = molecule.to_openeye()
-        molecule_smiles = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+        molecule_smiles = molecule.to_smiles(isomeric=not undefined_stereo, toolkit_registry=toolkit_wrapper)
 
         # First test making a molecule using the Molecule(oemol) method
 
         # If this is a known failure, check that it raises UndefinedStereochemistryError
         # and proceed with the test ignoring it.
-        test_mol =  None
+        test_mol = None
         if undefined_stereo:
             with pytest.raises(UndefinedStereochemistryError):
                 Molecule(oemol)
@@ -585,7 +675,7 @@ class TestMolecule:
         else:
             test_mol = Molecule(oemol)
 
-        test_mol_smiles = test_mol.to_smiles(toolkit_registry=toolkit_wrapper)
+        test_mol_smiles = test_mol.to_smiles(isomeric=not undefined_stereo, toolkit_registry=toolkit_wrapper)
         assert molecule_smiles == test_mol_smiles
 
         # Check that the two topologies are isomorphic.
@@ -602,7 +692,7 @@ class TestMolecule:
         else:
             test_mol = Molecule.from_openeye(oemol)
 
-        test_mol_smiles = test_mol.to_smiles(toolkit_registry=toolkit_wrapper)
+        test_mol_smiles = test_mol.to_smiles(isomeric=not undefined_stereo, toolkit_registry=toolkit_wrapper)
         assert molecule_smiles == test_mol_smiles
 
         # Check that the two topologies are isomorphic.
