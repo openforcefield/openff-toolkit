@@ -3454,6 +3454,8 @@ class FrozenMolecule(Serializable):
         has no current coordinates all atoms will be set to 0,0,0 in keeping with the behaviour of the
         backend toolkits.
 
+        Information on the type of XYZ file written can be found here <http://openbabel.org/wiki/XYZ_(format)>.
+
         Parameters
         ----------
         file_path : str or file-like object

@@ -1929,7 +1929,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             writer.close()
         # if we can not write to that file type catch the error here
         except KeyError:
-            raise ValueError(f'The requested file type ({file_format}) is not supported to be wrote to using RDKit.')
+            raise ValueError(f'The requested file type ({file_format}) is not supported to be written using '
+                             f'RDKitToolkitWrapper.')
 
     def to_file(self, molecule, file_path, file_format):
         """

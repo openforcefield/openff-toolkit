@@ -32,13 +32,13 @@ from openforcefield.tests.test_forcefield import create_ethanol, create_cyclohex
 #=============================================================================================
 
 
-def get_mini_drug_bank(toolkit):
+def get_mini_drug_bank(toolkit_class):
     """Read the mini drug bank sdf file with the toolkit and return the molecules"""
 
-    # This is a work around a weird error where even though the test is skipted due to a missing toolkit
+    # This is a work around a weird error where even though the test is skipped due to a missing toolkit
     #  we still try and read the file with the toolkit
-    if toolkit.is_available():
-        toolkit = toolkit()
+    if toolkit_class.is_available():
+        toolkit = toolkit_class()
         molecules = Molecule.from_file(get_data_file_path('molecules/MiniDrugBank.sdf'), 'sdf', toolkit_registry=toolkit,
                                        allow_undefined_stereo=True)
     else:
