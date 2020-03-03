@@ -32,12 +32,13 @@ from openforcefield.tests.test_forcefield import create_ethanol, create_cyclohex
 #=============================================================================================
 
 
-def get_mini_drug_bank(toolkit):
+def get_mini_drug_bank(toolkit_class):
     """Read the mini drug bank sdf file with the toolkit and return the molecules"""
 
-    # This is a work around a weird error where even though the test is skipted due to a missing toolkit
+    # This is a work around a weird error where even though the test is skipped due to a missing toolkit
     #  we still try and read the file with the toolkit
-    if toolkit.is_available():
+    if toolkit_class.is_available():
+        toolkit = toolkit_class()
         molecules = Molecule.from_file(get_data_file_path('molecules/MiniDrugBank.sdf'), 'sdf', toolkit_registry=toolkit,
                                        allow_undefined_stereo=True)
     else:
@@ -322,7 +323,7 @@ class TestOpenEyeToolkitWrapper:
         assert offmol.n_atoms == 4
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    @pytest.mark.parametrize('molecule', get_mini_drug_bank(OpenEyeToolkitWrapper()))
+    @pytest.mark.parametrize('molecule', get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_to_inchi(self, molecule):
         """Test conversion to standard and non-standard InChI"""
 
@@ -331,7 +332,7 @@ class TestOpenEyeToolkitWrapper:
         non_standard = molecule.to_inchi(True, toolkit_registry=toolkit)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    @pytest.mark.parametrize('molecule', get_mini_drug_bank(OpenEyeToolkitWrapper()))
+    @pytest.mark.parametrize('molecule', get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_to_inchikey(self, molecule):
         """Test the conversion to standard and non-standard InChIKey"""
 
@@ -349,7 +350,7 @@ class TestOpenEyeToolkitWrapper:
             mol = Molecule.from_inchi(inchi, toolkit_registry=toolkit)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    @pytest.mark.parametrize('molecule', get_mini_drug_bank(OpenEyeToolkitWrapper()))
+    @pytest.mark.parametrize('molecule', get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_non_standard_inchi_round_trip(self, molecule):
         """Test if a molecule can survive an InChi round trip test in some cases the standard InChI
         will not enough to ensure information is preserved so we test the non-standard inchi here."""
@@ -841,7 +842,7 @@ class TestRDKitToolkitWrapper:
         assert offmol.n_atoms == 4
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
-    @pytest.mark.parametrize('molecule', get_mini_drug_bank(RDKitToolkitWrapper()))
+    @pytest.mark.parametrize('molecule', get_mini_drug_bank(RDKitToolkitWrapper))
     def test_to_inchi(self, molecule):
         """Test conversion to standard and non-standard InChI"""
 
@@ -850,7 +851,7 @@ class TestRDKitToolkitWrapper:
         non_standard = molecule.to_inchi(fixed_hydrogens=True,toolkit_registry=toolkit)
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
-    @pytest.mark.parametrize('molecule', get_mini_drug_bank(RDKitToolkitWrapper()))
+    @pytest.mark.parametrize('molecule', get_mini_drug_bank(RDKitToolkitWrapper))
     def test_to_inchikey(self, molecule):
         """Test the conversion to standard and non-standard InChIKey"""
 
@@ -905,7 +906,7 @@ class TestRDKitToolkitWrapper:
         compare_mols(ref_mol, nonstandard_inchi_mol)
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
-    @pytest.mark.parametrize('molecule', get_mini_drug_bank(RDKitToolkitWrapper()))
+    @pytest.mark.parametrize('molecule', get_mini_drug_bank(RDKitToolkitWrapper))
     def test_non_standard_inchi_round_trip(self, molecule):
         """Test if a molecule can survive an InChi round trip test in some cases the standard InChI
         will not be enough to ensure information is preserved so we test the non-standard inchi here."""
