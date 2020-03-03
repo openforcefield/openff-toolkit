@@ -1915,6 +1915,136 @@ class FrozenMolecule(Serializable):
             return smiles
 
     @staticmethod
+    def from_inchi(inchi, allow_undefined_stereo=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Construct a Molecule from a InChI representation
+
+        Parameters
+        ----------
+        inchi : str
+            The InChI representation of the molecule.
+
+        allow_undefined_stereo : bool, default=False
+            Whether to accept InChI with undefined stereochemistry. If False,
+            an exception will be raised if a InChI with undefined stereochemistry
+            is passed into this function.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for InChI-to-molecule conversion
+
+
+        Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+
+        Examples
+        --------
+        make cis-1,2-Dichloroethene
+        >>> molecule = Molecule.from_inchi('InChI=1S/C2H2Cl2/c3-1-2-4/h1-2H/b2-1-')
+        """
+
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            molecule = toolkit_registry.call('from_inchi',
+                                             inchi,
+                                             allow_undefined_stereo=allow_undefined_stereo)
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            molecule = toolkit.from_inchi(inchi,
+                                          allow_undefined_stereo=allow_undefined_stereo)
+        else:
+            raise Exception(
+                'Invalid toolkit_registry passed to from_inchi. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
+                .format(type(toolkit_registry)))
+
+        return molecule
+
+    def to_inchi(self, fixed_hydrogens=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Create an InChI string for the molecule using the requested toolkit backend.
+        InChI is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
+        layer.
+
+        For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
+
+        Parameters
+        ----------
+        fixed_hydrogens: bool, default=False
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
+            InChI string of the molecule.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for molecule-to-InChI conversion
+
+        Returns
+        --------
+        inchi: str
+            The InChI string of the molecule.
+
+        Raises
+        -------
+        InvalidToolkitError
+             If an invalid object is passed as the toolkit_registry parameter
+        """
+
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            inchi = toolkit_registry.call('to_inchi',
+                                          self,
+                                          fixed_hydrogens=fixed_hydrogens)
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            inchi = toolkit.to_inchi(self,
+                                     fixed_hydrogens=fixed_hydrogens)
+        else:
+            raise InvalidToolkitError(
+                'Invalid toolkit_registry passed to to_inchi. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
+                .format(type(toolkit_registry)))
+
+        return inchi
+
+    def to_inchikey(self, fixed_hydrogens=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Create an InChIKey for the molecule using the requested toolkit backend.
+        InChIKey is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
+        layer.
+
+        For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
+
+        Parameters
+        ----------
+        fixed_hydrogens: bool, default=False
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
+            InChI string of the molecule.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for molecule-to-InChIKey conversion
+
+        Returns
+        --------
+        inchi_key: str
+            The InChIKey representation of the molecule.
+
+        Raises
+        -------
+        InvalidToolkitError
+             If an invalid object is passed as the toolkit_registry parameter
+        """
+
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            inchi_key = toolkit_registry.call('to_inchikey',
+                                              self,
+                                              fixed_hydrogens=fixed_hydrogens)
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            inchi_key = toolkit.to_inchikey(self,
+                                            fixed_hydrogens=fixed_hydrogens)
+        else:
+            raise InvalidToolkitError(
+                'Invalid toolkit_registry passed to to_inchikey. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
+                .format(type(toolkit_registry)))
+
+        return inchi_key
+
+    @staticmethod
     def from_smiles(smiles,
                     hydrogens_are_explicit=False,
                     toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
@@ -2079,21 +2209,15 @@ class FrozenMolecule(Serializable):
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
-        isomorphic = nx.is_isomorphic(mol1_netx,
-                                      mol2_netx,
-                                      node_match=node_match_func,
-                                      edge_match=edge_match_func)
+        GM = GraphMatcher(
+            mol1_netx,
+            mol2_netx,
+            node_match=node_match_func,
+            edge_match=edge_match_func)
+        isomorphic = GM.is_isomorphic()
 
         if isomorphic and return_atom_map:
-            # now generate the sorted mapping between the molecules
-            GM = GraphMatcher(
-                mol1_netx,
-                mol2_netx,
-                node_match=node_match_func,
-                edge_match=edge_match_func)
-            for mapping in GM.isomorphisms_iter():
-                topology_atom_map = mapping
-                break
+            topology_atom_map = GM.mapping
 
             # reorder the mapping by keys
             sorted_mapping = {}
@@ -3394,6 +3518,53 @@ class FrozenMolecule(Serializable):
 
         return mols
 
+    def _to_xyz_file(self, file_path):
+        """
+        Write the current molecule and its conformers to a multiframe xyz file, if the molecule
+        has no current coordinates all atoms will be set to 0,0,0 in keeping with the behaviour of the
+        backend toolkits.
+
+        Information on the type of XYZ file written can be found here <http://openbabel.org/wiki/XYZ_(format)>.
+
+        Parameters
+        ----------
+        file_path : str or file-like object
+            A file-like object or the path to the file to be written.
+        """
+
+        # If we do not have a conformer make one with all zeros
+        if self.n_conformers == 0:
+            conformers = [unit.Quantity(np.zeros((self.n_atoms, 3), np.float), unit.angstrom)]
+
+        else:
+            conformers = self._conformers
+
+        if len(conformers) == 1:
+            end = ''
+            title = lambda frame: f'{self.name if self.name is not "" else self.hill_formula}{frame}\n'
+        else:
+            end = 1
+            title = lambda frame: f'{self.name if self.name is not "" else self.hill_formula} Frame {frame}\n'
+
+        # check if we have a file path or an open file object
+        if isinstance(file_path, str):
+            xyz_data = open(file_path, 'w')
+        else:
+            xyz_data = file_path
+
+        # add the data to the xyz_data list
+        for i, geometry in enumerate(conformers, 1):
+            xyz_data.write(f'{self.n_atoms}\n'+title(end))
+            for j, atom_coords in enumerate(geometry.in_units_of(unit.angstrom)):
+                x, y, z = atom_coords._value
+                xyz_data.write(f'{self.atoms[j].element.symbol}       {x: .10f}   {y: .10f}   {z: .10f}\n')
+
+            # now we up the frame count
+            end = i + 1
+
+        # now close the file
+        xyz_data.close()
+
     def to_file(self,
                 file_path,
                 file_format,
@@ -3439,6 +3610,9 @@ class FrozenMolecule(Serializable):
             )
 
         file_format = file_format.upper()
+        # check if xyz, use the toolkit independent method.
+        if file_format == 'XYZ':
+            return self._to_xyz_file(file_path=file_path)
 
         # Take the first toolkit that can write the desired output format
         toolkit = None

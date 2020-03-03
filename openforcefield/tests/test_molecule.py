@@ -330,6 +330,42 @@ class TestMolecule:
         molecule.atoms[1].name = molecule.atoms[0].name # no longer unique
         assert ((len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms) == molecule.has_unique_atom_names)
 
+    inchi_data = [{'molecule': create_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
+                  {'molecule': create_reversed_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
+                  {'molecule': create_acetaldehyde(), 'standard_inchi': 'InChI=1S/C2H4O/c1-2-3/h2H,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H4O/c1-2-3/h2H,1H3'},
+                  {'molecule': create_cyclohexane(), 'standard_inchi': 'InChI=1S/C6H12/c1-2-4-6-5-3-1/h1-6H2',
+                   'fixed_hydrogen_inchi': 'InChI=1/C6H12/c1-2-4-6-5-3-1/h1-6H2'}
+                  ]
+
+    @pytest.mark.parametrize('data', inchi_data)
+    def test_from_inchi(self, data):
+        """Test building a molecule from standard and non-standard InChI strings."""
+
+        toolkit = OpenEyeToolkitWrapper()
+        ref_mol = data['molecule']
+        # make a molecule from inchi
+        inchi_mol = Molecule.from_inchi(data['standard_inchi'], toolkit_registry=toolkit)
+        assert inchi_mol.to_inchi(toolkit_registry=toolkit) == data['standard_inchi']
+
+        def compare_mols(ref_mol, inchi_mol):
+            assert ref_mol.n_atoms == inchi_mol.n_atoms
+            assert ref_mol.n_bonds == inchi_mol.n_bonds
+            assert ref_mol.n_angles == inchi_mol.n_angles
+            assert ref_mol.n_propers == inchi_mol.n_propers
+            assert ref_mol.is_isomorphic_with(inchi_mol) is True
+
+        compare_mols(ref_mol, inchi_mol)
+
+        # now make the molecule from the non-standard inchi and compare
+        nonstandard_inchi_mol = Molecule.from_inchi(data['fixed_hydrogen_inchi'], toolkit_registry=toolkit)
+        assert nonstandard_inchi_mol.to_inchi(fixed_hydrogens=True, toolkit_registry=toolkit) == data[
+            'fixed_hydrogen_inchi']
+
+        compare_mols(ref_mol, nonstandard_inchi_mol)
+
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @pytest.mark.slow
     def test_create_from_file(self):
@@ -484,6 +520,93 @@ class TestMolecule:
         topology = molecule.to_topology()
         molecule_copy = Molecule.from_topology(topology)
         assert molecule == molecule_copy
+
+    def test_to_multiframe_xyz(self):
+        """Test writing out a molecule with multiple conformations to an xyz file"""
+
+        # load in an SDF of butane with multiple conformers in it
+        molecules = Molecule.from_file(get_data_file_path('molecules/butane_multi.sdf'), 'sdf')
+        # now we want to combine the conformers to one molecule
+        butane = molecules[0]
+        for mol in molecules[1:]:
+            butane.add_conformer(mol._conformers[0])
+
+        # make sure we have the 7 conformers
+        assert butane.n_conformers == 7
+        with NamedTemporaryFile(suffix='.xyz') as iofile:
+            # try and write out the xyz file
+            butane.to_file(iofile.name, 'xyz')
+
+            # now lets check whats in the file
+            with open(iofile.name) as xyz_data:
+                data = xyz_data.readlines()
+                # make sure we have the correct amount of lines writen
+                assert len(data) == 112
+                # make sure all headers and frame data was writen
+                assert data.count('14\n') == 7
+                for i in range(1, 8):
+                    assert f'C4H10 Frame {i}\n' in data
+
+                # now make sure the first line of the coordinates are correct in every frame
+                coords = ['C        1.8902000189    0.0425999984    0.2431000024\n',
+                          'C        1.8976000547   -0.0232999995    0.2845999897\n',
+                          'C       -1.8794000149   -0.1792999953   -0.2565000057\n',
+                          'C       -1.5205999613   -0.0164999999    0.2786999941\n',
+                          'C       -1.4889999628   -0.2619000077    0.4871000051\n',
+                          'C       -1.4940999746   -0.2249000072   -0.0957999974\n',
+                          'C       -1.8826999664   -0.0372000001    0.1937000006\n']
+                for coord in coords:
+                    assert coord in data
+
+    def test_to_single_xyz(self):
+        """Test writing to a single frame xyz file"""
+
+        # load a molecule with a single conformation
+        toluene = Molecule.from_file(get_data_file_path('molecules/toluene.sdf'), 'sdf')
+        # make sure it has one conformer
+        assert toluene.n_conformers == 1
+
+        with NamedTemporaryFile(suffix='.xyz') as iofile:
+            # try and write out the xyz file
+            toluene.to_file(iofile.name, 'xyz')
+
+            # now lets check the file contents
+            with open(iofile.name) as xyz_data:
+                data = xyz_data.readlines()
+                # make sure we have the correct amount of lines writen
+                assert len(data) == 17
+                # make sure all headers and frame data was writen
+                assert data.count('15\n') == 1
+                assert data.count('C7H8\n') == 1
+                # now check that we can find the first and last coords
+                coords = ['C        0.0000000000    0.0000000000    0.0000000000\n',
+                          'H       -0.0000000000    3.7604000568    0.0000000000\n']
+                for coord in coords:
+                    assert coord in data
+
+    def test_to_xyz_no_conformers(self):
+        """Test writing a molecule out when it has no conformers here all coords should be 0."""
+
+        # here we want to make a molecule with no coordinates
+        ethanol = create_ethanol()
+        assert ethanol.n_conformers == 0
+
+        with NamedTemporaryFile(suffix='.xyz') as iofile:
+            # try and write out the xyz file
+            ethanol.to_file(iofile.name, 'xyz')
+
+            # now lets check the file contents
+            with open(iofile.name) as xyz_data:
+                data = xyz_data.readlines()
+                # make sure we have the correct amount of lines writen
+                assert len(data) == 11
+                # make sure all headers and frame data was writen
+                assert data.count('9\n') == 1
+                assert data.count('C2H6O\n') == 1
+                # now check that all coords are 0
+                coords = ['0.0000000000', '0.0000000000', '0.0000000000']
+                for atom_coords in data[2:]:
+                    assert atom_coords.split()[1:] == coords
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @pytest.mark.parametrize('molecule', mini_drug_bank())
