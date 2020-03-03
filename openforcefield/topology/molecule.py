@@ -1874,7 +1874,7 @@ class FrozenMolecule(Serializable):
         # Get a string representation of the function containing the toolkit name so we can check
         # if a SMILES was already cached for this molecule. This will return, for example
         # "RDKitToolkitWrapper.to_smiles"
-        smiles_hash = to_smiles_method.__qualname__ + isomeric + explicit_hydrogens + mapped
+        smiles_hash = to_smiles_method.__qualname__ + str(isomeric) + str(explicit_hydrogens) + str(mapped)
 
         # Check to see if a SMILES for this molecule was already cached using this method
         if smiles_hash in self._cached_smiles:

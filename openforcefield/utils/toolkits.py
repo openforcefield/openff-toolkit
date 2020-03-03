@@ -2002,15 +2002,20 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # stereochemistry must be defined
             self._detect_undefined_stereo(rdmol, err_msg_prefix="To produce a valid isomeric smiles all "
                                                                 "stereochemistry must be defined ")
+        if not explicit_hydrogens:
+            # remove them from the molecule
+            rdmol = Chem.RemoveHs(rdmol)
+
         if mapped:
             assert isomeric is True and explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
-                                                                    "stereochemsitry to be defined in order to " \
+                                                                    "stereochemsitry to be defined to " \
                                                                     "retain order"
             # now we need to add the indexing to the rdmol to get it in the smiles
             for atom in rdmol.GetAtoms():
-                atom.Set
+                # the mapping must start from 1, as RDKit uses 0 to represent no mapping.
+                atom.SetAtomMapNum(atom.GetIdx() + 1)
 
-        return Chem.MolToSmiles(rdmol, isomericSmiles=True, allHsExplicit=True)
+        return Chem.MolToSmiles(rdmol, isomericSmiles=isomeric, allHsExplicit=explicit_hydrogens)
 
     def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
         """
