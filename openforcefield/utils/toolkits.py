@@ -1059,22 +1059,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # check if we want an isomeric smiles
         if isomeric:
-            # tag potential stereo centers that might of been missed
-            oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
-            oechem.OEPerceiveChiral(oemol)
-            # stereochemsitry must be defined to generate isomeric smiles
-            # check each atom and bond has it defined
-            for oeatom in oemol.GetAtoms():
-                if oeatom.IsChiral():
-                    if not oeatom.HasStereoSpecified():
-                        raise UndefinedStereochemistryError('To produce a valid isomeric smiles all '
-                                                            'stereochemistry must be defined.')
-
-            for oebond in oemol.GetBonds():
-                if oebond.IsChiral():
-                    if not oebond.HasStereoSpecified():
-                        raise UndefinedStereochemistryError('To produce a valid isomeric smiles all '
-                                                            'stereochemistry must be defined.')
             # add the atom and bond stereo flags
             smiles_options |= oechem.OESMILESFlag_AtomStereo | oechem.OESMILESFlag_BondStereo
 
@@ -1083,9 +1067,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             smiles_options |= oechem.OESMILESFlag_Hydrogens
 
         if mapped:
-            assert isomeric is True and explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
-                                                                    "stereochemsitry to be defined to " \
-                                                                    "retain order"
+            assert explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
+                                                "stereochemsitry to be defined to retain order"
             # now we need to add the atom map to the atoms
             for oeatom in oemol.GetAtoms():
                 oeatom.SetMapIdx(oeatom.GetIdx() + 1)
@@ -2058,19 +2041,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         rdmol = self.to_rdkit(molecule)
 
-        # check if we want an isometric smiles
-        if isomeric:
-            # stereochemistry must be defined
-            self._detect_undefined_stereo(rdmol, err_msg_prefix="To produce a valid isomeric smiles all "
-                                                                "stereochemistry must be defined.")
         if not explicit_hydrogens:
             # remove the hydrogens from the molecule
             rdmol = Chem.RemoveHs(rdmol)
 
         if mapped:
-            assert isomeric is True and explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
-                                                                    "stereochemsitry to be defined to " \
-                                                                    "retain order"
+            assert explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
+                                               "stereochemsitry to be defined to retain order"
             # now we need to add the indexing to the rdmol to get it in the smiles
             for atom in rdmol.GetAtoms():
                 # the mapping must start from 1, as RDKit uses 0 to represent no mapping.
