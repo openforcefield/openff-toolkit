@@ -373,6 +373,7 @@ class TestMolecule:
             # first we need to make the cache key for the default input
             isomeric, explicit_hydrogens, mapped = True, True, False
             cache_key = toolkit.to_smiles.__qualname__ + str(isomeric) + str(explicit_hydrogens) + str(mapped)
+            cache_key += str(mol._properties.get('atom_map', None))
             mol._cached_smiles = {cache_key: None}
             assert mol.to_smiles(isomeric=isomeric, toolkit_registry=toolkit,
                                  explicit_hydrogens=explicit_hydrogens, mapped=mapped) is None
@@ -384,6 +385,40 @@ class TestMolecule:
             # now make sure the cache was updated
             assert mol._cached_smiles != {cache_key: None}
             assert len(mol._cached_smiles) == 2
+
+        else:
+            pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')
+
+    mapped_types = [{'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H:5]/[C:2](=[C:3](\\[H:6])/[Cl:4])/[Cl:1]',
+                     'rdkit_output': '[Cl:1]/[C:2](=[C:3](\\[Cl:4])[H:6])[H:5]',
+                     'atom_map': None},
+                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H]/C(=C(\\[H])/Cl)/[Cl:1]',
+                     'rdkit_output': '[H]/[C]([Cl])=[C](\\[H])[Cl:1]',
+                     'atom_map': {0: 0}},
+                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H:5]/[C:2](=[C:3](\\[H:6])/[Cl:4])/[Cl:1]',
+                     'rdkit_output': '[Cl:1]/[C:2](=[C:3](\\[Cl:4])[H:6])[H:5]',
+                     'atom_map': {0: 0, 1: 0, 2: 0, 3: 0}},
+                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H]/[C:2](=[C:3](\\[H])/[Cl:4])/[Cl:1]',
+                     'rdkit_output': '[H]/[C:2]([Cl:1])=[C:3](\\[H])[Cl:4]',
+                     'atom_map': {0: 0, 1: 1, 2: 2, 3: 3}}]
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    @pytest.mark.parametrize('data', mapped_types)
+    def test_partial_mapped_smiles(self, toolkit_class, data):
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles(smiles=data['molecule_input'], toolkit_registry=toolkit)
+            mol._properties['atom_map'] = data['atom_map']
+
+            if 'RDKit' in toolkit.__class__.__name__:
+                output = data['rdkit_output']
+
+            elif 'OpenEye' in toolkit.__class__.__name__:
+                output = data['openeye_output']
+
+            assert output == mol.to_smiles(isomeric=True, explicit_hydrogens=True,
+                                           mapped=True, toolkit_registry=toolkit)
 
         else:
             pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')

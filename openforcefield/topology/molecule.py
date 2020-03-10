@@ -1839,7 +1839,8 @@ class FrozenMolecule(Serializable):
         explicit_hydrogens: bool optional, default=True
             return a smiles string containing all hydrogens explicitly
         mapped: bool optional, default=False
-            return a explicit hydrogen mapped smiles
+            return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by supplying an
+            atom map into the properties dictionary
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES conversion
 
@@ -1875,6 +1876,7 @@ class FrozenMolecule(Serializable):
         # if a SMILES was already cached for this molecule. This will return, for example
         # "RDKitToolkitWrapper.to_smiles"
         smiles_hash = to_smiles_method.__qualname__ + str(isomeric) + str(explicit_hydrogens) + str(mapped)
+        smiles_hash += str(self._properties.get('atom_map', None))
         # Check to see if a SMILES for this molecule was already cached using this method
         if smiles_hash in self._cached_smiles:
             return self._cached_smiles[smiles_hash]

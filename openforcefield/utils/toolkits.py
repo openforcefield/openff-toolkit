@@ -1069,9 +1069,28 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if mapped:
             assert explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
                                                 "stereochemsitry to be defined to retain order"
-            # now we need to add the atom map to the atoms
-            for oeatom in oemol.GetAtoms():
-                oeatom.SetMapIdx(oeatom.GetIdx() + 1)
+
+            # if we only want to map specific atoms check for an atom map
+            # if we only want to map specific atoms check for an atom map
+            atom_map = molecule._properties.get('atom_map', None)
+            if atom_map is not None:
+                # make sure there are no repeated indices
+                map_ids = set(atom_map.values())
+                if len(map_ids) < len(atom_map):
+                    atom_map = None
+
+            if atom_map is None:
+                # now we need to add the atom map to the atoms
+                for oeatom in oemol.GetAtoms():
+                    oeatom.SetMapIdx(oeatom.GetIdx() + 1)
+            else:
+                for atom in oemol.GetAtoms():
+                    try:
+                        # try to set the atom map
+                        map_idx = atom_map[atom.GetIdx()] + 1
+                        atom.SetMapIdx(map_idx)
+                    except KeyError:
+                        continue
 
             smiles_options |= oechem.OESMILESFlag_AtomMaps
 
@@ -2048,10 +2067,28 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         if mapped:
             assert explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
                                                "stereochemsitry to be defined to retain order"
-            # now we need to add the indexing to the rdmol to get it in the smiles
-            for atom in rdmol.GetAtoms():
-                # the mapping must start from 1, as RDKit uses 0 to represent no mapping.
-                atom.SetAtomMapNum(atom.GetIdx() + 1)
+
+            # if we only want to map specific atoms check for an atom map
+            atom_map = molecule._properties.get('atom_map', None)
+            if atom_map is not None:
+                # make sure there are no repeated indices
+                map_ids = set(atom_map.values())
+                if len(map_ids) < len(atom_map):
+                    atom_map = None
+
+            if atom_map is None:
+                # now we need to add the indexing to the rdmol to get it in the smiles
+                for atom in rdmol.GetAtoms():
+                    # the mapping must start from 1, as RDKit uses 0 to represent no mapping.
+                    atom.SetAtomMapNum(atom.GetIdx() + 1)
+            else:
+                for atom in rdmol.GetAtoms():
+                    try:
+                        # try to set the atom map
+                        map_idx = atom_map[atom.GetIdx()] + 1
+                        atom.SetAtomMapNum(map_idx)
+                    except KeyError:
+                        continue
 
         return Chem.MolToSmiles(rdmol, isomericSmiles=isomeric, allHsExplicit=explicit_hydrogens)
 
