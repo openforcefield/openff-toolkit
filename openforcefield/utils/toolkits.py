@@ -1209,7 +1209,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if bond.GetBgnIdx() > bond.GetEndIdx():
                 bond.SwapEnds()
 
-        return self.from_openeye(oemol)
+        return self.from_openeye(oemol, allow_undefined_stereo=True)
 
     def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
         """

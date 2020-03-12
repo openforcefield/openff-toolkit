@@ -3683,7 +3683,7 @@ class FrozenMolecule(Serializable):
     def to_qcschema(self, multiplicity=1, conformer=0):
         """
         Generate the qschema input format used to submit jobs to archive
-        or run qcengine calculations locally, the molecule is placed in canonical order first.
+        or run qcengine calculations locally,
         spec can be found here <https://molssi-qc-schema.readthedocs.io/en/latest/index.html>
 
         .. warning :: This API is experimental and subject to change.
@@ -3724,20 +3724,17 @@ class FrozenMolecule(Serializable):
             raise ImportError('Please install QCElemental via conda install -c conda-forge qcelemental '
                               'to validate the schema')
 
-        # get a canonical ordered version of the molecule
-        canonical_mol = self.canonical_order_atoms()
-
         # get/ check the geometry
         try:
-            geometry = canonical_mol.conformers[conformer].in_units_of(unit.bohr)
+            geometry = self.conformers[conformer].in_units_of(unit.bohr)
         except (IndexError, TypeError):
             raise InvalidConformerError('The molecule must have a conformation to produce a valid qcschema; '
                                         f'no conformer was found at index {conformer}.')
 
         # Gather the required qschema data
-        charge = sum([atom.formal_charge for atom in canonical_mol.atoms])
-        connectivity = [(bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in canonical_mol.bonds]
-        symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in canonical_mol.atoms]
+        charge = sum([atom.formal_charge for atom in self.atoms])
+        connectivity = [(bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds]
+        symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms]
 
         schema_dict = {'symbols': symbols, 'geometry': geometry, 'connectivity': connectivity,
                        'molecular_charge': charge, 'molecular_multiplicity': multiplicity}

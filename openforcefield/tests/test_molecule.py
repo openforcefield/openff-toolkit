@@ -1078,7 +1078,7 @@ class TestMolecule:
         qcschema = ethanol.to_qcschema()
         # make sure the properties match
         charge = 0
-        connectivity = [(0, 1, 1.0), (0, 3, 1.0), (0, 4, 1.0), (0, 5, 1.0), (1, 2, 1.0), (1, 6, 1.0), (1, 7, 1.0), (2, 8, 1.0)]
+        connectivity = [(0, 1, 1.0), (0, 4, 1.0), (0, 5, 1.0), (0, 6, 1.0), (1, 2, 1.0), (1, 7, 1.0), (1, 8, 1.0), (2, 3, 1.0)]
         symbols = ['C', 'C', 'O', 'H', 'H', 'H', 'H', 'H', 'H']
         assert charge == qcschema.molecular_charge
         assert connectivity == qcschema.connectivity
