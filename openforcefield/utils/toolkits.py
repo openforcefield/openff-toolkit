@@ -554,6 +554,91 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return mols
 
+    def enumerate_stereoisomers(self, molecule, undefined_only=False, max_isomers=20, rationalise=True):
+        """
+        Enumerate the stereocenters and bonds of the current molecule.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The molecule whose state we should enumerate
+
+        undefined_only: bool optional, default=False
+            If we should enumerate all stereocenters and bonds or only those with undefined stereochemistry
+
+        max_isomers: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        rationalise: bool optional, default=True
+            If we should try to build and rationalise the molecule to ensure it can exist
+
+        Returns
+        --------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances
+
+        """
+        from openeye import oeomega, oechem
+        oemol = self.to_openeye(molecule=molecule)
+
+        # arguments for this function can be found here
+        # <https://docs.eyesopen.com/toolkits/python/omegatk/OEConfGenFunctions/OEFlipper.html?highlight=stereoisomers>
+        i = 0
+        molecules = []
+        for isomer in oeomega.OEFlipper(oemol, 200, not undefined_only, True, False):
+
+            if rationalise:
+                # try and determine if the molecule is reasonable by generating a conformer with
+                # strict stereo, like embedding in rdkit
+                omega = oeomega.OEOmega()
+                omega.SetMaxConfs(1)
+                omega.SetCanonOrder(False)
+                # Don't generate random stereoisomer if not specified
+                omega.SetStrictStereo(True)
+                mol = oechem.OEMol(isomer)
+                status = omega(mol)
+                if status:
+                    molecules.append(self.from_openeye(mol))
+
+            else:
+                molecules.append(self.from_openeye(isomer))
+
+        return molecules[:max_isomers]
+
+    def enumerate_tautomers(self, molecule, max_states=20):
+        """
+        Enumerate the possible tautomers of the current molecule
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The molecule whose state we should enumerate
+
+        max_states: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        Returns
+        -------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances
+        """
+        from openeye import oequacpac
+        oemol = self.to_openeye(molecule=molecule)
+
+        tautomers = []
+
+        # set the options
+        tautomer_options = oequacpac.OETautomerOptions()
+        tautomer_options.SetApplyWarts(False)
+        tautomer_options.SetMaxTautomersGenerated(max_states)
+        # here we turn on pka_norm
+        # This function generates tautomers (which might be different ionization states
+        # than parent) that are normalized to the predominant state at pH ~7.4
+        for tautomer in oequacpac.OEGetReasonableTautomers(oemol, tautomer_options, True):
+            tautomers.append(self.from_openeye(tautomer))
+
+        return tautomers
+
     @staticmethod
     def _check_mol2_gaff_atom_type(molecule, file_path=None):
         """Attempts to detect the presence of GAFF atom types in a molecule loaded from a mol2 file.
