@@ -2039,6 +2039,55 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         with open(file_path, 'w') as file_obj:
             self.to_file_obj(molecule=molecule, file_obj=file_obj, file_format=file_format)
 
+    def enumerate_stereoisomers(self, molecule, undefined_only=False, max_isomers=20, rationalise=True):
+        """
+        Enumerate the stereocenters and bonds of the current molecule.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The molecule whose state we should enumerate
+
+        undefined_only: bool optional, default=False
+            If we should enumerate all stereocenters and bonds or only those with undefined stereochemistry
+
+        max_isomers: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        rationalise: bool optional, default=True
+            If we should try to build and rationalise the molecule to ensure it can exist
+
+        Returns
+        --------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances
+
+        """
+        from rdkit import Chem
+        from rdkit.Chem.EnumerateStereoisomers import EnumerateStereoisomers, StereoEnumerationOptions
+
+        # create the molecule
+        rdmol = self.to_rdkit(molecule=molecule)
+
+        # in case any bonds/centers are missing stereo chem flag it here
+        Chem.AssignStereochemistry(rdmol, force=True, flagPossibleStereoCenters=True)
+        Chem.FindPotentialStereoBonds(rdmol)
+
+        # set up the options
+        stereo_opts = StereoEnumerationOptions(tryEmbedding=rationalise, onlyUnassigned=undefined_only,
+                                               maxIsomers=max_isomers)
+
+        isomers = tuple(EnumerateStereoisomers(rdmol, options=stereo_opts))
+
+        molecules = []
+        for isomer in isomers:
+            # isomer has CIS/TRANS tags so convert back to E/Z
+            Chem.SetDoubleBondNeighborDirections(isomer)
+            Chem.AssignStereochemistry(isomer, force=True, cleanIt=True)
+            molecules.append(self.from_rdkit(isomer))
+
+        return molecules
+
     def canonical_order_atoms(self, molecule):
         """
         Canonical order the atoms in the molecule using the RDKit.
