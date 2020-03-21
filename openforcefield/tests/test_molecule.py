@@ -36,7 +36,7 @@ from openforcefield.utils import get_data_file_path
 # TODO: Will the ToolkitWrapper allow us to pare that down?
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
 from openforcefield.tests.test_forcefield import create_ethanol, create_reversed_ethanol, create_acetaldehyde, \
-    create_benzene_no_aromatic, create_cyclohexane
+    create_benzene_no_aromatic, create_cyclohexane, create_cis_1_2_dichloroethene
 
 #=============================================================================================
 # TEST UTILITIES
@@ -303,34 +303,25 @@ class TestMolecule:
         undefined_stereo = molecule.name in undefined_stereo_mols
 
         smiles1 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-        molecule2 = Molecule.from_smiles(smiles1,
-                                         allow_undefined_stereo=undefined_stereo,
-                                         toolkit_registry=toolkit_wrapper)
+        if undefined_stereo:
+            molecule2 = Molecule.from_smiles(smiles1,
+                                             allow_undefined_stereo=True,
+                                             toolkit_registry=toolkit_wrapper)
+        else:
+            molecule2 = Molecule.from_smiles(smiles1,
+                                             toolkit_registry=toolkit_wrapper)
+
         smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
         assert (smiles1 == smiles2)
 
-    smiles_types = [{'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H:5]/[C:2](=[C:3](\\[H:6])/[Cl:4])/[Cl:1]',
-                     'rdkit_output': '[Cl:1]/[C:2](=[C:3](\\[Cl:4])[H:6])[H:5]',
-                     'isomeric': True, 'explicit_hydrogens': True, 'mapped': True, 'error': None},
-                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H:5][C:2](=[C:3]([H:6])[Cl:4])[Cl:1]',
-                     'rdkit_output': '[Cl:1][C:2](=[C:3]([Cl:4])[H:6])[H:5]',
-                     'isomeric': False, 'explicit_hydrogens': True, 'mapped': True, 'error': None},
-                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': None, 'rdkit_output': None,
-                     'isomeric': True, 'explicit_hydrogens': False, 'mapped': True, 'error': AssertionError},
-                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H]/C(=C(\\[H])/Cl)/Cl',
-                     'rdkit_output': '[H]/[C]([Cl])=[C](\\[H])[Cl]',
-                     'isomeric': True, 'explicit_hydrogens': True, 'mapped': False, 'error': None},
-                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': 'C(=C\\Cl)\\Cl',
-                     'rdkit_output': 'Cl/C=C\\Cl',
-                     'isomeric': True, 'explicit_hydrogens': False, 'mapped': False, 'error': None},
-                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H]C(=C([H])Cl)Cl',
-                     'rdkit_output': '[H][C]([Cl])=[C]([H])[Cl]',
-                     'isomeric': False, 'explicit_hydrogens': True, 'mapped': False, 'error': None},
-                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': None, 'rdkit_output': None,
-                     'isomeric': False, 'explicit_hydrogens': False, 'mapped': True, 'error': AssertionError},
-                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': 'C(=CCl)Cl',
-                     'rdkit_output': 'ClC=CCl',
-                     'isomeric': False, 'explicit_hydrogens': False, 'mapped': False, 'error': None},
+    smiles_types = [{'isomeric': True, 'explicit_hydrogens': True, 'mapped': True, 'error': None},
+                    {'isomeric': False, 'explicit_hydrogens': True, 'mapped': True, 'error': None},
+                    {'isomeric': True, 'explicit_hydrogens': False, 'mapped': True, 'error': AssertionError},
+                    {'isomeric': True, 'explicit_hydrogens': True, 'mapped': False, 'error': None},
+                    {'isomeric': True, 'explicit_hydrogens': False, 'mapped': False, 'error': None},
+                    {'isomeric': False, 'explicit_hydrogens': True, 'mapped': False, 'error': None},
+                    {'isomeric': False, 'explicit_hydrogens': False, 'mapped': True, 'error': AssertionError},
+                    {'isomeric': False, 'explicit_hydrogens': False, 'mapped': False, 'error': None},
                     ]
 
     @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
@@ -340,7 +331,7 @@ class TestMolecule:
 
         if toolkit_class.is_available():
             toolkit = toolkit_class()
-            mol = Molecule.from_smiles(data['molecule_input'], toolkit_registry=toolkit)
+            mol = create_cis_1_2_dichloroethene()
             isomeric, explicit_hs, mapped = data['isomeric'], data['explicit_hydrogens'], data['mapped']
             if data['error'] is not None:
                 with pytest.raises(data['error']):
@@ -348,20 +339,44 @@ class TestMolecule:
                                   mapped=mapped, toolkit_registry=toolkit)
 
             else:
-                # gather the toolkit dependent output
-                if 'RDKit' in toolkit.__class__.__name__:
-                    output = data['rdkit_output']
 
-                elif 'OpenEye' in toolkit.__class__.__name__:
-                    output = data['openeye_output']
+                # make the smiles then do some checks on it
+                output_smiles = mol.to_smiles(isomeric=isomeric,
+                                              explicit_hydrogens=explicit_hs,
+                                              mapped=mapped, toolkit_registry=toolkit)
+                if isomeric:
+                    assert '\\' in output_smiles
+                if explicit_hs:
+                    assert 'H' in output_smiles
+                if mapped:
+                    for i in range(1,7):
+                        assert f':{i}' in output_smiles
+                    # if the molecule is mapped make it using the mapping
+                    mol2 = Molecule.from_mapped_smiles(mapped_smiles=output_smiles,
+                                                       toolkit_registry=toolkit,
+                                                       allow_undefined_stereo=not isomeric)
+                else:
+                    # make a molecule from a standard smiles
+                    mol2 = Molecule.from_smiles(smiles=output_smiles,
+                                                allow_undefined_stereo=not isomeric,
+                                                toolkit_registry=toolkit)
 
-                assert output == mol.to_smiles(isomeric=isomeric, explicit_hydrogens=explicit_hs,
-                                               mapped=mapped, toolkit_registry=toolkit)
+                isomorphic, atom_map = Molecule.are_isomorphic(mol, mol2, return_atom_map=True,
+                                                               aromatic_matching=True,
+                                                               formal_charge_matching=True,
+                                                               bond_order_matching=True,
+                                                               atom_stereochemistry_matching=isomeric,
+                                                               bond_stereochemistry_matching=isomeric)
+
+                assert isomorphic is True
+                if mapped:
+                    assert {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5} == atom_map
+
         else:
             pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')
 
     @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
-    def test_smiles_chache(self, toolkit_class):
+    def test_smiles_cache(self, toolkit_class):
         """Make sure that the smiles cache is being used correctly."""
 
         if toolkit_class.is_available():
@@ -389,18 +404,11 @@ class TestMolecule:
         else:
             pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')
 
-    mapped_types = [{'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H:5]/[C:2](=[C:3](\\[H:6])/[Cl:4])/[Cl:1]',
-                     'rdkit_output': '[Cl:1]/[C:2](=[C:3](\\[Cl:4])[H:6])[H:5]',
-                     'atom_map': None},
-                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H]/C(=C(\\[H])/Cl)/[Cl:1]',
-                     'rdkit_output': '[H]/[C]([Cl])=[C](\\[H])[Cl:1]',
-                     'atom_map': {0: 0}},
-                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H:5]/[C:2](=[C:3](\\[H:6])/[Cl:4])/[Cl:1]',
-                     'rdkit_output': '[Cl:1]/[C:2](=[C:3](\\[Cl:4])[H:6])[H:5]',
-                     'atom_map': {0: 0, 1: 0, 2: 0, 3: 0}},
-                    {'molecule_input': 'Cl/C=C\Cl', 'openeye_output': '[H]/[C:2](=[C:3](\\[H])/[Cl:4])/[Cl:1]',
-                     'rdkit_output': '[H]/[C:2]([Cl:1])=[C:3](\\[H])[Cl:4]',
-                     'atom_map': {0: 0, 1: 1, 2: 2, 3: 3}}]
+    mapped_types = [{'atom_map': None},
+                    {'atom_map': {0: 0}},
+                    {'atom_map': {0: 0, 1: 0, 2: 0, 3: 0}},
+                    {'atom_map': {0: 0, 1: 1, 2: 2, 3: 3}},
+                    {'atom_map': {0: 1, 1: 2, 2: 3, 3: 4}}]
 
     @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize('data', mapped_types)
@@ -408,17 +416,24 @@ class TestMolecule:
 
         if toolkit_class.is_available():
             toolkit = toolkit_class()
-            mol = Molecule.from_smiles(smiles=data['molecule_input'], toolkit_registry=toolkit)
+            mol = create_cis_1_2_dichloroethene()
             mol._properties['atom_map'] = data['atom_map']
 
-            if 'RDKit' in toolkit.__class__.__name__:
-                output = data['rdkit_output']
+            smiles = mol.to_smiles(isomeric=True, explicit_hydrogens=True,
+                                   mapped=True, toolkit_registry=toolkit)
 
-            elif 'OpenEye' in toolkit.__class__.__name__:
-                output = data['openeye_output']
+            # now we just need to check the smiles generated
+            if data['atom_map'] is None:
+                for i, atom in enumerate(mol.atoms, 1):
+                    assert f'[{atom.element.symbol}:{i}]' in smiles
+            else:
+                if 0 in data['atom_map'].values():
+                    increment = True
+                else:
+                    increment = False
 
-            assert output == mol.to_smiles(isomeric=True, explicit_hydrogens=True,
-                                           mapped=True, toolkit_registry=toolkit)
+                for atom, index in data['atom_map'].items():
+                    assert f'[{mol.atoms[atom].element.symbol}:{index + 1 if increment else index}]'
 
         else:
             pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')

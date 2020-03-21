@@ -1828,19 +1828,23 @@ class FrozenMolecule(Serializable):
 
     def to_smiles(self, isomeric=True, explicit_hydrogens=True, mapped=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
-        Return a canonical isomeric SMILES representation of the current molecule
+        Return a canonical isomeric SMILES representation of the current molecule.
+        A partially mapped smiles can also be generated for atoms of interest by supplying an `atom_map` to the
+        properties dictionary.
 
         .. note :: RDKit and OpenEye versions will not necessarily return the same representation.
 
         Parameters
         ----------
         isomeric: bool optional, default= True
-            return an isometric smiles, requires all stereochemistry to be defined
+            return an isomeric smiles
         explicit_hydrogens: bool optional, default=True
             return a smiles string containing all hydrogens explicitly
         mapped: bool optional, default=False
             return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by supplying an
-            atom map into the properties dictionary
+            atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
+            an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
+            The map ids (values) should start from 0 or 1.
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES conversion
 

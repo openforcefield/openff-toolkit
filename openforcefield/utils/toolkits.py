@@ -1032,17 +1032,22 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     def to_smiles(self, molecule, isomeric=True, explicit_hydrogens=True, mapped=False):
         """
         Uses the OpenEye toolkit to convert a Molecule into a SMILES string.
+        A partially mapped smiles can also be generated for atoms of interest by supplying an `atom_map` to the
+        properties dictionary.
 
         Parameters
         ----------
+        molecule : An openforcefield.topology.Molecule
+            The molecule to convert into a SMILES.
         isomeric: bool optional, default= True
-            return an isometric smiles, requires all stereochemistry to be defined
+            return an isomeric smiles
         explicit_hydrogens: bool optional, default=True
             return a smiles string containing all hydrogens explicitly
         mapped: bool optional, default=False
-            return a explicit hydrogen mapped smiles
-        molecule : An openforcefield.topology.Molecule
-            The molecule to convert into a SMILES.
+            return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by supplying an
+            atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
+            an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
+            The map ids (values) should start from 0 or 1.
 
         Returns
         -------
@@ -1071,13 +1076,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                                                 "stereochemsitry to be defined to retain order"
 
             # if we only want to map specific atoms check for an atom map
-            # if we only want to map specific atoms check for an atom map
             atom_map = molecule._properties.get('atom_map', None)
             if atom_map is not None:
                 # make sure there are no repeated indices
                 map_ids = set(atom_map.values())
                 if len(map_ids) < len(atom_map):
                     atom_map = None
+                elif 0 in atom_map.values():
+                    # we need to increment the map index
+                    for atom, map in atom_map.items():
+                        atom_map[atom] = map + 1
 
             if atom_map is None:
                 # now we need to add the atom map to the atoms
@@ -1087,7 +1095,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 for atom in oemol.GetAtoms():
                     try:
                         # try to set the atom map
-                        map_idx = atom_map[atom.GetIdx()] + 1
+                        map_idx = atom_map[atom.GetIdx()]
                         atom.SetMapIdx(map_idx)
                     except KeyError:
                         continue
@@ -2040,17 +2048,22 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     def to_smiles(self, molecule, isomeric=True, explicit_hydrogens=True, mapped=False):
         """
         Uses the RDKit toolkit to convert a Molecule into a SMILES string.
+        A partially mapped smiles can also be generated for atoms of interest by supplying an `atom_map` to the
+        properties dictionary.
 
         Parameters
         ----------
         molecule : An openforcefield.topology.Molecule
             The molecule to convert into a SMILES.
         isomeric: bool optional, default= True
-            return an isometric smiles, requires all stereochemistry to be defined
+            return an isomeric smiles
         explicit_hydrogens: bool optional, default=True
             return a smiles string containing all hydrogens explicitly
         mapped: bool optional, default=False
-            return a explicit hydrogen mapped smiles
+            return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by supplying an
+            atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
+            an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
+            The map ids (values) should start from 0 or 1.
 
         Returns
         -------
@@ -2066,7 +2079,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         if mapped:
             assert explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
-                                               "stereochemsitry to be defined to retain order"
+                                               "stereochemistry to be defined to retain order"
 
             # if we only want to map specific atoms check for an atom map
             atom_map = molecule._properties.get('atom_map', None)
@@ -2075,6 +2088,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 map_ids = set(atom_map.values())
                 if len(map_ids) < len(atom_map):
                     atom_map = None
+                elif 0 in atom_map.values():
+                    # we need to increment the map index
+                    for atom, map in atom_map.items():
+                        atom_map[atom] = map + 1
 
             if atom_map is None:
                 # now we need to add the indexing to the rdmol to get it in the smiles
@@ -2085,7 +2102,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 for atom in rdmol.GetAtoms():
                     try:
                         # try to set the atom map
-                        map_idx = atom_map[atom.GetIdx()] + 1
+                        map_idx = atom_map[atom.GetIdx()]
                         atom.SetAtomMapNum(map_idx)
                     except KeyError:
                         continue
