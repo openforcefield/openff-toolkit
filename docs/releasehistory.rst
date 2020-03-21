@@ -89,6 +89,11 @@ Behavior changed
   and generate a new conformer of the molecule before running semiempirical calculations.
   Users can override this behavior by specifying the keyword argument
   ``use_conformers=molecule.conformers``
+- `PR #544 <https://github.com/openforcefield/openforcefield/pull/544>`_: Raises 
+  ``NotImplementedError`` when calling 
+  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`, 
+  which is not yet implemented, but would previously silently return ``None``.
+
 
 Tests added
 """""""""""
