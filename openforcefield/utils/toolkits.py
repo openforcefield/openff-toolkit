@@ -496,7 +496,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # OFFTK strictly treats SDF as a single-conformer format.
         # We need to override OETK's behavior here if the user is saving a multiconformer molecule.
-        # Delete all but the first conformer if writing to SDF.
+
+        # Remove all but the first conformer when writing to SDF as we only support single conformer format
         if (file_format.lower() == "sdf") and oemol.NumConfs() > 1:
             conf1 = [conf for conf in oemol.GetConfs()][0]
             flat_coords = list()
@@ -754,6 +755,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         Create a Molecule from an OpenEye molecule. If the OpenEye molecule has
         implicit hydrogens, this function will make them explicit.
 
+        ``OEAtom`` s have a different set of allowed value for partial charges than
+        ``openforcefield.topology.Molecule`` s. In the OpenEye toolkits, partial charges
+        are stored on individual ``OEAtom`` s, and their values are initialized to ``0.0``.
+        In the Open Force Field Toolkit, an ``openforcefield.topology.Molecule``'s
+        ``partial_charges`` attribute is initialized to ``None`` and can be set to a
+        ``simtk.unit.Quantity``-wrapped numpy array with units of
+        elementary charge. The Open Force
+        Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
+        charge of ``float('nan')`` to be equivalent to an Open Force Field Molecule's
+        ``partial_charges = None``.
+        This assumption is made in both ``to_openeye`` and ``from_openeye``.
+
         .. warning :: This API is experimental and subject to change.
 
         Parameters
@@ -928,20 +941,22 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             np.zeros(molecule.n_atoms, dtype=np.float),
             unit=unit.elementary_charge)
 
-        any_partial_charge_is_nan = False
+        # If all OEAtoms have a partial charge of NaN, then the OFFMol should
+        # have its partial_charges attribute set to None
+        any_partial_charge_is_not_nan = False
         for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
             off_idx = map_atoms[oe_idx]
             unitless_charge = oe_atom.GetPartialCharge()
-            if math.isnan(unitless_charge):
-                any_partial_charge_is_nan = True
-                break
+            if not math.isnan(unitless_charge):
+                any_partial_charge_is_not_nan = True
+                #break
             charge = unitless_charge * unit.elementary_charge
             partial_charges[off_idx] = charge
 
-        if any_partial_charge_is_nan:
-            molecule.partial_charges = None
-        else:
+        if any_partial_charge_is_not_nan:
             molecule.partial_charges = partial_charges
+        else:
+            molecule.partial_charges = None
 
         return molecule
 
@@ -949,6 +964,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     def to_openeye(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an OpenEye molecule using the specified aromaticity model
+
+        ``OEAtom`` s have a different set of allowed value for partial charges than
+        ``openforcefield.topology.Molecule`` s. In the OpenEye toolkits, partial charges
+        are stored on individual ``OEAtom`` s, and their values are initialized to ``0.0``.
+        In the Open Force Field Toolkit, an ``openforcefield.topology.Molecule``'s
+        ``partial_charges`` attribute is initialized to ``None`` and can be set to a
+        ``simtk.unit.Quantity``-wrapped numpy array with units of
+        elementary charge. The Open Force
+        Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
+        charge of ``float('nan')`` to be equivalent to an Open Force Field Molecule's
+        ``partial_charges = None``.
+        This assumption is made in both ``to_openeye`` and ``from_openeye``.
 
         .. todo ::
 

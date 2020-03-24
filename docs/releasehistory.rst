@@ -7,8 +7,8 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-0.6.1 - Bugfixes
-----------------
+0.7.0 - Current development
+---------------------------
 
 Behavior changed
 """"""""""""""""
@@ -26,20 +26,20 @@ Behavior changed
   ``partial_charges`` attribute is set to ``None`` (the default value), calling ``to_openeye`` will
   now produce a OE molecule with partial charges set to ``nan``. This would previously produce an OE
   molecule with partial charges of 0.0, which was a loss of information, since it wouldn't be clear
-  whether the original OFFMol's partial charges were all-zero or ``None``. OpenEye toolkit
+  whether the original OFFMol's partial charges were REALLY all-zero as opposed to ``None``. OpenEye toolkit
   wrapper methods such as ``from_smiles`` and ``from_file`` now produce OFFMols with
   ``partial_charges = None`` when appropriate (previously these would produce OFFMols with
-  all-zero charges).
-- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: Per the new SDF
-  partial charge specification adopted by RDKit, ``Molecule.to_rdkit``
+  all-zero charges, for the same reasoning as above).
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: ``Molecule.to_rdkit``
   now sets partial charges on the RDAtom's ``PartialCharges`` property (this was previously set
   on the ``partial_charges`` property). If the OFFMol's partial_charges attribute is None, this property
-  will not be defined.
+  will not be defined on the RDAtoms.
 - `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_:
   Enforce the behavior during SDF I/O that a SDF may contain multiple MOLECULES, but that the OFF Toolkit
-  will NEVER assume that it contains multiple CONFORMERS of the same molecule. This is an
+  DOES NOT assume that it contains multiple CONFORMERS of the same molecule. This is an
   important distinction, since otherwise there is ambiguity around whether properties of one
-  entry in a SDF are shared among several molecule blocks or not (More info
+  entry in a SDF are shared among several molecule blocks or not, or how to resolve conflicts if properties
+  are defined differently for several "conformers" of chemically-identical species (More info
   `here <https://docs.eyesopen.com/toolkits/python/oechemtk/oemol.html#dude-where-s-my-sd-data>`_.
   If the user requests the OFF
   Toolkit to write a multi-conformer ``Molecule`` to SDF, only the first conformer will be written.

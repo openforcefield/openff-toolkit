@@ -46,6 +46,8 @@ class TestOpenEyeToolkitWrapper:
         smiles = '[H]C([H])([H])C([H])([H])[H]'
         molecule = Molecule.from_smiles(smiles,
                                         toolkit_registry=toolkit_wrapper)
+        # When creating an OFFMol from SMILES, partial charges should be initialized to None
+        assert molecule.partial_charges is None
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
 
@@ -216,6 +218,40 @@ class TestOpenEyeToolkitWrapper:
         assert molecule2.partial_charges is None
 
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_to_from_openeye_none_partial_charges(self):
+        """Test to ensure that to_openeye and from_openeye correctly handle None partial charges"""
+        import math
+        # Create ethanol, which has partial charges defined with float values
+        ethanol = create_ethanol()
+        assert ethanol.partial_charges is not None
+        # Convert to OEMol, which should populate the partial charges on
+        # the OEAtoms with the same partial charges
+        oemol = ethanol.to_openeye()
+        for oeatom in oemol.GetAtoms():
+            assert not math.isnan(oeatom.GetPartialCharge())
+        # Change the first OEAtom's partial charge to nan, and ensure that it comes
+        # back to OFFMol with only the first atom as nan
+        for oeatom in oemol.GetAtoms():
+            oeatom.SetPartialCharge(float('nan'))
+            break
+        eth_from_oe = Molecule.from_openeye(oemol)
+        assert math.isnan(eth_from_oe.partial_charges[0] / unit.elementary_charge)
+        for pc in eth_from_oe.partial_charges[1:]:
+            assert not math.isnan(pc / unit.elementary_charge)
+        # Then, set all the OEMol's partial charges to nan, and ensure that
+        # from_openeye produces an OFFMol with partial_charges = None
+        for oeatom in oemol.GetAtoms():
+            oeatom.SetPartialCharge(float('nan'))
+        eth_from_oe = Molecule.from_openeye(oemol)
+        assert eth_from_oe.partial_charges is None
+
+        # Send the OFFMol with partial_charges = None back to OEMol, and
+        # ensure that all its charges are nan
+        oemol2 = eth_from_oe.to_openeye()
+        for oeatom in oemol2.GetAtoms():
+            assert math.isnan(oeatom.GetPartialCharge())
 
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
@@ -824,6 +860,8 @@ class TestRDKitToolkitWrapper:
         smiles = '[H][C]([H])([H])[C]([H])([H])[H]'
         molecule = Molecule.from_smiles(smiles,
                                         toolkit_registry=toolkit_wrapper)
+        # When making a molecule from SMILES, partial charges should be initialized to None
+        assert molecule.partial_charges is None
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         #print(smiles, smiles2)
         assert smiles == smiles2
