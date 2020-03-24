@@ -30,7 +30,8 @@ __all__ = [
     'ProperTorsionHandler',
     'ImproperTorsionHandler',
     'vdWHandler',
-    'GBSAHandler'
+    'GBSAHandler',
+    'VirtualSiteHandler'
 ]
 
 
@@ -1358,19 +1359,28 @@ class ParameterHandler(_ParameterAttributeHandler):
         smirnoff_data = attach_units(unitless_kwargs, attached_units)
 
         element_name = None
-        if self._INFOTYPE is not None:
-            element_name = self._INFOTYPE._ELEMENT_NAME
 
         for key, val in smirnoff_data.items():
-            # Skip sections that aren't the parameter list
-            if key != element_name:
-                continue
             # If there are multiple parameters, this will be a list. If there's just one, make it a list
             if not (isinstance(val, list)):
                 val = [val]
+
             # If we're reading the parameter list, iterate through and attach units to
             # each parameter_dict, then use it to initialize a ParameterType
             for unitless_param_dict in val:
+
+                # Perform some dynamic type checking if a type tag is specified
+                if "type" in unitless_param_dict:
+                    self._INFOTYPE = unitless_param_dict["type"]
+                    element_name = self._INFOTYPE._ELEMENT_NAME
+                elif self._INFOTYPE is not None:
+                    element_name = self._INFOTYPE._ELEMENT_NAME
+
+                # Skip sections that aren't the parameter list
+                # Delay check until now since we need to get the type per element
+                # since VirtualSite elements are variable
+                if key != element_name:
+                    break
                 param_dict = attach_units(unitless_param_dict, attached_units)
                 new_parameter = self._INFOTYPE(**param_dict,
                                                allow_cosmetic_attributes=allow_cosmetic_attributes)
@@ -2002,6 +2012,11 @@ class AngleHandler(ParameterHandler):
 
 #=============================================================================================
 
+
+
+
+#=============================================================================================
+
 # TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet (it'll be easy if we switch to use the attrs library).
 def _allow_only(allowed_values):
     """A converter that checks the new value is only in a set.
@@ -2497,6 +2512,108 @@ class vdWHandler(_NonbondedHandler):
                                                 self._scale14)
                 #force.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self._scale14)
 
+class VirtualSiteHandler(ParameterHandler):
+    """Handle SMIRNOFF ``<VirtualSites>`` tags
+
+    .. warning :: This API is experimental and subject to change.
+    """
+    #class VirtualSiteType(ParameterType):
+    class VirtualSiteType(vdWHandler.vdWType):
+        """A SMIRNOFF virtual site base type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+
+        _VALENCE_TYPE = None
+        # Needed here to read the generic VirtualSite xml elements
+        # Will specialize after the type is parsed
+        _ELEMENT_NAME = 'VirtualSite'
+        distance        = ParameterAttribute(unit=unit.angstrom)
+        chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
+        type            = ParameterAttribute()
+
+    class VirtualSiteBondChargeType(VirtualSiteType):
+        """A SMIRNOFF virtual site bond charge type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+        _ELEMENT_NAME = 'VirtualSiteBondChargeType'
+
+    class VirtualSiteLonePairType(VirtualSiteType):
+        """A SMIRNOFF virtual site requiring plane angles
+
+        .. warning :: This API is experimental and subject to change.
+        """
+        _ELEMENT_NAME = None
+        outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
+        inPlaneAngle    = ParameterAttribute(unit=unit.degree)
+
+    class VirtualSiteMonovalentLonePairType(VirtualSiteLonePairType):
+        """A SMIRNOFF monovalent lone pair virtual site type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+        _ELEMENT_NAME = 'VirtualSiteMonovalentType'
+
+    class VirtualSiteDivalentLonePairType(VirtualSiteLonePairType):
+        """A SMIRNOFF divalent lone pair virtual site type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+
+        _ELEMENT_NAME = 'VirtualSiteDivalentType'
+
+    class VirtualSiteTrivalentLonePairType(VirtualSiteLonePairType):
+        """A SMIRNOFF trivalent lone pair virtual site type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+
+        _ELEMENT_NAME = 'VirtualSiteTrivalentType'
+        
+    _DEPENDENCIES = None 
+    _TAGNAME = 'VirtualSites'  # SMIRNOFF tag name to process
+    __INFOTYPE = VirtualSiteType  # class to hold force type info
+
+    @property
+    def _INFOTYPE(self):
+        return self.__INFOTYPE
+
+    @_INFOTYPE.setter
+    def _INFOTYPE(self, type_str):
+        if type_str == "BondCharge":
+            self.__INFOTYPE=__class__.VirtualSiteBondChargeType
+        elif type_str == "MonovalentLonePair":
+            self.__INFOTYPE=__class__.VirtualSiteMonovalentLonePairType
+        elif type_str == "DivalentLonePair":
+            self.__INFOTYPE=__class__.VirtualSiteDivalentLonePairType
+        elif type_str == "TrivalentLonePair":
+            self.__INFOTYPE=__class__.VirtualSiteTrivalentLonePairType
+
+
+    def check_handler_compatibility(self,
+                                    other_handler):
+        """
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        #string_attrs_to_compare = ['potential', 'fractional_bondorder_method', 'fractional_bondorder_interpolation']
+        #self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare)
+        #super().check_handler_compatibility(other_handler)
+
+    def create_force(self, system, topology, **kwargs):
+        x=5.0
+        return
+        # Create or retrieve existing OpenMM Force object
 
 class ElectrostaticsHandler(_NonbondedHandler):
     """Handles SMIRNOFF ``<Electrostatics>`` tags.
