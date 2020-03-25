@@ -128,7 +128,7 @@ ParameterHandler
     A generic base class for objects that perform parametrization for one section in a SMIRNOFF data source.
 
     Each ParameterHandler-derived class MUST implement:
-        - ``create_force(self, system, topology, **kwargs)``: takes a ``System`` and a ``Topology`` as input, as well as optional keyword arguments, and modifies the ``System`` to contain the appropriate parameters.
+        - ``create_force(self, system, topology, **kwargs)``: takes an OpenMM ``System`` and a OpenFF ``Topology`` as input, as well as optional keyword arguments, and modifies the ``System`` to contain the appropriate parameters.
         - Class-level ``ParameterAttributes`` and ``IndexedParameterAttributes``: These correspond to the header-level attributes in a SMIRNOFF data source.
           For example,, the ``Bonds`` tag in the SMIRNOFF spec has an optional ``fractional_bondorder_method`` field, which corresponds to the line  ``fractional_bondorder_method = ParameterAttribute(default=None)`` in the ``BondHandler`` class definition.
           The ``ParameterAttribute`` and ``IndexedParameterAttribute`` classes offer considerable flexibility for validating inputs.
