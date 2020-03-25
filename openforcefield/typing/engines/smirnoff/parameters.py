@@ -1442,7 +1442,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             A list of matching ParameterType objects
         """
         # TODO: This is a necessary API point for Lee-Ping's ForceBalance
-        pass
+        raise NotImplementedError()
 
     class _Match:
         """Represents a ParameterType which has been matched to
