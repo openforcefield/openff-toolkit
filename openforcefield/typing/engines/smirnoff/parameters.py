@@ -1359,7 +1359,6 @@ class ParameterHandler(_ParameterAttributeHandler):
         smirnoff_data = attach_units(unitless_kwargs, attached_units)
 
         element_name = None
-
         for key, val in smirnoff_data.items():
             # If there are multiple parameters, this will be a list. If there's just one, make it a list
             if not (isinstance(val, list)):
@@ -1510,6 +1509,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
+        from collections import defaultdict
         logger.debug('Finding matches for {}'.format(self.__class__.__name__))
 
         matches = transformed_dict_cls()
@@ -1518,15 +1518,27 @@ class ParameterHandler(_ParameterAttributeHandler):
         #       by performing this loop in reverse order, and breaking early once
         #       all environments have been matched.
         for parameter_type in self._parameters:
-            matches_for_this_type = {}
+            matches_for_this_type = defaultdict(list)
 
             for environment_match in entity.chemical_environment_matches(parameter_type.smirks):
                 # Update the matches for this parameter type.
                 handler_match = self._Match(parameter_type, environment_match)
-                matches_for_this_type[environment_match.topology_atom_indices] = handler_match
+                key = environment_match.topology_atom_indices
+
+                fn = None
+                if len(key) < 4:
+                    fn = ValenceDict.__keytransform__
+                else:
+                    fn = ImproperDict.__keytransform__
+                key = fn(None, key)
+
+                matches_for_this_type[key] = [handler_match]
+                if environment_match.topology_atom_indices not in matches:
+                    matches[key] = []
 
             # Update matches of all parameter types.
-            matches.update(matches_for_this_type)
+            [ matches[k].extend(v) for k,v in matches_for_this_type.items()]
+            #matches.update(matches_for_this_type)
 
             logger.debug('{:64} : {:8} matches'.format(
                 parameter_type.smirks, len(matches_for_this_type)))

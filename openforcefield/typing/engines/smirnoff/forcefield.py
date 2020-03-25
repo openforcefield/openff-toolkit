@@ -1265,7 +1265,7 @@ class ForceField:
                 # match objects to ParameterTypes
 
                 for match in matches:
-                    parameter_matches[match] = matches[match].parameter_type
+                    parameter_matches[match] = [m.parameter_type for m in matches[match]] 
 
                 current_molecule_labels[tag] = parameter_matches
 
