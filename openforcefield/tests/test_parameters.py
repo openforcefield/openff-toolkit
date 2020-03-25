@@ -384,6 +384,21 @@ class TestParameterHandler:
         assert not(bh.attribute_is_cosmetic('pilot'))
 
 
+    def test_get_parameter(self):
+        """Test that ParameterHandler.get_parameter can lookup function
+        """
+        from simtk import unit
+        bh = BondHandler(skip_version_check=True)
+        bh.add_parameter({'smirks': '[*:1]-[*:2]',
+                          'length': 1*unit.angstrom,
+                          'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2})
+
+        params = bh.get_parameter({'smirks': '[*:1]-[*:2]'})
+
+        assert params[0].length == unit.Quantity(1.0, unit.angstrom)
+        assert params[0].k == unit.Quantity(10.0, unit.kilocalorie_per_mole/unit.angstrom**2)
+
+
 class TestParameterList:
     """Test capabilities of ParameterList for accessing and manipulating SMIRNOFF parameter definitions.
     """

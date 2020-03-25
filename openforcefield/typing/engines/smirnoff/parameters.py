@@ -1429,11 +1429,15 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Returns
         -------
-        list of ParameterType objects
+        params : list of ParameterType objects
             A list of matching ParameterType objects
         """
-        # TODO: This is a necessary API point for Lee-Ping's ForceBalance
-        raise NotImplementedError()
+        params = list()
+        for attr, value in parameter_attrs.items():
+            for param in self._parameters:
+                if getattr(param, attr) == value:
+                    params.append(param)
+        return params
 
     class _Match:
         """Represents a ParameterType which has been matched to
