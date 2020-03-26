@@ -48,6 +48,7 @@ import logging
 import re
 
 from simtk import openmm, unit
+import numpy as np
 
 from openforcefield.utils import attach_units,  \
     extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
@@ -2909,7 +2910,6 @@ class VirtualSiteHandler(_NonbondedHandler):
     """
 
 
-
     #class VirtualSiteType(ParameterType):
     class VirtualSiteType(vdWHandler.vdWType):
         """A SMIRNOFF virtual site base type
@@ -2949,7 +2949,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 force.setParticleParameters(atom, q, s, e)
             return vsite_q
 
-        def add_openmm_virtual_site(self, force, atoms):
+        def get_openmm_virtual_site(self, atoms):
             # obviously this will need to be implemented correctly for each type
             atoms = atoms[:2]
             originwt = [0.0, 1.0] # second atom is origin
@@ -2972,6 +2972,30 @@ class VirtualSiteHandler(_NonbondedHandler):
             off_idx = super().add_virtual_site(fn, atoms, **kwargs)
             return off_idx
 
+        def get_openmm_virtual_site(self, atoms, mass=None):
+            originwt = np.zeros_like(atoms)
+            originwt[0] = 1.0 # first atom is origin (where the hole should be)
+
+            xdir = np.full( len(atoms), 1.0/(originwt.shape[0]-1) ) # must == 1
+            xdir[0] = -1.0 # total sum == 0
+
+            # point towards COM (use mass weights instead of 1/N weights)
+            if mass:
+                mass = np.asarray(mass)
+                xdir[1:] = mass[1:] / mass[1:].sum()
+
+            # Seems ydir and zdir don't matter for BondCharge, since
+            # from openmm, zdir = cross(xdir, ydir) and then ydir set to 
+            # cross(zdir, xdir).
+            # We therefore allow ydir == zdir == 0, and just displace along xdir
+            ydir = np.array(xdir)
+
+            # since the origin is atom 1, and xdir is a unit vector pointing
+            # towards the center of the other atoms, we want the
+            # vsite to point away from the unit vector to achieve the desired
+            # distance
+            pos  = [-self.distance, 0.0, 0.0] # pos of the vsite in local crds
+            return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
 
 
     class VirtualSiteLonePairType(VirtualSiteType):
@@ -2996,6 +3020,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             kwargs.update(base_args)
             return fn( *args, **kwargs)
 
+
     class VirtualSiteMonovalentLonePairType(VirtualSiteLonePairType):
         """A SMIRNOFF monovalent lone pair virtual site type
 
@@ -3005,6 +3030,22 @@ class VirtualSiteHandler(_NonbondedHandler):
         def add_virtual_site(self, molecule, atoms):
             fn = molecule._add_monovalent_lone_pair_virtual_site
             return super().add_virtual_site(fn, atoms)
+
+        def get_openmm_virtual_site(self, atoms, mass=None):
+            assert len(atoms) == 3
+            originwt = np.zeros_like(atoms)
+            originwt[0] = 1.0 # 
+
+            xdir = [-1.0, 1.0, 0.0]
+            ydir = [-1.0, 0.0, 1.0]
+
+            theta = self.inPlaneAngle.value_in_unit( self.inPlaneAngle.unit)
+            psi   = self.outOfPlaneAngle.value_in_unit( self.outOfPlaneAngle.unit)
+
+            pos  = [self.distance*np.cos( theta)*np.cos( psi),
+                    self.distance*np.sin( theta)*np.cos( psi),
+                    self.distance*np.sin( psi)] # pos of the vsite in local crds
+            return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
 
     class VirtualSiteDivalentLonePairType(VirtualSiteLonePairType):
         """A SMIRNOFF divalent lone pair virtual site type
@@ -3017,6 +3058,21 @@ class VirtualSiteHandler(_NonbondedHandler):
             fn = molecule._add_divalent_lone_pair_virtual_site
             return super().add_virtual_site(fn, atoms)
 
+        def get_openmm_virtual_site(self, atoms, mass=None):
+            assert len(atoms) == 3
+            originwt = np.zeros_like(atoms)
+            originwt[0] = 1.0 # 
+
+            xdir = [-1.0, 0.5, 0.5]
+            ydir = [-1.0, 1.0, 0.0]
+
+            theta = self.outOfPlaneAngle.value_in_unit( self.outOfPlaneAngle.unit)
+
+            pos  = [-self.distance*np.cos( theta),
+                    0.0,
+                     self.distance*np.sin( theta)] # pos of the vsite in local crds
+            return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
+
     class VirtualSiteTrivalentLonePairType(VirtualSiteLonePairType):
         """A SMIRNOFF trivalent lone pair virtual site type
 
@@ -3027,6 +3083,21 @@ class VirtualSiteHandler(_NonbondedHandler):
         def add_virtual_site(self, molecule, atoms):
             fn = molecule._add_trivalent_lone_pair_virtual_site
             return super().add_virtual_site(fn, atoms)
+
+        def get_openmm_virtual_site(self, atoms, mass=None):
+            assert len(atoms) == 4
+            originwt = np.zeros_like(atoms)
+            originwt[0] = 1.0 # 
+
+            xdir = [-1.0, 1/3, 1/3, 1/3]
+
+            #ydir does not matter
+            ydir = [-1.0, 1.0, 0.0, 0.0]
+
+            pos  = [0.0,
+                    0.0,
+                    -self.distance] # pos of the vsite in local crds
+            return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
         
     _DEPENDENCIES = [ ElectrostaticsHandler, LibraryChargeHandler ]
     _TAGNAME = 'VirtualSites'  # SMIRNOFF tag name to process
@@ -3099,7 +3170,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 mol = atom_match.environment_match.reference_molecule
 
                 atom_idx = atom_match.parameter_type.add_virtual_site( mol, atom_key)
-                vsite = atom_match.parameter_type.add_openmm_virtual_site( force, atom_key)
+                vsite = atom_match.parameter_type.get_openmm_virtual_site( atom_key)
 
                 # apply the charge increment using the atom_key atoms, 
                 # and the vsite
