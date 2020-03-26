@@ -1487,7 +1487,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             matching the tuple of particle indices in ``entity``.
         """
 
-        # TODO: Right now, this method is only ever called with an entity that is a Topoogy.
+        # TODO: Right now, this method is only ever called with an entity that is a Topology.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
         return self._find_matches(entity)
 
@@ -1804,18 +1804,19 @@ class ConstraintHandler(ParameterHandler):
 
     def create_force(self, system, topology, **kwargs):
         constraint_matches = self.find_matches(topology)
-        for (atoms, constraint_match) in constraint_matches.items():
+        for (atoms, constraint_matches) in constraint_matches.items():
             # Update constrained atom pairs in topology
             #topology.add_constraint(*atoms, constraint.distance)
             # If a distance is specified (constraint.distance != True), add the constraint here.
             # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondHandler
-            constraint = constraint_match.parameter_type
+            for constraint_match in constraint_matches:
+                constraint = constraint_match.parameter_type
 
-            if constraint.distance is None:
-                topology.add_constraint(*atoms, True)
-            else:
-                system.addConstraint(*atoms, constraint.distance)
-                topology.add_constraint(*atoms, constraint.distance)
+                if constraint.distance is None:
+                    topology.add_constraint(*atoms, True)
+                else:
+                    system.addConstraint(*atoms, constraint.distance)
+                    topology.add_constraint(*atoms, constraint.distance)
 
 #=============================================================================================
 
@@ -2477,15 +2478,16 @@ class vdWHandler(_NonbondedHandler):
 
 
         # Set the particle Lennard-Jones terms.
-        for atom_key, atom_match in atom_matches.items():
-            atom_idx = atom_key[0]
-            ljtype = atom_match.parameter_type
-            if ljtype.sigma is None:
-                sigma = 2. * ljtype.rmin_half / (2.**(1. / 6.))
-            else:
-                sigma = ljtype.sigma
-            force.setParticleParameters(atom_idx, 0.0, sigma,
-                                        ljtype.epsilon)
+        for atom_key, atom_match_lst in atom_matches.items():
+            for atom_match in atom_match_lst:
+                atom_idx = atom_key[0]
+                ljtype = atom_match.parameter_type
+                if ljtype.sigma is None:
+                    sigma = 2. * ljtype.rmin_half / (2.**(1. / 6.))
+                else:
+                    sigma = ljtype.sigma
+                force.setParticleParameters(atom_idx, 0.0, sigma,
+                                            ljtype.epsilon)
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
         self._check_all_valence_terms_assigned(assigned_terms=atom_matches,
@@ -2523,109 +2525,6 @@ class vdWHandler(_NonbondedHandler):
                 force.createExceptionsFromBonds(bond_particle_indices, 0.83333,
                                                 self._scale14)
                 #force.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self._scale14)
-
-class VirtualSiteHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<VirtualSites>`` tags
-
-    .. warning :: This API is experimental and subject to change.
-    """
-    #class VirtualSiteType(ParameterType):
-    class VirtualSiteType(vdWHandler.vdWType):
-        """A SMIRNOFF virtual site base type
-
-        .. warning :: This API is experimental and subject to change.
-        """
-
-        _VALENCE_TYPE = None
-        # Needed here to read the generic VirtualSite xml elements
-        # Will specialize after the type is parsed
-        _ELEMENT_NAME = 'VirtualSite'
-        distance        = ParameterAttribute(unit=unit.angstrom)
-        chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
-        type            = ParameterAttribute()
-
-    class VirtualSiteBondChargeType(VirtualSiteType):
-        """A SMIRNOFF virtual site bond charge type
-
-        .. warning :: This API is experimental and subject to change.
-        """
-        _ELEMENT_NAME = 'VirtualSiteBondChargeType'
-
-    class VirtualSiteLonePairType(VirtualSiteType):
-        """A SMIRNOFF virtual site requiring plane angles
-
-        .. warning :: This API is experimental and subject to change.
-        """
-        _ELEMENT_NAME = None
-        outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
-        inPlaneAngle    = ParameterAttribute(unit=unit.degree)
-
-    class VirtualSiteMonovalentLonePairType(VirtualSiteLonePairType):
-        """A SMIRNOFF monovalent lone pair virtual site type
-
-        .. warning :: This API is experimental and subject to change.
-        """
-        _ELEMENT_NAME = 'VirtualSiteMonovalentType'
-
-    class VirtualSiteDivalentLonePairType(VirtualSiteLonePairType):
-        """A SMIRNOFF divalent lone pair virtual site type
-
-        .. warning :: This API is experimental and subject to change.
-        """
-
-        _ELEMENT_NAME = 'VirtualSiteDivalentType'
-
-    class VirtualSiteTrivalentLonePairType(VirtualSiteLonePairType):
-        """A SMIRNOFF trivalent lone pair virtual site type
-
-        .. warning :: This API is experimental and subject to change.
-        """
-
-        _ELEMENT_NAME = 'VirtualSiteTrivalentType'
-        
-    _DEPENDENCIES = None 
-    _TAGNAME = 'VirtualSites'  # SMIRNOFF tag name to process
-    __INFOTYPE = VirtualSiteType  # class to hold force type info
-
-    @property
-    def _INFOTYPE(self):
-        return self.__INFOTYPE
-
-    @_INFOTYPE.setter
-    def _INFOTYPE(self, type_str):
-        if type_str == "BondCharge":
-            self.__INFOTYPE=__class__.VirtualSiteBondChargeType
-        elif type_str == "MonovalentLonePair":
-            self.__INFOTYPE=__class__.VirtualSiteMonovalentLonePairType
-        elif type_str == "DivalentLonePair":
-            self.__INFOTYPE=__class__.VirtualSiteDivalentLonePairType
-        elif type_str == "TrivalentLonePair":
-            self.__INFOTYPE=__class__.VirtualSiteTrivalentLonePairType
-
-
-    def check_handler_compatibility(self,
-                                    other_handler):
-        """
-        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
-        called if a second handler is attempted to be initialized for the same tag.
-
-        Parameters
-        ----------
-        other_handler : a ParameterHandler object
-            The handler to compare to.
-
-        Raises
-        ------
-        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
-        """
-        #string_attrs_to_compare = ['potential', 'fractional_bondorder_method', 'fractional_bondorder_interpolation']
-        #self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare)
-        #super().check_handler_compatibility(other_handler)
-
-    def create_force(self, system, topology, **kwargs):
-        x=5.0
-        return
-        # Create or retrieve existing OpenMM Force object
 
 class ElectrostaticsHandler(_NonbondedHandler):
     """Handles SMIRNOFF ``<Electrostatics>`` tags.
@@ -2902,7 +2801,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
                       f"'allow_nonintegral_charges=True' keyword to ForceField.create_openmm_system"
                 raise NonintegralMoleculeChargeException(msg)
 
-
 class LibraryChargeHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<LibraryCharges>`` tags
 
@@ -2957,12 +2855,13 @@ class LibraryChargeHandler(_NonbondedHandler):
         atom_assignments = dict()
         # TODO: This assumes that later matches should always override earlier ones. This may require more
         #       thought, since matches can be partially overlapping
-        for topology_indices, library_charge in atom_matches.items():
-            for charge_idx, top_idx in enumerate(topology_indices):
-                if top_idx in assignable_atoms:
-                    logger.debug(f'Multiple library charge assignments found for atom {top_idx}')
-                assignable_atoms.add(top_idx)
-                atom_assignments[top_idx] = library_charge.parameter_type.charge[charge_idx]
+        for topology_indices, library_charges in atom_matches.items():
+            for library_charge in library_charges:
+                for charge_idx, top_idx in enumerate(topology_indices):
+                    if top_idx in assignable_atoms:
+                        logger.debug(f'Multiple library charge assignments found for atom {top_idx}')
+                    assignable_atoms.add(top_idx)
+                    atom_assignments[top_idx] = library_charge.parameter_type.charge[charge_idx]
         # TODO: Should header include a residue separator delimiter? Maybe not, since it's not clear how having
         #       multiple LibraryChargeHandlers could return a single set of matches while respecting different
         #       separators.
@@ -3003,7 +2902,225 @@ class LibraryChargeHandler(_NonbondedHandler):
         for assigned_mol in ref_mols_assigned:
             self.mark_charges_assigned(assigned_mol, topology)
 
+class VirtualSiteHandler(_NonbondedHandler):
+    """Handle SMIRNOFF ``<VirtualSites>`` tags
 
+    .. warning :: This API is experimental and subject to change.
+    """
+
+
+
+    #class VirtualSiteType(ParameterType):
+    class VirtualSiteType(vdWHandler.vdWType):
+        """A SMIRNOFF virtual site base type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+
+        _VALENCE_TYPE = None
+        # Needed here to read the generic VirtualSite xml elements
+        # Will specialize after the type is parsed
+        _ELEMENT_NAME = 'VirtualSite'
+        distance        = ParameterAttribute(unit=unit.angstrom)
+        chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
+        type            = ParameterAttribute()
+
+        def add_virtual_site(self, fn, atoms, **kwargs):
+
+            args = [ atoms, self.distance ]
+            base_args = {
+                "charge_increments" : self.chargeincrement,
+                "weights"           : None,
+                "epsilon"           : self.epsilon,
+                "sigma"             : self.sigma,
+                "rmin_half"         : self.rmin_half
+            }
+            kwargs.update( base_args)
+
+            return fn( *args, **kwargs)
+
+        def apply_chargeincrement(self, force, atom_key):
+            vsite_q = self.chargeincrement[0]
+            vsite_q *= 0.0
+            for qi,atom in enumerate(atom_key):
+                q, s, e = force.getParticleParameters( atom)
+                vsite_q -= self.chargeincrement[qi]
+                q       += self.chargeincrement[qi]
+                force.setParticleParameters(atom, q, s, e)
+            return vsite_q
+
+        def add_openmm_virtual_site(self, force, atoms):
+            # obviously this will need to be implemented correctly for each type
+            atoms = atoms[:2]
+            originwt = [0.0, 1.0] # second atom is origin
+            xdir = [1.0, -1.0] # must sum to 0
+            ydir = [-1.0, 1.0] # must sum to 0
+            pos  = [1.0, 0.0, 0.0] # pos of the vsite in local crds
+            return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
+
+
+    class VirtualSiteBondChargeType(VirtualSiteType):
+        """A SMIRNOFF virtual site bond charge type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+        _ELEMENT_NAME = 'VirtualSiteBondChargeType'
+
+        def add_virtual_site(self, molecule, atoms):
+            fn = molecule._add_bond_charge_virtual_site
+            kwargs = {}
+            off_idx = super().add_virtual_site(fn, atoms, **kwargs)
+            return off_idx
+
+
+
+    class VirtualSiteLonePairType(VirtualSiteType):
+        """A SMIRNOFF virtual site requiring plane angles
+
+        .. warning :: This API is experimental and subject to change.
+        """
+        _ELEMENT_NAME = None
+        outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
+        inPlaneAngle    = ParameterAttribute(unit=unit.degree)
+
+
+        def add_virtual_site(self, fn, atoms, **kwargs):
+            args = [ atoms, self.distance, self.outOfPlaneAngle, self.inPlaneAngle ]
+            base_args = {
+                "charge_increments" : self.chargeincrement,
+                "weights"           : None,
+                "epsilon"           : self.epsilon,
+                "sigma"             : self.sigma,
+                "rmin_half"         : self.rmin_half
+            }
+            kwargs.update(base_args)
+            return fn( *args, **kwargs)
+
+    class VirtualSiteMonovalentLonePairType(VirtualSiteLonePairType):
+        """A SMIRNOFF monovalent lone pair virtual site type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+        _ELEMENT_NAME = 'VirtualSiteMonovalentType'
+        def add_virtual_site(self, molecule, atoms):
+            fn = molecule._add_monovalent_lone_pair_virtual_site
+            return super().add_virtual_site(fn, atoms)
+
+    class VirtualSiteDivalentLonePairType(VirtualSiteLonePairType):
+        """A SMIRNOFF divalent lone pair virtual site type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+
+        _ELEMENT_NAME = 'VirtualSiteDivalentType'
+        def add_virtual_site(self, molecule, atoms):
+            fn = molecule._add_divalent_lone_pair_virtual_site
+            return super().add_virtual_site(fn, atoms)
+
+    class VirtualSiteTrivalentLonePairType(VirtualSiteLonePairType):
+        """A SMIRNOFF trivalent lone pair virtual site type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+
+        _ELEMENT_NAME = 'VirtualSiteTrivalentType'
+        def add_virtual_site(self, molecule, atoms):
+            fn = molecule._add_trivalent_lone_pair_virtual_site
+            return super().add_virtual_site(fn, atoms)
+        
+    _DEPENDENCIES = [ ElectrostaticsHandler, LibraryChargeHandler ]
+    _TAGNAME = 'VirtualSites'  # SMIRNOFF tag name to process
+    __INFOTYPE = VirtualSiteType  # class to hold force type info
+    __OPENMMTYPE = None
+
+    @property
+    def _INFOTYPE(self):
+        return self.__INFOTYPE
+
+    @_INFOTYPE.setter
+    def _INFOTYPE(self, type_str):
+        if type_str == "BondCharge":
+            self.__INFOTYPE=__class__.VirtualSiteBondChargeType
+        elif type_str == "MonovalentLonePair":
+            self.__INFOTYPE=__class__.VirtualSiteMonovalentLonePairType
+        elif type_str == "DivalentLonePair":
+            self.__INFOTYPE=__class__.VirtualSiteDivalentLonePairType
+        elif type_str == "TrivalentLonePair":
+            self.__INFOTYPE=__class__.VirtualSiteTrivalentLonePairType
+
+    #@property
+    #def _OPENMMTYPE(self):
+    #    return self.__OPENMMTYPE
+
+    #@_OPENMMTYPE.setter
+    #def _OPENMMTYPE(self, type_str):
+    #    if type_str == "BondCharge":
+    #        self.__OPENMMTYPE=openmm.LocalCoordinateSite
+    #    elif type_str == "MonovalentLonePair":
+    #        self.__OPENMMTYPE=openmm.LocalCoordinateSite
+    #    elif type_str == "DivalentLonePair":
+    #        self.__OPENMMTYPE=openmm.LocalCoordinateSite
+    #    elif type_str == "TrivalentLonePair":
+    #        self.__OPENMMTYPE=openmm.LocalCoordinateSite
+
+    def check_handler_compatibility(self,
+                                    other_handler):
+        """
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        #string_attrs_to_compare = ['potential', 'fractional_bondorder_method', 'fractional_bondorder_interpolation']
+        #self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare)
+        #super().check_handler_compatibility(other_handler)
+
+    def create_force(self, system, topology, **kwargs):
+        force = super().create_force(system, topology, **kwargs)
+
+
+        # first we need to actually add the discovered virtualsites
+        # add them to the topology
+
+        atom_matches = self.find_matches(topology)
+
+        # Set the particle Lennard-Jones terms.
+        for atom_key, atom_match_lst in atom_matches.items():
+            for atom_match in atom_match_lst:
+
+                # this is the new particle to add nonbonded terms to
+                mol = atom_match.environment_match.reference_molecule
+
+                atom_idx = atom_match.parameter_type.add_virtual_site( mol, atom_key)
+                vsite = atom_match.parameter_type.add_openmm_virtual_site( force, atom_key)
+
+                # apply the charge increment using the atom_key atoms, 
+                # and the vsite
+                # determine the vsite charge from the increment sum
+                vsite_q = atom_match.parameter_type.apply_chargeincrement( force, atom_key)
+
+                ljtype = atom_match.parameter_type
+                if ljtype.sigma is None:
+                    sigma = 2. * ljtype.rmin_half / (2.**(1. / 6.))
+                else:
+                    sigma = ljtype.sigma
+
+                # create the vsite particle
+                vsite_idx = system.addParticle(0.0)
+                system.setVirtualSite(vsite_idx, vsite)
+                force.addParticle(vsite_q, sigma, ljtype.epsilon)
+
+
+        # Check that no atoms (n.b. not particles) are missing force parameters.
+        self._check_all_valence_terms_assigned(assigned_terms=atom_matches,
+                                               valence_terms=list(topology.topology_atoms))
 
 class ToolkitAM1BCCHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags

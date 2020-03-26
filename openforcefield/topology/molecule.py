@@ -573,11 +573,11 @@ class VirtualSite(Particle):
         if charge_increments is None:
             self._charge_increments = None
         else:
-            assert hasattr(charge_increments, 'unit')
-            assert unit.elementary_charges.is_compatible(
-                charge_increments.unit)
-            self._charge_increments = charge_increments.in_units_of(
-                unit.elementary_charges)
+            for ci in charge_increments:
+                assert hasattr(ci, 'unit')
+                assert unit.elementary_charges.is_compatible( ci.unit)
+            self._charge_increments = [ci.in_units_of(unit.elementary_charges)
+                for ci in charge_increments]
 
         self._atoms = list()
         for atom in atoms:
