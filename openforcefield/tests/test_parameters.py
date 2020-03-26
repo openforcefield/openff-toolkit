@@ -389,9 +389,16 @@ class TestParameterHandler:
         """
         from simtk import unit
         bh = BondHandler(skip_version_check=True)
+
         bh.add_parameter({'smirks': '[*:1]-[*:2]',
                           'length': 1*unit.angstrom,
                           'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2})
+
+        # Ensure a query with no matches returns an empty list
+        assert not bh.get_parameter({'smirks': 'xyz'})
+
+        # Ensure searching for a nonexistent attr does not raise an exception
+        assert not bh.get_parameter({'bAdAttR': '0'})
 
         params = bh.get_parameter({'smirks': '[*:1]-[*:2]'})
 

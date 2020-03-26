@@ -1435,8 +1435,9 @@ class ParameterHandler(_ParameterAttributeHandler):
         params = list()
         for attr, value in parameter_attrs.items():
             for param in self._parameters:
-                if getattr(param, attr) == value:
-                    params.append(param)
+                if hasattr(param, attr):
+                    if getattr(param, attr) == value:
+                        params.append(param)
         return params
 
     class _Match:
