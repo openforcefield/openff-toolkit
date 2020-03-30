@@ -55,6 +55,11 @@ jobs:
         uname -a
         df -h
         ulimit -a
+    - name: Fix conda permissions in MacOS
+      shell: bash
+      if: startsWith(matrix.os, 'macOS')
+      run: |
+        sudo chown -R $(id -u):$(id -g) ${CONDA}
     - name: Configure conda
       shell: bash
       run: |
