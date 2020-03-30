@@ -62,7 +62,7 @@ jobs:
         conda activate
         conda config --set always_yes yes
         conda config --add channels omnia --add channels conda-forge --add channels openeye
-        cond install --quiet conda conda-build jinja2 anaconda-client
+        conda install --quiet conda conda-build jinja2 anaconda-client
         conda update --quiet --all
         conda info --all
         conda list
