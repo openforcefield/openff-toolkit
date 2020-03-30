@@ -583,7 +583,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # arguments for this function can be found here
         # <https://docs.eyesopen.com/toolkits/python/omegatk/OEConfGenFunctions/OEFlipper.html?highlight=stereoisomers>
-        i = 0
+
         molecules = []
         for isomer in oeomega.OEFlipper(oemol, 200, not undefined_only, True, False):
 
