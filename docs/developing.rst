@@ -199,10 +199,27 @@ For example, if a ``Topology`` has its ``box_vectors`` attribute defined, we ass
 Setting up a development environment
 """"""""""""""""""""""""""""""""""""
 
+1. Install the ``conda`` package manager as part of the Anaconda Distribution from `here <https://www.anaconda.com/distribution/>`_
+
+2. Set up conda environment
+
+.. code-block:: bash
+
+    $ # Create a conda environment with the Open Force Field toolkit and its dependencies
+    $ conda create --name off-dev -c conda-forge -c omnia -c openeye openforcefield openeye-toolkits
+    $ # Remove (only) the toolkit and replace it with a local install
+    $ conda remove --force openforcefield
+    $ git clone https://github.com/openforcefield/openforcefield
+    $ cd openforcefield
+    $ pip install -e .
+
+3. Obtain and store Open Eye license somewhere like ``~/.oe_license.txt``.
+   Optionally store the path in environmental variable ``OE_LICENSE``, i.e. using a command like ``echo
+   "export OE_LICENSE=/Users/yournamehere/.oe_license.txt" >> ~/.bashrc``
 
 
-Steps
-"""""
+Development Process
+"""""""""""""""""""
 
 Development of new toolkit features generally proceeds in the following stages:
 
