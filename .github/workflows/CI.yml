@@ -86,7 +86,7 @@ jobs:
         conda activate test
         if [[ "$RDKIT" == true ]]; then conda install --yes -c conda-forge rdkit; fi
         if [[ "$OPENEYE" == true ]]; then conda install -c openeye openeye-toolkits; fi
-        python -m pip install -e --no-deps .
+        python -m pip install --no-deps .
     - name: Test the package
       shell: bash
       run: |
