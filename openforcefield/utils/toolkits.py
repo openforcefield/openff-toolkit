@@ -598,10 +598,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 mol = oechem.OEMol(isomer)
                 status = omega(mol)
                 if status:
-                    molecules.append(self.from_openeye(mol))
+                    isomol = self.from_openeye(mol)
+                    if isomol != molecule:
+                        molecules.append(isomol)
 
             else:
-                molecules.append(self.from_openeye(isomer))
+                isomol = self.from_openeye(isomer)
+                if isomol != molecule:
+                    molecules.append(isomol)
 
         return molecules[:max_isomers]
 
@@ -2088,7 +2092,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # isomer has CIS/TRANS tags so convert back to E/Z
             Chem.SetDoubleBondNeighborDirections(isomer)
             Chem.AssignStereochemistry(isomer, force=True, cleanIt=True)
-            molecules.append(self.from_rdkit(isomer))
+            mol = self.from_rdkit(isomer)
+            if mol != molecule:
+                molecules.append(mol)
 
         return molecules
 

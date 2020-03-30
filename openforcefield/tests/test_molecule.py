@@ -427,7 +427,7 @@ class TestMolecule:
 
         # If this is a known failure, check that it raises UndefinedStereochemistryError
         # and proceed with the test ignoring it.
-        test_mol =  None
+        test_mol = None
         if undefined_stereo:
             with pytest.raises(UndefinedStereochemistryError):
                 Molecule(rdmol)
@@ -923,6 +923,143 @@ class TestMolecule:
         wrong_index_mapping = dict((i + 10, new_id) for i, new_id in enumerate(mapping.values()))
         with pytest.raises(IndexError):
             new_ethanol = ethanol.remap(wrong_index_mapping, current_to_new=True)
+
+    tautomer_data = [{'molecule': 'Oc1c(cccc3)c3nc2ccncc12', 'tautomers': 2},
+                     {'molecule': 'CN=c1nc[nH]cc1', 'tautomers': 2},
+                     {'molecule': 'c1[nH]c2c(=O)[nH]c(nc2n1)N', 'tautomers': 14}]
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    @pytest.mark.parametrize('molecule_data', tautomer_data)
+    def test_enumerating_tautomers(self, molecule_data, toolkit_class):
+        """Test the ability of each toolkit to produce tautomers of an input molecule."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles(molecule_data['molecule'], allow_undefined_stereo=True, toolkit_registry=toolkit)
+
+            tautomers = mol.enumerate_tautomers(toolkit_registry=toolkit)
+
+            assert len(tautomers) == molecule_data['tautomers']
+            assert mol not in tautomers
+            # check that the molecules are not isomorphic of the input
+            for taut in tautomers:
+                assert taut.n_conformers == 0
+                assert mol.is_isomorphic_with(taut) is False
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_enumerating_tautomers_options(self, toolkit_class):
+        """Test the enumeration options"""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            # test the max molecules option
+            mol = Molecule.from_smiles('c1[nH]c2c(=O)[nH]c(nc2n1)N', toolkit_registry=toolkit, allow_undefined_stereo=True)
+
+            tauts_no = 5
+            tautomers = mol.enumerate_tautomers(max_states=tauts_no, toolkit_registry=toolkit)
+            assert len(tautomers) <= tauts_no
+            assert mol not in tautomers
+
+    @pytest.mark.parametrize('toolkit_class', [RDKitToolkitWrapper, OpenEyeToolkitWrapper])
+    def test_enumerating_no_tautomers(self, toolkit_class):
+        """Test that the toolkits return an empty list if there are no tautomers to enumerate."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles('CC', toolkit_registry=toolkit)
+
+            tautomers = mol.enumerate_tautomers(toolkit_registry=toolkit)
+            assert tautomers == []
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_enumerating_stereobonds(self, toolkit_class):
+        """Test the backend toolkits in enumerating the stereo bonds in a molecule."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles('ClC=CCl', allow_undefined_stereo=True, toolkit_registry=toolkit)
+
+            # use the default options
+            isomers = mol.enumerate_stereoisomers()
+            assert len(isomers) == 2
+
+            assert mol not in isomers
+            # make sure the input molecule is only different by bond stereo
+            for ismol in isomers:
+                assert Molecule.are_isomorphic(mol, ismol, return_atom_map=False, bond_stereochemistry_matching=False)[0] is True
+                assert mol.is_isomorphic_with(ismol) is False
+
+            # make sure the isomers are different
+            assert Molecule.are_isomorphic(isomers[0], isomers[1])[0] is False
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_enumerating_stereocenters(self, toolkit_class):
+        """Test the backend toolkits in enumerating the stereo centers in a molecule."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles('NC(Cl)(F)O', toolkit_registry=toolkit, allow_undefined_stereo=True)
+
+            isomers = mol.enumerate_stereoisomers(toolkit_registry=toolkit)
+
+            assert len(isomers) == 2
+            # make sure the mol is not in the isomers and that they only differ by stereo chem
+            assert mol not in isomers
+            for ismol in isomers:
+                assert ismol.n_conformers != 0
+                assert Molecule.are_isomorphic(mol, ismol, return_atom_map=False, atom_stereochemistry_matching=False)[0] is True
+                assert mol.is_isomorphic_with(ismol) is False
+
+            # make sure the two isomers are different
+            assert Molecule.are_isomorphic(isomers[0], isomers[1])[0] is False
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_enumerating_stereo_options(self, toolkit_class):
+        """Test the enumerating stereo chem options"""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+
+            # test undefined only
+            mol = Molecule.from_smiles('ClC=CCl', toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(undefined_only=True, rationalise=False)
+
+            assert len(isomers) == 2
+            for isomer in isomers:
+                assert isomer.n_conformers == 0
+
+            mol = Molecule.from_smiles('Cl/C=C\Cl', toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(undefined_only=True, rationalise=False)
+
+            assert isomers == []
+
+            mol = Molecule.from_smiles('Cl/C=C\Cl', toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(undefined_only=False, rationalise=False)
+
+            assert len(isomers) == 1
+
+            # test max isomers
+            mol = Molecule.from_smiles('BrC=C[C@H]1OC(C2)(F)C2(Cl)C1', toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(max_isomers=5, undefined_only=True, toolkit_registry=toolkit, rationalise=True)
+
+            assert len(isomers) <= 5
+            for isomer in isomers:
+                assert isomer.n_conformers == 1
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
 
     @requires_rdkit
     def test_from_pdb_and_smiles(self):
