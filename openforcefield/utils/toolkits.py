@@ -620,7 +620,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         Returns
         -------
         molecules: List[openforcefield.topology.Molecule]
-            A list of openforcefield.topology.Molecule instances
+            A list of openforcefield.topology.Molecule instances excluding the input molecule.
         """
         from openeye import oequacpac
         oemol = self.to_openeye(molecule=molecule)
@@ -631,11 +631,15 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         tautomer_options = oequacpac.OETautomerOptions()
         tautomer_options.SetApplyWarts(False)
         tautomer_options.SetMaxTautomersGenerated(max_states)
-        # here we turn on pka_norm
-        # This function generates tautomers (which might be different ionization states
-        # than parent) that are normalized to the predominant state at pH ~7.4
-        for tautomer in oequacpac.OEGetReasonableTautomers(oemol, tautomer_options, True):
-            tautomers.append(self.from_openeye(tautomer))
+        tautomer_options.SetSaveStereo(True)
+        # this aligns the outputs of rdkit and openeye for the example cases
+        tautomer_options.SetCarbonHybridization(False)
+
+        for tautomer in oequacpac.OEEnumerateTautomers(oemol, tautomer_options):
+            # remove the input tautomer from the output
+            taut = self.from_openeye(tautomer, allow_undefined_stereo=True)
+            if taut != molecule:
+                tautomers.append(self.from_openeye(tautomer, allow_undefined_stereo=True))
 
         return tautomers
 
@@ -2087,6 +2091,42 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             molecules.append(self.from_rdkit(isomer))
 
         return molecules
+
+    def enumerate_tautomers(self, molecule, max_states=20):
+        """
+        Enumerate the possible tautomers of the current molecule.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The molecule whose state we should enumerate
+
+        max_states: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        Returns
+        -------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances not including the input molecule.
+        """
+
+        from rdkit.Chem.MolStandardize import rdMolStandardize
+        from rdkit import Chem
+
+        enumerator = rdMolStandardize.TautomerEnumerator()
+        rdmol = Chem.RemoveHs(molecule.to_rdkit())
+
+        tautomers = enumerator.Enumerate(rdmol)
+
+        # make a list of openforcefield molecules excluding the input molecule
+        molecules = []
+        for taut in tautomers:
+            taut_hs = Chem.AddHs(taut)
+            mol = self.from_smiles(Chem.MolToSmiles(taut_hs), allow_undefined_stereo=True)
+            if mol != molecule:
+                molecules.append(mol)
+
+        return molecules[:max_states]
 
     def canonical_order_atoms(self, molecule):
         """
