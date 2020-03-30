@@ -48,7 +48,7 @@ jobs:
       PYVER: ${{ matrix.python-version }}
 
     steps:
-    - uses: actions/checkout
+    - uses: actions/checkout@v2
     - name: Additional info about the build
       shell: bash
       run: |
