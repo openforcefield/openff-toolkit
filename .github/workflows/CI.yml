@@ -84,14 +84,16 @@ jobs:
         conda activate
         python devtools/scripts/create_conda_env.py -n=test -p=$PYTHON_VER devtools/conda-envs/test_env.yaml
         conda activate test
-        if [[ "$RDKIT" == true ]]; then conda install --yes -c conda-forge rdkit; fi
-        if [[ "$OPENEYE" == true ]]; then conda install -c openeye openeye-toolkits; fi
+        if [[ "$RDKIT" == true ]]; then conda install rdkit; fi
+        if [[ "$OPENEYE" == true ]]; then conda install openeye-toolkits; fi
         python -m pip install --no-deps .
     - name: Test the package
       shell: bash
       run: |
         . devtools/gh-actions/initialize_conda.sh
         conda activate test
+        # Re-export OE_LICENSE to render the $HOME variable
+        export OE_LICENSE=${OE_LICENSE}
         PYTEST_ARGS="--ignore=utilities --ignore=examples/deprecated --nbval-lax --cov=openforcefield --cov-config=setup.cfg"
         if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
           PYTEST_ARGS+=" --ignore=docs --ignore=devtools --doctest-modules"
