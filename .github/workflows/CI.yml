@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # nightly tests
+    - cron: '0 0 * * *'
+
+jobs:
+  test:
+
+    runs-on: ${{ matrix.cfg.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - 3.6
+          - 3.7
+          # Uncomment when ready ;)
+          # - 3.8
+        cfg:
+          - os: ubuntu-latest
+            rdkit: true
+            openeye: false
+
+          - os: ubuntu-latest
+            rdkit: false
+            openeye: true
+
+          - os: ubuntu-latest
+            rdkit: true
+            openeye: true
+
+          - os: macOS-latest
+            rdkit: true
+            openeye: false
+
+    env:
+      ORGNAME: omnia
+      PACKAGENAME: openforcefield
+      OE_LICENSE: $HOME/oe_license.txt
+      OPENEYE_CHANNEL: -i https://pypi.anaconda.org/OpenEye/simple
+      PIP_ARGS: "-U"
+      CI_OS: ${{ matrix.cfg.os }}
+      RDKIT: ${{ matrix.cfg.rdkit }}
+      OPENEYE: ${{ matrix.cfg.openeye }}
+      PYVER: ${{ matrix.python-version }}
+
+    steps:
+    - uses: actions/checkout
+    - name: Additional info about the build
+      shell: bash
+      run: |
+        uname -a
+        df -h
+        ulimit -a
+    - name: Configure conda
+      shell: bash
+      run: |
+        . devtools/gh-actions/initialize_conda.sh
+        conda activate
+        conda config --set always_yes yes
+        conda config --add channels omnia --add channels conda-forge --add channels openeye
+        cond install --quiet conda conda-build jinja2 anaconda-client
+        conda update --quiet --all
+        conda info --all
+        conda list
+    - name: Decrypt OpenEye license
+      shell: bash
+      env:
+        ENC_OE_LICENSE: ${{ secrets.OE_LICENSE__EXP_JUN2020 }}
+      run: |
+        echo "${ENC_OE_LICENSE}" > $HOME/oe_license.txt
+    - name: Prepare test environment
+      shell: bash
+      run: |
+        . devtools/gh-actions/initialize_conda.sh
+        conda activate
+        python devtools/scripts/create_conda_env.py -n=test -p=$PYTHON_VER devtools/conda-envs/test_env.yaml
+        conda activate test
+        if [[ "$RDKIT" == true ]]; then conda install --yes -c conda-forge rdkit; fi
+        if [[ "$OPENEYE" == true ]]; then conda install -c openeye openeye-toolkits; fi
+        python -m pip install -e --no-deps .
+    - name: Test the package
+      shell: bash
+      run: |
+        . devtools/gh-actions/initialize_conda.sh
+        conda activate test
+        PYTEST_ARGS="--ignore=utilities --ignore=examples/deprecated --nbval-lax --cov=openforcefield --cov-config=setup.cfg"
+        if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
+          PYTEST_ARGS+=" --ignore=docs --ignore=devtools --doctest-modules"
+        elif [[ "$OPENEYE" == true ]]; then
+          PYTEST_ARGS+=" --ignore=docs --ignore=devtools"
+          PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
+          PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
+        fi
+        pytest $PYTEST_ARGS
+
+    - name: Codecov
+      uses: codecov/codecov-action
+
+    # The maintainer of a downstream project has requested that
+    # we maintain py36 compatibility until at least Feb 2022.
+    # Contact Jeff Wagner or Yutong Zhao if this is an issue.
+    - name: Python 3.6 timebomb
+      shell: bash
+      if: matrix.python-version == 3.6
+      run: |
+        . devtools/gh-actions/initialize_conda.sh
+        conda activate test
+        python -c "from datetime import date; assert date(2022, 2, 1) > date.today(), 'Python 3.6 EOL reminder!'"
