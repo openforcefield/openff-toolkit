@@ -57,7 +57,7 @@ jobs:
         ulimit -a
     - name: Fix conda permissions in MacOS
       shell: bash
-      if: startsWith(matrix.os, 'macOS')
+      if: startsWith(matrix.cfg.os, 'macOS')
       run: |
         sudo chown -R $(id -u):$(id -g) ${CONDA}
     - name: Configure conda
