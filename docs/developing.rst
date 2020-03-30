@@ -24,8 +24,8 @@ When new functionality is added to the OFF Toolkit, it becomes our responsibilit
 Philosophy
 ''''''''''
 
-- The `core functionality` of the OFF Toolkit is to combine a ForceField and a Topology to create a System
-- A System contains `everything` needed to compute the potential energy of a system, except the coordinates.
+- The `core functionality` of the OFF Toolkit is to combine an Open Force Field ``ForceField`` and ``Topology`` to create an OpenMM ``System``.
+- An OpenMM ``System`` contains `everything` needed to compute the potential energy of a system, except the coordinates.
 - The OFF toolkit employs a modular "plugin" architecture wherever possible, providing a standard interface for contributed features.
 
 
@@ -39,11 +39,11 @@ Open Force Field Toolkit Concepts
   A graph representation of a molecule containing enough information to unambiguously parametrize it.
   Required data fields for an ``OFF Molecule`` are:
 
-  - Atoms: element (integer), formal_charge (integer), is_aromatic (boolean), stereochemistry (R/S/None)
-  - Bonds: order (integer), is_aromatic (boolean), stereochemistry (E/Z/None)
+  - ``atoms``: element (integer), formal_charge (integer), is_aromatic (boolean), stereochemistry (R/S/None)
+  - ``bonds``: order (integer), is_aromatic (boolean), stereochemistry (E/Z/None)
 
-  There are several other optional attributes such as ``conformers`` and ``partial_charges`` that may be populated in the Molecule data structure.
-  These are considered "optional" because they are not required for system creation, however if those fields are populates, the user MAY use them to override values that would otherwise be generated during system creation.
+  There are several other optional attributes such as ``conformers`` and ``partial_charges`` that may be populated in the ``Molecule`` data structure.
+  These are considered "optional" because they are not required for system creation, however if those fields are populated, the user MAY use them to override values that would otherwise be generated during system creation.
 
   A dictionary, ``Molecule.properties`` is exposed, which is a Python dict that can be populated with arbitrary data.
   This data should be considered cosmetic and should not affect system creation.
@@ -51,11 +51,11 @@ Open Force Field Toolkit Concepts
 
 ``OFF System``
   An object that contains everything needed to calculate a molecular system's energy, except the atomic coordinates.
-  Note that this does not exist yet, and that OpenMM System objects are being used for this purpose right now.
+  Note that this does not exist yet, and that OpenMM ``System`` objects are being used for this purpose right now.
 
 ``OFF Topology``
-  An object that efficiently holds many OFF Molecules.
-  The atom indexing in a Topology may differ from those of the underlying ``Molecule``s
+  An object that efficiently holds many OFF ``Molecule`` objects.
+  The atom indexing in a ``Topology`` may differ from those of the underlying ``Molecule``s
 
 ``OFF TopologyMolecule``
   The efficient data structures that make up an OFF Topology.
@@ -67,7 +67,7 @@ Open Force Field Toolkit Concepts
 
 ``OFF ForceField``
   An object generated from an OFFXML file (or other source of SMIRNOFF data).
-  Most information from the SMIRNOFF data source is stored in an OFF ForceField's several ParameterHandlers, however some top-level SMIRNOFF data is stored in the ForceField itself.
+  Most information from the SMIRNOFF data source is stored in this object's several ``ParameterHandler``s, however some top-level SMIRNOFF data is stored in the ``ForceField`` object itself.
 
 ``SMIRNOFF data``
   A hierarchical data structure that complies with the SMIRNOFF specification.
@@ -75,8 +75,8 @@ Open Force Field Toolkit Concepts
   The subsections in a SMIRNOFF data source generally correspond to one energy term in the functional form of a force field.
 
 ``ParameterHandler``
-  An object that has the ability to produce one component of a System, corresponding to one subsection in a SMIRNOFF data source.
-  Most ParameterHandlers contain a list of ``ParameterType`` objects.
+  An object that has the ability to produce one component of an OpenMM ``System``, corresponding to one subsection in a SMIRNOFF data source.
+  Most ``ParameterHandler`` objects contain a list of ``ParameterType`` objects.
 
 ``ParameterType``
   An object corresponding to a single SMARTS-based parameter.
@@ -91,13 +91,13 @@ Development Infrastructure
     "Continuous integration" testing.
 
     Services that run frequently while the code is undergoing changes, ensuring that the codebase still installs and has the intended behavior.
-    Currently, we use a service called "Travis" for this.
+    Currently, we use a service called `Travis CI <https://travis-ci.org>`_ for this.
     Every time we make commits to the ``master`` branch of the openforcefield Github repository, a set of virtual machines that mimic brand new Linux and Mac OSX computers are created, and follow build instructions specified in the repo's ``.travis.yml`` file to install the toolkit.
     After installing the OFF toolkit and its dependencies, these virtual machines run our test suite.
-    If the tests all pass, the build "passes" (returns a green check mark).
+    If the tests all pass, the build "passes" (returns a green check mark on GitHub).
     If all the tests for a specific change to the ``master`` branch return green, then we know that the change has not broken the toolkit's existing functionality.
     When proposing code changes, we ask that contributors open a Pull Request (PR) on GitHub to merge their changes into the ``master`` branch.
-    When a pull request is open, CI will run on the latest set of proposed changes and indicate whether they are safe to merge.
+    When a pull request is open, CI will run on the latest set of proposed changes and indicate whether they are safe to merge through status checks, summarized as a green check mark or red X.
 
 ``CodeCov``
   Code coverage.
@@ -217,11 +217,8 @@ Development of new toolkit features generally proceeds in the following stages:
       Only Travis has the decryption key for this file.
       However, this setup poses the risk that anyone who can run Travis builds could simply print the contents of the license after decryption, which would put us in violation of our academic contract with OpenEye.
       For this reason, the OpenEye-dependent tests will be skipped on forks.
-    * Note that creating a fork will prevent the OpenEye license from being decrypted on Travis, so a few options are possible:
-        * If you aren't working on OpenEye-dependent functionality
+    * Note that creating a fork will prevent the OpenEye license from being decrypted on Travis
 
-
-Developing in forks -- License stuff
 
 Contributing
 """"""""""""
