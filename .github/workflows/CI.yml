@@ -98,7 +98,7 @@ jobs:
         pytest $PYTEST_ARGS
 
     - name: Codecov
-      uses: codecov/codecov-action
+      uses: codecov/codecov-action@v1
 
     # The maintainer of a downstream project has requested that
     # we maintain py36 compatibility until at least Feb 2022.
