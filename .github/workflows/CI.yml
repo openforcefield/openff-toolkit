@@ -39,7 +39,6 @@ jobs:
     env:
       ORGNAME: omnia
       PACKAGENAME: openforcefield
-      OE_LICENSE: $HOME/oe_license.txt
       OPENEYE_CHANNEL: -i https://pypi.anaconda.org/OpenEye/simple
       PIP_ARGS: "-U"
       CI_OS: ${{ matrix.cfg.os }}
@@ -93,8 +92,8 @@ jobs:
         . devtools/gh-actions/initialize_conda.sh
         conda activate test
         # Re-export OE_LICENSE to render the $HOME variable
-        export OE_LICENSE=${OE_LICENSE}
-        PYTEST_ARGS="--ignore=utilities --ignore=examples/deprecated --nbval-lax --cov=openforcefield --cov-config=setup.cfg"
+        export OE_LICENSE="$HOME/oe_license.txt"
+        PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated --nbval-lax --cov=openforcefield --cov-config=setup.cfg"
         if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
           PYTEST_ARGS+=" --ignore=docs --ignore=devtools --doctest-modules"
         elif [[ "$OPENEYE" == true ]]; then
