@@ -93,7 +93,8 @@ Behavior changed
   ``NotImplementedError`` when calling 
   :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`, 
   which is not yet implemented, but would previously silently return ``None``.
-
+- `PR #551 <https://github.com/openforcefield/openforcefield/pull/551>`_: Implemented the
+  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>` function.
 
 Tests added
 """""""""""
