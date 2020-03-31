@@ -2,7 +2,13 @@ name: CI
 
 on:
   push:
+    branches:
+      - 'master'
+      - "maintenance/.+"
   pull_request:
+    branches:
+      - 'master'
+      - "maintenance/.+"
   schedule:
     # nightly tests
     - cron: '0 0 * * *'
