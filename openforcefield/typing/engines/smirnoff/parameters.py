@@ -1492,7 +1492,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
         return self._find_matches(entity)
 
-    def _find_matches(self, entity, transformed_dict_cls=ValenceDict):
+    def _find_matches(self, entity, transformed_dict_cls=ValenceDict, variable_keylen=False, allow_multiple=False):
         """Implement find_matches() and allow using a difference valence dictionary.
                 Parameters
         ----------
@@ -1526,20 +1526,22 @@ class ParameterHandler(_ParameterAttributeHandler):
                 handler_match = self._Match(parameter_type, environment_match)
                 key = environment_match.topology_atom_indices
 
-                fn = None
-                if len(key) < 4:
-                    fn = ValenceDict.__keytransform__
-                else:
-                    fn = ImproperDict.__keytransform__
-                key = fn(None, key)
+                if variable_keylen:
+                    if len(key) < 4:
+                        fn = ValenceDict.__keytransform__
+                    else:
+                        fn = ImproperDict.__keytransform__
+                    key = fn(None, key)
 
                 matches_for_this_type[key] = [handler_match]
                 if environment_match.topology_atom_indices not in matches:
                     matches[key] = []
 
             # Update matches of all parameter types.
-            [ matches[k].extend(v) for k,v in matches_for_this_type.items()]
-            #matches.update(matches_for_this_type)
+            if allow_multiple:
+                [ matches[k].extend(v) for k,v in matches_for_this_type.items()]
+            else:
+                matches.update(matches_for_this_type)
 
             logger.debug('{:64} : {:8} matches'.format(
                 parameter_type.smirks, len(matches_for_this_type)))
@@ -2841,7 +2843,7 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topoogy.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity, transformed_dict_cls=dict)
+        return self._find_matches(entity, transformed_dict_cls=dict, variable_keylen=True, allow_multiple=False)
 
     def create_force(self, system, topology, **kwargs):
         from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
@@ -3039,32 +3041,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             return fn( *args, **kwargs)
 
 
-    class VirtualSiteMonovalentLonePairType(VirtualSiteLonePairType):
-        """A SMIRNOFF monovalent lone pair virtual site type
-
-        .. warning :: This API is experimental and subject to change.
-        """
-        _ELEMENT_NAME = 'VirtualSiteMonovalentType'
-        def add_virtual_site(self, molecule, atoms):
-            fn = molecule._add_monovalent_lone_pair_virtual_site
-            return super().add_virtual_site(fn, atoms)
-
-        def get_openmm_virtual_site(self, atoms, mass=None):
-            assert len(atoms) == 3
-            originwt = np.zeros_like(atoms)
-            originwt[0] = 1.0 # 
-
-            xdir = [-1.0, 1.0, 0.0]
-            ydir = [-1.0, 0.0, 1.0]
-
-            theta = self.inPlaneAngle.value_in_unit( unit.radians)
-            psi   = self.outOfPlaneAngle.value_in_unit( unit.radians)
-
-            pos  = [self.distance*np.cos( theta)*np.cos( psi),
-                    self.distance*np.sin( theta)*np.cos( psi),
-                    self.distance*np.sin( psi)] # pos of the vsite in local crds
-            return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
-
     class VirtualSiteDivalentLonePairType(VirtualSiteLonePairType):
         """A SMIRNOFF divalent lone pair virtual site type
 
@@ -3079,10 +3055,10 @@ class VirtualSiteHandler(_NonbondedHandler):
         def get_openmm_virtual_site(self, atoms, mass=None):
             assert len(atoms) == 3
             originwt = np.zeros_like(atoms)
-            originwt[0] = 1.0 # 
+            originwt[1] = 1.0 # 
 
-            xdir = [-1.0, 0.5, 0.5]
-            ydir = [-1.0, 1.0, 0.0]
+            xdir = [0.5, -1.0, 0.5]
+            ydir = [1.0, -1.0, 0.0]
 
             theta = self.outOfPlaneAngle.value_in_unit( unit.radians)
 
@@ -3183,6 +3159,24 @@ class VirtualSiteHandler(_NonbondedHandler):
         #self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare)
         #super().check_handler_compatibility(other_handler)
 
+    def find_matches(self, entity):
+        """Find the virtual sites in the topology/molecule matched by a parameter type.
+
+        Parameters
+        ----------
+        entity : openforcefield.topology.Topology
+            Topology to search.
+
+        Returns
+        ---------
+        matches : Dict[Tuple[int], ParameterHandler._Match]
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the n-tuple of atom indices in ``entity``.
+
+        """
+        return self._find_matches(entity, transformed_dict_cls=dict, variable_keylen=False, allow_multiple=True)
+
+
     def create_force(self, system, topology, **kwargs):
         force = super().create_force(system, topology, **kwargs)
 
@@ -3196,6 +3190,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         for atom_key, atom_match_lst in atom_matches.items():
             for atom_match in atom_match_lst:
 
+                atom_key = atom_match.environment_match.topology_atom_indices
                 # this is the new particle to add nonbonded terms to
                 mol = atom_match.environment_match.reference_molecule
 
@@ -3220,8 +3215,8 @@ class VirtualSiteHandler(_NonbondedHandler):
 
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
-        self._check_all_valence_terms_assigned(assigned_terms=atom_matches,
-                                               valence_terms=list(topology.topology_atoms))
+        #self._check_all_valence_terms_assigned(assigned_terms=atom_matches,
+        #                                       valence_terms=list(topology.topology_atoms))
 
 class ToolkitAM1BCCHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags
