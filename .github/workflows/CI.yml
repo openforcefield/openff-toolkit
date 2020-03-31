@@ -89,7 +89,7 @@ jobs:
       run: |
         . devtools/gh-actions/initialize_conda.sh
         conda activate
-        python devtools/scripts/create_conda_env.py -n=test -p=$PYTHON_VER devtools/conda-envs/test_env.yaml
+        python devtools/scripts/create_conda_env.py -n=test -p=$PYVER devtools/conda-envs/test_env.yaml
         conda activate test
         if [[ "$RDKIT" == true ]]; then conda install rdkit; fi
         if [[ "$OPENEYE" == true ]]; then conda install openeye-toolkits; fi
