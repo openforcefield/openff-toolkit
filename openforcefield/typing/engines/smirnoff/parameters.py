@@ -2949,15 +2949,6 @@ class VirtualSiteHandler(_NonbondedHandler):
                 force.setParticleParameters(atom, q, s, e)
             return vsite_q
 
-        def get_openmm_virtual_site(self, atoms):
-            # obviously this will need to be implemented correctly for each type
-            atoms = atoms[:2]
-            originwt = [0.0, 1.0] # second atom is origin
-            xdir = [1.0, -1.0] # must sum to 0
-            ydir = [-1.0, 1.0] # must sum to 0
-            pos  = [1.0, 0.0, 0.0] # pos of the vsite in local crds
-            return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
-
 
     class VirtualSiteBondChargeType(VirtualSiteType):
         """A SMIRNOFF virtual site bond charge type
@@ -2997,6 +2988,33 @@ class VirtualSiteHandler(_NonbondedHandler):
             pos  = [-self.distance, 0.0, 0.0] # pos of the vsite in local crds
             return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
 
+    class VirtualSiteCentroidType(VirtualSiteType):
+        """A SMIRNOFF virtual site centroid type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+        _ELEMENT_NAME = 'VirtualSiteCentroidType'
+
+        def add_virtual_site(self, molecule, atoms):
+            # TODO: molecule does not have this vsite yet
+            #fn = molecule._add_centroid_virtual_site
+            #off_idx = super().add_virtual_site(fn, atoms, **kwargs)
+            #return off_idx
+            return None
+
+        def get_openmm_virtual_site(self, atoms, mass=None):
+
+            originwt = None
+            if mass:
+                mass = np.asarray(mass)
+                originwt = mass / mass.sum()
+            else:
+                originwt = np.full( len(atoms), 1.0/len(atoms))
+
+            xdir = np.zeros_like(atoms)
+            ydir = np.zeros_like(atoms)
+            pos  = [0.0, 0.0, 0.0] # pos of the vsite in local crds
+            return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
 
     class VirtualSiteLonePairType(VirtualSiteType):
         """A SMIRNOFF virtual site requiring plane angles
@@ -3097,6 +3115,32 @@ class VirtualSiteHandler(_NonbondedHandler):
             pos  = [0.0,
                     0.0,
                     -self.distance] # pos of the vsite in local crds
+            return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
+
+    class VirtualSiteMonovalentLonePairType(VirtualSiteLonePairType):
+        """A SMIRNOFF monovalent lone pair virtual site type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+        _ELEMENT_NAME = 'VirtualSiteMonovalentType'
+        def add_virtual_site(self, molecule, atoms):
+            fn = molecule._add_monovalent_lone_pair_virtual_site
+            return super().add_virtual_site(fn, atoms)
+
+        def get_openmm_virtual_site(self, atoms, mass=None):
+            assert len(atoms) == 3
+            originwt = np.zeros_like(atoms)
+            originwt[0] = 1.0 # 
+
+            xdir = [-1.0, 1.0, 0.0]
+            ydir = [-1.0, 0.0, 1.0]
+
+            theta = self.inPlaneAngle.value_in_unit( self.inPlaneAngle.unit)
+            psi   = self.outOfPlaneAngle.value_in_unit( self.outOfPlaneAngle.unit)
+
+            pos  = [self.distance*np.cos( theta)*np.cos( psi),
+                    self.distance*np.sin( theta)*np.cos( psi),
+                    self.distance*np.sin( psi)] # pos of the vsite in local crds
             return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
         
     _DEPENDENCIES = [ ElectrostaticsHandler, LibraryChargeHandler ]
