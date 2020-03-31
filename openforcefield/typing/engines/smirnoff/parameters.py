@@ -3057,8 +3057,8 @@ class VirtualSiteHandler(_NonbondedHandler):
             xdir = [-1.0, 1.0, 0.0]
             ydir = [-1.0, 0.0, 1.0]
 
-            theta = self.inPlaneAngle.value_in_unit( self.inPlaneAngle.unit)
-            psi   = self.outOfPlaneAngle.value_in_unit( self.outOfPlaneAngle.unit)
+            theta = self.inPlaneAngle.value_in_unit( unit.radians)
+            psi   = self.outOfPlaneAngle.value_in_unit( unit.radians)
 
             pos  = [self.distance*np.cos( theta)*np.cos( psi),
                     self.distance*np.sin( theta)*np.cos( psi),
@@ -3084,7 +3084,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             xdir = [-1.0, 0.5, 0.5]
             ydir = [-1.0, 1.0, 0.0]
 
-            theta = self.outOfPlaneAngle.value_in_unit( self.outOfPlaneAngle.unit)
+            theta = self.outOfPlaneAngle.value_in_unit( unit.radians)
 
             pos  = [-self.distance*np.cos( theta),
                     0.0,
@@ -3135,8 +3135,8 @@ class VirtualSiteHandler(_NonbondedHandler):
             xdir = [-1.0, 1.0, 0.0]
             ydir = [-1.0, 0.0, 1.0]
 
-            theta = self.inPlaneAngle.value_in_unit( self.inPlaneAngle.unit)
-            psi   = self.outOfPlaneAngle.value_in_unit( self.outOfPlaneAngle.unit)
+            theta = self.inPlaneAngle.value_in_unit( unit.radians)
+            psi   = self.outOfPlaneAngle.value_in_unit( unit.radians)
 
             pos  = [self.distance*np.cos( theta)*np.cos( psi),
                     self.distance*np.sin( theta)*np.cos( psi),
@@ -3146,7 +3146,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     _DEPENDENCIES = [ ElectrostaticsHandler, LibraryChargeHandler ]
     _TAGNAME = 'VirtualSites'  # SMIRNOFF tag name to process
     __INFOTYPE = VirtualSiteType  # class to hold force type info
-    __OPENMMTYPE = None
+    #_OPENMMTYPE = None
 
     @property
     def _INFOTYPE(self):
@@ -3163,20 +3163,6 @@ class VirtualSiteHandler(_NonbondedHandler):
         elif type_str == "TrivalentLonePair":
             self.__INFOTYPE=__class__.VirtualSiteTrivalentLonePairType
 
-    #@property
-    #def _OPENMMTYPE(self):
-    #    return self.__OPENMMTYPE
-
-    #@_OPENMMTYPE.setter
-    #def _OPENMMTYPE(self, type_str):
-    #    if type_str == "BondCharge":
-    #        self.__OPENMMTYPE=openmm.LocalCoordinateSite
-    #    elif type_str == "MonovalentLonePair":
-    #        self.__OPENMMTYPE=openmm.LocalCoordinateSite
-    #    elif type_str == "DivalentLonePair":
-    #        self.__OPENMMTYPE=openmm.LocalCoordinateSite
-    #    elif type_str == "TrivalentLonePair":
-    #        self.__OPENMMTYPE=openmm.LocalCoordinateSite
 
     def check_handler_compatibility(self,
                                     other_handler):
