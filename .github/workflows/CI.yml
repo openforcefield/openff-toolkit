@@ -29,20 +29,20 @@ jobs:
           # - 3.8
         cfg:
           - os: ubuntu-latest
-            rdkit: true
-            openeye: false
+            rdkit: "true"
+            openeye: "false"
 
           - os: ubuntu-latest
-            rdkit: false
-            openeye: true
+            rdkit: "false"
+            openeye: "true"
 
           - os: ubuntu-latest
-            rdkit: true
-            openeye: true
+            rdkit: "true"
+            openeye: "true"
 
           - os: macOS-latest
-            rdkit: true
-            openeye: false
+            rdkit: "true"
+            openeye: "false"
 
     env:
       CI_OS: ${{ matrix.cfg.os }}
@@ -111,4 +111,4 @@ jobs:
 
     - name: Codecov
       uses: codecov/codecov-action@v1
-      if: matrix.cfg.openeye == true && matrix.cfg.rdkit == true
+      if: matrix.cfg.os == 'ubuntu-latest' && matrix.python-version == 3.7 && matrix.cfg.openeye == 'true' && matrix.cfg.rdkit == 'true'
