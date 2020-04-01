@@ -241,6 +241,28 @@ def round_charge(xml):
         xmlsp[index] = chunk
     return ' q="'.join(xmlsp)
 
+
+def create_cis_1_2_dichloroethene():
+    """
+    Creates an openforcefield.topology.Molecule representation of cis-1,2-dichloroethene
+    without the use of a cheminformatics toolkit.
+    """
+
+    cis_dichloroethene = Molecule()
+    cis_dichloroethene.add_atom(17, 0, False)
+    cis_dichloroethene.add_atom(6, 0, False)
+    cis_dichloroethene.add_atom(6, 0, False)
+    cis_dichloroethene.add_atom(17, 0, False)
+    cis_dichloroethene.add_atom(1, 0, False)
+    cis_dichloroethene.add_atom(1, 0, False)
+    cis_dichloroethene.add_bond(0, 1, 1, False)
+    cis_dichloroethene.add_bond(1, 2, 2, False, 'Z')
+    cis_dichloroethene.add_bond(2, 3, 1, False)
+    cis_dichloroethene.add_bond(1, 4, 1, False)
+    cis_dichloroethene.add_bond(2, 5, 1, False)
+    return cis_dichloroethene
+
+
 def create_ethanol():
     """
     Creates an openforcefield.topology.Molecule representation of
