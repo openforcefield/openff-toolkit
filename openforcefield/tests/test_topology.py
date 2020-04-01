@@ -21,8 +21,8 @@ from simtk import unit
 from openforcefield.utils import (BASIC_CHEMINFORMATICS_TOOLKITS, RDKIT_AVAILABLE, OPENEYE_AVAILABLE,
                                   RDKitToolkitWrapper, OpenEyeToolkitWrapper)
 from openforcefield.tests.utils import get_data_file_path
-from openforcefield.tests.test_forcefield import create_cyclohexane, create_ethanol
-from openforcefield.topology import Topology, ValenceDict, ImproperDict, DuplicateUniqueMoleculeError
+from openforcefield.tests.test_forcefield import create_cyclohexane, create_ethanol, create_reversed_ethanol
+from openforcefield.topology import Topology, ValenceDict, DuplicateUniqueMoleculeError
 from openforcefield.topology import Molecule
 
 
@@ -281,12 +281,56 @@ class TestTopology(TestCase):
         # There are four virtual sites -- Two BondCharges with 2 atoms, and two MonovalentLonePairs with 3 atoms
         assert n_equal_atoms == 10
 
+    def test_topology_particles_virtualsites_indexed_last(self):
+        """
+        Test to ensure that virtualsites are strictly indexed after all atoms
+        in topology.particles
+        """
+        from openforcefield.topology import TopologyAtom, TopologyVirtualSite
+        topology = Topology()
+        topology.add_molecule(self.ethane_from_smiles_w_vsites)
+        topology.add_molecule(self.propane_from_smiles_w_vsites)
+
+        # Iterate through all TopologyParticles, ensuring that all atoms appear
+        # before all virtualsides
+        reading_atoms = True
+        for particle in topology.topology_particles:
+            if reading_atoms:
+                if isinstance(particle, TopologyAtom):
+                    pass
+                else:
+                    reading_atoms = False
+            elif not(reading_atoms):
+                assert isinstance(particle, TopologyVirtualSite)
+
+    def test_topology_virtualsites_atom_indexing(self):
+        """
+        Add multiple instances of the same molecule, but in a different
+        order, and ensure that virtualsite atoms are indexed correctly
+        """
+        topology = Topology()
+
+        topology.add_molecule(create_ethanol())
+        topology.add_molecule(create_ethanol())
+        topology.add_molecule(create_reversed_ethanol())
+
+        # Add a virtualsite to the reference ethanol
+        for ref_mol in topology.reference_molecules:
+            ref_mol._add_bond_charge_virtual_site([0, 1],
+                                                  0.5 * unit.angstrom,
+                                                  )
+
+        virtual_site_topology_atom_indices = [(0, 1), (9, 10), (26, 25)]
+        for top_vs, expected_indices in zip(topology.topology_virtual_sites, virtual_site_topology_atom_indices):
+            assert tuple([at.topology_particle_index for at in top_vs.atoms]) == expected_indices
+            assert top_vs.atom(0).topology_particle_index == expected_indices[0]
+            assert top_vs.atom(1).topology_particle_index == expected_indices[1]
+
     def test_is_bonded(self):
         """Test Topology.virtual_site function (get virtual site from index)
         """
         topology = Topology()
         topology.add_molecule(self.propane_from_smiles_w_vsites)
-        #raise Exception([str(topology.atom(i).atom) for i in range(6)])
         topology.assert_bonded(0, 1)
         topology.assert_bonded(1, 0)
         topology.assert_bonded(1, 2)
