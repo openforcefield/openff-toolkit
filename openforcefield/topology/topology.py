@@ -899,6 +899,10 @@ class Topology(Serializable):
     """
     A Topology is a chemical representation of a system containing one or more molecules appearing in a specified order.
 
+    As of the 0.7.0 release, the Topology particle indexing system puts all atoms before all virtualsites.
+    This ensures that atoms keep the same Topology particle index value, even if the Topology
+    is modified during system creation by the addition of virtual sites.
+
     .. warning :: This API is experimental and subject to change.
 
     Examples
