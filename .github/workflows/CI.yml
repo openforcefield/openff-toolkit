@@ -111,3 +111,4 @@ jobs:
 
     - name: Codecov
       uses: codecov/codecov-action@v1
+      if: matrix.cfg.openeye == true && matrix.cfg.rdkit == true
