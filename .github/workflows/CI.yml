@@ -17,7 +17,7 @@ on:
 
 jobs:
   test:
-
+    name: Test on ${{ matrix.cfg.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.cfg.rdkit }}, OpenEye=${{ matrix.cfg.openeye }}
     runs-on: ${{ matrix.cfg.os }}
     strategy:
       fail-fast: false
