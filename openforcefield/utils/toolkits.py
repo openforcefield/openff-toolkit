@@ -1122,15 +1122,25 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return oemol
 
-    @staticmethod
-    def to_smiles(molecule):
+    def to_smiles(self, molecule, isomeric=True, explicit_hydrogens=True, mapped=False):
         """
         Uses the OpenEye toolkit to convert a Molecule into a SMILES string.
+        A partially mapped smiles can also be generated for atoms of interest by supplying an `atom_map` to the
+        properties dictionary.
 
         Parameters
         ----------
         molecule : An openforcefield.topology.Molecule
             The molecule to convert into a SMILES.
+        isomeric: bool optional, default= True
+            return an isomeric smiles
+        explicit_hydrogens: bool optional, default=True
+            return a smiles string containing all hydrogens explicitly
+        mapped: bool optional, default=False
+            return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by supplying an
+            atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
+            an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
+            The map ids (values) should start from 0 or 1.
 
         Returns
         -------
@@ -1138,11 +1148,54 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The SMILES of the input molecule.
         """
         from openeye import oechem
-        oemol = OpenEyeToolkitWrapper.to_openeye(molecule)
-        smiles = oechem.OECreateSmiString(
-            oemol, oechem.OESMILESFlag_DEFAULT | oechem.OESMILESFlag_Hydrogens
-            | oechem.OESMILESFlag_Isotopes | oechem.OESMILESFlag_BondStereo
-            | oechem.OESMILESFlag_AtomStereo)
+        oemol = self.to_openeye(molecule)
+
+        # this sets up the default settings following the old DEFAULT flag
+        # more information on flags can be found here
+        # <https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemConstants/OESMILESFlag.html#OEChem::OESMILESFlag>
+        smiles_options = oechem.OESMILESFlag_Canonical | oechem.OESMILESFlag_Isotopes | oechem.OESMILESFlag_RGroups
+
+        # check if we want an isomeric smiles
+        if isomeric:
+            # add the atom and bond stereo flags
+            smiles_options |= oechem.OESMILESFlag_AtomStereo | oechem.OESMILESFlag_BondStereo
+
+        if explicit_hydrogens:
+            # add the hydrogen flag
+            smiles_options |= oechem.OESMILESFlag_Hydrogens
+
+        if mapped:
+            assert explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
+                                                "stereochemsitry to be defined to retain order"
+
+            # if we only want to map specific atoms check for an atom map
+            atom_map = molecule._properties.get('atom_map', None)
+            if atom_map is not None:
+                # make sure there are no repeated indices
+                map_ids = set(atom_map.values())
+                if len(map_ids) < len(atom_map):
+                    atom_map = None
+                elif 0 in atom_map.values():
+                    # we need to increment the map index
+                    for atom, map in atom_map.items():
+                        atom_map[atom] = map + 1
+
+            if atom_map is None:
+                # now we need to add the atom map to the atoms
+                for oeatom in oemol.GetAtoms():
+                    oeatom.SetMapIdx(oeatom.GetIdx() + 1)
+            else:
+                for atom in oemol.GetAtoms():
+                    try:
+                        # try to set the atom map
+                        map_idx = atom_map[atom.GetIdx()]
+                        atom.SetMapIdx(map_idx)
+                    except KeyError:
+                        continue
+
+            smiles_options |= oechem.OESMILESFlag_AtomMaps
+
+        smiles = oechem.OECreateSmiString(oemol, smiles_options)
         return smiles
 
     def to_inchi(self, molecule, fixed_hydrogens=False):
@@ -1257,7 +1310,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if bond.GetBgnIdx() > bond.GetEndIdx():
                 bond.SwapEnds()
 
-        return self.from_openeye(oemol)
+        return self.from_openeye(oemol, allow_undefined_stereo=True)
 
     def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
         """
@@ -2172,15 +2225,25 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         return molecule.remap(atom_mapping, current_to_new=True)
 
-    @classmethod
-    def to_smiles(cls, molecule):
+    def to_smiles(self, molecule, isomeric=True, explicit_hydrogens=True, mapped=False):
         """
         Uses the RDKit toolkit to convert a Molecule into a SMILES string.
+        A partially mapped smiles can also be generated for atoms of interest by supplying an `atom_map` to the
+        properties dictionary.
 
         Parameters
         ----------
         molecule : An openforcefield.topology.Molecule
             The molecule to convert into a SMILES.
+        isomeric: bool optional, default= True
+            return an isomeric smiles
+        explicit_hydrogens: bool optional, default=True
+            return a smiles string containing all hydrogens explicitly
+        mapped: bool optional, default=False
+            return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by supplying an
+            atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
+            an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
+            The map ids (values) should start from 0 or 1.
 
         Returns
         -------
@@ -2188,8 +2251,43 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             The SMILES of the input molecule.
         """
         from rdkit import Chem
-        rdmol = cls.to_rdkit(molecule)
-        return Chem.MolToSmiles(rdmol, isomericSmiles=True, allHsExplicit=True)
+        rdmol = self.to_rdkit(molecule)
+
+        if not explicit_hydrogens:
+            # remove the hydrogens from the molecule
+            rdmol = Chem.RemoveHs(rdmol)
+
+        if mapped:
+            assert explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
+                                               "stereochemistry to be defined to retain order"
+
+            # if we only want to map specific atoms check for an atom map
+            atom_map = molecule._properties.get('atom_map', None)
+            if atom_map is not None:
+                # make sure there are no repeated indices
+                map_ids = set(atom_map.values())
+                if len(map_ids) < len(atom_map):
+                    atom_map = None
+                elif 0 in atom_map.values():
+                    # we need to increment the map index
+                    for atom, map in atom_map.items():
+                        atom_map[atom] = map + 1
+
+            if atom_map is None:
+                # now we need to add the indexing to the rdmol to get it in the smiles
+                for atom in rdmol.GetAtoms():
+                    # the mapping must start from 1, as RDKit uses 0 to represent no mapping.
+                    atom.SetAtomMapNum(atom.GetIdx() + 1)
+            else:
+                for atom in rdmol.GetAtoms():
+                    try:
+                        # try to set the atom map
+                        map_idx = atom_map[atom.GetIdx()]
+                        atom.SetAtomMapNum(map_idx)
+                    except KeyError:
+                        continue
+
+        return Chem.MolToSmiles(rdmol, isomericSmiles=isomeric, allHsExplicit=explicit_hydrogens)
 
     def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
         """
