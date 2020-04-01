@@ -1758,21 +1758,36 @@ class TestMolecule:
                     # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
 
     @requires_rdkit
-    def test_visualize(self):
-        """Test that the visualize method returns an expected object"""
+    def test_visualize_rdkit(self):
+        """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
+        import rdkit
+
+        mol = Molecule().from_smiles('CCO')
+
+        assert isinstance(mol.visualize(backend='rdkit'), rdkit.Chem.rdchem.Mol)
+
+    def test_visualize_nglview(self):
+        """Test that the visualize method returns an NGLview widget"""
+        try:
+            import nglview
+        except ModuleNotFoundError:
+            pass
 
         # Start with a molecule without conformers
         mol = Molecule().from_smiles('CCO')
-
-        # Ensure we can select the backend
-        assert isinstance(mol.visualize(backend='rdkit'), rdkit.Chem.rdchem.Mol)
 
         with pytest.raises(ValueError):
             mol.visualize(backend='nglview')
 
         # Add conformers
-        mol.generat_conformers()
+        mol.generate_conformers()
 
         # Ensure an NGLView widget is returned
-        import nglview
-        assert isinstance(mol.visualize, nglview.NGLWidget)
+        assert isinstance(mol.visualize(backend='nglview'), nglview.NGLWidget)
+
+    @requires_openeye
+    def test_visualize_openeye(self):
+        """Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation"""
+        mol = Molecule().from_smiles('CCO')
+        with pytest.raises(NotImplementedError):
+            mol.visualize(backend='openeye')

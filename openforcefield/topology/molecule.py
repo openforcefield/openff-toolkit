@@ -4609,9 +4609,13 @@ class Molecule(FrozenMolecule):
         elif backend == 'rdkit':
             if RDKIT_AVAILABLE:
                 return self.to_rdkit()
-            elif OPENEYE_AVAILABLE:
+        elif backend == 'openeye':
+            if OPENEYE_AVAILABLE:
                 # TODO: Is there a simple way to viz OpenEye molecules in Jupyter?
                 raise NotImplementedError()
+        else:
+            raise ValueError('Could not find an appropriate backend')
+
 
 
 class InvalidConformerError(Exception):
