@@ -191,25 +191,25 @@ class TestTopology(TestCase):
         assert topology.n_topology_bonds == 7
 
     def test_get_atom(self):
-            """Test Topology.atom function (atom lookup from index)"""
-            topology = Topology()
-            topology.add_molecule(self.ethane_from_smiles)
-            with self.assertRaises(Exception) as context:
-                topology_atom = topology.atom(-1)
+        """Test Topology.atom function (atom lookup from index)"""
+        topology = Topology()
+        topology.add_molecule(self.ethane_from_smiles)
+        with self.assertRaises(Exception) as context:
+            topology_atom = topology.atom(-1)
 
-            # Make sure we get 2 carbons and 8 hydrogens
-            n_carbons = 0
-            n_hydrogens = 0
-            for index in range(8):
-                if topology.atom(index).atomic_number == 6:
-                    n_carbons += 1
-                if topology.atom(index).atomic_number == 1:
-                    n_hydrogens += 1
-            assert n_carbons == 2
-            assert n_hydrogens == 6
+        # Make sure we get 2 carbons and 8 hydrogens
+        n_carbons = 0
+        n_hydrogens = 0
+        for index in range(8):
+            if topology.atom(index).atomic_number == 6:
+                n_carbons += 1
+            if topology.atom(index).atomic_number == 1:
+                n_hydrogens += 1
+        assert n_carbons == 2
+        assert n_hydrogens == 6
 
-            with self.assertRaises(Exception) as context:
-                topology_atom = topology.atom(8)
+        with self.assertRaises(Exception) as context:
+            topology_atom = topology.atom(8)
 
     def test_get_bond(self):
             """Test Topology.bond function (bond lookup from index)"""
