@@ -1756,3 +1756,23 @@ class TestMolecule:
                     #                                        toolkit_registry=toolkit_registry)
                     # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
+
+    @requires_rdkit
+    def test_visualize(self):
+        """Test that the visualize method returns an expected object"""
+
+        # Start with a molecule without conformers
+        mol = Molecule().from_smiles('CCO')
+
+        # Ensure we can select the backend
+        assert isinstance(mol.visualize(backend='rdkit'), rdkit.Chem.rdchem.Mol)
+
+        with pytest.raises(ValueError):
+            mol.visualize(backend='nglview')
+
+        # Add conformers
+        mol.generat_conformers()
+
+        # Ensure an NGLView widget is returned
+        import nglview
+        assert isinstance(mol.visualize, nglview.NGLWidget)

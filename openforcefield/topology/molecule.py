@@ -4590,6 +4590,29 @@ class Molecule(FrozenMolecule):
 
         return self._add_conformer(coordinates)
 
+    def visualize(self, backend='rdkit'):
+        """Render a visualization of the molecule in Jupyter"""
+        from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
+
+        backend = backend.lower()
+
+        if backend == 'nglview':
+            import nglview as nv
+            if self.conformers:
+                # TODO: What happens/what should we do with mulitple conformers?
+                # TODO: Use tempdir
+                self.to_file('mol.sdf', file_format='sdf')
+                widget = nv.show_file('mol.sdf')
+                return widget
+            else:
+                raise ValueError('Visualizing with NGLview requires a molecule has conformers.')
+        elif backend == 'rdkit':
+            if RDKIT_AVAILABLE:
+                return self.to_rdkit()
+            elif OPENEYE_AVAILABLE:
+                # TODO: Is there a simple way to viz OpenEye molecules in Jupyter?
+                raise NotImplementedError()
+
 
 class InvalidConformerError(Exception):
     """
