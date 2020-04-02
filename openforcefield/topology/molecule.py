@@ -37,6 +37,7 @@ import numpy as np
 from collections import OrderedDict, Counter
 from copy import deepcopy
 import operator
+from io import StringIO
 
 from simtk import unit
 from simtk.openmm.app import element, Element
@@ -4599,10 +4600,13 @@ class Molecule(FrozenMolecule):
         if backend == 'nglview':
             import nglview as nv
             if self.conformers:
-                # TODO: What happens/what should we do with mulitple conformers?
-                # TODO: Use tempdir
-                self.to_file('mol.sdf', file_format='sdf')
-                widget = nv.show_file('mol.sdf')
+                # TODO: Implement Jaime's OFFTrajectory to viz conformers as a "trajectory"
+                memfile = StringIO()
+                self.to_file(memfile, file_format='pdb')
+                memfile.seek(0)
+                widget = nv.NGLWidget()
+                widget.add_component(memfile, ext="pdb")
+                widget.add_ball_and_stick()
                 return widget
             else:
                 raise ValueError('Visualizing with NGLview requires a molecule has conformers.')
