@@ -4600,18 +4600,15 @@ class Molecule(FrozenMolecule):
         if backend == 'nglview':
             import nglview as nv
             if self.conformers:
-                # TODO: Implement Jaime's OFFTrajectory to viz conformers as a "trajectory"
-                memfile = StringIO()
-                self.to_file(memfile, file_format='pdb')
-                memfile.seek(0)
+                traj = _OFFTrajectoryNGLView(self)
                 widget = nv.NGLWidget()
-                widget.add_component(memfile, ext="pdb")
-                widget.add_ball_and_stick()
+                widget.add_trajectory(traj)
                 return widget
             else:
                 raise ValueError('Visualizing with NGLview requires a molecule has conformers.')
         elif backend == 'rdkit':
             if RDKIT_AVAILABLE:
+                from rdkit.Chem.Draw import IPythonConsole
                 return self.to_rdkit()
         elif backend == 'openeye':
             if OPENEYE_AVAILABLE:
@@ -4632,6 +4629,33 @@ class Molecule(FrozenMolecule):
         else:
             raise ValueError('Could not find an appropriate backend')
 
+# TODO: Gracefull skip this class if nglview is not installed
+import nglview as nv
+import uuid
+class _OFFTrajectoryNGLView(nv.Trajectory):
+    """
+    Handling conformers of an OpenFF Molecule as frames in a trajectory. Only
+    to be used for NGLview visualization
+    """
+    def __init__(self, trajectory):
+        self.trajectory = trajectory
+        self.ext = "pdb"
+        self.params = {}
+        self.id = str(uuid.uuid4())
+
+    def get_coordinates(self, index):
+        return self.trajectory.conformers[index] / unit.angstrom
+
+    @property
+    def n_frames(self):
+        return len(self.trajectory.conformers)
+
+    def get_structure_string(self):
+        from io import StringIO
+        memfile = StringIO()
+        self.trajectory.to_file(memfile, "pdb")
+        memfile.seek(0)
+        return memfile.getvalue()
 
 
 class InvalidConformerError(Exception):
