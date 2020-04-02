@@ -4611,8 +4611,20 @@ class Molecule(FrozenMolecule):
                 return self.to_rdkit()
         elif backend == 'openeye':
             if OPENEYE_AVAILABLE:
-                # TODO: Is there a simple way to viz OpenEye molecules in Jupyter?
-                raise NotImplementedError()
+                from openeye import oedepict
+                from IPython.display import Image
+
+                oemol = self.to_openeye()
+
+                width, height = 500, 300
+                opts = oedepict.OE2DMolDisplayOptions(width, height, oedepict.OEScale_AutoScale)
+
+                oedepict.OEPrepareDepiction(oemol)
+                img = oedepict.OEImage(width, height)
+                display = oedepict.OE2DMolDisplay(oemol, opts)
+                oedepict.OERenderMolecule(img, display)
+                png = oedepict.OEWriteImageToString("png", img)
+                return Image(png)
         else:
             raise ValueError('Could not find an appropriate backend')
 

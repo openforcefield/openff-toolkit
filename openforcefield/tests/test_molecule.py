@@ -1788,6 +1788,8 @@ class TestMolecule:
     @requires_openeye
     def test_visualize_openeye(self):
         """Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation"""
+        import IPython
+
         mol = Molecule().from_smiles('CCO')
-        with pytest.raises(NotImplementedError):
-            mol.visualize(backend='openeye')
+
+        assert isinstance(mol.visualize(backend='openeye'), IPython.core.display.Image)
