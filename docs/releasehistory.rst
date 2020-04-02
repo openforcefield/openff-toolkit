@@ -57,6 +57,14 @@ New features
 - `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Adds the ability to write out to XYZ files via
   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` Both single frame and multiframe XYZ files are supported.
   Note reading from XYZ files will not be supported due to the lack of connectivity information.
+- `PR #535 <https://github.com/openforcefield/openforcefield/pull/535>`_: Extends the the API for the
+  :py:meth:`Molecule.to_smiles <openforcefield.topology.Molecule.to_smiles>` to allow for the creation of cmiles
+  identifiers through combinations of isomeric, explicit hydrogen and mapped smiles, the default settings will return
+  isomeric explicit hydrogen smiles as expected.
+        .. warning::
+           Atom maps can be supplied to the properties dictionary to modify which atoms have their map index included,
+           if no map is supplied all atoms will be mapped in the order they appear in the
+           :py:class:`Molecule <openforcefield.topology.Molecule>`.
 
 
 Behavior changed
