@@ -3596,7 +3596,7 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         molecules: List[openforcefield.topology.Molecule]
-            A list of openforcefield.topology.Molecule instances
+            A list of openforcefield.topology.Molecule instances not including the input molecule.
         """
 
         if isinstance(toolkit_registry, ToolkitRegistry):
@@ -3640,7 +3640,7 @@ class FrozenMolecule(Serializable):
         Returns
         --------
         molecules: List[openforcefield.topology.Molecule]
-            A list of openforcefield.topology.Molecule instances
+            A list of openforcefield.topology.Molecule instances not including the input molecule.
 
         """
 
@@ -3661,6 +3661,27 @@ class FrozenMolecule(Serializable):
             raise ValueError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
+
+        return molecules
+
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def enumerate_formalcharges(self, max_states=10):
+        """
+        Enumerate the formal charges of a molecule to generate different protomoers.
+
+        Parameters
+        ----------
+        max_states: int optional, default=10,
+            The maximum number of protomer states to be returned.
+
+        Returns
+        -------
+        molecules: List[openforcefield.topology.Molecule],
+            A list of the protomers of the input molecules not including the input.
+        """
+
+        toolkit = OpenEyeToolkitWrapper()
+        molecules = toolkit.enumerate_formalcharges(molecule=self, max_states=max_states)
 
         return molecules
 

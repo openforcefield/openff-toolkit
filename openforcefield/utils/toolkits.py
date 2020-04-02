@@ -554,6 +554,41 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return mols
 
+    def enumerate_formalcharges(self, molecule, max_states=10):
+        """
+        Enumerate the formal charges of a molecule to generate different protomoers.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The molecule whose state we should enumerate
+
+        max_states: int optional, default=10,
+            The maximum number of protomer states to be returned.
+
+        Returns
+        -------
+        molecules: List[openforcefield.topology.Molecule],
+            A list of the protomers of the input molecules not including the input.
+        """
+
+        from openeye import oequacpac
+        options = oequacpac.OEFormalChargeOptions()
+        # add one as the input is included
+        options.SetMaxCount(max_states + 1)
+
+        molecules = []
+
+        oemol = self.to_openeye(molecule=molecule)
+        for protomer in oequacpac.OEEnumerateFormalCharges(oemol, options):
+
+            mol = self.from_openeye(protomer, allow_undefined_stereo=True)
+
+            if mol != molecule:
+                molecules.append(mol)
+
+        return molecules
+
     def enumerate_stereoisomers(self, molecule, undefined_only=False, max_isomers=20, rationalise=True):
         """
         Enumerate the stereocenters and bonds of the current molecule.
@@ -634,7 +669,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # set the options
         tautomer_options = oequacpac.OETautomerOptions()
         tautomer_options.SetApplyWarts(False)
-        tautomer_options.SetMaxTautomersGenerated(max_states)
+        tautomer_options.SetMaxTautomersGenerated(max_states + 1)
         tautomer_options.SetSaveStereo(True)
         # this aligns the outputs of rdkit and openeye for the example cases
         tautomer_options.SetCarbonHybridization(False)

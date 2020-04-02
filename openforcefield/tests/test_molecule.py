@@ -203,7 +203,7 @@ openeye_drugbank_undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1700', 'Dru
 # Note that this list is different from that for OEMol,
 # since the toolkits have different definitions of "stereogenic"
 rdkit_drugbank_undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1962', 'DrugBank_2519',
-                                        'DrugBank_3930', 'DrugBank_5043', 'DrugBank_5418'}
+                                        'DrugBank_3930', 'DrugBank_5043', 'DrugBank_5329', 'DrugBank_5418'}
 
 
 # Missing stereo in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
@@ -1101,6 +1101,36 @@ class TestMolecule:
 
         else:
             pytest.skip('Required toolkit is unavailable')
+
+    @requires_openeye
+    def test_enumerating_no_formalcharges(self):
+        """Make sure no protomers are returned."""
+
+        mol = Molecule.from_smiles('CC')
+
+        assert mol.enumerate_formalcharges() == []
+
+    @requires_openeye
+    def test_enumerating_formalcharges(self):
+        """Test enumerating the formal charges."""
+
+        mol = Molecule.from_smiles('Oc2ccc(c1ccncc1)cc2')
+
+        # there should be three protomers for this molecule so restrict the output
+        protomers = mol.enumerate_formalcharges(max_states=2)
+
+        assert mol not in protomers
+        assert len(protomers) == 2
+
+        # now make sure we can generate them all
+        protomers = mol.enumerate_formalcharges(max_states=10)
+
+        assert mol not in protomers
+        assert len(protomers) == 3
+
+        # make sure the molecules are different
+        for protomer in protomers:
+            assert mol != protomer
 
     @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     def test_enumerating_stereobonds(self, toolkit_class):
