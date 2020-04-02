@@ -208,6 +208,7 @@ rdkit_drugbank_undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1962', 'DrugB
 
 # Missing stereo in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
 # 'DrugBank_4162', 'DrugBank_6531', 'DrugBank_1700',
+drugbank_stereogenic_in_rdkit_but_not_openeye = ['DrugBank_5329']
 
 # Some molecules are _valid_ in both OETK and RDKit, but will fail if you try
 # to convert from one to the other, since OE adds stereo that RDKit doesn't
@@ -292,7 +293,7 @@ class TestMolecule:
             # Skip the test if OpenEye assigns stereochemistry but RDKit doesn't (since then, the
             # OFF molecule will be loaded, but fail to convert in to_rdkit)
             if molecule.name in drugbank_stereogenic_in_oe_but_not_rdkit:
-                pytest.skip('Molecle is stereogenic in OpenEye (which loaded this dataset), but not RDKit, so it '
+                pytest.skip('Molecule is stereogenic in OpenEye (which loaded this dataset), but not RDKit, so it '
                             'is impossible to make a valid RDMol in this test')
             undefined_stereo_mols = rdkit_drugbank_undefined_stereo_mols
         elif toolkit == OpenEyeToolkitWrapper:
@@ -301,9 +302,12 @@ class TestMolecule:
         toolkit_wrapper = toolkit()
 
         undefined_stereo = molecule.name in undefined_stereo_mols
+        # Since OpenEye did the original reading of MiniDrugBank, if OPENEYE doesn't
+        # think a feature is stereogenic, then "molecule" won't have stereochemistry defined
+        stereogenic_in_rdk_but_not_openeye = molecule.name in drugbank_stereogenic_in_rdkit_but_not_openeye
 
         smiles1 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-        if undefined_stereo:
+        if undefined_stereo or stereogenic_in_rdk_but_not_openeye:
             molecule2 = Molecule.from_smiles(smiles1,
                                              allow_undefined_stereo=True,
                                              toolkit_registry=toolkit_wrapper)
