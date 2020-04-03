@@ -4680,7 +4680,7 @@ class _OFFTrajectoryNGLView(_NGLViewTrajectory):
         memfile.seek(0)
         block = memfile.getvalue()
         # FIXME: Prevent multi-model PDB export with a keyword in molecule.to_file()?
-        models = block.split('END\n')
+        models = block.split('END\n', 1)
         return models[0]
 
 
