@@ -2,7 +2,7 @@
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRks Native Open Force Field (SMIRNOFF) file -->
   <Date>2020-04-02</Date>
-  <Author>D. L. Dotson, Open Force Field; J. D. Chodera, MSKCC; A. Rizzi, Weill Cornell; J. Wagner, Open Force Field; C. C. Bannan, UC Irvine</Author>
+  <Author>J. D. Chodera, MSKCC; A. Rizzi, Weill Cornell; J. Wagner, Open Force Field; C. C. Bannan, UC Irvine; D. L. Dotson, Open Force Field</Author>
   <!-- SMIRNOFF file implementing monatomic ion library charges. -->
   <LibraryCharges version="0.3">
     <LibraryCharge name="Li+" smirks="[#3+1:1]" charge1="1.0*elementary_charge"/>
