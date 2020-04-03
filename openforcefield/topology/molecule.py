@@ -4629,33 +4629,44 @@ class Molecule(FrozenMolecule):
         else:
             raise ValueError('Could not find an appropriate backend')
 
-# TODO: Gracefull skip this class if nglview is not installed
-import nglview as nv
-import uuid
-class _OFFTrajectoryNGLView(nv.Trajectory):
+
+try:
+    from nglview import Trajectory as _NGLViewTrajectory
+except ImportError:
+    _NGLViewTrajectory = object
+
+
+class _OFFTrajectoryNGLView(_NGLViewTrajectory):
     """
     Handling conformers of an OpenFF Molecule as frames in a trajectory. Only
-    to be used for NGLview visualization
+    to be used for NGLview visualization.
+
+    Parameters
+    ----------
+    molecule : openforcefield.topology.Molecule
+        The molecule (with conformers) to visualize
     """
-    def __init__(self, trajectory):
-        self.trajectory = trajectory
+    def __init__(self, molecule):
+        self.molecule = molecule
         self.ext = "pdb"
         self.params = {}
         self.id = str(uuid.uuid4())
 
     def get_coordinates(self, index):
-        return self.trajectory.conformers[index] / unit.angstrom
+        return self.molecule.conformers[index] / unit.angstrom
 
     @property
     def n_frames(self):
-        return len(self.trajectory.conformers)
+        return len(self.molecule.conformers)
 
     def get_structure_string(self):
-        from io import StringIO
         memfile = StringIO()
-        self.trajectory.to_file(memfile, "pdb")
+        self.molecule.to_file(memfile, "pdb")
         memfile.seek(0)
-        return memfile.getvalue()
+        block = memfile.getvalue()
+        # FIXME: Prevent multi-model PDB export with a keyword in molecule.to_file()?
+        models = block.split('END\n')
+        return models[0]
 
 
 class InvalidConformerError(Exception):
