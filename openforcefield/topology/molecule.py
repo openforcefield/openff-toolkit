@@ -38,6 +38,7 @@ from collections import OrderedDict, Counter
 from copy import deepcopy
 import operator
 from io import StringIO
+import uuid
 
 from simtk import unit
 from simtk.openmm.app import element, Element
@@ -4560,7 +4561,7 @@ class Molecule(FrozenMolecule):
         index: int
             Index of the bond in this molecule
 
-"""
+        """
         bond_index = self._add_bond(
             atom1,
             atom2,
@@ -4592,40 +4593,54 @@ class Molecule(FrozenMolecule):
         return self._add_conformer(coordinates)
 
     def visualize(self, backend='rdkit'):
-        """Render a visualization of the molecule in Jupyter"""
+        """
+        Render a visualization of the molecule in Jupyter
+        
+        Parameters
+        ----------
+        backend : str, optional, default='rdkit'
+            Which visualization engine to use. Choose from:
+            - rdkit
+            - openeye
+            - nglview (conformers needed)
+        
+        Returns
+        -------
+        object
+            Depending on the backend chosen:
+            - rdkit, openeye -> IPython.display.Image
+            - nglview -> nglview.NGLWidget
+        """
         from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
 
         backend = backend.lower()
 
         if backend == 'nglview':
-            import nglview as nv
             if self.conformers:
-                traj = _OFFTrajectoryNGLView(self)
-                widget = nv.NGLWidget()
-                widget.add_trajectory(traj)
+                import nglview as nv
+                trajectory_like = _OFFTrajectoryNGLView(self)
+                widget = nv.NGLWidget(trajectory_like)
                 return widget
             else:
                 raise ValueError('Visualizing with NGLview requires a molecule has conformers.')
-        elif backend == 'rdkit':
-            if RDKIT_AVAILABLE:
-                from rdkit.Chem.Draw import IPythonConsole
-                return self.to_rdkit()
-        elif backend == 'openeye':
-            if OPENEYE_AVAILABLE:
-                from openeye import oedepict
-                from IPython.display import Image
+        elif backend == 'rdkit' and RDKIT_AVAILABLE:
+            from rdkit.Chem.Draw import IPythonConsole
+            return self.to_rdkit()
+        elif backend == 'openeye' and OPENEYE_AVAILABLE:
+            from openeye import oedepict
+            from IPython.display import Image
 
-                oemol = self.to_openeye()
+            oemol = self.to_openeye()
 
-                width, height = 500, 300
-                opts = oedepict.OE2DMolDisplayOptions(width, height, oedepict.OEScale_AutoScale)
+            width, height = 500, 300
+            opts = oedepict.OE2DMolDisplayOptions(width, height, oedepict.OEScale_AutoScale)
 
-                oedepict.OEPrepareDepiction(oemol)
-                img = oedepict.OEImage(width, height)
-                display = oedepict.OE2DMolDisplay(oemol, opts)
-                oedepict.OERenderMolecule(img, display)
-                png = oedepict.OEWriteImageToString("png", img)
-                return Image(png)
+            oedepict.OEPrepareDepiction(oemol)
+            img = oedepict.OEImage(width, height)
+            display = oedepict.OE2DMolDisplay(oemol, opts)
+            oedepict.OERenderMolecule(img, display)
+            png = oedepict.OEWriteImageToString("png", img)
+            return Image(png)
         else:
             raise ValueError('Could not find an appropriate backend')
 
