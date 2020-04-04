@@ -208,7 +208,7 @@ rdkit_drugbank_undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1962', 'DrugB
 
 # Missing stereo in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
 # 'DrugBank_4162', 'DrugBank_6531', 'DrugBank_1700',
-drugbank_stereogenic_in_rdkit_but_not_openeye = ['DrugBank_5329']
+drugbank_stereogenic_in_rdkit_but_not_openeye = {'DrugBank_5329'}
 
 # Some molecules are _valid_ in both OETK and RDKit, but will fail if you try
 # to convert from one to the other, since OE adds stereo that RDKit doesn't
@@ -307,7 +307,7 @@ class TestMolecule:
         stereogenic_in_rdk_but_not_openeye = molecule.name in drugbank_stereogenic_in_rdkit_but_not_openeye
 
         smiles1 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-        if undefined_stereo or stereogenic_in_rdk_but_not_openeye:
+        if undefined_stereo or ((toolkit is RDKitToolkitWrapper) and stereogenic_in_rdk_but_not_openeye):
             molecule2 = Molecule.from_smiles(smiles1,
                                              allow_undefined_stereo=True,
                                              toolkit_registry=toolkit_wrapper)
