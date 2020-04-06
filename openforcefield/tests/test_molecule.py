@@ -203,7 +203,7 @@ openeye_drugbank_undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1700', 'Dru
 # Note that this list is different from that for OEMol,
 # since the toolkits have different definitions of "stereogenic"
 rdkit_drugbank_undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1962', 'DrugBank_2519',
-                                        'DrugBank_3930', 'DrugBank_5043', 'DrugBank_5329', 'DrugBank_5418'}
+                                        'DrugBank_3930', 'DrugBank_5043', 'DrugBank_5418'}
 
 
 # Missing stereo in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
