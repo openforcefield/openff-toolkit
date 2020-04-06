@@ -1099,6 +1099,18 @@ class TestForceField():
 
 
 class TestForceFieldChargeAssignment:
+
+    def generate_monatomic_ions():
+        return (('Li+', +1*unit.elementary_charge),
+                ('Na+', +1*unit.elementary_charge),
+                ('K+', +1*unit.elementary_charge),
+                ('Rb+', +1*unit.elementary_charge),
+                ('Cs+', +1*unit.elementary_charge),
+                ('F-', -1*unit.elementary_charge),
+                ('Cl-', -1*unit.elementary_charge),
+                ('Br-', -1*unit.elementary_charge),
+                ('I-', -1*unit.elementary_charge))
+
     @pytest.mark.parametrize("toolkit_registry,registry_description", toolkit_registries)
     def test_charges_from_molecule(self, toolkit_registry, registry_description):
         """Test skipping charge generation and instead getting charges from the original Molecule"""
@@ -1296,6 +1308,20 @@ class TestForceFieldChargeAssignment:
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
+
+    @pytest.mark.parametrize('monatomic_ion,formal_charge', generate_monatomic_ions())
+    def test_library_charges_monatomic_ions(self, monatomic_ion, formal_charge):
+        """Test assigning library charges to each of the monatomic ions in openff-1.1.0.xml"""
+        from simtk.openmm import NonbondedForce
+
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml',
+                        'test_forcefields/ion_charges.offxml')
+        mol = Molecule.from_smiles("[{}]".format(monatomic_ion))
+        omm_system = ff.create_openmm_system(mol.to_topology())
+
+        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        q, sigma, epsilon = nonbondedForce.getParticleParameters(0)
+        assert q == formal_charge
 
     def test_charge_method_hierarchy(self):
         """Ensure that molecules are parameterized by charge_from_molecules first, then library charges

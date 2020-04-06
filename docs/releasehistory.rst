@@ -65,6 +65,8 @@ New features
            Atom maps can be supplied to the properties dictionary to modify which atoms have their map index included,
            if no map is supplied all atoms will be mapped in the order they appear in the
            :py:class:`Molecule <openforcefield.topology.Molecule>`.
+- `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_:
+  Adds ``test_forcefields/ion_charges.offxml``, giving `LibraryCharges` for monatomic ions.
 
 
 Behavior changed
@@ -141,6 +143,8 @@ Tests added
   :py:meth:`Molecule.from_inchi <openforcefield.topology.Molecule.from_inchi>`. Also added coverage for bad inputs and
   :py:meth:`Molecule.to_inchikey <openforcefield.topology.Molecule.to_inchikey>`.
 - `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Added to XYZ file coverage tests.
+- `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_: Added `LibraryCharges` parameterization test
+  for monatomic ions in ``test_forcefields/ion_charges.offxml``.
 
 Bugfixes
 """"""""
