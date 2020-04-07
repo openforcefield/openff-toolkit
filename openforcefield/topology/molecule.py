@@ -4616,13 +4616,22 @@ class Molecule(FrozenMolecule):
         backend = backend.lower()
 
         if backend == 'nglview':
-            if self.conformers:
+            try:
                 import nglview as nv
+            except ImportError:
+                raise ValueError(
+                    'Attempted to visualize with NGLview but did not find it '
+                    'installed. Try conda install -c conda-forge nglview.'
+                )
+            if self.conformers:
                 trajectory_like = _OFFTrajectoryNGLView(self)
                 widget = nv.NGLWidget(trajectory_like)
                 return widget
             else:
-                raise ValueError('Visualizing with NGLview requires a molecule has conformers.')
+                raise ValueError(
+                    'Visualizing with NGLview requires that the molecule has '
+                    'conformers.'
+                )
         elif backend == 'rdkit' and RDKIT_AVAILABLE:
             from rdkit.Chem.Draw import IPythonConsole
             return self.to_rdkit()
