@@ -506,10 +506,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oemol.NewConf(oecoords)
         # We're standardizing on putting partial charges into SDFs under the `atom.dprop.PartialCharge` property
         if (file_format.lower() == "sdf") and (molecule.partial_charges is not None):
-            partial_charges_list = []
-            for oeatom in oemol.GetAtoms():
-                partial_charges_list.append(f'{oeatom.GetPartialCharge():f}')
-            partial_charges_str = ' '.join(partial_charges_list)
+            partial_charges_list = [oeatom.GetPartialCharge() for oeatom in oemol.GetAtoms()]
+           partial_charges_str = ' '.join([f'{val:f}' for val in partial_charges_list])
             # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
             #  describe/infer the proper data type?
             oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
