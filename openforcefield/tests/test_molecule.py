@@ -257,7 +257,49 @@ class TestMolecule:
     """Test Molecule class."""
 
     # TODO: Test getstate/setstate
-    # TODO: Test {to_from}_{dict|yaml|toml|json|bson|messagepack|pickle}
+
+    # Test serialization {to_from}_{dict|yaml|toml|json|bson|messagepack|pickle}
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_dict_serialization(self, molecule):
+        """Test seralization of a molecule object to dict."""
+        serialized = molecule.to_dict()
+        molecule_copy = Molecule.from_dict(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_yaml_serialization(self, molecule):
+        """Test seralization of a molecule object to YAML."""
+        serialized = molecule.to_yaml()
+        molecule_copy = Molecule.from_yaml(serialized)
+        assert molecule == molecule_copy
+
+    def test_toml_serialization(self):
+        """Test seralization of a molecule object to TOML."""
+        # TODO: Test over mini_drug_bank when implemented
+        molecule = Molecule.from_smiles('CCO')
+        with pytest.raises(NotImplementedError):
+            molecule.to_toml()
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_bson_serialization(self, molecule):
+        """Test seralization of a molecule object to BSON."""
+        serialized = molecule.to_bson()
+        molecule_copy = Molecule.from_bson(serialized)
+        assert molecule == molecule_copy
+
+    def test_json_serialization(self):
+        """Test seralization of a molecule object to JSON."""
+        # TODO: Test over mini_drug_bank when fully implemented
+        molecule = Molecule.from_smiles('CCO')
+        with pytest.raises(TypeError):
+            molecule.to_json()
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_messagespack_serialization(self, molecule):
+        """Test seralization of a molecule object to messagepack."""
+        serialized = molecule.to_messagepack()
+        molecule_copy = Molecule.from_messagepack(serialized)
+        assert molecule == molecule_copy
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_pickle_serialization(self, molecule):
