@@ -1107,34 +1107,34 @@ class TestMolecule:
             pytest.skip('Required toolkit is unavailable')
 
     @requires_openeye
-    def test_enumerating_no_formalcharges(self):
+    def test_enumerating_no_protomers(self):
         """Make sure no protomers are returned."""
 
         mol = Molecule.from_smiles('CC')
 
-        assert mol.enumerate_formalcharges() == []
+        assert mol.enumerate_protomers() == []
 
     @requires_openeye
-    def test_enumerating_formalcharges(self):
+    def test_enumerating_protomers(self):
         """Test enumerating the formal charges."""
 
         mol = Molecule.from_smiles('Oc2ccc(c1ccncc1)cc2')
 
         # there should be three protomers for this molecule so restrict the output
-        protomers = mol.enumerate_formalcharges(max_states=2)
+        protomers = mol.enumerate_protomers(max_states=2)
 
         assert mol not in protomers
         assert len(protomers) == 2
 
         # now make sure we can generate them all
-        protomers = mol.enumerate_formalcharges(max_states=10)
+        protomers = mol.enumerate_protomers(max_states=10)
 
         assert mol not in protomers
         assert len(protomers) == 3
 
-        # make sure the molecules are different
-        for protomer in protomers:
-            assert mol != protomer
+        # make sure each protomer is unique
+        unique_protomers = set(protomers)
+        assert len(protomers) == len(unique_protomers)
 
     @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     def test_enumerating_stereobonds(self, toolkit_class):
@@ -1155,7 +1155,7 @@ class TestMolecule:
                 assert mol.is_isomorphic_with(ismol) is False
 
             # make sure the isomers are different
-            assert Molecule.are_isomorphic(isomers[0], isomers[1])[0] is False
+            assert isomers[0].is_isomorphic_with(isomers[1]) is False
 
         else:
             pytest.skip('Required toolkit is unavailable')
@@ -1179,7 +1179,7 @@ class TestMolecule:
                 assert mol.is_isomorphic_with(ismol) is False
 
             # make sure the two isomers are different
-            assert Molecule.are_isomorphic(isomers[0], isomers[1])[0] is False
+            assert isomers[0].is_isomorphic_with(isomers[1]) is False
 
         else:
             pytest.skip('Required toolkit is unavailable')

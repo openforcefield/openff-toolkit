@@ -554,7 +554,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return mols
 
-    def enumerate_formalcharges(self, molecule, max_states=10):
+    def enumerate_protomers(self, molecule, max_states=10):
         """
         Enumerate the formal charges of a molecule to generate different protomoers.
 
