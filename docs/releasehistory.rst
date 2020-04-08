@@ -12,6 +12,14 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 API-breaking changes
 """"""""""""""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Removes
+  ``TopologyMolecule.topology_particle_start_index``, since the :py:class`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  after all atoms.
+  :py:meth`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
+  and
+  :py:meth`TopologyMolecule.topology_virtual_site_start_index <openforcefield.topology.TopologyMolecule.topology_virtual_site_start_index>`
+  are still available to access the appropriate values in the respective topology indexing systems.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   ``OpenEyeToolkitWrapper.compute_wiberg_bond_orders`` is now
   :py:meth:`OpenEyeToolkitWrapper.assign_fractional_bond_orders <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.assign_fractional_bond_orders>`.
@@ -65,10 +73,16 @@ New features
            Atom maps can be supplied to the properties dictionary to modify which atoms have their map index included,
            if no map is supplied all atoms will be mapped in the order they appear in the
            :py:class:`Molecule <openforcefield.topology.Molecule>`.
+- `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_:
+  Adds ``test_forcefields/ion_charges.offxml``, giving `LibraryCharges` for monatomic ions.
 
 
 Behavior changed
 """"""""""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: The
+  :py:class`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  after all atoms.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
   When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
   are generated if the provided atom names are not unique (overriding any existing atom names). This
@@ -98,6 +112,9 @@ Behavior changed
 
 Tests added
 """""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Adds tests ensuring
+  that the new Topology particle indexing system are properly implemented, and that TopologyVirtualSites
+  reference the correct TopologyAtoms.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: Added round-trip SMILES test
   to add coverage for :py:meth:`Molecule.from_smiles <openforcefield.topology.Molecule.from_smiles>`.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: Added tests for unique atom
@@ -141,9 +158,15 @@ Tests added
   :py:meth:`Molecule.from_inchi <openforcefield.topology.Molecule.from_inchi>`. Also added coverage for bad inputs and
   :py:meth:`Molecule.to_inchikey <openforcefield.topology.Molecule.to_inchikey>`.
 - `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Added to XYZ file coverage tests.
+- `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_: Added `LibraryCharges` parameterization test
+  for monatomic ions in ``test_forcefields/ion_charges.offxml``.
 
 Bugfixes
 """"""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Fixes a bug where
+  :py:meth:`TopologyVirtualSite.atoms <openforcefield.topology.TopologyVirtualSite.atoms>` would
+  not correctly apply ``TopologyMolecule`` atom ordering on top of the reference molecule ordering,
+  in cases where the same molecule appears multiple times, but in a different order, in the same Topology.
 - `Issue #460 <https://github.com/openforcefield/openforcefield/issues/460>`_: Creates unique atom
   names in :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>` if the existing
   ones are not unique. The lack of unique atom names had been causing problems in workflows involving

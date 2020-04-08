@@ -2682,20 +2682,17 @@ class ElectrostaticsHandler(_NonbondedHandler):
             # instances of it in this topology.
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
 
-                top_mol_particle_start_index = topology_molecule.particle_start_topology_index
 
                 for topology_particle in topology_molecule.particles:
 
                     if type(topology_particle) is TopologyAtom:
                         ref_mol_particle_index = topology_particle.atom.molecule_particle_index
-                        top_mol_particle_index = topology_molecule._ref_to_top_index[ref_mol_particle_index]
                     elif type(topology_particle) is TopologyVirtualSite:
                         ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
-                        top_mol_particle_index = ref_mol_particle_index
                     else:
                         raise ValueError(f'Particles of type {type(topology_particle)} are not supported')
 
-                    topology_particle_index = top_mol_particle_start_index + top_mol_particle_index
+                    topology_particle_index = topology_particle.topology_particle_index
 
                     particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
 
@@ -2962,22 +2959,15 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
 
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
-
-
-                top_mol_particle_start_index = topology_molecule.particle_start_topology_index
-
                 for topology_particle in topology_molecule.particles:
-
                     if type(topology_particle) is TopologyAtom:
                         ref_mol_particle_index = topology_particle.atom.molecule_particle_index
-                        top_mol_particle_index = topology_molecule._ref_to_top_index[ref_mol_particle_index]
                     elif type(topology_particle) is TopologyVirtualSite:
                         ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
-                        top_mol_particle_index = ref_mol_particle_index
                     else:
                         raise ValueError(f'Particles of type {type(topology_particle)} are not supported')
 
-                    topology_particle_index = top_mol_particle_start_index + top_mol_particle_index
+                    topology_particle_index = topology_particle.topology_particle_index
 
                     particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
 
