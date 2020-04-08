@@ -512,9 +512,9 @@ class TestOpenEyeToolkitWrapper:
         from openforcefield.tests.test_forcefield import create_ethanol
         toolkit_wrapper = OpenEyeToolkitWrapper()
         ethanol = create_ethanol()
-        # we hard-code some dummy values for partial charges here, since mol2 is only
+        # we increase the magnitude of the partial charges here, since mol2 is only
         # written to 4 digits of precision, and the default middle charge for our test ethanol is 1e-5
-        ethanol.partial_charges = [-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4]
+        ethanol.partial_charges *= 100
         # Write ethanol to a temporary file, and then immediately read it.
         with NamedTemporaryFile(suffix='.mol2') as iofile:
             ethanol.to_file(iofile.name, file_format='mol2', toolkit_registry=toolkit_wrapper)
