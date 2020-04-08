@@ -12,6 +12,14 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 API-breaking changes
 """"""""""""""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Removes
+  ``TopologyMolecule.topology_particle_start_index``, since the :py:class`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  after all atoms.
+  :py:meth`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
+  and
+  :py:meth`TopologyMolecule.topology_virtual_site_start_index <openforcefield.topology.TopologyMolecule.topology_virtual_site_start_index>`
+  are still available to access the appropriate values in the respective topology indexing systems.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   ``OpenEyeToolkitWrapper.compute_wiberg_bond_orders`` is now
   :py:meth:`OpenEyeToolkitWrapper.assign_fractional_bond_orders <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.assign_fractional_bond_orders>`.
@@ -71,6 +79,10 @@ New features
 
 Behavior changed
 """"""""""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: The
+  :py:class`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  after all atoms.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
   When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
   are generated if the provided atom names are not unique (overriding any existing atom names). This
@@ -100,6 +112,9 @@ Behavior changed
 
 Tests added
 """""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Adds tests ensuring
+  that the new Topology particle indexing system are properly implemented, and that TopologyVirtualSites
+  reference the correct TopologyAtoms.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: Added round-trip SMILES test
   to add coverage for :py:meth:`Molecule.from_smiles <openforcefield.topology.Molecule.from_smiles>`.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: Added tests for unique atom
@@ -148,6 +163,10 @@ Tests added
 
 Bugfixes
 """"""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Fixes a bug where
+  :py:meth:`TopologyVirtualSite.atoms <openforcefield.topology.TopologyVirtualSite.atoms>` would
+  not correctly apply ``TopologyMolecule`` atom ordering on top of the reference molecule ordering,
+  in cases where the same molecule appears multiple times, but in a different order, in the same Topology.
 - `Issue #460 <https://github.com/openforcefield/openforcefield/issues/460>`_: Creates unique atom
   names in :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>` if the existing
   ones are not unique. The lack of unique atom names had been causing problems in workflows involving
