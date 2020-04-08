@@ -271,16 +271,24 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     _toolkit_installation_instructions = 'The OpenEye toolkit requires a (free for academics) license, and can be ' \
                                          'found at: ' \
                                          'https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html'
-    _toolkit_file_read_formats = [
-        'CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF',
-        'MMOD', 'MOL2', 'MOL2H', 'MOPAC', 'OEB', 'PDB', 'RDF', 'SDF', 'SKC',
-        'SLN', 'SMI', 'USM', 'XYC'
-    ]
-    _toolkit_file_write_formats = [
-        'CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF',
-        'MMOD', 'MOL2', 'MOL2H', 'MOPAC', 'OEB', 'PDB', 'RDF', 'SDF', 'SKC',
-        'SLN', 'SMI', 'USM', 'XYC'
-    ]
+
+    def __init__(self):
+
+        self._toolkit_file_read_formats = [
+            'CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF',
+            'MMOD', 'MOL2', 'MOL2H', 'MOPAC', 'OEB', 'PDB', 'RDF', 'SDF', 'SKC',
+            'SLN', 'SMI', 'USM', 'XYC'
+        ]
+        self._toolkit_file_write_formats = [
+            'CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF',
+            'MMOD', 'MOL2', 'MOL2H', 'MOPAC', 'OEB', 'PDB', 'RDF', 'SDF', 'SKC',
+            'SLN', 'SMI', 'USM', 'XYC'
+        ]
+
+        # check if the toolkit can be loaded
+        if not self.is_available():
+            raise ToolkitUnavailableException(f'The required toolkit {self._toolkit_name} is not '
+                                              f'available. {self._toolkit_installation_instructions}')
 
     @staticmethod
     def is_available(
@@ -890,6 +898,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 oe_idx] = atom_index  # store for mapping oeatom to molecule atom indices below
             atom_mapping[atom_index] = map_id
 
+        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
         if 0 not in atom_mapping.values():
             molecule._properties['atom_map'] = atom_mapping
 
@@ -1134,15 +1143,25 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return oemol
 
-    @staticmethod
-    def to_smiles(molecule):
+    def to_smiles(self, molecule, isomeric=True, explicit_hydrogens=True, mapped=False):
         """
         Uses the OpenEye toolkit to convert a Molecule into a SMILES string.
+        A partially mapped smiles can also be generated for atoms of interest by supplying an `atom_map` to the
+        properties dictionary.
 
         Parameters
         ----------
         molecule : An openforcefield.topology.Molecule
             The molecule to convert into a SMILES.
+        isomeric: bool optional, default= True
+            return an isomeric smiles
+        explicit_hydrogens: bool optional, default=True
+            return a smiles string containing all hydrogens explicitly
+        mapped: bool optional, default=False
+            return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by supplying an
+            atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
+            an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
+            The map ids (values) should start from 0 or 1.
 
         Returns
         -------
@@ -1150,12 +1169,127 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The SMILES of the input molecule.
         """
         from openeye import oechem
-        oemol = OpenEyeToolkitWrapper.to_openeye(molecule)
-        smiles = oechem.OECreateSmiString(
-            oemol, oechem.OESMILESFlag_DEFAULT | oechem.OESMILESFlag_Hydrogens
-            | oechem.OESMILESFlag_Isotopes | oechem.OESMILESFlag_BondStereo
-            | oechem.OESMILESFlag_AtomStereo)
+        oemol = self.to_openeye(molecule)
+
+        # this sets up the default settings following the old DEFAULT flag
+        # more information on flags can be found here
+        # <https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemConstants/OESMILESFlag.html#OEChem::OESMILESFlag>
+        smiles_options = oechem.OESMILESFlag_Canonical | oechem.OESMILESFlag_Isotopes | oechem.OESMILESFlag_RGroups
+
+        # check if we want an isomeric smiles
+        if isomeric:
+            # add the atom and bond stereo flags
+            smiles_options |= oechem.OESMILESFlag_AtomStereo | oechem.OESMILESFlag_BondStereo
+
+        if explicit_hydrogens:
+            # add the hydrogen flag
+            smiles_options |= oechem.OESMILESFlag_Hydrogens
+
+        if mapped:
+            assert explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
+                                                "stereochemsitry to be defined to retain order"
+
+            # if we only want to map specific atoms check for an atom map
+            atom_map = molecule._properties.get('atom_map', None)
+            if atom_map is not None:
+                # make sure there are no repeated indices
+                map_ids = set(atom_map.values())
+                if len(map_ids) < len(atom_map):
+                    atom_map = None
+                elif 0 in atom_map.values():
+                    # we need to increment the map index
+                    for atom, map in atom_map.items():
+                        atom_map[atom] = map + 1
+
+            if atom_map is None:
+                # now we need to add the atom map to the atoms
+                for oeatom in oemol.GetAtoms():
+                    oeatom.SetMapIdx(oeatom.GetIdx() + 1)
+            else:
+                for atom in oemol.GetAtoms():
+                    try:
+                        # try to set the atom map
+                        map_idx = atom_map[atom.GetIdx()]
+                        atom.SetMapIdx(map_idx)
+                    except KeyError:
+                        continue
+
+            smiles_options |= oechem.OESMILESFlag_AtomMaps
+
+        smiles = oechem.OECreateSmiString(oemol, smiles_options)
         return smiles
+
+    def to_inchi(self, molecule, fixed_hydrogens=False):
+        """
+        Create an InChI string for the molecule using the RDKit Toolkit.
+        InChI is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
+        layer.
+
+        For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
+
+        Parameters
+        ----------
+        molecule : An openforcefield.topology.Molecule
+            The molecule to convert into a SMILES.
+
+        fixed_hydrogens: bool, default=False
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
+            InChI string of the molecule.
+
+        Returns
+        --------
+        inchi: str
+            The InChI string of the molecule.
+        """
+
+        from openeye import oechem
+        oemol = self.to_openeye(molecule)
+
+        if fixed_hydrogens:
+            opts = oechem.OEInChIOptions()
+            opts.SetFixedHLayer(True)
+            inchi = oechem.OEMolToInChI(oemol)
+
+        else:
+            inchi = oechem.OEMolToSTDInChI(oemol)
+
+        return inchi
+
+    def to_inchikey(self, molecule, fixed_hydrogens=False):
+        """
+        Create an InChIKey for the molecule using the RDKit Toolkit.
+        InChIKey is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
+        layer.
+
+        For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
+
+        Parameters
+        ----------
+        molecule : An openforcefield.topology.Molecule
+            The molecule to convert into a SMILES.
+
+        fixed_hydrogens: bool, default=False
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
+            InChI string of the molecule.
+
+        Returns
+        --------
+        inchi_key: str
+            The InChIKey representation of the molecule.
+        """
+
+        from openeye import oechem
+        oemol = self.to_openeye(molecule)
+
+        if fixed_hydrogens:
+            opts = oechem.OEInChIOptions()
+            opts.SetFixedHLayer(True)
+            inchi_key = oechem.OEMolToInChIKey(oemol)
+
+        else:
+            inchi_key = oechem.OEMolToSTDInChIKey(oemol)
+
+        return inchi_key
 
     def canonical_order_atoms(self, molecule):
         """
@@ -1197,7 +1331,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if bond.GetBgnIdx() > bond.GetEndIdx():
                 bond.SwapEnds()
 
-        return self.from_openeye(oemol)
+        return self.from_openeye(oemol, allow_undefined_stereo=True)
 
     def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
         """
@@ -1244,6 +1378,39 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         molecule = self.from_openeye(oemol,
                                      allow_undefined_stereo=allow_undefined_stereo)
+        return molecule
+
+    def from_inchi(self, inchi, allow_undefined_stereo=False):
+        """
+        Construct a Molecule from a InChI representation
+
+        Parameters
+        ----------
+        inchi : str
+            The InChI representation of the molecule.
+
+        allow_undefined_stereo : bool, default=False
+            Whether to accept InChI with undefined stereochemistry. If False,
+            an exception will be raised if a InChI with undefined stereochemistry
+            is passed into this function.
+
+        Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+        """
+
+        from openeye import oechem
+        # This calls the same functions as OESmilesToMol
+        oemol = oechem.OEGraphMol()
+        oechem.OEInChIToMol(oemol, inchi)
+
+        # try and catch InChI parsing fails
+        # if there are no atoms don't build the molecule
+        if oemol.NumAtoms() == 0:
+            raise RuntimeError('There was an issue parsing the InChI string, please check and try again.')
+
+        molecule = self.from_openeye(oemol, allow_undefined_stereo=allow_undefined_stereo)
+
         return molecule
 
     def generate_conformers(self, molecule, n_conformers=1, clear_existing=True):
@@ -1645,11 +1812,32 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
     .. warning :: This API is experimental and subject to change.
     """
+
     _toolkit_name = 'The RDKit'
     _toolkit_installation_instructions = 'A conda-installable version of the free and open source RDKit cheminformatics ' \
                                          'toolkit can be found at: https://anaconda.org/rdkit/rdkit'
-    _toolkit_file_read_formats = ['SDF', 'MOL', 'SMI']  #TODO: Add TDT support
-    _toolkit_file_write_formats = ['SDF', 'MOL', 'SMI', 'PDB']
+
+    def __init__(self):
+        super().__init__()
+
+        self._toolkit_file_read_formats = ['SDF', 'MOL', 'SMI']  # TODO: Add TDT support
+
+        if not self.is_available():
+            raise ToolkitUnavailableException(f'The required toolkit {self._toolkit_name} is not '
+                                              f'available. {self._toolkit_installation_instructions}')
+        else:
+            from rdkit import Chem
+            # we have to make sure the toolkit can be loaded before formatting this dict
+            # Note any new file write formats should be added here only
+            self._toolkit_file_write_formats = {'SDF': Chem.SDWriter, 'MOL': Chem.SDWriter, 'SMI': Chem.SmilesWriter,
+                                                'PDB': Chem.PDBWriter, 'TDT': Chem.TDTWriter}
+
+    @property
+    def toolkit_file_write_formats(self):
+        """
+        List of file formats that this toolkit can write.
+        """
+        return list(self._toolkit_file_write_formats.keys())
 
     @staticmethod
     def is_available():
@@ -1854,7 +2042,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             a list of Molecule objects is returned.
 
         """
-        from openforcefield.topology import Molecule
         from rdkit import Chem
 
         mols = []
@@ -1905,18 +2092,17 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         -------
 
         """
-        from rdkit import Chem
+
         file_format = file_format.upper()
         rdmol = self.to_rdkit(molecule)
-        rdkit_writers = {
-            'SDF': Chem.SDWriter,
-            'PDB': Chem.PDBWriter,
-            'SMI': Chem.SmilesWriter,
-            'TDT': Chem.TDTWriter
-        }
-        writer = rdkit_writers[file_format](file_obj)
-        writer.write(rdmol)
-        writer.close()
+        try:
+            writer = self._toolkit_file_write_formats[file_format](file_obj)
+            writer.write(rdmol)
+            writer.close()
+        # if we can not write to that file type catch the error here
+        except KeyError:
+            raise ValueError(f'The requested file type ({file_format}) is not supported to be written using '
+                             f'RDKitToolkitWrapper.')
 
     def to_file(self, molecule, file_path, file_format):
         """
@@ -1935,19 +2121,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         ------
 
         """
-        from rdkit import Chem
-        file_format = file_format.upper()
+
+        # open a file object and pass to the object writer
         with open(file_path, 'w') as file_obj:
-            rdmol = self.to_rdkit(molecule)
-            rdkit_writers = {
-                'SDF': Chem.SDWriter,
-                'PDB': Chem.PDBWriter,
-                'SMI': Chem.SmilesWriter,
-                'TDT': Chem.TDTWriter
-            }
-            writer = rdkit_writers[file_format](file_obj)
-            writer.write(rdmol)
-            writer.close()
+            self.to_file_obj(molecule=molecule, file_obj=file_obj, file_format=file_format)
 
     def canonical_order_atoms(self, molecule):
         """
@@ -1987,15 +2164,25 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         return molecule.remap(atom_mapping, current_to_new=True)
 
-    @classmethod
-    def to_smiles(cls, molecule):
+    def to_smiles(self, molecule, isomeric=True, explicit_hydrogens=True, mapped=False):
         """
         Uses the RDKit toolkit to convert a Molecule into a SMILES string.
+        A partially mapped smiles can also be generated for atoms of interest by supplying an `atom_map` to the
+        properties dictionary.
 
         Parameters
         ----------
         molecule : An openforcefield.topology.Molecule
             The molecule to convert into a SMILES.
+        isomeric: bool optional, default= True
+            return an isomeric smiles
+        explicit_hydrogens: bool optional, default=True
+            return a smiles string containing all hydrogens explicitly
+        mapped: bool optional, default=False
+            return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by supplying an
+            atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
+            an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
+            The map ids (values) should start from 0 or 1.
 
         Returns
         -------
@@ -2003,8 +2190,43 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             The SMILES of the input molecule.
         """
         from rdkit import Chem
-        rdmol = cls.to_rdkit(molecule)
-        return Chem.MolToSmiles(rdmol, isomericSmiles=True, allHsExplicit=True)
+        rdmol = self.to_rdkit(molecule)
+
+        if not explicit_hydrogens:
+            # remove the hydrogens from the molecule
+            rdmol = Chem.RemoveHs(rdmol)
+
+        if mapped:
+            assert explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
+                                               "stereochemistry to be defined to retain order"
+
+            # if we only want to map specific atoms check for an atom map
+            atom_map = molecule._properties.get('atom_map', None)
+            if atom_map is not None:
+                # make sure there are no repeated indices
+                map_ids = set(atom_map.values())
+                if len(map_ids) < len(atom_map):
+                    atom_map = None
+                elif 0 in atom_map.values():
+                    # we need to increment the map index
+                    for atom, map in atom_map.items():
+                        atom_map[atom] = map + 1
+
+            if atom_map is None:
+                # now we need to add the indexing to the rdmol to get it in the smiles
+                for atom in rdmol.GetAtoms():
+                    # the mapping must start from 1, as RDKit uses 0 to represent no mapping.
+                    atom.SetAtomMapNum(atom.GetIdx() + 1)
+            else:
+                for atom in rdmol.GetAtoms():
+                    try:
+                        # try to set the atom map
+                        map_idx = atom_map[atom.GetIdx()]
+                        atom.SetAtomMapNum(map_idx)
+                    except KeyError:
+                        continue
+
+        return Chem.MolToSmiles(rdmol, isomericSmiles=isomeric, allHsExplicit=explicit_hydrogens)
 
     def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
         """
@@ -2069,6 +2291,46 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         molecule = self.from_rdkit(rdmol,
                                    allow_undefined_stereo=allow_undefined_stereo)
+
+        return molecule
+
+    def from_inchi(self, inchi, allow_undefined_stereo=False):
+        """
+        Construct a Molecule from a InChI representation
+
+        Parameters
+        ----------
+        inchi : str
+            The InChI representation of the molecule.
+
+        allow_undefined_stereo : bool, default=False
+            Whether to accept InChI with undefined stereochemistry. If False,
+            an exception will be raised if a InChI with undefined stereochemistry
+            is passed into this function.
+
+        Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+        """
+
+        from rdkit import Chem
+        # this seems to always remove the hydrogens
+        rdmol = Chem.MolFromInchi(inchi, sanitize=False, removeHs=False)
+
+        # try and catch an InChI parsing error
+        if rdmol is None:
+            raise RuntimeError('There was an issue parsing the InChI string, please check and try again.')
+
+        # process the molecule
+        # TODO do we need this with inchi?
+        rdmol.UpdatePropertyCache(strict=False)
+        Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
+        Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+
+        # add hydrogens back here
+        rdmol = Chem.AddHs(rdmol)
+
+        molecule = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
 
         return molecule
 
@@ -2509,6 +2771,68 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Return non-editable version
         return Chem.Mol(rdmol)
 
+    def to_inchi(self, molecule, fixed_hydrogens=False):
+        """
+        Create an InChI string for the molecule using the RDKit Toolkit.
+        InChI is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
+        layer.
+
+        For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
+
+        Parameters
+        ----------
+        molecule : An openforcefield.topology.Molecule
+            The molecule to convert into a SMILES.
+
+        fixed_hydrogens: bool, default=False
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
+            InChI string of the molecule.
+
+        Returns
+        --------
+        inchi: str
+            The InChI string of the molecule.
+        """
+
+        from rdkit import Chem
+        rdmol = self.to_rdkit(molecule)
+        if fixed_hydrogens:
+            inchi = Chem.MolToInchi(rdmol, options='-FixedH')
+        else:
+            inchi = Chem.MolToInchi(rdmol)
+        return inchi
+
+    def to_inchikey(self, molecule, fixed_hydrogens=False):
+        """
+        Create an InChIKey for the molecule using the RDKit Toolkit.
+        InChIKey is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
+        layer.
+
+        For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
+
+        Parameters
+        ----------
+        molecule : An openforcefield.topology.Molecule
+            The molecule to convert into a SMILES.
+
+        fixed_hydrogens: bool, default=False
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
+            InChI string of the molecule.
+
+        Returns
+        --------
+        inchi_key: str
+            The InChIKey representation of the molecule.
+        """
+
+        from rdkit import Chem
+        rdmol = self.to_rdkit(molecule)
+        if fixed_hydrogens:
+            inchi_key = Chem.MolToInchiKey(rdmol, options='-FixedH')
+        else:
+            inchi_key = Chem.MolToInchiKey(rdmol)
+        return inchi_key
+
     @staticmethod
     def _find_smarts_matches(rdmol, smirks,
                              aromaticity_model='OEAroModel_MDL'):
@@ -2885,8 +3209,20 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
     _toolkit_name = 'AmberTools'
     _toolkit_installation_instructions = 'The AmberTools toolkit (free and open source) can be found at ' \
                                          'https://anaconda.org/omnia/ambertools'
-    _toolkit_file_read_formats = []
-    _toolkit_file_write_formats = []
+
+    def __init__(self):
+        super().__init__()
+
+        self._toolkit_file_read_formats = []
+        self._toolkit_file_write_formats = []
+
+        if not self.is_available():
+            raise ToolkitUnavailableException(f'The required toolkit {self._toolkit_name} is not '
+                                              f'available. {self._toolkit_installation_instructions}')
+
+        # TODO: Find AMBERHOME or executable home, checking miniconda if needed
+        # Store an instance of an RDKitToolkitWrapper for file I/O
+        self._rdkit_toolkit_wrapper = RDKitToolkitWrapper()
 
     @staticmethod
     def is_available():
@@ -2906,11 +3242,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             return False
         else:
             return True
-
-    def __init__(self):
-        # TODO: Find AMBERHOME or executable home, checking miniconda if needed
-        # Store an instance of an RDKitToolkitWrapper for file I/O
-        self._rdkit_toolkit_wrapper = RDKitToolkitWrapper()
 
     def compute_partial_charges(self, molecule, charge_model=None):
         """
@@ -3428,24 +3759,23 @@ class ToolkitRegistry:
         """
         # Instantiate class if class, or just add if already instantiated.
         if isinstance(toolkit_wrapper, type):
-            toolkit_wrapper = toolkit_wrapper()
-
-        # Raise exception if not available.
-        if not toolkit_wrapper.is_available():
-            msg = "Unable to load toolkit '{}'. ".format(toolkit_wrapper._toolkit_name)
-            if exception_if_unavailable:
-                raise ToolkitUnavailableException(msg)
-            else:
-                if 'OpenEye' in msg:
-                    msg += "The Open Force Field Toolkit does not require the OpenEye Toolkits, and can " \
-                           "use RDKit/AmberTools instead. However, if you have a valid license for the " \
-                           "OpenEye Toolkits, consider installing them for faster performance and additional " \
-                           "file format support: " \
-                           "https://docs.eyesopen.com/toolkits/python/quickstart-python/linuxosx.html " \
-                           "OpenEye offers free Toolkit licenses for academics: " \
-                           "https://www.eyesopen.com/academic-licensing"
-                logger.warning(f"Warning: {msg}")
-            return
+            try:
+                toolkit_wrapper = toolkit_wrapper()
+            except ToolkitUnavailableException:
+                msg = "Unable to load toolkit '{}'. ".format(toolkit_wrapper._toolkit_name)
+                if exception_if_unavailable:
+                    raise ToolkitUnavailableException(msg)
+                else:
+                    if 'OpenEye' in msg:
+                        msg += "The Open Force Field Toolkit does not require the OpenEye Toolkits, and can " \
+                               "use RDKit/AmberTools instead. However, if you have a valid license for the " \
+                               "OpenEye Toolkits, consider installing them for faster performance and additional " \
+                               "file format support: " \
+                               "https://docs.eyesopen.com/toolkits/python/quickstart-python/linuxosx.html " \
+                               "OpenEye offers free Toolkit licenses for academics: " \
+                               "https://www.eyesopen.com/academic-licensing"
+                    logger.warning(f"Warning: {msg}")
+                return
 
         # Add toolkit to the registry.
         self._toolkits.append(toolkit_wrapper)

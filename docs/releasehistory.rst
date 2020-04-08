@@ -54,6 +54,14 @@ Behavior changed
 
 API-breaking changes
 """"""""""""""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Removes
+  ``TopologyMolecule.topology_particle_start_index``, since the :py:class`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  after all atoms.
+  :py:meth`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
+  and
+  :py:meth`TopologyMolecule.topology_virtual_site_start_index <openforcefield.topology.TopologyMolecule.topology_virtual_site_start_index>`
+  are still available to access the appropriate values in the respective topology indexing systems.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   ``OpenEyeToolkitWrapper.compute_wiberg_bond_orders`` is now
   :py:meth:`OpenEyeToolkitWrapper.assign_fractional_bond_orders <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.assign_fractional_bond_orders>`.
@@ -87,9 +95,36 @@ New features
 - `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_:
    The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
   :py:meth:`Molecule.find_rotatable_bonds <openforcefield.topology.Molecule.find_rotatable_bonds>`
+- `PR #521 <https://github.com/openforcefield/openforcefield/pull/521>`_:
+  Adds :py:meth:`Molecule.to_inchi <openforcefield.topology.Molecule.to_inchi>`
+  and :py:meth:`Molecule.to_inchikey <openforcefield.topology.Molecule.to_inchikey>`
+  and :py:meth:`Molecule.from_inchi <openforcefield.topology.Molecule.from_inchi>`
+      .. warning::
+         InChI was not designed as an molecule interchange format and using it as one is not recommended. Many round trip
+         tests will fail when using this format due to a loss of information. We have also added support for fixed
+         hydrogen layer nonstandard InChI which can help in the case of tautomers, but overall creating molecules from InChI should be
+         avoided.
+- `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Adds the ability to write out to XYZ files via
+  :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` Both single frame and multiframe XYZ files are supported.
+  Note reading from XYZ files will not be supported due to the lack of connectivity information.
+- `PR #535 <https://github.com/openforcefield/openforcefield/pull/535>`_: Extends the the API for the
+  :py:meth:`Molecule.to_smiles <openforcefield.topology.Molecule.to_smiles>` to allow for the creation of cmiles
+  identifiers through combinations of isomeric, explicit hydrogen and mapped smiles, the default settings will return
+  isomeric explicit hydrogen smiles as expected.
+        .. warning::
+           Atom maps can be supplied to the properties dictionary to modify which atoms have their map index included,
+           if no map is supplied all atoms will be mapped in the order they appear in the
+           :py:class:`Molecule <openforcefield.topology.Molecule>`.
+- `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_:
+  Adds ``test_forcefields/ion_charges.offxml``, giving `LibraryCharges` for monatomic ions.
+
 
 Behavior changed
 """"""""""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: The
+  :py:class`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  after all atoms.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
   When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
   are generated if the provided atom names are not unique (overriding any existing atom names). This
@@ -104,9 +139,24 @@ Behavior changed
   :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` now use the
   :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to match
   molecules.
+- `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
+  In order to provide the same results for the same chemical species, regardless of input
+  conformation, fractional bond order calculation methods now default to ignore input conformers
+  and generate a new conformer of the molecule before running semiempirical calculations.
+  Users can override this behavior by specifying the keyword argument
+  ``use_conformers=molecule.conformers``
+- `PR #544 <https://github.com/openforcefield/openforcefield/pull/544>`_: Raises 
+  ``NotImplementedError`` when calling 
+  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`, 
+  which is not yet implemented, but would previously silently return ``None``.
+- `PR #551 <https://github.com/openforcefield/openforcefield/pull/551>`_: Implemented the
+  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>` function.
 
 Tests added
 """""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Adds tests ensuring
+  that the new Topology particle indexing system are properly implemented, and that TopologyVirtualSites
+  reference the correct TopologyAtoms.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: Added round-trip SMILES test
   to add coverage for :py:meth:`Molecule.from_smiles <openforcefield.topology.Molecule.from_smiles>`.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: Added tests for unique atom
@@ -145,9 +195,20 @@ Tests added
    identified in issue #513 as loosing aromaticity when converted to rdkit.
 - `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_: Added a verity of toolkit dependent tests
    for identifying rotatable bonds while ignoring the user requested types.
+- `PR #521 <https://github.com/openforcefield/openforcefield/pull/521>`_: Added toolkit independent round-trip InChI
+  tests which add coverage for :py:meth:`Molecule.to_inchi <openforcefield.topology.Molecule.to_inchi>` and
+  :py:meth:`Molecule.from_inchi <openforcefield.topology.Molecule.from_inchi>`. Also added coverage for bad inputs and
+  :py:meth:`Molecule.to_inchikey <openforcefield.topology.Molecule.to_inchikey>`.
+- `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Added to XYZ file coverage tests.
+- `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_: Added `LibraryCharges` parameterization test
+  for monatomic ions in ``test_forcefields/ion_charges.offxml``.
 
 Bugfixes
 """"""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Fixes a bug where
+  :py:meth:`TopologyVirtualSite.atoms <openforcefield.topology.TopologyVirtualSite.atoms>` would
+  not correctly apply ``TopologyMolecule`` atom ordering on top of the reference molecule ordering,
+  in cases where the same molecule appears multiple times, but in a different order, in the same Topology.
 - `Issue #460 <https://github.com/openforcefield/openforcefield/issues/460>`_: Creates unique atom
   names in :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>` if the existing
   ones are not unique. The lack of unique atom names had been causing problems in workflows involving
@@ -174,7 +235,11 @@ Bugfixes
    :py:meth:`Molecule.find_rotatable_bonds <openforcefield.topology.Molecule.find_rotatable_bonds>` has been added
    which returns a list of rotatable :py:class:`Bond <openforcefield.topology.Bond>` instances for the molecule.
 - `Issue #491 <https://github.com/openforcefield/openforcefield/issues/491>`_: We can now parse large molecules without hitting a match limit cap.
-
+- `Issue #474 <https://github.com/openforcefield/openforcefield/issues/474>`_: We can now  convert molecules to InChI and
+   InChIKey and from InChI.
+- `Issue #523 <https://github.com/openforcefield/openforcefield/issues/523>`_: The
+   :py:meth: `Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
+   line with the support file type list.
 
 Example added
 """""""""""""

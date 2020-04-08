@@ -36,7 +36,7 @@ from openforcefield.utils import get_data_file_path
 # TODO: Will the ToolkitWrapper allow us to pare that down?
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
 from openforcefield.tests.test_forcefield import create_ethanol, create_reversed_ethanol, create_acetaldehyde, \
-    create_benzene_no_aromatic, create_cyclohexane
+    create_benzene_no_aromatic, create_cyclohexane, create_cis_1_2_dichloroethene
 
 #=============================================================================================
 # TEST UTILITIES
@@ -208,6 +208,7 @@ rdkit_drugbank_undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1962', 'DrugB
 
 # Missing stereo in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
 # 'DrugBank_4162', 'DrugBank_6531', 'DrugBank_1700',
+drugbank_stereogenic_in_rdkit_but_not_openeye = {'DrugBank_5329'}
 
 # Some molecules are _valid_ in both OETK and RDKit, but will fail if you try
 # to convert from one to the other, since OE adds stereo that RDKit doesn't
@@ -292,7 +293,7 @@ class TestMolecule:
             # Skip the test if OpenEye assigns stereochemistry but RDKit doesn't (since then, the
             # OFF molecule will be loaded, but fail to convert in to_rdkit)
             if molecule.name in drugbank_stereogenic_in_oe_but_not_rdkit:
-                pytest.skip('Molecle is stereogenic in OpenEye (which loaded this dataset), but not RDKit, so it '
+                pytest.skip('Molecule is stereogenic in OpenEye (which loaded this dataset), but not RDKit, so it '
                             'is impossible to make a valid RDMol in this test')
             undefined_stereo_mols = rdkit_drugbank_undefined_stereo_mols
         elif toolkit == OpenEyeToolkitWrapper:
@@ -301,17 +302,145 @@ class TestMolecule:
         toolkit_wrapper = toolkit()
 
         undefined_stereo = molecule.name in undefined_stereo_mols
+        # Since OpenEye did the original reading of MiniDrugBank, if OPENEYE doesn't
+        # think a feature is stereogenic, then "molecule" won't have stereochemistry defined
+        stereogenic_in_rdk_but_not_openeye = molecule.name in drugbank_stereogenic_in_rdkit_but_not_openeye
 
         smiles1 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-        if undefined_stereo:
+        if undefined_stereo or ((toolkit is RDKitToolkitWrapper) and stereogenic_in_rdk_but_not_openeye):
             molecule2 = Molecule.from_smiles(smiles1,
                                              allow_undefined_stereo=True,
                                              toolkit_registry=toolkit_wrapper)
         else:
             molecule2 = Molecule.from_smiles(smiles1,
                                              toolkit_registry=toolkit_wrapper)
+
         smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
         assert (smiles1 == smiles2)
+
+    smiles_types = [{'isomeric': True, 'explicit_hydrogens': True, 'mapped': True, 'error': None},
+                    {'isomeric': False, 'explicit_hydrogens': True, 'mapped': True, 'error': None},
+                    {'isomeric': True, 'explicit_hydrogens': False, 'mapped': True, 'error': AssertionError},
+                    {'isomeric': True, 'explicit_hydrogens': True, 'mapped': False, 'error': None},
+                    {'isomeric': True, 'explicit_hydrogens': False, 'mapped': False, 'error': None},
+                    {'isomeric': False, 'explicit_hydrogens': True, 'mapped': False, 'error': None},
+                    {'isomeric': False, 'explicit_hydrogens': False, 'mapped': True, 'error': AssertionError},
+                    {'isomeric': False, 'explicit_hydrogens': False, 'mapped': False, 'error': None},
+                    ]
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    @pytest.mark.parametrize('data', smiles_types)
+    def test_smiles_types(self, data, toolkit_class):
+        """Test that the toolkit is passing the correct args to the toolkit backends across different combinations."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = create_cis_1_2_dichloroethene()
+            isomeric, explicit_hs, mapped = data['isomeric'], data['explicit_hydrogens'], data['mapped']
+            if data['error'] is not None:
+                with pytest.raises(data['error']):
+                    mol.to_smiles(isomeric=isomeric, explicit_hydrogens=explicit_hs,
+                                  mapped=mapped, toolkit_registry=toolkit)
+
+            else:
+
+                # make the smiles then do some checks on it
+                output_smiles = mol.to_smiles(isomeric=isomeric,
+                                              explicit_hydrogens=explicit_hs,
+                                              mapped=mapped, toolkit_registry=toolkit)
+                if isomeric:
+                    assert '\\' in output_smiles
+                if explicit_hs:
+                    assert 'H' in output_smiles
+                if mapped:
+                    for i in range(1,7):
+                        assert f':{i}' in output_smiles
+                    # if the molecule is mapped make it using the mapping
+                    mol2 = Molecule.from_mapped_smiles(mapped_smiles=output_smiles,
+                                                       toolkit_registry=toolkit,
+                                                       allow_undefined_stereo=not isomeric)
+                else:
+                    # make a molecule from a standard smiles
+                    mol2 = Molecule.from_smiles(smiles=output_smiles,
+                                                allow_undefined_stereo=not isomeric,
+                                                toolkit_registry=toolkit)
+
+                isomorphic, atom_map = Molecule.are_isomorphic(mol, mol2, return_atom_map=True,
+                                                               aromatic_matching=True,
+                                                               formal_charge_matching=True,
+                                                               bond_order_matching=True,
+                                                               atom_stereochemistry_matching=isomeric,
+                                                               bond_stereochemistry_matching=isomeric)
+
+                assert isomorphic is True
+                if mapped:
+                    assert {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5} == atom_map
+
+        else:
+            pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_smiles_cache(self, toolkit_class):
+        """Make sure that the smiles cache is being used correctly."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            # this uses no toolkit back end so no smiles should be saved
+            mol = create_ethanol()
+
+            # now lets populate the cache with a test result
+            # first we need to make the cache key for the default input
+            isomeric, explicit_hydrogens, mapped = True, True, False
+            cache_key = toolkit.to_smiles.__qualname__ + str(isomeric) + str(explicit_hydrogens) + str(mapped)
+            cache_key += str(mol._properties.get('atom_map', None))
+            mol._cached_smiles = {cache_key: None}
+            assert mol.to_smiles(isomeric=isomeric, toolkit_registry=toolkit,
+                                 explicit_hydrogens=explicit_hydrogens, mapped=mapped) is None
+
+            # now make sure the cache is not used if we change an input arg
+            assert mol.to_smiles(isomeric=True, explicit_hydrogens=True,
+                                 mapped=True, toolkit_registry=toolkit) is not None
+
+            # now make sure the cache was updated
+            assert mol._cached_smiles != {cache_key: None}
+            assert len(mol._cached_smiles) == 2
+
+        else:
+            pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')
+
+    mapped_types = [{'atom_map': None},
+                    {'atom_map': {0: 0}},
+                    {'atom_map': {0: 0, 1: 0, 2: 0, 3: 0}},
+                    {'atom_map': {0: 0, 1: 1, 2: 2, 3: 3}},
+                    {'atom_map': {0: 1, 1: 2, 2: 3, 3: 4}}]
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    @pytest.mark.parametrize('data', mapped_types)
+    def test_partial_mapped_smiles(self, toolkit_class, data):
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = create_cis_1_2_dichloroethene()
+            mol._properties['atom_map'] = data['atom_map']
+
+            smiles = mol.to_smiles(isomeric=True, explicit_hydrogens=True,
+                                   mapped=True, toolkit_registry=toolkit)
+
+            # now we just need to check the smiles generated
+            if data['atom_map'] is None:
+                for i, atom in enumerate(mol.atoms, 1):
+                    assert f'[{atom.element.symbol}:{i}]' in smiles
+            else:
+                if 0 in data['atom_map'].values():
+                    increment = True
+                else:
+                    increment = False
+
+                for atom, index in data['atom_map'].items():
+                    assert f'[{mol.atoms[atom].element.symbol}:{index + 1 if increment else index}]'
+
+        else:
+            pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_unique_atom_names(self, molecule):
@@ -329,6 +458,42 @@ class TestMolecule:
         assert ((len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms) == molecule.has_unique_atom_names)
         molecule.atoms[1].name = molecule.atoms[0].name # no longer unique
         assert ((len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms) == molecule.has_unique_atom_names)
+
+    inchi_data = [{'molecule': create_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
+                  {'molecule': create_reversed_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
+                  {'molecule': create_acetaldehyde(), 'standard_inchi': 'InChI=1S/C2H4O/c1-2-3/h2H,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H4O/c1-2-3/h2H,1H3'},
+                  {'molecule': create_cyclohexane(), 'standard_inchi': 'InChI=1S/C6H12/c1-2-4-6-5-3-1/h1-6H2',
+                   'fixed_hydrogen_inchi': 'InChI=1/C6H12/c1-2-4-6-5-3-1/h1-6H2'}
+                  ]
+
+    @pytest.mark.parametrize('data', inchi_data)
+    def test_from_inchi(self, data):
+        """Test building a molecule from standard and non-standard InChI strings."""
+
+        toolkit = OpenEyeToolkitWrapper()
+        ref_mol = data['molecule']
+        # make a molecule from inchi
+        inchi_mol = Molecule.from_inchi(data['standard_inchi'], toolkit_registry=toolkit)
+        assert inchi_mol.to_inchi(toolkit_registry=toolkit) == data['standard_inchi']
+
+        def compare_mols(ref_mol, inchi_mol):
+            assert ref_mol.n_atoms == inchi_mol.n_atoms
+            assert ref_mol.n_bonds == inchi_mol.n_bonds
+            assert ref_mol.n_angles == inchi_mol.n_angles
+            assert ref_mol.n_propers == inchi_mol.n_propers
+            assert ref_mol.is_isomorphic_with(inchi_mol) is True
+
+        compare_mols(ref_mol, inchi_mol)
+
+        # now make the molecule from the non-standard inchi and compare
+        nonstandard_inchi_mol = Molecule.from_inchi(data['fixed_hydrogen_inchi'], toolkit_registry=toolkit)
+        assert nonstandard_inchi_mol.to_inchi(fixed_hydrogens=True, toolkit_registry=toolkit) == data[
+            'fixed_hydrogen_inchi']
+
+        compare_mols(ref_mol, nonstandard_inchi_mol)
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @pytest.mark.slow
@@ -391,7 +556,7 @@ class TestMolecule:
 
         # If this is a known failure, check that it raises UndefinedStereochemistryError
         # and proceed with the test ignoring it.
-        test_mol =  None
+        test_mol = None
         if undefined_stereo:
             with pytest.raises(UndefinedStereochemistryError):
                 Molecule(rdmol)
@@ -485,6 +650,93 @@ class TestMolecule:
         molecule_copy = Molecule.from_topology(topology)
         assert molecule == molecule_copy
 
+    def test_to_multiframe_xyz(self):
+        """Test writing out a molecule with multiple conformations to an xyz file"""
+
+        # load in an SDF of butane with multiple conformers in it
+        molecules = Molecule.from_file(get_data_file_path('molecules/butane_multi.sdf'), 'sdf')
+        # now we want to combine the conformers to one molecule
+        butane = molecules[0]
+        for mol in molecules[1:]:
+            butane.add_conformer(mol._conformers[0])
+
+        # make sure we have the 7 conformers
+        assert butane.n_conformers == 7
+        with NamedTemporaryFile(suffix='.xyz') as iofile:
+            # try and write out the xyz file
+            butane.to_file(iofile.name, 'xyz')
+
+            # now lets check whats in the file
+            with open(iofile.name) as xyz_data:
+                data = xyz_data.readlines()
+                # make sure we have the correct amount of lines writen
+                assert len(data) == 112
+                # make sure all headers and frame data was writen
+                assert data.count('14\n') == 7
+                for i in range(1, 8):
+                    assert f'C4H10 Frame {i}\n' in data
+
+                # now make sure the first line of the coordinates are correct in every frame
+                coords = ['C        1.8902000189    0.0425999984    0.2431000024\n',
+                          'C        1.8976000547   -0.0232999995    0.2845999897\n',
+                          'C       -1.8794000149   -0.1792999953   -0.2565000057\n',
+                          'C       -1.5205999613   -0.0164999999    0.2786999941\n',
+                          'C       -1.4889999628   -0.2619000077    0.4871000051\n',
+                          'C       -1.4940999746   -0.2249000072   -0.0957999974\n',
+                          'C       -1.8826999664   -0.0372000001    0.1937000006\n']
+                for coord in coords:
+                    assert coord in data
+
+    def test_to_single_xyz(self):
+        """Test writing to a single frame xyz file"""
+
+        # load a molecule with a single conformation
+        toluene = Molecule.from_file(get_data_file_path('molecules/toluene.sdf'), 'sdf')
+        # make sure it has one conformer
+        assert toluene.n_conformers == 1
+
+        with NamedTemporaryFile(suffix='.xyz') as iofile:
+            # try and write out the xyz file
+            toluene.to_file(iofile.name, 'xyz')
+
+            # now lets check the file contents
+            with open(iofile.name) as xyz_data:
+                data = xyz_data.readlines()
+                # make sure we have the correct amount of lines writen
+                assert len(data) == 17
+                # make sure all headers and frame data was writen
+                assert data.count('15\n') == 1
+                assert data.count('C7H8\n') == 1
+                # now check that we can find the first and last coords
+                coords = ['C        0.0000000000    0.0000000000    0.0000000000\n',
+                          'H       -0.0000000000    3.7604000568    0.0000000000\n']
+                for coord in coords:
+                    assert coord in data
+
+    def test_to_xyz_no_conformers(self):
+        """Test writing a molecule out when it has no conformers here all coords should be 0."""
+
+        # here we want to make a molecule with no coordinates
+        ethanol = create_ethanol()
+        assert ethanol.n_conformers == 0
+
+        with NamedTemporaryFile(suffix='.xyz') as iofile:
+            # try and write out the xyz file
+            ethanol.to_file(iofile.name, 'xyz')
+
+            # now lets check the file contents
+            with open(iofile.name) as xyz_data:
+                data = xyz_data.readlines()
+                # make sure we have the correct amount of lines writen
+                assert len(data) == 11
+                # make sure all headers and frame data was writen
+                assert data.count('9\n') == 1
+                assert data.count('C2H6O\n') == 1
+                # now check that all coords are 0
+                coords = ['0.0000000000', '0.0000000000', '0.0000000000']
+                for atom_coords in data[2:]:
+                    assert atom_coords.split()[1:] == coords
+
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     @pytest.mark.parametrize('format', [
@@ -541,7 +793,7 @@ class TestMolecule:
 
         # If this is a known failure, check that it raises UndefinedStereochemistryError
         # and proceed with the test ignoring it.
-        test_mol =  None
+        test_mol = None
         if undefined_stereo:
             with pytest.raises(UndefinedStereochemistryError):
                 Molecule(oemol)
@@ -845,7 +1097,7 @@ class TestMolecule:
         qcschema = ethanol.to_qcschema()
         # make sure the properties match
         charge = 0
-        connectivity = [(0, 1, 1.0), (0, 3, 1.0), (0, 4, 1.0), (0, 5, 1.0), (1, 2, 1.0), (1, 6, 1.0), (1, 7, 1.0), (2, 8, 1.0)]
+        connectivity = [(0, 1, 1.0), (0, 4, 1.0), (0, 5, 1.0), (0, 6, 1.0), (1, 2, 1.0), (1, 7, 1.0), (1, 8, 1.0), (2, 3, 1.0)]
         symbols = ['C', 'C', 'O', 'H', 'H', 'H', 'H', 'H', 'H']
         assert charge == qcschema.molecular_charge
         assert connectivity == qcschema.connectivity
@@ -1265,7 +1517,11 @@ class TestMolecule:
         molecule_dict = molecule.to_dict()
         molecule2 = Molecule.from_dict(molecule_dict)
 
-        assert hash(molecule) == hash(molecule2)
+        # test that the molecules are the same
+        assert molecule.is_isomorphic_with(molecule2)
+        # lets also make sure that the vsites were constructed correctly
+        for site1, site2 in zip(molecule.virtual_sites, molecule2.virtual_sites):
+            assert site1.to_dict() == site2.to_dict()
 
     # TODO: Make a test for to_dict and from_dict for VirtualSites (even though they're currently just unloaded using
     #      (for example) Molecule._add_bond_virtual_site functions
