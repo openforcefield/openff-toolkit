@@ -405,8 +405,8 @@ class TestOpenEyeToolkitWrapper:
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_sdf_properties_roundtrip(self):
-        """Test OpenEyeToolkitWrapper for performing a round trip of a molecule with partial charge to and from
-        a sdf file"""
+        """Test OpenEyeToolkitWrapper for performing a round trip of a molecule with defined partial charges
+        and entries in the properties dict to and from a sdf file"""
         from openforcefield.tests.test_forcefield import create_ethanol
         toolkit_wrapper = OpenEyeToolkitWrapper()
         ethanol = create_ethanol()
@@ -512,9 +512,9 @@ class TestOpenEyeToolkitWrapper:
         from openforcefield.tests.test_forcefield import create_ethanol
         toolkit_wrapper = OpenEyeToolkitWrapper()
         ethanol = create_ethanol()
-        # The value of ethanol.partial_charges[4] is 1e-5, but mol2 is only written to 4 digits of precision, so we
-        # multiply by ten to make this test pass within the precision of the mol2 specification
-        ethanol.partial_charges[4] *= 10
+        # we hard-code some dummy values for partial charges here, since mol2 is only
+        # written to 4 digits of precision, and the default middle charge for our test ethanol is 1e-5
+        ethanol.partial_charges = [-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4]
         # Write ethanol to a temporary file, and then immediately read it.
         with NamedTemporaryFile(suffix='.mol2') as iofile:
             ethanol.to_file(iofile.name, file_format='mol2', toolkit_registry=toolkit_wrapper)
@@ -1107,8 +1107,8 @@ class TestRDKitToolkitWrapper:
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_sdf_properties_roundtrip(self):
-        """Test RDKitToolkitWrapper for performing a round trip of a molecule with partial charge to and from
-        a sdf file"""
+        """Test RDKitToolkitWrapper for performing a round trip of a molecule with defined partial charges
+        and entries in the properties dict to and from a sdf file"""
         from openforcefield.tests.test_forcefield import create_ethanol
         toolkit_wrapper = RDKitToolkitWrapper()
         ethanol = create_ethanol()
