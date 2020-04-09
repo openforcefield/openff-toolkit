@@ -1985,7 +1985,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^ Chem.SANITIZE_ADJUSTHS)
                     Chem.AssignStereochemistryFrom3D(rdmol)
                 except ValueError as e:
-                    logger.warn(rdmol.GetProp('_Name') + e)
+                    logger.warning(rdmol.GetProp('_Name') + ' ' + str(e))
                     continue
                 Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
                 mol = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
