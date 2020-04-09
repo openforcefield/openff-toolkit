@@ -495,7 +495,7 @@ class TestOpenEyeToolkitWrapper:
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_write_sdf_no_charges(self):
-        """Test OpenEyeToolkitWrapper for importing a charges from a sdf file"""
+        """Test OpenEyeToolkitWrapper for writing an SDF file without charges"""
         from io import StringIO
         toolkit_wrapper = OpenEyeToolkitWrapper()
         ethanol = create_ethanol()
@@ -1325,7 +1325,7 @@ class TestRDKitToolkitWrapper:
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_write_sdf_no_charges(self):
-        """Test RDKitToolkitWrapper for importing a charges from a sdf file"""
+        """Test RDKitToolkitWrapper for writing an SDF file with no charges"""
         from io import StringIO
         toolkit_wrapper = RDKitToolkitWrapper()
         ethanol = create_ethanol()
