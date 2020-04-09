@@ -219,7 +219,7 @@ class TestOpenEyeToolkitWrapper:
             assert atom1.to_dict() == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
             assert bond1.to_dict() == bond2.to_dict()
-        assert (molecule._conformers[0] == molecule2._conformers[0]).all()
+        assert (molecule.conformers[0] == molecule2.conformers[0]).all()
         for pc1, pc2 in zip(molecule._partial_charges, molecule2._partial_charges):
             pc1_ul = pc1 / unit.elementary_charge
             pc2_ul = pc2 / unit.elementary_charge
@@ -423,8 +423,8 @@ class TestOpenEyeToolkitWrapper:
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_file_path('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        assert len(molecule._conformers) == 1
-        assert molecule._conformers[0].shape == (15,3)
+        assert len(molecule.conformers) == 1
+        assert molecule.conformers[0].shape == (15,3)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_load_multiconformer_sdf_as_separate_molecules(self):
@@ -436,9 +436,9 @@ class TestOpenEyeToolkitWrapper:
         filename = get_data_file_path('molecules/methane_multiconformer.sdf')
         molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecules) == 2
-        assert len(molecules[0]._conformers) == 1
-        assert len(molecules[1]._conformers) == 1
-        assert molecules[0]._conformers[0].shape == (5, 3)
+        assert len(molecules[0].conformers) == 1
+        assert len(molecules[1].conformers) == 1
+        assert molecules[0].conformers[0].shape == (5, 3)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_load_multiconformer_sdf_as_separate_molecules_properties(self):
@@ -451,9 +451,9 @@ class TestOpenEyeToolkitWrapper:
         filename = get_data_file_path('molecules/methane_multiconformer_properties.sdf')
         molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecules) == 2
-        assert len(molecules[0]._conformers) == 1
-        assert len(molecules[1]._conformers) == 1
-        assert molecules[0]._conformers[0].shape == (5, 3)
+        assert len(molecules[0].conformers) == 1
+        assert len(molecules[1].conformers) == 1
+        assert molecules[0].conformers[0].shape == (5, 3)
         # The first molecule in the SDF has the following properties and charges:
         assert molecules[0].properties['test_property_key'] == 'test_property_value'
         np.testing.assert_allclose(molecules[0].partial_charges / unit.elementary_charge,
@@ -467,7 +467,6 @@ class TestOpenEyeToolkitWrapper:
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_write_sdf_charges(self):
         """Test OpenEyeToolkitWrapper for writing partial charges to a sdf file"""
-        from openforcefield.tests.test_forcefield import create_ethanol
         from io import StringIO
         toolkit_wrapper = OpenEyeToolkitWrapper()
         ethanol = create_ethanol()
@@ -497,7 +496,6 @@ class TestOpenEyeToolkitWrapper:
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_write_sdf_no_charges(self):
         """Test OpenEyeToolkitWrapper for importing a charges from a sdf file"""
-        from openforcefield.tests.test_forcefield import create_ethanol
         from io import StringIO
         toolkit_wrapper = OpenEyeToolkitWrapper()
         ethanol = create_ethanol()
@@ -514,7 +512,6 @@ class TestOpenEyeToolkitWrapper:
     def test_sdf_properties_roundtrip(self):
         """Test OpenEyeToolkitWrapper for performing a round trip of a molecule with defined partial charges
         and entries in the properties dict to and from a sdf file"""
-        from openforcefield.tests.test_forcefield import create_ethanol
         toolkit_wrapper = OpenEyeToolkitWrapper()
         ethanol = create_ethanol()
         ethanol.properties['test_property'] = 'test_value'
@@ -571,16 +568,16 @@ class TestOpenEyeToolkitWrapper:
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_file_path('molecules/toluene.mol2')
         molecule1 = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        assert len(molecule1._conformers) == 1
-        assert molecule1._conformers[0].shape == (15, 3)
+        assert len(molecule1.conformers) == 1
+        assert molecule1.conformers[0].shape == (15, 3)
         assert_almost_equal(molecule1.conformers[0][5][1] / unit.angstrom, 22.98, decimal=2)
 
         # Test loading from file-like object
         with open(filename, 'r') as infile:
             molecule2 = Molecule(infile, file_format='MOL2', toolkit_registry=toolkit_wrapper)
         assert molecule1.is_isomorphic_with(molecule2)
-        assert len(molecule2._conformers) == 1
-        assert molecule2._conformers[0].shape == (15, 3)
+        assert len(molecule2.conformers) == 1
+        assert molecule2.conformers[0].shape == (15, 3)
         assert_almost_equal(molecule2.conformers[0][5][1] / unit.angstrom, 22.98, decimal=2)
 
         # Test loading from gzipped mol2
@@ -588,8 +585,8 @@ class TestOpenEyeToolkitWrapper:
         with gzip.GzipFile(filename + '.gz', 'r') as infile:
             molecule3 = Molecule(infile, file_format='MOL2', toolkit_registry=toolkit_wrapper)
         assert molecule1.is_isomorphic_with(molecule3)
-        assert len(molecule3._conformers) == 1
-        assert molecule3._conformers[0].shape == (15, 3)
+        assert len(molecule3.conformers) == 1
+        assert molecule3.conformers[0].shape == (15, 3)
         assert_almost_equal(molecule3.conformers[0][5][1] / unit.angstrom, 22.98, decimal=2)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
@@ -598,8 +595,8 @@ class TestOpenEyeToolkitWrapper:
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_file_path('molecules/toluene_charged.mol2')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        assert len(molecule._conformers) == 1
-        assert molecule._conformers[0].shape == (15,3)
+        assert len(molecule.conformers) == 1
+        assert molecule.conformers[0].shape == (15,3)
         target_charges = unit.Quantity(np.array([-0.1342,-0.1271,-0.1271,-0.1310,
                                                  -0.1310,-0.0765,-0.0541, 0.1314,
                                                   0.1286, 0.1286, 0.1303, 0.1303,
@@ -616,7 +613,6 @@ class TestOpenEyeToolkitWrapper:
     def test_mol2_charges_roundtrip(self):
         """Test OpenEyeToolkitWrapper for performing a round trip of a molecule with partial charge to and from
         a mol2 file"""
-        from openforcefield.tests.test_forcefield import create_ethanol
         toolkit_wrapper = OpenEyeToolkitWrapper()
         ethanol = create_ethanol()
         # we increase the magnitude of the partial charges here, since mol2 is only
@@ -1202,7 +1198,7 @@ class TestRDKitToolkitWrapper:
             assert atom1.to_dict() == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
             assert bond1.to_dict() == bond2.to_dict()
-        assert (molecule._conformers[0] == molecule2._conformers[0]).all()
+        assert (molecule.conformers[0] == molecule2.conformers[0]).all()
         for pc1, pc2 in zip(molecule._partial_charges, molecule2._partial_charges):
             pc1_ul = pc1 / unit.elementary_charge
             pc2_ul = pc2 / unit.elementary_charge
@@ -1260,8 +1256,8 @@ class TestRDKitToolkitWrapper:
         toolkit_wrapper = RDKitToolkitWrapper()
         filename = get_data_file_path('molecules/toluene.sdf')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        assert len(molecule._conformers) == 1
-        assert molecule._conformers[0].shape == (15, 3)
+        assert len(molecule.conformers) == 1
+        assert molecule.conformers[0].shape == (15, 3)
         assert_almost_equal(molecule.conformers[0][5][1] / unit.angstrom, 2.0104, decimal=4)
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
@@ -1277,7 +1273,6 @@ class TestRDKitToolkitWrapper:
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_write_sdf_charges(self):
         """Test RDKitToolkitWrapper for writing partial charges to a sdf file"""
-        from openforcefield.tests.test_forcefield import create_ethanol
         from io import StringIO
         toolkit_wrapper = RDKitToolkitWrapper()
         ethanol = create_ethanol()
@@ -1309,7 +1304,6 @@ class TestRDKitToolkitWrapper:
     def test_sdf_properties_roundtrip(self):
         """Test RDKitToolkitWrapper for performing a round trip of a molecule with defined partial charges
         and entries in the properties dict to and from a sdf file"""
-        from openforcefield.tests.test_forcefield import create_ethanol
         toolkit_wrapper = RDKitToolkitWrapper()
         ethanol = create_ethanol()
         # Write ethanol to a temporary file, and then immediately read it.
@@ -1332,7 +1326,6 @@ class TestRDKitToolkitWrapper:
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_write_sdf_no_charges(self):
         """Test RDKitToolkitWrapper for importing a charges from a sdf file"""
-        from openforcefield.tests.test_forcefield import create_ethanol
         from io import StringIO
         toolkit_wrapper = RDKitToolkitWrapper()
         ethanol = create_ethanol()
@@ -1356,9 +1349,9 @@ class TestRDKitToolkitWrapper:
         filename = get_data_file_path('molecules/methane_multiconformer.sdf')
         molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecules) == 2
-        assert len(molecules[0]._conformers) == 1
-        assert len(molecules[1]._conformers) == 1
-        assert molecules[0]._conformers[0].shape == (5, 3)
+        assert len(molecules[0].conformers) == 1
+        assert len(molecules[1].conformers) == 1
+        assert molecules[0].conformers[0].shape == (5, 3)
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_load_multiconformer_sdf_as_separate_molecules_properties(self):
@@ -1370,9 +1363,9 @@ class TestRDKitToolkitWrapper:
         filename = get_data_file_path('molecules/methane_multiconformer_properties.sdf')
         molecules = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecules) == 2
-        assert len(molecules[0]._conformers) == 1
-        assert len(molecules[1]._conformers) == 1
-        assert molecules[0]._conformers[0].shape == (5, 3)
+        assert len(molecules[0].conformers) == 1
+        assert len(molecules[1].conformers) == 1
+        assert molecules[0].conformers[0].shape == (5, 3)
         # The first molecule in the SDF has the following properties and charges:
         assert molecules[0].properties['test_property_key'] == 'test_property_value'
         np.testing.assert_allclose(molecules[0].partial_charges / unit.elementary_charge,
@@ -1417,8 +1410,8 @@ class TestRDKitToolkitWrapper:
         toolkit_wrapper = RDKitToolkitWrapper()
         filename = get_data_file_path('molecules/toluene.pdb')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        assert len(molecule._conformers) == 1
-        assert molecule._conformers[0].shape == (15,3)
+        assert len(molecule.conformers) == 1
+        assert molecule.conformers[0].shape == (15,3)
 
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip
@@ -1428,8 +1421,8 @@ class TestRDKitToolkitWrapper:
         toolkit_wrapper = RDKitToolkitWrapper()
         filename = get_data_file_path('molecules/toluene.pdb')
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        assert len(molecule._conformers) == 1
-        assert molecule._conformers[0].shape == (15,3)
+        assert len(molecule.conformers) == 1
+        assert molecule.conformers[0].shape == (15,3)
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_generate_conformers(self):
