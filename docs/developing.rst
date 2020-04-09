@@ -24,8 +24,8 @@ When new functionality is added to the OFF Toolkit, it becomes our responsibilit
 Philosophy
 ''''''''''
 
-- The `core functionality` of the OFF Toolkit is to combine an Open Force Field ``ForceField`` and ``Topology`` to create an OpenMM ``System``.
-- An OpenMM ``System`` contains `everything` needed to compute the potential energy of a system, except the coordinates.
+- The *core functionality* of the OFF Toolkit is to combine an Open Force Field ``ForceField`` and ``Topology`` to create an OpenMM ``System``.
+- An OpenMM ``System`` contains *everything* needed to compute the potential energy of a system, except the coordinates.
 - The OFF toolkit employs a modular "plugin" architecture wherever possible, providing a standard interface for contributed features.
 
 
@@ -148,29 +148,36 @@ ParameterHandler
           The default implementation of this function should suffice for most developers.
         - ``postprocess_system``: operates identically to ``create_force``, but is run after each ParameterHandlers' ``create_force`` has already been called.
           The default implementation of this method simply does nothing, and should suffice for most developers.
-- ParameterType
-- ToolkitRegistry
-- Molecule.to/from_object
-- Force field directories
 
-Molecule definition
-'''''''''''''''''''
+.. TODO : fill in the modular components below
+.. ParameterType
 
-Required stereochemistry
-''''''''''''''''''''''''
-
-Conformation dependence
-'''''''''''''''''''''''
+   ToolkitRegistry
+   
+   Molecule.to/from_object
+   
+   Force field directories
 
 
-
-Reliance on external dependencies
-'''''''''''''''''''''''''''''''''
-
-
-
-ForceField file paths
-'''''''''''''''''''''
+.. TODO : fill in the sections below
+.. Molecule definition
+   '''''''''''''''''''
+   
+   Required stereochemistry
+   ''''''''''''''''''''''''
+   
+   Conformation dependence
+   '''''''''''''''''''''''
+   
+   
+   
+   Reliance on external dependencies
+   '''''''''''''''''''''''''''''''''
+   
+   
+   
+   ForceField file paths
+   '''''''''''''''''''''
 
 Documentation
 '''''''''''''
