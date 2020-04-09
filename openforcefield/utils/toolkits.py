@@ -529,7 +529,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         where the tag is "atom.dprop.PartialCharge", indicating that it has a list of
         atomic partial charges. If so, apply those charges to the OEAtoms in the OEMolBase,
         and delete the SD data pair.
-
+m
         Parameters
         ----------
         oemol : openeye.oechem.OEMolBase
@@ -949,7 +949,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # If all OEAtoms have a partial charge of NaN, then the OFFMol should
         # have its partial_charges attribute set to None
         any_partial_charge_is_not_nan = False
-        for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
+        for oe_atom in oemol.GetAtoms():
+            oe_idx = oe_atom.GetIdx()
             off_idx = map_atoms[oe_idx]
             unitless_charge = oe_atom.GetPartialCharge()
             if not math.isnan(unitless_charge):
