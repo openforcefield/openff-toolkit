@@ -232,9 +232,9 @@ class TopologyAtom(Serializable):
         int
             The index of this atom in its parent topology.
         """
-        # This assumes that particles in a molecule are ordered with all the Atoms first and VirtualSites last.
-        mapped_molecule_particle_index = self._topology_molecule._ref_to_top_index[self._atom.molecule_atom_index]
-        return self._topology_molecule.particle_start_topology_index + mapped_molecule_particle_index
+        # This assumes that the particles in a topology are listed with all atoms from all TopologyMolecules
+        # first, followed by all VirtualSites from all TopologyMolecules second
+        return self.topology_atom_index
 
     @property
     def topology_bonds(self):
@@ -446,9 +446,6 @@ class TopologyVirtualSite(Serializable):
         """
         return TopologyAtom(self._virtual_site.atoms[index],
                             self.topology_molecule)
-        #for atom in self._virtual_site.atoms:
-        #    reference_mol_atom_index = atom.molecule_atom_index
-        #    yield self._topology_molecule.atom(reference_mol_atom_index)
 
     @property
     def atoms(self):
@@ -459,9 +456,8 @@ class TopologyVirtualSite(Serializable):
         -------
         iterator of openforcefield.topology.TopologyAtom
         """
-        for atom in self._virtual_site.atoms:
-            reference_mol_atom_index = atom.molecule_atom_index
-            yield self._topology_molecule.atom(reference_mol_atom_index)
+        for ref_atom in self._virtual_site.atoms:
+            yield TopologyAtom(ref_atom, self._topology_molecule)
 
     @property
     def virtual_site(self):
@@ -507,7 +503,11 @@ class TopologyVirtualSite(Serializable):
         int
             The index of this particle in its parent topology.
         """
-        return self._topology_molecule.particle_start_topology_index + self._virtual_site.molecule_particle_index
+        # This assumes that the particles in a topology are listed with all atoms from all TopologyMolecules
+        # first, followed by all VirtualSites from all TopologyMolecules second
+        return self.topology.n_topology_atoms + self.topology_virtual_site_index
+
+        # return self._topology_molecule.particle_start_topology_index + self._virtual_site.molecule_particle_index
 
     @property
     def molecule(self):
@@ -590,7 +590,6 @@ class TopologyMolecule:
 
         # Initialize cached data
         self._atom_start_topology_index = None
-        self._particle_start_topology_index = None
         self._bond_start_topology_index = None
         self._virtual_site_start_topology_index = None
 
@@ -598,7 +597,6 @@ class TopologyMolecule:
     def _invalidate_cached_data(self):
         """Unset all cached data, in response to an appropriate change"""
         self._atom_start_topology_index = None
-        self._particle_start_topology_index = None
         self._bond_start_topology_index = None
         self._virtual_site_start_topology_index = None
 
@@ -777,12 +775,6 @@ class TopologyMolecule:
         for vsite in self.reference_molecule.virtual_sites:
             yield TopologyVirtualSite(vsite, self)
 
-        #for particle in self._reference_molecule.particles:
-        #    if isinstance(particle, Atom):
-        #        yield TopologyAtom(particle, self)
-        #    elif isinstance(particle, VirtualSite):
-        #        yield TopologyVirtualSite(particle, self)
-
     @property
     def n_particles(self):
         """Get the number of particles in this TopologyMolecule
@@ -793,21 +785,6 @@ class TopologyMolecule:
         """
         return self._reference_molecule.n_particles
 
-    @property
-    def particle_start_topology_index(self):
-        """Get the topology index of the first particle in this TopologyMolecule.
-        """
-        # If cached value is not available, generate it.
-        if self._particle_start_topology_index is None:
-            particle_start_topology_index = 0
-            for topology_molecule in self._topology.topology_molecules:
-                if self == topology_molecule:
-                    self._particle_start_topology_index = particle_start_topology_index
-                    break
-                particle_start_topology_index += topology_molecule.n_particles
-
-        # Return the cached value
-        return self._particle_start_topology_index
 
     def virtual_site(self, index):
         """
@@ -921,6 +898,10 @@ class TopologyMolecule:
 class Topology(Serializable):
     """
     A Topology is a chemical representation of a system containing one or more molecules appearing in a specified order.
+
+    As of the 0.7.0 release, the Topology particle indexing system puts all atoms before all virtualsites.
+    This ensures that atoms keep the same Topology particle index value, even if the Topology
+    is modified during system creation by the addition of virtual sites.
 
     .. warning :: This API is experimental and subject to change.
 
@@ -1326,8 +1307,12 @@ class Topology(Serializable):
         topology_particles : Iterable of TopologyAtom and TopologyVirtualSite
         """
         for topology_molecule in self._topology_molecules:
-            for particle in topology_molecule.particles:
-                yield particle
+            for atom in topology_molecule.atoms:
+                yield atom
+        for topology_molecule in self._topology_molecules:
+            for vs in topology_molecule.virtual_sites:
+                yield vs
+
 
     @property
     def n_topology_virtual_sites(self):
