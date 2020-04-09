@@ -179,9 +179,10 @@ ParameterHandler
    ForceField file paths
    '''''''''''''''''''''
 
-Documentation
-'''''''''''''
-If you define a new class, add new files to autodoc
+.. TODO : expand this section
+.. Documentation
+   '''''''''''''
+   If you define a new class, add new files to autodoc
 
 User Experience
 '''''''''''''''
