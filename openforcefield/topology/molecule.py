@@ -4653,6 +4653,21 @@ class Molecule(FrozenMolecule):
         else:
             raise ValueError('Could not find an appropriate backend')
 
+    def _ipython_display_(self):
+        try:
+            self.visualize(backend='nglview')._ipython_display_()
+        except (ImportError, ValueError):
+            pass
+
+        try:
+            self.visualize(backend='rdkit')._ipython_display_()
+        except ValueError:
+            pass
+
+        try:
+            self.visualize(backend='openeye')._ipython_display()
+        except ValueError:
+            pass
 
 try:
     from nglview import Trajectory as _NGLViewTrajectory
