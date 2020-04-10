@@ -75,6 +75,8 @@ New features
            :py:class:`Molecule <openforcefield.topology.Molecule>`.
 - `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_:
   Adds ``test_forcefields/ion_charges.offxml``, giving `LibraryCharges` for monatomic ions.
+- `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
+  Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 
 
 Behavior changed
@@ -160,6 +162,8 @@ Tests added
 - `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Added to XYZ file coverage tests.
 - `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_: Added `LibraryCharges` parameterization test
   for monatomic ions in ``test_forcefields/ion_charges.offxml``.
+- `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_: Added test for ``quacpac`` error output
+  for ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 
 Bugfixes
 """"""""
