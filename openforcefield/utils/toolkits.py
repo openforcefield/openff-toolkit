@@ -1490,7 +1490,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 quacpac_status = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
 
         if quacpac_status is False:
-            raise Exception('Unable to assign charges')
+            raise Exception('Unable to assign charges; OE error: "{}"'.format(errfs.str().decode("UTF-8")))
 
         # Extract and return charges
         ## TODO: Make sure atom mapping remains constant
