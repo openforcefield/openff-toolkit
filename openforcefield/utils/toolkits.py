@@ -1130,7 +1130,13 @@ m
                 oe_idx = map_atoms[off_idx]
                 charge_unitless = charge / unit.elementary_charge
                 oe_indexed_charges[oe_idx] = charge_unitless
-            for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
+            # TODO: This loop below fails if we try to use an "enumerate"-style loop.
+            #  It's worth investigating whether we make this assumption elsewhere in the codebase, since
+            #  the OE docs may indicate that this sort of usage is a very bad thing to do.
+            #  https://docs.eyesopen.com/toolkits/python/oechemtk/atombondindices.html#indices-for-molecule-lookup-considered-harmful
+            #for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
+            for oe_atom in oemol.GetAtoms():
+                oe_idx = oe_atom.GetIdx()
                 oe_atom.SetPartialCharge(oe_indexed_charges[oe_idx])
 
         # Retain properties, if present
@@ -1617,8 +1623,9 @@ m
 
         charges = unit.Quantity(
             np.zeros([oemol.NumAtoms()], np.float64), unit.elementary_charge)
-        for index, atom in enumerate(oemol.GetAtoms()):
-            charge = atom.GetPartialCharge()
+        for oeatom in oemol.GetAtoms():
+            index = oeatom.GetIdx()
+            charge = oeatom.GetPartialCharge()
             charge = charge * unit.elementary_charge
             charges[index] = charge
 
@@ -1694,7 +1701,8 @@ m
 
         # TODO: Will bonds always map back to the same index? Consider doing a topology mapping.
         # Loop over bonds
-        for idx, bond in enumerate(oemol.GetBonds()):
+        for bond in oemol.GetBonds():
+            idx = bond.GetIdx()
             # Get bond order
             order = am1results.GetBondOrder(bond.GetBgnIdx(), bond.GetEndIdx())
             mol_bond = molecule._bonds[idx]
