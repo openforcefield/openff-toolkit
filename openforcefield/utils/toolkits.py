@@ -1502,11 +1502,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             charge = charge * unit.elementary_charge
             charges[index] = charge
 
-        if ((charges / unit.elementary_charge) == 0.).all():
-            # TODO: These will be 0 if the charging failed. What behavior do we want in that case?
-            raise Exception(
-                "Partial charge calculation failed. Charges from compute_partial_charges() are all 0."
-            )
         return charges
 
     def assign_fractional_bond_orders(self, molecule, bond_order_model=None, use_conformers=None):
