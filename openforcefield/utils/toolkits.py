@@ -508,7 +508,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Remove all but the first conformer when writing to SDF as we only support single conformer format
         if (file_format.lower() == "sdf") and oemol.NumConfs() > 1:
             conf1 = [conf for conf in oemol.GetConfs()][0]
-            flat_coords = [*conf1.GetCoords().values()]
+            flat_coords = list()
+            for idx, coord in conf1.GetCoords().items():
+                flat_coords.extend(coord)
             oemol.DeleteConfs()
             oecoords = oechem.OEFloatArray(flat_coords)
             oemol.NewConf(oecoords)
@@ -529,7 +531,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         where the tag is "atom.dprop.PartialCharge", indicating that it has a list of
         atomic partial charges. If so, apply those charges to the OEAtoms in the OEMolBase,
         and delete the SD data pair.
-m
+
         Parameters
         ----------
         oemol : openeye.oechem.OEMolBase
