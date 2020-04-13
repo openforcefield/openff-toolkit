@@ -2,9 +2,6 @@ name: Conda
 
 on:
   pull_request:
-  # Remove before merge
-    branches:
-      - "ci-conda-install"
   schedule:
     # Nightly tests run on master by default:
     #   Scheduled workflows run on the latest commit on the default or base branch.
