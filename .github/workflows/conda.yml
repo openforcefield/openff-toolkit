@@ -1,0 +1,71 @@
+name: Conda
+
+on:
+  pull_request:
+  # Remove before merge
+    branches:
+      - "ci-conda-install"
+  schedule:
+    # Nightly tests run on master by default:
+    #   Scheduled workflows run on the latest commit on the default or base branch.
+    #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
+    - cron: "0 0 * * *"
+
+jobs:
+  package:
+    name: Package installation tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macOS-latest
+        python-version:
+          - 3.6
+          - 3.7
+          # Uncomment when ready ;)
+          # - 3.8
+
+    env:
+      CI_OS: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Additional info about the build
+      shell: bash
+      run: |
+        uname -a
+        df -h
+        ulimit -a
+    - name: Fix conda permissions in MacOS
+      shell: bash
+      if: startsWith(matrix.cfg.os, 'macOS')
+      run: |
+        sudo chown -R $(id -u):$(id -g) ${CONDA}
+    - name: Configure conda
+      shell: bash
+      run: |
+        . devtools/gh-actions/initialize_conda.sh
+        conda activate
+        conda config --set always_yes yes
+        conda update --quiet --all
+        conda info --all
+        conda list
+    - name: Follow installation instructions
+      shell: bash
+      run: |
+        . devtools/gh-actions/initialize_conda.sh
+        conda activate
+        conda config --add channels omnia --add channels conda-forge
+        conda create -n openforcefield openforcefield python=${{ matrix.python-version }}
+    - name: Test and debug environment
+      shell: bash
+      run: |
+        . devtools/gh-actions/initialize_conda.sh
+        conda activate openforcefield
+        conda list
+        REPOVERSION=$(git describe --abbrev=0 --tags)
+        echo "Repository version: $REPOVERSION"
+        python -c "from openforcefield import __version__; print('Installed version:', __version__)"
+        python -c "from openforcefield import __version__; assert __version__.split('+')[0] == '${REPOVERSION}', 'Version mismatch!';"
