@@ -58,13 +58,5 @@ jobs:
         conda activate
         conda config --add channels omnia --add channels conda-forge
         conda create -n openforcefield openforcefield python=${{ matrix.python-version }}
-    - name: Test and debug environment
-      shell: bash
-      run: |
-        . devtools/gh-actions/initialize_conda.sh
         conda activate openforcefield
         conda list
-        python -c "from openforcefield import __version__; print('Installed version:', __version__)"
-        REPOVERSION=$(git describe --abbrev=0 --tags)
-        echo "Repository version: $REPOVERSION"
-        python -c "from openforcefield import __version__; assert __version__.split('+')[0] == '${REPOVERSION}', 'Version mismatch!';"
