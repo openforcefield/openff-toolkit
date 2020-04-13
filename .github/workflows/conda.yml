@@ -29,6 +29,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        ref: master
     - name: Additional info about the build
       shell: bash
       run: |
@@ -37,7 +39,7 @@ jobs:
         ulimit -a
     - name: Fix conda permissions in MacOS
       shell: bash
-      if: startsWith(matrix.cfg.os, 'macOS')
+      if: startsWith(matrix.os, 'macOS')
       run: |
         sudo chown -R $(id -u):$(id -g) ${CONDA}
     - name: Configure conda
@@ -62,7 +64,7 @@ jobs:
         . devtools/gh-actions/initialize_conda.sh
         conda activate openforcefield
         conda list
+        python -c "from openforcefield import __version__; print('Installed version:', __version__)"
         REPOVERSION=$(git describe --abbrev=0 --tags)
         echo "Repository version: $REPOVERSION"
-        python -c "from openforcefield import __version__; print('Installed version:', __version__)"
         python -c "from openforcefield import __version__; assert __version__.split('+')[0] == '${REPOVERSION}', 'Version mismatch!';"
