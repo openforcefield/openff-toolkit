@@ -473,20 +473,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The format for writing the molecule data
 
         """
-        from openeye import oechem
         from openforcefield.utils import temporary_directory, temporary_cd
-
-        oemol = self.to_openeye(molecule)
-
         # TODO: This is inefficiently implemented. Is there any way to attach a file-like object to an oemolstream?
         with temporary_directory() as tmpdir:
             with temporary_cd(tmpdir):
                 outfile = 'temp_molecule.' + file_format
-                ofs = oechem.oemolostream(outfile)
-                openeye_format = getattr(oechem, 'OEFormat_' + file_format)
-                ofs.SetFormat(openeye_format)
-                oechem.OEWriteMolecule(ofs, oemol)
-                ofs.close()
+                self.to_file(molecule, outfile, file_format)
                 file_data = open(outfile).read()
         file_obj.write(file_data)
 
@@ -509,8 +501,64 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ofs = oechem.oemolostream(file_path)
         openeye_format = getattr(oechem, 'OEFormat_' + file_format)
         ofs.SetFormat(openeye_format)
+
+        # OFFTK strictly treats SDF as a single-conformer format.
+        # We need to override OETK's behavior here if the user is saving a multiconformer molecule.
+
+        # Remove all but the first conformer when writing to SDF as we only support single conformer format
+        if (file_format.lower() == "sdf") and oemol.NumConfs() > 1:
+            conf1 = [conf for conf in oemol.GetConfs()][0]
+            flat_coords = list()
+            for idx, coord in conf1.GetCoords().items():
+                flat_coords.extend(coord)
+            oemol.DeleteConfs()
+            oecoords = oechem.OEFloatArray(flat_coords)
+            oemol.NewConf(oecoords)
+        # We're standardizing on putting partial charges into SDFs under the `atom.dprop.PartialCharge` property
+        if (file_format.lower() == "sdf") and (molecule.partial_charges is not None):
+            partial_charges_list = [oeatom.GetPartialCharge() for oeatom in oemol.GetAtoms()]
+            partial_charges_str = ' '.join([f'{val:f}' for val in partial_charges_list])
+            # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
+            #  describe/infer the proper data type?
+            oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
         oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
+
+    @staticmethod
+    def _turn_oemolbase_sd_charges_into_partial_charges(oemol):
+        """
+        Process an OEMolBase object and check to see whether it has an SD data pair
+        where the tag is "atom.dprop.PartialCharge", indicating that it has a list of
+        atomic partial charges. If so, apply those charges to the OEAtoms in the OEMolBase,
+        and delete the SD data pair.
+
+        Parameters
+        ----------
+        oemol : openeye.oechem.OEMolBase
+            The molecule to process
+
+        Returns
+        -------
+        charges_are_present : bool
+            Whether charges are present in the SD file. This is necessary because OEAtoms
+            have a default partial charge of 0.0, which makes truly zero-charge molecules
+            (eg "N2", "Ar"...) indistinguishable from molecules for which partial charges
+            have not been assigned. The OFF Toolkit allows this distinction with
+            mol.partial_charges=None. In order to complete roundtrips within the OFFMol
+            spec, we must interpret the presence or absence of this tag as a proxy for
+            mol.partial_charges=None.
+        """
+        from openeye import oechem
+        for dp in oechem.OEGetSDDataPairs(oemol):
+            if dp.GetTag() == "atom.dprop.PartialCharge":
+                charges_str = oechem.OEGetSDData(oemol, "atom.dprop.PartialCharge")
+                charges_unitless = [float(i) for i in charges_str.split()]
+                assert len(charges_unitless) == oemol.NumAtoms()
+                for charge, oeatom in zip(charges_unitless, oemol.GetAtoms()):
+                    oeatom.SetPartialCharge(charge)
+                oechem.OEDeleteSDData(oemol, "atom.dprop.PartialCharge")
+                return True
+        return False
 
     @classmethod
     def _read_oemolistream_molecules(cls, oemolistream, allow_undefined_stereo, file_path=None):
@@ -534,7 +582,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The list of Molecule objects in the stream.
 
         """
-        from openforcefield.topology import Molecule
         from openeye import oechem
 
         mols = list()
@@ -543,12 +590,55 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oechem.OEPerceiveChiral(oemol)
             oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
             oechem.OE3DToInternalStereo(oemol)
-            mol = cls.from_openeye(
-                oemol,
-                allow_undefined_stereo=allow_undefined_stereo)
-            mols.append(mol)
 
-            # Check if this file may be using GAFF atom types.
+            # If this is either a multi-conformer or multi-molecule SD file, check to see if there are partial charges
+            if (oemolistream.GetFormat() == oechem.OEFormat_SDF) and hasattr(oemol, 'GetConfs'):
+                # The openFF toolkit treats each conformer in a "multiconformer" SDF as
+                # a separate molecule.
+                # https://github.com/openforcefield/openforcefield/issues/202
+                # Note that there is ambiguity about how SD data and "multiconformer" SD files should be stored.
+                # As a result, we have to do some weird stuff below, as discussed in
+                # https://docs.eyesopen.com/toolkits/python/oechemtk/oemol.html#dude-where-s-my-sd-data
+
+                # Jeff: I was unable to find a way to distinguish whether a SDF was multiconformer or not.
+                # The logic below should handle either single- or multi-conformer SDFs.
+                for conf in oemol.GetConfIter():
+                    # First, we turn "conf" into an OEMCMol (OE multiconformer mol), since OTHER file formats
+                    # really are multiconformer, and we will eventually feed this into the `from_openeye` function,
+                    # which is made to ingest multiconformer mols.
+                    this_conf_oemcmol = conf.GetMCMol()
+
+                    # Then, we take any SD data pairs that were on the oemol, and copy them on to "this_conf_oemcmol".
+                    # These SD pairs will be populated if we're dealing with a single-conformer SDF.
+                    for dp in oechem.OEGetSDDataPairs(oemol):
+                        oechem.OESetSDData(this_conf_oemcmol, dp.GetTag(), dp.GetValue())
+                    # On the other hand, these SD pairs will be populated if we're dealing with a MULTI-conformer SDF.
+                    for dp in oechem.OEGetSDDataPairs(conf):
+                        oechem.OESetSDData(this_conf_oemcmol, dp.GetTag(), dp.GetValue())
+                    # This function fishes out the special SD data tag we use for partial charge
+                    # ("atom.dprop.PartialCharge"), and applies those as OETK-supported partial charges on the OEAtoms
+                    has_charges = cls._turn_oemolbase_sd_charges_into_partial_charges(this_conf_oemcmol)
+
+                    # Finally, we feed the molecule into `from_openeye`, where it converted into an OFFMol
+                    mol = cls.from_openeye(
+                        this_conf_oemcmol,
+                        allow_undefined_stereo=allow_undefined_stereo)
+
+                    # If the molecule didn't even have the `PartialCharges` tag, we set it from zeroes to None here.
+                    if not(has_charges):
+                        mol.partial_charges = None
+                    mols.append(mol)
+
+            else:
+                # In case this is being read from a SINGLE-molecule SD file, convert the SD field where we
+                # stash partial charges into actual per-atom partial charges
+                cls._turn_oemolbase_sd_charges_into_partial_charges(oemol)
+                mol = cls.from_openeye(
+                    oemol,
+                    allow_undefined_stereo=allow_undefined_stereo)
+                mols.append(mol)
+
+            # Check if this is an AMBER-produced mol2 file, which we can not load because they use GAFF atom types.
             if oemolistream.GetFormat() == oechem.OEFormat_MOL2:
                 cls._check_mol2_gaff_atom_type(mol, file_path)
 
@@ -671,6 +761,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         Create a Molecule from an OpenEye molecule. If the OpenEye molecule has
         implicit hydrogens, this function will make them explicit.
 
+        ``OEAtom`` s have a different set of allowed value for partial charges than
+        ``openforcefield.topology.Molecule`` s. In the OpenEye toolkits, partial charges
+        are stored on individual ``OEAtom`` s, and their values are initialized to ``0.0``.
+        In the Open Force Field Toolkit, an ``openforcefield.topology.Molecule``'s
+        ``partial_charges`` attribute is initialized to ``None`` and can be set to a
+        ``simtk.unit.Quantity``-wrapped numpy array with units of
+        elementary charge. The Open Force
+        Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
+        charge of ``float('nan')`` to be equivalent to an Open Force Field Molecule's
+        ``partial_charges = None``.
+        This assumption is made in both ``to_openeye`` and ``from_openeye``.
+
         .. warning :: This API is experimental and subject to change.
 
         Parameters
@@ -701,6 +803,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
         from openforcefield.topology.molecule import Molecule
+        import math
 
 
         # Add explicit hydrogens if they're implicit
@@ -766,15 +869,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 msg = 'Unable to make OFFMol from OEMol: ' + msg
                 raise UndefinedStereochemistryError(msg)
 
-        # TODO: What other information should we preserve besides name?
-        # TODO: How should we preserve the name?
-
         molecule = Molecule()
         molecule.name = oemol.GetTitle()
 
         # Copy any attached SD tag information
-        # TODO: Should we use an API for this?
-        molecule._properties = dict()
         for dp in oechem.OEGetSDDataPairs(oemol):
             molecule._properties[dp.GetTag()] = dp.GetValue()
 
@@ -849,13 +947,24 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         partial_charges = unit.Quantity(
             np.zeros(molecule.n_atoms, dtype=np.float),
             unit=unit.elementary_charge)
+
+        # If all OEAtoms have a partial charge of NaN, then the OFFMol should
+        # have its partial_charges attribute set to None
+        any_partial_charge_is_not_nan = False
         for oe_atom in oemol.GetAtoms():
             oe_idx = oe_atom.GetIdx()
             off_idx = map_atoms[oe_idx]
-            charge = oe_atom.GetPartialCharge() * unit.elementary_charge
+            unitless_charge = oe_atom.GetPartialCharge()
+            if not math.isnan(unitless_charge):
+                any_partial_charge_is_not_nan = True
+                #break
+            charge = unitless_charge * unit.elementary_charge
             partial_charges[off_idx] = charge
 
-        molecule.partial_charges = partial_charges
+        if any_partial_charge_is_not_nan:
+            molecule.partial_charges = partial_charges
+        else:
+            molecule.partial_charges = None
 
         return molecule
 
@@ -863,6 +972,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     def to_openeye(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an OpenEye molecule using the specified aromaticity model
+
+        ``OEAtom`` s have a different set of allowed value for partial charges than
+        ``openforcefield.topology.Molecule`` s. In the OpenEye toolkits, partial charges
+        are stored on individual ``OEAtom`` s, and their values are initialized to ``0.0``.
+        In the Open Force Field Toolkit, an ``openforcefield.topology.Molecule``'s
+        ``partial_charges`` attribute is initialized to ``None`` and can be set to a
+        ``simtk.unit.Quantity``-wrapped numpy array with units of
+        elementary charge. The Open Force
+        Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
+        charge of ``float('nan')`` to be equivalent to an Open Force Field Molecule's
+        ``partial_charges = None``.
+        This assumption is made in both ``to_openeye`` and ``from_openeye``.
 
         .. todo ::
 
@@ -906,6 +1027,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oeatom.SetFormalCharge(atom.formal_charge)
             oeatom.SetAromatic(atom.is_aromatic)
             oeatom.SetData('name', atom.name)
+            oeatom.SetPartialCharge(float('nan'))
             oemol_atoms.append(oeatom)
             map_atoms[atom.molecule_atom_index] = oeatom.GetIdx()
 
@@ -974,10 +1096,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             # Flip stereochemistry if incorrect
             oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
                 oemol, oebond)
-            #print('AAAA', oebond_stereochemistry, bond.stereochemistry)
             if oebond_stereochemistry != bond.stereochemistry:
                 # Flip the stereochemistry
-                #oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Trans)
                 oebond.SetStereo([oeatom1_neighbor, oeatom2_neighbor],
                                  oechem.OEBondStereo_CisTrans,
                                  oechem.OEBondStereo_Trans)
@@ -1002,26 +1122,29 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     flat_coords[(3 * oe_idx) + 1] = y
                     flat_coords[(3 * oe_idx) + 2] = z
 
-                # TODO: Do we need to do these internal unit checks?
-                # TODO: Is there any risk that the atom indexing systems will change?
-                #flat_coords = (conf.in_units_of(unit.angstrom) / unit.angstrom).flatten()
                 oecoords = oechem.OEFloatArray(flat_coords)
                 oemol.NewConf(oecoords)
 
-        # Retain charges, if present
-        if not (molecule._partial_charges is None):
-            # for off_atom, oe_atom in zip(molecule.atoms, oemol_atoms):
-            #    charge_unitless = molecule._partial_charges
-
+        # Retain charges, if present. All atoms are initialized above with a partial charge of NaN.
+        if molecule._partial_charges is not None:
             oe_indexed_charges = np.zeros((molecule.n_atoms), dtype=np.float)
             for off_idx, charge in enumerate(molecule._partial_charges):
                 oe_idx = map_atoms[off_idx]
                 charge_unitless = charge / unit.elementary_charge
                 oe_indexed_charges[oe_idx] = charge_unitless
-            for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
+            # TODO: This loop below fails if we try to use an "enumerate"-style loop.
+            #  It's worth investigating whether we make this assumption elsewhere in the codebase, since
+            #  the OE docs may indicate that this sort of usage is a very bad thing to do.
+            #  https://docs.eyesopen.com/toolkits/python/oechemtk/atombondindices.html#indices-for-molecule-lookup-considered-harmful
+            #for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
+            for oe_atom in oemol.GetAtoms():
+                oe_idx = oe_atom.GetIdx()
                 oe_atom.SetPartialCharge(oe_indexed_charges[oe_idx])
 
-        # TODO: Retain properties, if present
+        # Retain properties, if present
+        for key, value in molecule.properties.items():
+            oechem.OESetSDData(oemol, str(key), str(value))
+
         # Clean Up phase
         # The only feature of a molecule that wasn't perceived above seemed to be ring connectivity, better to run it
         # here then for someone to inquire about ring sizes and get 0 when it shouldn't be
@@ -1257,6 +1380,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 f"express all explicit hydrogens in the molecule, then you should construct the "
                 f"desired molecule as an OEMol (where oechem.OEHasImplicitHydrogens(oemol) returns "
                 f"False), and then use Molecule.from_openeye() to create the desired OFFMol.")
+
+        # Set partial charges to None, since they couldn't have been stored in a SMILES
+        for atom in oemol.GetAtoms():
+            atom.SetPartialCharge(float('nan'))
+
         molecule = self.from_openeye(oemol,
                                      allow_undefined_stereo=allow_undefined_stereo)
         return molecule
@@ -1497,8 +1625,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         charges = unit.Quantity(
             np.zeros([oemol.NumAtoms()], np.float64), unit.elementary_charge)
-        for index, atom in enumerate(oemol.GetAtoms()):
-            charge = atom.GetPartialCharge()
+        for oeatom in oemol.GetAtoms():
+            index = oeatom.GetIdx()
+            charge = oeatom.GetPartialCharge()
             charge = charge * unit.elementary_charge
             charges[index] = charge
 
@@ -1574,7 +1703,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # TODO: Will bonds always map back to the same index? Consider doing a topology mapping.
         # Loop over bonds
-        for idx, bond in enumerate(oemol.GetBonds()):
+        for bond in oemol.GetBonds():
+            idx = bond.GetIdx()
             # Get bond order
             order = am1results.GetBondOrder(bond.GetBgnIdx(), bond.GetEndIdx())
             mol_bond = molecule._bonds[idx]
@@ -1866,7 +1996,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^ Chem.SANITIZE_ADJUSTHS)
                     Chem.AssignStereochemistryFrom3D(rdmol)
                 except ValueError as e:
-                    print(rdmol.GetProp('_Name'), e)
+                    logger.warning(rdmol.GetProp('_Name') + ' ' + str(e))
                     continue
                 Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
                 mol = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
@@ -2447,9 +2577,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         any_atom_has_partial_charge = False
         for rd_idx, rd_atom in enumerate(rdmol.GetAtoms()):
             off_idx = map_atoms[rd_idx]
-            if rd_atom.HasProp("partial_charge"):
+            if rd_atom.HasProp("PartialCharge"):
                 charge = rd_atom.GetDoubleProp(
-                    "partial_charge") * unit.elementary_charge
+                    "PartialCharge") * unit.elementary_charge
                 partial_charges[off_idx] = charge
                 any_atom_has_partial_charge = True
             else:
@@ -2458,8 +2588,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     raise Exception(
                         "Some atoms in rdmol have partial charges, but others do not."
                     )
-
+        if any_atom_has_partial_charge:
             offmol.partial_charges = partial_charges
+        else:
+            offmol.partial_charges = None
         return offmol
 
     @classmethod
@@ -2630,8 +2762,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 charge_unitless = charge.value_in_unit(unit.elementary_charge)
                 rdk_indexed_charges[atom_idx] = charge_unitless
             for atom_idx, rdk_atom in enumerate(rdmol.GetAtoms()):
-                rdk_atom.SetDoubleProp('partial_charge',
+                rdk_atom.SetDoubleProp('PartialCharge',
                                        rdk_indexed_charges[atom_idx])
+
+            # Note: We could put this outside the "if" statement, which would result in all partial charges in the
+            #       resulting file being set to "n/a" if they weren't set in the Open Force Field Molecule
+            Chem.CreateAtomDoublePropertyList(rdmol, 'PartialCharge')
 
         # Cleanup the rdmol
         rdmol.UpdatePropertyCache(strict=False)
