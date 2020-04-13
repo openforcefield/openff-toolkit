@@ -17,7 +17,7 @@ On ``linux``, you can install the Python 3 version into ``$HOME/miniconda3`` wit
 
 .. code-block:: bash
 
-   $ wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+   $ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
    $ bash ./Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda3
    $ source ~/miniconda3/etc/profile.d/conda.sh
    $ conda activate base
@@ -27,7 +27,7 @@ On ``osx``, you want to use the ``osx`` binary
 
 .. code-block:: bash
 
-   $ curl https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O
+   $ curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O
    $ bash ./Miniconda3-latest-MacOSX-x86_64.sh -b -p $HOME/miniconda3
    $ source ~/miniconda3/etc/profile.d/conda.sh
    $ conda activate base
