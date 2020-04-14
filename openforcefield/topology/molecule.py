@@ -2909,15 +2909,19 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
-            The partial charges to assign to the molecule. Must be in units compatible with simtk.unit.elementary_charge
-        """
-        assert hasattr(charges, 'unit')
-        assert unit.elementary_charge.is_compatible(charges.unit)
-        assert charges.shape == (self.n_atoms, )
+        charges : None or a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
+            The partial charges to assign to the molecule. If not None, must be in units compatible with simtk.unit.elementary_charge
 
-        charges_ec = charges.in_units_of(unit.elementary_charge)
-        self._partial_charges = charges_ec
+        """
+        if charges is None:
+            self._partial_charges = None
+        else:
+            assert hasattr(charges, 'unit')
+            assert unit.elementary_charge.is_compatible(charges.unit)
+            assert charges.shape == (self.n_atoms, )
+
+            charges_ec = charges.in_units_of(unit.elementary_charge)
+            self._partial_charges = charges_ec
 
     @property
     def n_particles(self):
@@ -3948,7 +3952,7 @@ class FrozenMolecule(Serializable):
         try:
             mapped_smiles = qca_record['attributes']['canonical_isomeric_explicit_hydrogen_mapped_smiles']
         except KeyError:
-            raise KeyError('The record must contain the hydrogen mapped smiles to be safley made from the archive.')
+            raise KeyError('The record must contain the hydrogen mapped smiles to be safely made from the archive.')
 
         # make a new molecule that has been reordered to match the cmiles mapping
         offmol = cls.from_mapped_smiles(mapped_smiles, toolkit_registry=toolkit_registry,
@@ -4025,9 +4029,6 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        hydrogens_last: bool, default True
-            If the canonical ordering should rank the hydrogens last.
-
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
@@ -4111,10 +4112,11 @@ class FrozenMolecule(Serializable):
         new_molecule._bonds = sorted_bonds
 
         # remap the charges
-        new_charges = np.zeros(self.n_atoms)
-        for i in range(self.n_atoms):
-            new_charges[i] = self.partial_charges[new_to_cur[i]].value_in_unit(unit.elementary_charge)
-        new_molecule.partial_charges = new_charges * unit.elementary_charge
+        if self.partial_charges is not None:
+            new_charges = np.zeros(self.n_atoms)
+            for i in range(self.n_atoms):
+                new_charges[i] = self.partial_charges[new_to_cur[i]].value_in_unit(unit.elementary_charge)
+            new_molecule.partial_charges = new_charges * unit.elementary_charge
 
         # remap the conformers there can be more than one
         if self.conformers is not None:
