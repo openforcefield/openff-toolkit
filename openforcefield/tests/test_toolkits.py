@@ -726,6 +726,21 @@ class TestOpenEyeToolkitWrapper:
             charge_sum += pc
         assert 0.999 * unit.elementary_charge < charge_sum < 1.001 * unit.elementary_charge
 
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_compute_partial_charges_failure(self):
+        """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule it cannot assign charges to"""
+
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        smiles = '[Li+1]'
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
+
+        # For now, I'm just testing AM1-BCC (will test more when the SMIRNOFF spec for other charges is finalized)
+        with pytest.raises(Exception) as excinfo:
+            molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_wrapper)
+            assert "Unable to assign charges" in str(excinfo)
+            assert "OE Error: " in str(excinfo)
+
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_partial_charges_trans_cooh_am1bcc(self):
