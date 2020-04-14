@@ -124,6 +124,8 @@ New features
   py:meth:`Molecule.enumerate_protomers <openforcefield.topology.Molecule.enumerate_protomers>`
       .. warning::
          Enumerate protomoers is currently only available through the OpenEye toolkit.
+- `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
+  Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 
 
 Behavior changed
@@ -211,7 +213,8 @@ Tests added
   for monatomic ions in ``test_forcefields/ion_charges.offxml``.
 - `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_: Added tests to assure that state enumeration can
   correctly find molecules tautomers, stereoisomers and protomers when possible.
-
+- `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_: Added test for ``quacpac`` error output
+  for ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 
 Bugfixes
 """"""""
